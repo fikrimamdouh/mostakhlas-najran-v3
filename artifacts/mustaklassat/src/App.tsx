@@ -141,46 +141,69 @@ function ClerkQueryClientCacheInvalidator() {
 // Ensure user is synced with DB
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, isLoaded: isClerkLoaded } = useUser();
-  const [, setLocation] = useLocation();
-  const { data: dbUser, isLoading: isDbLoading, isError } = useGetMe({
-    query: { 
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
+  const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
+
+  const { data: dbUser, isLoading: isDbLoading, error } = useGetMe({
+    query: {
       queryKey: ["/api/users/me"],
-      enabled: !!user?.id,
-      retry: 1
+      enabled: !!user?.id && isClerkLoaded,
+      retry: false,
     }
   });
 
-  const [isSyncing, setIsSyncing] = useState(false);
+  const isNotFound = (error as any)?.status === 404;
 
   useEffect(() => {
-    if (isClerkLoaded && user && isError && !isSyncing) {
-      // Need to sync user to DB
-      setIsSyncing(true);
-      fetch('/api/users/sync', {
+    if (!isClerkLoaded || !user || !isNotFound || syncState !== 'idle') return;
+
+    setSyncState('syncing');
+
+    getToken().then(token => {
+      return fetch('/api/users/sync', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
-          clerkId: user.id,
           email: user.primaryEmailAddress?.emailAddress,
           name: user.fullName || user.firstName || 'مستخدم',
-        })
-      }).then(res => {
-        if (res.ok) {
-          queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
-        }
-        setIsSyncing(false);
-      }).catch(() => {
-        setIsSyncing(false);
+        }),
       });
-    }
-  }, [isClerkLoaded, user, isError, isSyncing]);
+    }).then(res => {
+      if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
+        setSyncState('done');
+      } else {
+        setSyncState('error');
+      }
+    }).catch(() => setSyncState('error'));
+  }, [isClerkLoaded, user, isNotFound, syncState, getToken, queryClient]);
 
-  if (!isClerkLoaded || isDbLoading || isSyncing) {
-    return <div className="flex h-screen items-center justify-center">جاري التحميل...</div>;
+  if (!isClerkLoaded || isDbLoading || syncState === 'syncing') {
+    return (
+      <div className="flex h-screen items-center justify-center flex-col gap-3" style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' }}>
+        <img src="/logo.png" alt="" className="h-16 w-auto opacity-80" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
+        <p className="text-white text-lg font-medium">جاري التحميل...</p>
+      </div>
+    );
   }
 
   if (dbUser?.status === "pending") {
     return <Redirect to="/pending" />;
+  }
+
+  if (dbUser?.status === "rejected") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 text-center" style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' }}>
+        <div className="bg-white rounded-2xl p-10 shadow-xl max-w-md w-full">
+          <h2 className="text-2xl font-bold mb-3 text-red-600">تم رفض حسابك</h2>
+          <p className="text-gray-600">للاستفسار، تواصل مع مدير النظام.</p>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;
