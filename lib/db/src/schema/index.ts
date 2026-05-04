@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, numeric, timestamp, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, numeric, timestamp, date, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -12,6 +12,7 @@ export const usersTable = pgTable("users", {
   company: text("company"),
   phone: text("phone"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  lastLoginAt: timestamp("last_login_at"),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({ id: true, createdAt: true });
@@ -52,3 +53,30 @@ export const extractsTable = pgTable("extracts", {
 export const insertExtractSchema = createInsertSchema(extractsTable).omit({ id: true, createdAt: true });
 export type InsertExtract = z.infer<typeof insertExtractSchema>;
 export type Extract = typeof extractsTable.$inferSelect;
+
+// Cloud storage for syncing original HTML app localStorage data per user
+export const userStorageTable = pgTable("user_storage", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => usersTable.id),
+  storageKey: text("storage_key").notNull(),
+  storageValue: text("storage_value").notNull(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("user_storage_user_key").on(t.userId, t.storageKey),
+]);
+
+export type UserStorage = typeof userStorageTable.$inferSelect;
+
+// Audit log for monitoring all user actions
+export const auditLogTable = pgTable("audit_log", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => usersTable.id),
+  userEmail: text("user_email"),
+  userName: text("user_name"),
+  action: text("action").notNull(),
+  details: text("details"),
+  ipAddress: text("ip_address"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type AuditLog = typeof auditLogTable.$inferSelect;

@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useUser, useClerk } from "@clerk/react";
 import { useGetMe } from "@workspace/api-client-react";
 import {
-  LayoutDashboard, Settings, Users, LogOut, ShieldAlert
+  LayoutDashboard, Settings, Users, LogOut, ShieldAlert, ClipboardList
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,10 @@ export function Sidebar() {
   const navigation = [
     { name: "لوحة القيادة", href: "/dashboard", icon: LayoutDashboard },
     { name: "الإعدادات", href: "/settings", icon: Settings },
-    ...(isAdmin ? [{ name: "إدارة المستخدمين", href: "/admin/users", icon: ShieldAlert }] : []),
+    ...(isAdmin ? [
+      { name: "إدارة المستخدمين", href: "/admin/users", icon: ShieldAlert },
+      { name: "سجل المراقبة", href: "/admin/audit", icon: ClipboardList },
+    ] : []),
   ];
 
   return (

@@ -5,6 +5,8 @@ import usersRouter from "./users";
 import projectsRouter from "./projects";
 import extractsRouter from "./extracts";
 import statsRouter from "./stats";
+import storageRouter from "./storage";
+import auditRouter from "./audit";
 
 const router: IRouter = Router();
 
@@ -14,5 +16,7 @@ router.use("/users", usersRouter);
 router.use("/projects", projectsRouter);
 router.use("/extracts", extractsRouter);
 router.use("/stats", statsRouter);
+router.use("/storage", storageRouter);
+router.use("/audit", auditRouter);
 
 export default router;

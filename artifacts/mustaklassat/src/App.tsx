@@ -21,6 +21,7 @@ import ProjectsList from "@/pages/projects/index";
 import NewProject from "@/pages/projects/new";
 
 import AdminUsers from "@/pages/admin/users";
+import AuditLog from "@/pages/admin/audit";
 import Settings from "@/pages/settings";
 
 const queryClient = new QueryClient({
@@ -182,18 +183,32 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }).catch(() => setSyncState('error'));
   }, [isClerkLoaded, user, isNotFound, syncState, getToken, queryClient]);
 
-  // حفظ الجلسة في localStorage ليستطيع النظام الأصلي قراءتها — يجب أن يكون قبل أي return مبكر
+  // حفظ الجلسة + Clerk token في localStorage ليستطيع النظام الأصلي قراءتها
   useEffect(() => {
-    if (dbUser && dbUser.status === "approved") {
+    if (!dbUser || dbUser.status !== "approved") return;
+
+    // نجلب التوكن ونحفظه مع الجلسة
+    getToken().then(token => {
       localStorage.setItem('najran_session', JSON.stringify({
         userId: dbUser.id,
         name: dbUser.name,
         email: dbUser.email,
         role: dbUser.role,
+        clerkToken: token,
         timestamp: Date.now(),
       }));
-    }
-  }, [dbUser]);
+    });
+
+    // تحديث آخر تسجيل دخول
+    getToken().then(token => {
+      if (token) {
+        fetch('/api/users/me/login', {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${token}` },
+        }).catch(() => {});
+      }
+    });
+  }, [dbUser, getToken]);
 
   if (!isClerkLoaded || isDbLoading || syncState === 'syncing') {
     return (
@@ -288,6 +303,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/projects" component={() => <ProtectedRoute component={ProjectsList} />} />
           <Route path="/projects/new" component={() => <ProtectedRoute component={NewProject} />} />
           <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsers} adminOnly />} />
+          <Route path="/admin/audit" component={() => <ProtectedRoute component={AuditLog} adminOnly />} />
           <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
           <Route path="/pending" component={() => (
              <Show when="signed-in" fallback={<Redirect to="/sign-in" />}>
