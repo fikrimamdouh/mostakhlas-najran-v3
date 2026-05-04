@@ -182,16 +182,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }).catch(() => setSyncState('error'));
   }, [isClerkLoaded, user, isNotFound, syncState, getToken, queryClient]);
 
-  if (!isClerkLoaded || isDbLoading || syncState === 'syncing') {
-    return (
-      <div className="flex h-screen items-center justify-center flex-col gap-3" style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' }}>
-        <img src="/logo.png" alt="" className="h-16 w-auto opacity-80" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
-        <p className="text-white text-lg font-medium">جاري التحميل...</p>
-      </div>
-    );
-  }
-
-  // حفظ الجلسة في localStorage ليستطيع النظام الأصلي قراءتها
+  // حفظ الجلسة في localStorage ليستطيع النظام الأصلي قراءتها — يجب أن يكون قبل أي return مبكر
   useEffect(() => {
     if (dbUser && dbUser.status === "approved") {
       localStorage.setItem('najran_session', JSON.stringify({
@@ -203,6 +194,15 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       }));
     }
   }, [dbUser]);
+
+  if (!isClerkLoaded || isDbLoading || syncState === 'syncing') {
+    return (
+      <div className="flex h-screen items-center justify-center flex-col gap-3" style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' }}>
+        <img src="/logo.png" alt="" className="h-16 w-auto opacity-80" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
+        <p className="text-white text-lg font-medium">جاري التحميل...</p>
+      </div>
+    );
+  }
 
   if (dbUser?.status === "pending") {
     return <Redirect to="/pending" />;
