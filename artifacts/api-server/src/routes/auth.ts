@@ -16,7 +16,7 @@ router.post("/sync", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   try {
-    const { email, name, company, phone } = req.body;
+    const { email, name, company, hospital, position, phone } = req.body;
 
     const existing = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId)).limit(1);
 
@@ -53,6 +53,8 @@ router.post("/sync", async (req, res) => {
       name: user.name,
       email: user.email,
       company: user.company,
+      hospital: hospital || null,
+      position: position || null,
       phone: user.phone,
     }).catch(() => {});
 

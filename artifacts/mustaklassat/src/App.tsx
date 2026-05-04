@@ -27,11 +27,9 @@ const queryClient = new QueryClient({
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 function SignInPage() {
-<<<<<<< codex/fix-failed-to-load-clerk-js-lemlqp
   return <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-muted/30 px-4 gap-4"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /><p className="text-sm text-muted-foreground">نسيت كلمة المرور؟ من شاشة الدخول اضغط <strong>Forgot password?</strong> وسيصلك كود/رابط استعادة على بريدك الإلكتروني.</p></div>;
-=======
-  return <div className="flex min-h-[100dvh] items-center justify-center bg-muted/30 px-4"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /></div>;
->>>>>>> main
+  return <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-muted/30 px-4 gap-4"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /><p className="text-sm text-muted-foreground">نسيت كلمة المرور؟ من شاشة الدخول اضغط <strong>Forgot password?</strong> وسيصلك كود/رابط استعادة على بريدك الإلكتروني.</p></div>;
+ main
 }
 function SignUpPage() {
   return <div className="flex min-h-[100dvh] items-center justify-center bg-muted/30 px-4"><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} /></div>;
@@ -46,7 +44,6 @@ function ClerkTokenSyncer() {
   return null;
 }
 
-<<<<<<< codex/fix-failed-to-load-clerk-js-lemlqp
 
 function ClerkUserSyncer() {
   const { user, isLoaded } = useUser();
@@ -70,6 +67,8 @@ function ClerkUserSyncer() {
             email: user.primaryEmailAddress?.emailAddress || "",
             name: user.fullName || user.firstName || "مستخدم جديد",
             company: user.unsafeMetadata?.company || null,
+            hospital: user.unsafeMetadata?.hospital || null,
+            position: user.unsafeMetadata?.position || null,
             phone: user.primaryPhoneNumber?.phoneNumber || null,
           }),
         });
@@ -98,20 +97,7 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
-=======
-function ClerkQueryClientCacheInvalidator() {
-  const { addListener } = useClerk();
-  const qc = useQueryClient();
-  const prevUserIdRef = useRef<string | null | undefined>(undefined);
-  useEffect(() => addListener(({ user }) => {
-    const userId = user?.id ?? null;
-    if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) qc.clear();
-    prevUserIdRef.current = userId;
-  }), [addListener, qc]);
-  return null;
-}
-
->>>>>>> main
+ main
 function AuthGuard({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { user } = useUser();
   const { data: me, isLoading } = useGetMe({ query: { enabled: !!user } });
@@ -141,7 +127,7 @@ function PendingReviewPage() {
         <div className="bg-card border border-border p-8 rounded-xl shadow-sm max-w-md w-full">
           <h2 className="text-2xl font-bold mb-2 text-primary">حسابك قيد المراجعة</h2>
           <p className="text-muted-foreground mb-6">لقد تم تسجيل حسابك بنجاح. يرجى الانتظار حتى يقوم مدير النظام بالموافقة على حسابك.</p>
-          <Button variant="outline" className="w-full" onClick={() => signOut({ redirectUrl: `${basePath}/sign-in` })}>
+          <Button variant="outline" className="w-full" onClick={() => signOut({ redirectUrl: `${basePath}/` })}>
             تسجيل الخروج
           </Button>
         </div>
@@ -154,19 +140,17 @@ function AppRoutes() {
   return (
     <QueryClientProvider client={queryClient}>
       <ClerkTokenSyncer />
-<<<<<<< codex/fix-failed-to-load-clerk-js-lemlqp
       <ClerkUserSyncer />
-=======
->>>>>>> main
+      <ClerkUserSyncer />
+ main
       <ClerkQueryClientCacheInvalidator />
       <Switch>
         <Route path="/" component={HomeRedirect} />
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
-<<<<<<< codex/fix-failed-to-load-clerk-js-lemlqp
         <Route path="/forgot-password/*?" component={SignInPage} />
-=======
->>>>>>> main
+        <Route path="/forgot-password/*?" component={SignInPage} />
+ main
         <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
         <Route path="/extracts" component={() => <ProtectedRoute component={ExtractsList} />} />
         <Route path="/extracts/new" component={() => <ProtectedRoute component={NewExtract} />} />

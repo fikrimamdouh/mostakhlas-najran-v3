@@ -118,7 +118,7 @@ export async function sendRejectionEmail(toEmail: string, name: string): Promise
 }
 
 
-export async function sendAdminNewSignupEmail(adminEmail: string, payload: { name: string; email: string; company?: string | null; phone?: string | null; }): Promise<void> {
+export async function sendAdminNewSignupEmail(adminEmail: string, payload: { name: string; email: string; company?: string | null; hospital?: string | null; position?: string | null; phone?: string | null; }): Promise<void> {
   const resend = await getResendClient();
   if (!resend) return;
 
@@ -133,6 +133,8 @@ export async function sendAdminNewSignupEmail(adminEmail: string, payload: { nam
           <p><strong>الاسم:</strong> ${payload.name}</p>
           <p><strong>الإيميل:</strong> ${payload.email}</p>
           <p><strong>الشركة:</strong> ${payload.company || "-"}</p>
+          <p><strong>المستشفى:</strong> ${payload.hospital || "-"}</p>
+          <p><strong>المنصب:</strong> ${payload.position || "-"}</p>
           <p><strong>الجوال:</strong> ${payload.phone || "-"}</p>
           <br/>
           <p style="color: #6b7280; font-size: 14px;">تم الإرسال تلقائياً إلى مدير النظام الأساسي.</p>
