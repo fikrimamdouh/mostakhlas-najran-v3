@@ -5,7 +5,11 @@
  * Construction Extracts Management System API
  * OpenAPI spec version: 0.1.0
  */
+import type { Extract } from "./extract";
 
-export interface HealthStatus {
-  status: string;
+export interface ExtractListResponse {
+  extracts: Extract[];
+  total: number;
+  page: number;
+  limit: number;
 }

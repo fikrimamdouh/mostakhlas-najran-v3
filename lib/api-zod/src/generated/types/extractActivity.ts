@@ -6,6 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
+export interface ExtractActivity {
+  id: number;
+  extractNumber: string;
+  projectName?: string | null;
   status: string;
+  amount: number;
+  action: string;
+  timestamp: Date;
 }
