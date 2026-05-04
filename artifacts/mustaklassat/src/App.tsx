@@ -74,7 +74,24 @@ function HomeRedirect() {
   return <><Show when="signed-in"><Redirect to="/dashboard" /></Show><Show when="signed-out"><Home /></Show></>;
 }
 
-<<<<<<< codex/fix-failed-to-load-clerk-js-z1ynem
+
+function PendingReviewPage() {
+  const { signOut } = useClerk();
+  return (
+    <Show when="signed-in">
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center p-4 text-center">
+        <div className="bg-card border border-border p-8 rounded-xl shadow-sm max-w-md w-full">
+          <h2 className="text-2xl font-bold mb-2 text-primary">حسابك قيد المراجعة</h2>
+          <p className="text-muted-foreground mb-6">لقد تم تسجيل حسابك بنجاح. يرجى الانتظار حتى يقوم مدير النظام بالموافقة على حسابك.</p>
+          <Button variant="outline" className="w-full" onClick={() => signOut({ redirectUrl: `${basePath}/sign-in` })}>
+            تسجيل الخروج
+          </Button>
+        </div>
+      </div>
+    </Show>
+  );
+}
+
 
 function PendingReviewPage() {
   const { signOut } = useClerk();
@@ -122,7 +139,6 @@ function AppRoutes() {
 export default function App() {
   return <TooltipProvider><WouterRouter base={basePath || undefined}><Toaster /><AppRoutes /></WouterRouter></TooltipProvider>;
 }
-=======
 function AppRoutes() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -142,7 +158,7 @@ function AppRoutes() {
         <Route path="/admin/audit" component={() => <ProtectedRoute component={AuditLog} />} />
         <Route path="/admin/users-view" component={() => <ProtectedRoute component={UsersView} />} />
         <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
-        <Route path="/pending" component={() => <Show when="signed-in"><div className="flex min-h-[100dvh] flex-col items-center justify-center p-4 text-center"><div className="bg-card border border-border p-8 rounded-xl shadow-sm max-w-md w-full"><h2 className="text-2xl font-bold mb-2 text-primary">حسابك قيد المراجعة</h2><p className="text-muted-foreground mb-6">لقد تم تسجيل حسابك بنجاح. يرجى الانتظار حتى يقوم مدير النظام بالموافقة على حسابك.</p></div></div></Show>} />
+        <Route path="/pending" component={PendingReviewPage} />
         <Route component={NotFound} />
       </Switch>
     </QueryClientProvider>
@@ -152,4 +168,4 @@ function AppRoutes() {
 export default function App() {
   return <TooltipProvider><WouterRouter base={basePath || undefined}><Toaster /><AppRoutes /></WouterRouter></TooltipProvider>;
 }
->>>>>>> main
+ main

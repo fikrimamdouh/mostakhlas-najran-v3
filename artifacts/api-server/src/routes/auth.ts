@@ -2,7 +2,7 @@ import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { sendWelcomeEmail } from "../lib/email";
+import { sendAdminNewSignupEmail, sendWelcomeEmail } from "../lib/email";
 
 const router = Router();
 
@@ -47,8 +47,14 @@ router.post("/sync", async (req, res) => {
       phone: phone || null,
     }).returning();
 
-    // Send welcome email asynchronously
+    // Send notifications asynchronously
     sendWelcomeEmail(user.email, user.name).catch(() => {});
+    sendAdminNewSignupEmail(PRIMARY_ADMIN_EMAIL, {
+      name: user.name,
+      email: user.email,
+      company: user.company,
+      phone: user.phone,
+    }).catch(() => {});
 
     return res.status(201).json(user);
   } catch (err) {
