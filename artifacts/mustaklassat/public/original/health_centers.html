@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <script src="/original/auth-check.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المراكز الصحية - تجمع نجران الصحي</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            direction: rtl;
+            position: relative;
+            overflow: hidden;
+        }
+        #particles-js-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        .mini-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            text-decoration: none;
+            transition: 0.3s;
+            backdrop-filter: blur(5px);
+            position: absolute;
+            top: 15px;
+            z-index: 10;
+        }
+        .mini-btn:hover {
+            background: rgba(255, 255, 255, 0.35);
+        }
+        .mini-btn.home {
+            right: 15px;
+        }
+        .mini-btn.settings {
+            right: 80px;
+        }
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 600px;
+            width: 90%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.2);
+            padding: 50px;
+            text-align: center;
+            color: #2c3e50;
+        }
+        .header-info img {
+            width: 90px;
+            margin-bottom: 15px;
+        }
+        .header-info h1 {
+            font-size: 30px;
+            font-weight: 700;
+            color: #1e3c72;
+            margin: 10px 0;
+        }
+        .header-info h3 {
+            font-size: 20px;
+            color: #2a5298;
+            margin-bottom: 20px;
+        }
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .login-form input {
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            text-align: center;
+            font-family: 'Tajawal', sans-serif;
+        }
+        .remember-me {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+        }
+        .error-msg {
+            color: #e74c3c;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: none;
+        }
+        .btn {
+            display: inline-block;
+            margin: 10px;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+            text-decoration: none;
+            width: 220px;
+            color: #fff;
+            font-family: 'Tajawal', sans-serif;
+        }
+        .btn-labor {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+        .btn-consumables {
+            background: linear-gradient(135deg, #007bff, #6610f2);
+        }
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+        .logout-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: #e74c3c;
+            color: #fff;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 2;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="particles-js-bg"></div>
+
+    <!-- أزرار التنقل -->
+    <a href="index.html" class="mini-btn home"><i class="fas fa-home"></i> الرئيسية</a>
+    <a href="settings_main.html" class="mini-btn settings"><i class="fas fa-cog"></i> الإعدادات</a>
+
+    <!-- صفحة تسجيل الدخول -->
+    <div class="container" id="login-container">
+        <div class="header-info">
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي">
+            <h1>تجمع نجران الصحي</h1>
+            <h3>إدارة الهندسة والصيانة</h3>
+        </div>
+        <form class="login-form" onsubmit="return login()">
+            <input type="text" id="username" placeholder="اسم المستخدم" required>
+            <input type="password" id="password" placeholder="كلمة المرور" required>
+            <div class="remember-me">
+                <input type="checkbox" id="remember">
+                <label for="remember">تذكرني</label>
+            </div>
+            <div class="error-msg" id="error-msg">بيانات الدخول غير صحيحة</div>
+            <button type="submit" class="btn btn-labor">دخول</button>
+        </form>
+    </div>
+
+    <!-- صفحة الزرّين بعد الدخول -->
+    <div class="container" id="main-container" style="display: none;">
+        <button class="logout-btn" onclick="logout()">تسجيل خروج</button>
+        <div class="header-info">
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي">
+            <h1>تجمع نجران الصحي</h1>
+            <h3>إدارة الهندسة والصيانة</h3>
+        </div>
+        <h2 style="margin-bottom: 30px;">اختر نوع المستخلص</h2>
+        <a href="health_centers_attendance.html" class="btn btn-labor">
+            <i class="fas fa-users"></i> مستخلص العمالة
+        </a>
+        <a href="health_centers_consumables.html" class="btn btn-consumables">
+            <i class="fas fa-box-open"></i> مستخلص المتسهلكات
+        </a>
+    </div>
+
+    <script>
+        const correctUser = "admin";
+        const correctPass = "najran2025";
+
+        function login() {
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
+            const remember = document.getElementById('remember').checked;
+
+            if (user === correctUser && pass === correctPass) {
+                const sessionData = { username: user, timestamp: new Date().toISOString() };
+                localStorage.setItem('health_centers_logged_in', JSON.stringify(sessionData));
+                if (remember) {
+                    localStorage.setItem('health_centers_remembered', JSON.stringify(sessionData));
+                }
+                showMain();
+            } else {
+                document.getElementById('error-msg').style.display = 'block';
+            }
+            return false;
+        }
+
+        function logout() {
+            localStorage.removeItem('health_centers_logged_in');
+            localStorage.removeItem('health_centers_remembered');
+            location.reload();
+        }
+
+        function showMain() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('main-container').style.display = 'block';
+        }
+
+        window.onload = function () {
+            particlesJS("particles-js-bg", {
+                particles: {
+                    number: { value: 80, density: { enable: true, value_area: 800 } },
+                    color: { value: "#d4af37" },
+                    shape: { type: "circle" },
+                    opacity: { value: 0.5, random: true },
+                    size: { value: 3, random: true },
+                    line_linked: { enable: true, distance: 150, color: "#d4af37", opacity: 0.4, width: 1 },
+                    move: { enable: true, speed: 2 }
+                },
+                interactivity: {
+                    detect_on: "canvas",
+                    events: {
+                        onhover: { enable: true, mode: "grab" },
+                        onclick: { enable: true, mode: "push" }
+                    }
+                },
+                retina_detect: true
+            });
+
+            const remembered = localStorage.getItem('health_centers_remembered');
+            if (remembered) {
+                showMain();
+            } else {
+                const session = localStorage.getItem('health_centers_logged_in');
+                if (session) {
+                    const data = JSON.parse(session);
+                    const now = new Date();
+                    const loginTime = new Date(data.timestamp);
+                    const diffHours = (now - loginTime) / (1000 * 3600);
+                    if (diffHours < 24) {
+                        showMain();
+                    } else {
+                        localStorage.removeItem('health_centers_logged_in');
+                    }
+                }
+            }
+        };
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <script src="/original/auth-check.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جدول الحضور والغياب</title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AAABAAEAAQEAAAEAGAAoAAAAFgAAACgAAAAQAAAAIAAAAAEAGAAAAAAAAAAAAAAA">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="attendance_contract_info.css">
+    <script src="contract_data_connector.js"></script>
+
+    <style>
+    
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #ffffff;
+            color: #000000;
+            font-family: 'Tajawal', Arial, sans-serif;
+            line-height: 1.6;
+            overflow-x: auto;
+        }
+        
+        .container {
+            background-color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        #particles-js-bg {
+            background-color: transparent;
+        }
+        
+        .department-table,
+        .action-buttons,
+        .header-info,
+        .page-contract-info,
+        .extract-details,
+        .nav-bar {
+            background-color: #ffffff;
+        }
+        
+        table {
+            background-color: #ffffff;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        
+        th, td {
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        
+<style>
+@media print {
+    body {
+        font-family: 'Tajawal', Arial, sans-serif !important;
+        font-size: 12px !important;
+        direction: rtl !important;
+        background: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        color: #000 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* إخفاء العناصر غير المهمة للطباعة */
+    .action-buttons, .nav-bar, .zoom-buttons, .no-print, .dialog, #particles-js-bg, footer {
+        display: none !important;
+    }
+
+    /* إظهار العنوان الكامل في الطباعة */
+    .extract-details {
+        display: block !important;
+        text-align: center !important;
+        font-size: 14px !important;
+        font-weight: bold !important;
+        margin: 15px 0 !important;
+        padding: 10px !important;
+        border: 1px solid #333 !important;
+        background: #f9f9f9 !important;
+    }
+
+    /* إظهار التواقيع في الطباعة */
+    .print-signatures {
+        display: block !important;
+        margin: 20px 0 !important;
+        page-break-inside: avoid !important;
+        border-top: 1px solid #333 !important;
+        padding-top: 15px !important;
+    }
+
+    /* تنسيق الجدول الأساسي */
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        table-layout: auto !important;
+        background: #fff !important;
+        page-break-inside: avoid !important;
+    }
+
+    thead {
+        display: table-header-group !important;
+        background: #003087 !important;
+        color: #fff !important;
+    }
+
+    th, td {
+        border: 1px solid #333 !important;
+        padding: 2px 4px !important;
+        font-size: 12px !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+        background: #fff !important;
+        max-width: 200px !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+    }
+
+    /* أعمدة الأيام */
+    th.day-col, td.day-col {
+        min-width: 18px !important;
+        max-width: 22px !important;
+        width: 20px !important;
+        font-size: 13px !important;
+        font-weight: bold !important;
+        line-height: 1.6 !important;
+        color: #222 !important;
+        background: #eaf6fa !important;
+        padding: 0 !important;
+    }
+
+    /* حضور */
+    .present, .day-col.present {
+        color: #0072ff !important;
+        background: #e8f0fe !important;
+    }
+    /* غياب */
+    .absent, .day-col.absent {
+        color: #ff1744 !important;
+        background: #ffeaea !important;
+    }
+
+    /* تمييز الفئة */
+    th.category-col, td.category-col {
+        min-width: 30px !important;
+        max-width: 45px !important;
+        font-size: 15px !important;
+        font-weight: 700 !important;
+        background: #f7f7fa !important;
+        color: #333 !important;
+    }
+
+    /* اسم الموظف */
+    th.name-col, td.name-col {
+        min-width: 110px !important;
+        max-width: 170px !important;
+    }
+    /* مسمى الوظيفة */
+    th.title-col, td.title-col {
+        min-width: 80px !important;
+        max-width: 110px !important;
+    }
+
+    /* إجماليات - صفوف خاصة */
+    tr.total-row td {
+        background: #f8f8f8 !important;
+        font-weight: bold !important;
+        font-size: 13px !important;
+    }
+
+    /* Landscape */
+    @page {
+        size: A4 landscape;
+        margin: 6mm;
+    }
+
+    /* التواقيع في الطباعة - إظهار بقوة تحت كل جدول */
+    .print-signatures {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        margin: 20px 0 !important;
+        page-break-inside: avoid !important;
+        border-top: 2px solid #333 !important;
+        padding-top: 15px !important;
+        background: white !important;
+        clear: both !important;
+    }
+
+    .print-signatures h4 {
+        display: block !important;
+        visibility: visible !important;
+        text-align: center !important;
+        margin-bottom: 15px !important;
+        font-size: 14px !important;
+        font-weight: bold !important;
+        color: #000 !important;
+    }
+
+    .print-signatures-grid {
+        display: grid !important;
+        visibility: visible !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 20px !important;
+        margin: 15px 0 !important;
+    }
+
+    .print-signature-item {
+        display: block !important;
+        visibility: visible !important;
+        text-align: center !important;
+        padding: 10px !important;
+        border: 1px solid #333 !important;
+        border-radius: 5px !important;
+        background: #f9f9f9 !important;
+    }
+
+    .print-signature-title {
+        display: block !important;
+        visibility: visible !important;
+        font-weight: bold !important;
+        margin-bottom: 8px !important;
+        font-size: 12px !important;
+        color: #000 !important;
+    }
+
+    .print-signature-line {
+        display: block !important;
+        visibility: visible !important;
+        border-bottom: 2px solid #000 !important;
+        height: 30px !important;
+        margin: 8px 0 !important;
+    }
+
+    .print-signature-name {
+        display: block !important;
+        visibility: visible !important;
+        font-size: 10px !important;
+        color: #666 !important;
+    }
+}
+
+    </style>
+</head>
+
+<body>
+
+<script>
+function preparePrint() {
+    const elementsToHide = document.querySelectorAll(
+        '.action-buttons, .zoom-buttons, .nav-bar, .no-print, .dialog, #particles-js-bg'
+    );
+    elementsToHide.forEach(el => el.style.display = 'none');
+
+    // إظهار كل الجداول بقوة
+    document.querySelectorAll('.department-table').forEach(el => {
+        el.style.display = 'block';
+        el.style.visibility = 'visible';
+        el.style.opacity = '1';
+    });
+
+    // إظهار التواقيع للطباعة
+    const printSignatures = document.querySelectorAll('.print-signatures');
+    printSignatures.forEach(sig => {
+        sig.style.display = 'block';
+        sig.style.visibility = 'visible';
+        sig.style.opacity = '1';
+    });
+
+    // تحديث البيانات
+    updateContractDataForPrint();
+    updatePrintSignatures();
+
+    window.print();
+
+    setTimeout(() => {
+        elementsToHide.forEach(el => el.style.display = '');
+        printSignatures.forEach(sig => {
+            sig.style.display = 'none';
+            sig.style.visibility = 'hidden';
+            sig.style.opacity = '0';
+        });
+    }, 1000);
+}
+
+
+    function updateContractDataForPrint() {
+        try {
+            // استدعاء دالة تحديث بيانات العقد الموجودة
+            if (typeof updateContractDisplayData === 'function') {
+                updateContractDisplayData();
+            }
+            
+            // تحديث بيانات العقد من localStorage مع قيم افتراضية أفضل
+            const hospitalName = localStorage.getItem('hospitalName') || 'مجمع نجران الصحي';
+            const companyName = localStorage.getItem('companyName') || 'شركة المقاولات';
+            const contractDetails = localStorage.getItem('contractDetails') || 'عقد الصيانة والتشغيل';
+            const contractType = localStorage.getItem('contractType') || 'عقد أساسي';
+            
+            // تحديث التواريخ من البيانات المحفوظة
+            const extractStart = localStorage.getItem('extractStart') || localStorage.getItem('extractStartDate');
+            const extractEnd = localStorage.getItem('extractEnd') || localStorage.getItem('extractEndDate');
+            const extractMonth = localStorage.getItem('extractMonth') || 'الشهر الحالي';
+            const extractYear = localStorage.getItem('extractYear') || new Date().getFullYear();
+
+            // تنسيق التواريخ
+            const formattedStartDate = formatDateForDisplay(extractStart);
+            const formattedEndDate = formatDateForDisplay(extractEnd);
+
+            // تحديث جميع العناصر في الصفحة
+            updateElementsText('.hospitalName', hospitalName);
+            updateElementsText('.companyName', companyName);
+            updateElementsText('.contractDetails', contractDetails);
+            updateElementsText('.contractType', contractType);
+            updateElementsText('#extract-start-date, #extract-start', formattedStartDate);
+            updateElementsText('#extract-end-date, #extract-end', formattedEndDate);
+            updateElementsText('#extract-month', extractMonth);
+            updateElementsText('#extract-year', extractYear);
+        updatePrintSignatures();
+
+        } catch (error) {
+            console.error('خطأ في تحديث بيانات العقد للطباعة:', error);
+        }
+    }
+
+    function updateElementsText(selector, text) {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+            if (element) element.textContent = text;
+        });
+    }
+
+    function formatDateForDisplay(dateString) {
+        if (!dateString || dateString === 'غير محدد') {
+            return new Date().toLocaleDateString('ar-SA');
+        }
+        
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return dateString;
+            return date.toLocaleDateString('ar-SA');
+        } catch (error) {
+            return dateString;
+        }
+    }
+</script>
+<!-- =================================================================== -->
+<!--      قسم النوافذ المنبثقة الموحد (Dialogs Section)              -->
+<!-- =================================================================== -->
+
+<!-- نافذة تعديل التواقيع -->
+<div id="signature-edit-overlay" class="overlay"></div>
+<div id="signature-edit-dialog" class="dialog">
+    <div class="dialog-content">
+        <span class="close" onclick="closeDialog('signature-edit-dialog')">×</span>
+        <div id="signature-password-section">
+            <h3>أدخل الباسورد لتعديل التواقيع</h3>
+            <input type="password" id="signature-password-input" placeholder="الباسورد">
+            <p id="signature-password-error" class="error-message" style="display: none;"></p>
+            <div class="buttons">
+                <button class="btn btn-success" onclick="verifySignaturePassword()"><i class="fas fa-check-circle"></i> تأكيد</button>
+                <button class="btn btn-secondary" onclick="closeDialog('signature-edit-dialog')"><i class="fas fa-times-circle"></i> إلغاء</button>
+            </div>
+        </div>
+        <div id="signature-edit-content" style="display: none;">
+            <h3>تعديل التواقيع</h3>
+            <div id="signature-fields-container"></div>
+            <div class="buttons">
+                <button class="btn btn-success" onclick="saveSignatures()"><i class="fas fa-save"></i> حفظ</button>
+                <button class="btn btn-secondary" onclick="closeDialog('signature-edit-dialog')"><i class="fas fa-times-circle"></i> إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- نافذة الباسورد لتعديل غرامة الجنسية -->
+<div id="nationality-fine-password-dialog" class="dialog" style="display: none;">
+    <div class="dialog-content">
+        <span class="close" onclick="closeNationalityFinePasswordDialog()">×</span>
+        <h3>أدخل الباسورد لتعديل غرامة الجنسية</h3>
+        <input type="password" id="nationality-fine-password-input" placeholder="الباسورد">
+        <p id="nationality-fine-password-error" style="color: red;"></p>
+        <div class="buttons">
+            <button class="confirm-btn" onclick="verifyNationalityFinePassword()"><i class="fas fa-check-circle"></i> تأكيد</button>
+            <button class="cancel-btn" onclick="closeNationalityFinePasswordDialog()"><i class="fas fa-times-circle"></i> إلغاء</button>
+        </div>
+    </div>
+</div>
+<!-- Overlay لنافذة باسورد غرامة الجنسية -->
+<div id="nationality-fine-password-overlay" class="overlay" style="display: none;"></div>
+
+<!-- نافذة الباسورد لمسح البيانات -->
+<div id="clear-data-password-dialog" class="dialog" style="display: none;">
+    <div class="dialog-content">
+        <span class="close" onclick="closeClearDataPasswordDialog()">×</span>
+        <h3>أدخل الباسورد لمسح البيانات</h3>
+        <input type="password" id="clear-data-password-input" placeholder="الباسورد">
+        <p id="clear-data-password-error" style="color: red;"></p>
+        <div class="buttons">
+            <button class="confirm-btn" onclick="verifyClearDataPassword()"><i class="fas fa-check-circle"></i> تأكيد</button>
+            <button class="cancel-btn" onclick="closeClearDataPasswordDialog()"><i class="fas fa-times-circle"></i> إلغاء</button>
+        </div>
+    </div>
+</div>
+<!-- Overlay لنافذة باسورد مسح البيانات -->
+<div id="clear-data-password-overlay" class="overlay" style="display: none;"></div>
+
+
+<body>
+    <div id="particles-js-bg"></div>
+    <div class="container">
+        <div class="header-info">
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-right">
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-left">
+            <h1>تجمع نجران الصحي</h1>
+            <h3>إدارة الهندسة والصيانة</h3>
+            <h2>بيان بالحضور والغياب</h2>
+            <p class="date" id="current-date-time"></p>
+        </div>
+
+        <div class="page-contract-info">
+            <p><strong>اسم المستشفى:</strong> <span class="hospitalName">غير محدد</span></p>
+            <p><strong>تفاصيل العقد:</strong> <span class="contractDetails">غير محدد</span></p>
+            <p><strong>اسم الشركة:</strong> <span class="companyName">غير محدد</span></p>
+            <p><strong>نوع العقد:</strong> <span class="contractType">غير محدد</span></p>
+            <p class="directPurchaseContainer" style="display: none;"><strong>نسبة الشراء المباشر:</strong> <span class="directPurchaseRatio">0</span>%</p>
+            <p><strong>مدة المستخلص:</strong> من <span id="extract-start-date">غير محدد</span> إلى <span id="extract-end-date">غير محدد</span></p>
+        </div>
+
+        <div class="extract-details">
+            <p class="extract-details-text">مستخلص العمالة شهر <span id="extract-month">غير محدد</span> <span id="extract-year">غير محدد</span> من تاريخ <span id="extract-start">غير محدد</span> إلى <span id="extract-end">غير محدد</span></p>
+        </div>
+
+        <div class="nav-bar">
+            <div class="dropdown">
+                <select id="navigation" onchange="window.navigateTo(this.value)">
+                    <option value="#">-- اختر صفحة --</option>
+                    <option value="index.html">الصفحة الرئيسية</option>
+                    <option value="attendance.html" selected>الحضور والانصراف</option>
+                    <option value="performance.html">شهادة الأداء</option>
+                    <option value="achievement.html">شهادة الإنجاز</option>
+                    <option value="consumables.html">مستخلص المستهلكات</option>
+                    <option value="spare_parts.html">مستخلص قطع الغيار</option>
+                    <option value="settings_main.html">الإعدادات الرئيسية</option>
+                </select>
+            </div>
+        </div>
+<script>
+window.navigateTo = function (url) {
+    if (url && url !== '#') {
+        window.location.href = url;
+    }
+};
+</script>
+    <!-- ================================================================ -->
+<!-- ✅ 2. كود الأزرار المحدث في HTML (بدون تنسيقات مضمنة) ✅ -->
+<!-- ================================================================ -->
+<div class="action-buttons">
+<!-- ✅✅✅ هذا هو الشكل الصحيح والنهائي للزر ✅✅✅ -->
+   <button 
+        onclick="openEmployeeManagement()" 
+        class="action-btn" 
+        style="background-color: #6f42c1; color: white;"
+        title="الوصول إلى لوحة الإدارة لتعديل الموظفين، أسماء الأقسام، وغيرها">
+        <i class="fas fa-cog"></i> الإعدادات والإدارة
+    </button>    <button onclick="openDialog('upload-excel-dialog')"><i class="fas fa-file-import"></i> استيراد من Excel</button>
+    <!-- النسخة النهائية للزر في attendance.html -->
+<button 
+    onclick="openPerformanceControlCenter()" 
+    class="action-btn" 
+    style="background-color: #6f42c1; color: white;"
+    title="التحكم في توزيع الراتب وتفعيل شهادات الأداء">
+    <i class="fas fa-cogs"></i> إعدادات الأداء
+</button>
+
+ 
+    <!-- أزرار جديدة بتنسيق مميز -->
+    <button onclick="openSmartUploadDialog()" style="background-color: #17a2b8;"><i class="fas fa-magic"></i> الرفع الذكي</button>
+    <button onclick="openBulkAttendanceDialog()" style="background-color: #6f42c1;"><i class="fas fa-calendar-alt"></i> تعديل جماعي</button>
+
+    <button onclick="openExcelExportDialog()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
+    <button onclick="openPrintDialog()"><i class="fas fa-print"></i> طباعة</button>
+    
+    <!-- أزرار النسخ الاحتياطي والاستعادة بتنسيق مميز -->
+    <button onclick="backupAttendanceData()" style="background-color: #28a745;"><i class="fas fa-download"></i> حفظ نسخة</button>
+    <button onclick="document.getElementById('restore-file-input').click()" style="background-color: #ffc107; color: black;"><i class="fas fa-upload"></i> استعادة نسخة</button>
+    <input type="file" id="restore-file-input" style="display: none;" onchange="restoreAttendanceData(event)" accept=".json">
+    
+    <button onclick="clearData()" style="background-color: #dc3545;"><i class="fas fa-eraser"></i> مسح البيانات</button>
+    <button onclick="openNationalityFineEditor()"><i class="fas fa-money-bill-wave"></i> غرامة الجنسية</button>
+    <button onclick="openSignatureEditDialog()"><i class="fas fa-signature"></i> تعديل التواقيع</button>
+</div>
+
+
+
+        <!-- جدول رقم 1: النظافة -->
+        <div class="department-table">
+            <h3>جدول رقم 1: النظافة</h3>
+            <div class="total">
+                الإجمالي - عدد الموظفين: <span id="cleaning-count">0</span> | التكلفة الشهرية: <span id="cleaning-total-cost">0.00</span> | حسم وغرامة الغياب: <span id="cleaning-total-fines">0.00</span> | صافي الاستحقاق: <span id="cleaning-net-total">0.00</span> | إجمالي الحسم: <span id="cleaning-total-deduction">0.00</span> | إجمالي الغرامة: <span id="cleaning-total-fine">0.00</span> | موظفين بغياب: <span id="cleaning-absent-employees">0</span>
+                <div id="cleaning-status-totals"></div>
+            </div>
+            <table id="cleaning-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2">م</th>
+                        <th rowspan="2" class="job-title">مسمى الوظيفة</th>
+                        <th rowspan="2">الفئة</th>
+                        <th rowspan="2" class="employee-name">اسم شاغل الوظيفة</th>
+                        <th colspan="30" id="cleaning-days-header">الأيام</th>
+                        <th rowspan="2">التكلفة الشهرية</th>
+                        <th colspan="2">عدد الأيام</th>
+                        <th colspan="2">حسم وغرامة الغياب</th>
+                        <th rowspan="2">صافي الاستحقاق</th>
+                        <th rowspan="2">الجنسية</th>
+                        <th rowspan="2">غرامة جنسية</th>
+<th rowspan="2">رقم الإقامة/الهوية</th> <!-- ✅ السطر المضاف في المكان الجديد -->
+
+                        <th class="status-j-col" style="display: none;" rowspan="2">إجازة</th>
+                        <th class="status-sh-col" style="display: none;" rowspan="2">شاغرة</th>
+                        <th class="status-t-col" style="display: none;" rowspan="2">تحت الإجراء</th>
+                        <th class="status-b-col" style="display: none;" rowspan="2">قبل بدء العقد</th>
+                        <th class="status-n-col" style="display: none;" rowspan="2">بعد نهاية العقد</th>
+                    </tr>
+                    <tr id="cleaning-table-header">
+                        <!-- Day headers will be populated by JS -->
+                        <th>حضور</th>
+                        <th>غياب</th>
+                        <th>الحسم</th>
+                        <th>غرامة الغياب</th>
+                    </tr>
+                </thead>
+                <tbody id="cleaning-table-body"></tbody>
+            </table>
+            <div class="zoom-buttons">
+                <button onclick="zoomInTable('cleaning-table')"><i class="fas fa-search-plus"></i> تكبير</button>
+                <button onclick="zoomOutTable('cleaning-table')"><i class="fas fa-search-minus"></i> تصغير</button>
+            </div>
+            <div class="empty-message" id="cleaning-empty">لا يوجد موظفون في هذا القسم</div>
+            
+            <!-- التواقيع للطباعة - جدول النظافة -->
+            <div class="print-signatures" style="display: none;">
+                <h4>التواقيع</h4>
+                <div class="print-signatures-grid">
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مدير المشروع:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-project-manager-1">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">رئيس قسم الصيانة:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-maintenance-head-1">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مدير المستشفى:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-hospital-manager-1">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مندوب المقاول:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-contractor-rep-1">غير محدد</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+ 
+        <!-- جدول رقم 2: الكهرباء -->
+        <div class="department-table">
+            <h3>جدول رقم 2: الكهرباء</h3>
+            <div class="total">
+                الإجمالي - عدد الموظفين: <span id="electricity-count">0</span> | التكلفة الشهرية: <span id="electricity-total-cost">0.00</span> | حسم وغرامة الغياب: <span id="electricity-total-fines">0.00</span> | صافي الاستحقاق: <span id="electricity-net-total">0.00</span> | إجمالي الحسم: <span id="electricity-total-deduction">0.00</span> | إجمالي الغرامة: <span id="electricity-total-fine">0.00</span> | موظفين بغياب: <span id="electricity-absent-employees">0</span>
+                <div id="electricity-status-totals"></div>
+            </div>
+            <table id="electricity-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2">م</th>
+                        <th rowspan="2" class="job-title">مسمى الوظيفة</th>
+                        <th rowspan="2">الفئة</th>
+                        <th rowspan="2" class="employee-name">اسم شاغل الوظيفة</th>
+                        <th colspan="30" id="electricity-days-header">الأيام</th>
+                        <th rowspan="2">التكلفة الشهرية</th>
+                        <th colspan="2">عدد الأيام</th>
+                        <th colspan="2">حسم وغرامة الغياب</th>
+                        <th rowspan="2">صافي الاستحقاق</th>
+                        <th rowspan="2">الجنسية</th>
+                        <th rowspan="2">غرامة جنسية</th>
+<th rowspan="2">رقم الإقامة/الهوية</th> <!-- ✅ السطر المضاف في المكان الجديد -->
+
+                        <th class="status-j-col" style="display: none;" rowspan="2">إجازة</th>
+                        <th class="status-sh-col" style="display: none;" rowspan="2">شاغرة</th>
+                        <th class="status-t-col" style="display: none;" rowspan="2">تحت الإجراء</th>
+                        <th class="status-b-col" style="display: none;" rowspan="2">قبل بدء العقد</th>
+                        <th class="status-n-col" style="display: none;" rowspan="2">بعد نهاية العقد</th>
+                    </tr>
+                    <tr id="electricity-table-header">
+                        <th>حضور</th>
+                        <th>غياب</th>
+                        <th>الحسم</th>
+                        <th>غرامة الغياب</th>
+                    </tr>
+                </thead>
+                <tbody id="electricity-table-body"></tbody>
+            </table>
+            <div class="zoom-buttons">
+                <button onclick="zoomInTable('electricity-table')"><i class="fas fa-search-plus"></i> تكبير</button>
+                <button onclick="zoomOutTable('electricity-table')"><i class="fas fa-search-minus"></i> تصغير</button>
+            </div>
+            <div class="empty-message" id="electricity-empty">لا يوجد موظفون في هذا القسم</div>
+            
+            <!-- التواقيع للطباعة - جدول الكهرباء -->
+            <div class="print-signatures" style="display: none;">
+                <h4>التواقيع</h4>
+                <div class="print-signatures-grid">
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مدير المشروع:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-project-manager-2">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">رئيس قسم الصيانة:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-maintenance-head-2">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مدير المستشفى:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-hospital-manager-2">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مندوب المقاول:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-contractor-rep-2">غير محدد</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+ 
+
+        <!-- جدول رقم 3: الزراعة -->
+<div class="print-section-container">
+
+        <div class="department-table">
+            <h3>جدول رقم 3: الزراعة</h3>
+            <div class="total">
+                الإجمالي - عدد الموظفين: <span id="agriculture-count">0</span> | التكلفة الشهرية: <span id="agriculture-total-cost">0.00</span> | حسم وغرامة الغياب: <span id="agriculture-total-fines">0.00</span> | صافي الاستحقاق: <span id="agriculture-net-total">0.00</span> | إجمالي الحسم: <span id="agriculture-total-deduction">0.00</span> | إجمالي الغرامة: <span id="agriculture-total-fine">0.00</span> | موظفين بغياب: <span id="agriculture-absent-employees">0</span>
+                <div id="agriculture-status-totals"></div>
+            </div>
+            <table id="agriculture-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2">م</th>
+                        <th rowspan="2" class="job-title">مسمى الوظيفة</th>
+                        <th rowspan="2">الفئة</th>
+                        <th rowspan="2" class="employee-name">اسم شاغل الوظيفة</th>
+                        <th colspan="30" id="agriculture-days-header">الأيام</th>
+                        <th rowspan="2">التكلفة الشهرية</th>
+                        <th colspan="2">عدد الأيام</th>
+                        <th colspan="2">حسم وغرامة الغياب</th>
+                        <th rowspan="2">صافي الاستحقاق</th>
+                        <th rowspan="2">الجنسية</th>
+                        <th rowspan="2">غرامة جنسية</th>
+<th rowspan="2">رقم الإقامة/الهوية</th> <!-- ✅ السطر المضاف في المكان الجديد -->
+
+                        <th class="status-j-col" style="display: none;" rowspan="2">إجازة</th>
+                        <th class="status-sh-col" style="display: none;" rowspan="2">شاغرة</th>
+                        <th class="status-t-col" style="display: none;" rowspan="2">تحت الإجراء</th>
+                        <th class="status-b-col" style="display: none;" rowspan="2">قبل بدء العقد</th>
+                        <th class="status-n-col" style="display: none;" rowspan="2">بعد نهاية العقد</th>
+                    </tr>
+                    <tr id="agriculture-table-header">
+                        <th>حضور</th>
+                        <th>غياب</th>
+                        <th>الحسم</th>
+                        <th>غرامة الغياب</th>
+                    </tr>
+                </thead>
+                <tbody id="agriculture-table-body"></tbody>
+            </table>
+            <div class="zoom-buttons">
+                <button onclick="zoomInTable('agriculture-table')"><i class="fas fa-search-plus"></i> تكبير</button>
+                <button onclick="zoomOutTable('agriculture-table')"><i class="fas fa-search-minus"></i> تصغير</button>
+            </div>
+            <div class="empty-message" id="agriculture-empty">لا يوجد موظفون في هذا القسم</div>
+            
+            <!-- التواقيع للطباعة - جدول الزراعة -->
+            <div class="print-signatures" style="display: none;">
+                <h4>التواقيع</h4>
+                <div class="print-signatures-grid">
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مدير المشروع:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-project-manager-3">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">رئيس قسم الصيانة:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-maintenance-head-3">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مدير المستشفى:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-hospital-manager-3">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مندوب المقاول:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-contractor-rep-3">غير محدد</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+ 
+
+        <!-- جدول رقم 4: الأعمال المدنية -->
+ 
+
+        <div class="department-table">
+            <h3>جدول رقم 4: الأعمال المدنية</h3>
+            <div class="total">
+                الإجمالي - عدد الموظفين: <span id="civil-works-count">0</span> | التكلفة الشهرية: <span id="civil-works-total-cost">0.00</span> | حسم وغرامة الغياب: <span id="civil-works-total-fines">0.00</span> | صافي الاستحقاق: <span id="civil-works-net-total">0.00</span> | إجمالي الحسم: <span id="civil-works-total-deduction">0.00</span> | إجمالي الغرامة: <span id="civil-works-total-fine">0.00</span> | موظفين بغياب: <span id="civil-works-absent-employees">0</span>
+                <div id="civil-works-status-totals"></div>
+            </div>
+            <table id="civil-works-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2">م</th>
+                        <th rowspan="2" class="job-title">مسمى الوظيفة</th>
+                        <th rowspan="2">الفئة</th>
+                        <th rowspan="2" class="employee-name">اسم شاغل الوظيفة</th>
+                        <th colspan="30" id="civil-works-days-header">الأيام</th>
+                        <th rowspan="2">التكلفة الشهرية</th>
+                        <th colspan="2">عدد الأيام</th>
+                        <th colspan="2">حسم وغرامة الغياب</th>
+                        <th rowspan="2">صافي الاستحقاق</th>
+                        <th rowspan="2">الجنسية</th>
+                        <th rowspan="2">غرامة جنسية</th>
+<th rowspan="2">رقم الإقامة/الهوية</th> <!-- ✅ السطر المضاف في المكان الجديد -->
+
+                        <th class="status-j-col" style="display: none;" rowspan="2">إجازة</th>
+                        <th class="status-sh-col" style="display: none;" rowspan="2">شاغرة</th>
+                        <th class="status-t-col" style="display: none;" rowspan="2">تحت الإجراء</th>
+                        <th class="status-b-col" style="display: none;" rowspan="2">قبل بدء العقد</th>
+                        <th class="status-n-col" style="display: none;" rowspan="2">بعد نهاية العقد</th>
+                    </tr>
+                    <tr id="civil-works-table-header">
+                        <th>حضور</th>
+                        <th>غياب</th>
+                        <th>الحسم</th>
+                        <th>غرامة الغياب</th>
+                    </tr>
+                </thead>
+                <tbody id="civil-works-table-body"></tbody>
+            </table>
+            <div class="zoom-buttons">
+                <button onclick="zoomInTable('civil-works-table')"><i class="fas fa-search-plus"></i> تكبير</button>
+                <button onclick="zoomOutTable('civil-works-table')"><i class="fas fa-search-minus"></i> تصغير</button>
+            </div>
+            <div class="empty-message" id="civil-works-empty">لا يوجد موظفون في هذا القسم</div>
+        </div>
+<!-- التواقيع للطباعة - جدول الأعمال المدنية -->
+<div class="print-signatures" style="display: none;">
+    <h4>التواقيع</h4>
+    <div class="print-signatures-grid">
+        <div class="print-signature-item">
+            <div class="print-signature-title">مدير المشروع:</div>
+            <div class="print-signature-line"></div>
+            <div class="print-signature-name" id="print-project-manager-4">غير محدد</div>
+        </div>
+        <div class="print-signature-item">
+            <div class="print-signature-title">رئيس قسم الصيانة:</div>
+            <div class="print-signature-line"></div>
+            <div class="print-signature-name" id="print-maintenance-head-4">غير محدد</div>
+        </div>
+        <div class="print-signature-item">
+            <div class="print-signature-title">مدير المستشفى:</div>
+            <div class="print-signature-line"></div>
+            <div class="print-signature-name" id="print-hospital-manager-4">غير محدد</div>
+        </div>
+        <div class="print-signature-item">
+            <div class="print-signature-title">مندوب المقاول:</div>
+            <div class="print-signature-line"></div>
+            <div class="print-signature-name" id="print-contractor-rep-4">غير محدد</div>
+        </div>
+    </div>
+</div>
+        </div>
+ 
+
+        <!-- جدول رقم 5: الميكانيكا -->
+ 
+
+        <div class="department-table">
+            <h3>جدول رقم 5: الميكانيكا</h3>
+            <div class="total">
+                الإجمالي - عدد الموظفين: <span id="mechanical-count">0</span> | التكلفة الشهرية: <span id="mechanical-total-cost">0.00</span> | حسم وغرامة الغياب: <span id="mechanical-total-fines">0.00</span> | صافي الاستحقاق: <span id="mechanical-net-total">0.00</span> | إجمالي الحسم: <span id="mechanical-total-deduction">0.00</span> | إجمالي الغرامة: <span id="mechanical-total-fine">0.00</span> | موظفين بغياب: <span id="mechanical-absent-employees">0</span>
+                <div id="mechanical-status-totals"></div>
+            </div>
+            <table id="mechanical-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2">م</th>
+                        <th rowspan="2" class="job-title">مسمى الوظيفة</th>
+                        <th rowspan="2">الفئة</th>
+                        <th rowspan="2" class="employee-name">اسم شاغل الوظيفة</th>
+                        <th colspan="30" id="mechanical-days-header">الأيام</th>
+                        <th rowspan="2">التكلفة الشهرية</th>
+                        <th colspan="2">عدد الأيام</th>
+                        <th colspan="2">حسم وغرامة الغياب</th>
+                        <th rowspan="2">صافي الاستحقاق</th>
+                        <th rowspan="2">الجنسية</th>
+                        <th rowspan="2">غرامة جنسية</th>
+<th rowspan="2">رقم الإقامة/الهوية</th> <!-- ✅ السطر المضاف في المكان الجديد -->
+
+                        <th class="status-j-col" style="display: none;" rowspan="2">إجازة</th>
+                        <th class="status-sh-col" style="display: none;" rowspan="2">شاغرة</th>
+                        <th class="status-t-col" style="display: none;" rowspan="2">تحت الإجراء</th>
+                        <th class="status-b-col" style="display: none;" rowspan="2">قبل بدء العقد</th>
+                        <th class="status-n-col" style="display: none;" rowspan="2">بعد نهاية العقد</th>
+                    </tr>
+                    <tr id="mechanical-table-header">
+                        <th>حضور</th>
+                        <th>غياب</th>
+                        <th>الحسم</th>
+                        <th>غرامة الغياب</th>
+                    </tr>
+                </thead>
+                <tbody id="mechanical-table-body"></tbody>
+            </table>
+            <div class="zoom-buttons">
+                <button onclick="zoomInTable('mechanical-table')"><i class="fas fa-search-plus"></i> تكبير</button>
+                <button onclick="zoomOutTable('mechanical-table')"><i class="fas fa-search-minus"></i> تصغير</button>
+            </div>
+            <div class="empty-message" id="mechanical-empty">لا يوجد موظفون في هذا القسم</div>
+            
+            <!-- التواقيع للطباعة - جدول الميكانيكا -->
+            <div class="print-signatures" style="display: none;">
+                <h4>التواقيع</h4>
+                <div class="print-signatures-grid">
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مدير المشروع:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-project-manager-5">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">رئيس قسم الصيانة:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-maintenance-head-5">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مدير المستشفى:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-hospital-manager-5">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مندوب المقاول:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-contractor-rep-5">غير محدد</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+ 
+
+        <!-- جدول رقم 6: المغسلة -->
+ 
+
+        <div class="department-table">
+            <h3>جدول رقم 6: المغسلة</h3>
+            <div class="total">
+                الإجمالي - عدد الموظفين: <span id="laundry-count">0</span> | التكلفة الشهرية: <span id="laundry-total-cost">0.00</span> | حسم وغرامة الغياب: <span id="laundry-total-fines">0.00</span> | صافي الاستحقاق: <span id="laundry-net-total">0.00</span> | إجمالي الحسم: <span id="laundry-total-deduction">0.00</span> | إجمالي الغرامة: <span id="laundry-total-fine">0.00</span> | موظفين بغياب: <span id="laundry-absent-employees">0</span>
+                <div id="laundry-status-totals"></div>
+            </div>
+            <table id="laundry-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2">م</th>
+                        <th rowspan="2" class="job-title">مسمى الوظيفة</th>
+                        <th rowspan="2">الفئة</th>
+                        <th rowspan="2" class="employee-name">اسم شاغل الوظيفة</th>
+                        <th colspan="30" id="laundry-days-header">الأيام</th>
+                        <th rowspan="2">التكلفة الشهرية</th>
+                        <th colspan="2">عدد الأيام</th>
+                        <th colspan="2">حسم وغرامة الغياب</th>
+                        <th rowspan="2">صافي الاستحقاق</th>
+                        <th rowspan="2">الجنسية</th>
+                        <th rowspan="2">غرامة جنسية</th>
+<th rowspan="2">رقم الإقامة/الهوية</th> <!-- ✅ السطر المضاف في المكان الجديد -->
+
+                        <th class="status-j-col" style="display: none;" rowspan="2">إجازة</th>
+                        <th class="status-sh-col" style="display: none;" rowspan="2">شاغرة</th>
+                        <th class="status-t-col" style="display: none;" rowspan="2">تحت الإجراء</th>
+                        <th class="status-b-col" style="display: none;" rowspan="2">قبل بدء العقد</th>
+                        <th class="status-n-col" style="display: none;" rowspan="2">بعد نهاية العقد</th>
+                    </tr>
+                    <tr id="laundry-table-header">
+                        <th>حضور</th>
+                        <th>غياب</th>
+                        <th>الحسم</th>
+                        <th>غرامة الغياب</th>
+                    </tr>
+                </thead>
+                <tbody id="laundry-table-body"></tbody>
+            </table>
+            <div class="zoom-buttons">
+                <button onclick="zoomInTable('laundry-table')"><i class="fas fa-search-plus"></i> تكبير</button>
+                <button onclick="zoomOutTable('laundry-table')"><i class="fas fa-search-minus"></i> تصغير</button>
+            </div>
+            <div class="empty-message" id="laundry-empty">لا يوجد موظفون في هذا القسم</div>
+            
+            <!-- التواقيع للطباعة - جدول المغسلة -->
+            <div class="print-signatures" style="display: none;">
+                <h4>التواقيع</h4>
+                <div class="print-signatures-grid">
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مدير المشروع:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-project-manager-6">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">رئيس قسم الصيانة:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-maintenance-head-6">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مدير المستشفى:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-hospital-manager-6">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مندوب المقاول:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-contractor-rep-6">غير محدد</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+ 
+
+        <!-- جدول رقم 7: خدمات المرضى -->
+ 
+
+        <div class="department-table">
+            <h3>جدول رقم 7: خدمات المرضى</h3>
+            <div class="total">
+                الإجمالي - عدد الموظفين: <span id="patient-services-count">0</span> | التكلفة الشهرية: <span id="patient-services-total-cost">0.00</span> | حسم وغرامة الغياب: <span id="patient-services-total-fines">0.00</span> | صافي الاستحقاق: <span id="patient-services-net-total">0.00</span> | إجمالي الحسم: <span id="patient-services-total-deduction">0.00</span> | إجمالي الغرامة: <span id="patient-services-total-fine">0.00</span> | موظفين بغياب: <span id="patient-services-absent-employees">0</span>
+                <div id="patient-services-status-totals"></div>
+            </div>
+            <table id="patient-services-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2">م</th>
+                        <th rowspan="2" class="job-title">مسمى الوظيفة</th>
+                        <th rowspan="2">الفئة</th>
+                        <th rowspan="2" class="employee-name">اسم شاغل الوظيفة</th>
+                        <th colspan="30" id="patient-services-days-header">الأيام</th>
+                        <th rowspan="2">التكلفة الشهرية</th>
+                        <th colspan="2">عدد الأيام</th>
+                        <th colspan="2">حسم وغرامة الغياب</th>
+                        <th rowspan="2">صافي الاستحقاق</th>
+                        <th rowspan="2">الجنسية</th>
+                        <th rowspan="2">غرامة جنسية</th>
+<th rowspan="2">رقم الإقامة/الهوية</th> <!-- ✅ السطر المضاف في المكان الجديد -->
+
+                        <th class="status-j-col" style="display: none;" rowspan="2">إجازة</th>
+                        <th class="status-sh-col" style="display: none;" rowspan="2">شاغرة</th>
+                        <th class="status-t-col" style="display: none;" rowspan="2">تحت الإجراء</th>
+                        <th class="status-b-col" style="display: none;" rowspan="2">قبل بدء العقد</th>
+                        <th class="status-n-col" style="display: none;" rowspan="2">بعد نهاية العقد</th>
+                    </tr>
+                    <tr id="patient-services-table-header">
+                        <th>حضور</th>
+                        <th>غياب</th>
+                        <th>الحسم</th>
+                        <th>غرامة الغياب</th>
+                    </tr>
+                </thead>
+                <tbody id="patient-services-table-body"></tbody>
+            </table>
+            <div class="zoom-buttons">
+                <button onclick="zoomInTable('patient-services-table')"><i class="fas fa-search-plus"></i> تكبير</button>
+                <button onclick="zoomOutTable('patient-services-table')"><i class="fas fa-search-minus"></i> تصغير</button>
+            </div>
+            <div class="empty-message" id="patient-services-empty">لا يوجد موظفون في هذا القسم</div>
+        </div>
+<!-- التواقيع للطباعة - جدول خدمات المرضى -->
+<div class="print-signatures" style="display: none;">
+    <h4>التواقيع</h4>
+    <div class="print-signatures-grid">
+        <div class="print-signature-item">
+            <div class="print-signature-title">مدير المشروع:</div>
+            <div class="print-signature-line"></div>
+            <div class="print-signature-name" id="print-project-manager-7">غير محدد</div>
+        </div>
+        <div class="print-signature-item">
+            <div class="print-signature-title">رئيس قسم الصيانة:</div>
+            <div class="print-signature-line"></div>
+            <div class="print-signature-name" id="print-maintenance-head-7">غير محدد</div>
+        </div>
+        <div class="print-signature-item">
+            <div class="print-signature-title">مدير المستشفى:</div>
+            <div class="print-signature-line"></div>
+            <div class="print-signature-name" id="print-hospital-manager-7">غير محدد</div>
+        </div>
+        <div class="print-signature-item">
+            <div class="print-signature-title">مندوب المقاول:</div>
+            <div class="print-signature-line"></div>
+            <div class="print-signature-name" id="print-contractor-rep-7">غير محدد</div>
+        </div>
+    </div>
+</div>
+        </div>
+ 
+
+        <!-- جدول رقم 8: الوظائف الإدارية السعوديين -->
+        <div class="department-table">
+            <h3>جدول رقم 8: الوظائف الإدارية السعوديين</h3>
+            <div class="total">
+                الإجمالي - عدد الموظفين: <span id="admin-saudi-count">0</span> | التكلفة الشهرية: <span id="admin-saudi-total-cost">0.00</span> | حسم وغرامة الغياب: <span id="admin-saudi-total-fines">0.00</span> | صافي الاستحقاق: <span id="admin-saudi-net-total">0.00</span> | إجمالي الحسم: <span id="admin-saudi-total-deduction">0.00</span> | إجمالي الغرامة: <span id="admin-saudi-total-fine">0.00</span> | موظفين بغياب: <span id="admin-saudi-absent-employees">0</span>
+                <div id="admin-saudi-status-totals"></div>
+            </div>
+            <table id="admin-saudi-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2">م</th>
+                        <th rowspan="2" class="job-title">مسمى الوظيفة</th>
+                        <th rowspan="2">الفئة</th>
+                        <th rowspan="2" class="employee-name">اسم شاغل الوظيفة</th>
+                        <th colspan="30" id="admin-saudi-days-header">الأيام</th>
+                        <th rowspan="2">التكلفة الشهرية</th>
+                        <th colspan="2">عدد الأيام</th>
+                        <th colspan="2">حسم وغرامة الغياب</th>
+                        <th rowspan="2">صافي الاستحقاق</th>
+                        <th rowspan="2">الجنسية</th>
+                        <th rowspan="2">غرامة جنسية</th>
+<th rowspan="2">رقم الإقامة/الهوية</th> <!-- ✅ السطر المضاف في المكان الجديد -->
+
+                        <th class="status-j-col" style="display: none;" rowspan="2">إجازة</th>
+                        <th class="status-sh-col" style="display: none;" rowspan="2">شاغرة</th>
+                        <th class="status-t-col" style="display: none;" rowspan="2">تحت الإجراء</th>
+                        <th class="status-b-col" style="display: none;" rowspan="2">قبل بدء العقد</th>
+                        <th class="status-n-col" style="display: none;" rowspan="2">بعد نهاية العقد</th>
+                    </tr>
+                    <tr id="admin-saudi-table-header">
+                        <!-- Day headers will be populated by JS -->
+                        <th>حضور</th>
+                        <th>غياب</th>
+                        <th>الحسم</th>
+                        <th>غرامة الغياب</th>
+                    </tr>
+                </thead>
+                <tbody id="admin-saudi-table-body"></tbody>
+            </table>
+            <div class="zoom-buttons">
+                <button onclick="zoomInTable('admin-saudi-table')"><i class="fas fa-search-plus"></i> تكبير</button>
+                <button onclick="zoomOutTable('admin-saudi-table')"><i class="fas fa-search-minus"></i> تصغير</button>
+            </div>
+            <div class="empty-message" id="admin-saudi-empty">لا يوجد موظفون في هذا القسم</div>
+        </div>
+   <!-- === الجزء المضاف والمصحح === -->
+            <!-- التواقيع للطباعة - جدول الوظائف الإدارية السعوديين -->
+            <div class="print-signatures" style="display: none;">
+                <h4>التواقيع</h4>
+                <div class="print-signatures-grid">
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مدير المشروع:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-project-manager-8">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">رئيس قسم الصيانة:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-maintenance-head-8">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مدير المستشفى:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-hospital-manager-8">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مندوب المقاول:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-contractor-rep-8">غير محدد</div>
+                    </div>
+                </div>
+            </div>
+            </div>
+ 
+      <!-- ================================================================ -->
+<!-- ✅ 6. كود HTML المحدث لقسم الإجمالي العام ✅ -->
+<!-- ================================================================ -->
+
+
+        <div class="status-legend" id="status-legend" style="display: none;">
+            <h4>دليل الحالات المستخدمة:</h4>
+            <div id="status-legend-content"></div>
+        </div>
+
+    </div>
+
+    <div id="add-employee-dialog" class="dialog" style="display: none;">
+        <div class="dialog-content">
+            <span class="close" onclick="closeDialog('add-employee-dialog')">×</span>
+            <h3>إضافة موظف جديد</h3>
+            <form id="add-employee-form">
+                <label for="add-employee-department">القسم:</label>
+                <select id="add-employee-department" required>
+                    <option value="cleaning">النظافة</option>
+                    <option value="electricity">الكهرباء</option>
+                    <option value="agriculture">الزراعة</option>
+                    <option value="civil_works">الأعمال المدنية</option>
+                    <option value="mechanical">الميكانيكا</option>
+                    <option value="laundry">المغسلة</option>
+                    <option value="patient_services">خدمات المرضى</option>
+                    <option value="admin_saudi">الوظائف الإدارية السعوديين</option>
+                </select>
+
+                <label for="add-employee-job-title">مسمى الوظيفة:</label>
+                <input type="text" id="add-employee-job-title" required>
+
+                <label for="add-employee-category">الفئة:</label>
+                <select id="add-employee-category">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                </select>
+
+                <label for="add-employee-name">اسم الموظف:</label>
+                <input type="text" id="add-employee-name" required>
+
+                <label for="add-employee-salary">التكلفة الشهرية:</label>
+                <input type="number" id="add-employee-salary" step="0.01" min="0">
+
+                <label for="add-employee-nationality">الجنسية:</label>
+                <select id="add-employee-nationality">
+                    <option value="سعودي">سعودي</option>
+                    <option value="غير سعودي">غير سعودي</option>
+                </select>
+
+<button type="button" onclick="addEmployee()" class="confirm-btn"><i class="fas fa-plus-circle"></i> إضافة الموظف</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="upload-excel-dialog" class="dialog" style="display: none;">
+        <div class="dialog-content">
+            <span class="close" onclick="closeDialog('upload-excel-dialog')">×</span>
+            <h3>استيراد بيانات الموظفين من Excel</h3>
+            <input type="file" id="excel-file-input" accept=".xlsx,.xls">
+<button onclick="importExcelWithDepartment()" class="confirm-btn"><i class="fas fa-file-import"></i> استيراد</button>
+        </div>
+    </div>
+
+    <div id="select-department-dialog" class="dialog" style="display: none;">
+        <div class="dialog-content">
+            <span class="close" onclick="closeDialog('select-department-dialog')">×</span>
+            <h3>اختر القسم لاستيراد البيانات</h3>
+            <select id="department-select">
+                <option value="cleaning">النظافة</option>
+                <option value="electricity">الكهرباء</option>
+                <option value="agriculture">الزراعة</option>
+                <option value="civil_works">الأعمال المدنية</option>
+                <option value="mechanical">الميكانيكا</option>
+                <option value="laundry">المغسلة</option>
+                <option value="patient_services">خدمات المرضى</option>
+                <option value="admin_saudi">الوظائف الإدارية السعوديين</option>
+            </select>
+<button onclick="processExcelFile(document.getElementById('department-select').value)" class="confirm-btn"><i class="fas fa-check-circle"></i> تأكيد الاستيراد</button>
+        </div>
+    </div>
+
+    <div id="export-pdf-dialog" class="dialog" style="display: none;">
+        <div class="dialog-content">
+            <span class="close" onclick="closeDialog('export-pdf-dialog')">×</span>
+            <h3>تصدير إلى PDF</h3>
+            <button onclick="exportToPDF()">تصدير PDF</button>
+        </div>
+    </div>
+
+    <div id="clear-data-dialog" class="dialog" style="display: none;">
+        <div class="dialog-content">
+            <span class="close" onclick="closeDialog('clear-data-dialog')">×</span>
+            <h3>تأكيد مسح البيانات</h3>
+            <p>هل أنت متأكد من رغبتك في مسح جميع بيانات الحضور والغياب؟ لا يمكن التراجع عن هذه العملية.</p>
+           <button onclick="clearData(); closeDialog('clear-data-dialog')" class="confirm-btn"><i class="fas fa-trash-alt"></i> نعم، امسح البيانات</button>
+<button onclick="closeDialog('clear-data-dialog')" class="cancel-btn"><i class="fas fa-times-circle"></i> إلغاء</button>
+
+        </div>
+    </div>
+
+    <div id="fines-dialog" class="dialog" style="display: none;">
+        <div class="dialog-content">
+            <span class="close" onclick="closeDialog('fines-dialog')">×</span>
+            <h3>تعديل غرامة الجنسية</h3>
+            <div id="fines-content"></div>
+        </div>
+    </div>
+
+    <!-- قسم التواقيع التلقائي -->
+  <div class="signatures-display-section">
+            <h3>التواقيع المعتمدة</h3>
+            <div class="signatures-grid">
+                <!-- سيتم ملء هذا الجزء بواسطة JavaScript -->
+                <p style="text-align: center; color: #888;">جاري تحميل التواقيع...</p>
+            </div>
+        </div>
+
+ 
+    <footer>
+        <p>© 2024 تجمع نجران الصحي - إدارة الهندسة والصيانة</p>
+    </footer>
+
+    <script src="attendance_interactive_v9_corrected.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            updateContractDisplayData();
+            renderTables();
+            updateDateTime();
+    updateSignaturesFromLocalStorage(); // ✅ هذا هو السطر الصحيح
+
+            if (typeof particlesJS !== 'undefined') {
+                particlesJS('particles-js-bg', {
+                    particles: {
+                        number: { value: 50 },
+                        color: { value: '#ffffff' },
+                        opacity: { value: 0.1 },
+                        size: { value: 3 },
+                        move: { enable: true, speed: 1 }
+                    }
+                });
+            }
+        });
+
+       function updateDateTime() {
+    const now = new Date();
+    const dateTimeElement = document.getElementById('current-date-time');
+    if (dateTimeElement) {
+        // التاريخ ميلادي
+        const dateStr = now.toLocaleDateString('en-GB');
+        // الوقت ميلادي 24 ساعة
+        const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        // الدمج النهائي
+        dateTimeElement.textContent =
+            dateStr.replace(/(\d{2})\/(\d{2})\/(\d{4})/, (m, d, mth, y) => `${parseInt(d)}/${parseInt(mth)}/${y} م`)
+            + ' ' + timeStr;
+    }
+}
+
+
+        window.navigateTo = function(url) {
+            if (url && url !== '#') {
+                window.location.href = url;
+            }
+        };
+
+      
+        function exportToPDF() {
+            const element = document.querySelector('.container');
+            const opt = {
+                margin: 1,
+                filename: 'attendance_report.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+            };
+            if (typeof html2pdf !== 'undefined') {
+                html2pdf().set(opt).from(element).save();
+            } else {
+                alert('مكتبة تصدير PDF غير متوفرة');
+            }
+            closeDialog('export-pdf-dialog');
+        }
+
+        // نظام التواقيع التلقائي
+    

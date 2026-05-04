@@ -1,167 +1,123 @@
-import { 
-  useGetDashboardStats, 
-  useGetRecentActivity, 
-  useGetExtractsByStatus,
-  getGetDashboardStatsQueryKey,
-  getGetRecentActivityQueryKey,
-  getGetExtractsByStatusQueryKey
-} from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, FileText, CheckCircle2, Clock, Building, Users } from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { useGetMe } from "@workspace/api-client-react";
+import { useUser } from "@clerk/react";
+import {
+  Clock, BarChart2, Trophy, Package, Wrench, CheckSquare,
+  Building2, Settings, SlidersHorizontal, ClipboardList, Eye, UserPlus
+} from "lucide-react";
+
+const modules = [
+  { href: "/original/settings_main.html",          icon: Settings,         label: "الإعدادات الرئيسية",        color: "#2a5298" },
+  { href: "/original/settings_advanced.html",       icon: SlidersHorizontal,label: "الإعدادات المتقدمة",         color: "#1e3c72" },
+  { href: "/original/attendance.html",              icon: Clock,            label: "الحضور والانصراف",           color: "#0077b6" },
+  { href: "/original/performance.html",             icon: BarChart2,        label: "جداول الأداء",              color: "#023e8a" },
+  { href: "/original/achievement.html",             icon: Trophy,           label: "شهادة الإنجاز",             color: "#0096c7" },
+  { href: "/original/consumables.html",             icon: Package,          label: "مستخلص المستهلكات",         color: "#0077b6" },
+  { href: "/original/spare_parts.html",             icon: Wrench,           label: "مستخلص قطع الغيار",         color: "#023e8a" },
+  { href: "/original/approval.html",               icon: CheckSquare,      label: "اعتماد المستخلص",           color: "#0096c7" },
+  { href: "/original/health_centers.html",          icon: Building2,        label: "المراكز الصحية",            color: "#2a5298" },
+  { href: "/original/health_centers_attendance.html",icon: ClipboardList,   label: "حضور المراكز الصحية",       color: "#1e3c72" },
+  { href: "/original/health_centers_consumables.html",icon: Package,        label: "مستهلكات المراكز الصحية",   color: "#0077b6" },
+  { href: "/original/review_extract.html",          icon: Eye,              label: "مراجعة المستخلص",           color: "#023e8a" },
+];
 
 export default function Dashboard() {
-  const { data: stats, isLoading: statsLoading } = useGetDashboardStats({
-    query: { queryKey: getGetDashboardStatsQueryKey() }
-  });
-
-  const { data: recentActivity, isLoading: activityLoading } = useGetRecentActivity({
-    query: { queryKey: getGetRecentActivityQueryKey() }
-  });
-
-  const { data: statusData, isLoading: statusLoading } = useGetExtractsByStatus({
-    query: { queryKey: getGetExtractsByStatusQueryKey() }
-  });
-
-  if (statsLoading || activityLoading || statusLoading) {
-    return <div className="flex items-center justify-center h-64 text-muted-foreground">جاري تحميل البيانات...</div>;
-  }
+  const { user } = useUser();
+  const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500" style={{ direction: "rtl" }}>
+      {/* Welcome */}
+      <div
+        className="rounded-2xl p-6 flex items-center gap-5"
+        style={{ background: "linear-gradient(135deg,#1e3c72 0%,#2a5298 100%)", color: "#fff" }}
+      >
+        <img
+          src="/logo.png"
+          alt="شعار تجمع نجران الصحي"
+          className="h-16 w-auto drop-shadow-lg"
+          onError={e => (e.target as HTMLImageElement).style.display = "none"}
+        />
+        <div>
+          <h1 className="text-2xl font-extrabold mb-1">
+            أهلاً، {user?.fullName || dbUser?.name || "مستخدم"} 👋
+          </h1>
+          <p style={{ color: "rgba(255,255,255,0.8)" }}>
+            برنامج المستخلصات الشهرية — إدارة الهندسة والصيانة
+          </p>
+          <p style={{ color: "#d4af37", fontSize: 13, marginTop: 4 }}>
+            {dbUser?.role === "admin" ? "🔑 مدير النظام" : "مستخدم معتمد"}
+          </p>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { n: "٤٩٥٬٠٠٠", label: "مستفيد من خدمات الرعاية الصحية" },
+          { n: "٦٩", label: "مركزاً للرعاية الأولية و١٢ مستشفى" },
+          { n: "١٣٠٠", label: "سرير بسعة إجمالية" },
+        ].map(s => (
+          <div
+            key={s.label}
+            className="rounded-xl p-5 text-center"
+            style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)", color: "#fff" }}
+          >
+            <div className="text-3xl font-black mb-1" style={{ color: "#d4af37" }}>{s.n}</div>
+            <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 13 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Modules grid */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">لوحة القيادة</h1>
-        <p className="text-muted-foreground">ملخص الأداء المالي والعمليات الجارية</p>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي المستخلصات</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats?.totalAmount || 0)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              عدد المستخلصات: {stats?.totalExtracts || 0}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">المستخلصات الجارية</CardTitle>
-            <Clock className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{formatCurrency(stats?.currentAmount || 0)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              عدد المستخلصات: {stats?.currentExtracts || 0}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">المشاريع النشطة</CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.activeProjects || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              من إجمالي {stats?.totalProjects || 0} مشاريع
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">المستخلصات المكتملة</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats?.completedExtracts || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              مستخلص معتمد
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="col-span-1 border-border shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-primary" />
-              أحدث العمليات
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {recentActivity && recentActivity.length > 0 ? (
-                recentActivity.slice(0, 5).map((activity) => (
-                  <div key={activity.id} className="flex items-start justify-between border-b border-border/50 pb-4 last:border-0 last:pb-0">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        مستخلص #{activity.extractNumber} <span className="text-muted-foreground">({activity.action})</span>
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {activity.projectName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(activity.timestamp)}
-                      </p>
-                    </div>
-                    <div className="font-medium text-sm">
-                      {formatCurrency(activity.amount)}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4 text-sm text-muted-foreground">لا توجد نشاطات حديثة</div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="col-span-1 border-border shadow-sm">
-          <CardHeader>
-            <CardTitle>توزيع المستخلصات</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {statusData?.map((stat) => (
-                <div key={stat.status} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="font-medium">
-                      {stat.status === 'current' ? 'جارية' : 
-                       stat.status === 'completed' ? 'مكتملة' : 'سابقة'}
-                    </div>
-                    <div className="font-bold">{formatCurrency(stat.amount)}</div>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <div>{stat.count} مستخلص</div>
-                    <div>
-                      {stats?.totalAmount ? 
-                        Math.round((stat.amount / stats.totalAmount) * 100) : 0}%
-                    </div>
-                  </div>
-                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full ${
-                        stat.status === 'current' ? 'bg-primary' : 
-                        stat.status === 'completed' ? 'bg-green-500' : 'bg-muted-foreground'
-                      }`}
-                      style={{ 
-                        width: `${stats?.totalAmount ? (stat.amount / stats.totalAmount) * 100 : 0}%` 
-                      }}
-                    />
-                  </div>
+        <h2 className="text-xl font-bold mb-4" style={{ color: "#1e3c72" }}>وحدات النظام</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {modules.map(m => {
+            const Icon = m.icon;
+            return (
+              <a
+                key={m.href}
+                href={m.href}
+                className="group rounded-xl p-5 text-center transition-all duration-200 hover:-translate-y-1 no-underline flex flex-col items-center gap-3"
+                style={{
+                  background: "#fff",
+                  border: "2px solid #e8edf7",
+                  boxShadow: "0 2px 8px rgba(30,60,114,0.07)",
+                  color: "#1e3c72",
+                }}
+              >
+                <div
+                  className="h-14 w-14 rounded-xl flex items-center justify-center transition-all group-hover:scale-110"
+                  style={{ background: m.color }}
+                >
+                  <Icon className="h-7 w-7 text-white" />
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <span className="font-bold text-sm leading-tight" style={{ color: "#1e3c72" }}>
+                  {m.label}
+                </span>
+              </a>
+            );
+          })}
+
+          {/* Admin-only: user management */}
+          {dbUser?.role === "admin" && (
+            <a
+              href="/admin/users"
+              className="group rounded-xl p-5 text-center transition-all duration-200 hover:-translate-y-1 no-underline flex flex-col items-center gap-3"
+              style={{
+                background: "linear-gradient(135deg,#d4af37,#b8962e)",
+                border: "2px solid #b8962e",
+                boxShadow: "0 2px 8px rgba(212,175,55,0.2)",
+                color: "#1e3c72",
+              }}
+            >
+              <div className="h-14 w-14 rounded-xl flex items-center justify-center bg-white/20">
+                <UserPlus className="h-7 w-7 text-white" />
+              </div>
+              <span className="font-bold text-sm text-white">إدارة المستخدمين</span>
+            </a>
+          )}
+        </div>
       </div>
     </div>
   );

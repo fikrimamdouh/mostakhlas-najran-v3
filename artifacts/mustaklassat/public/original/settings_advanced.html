@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <script src="/original/auth-check.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إعدادات النظام - المتقدمة</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        #particles-js-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        .container {
+            max-width: 1200px;
+            width: 90%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+            backdrop-filter: blur(10px);
+        }
+        .header-info {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+        .header-info .logo-right, .header-info .logo-left {
+            width: 80px;
+            height: auto;
+            transition: transform 0.5s ease, filter 0.3s ease;
+            filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.3));
+        }
+        .header-info .logo-right:hover, .header-info .logo-left:hover {
+            transform: rotate(10deg) scale(1.2);
+            filter: drop-shadow(5px 5px 15px rgba(0, 0, 0, 0.5));
+        }
+        .header-info .logo-right { float: right; margin-left: 15px; }
+        .header-info .logo-left { float: left; margin-right: 15px; }
+        .header-info .logo-clear { clear: both; }
+        .header-info h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2a5298;
+            margin: 8px 0;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 1s ease-in-out;
+        }
+        .header-info h3 {
+            font-size: 20px;
+            font-weight: 500;
+            color: #1e3c72;
+            margin: 5px 0;
+            animation: fadeIn 1.2s ease-in-out;
+        }
+        .header-info h2 {
+            font-size: 24px;
+            font-weight: 500;
+            color: #d4af37;
+            margin: 5px 0;
+            animation: fadeIn 1.2s ease-in-out;
+        }
+        .header-info .date {
+            font-size: 14px;
+            color: #7f8c8d;
+            animation: fadeIn 1.4s ease-in-out;
+        }
+        .side-data {
+            float: right;
+            width: 300px;
+            margin-bottom: 15px;
+        }
+        .side-data .contract-data {
+            font-size: 14px;
+            color: #2c3e50;
+        }
+        .side-data .contract-data p {
+            margin: 5px 0;
+        }
+        .side-data .contract-data .period {
+            font-weight: bold;
+            color: #d4af37;
+        }
+        .nav-bar {
+            display: flex;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            clear: both;
+        }
+        .nav-bar .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .nav-bar select {
+            padding: 10px 20px;
+            border: none;
+            font-size: 14px;
+            border-radius: 10px;
+            background: linear-gradient(145deg, #2a5298, #1e3c72);
+            color: #ffffff;
+            font-family: 'Tajawal', sans-serif;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .nav-bar select:focus {
+            background: #d4af37;
+            color: #2c3e50;
+        }
+        .nav-bar select:hover {
+            background: linear-gradient(145deg, #d4af37, #b8962e);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+        .nav-bar .dropdown-content {
+            display: none;
+            position: absolute;
+            background: #ffffff;
+            min-width: 180px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            z-index: 1;
+            border-radius: 10px;
+            top: 100%;
+            right: 0;
+            overflow: hidden;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        .nav-bar .dropdown:hover .dropdown-content {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .nav-bar .dropdown-content a {
+            background: transparent;
+            color: #2c3e50;
+            padding: 10px 14px;
+            text-decoration: none;
+            display: block;
+            font-size: 14px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .nav-bar .dropdown-content a:hover {
+            background: linear-gradient(to right, #e6f0ff, #d4eaff);
+            color: #d4af37;
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .tabs a {
+            padding: 10px 20px;
+            background: linear-gradient(145deg, #2a5298, #1e3c72);
+            color: #ffffff;
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .tabs a::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), transparent, rgba(255, 255, 255, 0.1));
+            animation: gradientMove 8s infinite linear;
+            z-index: 0;
+        }
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .tabs a:hover {
+            background: linear-gradient(145deg, #d4af37, #b8962e);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+        .tabs a.active {
+            background: linear-gradient(145deg, #d4af37, #b8962e);
+        }
+        .tabs a .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+            pointer-events: none;
+        }
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+        .section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: inset 0 0 20px rgba(212, 175, 55, 0.3), 0 10px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 15px;
+            animation: glow 3s infinite alternate;
+            border: 1px solid rgba(212, 175, 55, 0.5);
+            backdrop-filter: blur(15px);
+            position: relative;
+            overflow: hidden;
+            text-align: right;
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+        .section::after {
+            content: '';
+            position: absolute;
+            bottom: -50px;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            background: linear-gradient(to top, rgba(212, 175, 55, 0.1), transparent);
+            transform: scaleY(-1);
+            opacity: 0.5;
+        }
+        .section h2 {
+            font-size: 20px;
+            color: #d4af37;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        .section label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #1e3c72;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        .section label.blue-label {
+            color: #2a5298;
+        }
+        .section label.gold-label {
+            color: #d4af37;
+        }
+        .section input[type="text"],
+        .section input[type="email"],
+        .section input[type="password"],
+        .section input[type="number"],
+        .section input[type="date"],
+        .section input[type="time"],
+        .section select,
+        .section textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: 'Tajawal', sans-serif;
+            background: #f9fbfc;
+            color: #2c3e50;
+            transition: border-color 0.3s ease;
+        }
+        .section input[type="text"]:focus,
+        .section input[type="email"]:focus,
+        .section input[type="password"]:focus,
+        .section input[type="number"]:focus,
+        .section input[type="date"]:focus,
+        .section input[type="time"]:focus,
+        .section select:focus,
+        .section textarea:focus {
+            border-color: #d4af37;
+            outline: none;
+        }
+        .section input[type="radio"],
+        .section input[type="checkbox"] {
+            margin-left: 10px;
+            margin-right: 5px;
+        }
+        .section .sub-section {
+            margin-top: 15px;
+            padding: 10px;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 10px;
+        }
+        .section .sub-section h3 {
+            font-size: 18px;
+            color: #d4af37;
+            margin-bottom: 10px;
+        }
+        .section .buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 15px;
+        }
+        .section .buttons button {
+            padding: 8px 15px;
+            background: linear-gradient(145deg, #2a5298, #1e3c72);
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .section .buttons button:hover {
+            background: linear-gradient(145deg, #d4af37, #b8962e);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+        .section .success-message {
+            color: #1e3c72;
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: center;
+            display: none;
+        }
+        .section table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .section table th,
+        .section table td {
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            text-align: center;
+            font-size: 14px;
+            color: #1e3c72;
+        }
+        .section table th {
+            background: linear-gradient(145deg, #2a5298, #1e3c72);
+            color: #ffffff;
+        }
+        .section table td button {
+            padding: 5px 10px;
+            background: linear-gradient(145deg, #2a5298, #1e3c72);
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .section table td button:hover {
+            background: linear-gradient(145deg, #d4af37, #b8962e);
+            transform: translateY(-2px);
+        }
+        .dialog {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            z-index: 1000;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        .dialog p {
+            font-size: 16px;
+            color: #1e3c72;
+            margin-bottom: 15px;
+        }
+        .dialog .buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .dialog button {
+            padding: 8px 15px;
+            background: linear-gradient(145deg, #2a5298, #1e3c72);
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .dialog button:hover {
+            background: linear-gradient(145deg, #d4af37, #b8962e);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #1e3c72;
+            animation: fadeIn 2s ease-in-out;
+        }
+        footer p {
+            margin: 5px 0;
+        }
+        footer a {
+            color: #d4af37;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        footer a:hover {
+            color: #b8962e;
+        }
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            .header-info h1 {
+                font-size: 24px;
+            }
+            .header-info h2 {
+                font-size: 20px;
+            }
+            .header-info h3 {
+                font-size: 16px;
+            }
+            .section h2 {
+                font-size: 18px;
+            }
+            .section label,
+            .section input,
+            .section select,
+            .section textarea {
+                font-size: 12px;
+            }
+            .nav-bar select {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            .tabs a {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            .dialog p {
+                font-size: 14px;
+            }
+            .dialog button {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+            .side-data {
+                width: 100%;
+                float: none;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="particles-js-bg"></div>
+    <div class="container">
+        <div class="header-info">
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-right">
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-left">
+            <div class="logo-clear"></div>
+            <h1>تجمع نجران الصحي</h1>
+            <h3>إدارة الهندسة والصيانة</h3>
+            <h2>إعدادات النظام - المتقدمة</h2>
+            <p class="date" id="current-date-time"></p>
+        </div>
+
+        <div class="side-data">
+            <div class="contract-data" id="contract-data">
+                <!-- Data will be populated dynamically -->
+            </div>
+        </div>
+
+        <div class="nav-bar">
+            <div class="dropdown">
+                <select id="navigation" onchange="navigateWithSubmenu(this)">
+                    <option value="#">-- اختر صفحة --</option>
+                    <option value="index.html">الصفحة الرئيسية</option>
+                    <option value="settings">الإعدادات</option>
+                    <option value="attendance.html">الحضور والانصراف</option>
+                    <option value="performance.html">شهادة الأداء</option>
+                    <option value="achievement.html">شهادة الإنجاز</option>
+                    <option value="consumables.html">مستخلص المستهلكات</option>
+                    <option value="spare_parts.html">مستخلص قطع الغيار</option>
+                </select>
+                <div class="dropdown-content" id="settings-submenu" style="display: none;">
+                    <a href="settings_main.html" target="_blank">الإعدادات الرئيسية</a>
+                    <a href="settings_advanced.html" target="_blank">الإعدادات المتقدمة</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <a href="#notifications" onclick="toggleSection('notifications')" data-section="notifications">إعدادات الإشعارات</a>
+            <a href="#archiving" onclick="toggleSection('archiving')" data-section="archiving">إعدادات الأرشفة</a>
+            <a href="#formatting" onclick="toggleSection('formatting')" data-section="formatting">إعدادات التنسيق والطباعة</a>
+            <a href="#security" onclick="toggleSection('security')" data-section="security">إعدادات الأمان والصلاحيات</a>
+            <a href="#branches" onclick="toggleSection('branches')" data-section="branches">إعدادات الفروع</a>
+            <a href="#integration" onclick="toggleSection('integration')" data-section="integration">إعدادات التكامل</a>
+            <a href="#interface" onclick="toggleSection('interface')" data-section="interface">تخصيص الواجهة</a>
+            <a href="#header" onclick="toggleSection('header')" data-section="header">ترويسة المطبوعات</a>
+            <a href="#users" onclick="toggleSection('users')" data-section="users">إعدادات المستخدمين</a>
+            <a href="#custom-table" onclick="toggleSection('custom-table')" data-section="custom-table">إنشاء جدول مخصص</a>
+        </div>
+
+        <div id="notifications" class="section">
+            <h2>إعدادات الإشعارات</h2>
+            <label>إرسال إشعارات بالبريد الإلكتروني:</label>
+            <input type="radio" name="email-notifications" value="on"> تشغيل
+            <input type="radio" name="email-notifications" value="off"> إيقاف
+
+            <label>البريد الإلكتروني للإرسال:</label>
+            <input type="email" placeholder="البريد الإلكتروني">
+
+            <label>كلمة مرور البريد:</label>
+            <input type="password" placeholder="كلمة المرور">
+
+            <label>إرسال إشعارات عبر SMS:</label>
+            <input type="radio" name="sms-notifications" value="on"> تشغيل
+            <input type="radio" name="sms-notifications" value="off"> إيقاف
+
+            <label>API لخدمة SMS:</label>
+            <input type="text" placeholder="API لخدمة SMS">
+
+            <label>إرسال إشعارات للإدارة العليا:</label>
+            <input type="radio" name="admin-notifications" value="on"> تشغيل
+            <input type="radio" name="admin-notifications" value="off"> إيقاف
+
+            <label>توقيت الإشعارات اليومية:</label>
+            <input type="time">
+
+            <label>إرسال إشعار عند التأخير بأكثر من (دقائق):</label>
+            <input type="number" placeholder="عدد الدقائق">
+
+            <label>إرسال إشعار للمدير عند الغياب بدون إذن:</label>
+            <input type="radio" name="absence-notifications" value="on"> تشغيل
+            <input type="radio" name="absence-notifications" value="off"> إيقاف
+
+            <label>إرسال إشعارات لقسم معين:</label>
+            <select>
+                <option>جميع الأقسام</option>
+                <option>قسم النظافة</option>
+                <option>قسم الكهرباء</option>
+                <option>قسم الزراعة</option>
+                <option>قسم الأعمال المدنية</option>
+                <option>قسم الميكانيكا</option>
+                <option>قسم المغسلة</option>
+                <option>خدمات المرضى</option>
+            </select>
+
+            <label>رسالة إشعار مخصصة:</label>
+            <textarea placeholder="اكتب رسالتك هنا"></textarea>
+
+            <div class="buttons">
+                <button onclick="saveNotificationsData()">حفظ</button>
+                <button>إلغاء</button>
+            </div>
+            <div class="success-message" id="notifications-save-success">تم حفظ إعدادات الإشعارات بنجاح</div>
+        </div>
+
+        <div id="archiving" class="section">
+            <h2>إعدادات الأرشفة</h2>
+            <label>مدة الأرشفة:</label>
+            <select id="archive-duration">
+                <option>6 أشهر</option>
+                <option>1 سنة</option>
+                <option>2 سنة</option>
+            </select>
+
+            <label>ضغط البيانات المؤرشفة:</label>
+            <input type="radio" name="compress-data" value="on"> تشغيل
+            <input type="radio" name="compress-data" value="off"> إيقاف
+
+            <label>تصدير الأرشيف إلى السحابة:</label>
+            <input type="radio" name="cloud-export" value="on"> تشغيل
+            <input type="radio" name="cloud-export" value="off"> إيقاف
+
+            <div class="buttons">
+                <button onclick="saveArchivingData()">أرشفة الآن</button>
+                <button>تصفح الأرشيف</button>
+                <button>استعادة من الأرشيف</button>
+                <button>إلغاء الأرشفة</button>
+            </div>
+            <div class="success-message" id="archiving-save-success">تم أرشفة البيانات بنجاح</div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>اسم الأرشيف</th>
+                        <th>التاريخ</th>
+                        <th>الوقت</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="archive-log">
+                    <!-- Table rows will be populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+
+        <div id="formatting" class="section">
+            <h2>إعدادات التنسيق والطباعة</h2>
+            <label>حجم الورق:</label>
+            <select id="paper-size">
+                <option>A4</option>
+                <option>A3</option>
+                <option>Letter</option>
+            </select>
+
+            <label>اتجاه الطباعة:</label>
+            <input type="radio" name="print-orientation" value="vertical"> عمودي
+            <input type="radio" name="print-orientation" value="horizontal"> أفقي
+
+            <label>الهامش العلوي (سم):</label>
+            <input type="number" placeholder="الهامش العلوي">
+
+            <label>الهامش السفلي (سم):</label>
+            <input type="number" placeholder="الهامش السفلي">
+
+            <label>لون الخط في التقارير:</label>
+            <select>
+                <option>أسود</option>
+                <option>أزرق</option>
+                <option>أحمر</option>
+            </select>
+
+            <label>إضافة توقيعات إلكترونية في التقارير:</label>
+            <input type="radio" name="electronic-signatures" value="on"> تشغيل
+            <input type="radio" name="electronic-signatures" value="off"> إيقاف
+
+            <label>شعار المستشفى:</label>
+            <input type="file">
+
+            <label>رأس التقرير:</label>
+            <textarea placeholder="رأس التقرير"></textarea>
+
+            <label>تذييل التقرير:</label>
+            <textarea placeholder="تذييل التقرير"></textarea>
+
+            <div class="buttons">
+                <button onclick="saveFormattingData()">حفظ</button>
+                <button>إلغاء</button>
+            </div>
+            <div class="success-message" id="formatting-save-success">تم حفظ إعدادات التنسيق والطباعة بنجاح</div>
+        </div>
+
+        <div id="security" class="section">
+            <h2>إعدادات الأمان والصلاحيات</h2>
+            <label>تفعيل المصادقة الثنائية (2FA):</label>
+            <input type="radio" name="2fa" value="on"> تشغيل
+            <input type="radio" name="2fa" value="off"> إيقاف
+
+            <label>قفل النظام بعد فترة خمول (دقائق):</label>
+            <input type="number" placeholder="عدد الدقائق">
+
+            <label>فرض تغيير كلمة المرور كل (أيام):</label>
+            <input type="number" placeholder="عدد الأيام">
+
+            <label>تفعيل سجل النشاط:</label>
+            <input type="radio" name="activity-log" value="on"> تشغيل
+            <input type="radio" name="activity-log" value="off"> إيقاف
+
+            <label>تسجيل محاولات تسجيل الدخول الفاشلة:</label>
+            <input type="radio" name="failed-login" value="on"> تشغيل
+            <input type="radio" name="failed-login" value="off"> إيقاف
+
+            <label>تقييد الوصول بناءً على IP:</label>
+            <input type="text" placeholder="عنوان IP">
+
+            <div class="buttons">
+                <button onclick="saveSecurityData()">حفظ</button>
+                <button>إلغاء</button>
+            </div>
+            <div class="success-message" id="security-save-success">تم حفظ إعدادات الأمان والصلاحيات بنجاح</div>
+
+            <div class="sub-section">
+                <h3>إدارة المستخدمين</h3>
+                <label>اسم المستخدم:</label>
+                <input type="text" placeholder="اسم المستخدم">
+
+                <label>كلمة المرور:</label>
+                <input type="password" placeholder="كلمة المرور">
+
+                <label>الدور:</label>
+                <select>
+                    <option>مدير</option>
+                    <option>موظف</option>
+                </select>
+
+                <label>اسم الوظيفة:</label>
+                <select>
+                    <option>مشرف</option>
+                    <option>عامل نظافة</option>
+                    <option>فني كهرباء</option>
+                    <option>مهندس</option>
+                    <option>مدير قسم</option>
+                </select>
+
+                <label>الصلاحيات:</label>
+                <input type="checkbox" name="permissions"> تعديل الحضور
+                <input type="checkbox" name="permissions"> تعديل المستخلص
+                <input type="checkbox" name="permissions"> عرض التقارير فقط
+                <input type="checkbox" name="permissions"> تعديل الإعدادات
+
+                <label>تفعيل المستخدم:</label>
+                <input type="checkbox" name="activate-user">
+
+                <div class="buttons">
+                    <button onclick="addUser()">إضافة مستخدم</button>
+                    <button>إلغاء</button>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>اسم المستخدم</th>
+                            <th>كلمة المرور</th>
+                            <th>الدور</th>
+                            <th>الوظيفة</th>
+                            <th>الصلاحيات</th>
+                            <th>الحالة</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table">
+                        <!-- Table rows will be populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="branches" class="section">
+            <h2>إعدادات الفروع</h2>
+            <label>اسم الفرع:</label>
+            <input type="text" placeholder="اسم الفرع">
+
+            <label>العنوان:</label>
+            <input type="text" placeholder="العنوان">
+
+            <label>المدير المسؤول:</label>
+            <input type="text" placeholder="المدير المسؤول">
+
+            <label>ساعات العمل:</label>
+            <input type="text" placeholder="ساعات العمل">
+
+            <label>شعار الفرع:</label>
+            <input type="file">
+
+            <label>عدد الموظفين:</label>
+            <input type="number" placeholder="عدد الموظفين">
+
+            <div class="buttons">
+                <button onclick="addBranch()">إضافة فرع</button>
+                <button>إلغاء</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>اسم الفرع</th>
+                        <th>العنوان</th>
+                        <th>المدير</th>
+                        <th>عدد الموظفين</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="branches-table">
+                    <!-- Table rows will be populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+
+        <div id="integration" class="section">
+            <h2>إعدادات التكامل</h2>
+            <label>عنوان IP لجهاز البصمة:</label>
+            <input type="text" placeholder="عنوان IP">
+
+            <button>اختبار الاتصال</button>
+            <span>الحالة: غير متصل</span>
+
+            <label>تكامل مع أنظمة المحاسبة:</label>
+            <select>
+                <option>لا يوجد</option>
+                <option>QuickBooks</option>
+                <option>SAP</option>
+            </select>
+
+            <label>تكامل مع أنظمة الدفع الإلكتروني:</label>
+            <input type="radio" name="payment-integration" value="on"> تشغيل
+            <input type="radio" name="payment-integration" value="off"> إيقاف
+
+            <label>تكامل مع تطبيقات التواصل (WhatsApp):</label>
+            <input type="radio" name="whatsapp-integration" value="on"> تشغيل
+            <input type="radio" name="whatsapp-integration" value="off"> إيقاف
+
+            <label>تكامل مع تقويم العطلات:</label>
+            <input type="radio" name="holiday-integration" value="on"> تشغيل
+            <input type="radio" name="holiday-integration" value="off"> إيقاف
+
+            <label>تصدير بيانات الموظفين إلى نظام HR:</label>
+            <input type="radio" name="hr-export" value="on"> تشغيل
+            <input type="radio" name="hr-export" value="off"> إيقاف
+
+            <label>تفعيل API:</label>
+            <input type="radio" name="api" value="on"> تشغيل
+            <input type="radio" name="api" value="off"> إيقاف
+
+            <div class="buttons">
+                <button onclick="saveIntegrationData()">حفظ</button>
+                <button>إلغاء</button>
+            </div>
+            <div class="success-message" id="integration-save-success">تم حفظ إعدادات التكامل بنجاح</div>
+        </div>
+
+        <div id="interface" class="section">
+            <h2>تخصيص الواجهة</h2>
+            <label>لغة الواجهة:</label>
+            <select>
+                <option>العربية</option>
+                <option>الإنجليزية</option>
+            </select>
+
+            <label>لون الواجهة:</label>
+            <select>
+                <option>رمادي</option>
+                <option>أزرق</option>
+                <option>أخضر</option>
+            </select>
+
+            <label>نوع الخط:</label>
+            <select>
+                <option>Arial</option>
+                <option>Tajawal</option>
+            </select>
+
+            <label>حجم الخط:</label>
+            <select>
+                <option>صغير</option>
+                <option>متوسط</option>
+                <option>كبير</option>
+            </select>
+
+            <label>رفع خلفية مخصصة:</label>
+            <input type="file">
+
+            <label>تفعيل الوضع الليلي:</label>
+            <input type="radio" name="dark-mode" value="on"> تشغيل
+            <input type="radio" name="dark-mode" value="off"> إيقاف
+
+            <label>قالب الواجهة:</label>
+            <select>
+                <option>كلاسيكي</option>
+                <option>حديث</option>
+            </select>
+
+            <label>تفعيل التلميحات التوضيحية:</label>
+            <input type="radio" name="tooltips" value="on"> تشغيل
+            <input type="radio" name="tooltips" value="off"> إيقاف
+
+            <div class="buttons">
+                <button onclick="saveInterfaceData()">حفظ</button>
+                <button>إلغاء</button>
+            </div>
+            <div class="success-message" id="interface-save-success">تم حفظ إعدادات الواجهة بنجاح</div>
+        </div>
+
+        <div id="header" class="section">
+            <h2>ترويسة المطبوعات</h2>
+            <label>عنوان الترويسة:</label>
+            <input type="text" placeholder="عنوان الترويسة">
+
+            <label>العنوان الفرعي:</label>
+            <input type="text" placeholder="العنوان الفرعي">
+
+            <label>شعار الترويسة:</label>
+            <input type="file">
+
+            <label>حجم الخط للترويسة:</label>
+            <select>
+                <option>صغير</option>
+                <option>متوسط</option>
+                <option>كبير</option>
+            </select>
+
+            <label>إضافة تاريخ ووقت في الترويسة:</label>
+            <input type="radio" name="header-date" value="on"> تشغيل
+            <input type="radio" name="header-date" value="off"> إيقاف
+
+            <div class="buttons">
+                <button onclick="saveHeaderData()">حفظ</button>
+                <button>إلغاء</button>
+            </div>
+            <div class="success-message" id="header-save-success">تم حفظ إعدادات ترويسة المطبوعات بنجاح</div>
+        </div>
+
+        <div id="users" class="section">
+            <h2>إعدادات المستخدمين</h2>
+            <label>الاسم الكامل:</label>
+            <input type="text" placeholder="الاسم الكامل">
+
+            <label>البريد الإلكتروني:</label>
+            <input type="email" placeholder="البريد الإلكتروني">
+
+            <label>كلمة المرور:</label>
+            <input type="password" placeholder="كلمة المرور">
+
+            <label>الدور:</label>
+            <select>
+                <option>مدير</option>
+                <option>موظف</option>
+            </select>
+
+            <label>اسم الوظيفة:</label>
+            <select>
+                <option>مشرف</option>
+                <option>عامل نظافة</option>
+                <option>فني كهرباء</option>
+                <option>مهندس</option>
+                <option>مدير قسم</option>
+            </select>
+
+            <label>الصلاحيات:</label>
+            <input type="checkbox" name="permissions"> تعديل الحضور
+            <input type="checkbox" name="permissions"> تعديل المستخلص
+            <input type="checkbox" name="permissions"> عرض التقارير فقط
+            <input type="checkbox" name="permissions"> تعديل الإعدادات
+
+            <label>تفعيل المستخدم:</label>
+            <input type="checkbox" name="activate-user">
+
+            <div class="buttons">
+                <button onclick="addUser()">إضافة مستخدم</button>
+                <button>إلغاء</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>الاسم الكامل</th>
+                        <th>البريد الإلكتروني</th>
+                        <th>الدور</th>
+                        <th>الوظيفة</th>
+                        <th>الصلاحيات</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="users-table-2">
+                    <!-- Table rows will be populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+
+        <div id="custom-table" class="section">
+            <h2>إنشاء جدول مخصص</h2>
+            <label>عنوان الجدول:</label>
+            <input type="text" id="table-title" placeholder="عنوان الجدول">
+
+            <label>النص قبل الجدول:</label>
+            <textarea id="text-before-table" placeholder="اكتب النص الذي سيظهر قبل الجدول"></textarea>
+
+            <label>عدد الأعمدة:</label>
+            <input type="number" id="table-columns" placeholder="عدد الأعمدة">
+
+            <label>عدد الصفوف:</label>
+            <input type="number" id="table-rows" placeholder="عدد الصفوف">
+
+            <div class="buttons">
+                <button onclick="createTable()">إنشاء الجدول</button>
+            </div>
+
+            <div id="custom-table-container">
+                <!-- Table will be populated dynamically -->
+            </div>
+
+            <label>النص بعد الجدول:</label>
+            <textarea id="text-after-table" placeholder="اكتب النص الذي سيظهر بعد الجدول"></textarea>
+
+            <div class="buttons">
+                <button onclick="addColumn()">إضافة عمود</button>
+                <button onclick="addRow()">إضافة صف</button>
+                <button onclick="deleteColumn()">حذف عمود</button>
+                <button onclick="deleteRow()">حذف صف</button>
+            </div>
+
+            <div class="buttons">
+                <button onclick="saveTable()">حفظ الجدول</button>
+                <button onclick="createExtractLetter()">إنشاء خطاب مستخلص</button>
+            </div>
+            <div class="success-message" id="custom-table-save-success">تم حفظ الجدول بنجاح</div>
+        </div>
+
+        <footer>
+            <p>تصميم وتنفيذ فكري ممدوح</p>
+            <p>التواصل للدعم الفني: <a href="mailto:rorofikri@gmail.com">rorofikri@gmail.com</a></p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script>
+        particlesJS("particles-js-bg", {
+            "particles": {
+                "number": {
+                    "value": 80,
+                    "density": {
+                        "enable": true,
+                        "value_area": 800
+                    }
+                },
+                "color": {
+                    "value": "#d4af37"
+                },
+                "shape": {
+                    "type": "circle",
+                    "stroke": {
+                        "width": 0,
+                        "color": "#000000"
+                    }
+                },
+                "opacity": {
+                    "value": 0.5,
+                    "random": true,
+                    "anim": {
+                        "enable": true,
+                        "speed": 1,
+                        "opacity_min": 0.1,
+                        "sync": false
+                    }
+                },
+                "size": {
+                    "value": 3,
+                    "random": true,
+                    "anim": {
+                        "enable": false,
+                        "speed": 40,
+                        "size_min": 0.1,
+                        "sync": false
+                    }
+                },
+                "line_linked": {
+                    "enable": true,
+                    "distance": 150,
+                    "color": "#d4af37",
+                    "opacity": 0.4,
+                    "width": 1
+                },
+                "move": {
+                    "enable": true,
+                    "speed": 2,
+                    "direction": "none",
+                    "random": false,
+                    "straight": false,
+                    "out_mode": "out",
+                    "bounce": false
+                }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": {
+                    "onhover": {
+                        "enable": true,
+                        "mode": "grab"
+                    },
+                    "onclick": {
+                        "enable": true,
+                        "mode": "push"
+                    },
+                    "resize": true
+                },
+                "modes": {
+                    "grab": {
+                        "distance": 140,
+                        "line_linked": {
+                            "opacity": 1
+                        }
+                    },
+                    "push": {
+                        "particles_nb": 4
+                    }
+                }
+            },
+            "retina_detect": true
+        });
+
+        function updateDateTime() {
+            const now = new Date();
+            const dateTimeString = now.toLocaleString('ar-SA', {
+                dateStyle: 'medium',
+                timeStyle: 'short'
+            });
+            document.getElementById('current-date-time').textContent = dateTimeString;
+        }
+
+        function navigateWithSubmenu(select) {
+            const value = select.value;
+            if (value === 'settings') {
+                document.getElementById('settings-submenu').style.display = 'block';
+            } else {
+                document.getElementById('settings-submenu').style.display = 'none';
+                if (value !== '#') {
+                    window.open(value, '_blank');
+                }
+            }
+        }
+
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const tab = document.querySelector(`a[data-section="${sectionId}"]`);
+
+            document.querySelectorAll('.section').forEach(s => {
+                if (s.id !== sectionId) {
+                    s.classList.remove('active');
+                }
+            });
+            document.querySelectorAll('.tabs a').forEach(t => {
+                if (t.getAttribute('data-section') !== sectionId) {
+                    t.classList.remove('active');
+                }
+            });
+
+            if (section.classList.contains('active')) {
+                section.classList.remove('active');
+                tab.classList.remove('active');
+            } else {
+                section.classList.add('active');
+                tab.classList.add('active');
+            }
+        }
+
+        function updateSideData() {
+            const hospitalName = localStorage.getItem('hospitalName');
+            const contractDetails = localStorage.getItem('contractDetails');
+            const companyName = localStorage.getItem('companyName');
+            const extractStart = localStorage.getItem('extractStart');
+            const extractEnd = localStorage.getItem('extractEnd');
+            const extractMonth = localStorage.getItem('extractMonth');
+            const extractDuration = localStorage.getItem('extractDuration');
+
+            let dataHtml = '';
+            if (hospitalName) dataHtml += `<p>${hospitalName}</p>`;
+            if (contractDetails) dataHtml += `<p>${contractDetails}</p>`;
+            if (companyName) dataHtml += `<p>${companyName}</p>`;
+            if (extractStart && extractEnd) {
+                if (extractMonth && extractDuration === "شهر واحد") {
+                    dataHtml += `<p>${extractMonth} (<span class="period">من ${extractStart} إلى ${extractEnd}</span>)</p>`;
+                } else {
+                    dataHtml += `<p>(<span class="period">من ${extractStart} إلى ${extractEnd}</span>)</p>`;
+                }
+            }
+
+            document.getElementById('contract-data').innerHTML = dataHtml;
+        }
+
+        function saveNotificationsData() {
+            document.getElementById('notifications-save-success').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('notifications-save-success').style.display = 'none';
+            }, 3000);
+        }
+
+        function saveArchivingData() {
+            const now = new Date();
+            const logTable = document.getElementById('archive-log');
+            const row = logTable.insertRow();
+            row.insertCell().textContent = `أرشيف_${now.toISOString().split('T')[0]}`;
+            row.insertCell().textContent = now.toLocaleDateString('ar-SA');
+            row.insertCell().textContent = now.toLocaleTimeString('ar-SA');
+            row.insertCell().innerHTML = '<button>عرض</button> <button>حذف</button>';
+
+            document.getElementById('archiving-save-success').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('archiving-save-success').style.display = 'none';
+            }, 3000);
+        }
+
+        function saveFormattingData() {
+            document.getElementById('formatting-save-success').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('formatting-save-success').style.display = 'none';
+            }, 3000);
+        }
+
+        function saveSecurityData() {
+            document.getElementById('security-save-success').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('security-save-success').style.display = 'none';
+            }, 3000);
+        }
+
+        function addUser() {
+            const now = new Date();
+            const logTable = document.getElementById('users-table');
+            const row = logTable.insertRow();
+            row.insertCell().textContent = document.querySelector('#security input[placeholder="اسم المستخدم"]').value || 'غير محدد';
+            row.insertCell().textContent = document.querySelector('#security input[placeholder="كلمة المرور"]').value || 'غير محدد';
+            row.insertCell().textContent = document.querySelector('#security select').value || 'غير محدد';
+            row.insertCell().textContent = document.querySelector('#security select:nth-of-type(2)').value || 'غير محدد';
+            row.insertCell().textContent = Array.from(document.querySelectorAll('#security input[name="permissions"]:checked')).map(checkbox => checkbox.nextSibling.nodeValue.trim()).join(', ') || 'غير محدد';
+            row.insertCell().textContent = document.querySelector('#security input[name="activate-user"]').checked ? 'مفعل' : 'غير مفعل';
+            row.insertCell().innerHTML = '<button>تعديل</button> <button>حذف</button>';
+
+            const logTable2 = document.getElementById('users-table-2');
+            const row2 = logTable2.insertRow();
+            row2.insertCell().textContent = document.querySelector('#users input[placeholder="الاسم الكامل"]').value || 'غير محدد';
+            row2.insertCell().textContent = document.querySelector('#users input[placeholder="البريد الإلكتروني"]').value || 'غير محدد';
+            row2.insertCell().textContent = document.querySelector('#users select').value || 'غير محدد';
+            row2.insertCell().textContent = document.querySelector('#users select:nth-of-type(2)').value || 'غير محدد';
+            row2.insertCell().textContent = Array.from(document.querySelectorAll('#users input[name="permissions"]:checked')).map(checkbox => checkbox.nextSibling.nodeValue.trim()).join(', ') || 'غير محدد';
+            row2.insertCell().textContent = document.querySelector('#users input[name="activate-user"]').checked ? 'مفعل' : 'غير مفعل';
+            row2.insertCell().innerHTML = '<button>تعديل</button> <button>حذف</button>';
+        }
+
+        function addBranch() {
+            const now = new Date();
+            const logTable = document.getElementById('branches-table');
+            const row = logTable.insertRow();
+            row.insertCell().textContent = document.querySelector('#branches input[placeholder="اسم الفرع"]').value || 'غير محدد';
+            row.insertCell().textContent = document.querySelector('#branches input[placeholder="العنوان"]').value || 'غير محدد';
+            row.insertCell().textContent = document.querySelector('#branches input[placeholder="المدير المسؤول"]').value || 'غير محدد';
+            row.insertCell().textContent = document.querySelector('#branches input[placeholder="عدد الموظفين"]').value || 'غير محدد';
+            row.insertCell().innerHTML = '<button>تعديل</button> <button>حذف</button>';
+        }
+
+        function saveIntegrationData() {
+            document.getElementById('integration-save-success').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('integration-save-success').style.display = 'none';
+            }, 3000);
+        }
+
+        function saveInterfaceData() {
+            document.getElementById('interface-save-success').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('interface-save-success').style.display = 'none';
+            }, 3000);
+        }
+
+        function saveHeaderData() {
+            document.getElementById('header-save-success').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('header-save-success').style.display = 'none';
+            }, 3000);
+        }
+
+        let tableRows = 0;
+        let tableCols = 0;
+
+        function createTable() {
+            tableRows = parseInt(document.getElementById('table-rows').value) || 0;
+            tableCols = parseInt(document.getElementById('table-columns').value) || 0;
+
+            if (tableRows <= 0 || tableCols <= 0) {
+                alert('يرجى إدخال عدد صفوف وأعمدة صحيح.');
+                return;
+            }
+
+            let tableHtml = '<table>';
+            tableHtml += '<thead><tr>';
+            for (let j = 0; j < tableCols; j++) {
+                tableHtml += `<th>عمود ${j + 1}</th>`;
+            }
+            tableHtml += '</tr></thead><tbody>';
+            for (let i = 0; i < tableRows; i++) {
+                tableHtml += '<tr>';
+                for (let j = 0; j < tableCols; j++) {
+                    tableHtml += `<td><input type="text" placeholder="خلية ${i + 1}-${j + 1}"></td>`;
+                }
+                tableHtml += '</tr>';
+            }
+            tableHtml += '</tbody></table>';
+
+            document.getElementById('custom-table-container').innerHTML = tableHtml;
+        }
+
+        function addColumn() {
+            if (tableCols === 0) return;
+            tableCols++;
+            createTable();
+        }
+
+        function addRow() {
+            if (tableRows === 0) return;
+            tableRows++;
+            createTable();
+        }
+
+        function deleteColumn() {
+            if (tableCols <= 1) return;
+            tableCols--;
+            createTable();
+        }
+
+        function deleteRow() {
+            if (tableRows <= 1) return;
+            tableRows--;
+            createTable();
+        }
+
+        function saveTable() {
+            document.getElementById('custom-table-save-success').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('custom-table-save-success').style.display = 'none';
+            }, 3000);
+        }
+
+        function createExtractLetter() {
+            const textBeforeTable = document.getElementById('text-before-table').value;
+            const textAfterTable = document.getElementById('text-after-table').value;
+            const tableHtml = document.getElementById('custom-table-container').innerHTML;
+
+            const letterHtml = `
+                <html lang="ar" dir="rtl">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>خطاب مستخلص</title>
+                    <style>
+                        body { font-family: 'Tajawal', sans-serif; text-align: right; padding: 20px; }
+                        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                        table, th, td { border: 1px solid #d1d5db; }
+                        th, td { padding: 8px; text-align: center; }
+                        th { background: linear-gradient(145deg, #2a5298, #1e3c72); color: #ffffff; }
+                        .text-section { margin: 20px 0; }
+                    </style>
+                </head>
+                <body>
+                    <div class="text-section">${textBeforeTable}</div>
+                    ${tableHtml}
+                    <div class="text-section">${textAfterTable}</div>
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob([letterHtml], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'extract_letter.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function showBackupDialog() {
+            document.getElementById('backup-dialog').style.display = 'block';
+        }
+
+        function closeDialog() {
+            document.getElementById('backup-dialog').style.display = 'none';
+        }
+
+        function createBackup() {
+            const now = new Date();
+            const timestamp = now.toISOString().replace(/T/, '_').replace(/:/g, '-').split('.')[0];
+            const backupName = `backup_${timestamp}.json`;
+
+            const backupData = {
+                notifications: {
+                    emailNotifications: document.querySelector('#notifications input[name="email-notifications"]:checked')?.value || '',
+                    email: document.querySelector('#notifications input[placeholder="البريد الإلكتروني"]')?.value || '',
+                    emailPassword: document.querySelector('#notifications input[placeholder="كلمة المرور"]')?.value || '',
+                    smsNotifications: document.querySelector('#notifications input[name="sms-notifications"]:checked')?.value || '',
+                    smsApi: document.querySelector('#notifications input[placeholder="API لخدمة SMS"]')?.value || '',
+                    adminNotifications: document.querySelector('#notifications input[name="admin-notifications"]:checked')?.value || '',
+                    dailyNotificationTime: document.querySelector('#notifications input[type="time"]')?.value || '',
+                    delayNotificationMinutes: document.querySelector('#notifications input[placeholder="عدد الدقائق"]')?.value || '',
+                    absenceNotification: document.querySelector('#notifications input[name="absence-notifications"]:checked')?.value || '',
+                    departmentNotifications: document.querySelector('#notifications select')?.value || '',
+                    customMessage: document.querySelector('#notifications textarea')?.value || ''
+                },
+                archiving: {
+                    duration: document.getElementById('archive-duration')?.value || '',
+                    compressData: document.querySelector('#archiving input[name="compress-data"]:checked')?.value || '',
+                    cloudExport: document.querySelector('#archiving input[name="cloud-export"]:checked')?.value || ''
+                },
+                formatting: {
+                    paperSize: document.getElementById('paper-size')?.value || '',
+                    printOrientation: document.querySelector('#formatting input[name="print-orientation"]:checked')?.value || '',
+                    marginTop: document.querySelector('#formatting input[placeholder="الهامش العلوي"]')?.value || '',
+                    marginBottom: document.querySelector('#formatting input[placeholder="الهامش السفلي"]')?.value || '',
+                    fontColor: document.querySelector('#formatting select')?.value || '',
+                    electronicSignatures: document.querySelector('#formatting input[name="electronic-signatures"]:checked')?.value || '',
+                    reportHeader: document.querySelector('#formatting textarea[placeholder="رأس التقرير"]')?.value || '',
+                    reportFooter: document.querySelector('#formatting textarea[placeholder="تذييل التقرير"]')?.value || ''
+                },
+                security: {
+                    twoFactorAuth: document.querySelector('#security input[name="2fa"]:checked')?.value || '',
+                    lockAfterIdle: document.querySelector('#security input[placeholder="عدد الدقائق"]')?.value || '',
+                    passwordChangeDays: document.querySelector('#security input[placeholder="عدد الأيام"]')?.value || '',
+                    activityLog: document.querySelector('#security input[name="activity-log"]:checked')?.value || '',
+                    failedLoginAttempts: document.querySelector('#security input[name="failed-login"]:checked')?.value || '',
+                    ipRestriction: document.querySelector('#security input[placeholder="عنوان IP"]')?.value || ''
+                },
+                interface: {
+                    language: document.querySelector('#interface select:nth-of-type(1)')?.value || '',
+                    color: document.querySelector('#interface select:nth-of-type(2)')?.value || '',
+                    fontType: document.querySelector('#interface select:nth-of-type(3)')?.value || '',
+                    fontSize: document.querySelector('#interface select:nth-of-type(4)')?.value || '',
+                    darkMode: document.querySelector('#interface input[name="dark-mode"]:checked')?.value || '',
+                    template: document.querySelector('#interface select:nth-of-type(5)')?.value || '',
+                    tooltips: document.querySelector('#interface input[name="tooltips"]:checked')?.value || ''
+                },
+                header: {
+                    title: document.querySelector('#header input[placeholder="عنوان الترويسة"]')?.value || '',
+                    subtitle: document.querySelector('#header input[placeholder="العنوان الفرعي"]')?.value || '',
+                    fontSize: document.querySelector('#header select')?.value || '',
+                    includeDateTime: document.querySelector('#header input[name="header-date"]:checked')?.value || ''
+                }
+            };
+
+            const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = backupName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            const logTable = document.getElementById('backup-log');
+            const row = logTable.insertRow();
+            row.insertCell().textContent = now.toLocaleDateString('ar-SA');
+            row.insertCell().textContent = now.toLocaleTimeString('ar-SA');
+            row.insertCell().textContent = 'نجاح';
+
+            document.getElementById('backup-success').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('backup-success').style.display = 'none';
+            }, 3000);
+        }
+
+        function createBackupFromDialog() {
+            createBackup();
+            closeDialog();
+        }
+
+        function exportSettings() {
+            createBackup();
+            document.getElementById('export-success').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('export-success').style.display = 'none';
+            }, 3000);
+        }
+
+        function importSettings(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = JSON.parse(e.target.result);
+                    restoreBackupData(data);
+                    document.getElementById('import-success').style.display = 'block';
+                    setTimeout(() => {
+                        document.getElementById('import-success').style.display = 'none';
+                    }, 3000);
+                };
+                reader.readAsText(file);
+
+                const now = new Date();
+                const logTable = document.getElementById('export-import-log');
+                const row = logTable.insertRow();
+                row.insertCell().textContent = 'استيراد';
+                row.insertCell().textContent = now.toLocaleDateString('ar-SA');
+                row.insertCell().textContent = now.toLocaleTimeString('ar-SA');
+            }
+        }
+
+        function restoreBackup(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = JSON.parse(e.target.result);
+                    restoreBackupData(data);
+                    document.getElementById('restore-success').style.display = 'block';
+                    setTimeout(() => {
+                        document.getElementById('restore-success').style.display = 'none';
+                    }, 3000);
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function restoreBackupData(data) {
+            if (data.notifications) {
+                document.querySelector(`#notifications input[name="email-notifications"][value="${data.notifications.emailNotifications || 'off'}"]`).checked = true;
+                document.querySelector('#notifications input[placeholder="البريد الإلكتروني"]').value = data.notifications.email || '';
+                document.querySelector('#notifications input[placeholder="كلمة المرور"]').value = data.notifications.emailPassword || '';
+                document.querySelector(`#notifications input[name="sms-notifications"][value="${data.notifications.smsNotifications || 'off'}"]`).checked = true;
+                document.querySelector('#notifications input[placeholder="API لخدمة SMS"]').value = data.notifications.smsApi || '';
+                document.querySelector(`#notifications input[name="admin-notifications"][value="${data.notifications.adminNotifications || 'off'}"]`).checked = true;
+                document.querySelector('#notifications input[type="time"]').value = data.notifications.dailyNotificationTime || '';
+                document.querySelector('#notifications input[placeholder="عدد الدقائق"]').value = data.notifications.delayNotificationMinutes || '';
+                document.querySelector(`#notifications input[name="absence-notifications"][value="${data.notifications.absenceNotification || 'off'}"]`).checked = true;
+                document.querySelector('#notifications select').value = data.notifications.departmentNotifications || 'جميع الأقسام';
+                document.querySelector('#notifications textarea').value = data.notifications.customMessage || '';
+            }
+            if (data.archiving) {
+                document.getElementById('archive-duration').value = data.archiving.duration || '6 أشهر';
+                document.querySelector(`#archiving input[name="compress-data"][value="${data.archiving.compressData || 'off'}"]`).checked = true;
+                document.querySelector(`#archiving input[name="cloud-export"][value="${data.archiving.cloudExport || 'off'}"]`).checked = true;
+            }
+            if (data.formatting) {
+                document.getElementById('paper-size').value = data.formatting.paperSize || 'A4';
+                document.querySelector(`#formatting input[name="print-orientation"][value="${data.formatting.printOrientation || 'vertical'}"]`).checked = true;
+                document.querySelector('#formatting input[placeholder="الهامش العلوي"]').value = data.formatting.marginTop || '';
+                document.querySelector('#formatting input[placeholder="الهامش السفلي"]').value = data.formatting.marginBottom || '';
+                document.querySelector('#formatting select').value = data.formatting.fontColor || 'أسود';
+                document.querySelector(`#formatting input[name="electronic-signatures"][value="${data.formatting.electronicSignatures || 'off'}"]`).checked = true;
+                document.querySelector('#formatting textarea[placeholder="رأس التقرير"]').value = data.formatting.reportHeader || '';
+                document.querySelector('#formatting textarea[placeholder="تذييل التقرير"]').value = data.formatting.reportFooter || '';
+            }
+            if (data.security) {
+                document.querySelector(`#security input[name="2fa"][value="${data.security.twoFactorAuth || 'off'}"]`).checked = true;
+                document.querySelector('#security input[placeholder="عدد الدقائق"]').value = data.security.lockAfterIdle || '';
+                document.querySelector('#security input[placeholder="عدد الأيام"]').value = data.security.passwordChangeDays || '';
+                document.querySelector(`#security input[name="activity-log"][value="${data.security.activityLog || 'off'}"]`).checked = true;
+                document.querySelector(`#security input[name="failed-login"][value="${data.security.failedLoginAttempts || 'off'}"]`).checked = true;
+                document.querySelector('#security input[placeholder="عنوان IP"]').value = data.security.ipRestriction || '';
+            }
+            if (data.interface) {
+                document.querySelector('#interface select:nth-of-type(1)').value = data.interface.language || 'العربية';
+                document.querySelector('#interface select:nth-of-type(2)').value = data.interface.color || 'رمادي';
+                document.querySelector('#interface select:nth-of-type(3)').value = data.interface.fontType || 'Tajawal';
+                document.querySelector('#interface select:nth-of-type(4)').value = data.interface.fontSize || 'متوسط';
+                document.querySelector(`#interface input[name="dark-mode"][value="${data.interface.darkMode || 'off'}"]`).checked = true;
+                document.querySelector('#interface select:nth-of-type(5)').value = data.interface.template || 'كلاسيكي';
+                document.querySelector(`#interface input[name="tooltips"][value="${data.interface.tooltips || 'off'}"]`).checked = true;
+            }
+            if (data.header) {
+                document.querySelector('#header input[placeholder="عنوان الترويسة"]').value = data.header.title || '';
+                document.querySelector('#header input[placeholder="العنوان الفرعي"]').value = data.header.subtitle || '';
+                document.querySelector('#header select').value = data.header.fontSize || 'متوسط';
+                document.querySelector(`#header input[name="header-date"][value="${data.header.includeDateTime || 'off'}"]`).checked = true;
+            }
+        }
+
+        
+        document.querySelectorAll('.section .buttons button').forEach(button => {
+            button.addEventListener('click', function(e) {
+                const ripple = document.createElement('span');
+                ripple.classList.add('ripple');
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = e.clientX - rect.left - size / 2 + 'px';
+                ripple.style.top = e.clientY - rect.top - size / 2 + 'px';
+                this.appendChild(ripple);
+            });
+        });
+
+        window.onload = function() {
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            updateSideData();
+        };
+    </script>
+</body>
+</html>

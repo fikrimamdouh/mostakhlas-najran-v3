@@ -1,0 +1,1245 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Tajawal', sans-serif;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: #ffffff;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+#particles-js-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+
+.container {
+    max-width: 1200px;
+    width: 90%;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+    backdrop-filter: blur(10px);
+}
+
+.header-info {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+}
+
+.header-info .logo-right, .header-info .logo-left {
+    width: 80px;
+    height: auto;
+    transition: transform 0.5s ease, filter 0.3s ease;
+    filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.3));
+}
+
+.header-info .logo-right:hover, .header-info .logo-left:hover {
+    transform: rotate(10deg) scale(1.2);
+    filter: drop-shadow(5px 5px 15px rgba(0, 0, 0, 0.5));
+}
+
+.header-info .logo-right { float: right; margin-left: 15px; }
+.header-info .logo-left { float: left; margin-right: 15px; }
+.header-info .logo-clear { clear: both; }
+
+.header-info h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #2a5298;
+    margin: 8px 0;
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+    animation: fadeIn 1s ease-in-out;
+}
+
+.header-info h3 {
+    font-size: 20px;
+    font-weight: 500;
+    color: #1e3c72;
+    margin: 5px 0;
+    animation: fadeIn 1.2s ease-in-out;
+}
+
+.header-info h2 {
+    font-size: 24px;
+    font-weight: 500;
+    color: #d4af37;
+    margin: 5px 0;
+    animation: fadeIn 1.2s ease-in-out;
+}
+
+.header-info .date {
+    font-size: 14px;
+    color: #7f8c8d;
+    animation: fadeIn 1.4s ease-in-out;
+}
+
+.side-data {
+    float: right;
+    width: 300px;
+    margin-bottom: 15px;
+}
+
+.side-data .contract-data {
+    font-size: 14px;
+    color: #2c3e50;
+}
+
+.side-data .contract-data p {
+    margin: 5px 0;
+}
+
+.side-data .contract-data .period {
+    font-weight: bold;
+    color: #d4af37;
+}
+
+.nav-bar {
+    display: flex;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+    clear: both;
+}
+
+.nav-bar .dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.nav-bar select {
+    padding: 10px 20px;
+    border: none;
+    font-size: 14px;
+    border-radius: 10px;
+    background: linear-gradient(145deg, #2a5298, #1e3c72);
+    color: #ffffff;
+    font-family: 'Tajawal', sans-serif;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.nav-bar select:focus {
+    background: #d4af37;
+    color: #2c3e50;
+}
+
+.nav-bar select:hover {
+    background: linear-gradient(145deg, #d4af37, #b8962e);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.nav-bar .dropdown-content {
+    display: none;
+    position: absolute;
+    background: #ffffff;
+    min-width: 180px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    z-index: 1;
+    border-radius: 10px;
+    top: 100%;
+    right: 0;
+    overflow: hidden;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+.nav-bar .dropdown:hover .dropdown-content {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.nav-bar .dropdown-content a {
+    background: transparent;
+    color: #2c3e50;
+    padding: 10px 14px;
+    text-decoration: none;
+    display: block;
+    font-size: 14px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.nav-bar .dropdown-content a:hover {
+    background: linear-gradient(to right, #e6f0ff, #d4eaff);
+    color: #d4af37;
+}
+
+.tabs {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.tabs a {
+    padding: 10px 20px;
+    background: linear-gradient(145deg, #2a5298, #1e3c72);
+    color: #ffffff;
+    border-radius: 10px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.tabs a::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), transparent, rgba(255, 255, 255, 0.1));
+    animation: gradientMove 8s infinite linear;
+    z-index: 0;
+}
+
+@keyframes gradientMove {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.tabs a:hover {
+    background: linear-gradient(145deg, #d4af37, #b8962e);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.tabs a.active {
+    background: linear-gradient(145deg, #d4af37, #b8962e);
+}
+
+.tabs a .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+    transform: scale(0);
+    animation: ripple 0.6s linear;
+    pointer-events: none;
+}
+
+@keyframes ripple {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+.section {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 15px;
+    box-shadow: inset 0 0 20px rgba(212, 175, 55, 0.3), 0 10px 20px rgba(0, 0, 0, 0.1);
+    margin-bottom: 15px;
+    animation: glow 3s infinite alternate;
+    border: 1px solid rgba(212, 175, 55, 0.5);
+    backdrop-filter: blur(15px);
+    position: relative;
+    overflow: hidden;
+    text-align: right;
+    display: none;
+}
+
+.section.active {
+    display: block !important;
+}
+
+.section::after {
+    content: '';
+    position: absolute;
+    bottom: -50px;
+    left: 0;
+    width: 100%;
+    height: 50px;
+    background: linear-gradient(to top, rgba(212, 175, 55, 0.1), transparent);
+    transform: scaleY(-1);
+    opacity: 0.5;
+}
+
+.section h2 {
+    font-size: 20px;
+    color: #d4af37;
+    margin-bottom: 15px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.section h3 {
+    font-size: 18px;
+    color: #d4af37;
+    margin-bottom: 10px;
+}
+
+.section label {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #1e3c72;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.section label.blue-label {
+    color: #2a5298;
+    font-weight: bold;
+}
+
+.section label.gold-label {
+    color: #d4af37;
+}
+
+.section label.section-label {
+    color: #2a5298;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.section input[type="text"],
+.section input[type="email"],
+.section input[type="password"],
+.section input[type="number"],
+.section input[type="date"],
+.section input[type="time"],
+.section select,
+.section textarea {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    font-size: 14px;
+    font-family: 'Tajawal', sans-serif;
+    background: #f9fbfc;
+    color: #2c3e50;
+    transition: border-color 0.3s ease;
+}
+
+.section input[type="text"]:focus,
+.section input[type="email"]:focus,
+.section input[type="password"]:focus,
+.section input[type="number"]:focus,
+.section input[type="date"]:focus,
+.section input[type="time"]:focus,
+.section select:focus,
+.section textarea:focus {
+    border-color: #d4af37;
+    outline: none;
+}
+
+.section input[type="radio"],
+.section input[type="checkbox"] {
+    margin-left: 10px;
+    margin-right: 5px;
+}
+
+.section .sub-section {
+    margin-top: 15px;
+    padding: 10px;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 10px;
+}
+
+.section .sub-section h3 {
+    font-size: 18px;
+    color: #d4af37;
+    margin-bottom: 10px;
+}
+
+.section .buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 15px;
+}
+
+.section .buttons.single-row {
+    flex-wrap: nowrap;
+}
+
+.section .buttons button {
+    padding: 8px 15px;
+    background: linear-gradient(145deg, #2a5298, #1e3c72);
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.section .buttons button:hover {
+    background: linear-gradient(145deg, #d4af37, #b8962e);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* تنسيق الأزرار الجديدة */
+.button {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 20px;
+    margin: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #fff;
+}
+
+.button i {
+    margin-left: 8px;
+}
+
+.button:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+.button:active {
+    transform: translateY(0);
+}
+
+.btn-save {
+    background-color: #28a745;
+}
+
+.btn-clear {
+    background-color: #dc3545;
+}
+
+.btn-cancel {
+    background-color: #6c757d;
+}
+
+.btn-backup {
+    background-color: #007bff;
+}
+
+.btn-edit {
+    background-color: #ffc107;
+}
+
+.btn-restore {
+    background-color: #17a2b8;
+}
+
+.btn-export {
+    background-color: #17a2b8;
+}
+
+.btn-import {
+    background-color: #ffc107;
+    color: black;
+}
+
+.btn-delete {
+    background-color: #dc3545;
+}
+
+.section table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.section table th {
+    background: linear-gradient(145deg, #2a5298, #1e3c72);
+    color: #ffffff;
+}
+
+.section table th, .section table td {
+    padding: 8px;
+    border: 1px solid #d1d5db;
+    text-align: center;
+    font-size: 14px;
+    color: #1e3c72;
+}
+
+.section table td button {
+    padding: 5px 10px;
+    background: linear-gradient(145deg, #2a5298, #1e3c72);
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.section table td button:hover {
+    background: linear-gradient(145deg, #d4af37, #b8962e);
+    transform: translateY(-2px);
+}
+
+/* تنسيق جدول السجل */
+#backup-log-table, #export-import-log, #users-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+#backup-log-table th, #export-import-log th, #users-table th,
+#backup-log-table td, #export-import-log td, #users-table td {
+    border: 1px solid #d1d5db;
+    padding: 8px;
+    text-align: right;
+    font-size: 14px;
+}
+
+#backup-log-table th, #export-import-log th, #users-table th {
+    background: linear-gradient(145deg, #2a5298, #1e3c72);
+    color: #ffffff;
+}
+
+#backup-log-table td, #export-import-log td, #users-table td {
+    color: #1e3c72;
+}
+
+/* تنسيق حقل مدة المستخلص بالأيام */
+#extract-duration-days {
+    display: block;
+    font-size: 14px;
+    color: #2a5298;
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+/* تنسيق العناوين القابلة للنقر */
+.section-toggle {
+    cursor: pointer;
+    padding: 10px;
+    background: linear-gradient(145deg, #2a5298, #1e3c72);
+    color: #ffffff;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    transition: background 0.3s ease;
+}
+
+.section-toggle:hover {
+    background: linear-gradient(145deg, #d4af37, #b8962e);
+}
+
+/* تنسيق محتوى الأقسام الفرعية */
+.section-content {
+    display: none;
+}
+
+.section-content.active {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* التأكد من إظهار بيانات العقد افتراضيًا */
+#contract #contract-data {
+    display: block !important;
+}
+
+/* إخفاء التواقيع افتراضيًا */
+#signatures {
+    display: none;
+}
+
+/* تنسيق النافذة (Modal) */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    width: 400px;
+    max-width: 90%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h3 {
+    margin-top: 0;
+}
+
+.modal-content label {
+    display: block;
+    margin: 10px 0;
+}
+
+.modal-content .buttons {
+    text-align: left;
+}
+
+.modal-content label.section-label {
+    color: #2a5298;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+/* تنسيق الديالوج */
+.dialog {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    padding: 15px;
+    z-index: 1000;
+    text-align: center;
+    backdrop-filter: blur(10px);
+}
+
+.dialog p {
+    font-size: 16px;
+    color: #1e3c72;
+    margin-bottom: 15px;
+}
+
+.dialog .buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.dialog button {
+    padding: 8px 15px;
+    background: linear-gradient(145deg, #2a5298, #1e3c72);
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.dialog button:hover {
+    background: linear-gradient(145deg, #d4af37, #b8962e);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* تنسيق الفوتر */
+footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+    color: #1e3c72;
+    animation: fadeIn 2s ease-in-out;
+}
+
+footer p {
+    margin: 5px 0;
+}
+
+footer a {
+    color: #d4af37;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+footer a:hover {
+    color: #b8962e;
+}
+
+/* الرسوم المتحركة */
+@keyframes fadeIn {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glow {
+    0% { box-shadow: inset 0 0 20px rgba(212, 175, 55, 0.3), 0 10px 20px rgba(0, 0, 0, 0.1); }
+    100% { box-shadow: inset 0 0 30px rgba(212, 175, 55, 0.5), 0 15px 30px rgba(0, 0, 0, 0.2); }
+}/* تنسيق النافذة */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 600px;
+    direction: rtl;
+    font-family: 'Tajawal', sans-serif;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.modal-header i {
+    color: #007bff;
+    font-size: 24px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    color: #333;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-label {
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.section-label {
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.section-label input[type="checkbox"] {
+    margin-left: 10px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.file-status {
+    font-size: 14px;
+    color: #666;
+    margin-top: 5px;
+    display: block;
+}
+
+.modal-content .buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.modal-content button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: 'Tajawal', sans-serif;
+}
+
+.modal-content button:hover {
+    background-color: #0056b3;
+}
+
+.modal-content button.btn-cancel {
+    background-color: #dc3545;
+}
+
+.modal-content button.btn-cancel:hover {
+    background-color: #c82333;
+}
+
+.success-message {
+    display: none;
+    color: #28a745;
+    font-size: 14px;
+    margin-top: 10px;
+    text-align: center;
+}
+
+/* تنسيق الجدول */
+#backup-log-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-family: 'Tajawal', sans-serif;
+}
+
+#backup-log-table th,
+#backup-log-table td {
+    padding: 12px;
+    text-align: right;
+    border: 1px solid #ddd;
+}
+
+#backup-log-table th {
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+}
+
+#backup-log-table th i {
+    margin-left: 5px;
+}
+
+#backup-log-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+#backup-log-table tr:hover {
+    background-color: #f1f1f1;
+}
+
+#backup-log-table .button {
+    padding: 8px 15px;
+    margin: 0 5px;
+    font-size: 14px;
+    border-radius: 5px;
+}
+
+#backup-log-table .btn-restore {
+    background-color: #28a745;
+}
+
+#backup-log-table .btn-restore:hover {
+    background-color: #218838;
+}
+
+#backup-log-table .btn-delete {
+    background-color: #dc3545;
+}
+
+#backup-log-table .btn-delete:hover {
+    background-color: #c82333;
+}
+/**
+ * ===================================================================
+ *      ===>   ✅ الترقية النهائية لتصميم الأزرار (V5 - Modern) ✅   <===
+ * ===================================================================
+ * @description هذا الكود سيقوم بتجاوز كل تنسيقات الأزرار القديمة
+ *              وتطبيق تصميم موحد واحترافي على كل الأزرار في الصفحة.
+ */
+
+/* --- 1. التصميم الأساسي الموحد لكل الأزرار --- */
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px; /* مسافة بين الأيقونة والنص */
+    padding: 10px 22px; /* زيادة الحشو لراحة أكبر */
+    font-family: 'Tajawal', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px; /* حواف أكثر دائرية ونعومة */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* ظل أكثر نعومة */
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: white; /* لون النص الافتراضي أبيض */
+    background: #6c757d; /* لون افتراضي أنيق */
+}
+
+.button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 7px 20px rgba(0, 0, 0, 0.2);
+}
+
+.button:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* --- 2. تخصيص الألوان لكل نوع من الأزرار --- */
+
+/* زر الحفظ (أخضر) */
+.btn-save {
+    background: linear-gradient(135deg, #28a745, #218838);
+}
+
+/* زر الحذف والمسح (أحمر) */
+.btn-clear, .btn-delete {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+}
+
+/* زر الإلغاء (رمادي) */
+.btn-cancel {
+    background: linear-gradient(135deg, #6c757d, #5a6268);
+}
+
+/* زر التعديل (أصفر) */
+.btn-edit {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+    color: #212529; /* لون نص غامق ليتناسب مع الخلفية الصفراء */
+}
+
+/* زر النسخ الاحتياطي (أزرق) */
+.btn-backup {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+}
+
+/* زر الاستعادة والتصدير (سماوي) */
+.btn-restore, .btn-export {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+}
+
+/* زر الاستيراد (أصفر) */
+.btn-import {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+    color: #212529;
+}
+
+/* --- 3. تطبيق التنسيق على الأزرار داخل النوافذ المنبثقة --- */
+.dialog .buttons button {
+    min-width: 120px; /* عرض أدنى لضمان التناسق */
+}
+
+/* --- 4. تنسيق خاص بنافذة خيارات النسخ الاحتياطي --- */
+.backup-options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+.backup-option-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #f9f9f9;
+    text-align: center;
+    color: #333;
+}
+.backup-option-btn:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: #007bff;
+}
+.backup-option-btn i {
+    font-size: 28px;
+    color: #007bff;
+    margin-bottom: 10px;
+}
+.backup-option-btn span {
+    font-weight: bold;
+    color: #333;
+}
+.backup-option-btn small {
+    font-size: 12px;
+    color: #777;
+    margin-top: 5px;
+}
+/**
+ * ===================================================================
+ *      ===>   التصميم الاحترافي الشامل (V5 - Final)   <===
+ * ===================================================================
+ */
+
+/* ... (كل كود CSS من الرد السابق يبقى كما هو) ... */
+
+/* ✅ [جديد] تنسيق إضافي لقسم النسخ الاحتياطي المحسن */
+.section-description {
+    text-align: center;
+    color: var(--text-light);
+    max-width: 600px;
+    margin: -1rem auto 2rem auto;
+    font-size: 1rem;
+}
+
+/* ✅ [جديد] تنسيق نافذة الاستعادة */
+.file-upload-label {
+    display: inline-block;
+    padding: 12px 25px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s;
+    text-align: center;
+    width: 100%;
+}
+.file-upload-label:hover {
+    background: #3a7bc8;
+}
+.file-upload-label i {
+    margin-left: 10px;
+}
+#restore-file-input {
+    display: none; /* إخفاء حقل رفع الملف الأصلي */
+}
+.file-name-display {
+    margin-top: 10px;
+    color: var(--text-light);
+    font-style: italic;
+    text-align: center;
+}
+
+/* ✅ [جديد] تنسيق زر الإغلاق في النوافذ المنبثقة */
+.modal-content .close {
+    position: absolute;
+    top: 10px;
+    left: 15px;
+    font-size: 2rem;
+    color: #aaa;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+.modal-content .close:hover {
+    color: #333;
+}
+/**
+ * ===================================================================
+ *      ===>   ✅ تنسيقات نظام النسخ الاحتياطي والاستعادة (V7)   <===
+ * ===================================================================
+ */
+
+/* --- 1. تنسيق القسم الرئيسي في الصفحة --- */
+.section-description {
+    text-align: center;
+    color: #5a6268; /* لون نص أغمق قليلاً للوصف */
+    max-width: 600px;
+    margin: 0 auto 20px auto;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+/* --- 2. تنسيق النافذة المنبثقة (Modal) الشاملة --- */
+.modal {
+    display: none; /* مخفي بشكل افتراضي */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background: #fff;
+    padding: 25px 30px;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 800px; /* عرض مناسب للمحتوى */
+    color: #2c3e50;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    position: relative;
+}
+
+.modal-content .close {
+    position: absolute;
+    top: 10px;
+    left: 20px; /* ليتناسب مع الواجهة العربية */
+    font-size: 2.2rem;
+    color: #aaa;
+    cursor: pointer;
+    transition: color 0.3s, transform 0.3s;
+}
+
+.modal-content .close:hover {
+    color: #dc3545; /* لون أحمر عند الوقوف عليه */
+    transform: rotate(90deg);
+}
+
+.modal-content h3 {
+    text-align: center;
+    color: var(--primary-color, #2a5298);
+    margin-bottom: 10px;
+}
+
+.modal-subtitle {
+    color: var(--secondary-color, #1e3c72);
+    margin-top: 20px;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    border-bottom: 2px solid #eee;
+}
+
+.modal-description {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.modal-divider {
+    margin: 25px 0;
+    border: 0;
+    border-top: 1px solid #eee;
+}
+
+
+/* --- 3. تنسيق أزرار خيارات النسخ الاحتياطي (Grid) --- */
+.backup-options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.backup-option-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #fdfdfd;
+    text-align: center;
+    color: #333;
+}
+
+.backup-option-btn:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 15px rgba(0, 123, 255, 0.15);
+    border-color: var(--primary-color, #2a5298);
+}
+
+.backup-option-btn i {
+    font-size: 28px;
+    color: var(--primary-color, #2a5298);
+    margin-bottom: 10px;
+}
+
+.backup-option-btn span {
+    font-weight: bold;
+    color: #333;
+}
+
+.backup-option-btn small {
+    font-size: 12px;
+    color: #777;
+    margin-top: 5px;
+}
+
+
+/* --- 4. تنسيق قسم استعادة الملفات --- */
+.restore-section .file-upload-label {
+    display: block;
+    padding: 12px 25px;
+    background: var(--secondary-color, #1e3c72);
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s;
+    text-align: center;
+}
+
+.restore-section .file-upload-label:hover {
+    background: var(--primary-color, #2a5298);
+}
+
+.restore-section .file-upload-label i {
+    margin-left: 10px;
+}
+
+.restore-section #restore-file-input {
+    display: none; /* إخفاء حقل رفع الملف الأصلي */
+}
+
+.restore-section .file-name-display {
+    margin-top: 10px;
+    color: #777;
+    font-style: italic;
+    text-align: center;
+    padding: 5px;
+    min-height: 24px; /* حجز مساحة حتى لو كان فارغًا */
+}
+
+
+/* --- 5. تنسيق جدول سجل العمليات --- */
+.log-section {
+    margin-top: 25px;
+}
+
+#backup-log-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#backup-log-table th,
+#backup-log-table td {
+    padding: 12px;
+    border: 1px solid var(--border-color, #d1d5db);
+    text-align: center;
+    color: var(--text-dark, #2c3e50);
+}
+
+#backup-log-table th {
+    background: linear-gradient(145deg, #f1f5f9, #e2e8f0);
+    color: var(--secondary-color, #1e3c72);
+    font-weight: 700;
+}
+
+/* تنسيق حالة النجاح والفشل في السجل */
+.log-success {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.log-fail {
+    color: #dc3545;
+    font-weight: bold;
+}

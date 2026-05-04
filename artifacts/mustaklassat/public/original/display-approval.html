@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <script src="/original/auth-check.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>موافقة زيارة مقاولي الباطن</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator/qrcode.js"></script>
+    <style>
+        :root {
+            --primary-color: #1e3c72;
+            --secondary-color: #2a5298;
+            --accent-color: #d4af37;
+        }
+        body { font-family: 'Tajawal', sans-serif; background-color: #e9e9e9; direction: rtl; }
+        .page-container { width: 21cm; min-height: 29.7cm; padding: 1.8cm; margin: 20px auto; background-color: #ffffff; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15  ); position: relative; display: flex; flex-direction: column; }
+        
+        /* 1. تعديل تصميم الهيدر */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 25px;
+        }
+        .header .logo {
+            width: 85px;
+            height: auto;
+        }
+        .header .header-text {
+            text-align: center;
+        }
+        .header .header-text h1 { font-size: 22px; margin: 0; font-weight: 800; color: var(--primary-color); }
+        .header .header-text h2 { font-size: 18px; margin: 5px 0 0 0; font-weight: 500; color: var(--secondary-color); }
+
+        .title-section { text-align: center; margin-bottom: 20px; }
+        .title-section h3 { font-size: 22px; padding: 7px 20px; display: inline-block; border: 2px solid var(--accent-color); border-radius: 15px; background-color: rgba(212, 175, 55, 0.05); color: var(--primary-color); }
+        
+        .main-content { /* flex-grow: 1; */ }
+        
+        .details-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 15px; }
+        .details-table td { padding: 8px; border: 1px solid #e0e0e0; vertical-align: middle; }
+        .details-table .label { font-weight: 700; background-color: #f9f9f9; width: 20%; }
+        .approval-text { font-size: 15px; line-height: 1.8; text-align: justify; padding: 10px; }
+        
+        .id-photo-section {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        .id-photo-section h4 { font-size: 15px; color: var(--primary-color); margin-bottom: 10px; }
+        .id-photo-container { width: 220px; height: 140px; border: 2px dashed #ccc; border-radius: 10px; display: flex; justify-content: center; align-items: center; padding: 8px; background-color: #fdfdfd; }
+        .id-photo-container img { max-width: 100%; max-height: 100%; border-radius: 5px; }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-top: 15px;
+            margin-top: 40px;
+            border-top: 2px solid var(--accent-color);
+            flex-direction: row-reverse; /* لعكس أماكن التوقيع والباركود */
+        }
+        .signature-section { text-align: center; }
+        .signature-section .title { font-size: 15px; font-weight: 700; color: var(--primary-color); margin-bottom: 4px; }
+        .signature-section .name { font-size: 14px; margin-bottom: 10px; }
+        /* 2. تنسيق احترافي لاسم المدير */
+        .signature-font {
+            font-family: 'Segoe Script', 'Brush Script MT', cursive; /* خط شبيه بالتوقيع */
+            font-style: italic;
+            font-size: 16px;
+            color: #333;
+        }
+        .signature-section .signature-space { height: 35px; border-bottom: 1px solid #aaa; margin-bottom: 4px; }
+        .signature-section .date { font-size: 12px; color: #555; }
+        .qr-code-container { text-align: center; }
+        .qr-code-container p { font-size: 10px; margin: 0 0 4px 0; font-weight: bold; color: #555; }
+        .approval-id { font-size: 9px; color: #777; margin-top: 4px; }
+        .action-buttons { position: fixed; top: 20px; left: 20px; z-index: 100; }
+        .btn-print { padding: 12px 20px; background-color: var(--primary-color); color: #fff; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-family: 'Tajawal', sans-serif; }
+        .btn-print i { margin-left: 8px; }
+        @media print {
+            @page { size: A4; margin: 0; }
+            body { margin: 0; padding: 0; background-color: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .action-buttons { display: none; }
+            .page-container { box-shadow: none; margin: 0; padding: 1.8cm; width: 21cm; height: 29.7cm; box-sizing: border-box; display: flex; flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="action-buttons">
+        <button class="btn-print" onclick="window.print();"><i class="fas fa-print"></i> طباعة / حفظ PDF</button>
+    </div>
+
+    <div class="page-container">
+        <div class="header">
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo">
+            <div class="header-text">
+                <h1>تجمع نجران الصحي</h1>
+                <h2>الإدارة التنفيذية للتشغيل - إدارة الصيانة</h2>
+            </div>
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo">
+        </div>
+        
+        <div class="main-content">
+            <div class="title-section"><h3>موافقة زيارة مقاولي الباطن</h3></div>
+            <table class="details-table">
+                <tr><td class="label">مقاول الصيانة</td><td id="val-main_contractor"></td><td class="label">مقاول الباطن</td><td id="val-sub_contractor"></td></tr>
+                <tr><td class="label">الموقع</td><td id="val-site_location"></td><td class="label">النظام</td><td id="val-system_name"></td></tr>
+                <tr><td class="label">اسم المندوب</td><td id="val-rep_name"></td><td class="label">رقم الهوية</td><td id="val-rep_id"></td></tr>
+                <tr><td class="label">رقم الجوال</td><td id="val-rep_mobile"></td><td class="label">تاريخ الزيارة</td><td id="val-visit_date"></td></tr>
+            </table>
+            
+            <div class="approval-text" id="approval-text-dynamic"></div>
+
+            <div class="id-photo-section" id="id-photo-section">
+                <h4>مرفق: صورة هوية الزائر</h4>
+                <div class="id-photo-container" id="photo-display"></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="signature-section">
+                <p class="title">مدير إدارة الصيانة</p>
+                <p class="name"><span class="signature-font">م. محمد عباس المكرمي</span></p>
+                <div class="signature-space"></div>
+                <p class="date" id="approval-date"></p>
+            </div>
+            <div class="qr-code-container">
+                <p>للتحقق الرقمي</p>
+                <div id="qrcode"></div>
+                <p class="approval-id" id="val-approval-id"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', function() {
+            const dataString = localStorage.getItem('finalApprovalData_NajranHC');
+            const urlParams = new URLSearchParams(window.location.search);
+            const approvalId = urlParams.get('id');
+            if (!dataString || !approvalId) { document.body.innerHTML = '<h1>خطأ: بيانات الموافقة غير موجودة.</h1>'; return; }
+            const data = JSON.parse(dataString);
+            if (data.id.toString() !== approvalId) { document.body.innerHTML = '<h1>خطأ: رابط الموافقة غير صحيح.</h1>'; return; }
+            
+            function formatDate(dateString) {
+                const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
+                return new Date(dateString).toLocaleDateString('en-GB', options);
+            }
+
+            document.getElementById('val-main_contractor').textContent = data.main_contractor;
+            document.getElementById('val-sub_contractor').textContent = data.sub_contractor;
+            document.getElementById('val-site_location').textContent = data.site_location;
+            document.getElementById('val-system_name').textContent = data.system_name;
+            document.getElementById('val-rep_name').textContent = data.rep_name;
+            document.getElementById('val-rep_id').textContent = data.rep_id;
+            document.getElementById('val-rep_mobile').textContent = data.rep_mobile;
+            document.getElementById('val-visit_date').textContent = formatDate(data.visit_date);
+
+            const dynamicText = `توافق إدارة الصيانة بتجمع نجران الصحي على قيام المندوب: <strong>${data.rep_name}</strong>، بزيارة موقع: <strong>${data.site_location}</strong>، لتنفيذ أعمال الصيانة الوقائية لنظام: <strong>${data.system_name}</strong>، وذلك حسب شروط ومواصفات العقد.`;
+            document.getElementById('approval-text-dynamic').innerHTML = dynamicText;
+
+            if (data.rep_id_photo) {
+                const photoSection = document.getElementById('id-photo-section');
+                const photoDisplay = document.getElementById('photo-display');
+                const img = document.createElement('img');
+                img.src = data.rep_id_photo;
+                photoDisplay.appendChild(img);
+                photoSection.style.display = 'flex';
+            }
+
+            document.getElementById('approval-date').textContent = `تاريخ الإعتماد: ${formatDate(new Date())} م`;
+
+            document.getElementById('val-approval-id').textContent = `رقم مرجعي: ${data.id}`;
+            const qr = qrcode(0, 'M');
+            qr.addData(window.location.href);
+            qr.make();
+            document.getElementById('qrcode').innerHTML = qr.createImgTag(3, 6);
+        });
+    </script>
+</body>
+</html>

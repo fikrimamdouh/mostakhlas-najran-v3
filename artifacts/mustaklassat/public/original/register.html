@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <script src="/original/auth-check.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>طلب تفعيل حساب - منصة المستخلصات الشهرية</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-color: #1e3c72;
+            --secondary-color: #2a5298;
+            --accent-color: #d4af37;
+            --accent-hover: #b8962e;
+            --text-color: #f0f4f8;
+            --glass-bg: rgba(20, 30, 50, 0.55  );
+            --glass-border: rgba(212, 175, 55, 0.2);
+            --success-bg: rgba(40, 167, 69, 0.15);
+            --success-border: #28a745;
+            --error-bg: rgba(220, 53, 69, 0.15);
+            --error-border: #dc3545;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            perspective: 1000px; /* Required for 3D tilt effect */
+        }
+
+        #background-wrap {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .bubble {
+            position: absolute;
+            background: linear-gradient(45deg, var(--accent-color), var(--secondary-color));
+            border-radius: 50%;
+            opacity: 0.1; /* Softer opacity */
+            animation: rise 30s infinite ease-in;
+            bottom: -200px;
+        }
+
+        @keyframes rise {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0.1; }
+            50% { opacity: 0.2; }
+            100% { transform: translateY(-120vh) rotate(720deg); opacity: 0.1; }
+        }
+
+        .main-container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            width: 90%;
+            max-width: 1100px;
+            min-height: 650px;
+            background: var(--glass-bg);
+            border-radius: 30px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(15px);
+            overflow: hidden;
+            transform-style: preserve-3d; /* Enable 3D space for children */
+            transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            animation: popIn 1s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+        }
+        
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.95) rotateX(10deg); }
+            100% { opacity: 1; transform: scale(1) rotateX(0deg); }
+        }
+        
+        /* --- Interactive Glow Border --- */
+        .main-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 30px;
+            background: radial-gradient(
+                300px circle at var(--mouse-x) var(--mouse-y),
+                rgba(212, 175, 55, 0.25),
+                transparent 40%
+            );
+            z-index: 2;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .main-container:hover::before {
+            opacity: 1;
+        }
+
+        .info-panel {
+            flex-basis: 45%;
+            background: linear-gradient(160deg, rgba(212, 175, 55, 0.05), rgba(27, 38, 59, 0.05));
+            padding: 60px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .logo {
+            width: 120px;
+            margin-bottom: 25px;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.3));
+            animation: float 4s ease-in-out infinite; /* Floating animation */
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .info-panel h1 {
+            font-size: 32px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 15px;
+        }
+
+        .info-panel p {
+            font-size: 17px;
+            line-height: 1.7;
+            color: var(--text-color);
+            max-width: 300px;
+        }
+
+        .form-panel {
+            flex-basis: 55%;
+            padding: 60px 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .form-panel h2 {
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #fff;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 18px 50px 18px 20px;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--glass-border);
+            color: var(--text-color);
+            font-size: 16px;
+            font-family: 'Tajawal', sans-serif;
+            transition: border-color 0.4s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-bottom-color: var(--accent-color);
+        }
+
+        .input-group label {
+            position: absolute;
+            top: 18px;
+            right: 50px;
+            color: var(--placeholder-color);
+            font-size: 16px;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus ~ label,
+        .input-group input:not(:placeholder-shown) ~ label {
+            top: -8px;
+            font-size: 12px;
+            color: var(--accent-color);
+        }
+
+        .input-group i {
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            transform: translateY(-50%);
+            color: var(--placeholder-color);
+            transition: color 0.3s;
+        }
+        
+        .input-group input:focus ~ i {
+            color: var(--accent-color);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(90deg, var(--accent-color), var(--accent-hover));
+            border: none;
+            border-radius: 12px;
+            color: var(--primary-color);
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            box-shadow: 0 10px 25px rgba(212, 175, 55, 0.25);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-submit::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shine 4s infinite linear;
+        }
+        
+        @keyframes shine {
+            0% { left: -100%; }
+            50% { left: 100%; }
+            100% { left: 100%; }
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(212, 175, 55, 0.35);
+        }
+        
+        #message {
+            text-align: center;
+            padding: 12px;
+            margin-top: 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            display: none;
+            animation: fadeInMessage 0.5s forwards;
+        }
+        
+        @keyframes fadeInMessage { from { opacity: 0; } to { opacity: 1; } }
+
+        #message.success {
+            background: var(--success-bg);
+            border: 1px solid var(--success-border);
+            color: var(--success-border);
+        }
+        #message.error {
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--error-border);
+        }
+        
+        @media (max-width: 992px) {
+            .main-container { flex-direction: column; width: 95%; max-width: 500px; min-height: auto; }
+            .info-panel { flex-basis: auto; padding: 40px 20px; border-radius: 30px 30px 0 0; }
+            .form-panel { flex-basis: auto; padding: 40px 30px; }
+            .logo { width: 100px; }
+            .info-panel h1 { font-size: 28px; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="background-wrap"></div>
+
+    <div class="main-container">
+        <div class="info-panel">
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo">
+            <h1>تجمع نجران الصحي</h1>
+            <p>ترحب بكم إدارة الهندسة والصيانة وتدعوكم لتسجيل بياناتكم في منصة المستخلصات الشهرية لتفعيل حساباتكم.</p>
+        </div>
+        <div class="form-panel">
+            <h2>منصة تسجيل البيانات الموحدة</h2>
+            <form id="register-form">
+                <div class="input-group">
+                    <input type="text" id="full_name" placeholder=" " required>
+                    <label for="full_name">الاسم الكامل</label>
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="company" placeholder=" " required>
+                    <label for="company">الشركة / الجهة</label>
+                    <i class="fas fa-building"></i>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="site_location" placeholder=" " required>
+                    <label for="site_location">الموقع</label>
+                    <i class="fas fa-map-marker-alt"></i>
+                </div>
+                <div class="input-group">
+                    <input type="email" id="email" placeholder=" " required>
+                    <label for="email">البريد الإلكتروني</label>
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <div class="input-group">
+                    <input type="tel" id="mobile" placeholder=" " required>
+                    <label for="mobile">رقم الجوال</label>
+                    <i class="fas fa-mobile-alt"></i>
+                </div>
+                
+                <button type="submit" class="btn-submit">إرسال طلب التفعيل</button>
+                <div id="message"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://fhuhsheeegmrfintpqmu.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZodWhzaGVlZWdtcmZpbnRwcW11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMxOTc1MjMsImV4cCI6MjA2ODc3MzUyM30.pLWspI44DWnSyHHJfNzH994HbeIjgY3Fuf5uuF-XsS8';
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY   );
+        const registerForm = document.getElementById('register-form');
+        const messageEl = document.getElementById('message');
+
+        // Dynamic Background
+        const background = document.getElementById('background-wrap');
+        for (let i = 0; i < 10; i++) { // Reduced count for a cleaner look
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            const size = Math.random() * 150 + 80; // Larger, softer bubbles
+            bubble.style.width = `${size}px`;
+            bubble.style.height = `${size}px`;
+            bubble.style.left = `${Math.random() * 100}%`;
+            bubble.style.animationDuration = `${Math.random() * 20 + 15}s`;
+            bubble.style.animationDelay = `${Math.random() * 8}s`;
+            background.appendChild(bubble);
+        }
+        
+        // --- 3D Tilt & Glow Effect ---
+        const container = document.querySelector('.main-container');
+        container.addEventListener('mousemove', (e) => {
+            const rect = container.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            const rotateX = (y - centerY) / 20; // Adjust divisor for sensitivity
+            const rotateY = (centerX - x) / 20;
+            
+            container.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            container.style.setProperty('--mouse-x', `${x}px`);
+            container.style.setProperty('--mouse-y', `${y}px`);
+        });
+
+        container.addEventListener('mouseleave', () => {
+            container.style.transform = 'rotateX(0deg) rotateY(0deg)';
+        });
+
+        function showMessage(text, type) {
+            messageEl.textContent = text;
+            messageEl.className = type;
+            messageEl.style.display = 'block';
+        }
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formButton = e.target.querySelector('button');
+            formButton.disabled = true;
+            formButton.textContent = 'جارٍ الإرسال...';
+            messageEl.style.display = 'none';
+
+            const formData = {
+                full_name: document.getElementById('full_name').value,
+                company: document.getElementById('company').value,
+                site_location: document.getElementById('site_location').value,
+                email: document.getElementById('email').value,
+                mobile: document.getElementById('mobile').value,
+                status: 'جديد'
+            };
+
+            try {
+                const { error } = await supabase.from('requests').insert([formData]);
+                if (error) throw error;
+                
+                // 1. عرض رسالة النجاح
+                showMessage('تم إرسال طلبك بنجاح! سيتم توجيهك الآن للصفحة الرئيسية.', 'success');
+                registerForm.reset();
+                document.querySelectorAll('.input-group input').forEach(input => input.blur());
+
+                // 2. الإضافة الجديدة: إعادة التوجيه بعد 3 ثوانٍ
+                setTimeout(() => {
+                    // استبدل 'index.html' بالاسم الفعلي لصفحتك الرئيسية إذا كان مختلفاً
+                    window.location.href = 'index.html?registered=true';
+                }, 3000); // 3000 مللي ثانية = 3 ثوانٍ
+
+            } catch (error) {
+                showMessage(`حدث خطأ: ${error.message}`, 'error');
+                // نعيد تفعيل الزر فقط في حالة الخطأ
+                formButton.disabled = false;
+                formButton.textContent = 'إرسال طلب التفعيل';
+            }
+        });
+
+    </script>
+</body>
+</html>

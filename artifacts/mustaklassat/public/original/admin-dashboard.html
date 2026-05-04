@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - مراجعة الطلبات</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary-color: #1e3c72; --secondary-color: #2a5298; --accent-color: #d4af37; }
+        body { font-family: 'Tajawal', sans-serif; background-color: #f4f7f9; }
+        .container { max-width: 1200px; margin: 40px auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { color: var(--primary-color ); }
+        .request-card { background-color: #fff; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.08); margin-bottom: 25px; overflow: hidden; border-left: 5px solid var(--accent-color); }
+        .card-body { padding: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px 25px; }
+        .info-item { font-size: 15px; }
+        .info-item strong { color: var(--primary-color); display: block; margin-bottom: 4px; }
+        .card-footer { background-color: #f9fafb; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; margin: 0 5px; }
+        .btn-approve { background-color: #28a745; color: white; }
+        .btn-reject { background-color: #dc3545; color: white; }
+        .btn-view { background-color: #17a2b8; color: white; }
+        .btn-photo { background-color: #007bff; color: white; text-decoration: none; }
+        .status { font-weight: bold; padding: 5px 10px; border-radius: 8px; }
+        .status.approved { color: #155724; background-color: #d4edda; }
+        .status.rejected { color: #721c24; background-color: #f8d7da; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header"><h1><i class="fas fa-tasks"></i> لوحة مراجعة طلبات الزيارة</h1></div>
+        <div id="requests-list"></div>
+    </div>
+
+    <script>
+        const requestsList = document.getElementById('requests-list');
+        const STORAGE_KEY = 'visitRequests_NajranHC';
+
+        function fetchRequests() {
+            let requests = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+            requestsList.innerHTML = '';
+            if (requests.length === 0) {
+                requestsList.innerHTML = '<p style="text-align:center; font-size: 18px; color: #777;">لا توجد طلبات حالياً.</p>';
+                return;
+            }
+            requests.sort((a, b) => b.id - a.id).forEach(req => {
+                const card = document.createElement('div');
+                card.className = 'request-card';
+                let actionsHtml = '';
+                if (req.status === 'قيد المراجعة') {
+                    actionsHtml = `
+                        <button class="btn btn-approve" onclick="updateStatus(${req.id}, 'موافق عليه')">موافقة</button>
+                        <button class="btn btn-reject" onclick="updateStatus(${req.id}, 'مرفوض')">رفض</button>
+                    `;
+                } else if (req.status === 'موافق عليه') {
+                    actionsHtml = `<button class="btn btn-view" onclick="generateApproval(${req.id})">عرض الموافقة النهائية</button>`;
+                }
+                card.innerHTML = `
+                    <div class="card-body">
+                        <div class="info-item"><strong>اسم المندوب:</strong> ${req.rep_name}</div>
+                        <div class="info-item"><strong>الموقع:</strong> ${req.site_location}</div>
+                        <div class="info-item"><strong>تاريخ الزيارة:</strong> ${new Date(req.visit_date).toLocaleDateString('ar-SA')}</div>
+                        <div class="info-item"><strong>مقاول الصيانة:</strong> ${req.main_contractor}</div>
+                        <div class="info-item"><strong>مقاول الباطن:</strong> ${req.sub_contractor}</div>
+                        <div class="info-item"><strong>رقم الهوية:</strong> ${req.rep_id}</div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="actions">
+                            <a href="${req.rep_id_photo}" target="_blank" class="btn btn-photo">عرض صورة الهوية</a>
+                            ${actionsHtml}
+                        </div>
+                        <span class="status ${req.status === 'موافق عليه' ? 'approved' : (req.status === 'مرفوض' ? 'rejected' : '')}">
+                            الحالة: ${req.status}
+                        </span>
+                    </div>
+                `;
+                requestsList.appendChild(card);
+            });
+        }
+
+        function updateStatus(id, newStatus) {
+            let requests = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+            const requestIndex = requests.findIndex(r => r.id === id);
+            if (requestIndex > -1) {
+                requests[requestIndex].status = newStatus;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
+                fetchRequests();
+            }
+        }
+
+        function generateApproval(id) {
+            let requests = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+            const approvedRequest = requests.find(r => r.id === id);
+            if (approvedRequest) {
+                // هذا هو الجزء الذي يربط لوحة التحكم بصفحة الإعتماد
+                localStorage.setItem('finalApprovalData_NajranHC', JSON.stringify(approvedRequest));
+                window.open(`display-approval.html?id=${id}`, '_blank');
+            }
+        }
+        fetchRequests();
+    </script>
+</body>
+</html>

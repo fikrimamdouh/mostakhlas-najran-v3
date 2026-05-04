@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <script src="/original/auth-check.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جاري التحديث - تجمع نجران الصحي</title>
+    <style>
+        body {
+            font-family: 'Tajawal', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #f5f6f5 0%, #e0e7e9 100%);
+            margin: 0;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background-color: #ffffff;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #005555;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        header h1 {
+            font-size: 28px;
+            color: #005555;
+            margin: 0;
+        }
+        header p {
+            font-size: 16px;
+            color: #666;
+            margin: 5px 0 0;
+        }
+        .update-container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 85, 85, 0.15);
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+            margin: 40px auto;
+            border: 2px solid #005555;
+            animation: fadeIn 1s ease-in-out;
+        }
+        .update-container h2 {
+            font-size: 32px;
+            color: #005555;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+        .update-container p {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.8;
+        }
+        .spinner {
+            border: 6px solid #e0e0e0;
+            border-top: 6px solid #005555;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .logo {
+            margin-bottom: 20px;
+        }
+        .logo img.logo-left {
+            max-width: 180px;
+            transition: transform 0.3s ease;
+        }
+        .logo img.logo-left:hover {
+            transform: scale(1.05);
+        }
+        .back-button {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #005555;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        .back-button:hover {
+            background-color: #003d3d;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            background-color: #ffffff;
+            border-top: 1px solid #e0e0e0;
+            color: #999;
+            font-size: 14px;
+            margin-top: auto;
+        }
+        nav {
+            background-color: #f8f9fa;
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        nav a {
+            margin: 0 15px;
+            text-decoration: none;
+            color: #005555;
+            font-size: 16px;
+            transition: color 0.3s ease;
+        }
+        nav a:hover {
+            color: #003d3d;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1>تجمع نجران الصحي</h1>
+        <p>إدارة الهندسة والصيانة</p>
+    </header>
+    <nav>
+        <a href="index.html">الصفحة الرئيسية</a>
+        <a href="main_settings.html">الإعدادات الرئيسية</a>
+        <a href="advanced_settings.html">الإعدادات المتقدمة</a>
+        <a href="attendance.html">الحضور والانصراف</a>
+        <a href="performance.html">شهادة الأداء</a>
+        <a href="achievement.html">شهادة الإنجاز</a>
+        <a href="consumables.html">مستخلص المستهلكات</a>
+        <a href="spare_parts.html">مستخلص قطع الغيار</a>
+        <a href="approval.html">اعتماد المستخلص</a>
+    </nav>
+    <div class="update-container">
+        <div class="logo">
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-left">
+        </div>
+        <div class="spinner"></div>
+        <h2>جاري تحديث النظام</h2>
+        <p>نعمل حاليًا على تطوير هذه الصفحة لتقديم تجربة أفضل وأكثر كفاءة. يرجى العودة لاحقًا أو التواصل مع إدارة الهندسة والصيانة لمزيد من المعلومات.</p>
+        <a href="index.html" class="back-button">العودة إلى لوحة التحكم</a>
+    </div>
+    <footer>
+        جميع الحقوق محفوظة © 2025 تجمع نجران الصحي
+    </footer>
+</body>
+</html>

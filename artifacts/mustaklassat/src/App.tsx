@@ -191,6 +191,19 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // حفظ الجلسة في localStorage ليستطيع النظام الأصلي قراءتها
+  useEffect(() => {
+    if (dbUser && dbUser.status === "approved") {
+      localStorage.setItem('najran_session', JSON.stringify({
+        userId: dbUser.id,
+        name: dbUser.name,
+        email: dbUser.email,
+        role: dbUser.role,
+        timestamp: Date.now(),
+      }));
+    }
+  }, [dbUser]);
+
   if (dbUser?.status === "pending") {
     return <Redirect to="/pending" />;
   }
