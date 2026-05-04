@@ -39,7 +39,9 @@ const clerkPubKey = publishableKeyFromHost(
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
 );
 
-const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+const clerkProxyUrl = import.meta.env.DEV
+  ? undefined
+  : (import.meta.env.VITE_CLERK_PROXY_URL?.trim() || `${window.location.origin}/api/__clerk`);
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 function stripBase(path: string): string {
