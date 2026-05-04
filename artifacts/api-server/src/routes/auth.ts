@@ -2,9 +2,11 @@ import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { sendWelcomeEmail } from "../lib/email";
+import { sendAdminNewSignupEmail, sendWelcomeEmail } from "../lib/email";
 
 const router = Router();
+
+const PRIMARY_ADMIN_EMAIL = (process.env.PRIMARY_ADMIN_EMAIL || "rorofikri@gmail.com").trim().toLowerCase();
 
 // Called after Clerk sign-up to register/sync user in our DB
 // Mounted at /users so this handles POST /api/users/sync
@@ -18,7 +20,17 @@ router.post("/sync", async (req, res) => {
 
     const existing = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId)).limit(1);
 
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const isPrimaryAdmin = normalizedEmail === PRIMARY_ADMIN_EMAIL;
+
     if (existing.length > 0) {
+      if (isPrimaryAdmin && (existing[0].role !== "admin" || existing[0].status !== "approved")) {
+        const [upgraded] = await db.update(usersTable)
+          .set({ role: "admin", status: "approved" })
+          .where(eq(usersTable.id, existing[0].id))
+          .returning();
+        return res.json(upgraded);
+      }
       return res.json(existing[0]);
     }
 
@@ -26,14 +38,20 @@ router.post("/sync", async (req, res) => {
       clerkId: userId,
       email: email || "",
       name: name || "مستخدم جديد",
-      role: "user",
-      status: "pending",
+      role: isPrimaryAdmin ? "admin" : "user",
+      status: isPrimaryAdmin ? "approved" : "pending",
       company: company || null,
       phone: phone || null,
     }).returning();
 
-    // Send welcome email asynchronously
+    // Send notifications asynchronously
     sendWelcomeEmail(user.email, user.name).catch(() => {});
+    sendAdminNewSignupEmail(PRIMARY_ADMIN_EMAIL, {
+      name: user.name,
+      email: user.email,
+      company: user.company,
+      phone: user.phone,
+    }).catch(() => {});
 
     return res.status(201).json(user);
   } catch (err) {

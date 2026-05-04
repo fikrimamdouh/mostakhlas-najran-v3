@@ -116,3 +116,59 @@ export async function sendRejectionEmail(toEmail: string, name: string): Promise
     logger.error({ err, toEmail }, "Failed to send rejection email");
   }
 }
+
+
+export async function sendAdminNewSignupEmail(adminEmail: string, payload: { name: string; email: string; company?: string | null; phone?: string | null; }): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend) return;
+
+  try {
+    await resend.client.emails.send({
+      from: resend.fromEmail,
+      to: adminEmail,
+      subject: "تسجيل مستخدم جديد - نظام المستخلصات",
+      html: `
+        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #1e40af;">تم تسجيل مستخدم جديد</h2>
+          <p><strong>الاسم:</strong> ${payload.name}</p>
+          <p><strong>الإيميل:</strong> ${payload.email}</p>
+          <p><strong>الشركة:</strong> ${payload.company || "-"}</p>
+          <p><strong>الجوال:</strong> ${payload.phone || "-"}</p>
+          <br/>
+          <p style="color: #6b7280; font-size: 14px;">تم الإرسال تلقائياً إلى مدير النظام الأساسي.</p>
+        </div>
+      `,
+    });
+    logger.info({ adminEmail, userEmail: payload.email }, "Admin signup notification email sent");
+  } catch (err) {
+    logger.error({ err, adminEmail, userEmail: payload.email }, "Failed to send admin signup notification email");
+  }
+}
+
+
+export async function sendAdminActionEmail(
+  adminEmail: string,
+  payload: { action: string; actorName: string; actorEmail: string; targetName: string; targetEmail: string; details?: string | null; },
+): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend) return;
+
+  try {
+    await resend.client.emails.send({
+      from: resend.fromEmail,
+      to: adminEmail,
+      subject: `إشعار إداري: ${payload.action}`,
+      html: `
+        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #1e40af;">${payload.action}</h2>
+          <p><strong>تم بواسطة:</strong> ${payload.actorName} (${payload.actorEmail})</p>
+          <p><strong>على المستخدم:</strong> ${payload.targetName} (${payload.targetEmail})</p>
+          <p><strong>التفاصيل:</strong> ${payload.details || "-"}</p>
+        </div>
+      `,
+    });
+    logger.info({ adminEmail, action: payload.action, targetEmail: payload.targetEmail }, "Admin action notification email sent");
+  } catch (err) {
+    logger.error({ err, adminEmail, action: payload.action, targetEmail: payload.targetEmail }, "Failed to send admin action notification email");
+  }
+}
