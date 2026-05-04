@@ -92,24 +92,6 @@ function PendingReviewPage() {
   );
 }
 
-
-function PendingReviewPage() {
-  const { signOut } = useClerk();
-  return (
-    <Show when="signed-in">
-      <div className="flex min-h-[100dvh] flex-col items-center justify-center p-4 text-center">
-        <div className="bg-card border border-border p-8 rounded-xl shadow-sm max-w-md w-full">
-          <h2 className="text-2xl font-bold mb-2 text-primary">حسابك قيد المراجعة</h2>
-          <p className="text-muted-foreground mb-6">لقد تم تسجيل حسابك بنجاح. يرجى الانتظار حتى يقوم مدير النظام بالموافقة على حسابك.</p>
-          <Button variant="outline" className="w-full" onClick={() => signOut({ redirectUrl: `${basePath}/sign-in` })}>
-            تسجيل الخروج
-          </Button>
-        </div>
-      </div>
-    </Show>
-  );
-}
-
 function AppRoutes() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -139,33 +121,3 @@ function AppRoutes() {
 export default function App() {
   return <TooltipProvider><WouterRouter base={basePath || undefined}><Toaster /><AppRoutes /></WouterRouter></TooltipProvider>;
 }
-function AppRoutes() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <ClerkTokenSyncer />
-      <ClerkQueryClientCacheInvalidator />
-      <Switch>
-        <Route path="/" component={HomeRedirect} />
-        <Route path="/sign-in/*?" component={SignInPage} />
-        <Route path="/sign-up/*?" component={SignUpPage} />
-        <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
-        <Route path="/extracts" component={() => <ProtectedRoute component={ExtractsList} />} />
-        <Route path="/extracts/new" component={() => <ProtectedRoute component={NewExtract} />} />
-        <Route path="/extracts/:id" component={() => <ProtectedRoute component={ExtractDetail} />} />
-        <Route path="/projects" component={() => <ProtectedRoute component={ProjectsList} />} />
-        <Route path="/projects/new" component={() => <ProtectedRoute component={NewProject} />} />
-        <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsers} adminOnly />} />
-        <Route path="/admin/audit" component={() => <ProtectedRoute component={AuditLog} />} />
-        <Route path="/admin/users-view" component={() => <ProtectedRoute component={UsersView} />} />
-        <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
-        <Route path="/pending" component={PendingReviewPage} />
-        <Route component={NotFound} />
-      </Switch>
-    </QueryClientProvider>
-  );
-}
-
-export default function App() {
-  return <TooltipProvider><WouterRouter base={basePath || undefined}><Toaster /><AppRoutes /></WouterRouter></TooltipProvider>;
-}
- main

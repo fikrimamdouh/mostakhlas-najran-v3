@@ -144,3 +144,31 @@ export async function sendAdminNewSignupEmail(adminEmail: string, payload: { nam
     logger.error({ err, adminEmail, userEmail: payload.email }, "Failed to send admin signup notification email");
   }
 }
+
+
+export async function sendAdminActionEmail(
+  adminEmail: string,
+  payload: { action: string; actorName: string; actorEmail: string; targetName: string; targetEmail: string; details?: string | null; },
+): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend) return;
+
+  try {
+    await resend.client.emails.send({
+      from: resend.fromEmail,
+      to: adminEmail,
+      subject: `إشعار إداري: ${payload.action}`,
+      html: `
+        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #1e40af;">${payload.action}</h2>
+          <p><strong>تم بواسطة:</strong> ${payload.actorName} (${payload.actorEmail})</p>
+          <p><strong>على المستخدم:</strong> ${payload.targetName} (${payload.targetEmail})</p>
+          <p><strong>التفاصيل:</strong> ${payload.details || "-"}</p>
+        </div>
+      `,
+    });
+    logger.info({ adminEmail, action: payload.action, targetEmail: payload.targetEmail }, "Admin action notification email sent");
+  } catch (err) {
+    logger.error({ err, adminEmail, action: payload.action, targetEmail: payload.targetEmail }, "Failed to send admin action notification email");
+  }
+}
