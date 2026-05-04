@@ -22,6 +22,7 @@ import NewProject from "@/pages/projects/new";
 
 import AdminUsers from "@/pages/admin/users";
 import AuditLog from "@/pages/admin/audit";
+import UsersView from "@/pages/admin/users-view";
 import Settings from "@/pages/settings";
 
 const queryClient = new QueryClient({
@@ -303,7 +304,8 @@ function ClerkProviderWithRoutes() {
           <Route path="/projects" component={() => <ProtectedRoute component={ProjectsList} />} />
           <Route path="/projects/new" component={() => <ProtectedRoute component={NewProject} />} />
           <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsers} adminOnly />} />
-          <Route path="/admin/audit" component={() => <ProtectedRoute component={AuditLog} adminOnly />} />
+          <Route path="/admin/audit" component={() => <ProtectedRoute component={AuditLog} />} />
+          <Route path="/admin/users-view" component={() => <ProtectedRoute component={UsersView} />} />
           <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
           <Route path="/pending" component={() => (
              <Show when="signed-in" fallback={<Redirect to="/sign-in" />}>

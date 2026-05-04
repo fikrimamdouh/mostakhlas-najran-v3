@@ -86,7 +86,8 @@ export default function AdminUsers() {
       return res.json();
     },
     onSuccess: (_, { role }) => {
-      toast({ title: "✅ تم", description: `تم تغيير الصلاحية إلى ${role === "admin" ? "مدير" : "مستخدم"}` });
+      const label = role === "admin" ? "مدير النظام" : role === "supervisor" ? "مدير مستخلصات" : "مستخدم";
+      toast({ title: "✅ تم", description: `تم تغيير الصلاحية إلى ${label}` });
       queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
     },
   });
@@ -213,19 +214,24 @@ export default function AdminUsers() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       {user.role === "admin"
-                        ? <Badge className="bg-[#1e3c72] text-white gap-1"><Shield className="h-3 w-3" />مدير</Badge>
+                        ? <Badge className="bg-[#1e3c72] text-white gap-1"><Shield className="h-3 w-3" />مدير النظام</Badge>
+                        : user.role === "supervisor"
+                        ? <Badge className="bg-amber-600 text-white gap-1"><Shield className="h-3 w-3" />مدير مستخلصات</Badge>
                         : <Badge variant="outline" className="gap-1"><User className="h-3 w-3" />مستخدم</Badge>
                       }
-                      {/* Change role — can't change own role */}
+                      {/* Change role dropdown — can't change own role */}
                       {me?.id !== user.id && (
-                        <button
-                          title={user.role === "admin" ? "تحويل لمستخدم عادي" : "ترقية لمدير"}
-                          onClick={() => changeRole.mutate({ userId: user.id, role: user.role === "admin" ? "user" : "admin" })}
+                        <select
+                          value={user.role}
                           disabled={changeRole.isPending}
-                          className="text-xs text-blue-600 hover:underline"
+                          onChange={e => changeRole.mutate({ userId: user.id, role: e.target.value })}
+                          className="text-xs border border-gray-200 rounded px-1 py-0.5 text-gray-600 bg-white cursor-pointer hover:border-blue-400"
+                          title="تغيير الصلاحية"
                         >
-                          {user.role === "admin" ? "↓ خفض" : "↑ ترقية"}
-                        </button>
+                          <option value="user">مستخدم</option>
+                          <option value="supervisor">مدير مستخلصات</option>
+                          <option value="admin">مدير النظام</option>
+                        </select>
                       )}
                     </div>
                   </TableCell>

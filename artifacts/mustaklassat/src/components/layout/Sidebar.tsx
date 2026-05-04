@@ -14,13 +14,18 @@ export function Sidebar() {
   const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
 
   const isAdmin = dbUser?.role === "admin";
+  const isSupervisor = dbUser?.role === "supervisor";
+  const canViewAudit = isAdmin || isSupervisor;
 
   const navigation = [
     { name: "لوحة القيادة", href: "/dashboard", icon: LayoutDashboard },
     { name: "الإعدادات", href: "/settings", icon: Settings },
     ...(isAdmin ? [
       { name: "إدارة المستخدمين", href: "/admin/users", icon: ShieldAlert },
+    ] : []),
+    ...(canViewAudit ? [
       { name: "سجل المراقبة", href: "/admin/audit", icon: ClipboardList },
+      { name: "قائمة المستخدمين", href: "/admin/users-view", icon: Users },
     ] : []),
   ];
 

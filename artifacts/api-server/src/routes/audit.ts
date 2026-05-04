@@ -12,20 +12,21 @@ const requireAuth = (req: any, res: any, next: any) => {
   next();
 };
 
-const requireAdmin = async (req: any, res: any, next: any) => {
+// admin OR supervisor can view audit logs
+const requireAdminOrSupervisor = async (req: any, res: any, next: any) => {
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
-    if (!user || user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+    if (!user || !["admin", "supervisor"].includes(user.role)) return res.status(403).json({ error: "Forbidden" });
     req.currentUser = user;
     next();
   } catch (err) {
-    req.log.error({ err }, "requireAdmin failed");
+    req.log.error({ err }, "requireAdminOrSupervisor failed");
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-// GET /api/audit — list audit logs (admin only)
-router.get("/", requireAuth, requireAdmin, async (req: any, res) => {
+// GET /api/audit — list audit logs (admin + supervisor)
+router.get("/", requireAuth, requireAdminOrSupervisor, async (req: any, res) => {
   try {
     const { page = 1, limit = 50, userId } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
@@ -47,7 +48,7 @@ router.get("/", requireAuth, requireAdmin, async (req: any, res) => {
   }
 });
 
-// POST /api/audit — log an action (authenticated users)
+// POST /api/audit — log an action
 router.post("/", requireAuth, async (req: any, res) => {
   try {
     const [dbUser] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
@@ -57,7 +58,6 @@ router.post("/", requireAuth, async (req: any, res) => {
     if (!action) return res.status(400).json({ error: "action is required" });
 
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress || null;
-
     await db.insert(auditLogTable).values({
       userId: dbUser.id,
       userEmail: dbUser.email,
@@ -66,7 +66,6 @@ router.post("/", requireAuth, async (req: any, res) => {
       details: details || null,
       ipAddress: ip,
     });
-
     return res.json({ logged: true });
   } catch (err) {
     req.log.error({ err }, "Failed to log audit action");
@@ -74,14 +73,10 @@ router.post("/", requireAuth, async (req: any, res) => {
   }
 });
 
-// Helper to insert audit log without HTTP context
 export async function logAudit(userId: number | null, userEmail: string | null, userName: string | null, action: string, details?: string, ip?: string) {
   try {
     await db.insert(auditLogTable).values({
-      userId,
-      userEmail,
-      userName,
-      action,
+      userId, userEmail, userName, action,
       details: details || null,
       ipAddress: ip || null,
     });
