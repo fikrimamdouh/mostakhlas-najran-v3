@@ -20,7 +20,17 @@ router.post("/sync", async (req, res) => {
 
     const existing = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId)).limit(1);
 
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const isPrimaryAdmin = normalizedEmail === PRIMARY_ADMIN_EMAIL;
+
     if (existing.length > 0) {
+      if (isPrimaryAdmin && (existing[0].role !== "admin" || existing[0].status !== "approved")) {
+        const [upgraded] = await db.update(usersTable)
+          .set({ role: "admin", status: "approved" })
+          .where(eq(usersTable.id, existing[0].id))
+          .returning();
+        return res.json(upgraded);
+      }
       return res.json(existing[0]);
     }
 
