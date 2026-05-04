@@ -76,49 +76,58 @@
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
-  --background: 210 20% 98%; 
-  --foreground: 222 47% 11%;
+  /* نجران الصحي - أزرق غامق وذهبي */
+  --najran-blue-dark: #1e3c72;
+  --najran-blue: #2a5298;
+  --najran-gold: #d4af37;
+  --najran-gold-dark: #b8962e;
 
-  --border: 214 32% 91%;
+  --background: 210 20% 97%; 
+  --foreground: 222 58% 20%;
+
+  --border: 221 30% 88%;
   
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --card-border: 214 32% 91%;
+  --card-foreground: 222 58% 20%;
+  --card-border: 221 30% 88%;
 
-  --sidebar: 222 47% 11%;
+  /* Sidebar: dark blue gradient like original */
+  --sidebar: 222 58% 28%;
   --sidebar-foreground: 210 40% 98%;
-  --sidebar-border: 220 40% 15%;
-  --sidebar-primary: 210 40% 98%;
-  --sidebar-primary-foreground: 222 47% 11%;
-  --sidebar-accent: 215 30% 20%;
+  --sidebar-border: 221 50% 22%;
+  --sidebar-primary: 44 63% 52%;
+  --sidebar-primary-foreground: 222 58% 15%;
+  --sidebar-accent: 221 57% 35%;
   --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-ring: 210 40% 98%;
+  --sidebar-ring: 44 63% 52%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --popover-border: 214 32% 91%;
+  --popover-foreground: 222 58% 20%;
+  --popover-border: 221 30% 88%;
 
-  --primary: 221 83% 53%;
+  /* Primary = dark blue #2a5298 */
+  --primary: 221 57% 38%;
   --primary-foreground: 210 40% 98%;
 
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222 47% 11%;
+  --secondary: 221 30% 94%;
+  --secondary-foreground: 222 58% 20%;
 
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
+  --muted: 221 30% 94%;
+  --muted-foreground: 222 20% 50%;
 
-  --accent: 210 40% 96%;
-  --accent-foreground: 222 47% 11%;
+  /* Accent = gold #d4af37 */
+  --accent: 44 63% 52%;
+  --accent-foreground: 222 58% 15%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 210 40% 98%;
 
-  --input: 214 32% 91%;
-  --ring: 221 83% 53%;
+  --input: 221 30% 88%;
+  --ring: 221 57% 38%;
 
-  --chart-1: 221 83% 53%;
-  --chart-2: 142 71% 45%;
-  --chart-3: 38 92% 50%;
+  --chart-1: 221 57% 38%;
+  --chart-2: 44 63% 52%;
+  --chart-3: 142 71% 45%;
   --chart-4: 280 85% 50%;
   --chart-5: 340 75% 55%;
 

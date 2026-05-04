@@ -1,93 +1,215 @@
 import { Link } from "wouter";
-import { Building2, ArrowLeft, ShieldCheck, FileSpreadsheet, FolderKanban } from "lucide-react";
+import { ArrowLeft, ShieldCheck, FileSpreadsheet, FolderKanban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-background flex flex-col font-sans">
-      <header className="border-b border-border bg-white/50 backdrop-blur-sm fixed top-0 left-0 right-0 z-50">
+    <div
+      className="min-h-screen flex flex-col font-sans"
+      style={{
+        background: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)",
+        direction: "rtl",
+      }}
+    >
+      {/* Header */}
+      <header
+        className="fixed top-0 left-0 right-0 z-50 border-b"
+        style={{
+          background: "rgba(30, 60, 114, 0.85)",
+          backdropFilter: "blur(12px)",
+          borderColor: "rgba(255,255,255,0.15)",
+        }}
+      >
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-primary/10 p-2.5 rounded-xl text-primary">
-              <Building2 className="h-7 w-7" />
+            <img
+              src="/logo.png"
+              alt="تجمع نجران الصحي"
+              className="h-12 w-auto drop-shadow-md"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+            <div className="flex flex-col">
+              <span className="font-bold text-xl text-white leading-tight">
+                تجمع نجران الصحي
+              </span>
+              <span className="text-xs font-medium" style={{ color: "#d4af37" }}>
+                إدارة الهندسة والصيانة
+              </span>
             </div>
-            <span className="font-bold text-2xl tracking-tight text-foreground">نظام المستخلصات</span>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/sign-in">
-              <Button variant="ghost" className="font-bold text-base hover:bg-primary/5">تسجيل الدخول</Button>
+              <Button
+                variant="ghost"
+                className="font-bold text-base text-white hover:text-white"
+                style={{ background: "rgba(255,255,255,0.1)" }}
+              >
+                تسجيل الدخول
+              </Button>
             </Link>
             <Link href="/sign-up">
-              <Button className="font-bold text-base px-6 shadow-sm">حساب جديد</Button>
+              <Button
+                className="font-bold text-base px-6"
+                style={{
+                  background: "linear-gradient(135deg, #d4af37, #b8962e)",
+                  color: "#1e3c72",
+                  border: "none",
+                  boxShadow: "0 5px 15px rgba(212,175,55,0.3)",
+                }}
+              >
+                حساب جديد
+              </Button>
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center pt-32 pb-16">
-        <section className="w-full max-w-5xl mx-auto px-6 py-20 text-center flex flex-col items-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary font-medium text-sm mb-8 border border-primary/20">
+      {/* Hero */}
+      <main className="flex-1 flex flex-col items-center justify-center pt-24 pb-16 px-6">
+        <section className="w-full max-w-4xl mx-auto py-16 text-center flex flex-col items-center">
+          {/* Logo */}
+          <div
+            className="mb-8 animate-bounce"
+            style={{ animation: "float 3s ease-in-out infinite" }}
+          >
+            <img
+              src="/logo.png"
+              alt="شعار تجمع نجران الصحي"
+              className="h-28 w-auto mx-auto drop-shadow-2xl"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          </div>
+
+          <div
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 border text-sm font-medium"
+            style={{
+              background: "rgba(255,255,255,0.12)",
+              borderColor: "rgba(212,175,55,0.4)",
+              color: "#d4af37",
+              backdropFilter: "blur(8px)",
+            }}
+          >
             <ShieldCheck className="h-4 w-4" />
             <span>نظام معتمد لإدارة المشاريع الإنشائية</span>
           </div>
-          <h1 className="text-5xl md:text-7xl font-extrabold text-foreground leading-[1.2] mb-8 max-w-4xl">
-            إدارة <span className="text-primary">المستخلصات المالية</span> بثقة ودقة متناهية
+
+          <h1 className="text-5xl md:text-6xl font-extrabold text-white leading-tight mb-6 max-w-3xl">
+            برنامج المستخلصات الشهرية
           </h1>
-          <p className="text-xl text-muted-foreground mb-12 max-w-2xl leading-relaxed">
+          <h2 className="text-2xl font-semibold mb-8" style={{ color: "rgba(255,255,255,0.85)" }}>
+            إدارة المستخلصات المالية بثقة ودقة متناهية
+          </h2>
+          <p className="text-lg mb-10 max-w-2xl leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>
             منصة متكاملة لمهندسي ومحاسبي قطاع المقاولات. تتبع المستخلصات الجارية والسابقة، راقب ميزانيات المشاريع، وأدر عمليات الاعتماد في مكان واحد.
           </p>
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <Link href="/sign-up">
-              <Button size="lg" className="h-14 px-8 text-lg font-bold shadow-lg shadow-primary/20">
+              <Button
+                size="lg"
+                className="h-14 px-10 text-lg font-bold"
+                style={{
+                  background: "linear-gradient(135deg, #d4af37, #b8962e)",
+                  color: "#1e3c72",
+                  border: "none",
+                  boxShadow: "0 10px 30px rgba(212,175,55,0.35)",
+                }}
+              >
                 ابدأ الاستخدام الآن
                 <ArrowLeft className="mr-2 h-5 w-5" />
+              </Button>
+            </Link>
+            <Link href="/sign-in">
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-14 px-10 text-lg font-bold text-white"
+                style={{
+                  background: "rgba(255,255,255,0.1)",
+                  borderColor: "rgba(255,255,255,0.3)",
+                  backdropFilter: "blur(8px)",
+                }}
+              >
+                تسجيل الدخول
               </Button>
             </Link>
           </div>
         </section>
 
-        <section className="w-full max-w-6xl mx-auto px-6 py-16 grid md:grid-cols-3 gap-8">
-          <div className="bg-card border border-border p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-            <div className="h-12 w-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-6">
-              <FileSpreadsheet className="h-6 w-6" />
+        {/* Feature Cards */}
+        <section className="w-full max-w-5xl mx-auto px-4 pb-8 grid md:grid-cols-3 gap-6">
+          {[
+            {
+              icon: <FileSpreadsheet className="h-7 w-7" />,
+              title: "دورة حياة المستخلصات",
+              desc: "تتبع المستخلصات من الإنشاء وحتى الاعتماد، مع سجل كامل للتعديلات والملاحظات.",
+            },
+            {
+              icon: <FolderKanban className="h-7 w-7" />,
+              title: "إدارة المشاريع",
+              desc: "تنظيم المشاريع وإدارة قيم العقود ومراقبة الإنجاز المالي بوضوح.",
+            },
+            {
+              icon: <ShieldCheck className="h-7 w-7" />,
+              title: "صلاحيات واعتمادات",
+              desc: "نظام محكم للموافقات يفصل بين صلاحيات المنفذين والمعتمدين لضمان الشفافية.",
+            },
+          ].map((card) => (
+            <div
+              key={card.title}
+              className="rounded-2xl p-6 text-center transition-all duration-300 hover:-translate-y-1"
+              style={{
+                background: "rgba(255,255,255,0.95)",
+                backdropFilter: "blur(10px)",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
+              }}
+            >
+              <div
+                className="h-14 w-14 rounded-xl flex items-center justify-center mx-auto mb-4"
+                style={{
+                  background: "linear-gradient(135deg, #2a5298, #1e3c72)",
+                  color: "#ffffff",
+                }}
+              >
+                {card.icon}
+              </div>
+              <h3 className="text-xl font-bold mb-3" style={{ color: "#1e3c72" }}>
+                {card.title}
+              </h3>
+              <p className="leading-relaxed text-sm" style={{ color: "#5a6a8a" }}>
+                {card.desc}
+              </p>
             </div>
-            <h3 className="text-xl font-bold text-foreground mb-3">دورة حياة المستخلصات</h3>
-            <p className="text-muted-foreground leading-relaxed">
-              تتبع المستخلصات من الإنشاء وحتى الاعتماد، مع سجل كامل للتعديلات والملاحظات.
-            </p>
-          </div>
-          <div className="bg-card border border-border p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-            <div className="h-12 w-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-6">
-              <FolderKanban className="h-6 w-6" />
-            </div>
-            <h3 className="text-xl font-bold text-foreground mb-3">إدارة المشاريع</h3>
-            <p className="text-muted-foreground leading-relaxed">
-              تنظيم المشاريع وإدارة قيم العقود ومراقبة الإنجاز المالي بوضوح.
-            </p>
-          </div>
-          <div className="bg-card border border-border p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-            <div className="h-12 w-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-6">
-              <ShieldCheck className="h-6 w-6" />
-            </div>
-            <h3 className="text-xl font-bold text-foreground mb-3">صلاحيات واعتمادات</h3>
-            <p className="text-muted-foreground leading-relaxed">
-              نظام محكم للموافقات يفصل بين صلاحيات المنفذين والمعتمدين لضمان الشفافية.
-            </p>
-          </div>
+          ))}
         </section>
       </main>
 
-      <footer className="bg-sidebar text-sidebar-foreground border-t border-sidebar-border py-12">
-        <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between">
-          <div className="flex items-center gap-3 mb-4 md:mb-0">
-            <Building2 className="h-6 w-6 text-primary" />
-            <span className="font-bold text-lg">نظام المستخلصات</span>
-          </div>
-          <p className="text-sidebar-foreground/60 text-sm">
-            جميع الحقوق محفوظة &copy; {new Date().getFullYear()}
-          </p>
-        </div>
+      {/* Footer */}
+      <footer
+        className="py-6 text-center"
+        style={{
+          background: "rgba(0,0,0,0.25)",
+          backdropFilter: "blur(10px)",
+          borderTop: "1px solid rgba(255,255,255,0.15)",
+        }}
+      >
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
+          جميع الحقوق محفوظة &copy; {new Date().getFullYear()} تجمع نجران الصحي
+        </p>
+        <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
+          تابع للشركة القابضة للرعاية الصحية - رؤية المملكة 2030
+        </p>
       </footer>
+
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
+        }
+      `}</style>
     </div>
   );
 }
