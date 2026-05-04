@@ -76,6 +76,7 @@
   },
   "dependencies": {
     "@clerk/themes": "^2.4.57",
-    "@clerk/react": "^6.5.0"
+    "@clerk/react": "^6.5.0",
+    "internal": "link:@clerk/react/internal"
   }
 }
