@@ -27,7 +27,11 @@ const queryClient = new QueryClient({
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 function SignInPage() {
+<<<<<<< codex/fix-failed-to-load-clerk-js-lemlqp
+  return <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-muted/30 px-4 gap-4"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /><p className="text-sm text-muted-foreground">نسيت كلمة المرور؟ من شاشة الدخول اضغط <strong>Forgot password?</strong> وسيصلك كود/رابط استعادة على بريدك الإلكتروني.</p></div>;
+=======
   return <div className="flex min-h-[100dvh] items-center justify-center bg-muted/30 px-4"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /></div>;
+>>>>>>> main
 }
 function SignUpPage() {
   return <div className="flex min-h-[100dvh] items-center justify-center bg-muted/30 px-4"><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} /></div>;
@@ -39,6 +43,46 @@ function ClerkTokenSyncer() {
     setAuthTokenGetter(() => getToken());
     return () => setAuthTokenGetter(null);
   }, [getToken]);
+  return null;
+}
+
+<<<<<<< codex/fix-failed-to-load-clerk-js-lemlqp
+
+function ClerkUserSyncer() {
+  const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
+
+  useEffect(() => {
+    if (!isLoaded || !user) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const token = await getToken();
+        if (!token || cancelled) return;
+        await fetch("/api/users/sync", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            email: user.primaryEmailAddress?.emailAddress || "",
+            name: user.fullName || user.firstName || "مستخدم جديد",
+            company: user.unsafeMetadata?.company || null,
+            phone: user.primaryPhoneNumber?.phoneNumber || null,
+          }),
+        });
+      } catch {
+        // no-op: sync is best-effort
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, user, getToken]);
+
   return null;
 }
 
@@ -54,6 +98,20 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
+=======
+function ClerkQueryClientCacheInvalidator() {
+  const { addListener } = useClerk();
+  const qc = useQueryClient();
+  const prevUserIdRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => addListener(({ user }) => {
+    const userId = user?.id ?? null;
+    if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) qc.clear();
+    prevUserIdRef.current = userId;
+  }), [addListener, qc]);
+  return null;
+}
+
+>>>>>>> main
 function AuthGuard({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { user } = useUser();
   const { data: me, isLoading } = useGetMe({ query: { enabled: !!user } });
@@ -96,11 +154,19 @@ function AppRoutes() {
   return (
     <QueryClientProvider client={queryClient}>
       <ClerkTokenSyncer />
+<<<<<<< codex/fix-failed-to-load-clerk-js-lemlqp
+      <ClerkUserSyncer />
+=======
+>>>>>>> main
       <ClerkQueryClientCacheInvalidator />
       <Switch>
         <Route path="/" component={HomeRedirect} />
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
+<<<<<<< codex/fix-failed-to-load-clerk-js-lemlqp
+        <Route path="/forgot-password/*?" component={SignInPage} />
+=======
+>>>>>>> main
         <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
         <Route path="/extracts" component={() => <ProtectedRoute component={ExtractsList} />} />
         <Route path="/extracts/new" component={() => <ProtectedRoute component={NewExtract} />} />
