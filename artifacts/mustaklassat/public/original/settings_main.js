@@ -62,7 +62,7 @@ function updateDateTime() {
 // التنقل بين الصفحات
 function navigateTo(page) {
     const pageUrls = {
-        'index.html': 'index.html',
+        '/dashboard': '/dashboard',
         'attendance.html': 'attendance.html',
         'performance.html': 'performance.html',
         'achievement.html': 'achievement.html',
