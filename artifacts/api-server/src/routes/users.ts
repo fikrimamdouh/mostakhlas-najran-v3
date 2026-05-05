@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
+import { clerkClient, getAuth } from "@clerk/express";
 import { db, usersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { sendAdminActionEmail, sendApprovalEmail, sendRejectionEmail } from "../lib/email";
@@ -56,31 +56,50 @@ const requireAdminOrSupervisor = async (req: any, res: any, next: any) => {
 // GET /api/users/me
 router.get("/me", requireAuth, async (req: any, res) => {
   try {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    const auth = getAuth(req);
+    const clerkUserId = auth?.userId;
+    if (!clerkUserId) return res.status(401).json({ error: "Unauthorized" });
 
-    const isPrimaryAdmin = String(user.email || "").trim().toLowerCase() === PRIMARY_ADMIN_EMAIL || (PRIMARY_ADMIN_CLERK_ID && user.clerkId === PRIMARY_ADMIN_CLERK_ID);
-    const [{ count: adminCount }] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(usersTable)
-      .where(eq(usersTable.role, "admin"));
-    const [primaryAdminUser] = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.email, PRIMARY_ADMIN_EMAIL))
-      .limit(1);
+    const sessionEmail = String((auth as any)?.sessionClaims?.email || "").trim().toLowerCase();
+    let email = sessionEmail;
 
-    const shouldBootstrapAdmin = Number(adminCount) === 0 || (!primaryAdminUser && !String(user.email || "").trim());
-
-    if ((isPrimaryAdmin || shouldBootstrapAdmin) && (user.role !== "admin" || user.status !== "approved")) {
-      const [upgraded] = await db.update(usersTable)
-        .set({ role: "admin", status: "approved" })
-        .where(eq(usersTable.id, user.id))
-        .returning();
-      return res.json(upgraded);
+    if (!email) {
+      try {
+        const clerkUser = await clerkClient.users.getUser(clerkUserId);
+        email = String(clerkUser.emailAddresses?.[0]?.emailAddress || "").trim().toLowerCase();
+      } catch {
+        // fallback to DB email if Clerk lookup fails
+      }
     }
 
-    return res.json(user);
+    const [existing] = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkUserId)).limit(1);
+
+    const isPrimaryAdmin = email === PRIMARY_ADMIN_EMAIL || (PRIMARY_ADMIN_CLERK_ID && clerkUserId === PRIMARY_ADMIN_CLERK_ID);
+    const targetRole = isPrimaryAdmin ? "admin" : "company";
+    const targetStatus = isPrimaryAdmin ? "approved" : "pending";
+
+    if (!existing) {
+      const [created] = await db.insert(usersTable).values({
+        clerkId: clerkUserId,
+        email: email || "",
+        name: "مستخدم جديد",
+        role: targetRole as any,
+        status: targetStatus as any,
+      }).returning();
+      return res.json(created);
+    }
+
+    const updates: Record<string, any> = {};
+    if (email && email !== String(existing.email || "").trim().toLowerCase()) updates.email = email;
+    if (existing.role !== targetRole) updates.role = targetRole;
+    if (existing.status !== targetStatus) updates.status = targetStatus;
+
+    if (Object.keys(updates).length > 0) {
+      const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, existing.id)).returning();
+      return res.json(updated);
+    }
+
+    return res.json(existing);
   } catch (err) {
     req.log.error({ err }, "Failed to get user");
     return res.status(500).json({ error: "Internal server error" });
@@ -182,7 +201,7 @@ router.patch("/:userId/role", requireAuth, requireAdmin, async (req: any, res) =
   try {
     const { userId } = req.params;
     const { role } = req.body;
-    if (!["admin", "supervisor", "user"].includes(role)) return res.status(400).json({ error: "Invalid role" });
+    if (!["admin", "supervisor", "user", "company"].includes(role)) return res.status(400).json({ error: "Invalid role" });
     const [user] = await db.update(usersTable).set({ role }).where(eq(usersTable.id, Number(userId))).returning();
     if (!user) return res.status(404).json({ error: "User not found" });
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
