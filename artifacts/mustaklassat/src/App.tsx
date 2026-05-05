@@ -19,6 +19,7 @@ import AdminUsers from "@/pages/admin/users";
 import AuditLog from "@/pages/admin/audit";
 import UsersView from "@/pages/admin/users-view";
 import Settings from "@/pages/settings";
+import { apiUrl } from "@/lib/api-base";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
@@ -99,7 +100,7 @@ function ClerkUserSyncer() {
           timestamp: Date.now(),
         }));
         if (!token || cancelled) return;
-        await fetch("/api/users/sync", {
+        await fetch(apiUrl("/api/users/sync"), {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -115,7 +116,7 @@ function ClerkUserSyncer() {
           }),
         });
 
-        await fetch("/api/users/me", {
+        await fetch(apiUrl("/api/users/me"), {
           method: "GET",
           headers: { Authorization: `Bearer ${token}` },
         });
