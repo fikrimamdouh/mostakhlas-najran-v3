@@ -56,7 +56,13 @@ router.get("/me", requireAuth, async (req: any, res) => {
       .select({ count: sql<number>`count(*)` })
       .from(usersTable)
       .where(eq(usersTable.role, "admin"));
-    const shouldBootstrapAdmin = Number(adminCount) === 0;
+    const [primaryAdminUser] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, PRIMARY_ADMIN_EMAIL))
+      .limit(1);
+
+    const shouldBootstrapAdmin = Number(adminCount) === 0 || (!primaryAdminUser && !String(user.email || "").trim());
 
     if ((isPrimaryAdmin || shouldBootstrapAdmin) && (user.role !== "admin" || user.status !== "approved")) {
       const [upgraded] = await db.update(usersTable)
