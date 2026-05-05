@@ -139,7 +139,7 @@ export default function UsersView() {
                     <div className="flex items-center gap-2">
                       <div className="h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
                         style={{ background: "#f0f2f8", color: "#1e3c72" }}>
-                        {u.name.charAt(0)}
+                        {(u?.name?.charAt(0) || "م")}
                       </div>
                       <span className="font-semibold text-gray-800">{u.name}</span>
                     </div>

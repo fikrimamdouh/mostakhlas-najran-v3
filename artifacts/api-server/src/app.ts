@@ -1,10 +1,6 @@
 import express, { type Express } from "express";
 import cors from "cors";
-<<<<<<< codex/fix-project-for-vercel-deployment-3ssabs
 import { pinoHttp } from "pino-http";
-=======
-import * as pinoHttp from "pino-http";
->>>>>>> main
 import type { IncomingMessage, ServerResponse } from "http";
 import { clerkMiddleware } from "@clerk/express";
 import { publishableKeyFromHost } from "@clerk/shared/keys";
@@ -19,7 +15,7 @@ import { logger } from "./lib/logger";
 const app: Express = express();
 
 app.use(
-  pinoHttp.default({
+  pinoHttp({
     logger,
     serializers: {
       req(req: IncomingMessage & { id?: string }) {
