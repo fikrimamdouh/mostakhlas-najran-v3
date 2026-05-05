@@ -1,5 +1,5 @@
 import { syncCurrentUser } from "../_lib/syncCurrentUser";
 
-export async function POST(req: Request) {
+export async function GET(req: Request) {
   return await syncCurrentUser(req);
 }
