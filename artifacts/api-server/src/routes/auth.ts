@@ -21,7 +21,8 @@ router.post("/sync", async (req, res) => {
     const existing = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId)).limit(1);
 
     const normalizedEmail = String(email || "").trim().toLowerCase();
-    const isPrimaryAdmin = normalizedEmail === PRIMARY_ADMIN_EMAIL;
+    const existingEmail = String(existing[0]?.email || "").trim().toLowerCase();
+    const isPrimaryAdmin = normalizedEmail === PRIMARY_ADMIN_EMAIL || existingEmail === PRIMARY_ADMIN_EMAIL;
 
     if (existing.length > 0) {
       if (isPrimaryAdmin && (existing[0].role !== "admin" || existing[0].status !== "approved")) {
@@ -39,7 +40,7 @@ router.post("/sync", async (req, res) => {
 
     const [user] = await db.insert(usersTable).values({
       clerkId: userId,
-      email: email || "",
+      email: email || existing[0]?.email || "",
       name: name || "مستخدم جديد",
       role: isPrimaryAdmin ? "admin" : "user",
       status: isPrimaryAdmin ? "approved" : "pending",
