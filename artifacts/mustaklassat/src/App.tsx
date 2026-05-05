@@ -55,6 +55,13 @@ function ClerkUserSyncer() {
     (async () => {
       try {
         const token = await getToken();
+        const signedInEmail = String(user.primaryEmailAddress?.emailAddress || "").trim().toLowerCase();
+
+        localStorage.setItem("najran_session", JSON.stringify({
+          name: user.fullName || user.firstName || "مستخدم",
+          role: signedInEmail === PRIMARY_ADMIN_EMAIL ? "admin" : "user",
+          timestamp: Date.now(),
+        }));
         if (!token || cancelled) return;
         await fetch("/api/users/sync", {
           method: "POST",
