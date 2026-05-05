@@ -9,6 +9,7 @@ const router = Router();
 
 
 const PRIMARY_ADMIN_EMAIL = (process.env.PRIMARY_ADMIN_EMAIL || "rorofikri@gmail.com").trim().toLowerCase();
+const PRIMARY_ADMIN_CLERK_ID = (process.env.PRIMARY_ADMIN_CLERK_ID || "user_3DIFbR0YQyLX8xxPdBCeLl2CcTX").trim();
 
 const notifyPrimaryAdmin = (payload: { action: string; actorName: string; actorEmail: string; targetName: string; targetEmail: string; details?: string | null; }) => {
   sendAdminActionEmail(PRIMARY_ADMIN_EMAIL, payload).catch(() => {});
@@ -24,7 +25,14 @@ const requireAuth = (req: any, res: any, next: any) => {
 const requireAdmin = async (req: any, res: any, next: any) => {
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
-    if (!user || user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+    const isPrimaryAdmin = !!user && (String(user.email || "").trim().toLowerCase() === PRIMARY_ADMIN_EMAIL || (PRIMARY_ADMIN_CLERK_ID && user.clerkId === PRIMARY_ADMIN_CLERK_ID));
+    if (!user) return res.status(403).json({ error: "Forbidden" });
+    if (isPrimaryAdmin && (user.role !== "admin" || user.status !== "approved")) {
+      const [upgraded] = await db.update(usersTable).set({ role: "admin", status: "approved" }).where(eq(usersTable.id, user.id)).returning();
+      req.currentUser = upgraded;
+      return next();
+    }
+    if (user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
     req.currentUser = user;
     next();
   } catch (err) {
@@ -51,7 +59,7 @@ router.get("/me", requireAuth, async (req: any, res) => {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const isPrimaryAdmin = String(user.email || "").trim().toLowerCase() === PRIMARY_ADMIN_EMAIL;
+    const isPrimaryAdmin = String(user.email || "").trim().toLowerCase() === PRIMARY_ADMIN_EMAIL || (PRIMARY_ADMIN_CLERK_ID && user.clerkId === PRIMARY_ADMIN_CLERK_ID);
     const [{ count: adminCount }] = await db
       .select({ count: sql<number>`count(*)` })
       .from(usersTable)

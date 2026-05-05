@@ -7,6 +7,7 @@ import { sendAdminNewSignupEmail, sendWelcomeEmail } from "../lib/email";
 const router = Router();
 
 const PRIMARY_ADMIN_EMAIL = (process.env.PRIMARY_ADMIN_EMAIL || "rorofikri@gmail.com").trim().toLowerCase();
+const PRIMARY_ADMIN_CLERK_ID = (process.env.PRIMARY_ADMIN_CLERK_ID || "user_3DIFbR0YQyLX8xxPdBCeLl2CcTX").trim();
 
 // Called after Clerk sign-up to register/sync user in our DB
 // Mounted at /users so this handles POST /api/users/sync
@@ -22,7 +23,7 @@ router.post("/sync", async (req, res) => {
 
     const normalizedEmail = String(email || "").trim().toLowerCase();
     const existingEmail = String(existing[0]?.email || "").trim().toLowerCase();
-    const isPrimaryAdmin = normalizedEmail === PRIMARY_ADMIN_EMAIL || existingEmail === PRIMARY_ADMIN_EMAIL;
+    const isPrimaryAdmin = normalizedEmail === PRIMARY_ADMIN_EMAIL || existingEmail === PRIMARY_ADMIN_EMAIL || (PRIMARY_ADMIN_CLERK_ID && userId === PRIMARY_ADMIN_CLERK_ID);
 
     if (existing.length > 0) {
       if (isPrimaryAdmin && (existing[0].role !== "admin" || existing[0].status !== "approved")) {

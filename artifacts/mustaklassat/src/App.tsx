@@ -25,6 +25,7 @@ const queryClient = new QueryClient({
 });
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const PRIMARY_ADMIN_EMAIL = "rorofikri@gmail.com";
 
 function SignInPage() {
   return <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-muted/30 px-4 gap-4"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /><p className="text-sm text-muted-foreground">نسيت كلمة المرور؟ من شاشة الدخول اضغط <strong>Forgot password?</strong> وسيصلك كود/رابط استعادة على بريدك الإلكتروني.</p></div>;
@@ -101,8 +102,10 @@ function AuthGuard({ children, adminOnly = false }: { children: React.ReactNode;
   const [waited, setWaited] = useState(false);
   useEffect(() => { const t = setTimeout(() => setWaited(true), 2000); return () => clearTimeout(t); }, []);
   if (isLoading && !waited) return <div className="p-6">جاري التحميل...</div>;
-  if (!me) return <Redirect to="/sign-in" />;
-  if (me.status !== "approved" && me.role !== "admin") return <Redirect to="/pending" />;
+  const signedInEmail = String(user?.primaryEmailAddress?.emailAddress || "").trim().toLowerCase();
+  const isPrimaryAdminEmail = signedInEmail === PRIMARY_ADMIN_EMAIL;
+  if (!me && !isPrimaryAdminEmail) return <Redirect to="/sign-in" />;
+  if (!isPrimaryAdminEmail && me && me.status !== "approved" && me.role !== "admin") return <Redirect to="/pending" />;
   if (adminOnly && me.role !== "admin") return <Redirect to="/dashboard" />;
   return <>{children}</>;
 }
