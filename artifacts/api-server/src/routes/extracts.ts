@@ -26,7 +26,7 @@ router.get("/", requireAuth, async (req: any, res) => {
     const offset = (Number(page) - 1) * Number(limit);
 
     const conditions: any[] = [];
-    if (status) conditions.push(eq(extractsTable.status, status as string));
+    if (status && ["current", "completed", "previous"].includes(String(status))) conditions.push(eq(extractsTable.status, status as "current" | "completed" | "previous"));
     if (projectId) conditions.push(eq(extractsTable.projectId, Number(projectId)));
 
     const baseQuery = db
