@@ -1,114 +1,39 @@
 import { useEffect, useRef, useState } from "react";
-import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser, useAuth } from '@clerk/react';
-import { publishableKeyFromHost } from '@clerk/react/internal';
-import { shadcn } from '@clerk/themes';
-import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from 'wouter';
+import { SignIn, SignUp, Show, useClerk, useUser, useAuth } from "@clerk/react";
+import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useGetMe, setAuthTokenGetter } from "@workspace/api-client-react";
-
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import NotFound from "@/pages/not-found";
-
 import ExtractsList from "@/pages/extracts/index";
 import NewExtract from "@/pages/extracts/new";
 import ExtractDetail from "@/pages/extracts/detail";
-
 import ProjectsList from "@/pages/projects/index";
 import NewProject from "@/pages/projects/new";
-
 import AdminUsers from "@/pages/admin/users";
 import AuditLog from "@/pages/admin/audit";
 import UsersView from "@/pages/admin/users-view";
 import Settings from "@/pages/settings";
 
 const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-      refetchOnWindowFocus: false,
-    },
-  },
+  defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
 });
 
-const clerkPubKey = publishableKeyFromHost(
-  window.location.hostname,
-  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
-);
-
-const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-function stripBase(path: string): string {
-  return basePath && path.startsWith(basePath)
-    ? path.slice(basePath.length) || "/"
-    : path;
-}
-
-if (!clerkPubKey) {
-  throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in .env file');
-}
-
-const clerkAppearance = {
-  theme: shadcn,
-  cssLayerName: "clerk",
-  options: {
-    logoPlacement: "inside" as const,
-    logoLinkUrl: basePath || "/",
-    logoImageUrl: `${window.location.origin}${basePath}/logo.png`,
-  },
-  variables: {
-    colorPrimary: "#2a5298",
-    colorForeground: "#1e3c72",
-    colorMutedForeground: "#5a6a8a",
-    colorDanger: "hsl(0 84% 60%)",
-    colorBackground: "hsl(0 0% 100%)",
-    colorInput: "#dce6f5",
-    colorInputForeground: "#1e3c72",
-    colorNeutral: "#dce6f5",
-    fontFamily: "'Tajawal', sans-serif",
-    borderRadius: "0.5rem",
-  },
-  elements: {
-    rootBox: "w-full flex justify-center",
-    cardBox: "bg-white rounded-2xl w-[440px] max-w-full overflow-hidden shadow-lg border border-border",
-    card: "!shadow-none !border-0 !bg-transparent !rounded-none",
-    footer: "!shadow-none !border-0 !bg-transparent !rounded-none",
-    headerTitle: "text-2xl font-bold text-foreground",
-    headerSubtitle: "text-muted-foreground",
-    socialButtonsBlockButtonText: "text-foreground font-medium",
-    formFieldLabel: "text-foreground font-medium",
-    footerActionLink: "text-primary hover:text-primary/90 font-medium",
-    footerActionText: "text-muted-foreground",
-    dividerText: "text-muted-foreground bg-white px-2",
-    identityPreviewEditButton: "text-primary hover:text-primary/90",
-    formFieldSuccessText: "text-green-600",
-    alertText: "text-destructive",
-    formButtonPrimary: "bg-primary text-primary-foreground hover:bg-primary/90 transition-colors",
-    formFieldInput: "bg-background border-input text-foreground rounded-md",
-  },
-};
+const PRIMARY_ADMIN_EMAIL = "rorofikri@gmail.com";
 
 function SignInPage() {
-  return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-muted/30 px-4">
-      <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
-    </div>
-  );
+  return <div className="flex min-h-[100dvh] items-center justify-center bg-muted/30 px-4"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /></div>;
 }
-
 function SignUpPage() {
-  return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-muted/30 px-4">
-      <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
-    </div>
-  );
+  return <div className="flex min-h-[100dvh] items-center justify-center bg-muted/30 px-4"><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} /></div>;
 }
 
-// Wire Clerk session token into every API request
 function ClerkTokenSyncer() {
   const { getToken } = useAuth();
   useEffect(() => {
@@ -118,221 +43,130 @@ function ClerkTokenSyncer() {
   return null;
 }
 
-function ClerkQueryClientCacheInvalidator() {
-  const { addListener } = useClerk();
-  const queryClient = useQueryClient();
-  const prevUserIdRef = useRef<string | null | undefined>(undefined);
+
+function ClerkUserSyncer() {
+  const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
 
   useEffect(() => {
-    const unsubscribe = addListener(({ user }) => {
-      const userId = user?.id ?? null;
-      if (
-        prevUserIdRef.current !== undefined &&
-        prevUserIdRef.current !== userId
-      ) {
-        queryClient.clear();
+    if (!isLoaded || !user) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const token = await getToken();
+        if (!token || cancelled) return;
+        await fetch("/api/users/sync", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            email: user.primaryEmailAddress?.emailAddress || "",
+            name: user.fullName || user.firstName || "مستخدم جديد",
+            company: user.unsafeMetadata?.company || null,
+            hospital: user.unsafeMetadata?.hospital || null,
+            position: user.unsafeMetadata?.position || null,
+            phone: user.primaryPhoneNumber?.phoneNumber || null,
+          }),
+        });
+      } catch {
+        // no-op: sync is best-effort
       }
-      prevUserIdRef.current = userId;
-    });
-    return unsubscribe;
-  }, [addListener, queryClient]);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, user, getToken]);
 
   return null;
 }
 
-// Ensure user is synced with DB
-function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, isLoaded: isClerkLoaded } = useUser();
-  const { getToken } = useAuth();
-  const queryClient = useQueryClient();
-  const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
+function ClerkQueryClientCacheInvalidator() {
+  const { addListener } = useClerk();
+  const qc = useQueryClient();
+  const prevUserIdRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => addListener(({ user }) => {
+    const userId = user?.id ?? null;
+    if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) qc.clear();
+    prevUserIdRef.current = userId;
+  }), [addListener, qc]);
+  return null;
+}
 
-  const { data: dbUser, isLoading: isDbLoading, error } = useGetMe({
-    query: {
-      queryKey: ["/api/users/me"],
-      enabled: !!user?.id && isClerkLoaded,
-      retry: false,
-    }
-  });
-
-  const isNotFound = (error as any)?.status === 404;
-
-  useEffect(() => {
-    if (!isClerkLoaded || !user || !isNotFound || syncState !== 'idle') return;
-
-    setSyncState('syncing');
-
-    getToken().then(token => {
-      return fetch('/api/users/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          email: user.primaryEmailAddress?.emailAddress,
-          name: user.fullName || user.firstName || 'مستخدم',
-        }),
-      });
-    }).then(res => {
-      if (res.ok) {
-        queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
-        setSyncState('done');
-      } else {
-        setSyncState('error');
-      }
-    }).catch(() => setSyncState('error'));
-  }, [isClerkLoaded, user, isNotFound, syncState, getToken, queryClient]);
-
-  // حفظ الجلسة + Clerk token في localStorage ليستطيع النظام الأصلي قراءتها
-  useEffect(() => {
-    if (!dbUser || dbUser.status !== "approved") return;
-
-    // نجلب التوكن ونحفظه مع الجلسة
-    getToken().then(token => {
-      localStorage.setItem('najran_session', JSON.stringify({
-        userId: dbUser.id,
-        name: dbUser.name,
-        email: dbUser.email,
-        role: dbUser.role,
-        clerkToken: token,
-        timestamp: Date.now(),
-      }));
-    });
-
-    // تحديث آخر تسجيل دخول
-    getToken().then(token => {
-      if (token) {
-        fetch('/api/users/me/login', {
-          method: 'PATCH',
-          headers: { 'Authorization': `Bearer ${token}` },
-        }).catch(() => {});
-      }
-    });
-  }, [dbUser, getToken]);
-
-  if (!isClerkLoaded || isDbLoading || syncState === 'syncing') {
-    return (
-      <div className="flex h-screen items-center justify-center flex-col gap-3" style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' }}>
-        <img src="/logo.png" alt="" className="h-16 w-auto opacity-80" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
-        <p className="text-white text-lg font-medium">جاري التحميل...</p>
-      </div>
-    );
-  }
-
-  if (dbUser?.status === "pending") {
-    return <Redirect to="/pending" />;
-  }
-
-  if (dbUser?.status === "rejected") {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 text-center" style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' }}>
-        <div className="bg-white rounded-2xl p-10 shadow-xl max-w-md w-full">
-          <h2 className="text-2xl font-bold mb-3 text-red-600">تم رفض حسابك</h2>
-          <p className="text-gray-600">للاستفسار، تواصل مع مدير النظام.</p>
-        </div>
-      </div>
-    );
-  }
-
+function AuthGuard({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
+  const { user } = useUser();
+  const { isLoaded, isSignedIn } = useAuth();
+  const { data: me, isLoading } = useGetMe({ query: { enabled: !!isLoaded && !!isSignedIn, queryKey: ["/api/users/me"] } });
+  const [waited, setWaited] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setWaited(true), 2000); return () => clearTimeout(t); }, []);
+  if (!isLoaded) return <div className="p-6">جاري تحميل الجلسة...</div>;
+  if (isSignedIn && (isLoading || !me) && !waited) return <div className="p-6">جاري تحميل البيانات...</div>;
+  const signedInEmail = String(user?.primaryEmailAddress?.emailAddress || "").trim().toLowerCase();
+  const isPrimaryAdminEmail = signedInEmail === PRIMARY_ADMIN_EMAIL;
+  if (!isSignedIn) return <Redirect to="/sign-in" />;
+  if (!me && !isPrimaryAdminEmail) return <div className="p-6">جاري تهيئة الحساب...</div>;
+  if (!isPrimaryAdminEmail && me && me.status !== "approved" && me.role !== "admin") return <Redirect to="/pending" />;
+  if (adminOnly && !isPrimaryAdminEmail && (!me || me.role !== "admin")) return <Redirect to="/dashboard" />;
   return <>{children}</>;
 }
 
-function ProtectedRoute({ component: Component, adminOnly = false }: { component: any, adminOnly?: boolean }) {
+function ProtectedRoute({ component: Component, adminOnly = false }: { component: any; adminOnly?: boolean }) {
+  return <AuthGuard adminOnly={adminOnly}><MainLayout><Component /></MainLayout></AuthGuard>;
+}
+
+function HomeRedirect() {
+  return <><Show when="signed-in"><Redirect to="/dashboard" /></Show><Show when="signed-out"><Home /></Show></>;
+}
+
+
+function PendingReviewPage() {
+  const { signOut } = useClerk();
   return (
-    <Show when="signed-in" fallback={<Redirect to="/sign-in" />}>
-      <AuthGuard>
-        <MainLayout>
-          <Component />
-        </MainLayout>
-      </AuthGuard>
+    <Show when="signed-in">
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center p-4 text-center">
+        <div className="bg-card border border-border p-8 rounded-xl shadow-sm max-w-md w-full">
+          <h2 className="text-2xl font-bold mb-2 text-primary">حسابك قيد المراجعة</h2>
+          <p className="text-muted-foreground mb-6">لقد تم تسجيل حسابك بنجاح. يرجى الانتظار حتى يقوم مدير النظام بالموافقة على حسابك.</p>
+          <Button variant="outline" className="w-full" onClick={() => signOut({ redirectUrl: `${basePath}/` })}>
+            تسجيل الخروج
+          </Button>
+        </div>
+      </div>
     </Show>
   );
 }
 
-function HomeRedirect() {
+function AppRoutes() {
   return (
-    <>
-      <Show when="signed-in">
-        <Redirect to="/dashboard" />
-      </Show>
-      <Show when="signed-out">
-        <Home />
-      </Show>
-    </>
+    <QueryClientProvider client={queryClient}>
+      <ClerkTokenSyncer />
+      <ClerkUserSyncer />
+      <ClerkQueryClientCacheInvalidator />
+      <Switch>
+        <Route path="/" component={HomeRedirect} />
+        <Route path="/sign-in/*?" component={SignInPage} />
+        <Route path="/sign-up/*?" component={SignUpPage} />
+        <Route path="/forgot-password/*?" component={SignInPage} />
+        <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
+        <Route path="/extracts" component={() => <ProtectedRoute component={ExtractsList} />} />
+        <Route path="/extracts/new" component={() => <ProtectedRoute component={NewExtract} />} />
+        <Route path="/extracts/:id" component={() => <ProtectedRoute component={ExtractDetail} />} />
+        <Route path="/projects" component={() => <ProtectedRoute component={ProjectsList} />} />
+        <Route path="/projects/new" component={() => <ProtectedRoute component={NewProject} />} />
+        <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsers} adminOnly />} />
+        <Route path="/admin/audit" component={() => <ProtectedRoute component={AuditLog} />} />
+        <Route path="/admin/users-view" component={() => <ProtectedRoute component={UsersView} />} />
+        <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
+        <Route path="/pending" component={PendingReviewPage} />
+        <Route component={NotFound} />
+      </Switch>
+    </QueryClientProvider>
   );
 }
 
-function ClerkProviderWithRoutes() {
-  const [, setLocation] = useLocation();
-
-  return (
-    <ClerkProvider
-      publishableKey={clerkPubKey}
-      proxyUrl={clerkProxyUrl}
-      appearance={clerkAppearance}
-      signInUrl={`${basePath}/sign-in`}
-      signUpUrl={`${basePath}/sign-up`}
-      localization={{
-        signIn: {
-          start: {
-            title: "مرحباً بك",
-            subtitle: "سجل دخولك للوصول إلى حسابك",
-          },
-        },
-        signUp: {
-          start: {
-            title: "إنشاء حساب جديد",
-            subtitle: "ابدأ معنا اليوم",
-          },
-        },
-      }}
-      routerPush={(to) => setLocation(stripBase(to))}
-      routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
-    >
-      <QueryClientProvider client={queryClient}>
-        <ClerkTokenSyncer />
-        <ClerkQueryClientCacheInvalidator />
-        <Switch>
-          <Route path="/" component={HomeRedirect} />
-          <Route path="/sign-in/*?" component={SignInPage} />
-          <Route path="/sign-up/*?" component={SignUpPage} />
-          <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
-          <Route path="/extracts" component={() => <ProtectedRoute component={ExtractsList} />} />
-          <Route path="/extracts/new" component={() => <ProtectedRoute component={NewExtract} />} />
-          <Route path="/extracts/:id" component={() => <ProtectedRoute component={ExtractDetail} />} />
-          <Route path="/projects" component={() => <ProtectedRoute component={ProjectsList} />} />
-          <Route path="/projects/new" component={() => <ProtectedRoute component={NewProject} />} />
-          <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsers} adminOnly />} />
-          <Route path="/admin/audit" component={() => <ProtectedRoute component={AuditLog} />} />
-          <Route path="/admin/users-view" component={() => <ProtectedRoute component={UsersView} />} />
-          <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
-          <Route path="/pending" component={() => (
-             <Show when="signed-in" fallback={<Redirect to="/sign-in" />}>
-               <div className="flex min-h-[100dvh] flex-col items-center justify-center p-4 text-center">
-                 <div className="bg-card border border-border p-8 rounded-xl shadow-sm max-w-md w-full">
-                   <h2 className="text-2xl font-bold mb-2 text-primary">حسابك قيد المراجعة</h2>
-                   <p className="text-muted-foreground mb-6">لقد تم تسجيل حسابك بنجاح. يرجى الانتظار حتى يقوم مدير النظام بالموافقة على حسابك.</p>
-                 </div>
-               </div>
-             </Show>
-          )} />
-          <Route component={NotFound} />
-        </Switch>
-      </QueryClientProvider>
-    </ClerkProvider>
-  );
+export default function App() {
+  return <TooltipProvider><WouterRouter base={basePath || undefined}><Toaster /><AppRoutes /></WouterRouter></TooltipProvider>;
 }
-
-function App() {
-  return (
-    <TooltipProvider>
-      <WouterRouter base={basePath}>
-        <ClerkProviderWithRoutes />
-      </WouterRouter>
-      <Toaster />
-    </TooltipProvider>
-  );
-}
-
-export default App;
