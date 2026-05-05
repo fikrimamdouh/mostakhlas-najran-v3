@@ -128,7 +128,7 @@ export function Sidebar() {
         <Button
           variant="ghost"
           className="w-full justify-start text-white/70 hover:text-white hover:bg-white/10 text-sm"
-          onClick={() => { localStorage.removeItem('najran_session'); signOut(); }}
+          onClick={() => { localStorage.removeItem('najran_session'); signOut({ redirectUrl: '/' }); }}
         >
           <LogOut className="ml-2 h-4 w-4 rotate-180" />
           تسجيل الخروج
