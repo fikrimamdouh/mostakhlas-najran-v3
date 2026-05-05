@@ -1,11 +1,19 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
+import { clerkClient, getAuth } from "@clerk/express";
 import { db, usersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
-import { sendApprovalEmail, sendRejectionEmail } from "../lib/email";
+import { sendAdminActionEmail, sendApprovalEmail, sendRejectionEmail } from "../lib/email";
 import { logAudit } from "./audit";
 
 const router = Router();
+
+
+const PRIMARY_ADMIN_EMAIL = (process.env.PRIMARY_ADMIN_EMAIL || "rorofikri@gmail.com").trim().toLowerCase();
+const PRIMARY_ADMIN_CLERK_ID = (process.env.PRIMARY_ADMIN_CLERK_ID || "user_3DIFbR0YQyLX8xxPdBCeLl2CcTX").trim();
+
+const notifyPrimaryAdmin = (payload: { action: string; actorName: string; actorEmail: string; targetName: string; targetEmail: string; details?: string | null; }) => {
+  sendAdminActionEmail(PRIMARY_ADMIN_EMAIL, payload).catch(() => {});
+};
 
 const requireAuth = (req: any, res: any, next: any) => {
   const auth = getAuth(req);
@@ -17,7 +25,14 @@ const requireAuth = (req: any, res: any, next: any) => {
 const requireAdmin = async (req: any, res: any, next: any) => {
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
-    if (!user || user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+    const isPrimaryAdmin = !!user && (String(user.email || "").trim().toLowerCase() === PRIMARY_ADMIN_EMAIL || (PRIMARY_ADMIN_CLERK_ID && user.clerkId === PRIMARY_ADMIN_CLERK_ID));
+    if (!user) return res.status(403).json({ error: "Forbidden" });
+    if (isPrimaryAdmin && (user.role !== "admin" || user.status !== "approved")) {
+      const [upgraded] = await db.update(usersTable).set({ role: "admin", status: "approved" }).where(eq(usersTable.id, user.id)).returning();
+      req.currentUser = upgraded;
+      return next();
+    }
+    if (user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
     req.currentUser = user;
     next();
   } catch (err) {
@@ -41,9 +56,50 @@ const requireAdminOrSupervisor = async (req: any, res: any, next: any) => {
 // GET /api/users/me
 router.get("/me", requireAuth, async (req: any, res) => {
   try {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
-    if (!user) return res.status(404).json({ error: "User not found" });
-    return res.json(user);
+    const auth = getAuth(req);
+    const clerkUserId = auth?.userId;
+    if (!clerkUserId) return res.status(401).json({ error: "Unauthorized" });
+
+    const sessionEmail = String((auth as any)?.sessionClaims?.email || "").trim().toLowerCase();
+    let email = sessionEmail;
+
+    if (!email) {
+      try {
+        const clerkUser = await clerkClient.users.getUser(clerkUserId);
+        email = String(clerkUser.emailAddresses?.[0]?.emailAddress || "").trim().toLowerCase();
+      } catch {
+        // fallback to DB email if Clerk lookup fails
+      }
+    }
+
+    const [existing] = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkUserId)).limit(1);
+
+    const isPrimaryAdmin = email === PRIMARY_ADMIN_EMAIL || (PRIMARY_ADMIN_CLERK_ID && clerkUserId === PRIMARY_ADMIN_CLERK_ID);
+    const targetRole = isPrimaryAdmin ? "admin" : "company";
+    const targetStatus = isPrimaryAdmin ? "approved" : "pending";
+
+    if (!existing) {
+      const [created] = await db.insert(usersTable).values({
+        clerkId: clerkUserId,
+        email: email || "",
+        name: "مستخدم جديد",
+        role: targetRole as any,
+        status: targetStatus as any,
+      }).returning();
+      return res.json(created);
+    }
+
+    const updates: Record<string, any> = {};
+    if (email && email !== String(existing.email || "").trim().toLowerCase()) updates.email = email;
+    if (existing.role !== targetRole) updates.role = targetRole;
+    if (existing.status !== targetStatus) updates.status = targetStatus;
+
+    if (Object.keys(updates).length > 0) {
+      const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, existing.id)).returning();
+      return res.json(updated);
+    }
+
+    return res.json(existing);
   } catch (err) {
     req.log.error({ err }, "Failed to get user");
     return res.status(500).json({ error: "Internal server error" });
@@ -115,6 +171,7 @@ router.post("/:userId/approve", requireAuth, requireAdmin, async (req: any, res)
     sendApprovalEmail(user.email, user.name).catch(() => {});
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
     logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "موافقة على مستخدم", `تمت الموافقة على ${user.name} (${user.email})`, ip);
+    notifyPrimaryAdmin({ action: "موافقة على مستخدم", actorName: req.currentUser.name, actorEmail: req.currentUser.email, targetName: user.name, targetEmail: user.email, details: "تمت الموافقة على الحساب" });
     return res.json(user);
   } catch (err) {
     req.log.error({ err }, "Failed to approve user");
@@ -131,6 +188,7 @@ router.post("/:userId/reject", requireAuth, requireAdmin, async (req: any, res) 
     sendRejectionEmail(user.email, user.name).catch(() => {});
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
     logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "رفض مستخدم", `تم رفض ${user.name} (${user.email})`, ip);
+    notifyPrimaryAdmin({ action: "رفض مستخدم", actorName: req.currentUser.name, actorEmail: req.currentUser.email, targetName: user.name, targetEmail: user.email, details: "تم رفض الحساب" });
     return res.json(user);
   } catch (err) {
     req.log.error({ err }, "Failed to reject user");
@@ -143,12 +201,13 @@ router.patch("/:userId/role", requireAuth, requireAdmin, async (req: any, res) =
   try {
     const { userId } = req.params;
     const { role } = req.body;
-    if (!["admin", "supervisor", "user"].includes(role)) return res.status(400).json({ error: "Invalid role" });
+    if (!["admin", "supervisor", "user", "company"].includes(role)) return res.status(400).json({ error: "Invalid role" });
     const [user] = await db.update(usersTable).set({ role }).where(eq(usersTable.id, Number(userId))).returning();
     if (!user) return res.status(404).json({ error: "User not found" });
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
     const roleAr = role === "admin" ? "مدير النظام" : role === "supervisor" ? "مدير مستخلصات" : "مستخدم عادي";
     logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "تغيير صلاحية", `تغيير دور ${user.name} إلى ${roleAr}`, ip);
+    notifyPrimaryAdmin({ action: "تغيير صلاحيات المستخدم", actorName: req.currentUser.name, actorEmail: req.currentUser.email, targetName: user.name, targetEmail: user.email, details: `الدور الجديد: ${roleAr}` });
     return res.json(user);
   } catch (err) {
     req.log.error({ err }, "Failed to change role");
@@ -164,6 +223,7 @@ router.post("/:userId/deactivate", requireAuth, requireAdmin, async (req: any, r
     if (!user) return res.status(404).json({ error: "User not found" });
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
     logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "تعطيل حساب", `تم تعطيل حساب ${user.name} (${user.email})`, ip);
+    notifyPrimaryAdmin({ action: "تعطيل حساب", actorName: req.currentUser.name, actorEmail: req.currentUser.email, targetName: user.name, targetEmail: user.email, details: "تم تعطيل الحساب" });
     return res.json(user);
   } catch (err) {
     req.log.error({ err }, "Failed to deactivate user");
@@ -179,6 +239,7 @@ router.post("/:userId/activate", requireAuth, requireAdmin, async (req: any, res
     if (!user) return res.status(404).json({ error: "User not found" });
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
     logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "تفعيل حساب", `تم تفعيل حساب ${user.name} (${user.email})`, ip);
+    notifyPrimaryAdmin({ action: "تفعيل حساب", actorName: req.currentUser.name, actorEmail: req.currentUser.email, targetName: user.name, targetEmail: user.email, details: "تم تفعيل الحساب" });
     return res.json(user);
   } catch (err) {
     req.log.error({ err }, "Failed to activate user");
