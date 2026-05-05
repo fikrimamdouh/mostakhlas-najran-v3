@@ -52,7 +52,13 @@ router.get("/me", requireAuth, async (req: any, res) => {
     if (!user) return res.status(404).json({ error: "User not found" });
 
     const isPrimaryAdmin = String(user.email || "").trim().toLowerCase() === PRIMARY_ADMIN_EMAIL;
-    if (isPrimaryAdmin && (user.role !== "admin" || user.status !== "approved")) {
+    const [{ count: adminCount }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(usersTable)
+      .where(eq(usersTable.role, "admin"));
+    const shouldBootstrapAdmin = Number(adminCount) === 0;
+
+    if ((isPrimaryAdmin || shouldBootstrapAdmin) && (user.role !== "admin" || user.status !== "approved")) {
       const [upgraded] = await db.update(usersTable)
         .set({ role: "admin", status: "approved" })
         .where(eq(usersTable.id, user.id))
