@@ -98,20 +98,23 @@ function ClerkQueryClientCacheInvalidator() {
 
 function AuthGuard({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { user } = useUser();
-  const { data: me, isLoading } = useGetMe({ query: { enabled: !!user, queryKey: ["/api/users/me"] } });
+  const { isLoaded, isSignedIn } = useAuth();
+  const { data: me, isLoading } = useGetMe({ query: { enabled: !!isLoaded && !!isSignedIn, queryKey: ["/api/users/me"] } });
   const [waited, setWaited] = useState(false);
   useEffect(() => { const t = setTimeout(() => setWaited(true), 2000); return () => clearTimeout(t); }, []);
-  if (isLoading && !waited) return <div className="p-6">جاري التحميل...</div>;
+  if (!isLoaded) return <div className="p-6">جاري تحميل الجلسة...</div>;
+  if (isSignedIn && (isLoading || !me) && !waited) return <div className="p-6">جاري تحميل البيانات...</div>;
   const signedInEmail = String(user?.primaryEmailAddress?.emailAddress || "").trim().toLowerCase();
   const isPrimaryAdminEmail = signedInEmail === PRIMARY_ADMIN_EMAIL;
-  if (!me && !isPrimaryAdminEmail) return <Redirect to="/sign-in" />;
+  if (!isSignedIn) return <Redirect to="/sign-in" />;
+  if (!me && !isPrimaryAdminEmail) return <div className="p-6">جاري تهيئة الحساب...</div>;
   if (!isPrimaryAdminEmail && me && me.status !== "approved" && me.role !== "admin") return <Redirect to="/pending" />;
   if (adminOnly && !isPrimaryAdminEmail && (!me || me.role !== "admin")) return <Redirect to="/dashboard" />;
   return <>{children}</>;
 }
 
 function ProtectedRoute({ component: Component, adminOnly = false }: { component: any; adminOnly?: boolean }) {
-  return <Show when="signed-in"><AuthGuard adminOnly={adminOnly}><MainLayout><Component /></MainLayout></AuthGuard></Show>;
+  return <AuthGuard adminOnly={adminOnly}><MainLayout><Component /></MainLayout></AuthGuard>;
 }
 
 function HomeRedirect() {

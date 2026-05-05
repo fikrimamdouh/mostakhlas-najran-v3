@@ -15,6 +15,51 @@ const notifyPrimaryAdmin = (payload: { action: string; actorName: string; actorE
   sendAdminActionEmail(PRIMARY_ADMIN_EMAIL, payload).catch(() => {});
 };
 
+
+async function syncCurrentUser(req: any) {
+  const auth = getAuth(req);
+  const clerkUserId = auth?.userId;
+  if (!clerkUserId) return null;
+
+  let email = String((auth as any)?.sessionClaims?.email || "").trim().toLowerCase();
+  if (!email) {
+    try {
+      const clerkUser = await clerkClient.users.getUser(clerkUserId);
+      email = String(clerkUser.emailAddresses?.[0]?.emailAddress || "").trim().toLowerCase();
+    } catch {
+      // ignore clerk lookup errors, keep fallback values
+    }
+  }
+
+  const [existing] = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkUserId)).limit(1);
+  const isPrimaryAdmin = email === PRIMARY_ADMIN_EMAIL || (PRIMARY_ADMIN_CLERK_ID && clerkUserId === PRIMARY_ADMIN_CLERK_ID);
+  const targetRole = isPrimaryAdmin ? "admin" : "company";
+  const targetStatus = isPrimaryAdmin ? "approved" : "pending";
+
+  if (!existing) {
+    const [created] = await db.insert(usersTable).values({
+      clerkId: clerkUserId,
+      email: email || "",
+      name: "مستخدم جديد",
+      role: targetRole as any,
+      status: targetStatus as any,
+    }).returning();
+    return created;
+  }
+
+  const updates: Record<string, any> = {};
+  if (email && email !== String(existing.email || "").trim().toLowerCase()) updates.email = email;
+  if (existing.role !== targetRole) updates.role = targetRole;
+  if (existing.status !== targetStatus) updates.status = targetStatus;
+
+  if (Object.keys(updates).length > 0) {
+    const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, existing.id)).returning();
+    return updated;
+  }
+
+  return existing;
+}
+
 const requireAuth = (req: any, res: any, next: any) => {
   const auth = getAuth(req);
   if (!auth?.userId) return res.status(401).json({ error: "Unauthorized" });
@@ -56,52 +101,22 @@ const requireAdminOrSupervisor = async (req: any, res: any, next: any) => {
 // GET /api/users/me
 router.get("/me", requireAuth, async (req: any, res) => {
   try {
-    const auth = getAuth(req);
-    const clerkUserId = auth?.userId;
-    if (!clerkUserId) return res.status(401).json({ error: "Unauthorized" });
-
-    const sessionEmail = String((auth as any)?.sessionClaims?.email || "").trim().toLowerCase();
-    let email = sessionEmail;
-
-    if (!email) {
-      try {
-        const clerkUser = await clerkClient.users.getUser(clerkUserId);
-        email = String(clerkUser.emailAddresses?.[0]?.emailAddress || "").trim().toLowerCase();
-      } catch {
-        // fallback to DB email if Clerk lookup fails
-      }
-    }
-
-    const [existing] = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkUserId)).limit(1);
-
-    const isPrimaryAdmin = email === PRIMARY_ADMIN_EMAIL || (PRIMARY_ADMIN_CLERK_ID && clerkUserId === PRIMARY_ADMIN_CLERK_ID);
-    const targetRole = isPrimaryAdmin ? "admin" : "company";
-    const targetStatus = isPrimaryAdmin ? "approved" : "pending";
-
-    if (!existing) {
-      const [created] = await db.insert(usersTable).values({
-        clerkId: clerkUserId,
-        email: email || "",
-        name: "مستخدم جديد",
-        role: targetRole as any,
-        status: targetStatus as any,
-      }).returning();
-      return res.json(created);
-    }
-
-    const updates: Record<string, any> = {};
-    if (email && email !== String(existing.email || "").trim().toLowerCase()) updates.email = email;
-    if (existing.role !== targetRole) updates.role = targetRole;
-    if (existing.status !== targetStatus) updates.status = targetStatus;
-
-    if (Object.keys(updates).length > 0) {
-      const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, existing.id)).returning();
-      return res.json(updated);
-    }
-
-    return res.json(existing);
+    const user = await syncCurrentUser(req);
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+    return res.json(user);
   } catch (err) {
     req.log.error({ err }, "Failed to get user");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/sync", requireAuth, async (req: any, res) => {
+  try {
+    const user = await syncCurrentUser(req);
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+    return res.json(user);
+  } catch (err) {
+    req.log.error({ err }, "Failed to sync user");
     return res.status(500).json({ error: "Internal server error" });
   }
 });
