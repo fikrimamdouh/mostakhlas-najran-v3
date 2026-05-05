@@ -172,16 +172,32 @@ function HomeRedirect() {
 
 function PendingReviewPage() {
   const { signOut } = useClerk();
+  const { user } = useUser();
   return (
     <Show when="signed-in">
-      <div className="flex min-h-[100dvh] flex-col items-center justify-center p-4 text-center">
-        <div className="bg-card border border-border p-8 rounded-xl shadow-sm max-w-md w-full">
-          <h2 className="text-2xl font-bold mb-2 text-primary">حسابك قيد المراجعة</h2>
-          <p className="text-muted-foreground mb-6">لقد تم تسجيل حسابك بنجاح. يرجى الانتظار حتى يقوم مدير النظام بالموافقة على حسابك.</p>
-          <Button variant="outline" className="w-full" onClick={() => signOut({ redirectUrl: `${basePath}/` })}>
-            تسجيل الخروج
-          </Button>
-        </div>
+      <div className="min-h-[100dvh] bg-[#f7f9fc]" style={{ direction: "rtl" }}>
+        <header className="border-b bg-white/95 backdrop-blur shadow-sm">
+          <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-xl bg-[#1e3c72] text-white flex items-center justify-center font-black">ن</div>
+              <div>
+                <div className="text-sm text-gray-500">تجمع نجران الصحي</div>
+                <div className="text-lg font-bold text-[#1e3c72]">نظام إدارة المستخلصات</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+              <span className="text-sm text-gray-600">{user?.fullName || "مستخدم"}</span>
+              <span className="text-xs font-bold text-amber-700">قيد المراجعة</span>
+            </div>
+            <Button variant="outline" onClick={() => signOut({ redirectUrl: `${basePath}/` })}>تسجيل الخروج</Button>
+          </div>
+        </header>
+        <main className="max-w-3xl mx-auto px-4 py-14">
+          <div className="bg-white border rounded-2xl p-8 shadow-sm text-center">
+            <h2 className="text-3xl font-bold text-[#1e3c72] mb-3">حسابك قيد المراجعة</h2>
+            <p className="text-gray-600 leading-8">تم تسجيل حسابك بنجاح. سيقوم مدير النظام بمراجعة الطلب واعتماده قريبًا، وبعد الموافقة ستتمكن من الدخول الكامل للنظام.</p>
+          </div>
+        </main>
       </div>
     </Show>
   );

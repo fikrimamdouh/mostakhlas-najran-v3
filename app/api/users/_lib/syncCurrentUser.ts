@@ -10,14 +10,24 @@ type UserRow = {
   status: "pending" | "approved" | "rejected";
   company: string | null;
   phone: string | null;
+  last_login_at: string | null;
 };
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
 const PRIMARY_ADMIN_EMAIL = (process.env.PRIMARY_ADMIN_EMAIL || "rorofikri@gmail.com").trim().toLowerCase();
 const PRIMARY_ADMIN_CLERK_ID = (process.env.PRIMARY_ADMIN_CLERK_ID || "user_3DIFbR0YQyLX8xxPdBCeLl2CcTX").trim();
 
+async function updateSeenColumns(clerkId: string) {
+  await pool.query("update users set last_login_at = now() where clerk_id = $1", [clerkId]);
+  try {
+    await pool.query("update users set last_seen_at = now() where clerk_id = $1", [clerkId]);
+  } catch {
+    // Column may not exist in older DBs.
+  }
+}
+
 export async function syncCurrentUser(req?: Request): Promise<Response> {
+  console.log("SYNC ROUTE HIT");
   const { userId, sessionClaims } = await auth();
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -41,11 +51,12 @@ export async function syncCurrentUser(req?: Request): Promise<Response> {
 
   if (existing.rowCount === 0) {
     const inserted = await pool.query<UserRow>(
-      `insert into users (clerk_id, email, name, role, status, company, phone)
-       values ($1,$2,$3,$4,$5,$6,$7)
+      `insert into users (clerk_id, email, name, role, status, company, phone, created_at, last_login_at)
+       values ($1,$2,$3,$4,$5,$6,$7, now(), now())
        returning *`,
       [userId, email || "", inputName || "مستخدم جديد", targetRole, targetStatus, inputCompany, inputPhone],
     );
+    console.log("SYNC USER CREATED", inserted.rows[0]);
     return Response.json(inserted.rows[0], { status: 200 });
   }
 
@@ -58,12 +69,17 @@ export async function syncCurrentUser(req?: Request): Promise<Response> {
   if (user.role !== targetRole) updates.role = targetRole;
   if (user.status !== targetStatus) updates.status = targetStatus;
 
-  if (Object.keys(updates).length === 0) return Response.json(user, { status: 200 });
+  if (Object.keys(updates).length > 0) {
+    const fields = Object.keys(updates);
+    const setClause = fields.map((f, i) => `${f} = $${i + 2}`).join(", ");
+    const values = [userId, ...fields.map((f) => (updates as any)[f])];
+    const updated = await pool.query<UserRow>(`update users set ${setClause} where clerk_id = $1 returning *`, values);
+    await updateSeenColumns(userId);
+    console.log("SYNC USER UPDATED", updated.rows[0]);
+    return Response.json(updated.rows[0], { status: 200 });
+  }
 
-  const fields = Object.keys(updates);
-  const setClause = fields.map((f, i) => `${f} = $${i + 2}`).join(", ");
-  const values = [userId, ...fields.map((f) => (updates as any)[f])];
-  const updated = await pool.query<UserRow>(`update users set ${setClause} where clerk_id = $1 returning *`, values);
-
-  return Response.json(updated.rows[0], { status: 200 });
+  await updateSeenColumns(userId);
+  console.log("SYNC USER UPDATED", user);
+  return Response.json(user, { status: 200 });
 }
