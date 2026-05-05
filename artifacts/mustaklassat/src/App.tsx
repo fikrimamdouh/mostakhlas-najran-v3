@@ -114,6 +114,11 @@ function ClerkUserSyncer() {
             name: user.fullName || JSON.parse(localStorage.getItem("signup_profile_draft") || "{}").fullName || user.firstName || "مستخدم جديد",
           }),
         });
+
+        await fetch("/api/users/me", {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        });
       } catch {
         // no-op: sync is best-effort
       }

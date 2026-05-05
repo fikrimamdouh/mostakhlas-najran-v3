@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { clerkClient, getAuth } from "@clerk/express";
-import { db, usersTable } from "@workspace/db";
+import { db, notificationsTable, usersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { sendAdminActionEmail, sendApprovalEmail, sendRejectionEmail } from "../lib/email";
 import { logAudit } from "./audit";
@@ -13,6 +13,17 @@ const PRIMARY_ADMIN_CLERK_ID = (process.env.PRIMARY_ADMIN_CLERK_ID || "user_3DIF
 
 const notifyPrimaryAdmin = (payload: { action: string; actorName: string; actorEmail: string; targetName: string; targetEmail: string; details?: string | null; }) => {
   sendAdminActionEmail(PRIMARY_ADMIN_EMAIL, payload).catch(() => {});
+};
+
+const createPendingUserNotification = async (user: any) => {
+  const [notification] = await db.insert(notificationsTable).values({
+    type: "new_user_pending",
+    title: "طلب تسجيل جديد",
+    message: "يوجد مستخدم جديد بانتظار الموافقة",
+    userId: user.id,
+  }).returning();
+  console.log("PENDING USER NOTIFICATION CREATED", notification);
+  return notification;
 };
 
 
@@ -44,6 +55,8 @@ async function syncCurrentUser(req: any) {
       role: targetRole as any,
       status: targetStatus as any,
     }).returning();
+    console.log("USER SYNC CREATED", created);
+    if (created.status === "pending") await createPendingUserNotification(created);
     return created;
   }
 
@@ -173,6 +186,17 @@ router.get("/", requireAuth, requireAdminOrSupervisor, async (req: any, res) => 
     return res.json({ users, total: Number(count), page: Number(page), limit: Number(limit) });
   } catch (err) {
     req.log.error({ err }, "Failed to list users");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /api/users/notifications - admin only
+router.get("/notifications", requireAuth, requireAdmin, async (req: any, res) => {
+  try {
+    const notifications = await db.select().from(notificationsTable).where(eq(notificationsTable.type, "new_user_pending" as any)).limit(50);
+    return res.json({ notifications });
+  } catch (err) {
+    req.log.error({ err }, "Failed to list notifications");
     return res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
-import { db, usersTable } from "@workspace/db";
+import { db, notificationsTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { sendAdminNewSignupEmail, sendWelcomeEmail } from "../lib/email";
 
@@ -48,6 +48,17 @@ router.post("/sync", async (req, res) => {
       company: company || null,
       phone: phone || null,
     }).returning();
+    console.log("USER SYNC CREATED", user);
+
+    if (user.status === "pending") {
+      const [notification] = await db.insert(notificationsTable).values({
+        type: "new_user_pending",
+        title: "طلب تسجيل جديد",
+        message: "يوجد مستخدم جديد بانتظار الموافقة",
+        userId: user.id,
+      }).returning();
+      console.log("PENDING USER NOTIFICATION CREATED", notification);
+    }
 
     // Send notifications asynchronously
     sendWelcomeEmail(user.email, user.name).catch(() => {});

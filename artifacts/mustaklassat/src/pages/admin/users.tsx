@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useListUsers, useApproveUser, useRejectUser, getListUsersQueryKey, useGetMe } from "@workspace/api-client-react";
 import { useAuth } from "@clerk/react";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,16 @@ export default function AdminUsers() {
 
   const [tab, setTab] = useState<TabType>("pending");
   const [search, setSearch] = useState("");
+
+  const { data: notificationsData } = useQuery<{ notifications: any[] }>({
+    queryKey: ["/api/users/notifications"],
+    queryFn: async () => {
+      const token = await getToken();
+      const res = await fetch("/api/users/notifications", { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      if (!res.ok) throw new Error("failed");
+      return res.json();
+    },
+  });
 
   const { data, isLoading, refetch, isFetching } = useListUsers(
     tab !== "all" ? { status: tab } : undefined,
@@ -116,6 +126,7 @@ export default function AdminUsers() {
   });
 
   const pendingCount = (data?.users || []).filter(u => u.status === "pending").length;
+  const pendingNotificationsCount = notificationsData?.notifications?.length || 0;
 
   const tabs: { key: TabType; label: string; icon: any }[] = [
     { key: "pending", label: "في الانتظار", icon: Clock },
@@ -135,7 +146,7 @@ export default function AdminUsers() {
           </h1>
           <p className="text-gray-500 mt-1">
             إجمالي المستخدمين: {data?.total ?? 0}
-            {pendingCount > 0 && <span className="mr-3 text-amber-600 font-medium">⚠️ {pendingCount} بانتظار الموافقة</span>}
+            {pendingCount > 0 && <span className="mr-3 text-amber-600 font-medium">⚠️ طلبات مستخدمين بانتظار الموافقة ({Math.max(pendingCount, pendingNotificationsCount)})</span>}
           </p>
         </div>
         <div className="flex items-center gap-2">
