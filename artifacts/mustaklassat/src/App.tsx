@@ -28,7 +28,7 @@ const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const PRIMARY_ADMIN_EMAIL = "rorofikri@gmail.com";
 
 function SignInPage() {
-  return <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-muted/30 px-4 gap-4"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /><p className="text-sm text-muted-foreground">نسيت كلمة المرور؟ من شاشة الدخول اضغط <strong>Forgot password?</strong> وسيصلك كود/رابط استعادة على بريدك الإلكتروني.</p></div>;
+  return <div className="flex min-h-[100dvh] items-center justify-center bg-muted/30 px-4"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /></div>;
 }
 function SignUpPage() {
   return <div className="flex min-h-[100dvh] items-center justify-center bg-muted/30 px-4"><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} /></div>;
