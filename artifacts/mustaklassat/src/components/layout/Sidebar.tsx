@@ -21,6 +21,16 @@ export function Sidebar() {
   const isAdmin = dbUser?.role === "admin" || isPrimaryAdmin;
   const canViewAudit = isAdmin;
 
+
+  const lastLoginText = (() => {
+    const dt = dbUser?.lastLoginAt ? new Date(dbUser.lastLoginAt) : null;
+    if (!dt || Number.isNaN(dt.getTime())) return "غير متوفر";
+    const day = dt.toLocaleDateString("ar-SA", { weekday: "long" });
+    const date = dt.toLocaleDateString("ar-SA");
+    const time = dt.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" });
+    return `${day} - ${date} - ${time}`;
+  })();
+
   const navigation = [
     { name: "لوحة القيادة", href: "/dashboard", icon: LayoutDashboard },
     { name: "الإعدادات", href: "/settings", icon: Settings },
@@ -128,6 +138,10 @@ export function Sidebar() {
               {isAdmin ? "مدير النظام الكامل" : "مستخدم"}
             </span>
           </div>
+        </div>
+        <div className="mb-3 rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.08)" }}>
+          <div className="text-[11px]" style={{ color: "#d4af37" }}>آخر تسجيل دخول</div>
+          <div className="text-xs mt-1 text-white/90 leading-relaxed">{lastLoginText}</div>
         </div>
         <Button
           variant="ghost"

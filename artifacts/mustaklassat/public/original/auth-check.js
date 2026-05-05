@@ -1,6 +1,5 @@
 /**
  * auth-check.js
- * يتحقق من تسجيل الدخول قبل عرض أي صفحة من صفحات النظام الأصلي
  */
 (function () {
   var BASE = window.location.origin;
@@ -11,15 +10,12 @@
       if (!raw) return null;
       var s = JSON.parse(raw);
       if (!s || !s.timestamp) return null;
-      // صلاحية الجلسة 8 ساعات
       if (Date.now() - s.timestamp > 8 * 60 * 60 * 1000) {
         localStorage.removeItem('najran_session');
         return null;
       }
       return s;
-    } catch (e) {
-      return null;
-    }
+    } catch (e) { return null; }
   }
 
   var session = getSession();
@@ -28,39 +24,64 @@
     return;
   }
 
-  // rewrite legacy home links
   document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll("a[href$='/dashboard'], a[href='/dashboard'], a[href='/dashboard']").forEach(function(a){
+    document.querySelectorAll("a[href$='/original/index.html'], a[href='/original/index.html'], a[href='index.html']").forEach(function(a){
       a.setAttribute('href', '/dashboard');
     });
 
-    // إضافة شريط المستخدم في أعلى الصفحة
-    var bar = document.createElement('div');
-    bar.id = 'najran-auth-bar';
-    bar.style.cssText = [
-      'position:fixed', 'bottom:0', 'left:0', 'right:0', 'z-index:99999',
-      'background:linear-gradient(90deg,#1e3c72,#2a5298)',
-      'color:#fff', 'display:flex', 'align-items:center',
-      'justify-content:space-between', 'padding:6px 16px',
-      'font-family:Tajawal,sans-serif', 'font-size:13px',
-      'border-top:2px solid #d4af37', 'direction:rtl'
-    ].join(';');
+    var style = document.createElement('style');
+    style.textContent = `
+      :root { --sb-w: 250px; --hdr-h: 56px; }
+      #najran-shell-header{position:fixed;top:0;left:0;right:0;height:var(--hdr-h);z-index:99998;background:linear-gradient(90deg,#1e3c72,#2a5298);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:2px solid #d4af37;font-family:Tajawal,sans-serif}
+      #najran-shell-sidebar{position:fixed;top:var(--hdr-h);right:0;bottom:0;width:var(--sb-w);z-index:99997;background:#183465;color:#fff;overflow:auto;padding:12px 10px;font-family:Tajawal,sans-serif}
+      #najran-shell-sidebar a{display:block;color:#fff;text-decoration:none;padding:10px 12px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,.06)}
+      #najran-shell-sidebar a:hover{background:rgba(212,175,55,.25)}
+      body{padding-top:calc(var(--hdr-h) + 8px)!important;padding-right:calc(var(--sb-w) + 12px)!important;box-sizing:border-box}
+      #najran-mobile-toggle{display:none}
+      @media (max-width: 900px){
+        #najran-mobile-toggle{display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:6px 10px;cursor:pointer}
+        #najran-shell-sidebar{transform:translateX(105%);transition:transform .25s ease}
+        #najran-shell-sidebar.open{transform:translateX(0)}
+        body{padding-right:10px!important}
+      }
+    `;
+    document.head.appendChild(style);
 
-    bar.innerHTML =
+    var header = document.createElement('div');
+    header.id = 'najran-shell-header';
+    header.innerHTML =
       '<div style="display:flex;align-items:center;gap:10px">' +
-        '<img src="/logo.png" style="height:26px;vertical-align:middle" onerror="this.style.display=\'none\'">' +
-        '<span style="color:#d4af37;font-weight:bold">تجمع نجران الصحي</span>' +
-        '<span style="color:rgba(255,255,255,0.7)">|</span>' +
-        '<span>' + (session.name || 'مستخدم') + '</span>' +
-        (session.role === 'admin' ? '<span style="background:#d4af37;color:#1e3c72;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:bold">مدير</span>' : '') +
+        '<button id="najran-mobile-toggle">☰</button>' +
+        '<img src="/logo.png" style="height:30px" onerror="this.style.display=\'none\'">' +
+        '<strong>تجمع نجران الصحي</strong>' +
       '</div>' +
-      '<div style="display:flex;align-items:center;gap:12px">' +
-        '<a href="/dashboard" style="color:#d4af37;text-decoration:none;font-weight:bold">🏠 الرئيسية الجديدة</a>' +'<'+'a href="/dashboard" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:3px 12px;border-radius:6px;text-decoration:none;font-family:Tajawal,sans-serif;font-size:13px">العودة للنظام الجديد</a>' +
-        '<button onclick="najranSignOut()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:3px 12px;border-radius:6px;cursor:pointer;font-family:Tajawal,sans-serif;font-size:13px">تسجيل الخروج</button>' +
+      '<div style="display:flex;align-items:center;gap:10px">' +
+        '<span>' + (session.name || 'مستخدم') + '</span>' +
+        '<a href="/dashboard" style="color:#d4af37;text-decoration:none;font-weight:bold">الرئيسية</a>' +
+        '<button onclick="najranSignOut()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:5px 10px;border-radius:6px;cursor:pointer">تسجيل الخروج</button>' +
       '</div>';
+    document.body.appendChild(header);
 
-    document.body.style.paddingBottom = '44px';
-    document.body.appendChild(bar);
+    var items = [
+      ['الإعدادات الرئيسية','/original/settings_main.html'],
+      ['الحضور والانصراف','/original/attendance.html'],
+      ['جداول الأداء','/original/performance.html'],
+      ['شهادة الإنجاز','/original/achievement.html'],
+      ['مستخلص المستهلكات','/original/consumables.html'],
+      ['مستخلص قطع الغيار','/original/spare_parts.html'],
+      ['اعتماد المستخلص','/original/approval.html'],
+      ['المراكز الصحية','/original/health_centers.html'],
+      ['مراجعة المستخلص','/original/review_extract.html']
+    ];
+
+    var side = document.createElement('aside');
+    side.id = 'najran-shell-sidebar';
+    side.innerHTML = '<div style="color:#d4af37;font-weight:bold;padding:8px 10px 12px">وحدات النظام</div>' +
+      items.map(function (it) { return '<a href="' + it[1] + '">' + it[0] + '</a>'; }).join('');
+    document.body.appendChild(side);
+
+    var toggle = document.getElementById('najran-mobile-toggle');
+    if (toggle) toggle.onclick = function(){ side.classList.toggle('open'); };
   });
 
   window.najranSignOut = function () {

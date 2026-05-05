@@ -25,7 +25,19 @@ export default function Dashboard() {
   const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500" style={{ direction: "rtl" }}>
+    <div className="relative overflow-hidden rounded-2xl">
+      <video
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        autoPlay
+        muted
+        loop
+        playsInline
+      >
+        <source src="/original/pattern-1.mp4" type="video/mp4" />
+      </video>
+      <div className="absolute inset-0 bg-white/80 backdrop-blur-[1px]" />
+
+      <div className="relative space-y-8 animate-in fade-in duration-500 p-2" style={{ direction: "rtl" }}>
       {/* Welcome */}
       <div
         className="rounded-2xl p-6 flex items-center gap-5"
@@ -118,6 +130,7 @@ export default function Dashboard() {
             </a>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
