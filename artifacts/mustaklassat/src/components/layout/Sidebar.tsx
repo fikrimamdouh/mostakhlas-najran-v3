@@ -7,13 +7,17 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
+const PRIMARY_ADMIN_EMAIL = "rorofikri@gmail.com";
+
 export function Sidebar() {
   const [location] = useLocation();
   const { user } = useUser();
   const { signOut } = useClerk();
   const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
 
-  const isAdmin = dbUser?.role === "admin";
+  const signedInEmail = String(user?.primaryEmailAddress?.emailAddress || "").trim().toLowerCase();
+  const isPrimaryAdmin = signedInEmail === PRIMARY_ADMIN_EMAIL;
+  const isAdmin = dbUser?.role === "admin" || isPrimaryAdmin;
   const isSupervisor = dbUser?.role === "supervisor";
   const canViewAudit = isAdmin || isSupervisor;
 
@@ -121,7 +125,7 @@ export function Sidebar() {
           <div className="flex flex-col min-w-0">
             <span className="text-sm font-medium text-white truncate">{user?.fullName || dbUser?.name}</span>
             <span className="text-xs" style={{ color: "#d4af37" }}>
-              {dbUser?.role === "admin" ? "مدير النظام" : "مستخدم"}
+              {isAdmin ? "مدير النظام الكامل" : "مستخدم"}
             </span>
           </div>
         </div>
