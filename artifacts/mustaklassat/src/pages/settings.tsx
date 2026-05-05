@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
+import { apiUrl } from "@/lib/api-base";
 import {
   User, Mail, Phone, Building, Calendar,
   ShieldCheck, Edit2, Save, X, Key, LogOut
@@ -36,7 +37,7 @@ export default function Settings() {
     setSaving(true);
     try {
       const token = await getToken();
-      const res = await fetch("/api/users/me", {
+      const res = await fetch(apiUrl("/api/users/me"), {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

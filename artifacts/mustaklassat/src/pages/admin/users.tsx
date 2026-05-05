@@ -13,6 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
+import { apiUrl } from "@/lib/api-base";
 
 type TabType = "all" | "pending" | "approved" | "rejected";
 
@@ -42,7 +43,7 @@ export default function AdminUsers() {
     queryKey: ["/api/users/notifications"],
     queryFn: async () => {
       const token = await getToken();
-      const res = await fetch("/api/users/notifications", { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const res = await fetch(apiUrl("/api/users/notifications"), { headers: token ? { Authorization: `Bearer ${token}` } : {} });
       if (!res.ok) throw new Error("failed");
       return res.json();
     },
@@ -73,7 +74,7 @@ export default function AdminUsers() {
 
   const doUserAction = async (userId: number, action: string) => {
     const token = await getToken();
-    const res = await fetch(`/api/users/${userId}/${action}`, {
+    const res = await fetch(apiUrl(`/api/users/${userId}/${action}`), {
       method: action === "role" ? "PATCH" : "POST",
       headers: {
         "Content-Type": "application/json",
@@ -87,7 +88,7 @@ export default function AdminUsers() {
   const changeRole = useMutation({
     mutationFn: async ({ userId, role }: { userId: number; role: string }) => {
       const token = await getToken();
-      const res = await fetch(`/api/users/${userId}/role`, {
+      const res = await fetch(apiUrl(`/api/users/${userId}/role`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ role }),
@@ -106,7 +107,7 @@ export default function AdminUsers() {
     mutationFn: async ({ userId, activate }: { userId: number; activate: boolean }) => {
       const token = await getToken();
       const endpoint = activate ? "activate" : "deactivate";
-      const res = await fetch(`/api/users/${userId}/${endpoint}`, {
+      const res = await fetch(apiUrl(`/api/users/${userId}/${endpoint}`), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       });
