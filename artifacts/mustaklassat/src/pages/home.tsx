@@ -35,7 +35,7 @@ export default function Home() {
                 تجمع نجران الصحي
               </span>
               <span className="text-xs font-medium" style={{ color: "#d4af37" }}>
-                إدارة الهندسة والصيانة
+                وحدة الصيانة العامة
               </span>
             </div>
           </div>
@@ -94,17 +94,17 @@ export default function Home() {
             }}
           >
             <ShieldCheck className="h-4 w-4" />
-            <span>نظام معتمد لإدارة المشاريع الإنشائية</span>
+            <span>نظام إدارة المستخلصات الشهرية للمشاريع التشغيلية والإنشائية</span>
           </div>
 
           <h1 className="text-5xl md:text-6xl font-extrabold text-white leading-tight mb-6 max-w-3xl">
-            برنامج المستخلصات الشهرية
+            نظام إدارة المستخلصات الشهرية للمشاريع التشغيلية والإنشائية
           </h1>
           <h2 className="text-2xl font-semibold mb-8" style={{ color: "rgba(255,255,255,0.85)" }}>
-            إدارة المستخلصات المالية بثقة ودقة متناهية
+            برنامج المستخلصات الشهرية
           </h2>
           <p className="text-lg mb-10 max-w-2xl leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>
-            منصة متكاملة لمهندسي ومحاسبي قطاع المقاولات. تتبع المستخلصات الجارية والسابقة، راقب ميزانيات المشاريع، وأدر عمليات الاعتماد في مكان واحد.
+            تمكّن الشركات من تسجيل بيانات المستخلصات، رفع المستندات، متابعة حالات الاعتماد، ومراجعة المستخلصات السابقة، مع ضمان دقة الإجراءات وسرعة دورة الاعتماد.
           </p>
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <Link href="/sign-up">
@@ -200,7 +200,7 @@ export default function Home() {
           جميع الحقوق محفوظة &copy; {new Date().getFullYear()} تجمع نجران الصحي
         </p>
         <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
-          تابع للشركة القابضة للرعاية الصحية - رؤية المملكة 2030
+          وحدة الصيانة العامة بتجمع نجران الصحي - رؤية المملكة 2030
         </p>
       </footer>
 
