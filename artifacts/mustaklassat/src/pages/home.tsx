@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 export default function Home() {
   return (
     <div
-      className="min-h-screen flex flex-col font-sans"
-      style={{
-        background: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)",
-        direction: "rtl",
-      }}
+      className="min-h-screen flex flex-col font-sans relative overflow-hidden"
+      style={{ direction: "rtl" }}
     >
+      <video className="absolute inset-0 h-full w-full object-cover" autoPlay muted loop playsInline>
+        <source src="/original/pattern-1.mp4" type="video/mp4" />
+      </video>
+      <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(30,60,114,0.86) 0%, rgba(42,82,152,0.86) 100%)" }} />
+      <div className="relative z-10 min-h-screen flex flex-col">
       {/* Header */}
       <header
         className="fixed top-0 left-0 right-0 z-50 border-b"
@@ -97,10 +99,10 @@ export default function Home() {
             <span>نظام إدارة المستخلصات الشهرية للمشاريع التشغيلية والإنشائية</span>
           </div>
 
-          <h1 className="text-5xl md:text-6xl font-extrabold text-white leading-tight mb-6 max-w-3xl">
+          <h1 className="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-6 max-w-4xl">
             نظام إدارة المستخلصات الشهرية للمشاريع التشغيلية والإنشائية
           </h1>
-          <h2 className="text-2xl font-semibold mb-8" style={{ color: "rgba(255,255,255,0.85)" }}>
+          <h2 className="text-xl md:text-2xl font-semibold mb-8" style={{ color: "rgba(255,255,255,0.9)" }}>
             برنامج المستخلصات الشهرية
           </h2>
           <p className="text-lg mb-10 max-w-2xl leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>
@@ -210,6 +212,7 @@ export default function Home() {
           50% { transform: translateY(-8px); }
         }
       `}</style>
+      </div>
     </div>
   );
 }
