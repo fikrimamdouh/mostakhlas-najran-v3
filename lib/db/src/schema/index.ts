@@ -7,7 +7,7 @@ export const usersTable = pgTable("users", {
   clerkId: text("clerk_id").notNull().unique(),
   email: text("email").notNull(),
   name: text("name").notNull(),
-  role: text("role", { enum: ["admin", "supervisor", "user"] }).notNull().default("user"),
+  role: text("role", { enum: ["admin", "supervisor", "user", "company"] }).notNull().default("company"),
   status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
   company: text("company"),
   phone: text("phone"),
@@ -80,3 +80,15 @@ export const auditLogTable = pgTable("audit_log", {
 });
 
 export type AuditLog = typeof auditLogTable.$inferSelect;
+
+export const notificationsTable = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  userId: integer("user_id").references(() => usersTable.id),
+  isRead: integer("is_read").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type Notification = typeof notificationsTable.$inferSelect;

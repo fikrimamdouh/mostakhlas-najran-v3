@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 export default function Home() {
   return (
     <div
-      className="min-h-screen flex flex-col font-sans"
-      style={{
-        background: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)",
-        direction: "rtl",
-      }}
+      className="min-h-screen flex flex-col font-sans relative overflow-hidden"
+      style={{ direction: "rtl" }}
     >
+      <video className="absolute inset-0 h-full w-full object-cover" autoPlay muted loop playsInline>
+        <source src="/original/pattern-1.mp4" type="video/mp4" />
+      </video>
+      <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(30,60,114,0.86) 0%, rgba(42,82,152,0.86) 100%)" }} />
+      <div className="relative z-10 min-h-screen flex flex-col">
       {/* Header */}
       <header
         className="fixed top-0 left-0 right-0 z-50 border-b"
@@ -35,7 +37,7 @@ export default function Home() {
                 تجمع نجران الصحي
               </span>
               <span className="text-xs font-medium" style={{ color: "#d4af37" }}>
-                إدارة الهندسة والصيانة
+                وحدة الصيانة العامة
               </span>
             </div>
           </div>
@@ -94,17 +96,17 @@ export default function Home() {
             }}
           >
             <ShieldCheck className="h-4 w-4" />
-            <span>نظام معتمد لإدارة المشاريع الإنشائية</span>
+            <span>نظام إدارة المستخلصات الشهرية للمشاريع التشغيلية والإنشائية</span>
           </div>
 
-          <h1 className="text-5xl md:text-6xl font-extrabold text-white leading-tight mb-6 max-w-3xl">
-            برنامج المستخلصات الشهرية
+          <h1 className="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-6 max-w-4xl">
+            نظام إدارة المستخلصات الشهرية للمشاريع التشغيلية والإنشائية
           </h1>
-          <h2 className="text-2xl font-semibold mb-8" style={{ color: "rgba(255,255,255,0.85)" }}>
-            إدارة المستخلصات المالية بثقة ودقة متناهية
+          <h2 className="text-xl md:text-2xl font-semibold mb-8" style={{ color: "rgba(255,255,255,0.9)" }}>
+            برنامج المستخلصات الشهرية
           </h2>
           <p className="text-lg mb-10 max-w-2xl leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>
-            منصة متكاملة لمهندسي ومحاسبي قطاع المقاولات. تتبع المستخلصات الجارية والسابقة، راقب ميزانيات المشاريع، وأدر عمليات الاعتماد في مكان واحد.
+            تمكّن الشركات من تسجيل بيانات المستخلصات، رفع المستندات، متابعة حالات الاعتماد، ومراجعة المستخلصات السابقة، مع ضمان دقة الإجراءات وسرعة دورة الاعتماد.
           </p>
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <Link href="/sign-up">
@@ -200,7 +202,7 @@ export default function Home() {
           جميع الحقوق محفوظة &copy; {new Date().getFullYear()} تجمع نجران الصحي
         </p>
         <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
-          تابع للشركة القابضة للرعاية الصحية - رؤية المملكة 2030
+          وحدة الصيانة العامة بتجمع نجران الصحي - رؤية المملكة 2030
         </p>
       </footer>
 
@@ -210,6 +212,7 @@ export default function Home() {
           50% { transform: translateY(-8px); }
         }
       `}</style>
+      </div>
     </div>
   );
 }
