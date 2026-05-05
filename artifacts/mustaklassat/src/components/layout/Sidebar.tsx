@@ -7,15 +7,19 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
+const PRIMARY_ADMIN_EMAIL = "rorofikri@gmail.com";
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
 export function Sidebar() {
   const [location] = useLocation();
   const { user } = useUser();
   const { signOut } = useClerk();
   const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
 
-  const isAdmin = dbUser?.role === "admin";
-  const isSupervisor = dbUser?.role === "supervisor";
-  const canViewAudit = isAdmin || isSupervisor;
+  const signedInEmail = String(user?.primaryEmailAddress?.emailAddress || "").trim().toLowerCase();
+  const isPrimaryAdmin = signedInEmail === PRIMARY_ADMIN_EMAIL;
+  const isAdmin = dbUser?.role === "admin" || isPrimaryAdmin;
+  const canViewAudit = isAdmin;
 
   const navigation = [
     { name: "لوحة القيادة", href: "/dashboard", icon: LayoutDashboard },
@@ -97,7 +101,7 @@ export function Sidebar() {
             ].map(item => (
               <a
                 key={item.href}
-                href={item.href}
+                href={`${basePath}${item.href}`}
                 className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 cursor-pointer"
                 style={{ textDecoration: "none" }}
               >
@@ -121,14 +125,14 @@ export function Sidebar() {
           <div className="flex flex-col min-w-0">
             <span className="text-sm font-medium text-white truncate">{user?.fullName || dbUser?.name}</span>
             <span className="text-xs" style={{ color: "#d4af37" }}>
-              {dbUser?.role === "admin" ? "مدير النظام" : "مستخدم"}
+              {isAdmin ? "مدير النظام الكامل" : "مستخدم"}
             </span>
           </div>
         </div>
         <Button
           variant="ghost"
           className="w-full justify-start text-white/70 hover:text-white hover:bg-white/10 text-sm"
-          onClick={() => { localStorage.removeItem('najran_session'); signOut(); }}
+          onClick={() => { localStorage.removeItem('najran_session'); signOut({ redirectUrl: '/' }); }}
         >
           <LogOut className="ml-2 h-4 w-4 rotate-180" />
           تسجيل الخروج
