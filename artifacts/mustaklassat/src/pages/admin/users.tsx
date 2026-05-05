@@ -215,9 +215,7 @@ export default function AdminUsers() {
                     <div className="flex items-center gap-2">
                       {user.role === "admin"
                         ? <Badge className="bg-[#1e3c72] text-white gap-1"><Shield className="h-3 w-3" />مدير النظام</Badge>
-                        : user.role === "supervisor"
-                        ? <Badge className="bg-amber-600 text-white gap-1"><Shield className="h-3 w-3" />مدير مستخلصات</Badge>
-                        : <Badge variant="outline" className="gap-1"><User className="h-3 w-3" />مستخدم</Badge>
+                        : <Badge variant="outline" className="gap-1"><User className="h-3 w-3" />مستخدم شركة</Badge>
                       }
                       {/* Change role dropdown — can't change own role */}
                       {me?.id !== user.id && (
