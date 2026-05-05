@@ -7,7 +7,7 @@ import "./index.css";
 const root = createRoot(document.getElementById("root")!);
 const clerkKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
-setBaseUrl(apiBaseUrl || null);
+setBaseUrl(apiBaseUrl || "https://api-mostakhlas.vercel.app");
 
 if (!clerkKey) {
   root.render(
