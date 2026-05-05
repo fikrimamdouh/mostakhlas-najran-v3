@@ -36,9 +36,6 @@ router.post("/sync", async (req, res) => {
       return res.json(existing[0]);
     }
 
-    const normalizedEmail = String(email || "").trim().toLowerCase();
-    const isPrimaryAdmin = normalizedEmail === PRIMARY_ADMIN_EMAIL;
-
     const [user] = await db.insert(usersTable).values({
       clerkId: userId,
       email: email || existing[0]?.email || "",
