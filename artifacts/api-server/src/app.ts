@@ -10,6 +10,7 @@ import {
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
+import usersRouter from "./routes/users";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
@@ -36,7 +37,15 @@ app.use(
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
-app.use(cors({ credentials: true, origin: true }));
+app.use(cors({
+  origin: [
+    "https://mostakhlas-najran-v3.vercel.app",
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+}));
+app.options("*", cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -49,6 +58,7 @@ app.use(
   })),
 );
 
+app.use("/api/users", usersRouter);
 app.use("/api", router);
 
 export default app;
