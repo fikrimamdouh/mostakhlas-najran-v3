@@ -2,10 +2,17 @@ import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { db, usersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
-import { sendApprovalEmail, sendRejectionEmail } from "../lib/email";
+import { sendAdminActionEmail, sendApprovalEmail, sendRejectionEmail } from "../lib/email";
 import { logAudit } from "./audit";
 
 const router = Router();
+
+
+const PRIMARY_ADMIN_EMAIL = (process.env.PRIMARY_ADMIN_EMAIL || "rorofikri@gmail.com").trim().toLowerCase();
+
+const notifyPrimaryAdmin = (payload: { action: string; actorName: string; actorEmail: string; targetName: string; targetEmail: string; details?: string | null; }) => {
+  sendAdminActionEmail(PRIMARY_ADMIN_EMAIL, payload).catch(() => {});
+};
 
 const requireAuth = (req: any, res: any, next: any) => {
   const auth = getAuth(req);
@@ -43,6 +50,16 @@ router.get("/me", requireAuth, async (req: any, res) => {
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
     if (!user) return res.status(404).json({ error: "User not found" });
+
+    const isPrimaryAdmin = String(user.email || "").trim().toLowerCase() === PRIMARY_ADMIN_EMAIL;
+    if (isPrimaryAdmin && (user.role !== "admin" || user.status !== "approved")) {
+      const [upgraded] = await db.update(usersTable)
+        .set({ role: "admin", status: "approved" })
+        .where(eq(usersTable.id, user.id))
+        .returning();
+      return res.json(upgraded);
+    }
+
     return res.json(user);
   } catch (err) {
     req.log.error({ err }, "Failed to get user");
@@ -115,6 +132,7 @@ router.post("/:userId/approve", requireAuth, requireAdmin, async (req: any, res)
     sendApprovalEmail(user.email, user.name).catch(() => {});
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
     logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "موافقة على مستخدم", `تمت الموافقة على ${user.name} (${user.email})`, ip);
+    notifyPrimaryAdmin({ action: "موافقة على مستخدم", actorName: req.currentUser.name, actorEmail: req.currentUser.email, targetName: user.name, targetEmail: user.email, details: "تمت الموافقة على الحساب" });
     return res.json(user);
   } catch (err) {
     req.log.error({ err }, "Failed to approve user");
@@ -131,6 +149,7 @@ router.post("/:userId/reject", requireAuth, requireAdmin, async (req: any, res) 
     sendRejectionEmail(user.email, user.name).catch(() => {});
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
     logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "رفض مستخدم", `تم رفض ${user.name} (${user.email})`, ip);
+    notifyPrimaryAdmin({ action: "رفض مستخدم", actorName: req.currentUser.name, actorEmail: req.currentUser.email, targetName: user.name, targetEmail: user.email, details: "تم رفض الحساب" });
     return res.json(user);
   } catch (err) {
     req.log.error({ err }, "Failed to reject user");
@@ -149,6 +168,7 @@ router.patch("/:userId/role", requireAuth, requireAdmin, async (req: any, res) =
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
     const roleAr = role === "admin" ? "مدير النظام" : role === "supervisor" ? "مدير مستخلصات" : "مستخدم عادي";
     logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "تغيير صلاحية", `تغيير دور ${user.name} إلى ${roleAr}`, ip);
+    notifyPrimaryAdmin({ action: "تغيير صلاحيات المستخدم", actorName: req.currentUser.name, actorEmail: req.currentUser.email, targetName: user.name, targetEmail: user.email, details: `الدور الجديد: ${roleAr}` });
     return res.json(user);
   } catch (err) {
     req.log.error({ err }, "Failed to change role");
@@ -164,6 +184,7 @@ router.post("/:userId/deactivate", requireAuth, requireAdmin, async (req: any, r
     if (!user) return res.status(404).json({ error: "User not found" });
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
     logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "تعطيل حساب", `تم تعطيل حساب ${user.name} (${user.email})`, ip);
+    notifyPrimaryAdmin({ action: "تعطيل حساب", actorName: req.currentUser.name, actorEmail: req.currentUser.email, targetName: user.name, targetEmail: user.email, details: "تم تعطيل الحساب" });
     return res.json(user);
   } catch (err) {
     req.log.error({ err }, "Failed to deactivate user");
@@ -179,6 +200,7 @@ router.post("/:userId/activate", requireAuth, requireAdmin, async (req: any, res
     if (!user) return res.status(404).json({ error: "User not found" });
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
     logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "تفعيل حساب", `تم تفعيل حساب ${user.name} (${user.email})`, ip);
+    notifyPrimaryAdmin({ action: "تفعيل حساب", actorName: req.currentUser.name, actorEmail: req.currentUser.email, targetName: user.name, targetEmail: user.email, details: "تم تفعيل الحساب" });
     return res.json(user);
   } catch (err) {
     req.log.error({ err }, "Failed to activate user");
