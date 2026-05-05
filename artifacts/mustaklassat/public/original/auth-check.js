@@ -28,8 +28,13 @@
     return;
   }
 
-  // إضافة شريط المستخدم في أعلى الصفحة
+  // rewrite legacy home links
   document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll("a[href$='/dashboard'], a[href='/dashboard'], a[href='/dashboard']").forEach(function(a){
+      a.setAttribute('href', '/dashboard');
+    });
+
+    // إضافة شريط المستخدم في أعلى الصفحة
     var bar = document.createElement('div');
     bar.id = 'najran-auth-bar';
     bar.style.cssText = [
@@ -50,7 +55,7 @@
         (session.role === 'admin' ? '<span style="background:#d4af37;color:#1e3c72;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:bold">مدير</span>' : '') +
       '</div>' +
       '<div style="display:flex;align-items:center;gap:12px">' +
-        '<a href="/dashboard" style="color:#d4af37;text-decoration:none;font-weight:bold">🏠 الرئيسية</a>' +
+        '<a href="/dashboard" style="color:#d4af37;text-decoration:none;font-weight:bold">🏠 الرئيسية الجديدة</a>' +'<'+'a href="/dashboard" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:3px 12px;border-radius:6px;text-decoration:none;font-family:Tajawal,sans-serif;font-size:13px">العودة للنظام الجديد</a>' +
         '<button onclick="najranSignOut()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:3px 12px;border-radius:6px;cursor:pointer;font-family:Tajawal,sans-serif;font-size:13px">تسجيل الخروج</button>' +
       '</div>';
 
