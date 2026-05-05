@@ -176,7 +176,7 @@ export default function Settings() {
             <Button
               variant="outline"
               className="gap-2 text-red-600 border-red-200 hover:bg-red-50"
-              onClick={() => { localStorage.removeItem("najran_session"); signOut(); }}
+              onClick={() => { localStorage.removeItem("najran_session"); signOut({ redirectUrl: "/" }); }}
             >
               <LogOut className="h-4 w-4" />
               تسجيل الخروج
