@@ -18,8 +18,7 @@ export function Sidebar() {
   const signedInEmail = String(user?.primaryEmailAddress?.emailAddress || "").trim().toLowerCase();
   const isPrimaryAdmin = signedInEmail === PRIMARY_ADMIN_EMAIL;
   const isAdmin = dbUser?.role === "admin" || isPrimaryAdmin;
-  const isSupervisor = dbUser?.role === "supervisor";
-  const canViewAudit = isAdmin || isSupervisor;
+  const canViewAudit = isAdmin;
 
   const navigation = [
     { name: "لوحة القيادة", href: "/dashboard", icon: LayoutDashboard },

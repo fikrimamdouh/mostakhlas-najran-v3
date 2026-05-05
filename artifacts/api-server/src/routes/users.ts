@@ -137,7 +137,7 @@ router.patch("/me/login", requireAuth, async (req: any, res) => {
 
     // Log login in audit
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
-    logAudit(user.id, user.email, user.name, "تسجيل دخول", null, ip);
+    logAudit(user.id, user.email, user.name, "تسجيل دخول", undefined, ip);
 
     return res.json({ ok: true });
   } catch (err) {
@@ -152,7 +152,7 @@ router.get("/", requireAuth, requireAdminOrSupervisor, async (req: any, res) => 
     const { status, page = 1, limit = 50 } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
     let query = db.select().from(usersTable) as any;
-    if (status) query = query.where(eq(usersTable.status, status as string));
+    if (status && ["pending", "approved", "rejected"].includes(String(status))) query = query.where(eq(usersTable.status, status as "pending" | "approved" | "rejected"));
     const users = await query.limit(Number(limit)).offset(offset);
     const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(usersTable);
     return res.json({ users, total: Number(count), page: Number(page), limit: Number(limit) });

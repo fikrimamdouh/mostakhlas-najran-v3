@@ -43,7 +43,7 @@ router.post("/sync", async (req, res) => {
       clerkId: userId,
       email: email || existing[0]?.email || "",
       name: name || "مستخدم جديد",
-      role: isPrimaryAdmin ? "admin" : "user",
+      role: isPrimaryAdmin ? "admin" : "company",
       status: isPrimaryAdmin ? "approved" : "pending",
       company: company || null,
       phone: phone || null,

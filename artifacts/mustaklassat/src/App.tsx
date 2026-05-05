@@ -98,7 +98,7 @@ function ClerkQueryClientCacheInvalidator() {
 
 function AuthGuard({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { user } = useUser();
-  const { data: me, isLoading } = useGetMe({ query: { enabled: !!user } });
+  const { data: me, isLoading } = useGetMe({ query: { enabled: !!user, queryKey: ["/api/users/me"] } });
   const [waited, setWaited] = useState(false);
   useEffect(() => { const t = setTimeout(() => setWaited(true), 2000); return () => clearTimeout(t); }, []);
   if (isLoading && !waited) return <div className="p-6">جاري التحميل...</div>;
@@ -106,7 +106,7 @@ function AuthGuard({ children, adminOnly = false }: { children: React.ReactNode;
   const isPrimaryAdminEmail = signedInEmail === PRIMARY_ADMIN_EMAIL;
   if (!me && !isPrimaryAdminEmail) return <Redirect to="/sign-in" />;
   if (!isPrimaryAdminEmail && me && me.status !== "approved" && me.role !== "admin") return <Redirect to="/pending" />;
-  if (adminOnly && me.role !== "admin") return <Redirect to="/dashboard" />;
+  if (adminOnly && !isPrimaryAdminEmail && (!me || me.role !== "admin")) return <Redirect to="/dashboard" />;
   return <>{children}</>;
 }
 
