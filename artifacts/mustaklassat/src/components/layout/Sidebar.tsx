@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 const PRIMARY_ADMIN_EMAIL = "rorofikri@gmail.com";
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function Sidebar() {
   const [location] = useLocation();
@@ -100,7 +101,7 @@ export function Sidebar() {
             ].map(item => (
               <a
                 key={item.href}
-                href={item.href}
+                href={`${basePath}${item.href}`}
                 className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 cursor-pointer"
                 style={{ textDecoration: "none" }}
               >
