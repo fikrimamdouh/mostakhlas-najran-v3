@@ -92,7 +92,7 @@ export default function Settings() {
               className="flex h-20 w-20 items-center justify-center rounded-full text-white text-3xl font-bold shadow-lg border-4 border-white"
               style={{ background: "linear-gradient(135deg,#d4af37,#b8962e)" }}
             >
-              {user.name.charAt(0)}
+              {(user?.name?.charAt(0) || "م")}
             </div>
             <div className="space-y-1 mb-2">
               <h2 className="text-2xl font-bold" style={{ color: "#1e3c72" }}>{user.name}</h2>
