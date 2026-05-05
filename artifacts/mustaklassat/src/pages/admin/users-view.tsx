@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Users, Search, Clock, User, Eye } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { apiUrl } from "@/lib/api-base";
 
 interface UserRow {
   id: number;
@@ -53,7 +54,7 @@ export default function UsersView() {
     queryKey: ["/api/users"],
     queryFn: async () => {
       const token = await getToken();
-      const res = await fetch("/api/users?limit=100", {
+      const res = await fetch(apiUrl("/api/users?limit=100"), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed");

@@ -48,6 +48,7 @@ async function syncCurrentUser(req: any) {
   const targetStatus = isPrimaryAdmin ? "approved" : "pending";
 
   if (!existing) {
+    console.log("SYNC HIT");
     const [created] = await db.insert(usersTable).values({
       clerkId: clerkUserId,
       email: email || "",
@@ -55,7 +56,7 @@ async function syncCurrentUser(req: any) {
       role: targetRole as any,
       status: targetStatus as any,
     }).returning();
-    console.log("USER SYNC CREATED", created);
+    console.log("USER CREATED", created);
     if (created.status === "pending") await createPendingUserNotification(created);
     return created;
   }
@@ -124,6 +125,7 @@ router.get("/me", requireAuth, async (req: any, res) => {
 });
 
 router.post("/sync", requireAuth, async (req: any, res) => {
+  console.log("SYNC HIT");
   try {
     const user = await syncCurrentUser(req);
     if (!user) return res.status(401).json({ error: "Unauthorized" });

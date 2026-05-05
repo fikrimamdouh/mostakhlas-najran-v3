@@ -1,13 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "vite",
   "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
-  "buildCommand": "cd ../.. && pnpm --filter @workspace/mustaklassat run build",
-  "outputDirectory": "../mustaklassat/dist",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+  "buildCommand": "cd ../.. && pnpm --filter @workspace/api-server run build",
+  "functions": {
+    "api/[...path].ts": {
+      "maxDuration": 60
     }
-  ]
+  }
 }
