@@ -50,6 +50,22 @@ router.get("/me", requireAuth, async (req: any, res) => {
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
     if (!user) return res.status(404).json({ error: "User not found" });
+
+    const isPrimaryAdmin = String(user.email || "").trim().toLowerCase() === PRIMARY_ADMIN_EMAIL;
+    const [{ count: adminCount }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(usersTable)
+      .where(eq(usersTable.role, "admin"));
+    const shouldBootstrapAdmin = Number(adminCount) === 0;
+
+    if ((isPrimaryAdmin || shouldBootstrapAdmin) && (user.role !== "admin" || user.status !== "approved")) {
+      const [upgraded] = await db.update(usersTable)
+        .set({ role: "admin", status: "approved" })
+        .where(eq(usersTable.id, user.id))
+        .returning();
+      return res.json(upgraded);
+    }
+
     return res.json(user);
   } catch (err) {
     req.log.error({ err }, "Failed to get user");
