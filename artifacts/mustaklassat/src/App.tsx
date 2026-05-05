@@ -31,7 +31,43 @@ function SignInPage() {
   return <div className="flex min-h-[100dvh] items-center justify-center bg-muted/30 px-4"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /></div>;
 }
 function SignUpPage() {
-  return <div className="flex min-h-[100dvh] items-center justify-center bg-muted/30 px-4"><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} /></div>;
+  const [profile, setProfile] = useState({ fullName: "", phone: "", location: "", company: "", position: "" });
+
+  const saveDraft = () => {
+    localStorage.setItem("signup_profile_draft", JSON.stringify(profile));
+  };
+
+  return (
+    <div className="flex min-h-[100dvh] items-center justify-center bg-muted/30 px-4 py-8">
+      <div className="w-full max-w-5xl grid md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl border p-5">
+          <h3 className="font-bold text-lg mb-4">بيانات الشركة/المستخدم</h3>
+          <div className="space-y-3">
+            {[
+              ["fullName", "الاسم الكامل"],
+              ["phone", "الجوال"],
+              ["location", "الموقع"],
+              ["company", "الشركة"],
+              ["position", "الوظيفة"],
+            ].map(([key, label]) => (
+              <div key={key}>
+                <label className="text-sm text-gray-600">{label}</label>
+                <input
+                  className="w-full border rounded-md px-3 py-2 mt-1"
+                  value={(profile as any)[key]}
+                  onChange={(e) => setProfile((p) => ({ ...p, [key]: e.target.value }))}
+                  onBlur={saveDraft}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center justify-center">
+          <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function ClerkTokenSyncer() {
@@ -71,11 +107,11 @@ function ClerkUserSyncer() {
           },
           body: JSON.stringify({
             email: user.primaryEmailAddress?.emailAddress || "",
-            name: user.fullName || user.firstName || "مستخدم جديد",
-            company: user.unsafeMetadata?.company || null,
-            hospital: user.unsafeMetadata?.hospital || null,
-            position: user.unsafeMetadata?.position || null,
-            phone: user.primaryPhoneNumber?.phoneNumber || null,
+            company: user.unsafeMetadata?.company || JSON.parse(localStorage.getItem("signup_profile_draft") || "{}").company || null,
+            hospital: user.unsafeMetadata?.hospital || JSON.parse(localStorage.getItem("signup_profile_draft") || "{}").location || null,
+            position: user.unsafeMetadata?.position || JSON.parse(localStorage.getItem("signup_profile_draft") || "{}").position || null,
+            phone: user.primaryPhoneNumber?.phoneNumber || JSON.parse(localStorage.getItem("signup_profile_draft") || "{}").phone || null,
+            name: user.fullName || JSON.parse(localStorage.getItem("signup_profile_draft") || "{}").fullName || user.firstName || "مستخدم جديد",
           }),
         });
       } catch {
