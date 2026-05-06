@@ -166,8 +166,8 @@ function ProtectedRoute({ component: Component, adminOnly = false }: { component
   return <AuthGuard adminOnly={adminOnly}><MainLayout><Component /></MainLayout></AuthGuard>;
 }
 
-function HomeRedirect() {
-  return <><Show when="signed-in"><Redirect to="/dashboard" /></Show><Show when="signed-out"><Home /></Show></>;
+function HomePage() {
+  return <Home />;
 }
 
 
@@ -211,7 +211,7 @@ function AppRoutes() {
       <ClerkUserSyncer />
       <ClerkQueryClientCacheInvalidator />
       <Switch>
-        <Route path="/" component={HomeRedirect} />
+        <Route path="/" component={HomePage} />
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
         <Route path="/forgot-password/*?" component={SignInPage} />
