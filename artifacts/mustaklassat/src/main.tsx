@@ -6,7 +6,11 @@ import "./index.css";
 
 const root = createRoot(document.getElementById("root")!);
 const clerkKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? "";
+const allowExternalApiBaseUrl = import.meta.env.VITE_ALLOW_EXTERNAL_API === "true";
+const apiBaseUrl = allowExternalApiBaseUrl
+  ? configuredApiBaseUrl.replace(/\/+$/, "")
+  : "";
 setBaseUrl(apiBaseUrl || null);
 
 function renderAuthConfigError(message: string) {
