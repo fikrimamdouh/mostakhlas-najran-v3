@@ -14,7 +14,9 @@ export type UserProfileRole =
 
 export const UserProfileRole = {
   admin: "admin",
+  supervisor: "supervisor",
   user: "user",
+  company: "company",
 } as const;
 
 export type UserProfileStatus =
@@ -36,6 +38,7 @@ export interface UserProfile {
   company?: string | null;
   phone?: string | null;
   createdAt: string;
+  lastLoginAt?: string | null;
 }
 
 export interface UserListResponse {
