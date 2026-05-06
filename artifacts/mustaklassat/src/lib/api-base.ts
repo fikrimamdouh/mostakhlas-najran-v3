@@ -1,7 +1,11 @@
-const DEFAULT_API_BASE_URL = "https://api-mostakhlas.vercel.app";
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? "";
+const allowExternalApiBaseUrl = import.meta.env.VITE_ALLOW_EXTERNAL_API === "true";
 
-export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, "");
+export const API_BASE_URL = allowExternalApiBaseUrl
+  ? configuredApiBaseUrl.replace(/\/+$/, "")
+  : "";
 
 export function apiUrl(path: string): string {
-  return `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE_URL}${normalizedPath}`;
 }
