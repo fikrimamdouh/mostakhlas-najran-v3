@@ -36,6 +36,7 @@ export interface UserProfile {
   company?: string | null;
   phone?: string | null;
   createdAt: string;
+  lastLoginAt?: string | null;
 }
 
 export interface UserListResponse {

@@ -18,4 +18,5 @@ export interface UserProfile {
   company?: string | null;
   phone?: string | null;
   createdAt: Date;
+  lastLoginAt?: Date | null;
 }
