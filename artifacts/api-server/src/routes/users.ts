@@ -202,19 +202,20 @@ router.patch("/me", requireAuth, async (req: any, res) => {
 // PATCH /api/users/me/login
 router.patch("/me/login", requireAuth, async (req: any, res) => {
   try {
-    const [user] = await db.update(usersTable)
-      .set({ lastLoginAt: new Date() })
+    const [user] = await db
+      .select()
+      .from(usersTable)
       .where(eq(usersTable.clerkId, req.clerkUserId))
-      .returning();
+      .limit(1);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // Log login in audit
+    // Log login without requiring an optional last_login_at column to exist in production.
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
     logAudit(user.id, user.email, user.name, "تسجيل دخول", undefined, ip);
 
     return res.json({ ok: true });
   } catch (err) {
-    req.log.error({ err }, "Failed to update last login");
+    req.log.error({ err }, "Failed to log user login");
     return res.status(500).json({ error: "Internal server error" });
   }
 });
