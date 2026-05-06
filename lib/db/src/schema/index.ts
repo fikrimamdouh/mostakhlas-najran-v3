@@ -12,7 +12,6 @@ export const usersTable = pgTable("users", {
   company: text("company"),
   phone: text("phone"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  lastLoginAt: timestamp("last_login_at"),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({ id: true, createdAt: true });
