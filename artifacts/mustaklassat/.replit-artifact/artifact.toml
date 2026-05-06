@@ -19,7 +19,7 @@ run = "pnpm --filter @workspace/mustaklassat run dev"
 
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/mustaklassat", "run", "build" ]
-publicDir = "artifacts/mustaklassat/dist/public"
+publicDir = "artifacts/mustaklassat/dist"
 serve = "static"
 
 [[services.production.rewrites]]
