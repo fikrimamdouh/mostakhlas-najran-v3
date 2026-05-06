@@ -22,11 +22,12 @@ export const GetMeResponse = zod.object({
   clerkId: zod.string(),
   email: zod.string(),
   name: zod.string(),
-  role: zod.enum(["admin", "user"]),
+  role: zod.enum(["admin", "supervisor", "user", "company"]),
   status: zod.enum(["pending", "approved", "rejected"]),
   company: zod.string().nullish(),
   phone: zod.string().nullish(),
   createdAt: zod.coerce.date(),
+  lastLoginAt: zod.coerce.date().nullish(),
 });
 
 /**
@@ -48,11 +49,12 @@ export const ListUsersResponse = zod.object({
       clerkId: zod.string(),
       email: zod.string(),
       name: zod.string(),
-      role: zod.enum(["admin", "user"]),
+      role: zod.enum(["admin", "supervisor", "user", "company"]),
       status: zod.enum(["pending", "approved", "rejected"]),
       company: zod.string().nullish(),
       phone: zod.string().nullish(),
       createdAt: zod.coerce.date(),
+      lastLoginAt: zod.coerce.date().nullish(),
     }),
   ),
   total: zod.number(),
@@ -72,11 +74,12 @@ export const ApproveUserResponse = zod.object({
   clerkId: zod.string(),
   email: zod.string(),
   name: zod.string(),
-  role: zod.enum(["admin", "user"]),
+  role: zod.enum(["admin", "supervisor", "user", "company"]),
   status: zod.enum(["pending", "approved", "rejected"]),
   company: zod.string().nullish(),
   phone: zod.string().nullish(),
   createdAt: zod.coerce.date(),
+  lastLoginAt: zod.coerce.date().nullish(),
 });
 
 /**
@@ -91,11 +94,12 @@ export const RejectUserResponse = zod.object({
   clerkId: zod.string(),
   email: zod.string(),
   name: zod.string(),
-  role: zod.enum(["admin", "user"]),
+  role: zod.enum(["admin", "supervisor", "user", "company"]),
   status: zod.enum(["pending", "approved", "rejected"]),
   company: zod.string().nullish(),
   phone: zod.string().nullish(),
   createdAt: zod.coerce.date(),
+  lastLoginAt: zod.coerce.date().nullish(),
 });
 
 /**
