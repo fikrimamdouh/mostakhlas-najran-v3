@@ -381,6 +381,10 @@ components:
         createdAt:
           type: string
           format: date-time
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
       required:
         - id
         - clerkId
