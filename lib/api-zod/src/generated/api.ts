@@ -27,6 +27,7 @@ export const GetMeResponse = zod.object({
   company: zod.string().nullish(),
   phone: zod.string().nullish(),
   createdAt: zod.coerce.date(),
+  lastLoginAt: zod.coerce.date().nullish(),
 });
 
 /**
@@ -53,6 +54,7 @@ export const ListUsersResponse = zod.object({
       company: zod.string().nullish(),
       phone: zod.string().nullish(),
       createdAt: zod.coerce.date(),
+      lastLoginAt: zod.coerce.date().nullish(),
     }),
   ),
   total: zod.number(),
@@ -77,6 +79,7 @@ export const ApproveUserResponse = zod.object({
   company: zod.string().nullish(),
   phone: zod.string().nullish(),
   createdAt: zod.coerce.date(),
+  lastLoginAt: zod.coerce.date().nullish(),
 });
 
 /**
@@ -96,6 +99,7 @@ export const RejectUserResponse = zod.object({
   company: zod.string().nullish(),
   phone: zod.string().nullish(),
   createdAt: zod.coerce.date(),
+  lastLoginAt: zod.coerce.date().nullish(),
 });
 
 /**
