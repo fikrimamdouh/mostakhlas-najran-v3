@@ -5,7 +5,7 @@ import { setBaseUrl } from "@workspace/api-client-react";
 import "./index.css";
 
 const root = createRoot(document.getElementById("root")!);
-const clerkKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const clerkKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? "";
 const allowExternalApiBaseUrl = import.meta.env.VITE_ALLOW_EXTERNAL_API === "true";
 const apiBaseUrl = allowExternalApiBaseUrl
@@ -25,7 +25,9 @@ function renderAuthConfigError(message: string) {
 }
 
 if (!clerkKey) {
-  renderAuthConfigError("المتغير VITE_CLERK_PUBLISHABLE_KEY غير موجود في إعدادات البيئة.");
+  renderAuthConfigError("مفتاح Clerk العام غير موجود. اضبط VITE_CLERK_PUBLISHABLE_KEY أو NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.");
+} else if (import.meta.env.PROD && clerkKey.startsWith("pk_test_")) {
+  renderAuthConfigError("تم نشر التطبيق بمفتاح Clerk تجريبي. اضبط مفتاح الإنتاج pk_live في VITE_CLERK_PUBLISHABLE_KEY أو NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.");
 } else {
   root.render(
     <ClerkProvider publishableKey={clerkKey}>

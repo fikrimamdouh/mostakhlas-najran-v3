@@ -15,6 +15,7 @@ const basePath = process.env.BASE_PATH ?? "/";
 const apiProxyTarget = process.env.API_PROXY_TARGET ?? "https://api-mostakhlas.vercel.app";
 
 export default defineConfig({
+  envPrefix: ["VITE_", "NEXT_PUBLIC_"],
   base: basePath,
   plugins: [
     react(),

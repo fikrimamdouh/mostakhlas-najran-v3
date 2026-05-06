@@ -16,9 +16,24 @@ import { logger } from "./lib/logger";
 const app: Express = express();
 
 /* ---------- CORS (must be before routes) ---------- */
+const configuredOrigins = (process.env.ALLOWED_ORIGINS || process.env.APP_ORIGIN || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const defaultAllowedOrigins = [
+  "https://mostakhlas-najran-v3.vercel.app",
+  "http://localhost:5173",
+];
+
+const allowedOrigins = new Set([...defaultAllowedOrigins, ...configuredOrigins]);
+
 const corsOptions = {
-  origin: "https://mostakhlas-najran-v3.vercel.app",
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  origin(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+    return callback(new Error(`Origin not allowed by CORS: ${origin}`));
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
 };
@@ -59,7 +74,7 @@ app.use(
   clerkMiddleware((req) => ({
     publishableKey: publishableKeyFromHost(
       getClerkProxyHost(req) ?? "",
-      process.env.CLERK_PUBLISHABLE_KEY
+      process.env.CLERK_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
     ),
   }))
 );
