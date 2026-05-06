@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { clerkClient, getAuth } from "@clerk/express";
 import { db, notificationsTable, usersTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
-import { sendAdminActionEmail, sendApprovalEmail, sendRejectionEmail } from "../lib/email";
+import { and, eq, sql } from "drizzle-orm";
+import { sendAdminActionEmail, sendAdminNewSignupEmail, sendApprovalEmail, sendRejectionEmail, sendWelcomeEmail } from "../lib/email";
 import { logAudit } from "./audit";
 
 const router = Router();
@@ -15,56 +15,100 @@ const notifyPrimaryAdmin = (payload: { action: string; actorName: string; actorE
   sendAdminActionEmail(PRIMARY_ADMIN_EMAIL, payload).catch(() => {});
 };
 
+type SyncUserProfile = {
+  email?: unknown;
+  name?: unknown;
+  company?: unknown;
+  hospital?: unknown;
+  position?: unknown;
+  phone?: unknown;
+};
+
+const cleanString = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const cleanEmail = (value: unknown): string | null => cleanString(value)?.toLowerCase() ?? null;
+
 const createPendingUserNotification = async (user: any) => {
+  const [existingNotification] = await db
+    .select()
+    .from(notificationsTable)
+    .where(and(eq(notificationsTable.type, "new_user_pending"), eq(notificationsTable.userId, user.id)))
+    .limit(1);
+
+  if (existingNotification) return existingNotification;
+
   const [notification] = await db.insert(notificationsTable).values({
     type: "new_user_pending",
     title: "طلب تسجيل جديد",
     message: "يوجد مستخدم جديد بانتظار الموافقة",
     userId: user.id,
   }).returning();
-  console.log("PENDING USER NOTIFICATION CREATED", notification);
   return notification;
 };
 
-
-async function syncCurrentUser(req: any) {
+async function syncCurrentUser(req: any, profile: SyncUserProfile = {}) {
   const auth = getAuth(req);
   const clerkUserId = auth?.userId;
   if (!clerkUserId) return null;
 
-  let email = String((auth as any)?.sessionClaims?.email || "").trim().toLowerCase();
-  if (!email) {
-    try {
-      const clerkUser = await clerkClient.users.getUser(clerkUserId);
-      email = String(clerkUser.emailAddresses?.[0]?.emailAddress || "").trim().toLowerCase();
-    } catch {
-      // ignore clerk lookup errors, keep fallback values
-    }
+  let clerkName: string | null = null;
+  let email = cleanEmail((auth as any)?.sessionClaims?.email) ?? cleanEmail(profile.email);
+
+  try {
+    const clerkUser = await clerkClient.users.getUser(clerkUserId);
+    email = email ?? cleanEmail(clerkUser.primaryEmailAddress?.emailAddress) ?? cleanEmail(clerkUser.emailAddresses?.[0]?.emailAddress);
+    clerkName = cleanString(clerkUser.fullName) ?? cleanString(clerkUser.firstName);
+  } catch {
+    // Keep token/body fallback values if Clerk lookup is unavailable.
   }
 
   const [existing] = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkUserId)).limit(1);
   const isPrimaryAdmin = email === PRIMARY_ADMIN_EMAIL || (PRIMARY_ADMIN_CLERK_ID && clerkUserId === PRIMARY_ADMIN_CLERK_ID);
-  const targetRole = isPrimaryAdmin ? "admin" : "company";
-  const targetStatus = isPrimaryAdmin ? "approved" : "pending";
+  const profileName = cleanString(profile.name) ?? clerkName;
+  const profileCompany = cleanString(profile.company);
+  const profilePhone = cleanString(profile.phone);
 
   if (!existing) {
-    console.log("SYNC HIT");
     const [created] = await db.insert(usersTable).values({
       clerkId: clerkUserId,
       email: email || "",
-      name: "مستخدم جديد",
-      role: targetRole as any,
-      status: targetStatus as any,
+      name: profileName || "مستخدم جديد",
+      role: isPrimaryAdmin ? "admin" : "company",
+      status: isPrimaryAdmin ? "approved" : "pending",
+      company: profileCompany,
+      phone: profilePhone,
     }).returning();
-    console.log("USER CREATED", created);
-    if (created.status === "pending") await createPendingUserNotification(created);
+    if (created.status === "pending") {
+      await createPendingUserNotification(created);
+      sendWelcomeEmail(created.email, created.name).catch(() => {});
+      sendAdminNewSignupEmail(PRIMARY_ADMIN_EMAIL, {
+        name: created.name,
+        email: created.email,
+        company: created.company,
+        hospital: cleanString(profile.hospital),
+        position: cleanString(profile.position),
+        phone: created.phone,
+      }).catch(() => {});
+    }
     return created;
   }
 
   const updates: Record<string, any> = {};
   if (email && email !== String(existing.email || "").trim().toLowerCase()) updates.email = email;
-  if (existing.role !== targetRole) updates.role = targetRole;
-  if (existing.status !== targetStatus) updates.status = targetStatus;
+  if (profileName && profileName !== existing.name) updates.name = profileName;
+  if (profileCompany !== null && profileCompany !== existing.company) updates.company = profileCompany;
+  if (profilePhone !== null && profilePhone !== existing.phone) updates.phone = profilePhone;
+
+  if (isPrimaryAdmin) {
+    if (existing.role !== "admin") updates.role = "admin";
+    if (existing.status !== "approved") updates.status = "approved";
+  } else if (existing.status === "pending") {
+    await createPendingUserNotification(existing);
+  }
 
   if (Object.keys(updates).length > 0) {
     const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, existing.id)).returning();
@@ -125,9 +169,8 @@ router.get("/me", requireAuth, async (req: any, res) => {
 });
 
 router.post("/sync", requireAuth, async (req: any, res) => {
-  console.log("SYNC HIT");
   try {
-    const user = await syncCurrentUser(req);
+    const user = await syncCurrentUser(req, req.body);
     if (!user) return res.status(401).json({ error: "Unauthorized" });
     return res.json(user);
   } catch (err) {

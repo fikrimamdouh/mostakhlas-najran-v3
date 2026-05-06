@@ -368,7 +368,7 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, user]
+          enum: [admin, supervisor, user, company]
         status:
           type: string
           enum: [pending, approved, rejected]
