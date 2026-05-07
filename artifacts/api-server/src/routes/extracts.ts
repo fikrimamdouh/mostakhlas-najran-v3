@@ -1,16 +1,12 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db, extractsTable, projectsTable, usersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
+import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
 
-const requireAuth = async (req: any, res: any, next: any) => {
-  const auth = getAuth(req);
-  if (!auth?.userId) return res.status(401).json({ error: "Unauthorized" });
-  req.clerkUserId = auth.userId;
-
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, auth.userId)).limit(1);
+const requireApproved = async (req: any, res: any, next: any) => {
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
   if (!user) return res.status(401).json({ error: "User not registered" });
   if (user.status !== "approved" && user.role !== "admin") {
     return res.status(403).json({ error: "Account pending approval" });
@@ -20,7 +16,7 @@ const requireAuth = async (req: any, res: any, next: any) => {
 };
 
 // GET /api/extracts
-router.get("/", requireAuth, async (req: any, res) => {
+router.get("/", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const { status, projectId, page = 1, limit = 20 } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
@@ -61,7 +57,7 @@ router.get("/", requireAuth, async (req: any, res) => {
 });
 
 // POST /api/extracts
-router.post("/", requireAuth, async (req: any, res) => {
+router.post("/", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const { extractNumber, projectId, status, amount, description, notes, submittedAt } = req.body;
 
@@ -88,7 +84,7 @@ router.post("/", requireAuth, async (req: any, res) => {
 });
 
 // GET /api/extracts/:extractId
-router.get("/:extractId", requireAuth, async (req: any, res) => {
+router.get("/:extractId", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const [extract] = await db
       .select({
@@ -120,7 +116,7 @@ router.get("/:extractId", requireAuth, async (req: any, res) => {
 });
 
 // PUT /api/extracts/:extractId
-router.put("/:extractId", requireAuth, async (req: any, res) => {
+router.put("/:extractId", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const { status, amount, description, notes, approvedAt } = req.body;
     const updates: any = {};
@@ -148,7 +144,7 @@ router.put("/:extractId", requireAuth, async (req: any, res) => {
 });
 
 // DELETE /api/extracts/:extractId
-router.delete("/:extractId", requireAuth, async (req: any, res) => {
+router.delete("/:extractId", requireAuth, requireApproved, async (req: any, res) => {
   try {
     await db.delete(extractsTable).where(eq(extractsTable.id, Number(req.params.extractId)));
     return res.status(204).send();

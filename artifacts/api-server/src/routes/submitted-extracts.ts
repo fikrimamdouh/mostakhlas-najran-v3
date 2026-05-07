@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db, usersTable, submittedExtractsTable, userStorageTable } from "@workspace/db";
+import { requireAuth } from "../middleware/requireAuth";
 import { eq, desc, and } from "drizzle-orm";
 
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
@@ -41,11 +41,8 @@ function advanceMonthInExtractData(jsonStr: string): string {
 
 const router = Router();
 
-const requireAuth = async (req: any, res: any, next: any) => {
-  const auth = getAuth(req);
-  if (!auth?.userId) return res.status(401).json({ error: "Unauthorized" });
-  req.clerkUserId = auth.userId;
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, auth.userId)).limit(1);
+const requireApproved = async (req: any, res: any, next: any) => {
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
   if (!user) return res.status(401).json({ error: "User not registered" });
   if (user.status !== "approved" && user.role !== "admin") {
     return res.status(403).json({ error: "Account pending approval" });
@@ -90,7 +87,7 @@ const COMPANY_SITES: Record<string, { sites: string[] }> = {
 };
 
 // GET /api/submitted-extracts — list all (admin/supervisor) or company-filtered (contract_supervisor) or own (user)
-router.get("/", requireAuth, async (req: any, res) => {
+router.get("/", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const role = req.currentUser.role;
     const isAdminOrSup = role === "admin" || role === "supervisor";
@@ -143,7 +140,7 @@ router.get("/", requireAuth, async (req: any, res) => {
 });
 
 // POST /api/submitted-extracts — submit a new extract from HTML page
-router.post("/", requireAuth, async (req: any, res) => {
+router.post("/", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const { extractType, companyName, contractNumber, hospitalName, periodMonth, totalAmount, notes } = req.body;
 
@@ -171,7 +168,7 @@ router.post("/", requireAuth, async (req: any, res) => {
 });
 
 // PUT /api/submitted-extracts/:id — resubmit after revision
-router.put("/:id", requireAuth, async (req: any, res) => {
+router.put("/:id", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const [existing] = await db.select().from(submittedExtractsTable)
       .where(eq(submittedExtractsTable.id, Number(req.params.id))).limit(1);
@@ -206,7 +203,7 @@ router.put("/:id", requireAuth, async (req: any, res) => {
 });
 
 // GET /api/submitted-extracts/:id
-router.get("/:id", requireAuth, async (req: any, res) => {
+router.get("/:id", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const [row] = await db
       .select()
@@ -229,7 +226,7 @@ router.get("/:id", requireAuth, async (req: any, res) => {
 });
 
 // PATCH /api/submitted-extracts/:id/status — admin updates status
-router.patch("/:id/status", requireAuth, requireAdmin, async (req: any, res) => {
+router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (req: any, res) => {
   try {
     const { status, adminNotes } = req.body;
     const validStatuses = ["submitted", "under_review", "approved", "rejected", "needs_revision"];

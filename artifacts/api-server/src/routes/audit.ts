@@ -1,16 +1,9 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db, usersTable, auditLogTable } from "@workspace/db";
 import { eq, desc, sql } from "drizzle-orm";
+import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
-
-const requireAuth = (req: any, res: any, next: any) => {
-  const auth = getAuth(req);
-  if (!auth?.userId) return res.status(401).json({ error: "Unauthorized" });
-  req.clerkUserId = auth.userId;
-  next();
-};
 
 // admin OR supervisor can view audit logs
 const requireAdminOrSupervisor = async (req: any, res: any, next: any) => {

@@ -1,16 +1,9 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db, usersTable, userStorageTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
+import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
-
-const requireAuth = (req: any, res: any, next: any) => {
-  const auth = getAuth(req);
-  if (!auth?.userId) return res.status(401).json({ error: "Unauthorized" });
-  req.clerkUserId = auth.userId;
-  next();
-};
 
 const getDbUser = async (clerkId: string) => {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkId)).limit(1);

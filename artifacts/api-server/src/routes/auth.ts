@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { sendWelcomeEmail, sendAdminNewUserEmail } from "../lib/email";
+import { requireAuth } from "../middleware/requireAuth";
 
 const ADMIN_EMAIL = "rorofikri@gmail.com";
 
@@ -10,10 +10,8 @@ const router = Router();
 
 // Called after Clerk sign-up to register/sync user in our DB
 // Mounted at /users so this handles POST /api/users/sync
-router.post("/sync", async (req, res) => {
-  const auth = getAuth(req);
-  const userId = auth?.userId;
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+router.post("/sync", requireAuth, async (req: any, res) => {
+  const userId = req.clerkUserId;
 
   try {
     const { email, name, company, phone, hospital, jobTitle, contractNumber } = req.body;

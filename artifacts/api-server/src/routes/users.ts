@@ -1,18 +1,11 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db, usersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { sendApprovalEmail, sendRejectionEmail } from "../lib/email";
 import { logAudit } from "./audit";
+import { requireAuth, clerk } from "../middleware/requireAuth";
 
 const router = Router();
-
-const requireAuth = (req: any, res: any, next: any) => {
-  const auth = getAuth(req);
-  if (!auth?.userId) return res.status(401).json({ error: "Unauthorized" });
-  req.clerkUserId = auth.userId;
-  next();
-};
 
 const requireAdmin = async (req: any, res: any, next: any) => {
   try {
@@ -41,8 +34,22 @@ const requireAdminOrSupervisor = async (req: any, res: any, next: any) => {
 // GET /api/users/me
 router.get("/me", requireAuth, async (req: any, res) => {
   try {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    const clerkUserId = req.clerkUserId;
+    let [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkUserId)).limit(1);
+
+    if (!user) {
+      const clerkUser = await clerk.users.getUser(clerkUserId);
+      const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
+      const name = `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() || "مستخدم جديد";
+      [user] = await db.insert(usersTable).values({
+        clerkId: clerkUserId,
+        email,
+        name,
+        role: "user",
+        status: "pending",
+      }).returning();
+    }
+
     return res.json(user);
   } catch (err) {
     req.log.error({ err }, "Failed to get user");
@@ -76,6 +83,21 @@ async function handleActivity(req: any, res: any) {
   try {
     const { page, event, details } = req.body;
     if (!page) return res.status(400).json({ error: "page required" });
+
+    // Ensure user exists before updating activity
+    let [existing] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+    if (!existing) {
+      const clerkUser = await clerk.users.getUser(req.clerkUserId);
+      const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
+      const name = `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() || "مستخدم جديد";
+      [existing] = await db.insert(usersTable).values({
+        clerkId: req.clerkUserId,
+        email,
+        name,
+        role: "user",
+        status: "pending",
+      }).returning();
+    }
 
     const [user] = await db.update(usersTable)
       .set({ lastPage: page, lastPageAt: new Date() })

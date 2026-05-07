@@ -1,16 +1,12 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db, projectsTable, usersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
+import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
 
-const requireAuth = async (req: any, res: any, next: any) => {
-  const auth = getAuth(req);
-  if (!auth?.userId) return res.status(401).json({ error: "Unauthorized" });
-  req.clerkUserId = auth.userId;
-
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, auth.userId)).limit(1);
+const requireApproved = async (req: any, res: any, next: any) => {
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
   if (!user) return res.status(401).json({ error: "User not registered" });
   if (user.status !== "approved" && user.role !== "admin") {
     return res.status(403).json({ error: "Account pending approval" });
@@ -20,7 +16,7 @@ const requireAuth = async (req: any, res: any, next: any) => {
 };
 
 // GET /api/projects
-router.get("/", requireAuth, async (req: any, res) => {
+router.get("/", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const projects = await db.select().from(projectsTable).orderBy(projectsTable.createdAt);
     const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(projectsTable);
@@ -32,7 +28,7 @@ router.get("/", requireAuth, async (req: any, res) => {
 });
 
 // POST /api/projects
-router.post("/", requireAuth, async (req: any, res) => {
+router.post("/", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const { name, description, location, contractValue, startDate, endDate } = req.body;
     if (!name) return res.status(400).json({ error: "name is required" });
@@ -55,7 +51,7 @@ router.post("/", requireAuth, async (req: any, res) => {
 });
 
 // GET /api/projects/:projectId
-router.get("/:projectId", requireAuth, async (req: any, res) => {
+router.get("/:projectId", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const [project] = await db.select().from(projectsTable).where(eq(projectsTable.id, Number(req.params.projectId))).limit(1);
     if (!project) return res.status(404).json({ error: "Project not found" });

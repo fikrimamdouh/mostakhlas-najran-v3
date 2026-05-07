@@ -1,15 +1,12 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db, extractsTable, projectsTable, usersTable } from "@workspace/db";
 import { eq, sql, sum } from "drizzle-orm";
+import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
 
-const requireAuth = async (req: any, res: any, next: any) => {
-  const auth = getAuth(req);
-  if (!auth?.userId) return res.status(401).json({ error: "Unauthorized" });
-  req.clerkUserId = auth.userId;
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, auth.userId)).limit(1);
+const requireApproved = async (req: any, res: any, next: any) => {
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
   if (!user) return res.status(401).json({ error: "User not registered" });
   if (user.status !== "approved" && user.role !== "admin") {
     return res.status(403).json({ error: "Account pending approval" });
@@ -19,7 +16,7 @@ const requireAuth = async (req: any, res: any, next: any) => {
 };
 
 // GET /api/stats/dashboard
-router.get("/dashboard", requireAuth, async (req: any, res) => {
+router.get("/dashboard", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const [counts] = await db.select({
       totalExtracts: sql<number>`count(*)`,
@@ -57,7 +54,7 @@ router.get("/dashboard", requireAuth, async (req: any, res) => {
 });
 
 // GET /api/stats/extracts-by-status
-router.get("/extracts-by-status", requireAuth, async (req: any, res) => {
+router.get("/extracts-by-status", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const data = await db.select({
       status: extractsTable.status,
@@ -79,7 +76,7 @@ router.get("/extracts-by-status", requireAuth, async (req: any, res) => {
 });
 
 // GET /api/stats/recent-activity
-router.get("/recent-activity", requireAuth, async (req: any, res) => {
+router.get("/recent-activity", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const extracts = await db
       .select({

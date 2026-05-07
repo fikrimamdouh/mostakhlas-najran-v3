@@ -1,14 +1,12 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
 import { db, usersTable, submittedExtractsTable, userStorageTable, auditLogTable, extractsTable, projectsTable } from "@workspace/db";
 import { eq, ne } from "drizzle-orm";
+import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
 
 const requireAdmin = async (req: any, res: any, next: any) => {
-  const auth = getAuth(req);
-  if (!auth?.userId) return res.status(401).json({ error: "Unauthorized" });
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, auth.userId)).limit(1);
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
   if (!user || user.role !== "admin") return res.status(403).json({ error: "Admin only" });
   req.currentUser = user;
   next();
@@ -19,7 +17,7 @@ const requireAdmin = async (req: any, res: any, next: any) => {
  * Clears all data except the calling admin's account.
  * Requires: role=admin + confirmation phrase in body.
  */
-router.post("/reset-system", requireAdmin, async (req: any, res: any) => {
+router.post("/reset-system", requireAuth, requireAdmin, async (req: any, res: any) => {
   const { confirmation } = req.body ?? {};
   if (confirmation !== "تأكيد التهيئة الكاملة") {
     return res.status(400).json({ error: "يجب إرسال جملة التأكيد الصحيحة" });
