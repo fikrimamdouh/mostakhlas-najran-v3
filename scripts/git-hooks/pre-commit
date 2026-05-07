@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# pre-commit hook — blocks commits with wrong author email
+# Install with: pnpm run setup-git
+
+REQUIRED_EMAIL="rorofikri@gmail.com"
+ACTUAL_EMAIL=$(git config user.email 2>/dev/null || echo "")
+
+if [ "$ACTUAL_EMAIL" != "$REQUIRED_EMAIL" ]; then
+  echo ""
+  echo "❌  COMMIT BLOCKED: wrong git user.email"
+  echo "    Current : $ACTUAL_EMAIL"
+  echo "    Required: $REQUIRED_EMAIL"
+  echo ""
+  echo "    Run:  pnpm run fix-git-identity"
+  echo ""
+  exit 1
+fi
