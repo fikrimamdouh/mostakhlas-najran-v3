@@ -1,0 +1,3594 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <script src="/original/auth-check.js"></script>
+    <script src="/original/cloud-sync.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جداول الأداء - تجمع نجران الصحي</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="performance_styles.css">
+    <script src="contract_data_connector.js"></script>
+    <script src="/original/month-context.js"></script>
+    <script src="/original/extract-stepper.js"></script>
+    <style>
+.contract-info-rows {
+    font-size: 17px;
+    margin-bottom: 13px;
+    font-weight: 500;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.7;
+}
+.main-table-wrapper { 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    min-height: 100px; 
+    margin: 25px 0 20px 0;
+}
+table {
+    border-collapse: collapse;
+    width: 70%;
+    margin: auto;
+    font-size: 16px;
+    background: #fff;
+    box-shadow: 0 2px 18px #ddd;
+    border-radius: 16px;
+    overflow: hidden;
+}
+th {
+    background-color: #007bff;
+    color: #fff !important;
+    font-weight: bold;
+}
+tr:nth-child(even) td { background: #f6f8fc }
+tr.total-row th, tr.total-row td {
+    background: #fee08b;
+    color: #a85912;
+    font-size: 17px;
+}
+.summary-text, .footer-text { margin: 22px auto 7px auto; font-size: 16px; max-width: 800px; }
+.signatures { margin: 35px auto 0 auto; max-width: 900px; font-size: 15px;}
+.signature-item { min-width: 200px; text-align: center; }
+
+        .table-container table td, .table-container table th, .table-container input[type="number"], .summary-text p, .summary-text span {
+            color: #000000 !important;
+        }
+              .edit-dialog {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            text-align: right;
+            max-height: 80vh;
+            overflow-y: auto;
+            
+            /* التعديلات الجديدة هنا */
+            width: 95% !important; /* اجعلها تأخذ 95% من عرض الشاشة */
+            max-width: 900px !important; /* حد أقصى 900 بكسل */
+            min-width: 400px !important; /* حد أدنى 400 بكسل لضمان عدم صغرها جداً */
+        }
+
+        .edit-dialog input, .edit-dialog select {
+            margin: 5px 0;
+            padding: 5px;
+            width: 100%;
+            border: 1px solid #d1d5db;
+            border-radius: 5px;
+        }
+        .edit-dialog button {
+            padding: 8px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .edit-dialog .confirm-btn {
+            background: #2a5298;
+            color: #fff;
+        }
+        .edit-dialog .cancel-btn {
+            background: #d1d5db;
+            color: #2c3e50;
+        }
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            z-index: 999;
+        }
+        .signatures {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .signature-item {
+            text-align: center;
+            font-size: 12px;
+        }
+        .total-amount {
+            margin: 15px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .total-amount input[type="number"] {
+            width: 200px;
+            height: 40px;
+            padding: 10px;
+            font-size: 18px;
+            border: 2px solid #2a5298;
+            border-radius: 8px;
+            background: #f8f9fa;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        .total-amount input[type="number"]:hover {
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+            border-color: #1e3a8a;
+        }
+        .total-amount input[type="number"]:focus {
+            outline: none;
+            background: #ffffff;
+            border-color: #1e3a8a;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .total-amount input[type="number"] {
+            animation: pulse 2s infinite;
+        }
+        .summary-text p {
+            margin: 5px 0;
+            font-size: 16px;
+        }
+        .save-btn {
+            display: none;
+            padding: 10px 20px;
+            margin: 10px 0;
+            background: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s ease;
+        }
+        .save-btn:hover {
+            background: #218838;
+        }
+        
+        /* تحسين الأزرار */
+        .table-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        .table-buttons button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .table-buttons button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .btn-add {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+        .btn-edit {
+            background: linear-gradient(135deg, #007bff, #6610f2);
+            color: white;
+        }
+        .btn-pdf {
+            background: linear-gradient(135deg, #dc3545, #e83e8c);
+            color: white;
+        }
+        .btn-excel {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+        .btn-print {
+            background: linear-gradient(135deg, #6c757d, #495057);
+            color: white;
+        }
+        .btn-save {
+            background: linear-gradient(135deg, #fd7e14, #e83e8c);
+            color: white;
+        }
+        .action-buttons, .export-buttons {
+            display: none; /* إخفاء الأزرار القديمة */
+        }
+.btn-import-excel {
+    background: linear-gradient(135deg, #1e90ff, #00bfff);
+    color: white;
+}
+
+    
+  /* ══ شريط الأزرار الجديد std-action-bar ══ */
+  .std-action-bar {
+    background: #fff !important;
+    padding: 10px 16px !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 7px !important;
+    align-items: center !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,.04) !important;
+  }
+  .ab {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 7px 15px !important;
+    border-radius: 9px !important;
+    border: none !important;
+    font-family: 'Tajawal', sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    transition: transform .15s, opacity .15s, box-shadow .15s !important;
+    white-space: nowrap !important;
+    color: #fff !important;
+    background: #1e3c72 !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,.15) !important;
+  }
+  .ab:hover { opacity: .88 !important; transform: translateY(-1px) !important; box-shadow: 0 4px 12px rgba(0,0,0,.2) !important; }
+  .ab:active { transform: translateY(0) !important; opacity: 1 !important; }
+  .ab-manage   { background: #6d28d9 !important; }
+  .ab-import   { background: #0369a1 !important; }
+  .ab-excel    { background: #16a34a !important; }
+  .ab-print    { background: #475569 !important; }
+  .ab-backup   { background: #0891b2 !important; }
+  .ab-restore  { background: #b45309 !important; }
+  .ab-sig      { background: #4f46e5 !important; }
+  .ab-titles   { background: #ea580c !important; }
+  .ab-clear    { background: #dc2626 !important; }
+  .ab-update   { background: #0369a1 !important; }
+
+  </style>
+    <style>
+.contract-info-rows {
+    font-size: 17px;
+    margin-bottom: 13px;
+    font-weight: 500;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.7;
+}
+/* ... (الكثير من أكواد CSS الأخرى) ... */
+
+/* تلوين الكتابة داخل صف الإضافة والتعديل */
+    #new-performance-row input,
+    #new-performance-row select {
+        color: #007bff !important; /* أزرق */
+        font-weight: 500;
+    }
+
+    /* هنا تبدأ أكواد CSS الجديدة التي ستلصقها */
+    /* تحسين تنسيق النصوص داخل النوافذ المنبثقة */
+    .edit-dialog h3,
+    .edit-dialog label,
+    .edit-dialog p {
+        color: #333333 !important; /* لون غامق للنصوص */
+    }
+
+    /* تحسين تنسيق حقول الإدخال داخل النوافذ المنبثقة */
+    .edit-dialog input[type="text"],
+    .edit-dialog input[type="number"],
+    .edit-dialog input[type="password"] {
+        color: #000000 !important; /* لون أسود لقيم الإدخال */
+        background-color: #f8f8f8 !important; /* خلفية فاتحة لحقول الإدخال */
+        border: 1px solid #cccccc !important; /* حدود واضحة */
+    }
+
+    /* تحسين تنسيق الأزرار داخل النوافذ المنبثقة */
+    .edit-dialog button {
+        color: #ffffff !important; /* لون أبيض لأزرار التأكيد */
+    }
+    .edit-dialog .cancel-btn {
+        color: #333333 !important; /* لون غامق لزر الإلغاء */
+    }
+
+    /* تنسيق خاص لعناصر التعديل في قائمة البنود */
+    .edit-item-row h4 {
+        color: #007bff !important; /* لون أزرق لعناوين البنود */
+        margin-bottom: 10px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 5px;
+    }
+    .edit-item-row label {
+        font-weight: bold;
+        margin-top: 8px;
+        display: block;
+    }
+    .edit-item-row input {
+        margin-bottom: 10px;
+    }
+    .edit-item-row .delete-item-btn {
+        background-color: #dc3545; /* لون أحمر لزر الحذف */
+        color: white;
+        margin-top: 10px;
+        padding: 8px 12px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    .edit-item-row .delete-item-btn:hover {
+        background-color: #c82333;
+    }
+</style>
+
+<style>
+    /* تلوين الكتابة داخل صف الإضافة والتعديل */
+    #new-performance-row input,
+    #new-performance-row select {
+        color: #007bff !important; /* أزرق */
+        font-weight: 500;
+    }
+.btn-titles { background: linear-gradient(135deg, #6f42c1, #9a67ea); }
+
+</style>
+
+
+<link rel="stylesheet" href="/original/shared-styles.css">
+</head>
+
+
+
+
+<body>
+    <div id="overlay" class="overlay"></div>
+    <div id="edit-dialog" class="edit-dialog">
+        <div id="password-section">
+            <h3>أدخل الباسورد</h3>
+            <input type="password" id="password-input" placeholder="الباسورد">
+            <p id="password-error" style="color: red;"></p>
+            <button class="confirm-btn" onclick="verifyPassword()">تأكيد</button>
+            <button class="cancel-btn" onclick="closeEditDialog()">إلغاء</button>
+        </div>
+        <div id="edit-items" style="display: none;">
+            <h3>تعديل البنود</h3>
+            <div id="edit-items-container"></div>
+            <button class="confirm-btn" onclick="saveEditedItems()">حفظ</button>
+            <button class="cancel-btn" onclick="closeEditDialog()">إلغاء</button>
+        </div>
+        <div id="add-item" style="display: none;">
+            <h3>إضافة بند جديد</h3>
+            <label>اسم النشاط:</label>
+            <input type="text" id="new-activity-input">
+            <label>الدرجة القصوى:</label>
+            <input type="number" id="new-max-score-input" min="0">
+            <label>التقدير:</label>
+            <input type="number" id="new-score-input" min="0">
+            <button class="confirm-btn" onclick="saveNewItem()">حفظ</button>
+            <button class="cancel-btn" onclick="closeEditDialog()">إلغاء</button>
+        </div>
+    </div>
+        
+    <div id="particles-js-bg"></div>
+    <div class="container">
+        <header>
+            <div class="header-info">
+                <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-right">
+                <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-left">
+                <h1>تجمع نجران الصحي</h1>
+                <h3>وحدة الصيانة العامة</h3>
+                <h2 id="spare-parts-title">مستخلص العمالة</h2>
+                <p class="date" id="current-date-time"></p>
+            </div>
+            <nav>
+                <div class="nav-bar">
+                    <div class="dropdown">
+                        <select id="navigation" onchange="navigateTo(this.value)">
+                            <option value="#">-- اختر صفحة --</option>
+                            <option value="index.html">الصفحة الرئيسية</option>
+                            <option value="attendance.html">الحضور والانصراف</option>
+                            <option value="performance.html">شهادة الأداء</option>
+                            <option value="achievement.html">شهادة الإنجاز</option>
+                            <option value="consumables.html">مستخلص المستهلكات</option>
+                            <option value="spare_parts.html">مستخلص قطع الغيار</option>
+                            <option value="approval.html">✅ متابعة المستخلصات</option>
+                            <option value="admin-dashboard.html">🛡️ لوحة الأدمن</option>
+                        </select>
+                    </div>
+                </div>
+            </nav>
+        </header>
+
+        <h2>جداول الأداء</h2>
+
+          <div class="page-contract-info">
+            <p><strong>اسم المستشفى:</strong> <span class="hospitalName">غير محدد</span></p>
+            <p><strong>تفاصيل العقد:</strong> <span class="contractDetails">غير محدد</span></p>
+            <p><strong>اسم الشركة:</strong> <span class="companyName">غير محدد</span></p>
+            <p><strong>نوع العقد:</strong> <span class="contractType">غير محدد</span></p>
+            <p class="directPurchaseContainer" style="display: none;"><strong>نسبة الشراء المباشر:</strong> <span class="directPurchaseRatio">0</span>%</p>
+            <p><strong>رقم الدفعة:</strong> دفعة رقم <span id="extract-payment-number">—</span> &nbsp;|&nbsp; شهر <span class="extract-month-display">—</span> <span class="extract-year-display">—</span></p>
+            <p><strong>مدة المستخلص:</strong> من <span id="extract-start-date">غير محدد</span> إلى <span id="extract-end-date">غير محدد</span></p>
+        </div>
+<div class="std-action-bar no-print">
+    <button class="ab ab-update" onclick="updateAllPerformanceData()"><i class="fas fa-sync-alt"></i> تحديث الأداء</button>
+    <button class="ab ab-restore" onclick="resetPerformanceData()"><i class="fas fa-redo"></i> إعادة تعيين</button>
+    <button class="ab ab-backup" onclick="createBackup()"><i class="fas fa-download"></i> حفظ نسخة</button>
+    <button class="ab ab-restore" onclick="restoreBackup()"><i class="fas fa-upload"></i> استعادة نسخة</button>
+    <button class="ab ab-sig" onclick="openSignatureEditDialog()"><i class="fas fa-signature"></i> تعديل التواقيع</button>
+    <button class="ab ab-titles" onclick="openEditTableNamesDialog()"><i class="fas fa-heading"></i> تعديل أسماء الجداول</button>
+</div>
+
+<!-- التنسيق الموحد للأزرار -->
+<style>
+.control-btn {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding: 10px 18px;
+    border:none;
+    border-radius:25px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    transition:all .3s ease;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+    color:#fff;
+}
+
+.btn-update { background:linear-gradient(135deg,#17a2b8,#20c997); }
+.btn-reset  { background:linear-gradient(135deg,#dc3545,#e83e8c); }
+.btn-backup { background:linear-gradient(135deg,#28a745,#20c997); }
+.btn-restore{ background:linear-gradient(135deg,#ffc107,#fd7e14); }
+.btn-edit   { background:linear-gradient(135deg,#007bff,#6610f2); }
+
+.control-btn:hover {
+    transform:translateY(-3px);
+    box-shadow:0 4px 15px rgba(0,0,0,.25);
+}
+</style>        <div class="sections-container">
+            <div class="section-card" onclick="toggleTable('cleaning')"><h3><i class="fas fa-broom"></i> جدول ع 1</h3></div>
+            <div class="section-card" onclick="toggleTable('electricity')"><h3><i class="fas fa-bolt"></i> جدول ع 2</h3></div>
+            <div class="section-card" onclick="toggleTable('agriculture')"><h3><i class="fas fa-leaf"></i> جدول ع 3</h3></div>
+            <div class="section-card" onclick="toggleTable('civil')"><h3><i class="fas fa-tools"></i> جدول ع 4</h3></div>
+            <div class="section-card" onclick="toggleTable('mechanics')"><h3><i class="fas fa-cogs"></i> جدول ع 5</h3></div>
+            <div class="section-card" onclick="toggleTable('laundry')"><h3><i class="fas fa-tshirt"></i> جدول ع 6</h3></div>
+    <div class="section-card" onclick="toggleTable('security')"><h3><i class="fas fa-shield-alt"></i> جدول ع 7</h3></div>
+            <div class="section-card" onclick="toggleTable('certificate')"><h3><i class="fas fa-certificate"></i> شهادة الأداء الشهري 🟦</h3></div>
+        </div>
+
+        <div id="cleaning" class="table-container" style="display: none;" data-title="جدول ح غ 1 - لاسم جدول الغرامات الخاصة بمستوى الأداء لقسم النظافة بمستشفى ">
+            <div class="table-title">جدول ع 1 - تقييم قسم النظافة</div>
+            <div class="total-amount">إجمالي المبلغ لأنشطة القسم: <input type="number" id="cleaning-amount" value="0" step="0.01" onchange="updateCertificateFromPerformance()"></div>
+            <table id="cleaning-table">
+                <thead>
+                    <tr><th>أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>نظافة جميع المداخل والأروقة والمرافق</td><td>8</td><td><input type="number" class="editable" value="7" max="100" min="0" onchange="updateTotal('cleaning'); updateCertificateFromPerformance();"></td></tr>
+                    <tr><td>نظافة الأرضيات والجدران والأسطح</td><td>10</td><td><input type="number" class="editable" value="9" max="100" min="0" onchange="updateTotal('cleaning'); updateCertificateFromPerformance();"></td></tr>
+                    <tr><td>نظافة أثاث المكاتب والكراسي والطاولات</td><td>6</td><td><input type="number" class="editable" value="6" max="100" min="0" onchange="updateTotal('cleaning'); updateCertificateFromPerformance();"></td></tr>
+                    <tr><td>استخدام المنظفات المطابقة للمواصفات</td><td>8</td><td><input type="number" class="editable" value="7" max="100" min="0" onchange="updateTotal('cleaning'); updateCertificateFromPerformance();"></td></tr>
+                    <tr><td>نظافة النوافذ الزجاجية والمرايات</td><td>10</td><td><input type="number" class="editable" value="9" max="100" min="0" onchange="updateTotal('cleaning'); updateCertificateFromPerformance();"></td></tr>
+                    <tr><td>نظافة دورات المياه وتعقيمها بانتظام</td><td>8</td><td><input type="number" class="editable" value="7" max="100" min="0" onchange="updateTotal('cleaning'); updateCertificateFromPerformance();"></td></tr>
+                    <tr><td>نظافة المصاعد</td><td>6</td><td><input type="number" class="editable" value="6" max="100" min="0" onchange="updateTotal('cleaning'); updateCertificateFromPerformance();"></td></tr>
+                    <tr><td>جمع وتفريغ الحاويات الداخلية</td><td>8</td><td><input type="number" class="editable" value="7" max="100" min="0" onchange="updateTotal('cleaning'); updateCertificateFromPerformance();"></td></tr>
+                    <tr><td>نظافة المداخل الخارجية</td><td>4</td><td><input type="number" class="editable" value="3" max="100" min="0" onchange="updateTotal('cleaning'); updateCertificateFromPerformance();"></td></tr>
+                    <tr><td>هل يقوم القسم باستخدام المواد والمعدات الخاصة</td><td>10</td><td><input type="number" class="editable" value="9" max="100" min="0" onchange="updateTotal('cleaning'); updateCertificateFromPerformance();"></td></tr>
+                    <tr><td>هل يوجد لدى القسم سجل متابعة يومي وجدول مناوبة</td><td>4</td><td><input type="number" class="editable" value="3" max="100" min="0" onchange="updateTotal('cleaning'); updateCertificateFromPerformance();"></td></tr>
+                    <tr><td>هل يقوم مشرف القسم بمتابعة الأداء اليومي</td><td>4</td><td><input type="number" class="editable" value="3" max="100" min="0" onchange="updateTotal('cleaning'); updateCertificateFromPerformance();"></td></tr>
+                    <tr><td>هل يقوم المشرف بمتابعة الموظف الضعيف وتدريبه</td><td>4</td><td><input type="number" class="editable" value="3" max="100" min="0" onchange="updateTotal('cleaning'); updateCertificateFromPerformance();"></td></tr>
+                    <tr class="total-row"><th>المجموع</th><th>88</th><th id="cleaning-total">79</th></tr>
+                </tbody>
+            </table>
+            <div class="summary-text">
+<p>التقدير الذي حصل عليه المقاول: <span id="cleaning-score">79 من 88</span> (<span id="cleaning-percentage-score">90%</span>)</p>
+                <p>نسبة الحسم للمقاول في هذا القسم: <span id="cleaning-deduction">0%</span></p>
+                <p>مبلغ غرامة الأداء علي المقاول لهذا الجدول: <span id="cleaning-deducted-amount">0</span> ريال سعودي</p>
+            </div>
+            <div class="footer-text"><p>بناءً على ما سبق تم تقييم القسم من خلال لجنة الإشراف والمتابعة حسب المعايير المعتمدة، وتم احتساب المبلغ المستحق بناءً على نسبة التقييم.</p></div>
+            <div class="table-buttons">
+                <button class="btn-add" onclick="openAddModal('cleaning')">
+                    <span>➕</span> إضافة بند
+                </button>
+<button class="btn-import-excel" onclick="openExcelImportDialog('cleaning')"><i class="fas fa-file-excel"></i> استيراد Excel</button>
+
+                <button class="btn-edit" onclick="openEditItemDialog('cleaning')">
+                    <span>✏️</span> تعديل بند
+                </button>
+                <button class="btn-pdf" onclick="exportToPDF('cleaning')">
+                    <span>📄</span> تصدير PDF
+                </button>
+                <button class="btn-excel" onclick="exportSectionToExcel()">
+    <span>📊</span> تصدير Excel
+</button>
+<button class="btn-print" onclick="printSingleTable('cleaning')">
+                    <span>🖨️</span> طباعة
+                </button>
+                <button class="btn-save" id="cleaning-save-btn" onclick="saveTableData('cleaning', true)">
+                    <span>💾</span> حفظ
+                </button>
+            </div>
+           
+        </div>
+
+       <div id="electricity" class="table-container" style="display: none;" data-title="جدول ح غ 2 - لاسم جدول الغرامات الخاصة بمستوى الأداء لقسم الكهرباء بمستشفى ">
+    <div class="table-title">جدول ع 2 - تقييم قسم الكهرباء</div>
+    <div class="total-amount">إجمالي المبلغ لأنشطة القسم: <input type="number" id="electricity-amount" value="0" step="0.01" onchange="updateCertificateFromPerformance()"></div>
+    <table id="electricity-table">
+        <thead>
+            <tr><th>أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>هل يتم استكمال إجراءات الإدارة والصيانة والإصلاح</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم استلام بلاغات عاجلة ومعالجتها فورًا</td><td>10</td><td><input type="number" class="editable" value="8" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم متابعة أعمال الصيانة الوقائية والطارئة</td><td>6</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم إتمام أعمال الصيانة حسب الخطط المعتمدة</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تنفيذ أعمال الصيانة الوقائية بشكل دوري</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم صيانة شبكات الكهرباء والمحولات</td><td>6</td><td><input type="number" class="editable" value="6" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم صيانة أنظمة الإنارة الداخلية والخارجية</td><td>6</td><td><input type="number" class="editable" value="6" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم صيانة المولدات الكهربائية الاحتياطية</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم توفير الإضاءة الكافية للمرضى والموظفين</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يوجد سجل متابعة يومي لأعمال القسم</td><td>6</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تنظيف المعدات وصيانتها دوريًا</td><td>4</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تدريب موظفي القسم</td><td>3</td><td><input type="number" class="editable" value="3" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم متابعة الأداء اليومي</td><td>3</td><td><input type="number" class="editable" value="3" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+    <tr><td>هل يتم فحص دوري لألواح التوزيع الكهربائية</td><td>4</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+    <tr><td>هل يتم فحص دوري لألواح التوزيع الكهربائية</td><td>4</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+    <tr><td>هل يتم فحص دوري لألواح التوزيع الكهربائية</td><td>4</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+    <tr><td>هل يتم فحص دوري لألواح التوزيع الكهربائية</td><td>4</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+    <tr><td>هل يتم فحص دوري لألواح التوزيع الكهربائية</td><td>4</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+    <tr><td>هل يتم فحص دوري لألواح التوزيع الكهربائية</td><td>4</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+    <tr><td>هل يتم فحص دوري لألواح التوزيع الكهربائية</td><td>4</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+    <tr><td>هل يتم فحص دوري لألواح التوزيع الكهربائية</td><td>4</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+    <tr><td>هل يتم فحص دوري لألواح التوزيع الكهربائية</td><td>4</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+    <tr><td>هل يتم فحص دوري لألواح التوزيع الكهربائية</td><td>4</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+    <tr><td>هل يتم فحص دوري لألواح التوزيع الكهربائية</td><td>4</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('electricity'); updateCertificateFromPerformance();"></td></tr>
+           
+ <tr class="total-row"><th>المجموع</th><th>69</th><th id="electricity-total">64</th></tr>
+        </tbody>
+    </table>
+    <div class="summary-text">
+<p>التقدير الذي حصل عليه المقاول: <span id="electricity-score">64 من 69</span> (<span id="electricity-percentage-score">93%</span>)</p>
+        <p>نسبة الحسم للمقاول في هذا القسم: <span id="electricity-deduction">0%</span></p>
+        <p>مبلغ غرامة الأداء علي المقاول لهذا الجدول: <span id="electricity-deducted-amount">0</span> ريال سعودي</p>
+    </div>
+    <div class="footer-text"><p>بناءً على ما سبق تم تقييم القسم من خلال لجنة الإشراف والمتابعة حسب المعايير المعتمدة، وتم احتساب المبلغ المستحق بناءً على نسبة التقييم.</p></div>
+    <div class="table-buttons">
+        <button class="btn-add" onclick="openAddModal('electricity')">
+            <span>➕</span> إضافة بند
+        </button>
+<button class="btn-import-excel" onclick="openExcelImportDialog('electricity')"><i class="fas fa-file-excel"></i> استيراد Excel</button>
+
+        <button class="btn-edit" onclick="openEditItemDialog('electricity')">
+            <span>✏️</span> تعديل بند
+        </button>
+        <button class="btn-pdf" onclick="exportToPDF('electricity')">
+            <span>📄</span> تصدير PDF
+        </button>
+       <button class="btn-excel" onclick="exportSectionToExcel()">
+    <span>📊</span> تصدير Excel
+</button>
+
+        <button class="btn-print" onclick="printSingleTable('electricity')">
+            <span>🖨️</span> طباعة
+        </button>
+        <button class="btn-save" id="electricity-save-btn" onclick="saveTableData('electricity', true)">
+            <span>💾</span> حفظ
+        </button>
+    </div>
+</div>
+
+<div id="agriculture" class="table-container" style="display: none;" data-title="جدول ح غ 3 - لاسم جدول الغرامات الخاصة بمستوى الأداء لقسم الزراعة بمستشفى ">
+    <div class="table-title">جدول ع 3 - تقييم قسم الزراعة</div>
+    <div class="total-amount">إجمالي المبلغ لأنشطة القسم: <input type="number" id="agriculture-amount" value="0" step="0.01" onchange="updateCertificateFromPerformance()"></div>
+    <table id="agriculture-table">
+        <thead>
+            <tr><th>أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>هل يتم استكمال إجراءات الإدارة والصيانة والإصلاح</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('agriculture'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم استلام بلاغات عاجلة ومعالجتها فورًا</td><td>10</td><td><input type="number" class="editable" value="8" max="100" min="0" onchange="updateTotal('agriculture'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم متابعة أعمال الصيانة الوقائية والطارئة</td><td>6</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('agriculture'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم إتمام أعمال الصيانة حسب الخطط المعتمدة</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('agriculture'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تنفيذ أعمال الصيانة الوقائية بشكل دوري</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('agriculture'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم صيانة شبكات الري والمضخات</td><td>6</td><td><input type="number" class="editable" value="6" max="100" min="0" onchange="updateTotal('agriculture'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم صيانة المسطحات الخضراء والأشجار</td><td>6</td><td><input type="number" class="editable" value="6" max="100" min="0" onchange="updateTotal('agriculture'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم صيانة الحدائق والمزروعات</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('agriculture'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم توفير البيئة المناسبة للنباتات والأشجار</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('agriculture'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يوجد سجل متابعة يومي لأعمال القسم</td><td>6</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('agriculture'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تنظيف المعدات وصيانتها دوريًا</td><td>4</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('agriculture'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تدريب موظفي القسم</td><td>3</td><td><input type="number" class="editable" value="3" max="100" min="0" onchange="updateTotal('agriculture'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم متابعة الأداء اليومي</td><td>3</td><td><input type="number" class="editable" value="3" max="100" min="0" onchange="updateTotal('agriculture'); updateCertificateFromPerformance();"></td></tr>
+            <tr class="total-row"><th>المجموع</th><th>69</th><th id="agriculture-total">64</th></tr>
+        </tbody>
+    </table>
+    <div class="summary-text">
+<p>التقدير الذي حصل عليه المقاول: <span id="agriculture-score">64 من 69</span> (<span id="agriculture-percentage-score">93%</span>)</p>
+        <p>نسبة الحسم للمقاول في هذا القسم: <span id="agriculture-deduction">0%</span></p>
+        <p>مبلغ غرامة الأداء علي المقاول لهذا الجدول: <span id="agriculture-deducted-amount">0</span> ريال سعودي</p>
+    </div>
+    <div class="footer-text"><p>بناءً على ما سبق تم تقييم القسم من خلال لجنة الإشراف والمتابعة حسب المعايير المعتمدة، وتم احتساب المبلغ المستحق بناءً على نسبة التقييم.</p></div>
+    <div class="table-buttons">
+        <button class="btn-add" onclick="openAddModal('agriculture')">
+            <span>➕</span> إضافة بند
+        </button>
+<button class="btn-import-excel" onclick="openExcelImportDialog('agriculture')"><i class="fas fa-file-excel"></i> استيراد Excel</button>
+
+        <button class="btn-edit" onclick="openEditItemDialog('agriculture')">
+            <span>✏️</span> تعديل بند
+        </button>
+        <button class="btn-pdf" onclick="exportToPDF('agriculture')">
+            <span>📄</span> تصدير PDF
+        </button>
+   <button class="btn-excel" onclick="exportSectionToExcel()">
+    <span>📊</span> تصدير Excel
+</button>
+
+        <button class="btn-print" onclick="printSingleTable('agriculture')">
+            <span>🖨️</span> طباعة
+        </button>
+        <button class="btn-save" id="agriculture-save-btn" onclick="saveTableData('agriculture', true)">
+            <span>💾</span> حفظ
+        </button>
+    </div>
+</div>
+
+<div id="civil" class="table-container" style="display: none;" data-title="جدول ح غ 4 - لاسم جدول الغرامات الخاصة بمستوى الأداء لقسم المدني بمستشفى ">
+    <div class="table-title">جدول ع 4 - تقييم قسم المدني</div>
+    <div class="total-amount">إجمالي المبلغ لأنشطة القسم: <input type="number" id="civil-amount" value="0" step="0.01" onchange="updateCertificateFromPerformance()"></div>
+    <table id="civil-table">
+        <thead>
+            <tr><th>أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>هل يتم استكمال إجراءات الإدارة والصيانة والإصلاح</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('civil'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم استلام بلاغات عاجلة ومعالجتها فورًا</td><td>10</td><td><input type="number" class="editable" value="8" max="100" min="0" onchange="updateTotal('civil'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم متابعة أعمال الصيانة الوقائية والطارئة</td><td>6</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('civil'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم إتمام أعمال الصيانة حسب الخطط المعتمدة</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('civil'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تنفيذ أعمال الصيانة الوقائية بشكل دوري</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('civil'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم صيانة المباني والهياكل</td><td>6</td><td><input type="number" class="editable" value="6" max="100" min="0" onchange="updateTotal('civil'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم صيانة الأبواب والنوافذ</td><td>6</td><td><input type="number" class="editable" value="6" max="100" min="0" onchange="updateTotal('civil'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم صيانة الأسقف والجدران</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('civil'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم توفير بيئة آمنة للمرضى والموظفين</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('civil'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يوجد سجل متابعة يومي لأعمال القسم</td><td>6</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('civil'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تنظيف المعدات وصيانتها دوريًا</td><td>4</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('civil'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تدريب موظفي القسم</td><td>3</td><td><input type="number" class="editable" value="3" max="100" min="0" onchange="updateTotal('civil'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم متابعة الأداء اليومي</td><td>3</td><td><input type="number" class="editable" value="3" max="100" min="0" onchange="updateTotal('civil'); updateCertificateFromPerformance();"></td></tr>
+            <tr class="total-row"><th>المجموع</th><th>69</th><th id="civil-total">64</th></tr>
+        </tbody>
+    </table>
+    <div class="summary-text">
+<p>التقدير الذي حصل عليه المقاول: <span id="civil-score">64 من 69</span> (<span id="civil-percentage-score">93%</span>)</p>
+        <p>نسبة الحسم للمقاول في هذا القسم: <span id="civil-deduction">0%</span></p>
+        <p>مبلغ غرامة الأداء علي المقاول لهذا الجدول: <span id="civil-deducted-amount">0</span> ريال سعودي</p>
+    </div>
+    <div class="footer-text"><p>بناءً على ما سبق تم تقييم القسم من خلال لجنة الإشراف والمتابعة حسب المعايير المعتمدة، وتم احتساب المبلغ المستحق بناءً على نسبة التقييم.</p></div>
+    <div class="table-buttons">
+        <button class="btn-add" onclick="openAddModal('civil')">
+            <span>➕</span> إضافة بند
+        </button>
+<button class="btn-import-excel" onclick="openExcelImportDialog('civil')"><i class="fas fa-file-excel"></i> استيراد Excel</button>
+
+        <button class="btn-edit" onclick="openEditItemDialog('civil')">
+            <span>✏️</span> تعديل بند
+        </button>
+        <button class="btn-pdf" onclick="exportToPDF('civil')">
+            <span>📄</span> تصدير PDF
+        </button>
+       <button class="btn-excel" onclick="exportSectionToExcel()">
+    <span>📊</span> تصدير Excel
+</button>
+
+        <button class="btn-print" onclick="printSingleTable('civil')">
+            <span>🖨️</span> طباعة
+        </button>
+        <button class="btn-save" id="civil-save-btn" onclick="saveTableData('civil', true)">
+            <span>💾</span> حفظ
+        </button>
+    </div>
+</div>
+
+<div id="mechanics" class="table-container" style="display: none;" data-title="جدول ح غ 5 - لاسم جدول الغرامات الخاصة بمستوى الأداء لقسم الميكانيكا بمستشفى ">
+    <div class="table-title">جدول ع 5 - تقييم قسم الميكانيكا</div>
+    <div class="total-amount">إجمالي المبلغ لأنشطة القسم: <input type="number" id="mechanics-amount" value="0" step="0.01" onchange="updateCertificateFromPerformance()"></div>
+    <table id="mechanics-table">
+        <thead>
+            <tr><th>أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>هل يتم استكمال إجراءات الإدارة والصيانة والإصلاح</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('mechanics'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم استلام بلاغات عاجلة ومعالجتها فورًا</td><td>10</td><td><input type="number" class="editable" value="8" max="100" min="0" onchange="updateTotal('mechanics'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم متابعة أعمال الصيانة الوقائية والطارئة</td><td>6</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('mechanics'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم إتمام أعمال الصيانة حسب الخطط المعتمدة</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('mechanics'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تنفيذ أعمال الصيانة الوقائية بشكل دوري</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('mechanics'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم صيانة أنظمة التكييف والتبريد</td><td>6</td><td><input type="number" class="editable" value="6" max="100" min="0" onchange="updateTotal('mechanics'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم صيانة أنظمة السباكة والصرف الصحي</td><td>6</td><td><input type="number" class="editable" value="6" max="100" min="0" onchange="updateTotal('mechanics'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم صيانة المضخات والمحركات</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('mechanics'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم توفير بيئة مريحة للمرضى والموظفين</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('mechanics'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يوجد سجل متابعة يومي لأعمال القسم</td><td>6</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('mechanics'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تنظيف المعدات وصيانتها دوريًا</td><td>4</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('mechanics'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تدريب موظفي القسم</td><td>3</td><td><input type="number" class="editable" value="3" max="100" min="0" onchange="updateTotal('mechanics'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم متابعة الأداء اليومي</td><td>3</td><td><input type="number" class="editable" value="3" max="100" min="0" onchange="updateTotal('mechanics'); updateCertificateFromPerformance();"></td></tr>
+            <tr class="total-row"><th>المجموع</th><th>69</th><th id="mechanics-total">64</th></tr>
+        </tbody>
+    </table>
+    <div class="summary-text">
+<p>التقدير الذي حصل عليه المقاول: <span id="mechanics-score">64 من 69</span> (<span id="mechanics-percentage-score">93%</span>)</p>
+        <p>نسبة الحسم للمقاول في هذا القسم: <span id="mechanics-deduction">0%</span></p>
+        <p>مبلغ غرامة الأداء علي المقاول لهذا الجدول: <span id="mechanics-deducted-amount">0</span> ريال سعودي</p>
+    </div>
+    <div class="footer-text"><p>بناءً على ما سبق تم تقييم القسم من خلال لجنة الإشراف والمتابعة حسب المعايير المعتمدة، وتم احتساب المبلغ المستحق بناءً على نسبة التقييم.</p></div>
+    <div class="table-buttons">
+        <button class="btn-add" onclick="openAddModal('mechanics')">
+            <span>➕</span> إضافة بند
+        </button>
+<button class="btn-import-excel" onclick="openExcelImportDialog('mechanics')"><i class="fas fa-file-excel"></i> استيراد Excel</button>
+
+        <button class="btn-edit" onclick="openEditItemDialog('mechanics')">
+            <span>✏️</span> تعديل بند
+        </button>
+        <button class="btn-pdf" onclick="exportToPDF('mechanics')">
+            <span>📄</span> تصدير PDF
+        </button>
+       <button class="btn-excel" onclick="exportSectionToExcel()">
+    <span>📊</span> تصدير Excel
+</button>
+
+        <button class="btn-print" onclick="printSingleTable('mechanics')">
+            <span>🖨️</span> طباعة
+        </button>
+<button class="btn-save" id="mechanics-save-btn" onclick="saveTableData('mechanics', true)">
+            <span>💾</span> حفظ
+        </button>
+    </div>
+</div>
+
+<div id="laundry" class="table-container" style="display: none;" data-title="جدول ح غ 7 - لاسم جدول الغرامات الخاصة بمستوى الأداء لقسم الغسيل بمستشفى ">
+    <div class="table-title">جدول ع 6 - تقييم قسم الغسيل</div>
+    <div class="total-amount">إجمالي المبلغ لأنشطة القسم: <input type="number" id="laundry-amount" value="0" step="0.01" onchange="updateCertificateFromPerformance()"></div>
+    <table id="laundry-table">
+        <thead>
+            <tr><th>أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>هل يتم استكمال إجراءات الإدارة والغسيل</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('laundry'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم استلام بلاغات عاجلة ومعالجتها فورًا</td><td>10</td><td><input type="number" class="editable" value="8" max="100" min="0" onchange="updateTotal('laundry'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم متابعة أعمال الغسيل والكي</td><td>6</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('laundry'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم إتمام أعمال الغسيل حسب الخطط المعتمدة</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('laundry'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تنفيذ أعمال الغسيل بشكل دوري</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('laundry'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم غسيل وتعقيم الملابس والمفروشات</td><td>6</td><td><input type="number" class="editable" value="6" max="100" min="0" onchange="updateTotal('laundry'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم كي وترتيب الملابس والمفروشات</td><td>6</td><td><input type="number" class="editable" value="6" max="100" min="0" onchange="updateTotal('laundry'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم صيانة آلات الغسيل والكي</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('laundry'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم توفير ملابس ومفروشات نظيفة للمرضى</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('laundry'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يوجد سجل متابعة يومي لأعمال القسم</td><td>6</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('laundry'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تنظيف المعدات وصيانتها دوريًا</td><td>4</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('laundry'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تدريب موظفي القسم</td><td>3</td><td><input type="number" class="editable" value="3" max="100" min="0" onchange="updateTotal('laundry'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم متابعة الأداء اليومي</td><td>3</td><td><input type="number" class="editable" value="3" max="100" min="0" onchange="updateTotal('laundry'); updateCertificateFromPerformance();"></td></tr>
+            <tr class="total-row"><th>المجموع</th><th>69</th><th id="laundry-total">64</th></tr>
+        </tbody>
+    </table>
+    <div class="summary-text">
+<p>التقدير الذي حصل عليه المقاول: <span id="laundry-score">64 من 69</span> (<span id="laundry-percentage-score">93%</span>)</p>
+        <p>نسبة الحسم للمقاول في هذا القسم: <span id="laundry-deduction">0%</span></p>
+        <p>مبلغ غرامة الأداء علي المقاول لهذا الجدول: <span id="laundry-deducted-amount">0</span> ريال سعودي</p>
+    </div>
+    <div class="footer-text"><p>بناءً على ما سبق تم تقييم القسم من خلال لجنة الإشراف والمتابعة حسب المعايير المعتمدة، وتم احتساب المبلغ المستحق بناءً على نسبة التقييم.</p></div>
+    <div class="table-buttons">
+        <button class="btn-add" onclick="openAddModal('laundry')">
+            <span>➕</span> إضافة بند
+        </button>
+<button class="btn-import-excel" onclick="openExcelImportDialog('laundry')"><i class="fas fa-file-excel"></i> استيراد Excel</button>
+
+        <button class="btn-edit" onclick="openEditItemDialog('laundry')">
+            <span>✏️</span> تعديل بند
+        </button>
+        <button class="btn-pdf" onclick="exportToPDF('laundry')">
+            <span>📄</span> تصدير PDF
+        </button>
+       <button class="btn-excel" onclick="exportSectionToExcel()">
+    <span>📊</span> تصدير Excel
+</button>
+
+        <button class="btn-print" onclick="printSingleTable('laundry')">
+            <span>🖨️</span> طباعة
+        </button>
+        <button class="btn-save" id="laundry-save-btn" onclick="saveTableData('laundry', true)">
+            <span>💾</span> حفظ
+        </button>
+    </div>
+</div>
+
+<div id="security" class="table-container" style="display: none;" data-title="جدول ح غ 6 - لاسم جدول الغرامات الخاصة بمستوى الأداء لقسم الأمن بمستشفى">
+    <div class="table-title">جدول ع 7 - تقييم قسم الأمن</div>
+    <div class="total-amount">إجمالي المبلغ لأنشطة القسم: <input type="number" id="security-amount" value="0" step="0.01" onchange="updateCertificateFromPerformance()"></div>
+    <table id="security-table">
+        <thead>
+            <tr><th>أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>هل يتم استكمال إجراءات الإدارة والأمن</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('security'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم استلام بلاغات عاجلة ومعالجتها فورًا</td><td>10</td><td><input type="number" class="editable" value="8" max="100" min="0" onchange="updateTotal('security'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم متابعة أعمال الأمن والحراسة</td><td>6</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('security'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم إتمام أعمال الأمن حسب الخطط المعتمدة</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('security'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تنفيذ أعمال الحراسة بشكل دوري</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('security'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم مراقبة المداخل والمخارج</td><td>6</td><td><input type="number" class="editable" value="6" max="100" min="0" onchange="updateTotal('security'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تنظيم حركة المرور والمواقف</td><td>6</td><td><input type="number" class="editable" value="6" max="100" min="0" onchange="updateTotal('security'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم صيانة أنظمة المراقبة والإنذار</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('security'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم توفير بيئة آمنة للمرضى والموظفين</td><td>5</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('security'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يوجد سجل متابعة يومي لأعمال القسم</td><td>6</td><td><input type="number" class="editable" value="5" max="100" min="0" onchange="updateTotal('security'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تنظيف المعدات وصيانتها دوريًا</td><td>4</td><td><input type="number" class="editable" value="4" max="100" min="0" onchange="updateTotal('security'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم تدريب موظفي القسم</td><td>3</td><td><input type="number" class="editable" value="3" max="100" min="0" onchange="updateTotal('security'); updateCertificateFromPerformance();"></td></tr>
+            <tr><td>هل يتم متابعة الأداء اليومي</td><td>3</td><td><input type="number" class="editable" value="3" max="100" min="0" onchange="updateTotal('security'); updateCertificateFromPerformance();"></td></tr>
+            <tr class="total-row"><th>المجموع</th><th>69</th><th id="security-total">64</th></tr>
+        </tbody>
+    </table>
+    <div class="summary-text">
+<p>التقدير الذي حصل عليه المقاول: <span id="security-score">64 من 69</span> (<span id="security-percentage-score">93%</span>)</p>
+        <p>نسبة الحسم للمقاول في هذا القسم: <span id="security-deduction">0%</span></p>
+        <p>مبلغ غرامة الأداء علي المقاول لهذا الجدول: <span id="security-deducted-amount">0</span> ريال سعودي</p>
+    </div>
+    <div class="footer-text"><p>بناءً على ما سبق تم تقييم القسم من خلال لجنة الإشراف والمتابعة حسب المعايير المعتمدة، وتم احتساب المبلغ المستحق بناءً على نسبة التقييم.</p></div>
+    <div class="table-buttons">
+        <button class="btn-add" onclick="openAddModal('security')">
+            <span>➕</span> إضافة بند
+        </button>
+<button class="btn-import-excel" onclick="openExcelImportDialog('security')"><i class="fas fa-file-excel"></i> استيراد Excel</button>
+
+        <button class="btn-edit" onclick="openEditItemDialog('security')">
+            <span>✏️</span> تعديل بند
+        </button>
+        <button class="btn-pdf" onclick="exportToPDF('security')">
+            <span>📄</span> تصدير PDF
+        </button>
+        <button class="btn-excel" onclick="exportSectionToExcel()">
+    <span>📊</span> تصدير Excel
+</button>
+
+        <button class="btn-print" onclick="printSingleTable('security')">
+            <span>🖨️</span> طباعة
+        </button>
+        <button class="btn-save" id="security-save-btn" onclick="saveTableData('security', true)">
+            <span>💾</span> حفظ
+        </button>
+    </div>
+</div>
+
+        <div id="certificate" class="table-container" data-title="شهادة الأداء الشهري">
+            <div class="table-title">شهادة الأداء الشهري</div>
+           
+            <div class="total-amount">إجمالي المبلغ المستحق: <span id="certificate-total-amount">0</span> ريال</div>
+            <table id="certificate-table">
+                <thead>
+                    <tr><th>القسم</th><th>المبلغ المخصص</th><th>التقدير</th><th>النسبة المئوية</th><th>المبلغ المستحق</th></tr>
+                </thead>
+                <tbody>
+    <!-- التعديل هنا: تمت إضافة id لكل اسم قسم -->
+    <tr><td id="cert-item-name-cleaning">قسم النظافة</td><td id="cleaning-allocated">0</td><td id="cleaning-certificate-score">79/88</td><td id="cleaning-percentage">90%</td><td id="cleaning-due">0</td></tr>
+    <tr><td id="cert-item-name-electricity">قسم الكهرباء</td><td id="electricity-allocated">0</td><td id="electricity-certificate-score">64/69</td><td id="electricity-percentage">93%</td><td id="electricity-due">0</td></tr>
+    <tr><td id="cert-item-name-agriculture">قسم الزراعة</td><td id="agriculture-allocated">0</td><td id="agriculture-certificate-score">64/69</td><td id="agriculture-percentage">93%</td><td id="agriculture-due">0</td></tr>
+    <tr><td id="cert-item-name-civil">قسم المدني</td><td id="civil-allocated">0</td><td id="civil-certificate-score">64/69</td><td id="civil-percentage">93%</td><td id="civil-due">0</td></tr>
+    <tr><td id="cert-item-name-mechanics">قسم الميكانيكا</td><td id="mechanics-allocated">0</td><td id="mechanics-certificate-score">64/69</td><td id="mechanics-percentage">93%</td><td id="mechanics-due">0</td></tr>
+    <tr><td id="cert-item-name-laundry">قسم الغسيل</td><td id="laundry-allocated">0</td><td id="laundry-certificate-score">64/69</td><td id="laundry-percentage">93%</td><td id="laundry-due">0</td></tr>
+    <tr><td id="cert-item-name-security">قسم الأمن</td><td id="security-allocated">0</td><td id="security-certificate-score">64/69</td><td id="security-percentage">93%</td><td id="security-due">0</td></tr>
+    <!-- يمكنك إضافة صف لجدول 8 هنا إذا احتجت لذلك مستقبلاً -->
+    <!-- <tr><td id="cert-item-name-new_section_8">قسم جديد 8</td> ... </tr> -->
+
+    <tr class="total-row"><th>المجموع</th><th id="total-allocated">0</th><th>-</th><th>-</th><th id="total-due">0</th></tr>
+</tbody>
+
+            </table>
+            <div class="summary-text">
+                <p>إجمالي المبلغ المستحق للمقاول: <span id="total-due-text">صفر</span> ريال سعودي</p>
+                <p>المبلغ كتابة: <span id="total-due-text-arabic">فقط صفر ريال سعودي لا غير</span></p>
+                <p>إجمالي غرامة الأداء: <span id="total-deducted-amount">0</span> ريال سعودي</p>
+            </div>
+            <div class="footer-text"><p>بناءً على ما سبق تم تقييم أداء المقاول من خلال لجنة الإشراف والمتابعة حسب المعايير المعتمدة، وتم احتساب المبلغ المستحق بناءً على نسبة التقييم.</p></div>
+            <div class="table-buttons">
+                <button class="btn-pdf" onclick="exportToPDF('certificate')">
+                    <span>📄</span> تصدير PDF
+                </button>
+               <button class="btn-excel" onclick="exportSectionToExcel()">
+    <span>📊</span> تصدير Excel
+</button>
+
+                <button class="btn-print" onclick="printSingleTable('certificate')">
+                    <span>🖨️</span> طباعة
+                </button>
+            </div>
+        </div>
+    </div>
+
+   <!-- قسم التواقيع اليدوي -->
+<div class="signatures-section" style="margin: 30px 0; padding: 20px; border-top: 2px solid #ddd;">
+    <h3 style="text-align: center; margin-bottom: 20px;">التواقيع</h3>
+    <div class="signatures-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0;">
+        <div class="signature-item" style="text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+            <div class="signature-title" style="font-weight: bold; margin-bottom: 10px;">مدير المشروع:</div>
+            <div class="signature-line" style="border-bottom: 1px solid #000; height: 40px; margin: 10px 0;"></div>
+            <div class="signature-name" id="display-projectManager" style="font-size: 14px; margin-top: 5px;">غير محدد</div>
+        </div>
+        <div class="signature-item" style="text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+            <div class="signature-title" style="font-weight: bold; margin-bottom: 10px;">مدير الإدارة الهندسية:</div>
+            <div class="signature-line" style="border-bottom: 1px solid #000; height: 40px; margin: 10px 0;"></div>
+            <div class="signature-name" id="display-engineeringManager" style="font-size: 14px; margin-top: 5px;">غير محدد</div>
+        </div>
+        <div class="signature-item" style="text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+            <div class="signature-title" style="font-weight: bold; margin-bottom: 10px;">مدير المستشفى:</div>
+            <div class="signature-line" style="border-bottom: 1px solid #000; height: 40px; margin: 10px 0;"></div>
+            <div class="signature-name" id="display-hospitalManager" style="font-size: 14px; margin-top: 5px;">غير محدد</div>
+        </div>
+        <div class="signature-item" style="text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+            <div class="signature-title" style="font-weight: bold; margin-bottom: 10px;">محاسب المستشفى:</div>
+            <div class="signature-line" style="border-bottom: 1px solid #000; height: 40px; margin: 10px 0;"></div>
+            <div class="signature-name" id="display-hospitalAccountant" style="font-size: 14px; margin-top: 5px;">غير محدد</div>
+        </div>
+        <div class="signature-item" style="text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+            <div class="signature-title" style="font-weight: bold; margin-bottom: 10px;">مندوب المقاول:</div>
+            <div class="signature-line" style="border-bottom: 1px solid #000; height: 40px; margin: 10px 0;"></div>
+            <div class="signature-name" id="display-contractorRepresentative" style="font-size: 14px; margin-top: 5px;">غير محدد</div>
+        </div>
+    </div>
+</div>
+
+<!-- نافذة تعديل التواقيع (النسخة النهائية والمحسنة) -->
+<div id="signature-edit-dialog" class="edit-dialog" style="display: none;">
+    <div id="signature-password-section">
+        <h3>أدخل الباسورد</h3>
+        <input type="password" id="signature-password-input" placeholder="الباسورد">
+        <p id="signature-password-error" style="color: red;"></p>
+        <button class="confirm-btn" onclick="verifySignaturePassword()">تأكيد</button>
+        <button class="cancel-btn" onclick="closeSignatureEditDialog()">إلغاء</button>
+    </div>
+
+    <!-- هذا هو الجزء المحدث الذي يحتوي على زر الإضافة -->
+    <div id="signature-edit-content" style="display: none;">
+        <h3 style="text-align: center; color: #007bff; margin-bottom: 20px;">إدارة التواقيع</h3>
+        
+        <!-- الحاوية التي ستحمل قائمة التواقيع القابلة للتعديل -->
+        <div id="signature-fields-container" style="margin-bottom: 20px;">
+            <!-- سيتم ملء التواقيع هنا بواسطة JavaScript -->
+        </div>
+        
+        <!-- ============== زر الإضافة الذي تبحث عنه ============== -->
+        <button class="btn-add" onclick="addSignatureField()" style="margin-bottom: 20px; width: 100%; justify-content: center;">
+            <i class="fas fa-plus-circle"></i>&nbsp; إضافة توقيع جديد
+        </button>
+        <!-- ======================================================= -->
+        
+        <!-- أزرار الحفظ والإلغاء -->
+        <div class="dialog-buttons" style="text-align: center;">
+            <button class="confirm-btn" onclick="saveSignatures()">
+                <i class="fas fa-save"></i> حفظ جميع التغييرات
+            </button>
+            <button class="cancel-btn" onclick="closeSignatureEditDialog()">
+                <i class="fas fa-times-circle"></i> إلغاء
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Overlay جديد لهذه النافذة -->
+<div id="signature-edit-overlay" class="overlay" style="display: none;"></div>
+<!-- ================================================== -->
+<!-- === نافذة تعديل أسماء الجداول (الكود الجديد) === -->
+<!-- ================================================== -->
+<div id="table-names-overlay" class="overlay"></div>
+<div id="table-names-dialog" class="edit-dialog">
+    <h3 style="text-align: center; color: #6f42c1;">تعديل أسماء الجداول</h3>
+    <p style="text-align: center; color: #6c757d; margin-top: -10px; margin-bottom: 20px;">يمكنك تغيير العناوين التي تظهر فوق كل جدول.</p>
+    
+    <div id="table-names-form-container">
+        <!-- سيتم ملء الحقول هنا بواسطة JavaScript -->
+        <p>جاري تحميل أسماء الجداول...</p>
+    </div>
+
+    <div class="dialog-buttons" style="text-align: center; margin-top: 20px;">
+        <button class="confirm-btn" onclick="saveTableNames()">
+            <i class="fas fa-save"></i> حفظ الأسماء
+        </button>
+        <button class="cancel-btn" onclick="closeEditTableNamesDialog()">
+            <i class="fas fa-times-circle"></i> إلغاء
+        </button>
+    </div>
+</div>
+
+<script src="/original/track.js"></script>
+</body>
+</html><script>
+
+function navigateTo(page) {
+    if (page && page !== '#') {
+        window.location.href = page;
+    }
+}
+function getDeductionByPerformance(percentage) {
+    if (percentage >= 86 && percentage <= 100) return 0;
+    if (percentage === 85) return 1;
+    if (percentage === 84) return 2;
+    if (percentage === 83) return 2.5;
+    if (percentage === 82) return 3;
+    if (percentage === 81) return 3.5;
+    if (percentage === 80) return 4;
+    if (percentage === 79) return 4.75;
+    if (percentage === 78) return 5.5;
+    if (percentage === 77) return 5.75;
+    if (percentage === 76) return 6;
+    if (percentage === 75) return 6.25;
+    if (percentage === 74) return 6.5;
+    if (percentage === 73) return 6.75;
+    if (percentage === 72) return 7;
+    if (percentage === 71) return 7.25;
+    if (percentage === 70) return 7.5;
+    if (percentage === 69) return 7.75;
+    if (percentage === 68) return 8;
+    if (percentage === 67) return 8.25;
+    if (percentage === 66) return 8.5;
+    if (percentage === 65) return 8.75;
+    if (percentage === 64) return 9;
+    if (percentage === 63) return 9.25;
+    if (percentage === 62) return 9.5;
+    if (percentage === 61) return 9.75;
+    if (percentage === 60) return 10;
+    if (percentage === 59) return 11;
+    if (percentage === 58) return 12;
+    if (percentage === 57) return 13;
+    if (percentage === 56) return 14;
+    if (percentage === 55) return 15;
+    if (percentage === 54) return 16;
+    if (percentage === 53) return 17;
+    if (percentage === 52) return 18;
+    if (percentage === 51) return 19;
+    if (percentage <= 50) return 20;
+    return 0;
+}
+function tafqitSAR(number) {
+    // افصل الأجزاء
+    let integerPart = Math.floor(number);
+    let decimalPart = Math.round((number - integerPart) * 100);
+
+    // تفقيط الجزء الصحيح
+    let intText = integerPart > 0 ? toArabicWords(integerPart) + " ريال" + (integerPart !== 1 ? "ات" : "") : "";
+
+    // تفقيط الجزء الكسري
+    let decText = "";
+    if (decimalPart > 0) {
+        decText = toArabicWords(decimalPart) + " هللة" + (decimalPart !== 1 ? "" : "");
+    }
+
+    let finalText = "فقط ";
+    if (intText && decText) {
+        finalText += intText + " و" + decText + " لا غير";
+    } else if (intText) {
+        finalText += intText + " لا غير";
+    } else if (decText) {
+        finalText += decText + " لا غير";
+    } else {
+        finalText += "صفر ريال سعودي لا غير";
+    }
+    return finalText;
+}
+
+// دالة التفقيط للأرقام العربية (تدعم الآلاف والملايين)
+function toArabicWords(number) {
+    const ones = ["", "واحد", "اثنان", "ثلاثة", "أربعة", "خمسة", "ستة", "سبعة", "ثمانية", "تسعة"];
+    const tens = ["", "عشرة", "عشرون", "ثلاثون", "أربعون", "خمسون", "ستون", "سبعون", "ثمانون", "تسعون"];
+    const teens = ["", "أحد عشر", "اثنا عشر", "ثلاثة عشر", "أربعة عشر", "خمسة عشر", "ستة عشر", "سبعة عشر", "ثمانية عشر", "تسعة عشر"];
+    const hundreds = ["", "مائة", "مائتان", "ثلاثمائة", "أربعمائة", "خمسمائة", "ستمائة", "سبعمائة", "ثمانمائة", "تسعمائة"];
+    const thousands = ["", "ألف", "ألفان", "آلاف", "ألف"];
+
+    if (number === 0) return "صفر";
+    if (number < 10) return ones[number];
+    if (number < 20) return teens[number - 10];
+    if (number < 100) {
+        const unit = number % 10;
+        const ten = Math.floor(number / 10);
+        return (unit ? ones[unit] + " و" : "") + tens[ten];
+    }
+    if (number < 1000) {
+        const hundred = Math.floor(number / 100);
+        const remainder = number % 100;
+        return (hundreds[hundred] + (remainder ? " و" + toArabicWords(remainder) : ""));
+    }
+    if (number < 1000000) {
+        const thousandsNum = Math.floor(number / 1000);
+        const remainder = number % 1000;
+        let thousandsText = "";
+        if (thousandsNum === 1) {
+            thousandsText = "ألف";
+        } else if (thousandsNum === 2) {
+            thousandsText = "ألفان";
+        } else if (thousandsNum >= 3 && thousandsNum <= 10) {
+            thousandsText = ones[thousandsNum] + " آلاف";
+        } else if (thousandsNum > 10) {
+            thousandsText = toArabicWords(thousandsNum) + " ألف";
+        }
+        return thousandsText + (remainder ? " و" + toArabicWords(remainder) : "");
+    }
+    if (number < 1000000000) {
+        const millionsNum = Math.floor(number / 1000000);
+        const remainder = number % 1000000;
+        let millionsText = "";
+        if (millionsNum === 1) {
+            millionsText = "مليون";
+        } else if (millionsNum === 2) {
+            millionsText = "مليونان";
+        } else if (millionsNum >= 3 && millionsNum <= 10) {
+            millionsText = ones[millionsNum] + " ملايين";
+        } else if (millionsNum > 10) {
+            millionsText = toArabicWords(millionsNum) + " مليون";
+        }
+        return millionsText + (remainder ? " و" + toArabicWords(remainder) : "");
+    }
+    return number.toString();
+}
+
+// ✅✅✅ استبدل دالة updateTotal القديمة بالكامل بهذه النسخة الجديدة ✅✅✅
+function updateTotal(tableId) {
+    const table = document.getElementById(tableId + '-table');
+    if (!table) return;
+
+    let totalScore = 0;
+    let totalMaxScore = 0;
+
+    // 1. المرور على كل الصفوف لحساب كلا المجموعين من جديد
+    const rows = table.querySelectorAll('tbody tr:not(.total-row)');
+    rows.forEach(row => {
+        const maxScoreCell = row.cells[1];
+        const scoreInput = row.cells[2].querySelector('input.editable');
+
+        if (maxScoreCell) {
+            totalMaxScore += parseInt(maxScoreCell.textContent) || 0;
+        }
+        if (scoreInput) {
+            totalScore += parseInt(scoreInput.value) || 0;
+        }
+    });
+
+    // 2. تحديث صف المجموع في الجدول بالقيم الصحيحة
+    const totalRow = table.querySelector('.total-row');
+    if (totalRow) {
+        const maxScoreTotalCell = totalRow.cells[1]; // الخلية الثانية في صف المجموع
+        const scoreTotalCell = totalRow.cells[2];   // الخلية الثالثة في صف المجموع
+        
+        if (maxScoreTotalCell) maxScoreTotalCell.textContent = totalMaxScore;
+        if (scoreTotalCell) scoreTotalCell.textContent = totalScore;
+    }
+
+    // 3. تحديث ملخص الأداء تحت الجدول بالقيم الصحيحة
+    const scoreElement = document.getElementById(tableId + '-score');
+    const percentageElement = document.getElementById(tableId + '-percentage-score');
+
+    if (scoreElement) {
+        scoreElement.textContent = `${totalScore} من ${totalMaxScore}`;
+    }
+
+    if (percentageElement) {
+        const percentage = totalMaxScore > 0 ? ((totalScore / totalMaxScore) * 100) : 0;
+        percentageElement.textContent = percentage.toFixed(2) + '%';
+    }
+
+    // 4. استدعاء باقي الدوال الحسابية
+    updateDeduction(tableId, totalScore);
+    updateCertificateFromPerformance();
+
+    // 5. إظهار زر الحفظ
+    const saveButton = document.getElementById(tableId + '-save-btn');
+    if (saveButton) {
+        saveButton.style.display = 'inline-block';
+    }
+}
+
+function updateDeduction(tableId, total) {
+    // إذا كان الجدول هو شهادة الأداء، فلا داعي لحساب الخصم هنا
+    // لأن شهادة الأداء تجمع الخصومات من الجداول الأخرى
+    if (tableId === 'certificate') {
+        return;
+    }
+
+    const maxTotal = getMaxTotal(tableId);
+    // تجنب القسمة على صفر إذا كانت الدرجة القصوى الإجمالية صفر
+    const percentage = (maxTotal > 0) ? (total / maxTotal) * 100 : 0;
+    
+    // حساب نسبة الحسم بناءً على الأداء
+    const deduction = getDeductionByPerformance(Math.floor(percentage));
+    
+    // الحصول على عنصر عرض نسبة الحسم
+    const deductionElement = document.getElementById(tableId + '-deduction');
+    
+    // الحصول على حقل إدخال المبلغ المخصص للقسم
+    const amountInput = document.getElementById(tableId + '-amount');
+    
+    let amount = 0;
+    // التحقق من وجود حقل الإدخال قبل محاولة قراءة قيمته
+    if (amountInput) {
+        amount = parseFloat(amountInput.value) || 0;
+    } else {
+        // رسالة تحذير في الكونسول إذا لم يتم العثور على العنصر
+        console.warn(`العنصر ${tableId}-amount غير موجود. قد يؤثر على الحسابات.`);
+    }
+
+    // حساب المبلغ المخصوم فعلياً
+    const deductedAmount = (deduction / 100) * amount;
+    
+    // تحديث عرض نسبة الحسم والمبلغ المخصوم في الصفحة
+    if (deductionElement) {
+        deductionElement.textContent = deduction + '%';
+        const deductedAmountElement = document.getElementById(tableId + '-deducted-amount');
+        if (deductedAmountElement) {
+            deductedAmountElement.textContent = deductedAmount.toFixed(2);
+        }
+    }
+}
+function getMaxTotal(tableId) {
+    const table = document.getElementById(tableId + '-table');
+    if (!table) return 0; // إذا لم يتم العثور على الجدول، أعد 0 لتجنب القسمة على صفر
+    
+    let totalMaxScore = 0;
+    // ابحث عن جميع صفوف البنود (غير صف الإجمالي)
+    const rows = table.querySelectorAll('tbody tr:not(.total-row)');
+    
+    rows.forEach(row => {
+        // الدرجة القصوى هي في الخلية الثانية (index 1)
+        const maxScoreCell = row.cells[1];
+        totalMaxScore += parseInt(maxScoreCell.textContent) || 0;
+    });
+    
+    return totalMaxScore;
+}
+// =================================================================================
+// == الدالة الجديدة والمطورة لشهادة الأداء (الحل المتكامل) ==
+// =================================================================================
+function updateCertificateFromPerformance() {
+    // قائمة بجميع الجداول الممكنة في النظام
+    const allPossibleDepartments = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'laundry', 'security', 'new_section_8']; // أضف أي جداول مستقبلية هنا
+
+    let totalAllocated = 0;
+    let totalDue = 0;
+    let totalDeducted = 0;
+
+    allPossibleDepartments.forEach(dept => {
+        // الحصول على العناصر الخاصة بكل قسم
+        const amountInput = document.getElementById(dept + '-amount');
+        const certificateRow = document.getElementById('cert-item-name-' + dept)?.parentElement; // الحصول على صف الجدول (tr) بأكمله
+
+        // إذا لم يكن الصف موجودًا في شهادة الأداء، نتجاهله وننتقل للتالي
+        if (!certificateRow) {
+            return;
+        }
+
+        // قراءة المبلغ المخصص من حقل الإدخال
+        const amount = amountInput ? parseFloat(amountInput.value) || 0 : 0;
+
+        // *** الجزء الذكي الأول: إخفاء الصفوف الفارغة ***
+        // إذا كان المبلغ صفرًا، قم بإخفاء الصف بالكامل وانتقل للقسم التالي
+        if (amount === 0) {
+            certificateRow.style.display = 'none'; // إخفاء الصف
+            return; // الخروج من هذه الدورة والانتقال للقسم التالي
+        }
+        
+        // إذا كان المبلغ ليس صفرًا، تأكد من أن الصف ظاهر
+        certificateRow.style.display = ''; // إظهار الصف (يزيل أي 'none' سابق)
+
+        // *** الجزء الذكي الثاني: تحديث الأسماء تلقائيًا ***
+        // قراءة العنوان الحالي للجدول من الصفحة مباشرة
+        const tableTitleElement = document.querySelector(`#${dept} .table-title`);
+        const currentTitle = tableTitleElement ? tableTitleElement.textContent : 'اسم غير محدد';
+        
+        // تحديث اسم البند في شهادة الأداء
+        const certificateItemNameElement = document.getElementById('cert-item-name-' + dept);
+        if (certificateItemNameElement) {
+            certificateItemNameElement.textContent = currentTitle;
+        }
+
+        // --- استكمال الحسابات كالمعتاد ---
+        const scoreElement = document.getElementById(dept + '-total');
+        const score = parseInt(scoreElement?.textContent) || 0;
+        const maxScore = getMaxTotal(dept);
+        const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
+        const deductionElement = document.getElementById(dept + '-deducted-amount');
+        const actualDeduction = deductionElement ? parseFloat(deductionElement.textContent) || 0 : 0;
+        const due = amount - actualDeduction;
+
+        // تحديث باقي خلايا الصف في شهادة الأداء
+        document.getElementById(dept + '-allocated').textContent = amount.toFixed(2);
+        document.getElementById(dept + '-certificate-score').textContent = score + '/' + maxScore;
+        document.getElementById(dept + '-percentage').textContent = percentage.toFixed(0) + '%';
+        document.getElementById(dept + '-due').textContent = due.toFixed(2);
+
+        // إضافة للإجماليات
+        totalAllocated += amount;
+        totalDue += due;
+        totalDeducted += actualDeduction;
+    });
+
+    // تحديث الإجماليات النهائية في شهادة الأداء
+    document.getElementById('total-allocated').textContent = totalAllocated.toFixed(2);
+    document.getElementById('total-due').textContent = totalDue.toFixed(2);
+    document.getElementById('certificate-total-amount').textContent = totalDue.toFixed(2);
+    document.getElementById('total-due-text').textContent = totalDue.toFixed(2);
+    document.getElementById('total-due-text-arabic').textContent = tafqitSAR(totalDue);
+    document.getElementById('total-deducted-amount').textContent = totalDeducted.toFixed(2);
+
+    // حفظ البيانات الهامة في localStorage
+    localStorage.setItem('performanceTotalDeduction', totalDeducted.toFixed(2));
+}
+
+// =================================================================
+// == دالة تحميل البيانات (نسخة مُصححة لمنع اختفاء البنود) ==
+// =================================================================
+function loadTableData(tableId) {
+    console.log(`بدء تحميل بيانات الجدول: ${tableId}`);
+    try {
+        const savedDataJSON = localStorage.getItem(`tableData_${tableId}`);
+        const table = document.getElementById(tableId + '-table');
+        if (!table) {
+            console.error(`الجدول ${tableId} غير موجود`);
+            return;
+        }
+        const tbody = table.querySelector('tbody');
+        const totalRow = tbody.querySelector('.total-row');
+
+        // **الجزء المُصحح**: لن نمسح البنود إلا إذا وجدنا بيانات محفوظة
+        if (savedDataJSON) {
+            const savedData = JSON.parse(savedDataJSON);
+
+            // 1. مسح البنود القديمة فقط إذا كانت هناك بيانات محفوظة
+            let currentRow = tbody.firstElementChild;
+            while (currentRow && currentRow !== totalRow) {
+                const nextRow = currentRow.nextElementSibling;
+                tbody.removeChild(currentRow);
+                currentRow = nextRow;
+            }
+
+            // 2. بناء الجدول من البيانات المحفوظة
+            savedData.rows.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.activity}</td>
+                    <td>${item.maxScore}</td>
+                    <td><input type="number" class="editable" value="${item.score}" max="${item.maxScore}" min="0" onchange="updateTotal('${tableId}');"></td>
+                `;
+                tbody.insertBefore(tr, totalRow);
+            });
+
+            // 3. تحميل المبلغ المخصص
+            const amountInput = document.getElementById(tableId + '-amount');
+            if (amountInput && savedData.amount !== undefined) {
+                amountInput.value = savedData.amount;
+            }
+        }
+        // **نهاية الجزء المُصحح**
+
+        // تحديث كل الحسابات بناءً على البيانات الموجودة الآن (سواء من HTML أو الذاكرة)
+        updateTotal(tableId);
+        updateCertificateFromPerformance();
+
+    } catch (error) {
+        console.error(`خطأ في تحميل بيانات الجدول ${tableId}:`, error);
+    }
+}
+
+/**
+ * ===================================================================
+ *      ===>   الخطوة 3: تحديث مبلغ القسم (النسخة النهائية)   <===
+ * ===================================================================
+ */
+function updateTotalAmount(tableId) {
+    if (tableId === 'certificate') return;
+
+    const departmentMap = {
+        'cleaning': { key: 'cleaning' },
+        'electricity': { key: 'electricity' },
+        'agriculture': { key: 'agriculture' },
+        'civil': { key: 'civil_works' },
+        'mechanics': { key: 'mechanical' },
+        'laundry': { key: 'laundry' },
+        'security': { key: 'patient_services' }
+    };
+    const deptInfo = departmentMap[tableId];
+    if (!deptInfo) return;
+
+    try {
+        // 1. قراءة الإعدادات الشاملة
+        const settings = JSON.parse(localStorage.getItem('distributionSettings')) || { hasProjectManager: false, activeDepartments: [] };
+        let pmFullSalary = 0;
+
+        // 2. حساب راتب المدير (فقط إذا كان الإعداد "نعم")
+        if (settings.hasProjectManager === true) {
+            const attendanceData = JSON.parse(localStorage.getItem('attendanceData') || '{}');
+            const electricityData = attendanceData['electricity'] || [];
+            if (electricityData.length > 0) {
+                const pmEmp = electricityData[0];
+                const pmSalary = parseFloat(pmEmp.salary) || 0;
+                const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+                const contractType = contractData.contractType || 'عقد أساسي';
+                const directPurchaseRatio = parseFloat(contractData.directPurchaseRatio) || 0;
+                let pmAdjustedSalary = pmSalary;
+                if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) {
+                    pmAdjustedSalary += (pmSalary * directPurchaseRatio / 100);
+                }
+                const { daysInMonth, totalDaysInMonth } = getExtractPeriodDetails();
+                const pmDailySalary = (totalDaysInMonth > 0) ? pmAdjustedSalary / totalDaysInMonth : 0;
+                pmFullSalary = pmDailySalary * daysInMonth;
+            }
+        }
+
+        // 3. العد التلقائي للأقسام النشطة (باستثناء الكهرباء)
+        const divisionCount = settings.activeDepartments.filter(key => key !== 'electricity').length;
+        const distributedShare = (pmFullSalary > 0 && divisionCount > 0) ? pmFullSalary / divisionCount : 0;
+
+        // 4. حساب التكلفة النهائية للقسم
+        let finalAmountForSection = parseFloat(localStorage.getItem(`deptCalculatedCost_${deptInfo.key}`)) || 0;
+
+        // 5. تطبيق منطق الخصم والإضافة بناءً على الإعدادات
+        if (settings.hasProjectManager === true) {
+            if (deptInfo.key === 'electricity') {
+                finalAmountForSection -= pmFullSalary; // خصم الراتب الكامل من الكهرباء
+            } else if (settings.activeDepartments.includes(deptInfo.key)) {
+                // أضف الحصة فقط إذا كان القسم نشطًا
+                finalAmountForSection += distributedShare;
+            }
+        }
+
+        // 6. تحديث الواجهة
+        const amountInput = document.getElementById(tableId + '-amount');
+        if (amountInput) {
+            amountInput.value = finalAmountForSection.toFixed(2);
+        }
+        
+    } catch (error) {
+        console.error(`خطأ في تحديث مبلغ القسم ${tableId}:`, error);
+    }
+}
+/**
+ * ===================================================================
+ *      ===>   دالة إخفاء/إظهار بطاقات الأقسام (النسخة النهائية)   <===
+ * ===================================================================
+ * @description يقرأ الإعدادات ويخفي بطاقات الأقسام غير النشطة.
+ */
+function applyDisplaySettingsToCards() {
+    console.log("تطبيق إعدادات العرض على البطاقات...");
+
+    // 1. قراءة الإعدادات
+    const settings = JSON.parse(localStorage.getItem('distributionSettings')) || {
+        hasProjectManager: false,
+        activeDepartments: []
+    };
+    const activeDepts = settings.activeDepartments;
+
+    // 2. خريطة لربط ID الجدول في HTML بمفتاح القسم في الإعدادات
+    const departmentMap = {
+        'cleaning': 'cleaning',
+        'electricity': 'electricity',
+        'agriculture': 'agriculture',
+        'civil': 'civil_works',
+        'mechanics': 'mechanical',
+        'laundry': 'laundry',
+        'security': 'patient_services'
+    };
+
+    // 3. المرور على كل بطاقة قسم وتحديد مصيرها
+    document.querySelectorAll('.sections-container .section-card').forEach(card => {
+        const onclickAttr = card.getAttribute('onclick');
+        if (!onclickAttr) return;
+
+        // استخراج ID الجدول من خاصية onclick (مثال: 'cleaning' من "toggleTable('cleaning')")
+        const tableId = onclickAttr.match(/'([^']+)'/)[1];
+        
+        // تجاهل بطاقة شهادة الأداء
+        if (tableId === 'certificate') {
+            return;
+        }
+
+        const deptKey = departmentMap[tableId];
+
+        // 4. إظهار أو إخفاء البطاقة
+        if (activeDepts.includes(deptKey)) {
+            card.style.display = 'flex'; // أظهر البطاقة
+        } else {
+            card.style.display = 'none'; // أخفِ البطاقة
+        }
+    });
+}
+
+/**
+ * ===================================================================
+ *      ===>   دالة تبديل الجداول (النسخة النهائية والذكية)   <===
+ * ===================================================================
+ */
+function toggleTable(tableId) {
+    // 1. قراءة الإعدادات لمعرفة أي الجداول يجب أن تكون ظاهرة
+    const settings = JSON.parse(localStorage.getItem('distributionSettings')) || { activeDepartments: [] };
+    const activeDepts = settings.activeDepartments;
+
+    const departmentMap = {
+        'cleaning': 'cleaning',
+        'electricity': 'electricity',
+        'agriculture': 'agriculture',
+        'civil': 'civil_works',
+        'mechanics': 'mechanical',
+        'laundry': 'laundry',
+        'security': 'patient_services'
+    };
+
+    // 2. إخفاء جميع الجداول أولاً
+    document.querySelectorAll('.table-container').forEach(table => {
+        table.style.display = 'none';
+    });
+
+    // 3. إظهار الجدول الذي تم النقر عليه فقط
+    const selectedTable = document.getElementById(tableId);
+    if (selectedTable) {
+        selectedTable.style.display = 'block';
+        
+        // 4. تحديث الحسابات لهذا الجدول (إذا لم يكن جدول الشهادة)
+        if (tableId !== 'certificate') {
+            updateTotalAmount(tableId);
+            updateTotal(tableId);
+        }
+        updateCertificateFromPerformance();
+    }
+}
+
+// دالة مساعدة للحفظ عند الإدخال
+function saveOnInput(event) {
+    const tableContainer = event.target.closest('.table-container');
+    if (tableContainer) {
+        const tableId = tableContainer.id;
+        saveTableData(tableId);
+        document.getElementById(tableId + '-save-btn').style.display = 'block';
+    }
+}
+
+   
+
+function formatDate(dateString) {
+    if (!dateString || dateString === 'غير محدد') return 'غير محدد';
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('ar-SA');
+    } catch (e) {
+        return dateString;
+    }
+}
+
+
+// دالة جلب تفاصيل فترة المستخلص (مهمة لحسابات الراتب النسبي)
+function getExtractPeriodDetails(startDate, endDate) {
+    try {
+        const persistentData = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+        const extractStart = startDate || persistentData.extractStart || null;
+        const extractEnd = endDate || persistentData.extractEnd || null;
+        
+        const start = extractStart ? new Date(extractStart) : new Date();
+        const end = extractEnd ? new Date(extractEnd) : new Date();
+        
+        if (!extractStart || !extractEnd) {
+            const now = new Date();
+            start.setDate(1);
+            end.setMonth(now.getMonth() + 1, 0);
+        }
+
+        const daysInMonth = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+        const monthStart = new Date(start.getFullYear(), start.getMonth(), 1);
+        const monthEnd = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+        const totalDaysInMonth = monthEnd.getDate();
+        
+        return {
+            startDay: start.getDate(),
+            endDay: end.getDate(),
+            daysInMonth: Math.max(1, daysInMonth),
+            totalDaysInMonth: totalDaysInMonth,
+            monthName: start.toLocaleDateString('ar-SA', { month: 'long' }),
+            year: start.getFullYear()
+        };
+    } catch (error) {
+        console.error('خطأ في حساب تفاصيل المستخلص:', error);
+        return {
+            startDay: 1,
+            endDay: 30,
+            daysInMonth: 30,
+            totalDaysInMonth: 30,
+            monthName: 'غير محدد',
+            year: new Date().getFullYear()
+        };
+    }
+}
+
+
+
+
+
+const PASSWORD = "admin123";
+let editingTableId = null;
+
+function closeEditDialog() {
+    document.getElementById('edit-dialog').style.display = 'none';
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('edit-items').style.display = 'none';
+    document.getElementById('add-item').style.display = 'none';
+    document.getElementById('password-section').style.display = 'block';
+    editingTableId = null;
+}
+
+function verifyPassword() {
+    const input = document.getElementById('password-input').value;
+    if (input === PASSWORD) {
+        document.getElementById('password-section').style.display = 'none';
+        // هنا التعديل: بناءً على الغرض من فتح النافذة
+        if (currentDialogPurpose === 'add') {
+            document.getElementById('add-item').style.display = 'block';
+            // مسح الحقول عند فتح نافذة الإضافة
+            document.getElementById('new-activity-input').value = '';
+            document.getElementById('new-max-score-input').value = '';
+            document.getElementById('new-score-input').value = '';
+        } else if (currentDialogPurpose === 'edit') {
+            document.getElementById('edit-items').style.display = 'block';
+            loadTableItems(editingTableId);
+        }
+    } else {
+        document.getElementById('password-error').textContent = 'الباسورد غير صحيح';
+    }
+}
+
+function loadTableItems(tableId) {
+    const table = document.getElementById(tableId + '-table');
+    const rows = table.querySelectorAll('tbody tr:not(.total-row)');
+    const itemsContainer = document.getElementById('edit-items-container');
+    itemsContainer.innerHTML = '';
+    rows.forEach((row, index) => {
+        const activity = row.cells[0].textContent;
+        const maxScore = row.cells[1].textContent;
+        const score = row.cells[2].querySelector('input').value;
+        const itemDiv = document.createElement('div');
+        itemDiv.classList.add('edit-item-row'); // أضف كلاس جديد للتصميم
+        itemDiv.innerHTML = `
+            <div class="item-details">
+                <h4>بند ${index + 1}</h4>
+                <label>اسم النشاط:</label>
+                <input type="text" value="${activity}" data-index="${index}" class="activity-input">
+                <label>الدرجة القصوى:</label>
+                <input type="number" value="${maxScore}" data-index="${index}" class="max-score-input">
+                <label>التقدير:</label>
+                <input type="number" value="${score}" data-index="${index}" class="score-input">
+            </div>
+            <button class="delete-item-btn" data-index="${index}" onclick="deleteItem(${index})">
+                <i class="fas fa-trash-alt"></i> حذف
+            </button>
+            <hr>
+        `;
+        itemsContainer.appendChild(itemDiv);
+    });
+}
+
+function deleteItem(indexToDelete) {
+    if (!confirm('هل أنت متأكد من حذف هذا البند؟ لا يمكن التراجع عن هذا الإجراء.')) {
+        return; // إلغاء الحذف إذا لم يؤكد المستخدم
+    }
+
+    const table = document.getElementById(editingTableId + '-table');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr:not(.total-row)')); // الحصول على قائمة قابلة للتعديل
+
+    if (indexToDelete >= 0 && indexToDelete < rows.length) {
+        // --- بداية التعديل هنا في deleteItem ---
+        const rowToDelete = rows[indexToDelete];
+        const maxScoreToDelete = parseFloat(rowToDelete.cells[1].textContent) || 0; // الدرجة القصوى للبند المحذوف
+
+        const totalRow = tbody.querySelector('.total-row');
+        const currentTotalMaxScoreElement = totalRow.cells[1];
+        const currentTotalMaxScore = parseFloat(currentTotalMaxScoreElement.textContent) || 0;
+        currentTotalMaxScoreElement.textContent = currentTotalMaxScore - maxScoreToDelete; // طرح الدرجة القصوى
+        // --- نهاية التعديل هنا في deleteItem ---
+
+        // إزالة الصف من الـ DOM
+        tbody.removeChild(rowToDelete); // استخدم rowToDelete بدلاً من rows[indexToDelete] بعد الحصول على قيمته
+
+        // إعادة بناء واجهة التعديل بعد الحذف
+        loadTableItems(editingTableId);
+
+        // تحديث المجاميع وحفظ البيانات
+        updateTotal(editingTableId);
+        updateCertificateFromPerformance();
+        saveTableData(editingTableId, true); // حفظ التغييرات في localStorage
+        alert('تم حذف البند بنجاح!');
+    } else {
+        console.error('فهرس البند غير صالح للحذف:', indexToDelete);
+    }
+}
+
+function saveEditedItems() {
+    const table = document.getElementById(editingTableId + '-table');
+    const rows = table.querySelectorAll('tbody tr:not(.total-row)');
+    const activityInputs = document.querySelectorAll('.activity-input');
+    const maxScoreInputs = document.querySelectorAll('.max-score-input');
+    const scoreInputs = document.querySelectorAll('.score-input');
+    
+    let totalMaxScore = 0; // إعادة تهيئة المجموع الكلي للدرجة القصوى
+    let totalScore = 0;
+
+    rows.forEach((row, index) => {
+        const activity = activityInputs[index].value;
+        const maxScore = parseFloat(maxScoreInputs[index].value) || 0;
+        const score = parseFloat(scoreInputs[index].value) || 0;
+        
+        // تحديث محتوى الخلايا في الجدول الأصلي
+        row.cells[0].textContent = activity;
+        row.cells[1].textContent = maxScore; // تحديث الدرجة القصوى لكل بند
+        row.cells[2].querySelector('input').value = score; // تحديث التقدير لكل بند
+
+        totalMaxScore += maxScore; // جمع الدرجات القصوى الجديدة
+        totalScore += score;
+    });
+
+    // --- بداية التعديل هنا في saveEditedItems ---
+    const totalRow = table.querySelector('.total-row');
+    totalRow.cells[1].textContent = totalMaxScore; // تحديث الدرجة القصوى الإجمالية في صف المجموع
+    // --- نهاية التعديل هنا في saveEditedItems ---
+
+    document.getElementById(editingTableId + '-total').textContent = totalScore;
+    document.getElementById(editingTableId + '-score').textContent = totalScore;
+    
+    const percentageElement = document.getElementById(editingTableId + '-percentage-score');
+    if (percentageElement) {
+        const percentage = totalMaxScore > 0 ? ((totalScore / totalMaxScore) * 100) : 0;
+        percentageElement.textContent = percentage.toFixed(2) + '%';
+    }
+
+    updateDeduction(editingTableId, totalScore);
+    updateCertificateFromPerformance();
+    saveTableData(editingTableId);
+    closeEditDialog();
+}
+
+
+function openAddModal(tableId) {
+    editingTableId = tableId;
+    document.getElementById('edit-dialog').style.display = 'block';
+    document.getElementById('overlay').style.display = 'block';
+    
+    // إظهار قسم الباسورد أولاً
+    document.getElementById('password-section').style.display = 'block'; 
+    // إخفاء أقسام التعديل والإضافة حتى يتم التحقق من الباسورد
+    document.getElementById('edit-items').style.display = 'none'; 
+    document.getElementById('add-item').style.display = 'none'; 
+    
+    // مسح حقول الباسورد وأي رسائل خطأ سابقة
+    document.getElementById('password-input').value = '';
+    document.getElementById('password-error').textContent = '';
+    
+    // مسح الحقول القديمة في نموذج الإضافة (للتأكد عند ظهورها)
+    document.getElementById('new-activity-input').value = '';
+    document.getElementById('new-max-score-input').value = '';
+    document.getElementById('new-score-input').value = '';
+
+    // **جديد:** تخزين الغرض من فتح النافذة
+    currentDialogPurpose = 'add'; 
+}
+
+function saveNewItem() {
+    console.log(`بدء حفظ بند جديد في الجدول: ${editingTableId}`);
+    
+    const table = document.getElementById(editingTableId + '-table');
+    if (!table) {
+        console.error(`الجدول ${editingTableId} غير موجود`);
+        alert('الجدول المطلوب غير موجود');
+        return;
+    }
+
+    const tbody = table.querySelector('tbody');
+    const activity = document.getElementById('new-activity-input')?.value?.trim();
+    const maxScore = parseFloat(document.getElementById('new-max-score-input')?.value) || 0;
+    const score = parseFloat(document.getElementById('new-score-input')?.value) || 0;
+
+    // التحقق من البيانات
+    if (!activity || activity.length < 3) {
+        alert('يرجى إدخال اسم نشاط صالح (على الأقل 3 أحرف)');
+        return;
+    }
+    if (maxScore <= 0) {
+        alert('يرجى إدخال درجة قصوى أكبر من صفر');
+        return;
+    }
+    if (score < 0 || score > maxScore) {
+        alert(`التقدير يجب أن يكون بين 0 و ${maxScore}`);
+        return;
+    }
+
+    // إضافة البند الجديد
+    try {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${activity}</td>
+            <td>${maxScore}</td>
+            <td><input type="number" class="editable" value="${score}" max="${maxScore}" min="0" onchange="updateTotal('${editingTableId}'); updateCertificateFromPerformance();"></td>
+        `;
+        // إضافة الصف قبل الصف الإجمالي
+        tbody.insertBefore(tr, tbody.querySelector('.total-row'));
+
+        // --- بداية التعديل هنا في saveNewItem ---
+        const totalRow = tbody.querySelector('.total-row');
+        const currentTotalMaxScoreElement = totalRow.cells[1]; // الخلية التي تحتوي على الدرجة القصوى الإجمالية
+        const currentTotalMaxScore = parseFloat(currentTotalMaxScoreElement.textContent) || 0;
+        currentTotalMaxScoreElement.textContent = currentTotalMaxScore + maxScore; // تحديث الدرجة القصوى الإجمالية
+        // --- نهاية التعديل هنا في saveNewItem ---
+
+        // تحديث المجموع الكلي
+        updateTotal(editingTableId);
+
+        // حفظ البيانات في localStorage
+        saveTableData(editingTableId, true);
+
+        // تحديث شهادة الأداء
+        updateCertificateFromPerformance();
+
+        // إغلاق النافذة
+        closeEditDialog();
+
+        alert('تم إضافة البند بنجاح!');
+        console.log(`تم إضافة بند جديد: ${activity}, درجة قصوى: ${maxScore}, تقدير: ${score}`);
+    } catch (error) {
+        console.error('خطأ أثناء إضافة البند:', error);
+        alert('حدث خطأ أثناء إضافة البند، يرجى المحاولة مرة أخرى');
+    }
+}
+
+function openEditItemDialog(tableId) {
+    editingTableId = tableId;
+    document.getElementById('edit-dialog').style.display = 'block';
+    document.getElementById('overlay').style.display = 'block';
+    document.getElementById('password-input').value = '';
+    document.getElementById('password-error').textContent = '';
+    document.getElementById('edit-items').style.display = 'none';
+    document.getElementById('add-item').style.display = 'none';
+    currentDialogPurpose = 'edit';
+}
+
+function printTable(tableId) {
+    const table = document.getElementById(tableId);
+    const logoRight = document.querySelector('.logo-right')?.src || '';
+    const logoLeft = document.querySelector('.logo-left')?.src || '';
+    const pageTitle = document.title;
+    const tableTitle = document.querySelector(`#${tableId} .table-title`)?.textContent || '';
+    const hospitalName = document.querySelector('.hospitalName')?.textContent || '';
+    const contractDetails = document.querySelector('.contractDetails')?.textContent || '';
+    const companyName = document.querySelector('.companyName')?.textContent || '';
+    const contractType = document.querySelector('.contractType')?.textContent || '';
+    const extractStart = document.getElementById('extract-start-date')?.textContent || '';
+    const extractEnd = document.getElementById('extract-end-date')?.textContent || '';
+    let contractRow = `
+        <span><strong>اسم المستشفى:</strong> ${hospitalName}</span> &nbsp; | &nbsp; 
+        <span><strong>تفاصيل العقد:</strong> ${contractDetails}</span> &nbsp; | &nbsp; 
+        <span><strong>اسم الشركة:</strong> ${companyName}</span> &nbsp; | &nbsp; 
+        <span><strong>نوع العقد:</strong> ${contractType}</span> &nbsp; | &nbsp; 
+        <span><strong>مدة المستخلص:</strong> من ${extractStart} إلى ${extractEnd}</span>
+    `;
+    const summary = document.querySelector(`#${tableId} .summary-text`)?.innerHTML || '';
+    const footer = document.querySelector(`#${tableId} .footer-text`)?.innerHTML || '';
+    const signatures = document.querySelector(`#${tableId} .signatures`)?.outerHTML || '';
+    const printDate = new Date().toLocaleString('ar-EG');
+
+    // نسخ الجدول بدون الأزرار أو العناصر المكررة
+let onlyTableHTML = "";
+if (table) {
+    const tableClone = table.cloneNode(true);
+    // حذف أزرار أو عناصر غير مطلوبة
+    tableClone.querySelectorAll('.action-buttons, .export-buttons, button').forEach(el => el.remove());
+    tableClone.querySelectorAll('.table-title, .summary-text, .footer-text, .signatures').forEach(el => el.remove());
+
+    // هنا التحويل: كل input.editable يتحول إلى رقم ثابت
+    tableClone.querySelectorAll('input.editable').forEach(input => {
+        let td = input.parentElement;
+        let value = input.value;
+        td.innerHTML = value; // يحوله لنص فقط
+    });
+
+    onlyTableHTML = tableClone.querySelector('table') ? tableClone.querySelector('table').outerHTML : '';
+}
+
+
+    const printWindow = window.open('', '', 'height=900,width=1200');
+    printWindow.document.write(`
+    <html>
+    <head>
+        <title>طباعة ${tableTitle}</title>
+        <style>
+            body { font-family: 'Cairo', 'Arial', sans-serif; direction: rtl; margin: 0; background: #f9f9f9;}
+            .header-print { margin-top: 30px; margin-bottom: 8px; text-align: center;}
+            .logo-row { display: flex; justify-content: center; align-items: center; gap: 45px; margin-bottom: 5px;}
+            .logo-row img { width: 65px; height: 65px; object-fit: contain; }
+            .page-title { font-size: 25px; margin-bottom: 7px; font-weight: bold;}
+            .contract-info-row {
+                font-size: 17px;
+                font-weight: 500;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                margin-bottom: 12px;
+                gap: 2px;
+            }
+            .contract-info-top {margin-bottom:3px;}
+            .contract-info-bottom {color: #28527a;}
+            .main-table-wrapper { display: flex; justify-content: center; margin: 12px 0 18px 0;}
+            table { border-collapse: collapse; width: 80%; margin: auto; font-size: 16px; background:#fff; box-shadow:0 0 10px #eee;}
+            th, td { border: 1.5px solid #c0c0c0; padding: 7px 10px; text-align: right;}
+            th { background-color: #e3f0fa; font-weight: bold; font-size:17px;}
+            tr.total-row th, tr.total-row td {background: #eef7fb !important; font-weight: bold;}
+            .summary-text, .footer-text { margin: 13px auto 7px auto; font-size: 16px; max-width: 850px;}
+            .summary-text {background: #f3f3ff; border-radius: 8px; padding: 10px 18px;}
+            .footer-text {color:#28527a; font-size:15px;}
+            .signatures {
+                display: flex;
+                gap: 24px;
+                justify-content: space-evenly;
+                margin: 30px auto 0 auto;
+                max-width: 850px;
+                font-size: 15px;
+                flex-wrap: wrap;
+            }
+            .signature-item { min-width: 210px; text-align: center; border-top:1px dotted #bbb; padding-top:7px;}
+            .print-footer {text-align:left; color:#888; font-size:13px; margin:34px 0 0 0; padding-left:40px;}
+            @media print {
+                html, body { width: 100%; background:#fff;}
+                table { page-break-inside: avoid; }
+                .header-print, .main-table-wrapper, .summary-text, .footer-text, .signatures {break-inside: avoid;}
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header-print">
+            <div class="logo-row">
+                <img src="${logoRight}" alt="شعار يمين">
+                <img src="${logoLeft}" alt="شعار يسار">
+            </div>
+            <div class="page-title">${pageTitle}</div>
+            <div class="contract-info-row">
+                <div class="contract-info-top">
+                    <span><strong>اسم المستشفى:</strong> ${hospitalName}</span>
+                    &nbsp;|&nbsp;
+                    <span><strong>اسم الشركة:</strong> ${companyName}</span>
+                </div>
+                <div class="contract-info-bottom">
+                    <span><strong>تفاصيل العقد:</strong> ${contractDetails}</span>
+                    &nbsp;|&nbsp;
+                    <span><strong>نوع العقد:</strong> ${contractType}</span>
+                    &nbsp;|&nbsp;
+                    <span><strong>مدة المستخلص:</strong> من ${extractStart} إلى ${extractEnd}</span>
+                </div>
+            </div>
+            <div class="table-title">${tableTitle}</div>
+        </div>
+        <div class="main-table-wrapper">${onlyTableHTML}</div>
+        <div class="summary-text">${summary}</div>
+        <div class="footer-text">${footer}</div>
+        <div class="print-footer">
+</body>
+    </html>
+`);
+printWindow.document.close();
+setTimeout(() => {
+    printWindow.print();
+}, 600);
+
+}
+
+function exportSectionToExcel() {
+    // رسالة للمستخدم بأن العملية قد تستغرق بضع ثوانٍ
+    showSuccessMessage('جاري تجهيز ملف الإكسل الشامل... يرجى الانتظار.');
+
+    try {
+        // 1. إنشاء ملف إكسل جديد
+        const wb = XLSX.utils.book_new();
+
+        // 2. جمع البيانات العامة (اسم المستشفى، الشركة، إلخ)
+        const hospitalName = document.querySelector('.hospitalName')?.textContent || 'غير محدد';
+        const companyName = document.querySelector('.companyName')?.textContent || 'غير محدد';
+        const contractDetails = document.querySelector('.contractDetails')?.textContent || 'غير محدد';
+        const contractType = document.querySelector('.contractType')?.textContent || 'غير محدد';
+        const extractStart = document.getElementById('extract-start-date')?.textContent || 'غير محدد';
+        const extractEnd = document.getElementById('extract-end-date')?.textContent || 'غير محدد';
+
+        const generalInfo = [
+            ["اسم المستشفى:", hospitalName],
+            ["اسم الشركة:", companyName],
+            ["تفاصيل العقد:", contractDetails],
+            ["نوع العقد:", contractType],
+            ["مدة المستخلص:", `من ${extractStart} إلى ${extractEnd}`],
+            [] // سطر فارغ للترتيب
+        ];
+
+        // 3. المرور على كل قسم (بما في ذلك شهادة الأداء)
+        const sections = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'laundry', 'security', 'certificate'];
+
+        sections.forEach(sectionId => {
+            const sectionContainer = document.getElementById(sectionId);
+            if (!sectionContainer) return; // تخطي إذا لم يكن القسم موجوداً
+
+            const tableTitle = sectionContainer.querySelector('.table-title')?.textContent || `جدول ${sectionId}`;
+            const table = sectionContainer.querySelector('table');
+            
+            let sectionData = [...generalInfo]; // ابدأ بالمعلومات العامة لكل ورقة
+            sectionData.push([tableTitle]); // أضف عنوان الجدول
+            sectionData.push([]); // سطر فارغ
+
+            // إضافة المبلغ المخصص (إذا لم يكن جدول الشهادة)
+            if (sectionId !== 'certificate') {
+                const totalAmount = sectionContainer.querySelector('.total-amount input')?.value || '0';
+                sectionData.push(["إجمالي المبلغ لأنشطة القسم:", `${totalAmount} ريال سعودي`]);
+                sectionData.push([]);
+            }
+
+            // استخراج بيانات الجدول (الرؤوس والصفوف)
+            if (table) {
+                const headers = [];
+                table.querySelectorAll('thead th').forEach(th => headers.push(th.textContent.trim()));
+                sectionData.push(headers);
+
+                table.querySelectorAll('tbody tr').forEach(tr => {
+                    const rowData = [];
+                    tr.querySelectorAll('td, th').forEach(cell => {
+                        // إذا كانت الخلية تحتوي على input، خذ قيمته، وإلا خذ النص
+                        const input = cell.querySelector('input');
+                        rowData.push(input ? input.value : cell.textContent.trim());
+                    });
+                    sectionData.push(rowData);
+                });
+            }
+            
+            sectionData.push([]); // سطر فارغ
+
+            // إضافة الملخص والنص السفلي
+            const summaryText = sectionContainer.querySelector('.summary-text')?.innerText || '';
+            if (summaryText) {
+                sectionData.push(["الملخص:"]);
+                summaryText.split('\n').forEach(line => sectionData.push([line]));
+                sectionData.push([]);
+            }
+
+            const footerText = sectionContainer.querySelector('.footer-text')?.innerText || '';
+            if (footerText) {
+                sectionData.push(["ملاحظات:", footerText]);
+            }
+
+            // 4. إنشاء ورقة عمل جديدة وإضافتها للملف
+            const ws = XLSX.utils.aoa_to_sheet(sectionData);
+            
+            // تعديل عرض الأعمدة لتبدو أفضل
+            ws['!cols'] = [ { wch: 40 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 } ];
+
+            // اسم الورقة سيكون هو عنوان الجدول
+            const sheetName = tableTitle.substring(0, 30); // اسم الورقة لا يمكن أن يكون طويلاً جداً
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        });
+
+        // 5. إضافة ورقة خاصة بالتواقيع
+        const signatures = [];
+        document.querySelectorAll('.signatures-grid .signature-item').forEach(item => {
+            const title = item.querySelector('.signature-title')?.textContent.replace(':', '').trim() || '';
+            const name = item.querySelector('.signature-name')?.textContent.trim() || '';
+            if (title && name) {
+                signatures.push([`${title}:`, name]);
+            }
+        });
+
+        if (signatures.length > 0) {
+            const sigData = [["التواقيع المعتمدة"], [], ...signatures];
+            const sig_ws = XLSX.utils.aoa_to_sheet(sigData);
+            sig_ws['!cols'] = [ { wch: 30 }, { wch: 30 } ];
+            XLSX.utils.book_append_sheet(wb, sig_ws, "التواقيع");
+        }
+
+        // 6. تصدير الملف النهائي
+        const fileName = `تقرير_الأداء_الشامل_${hospitalName.replace(/ /g, '_')}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+
+    } catch (error) {
+        console.error("حدث خطأ أثناء تصدير ملف الإكسل الشامل:", error);
+        alert("فشل تصدير الملف. يرجى مراجعة الكونسول لمزيد من التفاصيل.");
+    }
+}
+// دالة الطباعة التكيفية (للصفحة كاملة)
+function printPage() {
+    const elementsToHide = document.querySelectorAll('.action-buttons, .export-buttons, .nav-bar, .no-print');
+    elementsToHide.forEach(el => el.style.display = 'none');
+
+    const printStyle = document.createElement('style');
+    printStyle.innerHTML = `
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 15mm 10mm 15mm 10mm;
+            }
+            body {
+                font-size: 12px;
+                line-height: 1.4;
+                font-family: 'Arial', sans-serif;
+                margin: 0;
+                padding: 0;
+            }
+            .container {
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .header-info {
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                margin-bottom: 15px !important;
+                page-break-inside: avoid;
+                padding: 10px 0;
+            }
+            .header-info .logo-right, .header-info .logo-left {
+                width: 60px !important;
+                height: 60px !important;
+            }
+            .header-info .center-content {
+                text-align: center !important;
+                flex: 1 !important;
+            }
+            .header-info h1 {
+                font-size: 16px !important;
+                margin: 3px 0 !important;
+                font-weight: bold;
+            }
+            .header-info h2 {
+                font-size: 14px !important;
+                margin: 3px 0 !important;
+            }
+            .header-info h3 {
+                font-size: 12px !important;
+                margin: 3px 0 !important;
+            }
+            .table-container {
+                page-break-inside: avoid;
+                margin: 0 auto !important;
+                max-width: 90% !important;
+            }
+            .table-title {
+                text-align: center !important;
+                font-size: 14px !important;
+                font-weight: bold !important;
+                margin: 10px 0 !important;
+            }
+            .total-amount {
+                text-align: center !important;
+                font-size: 12px !important;
+                margin: 8px 0 !important;
+            }
+            table {
+                font-size: 10px !important;
+                width: 80% !important;
+                margin: 10px auto !important;
+                border-collapse: collapse !important;
+            }
+            table th, table td {
+                padding: 4px 6px !important;
+                border: 1px solid #000 !important;
+                text-align: center !important;
+                vertical-align: middle !important;
+            }
+            table th {
+            table th:first-child, table td:first-child {
+                width: 50% !important;
+                text-align: right !important;
+                padding-right: 10px !important;
+            }
+            table th:nth-child(2), table td:nth-child(2) {
+                width: 15% !important;
+            }
+            table th:nth-child(3), table td:nth-child(3) {
+                width: 15% !important;
+            }
+                background-color: #f0f0f0 !important;
+                font-weight: bold !important;
+            }
+            .summary-text {
+                font-size: 11px !important;
+                margin: 10px 0 !important;
+                text-align: center !important;
+            }
+            .footer-text {
+                font-size: 10px !important;
+                margin: 8px 0 !important;
+                text-align: justify !important;
+            }
+            .signatures-grid {
+                display: grid !important;
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 15px !important;
+                margin: 15px 0 !important;
+                page-break-inside: avoid;
+            }
+            .signature-item {
+                font-size: 9px !important;
+                padding: 8px !important;
+                text-align: center !important;
+                border: 1px solid #ddd !important;
+                border-radius: 4px !important;
+            }
+            .signature-line {
+                border-bottom: 1px solid #000 !important;
+                height: 30px !important;
+                margin: 8px 0 !important;
+            }
+            .table-buttons, .action-buttons, .export-buttons, .nav-bar, .no-print, button {
+                display: none !important;
+            }
+        }
+    `;
+    document.head.appendChild(printStyle);
+
+    const headerInfo = document.querySelector('.header-info');
+    if (headerInfo) {
+        const originalHTML = headerInfo.innerHTML;
+        headerInfo.innerHTML = `
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-right">
+            <div class="center-content">
+                <h1>تجمع نجران الصحي</h1>
+                <h3>وحدة الصيانة العامة</h3>
+                <h2>جداول الأداء</h2>
+            </div>
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-left">
+        `;
+
+        window.print();
+
+        setTimeout(() => {
+            headerInfo.innerHTML = originalHTML;
+            elementsToHide.forEach(el => el.style.display = '');
+            document.head.removeChild(printStyle);
+        }, 1000);
+    }
+}
+function resetPerformanceData() {
+    if (confirm('هل أنت متأكد من إعادة تعيين بيانات الأداء؟ سيتم مسح كل المبالغ المحفوظة وإعادة حسابها.')) {
+        const departments = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'security', 'laundry'];
+        departments.forEach(dept => {
+            document.getElementById(dept + '-amount').value = '0';
+            document.getElementById(dept + '-save-btn').style.display = 'block';
+        });
+        updateAllPerformanceData();
+        showSuccessMessage('تم إعادة تعيين بيانات الأداء بنجاح');
+    }
+}
+// دالة تصدير PDF للأقسام المختلفة
+function exportToPDF(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (!section) {
+        alert('القسم المطلوب غير موجود');
+        return;
+    }
+
+    // جمع البيانات
+    const hospitalName = document.querySelector('.hospitalName')?.textContent || 'مجمع نجران الصحي';
+    const companyName = document.querySelector('.companyName')?.textContent || 'شركة المقاولات';
+    const contractDetails = document.querySelector('.contractDetails')?.textContent || 'تفاصيل العقد';
+    const contractType = document.querySelector('.contractType')?.textContent || 'نوع العقد';
+    const extractStart = document.getElementById('extract-start-date')?.textContent || '';
+    const extractEnd = document.getElementById('extract-end-date')?.textContent || '';
+    const tableTitle = section.querySelector('.table-title')?.textContent || 'جدول الأداء';
+    const table = section.querySelector('table');
+    const summaryText = section.querySelector('.summary-text')?.innerHTML || '';
+    const footerText = section.querySelector('.footer-text')?.innerHTML || '';
+    const totalAmount = sectionId !== 'certificate' ? section.querySelector('.total-amount input')?.value || '0' : '';
+
+    // التواقيع
+  // الحصول على التواقيع المعروضة حاليًا على الصفحة بشكل ديناميكي
+const signatures = [];
+document.querySelectorAll('.signatures-grid .signature-item').forEach(item => {
+    const title = item.querySelector('.signature-title')?.textContent.replace(':', '').trim() || '';
+    const name = item.querySelector('.signature-name')?.textContent.trim() || '';
+    if (title && name) {
+        signatures.push({ title, name });
+    }
+});
+
+
+
+    const printDate = new Date();
+    const dateString = printDate.toLocaleDateString('ar-EG', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    const logoRight = document.querySelector('.logo-right')?.src || '';
+    const logoLeft = document.querySelector('.logo-left')?.src || '';
+
+    // إنشاء نافذة الـ PDF
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>تصدير ${tableTitle} إلى PDF</title>
+        <style>
+            @page {
+                size: A4;
+                margin: 10mm;
+            }
+            * {
+                box-sizing: border-box;
+                font-family: 'Noto Sans Arabic', 'Arial', sans-serif;
+            }
+            body {
+                margin: 0;
+                padding: 5px;
+                color: #333;
+                line-height: 1.4;
+                background-color: white;
+                font-size: 11px;
+            }
+            .print-container {
+                width: 100%;
+                max-width: 100%;
+                padding: 5px;
+            }
+            .print-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 5px 0;
+                border-bottom: 2px solid #007bff;
+                margin-bottom: 10px;
+                page-break-inside: avoid;
+            }
+            .logo-container {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .print-header img {
+                width: 50px;
+                height: 50px;
+                object-fit: contain;
+            }
+            .print-title {
+                text-align: center;
+                flex-grow: 1;
+            }
+            .print-title h1 {
+                color: #007bff;
+                font-size: 16px;
+                margin: 2px 0;
+            }
+            .print-title h2 {
+                color: #28a745;
+                font-size: 14px;
+                margin: 2px 0;
+            }
+            .print-title h3 {
+                color: #17a2b8;
+                font-size: 12px;
+                margin: 2px 0;
+            }
+            .contract-info {
+                background: #f8f9fa;
+                border-radius: 6px;
+                padding: 8px;
+                margin: 8px 0;
+                border: 1px solid #e0e0e0;
+                font-size: 10px;
+                page-break-inside: avoid;
+            }
+            .contract-row {
+                display: flex;
+                margin: 3px 0;
+                padding-bottom: 3px;
+                border-bottom: 1px dashed #e0e0e0;
+            }
+            .contract-row:last-child {
+                border-bottom: none;
+            }
+            .contract-label {
+                font-weight: bold;
+                color: #007bff;
+                min-width: 100px;
+            }
+            .table-title {
+                text-align: center;
+                font-size: 14px;
+                font-weight: bold;
+                margin: 8px 0;
+                padding: 6px;
+                background: linear-gradient(to right, #007bff, #17a2b8);
+                color: white;
+                border-radius: 6px;
+                page-break-inside: avoid;
+            }
+            .total-amount {
+                text-align: center;
+                font-size: 11px;
+                margin: 6px 0;
+                font-weight: bold;
+                page-break-inside: avoid;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 8px 0;
+                font-size: 10px;
+                box-shadow: 0 0 6px rgba(0,0,0,0.05);
+                border-radius: 6px;
+                overflow: hidden;
+                page-break-inside: auto;
+            }
+            table th, table td {
+                border: 1px solid #dee2e6;
+                padding: 5px 7px;
+                text-align: center;
+            }
+            table th {
+                background: #007bff;
+                color: white;
+                font-weight: bold;
+                font-size: 11px;
+            }
+            table tr:nth-child(even) {
+                background-color: #f8f9fa;
+            }
+            table tr.total-row th, 
+            table tr.total-row td {
+                background: #fee08b;
+                color: #a85912;
+                font-size: 11px;
+                font-weight: bold;
+            }
+            .summary-section {
+                background: #e9f7ff;
+                padding: 8px;
+                border-radius: 6px;
+                margin: 8px 0;
+                border-left: 3px solid #007bff;
+                font-size: 10px;
+                page-break-inside: avoid;
+            }
+            .footer-text {
+                font-size: 9px;
+                margin: 8px 0;
+                padding: 6px;
+                text-align: justify;
+                line-height: 1.3;
+                color: #495057;
+                background: #f8f9fa;
+                border-radius: 6px;
+                border-top: 1px solid #e9ecef;
+                page-break-inside: avoid;
+            }
+            .signatures-section {
+                margin: 10px 0;
+                padding-top: 8px;
+                border-top: 1px solid #dee2e6;
+                page-break-inside: avoid;
+            }
+            .signatures-title {
+                text-align: center;
+                font-size: 12px;
+                margin-bottom: 8px;
+                color: #007bff;
+                font-weight: bold;
+            }
+            .signatures-grid {
+                display: flex;
+                flex-direction: row;
+                justify-content: space-between;
+                gap: 5px;
+                margin: 8px 0;
+            }
+            .signature-item {
+                text-align: center;
+                padding: 8px;
+                background: white;
+                border-radius: 4px;
+                border: 1px solid #e0e0e0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+                flex: 1;
+                max-width: 18%;
+            }
+            .signature-title {
+                font-weight: bold;
+                font-size: 9px;
+                margin-bottom: 5px;
+                color: #007bff;
+            }
+            .signature-line {
+                border-bottom: 1px solid #333;
+                height: 20px;
+                margin: 5px 0;
+            }
+            .signature-name {
+                font-size: 8px;
+                margin-top: 5px;
+                color: #555;
+                font-weight: 500;
+            }
+            .print-footer {
+                text-align: center;
+                font-size: 9px;
+                color: #6c757d;
+                margin-top: 8px;
+                padding-top: 6px;
+                border-top: 1px solid #e0e0e0;
+                page-break-inside: avoid;
+            }
+           @media print {
+    body {
+        margin: 0;
+        font-size: 9px;
+        line-height: 1.1;
+    }
+
+    table {
+        font-size: 8px;
+        width: 100%;
+        page-break-inside: auto;
+    }
+
+    tr {
+        page-break-inside: avoid;
+    }
+
+    @page {
+        size: A4;
+        margin: 5mm;
+    }
+
+    .print-container, .print-header, .contract-info, .table-title, .total-amount, .summary-section, .footer-text, .signatures-section {
+        page-break-inside: avoid;
+    }
+
+    body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+.btn-update {
+    background: linear-gradient(135deg, #17a2b8, #20c997);
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.btn-update:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+        </style>
+    </head>
+    <body>
+        <div class="print-container">
+            <div class="print-header">
+                <div class="logo-container">
+                    <img src="${logoLeft}" alt="شعار تجمع نجران الصحي">
+                </div>
+                <div class="print-title">
+                    <h1>تجمع نجران الصحي</h1>
+                    <h2>وحدة الصيانة العامة</h2>
+                    <h3>جداول الأداء الشهرية</h3>
+                </div>
+                <div class="logo-container">
+                    <img src="${logoRight}" alt="شعار تجمع نجران الصحي">
+                </div>
+            </div>
+            
+            <div class="contract-info">
+                <div class="contract-row">
+                    <span class="contract-label">اسم المستشفى:</span>
+                    <span>${hospitalName}</span>
+                </div>
+                <div class="contract-row">
+                    <span class="contract-label">اسم الشركة:</span>
+                    <span>${companyName}</span>
+                </div>
+                <div class="contract-row">
+                    <span class="contract-label">تفاصيل العقد:</span>
+                    <span>${contractDetails}</span>
+                </div>
+                <div class="contract-row">
+                    <span class="contract-label">نوع العقد:</span>
+                    <span>${contractType}</span>
+                </div>
+                <div class="contract-row">
+                    <span class="contract-label">مدة المستخلص:</span>
+                    <span>من ${extractStart} إلى ${extractEnd}</span>
+                </div>
+            </div>
+            
+            <div class="table-title">${tableTitle}</div>
+            ${sectionId !== 'certificate' ? `
+            <div class="total-amount">
+                إجمالي المبلغ لأنشطة القسم: ${totalAmount} ريال سعودي
+            </div>
+            ` : ''}
+            ${table ? convertInputsToText(table.outerHTML) : ''}
+            
+            <div class="summary-section">
+                ${summaryText}
+            </div>
+            <div class="footer-text">
+                ${footerText}
+            </div>
+            
+            <div class="signatures-section">
+                <div class="signatures-title">التواقيع</div>
+                <div class="signatures-grid">
+                    ${signatures.map(sig => `
+                        <div class="signature-item">
+                            <div class="signature-title">${sig.title}</div>
+                            <div class="signature-line"></div>
+                            <div class="signature-name">${sig.name}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            
+        </div>
+</body>
+    </html>
+    `);
+    
+    printWindow.document.close();
+    
+    setTimeout(() => {
+        printWindow.print();
+        setTimeout(() => {
+            printWindow.close();
+        }, 1000);
+    }, 800);
+}
+// دالة طباعة جدول واحد فقط
+// ... (باقي الكود) ...
+
+function updateAllPerformanceData() {
+    const departments = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'security', 'laundry'];
+    let updatedCount = 0;
+
+    departments.forEach(dept => {
+        const amountInput = document.getElementById(dept + '-amount');
+        const savedData = JSON.parse(localStorage.getItem(`tableData_${dept}`) || '{}');
+        const oldAmount = savedData.amount ? parseFloat(savedData.amount) : 0;
+        updateTotalAmount(dept);
+        const newAmount = parseFloat(amountInput.value) || 0;
+        if (oldAmount !== newAmount) {
+            updatedCount++;
+        }
+    });
+
+    // تحديث شهادة الأداء
+    updateCertificateFromPerformance();
+
+    // إظهار رسالة نجاح
+    showSuccessMessage(`تم تحديث بيانات الأداء لـ ${updatedCount} أقسام بنجاح`);
+}
+
+// دالة لعرض رسالة نجاح
+function showSuccessMessage(message) {
+    const successMsg = document.createElement('div');
+    successMsg.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #28a745;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        z-index: 1001;
+        font-size: 14px;
+        max-width: 300px;
+    `;
+    successMsg.textContent = message;
+
+    document.body.appendChild(successMsg);
+
+    setTimeout(() => {
+        if (successMsg.parentNode) {
+            successMsg.parentNode.removeChild(successMsg);
+        }
+    }, 3000);
+}
+function convertInputsToText(tableHTML) {
+    // إنشاء عنصر مؤقت في الذاكرة لتحليل الـ HTML
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(tableHTML, 'text/html');
+    
+    // البحث عن كل حقول الإدخال التي تحمل الكلاس 'editable'
+    const inputs = doc.querySelectorAll('input.editable');
+    
+    // المرور على كل حقل وتغييره
+    inputs.forEach(input => {
+        const td = input.parentElement; // الخلية التي تحتوي على الحقل
+        td.textContent = input.value;   // استبدال محتوى الخلية بقيمة الحقل
+    });
+    
+    // إرجاع الـ HTML للجدول بعد التعديل
+    return doc.querySelector('table').outerHTML;
+}
+
+function printSingleTable(tableId) {
+    const tableContainer = document.getElementById(tableId);
+    if (!tableContainer) {
+        alert('الجدول المطلوب غير موجود');
+        return;
+    }
+
+    // ... (نفس الكود السابق لجمع البيانات: اسم المستشفى، الشركة، إلخ)
+    const hospitalName = document.querySelector('.hospitalName')?.textContent || 'مجمع نجران الصحي';
+    const companyName = document.querySelector('.companyName')?.textContent || 'شركة المقاولات';
+    const contractDetails = document.querySelector('.contractDetails')?.textContent || 'تفاصيل العقد';
+    const contractType = document.querySelector('.contractType')?.textContent || 'نوع العقد';
+    const extractStart = document.getElementById('extract-start-date')?.textContent || '';
+    const extractEnd = document.getElementById('extract-end-date')?.textContent || '';
+    
+    const tableTitle = tableContainer.querySelector('.table-title')?.textContent || 'جدول الأداء';
+    const table = tableContainer.querySelector('table');
+    const summaryText = tableContainer.querySelector('.summary-text')?.innerHTML || '';
+    const footerText = tableContainer.querySelector('.footer-text')?.innerHTML || '';
+    const totalAmount = tableId !== 'certificate' ? tableContainer.querySelector('.total-amount input')?.value || '0' : '';
+
+    const signatures = [];
+    document.querySelectorAll('.signatures-grid .signature-item').forEach(item => {
+        const title = item.querySelector('.signature-title')?.textContent.replace(':', '').trim() || '';
+        const name = item.querySelector('.signature-name')?.textContent.trim() || '';
+        if (title && name) {
+            signatures.push({ title, name });
+        }
+    });
+
+    const logoRight = document.querySelector('.logo-right')?.src || '';
+    const logoLeft = document.querySelector('.logo-left')?.src || '';
+
+    // فتح نافذة الطباعة
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+        <meta charset="UTF-8">
+        <title>طباعة ${tableTitle}</title>
+        <style>
+            /* ... (نفس كود الـ CSS الخاص بالطباعة بدون تغيير) ... */
+            @page { size: A4; margin: 10mm; }
+            body { margin: 0; padding: 5px; font-family: 'Arial', sans-serif; direction: rtl; font-size: 11px; }
+            .print-container { width: 100%; }
+            .print-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #007bff; margin-bottom: 10px; page-break-inside: avoid; }
+            .print-header img { width: 50px; height: 50px; }
+            .print-title { text-align: center; flex-grow: 1; }
+            .print-title h1 { font-size: 16px; margin: 2px 0; }
+            .contract-info { background: #f8f9fa; padding: 8px; margin: 8px 0; border: 1px solid #e0e0e0; font-size: 10px; page-break-inside: avoid; }
+            .table-title { text-align: center; font-size: 14px; font-weight: bold; margin: 8px 0; background: #007bff; color: white; padding: 6px; border-radius: 6px; page-break-inside: avoid; }
+            table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10px; page-break-inside: auto; }
+            table th, table td { border: 1px solid #dee2e6; padding: 5px 7px; text-align: center; }
+            table th { background: #007bff; color: white; }
+            table tr.total-row th, table tr.total-row td { background: #fee08b; color: #a85912; font-weight: bold; }
+            .summary-section, .footer-text, .signatures-section { page-break-inside: avoid; }
+            .signatures-grid { display: flex; flex-wrap: wrap; justify-content: space-around; gap: 10px; }
+            .signature-item { text-align: center; flex: 1; min-width: 150px; }
+            .signature-line { border-bottom: 1px solid #333; height: 20px; margin: 15px 0 5px 0; }
+            @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+        </style>
+    </head>
+    <body>
+        <div class="print-container">
+            <div class="print-header">
+                <img src="${logoLeft}" alt="شعار يسار">
+                <div class="print-title"><h1>${hospitalName}</h1><h2>${companyName}</h2></div>
+                <img src="${logoRight}" alt="شعار يمين">
+            </div>
+            <div class="contract-info">
+                <p><strong>تفاصيل العقد:</strong> ${contractDetails} | <strong>نوع العقد:</strong> ${contractType}</p>
+                <p><strong>مدة المستخلص:</strong> من ${extractStart} إلى ${extractEnd}</p>
+            </div>
+            <div class="table-title">${tableTitle}</div>
+            ${totalAmount ? `<p><strong>إجمالي المبلغ للقسم:</strong> ${totalAmount} ريال</p>` : ''}
+            
+            <!-- ✅✅✅ هذا هو السطر الذي تم تعديله ✅✅✅ -->
+            ${table ? convertInputsToText(table.outerHTML) : ''}
+            
+            <div class="summary-section">${summaryText}</div>
+            <div class="footer-text">${footerText}</div>
+            <div class="signatures-section">
+                <div class="signatures-grid">
+                    ${signatures.map(sig => `
+                        <div class="signature-item">
+                            <div class="signature-title">${sig.title}</div>
+                            <div class="signature-line"></div>
+                            <div class="signature-name">${sig.name}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+</body>
+    </html>
+    `);
+    
+    printWindow.document.close();
+    
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 800);
+}
+
+// ===== دوال تعديل التواقيع =====
+
+// كائن يحدد التواقيع التي يمكن تعديلها ومفاتيحها في localStorage
+const editableSignatures = [
+    { key: 'projectManager', title: 'مدير المشروع' },
+    { key: 'engineeringManager', title: 'مدير الإدارة الهندسية' },
+    { key: 'hospitalManager', title: 'مدير المستشفى' },
+    { key: 'hospitalAccountant', title: 'محاسب المستشفى' },
+    { key: 'contractorRepresentative', title: 'مندوب المقاول' }
+];
+
+const SIGNATURE_STORAGE_KEY = 'performanceSignatures_v2'; // مفتاح جديد لتجنب التعارض
+
+// 1. دالة فتح النافذة الرئيسية
+function openSignatureEditDialog() {
+    document.getElementById('signature-edit-dialog').style.display = 'block';
+    document.getElementById('signature-edit-overlay').style.display = 'block';
+    document.getElementById('signature-password-section').style.display = 'block';
+    document.getElementById('signature-edit-content').style.display = 'none';
+    document.getElementById('signature-password-input').value = '';
+    document.getElementById('signature-password-error').textContent = '';
+}
+// 2. دالة إغلاق النافذة
+function closeSignatureEditDialog() {
+    document.getElementById('signature-edit-dialog').style.display = 'none';
+    document.getElementById('signature-edit-overlay').style.display = 'none';
+}
+ // 3. دالة التحقق من كلمة المرور
+function verifySignaturePassword() {
+    const input = document.getElementById('signature-password-input').value;
+    if (input === "admin123") { // يمكنك تغيير كلمة المرور
+        document.getElementById('signature-password-section').style.display = 'none';
+        document.getElementById('signature-edit-content').style.display = 'block';
+        populateSignatureFields(); // عرض التواقيع الحالية
+    } else {
+        document.getElementById('signature-password-error').textContent = 'الباسورد غير صحيح';
+    }
+}
+// 4. دالة عرض التواقيع الحالية في نافذة التعديل
+function populateSignatureFields() {
+    const container = document.getElementById('signature-fields-container');
+    container.innerHTML = ''; // مسح المحتوى القديم
+    const signatures = JSON.parse(localStorage.getItem(SIGNATURE_STORAGE_KEY) || '[]');
+
+    // إذا كانت القائمة فارغة لأول مرة، أضف التواقيع الافتراضية
+    if (signatures.length === 0) {
+        const defaultSignatures = [
+            { title: 'مدير المشروع', name: 'م. اسم المدير' },
+            { title: 'مدير الإدارة الهندسية', name: 'م. اسم المدير' },
+            { title: 'مدير المستشفى', name: 'اسم المدير' },
+            { title: 'محاسب المستشفى', name: 'اسم المحاسب' },
+            { title: 'مندوب المقاول', name: 'اسم المندوب' }
+        ];
+        localStorage.setItem(SIGNATURE_STORAGE_KEY, JSON.stringify(defaultSignatures));
+        signatures.push(...defaultSignatures);
+    }
+
+    signatures.forEach((sig, index) => {
+        const fieldHTML = `
+            <div class="edit-item-row" id="signature-field-${index}">
+                <h4>توقيع ${index + 1}</h4>
+                <label>المسمى الوظيفي:</label>
+                <input type="text" class="sig-title-input" value="${sig.title || ''}" placeholder="مثال: مدير المشروع">
+                <label>الاسم:</label>
+                <input type="text" class="sig-name-input" value="${sig.name || ''}" placeholder="مثال: فلان الفلاني">
+                <button class="delete-item-btn" onclick="removeSignatureField(${index})">
+                    <i class="fas fa-trash-alt"></i> حذف هذا التوقيع
+                </button>
+            </div>
+        `;
+        container.innerHTML += fieldHTML;
+    });
+}
+// 5. دالة لإضافة حقل توقيع جديد فارغ في نافذة التعديل
+function addSignatureField() {
+    const container = document.getElementById('signature-fields-container');
+    const newIndex = container.children.length;
+    const newField = document.createElement('div');
+    newField.className = 'edit-item-row';
+    newField.id = `signature-field-${newIndex}`;
+    newField.innerHTML = `
+        <h4>توقيع ${newIndex + 1} (جديد)</h4>
+        <label>المسمى الوظيفي:</label>
+        <input type="text" class="sig-title-input" placeholder="مثال: مشرف الجودة">
+        <label>الاسم:</label>
+        <input type="text" class="sig-name-input" placeholder="اسم الشخص">
+        <button class="delete-item-btn" onclick="removeSignatureField(${newIndex})">
+            <i class="fas fa-trash-alt"></i> حذف هذا التوقيع
+        </button>
+    `;
+    container.appendChild(newField);
+}
+
+// 6. دالة لحذف حقل توقيع من نافذة التعديل
+function removeSignatureField(index) {
+    const fieldToRemove = document.getElementById(`signature-field-${index}`);
+    if (fieldToRemove && confirm('هل أنت متأكد من حذف هذا التوقيع؟')) {
+        fieldToRemove.remove();
+        // إعادة ترقيم باقي الحقول (اختياري لكن يحسن الواجهة)
+        const container = document.getElementById('signature-fields-container');
+        Array.from(container.children).forEach((child, newIndex) => {
+            child.id = `signature-field-${newIndex}`;
+            child.querySelector('h4').innerText = `توقيع ${newIndex + 1}`;
+            child.querySelector('.delete-item-btn').setAttribute('onclick', `removeSignatureField(${newIndex})`);
+        });
+    }
+}
+
+// 7. دالة حفظ جميع التواقيع من النافذة إلى الذاكرة
+function saveSignatures() {
+    const container = document.getElementById('signature-fields-container');
+    const fields = container.querySelectorAll('.edit-item-row');
+    const newSignatures = [];
+
+    fields.forEach(field => {
+        const title = field.querySelector('.sig-title-input').value.trim();
+        const name = field.querySelector('.sig-name-input').value.trim();
+        // أضف التوقيع فقط إذا كان المسمى أو الاسم موجودًا
+        if (title || name) {
+            newSignatures.push({ title: title, name: name });
+        }
+    });
+
+    localStorage.setItem(SIGNATURE_STORAGE_KEY, JSON.stringify(newSignatures));
+    showSuccessMessage('تم حفظ التواقيع بنجاح!');
+    closeSignatureEditDialog();
+    updateSignaturesOnPage(); // تحديث العرض في الصفحة الرئيسية
+}
+
+// 8. دالة تحديث عرض التواقيع في الصفحة الرئيسية
+function updateSignaturesOnPage() {
+    const grid = document.querySelector('.signatures-grid');
+    grid.innerHTML = ''; // مسح التواقيع القديمة
+    const signatures = JSON.parse(localStorage.getItem(SIGNATURE_STORAGE_KEY) || '[]');
+
+    if (signatures.length === 0) {
+        grid.innerHTML = '<p style="text-align:center; grid-column: 1 / -1;">لا توجد تواقيع لعرضها. يمكنك إضافتها من زر "تعديل التواقيع".</p>';
+        return;
+    }
+
+    signatures.forEach(sig => {
+        const signatureHTML = `
+            <div class="signature-item" style="text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+                <div class="signature-title" style="font-weight: bold; margin-bottom: 10px;">${sig.title || 'مسمى فارغ'}:</div>
+                <div class="signature-line" style="border-bottom: 1px solid #000; height: 40px; margin: 10px 0;"></div>
+                <div class="signature-name" style="font-size: 14px; margin-top: 5px;">${sig.name || 'اسم فارغ'}</div>
+            </div>
+        `;
+        grid.innerHTML += signatureHTML;
+    });
+}
+/**
+ * ===================================================================
+ *      ===>   التحميل المنظم لصفحة الأداء (النسخة النهائية والمصححة)   <===
+ * ===================================================================
+ * @description يضمن إنشاء "ملف الإعدادات الافتراضي" عند أول تشغيل،
+ *              مما يفعل كل الخصائص (توزيع الراتب وظهور الأقسام) تلقائيًا.
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("بدء تحميل صفحة الأداء...");
+
+    // 1. تحديث بيانات العقد والوقت أولاً
+    if (typeof updateContractDisplayData === 'function') {
+        updateContractDisplayData();
+    }
+    if (typeof updateDateTime === 'function') {
+        updateDateTime();
+        setInterval(updateDateTime, 60000);
+    }
+
+    // 2. ===== إنشاء ملف الإعدادات الافتراضي (هذا هو الحل) =====
+    // يتحقق من وجود الإعدادات، وينشئها بالقيم الافتراضية إذا لم تكن موجودة.
+    if (!localStorage.getItem('distributionSettings')) {
+        console.log("ملف الإعدادات غير موجود. سيتم إنشاؤه الآن بالقيم الافتراضية.");
+        
+        const defaultSettings = {
+            // تفعيل توزيع راتب المدير (الخصم) بشكل افتراضي
+            hasProjectManager: true, 
+            
+            // تفعيل ظهور جميع الأقسام بشكل افتراضي
+            activeDepartments: [   
+                'cleaning', 
+                'electricity', 
+                'agriculture', 
+                'civil_works', 
+                'mechanical', 
+                'laundry', 
+                'patient_services'
+            ]
+        };
+        
+        // حفظ ملف الإعدادات الافتراضي في الذاكرة
+        localStorage.setItem('distributionSettings', JSON.stringify(defaultSettings));
+        console.log("تم إنشاء وحفظ ملف الإعدادات الافتراضي بنجاح.");
+    }
+    // ==========================================================
+
+    // 3. الآن، بعد التأكد من وجود الإعدادات، نقوم بتطبيقها
+    applyPerformanceSettings();
+    applyDisplaySettingsToCards();
+
+    // 4. تحميل البيانات والحسابات
+    const departments = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'laundry', 'security'];
+    departments.forEach(tableId => {
+        const tableElement = document.getElementById(tableId);
+        if (tableElement && tableElement.style.display !== 'none') {
+            loadTableData(tableId);
+        }
+    });
+
+    // 5. استدعاء دالة التحديث الشاملة لضمان سحب كل البيانات والحسابات
+    updateAllTotals();
+
+    // 6. تحديث باقي عناصر الواجهة
+    updateSignaturesOnPage();
+    updateTableTitlesFromStorage();
+    
+    console.log("اكتمل تحميل صفحة الأداء بنجاح.");
+});
+
+// تأكد من وجود هذه الدالة المساعدة في الكود لديك
+function updateAllTotals() {
+    const departments = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'laundry', 'security'];
+    
+    departments.forEach(dept => {
+        updateTotalAmount(dept);
+    });
+
+    departments.forEach(dept => {
+        updateTotal(dept);
+    });
+
+    updateCertificateFromPerformance();
+}
+ 
+
+// 2) مستمع آخر على زر الطباعة/التصدير ليضمن أن البيانات الأخيرة محفوظة
+document.addEventListener('click', function (e) {
+    if (e.target.classList.contains('btn-print') || 
+        e.target.classList.contains('btn-pdf')  || 
+        e.target.classList.contains('btn-excel')) {
+
+        const tableContainer = e.target.closest('.table-container');
+        if (tableContainer) {
+            const tableId = tableContainer.id;
+            saveTableData(tableId);   // احفظ آخر قيمة قبل الطباعة
+        }
+    }
+});
+// ===== نظام النسخ الاحتياطي الكامل =====
+function createBackup() {
+    const backup = {
+        timestamp: new Date().toISOString(),
+        performanceData: {},
+        signatures: {}
+    };
+
+    // حفظ جميع الجداول
+    const departments = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'security', 'laundry'];
+    departments.forEach(dept => {
+        const data = localStorage.getItem(`tableData_${dept}`);
+        if (data) backup.performanceData[dept] = JSON.parse(data);
+    });
+
+    // حفظ التواقيع
+    const signatureData = localStorage.getItem('performanceSignatures');
+    if (signatureData) backup.signatures = JSON.parse(signatureData);
+
+    // حفظ البيانات العامة
+    backup.generalData = {
+        certificateTotal: localStorage.getItem('performanceData'),
+        totalDeduction: localStorage.getItem('performanceTotalDeduction')
+    };
+
+    // تحميل الملف
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `backup_performance_${new Date().toLocaleDateString('ar-SA').replace(/\//g, '-')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    showSuccessMessage('تم حفظ النسخة الاحتياطية بنجاح!');
+}
+// ==================================================
+// == كود تشغيل ميزة تعديل أسماء الجداول (جديد) ==
+// ===================================================
+
+// 1. دالة لفتح نافذة التعديل
+function openEditTableNamesDialog() {
+    const dialog = document.getElementById('table-names-dialog');
+    const overlay = document.getElementById('table-names-overlay');
+    
+    // تحميل الأسماء الحالية في الحقول
+    populateTableNamesForm();
+
+    dialog.style.display = 'block';
+    overlay.style.display = 'block';
+}
+
+// 2. دالة لإغلاق النافذة
+function closeEditTableNamesDialog() {
+    const dialog = document.getElementById('table-names-dialog');
+    const overlay = document.getElementById('table-names-overlay');
+    dialog.style.display = 'none';
+    overlay.style.display = 'none';
+}
+
+// 3. دالة لملء النافذة بالأسماء الحالية
+function populateTableNamesForm() {
+    const container = document.getElementById('table-names-form-container');
+    const savedNames = JSON.parse(localStorage.getItem('performanceTableNames') || '{}');
+    container.innerHTML = ''; // مسح المحتوى القديم
+
+    // المرور على كل الجداول في الصفحة
+    document.querySelectorAll('.table-container').forEach(tableDiv => {
+        const tableId = tableDiv.id;
+        if (tableId === 'certificate') return; // استثناء جدول الشهادة
+
+        const defaultTitle = tableDiv.querySelector('.table-title').textContent;
+        const currentTitle = savedNames[tableId] || defaultTitle;
+
+        const formGroup = document.createElement('div');
+        formGroup.style.marginBottom = '15px';
+        formGroup.innerHTML = `
+            <label for="name-input-${tableId}" style="font-weight: bold; display: block; margin-bottom: 5px;">${defaultTitle}:</label>
+            <input type="text" id="name-input-${tableId}" value="${currentTitle}" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
+        `;
+        container.appendChild(formGroup);
+    });
+}
+
+// 4. دالة لحفظ الأسماء الجديدة
+function saveTableNames() {
+    const savedNames = JSON.parse(localStorage.getItem('performanceTableNames') || '{}');
+    let changesMade = false;
+
+    document.querySelectorAll('.table-container').forEach(tableDiv => {
+        const tableId = tableDiv.id;
+        if (tableId === 'certificate') return;
+
+        const input = document.getElementById(`name-input-${tableId}`);
+        if (input) {
+            const newName = input.value.trim();
+            if (newName && savedNames[tableId] !== newName) {
+                savedNames[tableId] = newName;
+                changesMade = true;
+            }
+        }
+    });
+
+    if (changesMade) {
+        localStorage.setItem('performanceTableNames', JSON.stringify(savedNames));
+        showSuccessMessage('تم حفظ أسماء الجداول بنجاح!');
+        // تحديث العناوين في الصفحة فوراً
+        updateTableTitlesFromStorage();
+    } else {
+        showSuccessMessage('لم يتم إجراء أي تغييرات.');
+    }
+
+    closeEditTableNamesDialog();
+}
+
+// 5. دالة لتحديث العناوين في الصفحة من البيانات المحفوظة
+function updateTableTitlesFromStorage() {
+    const savedNames = JSON.parse(localStorage.getItem('performanceTableNames') || '{}');
+    Object.keys(savedNames).forEach(tableId => {
+        const titleElement = document.querySelector(`#${tableId} .table-title`);
+        if (titleElement) {
+            titleElement.textContent = savedNames[tableId];
+        }
+    });
+}
+
+// 6. استدعاء دالة تحديث العناوين عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', updateTableTitlesFromStorage);
+
+
+function restoreBackup() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                const backup = JSON.parse(event.target.result);
+
+                // استعادة الجداول
+                Object.keys(backup.performanceData || {}).forEach(dept => {
+                    localStorage.setItem(`tableData_${dept}`, JSON.stringify(backup.performanceData[dept]));
+                });
+
+                // استعادة التواقيع
+                if (backup.signatures) {
+                    localStorage.setItem('performanceSignatures', JSON.stringify(backup.signatures));
+                }
+
+                // استعادة البيانات العامة
+                if (backup.generalData?.certificateTotal) {
+                    localStorage.setItem('performanceData', backup.generalData.certificateTotal);
+                }
+                if (backup.generalData?.totalDeduction) {
+                    localStorage.setItem('performanceTotalDeduction', backup.generalData.totalDeduction);
+                }
+
+                // إعادة تحميل الصفحة لتطبيق التغييرات
+                location.reload();
+                showSuccessMessage('تم استعادة النسخة الاحتياطية بنجاح!');
+
+            } catch (error) {
+                alert('خطأ في ملف النسخة الاحتياطية');
+                console.error(error);
+            }
+        };
+        reader.readAsText(file);
+    };
+    
+    input.click();
+}
+function saveTableData(tableId, isManualSave = false) {
+    console.log(`بدء حفظ بيانات الجدول: ${tableId}`);
+    const table = document.getElementById(tableId + '-table');
+    if (!table) {
+        console.error(`الجدول ${tableId} غير موجود`);
+        return;
+    }
+    const rows = table.querySelectorAll('tbody tr:not(.total-row)');
+    const amountInput = document.getElementById(tableId + '-amount');
+    
+    const data = {
+        rows: [],
+        amount: amountInput ? parseFloat(amountInput.value) || 0 : 0
+    };
+
+    rows.forEach(row => {
+        const activity = row.cells[0].textContent;
+        const maxScore = parseInt(row.cells[1].textContent) || 0;
+        const scoreInput = row.cells[2].querySelector('input');
+        const score = scoreInput ? parseInt(scoreInput.value) || 0 : 0;
+        data.rows.push({ activity, maxScore, score });
+    });
+
+    try {
+        localStorage.setItem(`tableData_${tableId}`, JSON.stringify(data));
+        
+        if (isManualSave) {
+            showSuccessMessage('تم حفظ البيانات بنجاح!');
+        }
+        
+        const saveButton = document.getElementById(tableId + '-save-btn');
+        if (saveButton) {
+            saveButton.style.display = 'none';
+        }
+    } catch (error) {
+        console.error(`خطأ في حفظ بيانات الجدول ${tableId}:`, error);
+    }
+}
+function applyDisplaySettings() {
+    const settings = JSON.parse(localStorage.getItem('distributionSettings')) || { activeDepartments: [] };
+    const activeDepts = settings.activeDepartments;
+
+    // إذا لم يكن هناك مدير موقع، فلا داعي لإخفاء أي شيء
+    if (!settings.hasProjectManager) {
+        document.querySelectorAll('.table-container').forEach(table => table.style.display = '');
+        return;
+    }
+
+    const departmentMap = {
+        'cleaning': 'cleaning',
+        'electricity': 'electricity',
+        'agriculture': 'agriculture',
+        'civil': 'civil_works',
+        'mechanics': 'mechanical',
+        'laundry': 'laundry',
+        'security': 'patient_services'
+    };
+
+    // إخفاء أو إظهار كل جدول بناءً على القائمة المحفوظة
+    for (const tableId in departmentMap) {
+        const tableElement = document.getElementById(tableId);
+        if (tableElement) {
+            const deptKey = departmentMap[tableId];
+            if (activeDepts.includes(deptKey)) {
+                tableElement.style.display = ''; // أظهر الجدول
+            } else {
+                tableElement.style.display = 'none'; // أخفِ الجدول
+            }
+        }
+    }
+    // تحديث الحسابات بعد إظهار/إخفاء الجداول
+    updateCertificateFromPerformance();
+}
+/**
+ * ===================================================================
+ *      ===>   الخطوة 2: دالة تطبيق إعدادات العرض   <===
+ * ===================================================================
+ * @description يقرأ الإعدادات من الذاكرة ويخفي/يظهر جداول الأداء.
+ */
+function applyPerformanceSettings() {
+    console.log("تطبيق إعدادات العرض...");
+    
+    // 1. قراءة الإعدادات مع قيم افتراضية آمنة
+    const settings = JSON.parse(localStorage.getItem('distributionSettings')) || {
+        hasProjectManager: false,
+        activeDepartments: [] // افتراضياً لا يوجد أقسام نشطة إذا لم توجد إعدادات
+    };
+    const activeDepts = settings.activeDepartments;
+
+    // 2. خريطة لربط ID الجدول في HTML بمفتاح القسم في الإعدادات
+    const departmentMap = {
+        'cleaning': 'cleaning',
+        'electricity': 'electricity',
+        'agriculture': 'agriculture',
+        'civil': 'civil_works',
+        'mechanics': 'mechanical',
+        'laundry': 'laundry',
+        'security': 'patient_services'
+    };
+
+    // 3. المرور على كل جدول وتحديد مصيره (إظهار أو إخفاء)
+    for (const tableId in departmentMap) {
+        const tableElement = document.getElementById(tableId);
+        if (tableElement) {
+            const deptKey = departmentMap[tableId];
+            
+            // أظهر الجدول فقط إذا كان مفتاحه موجودًا في قائمة الأقسام النشطة
+            if (activeDepts.includes(deptKey)) {
+                tableElement.style.display = 'block';
+            }
+        }
+    }
+}
+/**
+ * ===================================================================
+ *      ===>   نظام استيراد بنود الأداء من Excel   <===
+ * ===================================================================
+ */
+
+// متغير عام لتخزين اسم الجدول الذي يتم استيراد البيانات إليه
+let currentImportTableId = null;
+
+// 1. دالة تفتح نافذة اختيار الملف وتخزن اسم الجدول
+function openExcelImportDialog(tableId) {
+    currentImportTableId = tableId;
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = ".xlsx, .xls";
+    fileInput.onchange = handlePerformanceExcelUpload;
+    fileInput.click();
+}
+
+// 2. دالة تقرأ ملف الإكسل وتعالج البيانات
+/**
+ * ===================================================================
+ *      ===>   قراءة ملف الإكسل (النسخة المطورة والذكية)   <===
+ * ===================================================================
+ */
+function handlePerformanceExcelUpload(event) {
+    const file = event.target.files[0];
+    if (!file || !currentImportTableId) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+
+            if (jsonData.length === 0) {
+                throw new Error("الملف فارغ أو لا يمكن قراءته.");
+            }
+
+            // 1. البحث الذكي عن صف العناوين والأعمدة
+            let headerRowIndex = -1;
+            let activityIndex = -1, maxScoreIndex = -1, scoreIndex = -1;
+
+            for (let i = 0; i < jsonData.length; i++) {
+                const row = jsonData[i].map(cell => String(cell).trim());
+                const activityFound = row.some(cell => cell.includes("أنشطة القسم"));
+                const maxScoreFound = row.some(cell => cell.includes("الدرجة القصوى"));
+                const scoreFound = row.some(cell => cell.includes("التقدير"));
+
+                if (activityFound && maxScoreFound && scoreFound) {
+                    headerRowIndex = i;
+                    activityIndex = row.findIndex(cell => cell.includes("أنشطة القسم"));
+                    maxScoreIndex = row.findIndex(cell => cell.includes("الدرجة القصوى"));
+                    scoreIndex = row.findIndex(cell => cell.includes("التقدير"));
+                    break;
+                }
+            }
+
+            if (headerRowIndex === -1) {
+                throw new Error("لم يتم العثور على صف العناوين. تأكد من وجود 'أنشطة القسم'، 'الدرجة القصوى'، و 'التقدير'.");
+            }
+
+            // 2. استخراج البنود من البيانات
+            const newItems = [];
+            for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                const activity = String(row[activityIndex] || '').trim();
+
+                // 3. التوقف عند الوصول إلى صف المجموع
+if (activity.trim().includes("المجمــــــــــــــــوع")) {
+                    break;
+                }
+
+                const maxScore = parseInt(row[maxScoreIndex]) || 0;
+                const score = parseInt(row[scoreIndex]) || 0;
+
+                // إضافة البند فقط إذا كان يحتوي على نشاط ودرجة قصوى
+                if (activity && maxScore > 0) {
+                    newItems.push({ activity, maxScore, score });
+                }
+            }
+
+            if (newItems.length === 0) {
+                throw new Error("لم يتم العثور على بنود صالحة في الملف.");
+            }
+
+            // 4. استدعاء الدالة التي ستقوم بتحديث الجدول
+            updateTableWithImportedData(currentImportTableId, newItems);
+
+        } catch (error) {
+            alert(`فشل استيراد الملف: ${error.message}`);
+            console.error("خطأ في معالجة ملف الإكسل:", error);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// 3. دالة تقوم بتحديث الجدول بالبيانات الجديدة
+function updateTableWithImportedData(tableId, items) {
+    if (!confirm(`هل أنت متأكد من استبدال البنود الحالية في جدول "${document.querySelector('#' + tableId + ' .table-title').textContent}" بالبيانات الجديدة؟`)) {
+        return;
+    }
+
+    const table = document.getElementById(tableId + '-table');
+    const tbody = table.querySelector('tbody');
+    const totalRow = tbody.querySelector('.total-row');
+
+    // مسح البنود القديمة
+    while (tbody.firstChild && tbody.firstChild !== totalRow) {
+        tbody.removeChild(tbody.firstChild);
+    }
+
+    // إضافة البنود الجديدة
+    items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${item.activity}</td>
+            <td>${item.maxScore}</td>
+            <td><input type="number" class="editable" value="${item.score}" max="${item.maxScore}" min="0" onchange="updateTotal('${tableId}');"></td>
+        `;
+        tbody.insertBefore(tr, totalRow);
+    });
+
+    // تحديث كل شيء وحفظ البيانات
+    updateTotal(tableId);
+    updateCertificateFromPerformance();
+    saveTableData(tableId, true);
+
+    showSuccessMessage(`تم استيراد ${items.length} بنود بنجاح!`);
+}
+/**
+ * ===================================================================
+ *      ===>   رابط بيانات العقد (النسخة النهائية والمحسّنة)   <===
+ * ===================================================================
+ * @description هذه الدالة هي المسؤولة عن جلب بيانات العقد المحفوظة
+ *              وعرضها في أي صفحة تحتاج إليها، مثل صفحة الأداء.
+ */
+function updateContractDisplayData() {
+    try {
+        // 1. قراءة بيانات العقد من الذاكرة المحلية
+        const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+        const extractData = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+
+        // 2. استخراج البيانات مع توفير قيم افتراضية آمنة
+        const hospitalName = contractData.hospitalName || 'غير محدد';
+        const contractDetails = contractData.contractDetails || 'غير محدد';
+        const companyName = contractData.companyName || 'غير محدد';
+        const contractType = contractData.contractType || 'غير محدد';
+        const directPurchaseRatio = contractData.directPurchaseRatio || '0';
+        
+        // 3. تنسيق التواريخ بشكل صحيح
+        const extractStart = extractData.extractStart ? new Date(extractData.extractStart).toLocaleDateString('ar-SA') : 'غير محدد';
+        const extractEnd = extractData.extractEnd ? new Date(extractData.extractEnd).toLocaleDateString('ar-SA') : 'غير محدد';
+
+        // 4. تحديث جميع العناصر في الصفحة التي تحمل الكلاسات المخصصة
+        document.querySelectorAll('.hospitalName').forEach(el => el.textContent = hospitalName);
+        document.querySelectorAll('.contractDetails').forEach(el => el.textContent = contractDetails);
+        document.querySelectorAll('.companyName').forEach(el => el.textContent = companyName);
+        document.querySelectorAll('.contractType').forEach(el => el.textContent = contractType);
+        
+        // تحديث فترة المستخلص
+        document.querySelectorAll('#extract-start-date').forEach(el => el.textContent = extractStart);
+        document.querySelectorAll('#extract-end-date').forEach(el => el.textContent = extractEnd);
+
+        // 5. التعامل مع حقل "الشراء المباشر"
+        const directPurchaseContainer = document.querySelector('.directPurchaseContainer');
+        if (directPurchaseContainer) {
+            if (contractType === 'شراء مباشر') {
+                document.querySelector('.directPurchaseRatio').textContent = directPurchaseRatio;
+                directPurchaseContainer.style.display = 'block'; // إظهار الحقل
+            } else {
+                directPurchaseContainer.style.display = 'none'; // إخفاء الحقل
+            }
+        }
+        
+        console.log("تم تحديث بيانات العقد بنجاح في الواجهة.");
+
+    } catch (error) {
+        console.error("حدث خطأ أثناء عرض بيانات العقد:", error);
+    }
+}
+
+// 6. تأكد من استدعاء الدالة عند تحميل الصفحة
+// أضف هذا السطر في نهاية ملف الجافا سكريبت الرئيسي أو داخل مستمع `DOMContentLoaded`
+document.addEventListener('DOMContentLoaded', updateContractDisplayData);
+
+// استدعاء الدالة عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', applyDisplaySettings);
+
+    </script>
+
+<script src="/original/extract-submit.js"></script>
+<script src="/original/track.js"></script>
+<script src="/original/shared-nav.js"></script>
+</body>
+</html>
+
+

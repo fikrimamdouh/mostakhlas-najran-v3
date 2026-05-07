@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <script src="/original/auth-check.js"></script>
+    <script src="/original/cloud-sync.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المراكز الصحية - تجمع نجران الصحي</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/original/shared-styles.css">
+    <style>
+        body { margin: 0; direction: rtl; }
+        .hub-page {
+            max-width: 700px;
+            margin: 60px auto;
+            padding: 0 20px;
+            text-align: center;
+        }
+        .hub-logo {
+            width: 90px;
+            height: 90px;
+            margin: 0 auto 20px;
+            display: block;
+            border-radius: 16px;
+            border: 2px solid #c7d7f9;
+            padding: 6px;
+            background: #fff;
+        }
+        .hub-title { font-size: 28px; font-weight: 800; color: #003087; margin-bottom: 6px; }
+        .hub-sub   { font-size: 15px; color: #64748b; margin-bottom: 32px; }
+        .hub-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+        @media (max-width: 500px) { .hub-grid { grid-template-columns: 1fr; } }
+        /* hub-card styles injected by shared-styles.css */
+        .hub-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #f1f5f9;
+            color: #475569;
+            padding: 10px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background .15s;
+        }
+        .hub-back:hover { background: #e2e8f0; }
+    </style>
+</head>
+<body>
+    <div id="particles-js-bg"></div>
+
+    <!-- Hidden nav so shared-nav picks current page context -->
+    <div class="nav-bar" style="display:none">
+        <div class="dropdown">
+            <select id="navigation" onchange="if(this.value) window.location.href=this.value">
+                <option value="#">-- اختر صفحة --</option>
+                <option value="attendance.html">الحضور والانصراف</option>
+                <option value="performance.html">شهادة الأداء</option>
+                <option value="achievement.html">شهادة الإنجاز</option>
+                <option value="consumables.html">مستخلص المستهلكات</option>
+                <option value="spare_parts.html">مستخلص قطع الغيار</option>
+                <option value="health_centers_attendance.html" selected>المراكز الصحية</option>
+                <option value="approval.html">متابعة المستخلصات</option>
+                <option value="admin-dashboard.html">🛡️ لوحة الأدمن</option>
+                <option value="settings_main.html">الإعدادات</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="hub-page">
+        <img src="/original/najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="hub-logo">
+        <h1 class="hub-title">المراكز الصحية</h1>
+        <p class="hub-sub">اختر نوع المستخلص للمراكز الصحية</p>
+
+        <div class="hub-grid">
+            <a href="health_centers_attendance.html" class="hub-card">
+                <span class="hub-icon">👥</span>
+                <h3>مستخلص العمالة</h3>
+                <p style="font-size:13px; color:#64748b; margin:0;">كشف الحضور والانصراف</p>
+            </a>
+            <a href="health_centers_consumables.html" class="hub-card">
+                <span class="hub-icon">📦</span>
+                <h3>مستخلص المستهلكات</h3>
+                <p style="font-size:13px; color:#64748b; margin:0;">المواد والمستهلكات المجمعة</p>
+            </a>
+        </div>
+
+        <a href="attendance.html" class="hub-back">
+            <i class="fas fa-arrow-right"></i> العودة للقائمة الرئيسية
+        </a>
+    </div>
+
+    <script src="/original/shared-nav.js"></script>
+    <script src="/original/track.js"></script>
+</body>
+</html>

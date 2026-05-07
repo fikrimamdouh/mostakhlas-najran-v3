@@ -1,0 +1,694 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Construction Extracts Management System API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: users
+    description: User management
+  - name: extracts
+    description: Extract/Mustaklassat management
+  - name: projects
+    description: Projects management
+  - name: stats
+    description: Dashboard statistics
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /users/me:
+    get:
+      operationId: getMe
+      tags: [users]
+      summary: Get current user profile
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users (admin only)
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+
+  /users/{userId}/approve:
+    post:
+      operationId: approveUser
+      tags: [users]
+      summary: Approve a user registration (admin only)
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+  /users/{userId}/reject:
+    post:
+      operationId: rejectUser
+      tags: [users]
+      summary: Reject a user registration (admin only)
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List all projects
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectListResponse"
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Create a new project
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectBody"
+      responses:
+        "201":
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{projectId}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Get a project by ID
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /extracts:
+    get:
+      operationId: listExtracts
+      tags: [extracts]
+      summary: List all extracts
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [current, completed, previous]
+        - name: projectId
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of extracts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtractListResponse"
+    post:
+      operationId: createExtract
+      tags: [extracts]
+      summary: Create a new extract
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExtractBody"
+      responses:
+        "201":
+          description: Extract created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Extract"
+
+  /extracts/{extractId}:
+    get:
+      operationId: getExtract
+      tags: [extracts]
+      summary: Get extract by ID
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: extractId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Extract details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Extract"
+    put:
+      operationId: updateExtract
+      tags: [extracts]
+      summary: Update an extract
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: extractId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateExtractBody"
+      responses:
+        "200":
+          description: Extract updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Extract"
+    delete:
+      operationId: deleteExtract
+      tags: [extracts]
+      summary: Delete an extract
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: extractId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Extract deleted
+
+  /stats/dashboard:
+    get:
+      operationId: getDashboardStats
+      tags: [stats]
+      summary: Get dashboard statistics
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /stats/extracts-by-status:
+    get:
+      operationId: getExtractsByStatus
+      tags: [stats]
+      summary: Get extracts grouped by status
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: Extracts by status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExtractStatusCount"
+
+  /stats/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [stats]
+      summary: Get recent extract activity
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExtractActivity"
+
+components:
+  securitySchemes:
+    clerkAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        clerkId:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [admin, supervisor, contract_supervisor, user]
+        contractCompany:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        company:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        hospital:
+          type: string
+          nullable: true
+        jobTitle:
+          type: string
+          nullable: true
+        contractNumber:
+          type: string
+          nullable: true
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastPage:
+          type: string
+          nullable: true
+        lastPageAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - clerkId
+        - email
+        - role
+        - status
+        - createdAt
+
+    UserListResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserProfile"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - users
+        - total
+        - page
+        - limit
+
+    Project:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        contractValue:
+          type: number
+          nullable: true
+        startDate:
+          type: string
+          format: date
+          nullable: true
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        status:
+          type: string
+          enum: [active, completed, on_hold]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - status
+        - createdAt
+
+    CreateProjectBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        contractValue:
+          type: number
+          nullable: true
+        startDate:
+          type: string
+          format: date
+          nullable: true
+        endDate:
+          type: string
+          format: date
+          nullable: true
+      required:
+        - name
+
+    ProjectListResponse:
+      type: object
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: "#/components/schemas/Project"
+        total:
+          type: integer
+      required:
+        - projects
+        - total
+
+    Extract:
+      type: object
+      properties:
+        id:
+          type: integer
+        extractNumber:
+          type: string
+        projectId:
+          type: integer
+        projectName:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [current, completed, previous]
+        amount:
+          type: number
+        description:
+          type: string
+          nullable: true
+        submittedBy:
+          type: string
+          nullable: true
+        submittedAt:
+          type: string
+          format: date-time
+          nullable: true
+        approvedBy:
+          type: string
+          nullable: true
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - extractNumber
+        - projectId
+        - status
+        - amount
+        - createdAt
+
+    CreateExtractBody:
+      type: object
+      properties:
+        extractNumber:
+          type: string
+        projectId:
+          type: integer
+        status:
+          type: string
+          enum: [current, completed, previous]
+        amount:
+          type: number
+        description:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        submittedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - extractNumber
+        - projectId
+        - status
+        - amount
+
+    UpdateExtractBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [current, completed, previous]
+        amount:
+          type: number
+        description:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ExtractListResponse:
+      type: object
+      properties:
+        extracts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Extract"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - extracts
+        - total
+        - page
+        - limit
+
+    DashboardStats:
+      type: object
+      properties:
+        totalExtracts:
+          type: integer
+        currentExtracts:
+          type: integer
+        completedExtracts:
+          type: integer
+        previousExtracts:
+          type: integer
+        totalAmount:
+          type: number
+        currentAmount:
+          type: number
+        totalProjects:
+          type: integer
+        activeProjects:
+          type: integer
+        pendingUsers:
+          type: integer
+      required:
+        - totalExtracts
+        - currentExtracts
+        - completedExtracts
+        - previousExtracts
+        - totalAmount
+        - currentAmount
+        - totalProjects
+        - activeProjects
+        - pendingUsers
+
+    ExtractStatusCount:
+      type: object
+      properties:
+        status:
+          type: string
+        count:
+          type: integer
+        amount:
+          type: number
+      required:
+        - status
+        - count
+        - amount
+
+    ExtractActivity:
+      type: object
+      properties:
+        id:
+          type: integer
+        extractNumber:
+          type: string
+        projectName:
+          type: string
+          nullable: true
+        status:
+          type: string
+        amount:
+          type: number
+        action:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - id
+        - extractNumber
+        - status
+        - amount
+        - action
+        - timestamp

@@ -1,0 +1,236 @@
+.btn-save {
+    display: none;
+}
+
+/* تنسيق مكون معلومات العقد */
+.page-contract-info {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    margin: 0 0 20px 0;
+    border-right: 4px solid #2a5298;
+    text-align: right;
+    font-family: 'Tajawal', sans-serif;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.page-contract-info p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #2c3e50;
+    flex-basis: 48%;
+}
+
+.page-contract-info strong {
+    color: #1e3c72;
+    font-weight: 600;
+}
+
+/* تنسيق الجداول */
+.table-container {
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 30px;
+    display: none;
+}
+
+.table-container.active {
+    display: block;
+}
+
+.table-title {
+    font-size: 20px;
+    color: #1e3c72;
+    margin-bottom: 15px;
+    text-align: center;
+    font-weight: 700;
+    border-bottom: 2px solid #d4af37;
+    padding-bottom: 10px;
+}
+
+.table-container table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+}
+
+.table-container th, 
+.table-container td {
+    padding: 10px;
+    border: 1px solid #e0e0e0;
+    text-align: center;
+}
+
+.table-container th {
+    background: linear-gradient(145deg, #2a5298, #1e3c72);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.table-container tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.table-container tr:hover {
+    background-color: #f1f4f9;
+}
+
+.table-container input[type="number"] {
+    width: 60px;
+    padding: 5px;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.table-container .total-row {
+    background-color: #f0f4f8;
+    font-weight: 700;
+}
+
+.table-container .total-row th:last-child {
+    background: #d4af37;
+    color: #ffffff;
+}
+
+.total-amount {
+    margin: 10px 0;
+    font-weight: 600;
+    color: #1e3c72;
+}
+
+.total-amount input {
+    width: 120px;
+    padding: 5px;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    margin-right: 10px;
+}
+
+.summary-text {
+    margin: 15px 0;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    border-right: 3px solid #d4af37;
+}
+
+.summary-text p {
+    margin: 5px 0;
+    color: #2c3e50;
+}
+
+.footer-text {
+    margin: 15px 0;
+    font-size: 14px;
+    color: #7f8c8d;
+    text-align: center;
+    font-style: italic;
+}
+
+.signatures {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    margin: 20px 0;
+}
+
+.signature-item {
+    flex-basis: 48%;
+    margin-bottom: 10px;
+    padding: 5px;
+    border-bottom: 1px dashed #d1d5db;
+}
+
+.signature-item i {
+    color: #1e3c72;
+    margin-left: 5px;
+}
+
+.action-buttons, .export-buttons {
+    display: flex;
+    gap: 10px;
+    margin: 15px 0;
+    justify-content: center;
+}
+
+.action-buttons button, .export-buttons button {
+    padding: 8px 15px;
+    background: linear-gradient(145deg, #2a5298, #1e3c72);
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.action-buttons button:hover, .export-buttons button:hover {
+    background: linear-gradient(145deg, #d4af37, #b8962e);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* تنسيق بطاقات الأقسام */
+.sections-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.section-card {
+    background: linear-gradient(145deg, #2a5298, #1e3c72);
+    color: #ffffff;
+    padding: 15px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    flex-basis: calc(25% - 15px);
+    min-width: 200px;
+}
+
+.section-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(145deg, #d4af37, #b8962e);
+}
+
+.section-card h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.section-card i {
+    margin-left: 5px;
+    font-size: 18px;
+}
+
+/* تحسينات للتوافق مع الأجهزة المحمولة */
+@media (max-width: 768px) {
+    .page-contract-info p {
+        flex-basis: 100%;
+    }
+    
+    .signature-item {
+        flex-basis: 100%;
+    }
+    
+    .section-card {
+        flex-basis: calc(50% - 15px);
+    }
+    
+    .action-buttons, .export-buttons {
+        flex-direction: column;
+    }
+}

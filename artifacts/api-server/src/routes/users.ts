@@ -1,0 +1,275 @@
+import { Router } from "express";
+import { getAuth } from "@clerk/express";
+import { db, usersTable } from "@workspace/db";
+import { eq, sql } from "drizzle-orm";
+import { sendApprovalEmail, sendRejectionEmail } from "../lib/email";
+import { logAudit } from "./audit";
+
+const router = Router();
+
+const requireAuth = (req: any, res: any, next: any) => {
+  const auth = getAuth(req);
+  if (!auth?.userId) return res.status(401).json({ error: "Unauthorized" });
+  req.clerkUserId = auth.userId;
+  next();
+};
+
+const requireAdmin = async (req: any, res: any, next: any) => {
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+    if (!user || user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+    req.currentUser = user;
+    next();
+  } catch (err) {
+    req.log.error({ err }, "requireAdmin failed");
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const requireAdminOrSupervisor = async (req: any, res: any, next: any) => {
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+    if (!user || !["admin", "supervisor"].includes(user.role)) return res.status(403).json({ error: "Forbidden" });
+    req.currentUser = user;
+    next();
+  } catch (err) {
+    req.log.error({ err }, "requireAdminOrSupervisor failed");
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// GET /api/users/me
+router.get("/me", requireAuth, async (req: any, res) => {
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    return res.json(user);
+  } catch (err) {
+    req.log.error({ err }, "Failed to get user");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PATCH /api/users/me — update own profile
+router.patch("/me", requireAuth, async (req: any, res) => {
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const { name, phone, company } = req.body;
+    const updates: Record<string, any> = {};
+    if (name) updates.name = name;
+    if (phone !== undefined) updates.phone = phone;
+    if (company !== undefined) updates.company = company;
+    const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, user.id)).returning();
+    const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
+    logAudit(user.id, user.email, user.name, "تحديث الملف الشخصي", JSON.stringify(updates), ip);
+    return res.json(updated);
+  } catch (err) {
+    req.log.error({ err }, "Failed to update profile");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PATCH /api/users/me/activity — update current page; optionally log special events to audit
+// Also accepts POST as a fallback (some proxies block PATCH)
+async function handleActivity(req: any, res: any) {
+  try {
+    const { page, event, details } = req.body;
+    if (!page) return res.status(400).json({ error: "page required" });
+
+    const [user] = await db.update(usersTable)
+      .set({ lastPage: page, lastPageAt: new Date() })
+      .where(eq(usersTable.clerkId, req.clerkUserId))
+      .returning();
+
+    if (event && user) {
+      const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
+      logAudit(user.id, user.email, user.name ?? "", event, details || page, ip);
+    }
+
+    return res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to update activity");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+router.patch("/me/activity", requireAuth, handleActivity);
+router.post("/me/activity", requireAuth, handleActivity);
+
+// PATCH /api/users/me/login
+router.patch("/me/login", requireAuth, async (req: any, res) => {
+  try {
+    const [user] = await db.update(usersTable)
+      .set({ lastLoginAt: new Date() })
+      .where(eq(usersTable.clerkId, req.clerkUserId))
+      .returning();
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Log login in audit
+    const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
+    logAudit(user.id, user.email, user.name, "تسجيل دخول", undefined, ip);
+
+    return res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to update last login");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /api/users - admin + supervisor (read-only for supervisor)
+router.get("/", requireAuth, requireAdminOrSupervisor, async (req: any, res) => {
+  try {
+    const { status, page = 1, limit = 50 } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
+    let query = db.select().from(usersTable) as any;
+    if (status) query = query.where(eq(usersTable.status, status as "pending" | "approved" | "rejected"));
+    const users = await query.limit(Number(limit)).offset(offset);
+    const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(usersTable);
+    return res.json({ users, total: Number(count), page: Number(page), limit: Number(limit) });
+  } catch (err) {
+    req.log.error({ err }, "Failed to list users");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/users/:userId/approve - admin only
+router.post("/:userId/approve", requireAuth, requireAdmin, async (req: any, res) => {
+  try {
+    const { userId } = req.params;
+    const [user] = await db.update(usersTable).set({ status: "approved" }).where(eq(usersTable.id, Number(userId))).returning();
+    if (!user) return res.status(404).json({ error: "User not found" });
+    sendApprovalEmail(user.email, user.name).catch(() => {});
+    const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
+    logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "موافقة على مستخدم", `تمت الموافقة على ${user.name} (${user.email})`, ip);
+    return res.json(user);
+  } catch (err) {
+    req.log.error({ err }, "Failed to approve user");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/users/:userId/reject - admin only
+router.post("/:userId/reject", requireAuth, requireAdmin, async (req: any, res) => {
+  try {
+    const { userId } = req.params;
+    const [user] = await db.update(usersTable).set({ status: "rejected" }).where(eq(usersTable.id, Number(userId))).returning();
+    if (!user) return res.status(404).json({ error: "User not found" });
+    sendRejectionEmail(user.email, user.name).catch(() => {});
+    const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
+    logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "رفض مستخدم", `تم رفض ${user.name} (${user.email})`, ip);
+    return res.json(user);
+  } catch (err) {
+    req.log.error({ err }, "Failed to reject user");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PATCH /api/users/:userId/role - admin only
+router.patch("/:userId/role", requireAuth, requireAdmin, async (req: any, res) => {
+  try {
+    const { userId } = req.params;
+    const { role, contractCompany } = req.body;
+    if (!["admin", "supervisor", "contract_supervisor", "user"].includes(role)) return res.status(400).json({ error: "Invalid role" });
+    const updates: Record<string, any> = { role };
+    if (role === "contract_supervisor") {
+      if (!contractCompany) return res.status(400).json({ error: "contractCompany required for contract_supervisor" });
+      updates.contractCompany = contractCompany;
+    } else {
+      updates.contractCompany = null;
+    }
+    const [user] = await db.update(usersTable).set(updates).where(eq(usersTable.id, Number(userId))).returning();
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
+    const roleAr = role === "admin" ? "مدير النظام" : role === "supervisor" ? "مشرف" : role === "contract_supervisor" ? `مشرف عقد (${contractCompany})` : "مستخدم عادي";
+    logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "تغيير صلاحية", `تغيير دور ${user.name} إلى ${roleAr}`, ip);
+    return res.json(user);
+  } catch (err) {
+    req.log.error({ err }, "Failed to change role");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /api/users/company/:company — contract_supervisor: list users of their company
+router.get("/company/:company", requireAuth, async (req: any, res) => {
+  try {
+    const role = req.currentUser.role;
+    const { company } = req.params;
+    // admin can query any; contract_supervisor only their own company
+    if (role !== "admin" && role !== "supervisor") {
+      if (role !== "contract_supervisor" || req.currentUser.contractCompany !== company) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+    }
+    const { inArray } = await import("drizzle-orm");
+    const COMPANY_SITES: Record<string, string[]> = {
+      "بيت_العرب": [
+        "مستشفى يدمة العام", "مستشفى حبونا العام", "مستشفى بدر الجنوب العام",
+        "مستشفى الولادة والأطفال", "مستشفى نجران العام القديم وسكن الممرضات الخارجي",
+        "المكاتب الإدارية والمرافق الصحية", "صيانة وإصلاح السيارات والعيادات المتنقلة",
+      ],
+      "سراكو": [
+        "مستشفى نجران العام الجديد", "مركز طب الأسنان التخصصي", "مجمع الأمل للصحة النفسية",
+        "مستشفى ثار العام", "مستشفى خباش العام", "المراكز الصحية",
+        "مستشفى الملك خالد", "مركز الأمير سلطان", "مستشفى شروره العام",
+      ],
+    };
+    const sites = COMPANY_SITES[company];
+    if (!sites) return res.status(400).json({ error: "Unknown company" });
+    const users = await db.select().from(usersTable)
+      .where(inArray(usersTable.hospital, sites));
+    return res.json({ users, total: users.length });
+  } catch (err) {
+    req.log.error({ err }, "Failed to list company users");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/users/:userId/deactivate - admin only
+router.post("/:userId/deactivate", requireAuth, requireAdmin, async (req: any, res) => {
+  try {
+    const { userId } = req.params;
+    const [user] = await db.update(usersTable).set({ status: "rejected" }).where(eq(usersTable.id, Number(userId))).returning();
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
+    logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "تعطيل حساب", `تم تعطيل حساب ${user.name} (${user.email})`, ip);
+    return res.json(user);
+  } catch (err) {
+    req.log.error({ err }, "Failed to deactivate user");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PATCH /api/users/:userId/modules - admin only
+router.patch("/:userId/modules", requireAuth, requireAdmin, async (req: any, res) => {
+  try {
+    const { userId } = req.params;
+    const { modules } = req.body; // string[] | null
+    const allowedModules = modules === null ? null : JSON.stringify(modules);
+    const [user] = await db.update(usersTable).set({ allowedModules }).where(eq(usersTable.id, Number(userId))).returning();
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
+    logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "تعديل وحدات المستخدم", `وحدات ${user.name}: ${allowedModules || "الكل"}`, ip);
+    return res.json(user);
+  } catch (err) {
+    req.log.error({ err }, "Failed to update modules");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/users/:userId/activate - admin only
+router.post("/:userId/activate", requireAuth, requireAdmin, async (req: any, res) => {
+  try {
+    const { userId } = req.params;
+    const [user] = await db.update(usersTable).set({ status: "approved" }).where(eq(usersTable.id, Number(userId))).returning();
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
+    logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "تفعيل حساب", `تم تفعيل حساب ${user.name} (${user.email})`, ip);
+    return res.json(user);
+  } catch (err) {
+    req.log.error({ err }, "Failed to activate user");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+export default router;

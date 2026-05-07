@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <script src="/original/auth-check.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>أرشيف المستخلصات المحفوظة</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/original/shared-styles.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Tajawal', sans-serif; background: #f0f4f8; color: #1a202c; direction: rtl; }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      padding: 0 24px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      box-shadow: 0 2px 12px rgba(30,60,114,.28); position: sticky; top: 0; z-index: 100;
+    }
+    .hb { display: flex; align-items: center; gap: 12px; }
+    .hb img { width: 38px; height: 38px; border-radius: 9px; }
+    .hb h1 { font-size: 15px; font-weight: 800; color: #fff; }
+    .hb p  { font-size: 11px; color: rgba(255,255,255,.7); }
+    .btn-hdr {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 16px; border-radius: 10px; font-family: 'Tajawal', sans-serif;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      background: rgba(255,255,255,.1); color: rgba(255,255,255,.85);
+      border: 1px solid rgba(255,255,255,.15); text-decoration: none; transition: background .2s;
+    }
+    .btn-hdr:hover { background: rgba(255,255,255,.2); color: #fff; }
+
+    /* ── Layout ── */
+    main { max-width: 1200px; margin: 0 auto; padding: 28px 20px 80px; }
+
+    /* ── Page title ── */
+    .page-title { margin-bottom: 24px; }
+    .page-title h2 { font-size: 22px; font-weight: 800; color: #1e3c72; display: flex; align-items: center; gap: 10px; }
+    .page-title p  { font-size: 13px; color: #64748b; margin-top: 4px; }
+
+    /* ── Summary cards ── */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px; margin-bottom: 28px;
+    }
+    .stat-card {
+      background: #fff; border-radius: 16px; padding: 18px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.06); border: 1.5px solid #e2e8f0;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .stat-card .icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; margin-bottom: 8px;
+    }
+    .stat-card .val { font-size: 26px; font-weight: 800; color: #1e3c72; }
+    .stat-card .lbl { font-size: 12px; color: #64748b; }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      margin-bottom: 18px; background: #fff; padding: 12px 16px;
+      border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.05);
+      border: 1.5px solid #e2e8f0;
+    }
+    .toolbar input, .toolbar select {
+      padding: 8px 13px; border-radius: 9px; border: 1.5px solid #e2e8f0;
+      font-family: 'Tajawal', sans-serif; font-size: 13px; background: #f8fafc;
+      color: #334155; outline: none; transition: border .2s;
+    }
+    .toolbar input:focus, .toolbar select:focus { border-color: #2a5298; background: #fff; }
+    .toolbar .spacer { flex: 1; }
+    .btn-danger {
+      background: linear-gradient(135deg, #991b1b, #dc2626);
+      color: #fff; border: none; border-radius: 9px; padding: 8px 16px;
+      font-family: 'Tajawal', sans-serif; font-size: 13px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; gap: 6px;
+      transition: filter .15s;
+    }
+    .btn-danger:hover { filter: brightness(1.1); }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center; padding: 60px 20px; background: #fff;
+      border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.06);
+      border: 1.5px dashed #cbd5e1;
+    }
+    .empty-state i { font-size: 52px; color: #cbd5e1; margin-bottom: 16px; }
+    .empty-state h3 { font-size: 17px; color: #64748b; margin-bottom: 6px; }
+    .empty-state p  { font-size: 13px; color: #94a3b8; }
+
+    /* ── Archive cards grid ── */
+    .archive-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── Single archive card ── */
+    .arc-card {
+      background: #fff; border-radius: 18px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.07); border: 1.5px solid #e2e8f0;
+      overflow: hidden; transition: box-shadow .2s, transform .15s;
+    }
+    .arc-card:hover { box-shadow: 0 6px 24px rgba(30,60,114,.12); transform: translateY(-2px); }
+
+    .arc-card-header {
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      padding: 16px 18px; display: flex; align-items: flex-start; justify-content: space-between;
+    }
+    .arc-badge {
+      background: rgba(255,255,255,.15); border-radius: 8px;
+      padding: 3px 10px; font-size: 12px; color: rgba(255,255,255,.9);
+      font-weight: 700; border: 1px solid rgba(255,255,255,.2);
+    }
+    .arc-payment {
+      font-size: 22px; font-weight: 800; color: #fff;
+      line-height: 1.2; margin-top: 6px;
+    }
+    .arc-period {
+      font-size: 13px; color: rgba(255,255,255,.8); margin-top: 2px;
+    }
+    .arc-source-badge {
+      padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+      border: 1px solid rgba(255,255,255,.3);
+    }
+    .src-save   { background: rgba(22,163,74,.25);   color: #bbf7d0; }
+    .src-print  { background: rgba(59,130,246,.25);  color: #bfdbfe; }
+    .src-pdf    { background: rgba(220,38,38,.25);   color: #fecaca; }
+    .src-manual { background: rgba(245,158,11,.25);  color: #fde68a; }
+
+    .arc-card-body { padding: 16px 18px; }
+
+    .arc-meta {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin-bottom: 12px;
+    }
+    .arc-meta-item { display: flex; flex-direction: column; gap: 2px; }
+    .arc-meta-item .ml { font-size: 11px; color: #94a3b8; }
+    .arc-meta-item .mv { font-size: 13px; font-weight: 700; color: #1e293b; }
+
+    .arc-depts {
+      background: #f8fafc; border-radius: 10px; padding: 10px 12px;
+      margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .arc-dept-chip {
+      background: #e0e7ff; color: #3730a3; border-radius: 20px;
+      padding: 3px 10px; font-size: 11px; font-weight: 700;
+    }
+
+    .arc-totals {
+      display: flex; justify-content: space-between; align-items: center;
+      background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+      border-radius: 10px; padding: 10px 14px; margin-bottom: 14px;
+      border: 1px solid #bae6fd;
+    }
+    .arc-totals .t-lbl { font-size: 12px; color: #0369a1; }
+    .arc-totals .t-val { font-size: 17px; font-weight: 800; color: #0c4a6e; }
+
+    .arc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .arc-btn {
+      flex: 1; min-width: 80px; padding: 8px 12px; border-radius: 9px;
+      font-family: 'Tajawal', sans-serif; font-size: 13px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+      border: none; transition: filter .15s, transform .1s;
+    }
+    .arc-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .arc-btn-print {
+      background: linear-gradient(135deg, #1e3c72, #2a5298); color: #fff;
+    }
+    .arc-btn-del {
+      background: linear-gradient(135deg, #7f1d1d, #dc2626); color: #fff;
+      flex: 0; min-width: 40px;
+    }
+
+    .arc-date { font-size: 11px; color: #94a3b8; margin-top: 10px; text-align: center; }
+
+    /* ── Print ── */
+    @media print {
+      header, .toolbar, .stats-row, .arc-actions { display: none !important; }
+      body { background: #fff; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="hb">
+    <img src="/original/najran_health_cluster_logo.png" alt="شعار" onerror="this.style.display='none'">
+    <div>
+      <h1>أرشيف المستخلصات</h1>
+      <p>سجل جميع عمليات الحفظ والطباعة</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="/original/attendance.html"   class="btn-hdr"><i class="fas fa-table"></i> الحضور</a>
+    <a href="/original/settings_main.html" class="btn-hdr"><i class="fas fa-cog"></i> الإعدادات</a>
+    <a href="/original/approval.html"     class="btn-hdr"><i class="fas fa-check-circle"></i> الاعتماد</a>
+    <a href="/dashboard"                  class="btn-hdr"><i class="fas fa-home"></i> الرئيسية</a>
+  </div>
+</header>
+
+<main>
+  <div class="page-title">
+    <h2><i class="fas fa-archive" style="color:#2a5298;"></i> أرشيف المستخلصات المحفوظة</h2>
+    <p>كل عملية حفظ أو طباعة تُسجَّل هنا تلقائياً للمراجعة والإسترداد</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="stats-row"></div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <input type="text"   id="search-pn"    placeholder="🔍 ابحث برقم الدفعة…" oninput="renderArchive()">
+    <select id="filter-month" onchange="renderArchive()">
+      <option value="">كل الشهور</option>
+      <option>يناير</option><option>فبراير</option><option>مارس</option>
+      <option>أبريل</option><option>مايو</option><option>يونيو</option>
+      <option>يوليو</option><option>أغسطس</option><option>سبتمبر</option>
+      <option>أكتوبر</option><option>نوفمبر</option><option>ديسمبر</option>
+    </select>
+    <select id="filter-year" onchange="renderArchive()">
+      <option value="">كل السنوات</option>
+    </select>
+    <select id="filter-source" onchange="renderArchive()">
+      <option value="">كل المصادر</option>
+      <option value="save">حفظ يدوي</option>
+      <option value="print">طباعة</option>
+      <option value="pdf">تصدير PDF</option>
+    </select>
+    <div class="spacer"></div>
+    <button class="btn-danger" onclick="clearAllArchive()">
+      <i class="fas fa-trash-alt"></i> حذف الكل
+    </button>
+  </div>
+
+  <!-- Cards -->
+  <div id="archive-container"></div>
+</main>
+
+<script src="/original/extract-snapshot.js"></script>
+<script src="/original/track.js"></script>
+<script src="/original/shared-nav.js"></script>
+<script>
+  /* ── Source label helpers ── */
+  function sourceLabel(src) {
+    return { save: 'حفظ يدوي', print: 'طباعة', pdf: 'تصدير PDF', manual: 'يدوي' }[src] || src;
+  }
+  function sourceCls(src) {
+    return { save: 'src-save', print: 'src-print', pdf: 'src-pdf', manual: 'src-manual' }[src] || 'src-manual';
+  }
+
+  /* ── Format helpers ── */
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('ar-SA', {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+  }
+  function fmtNum(n) {
+    return Number(n || 0).toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function fmtDateRange(s, e) {
+    if (!s && !e) return '—';
+    const fmt = d => d ? new Date(d).toLocaleDateString('ar-SA', { day:'numeric', month:'short', year:'numeric' }) : '';
+    return fmt(s) + (e ? ' — ' + fmt(e) : '');
+  }
+
+  /* ── Dept Arabic names ── */
+  const DEPT_NAMES = {
+    cleaning: 'النظافة', electricity: 'الكهرباء', agriculture: 'الزراعة',
+    civil_works: 'الأعمال المدنية', mechanical: 'الميكانيكا', laundry: 'المغسلة',
+    patient_services: 'خدمات المرضى', admin_saudi: 'الإداريون'
+  };
+
+  /* ── Populate year filter ── */
+  function populateYearFilter() {
+    const archive = window.getExtractArchive();
+    const years = [...new Set(archive.map(s => s.extractYear).filter(Boolean))].sort().reverse();
+    const sel = document.getElementById('filter-year');
+    years.forEach(y => {
+      const opt = document.createElement('option');
+      opt.value = y; opt.textContent = y;
+      sel.appendChild(opt);
+    });
+  }
+
+  /* ── Render stats ── */
+  function renderStats(archive) {
+    const total    = archive.length;
+    const saves    = archive.filter(s => s.source === 'save').length;
+    const prints   = archive.filter(s => s.source === 'print').length;
+    const lastSave = archive.length ? fmtDate(archive[0].savedAt) : '—';
+
+    const container = document.getElementById('stats-row');
+    container.innerHTML = `
+      <div class="stat-card">
+        <div class="icon" style="background:#eff6ff;color:#2563eb;"><i class="fas fa-archive"></i></div>
+        <div class="val">${total}</div><div class="lbl">إجمالي السجلات</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-save"></i></div>
+        <div class="val">${saves}</div><div class="lbl">عمليات حفظ</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon" style="background:#fef9c3;color:#ca8a04;"><i class="fas fa-print"></i></div>
+        <div class="val">${prints}</div><div class="lbl">عمليات طباعة</div>
+      </div>
+      <div class="stat-card" style="grid-column:span 1">
+        <div class="icon" style="background:#fdf4ff;color:#a21caf;"><i class="fas fa-clock"></i></div>
+        <div class="val" style="font-size:14px;margin-top:4px;">${lastSave}</div>
+        <div class="lbl">آخر حفظ</div>
+      </div>`;
+  }
+
+  /* ── Main render ── */
+  function renderArchive() {
+    let archive = window.getExtractArchive();
+
+    /* filters */
+    const pnQ   = document.getElementById('search-pn').value.trim().toLowerCase();
+    const monQ  = document.getElementById('filter-month').value;
+    const yrQ   = document.getElementById('filter-year').value;
+    const srcQ  = document.getElementById('filter-source').value;
+
+    if (pnQ)  archive = archive.filter(s => (s.paymentNumber||'').toLowerCase().includes(pnQ));
+    if (monQ) archive = archive.filter(s => s.extractMonth === monQ);
+    if (yrQ)  archive = archive.filter(s => String(s.extractYear) === yrQ);
+    if (srcQ) archive = archive.filter(s => s.source === srcQ);
+
+    renderStats(window.getExtractArchive());
+
+    const container = document.getElementById('archive-container');
+
+    if (archive.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-box-open"></i>
+          <h3>لا توجد سجلات محفوظة</h3>
+          <p>كل عملية حفظ أو طباعة ستظهر هنا تلقائياً</p>
+        </div>`;
+      return;
+    }
+
+    const html = archive.map(snap => {
+      /* dept chips */
+      const deptChips = Object.keys(snap.departments || {})
+        .filter(k => snap.departments[k].count > 0)
+        .map(k => `<span class="arc-dept-chip">${DEPT_NAMES[k]||k} (${snap.departments[k].count})</span>`)
+        .join('');
+
+      return `
+        <div class="arc-card" id="card-${snap.id}">
+          <div class="arc-card-header">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span class="arc-badge">دفعة ${snap.paymentNumber || '—'}</span>
+                <span class="arc-source-badge ${sourceCls(snap.source)}">${sourceLabel(snap.source)}</span>
+              </div>
+              <div class="arc-payment">${snap.extractMonth || '—'} ${snap.extractYear || ''}</div>
+              <div class="arc-period">${fmtDateRange(snap.extractStart, snap.extractEnd)}</div>
+            </div>
+            <div style="text-align:left;">
+              <div style="color:rgba(255,255,255,.7);font-size:11px;">${snap.hospitalName||''}</div>
+              <div style="color:rgba(255,255,255,.6);font-size:11px;margin-top:2px;">${snap.companyName||''}</div>
+            </div>
+          </div>
+          <div class="arc-card-body">
+            <div class="arc-meta">
+              <div class="arc-meta-item">
+                <span class="ml">عدد الموظفين</span>
+                <span class="mv">${snap.totalEmployees || 0} موظف</span>
+              </div>
+              <div class="arc-meta-item">
+                <span class="ml">إجمالي الصافي</span>
+                <span class="mv" style="color:#0c4a6e;">${fmtNum(snap.totalNetAmount)} ر.س</span>
+              </div>
+            </div>
+            ${deptChips ? `<div class="arc-depts">${deptChips}</div>` : ''}
+            <div class="arc-totals">
+              <div>
+                <div class="t-lbl">صافي الاستحقاق الكلي</div>
+                <div class="t-val">${fmtNum(snap.totalNetAmount)} ر.س</div>
+              </div>
+              <i class="fas fa-coins" style="font-size:28px;color:#7dd3fc;opacity:.6;"></i>
+            </div>
+            <div class="arc-actions">
+              <button class="arc-btn arc-btn-print" onclick="printSnapshotCard('${snap.id}')">
+                <i class="fas fa-print"></i> طباعة البطاقة
+              </button>
+              <button class="arc-btn arc-btn-del" onclick="deleteSnap('${snap.id}')" title="حذف">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+            <div class="arc-date"><i class="fas fa-clock"></i> تم الحفظ: ${fmtDate(snap.savedAt)}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = `<div class="archive-grid">${html}</div>`;
+  }
+
+  /* ── Delete single ── */
+  function deleteSnap(id) {
+    if (!confirm('هل تريد حذف هذا السجل من الأرشيف؟')) return;
+    window.deleteExtractSnapshot(id);
+    renderArchive();
+  }
+
+  /* ── Clear all ── */
+  function clearAllArchive() {
+    if (!confirm('هل تريد حذف جميع سجلات الأرشيف؟\nلا يمكن التراجع عن هذا الإجراء.')) return;
+    localStorage.removeItem('extractArchive');
+    renderArchive();
+  }
+
+  /* ── Print snapshot card ── */
+  function printSnapshotCard(id) {
+    const snap = window.getExtractArchive().find(s => s.id === id);
+    if (!snap) return;
+
+    const DEPT_AR = {
+      cleaning: 'النظافة', electricity: 'الكهرباء', agriculture: 'الزراعة',
+      civil_works: 'الأعمال المدنية', mechanical: 'الميكانيكا', laundry: 'المغسلة',
+      patient_services: 'خدمات المرضى', admin_saudi: 'الوظائف الإدارية السعوديون'
+    };
+
+    const deptRows = Object.keys(snap.departments || {})
+      .filter(k => snap.departments[k].count > 0)
+      .map(k => `
+        <tr>
+          <td>${DEPT_AR[k] || k}</td>
+          <td>${snap.departments[k].count}</td>
+          <td>${Number(snap.departments[k].total || 0).toLocaleString('ar-SA', {minimumFractionDigits:2})}</td>
+        </tr>`).join('');
+
+    const formatDate = d => d ? new Date(d).toLocaleDateString('ar-SA', {year:'numeric',month:'long',day:'numeric'}) : '—';
+
+    const pw = window.open('', '_blank', 'width=900,height=700');
+    pw.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head>
+      <meta charset="UTF-8">
+      <title>بطاقة مستخلص — دفعة ${snap.paymentNumber}</title>
+      <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">
+      <style>
+        body { font-family:'Tajawal',Arial,sans-serif; background:#fff; color:#111; direction:rtl; padding:30px; }
+        .card { max-width:700px; margin:0 auto; border:2px solid #1e3c72; border-radius:16px; overflow:hidden; }
+        .card-head {
+          background:linear-gradient(135deg,#1e3c72,#2a5298);
+          color:#fff; padding:20px 24px; text-align:center;
+        }
+        .card-head h1 { font-size:20px; font-weight:800; margin:0 0 4px; }
+        .card-head p  { font-size:13px; opacity:.8; margin:0; }
+        .card-body { padding:20px 24px; }
+        .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+        .info-item { background:#f8fafc; border-radius:8px; padding:10px 14px; }
+        .info-item .l { font-size:11px; color:#64748b; }
+        .info-item .v { font-size:15px; font-weight:800; color:#1e293b; margin-top:2px; }
+        table { width:100%; border-collapse:collapse; margin-top:12px; }
+        th { background:#1e3c72; color:#fff; padding:8px 12px; font-size:13px; }
+        td { padding:8px 12px; font-size:13px; border-bottom:1px solid #e2e8f0; text-align:center; }
+        tr:last-child td { border-bottom:none; }
+        .total-row td { background:#1e3c72; color:#d4af37; font-weight:800; font-size:14px; }
+        .sigs { display:flex; justify-content:space-around; margin-top:28px; flex-wrap:wrap; gap:12px; }
+        .sig { text-align:center; min-width:140px; }
+        .sig-line { border-bottom:2px solid #111; height:40px; margin-bottom:4px; }
+        .sig-role { font-size:12px; font-weight:700; color:#333; }
+        .footer { text-align:center; font-size:11px; color:#94a3b8; margin-top:20px; }
+        @media print { @page { margin: 1cm; } }
+      </style>
+    </head><body>
+      <div class="card">
+        <div class="card-head">
+          <h1>مستخلص عمالة — دفعة ${snap.paymentNumber || '—'}</h1>
+          <p>${snap.extractMonth || ''} ${snap.extractYear || ''} &nbsp;|&nbsp; ${snap.hospitalName || ''}</p>
+        </div>
+        <div class="card-body">
+          <div class="info-grid">
+            <div class="info-item"><div class="l">رقم الدفعة</div><div class="v">${snap.paymentNumber||'—'}</div></div>
+            <div class="info-item"><div class="l">الشهر</div><div class="v">${snap.extractMonth||'—'} ${snap.extractYear||''}</div></div>
+            <div class="info-item"><div class="l">من تاريخ</div><div class="v">${formatDate(snap.extractStart)}</div></div>
+            <div class="info-item"><div class="l">إلى تاريخ</div><div class="v">${formatDate(snap.extractEnd)}</div></div>
+            <div class="info-item"><div class="l">المستشفى</div><div class="v">${snap.hospitalName||'—'}</div></div>
+            <div class="info-item"><div class="l">الشركة</div><div class="v">${snap.companyName||'—'}</div></div>
+            <div class="info-item"><div class="l">إجمالي الموظفين</div><div class="v">${snap.totalEmployees||0} موظف</div></div>
+            <div class="info-item"><div class="l">مصدر السجل</div><div class="v">${sourceLabel(snap.source)}</div></div>
+          </div>
+
+          <table>
+            <thead><tr><th>القسم</th><th>عدد الموظفين</th><th>صافي الاستحقاق (ر.س)</th></tr></thead>
+            <tbody>${deptRows}</tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td>الإجمالي</td>
+                <td>${snap.totalEmployees||0}</td>
+                <td>${Number(snap.totalNetAmount||0).toLocaleString('ar-SA',{minimumFractionDigits:2})}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          ${(snap.engineeringManager||snap.hospitalManager) ? `
+          <div class="sigs">
+            ${snap.engineeringManager    ? `<div class="sig"><div class="sig-line"></div><div class="sig-role">مدير المشروع<br>${snap.engineeringManager}</div></div>` : ''}
+            ${snap.generalServicesManager ? `<div class="sig"><div class="sig-line"></div><div class="sig-role">رئيس قسم الصيانة<br>${snap.generalServicesManager}</div></div>` : ''}
+            ${snap.hospitalManager        ? `<div class="sig"><div class="sig-line"></div><div class="sig-role">مدير المستشفى<br>${snap.hospitalManager}</div></div>` : ''}
+            ${snap.followUpManager        ? `<div class="sig"><div class="sig-line"></div><div class="sig-role">مندوب المقاول<br>${snap.followUpManager}</div></div>` : ''}
+          </div>` : ''}
+
+          <div class="footer">تاريخ الحفظ: ${fmtDate(snap.savedAt)} &nbsp;|&nbsp; نظام إدارة المستخلصات — تجمع نجران الصحي</div>
+        </div>
+      </div>
+      <script>window.onload = function(){ window.print(); window.onafterprint = function(){ window.close(); }; }<\/script>
+    </body></html>`);
+    pw.document.close();
+  }
+
+  /* ── Init ── */
+  document.addEventListener('DOMContentLoaded', function () {
+    populateYearFilter();
+    renderArchive();
+  });
+</script>
+</body>
+</html>

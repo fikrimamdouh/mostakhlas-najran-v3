@@ -1,0 +1,879 @@
+/**
+ * shared-styles.css — Unified design system
+ * ALL rules are scoped to @media screen so print output is NEVER affected.
+ * Add <link rel="stylesheet" href="/original/shared-styles.css"> to every page.
+ */
+
+/* ══════════════════════════════════════════════════
+   1. FONT — Tajawal everywhere (screen only)
+══════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;600;700;800&display=swap');
+
+@media screen {
+  * {
+    font-family: 'Tajawal', 'Segoe UI', Arial, sans-serif !important;
+  }
+  /* استعادة خط Font Awesome — لا تكسر الأيقونات */
+  i.fas::before, i.far::before, i.fab::before, i.fal::before,
+  [class*=" fa-"]::before, [class^="fa-"]::before {
+    font-family: "Font Awesome 5 Free", "Font Awesome 5 Brands" !important;
+    font-weight: 900 !important;
+  }
+
+  /* ════════════════════════════════════════════════
+     2. PAGE BACKGROUND & LAYOUT
+  ════════════════════════════════════════════════ */
+  body {
+    background: #eef2f7 !important;
+    color: #1e293b !important;
+    /* Override flex centering used in settings pages */
+    display: block !important;
+    min-height: 100vh;
+  }
+
+  /* Hide particles.js canvas — purely decorative, removed on screen */
+  #particles-js-bg {
+    display: none !important;
+  }
+
+  /* White card container */
+  .container {
+    background: #ffffff !important;
+    box-shadow: 0 2px 16px rgba(0,0,0,.08) !important;
+    border-radius: 0 0 12px 12px !important;
+    margin-bottom: 32px !important;
+    /* Remove settings pages absolute positioning issues */
+    position: relative !important;
+    z-index: 1 !important;
+    width: 95% !important;
+    max-width: 1300px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  /* ════════════════════════════════════════════════
+     3. TABLE HEADERS — unified dark navy
+  ════════════════════════════════════════════════ */
+  thead tr,
+  thead tr th,
+  thead tr td,
+  tr.table-header,
+  tr.header-row,
+  table thead {
+    background: #003087 !important;
+    color: #ffffff !important;
+  }
+
+  /* Zebra rows */
+  tbody tr:nth-child(even) td {
+    background: #f8faff !important;
+  }
+  tbody tr:hover td {
+    background: #e8f0fe !important;
+  }
+
+  /* ════════════════════════════════════════════════
+     4. BUTTON SYSTEM — semantic color palette
+     NAVY   (#003087) = Primary / Edit / Manage
+     GREEN  (#16a34a) = Save / Excel / Export
+     GREY   (#475569) = Print / PDF / Cancel
+     AMBER  (#b45309) = Backup / Restore
+     TEAL   (#0369a1) = Refresh / Sync / Smart
+     RED    (#dc2626) = Destructive / Clear / Remove
+     PURPLE (#6d28d9) = Certificates / Special
+  ════════════════════════════════════════════════ */
+
+  /* Base button reset — all buttons */
+  button,
+  a.btn,
+  .action-btn,
+  .control-btn,
+  .btn-add, .btn-edit, .btn-save, .btn-update, .btn-titles,
+  .btn-excel, .btn-import-excel, .btn-import,
+  .btn-print, .btn-pdf,
+  .btn-refresh,
+  .btn-backup, .btn-restore,
+  .btn-reset, .btn-clear, .btn-remove, .btn-delete,
+  .btn-edit-names, .btn-edit-signatures,
+  /* settings_main classes */
+  .button.btn-save, .button.btn-clear, .button.btn-cancel,
+  .button.btn-edit, .button.btn-backup, .button.btn-restore {
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    letter-spacing: .2px !important;
+    transition: opacity .18s, transform .12s !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,.18) !important;
+    background-image: none !important; /* Kill all gradients */
+    text-decoration: none !important;
+  }
+
+  button:hover,
+  .action-btn:hover,
+  .control-btn:hover,
+  .btn:hover {
+    opacity: .88 !important;
+    transform: translateY(-1px) !important;
+  }
+
+  /* ── PRIMARY: Navy — Add / Edit / Manage / Update ── */
+  .btn-add,
+  .btn-update,
+  .btn-edit,
+  .btn-edit-names,
+  .btn-edit-signatures,
+  .btn-titles,
+  .button.btn-edit {
+    background: #003087 !important;
+    color: #fff !important;
+  }
+
+  /* ── SAVE / EXCEL / EXPORT: Green ── */
+  .btn-excel,
+  .btn-import-excel,
+  .btn-import,
+  .btn-save,
+  .button.btn-save {
+    background: #16a34a !important;
+    color: #fff !important;
+  }
+
+  /* ── PRINT / PDF / CANCEL: Slate grey ── */
+  .btn-print,
+  .btn-pdf,
+  .btn-cancel,
+  .button.btn-cancel {
+    background: #475569 !important;
+    color: #fff !important;
+  }
+
+  /* ── BACKUP / RESTORE: Amber ── */
+  .btn-backup,
+  .btn-restore,
+  .button.btn-backup,
+  .button.btn-restore {
+    background: #b45309 !important;
+    color: #fff !important;
+  }
+
+  /* ── REFRESH / SMART / SYNC: Teal ── */
+  .btn-refresh {
+    background: #0369a1 !important;
+    color: #fff !important;
+  }
+
+  /* ── DESTRUCTIVE: Red ── */
+  .btn-reset,
+  .btn-clear,
+  .btn-remove,
+  .btn-delete,
+  .button.btn-clear,
+  button[onclick*="clear"],
+  button[onclick*="Clear"],
+  button[onclick*="clearData"],
+  button[onclick*="clearAll"],
+  button[onclick*="clearAllData"],
+  button[onclick*="confirmClear"],
+  button[onclick*="resetPerformance"],
+  button[onclick*="resetData"] {
+    background: #dc2626 !important;
+    color: #fff !important;
+  }
+
+  /* ── CERTIFICATES / SPECIAL: Purple ── */
+  button[onclick*="showGrand"],
+  button[onclick*="Certificate"] {
+    background: #6d28d9 !important;
+    color: #fff !important;
+  }
+
+  /* ══ performance.html control-btn overrides ══ */
+  .control-btn.btn-update { background: #0369a1 !important; }
+  .control-btn.btn-reset  { background: #dc2626 !important; }
+  .control-btn.btn-backup { background: #b45309 !important; }
+  .control-btn.btn-restore{ background: #b45309 !important; }
+  .control-btn.btn-edit   { background: #003087 !important; }
+  .control-btn.btn-titles { background: #6d28d9 !important; }
+
+  /* ══ achievement.html action-bar ══ */
+  .action-bar .btn-print            { background: #475569 !important; }
+  .action-bar .btn-excel            { background: #16a34a !important; }
+  .action-bar .btn-refresh          { background: #0369a1 !important; }
+  .action-bar .btn-edit-names       { background: #003087 !important; color: #fff !important; }
+  .action-bar .btn-edit-signatures  { background: #003087 !important; color: #fff !important; }
+
+  /* ══ spare_parts.html .action-btns ══ */
+  .action-btns .btn-add    { background: #003087 !important; color: #fff !important; }
+  .action-btns .btn-remove { background: #dc2626 !important; color: #fff !important; }
+  .action-btns .btn-excel  { background: #16a34a !important; color: #fff !important; }
+  .action-btns .btn-print  { background: #475569 !important; color: #fff !important; }
+  .action-btns .btn-backup { background: #b45309 !important; color: #fff !important; }
+  .action-btns .btn-clear  { background: #dc2626 !important; color: #fff !important; }
+
+  /* ══ Inline-style button overrides (attendance, health_centers_attendance) ══ */
+  button[onclick*="SmartUpload"],
+  button[onclick*="openSmartUpload"] {
+    background: #0369a1 !important; color: #fff !important;
+  }
+  button[onclick*="BulkAttendance"],
+  button[onclick*="openBulk"] {
+    background: #003087 !important; color: #fff !important;
+  }
+  button[onclick*="backup"],
+  button[onclick*="backupData"],
+  button[onclick*="backupAttendance"] {
+    background: #b45309 !important; color: #fff !important;
+  }
+  button[onclick*="restore"],
+  button[onclick*="Restore"],
+  button[onclick*="restore-file-input"],
+  button[onclick*="restoreData"],
+  button[onclick*="confirmRestore"] {
+    background: #1d4ed8 !important; color: #fff !important;
+  }
+  button[onclick*="openEmployee"],
+  button[onclick*="EmployeeManagement"] {
+    background: #003087 !important; color: #fff !important;
+  }
+  button[onclick*="openPerformanceControl"] {
+    background: #003087 !important; color: #fff !important;
+  }
+  button[onclick*="openImport"],
+  button[onclick*="openExcelExport"],
+  button[onclick*="openExport"] {
+    background: #16a34a !important; color: #fff !important;
+  }
+  button[onclick*="openPrint"],
+  button[onclick*="openSignature"] {
+    background: #475569 !important; color: #fff !important;
+  }
+  button[onclick*="openTitle"],
+  button[onclick*="TitleEditor"] {
+    background: #003087 !important; color: #fff !important;
+  }
+
+  /* ════════════════════════════════════════════════
+     5. ACTION BUTTONS BAR — unified bar style
+  ════════════════════════════════════════════════ */
+  .action-buttons,
+  .action-bar,
+  .action-btns,
+  .main-action-buttons {
+    background: #f8faff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+    padding: 12px 16px !important;
+    gap: 8px !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    margin-bottom: 16px !important;
+  }
+
+  /* ════════════════════════════════════════════════
+     6. CONTRACT INFO / PAGE INFO BAR
+  ════════════════════════════════════════════════ */
+  .page-contract-info,
+  .page-contract-info-v2,
+  .contract-info {
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%) !important;
+    border: 1px solid #c7d7f9 !important;
+    border-radius: 10px !important;
+    padding: 14px 20px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .page-contract-info p,
+  .page-contract-info-v2 p,
+  .contract-info p {
+    color: #1e3c72 !important;
+    margin: 4px 0 !important;
+  }
+
+  /* ════════════════════════════════════════════════
+     7. SETTINGS PAGES — tabs + form groups
+  ════════════════════════════════════════════════ */
+  /* Tabs bar */
+  .tabs {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    background: #f1f5f9 !important;
+    border-radius: 10px !important;
+    padding: 10px 12px !important;
+    margin-bottom: 20px !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+  .tabs a {
+    display: inline-block !important;
+    padding: 7px 16px !important;
+    border-radius: 7px !important;
+    background: #fff !important;
+    color: #003087 !important;
+    text-decoration: none !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    border: 1px solid #c7d7f9 !important;
+    transition: background .15s !important;
+  }
+  .tabs a:hover,
+  .tabs a.active {
+    background: #003087 !important;
+    color: #fff !important;
+    border-color: #003087 !important;
+  }
+
+  /* Form groups */
+  .form-group {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 10px 0 !important;
+    border-bottom: 1px solid #f0f4f8 !important;
+  }
+  .form-group label {
+    min-width: 220px !important;
+    font-weight: 600 !important;
+    color: #1e3c72 !important;
+    font-size: 14px !important;
+  }
+  .form-group input[type="text"],
+  .form-group input[type="number"],
+  .form-group input[type="email"],
+  .form-group input[type="date"],
+  .form-group input[type="password"],
+  .form-group textarea,
+  .form-group select {
+    border: 1px solid #c7d7f9 !important;
+    border-radius: 7px !important;
+    padding: 8px 12px !important;
+    font-size: 14px !important;
+    background: #f8faff !important;
+    color: #1e293b !important;
+    min-width: 200px !important;
+  }
+  .form-group input:focus,
+  .form-group textarea:focus,
+  .form-group select:focus {
+    outline: 2px solid #003087 !important;
+    background: #fff !important;
+  }
+
+  /* Section headers */
+  .section-toggle,
+  .section h2,
+  .section h3 {
+    color: #003087 !important;
+    border-bottom: 2px solid #e8f0fe !important;
+    padding-bottom: 8px !important;
+    margin: 16px 0 12px !important;
+  }
+
+  /* Buttons row in settings */
+  .buttons,
+  .buttons.single-row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 14px 0 8px !important;
+  }
+  .button {
+    padding: 9px 20px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    border: none !important;
+    cursor: pointer !important;
+    color: #fff !important;
+  }
+
+  /* ════════════════════════════════════════════════
+     8. DIALOG / MODAL — Professional Design
+  ════════════════════════════════════════════════ */
+
+  /* Centered white card — backdrop is handled separately by .overlay */
+  .dialog {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 10000 !important;
+    display: none;
+    flex-direction: column !important;
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    animation: dialogFadeIn .22s ease !important;
+    overflow: hidden !important;
+    width: 90% !important;
+    max-width: 700px !important;
+    max-height: 90vh !important;
+    border-radius: 14px !important;
+    border: 1px solid #d1d9e8 !important;
+    box-shadow: 0 8px 40px rgba(0, 0, 60, 0.2) !important;
+  }
+  .dialog[style*="flex"] {
+    display: flex !important;
+  }
+  @keyframes dialogFadeIn {
+    from { opacity: 0; transform: translate(-50%, -47%); }
+    to   { opacity: 1; transform: translate(-50%, -50%); }
+  }
+
+  /* White card */
+  .dialog-content {
+    background: #fff !important;
+    border-radius: 20px !important;
+    box-shadow: 0 28px 72px rgba(0, 30, 90, .35) !important;
+    padding: 32px 36px 28px !important;
+    width: 100% !important;
+    max-width: 540px !important;
+    max-height: 88vh !important;
+    overflow-y: auto !important;
+    position: relative !important;
+    color: #1e293b !important;
+    animation: dialogSlideIn .22s cubic-bezier(.34,1.56,.64,1) !important;
+  }
+  @keyframes dialogSlideIn {
+    from { transform: translateY(24px) scale(.95); opacity: 0; }
+    to   { transform: translateY(0)    scale(1);   opacity: 1; }
+  }
+
+  /* Title */
+  .dialog-content h3 {
+    color: #003087 !important;
+    font-size: 17px !important;
+    font-weight: 800 !important;
+    margin: 0 0 20px !important;
+    padding: 0 32px 14px 0 !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    letter-spacing: .2px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  /* Close button — top-left for RTL */
+  .dialog-content .close {
+    position: absolute !important;
+    top: 16px !important;
+    left: 16px !important;
+    width: 32px !important;
+    height: 32px !important;
+    background: #f1f5f9 !important;
+    border: none !important;
+    border-radius: 50% !important;
+    font-size: 18px !important;
+    color: #64748b !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+    transition: background .18s, color .18s !important;
+    text-decoration: none !important;
+    font-family: Arial, sans-serif !important;
+  }
+  .dialog-content .close:hover {
+    background: #fee2e2 !important;
+    color: #dc2626 !important;
+  }
+
+  /* Form labels */
+  .dialog-content label {
+    display: block !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #374151 !important;
+    margin-bottom: 5px !important;
+  }
+
+  /* Inputs inside dialog */
+  .dialog-content input[type="text"],
+  .dialog-content input[type="number"],
+  .dialog-content input[type="email"],
+  .dialog-content input[type="password"],
+  .dialog-content select,
+  .dialog-content textarea {
+    width: 100% !important;
+    padding: 9px 13px !important;
+    border: 1.5px solid #d1d5db !important;
+    border-radius: 9px !important;
+    font-size: 14px !important;
+    font-family: 'Tajawal', sans-serif !important;
+    color: #1e293b !important;
+    background: #f8fafc !important;
+    margin-bottom: 14px !important;
+    transition: border-color .2s, box-shadow .2s !important;
+    outline: none !important;
+  }
+  .dialog-content input:focus,
+  .dialog-content select:focus,
+  .dialog-content textarea:focus {
+    border-color: #003087 !important;
+    background: #fff !important;
+    box-shadow: 0 0 0 3px rgba(0, 48, 135, .1) !important;
+  }
+
+  /* Form group spacing */
+  .dialog-content .form-group {
+    margin-bottom: 14px !important;
+  }
+  .dialog-content .form-group label {
+    margin-bottom: 6px !important;
+  }
+
+  /* Checkbox rows inside dialogs */
+  .dialog-content .form-group label,
+  .dialog-content label[style*="flex"] {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    cursor: pointer !important;
+  }
+  .dialog-content input[type="checkbox"] {
+    width: 18px !important;
+    height: 18px !important;
+    margin-bottom: 0 !important;
+    accent-color: #003087 !important;
+    cursor: pointer !important;
+  }
+
+  /* Scrollable list inside dialog */
+  .dialog-content [style*="overflow-y: auto"],
+  .dialog-content [style*="overflow-y:auto"] {
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+    padding: 10px !important;
+    background: #f8fafc !important;
+  }
+
+  /* Buttons row */
+  .dialog-content .buttons {
+    margin-top: 22px !important;
+    display: flex !important;
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important;
+  }
+
+  /* Confirm / Save button */
+  .confirm-btn,
+  .btn-success {
+    background: linear-gradient(135deg, #003087, #1a50a0) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 10px !important;
+    padding: 9px 22px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    font-family: 'Tajawal', sans-serif !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    transition: filter .15s, transform .1s !important;
+    margin-top: 4px !important;
+  }
+  .confirm-btn:hover,
+  .btn-success:hover { filter: brightness(1.1) !important; transform: translateY(-1px) !important; }
+
+  /* Print button in dialogs */
+  .btn-success[onclick*="print"],
+  .btn-success[onclick*="Print"] {
+    background: linear-gradient(135deg, #166534, #16a34a) !important;
+  }
+
+  /* Cancel button */
+  .cancel-btn,
+  .btn-secondary {
+    background: linear-gradient(135deg, #374151, #6b7280) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 10px !important;
+    padding: 9px 22px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    font-family: 'Tajawal', sans-serif !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    transition: filter .15s, transform .1s !important;
+    margin-top: 4px !important;
+  }
+  .cancel-btn:hover,
+  .btn-secondary:hover { filter: brightness(1.15) !important; transform: translateY(-1px) !important; }
+
+  /* Password error text */
+  .error-message {
+    color: #dc2626 !important;
+    font-size: 13px !important;
+    margin-top: -8px !important;
+    margin-bottom: 10px !important;
+  }
+
+  /* ── Wide dialog (for smart upload / bulk attendance) ── */
+  .wide-dialog .dialog-content,
+  .dialog.wide-dialog > .dialog-content {
+    max-width: 700px !important;
+  }
+
+  /* dialog-header / dialog-body / dialog-footer — direct children of .dialog (no dialog-content wrapper) */
+  /* These form a "card" together when placed directly inside the overlay */
+  .dialog > .dialog-header,
+  .dialog > .dialog-body,
+  .dialog > .dialog-footer {
+    background: #fff !important;
+    max-width: 560px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .dialog > .dialog-header {
+    border-radius: 20px 20px 0 0 !important;
+    padding: 20px 28px 16px !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    box-shadow: 0 -2px 0 rgba(30,60,114,.08) !important;
+  }
+  .dialog > .dialog-body {
+    padding: 18px 28px !important;
+  }
+  .dialog > .dialog-footer {
+    border-radius: 0 0 20px 20px !important;
+    padding: 14px 28px 22px !important;
+    border-top: 2px solid #e2e8f0 !important;
+    display: flex !important;
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+    box-shadow: 0 12px 40px rgba(0,30,90,.18) !important;
+  }
+  /* Header h3 inside direct dialog-header */
+  .dialog > .dialog-header h3 {
+    color: #003087 !important;
+    font-size: 17px !important;
+    font-weight: 800 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+  /* Also support header/body/footer inside dialog-content (nested use) */
+  .dialog-content .dialog-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0 0 14px !important;
+    margin-bottom: 16px !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+  }
+  .dialog-content .dialog-header h3 {
+    color: #003087 !important;
+    font-size: 17px !important;
+    font-weight: 800 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+  .dialog-content .dialog-body {
+    padding: 4px 0 8px !important;
+  }
+  .dialog-content .dialog-footer {
+    margin-top: 16px !important;
+    padding-top: 14px !important;
+    border-top: 2px solid #e2e8f0 !important;
+    display: flex !important;
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+  }
+
+  /* Info text inside dialogs */
+  .info-text {
+    background: #eff6ff !important;
+    border: 1px solid #bfdbfe !important;
+    border-radius: 8px !important;
+    padding: 10px 14px !important;
+    color: #1e40af !important;
+    font-size: 13px !important;
+    line-height: 1.6 !important;
+    margin-bottom: 14px !important;
+  }
+
+  /* Checkbox grid */
+  .checkbox-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+    gap: 6px 12px !important;
+  }
+  .form-group-checkbox {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+  .form-group-checkbox label {
+    margin-bottom: 0 !important;
+    cursor: pointer !important;
+    font-weight: 600 !important;
+  }
+
+  /* Status area in smart upload */
+  .status-area {
+    margin-top: 14px !important;
+    padding: 10px !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+    background: #f8fafc !important;
+    font-size: 13px !important;
+  }
+  .status-success { color: #16a34a !important; font-weight: 700 !important; }
+  .status-error   { color: #dc2626 !important; font-weight: 700 !important; }
+  .status-skipped { color: #f59e0b !important; font-weight: 700 !important; }
+
+  /* Overlay backdrop (separate from .dialog which now IS the overlay) */
+  .overlay {
+    display: none;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 9999 !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+  }
+  .overlay[style*="block"] {
+    display: block !important;
+  }
+
+  /* ════════════════════════════════════════════════
+     9. SUMMARY / TOTALS BAR
+  ════════════════════════════════════════════════ */
+  .summary-bar,
+  .totals-row,
+  tfoot tr,
+  tfoot tr td {
+    background: linear-gradient(135deg, #1a3562, #2a5298) !important;
+    color: #d4af37 !important;
+    font-weight: 700 !important;
+  }
+
+  /* ════════════════════════════════════════════════
+     10. SCROLLBAR
+  ════════════════════════════════════════════════ */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #f1f5f9; }
+  ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+  /* ════════════════════════════════════════════════
+     11. APPROVAL PAGE — keep its own button semantics
+  ════════════════════════════════════════════════ */
+  .btn-approve { background: linear-gradient(135deg,#16a34a,#15803d) !important; color: #fff !important; }
+  .btn-reject  { background: linear-gradient(135deg,#dc2626,#b91c1c) !important; color: #fff !important; }
+  .btn-review  { background: #fffbeb !important; color: #b45309 !important; }
+  .btn-request-revision { background: #fff7ed !important; color: #ea580c !important; }
+
+  /* ════════════════════════════════════════════════
+     12. HEALTH CENTERS HUB PAGE
+  ════════════════════════════════════════════════ */
+  .hub-card {
+    background: #fff !important;
+    border: 2px solid #c7d7f9 !important;
+    border-radius: 16px !important;
+    padding: 32px 24px !important;
+    text-align: center !important;
+    cursor: pointer !important;
+    transition: all .2s !important;
+    text-decoration: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 12px !important;
+    color: #003087 !important;
+  }
+  .hub-card:hover {
+    border-color: #003087 !important;
+    box-shadow: 0 8px 24px rgba(0,48,135,.15) !important;
+    transform: translateY(-3px) !important;
+  }
+  .hub-card .hub-icon {
+    font-size: 48px !important;
+    line-height: 1 !important;
+  }
+  .hub-card h3 {
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    color: #003087 !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+
+  /* ══════════════════════════════════════════════════════════
+     شريط الإجراءات الموحد — يُستخدم في جميع الصفحات
+     ══════════════════════════════════════════════════════════ */
+  .std-action-bar {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 12px 20px !important;
+    background: #f8fafc !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+  }
+
+  /* الزر الأساسي */
+  .ab {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 7px 16px !important;
+    border-radius: 9px !important;
+    border: none !important;
+    font-size: 13px !important;
+    font-family: 'Tajawal', sans-serif !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    color: #fff !important;
+    transition: filter .15s, transform .1s !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,.18) !important;
+    white-space: nowrap !important;
+    line-height: 1.4 !important;
+  }
+  .ab:hover  { filter: brightness(1.12) !important; transform: translateY(-1px) !important; }
+  .ab:active { filter: brightness(.95)  !important; transform: translateY(0)     !important; }
+
+  /* ── ألوان حسب الوظيفة ── */
+  /* كحلي — إدارة / إعدادات */
+  .ab-manage  { background: linear-gradient(135deg,#003087,#1a50a0) !important; }
+  /* بنفسجي — استيراد / رفع ذكي */
+  .ab-import  { background: linear-gradient(135deg,#5b21b6,#7c3aed) !important; }
+  /* أخضر زمردي — تصدير Excel */
+  .ab-excel   { background: linear-gradient(135deg,#166534,#16a34a) !important; }
+  /* رمادي — طباعة */
+  .ab-print   { background: linear-gradient(135deg,#334155,#64748b) !important; }
+  /* أزرق — تحديث / إعادة حساب */
+  .ab-update  { background: linear-gradient(135deg,#0c4a6e,#0369a1) !important; }
+  /* كهرماني — نسخ احتياطي */
+  .ab-backup  { background: linear-gradient(135deg,#92400e,#d97706) !important; }
+  /* برتقالي — استعادة نسخة */
+  .ab-restore { background: linear-gradient(135deg,#9a3412,#ea580c) !important; }
+  /* أخضر زيتوني — تعديل التواقيع */
+  .ab-sig     { background: linear-gradient(135deg,#134e4a,#0f766e) !important; }
+  /* فيروزي — تعديل العناوين / الأسماء */
+  .ab-titles  { background: linear-gradient(135deg,#155e75,#0891b2) !important; }
+  /* أحمر — مسح البيانات (دائماً آخر زر) */
+  .ab-clear   { background: linear-gradient(135deg,#991b1b,#dc2626) !important; }
+  /* رمادي فاتح — إلغاء / ثانوي */
+  .ab-cancel  { background: linear-gradient(135deg,#374151,#6b7280) !important; }
+
+} /* end @media screen */
+

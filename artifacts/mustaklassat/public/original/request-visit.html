@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <script src="/original/auth-check.js"></script>
+    <script src="/original/cloud-sync.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوابة تسجيل ومتابعة الزيارات</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary-color: #1e3c72; --secondary-color: #2a5298; --accent-color: #d4af37; --accent-hover: #b8962e; --glass-bg: rgba(255, 255, 255, 0.95 ); }
+        body { font-family: 'Tajawal', sans-serif; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 40px 20px; }
+        .main-container { width: 95%; max-width: 1200px; background: var(--glass-bg); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); padding: 40px 50px; margin-bottom: 40px; }
+        .form-header { text-align: center; margin-bottom: 35px; display: flex; flex-direction: column; align-items: center; }
+        .form-header img { width: 90px; margin-bottom: 15px; }
+        .form-header h2 { font-size: 26px; color: var(--primary-color); margin: 0; }
+        .form-header p { font-size: 16px; color: #555; margin-top: 8px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 30px; }
+        .input-group { position: relative; }
+        .input-group.full-width { grid-column: 1 / -1; }
+        .input-group label { font-weight: 500; display: block; margin-bottom: 8px; color: #333; font-size: 15px; }
+        .input-group input { width: 100%; padding: 12px; font-size: 15px; border: 1px solid #ccc; border-radius: 8px; font-family: 'Tajawal', sans-serif; }
+        .btn-submit { grid-column: 1 / -1; width: 100%; padding: 15px; margin-top: 20px; background: linear-gradient(145deg, var(--accent-color), var(--accent-hover)); color: var(--primary-color); border-radius: 10px; font-size: 18px; font-weight: 700; border: none; cursor: pointer; }
+        #status-message { text-align: center; margin-top: 20px; font-weight: bold; padding: 12px; border-radius: 8px; display: none; }
+        #status-message.success { background-color: rgba(40, 167, 69, 0.1); color: #155724; }
+
+        /* --- أنماط الفهرس والبحث --- */
+        .requests-index { margin-top: 40px; border-top: 2px solid var(--accent-color); padding-top: 30px; }
+        .index-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .index-header h3 { color: var(--primary-color); margin: 0; font-size: 22px; }
+        .search-box { position: relative; }
+        .search-box input { padding: 10px 35px 10px 15px; border-radius: 20px; border: 1px solid #ddd; font-family: 'Tajawal', sans-serif; width: 250px; }
+        .search-box i { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); color: #aaa; }
+        
+        .table-container { overflow-x: auto; } /* يضيف شريط تمرير فقط إذا لزم الأمر حقاً على الشاشات الصغيرة جداً */
+        .requests-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .requests-table th, .requests-table td { padding: 12px; text-align: right; border-bottom: 1px solid #ddd; white-space: normal; /* 1. السماح بالتفاف النص لإلغاء السكرول */ }
+        .requests-table thead th { background-color: #f2f2f2; color: #333; font-weight: 700; }
+        .status-badge { font-weight: bold; padding: 5px 10px; border-radius: 15px; color: white; font-size: 12px; white-space: nowrap; }
+        .status-pending { background-color: #ffc107; color: #333; }
+        .status-approved { background-color: #28a745; }
+        .status-rejected { background-color: #dc3545; }
+        .btn-action { padding: 5px 10px; font-size: 12px; border-radius: 5px; text-decoration: none; color: white; background-color: #007bff; border: none; cursor: pointer; white-space: nowrap; }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="form-header">
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي">
+            <h2>بوابة تسجيل ومتابعة الزيارات</h2>
+            <p>يرجى تعبئة بيانات الزيارة المطلوبة بدقة ومتابعة حالة طلباتك السابقة.</p>
+        </div>
+        <form id="visit-request-form">
+            <!-- ... نفس حقول النموذج ... -->
+            <div class="form-grid">
+                <div class="input-group"><label for="rep_name">الاسم</label><input type="text" id="rep_name" required></div>
+                <div class="input-group"><label for="site_location">الموقع</label><input type="text" id="site_location" required></div>
+                <div class="input-group"><label for="rep_id">رقم الهوية (الإقامة)</label><input type="text" id="rep_id" required></div>
+                <div class="input-group"><label for="visit_date">تاريخ الزيارة</label><input type="date" id="visit_date" required></div>
+                <div class="input-group"><label for="rep_mobile">رقم الجوال</label><input type="tel" id="rep_mobile" required></div>
+                <div class="input-group"><label for="system_name">النظام</label><input type="text" id="system_name" required></div>
+                <div class="input-group"><label for="main_contractor">مقاول الصيانة</label><input type="text" id="main_contractor" required></div>
+                <div class="input-group"><label for="sub_contractor">مقاول الباطن</label><input type="text" id="sub_contractor" required></div>
+                <div class="input-group full-width"><label for="rep_id_photo">صورة هوية الزائر (اختياري)</label><input type="file" id="rep_id_photo" accept="image/*"></div>
+                <button type="submit" class="btn-submit" id="submit-btn">إرسال الطلب للمراجعة</button>
+            </div>
+        </form>
+        <div id="status-message"></div>
+
+        <div class="requests-index">
+            <div class="index-header">
+                <h3><i class="fas fa-history"></i> سجل الطلبات المقدمة</h3>
+                <!-- 2. حقل البحث الجديد -->
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="بحث في السجل...">
+                    <i class="fas fa-search"></i>
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="requests-table">
+                    <thead>
+                        <tr>
+                            <th>الاسم</th><th>الموقع</th><th>رقم الهوية</th><th>الجوال</th><th>النظام</th>
+                            <th>مقاول الصيانة</th><th>مقاول الباطن</th><th>تاريخ الزيارة</th><th>الحالة</th><th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requests-tbody">
+                        <!-- سيتم تعبئة الطلبات هنا -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const requestForm = document.getElementById('visit-request-form');
+        const requestsTbody = document.getElementById('requests-tbody');
+        const searchInput = document.getElementById('search-input');
+        const STORAGE_KEY = 'visitRequests_NajranHC';
+
+        function displayRequests() {
+            let requests = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+            const searchTerm = searchInput.value.toLowerCase();
+            requestsTbody.innerHTML = '';
+
+            const filteredRequests = requests.filter(req => {
+                // البحث في كل قيم الطلب
+                return Object.values(req).some(value => 
+                    value && value.toString().toLowerCase().includes(searchTerm)
+                );
+            });
+
+            if (filteredRequests.length === 0) {
+                requestsTbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">لا توجد نتائج مطابقة للبحث أو لا توجد طلبات.</td></tr>';
+                return;
+            }
+
+            filteredRequests.sort((a, b) => b.id - a.id).forEach(req => {
+                let statusClass = '';
+                let statusText = req.status;
+                if (statusText === 'قيد المراجعة') statusClass = 'status-pending';
+                else if (statusText === 'موافق عليه') statusClass = 'status-approved';
+                else if (statusText === 'مرفوض') statusClass = 'status-rejected';
+
+                const photoButton = req.rep_id_photo 
+                    ? `<a href="${req.rep_id_photo}" target="_blank" class="btn-action">عرض الهوية</a>` 
+                    : 'لا يوجد';
+
+                const row = `
+                    <tr>
+                        <td>${req.rep_name}</td><td>${req.site_location}</td><td>${req.rep_id}</td>
+                        <td>${req.rep_mobile}</td><td>${req.system_name}</td><td>${req.main_contractor}</td>
+                        <td>${req.sub_contractor}</td><td>${new Date(req.visit_date).toLocaleDateString('ar-SA')}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td><td>${photoButton}</td>
+                    </tr>
+                `;
+                requestsTbody.innerHTML += row;
+            });
+        }
+
+        // 3. ربط حدث الكتابة في حقل البحث بدالة العرض
+        searchInput.addEventListener('keyup', displayRequests);
+
+        requestForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const photoFile = document.getElementById('rep_id_photo').files[0];
+            const saveRequest = (photoData) => {
+                let requests = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+                const newRequest = {
+                    id: Date.now(),
+                    rep_name: document.getElementById('rep_name').value,
+                    site_location: document.getElementById('site_location').value,
+                    rep_id: document.getElementById('rep_id').value,
+                    visit_date: document.getElementById('visit_date').value,
+                    rep_mobile: document.getElementById('rep_mobile').value,
+                    system_name: document.getElementById('system_name').value,
+                    main_contractor: document.getElementById('main_contractor').value,
+                    sub_contractor: document.getElementById('sub_contractor').value,
+                    rep_id_photo: photoData,
+                    status: 'قيد المراجعة'
+                };
+                requests.push(newRequest);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
+                const statusMessage = document.getElementById('status-message');
+                statusMessage.textContent = 'تم إرسال طلبك بنجاح. تم تحديث السجل أدناه.';
+                statusMessage.className = 'success';
+                statusMessage.style.display = 'block';
+                requestForm.reset();
+                displayRequests();
+            };
+            if (photoFile) {
+                const reader = new FileReader();
+                reader.onload = (event) => saveRequest(event.target.result);
+                reader.readAsDataURL(photoFile);
+            } else {
+                saveRequest(null);
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', displayRequests);
+    </script>
+</body>
+</html>

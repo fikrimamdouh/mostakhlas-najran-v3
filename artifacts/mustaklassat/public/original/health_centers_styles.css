@@ -1,0 +1,2355 @@
+/* ===================================================================
+//
+//  Health Centers System - Master Stylesheet (V-Ultimate)
+//  Author: Manus AI
+//  Description: A final, clean, and beautifully unified stylesheet.
+//
+// =================================================================== */
+
+/* --- 1. General Body & Layout --- */
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap' );
+
+body {
+    background-color: #f4f7f9;
+    color: #343a40;
+    font-family: 'Tajawal', Arial, sans-serif;
+    direction: rtl;
+    margin: 0;
+}
+
+.container {
+    max-width: 1600px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.07);
+    border-radius: 15px;
+}
+
+/* --- 2. Main Page Header & Contract Info --- */
+.header-info {
+    text-align: center;
+    padding: 20px;
+    border-bottom: 1px solid #e9ecef;
+    margin-bottom: 20px;
+    position: relative;
+}
+.header-info .logo-right { position: absolute; right: 20px; top: 20px; height: 80px; }
+.header-info .logo-left { position: absolute; left: 20px; top: 20px; height: 80px; }
+.header-info h1 { color: #003087; margin: 0; font-weight: 800; }
+.header-info h3 { color: #0056b3; margin: 5px 0; font-weight: 500; }
+.header-info h2 { color: #d4af37; margin: 10px 0; font-weight: 700; }
+.header-info .date { color: #6c757d; }
+
+/* =================================================================== */
+/* === ✅ [النسخة النهائية] تنسيق معلومات العقد (سطر واحد) === */
+/* =================================================================== */
+
+.page-contract-info-v2 {
+    text-align: center; /* توسيط السطر بالكامل */
+    padding: 10px 15px;
+    margin: -15px auto 20px auto; /* تقليل الهامش العلوي لتقريبه من الهيدر */
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    max-width: 95%; /* تحديد عرض أقصى */
+}
+
+.page-contract-info-v2 p {
+    margin: 0;
+    padding: 0;
+    font-size: 0.9em; /* تصغير حجم الخط قليلاً */
+    color: #343a40;
+    display: flex; /* استخدام Flexbox لترتيب العناصر */
+    flex-wrap: wrap; /* السماح بالالتفاف على الشاشات الصغيرة جداً */
+    justify-content: center; /* توسيط العناصر داخل السطر */
+    gap: 5px 15px; /* مسافات بين العناصر (عمودي وأفقي) */
+}
+
+.page-contract-info-v2 p span {
+    white-space: nowrap; /* منع كسر النص داخل كل معلومة */
+}
+
+.page-contract-info-v2 p strong {
+    color: #0056b3; /* لون مميز للعناوين */
+    margin-left: 5px; /* مسافة بسيطة بعد العنوان */
+}
+
+.page-contract-info-v2 .separator {
+    color: #ced4da; /* لون خافت للفاصل */
+    font-weight: bold;
+}
+
+/* --- تنسيقات الطباعة لهذا القسم --- */
+@media print {
+    .page-contract-info-v2 {
+        font-size: 8pt !important; /* تصغير الخط أكثر في الطباعة */
+        padding: 8px !important;
+        border: 1px solid #666 !important;
+        background-color: transparent !important;
+        margin-bottom: 15px !important;
+    }
+    .page-contract-info-v2 p {
+        gap: 5px 10px !important; /* تقليل المسافات في الطباعة */
+    }
+}
+
+/* --- 3. UNIFIED BUTTON STYLES --- */
+/* Base style for all buttons */
+.action-buttons button, .btn-action, .dialog .btn, .dialog button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 1em;
+    font-weight: 700;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    text-decoration: none;
+}
+.action-buttons button:hover, .btn-action:hover, .dialog .btn:hover, .dialog button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Main Action Buttons Bar */
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 25px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+.action-buttons button {
+    background-color: #007bff; color: white; border-color: #007bff;
+}
+.action-buttons button[style*="background-color: #17a2b8"] { background-color: #17a2b8 !important; }
+.action-buttons button[style*="background-color: #28a745"] { background-color: #28a745 !important; }
+.action-buttons button[style*="background-color: #ffc107"] { background-color: #ffc107 !important; color: #212529 !important; }
+.action-buttons button[style*="background-color: #dc3545"] { background-color: #dc3545 !important; }
+
+/* Tab Action Buttons */
+.tab-action-buttons {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+}
+.btn-action.btn-edit-scores { background-color: #007bff; color: white; }
+.btn-action.btn-save-scores { background-color: #28a745; color: white; }
+.btn-action.btn-manage-items { background-color: #ffc107; color: #212529; }
+.btn-action.btn-update { background-color: #17a2b8; color: white; }
+.btn-action.btn-reset { background-color: #dc3545; color: white; }
+.btn-action.btn-print { background-color: #6c757d; color: white; }
+.btn-action.btn-export-pdf { background-color: #c82333; color: white; }
+.btn-action.btn-export-excel { background-color: #1d6f42; color: white; }
+.btn-action.btn-signatures { background-color: #5a6268; color: white; }
+.btn-action.cancel-mode { background-color: #343a40; }
+
+/* Dialog Footer Buttons */
+.dialog .dialog-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.dialog .footer-actions { display: flex; gap: 10px; }
+.btn-primary { background-color: #007bff; color: white; }
+.btn-success { background-color: #28a745; color: white; }
+.btn-secondary { background-color: #6c757d; color: white; }
+
+/* --- 4. Main Grid View (Center Icons) --- */
+#centers-grid-container, #special-categories-container {
+    text-align: center; padding: 20px; background-color: #fdfdff;
+    border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 20px;
+}
+#centers-grid-container h2, #special-categories-container h2 { color: #003087; margin-bottom: 20px; }
+#centers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; }
+.center-icon {
+    background: linear-gradient(145deg, #2a5298, #1e3c72); color: white;
+    padding: 35px 10px 20px 10px; border-radius: 10px; cursor: pointer;
+    transition: all 0.3s ease; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    min-height: 120px; position: relative; overflow: hidden;
+}
+.center-icon:hover {
+    transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    background: linear-gradient(145deg, #d4af37, #b8962e);
+}
+.center-icon i { font-size: 2.5em; margin-bottom: 10px; }
+.center-icon span { font-weight: 500; font-size: 1em; }
+.center-icon-badge {
+    position: absolute; top: -10px; right: -10px; background-color: #d4af37;
+    color: #1e3c72; font-weight: bold; font-size: 14px; width: 40px; height: 40px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2); transform: rotate(15deg);
+}
+#special-categories-grid { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+.center-icon.special-category { background: linear-gradient(145deg, #6c757d, #343a40); min-width: 220px; }
+
+/* --- 5. Center Details View (Tabs Interface) --- */
+#center-details-view {
+    background-color: #f4f7f9; border-radius: 12px; padding: 20px;
+    margin-top: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+.center-header-container {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 15px; margin-bottom: 20px; border-bottom: 2px solid #e9ecef;
+}
+#center-main-title { flex-grow: 1; text-align: center; }
+#center-main-title h2 { color: #003087; font-size: 1.8em; }
+#center-main-title h3 { color: #0056b3; font-size: 1.4em; }
+#center-main-title p { color: #6c757d; font-size: 1.1em; direction: ltr; }
+.back-button {
+    background-color: #6c757d; color: white; border: none; border-radius: 8px;
+    padding: 12px 20px; font-size: 1em; font-weight: 600; cursor: pointer;
+    transition: background-color 0.3s;
+}
+.back-button:hover { background-color: #5a6268; }
+
+.tabs-container { display: flex; gap: 10px; margin-bottom: 0; }
+.tab-link {
+    flex: 1; padding: 15px; font-size: 1.1em; font-weight: 700; text-align: center;
+    cursor: pointer; border: none; background-color: #e9ecef; color: #495057;
+    border-radius: 8px 8px 0 0; transition: all 0.3s ease; display: flex;
+    align-items: center; justify-content: center; gap: 8px;
+}
+.tab-link:hover { background-color: #d4e3f3; }
+.tab-link.active {
+    background-color: #0056b3; color: white; transform: translateY(-5px);
+    box-shadow: 0 -4px 10px rgba(0, 86, 179, 0.2);
+}
+#tab-content-container {
+    background-color: #ffffff; padding: 25px; border-radius: 0 0 12px 12px;
+    border: 1px solid #dee2e6; border-top: none; min-height: 400px;
+}
+
+/* --- 6. ENHANCED TABLE STYLES --- */
+.department-table, .performance-table, .achievement-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 25px 0;
+    font-size: 14px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.department-table th, .department-table td,
+.performance-table th, .performance-table td,
+.achievement-table th, .achievement-table td {
+    padding: 12px 15px;
+    text-align: center;
+    border: none;
+    border-bottom: 1px solid #e9ecef;
+}
+.department-table thead th, .performance-table thead th, .achievement-table thead th {
+    background-color: #003087;
+    color: #ffffff;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.department-table tbody tr:hover, .performance-table tbody tr:hover, .achievement-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+.department-table tbody tr:last-child td, .performance-table tbody tr:last-child td, .achievement-table tbody tr:last-child td {
+    border-bottom: none;
+}
+.total-row td {
+    font-weight: 800 !important;
+    font-size: 1.1em;
+    background-color: #e9ecef !important;
+    color: #003087;
+}
+.performance-table .item-text { text-align: right; white-space: normal; }
+.performance-table .score-input {
+    width: 80px; padding: 5px; text-align: center; border: 1px solid #ced4da;
+    border-radius: 5px; background-color: #f1f3f5; transition: all 0.3s ease;
+}
+.performance-table .score-input:disabled {
+    background-color: transparent; border-color: transparent;
+    color: #212529; font-weight: bold;
+}
+.department-table input, .department-table select {
+    color: #000; background-color: transparent; border: none; width: 100%;
+    text-align: center; font-family: 'Tajawal', sans-serif; font-size: 1em;
+}
+.department-table select { cursor: pointer; }
+
+/* --- 7. Performance Tab Specific Styles --- */
+.performance-cost-display {
+    background-color: #e9ecef; border: 1px solid #dee2e6; border-radius: 8px;
+    padding: 15px 20px; margin-bottom: 20px; display: flex;
+    justify-content: space-between; align-items: center; font-size: 1.2em;
+    color: #003087; font-weight: 500;
+}
+.performance-cost-display .cost-value {
+    font-weight: 700; font-size: 1.3em; color: #28a745; background-color: #fff;
+    padding: 5px 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.certificate-summary {
+    margin-top: 20px; padding: 15px; background-color: #f8f9fa;
+    border-radius: 8px; text-align: center;
+}
+.certificate-summary p { margin: 8px 0; font-size: 1.1em; }
+.certificate-summary span { font-weight: bold; color: #0056b3; }
+
+/* --- 8. Dialogs & Modals (Unified & Structured) --- */
+.overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: transparent; z-index: 999;
+}
+.dialog {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background-color: white; border-radius: 12px;
+    border: 1px solid #d1d9e8; box-shadow: 0 8px 32px rgba(0,0,60,0.18);
+    z-index: 1000; width: 90%; max-width: 700px; max-height: 90vh;
+    display: flex; flex-direction: column; padding: 0; overflow: hidden;
+}
+.dialog.wide-dialog { max-width: 1100px; }
+.dialog .dialog-header {
+    padding: 15px 25px; border-bottom: 1px solid #e9ecef; display: flex;
+    justify-content: space-between; align-items: center; flex-shrink: 0;
+}
+.dialog .dialog-header h3 { margin: 0; color: #003087; }
+.dialog .dialog-header .close {
+    position: static; font-size: 1.8em; cursor: pointer; color: #888; line-height: 1;
+}
+.dialog .dialog-body {
+    padding: 15px 25px;
+    overflow-y: auto !important; /* ✅✅✅ هذا هو الإصلاح الجذري ✅✅✅ */
+    flex-grow: 1;
+    background-color: #f8f9fa;
+}
+.dialog .dialog-footer {
+    padding: 15px 25px; border-top: 1px solid #e9ecef; background-color: #fff;
+    display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+}
+
+/* --- 9. Dialog Item Rows (For Signatures & Performance Items) --- */
+.dialog-item-row, .signature-field-item {
+    display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: center;
+    padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px;
+    margin-bottom: 15px; background-color: #fff;
+}
+.dialog-item-row .item-content, .signature-field-item .item-content {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 15px; align-items: center;
+}
+.dialog-item-row .item-content { grid-template-columns: 1fr auto; }
+.dialog-item-row .form-group, .signature-field-item .form-group { margin: 0; }
+.dialog-item-row .form-group label, .signature-field-item .form-group label {
+    font-size: 0.9em; color: #6c757d; margin-bottom: 3px; display: block;
+}
+.dialog-item-row input, .signature-field-item input {
+    width: 100%; box-sizing: border-box; font-size: 1em; padding: 10px;
+    border: 1px solid #ccc; border-radius: 4px;
+}
+.dialog-item-row .max-score-group { width: 100px; }
+.dialog-item-row.new-item-highlight { animation: highlight 1.5s ease-out; }
+@keyframes highlight { from { background-color: #fff3cd; } to { background-color: #fff; } }
+.dialog-item-row .btn-danger, .signature-field-item .btn-danger {
+    padding: 8px 12px; background-color: #f8d7da; color: #721c24;
+    border: 1px solid #f5c6cb; border-radius: 5px; cursor: pointer;
+    transition: all 0.2s ease; height: fit-content;
+}
+.dialog-item-row .btn-danger:hover, .signature-field-item .btn-danger:hover {
+    background-color: #dc3545; color: white; border-color: #dc3545;
+}
+
+/* --- 10. Grand Total & Signatures (Footer Sections) --- */
+.page-summary { margin-top: 30px; }
+.grand-total {
+    margin-bottom: 20px; padding: 25px;
+    background: linear-gradient(145deg, #1e3c72, #2a5298); color: white;
+    border-radius: 15px; box-shadow: 0 10px 25px rgba(30, 60, 114, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.grand-total h3 {
+    text-align: center; margin-top: 0; margin-bottom: 25px; font-size: 1.8em;
+    font-weight: 700; border-bottom: 2px solid rgba(212, 175, 55, 0.5);
+    padding-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 15px;
+}
+.total-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px; text-align: center;
+}
+.total-item {
+    background-color: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.3s ease;
+}
+.total-item:hover { background-color: rgba(255, 255, 255, 0.1); transform: translateY(-5px); }
+.total-label { display: block; font-size: 1em; margin-bottom: 10px; opacity: 0.8; font-weight: 500; }
+.total-value { display: block; font-size: 1.8em; font-weight: 700; letter-spacing: 1px; }
+.total-item.net-total {
+    background-color: #d4af37; color: #1e3c72; border: 1px solid #b8962e;
+}
+.total-item.net-total .total-label { opacity: 0.9; }
+.admin-total {
+    background: linear-gradient(145deg, #495057, #6c757d);
+    box-shadow: 0 10px 25px rgba(0,0,0, 0.2);
+}
+.admin-total h3 { border-bottom-color: rgba(255, 255, 255, 0.3); }
+.admin-total .net-total { background-color: #f8f9fa; color: #343a40; }
+
+.signatures-display-section {
+    margin-top: 40px; padding-top: 30px; border-top: 1px solid #eee;
+}
+.signatures-display-section h3 { text-align: center; color: #003087; margin-bottom: 30px; }
+/* =================================================================== */
+/* === ✅ [الحل النهائي] تنسيق احترافي للتواقيع في الطباعة (سطر واحد) === */
+/* =================================================================== */
+.signatures-display-section {
+    margin-top: 50px !important;
+    padding-top: 20px !important;
+    border-top: 1px solid #ccc !important;
+    page-break-inside: avoid !important;
+}
+
+/* هنا التغيير الجوهري: نستخدم flex بدلاً من grid للطباعة */
+.signatures-grid {
+    display: flex !important;
+    justify-content: space-around !important; /* توزيع المسافات بالتساوي */
+    align-items: flex-end; /* محاذاة العناصر للأسفل */
+    flex-wrap: nowrap !important; /* منع نزول التواقيع لسطر جديد */
+    gap: 20px !important;
+}
+
+.signature-item-display {
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    flex: 1; /* جعل كل توقيع يأخذ مساحة متساوية */
+    min-width: 150px; /* حد أدنى لعرض كل توقيع */
+}
+
+.signature-item-display .title {
+    font-size: 11pt;
+    font-weight: bold;
+    margin-bottom: 40px; /* مسافة كافية بين المسمى والخط للتوقيع الفعلي */
+}
+
+.signature-item-display .line {
+    height: 1px;
+    background-color: #000;
+    margin: 0;
+}
+
+.signature-item-display .name {
+    font-size: 10pt;
+    margin-top: 8px;
+    font-weight: 500;
+}
+.signature-item-display { text-align: center; }
+.signature-item-display .title { font-weight: 700; font-size: 1.1em; color: #343a40; }
+.signature-item-display .line {
+    height: 1px; background-color: #ccc; margin: 25px auto 8px auto; width: 80%;
+}
+.signature-item-display .name { color: #555; font-size: 1.1em; }
+
+footer {
+    text-align: center; margin-top: 30px; padding-top: 20px;
+    border-top: 1px solid #eee; color: #888;
+}
+
+/* =================================================================== */
+/* ===       ✅ [النسخة النهائية والمضمونة 100%] للطباعة           === */
+/* =================================================================== */
+
+@media print {
+    /* --- 1. إعدادات الصفحة العامة --- */
+    @page {
+        margin: 1cm; /* سيتم تحديد الاتجاه بواسطة JS */
+    }
+
+    body, html {
+        background: #fff !important;
+        color: #000 !important;
+        font-family: 'Tajawal', sans-serif !important;
+        font-size: 9pt !important;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* --- 2. إخفاء كل العناصر غير المرغوب فيها --- */
+    .no-print, .nav-bar, .action-buttons, .tab-action-buttons, .dialog, footer, #main-action-buttons, .back-button {
+        display: none !important;
+    }
+
+/* --- 3. ✅ [الحل النهائي والمضمون 100%] --- */
+/* عند الطباعة، نلغي خاصية التمرير ونسمح للحاوية بالتمدد */
+.table-responsive-wrapper {
+    overflow: visible !important; /* أهم تعديل: يلغي شريط التمرير */
+    border: none !important;
+}
+
+/* نضمن أن الجدول الذي بداخلها يأخذ العرض الكامل */
+.department-table table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    border: 1px solid #000 !important;
+}
+
+    /* --- 4. التحكم الدقيق في فواصل الصفحات --- */
+    .printable-container,
+    .printable-header,
+    .page-contract-info-v2,
+    .department-table,
+    .signatures-display-section {
+        page-break-inside: avoid !important;
+    }
+    tr { page-break-inside: avoid !important; }
+
+    /* --- 5. تنسيق الهيدر ومعلومات العقد --- */
+    .printable-header {
+        display: flex !important;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #000;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+    }
+    .printable-header img { height: 60px; }
+    .page-contract-info-v2 {
+        border: 1px solid #666 !important;
+        margin-bottom: 15px !important;
+    }
+
+    /* --- 6. ✅ [الحل النهائي لتكسير النصوص] --- */
+    .department-table th, .department-table td {
+        border: 1px solid #333 !important;
+        padding: 4px 2px !important;
+        text-align: center !important;
+        vertical-align: middle;
+        font-size: 8pt !important;
+    }
+    .department-table thead th {
+        background-color: #e0e0e0 !important;
+        color: #000 !important;
+        font-weight: bold;
+        white-space: nowrap !important; /* منع تكسير رؤوس الأعمدة نهائياً */
+    }
+    .department-table td.employee-name, .department-table td.job-title {
+        white-space: normal !important; /* السماح بتكسير الأسماء الطويلة فقط */
+        word-wrap: break-word;
+    }
+
+    /* --- 7. تنسيق التواقيع --- */
+    .signatures-grid {
+        display: flex !important;
+        justify-content: space-around !important;
+        flex-wrap: nowrap !important;
+    }
+    .signature-item-display .line {
+        background-color: #000 !important;
+    }
+}
+/* =================================================================== */
+/* === START: Final Fixes for Print & Dialogs (V-Ultimate) === */
+/* =================================================================== */
+
+/* --- 1. Print Styles Enhancement --- */
+/* هذا الكلاس يتم إضافته ديناميكياً عند الطباعة لضمان أفضل تنسيق */
+.printable-container {
+    width: 100%;
+    margin: 0 auto;
+}
+.printable-container .header-info {
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+.printable-container .certificate-container {
+    box-shadow: none;
+    border: none;
+    padding: 0;
+}
+
+@media print {
+    body {
+        -webkit-print-color-adjust: exact !important; /* For Chrome, Safari */
+        color-adjust: exact !important; /* For Firefox */
+    }
+    .printable-container {
+        display: block !important;
+    }
+}
+
+/* --- 2. Dialog Scroll Fix (Re-applying for clarity) --- */
+/* هذا يضمن أن كل النوافذ المنبثقة العريضة لها هيكل قابل للتمرير */
+.dialog.wide-dialog {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    max-height: 90vh;
+    overflow: hidden;
+}
+.dialog .dialog-header {
+    padding: 15px 25px;
+    border-bottom: 1px solid #e9ecef;
+    flex-shrink: 0;
+}
+.dialog .dialog-body {
+    padding: 15px 25px;
+    overflow-y: auto; /* شريط التمرير هنا */
+    flex-grow: 1;
+    background-color: #f8f9fa;
+}
+.dialog .dialog-footer {
+    padding: 15px 25px;
+    border-top: 1px solid #e9ecef;
+    background-color: #fff;
+    flex-shrink: 0;
+}
+
+/* =================================================================== */
+/* === END: Final Fixes for Print & Dialogs (V-Ultimate) === */
+/* =================================================================== */
+/* =================================================================== */
+/* === 10. Dialogs & Modals (Unified & Structured) === */
+/* =================================================================== */
+.overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: transparent; z-index: 999;
+}
+.dialog {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background-color: white; border-radius: 12px;
+    border: 1px solid #d1d9e8; box-shadow: 0 8px 32px rgba(0,0,60,0.18);
+    z-index: 1000; width: 90%; max-width: 700px; max-height: 90vh;
+    display: flex; flex-direction: column; padding: 0; overflow: hidden;
+}
+.dialog.wide-dialog { max-width: 1100px; }
+
+.dialog .dialog-header {
+    padding: 15px 25px; border-bottom: 1px solid #e9ecef; display: flex;
+    justify-content: space-between; align-items: center; flex-shrink: 0;
+}
+.dialog .dialog-header h3 { margin: 0; color: #003087; }
+.dialog .dialog-header .close {
+    position: static; font-size: 1.8em; cursor: pointer; color: #888; line-height: 1;
+}
+.dialog .dialog-body {
+    padding: 15px 25px;
+    overflow-y: auto; /* ✅✅✅ هذا هو السطر المسؤول عن شريط التمرير ✅✅✅ */
+    flex-grow: 1;
+    background-color: #f8f9fa;
+}
+.dialog .dialog-footer {
+    padding: 15px 25px; border-top: 1px solid #e9ecef; background-color: #fff;
+    display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+}
+/* =================================================================== */
+/* === 13. FINAL FIX for Dialogs with !important === */
+/* =================================================================== */
+
+/* فرض الهيكل المقسم على كل النوافذ العريضة */
+.dialog.wide-dialog {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    max-height: 90vh !important; /* تحديد ارتفاع أقصى */
+}
+
+/* فرض أنماط الرأس الثابت */
+.dialog .dialog-header {
+    flex-shrink: 0 !important;
+}
+
+/* فرض أنماط الجسم القابل للتمرير (هذا هو مفتاح الحل) */
+.dialog .dialog-body {
+    overflow-y: auto !important; /* فرض شريط التمرير العمودي */
+    flex-grow: 1 !important;     /* فرض تمدد الجسم ليملأ المساحة */
+    background-color: #f8f9fa !important;
+    padding: 20px 25px !important;
+}
+
+/* فرض أنماط التذييل الثابت */
+.dialog .dialog-footer {
+    flex-shrink: 0 !important;
+    background-color: #ffffff !important;
+    border-top: 1px solid #e9ecef !important;
+    padding: 15px 25px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
+
+/* التأكد من أن أزرار التذييل ظاهرة بشكل صحيح */
+.dialog .dialog-footer .footer-actions {
+    display: flex;
+    gap: 10px;
+}
+/* =================================================================== */
+/* === 14. Achievement Tab & Print Enhancements === */
+/* =================================================================== */
+
+/* إخفاء الأزرار عند الطباعة */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    .certificate-container {
+        page-break-inside: avoid;
+    }
+}
+
+/* تصميم احترافي لقسم التواقيع */
+.signatures-display-section {
+    margin-top: 40px;
+    padding-top: 30px;
+    border-top: 1px solid #eee;
+}
+.signatures-display-section h3 {
+    text-align: center;
+    color: #003087;
+    margin-bottom: 30px;
+}
+.signatures-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 40px 30px;
+    justify-content: center;
+}
+.signature-item-display {
+    text-align: center;
+}
+.signature-item-display .title {
+    font-weight: 700;
+    font-size: 1.1em;
+    color: #343a40;
+}
+.signature-item-display .line {
+    height: 1px;
+    background-color: #999;
+    margin: 25px auto 8px auto;
+    width: 80%;
+}
+.signature-item-display .name {
+    color: #555;
+    font-size: 1.1em;
+    min-height: 20px; /* لضمان وجود مساحة حتى لو كان الاسم فارغاً */
+}
+/* =================================================================== */
+/* === 15. Final Print & Signature Enhancements === */
+/* =================================================================== */
+
+/* كلاس لتوسيط النصوص */
+.text-center {
+    text-align: center;
+}
+
+/* تحسين تصميم قسم التواقيع */
+.signatures-display-section {
+    margin-top: 50px; /* زيادة المسافة العلوية */
+    padding-top: 30px;
+    border-top: 1px solid #eee;
+}
+
+.signatures-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 60px 30px; /* زيادة المسافة العمودية بين التواقيع */
+    justify-content: center;
+}
+
+.signature-item-display {
+    text-align: center;
+}
+
+.signature-item-display .title {
+    font-weight: 800; /* خط أعرض للمسمى الوظيفي */
+    font-size: 1.1em;
+    color: #003087; /* لون أزرق داكن */
+}
+
+.signature-item-display .line {
+    height: 1px;
+    background-color: #343a40; /* خط أغمق وأوضح */
+    margin: 40px auto 10px auto; /* زيادة المسافة للتوقيع الفعلي */
+    width: 90%;
+}
+
+.signature-item-display .name {
+    color: #343a40;
+    font-size: 1.1em;
+    font-weight: 500;
+    min-height: 20px;
+}
+
+/* أنماط الطباعة النهائية */
+@media print {
+    .printable-container .header-info,
+    .printable-container .certificate-header {
+        text-align: center !important;
+    }
+
+    .printable-container .header-info h1,
+    .printable-container .header-info h2,
+    .printable-container .header-info h3 {
+        margin: 5px 0 !important;
+    }
+    
+    .printable-container .signatures-grid {
+        gap: 40px 20px !important; /* تقليل المسافات قليلاً في الطباعة */
+    }
+}
+/* =================================================================== */
+/* === 15. Final Print & Signature Enhancements === */
+/* =================================================================== */
+
+/* تصميم احترافي لقسم التواقيع */
+.signatures-display-section {
+    margin-top: 50px; /* زيادة المسافة العلوية */
+    padding-top: 30px;
+    border-top: 1px solid #eee;
+}
+
+.signatures-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 60px 30px; /* زيادة المسافة العمودية بين التواقيع */
+    justify-content: center;
+}
+
+.signature-item-display {
+    text-align: center;
+}
+
+.signature-item-display .title {
+    font-weight: 800; /* خط أعرض للمسمى الوظيفي */
+    font-size: 1.1em;
+    color: #003087; /* لون أزرق داكن */
+}
+
+.signature-item-display .line {
+    height: 1px;
+    background-color: #343a40; /* خط أغمق وأوضح */
+    margin: 40px auto 10px auto; /* زيادة المسافة للتوقيع الفعلي */
+    width: 90%;
+}
+
+.signature-item-display .name {
+    color: #343a40;
+    font-size: 1.1em;
+    font-weight: 500;
+    min-height: 20px;
+}
+/* =================================================================== */
+/* === 17. Professional Print Styles (Final Fix) === */
+/* =================================================================== */
+
+@media print {
+    /* إعدادات الصفحة العامة */
+    @page {
+        size: A4 portrait;
+        margin: 0.7in;
+    }
+
+    body {
+        -webkit-print-color-adjust: exact !important; /* لطباعة الألوان في Chrome */
+        print-color-adjust: exact !important; /* المعيار الرسمي */
+        background-color: #fff !important;
+        font-family: 'Tajawal', sans-serif !important;
+        font-size: 10pt !important;
+    }
+
+    /* إخفاء كل شيء لا نريده في الطباعة */
+    .no-print, .nav-bar, .action-buttons, .tab-action-buttons, .dialog, .overlay, footer, #main-action-buttons {
+        display: none !important;
+    }
+
+    /* إظهار المحتوى المطبوع فقط */
+    .printable-container {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    /* تنسيق الهيدر المطبوع */
+    .printable-header {
+        display: flex !important;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #000;
+        padding-bottom: 15px;
+    }
+    .printable-header .logo-left-print, .printable-header .logo-right-print {
+        width: 70px; height: auto;
+    }
+    .printable-header .header-text-print { text-align: center; flex-grow: 1; }
+    .printable-header h1, .printable-header h2, .printable-header h3 {
+        margin: 3px 0 !important; padding: 0 !important; color: #000 !important;
+    }
+    .printable-header h1 { font-size: 16pt; font-weight: bold; }
+    .printable-header h3 { font-size: 14pt; }
+    .printable-header h2 { font-size: 12pt; font-weight: bold; }
+
+    /* تنسيق الجداول في الطباعة */
+    .achievement-table, .performance-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin: 20px 0 !important;
+        font-size: 9pt !important;
+    }
+    .achievement-table th, .achievement-table td,
+    .performance-table th, .performance-table td {
+        border: 1px solid #333 !important;
+        padding: 6px 4px !important;
+        text-align: center !important;
+        word-wrap: break-word;
+    }
+    .achievement-table th, .performance-table th {
+        background-color: #f2f2f2 !important;
+        font-weight: bold !important;
+    }
+    .total-row {
+        background-color: #e0e0e0 !important;
+        font-weight: bold !important;
+    }
+    .tafqeet-cell {
+        text-align: right !important;
+        font-weight: bold !important;
+        padding: 10px !important;
+    }
+
+    /* تنسيق التواقيع في الطباعة */
+    .signatures-display-section {
+        margin-top: 40px !important;
+        padding-top: 20px !important;
+        border-top: 1px solid #ccc !important;
+        page-break-inside: avoid !important; /* منع كسر الصفحة داخل قسم التواقيع */
+    }
+    .signatures-grid {
+        gap: 30px 20px !important;
+    }
+    .signature-item-display .line {
+        margin: 30px auto 8px auto !important;
+    }
+}
+/* =================================================================== */
+/* === 17. Professional Print Styles (Final & Unified) === */
+/* =================================================================== */
+/* =================================================================== */
+/* === 17. Professional Print Styles (FINAL & GUARANTEED FIX) === */
+/* =================================================================== */
+
+@media print {
+    /* إعدادات الصفحة العامة */
+    @page {
+        size: A4 portrait;
+        margin: 0.6in; /* هامش مناسب */
+    }
+
+    body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        background-color: #fff !important;
+        font-family: 'Tajawal', sans-serif !important;
+        font-size: 10pt !important;
+        color: #000 !important;
+    }
+
+    /* إخفاء كل العناصر غير المرغوب فيها */
+    .no-print, .nav-bar, .action-buttons, .tab-action-buttons, .dialog .dialog-footer, .dialog .dialog-header .close, footer, #main-action-buttons {
+        display: none !important;
+    }
+
+    /* إجبار الحاوية القابلة للطباعة على أخذ كامل المساحة */
+    .printable-container {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    /* تنسيق الهيدر الرسمي (الشعارات والعناوين) */
+    .printable-header {
+        display: flex !important;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 25px;
+        border-bottom: 2px solid #000;
+        padding-bottom: 15px;
+        page-break-inside: avoid;
+    }
+    .printable-header .logo-left-print, .printable-header .logo-right-print {
+        width: 75px; height: auto;
+    }
+    .printable-header .header-text-print { text-align: center; flex-grow: 1; }
+    .printable-header h1, .printable-header h2, .printable-header h3 {
+        margin: 2px 0 !important; padding: 0 !important; color: #000 !important;
+    }
+    .printable-header h1 { font-size: 18pt; font-weight: bold; }
+    .printable-header h2 { font-size: 14pt; }
+    .printable-header h3 { font-size: 12pt; font-weight: bold; }
+
+    /* تنسيق الجداول بشكل احترافي */
+    .department-table, .performance-table, .achievement-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin: 25px 0 !important;
+        font-size: 9.5pt !important;
+        page-break-inside: avoid;
+    }
+    .department-table th, .department-table td,
+    .performance-table th, .performance-table td,
+    .achievement-table th, .achievement-table td {
+        border: 1px solid #000 !important;
+        padding: 8px 5px !important;
+        text-align: center !important;
+        vertical-align: middle;
+    }
+    .department-table thead th, .performance-table thead th, .achievement-table thead th {
+        background-color: #e8e8e8 !important;
+        font-weight: bold !important;
+    }
+    .total-row {
+        background-color: #dcdcdc !important;
+        font-weight: bold !important;
+    }
+
+    /* ✅✅✅ [الحل النهائي] تنسيق احترافي للتواقيع في الطباعة ✅✅✅ */
+    .signatures-display-section {
+        margin-top: 50px !important;
+        padding-top: 20px !important;
+        border-top: 1px solid #ccc !important;
+        page-break-inside: avoid !important;
+    }
+    .signatures-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 50px 25px !important; /* زيادة المسافات بين التواقيع */
+    }
+    .signature-item-display {
+        display: flex;
+        flex-direction: column;
+        text-align: center;
+    }
+    .signature-item-display .title {
+        font-size: 11pt;
+        font-weight: bold;
+        margin-bottom: 35px; /* مسافة كبيرة بين المسمى والخط */
+    }
+    .signature-item-display .line {
+        height: 1px;
+        background-color: #000;
+        margin: 0;
+    }
+    .signature-item-display .name {
+        font-size: 10pt;
+        margin-top: 8px;
+        font-weight: 500;
+    }
+}
+/* =================================================================== */
+/* === 19. Grand Certificate & Final Print Enhancements === */
+/* =================================================================== */
+
+/* تصميم جمالي لنافذة الشهادة الإجمالية */
+#grand-cert-body {
+    background-color: #fff !important;
+}
+
+#printable-grand-certificate .achievement-table {
+    border: 2px solid #003087; /* إطار أزرق داكن للجدول */
+    border-radius: 8px;
+    overflow: hidden; /* لإخفاء زوايا الصفوف الحادة */
+}
+
+#printable-grand-certificate .achievement-table thead th {
+    background-color: #003087 !important; /* هيدر أزرق داكن */
+    color: #fff !important;
+    font-size: 11pt;
+    padding: 12px 8px !important;
+}
+
+#printable-grand-certificate .achievement-table tbody tr:nth-child(even) {
+    background-color: #f4f7f9; /* لون خفيف للصفوف الزوجية */
+}
+
+#printable-grand-certificate .achievement-table .total-row {
+    background-color: #d4af37 !important; /* لون ذهبي للإجمالي */
+    color: #003087 !important;
+    font-size: 12pt;
+}
+
+#printable-grand-certificate .achievement-table .total-row td {
+    padding: 12px 8px !important;
+}
+
+/* ✅✅✅ [الحل النهائي لمشكلة كسر الصفحة في الطباعة] ✅✅✅ */
+@media print {
+    .printable-container,
+    .certificate-container,
+    .department-table {
+        page-break-inside: avoid !important; /* القاعدة الأهم: تمنع كسر العنصر نفسه */
+    }
+
+    .certificate-header,
+    .signatures-display-section {
+        page-break-before: auto; /* اسمح بفاصل قبل هذه العناصر إذا لزم الأمر */
+        page-break-after: auto;
+        page-break-inside: avoid !important; /* لكن لا تكسر العنصر نفسه أبداً */
+    }
+
+    table {
+        page-break-inside: auto; /* اسمح بكسر الجدول إذا كان طويلاً جداً */
+    }
+
+    tr {
+        page-break-inside: avoid !important; /* لا تكسر الصف الواحد أبداً */
+        page-break-after: auto;
+    }
+}
+/* --- 20. Professional Dialog Checkbox Grid --- */
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 10px;
+    margin-top: 15px;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+}
+.form-group-checkbox {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+}
+.form-group-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-left: 12px;
+    cursor: pointer;
+}
+.form-group-checkbox label {
+    cursor: pointer;
+    font-weight: 500;
+}
+.all-selector {
+    background-color: #e9ecef;
+    border-bottom: 2px solid #dee2e6;
+}
+/* ✅ [جديد] تنسيقات حاوية التمرير الأفقي للجدول */
+/* --- 2. حاوية الجدول القابلة للتحجيم (Zoomable) --- */
+/* --- 2. حاوية الجدول القابلة للتحجيم (Zoomable) --- */
+/* =================================================================== */
+/* === 33. حاوية الجدول المتكيفة مع الزوم (V-Final) === */
+/* =================================================================== */
+
+.table-responsive-wrapper {
+    overflow-x: auto; /* ✅ [مُعدل] السماح بظهور شريط التمرير الأفقي عند الحاجة */
+    width: 100%;
+    border: 1px solid #dee2e6;
+    border-radius: 0 0 8px 8px;
+    margin-bottom: 1rem;
+    -webkit-overflow-scrolling: touch; /* تحسين التمرير على أجهزة اللمس */
+}
+
+.table-responsive-wrapper table {
+    width: 100%; /* ✅ جعل الجدول يملأ الحاوية بالكامل ويتقلص ليناسبها افتراضياً */
+    transform-origin: top right;
+    transition: transform 0.3s ease;
+    margin-bottom: 0;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+}
+
+.table-responsive-wrapper table {
+    width: 100%; /* ✅ جعل الجدول يملأ الحاوية بالكامل ويتقلص ليناسبها */
+    transform-origin: top right; /* ✅ تحديد نقطة بداية الزوم من أعلى اليمين */
+    transition: transform 0.3s ease; /* ✅ إضافة تأثير انتقال ناعم للزوم */
+    margin-bottom: 0;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+}
+
+.table-responsive-wrapper table {
+    width: 100%; /* ✅ جعل الجدول يملأ الحاوية بالكامل */
+    transform-origin: top right; /* ✅ تحديد نقطة بداية الزوم من أعلى اليمين */
+    transition: transform 0.3s ease; /* ✅ إضافة تأثير انتقال ناعم للزوم */
+    margin-bottom: 0;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+}
+
+/* تحسينات إضافية على الجدول داخل الحاوية */
+.table-responsive-wrapper table {
+    margin-bottom: 0; /* إزالة الهامش السفلي من الجدول نفسه */
+}
+/* ✅ [جديد] تنسيقات أزرار التحكم داخل التبويبات (طباعة، تكبير، تواقيع) */
+.tab-action-buttons {
+    display: flex;
+    justify-content: center; /* توسيط الأزرار */
+    align-items: center;
+    gap: 15px; /* مسافة بين الأزرار */
+    margin-top: 25px; /* مسافة علوية لفصلها عن الجدول */
+    padding: 15px;
+    border-top: 1px solid #e0e0e0;
+    background-color: #f9f9f9;
+    border-radius: 0 0 8px 8px; /* حواف دائرية للجزء السفلي */
+}
+
+.tab-action-buttons button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px; /* مسافة بين الأيقونة والنص */
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: 'Tajawal', sans-serif;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* تصميم زر الطباعة والتواقيع */
+.tab-action-buttons button:nth-child(1),
+.tab-action-buttons button:nth-child(2) {
+    background-color: #007bff; /* أزرق */
+    color: white;
+}
+
+.tab-action-buttons button:nth-child(1):hover,
+.tab-action-buttons button:nth-child(2):hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
+
+/* تصميم أزرار التكبير والتصغير */
+.tab-action-buttons button:nth-child(3),
+.tab-action-buttons button:nth-child(4) {
+    background-color: #6c757d; /* رمادي */
+    color: white;
+}
+
+.tab-action-buttons button:nth-child(3):hover,
+.tab-action-buttons button:nth-child(4):hover {
+    background-color: #5a6268;
+    transform: translateY(-2px);
+}
+
+/* أيقونات الأزرار */
+.tab-action-buttons button i {
+    font-size: 16px;
+}
+/* --- تنسيقات القوائم المنسدلة المحسنة --- */
+
+/* تنسيق قائمة الفئات */
+.category-select {
+    width: 50px;
+    padding: 5px;
+    border-radius: 5px;
+    text-align: center;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.category-select:hover {
+    transform: scale(1.1);
+}
+
+/* تنسيق قائمة الحضور (لإزالة المظهر الافتراضي) */
+.attendance-select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+}
+
+/* إظهار سهم القائمة عند المرور بالفأرة لتحسين تجربة المستخدم */
+.attendance-select:hover {
+    text-decoration: underline;
+}
+/* =================================================================== */
+/* === تحسينات تصميم جدول الحضور والقوائم المنسدلة (V2) === */
+/* =================================================================== */
+
+/* 
+ * القاعدة الأساسية: جعل القائمة المنسدلة تبدو كنص عادي
+ * - إزالة الحدود (المربعات)
+ * - إزالة سهم القائمة المنسدلة
+ * - توسيط النص وجعله عريضًا
+ * - إعطاء حجم موحد لضمان تناسق الشكل
+ */
+.attendance-select {
+    border: none; /* ✅ إزالة الحدود (المربعات) */
+    -webkit-appearance: none; /* إزالة المظهر الافتراضي للمتصفح (Chrome, Safari) */
+    -moz-appearance: none;    /* إزالة المظهر الافتراضي للمتصفح (Firefox) */
+    appearance: none;         /* إزالة المظهر الافتراضي للمتصفح (Standard) */
+    padding: 4px;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    font-family: 'Tajawal', sans-serif;
+    font-weight: 700; /* جعل النص عريضًا */
+    text-align: center; /* توسيط الحرف (ح, غ, ...) */
+    cursor: pointer; /* تغيير شكل المؤشر للإشارة إلى أنه قابل للنقر */
+    border-radius: 4px; /* حواف دائرية بسيطة */
+}
+
+/* 
+ * عند مرور الماوس فوق القائمة، نعطيها ظلًا خفيفًا ليعرف المستخدم أنها قابلة للتفاعل
+ */
+.attendance-select:hover {
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
+/* 
+ * عند التركيز على القائمة (بعد النقر عليها)، نعيد إظهار الحدود
+ * هذا يعطي المستخدم إشارة مرئية واضحة للعنصر الذي يقوم بتعديله.
+ */
+.attendance-select:focus {
+    border: 2px solid #007bff; /* إظهار حد أزرق واضح عند التعديل */
+    outline: none; /* إزالة الحد الخارجي الافتراضي للمتصفح */
+}
+
+/* 
+ * تنسيق الخلية التي تحتوي على القائمة المنسدلة لضمان عدم وجود مسافات إضافية
+ */
+td.day-col {
+    padding: 0 !important;
+    vertical-align: middle;
+}
+/* =================================================================== */
+/* === 21. تحسينات القوائم المنسدلة الملونة والخلايا (V-Final) === */
+/* =================================================================== */
+
+/* 
+ * القاعدة الأساسية: جعل القائمة المنسدلة تبدو كنص عادي وأنيق
+ * - إزالة الحدود والمظهر الافتراضي للمتصفح.
+ * - توسيط النص وجعله عريضًا.
+ * - إضافة تأثير انتقال ناعم.
+ */
+.attendance-select {
+    -webkit-appearance: none; /* إزالة المظهر الافتراضي لمتصفحات WebKit */
+    -moz-appearance: none;    /* إزالة المظهر الافتراضي لمتصفحات Firefox */
+    appearance: none;         /* المعيار الرسمي لإزالة المظهر الافتراضي */
+    border: none;             /* إزالة أي حدود متبقية */
+    background-color: transparent; /* خلفية شفافة لتندمج مع الخلية */
+    padding: 8px 4px;         /* مساحة داخلية مريحة */
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    font-family: 'Tajawal', sans-serif;
+    font-weight: 700;         /* خط عريض وواضح */
+    font-size: 1.1em;         /* حجم خط أكبر قليلاً */
+    text-align: center;       /* توسيط النص (ح, غ, ...) */
+    cursor: pointer;          /* تغيير شكل المؤشر للإشارة إلى أنه قابل للنقر */
+    border-radius: 6px;       /* حواف دائرية بسيطة */
+    transition: all 0.3s ease; /* تأثير انتقال ناعم للألوان والظلال */
+}
+
+/* 
+ * عند التركيز على القائمة (بعد النقر عليها)، نعطيها ظلاً واضحاً
+ * هذا يعطي المستخدم إشارة مرئية للعنصر الذي يقوم بتعديله.
+ */
+.attendance-select:focus {
+    outline: none; /* إزالة الحد الخارجي الافتراضي للمتصفح */
+    box-shadow: 0 0 0 2px #007bff; /* إضافة ظل أزرق كحد خارجي عند التركيز */
+}
+
+/* 
+ * تنسيق الخلية التي تحتوي على القائمة المنسدلة لضمان التوسيط والمظهر المثالي
+ */
+td.day-col {
+    padding: 0 !important; /* إزالة الحشو الافتراضي للخلية */
+    vertical-align: middle; /* توسيط القائمة عمودياً داخل الخلية */
+}
+
+/* 
+ * الألوان الديناميكية التي سيتم تطبيقها عبر JavaScript
+ * كل كلاس يمثل حالة مختلفة (حاضر، غائب، إجازة، إلخ.)
+ */
+.attendance-select.present {
+    color: #1a7431; /* أخضر داكن للحضور */
+    background-color: #e8f5e9; /* خلفية خضراء فاتحة جداً */
+}
+
+.attendance-select.absent {
+    color: #b71c1c; /* أحمر داكن للغياب */
+    background-color: #ffebee; /* خلفية حمراء فاتحة جداً */
+}
+
+.attendance-select.leave {
+    color: #e65100; /* برتقالي داكن للإجازة */
+    background-color: #fff3e0; /* خلفية برتقالية فاتحة جداً */
+}
+
+.attendance-select.default {
+    color: #343a40; /* اللون الافتراضي */
+    background-color: transparent;
+}
+/* =================================================================== */
+/* === 22. تحسينات تلوين الفئات والإجماليات والتواقيع (V-Final) === */
+/* =================================================================== */
+
+/* --- ألوان الفئات --- */
+.category-select.cat-1 { background-color: #e74c3c; color: white; }
+.category-select.cat-2 { background-color: #3498db; color: white; }
+.category-select.cat-3 { background-color: #2ecc71; color: white; }
+.category-select.cat-4 { background-color: #f1c40f; color: #333; } /* لون نص أغمق للخلفية الصفراء */
+.category-select.cat-5 { background-color: #9b59b6; color: white; }
+.category-select.cat-6 { background-color: #1abc9c; color: white; }
+.category-select.cat-7 { background-color: #e67e22; color: white; }
+
+/* --- تصميم احترافي جديد لشريط الإجماليات --- */
+.table-summary-v2 {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    align-items: center;
+    padding: 15px;
+    background: linear-gradient(145deg, #f1f3f5, #e9ecef);
+    border-top: 2px solid #dee2e6;
+    border-bottom: 2px solid #dee2e6;
+    margin-top: -1px; /* لإخفاء الحد السفلي للجدول */
+}
+.summary-item {
+    text-align: center;
+    padding: 5px 15px;
+}
+.summary-item .label {
+    display: block;
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-bottom: 4px;
+}
+.summary-item .value {
+    font-size: 1.2em;
+    font-weight: 700;
+    color: #0056b3;
+}
+.summary-item .value.net-total {
+    color: #28a745; /* لون مميز للصافي */
+}
+/* =================================================================== */
+/* === 23. تحسينات نهائية للفئات والحالات ورؤوس الأعمدة (V-Final) === */
+/* =================================================================== */
+
+/* --- تلوين خيارات الفئات --- */
+.category-select option[value="1"] { background-color: #e74c3c; color: white; }
+.category-select option[value="2"] { background-color: #3498db; color: white; }
+.category-select option[value="3"] { background-color: #2ecc71; color: white; }
+.category-select option[value="4"] { background-color: #f1c40f; color: #333; }
+.category-select option[value="5"] { background-color: #9b59b6; color: white; }
+.category-select option[value="6"] { background-color: #1abc9c; color: white; }
+.category-select option[value="7"] { background-color: #e67e22; color: white; }
+
+/* =================================================================== */
+/* === 25. تحسينات نهائية للكود الجديد (فئات وحالات) === */
+/* =================================================================== */
+
+/* --- تلوين أرقام الفئات --- */
+.category-cell select {
+    font-weight: bold;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+.category-cell option {
+    font-weight: bold;
+}
+
+/* --- ألوان الحالات الجديدة من الصورة --- */
+.day-cell select.status-c { background-color: #f8d7da !important; color: #721c24 !important; } /* غياب بدون عذر */
+.day-cell select.status-j { background-color: #fff3cd !important; color: #856404 !important; } /* إجازة */
+.day-cell select.status-sh { background-color: #d1ecf1 !important; color: #0c5460 !important; } /* شاغرة */
+.day-cell select.status-t { background-color: #e2e3e5 !important; color: #383d41 !important; } /* تحت الإجراء */
+.day-cell select.status-b { background-color: #cce5ff !important; color: #004085 !important; } /* قبل العقد */
+.day-cell select.status-n { background-color: #ffeeba !important; color: #856404 !important; } /* بعد العقد */
+/* =================================================================== */
+/* === 28. نظام الطباعة الموحد والنهائي (A4 Landscape) === */
+/* =================================================================== */
+
+@media print {
+    /* --- 1. إعدادات الصفحة العامة --- */
+    @page {
+        size: A4 landscape; /* تحديد حجم الصفحة واتجاهها بالعرض */
+        margin: 1cm; /* تحديد هوامش الصفحة */
+    }
+
+    body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        background-color: #fff !important;
+        font-family: 'Tajawal', sans-serif !important;
+        font-size: 9pt !important;
+        color: #000 !important;
+    }
+
+    /* --- 2. إخفاء العناصر غير المرغوب فيها --- */
+    .no-print, .action-buttons, .nav-bar, .back-button, .tab-action-buttons, .dialog, footer, #main-action-buttons, #main-grid-view, #main-summary-section {
+        display: none !important;
+    }
+
+    /* --- 3. تنسيق الحاويات الرئيسية للطباعة --- */
+    .printable-page {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        page-break-after: always;
+    }
+    .printable-page:last-child {
+        page-break-after: auto;
+    }
+
+    /* --- 4. تنسيق الهيدر الرسمي --- */
+    .printable-header {
+        display: flex !important;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #000;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+        page-break-inside: avoid;
+    }
+    .printable-header img { height: 60px; }
+    .printable-header .header-text { text-align: center; }
+    .printable-header h1, .printable-header h2, .printable-header h3 {
+        color: #000 !important;
+        margin: 2px 0;
+    }
+    .printable-header h1 { font-size: 16pt; }
+    .printable-header h2 { font-size: 14pt; }
+    .printable-header h3 { font-size: 12pt; }
+
+    /* --- 5. تنسيق معلومات العقد --- */
+    .page-contract-info {
+        border: 1px solid #000 !important;
+        background-color: #f9f9f9 !important;
+        font-size: 10pt !important;
+        page-break-inside: avoid;
+    }
+
+    /* --- 6. تنسيق الجداول (الحل النهائي لمشكلة الأعمدة) --- */
+    .department-table, .performance-table, .achievement-table {
+        box-shadow: none !important;
+        border: 1px solid #000 !important;
+        margin: 15px 0 !important;
+        page-break-inside: avoid;
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+    .department-table table, .performance-table, .achievement-table {
+        table-layout: fixed; /* أهم خاصية: تجبر الأعمدة على الالتزام بالعرض المحدد */
+        width: 100%;
+    }
+    .department-table thead th, .performance-table thead th, .achievement-table thead th {
+        background-color: #e0e0e0 !important;
+        color: #000 !important;
+        font-size: 8pt !important;
+        padding: 5px 2px !important;
+        font-weight: bold;
+    }
+    .department-table th, .department-table td,
+    .performance-table td, .achievement-table td {
+        border: 1px solid #333 !important;
+        padding: 4px 2px !important;
+        font-size: 8pt !important;
+        text-align: center;
+        vertical-align: middle;
+    }
+    .department-table .day-col {
+        width: 1.6% !important; /* تحديد عرض ثابت وصغير لأعمدة الأيام */
+    }
+    .department-table th:nth-child(1) { width: 3%; }  /* عمود "م" */
+    .department-table th:nth-child(2) { width: 10%; } /* مسمى الوظيفة */
+    .department-table th:nth-child(3) { width: 4%; }  /* الفئة */
+    .department-table th:nth-child(4) { width: 12%; } /* اسم الموظف */
+    .department-table .employee-name, .department-table .job-title {
+        white-space: normal; /* السماح بالتفاف النص في هذه الأعمدة فقط */
+    }
+    .total-row td {
+        background-color: #dcdcdc !important;
+        font-weight: bold !important;
+    }
+
+    /* --- 7. تنسيق شريط الإجمالي --- */
+    .table-summary-v2 {
+        border: 1px solid #333 !important;
+        background: #f2f2f2 !important;
+        padding: 8px !important;
+        font-size: 9pt !important;
+        page-break-inside: avoid;
+    }
+    .summary-item .label { font-size: 8pt !important; }
+    .summary-item .value { font-size: 10pt !important; }
+
+    /* --- 8. تنسيق التواقيع --- */
+    .signatures-display-section {
+        margin-top: 25px !important;
+        padding-top: 15px !important;
+        border-top: 1px solid #000 !important;
+        page-break-inside: avoid !important;
+    }
+    .signatures-grid {
+        display: flex !important;
+        justify-content: space-between !important;
+        flex-wrap: nowrap !important;
+    }
+    .signature-item-display .line {
+        background-color: #000 !important;
+    }
+}
+/* =================================================================== */
+/* === 30. تحسينات منع التكرار ومؤشر البيانات (V-Final) === */
+/* =================================================================== */
+
+/* --- 1. شارة "يوجد بيانات" على أيقونات المراكز --- */
+.center-icon.has-data::after {
+    content: '✓'; /* علامة صح */
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 24px;
+    height: 24px;
+    background-color: #28a745; /* أخضر */
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    border: 2px solid white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* --- 2. حاوية التمرير الأفقي للجدول --- */
+.table-responsive-wrapper {
+    overflow-x: auto; /* أهم خاصية: تضيف شريط تمرير أفقي عند الحاجة */
+    width: 100%;
+    border: 1px solid #dee2e6;
+    border-radius: 0 0 8px 8px; /* لتتناسق مع زوايا الحاوية الرئيسية */
+    margin-bottom: 1rem;
+    -webkit-overflow-scrolling: touch; /* لتحسين التمرير على أجهزة اللمس */
+}
+
+.table-responsive-wrapper table {
+    margin-bottom: 0; /* إزالة الهامش السفلي من الجدول نفسه */
+    border-radius: 0; /* إزالة الحواف الدائرية من الجدول ليتناسب مع الحاوية */
+    box-shadow: none; /* إزالة الظل من الجدول */
+    border: none; /* إزالة حدود الجدول الخارجية */
+}
+/* =================================================================== */
+/* === 30. تحسينات منع التكرار ومؤشر البيانات (V-Final) === */
+/* =================================================================== */
+
+/* --- 1. شارة "يوجد بيانات" على أيقونات المراكز --- */
+.center-icon.has-data::after {
+    content: '✓'; /* علامة صح */
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 24px;
+    height: 24px;
+    background-color: #28a745; /* أخضر */
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    border: 2px solid white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* --- 2. حاوية التمرير الأفقي للجدول --- */
+.table-responsive-wrapper {
+    overflow-x: auto; /* أهم خاصية: تضيف شريط تمرير أفقي عند الحاجة */
+    width: 100%;
+    border: 1px solid #dee2e6;
+    border-radius: 0 0 8px 8px; /* لتتناسق مع زوايا الحاوية الرئيسية */
+    margin-bottom: 1rem;
+    -webkit-overflow-scrolling: touch; /* لتحسين التمرير على أجهزة اللمس */
+}
+
+.table-responsive-wrapper table {
+    margin-bottom: 0; /* إزالة الهامش السفلي من الجدول نفسه */
+    border-radius: 0; /* إزالة الحواف الدائرية من الجدول ليتناسب مع الحاوية */
+    box-shadow: none; /* إزالة الظل من الجدول */
+    border: none; /* إزالة حدود الجدول الخارجية */
+}
+/* =================================================================== */
+/* === 31. تمييز المراكز الفارغة (V-Final) === */
+/* =================================================================== */
+
+/* --- 1. تنسيق أيقونة المركز الفارغ --- */
+.center-icon.is-empty {
+    background: linear-gradient(145deg, #868e96, #495057); /* تدرج رمادي */
+    opacity: 0.7; /* جعلها باهتة قليلاً */
+}
+
+.center-icon.is-empty:hover {
+    opacity: 1; /* إظهار اللون الكامل عند المرور بالفأرة */
+    background: linear-gradient(145deg, #dc3545, #c82333); /* تغيير اللون للأحمر للفت الانتباه */
+}
+
+/* --- 2. شارة "فارغ" على أيقونات المراكز --- */
+.center-icon.is-empty::after {
+    content: '!'; /* علامة تعجب */
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 24px;
+    height: 24px;
+    background-color: #ffc107; /* أصفر تحذيري */
+    color: #343a40;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: bold;
+    border: 2px solid white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+/* =================================================================== */
+/* === 32. تنسيق عنوان الجدول الاحترافي (V-Final) === */
+/* =================================================================== */
+
+.extract-details-v2 {
+    display: flex;
+    justify-content: space-between; /* توزيع المسافات */
+    align-items: baseline; /* محاذاة على الخط الأساسي للنص */
+    flex-wrap: wrap;
+    gap: 10px 20px; /* تقليل المسافة العمودية والأفقية */
+    padding: 12px 20px;
+    background-color: #003087;
+    color: #ffffff;
+    border-bottom: 3px solid #d4af37;
+    border-radius: 8px 8px 0 0;
+}
+
+.extract-details-v2 .title-main {
+    font-size: 1.1em; /* تصغير طفيف للخط الرئيسي */
+    font-weight: 700;
+    flex-grow: 1;
+    text-align: right;
+}
+
+.extract-details-v2 .title-period,
+.extract-details-v2 .title-days {
+    font-size: 0.95em; /* تصغير طفيف لخطوط المعلومات */
+    font-weight: 500;
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 4px 8px; /* تقليل الحشو الداخلي */
+    border-radius: 5px;
+    white-space: nowrap; /* منع نزول النص لسطر جديد */
+}
+
+.extract-details-v2 .title-period span,
+.extract-details-v2 .title-days span {
+    font-weight: 700;
+    color: #d4af37;
+    direction: ltr;
+    display: inline-block;
+    margin: 0 3px;
+}
+/* =================================================================== */
+/* === 30. تحسينات منع التكرار ومؤشر البيانات (V-Final) === */
+/* =================================================================== */
+
+/* --- 1. شارة "يوجد بيانات" على أيقونات المراكز --- */
+.center-icon.has-data::after {
+    content: '✓'; /* علامة صح */
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 24px;
+    height: 24px;
+    background-color: #28a745; /* أخضر */
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    border: 2px solid white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* --- 2. حاوية التمرير الأفقي للجدول --- */
+.table-responsive-wrapper {
+    overflow-x: auto; /* أهم خاصية: تضيف شريط تمرير أفقي عند الحاجة */
+    width: 100%;
+    border: 1px solid #dee2e6;
+    border-radius: 0 0 8px 8px; /* لتتناسق مع زوايا الحاوية الرئيسية */
+    margin-bottom: 1rem;
+    -webkit-overflow-scrolling: touch; /* لتحسين التمرير على أجهزة اللمس */
+}
+
+.table-responsive-wrapper table {
+    margin-bottom: 0; /* إزالة الهامش السفلي من الجدول نفسه */
+    border-radius: 0; /* إزالة الحواف الدائرية من الجدول ليتناسب مع الحاوية */
+    box-shadow: none; /* إزالة الظل من الجدول */
+    border: none; /* إزالة حدود الجدول الخارجية */
+}
+/* =================================================================== */
+/* ===       ✅ [النسخة النهائية] نظام الطباعة باستخدام Zoom        === */
+/* =================================================================== */
+
+@media print {
+    /* --- 1. إعدادات الصفحة العامة --- */
+    @page {
+        size: A4 landscape; /* الاتجاه بالعرض ضروري دائماً للجداول الطويلة */
+        margin: 1cm;
+    }
+
+    /* --- 2. إخفاء العناصر غير المرغوب فيها --- */
+    body .no-print,
+    body .nav-bar,
+    body .action-buttons,
+    body .tab-action-buttons,
+    body .dialog,
+    body footer,
+    body #main-action-buttons,
+    body .back-button,
+    body .extract-details-v2 {
+        display: none !important;
+    }
+
+    /* --- 3. ✅ [الحل الأساسي] تطبيق الزوم على كل الصفحة --- */
+    body {
+        zoom: 90%; /* يمكنك تعديل هذه النسبة (مثلاً 60% أو 70%) لتناسب المحتوى تماماً */
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* --- 4. منع كسر العناصر في أماكن خاطئة --- */
+    .printable-container,
+    .department-table,
+    .certificate-container,
+    .signatures-display-section,
+    tr, th, td {
+        page-break-inside: avoid !important;
+    }
+
+    /* --- 5. تحسينات طفيفة على الطباعة --- */
+    .printable-header {
+        border-bottom: 2px solid #000;
+    }
+    .page-contract-info-v2 {
+        border: 1px solid #666 !important;
+    }
+    .department-table table {
+        border: 1px solid #000 !important;
+    }
+    .department-table thead th {
+        background-color: #e0e0e0 !important;
+        color: #000 !important;
+    }
+    .signatures-display-section {
+        border-top: 1px solid #000 !important;
+    }
+    .signature-item-display .line {
+        background-color: #000 !important;
+    }
+}
+.extract-details-v2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 10px 20px;
+    padding: 12px 20px;
+    /* ✅ [الحل هنا] استبدال اللون الثابت بالتدرج اللوني الأزرق */
+    background: linear-gradient(145deg, #0056b3, #007bff);
+    color: #ffffff;
+    border-bottom: 3px solid #d4af37;
+    border-radius: 8px 8px 0 0;
+}
+/* =================================================================== */
+/* --- V3 Upgraded Management Interface Styles --- */
+/* =================================================================== */
+
+.management-container-v3 {
+    display: flex;
+    height: 80vh; /* ارتفاع كبير ليملأ النافذة */
+    width: 100%;
+    background-color: #f0f2f5;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.management-sidebar-v3 {
+    width: 250px;
+    background-color: #ffffff;
+    border-right: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+}
+
+.management-sidebar-v3 h3 {
+    margin-top: 0;
+    color: #333;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    font-size: 16px;
+}
+
+#centers-list-sidebar {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-bottom: 15px;
+}
+
+#centers-list-sidebar a {
+    display: block;
+    padding: 10px 15px;
+    color: #333;
+    text-decoration: none;
+    border-radius: 6px;
+    margin-bottom: 5px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+#centers-list-sidebar a:hover {
+    background-color: #e9ecef;
+}
+
+#centers-list-sidebar a.active {
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+}
+
+.management-content-v3 {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    overflow: hidden; /* مهم لمنع المحتوى من الخروج */
+}
+
+#management-header-v3 {
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+#management-header-v3 h3 {
+    margin: 0 0 15px 0;
+    color: #007bff;
+}
+
+.search-sort-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+#employee-search-input {
+    flex-grow: 1;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+#management-content-area {
+    flex-grow: 1;
+    overflow-y: auto; /* يجعل قائمة الموظفين فقط هي التي يتم تمريرها */
+    padding-top: 15px;
+}
+
+.info-text-v3 {
+    text-align: center;
+    color: #777;
+    margin-top: 50px;
+    font-size: 16px;
+}
+
+#management-footer-v3 {
+    padding-top: 15px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.employee-card-v3 {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: box-shadow 0.2s;
+}
+
+.employee-card-v3:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+.employee-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.employee-details .employee-name {
+    font-weight: bold;
+    font-size: 16px;
+    color: #333;
+}
+
+.employee-details .employee-job {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.employee-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 12px;
+    color: #888;
+}
+
+.employee-meta span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.employee-actions .action-btn {
+    background: none;
+    border: 1px solid #ccc;
+    color: #555;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-left: 5px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.employee-actions .action-btn:hover {
+    background-color: #f0f0f0;
+}
+
+.employee-actions .btn-edit:hover {
+    color: #007bff;
+    border-color: #007bff;
+}
+.employee-actions .btn-attendance:hover {
+    color: #28a745;
+    border-color: #28a745;
+}
+.employee-actions .btn-danger:hover {
+    color: #dc3545;
+    border-color: #dc3545;
+}
+
+/* Styles for Center Name Management inside the new UI */
+.center-editor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+}
+
+.center-name-card {
+    display: flex;
+    align-items: center;
+    background-color: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+}
+
+.center-name-card .center-number {
+    font-weight: bold;
+    color: #555;
+    margin-left: 10px;
+    white-space: nowrap;
+}
+
+.center-name-card .center-name-input {
+    width: 100%;
+    border: 1px solid #ccc;
+    padding: 8px;
+    border-radius: 4px;
+}
+/* Style for info message box */
+.info-message-box {
+    text-align: center;
+    padding: 40px 20px;
+    margin: 20px;
+    border: 1px dashed #007bff;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+}
+
+.info-message-box i {
+    font-size: 48px;
+    color: #007bff;
+    margin-bottom: 15px;
+}
+
+.info-message-box h3 {
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.info-message-box p {
+    color: #666;
+    font-size: 16px;
+    line-height: 1.6;
+}
+/* =================================================================== */
+/* --- V2 Certificate Styles (Performance & Achievement) --- */
+/* =================================================================== */
+
+.certificate-container-v2 {
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    padding: 25px;
+    margin: 15px auto;
+    max-width: 95%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.certificate-header-v2 {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.certificate-header-v2 h2 {
+    font-size: 20px;
+    color: #0056b3;
+    font-weight: 700;
+    margin: 0 0 5px 0;
+}
+
+.certificate-header-v2 h3 {
+    font-size: 16px;
+    color: #333;
+    margin: 5px 0;
+}
+
+.certificate-header-v2 p {
+    font-size: 14px;
+    color: #666;
+    margin: 5px 0;
+}
+
+.performance-cost-display {
+    background-color: #e9ecef;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 10px 15px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.performance-cost-display .cost-value {
+    font-weight: 700;
+    color: #28a745;
+}
+
+.performance-table-v2 {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px; /* ✅ تصغير حجم الخط داخل الجدول */
+}
+
+.performance-table-v2 th,
+.performance-table-v2 td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.performance-table-v2 thead th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.performance-table-v2 .item-text {
+    text-align: right;
+    width: 60%;
+}
+
+.performance-table-v2 .score-input {
+    width: 60px;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 5px;
+}
+
+.performance-table-v2 .score-input:disabled {
+    background-color: #f8f9fa;
+    border-color: transparent;
+    color: #333;
+}
+
+.performance-table-v2 .total-row td {
+    font-weight: bold;
+    background-color: #e9ecef;
+}
+/* =================================================================== */
+/* --- Dialog Scroll & Layout Fix --- */
+/* =================================================================== */
+
+/* 1. تحويل النافذة المنبثقة إلى حاوية Flex عمودية */
+.dialog {
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh; /* تحديد أقصى ارتفاع للنافذة (90% من ارتفاع الشاشة) */
+}
+
+/* 2. جعل محتوى النافذة (الجسم) هو الجزء القابل للتمرير */
+.dialog .dialog-body {
+    flex-grow: 1; /* السماح للجسم بالنمو ليملأ المساحة المتاحة */
+    overflow-y: auto; /* ✅ [الحل هنا] إضافة شريط تمرير عمودي عند الحاجة */
+    padding: 15px 20px; /* تعديل بسيط للحشو الداخلي */
+}
+
+/* 3. تثبيت الهيدر والتذييل */
+.dialog .dialog-header,
+.dialog .dialog-footer {
+    flex-shrink: 0; /* منع الهيدر والتذييل من التقلص */
+}
+
+/* 4. تحسين مظهر حقول الإدخال لتكون أصغر قليلاً */
+.edit-form-container .form-group {
+    margin-bottom: 12px; /* تقليل المسافة بين الحقول */
+}
+
+.edit-form-container .form-group label {
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+/* ================================================= */
+/* === أنماط التوقيع والختم الجديدة والمحسّنة V2 === */
+/* ================================================= */
+
+/* حاوية التواقيع الرئيسية */
+.signatures-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    gap: 25px; /* زيادة المسافة بين كتل التواقيع */
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+}
+
+/* كتلة التوقيع والختم الكاملة */
+.signature-block-display {
+    display: flex;
+    align-items: flex-end; /* محاذاة العناصر لأسفل */
+    gap: 20px; /* زيادة المسافة بين التوقيع والختم */
+    width: 100%;
+    max-width: 420px; /* تعديل العرض ليناسب التصميم الجديد */
+    min-height: 120px; /* ضمان وجود ارتفاع كافٍ */
+    /* تمت إزالة الخط العلوي من هنا ليكون في الحاوية الرئيسية */
+}
+
+/* منطقة التوقيع (المسمى والاسم والخط) */
+.signature-area-display {
+    flex-grow: 1; /* السماح لها بأخذ المساحة المتاحة */
+    text-align: center;
+    display: flex;
+    flex-direction: column; /* ترتيب العناصر بشكل عمودي */
+    justify-content: flex-end; /* دفع المحتوى لأسفل */
+}
+
+/* ✅ 1. جعل المسمى الوظيفي (البيان) مميزاً */
+.signature-area-display .title {
+    font-size: 17px; /* تكبير الخط قليلاً */
+    font-weight: 700; /* خط عريض */
+    color: #003087; /* لون أزرق داكن مميز */
+    margin-bottom: 8px; /* إضافة مسافة صغيرة أسفل المسمى */
+}
+
+/* خط التوقيع */
+.signature-area-display .line {
+    height: 1px;
+    background-color: #888; /* لون أفتح قليلاً */
+    margin-top: 30px; /* مسافة فوق الخط (للتوقيع اليدوي) */
+}
+
+/* ✅ 2. جعل الاسم مميزاً وإضافة مسافة */
+.signature-area-display .name {
+    font-size: 16px; /* تكبير الخط */
+    color: #333; /* لون أغمق وأوضح */
+    font-weight: 500;
+    margin-top: 10px; /* ✅ 3. هذه هي المسافة المطلوبة بين الخط والاسم */
+}
+
+/* منطقة الختم (تبقى كما هي) */
+.stamp-area-display {
+    flex-shrink: 0;
+}
+
+.stamp-box-display {
+    width: 90px;
+    height: 90px;
+    border: 2px dashed #ccc;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #ccc;
+    font-size: 16pt;
+    font-weight: 500;
+}
+.hide-stamp .stamp-area { display: none !important; }
+
+.show-stamp-checkbox {
+    margin-left: 6px;
+    transform: scale(0.9);
+}

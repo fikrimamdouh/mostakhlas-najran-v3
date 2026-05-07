@@ -1,0 +1,387 @@
+VM46 index.iife.js:1 content script loaded
+installHook.js:1 Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+overrideMethod @ installHook.js:1
+/api/users/me/activity:1  Failed to load resource: the server responded with a status of 405 ()
+VM46 index.iife.js:1 content script loaded
+VM52 clerk.browser.js:12 Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+q @ VM52 clerk.browser.js:12
+VM56 ui-common_ui_ad69ce_1.7.0.js:5 🔒 Clerk:
+The <SignIn/> component cannot render when a user is already signed in, unless the application allows multiple sessions. Since a user is signed in and this application only allows a single session, Clerk is redirecting to the `afterSignIn` URL instead.
+(This notice only appears in development)
+refresh.js:27 WebSocket connection to 'ws://localhost:8081/' failed: 
+initClient @ refresh.js:27
+/api/users/me/activity:1  Failed to load resource: the server responded with a status of 405 ()
+VM46 index.iife.js:1 content script loaded
+VM52 clerk.browser.js:12 Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+q @ VM52 clerk.browser.js:12
+VM56 ui-common_ui_ad69ce_1.7.0.js:5 🔒 Clerk:
+The <SignIn/> component cannot render when a user is already signed in, unless the application allows multiple sessions. Since a user is signed in and this application only allows a single session, Clerk is redirecting to the `afterSignIn` URL instead.
+(This notice only appears in development)
+/api/users/me/activity:1  Failed to load resource: the server responded with a status of 405 ()
+VM46 index.iife.js:1 content script loaded
+VM52 clerk.browser.js:12 Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+q @ VM52 clerk.browser.js:12
+VM56 ui-common_ui_ad69ce_1.7.0.js:5 🔒 Clerk:
+The <SignIn/> component cannot render when a user is already signed in, unless the application allows multiple sessions. Since a user is signed in and this application only allows a single session, Clerk is redirecting to the `afterSignIn` URL instead.
+(This notice only appears in development)
+/api/users/me/activity:1  Failed to load resource: the server responded with a status of 405 ()
+VM46 index.iife.js:1 content script loaded
+VM52 clerk.browser.js:12 Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+q @ VM52 clerk.browser.js:12
+VM56 ui-common_ui_ad69ce_1.7.0.js:5 🔒 Clerk:
+The <SignIn/> component cannot render when a user is already signed in, unless the application allows multiple sessions. Since a user is signed in and this application only allows a single session, Clerk is redirecting to the `afterSignIn` URL instead.
+(This notice only appears in development)
+/api/users/me/activity:1  Failed to load resource: the server responded with a status of 405 ()
+index.iife.js:1 content script loaded
+clerk.browser.js:12 Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+q @ clerk.browser.js:12
+load @ clerk.browser.js:18
+getEntryChunks @ index-CG3oReoe.js:23
+await in getEntryChunks
+V1 @ index-CG3oReoe.js:23
+getOrCreateInstance @ index-CG3oReoe.js:23
+wT @ index-CG3oReoe.js:23
+xT @ index-CG3oReoe.js:23
+af @ index-CG3oReoe.js:8
+jf @ index-CG3oReoe.js:8
+yv @ index-CG3oReoe.js:8
+Fv @ index-CG3oReoe.js:8
+QN @ index-CG3oReoe.js:8
+Yf @ index-CG3oReoe.js:8
+Vv @ index-CG3oReoe.js:8
+rx @ index-CG3oReoe.js:8
+ue @ index-CG3oReoe.js:1
+postMessage
+te @ index-CG3oReoe.js:1
+KE.e.unstable_scheduleCallback @ index-CG3oReoe.js:1
+nx @ index-CG3oReoe.js:8
+tx @ index-CG3oReoe.js:8
+(anonymous) @ index-CG3oReoe.js:8
+ui-common_ui_ad69ce_1.7.0.js:5 🔒 Clerk:
+The <SignIn/> component cannot render when a user is already signed in, unless the application allows multiple sessions. Since a user is signed in and this application only allows a single session, Clerk is redirecting to the `afterSignIn` URL instead.
+(This notice only appears in development)
+index-CG3oReoe.js:23  PATCH https://mostakhlas-najran-v3.vercel.app/api/users/me/activity net::ERR_ABORTED 405 (Method Not Allowed)
+(anonymous) @ index-CG3oReoe.js:23
+Promise.then
+(anonymous) @ index-CG3oReoe.js:23
+wl @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+Xv @ index-CG3oReoe.js:8
+gc @ index-CG3oReoe.js:8
+Qv @ index-CG3oReoe.js:8
+Gv @ index-CG3oReoe.js:8
+Bv @ index-CG3oReoe.js:8
+Vv @ index-CG3oReoe.js:8
+sx @ index-CG3oReoe.js:8
+kl @ index-CG3oReoe.js:8
+tx @ index-CG3oReoe.js:8
+(anonymous) @ index-CG3oReoe.js:8
+setTimeout
+nA @ index-CG3oReoe.js:23
+d @ index-CG3oReoe.js:23
+batch @ index-CG3oReoe.js:23
+#a @ index-CG3oReoe.js:23
+setData @ index-CG3oReoe.js:23
+fetch @ index-CG3oReoe.js:23
+await in fetch
+#d @ index-CG3oReoe.js:23
+onSubscribe @ index-CG3oReoe.js:23
+subscribe @ index-CG3oReoe.js:23
+(anonymous) @ index-CG3oReoe.js:23
+my @ index-CG3oReoe.js:8
+wl @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+Xv @ index-CG3oReoe.js:8
+gc @ index-CG3oReoe.js:8
+Qv @ index-CG3oReoe.js:8
+Gv @ index-CG3oReoe.js:8
+Bv @ index-CG3oReoe.js:8
+Vv @ index-CG3oReoe.js:8
+sx @ index-CG3oReoe.js:8
+kl @ index-CG3oReoe.js:8
+tx @ index-CG3oReoe.js:8
+(anonymous) @ index-CG3oReoe.js:8
+postMessage
+u @ framework_ui_ad69ce_1.7.0.js:1
+F @ framework_ui_ad69ce_1.7.0.js:1
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+ow @ framework_ui_ad69ce_1.7.0.js:1
+oB @ framework_ui_ad69ce_1.7.0.js:1
+Promise.then
+un @ framework_ui_ad69ce_1.7.0.js:1
+oL @ framework_ui_ad69ce_1.7.0.js:1
+oS @ framework_ui_ad69ce_1.7.0.js:1
+x @ framework_ui_ad69ce_1.7.0.js:1
+T @ framework_ui_ad69ce_1.7.0.js:1
+postMessage
+u @ framework_ui_ad69ce_1.7.0.js:1
+F @ framework_ui_ad69ce_1.7.0.js:1
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+ow @ framework_ui_ad69ce_1.7.0.js:1
+oH @ framework_ui_ad69ce_1.7.0.js:1
+oQ @ framework_ui_ad69ce_1.7.0.js:1
+Promise.then
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+uj @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+u$ @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+u$ @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+oI @ framework_ui_ad69ce_1.7.0.js:1
+oS @ framework_ui_ad69ce_1.7.0.js:1
+x @ framework_ui_ad69ce_1.7.0.js:1
+T @ framework_ui_ad69ce_1.7.0.js:1
+postMessage
+u @ framework_ui_ad69ce_1.7.0.js:1
+F @ framework_ui_ad69ce_1.7.0.js:1
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+ow @ framework_ui_ad69ce_1.7.0.js:1
+oH @ framework_ui_ad69ce_1.7.0.js:1
+oQ @ framework_ui_ad69ce_1.7.0.js:1
+Promise.then
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+uj @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+u$ @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+u$ @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+oI @ framework_ui_ad69ce_1.7.0.js:1
+oS @ framework_ui_ad69ce_1.7.0.js:1
+x @ framework_ui_ad69ce_1.7.0.js:1
+T @ framework_ui_ad69ce_1.7.0.js:1
+postMessage
+u @ framework_ui_ad69ce_1.7.0.js:1
+F @ framework_ui_ad69ce_1.7.0.js:1
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+ow @ framework_ui_ad69ce_1.7.0.js:1
+oH @ framework_ui_ad69ce_1.7.0.js:1
+oQ @ framework_ui_ad69ce_1.7.0.js:1
+Promise.then
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+uj @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+u$ @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+u$ @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+oI @ framework_ui_ad69ce_1.7.0.js:1
+oS @ framework_ui_ad69ce_1.7.0.js:1
+x @ framework_ui_ad69ce_1.7.0.js:1
+T @ framework_ui_ad69ce_1.7.0.js:1
+postMessage
+u @ framework_ui_ad69ce_1.7.0.js:1
+F @ framework_ui_ad69ce_1.7.0.js:1
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+ow @ framework_ui_ad69ce_1.7.0.js:1
+oH @ framework_ui_ad69ce_1.7.0.js:1
+oQ @ framework_ui_ad69ce_1.7.0.js:1
+Promise.then
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+uj @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+u$ @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+u$ @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+oI @ framework_ui_ad69ce_1.7.0.js:1
+oS @ framework_ui_ad69ce_1.7.0.js:1
+x @ framework_ui_ad69ce_1.7.0.js:1
+T @ framework_ui_ad69ce_1.7.0.js:1
+postMessage
+u @ framework_ui_ad69ce_1.7.0.js:1
+F @ framework_ui_ad69ce_1.7.0.js:1
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+ow @ framework_ui_ad69ce_1.7.0.js:1
+oH @ framework_ui_ad69ce_1.7.0.js:1
+oQ @ framework_ui_ad69ce_1.7.0.js:1
+Promise.then
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+uj @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+u$ @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+u$ @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+oI @ framework_ui_ad69ce_1.7.0.js:1
+oS @ framework_ui_ad69ce_1.7.0.js:1
+x @ framework_ui_ad69ce_1.7.0.js:1
+T @ framework_ui_ad69ce_1.7.0.js:1
+postMessage
+u @ framework_ui_ad69ce_1.7.0.js:1
+F @ framework_ui_ad69ce_1.7.0.js:1
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+ow @ framework_ui_ad69ce_1.7.0.js:1
+oH @ framework_ui_ad69ce_1.7.0.js:1
+oQ @ framework_ui_ad69ce_1.7.0.js:1
+Promise.then
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+uj @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+u$ @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+u$ @ framework_ui_ad69ce_1.7.0.js:1
+uK @ framework_ui_ad69ce_1.7.0.js:1
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+oI @ framework_ui_ad69ce_1.7.0.js:1
+oS @ framework_ui_ad69ce_1.7.0.js:1
+x @ framework_ui_ad69ce_1.7.0.js:1
+T @ framework_ui_ad69ce_1.7.0.js:1
+postMessage
+u @ framework_ui_ad69ce_1.7.0.js:1
+F @ framework_ui_ad69ce_1.7.0.js:1
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+ow @ framework_ui_ad69ce_1.7.0.js:1
+ok @ framework_ui_ad69ce_1.7.0.js:1
+o4 @ framework_ui_ad69ce_1.7.0.js:1
+(anonymous) @ framework_ui_ad69ce_1.7.0.js:1
+(anonymous) @ ui.browser.js:21
+Promise.then
+ensureMounted @ ui.browser.js:21
+ensureMounted @ ui.browser.js:21
+(anonymous) @ clerk.browser.js:18
+Promise.then
+__internal_updateProps @ clerk.browser.js:18
+V1.__internal_updateProps @ index-CG3oReoe.js:23
+await in V1.__internal_updateProps
+(anonymous) @ index-CG3oReoe.js:23
+wl @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+or @ index-CG3oReoe.js:8
+Rv @ index-CG3oReoe.js:8
+Xv @ index-CG3oReoe.js:8
+gc @ index-CG3oReoe.js:8
+sx @ index-CG3oReoe.js:8
+kl @ index-CG3oReoe.js:8
+Qv @ index-CG3oReoe.js:8
+Gv @ index-CG3oReoe.js:8
+Bv @ index-CG3oReoe.js:8
+Vv @ index-CG3oReoe.js:8
+rx @ index-CG3oReoe.js:8
+ue @ index-CG3oReoe.js:1
+postMessage
+te @ index-CG3oReoe.js:1
+KE.e.unstable_scheduleCallback @ index-CG3oReoe.js:1
+nx @ index-CG3oReoe.js:8
+tx @ index-CG3oReoe.js:8
+(anonymous) @ index-CG3oReoe.js:8

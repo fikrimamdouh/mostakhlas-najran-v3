@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <script src="/original/auth-check.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>متابعة المستخلصات — تجمع نجران الصحي</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+      direction: rtl;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      height: 64px;
+      box-shadow: 0 2px 12px rgba(30,60,114,.25);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-brand { display: flex; align-items: center; gap: 12px; }
+    .header-brand img { width: 40px; height: 40px; border-radius: 10px; }
+    .header-brand .brand-text h1 { font-size: 16px; font-weight: 800; color: #fff; }
+    .header-brand .brand-text p { font-size: 11px; color: rgba(255,255,255,.7); }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+    .btn-refresh {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 10px;
+      background: rgba(255,255,255,.15); color: #fff;
+      border: 1px solid rgba(255,255,255,.25);
+      font-family: 'Tajawal', sans-serif; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: background .2s;
+    }
+    .btn-refresh:hover { background: rgba(255,255,255,.25); }
+    .btn-home {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 10px;
+      background: rgba(255,255,255,.1); color: rgba(255,255,255,.85);
+      border: 1px solid rgba(255,255,255,.15);
+      font-family: 'Tajawal', sans-serif; font-size: 13px; font-weight: 600;
+      cursor: pointer; text-decoration: none; transition: background .2s;
+    }
+    .btn-home:hover { background: rgba(255,255,255,.2); color: #fff; }
+
+    /* ── Main layout ── */
+    main { max-width: 900px; margin: 0 auto; padding: 28px 20px 60px; }
+
+    /* ── Page title ── */
+    .page-title { margin-bottom: 24px; }
+    .page-title h2 { font-size: 24px; font-weight: 800; color: #1e3c72; }
+    .page-title p { font-size: 13px; color: #64748b; margin-top: 4px; }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 14px 10px;
+      text-align: center;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all .2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+    .stat-card.active { border-color: var(--c); }
+    .stat-card .num { font-size: 26px; font-weight: 800; color: var(--c); }
+    .stat-card .lbl { font-size: 11px; color: #64748b; margin-top: 3px; line-height: 1.3; }
+
+    /* ── Filters ── */
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .filter-btn {
+      padding: 8px 18px; border-radius: 20px;
+      border: 2px solid #e2e8f0; background: #fff;
+      font-family: 'Tajawal', sans-serif; font-size: 13px; font-weight: 600;
+      color: #64748b; cursor: pointer; transition: all .2s;
+    }
+    .filter-btn.active {
+      background: #1e3c72; border-color: #1e3c72; color: #fff;
+    }
+    .filter-btn:hover:not(.active) { border-color: #1e3c72; color: #1e3c72; }
+
+    /* ── Month groups ── */
+    .month-group { margin-bottom: 24px; }
+    .month-group-header {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 14px; font-weight: 800; color: #1e3c72;
+      padding: 8px 12px; margin-bottom: 10px;
+      background: linear-gradient(90deg, #eff6ff, transparent);
+      border-right: 4px solid #2a5298; border-radius: 4px 0 0 4px;
+    }
+    .month-group-count {
+      font-size: 11px; font-weight: 600; color: #2a5298;
+      background: #dbeafe; padding: 2px 8px; border-radius: 12px;
+    }
+
+    /* ── Cards ── */
+    .cards-list { display: flex; flex-direction: column; gap: 14px; }
+    .card {
+      background: #fff;
+      border-radius: 18px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+      overflow: hidden;
+      transition: box-shadow .2s;
+    }
+    .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+    .card.border-revision { border-color: #fed7aa; }
+    .card.border-rejected { border-color: #fecaca; }
+
+    .card-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 20px; cursor: pointer; gap: 12px;
+    }
+    .card-head:hover { background: #fafafa; }
+    .card-icon {
+      width: 48px; height: 48px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 22px;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+    }
+    .card-icon.orange { background: linear-gradient(135deg, #ea580c, #c2410c); }
+    .card-meta { flex: 1; }
+    .card-meta h3 { font-size: 16px; font-weight: 700; color: #1e3c72; }
+    .card-meta p { font-size: 12px; color: #94a3b8; margin-top: 3px; }
+    .card-meta .submitted-by { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    .card-right { display: flex; align-items: center; gap: 10px; }
+    .chevron { font-size: 18px; color: #94a3b8; transition: transform .2s; }
+    .chevron.open { transform: rotate(180deg); }
+
+    /* ── Status badge ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px; border-radius: 20px;
+      font-size: 12px; font-weight: 700;
+      border: 1px solid transparent; white-space: nowrap;
+    }
+    .badge-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .revision-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 600;
+      background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0;
+    }
+
+    /* ── Card body ── */
+    .card-body {
+      border-top: 1px solid #f1f5f9;
+      padding: 20px;
+      display: none;
+    }
+    .card-body.open { display: block; }
+
+    /* ── Info grid ── */
+    .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+    @media(min-width: 600px) { .info-grid { grid-template-columns: repeat(4, 1fr); } }
+    .info-cell {
+      background: #f8fafc; border-radius: 12px; padding: 12px;
+    }
+    .info-cell .lbl { font-size: 11px; color: #94a3b8; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+    .info-cell .val { font-size: 14px; font-weight: 600; color: #334155; }
+
+    /* ── Parts ── */
+    .parts-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .part-chip {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border-radius: 20px;
+      background: #f0fdf4; color: #16a34a;
+      border: 1px solid #bbf7d0; font-size: 12px; font-weight: 600;
+    }
+
+    /* ── Timeline ── */
+    .timeline { font-size: 12px; color: #94a3b8; margin-bottom: 16px; line-height: 1.8; }
+    .timeline .revised { color: #ea580c; font-weight: 600; }
+
+    /* ── Banner ── */
+    .banner {
+      border-radius: 14px; padding: 16px; border: 2px solid;
+      display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;
+    }
+    .banner-row { display: flex; align-items: flex-start; gap: 12px; }
+    .banner-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 18px;
+    }
+    .banner-text h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .banner-text p { font-size: 13px; line-height: 1.5; }
+    .banner.revision { background: #fff7ed; border-color: #fed7aa; }
+    .banner.revision .banner-icon { background: #ea580c; }
+    .banner.revision h4 { color: #c2410c; }
+    .banner.revision p { color: #7c2d12; }
+    .banner.rejected { background: #fef2f2; border-color: #fecaca; }
+    .banner.rejected .banner-icon { background: #dc2626; }
+    .banner.rejected h4 { color: #b91c1c; }
+    .banner.rejected p { color: #7f1d1d; }
+    .banner-action {
+      align-self: flex-start;
+      padding: 10px 18px; border-radius: 12px;
+      font-family: 'Tajawal', sans-serif; font-size: 13px; font-weight: 700;
+      color: #fff; border: none; cursor: pointer; transition: opacity .2s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .banner.revision .banner-action { background: linear-gradient(135deg, #ea580c, #c2410c); }
+    .banner.rejected .banner-action { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+    .banner-action:hover { opacity: .85; }
+
+    /* ── Admin notes display ── */
+    .notes-box {
+      background: #fffbeb; border: 1px solid #fde68a;
+      border-radius: 12px; padding: 12px; margin-bottom: 16px;
+    }
+    .notes-box h5 { font-size: 12px; font-weight: 700; color: #b45309; margin-bottom: 4px; }
+    .notes-box p { font-size: 13px; color: #92400e; }
+
+    /* ── Admin actions ── */
+    .admin-actions { border-top: 1px solid #f1f5f9; padding-top: 16px; }
+    .admin-actions h5 { font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 12px; }
+    .notes-input {
+      width: 100%; border: 1.5px solid #e2e8f0; border-radius: 12px;
+      padding: 10px 14px; font-family: 'Tajawal', sans-serif; font-size: 13px;
+      resize: none; margin-bottom: 10px; direction: rtl;
+      transition: border-color .2s;
+    }
+    .notes-input:focus { outline: none; border-color: #2a5298; }
+    .admin-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    .admin-btn {
+      padding: 9px 18px; border-radius: 12px;
+      font-family: 'Tajawal', sans-serif; font-size: 13px; font-weight: 700;
+      border: 1.5px solid; cursor: pointer; transition: all .2s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .admin-btn:disabled { opacity: .5; pointer-events: none; }
+    .btn-review { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+    .btn-review:hover { background: #fef3c7; }
+    .btn-toggle-note { background: #f8fafc; color: #334155; border-color: #e2e8f0; }
+    .btn-toggle-note:hover { background: #f1f5f9; }
+    .btn-request-revision { background: #fff7ed; color: #ea580c; border-color: #fed7aa; }
+    .btn-request-revision:hover { background: #ffedd5; }
+    .btn-approve { background: linear-gradient(135deg,#16a34a,#15803d); color: #fff; border-color: transparent; }
+    .btn-approve:hover { opacity: .9; }
+    .btn-reject { background: linear-gradient(135deg,#dc2626,#b91c1c); color: #fff; border-color: transparent; }
+    .btn-reject:hover { opacity: .9; }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center; padding: 60px 20px;
+      background: #fff; border-radius: 18px; border: 1px dashed #e2e8f0;
+    }
+    .empty .icon { font-size: 48px; margin-bottom: 12px; opacity: .3; }
+    .empty h3 { font-size: 16px; font-weight: 700; color: #64748b; margin-bottom: 6px; }
+    .empty p { font-size: 13px; color: #94a3b8; }
+
+    /* ── Loading ── */
+    .loading {
+      text-align: center; padding: 60px;
+    }
+    .spinner {
+      width: 44px; height: 44px; border: 5px solid #e2e8f0;
+      border-top-color: #2a5298; border-radius: 50%;
+      animation: spin .8s linear infinite; margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #1e293b; color: #fff; padding: 12px 24px;
+      border-radius: 14px; font-size: 14px; font-weight: 600;
+      box-shadow: 0 4px 20px rgba(0,0,0,.25); z-index: 999;
+      opacity: 0; transition: opacity .3s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+    .toast.green { background: #16a34a; }
+    .toast.red { background: #dc2626; }
+    .toast.orange { background: #ea580c; }
+
+    /* ── Preview Modal ── */
+    .preview-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(15,23,42,.65); backdrop-filter: blur(4px);
+      z-index: 1000; align-items: center; justify-content: center; padding: 20px;
+    }
+    .preview-overlay.open { display: flex; }
+    .preview-modal {
+      background: #fff; border-radius: 24px;
+      width: 100%; max-width: 680px; max-height: 90vh;
+      overflow-y: auto; box-shadow: 0 24px 64px rgba(0,0,0,.25);
+      animation: slideUp .25s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+    .preview-header {
+      background: linear-gradient(135deg,#1e3c72,#2a5298);
+      padding: 24px 28px 20px; border-radius: 24px 24px 0 0;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    }
+    .preview-header-text h2 { font-size: 20px; font-weight: 800; color: #fff; }
+    .preview-header-text p { font-size: 13px; color: rgba(255,255,255,.75); margin-top: 4px; }
+    .preview-close {
+      background: rgba(255,255,255,.15); border: none; color: #fff;
+      width: 36px; height: 36px; border-radius: 10px; font-size: 18px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background .2s;
+    }
+    .preview-close:hover { background: rgba(255,255,255,.25); }
+    .preview-body { padding: 24px 28px 28px; }
+    .preview-approved-banner {
+      display: flex; align-items: center; gap: 12px;
+      background: #f0fdf4; border: 1.5px solid #bbf7d0;
+      border-radius: 14px; padding: 14px 18px; margin-bottom: 20px;
+    }
+    .preview-approved-icon {
+      width: 44px; height: 44px; background: #16a34a;
+      border-radius: 12px; display: flex; align-items: center;
+      justify-content: center; font-size: 20px; flex-shrink: 0;
+    }
+    .preview-approved-text h4 { font-size: 15px; font-weight: 700; color: #15803d; }
+    .preview-approved-text p { font-size: 12px; color: #166534; margin-top: 2px; }
+    .preview-section-title {
+      font-size: 12px; font-weight: 700; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: .5px;
+      margin: 0 0 10px; display: flex; align-items: center; gap: 6px;
+    }
+    .preview-section-title::after {
+      content: ''; flex: 1; height: 1px; background: #e2e8f0;
+    }
+    .preview-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; margin-bottom: 20px;
+    }
+    .preview-cell {
+      background: #f8fafc; border-radius: 12px; padding: 12px 14px;
+    }
+    .preview-cell .lbl { font-size: 11px; color: #94a3b8; margin-bottom: 4px; }
+    .preview-cell .val { font-size: 14px; font-weight: 600; color: #1e293b; }
+    .preview-amount-card {
+      background: linear-gradient(135deg,#f0fdf4,#dcfce7);
+      border: 1.5px solid #bbf7d0; border-radius: 16px;
+      padding: 18px; margin-bottom: 20px; text-align: center;
+    }
+    .preview-amount-card .lbl { font-size: 12px; color: #15803d; font-weight: 600; }
+    .preview-amount-card .val { font-size: 28px; font-weight: 800; color: #15803d; margin-top: 4px; }
+    .preview-notes {
+      background: #fffbeb; border: 1px solid #fde68a;
+      border-radius: 12px; padding: 14px; margin-bottom: 20px;
+    }
+    .preview-notes h5 { font-size: 12px; font-weight: 700; color: #b45309; margin-bottom: 6px; }
+    .preview-notes p { font-size: 13px; color: #92400e; line-height: 1.6; }
+    .preview-parts {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;
+    }
+    .preview-part-chip {
+      display: flex; align-items: center; gap: 5px;
+      padding: 6px 14px; border-radius: 20px;
+      background: #eff6ff; color: #1d4ed8;
+      border: 1px solid #bfdbfe; font-size: 12px; font-weight: 600;
+    }
+    .preview-print-btn {
+      width: 100%; padding: 12px; border-radius: 14px;
+      background: linear-gradient(135deg,#1e3c72,#2a5298);
+      color: #fff; border: none; font-family: 'Tajawal',sans-serif;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: opacity .2s;
+    }
+    .preview-print-btn:hover { opacity: .9; }
+  </style>
+<link rel="stylesheet" href="/original/shared-styles.css">
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <img src="/original/najran_health_cluster_logo.png" alt="شعار">
+    <div class="brand-text">
+      <h1>تجمع نجران الصحي</h1>
+      <p>وحدة الصيانة العامة</p>
+    </div>
+  </div>
+  <div class="header-actions">
+    <a href="/original/monthly-overview.html" class="btn-refresh" style="text-decoration:none">📊 النظرة الشاملة</a>
+    <button class="btn-refresh" onclick="loadExtracts()">
+      <span id="refresh-icon">↻</span> تحديث
+    </button>
+    <a href="/original/index.html" class="btn-home">🏠 الرئيسية</a>
+  </div>
+</header>
+
+<main>
+  <div class="page-title">
+    <h2>متابعة المستخلصات واعتمادها</h2>
+    <p id="page-subtitle">جاري تحميل البيانات...</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar" id="stats-bar">
+    <div class="stat-card" style="--c:#2a5298" onclick="setFilter('submitted')" id="stat-submitted">
+      <div class="num" id="cnt-submitted">—</div>
+      <div class="lbl">بانتظار<br>المراجعة</div>
+    </div>
+    <div class="stat-card" style="--c:#b45309" onclick="setFilter('under_review')" id="stat-under_review">
+      <div class="num" id="cnt-under_review">—</div>
+      <div class="lbl">قيد<br>المراجعة</div>
+    </div>
+    <div class="stat-card" style="--c:#ea580c" onclick="setFilter('needs_revision')" id="stat-needs_revision">
+      <div class="num" id="cnt-needs_revision">—</div>
+      <div class="lbl">يحتاج<br>تعديل</div>
+    </div>
+    <div class="stat-card" style="--c:#16a34a" onclick="setFilter('approved')" id="stat-approved">
+      <div class="num" id="cnt-approved">—</div>
+      <div class="lbl">معتمدة</div>
+    </div>
+    <div class="stat-card" style="--c:#dc2626" onclick="setFilter('rejected')" id="stat-rejected">
+      <div class="num" id="cnt-rejected">—</div>
+      <div class="lbl">مرفوضة</div>
+    </div>
+  </div>
+
+  <!-- Filters + Month Filter -->
+  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:20px">
+    <div class="filters" style="margin:0;flex:1;min-width:200px">
+      <button class="filter-btn active" onclick="setFilter('all')" id="filter-all">الكل</button>
+      <button class="filter-btn" onclick="setFilter('submitted')" id="filter-submitted">بانتظار المراجعة</button>
+      <button class="filter-btn" onclick="setFilter('needs_revision')" id="filter-needs_revision">يحتاج تعديل</button>
+      <button class="filter-btn" onclick="setFilter('approved')" id="filter-approved">معتمدة</button>
+      <button class="filter-btn" onclick="setFilter('rejected')" id="filter-rejected">مرفوضة</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <label style="font-size:13px;font-weight:700;color:#475569;white-space:nowrap">📅 الشهر:</label>
+      <select id="month-filter" onchange="renderList()" style="padding:8px 12px;border-radius:10px;border:1.5px solid #e2e8f0;font-family:'Tajawal',sans-serif;font-size:13px;color:#334155;background:#fff;outline:none">
+        <option value="all">كل الشهور</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- List -->
+  <div id="list-area">
+    <div class="loading">
+      <div class="spinner"></div>
+      <p style="color:#94a3b8;font-size:14px;">جاري التحميل...</p>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<!-- ── Preview Modal ── -->
+<div class="preview-overlay" id="preview-overlay" onclick="closePreview(event)">
+  <div class="preview-modal" id="preview-modal">
+    <div class="preview-header">
+      <div class="preview-header-text">
+        <h2 id="prev-type">معاينة المستخلص</h2>
+        <p id="prev-subtitle">تفاصيل المستخلص المعتمد</p>
+      </div>
+      <button class="preview-close" onclick="closePreviewDirect()">✕</button>
+    </div>
+    <div class="preview-body">
+      <div class="preview-approved-banner">
+        <div class="preview-approved-icon">✓</div>
+        <div class="preview-approved-text">
+          <h4>مستخلص معتمد رسمياً</h4>
+          <p id="prev-approved-info">تاريخ الاعتماد وبيانات المعتمد</p>
+        </div>
+      </div>
+
+      <div class="preview-amount-card">
+        <div class="lbl">القيمة الإجمالية للمستخلص</div>
+        <div class="val" id="prev-amount">— ر.س</div>
+      </div>
+
+      <p class="preview-section-title">بيانات العقد</p>
+      <div class="preview-grid">
+        <div class="preview-cell"><div class="lbl">🏢 اسم الشركة</div><div class="val" id="prev-company">—</div></div>
+        <div class="preview-cell"><div class="lbl">📄 رقم العقد</div><div class="val" id="prev-contract">—</div></div>
+        <div class="preview-cell"><div class="lbl">🏥 المستشفى</div><div class="val" id="prev-hospital">—</div></div>
+        <div class="preview-cell"><div class="lbl">📅 الفترة</div><div class="val" id="prev-period">—</div></div>
+      </div>
+
+      <p class="preview-section-title">مكونات المستخلص</p>
+      <div class="preview-parts" id="prev-parts"></div>
+
+      <p class="preview-section-title" id="prev-notes-title" style="display:none">ملاحظات المراجع</p>
+      <div class="preview-notes" id="prev-notes" style="display:none">
+        <p id="prev-notes-text"></p>
+      </div>
+
+      <p class="preview-section-title">مسار الاعتماد</p>
+      <div class="preview-grid">
+        <div class="preview-cell"><div class="lbl">📤 تاريخ الرفع</div><div class="val" id="prev-submitted-at">—</div></div>
+        <div class="preview-cell"><div class="lbl">✅ تاريخ الاعتماد</div><div class="val" id="prev-approved-at">—</div></div>
+        <div class="preview-cell"><div class="lbl">👤 رُفع بواسطة</div><div class="val" id="prev-submitted-by">—</div></div>
+        <div class="preview-cell"><div class="lbl">🔏 اعتمد بواسطة</div><div class="val" id="prev-approved-by">—</div></div>
+      </div>
+
+      <button class="preview-print-btn" onclick="window.print()">🖨 طباعة المعاينة</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+const REVISION_KEY = 'najran_revision_extract_id';
+
+const TYPE_LABELS = {
+  labor:         'مستخلص العمالة',
+  consumables:   'مستخلص المستهلكات',
+  spare_parts:   'مستخلص قطع الغيار',
+  health_centers:'مستخلص المراكز الصحية',
+};
+const TYPE_PARTS = {
+  labor:         ['الحضور والانصراف','جداول الأداء','شهادة الإنجاز'],
+  consumables:   ['المستهلكات والمواد الهندسية'],
+  spare_parts:   ['قطع الغيار'],
+  health_centers:['عمالة المراكز','مستهلكات المراكز'],
+};
+const TYPE_PAGES = {
+  labor:          '/original/attendance.html',
+  consumables:    '/original/consumables.html',
+  health_centers: '/original/health_centers_attendance.html',
+  spare_parts:    '/original/spare_parts.html',
+};
+const STATUS_CFG = {
+  submitted:      { label:'بانتظار المراجعة', color:'#2a5298', bg:'#eff6ff' },
+  under_review:   { label:'قيد المراجعة',    color:'#b45309', bg:'#fffbeb' },
+  approved:       { label:'معتمد ✓',          color:'#16a34a', bg:'#f0fdf4' },
+  rejected:       { label:'مرفوض',            color:'#dc2626', bg:'#fef2f2' },
+  needs_revision: { label:'يحتاج تعديل',      color:'#ea580c', bg:'#fff7ed' },
+};
+
+// ── State ────────────────────────────────────────────────────────────────────
+let allExtracts = [];
+let currentFilter = 'all';
+let expandedId = null;
+let showNotesFor = null;
+
+function getSession() {
+  try { return JSON.parse(localStorage.getItem('najran_session') || '{}'); } catch { return {}; }
+}
+function isAdmin() {
+  const s = getSession();
+  return s.role === 'admin' || s.role === 'supervisor';
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 2800);
+}
+
+// ── Format ────────────────────────────────────────────────────────────────
+function fmt(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' });
+}
+
+// ── Load ─────────────────────────────────────────────────────────────────
+async function loadExtracts() {
+  const session = getSession();
+  const token = session.clerkToken;
+  if (!token) {
+    window.location.href = '/sign-in';
+    return;
+  }
+  document.getElementById('refresh-icon').textContent = '⟳';
+  try {
+    const res = await fetch('/api/submitted-extracts', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    allExtracts = data.extracts || [];
+    updateStats();
+    renderList();
+    const sub = isAdmin()
+      ? `جميع المستخلصات المرفوعة — الإجمالي: ${allExtracts.length}`
+      : `مستخلصاتك المرفوعة للاعتماد — الإجمالي: ${allExtracts.length}`;
+    document.getElementById('page-subtitle').textContent = sub;
+  } catch {
+    document.getElementById('list-area').innerHTML =
+      `<div class="empty"><div class="icon">⚠️</div><h3>تعذر التحميل</h3><p>تحقق من اتصالك وأعد المحاولة</p></div>`;
+  }
+  document.getElementById('refresh-icon').textContent = '↻';
+}
+
+function updateStats() {
+  ['submitted','under_review','needs_revision','approved','rejected'].forEach(k => {
+    const c = allExtracts.filter(e => e.status === k).length;
+    document.getElementById('cnt-' + k).textContent = c;
+  });
+  // Populate month filter dropdown
+  const mf = document.getElementById('month-filter');
+  if (mf) {
+    const currentVal = mf.value;
+    const months = new Set();
+    allExtracts.forEach(e => { if (e.periodMonth) months.add(e.periodMonth.trim()); });
+    // Sort months (most recent first)
+    const sorted = [...months].sort((a, b) => {
+      const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+      const parseP = s => { const p=s.trim().split(' '); const y=parseInt(p[p.length-1])||0; const m=MONTHS_AR.indexOf(p[0]); return y*12+m; };
+      return parseP(b) - parseP(a);
+    });
+    const opts = ['<option value="all">كل الشهور</option>', ...sorted.map(m => `<option value="${m}" ${m===currentVal?'selected':''}>${m}</option>`)].join('');
+    mf.innerHTML = opts;
+  }
+}
+
+// ── Filter ───────────────────────────────────────────────────────────────
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn, .stat-card').forEach(el => el.classList.remove('active'));
+  const fb = document.getElementById('filter-' + f);
+  if (fb) fb.classList.add('active');
+  const sb = document.getElementById('stat-' + f);
+  if (sb) sb.classList.add('active');
+  renderList();
+}
+
+// ── Render ───────────────────────────────────────────────────────────────
+function renderList() {
+  const monthFilter = document.getElementById('month-filter')?.value || 'all';
+  let filtered = currentFilter === 'all' ? allExtracts : allExtracts.filter(e => e.status === currentFilter);
+  if (monthFilter !== 'all') filtered = filtered.filter(e => (e.periodMonth||'').trim() === monthFilter);
+
+  const area = document.getElementById('list-area');
+  if (filtered.length === 0) {
+    area.innerHTML = `<div class="empty">
+      <div class="icon">📋</div>
+      <h3>لا توجد مستخلصات</h3>
+      <p>${currentFilter === 'all' ? 'لم يتم رفع أي مستخلصات بعد' : 'لا يوجد مستخلصات بهذه الحالة'}</p>
+    </div>`;
+    return;
+  }
+
+  // Group by month for better visual separation
+  const byMonth = {};
+  filtered.forEach(e => {
+    const m = (e.periodMonth || 'بدون شهر').trim();
+    if (!byMonth[m]) byMonth[m] = [];
+    byMonth[m].push(e);
+  });
+
+  const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const parseP = s => { const p=s.trim().split(' '); const y=parseInt(p[p.length-1])||0; const m=MONTHS_AR.indexOf(p[0]); return y*12+m; };
+  const sortedMonths = Object.keys(byMonth).sort((a,b) => parseP(b)-parseP(a));
+
+  const useGroups = monthFilter === 'all' && sortedMonths.length > 1;
+  if (useGroups) {
+    area.innerHTML = sortedMonths.map(m => `
+      <div class="month-group">
+        <div class="month-group-header">📅 ${m} <span class="month-group-count">${byMonth[m].length} مستخلص</span></div>
+        <div class="cards-list">${byMonth[m].map(e => cardHTML(e)).join('')}</div>
+      </div>`).join('');
+  } else {
+    area.innerHTML = `<div class="cards-list">${filtered.map(e => cardHTML(e)).join('')}</div>`;
+  }
+
+  // Scroll to anchor if present
+  const hash = window.location.hash;
+  if (hash && hash.startsWith('#extract-')) {
+    setTimeout(() => {
+      const el = document.getElementById('card-' + hash.replace('#extract-', ''));
+      if (el) { el.scrollIntoView({behavior:'smooth',block:'center'}); el.style.boxShadow='0 0 0 3px #2a529880'; setTimeout(()=>{ el.style.boxShadow=''; }, 2000); }
+    }, 200);
+  }
+}
+
+function cardHTML(e) {
+  const cfg = STATUS_CFG[e.status] || STATUS_CFG.submitted;
+  const parts = TYPE_PARTS[e.extractType] || [];
+  const isExpanded = expandedId === e.id;
+  const session = getSession();
+  const admin = isAdmin();
+  const isOwner = session.userId && String(session.userId) === String(e.userId);
+  const canRevise = isOwner && (e.status === 'needs_revision' || e.status === 'rejected');
+  const borderClass = e.status === 'needs_revision' ? 'border-revision' : e.status === 'rejected' ? 'border-rejected' : '';
+
+  // Badge
+  const badge = `<span class="badge" style="color:${cfg.color};background:${cfg.bg};border-color:${cfg.color}30">
+    <span class="badge-dot" style="background:${cfg.color}"></span>${cfg.label}
+  </span>`;
+  const revChip = (e.revisionCount > 0)
+    ? `<span class="revision-chip">↺ مراجعة ${e.revisionCount}</span>`
+    : '';
+
+  // Body
+  let bodyHTML = '';
+  if (isExpanded) {
+    // Banners
+    let banner = '';
+    if (canRevise && e.status === 'needs_revision') {
+      banner = `<div class="banner revision">
+        <div class="banner-row">
+          <div class="banner-icon">✏️</div>
+          <div class="banner-text">
+            <h4>طُلب منك تعديل هذا المستخلص</h4>
+            ${e.adminNotes ? `<p>${e.adminNotes}</p>` : ''}
+          </div>
+        </div>
+        <button class="banner-action" onclick="startRevision(${e.id},'${e.extractType}')">✏️ تعديل وإعادة الرفع</button>
+      </div>`;
+    } else if (canRevise && e.status === 'rejected') {
+      banner = `<div class="banner rejected">
+        <div class="banner-row">
+          <div class="banner-icon">✕</div>
+          <div class="banner-text">
+            <h4>تم رفض هذا المستخلص</h4>
+            ${e.adminNotes ? `<p>${e.adminNotes}</p>` : ''}
+            <p style="margin-top:4px;font-size:12px">يمكنك تعديل البيانات وإعادة الرفع</p>
+          </div>
+        </div>
+        <button class="banner-action" onclick="startRevision(${e.id},'${e.extractType}')">✏️ تعديل وإعادة الرفع</button>
+      </div>`;
+    }
+
+    // Info grid
+    const infoGrid = `<div class="info-grid">
+      <div class="info-cell"><div class="lbl">🏢 الشركة</div><div class="val">${e.companyName || '—'}</div></div>
+      <div class="info-cell"><div class="lbl">📄 رقم العقد</div><div class="val">${e.contractNumber || '—'}</div></div>
+      <div class="info-cell"><div class="lbl">📅 الفترة</div><div class="val">${e.periodMonth || '—'}</div></div>
+      <div class="info-cell"><div class="lbl">💰 القيمة</div><div class="val">${e.totalAmount ? Number(e.totalAmount).toLocaleString('en-US') + ' ر.س' : '—'}</div></div>
+    </div>`;
+
+    // Parts
+    const partsRow = `<div class="parts-row">
+      ${parts.map(p => `<span class="part-chip">✓ ${p}</span>`).join('')}
+    </div>`;
+
+    // Timeline
+    const timeline = `<div class="timeline">
+      <div>📅 تاريخ الرفع: ${fmt(e.createdAt)}</div>
+      ${e.revisionCount > 0 && e.revisedAt ? `<div class="revised">↺ آخر تعديل: ${fmt(e.revisedAt)} (مراجعة رقم ${e.revisionCount})</div>` : ''}
+      ${e.approvedAt ? `<div>✅ تاريخ الاعتماد: ${fmt(e.approvedAt)}${e.approvedBy ? ' · بواسطة: ' + e.approvedBy : ''}</div>` : ''}
+    </div>`;
+
+    // Admin notes (non-banner)
+    let notesDisplay = '';
+    if (e.adminNotes && e.status !== 'needs_revision' && e.status !== 'rejected') {
+      notesDisplay = `<div class="notes-box"><h5>ملاحظات المراجع:</h5><p>${e.adminNotes}</p></div>`;
+    }
+
+    // Admin actions
+    let adminActions = '';
+    if (admin && e.status !== 'approved') {
+      const noteVisible = showNotesFor === e.id;
+      adminActions = `<div class="admin-actions">
+        <h5>إجراءات المراجع</h5>
+        ${noteVisible ? `<textarea class="notes-input" rows="2" id="notes-${e.id}" placeholder="ملاحظات للمستخدم (ستظهر له)...">${e.adminNotes || ''}</textarea>` : ''}
+        <div class="admin-btns">
+          ${e.status === 'submitted' ? `<button class="admin-btn btn-review" onclick="updateStatus(${e.id},'under_review')">👁 بدء المراجعة</button>` : ''}
+          <button class="admin-btn btn-toggle-note" onclick="toggleNote(${e.id})">${noteVisible ? 'إخفاء' : 'إضافة ملاحظة'}</button>
+          ${e.status !== 'needs_revision' ? `<button class="admin-btn btn-request-revision" onclick="updateStatus(${e.id},'needs_revision')">✏️ طلب تعديل</button>` : ''}
+          <button class="admin-btn btn-approve" onclick="updateStatus(${e.id},'approved')">✓ اعتماد</button>
+          ${e.status !== 'rejected' ? `<button class="admin-btn btn-reject" onclick="updateStatus(${e.id},'rejected')">✕ رفض</button>` : ''}
+        </div>
+      </div>`;
+    }
+
+    // Preview button for approved extracts
+    const previewBtn = e.status === 'approved'
+      ? `<div style="padding-top:12px;border-top:1px solid #f1f5f9;margin-top:4px">
+          <button class="admin-btn btn-approve" style="background:linear-gradient(135deg,#1e3c72,#2a5298);border-color:transparent" onclick="openPreview(${e.id})">
+            🔍 معاينة المستخلص المعتمد
+          </button>
+         </div>`
+      : '';
+
+    bodyHTML = `<div class="card-body open">
+      ${banner}${infoGrid}${partsRow}${timeline}${notesDisplay}${adminActions}${previewBtn}
+    </div>`;
+  }
+
+  return `<div class="card ${borderClass}" id="card-${e.id}">
+    <div class="card-head" onclick="toggleCard(${e.id})">
+      <div class="card-icon ${e.status === 'needs_revision' ? 'orange' : ''}">📄</div>
+      <div class="card-meta">
+        <h3>${TYPE_LABELS[e.extractType] || e.extractType}</h3>
+        <p>${e.companyName || '—'}${e.periodMonth ? ' · ' + e.periodMonth : ''}</p>
+        ${admin && e.submittedByName ? `<span class="submitted-by">رُفع بواسطة: ${e.submittedByName}</span>` : ''}
+      </div>
+      <div class="card-right">
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+          ${badge}${revChip}
+        </div>
+        <span class="chevron ${isExpanded ? 'open' : ''}">▾</span>
+      </div>
+    </div>
+    ${bodyHTML}
+  </div>`;
+}
+
+// ── Interactions ──────────────────────────────────────────────────────────
+function toggleCard(id) {
+  expandedId = expandedId === id ? null : id;
+  renderList();
+}
+
+function toggleNote(id) {
+  showNotesFor = showNotesFor === id ? null : id;
+  renderList();
+  if (showNotesFor === id) {
+    const ta = document.getElementById('notes-' + id);
+    if (ta) ta.focus();
+  }
+}
+
+async function updateStatus(id, status) {
+  const session = getSession();
+  const token = session.clerkToken;
+  if (!token) return;
+
+  const notesEl = document.getElementById('notes-' + id);
+  const adminNotes = notesEl ? notesEl.value.trim() : undefined;
+
+  try {
+    const res = await fetch(`/api/submitted-extracts/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status, adminNotes: adminNotes || undefined }),
+    });
+    if (!res.ok) throw new Error();
+    const updated = await res.json();
+
+    // Update local state
+    const idx = allExtracts.findIndex(e => e.id === id);
+    if (idx !== -1) allExtracts[idx] = { ...allExtracts[idx], ...updated };
+
+    updateStats();
+    showNotesFor = null;
+    renderList();
+
+    const msgs = {
+      under_review: 'تم تحديث الحالة إلى: قيد المراجعة',
+      approved: updated.monthAdvanced ? 'تم اعتماد المستخلص ✓  —  تم فتح الشهر التالي تلقائياً' : 'تم اعتماد المستخلص ✓',
+      rejected: 'تم رفض المستخلص',
+      needs_revision: 'تم إرسال طلب التعديل للمستخدم',
+    };
+    const types = { approved: 'green', rejected: 'red', needs_revision: 'orange' };
+    showToast(msgs[status] || 'تم التحديث', types[status] || '');
+  } catch {
+    showToast('حدث خطأ — أعد المحاولة', 'red');
+  }
+}
+
+function startRevision(id, type) {
+  localStorage.setItem(REVISION_KEY, String(id));
+  window.location.href = TYPE_PAGES[type] || '/original/attendance.html';
+}
+
+// ── Preview ───────────────────────────────────────────────────────────────
+function openPreview(id) {
+  const e = allExtracts.find(x => x.id === id);
+  if (!e) return;
+
+  document.getElementById('prev-type').textContent = TYPE_LABELS[e.extractType] || e.extractType;
+  document.getElementById('prev-subtitle').textContent = 'رقم المستخلص #' + e.id + (e.periodMonth ? ' — ' + e.periodMonth : '');
+
+  const approvedInfo = (e.approvedAt ? 'اعتمد في ' + fmt(e.approvedAt) : '') +
+    (e.approvedBy ? ' · بواسطة: ' + e.approvedBy : '');
+  document.getElementById('prev-approved-info').textContent = approvedInfo || 'تم الاعتماد';
+
+  document.getElementById('prev-amount').textContent =
+    e.totalAmount ? Number(e.totalAmount).toLocaleString('en-US') + ' ر.س' : '— ر.س';
+
+  document.getElementById('prev-company').textContent = e.companyName || '—';
+  document.getElementById('prev-contract').textContent = e.contractNumber || '—';
+  document.getElementById('prev-hospital').textContent = e.hospitalName || e.submittedByHospital || '—';
+  document.getElementById('prev-period').textContent = e.periodMonth || '—';
+
+  const parts = TYPE_PARTS[e.extractType] || [];
+  document.getElementById('prev-parts').innerHTML = parts.map(p =>
+    `<span class="preview-part-chip">✓ ${p}</span>`).join('');
+
+  if (e.adminNotes) {
+    document.getElementById('prev-notes-title').style.display = 'flex';
+    document.getElementById('prev-notes').style.display = 'block';
+    document.getElementById('prev-notes-text').textContent = e.adminNotes;
+  } else {
+    document.getElementById('prev-notes-title').style.display = 'none';
+    document.getElementById('prev-notes').style.display = 'none';
+  }
+
+  document.getElementById('prev-submitted-at').textContent = fmt(e.createdAt);
+  document.getElementById('prev-approved-at').textContent = e.approvedAt ? fmt(e.approvedAt) : '—';
+  document.getElementById('prev-submitted-by').textContent = e.submittedByName || '—';
+  document.getElementById('prev-approved-by').textContent = e.approvedBy || '—';
+
+  document.getElementById('preview-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePreview(evt) {
+  if (evt.target === document.getElementById('preview-overlay')) closePreviewDirect();
+}
+function closePreviewDirect() {
+  document.getElementById('preview-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────
+loadExtracts();
+setInterval(loadExtracts, 60000);
+</script>
+</body>
+</html>
