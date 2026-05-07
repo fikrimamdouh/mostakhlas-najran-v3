@@ -415,12 +415,32 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const { getToken } = useAuth();
   const queryClient = useQueryClient();
   const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
+  const [hasToken, setHasToken] = useState(false);
+
+  // Wait until getToken() returns a real JWT before firing any API call.
+  // Clerk may return null on the first call even when isLoaded+user are ready
+  // because the access token hasn't been fetched from Clerk's servers yet.
+  useEffect(() => {
+    if (!isClerkLoaded || !user?.id || hasToken) return;
+    let cancelled = false;
+    const tryGetToken = async () => {
+      for (let i = 0; i < 8; i++) {
+        const token = await getToken();
+        if (cancelled) return;
+        if (token) { setHasToken(true); return; }
+        await new Promise(r => setTimeout(r, 400));
+      }
+    };
+    tryGetToken();
+    return () => { cancelled = true; };
+  }, [isClerkLoaded, user?.id, getToken, hasToken]);
 
   const { data: dbUser, isLoading: isDbLoading, error } = useGetMe({
     query: {
       queryKey: ["/api/users/me"],
-      enabled: !!user?.id && isClerkLoaded,
-      retry: false,
+      enabled: !!user?.id && isClerkLoaded && hasToken,
+      retry: 3,
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
     }
   });
 
@@ -497,7 +517,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [dbUser, getToken]);
 
-  if (!isClerkLoaded || isDbLoading || syncState === 'syncing') {
+  if (!isClerkLoaded || (!!user?.id && !hasToken) || isDbLoading || syncState === 'syncing') {
     return (
       <div className="flex h-screen items-center justify-center flex-col gap-3" style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' }}>
         <img src="/logo.png" alt="" className="h-16 w-auto opacity-80" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
