@@ -235,11 +235,11 @@
       }
     }
 
-    // مفاتيح pattern-based (deptCalculatedCost_X, dept_X)
+    // مفاتيح pattern-based (deptCalculatedCost_X, dept_X, sb_sigs_*)
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (!k) continue;
-      if (k.startsWith('deptCalculatedCost_') || k.startsWith('dept_')) {
+      if (k.startsWith('deptCalculatedCost_') || k.startsWith('dept_') || k.startsWith('sb_sigs_')) {
         const v = localStorage.getItem(k);
         if (v !== null) {
           allData[k]      = v;

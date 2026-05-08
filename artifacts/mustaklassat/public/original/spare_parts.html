@@ -400,29 +400,12 @@
   </div>
 
   <!-- ── Signature section ── -->
-  <div class="sig-section">
-    <div class="sig-box">
-      <div class="sig-title">مُعِدّ المستخلص</div>
-      <input class="sig-name-input" id="sig1-name" type="text" placeholder="الاسم والمسمى الوظيفي"
-        onchange="saveData()">
-      <div class="sig-line"></div>
-      <div class="sig-label">التوقيع والختم</div>
-    </div>
-    <div class="sig-box">
-      <div class="sig-title">مراجع المستخلص</div>
-      <input class="sig-name-input" id="sig2-name" type="text" placeholder="الاسم والمسمى الوظيفي"
-        onchange="saveData()">
-      <div class="sig-line"></div>
-      <div class="sig-label">التوقيع والختم</div>
-    </div>
-    <div class="sig-box">
-      <div class="sig-title">معتمد المستخلص</div>
-      <input class="sig-name-input" id="sig3-name" type="text" placeholder="الاسم والمسمى الوظيفي"
-        onchange="saveData()">
-      <div class="sig-line"></div>
-      <div class="sig-label">التوقيع والختم</div>
-    </div>
+  <div style="margin:16px 0 0; display:flex; align-items:center; gap:10px; flex-wrap:wrap;" class="no-print">
+    <button class="ab ab-sig" onclick="SignatureBlock.open('spare_parts')" style="margin:0;">
+      <i class="fas fa-signature"></i> تعديل التواقيع
+    </button>
   </div>
+  <div id="sb-container-spare_parts" class="sb-wrap"></div>
 
 </div>
 
@@ -659,5 +642,7 @@ document.getElementById('sp-table').addEventListener('input', () => {
 <script src="/original/extract-submit.js"></script>
 <script src="/original/track.js"></script>
 <script src="/original/shared-nav.js"></script>
+<script src="/original/signature-block.js"></script>
+<script>SignatureBlock.init('spare_parts', { showStamp: true });</script>
 </body>
 </html>

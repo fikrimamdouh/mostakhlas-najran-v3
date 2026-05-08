@@ -678,7 +678,7 @@
                 <button class="ab ab-excel" onclick="exportAchievementToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
                 <button class="ab ab-print" onclick="window.print()"><i class="fas fa-print"></i> طباعة</button>
                 <button class="ab ab-update" onclick="refreshAllData()"><i class="fas fa-sync-alt"></i> تحديث البيانات</button>
-                <button class="ab ab-sig" onclick="openSignatureEditDialog()"><i class="fas fa-signature"></i> تعديل التواقيع</button>
+                <button class="ab ab-sig" onclick="SignatureBlock.open('achievement')"><i class="fas fa-signature"></i> تعديل التواقيع</button>
                 <button class="ab ab-titles" onclick="openItemNameDialog()"><i class="fas fa-edit"></i> تعديل أسماء البنود</button>
             </div>
 
@@ -733,38 +733,8 @@
 
            
 
-            <!-- Signatures in One Row (Pulled from Settings) -->
-            <div class="signatures-section">
-                <div class="signature-box">
-                    <i class="fas fa-user-tie"></i>
-                    <p><strong id="display-contractorRepresentativeTitle">مندوب المقاول:</strong></p>
-                    <p class="signature-line">_____________________</p>
-                    <p class="signature-name" id="display-contractorRepresentative"></p>
-                </div>
-                <div class="signature-box">
-                    <i class="fas fa-tools"></i>
-                    <p><strong id="display-maintenanceHeadTitle">رئيس قسم الصيانة:</strong></p>
-                    <p class="signature-line">_____________________</p>
-                    <p class="signature-name" id="display-maintenanceHead"></p>
-                </div>
-                <div class="signature-box">
-                    <i class="fas fa-user-cog"></i>
-                    <p><strong id="display-projectManagerTitle">مدير المشروع:</strong></p>
-                    <p class="signature-line">_____________________</p>
-                    <p class="signature-name" id="display-projectManager"></p>
-                </div>
-                <div class="signature-box">
-                    <i class="fas fa-hospital-user"></i>
-                    <p><strong id="display-hospitalManagerTitle">مدير المستشفى:</strong></p>
-                    <p class="signature-line">_____________________</p>
-                    <p class="signature-name" id="display-hospitalManager"></p>
-                </div>
-            </div>
-
-            <div class="mt-4 text-center stamp-section">
-                <p class="font-semibold text-sm">ختم المستشفى</p>
-                <div class="stamp-box"></div>
-            </div>
+            <!-- التواقيع الموحدة -->
+            <div id="sb-container-achievement" class="sb-wrap"></div>
 
            
         </div>
@@ -1132,24 +1102,7 @@ function saveSignatures() {
 
 // 7. دالة لتحديث عرض التواقيع في الصفحة الرئيسية
 function updateSignaturesOnPage() {
-    const signatures = JSON.parse(localStorage.getItem(SIGNATURE_STORAGE_KEY) || '[]');
-    const container = document.querySelector('.signatures-section');
-    container.innerHTML = '';
-    if (signatures.length === 0) {
-        container.innerHTML = '<p style="width: 100%; text-align: center;">لم يتم إضافة تواقيع.</p>';
-        return;
-    }
-    signatures.forEach(sig => {
-        const signatureBox = document.createElement('div');
-        signatureBox.classList.add('signature-box');
-        signatureBox.innerHTML = `
-            <i class="fas fa-user-tie"></i>
-            <p><strong>${sig.title}:</strong></p>
-            <p class="signature-line">_____________________</p>
-            <p class="signature-name">${sig.name || ' '}</p>
-        `;
-        container.appendChild(signatureBox);
-    });
+    // replaced by SignatureBlock system — no-op kept for backward compatibility
 }
 
 // --- END: نهاية كود JavaScript الجديد ---
@@ -1590,52 +1543,10 @@ function closeDialog(dialogId, overlayId) {
     // --- END: NEW CONFIGURATION & FUNCTIONS TO BE ADDED ---
 
 </script>
-    <script src="signature_manager.js"></script>
-
     <script src="attendance_contract_info.js"></script>
-<!-- نافذة تعديل التواقيع -->
-<!-- START: نافذة تعديل التواقيع (النسخة الجديدة الديناميكية) -->
-<div id="signature-edit-dialog" class="edit-dialog wide-dialog" style="display: none;">
-    <!-- قسم إدخال الباسورد (يبقى كما هو) -->
-    <div id="signature-password-section">
-        <h3>أدخل الباسورد لتعديل التواقيع</h3>
-        <input type="password" id="signature-password-input" placeholder="الباسورد">
-        <p id="signature-password-error" style="color: red;"></p>
-        <button class="confirm-btn" onclick="verifySignaturePassword()">تأكيد</button>
-        <button class="cancel-btn" onclick="closeSignatureEditDialog()">إلغاء</button>
-    </div>
-
-    <!-- قسم تعديل التواقيع (محتوى جديد بالكامل) -->
-    <div id="signature-edit-content" style="display: none;">
-        <h3>تعديل التواقيع</h3>
-        <div id="signature-fields-container">
-            <!-- حقول التواقيع الديناميكية ستضاف هنا بواسطة JavaScript -->
-        </div>
-        <div class="dialog-buttons" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; display: flex; justify-content: space-between;">
-            
-            <!-- زر إضافة توقيع جديد -->
-            <button class="confirm-btn" onclick="addSignatureField()" style="background-color: #28a745;">
-                <i class="fas fa-plus-circle" style="margin-left: 5px;"></i> إضافة توقيع
-            </button>
-            
-            <div>
-                <button class="confirm-btn" onclick="saveSignatures()">
-                    <i class="fas fa-save" style="margin-left: 5px;"></i> حفظ التغييرات
-                </button>
-                <button class="cancel-btn" onclick="closeSignatureEditDialog()">
-                    <i class="fas fa-times-circle" style="margin-left: 5px;"></i> إغلاق
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-<!-- END: نهاية نافذة التعديل الجديدة -->
 
     </div>
 </div>
-
-<!-- Overlay جديد لهذه النافذة -->
-<div id="signature-edit-overlay" class="overlay" style="display: none;"></div>
 <!-- START: NEW Item Name Edit Dialog -->
 <div id="item-name-dialog" class="edit-dialog" style="display: none;">
     <h3>تعديل أسماء البنود</h3>
@@ -1657,5 +1568,7 @@ function closeDialog(dialogId, overlayId) {
 <script src="/original/extract-submit.js"></script>
 <script src="/original/track.js"></script>
 <script src="/original/shared-nav.js"></script>
+<script src="/original/signature-block.js"></script>
+<script>SignatureBlock.init('achievement', { showStamp: true });</script>
 </body>
 </html>

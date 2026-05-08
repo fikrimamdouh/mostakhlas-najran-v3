@@ -442,7 +442,7 @@ tr.total-row th, tr.total-row td {
     <button class="ab ab-restore" onclick="resetPerformanceData()"><i class="fas fa-redo"></i> إعادة تعيين</button>
     <button class="ab ab-backup" onclick="createBackup()"><i class="fas fa-download"></i> حفظ نسخة</button>
     <button class="ab ab-restore" onclick="restoreBackup()"><i class="fas fa-upload"></i> استعادة نسخة</button>
-    <button class="ab ab-sig" onclick="openSignatureEditDialog()"><i class="fas fa-signature"></i> تعديل التواقيع</button>
+    <button class="ab ab-sig" onclick="SignatureBlock.open('performance')"><i class="fas fa-signature"></i> تعديل التواقيع</button>
     <button class="ab ab-titles" onclick="openEditTableNamesDialog()"><i class="fas fa-heading"></i> تعديل أسماء الجداول</button>
 </div>
 
@@ -926,77 +926,8 @@ tr.total-row th, tr.total-row td {
         </div>
     </div>
 
-   <!-- قسم التواقيع اليدوي -->
-<div class="signatures-section" style="margin: 30px 0; padding: 20px; border-top: 2px solid #ddd;">
-    <h3 style="text-align: center; margin-bottom: 20px;">التواقيع</h3>
-    <div class="signatures-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0;">
-        <div class="signature-item" style="text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
-            <div class="signature-title" style="font-weight: bold; margin-bottom: 10px;">مدير المشروع:</div>
-            <div class="signature-line" style="border-bottom: 1px solid #000; height: 40px; margin: 10px 0;"></div>
-            <div class="signature-name" id="display-projectManager" style="font-size: 14px; margin-top: 5px;">غير محدد</div>
-        </div>
-        <div class="signature-item" style="text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
-            <div class="signature-title" style="font-weight: bold; margin-bottom: 10px;">مدير الإدارة الهندسية:</div>
-            <div class="signature-line" style="border-bottom: 1px solid #000; height: 40px; margin: 10px 0;"></div>
-            <div class="signature-name" id="display-engineeringManager" style="font-size: 14px; margin-top: 5px;">غير محدد</div>
-        </div>
-        <div class="signature-item" style="text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
-            <div class="signature-title" style="font-weight: bold; margin-bottom: 10px;">مدير المستشفى:</div>
-            <div class="signature-line" style="border-bottom: 1px solid #000; height: 40px; margin: 10px 0;"></div>
-            <div class="signature-name" id="display-hospitalManager" style="font-size: 14px; margin-top: 5px;">غير محدد</div>
-        </div>
-        <div class="signature-item" style="text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
-            <div class="signature-title" style="font-weight: bold; margin-bottom: 10px;">محاسب المستشفى:</div>
-            <div class="signature-line" style="border-bottom: 1px solid #000; height: 40px; margin: 10px 0;"></div>
-            <div class="signature-name" id="display-hospitalAccountant" style="font-size: 14px; margin-top: 5px;">غير محدد</div>
-        </div>
-        <div class="signature-item" style="text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
-            <div class="signature-title" style="font-weight: bold; margin-bottom: 10px;">مندوب المقاول:</div>
-            <div class="signature-line" style="border-bottom: 1px solid #000; height: 40px; margin: 10px 0;"></div>
-            <div class="signature-name" id="display-contractorRepresentative" style="font-size: 14px; margin-top: 5px;">غير محدد</div>
-        </div>
-    </div>
-</div>
-
-<!-- نافذة تعديل التواقيع (النسخة النهائية والمحسنة) -->
-<div id="signature-edit-dialog" class="edit-dialog" style="display: none;">
-    <div id="signature-password-section">
-        <h3>أدخل الباسورد</h3>
-        <input type="password" id="signature-password-input" placeholder="الباسورد">
-        <p id="signature-password-error" style="color: red;"></p>
-        <button class="confirm-btn" onclick="verifySignaturePassword()">تأكيد</button>
-        <button class="cancel-btn" onclick="closeSignatureEditDialog()">إلغاء</button>
-    </div>
-
-    <!-- هذا هو الجزء المحدث الذي يحتوي على زر الإضافة -->
-    <div id="signature-edit-content" style="display: none;">
-        <h3 style="text-align: center; color: #007bff; margin-bottom: 20px;">إدارة التواقيع</h3>
-        
-        <!-- الحاوية التي ستحمل قائمة التواقيع القابلة للتعديل -->
-        <div id="signature-fields-container" style="margin-bottom: 20px;">
-            <!-- سيتم ملء التواقيع هنا بواسطة JavaScript -->
-        </div>
-        
-        <!-- ============== زر الإضافة الذي تبحث عنه ============== -->
-        <button class="btn-add" onclick="addSignatureField()" style="margin-bottom: 20px; width: 100%; justify-content: center;">
-            <i class="fas fa-plus-circle"></i>&nbsp; إضافة توقيع جديد
-        </button>
-        <!-- ======================================================= -->
-        
-        <!-- أزرار الحفظ والإلغاء -->
-        <div class="dialog-buttons" style="text-align: center;">
-            <button class="confirm-btn" onclick="saveSignatures()">
-                <i class="fas fa-save"></i> حفظ جميع التغييرات
-            </button>
-            <button class="cancel-btn" onclick="closeSignatureEditDialog()">
-                <i class="fas fa-times-circle"></i> إلغاء
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Overlay جديد لهذه النافذة -->
-<div id="signature-edit-overlay" class="overlay" style="display: none;"></div>
+   <!-- قسم التواقيع الموحد -->
+<div id="sb-container-performance" class="sb-wrap"></div>
 <!-- ================================================== -->
 <!-- === نافذة تعديل أسماء الجداول (الكود الجديد) === -->
 <!-- ================================================== -->
@@ -2090,14 +2021,10 @@ function exportSectionToExcel() {
         });
 
         // 5. إضافة ورقة خاصة بالتواقيع
-        const signatures = [];
-        document.querySelectorAll('.signatures-grid .signature-item').forEach(item => {
-            const title = item.querySelector('.signature-title')?.textContent.replace(':', '').trim() || '';
-            const name = item.querySelector('.signature-name')?.textContent.trim() || '';
-            if (title && name) {
-                signatures.push([`${title}:`, name]);
-            }
-        });
+        const _sbSigsExcel = (typeof SignatureBlock !== 'undefined')
+            ? SignatureBlock.getSigs('performance')
+            : JSON.parse(localStorage.getItem('sb_sigs_performance') || '[]');
+        const signatures = _sbSigsExcel.map(s => [`${s.title}:`, s.name || '']);
 
         if (signatures.length > 0) {
             const sigData = [["التواقيع المعتمدة"], [], ...signatures];
@@ -2301,16 +2228,10 @@ function exportToPDF(sectionId) {
     const footerText = section.querySelector('.footer-text')?.innerHTML || '';
     const totalAmount = sectionId !== 'certificate' ? section.querySelector('.total-amount input')?.value || '0' : '';
 
-    // التواقيع
-  // الحصول على التواقيع المعروضة حاليًا على الصفحة بشكل ديناميكي
-const signatures = [];
-document.querySelectorAll('.signatures-grid .signature-item').forEach(item => {
-    const title = item.querySelector('.signature-title')?.textContent.replace(':', '').trim() || '';
-    const name = item.querySelector('.signature-name')?.textContent.trim() || '';
-    if (title && name) {
-        signatures.push({ title, name });
-    }
-});
+    // التواقيع — من النظام الموحد
+const signatures = (typeof SignatureBlock !== 'undefined')
+    ? SignatureBlock.getSigs('performance')
+    : JSON.parse(localStorage.getItem('sb_sigs_performance') || '[]');
 
 
 
@@ -2768,14 +2689,9 @@ function printSingleTable(tableId) {
     const footerText = tableContainer.querySelector('.footer-text')?.innerHTML || '';
     const totalAmount = tableId !== 'certificate' ? tableContainer.querySelector('.total-amount input')?.value || '0' : '';
 
-    const signatures = [];
-    document.querySelectorAll('.signatures-grid .signature-item').forEach(item => {
-        const title = item.querySelector('.signature-title')?.textContent.replace(':', '').trim() || '';
-        const name = item.querySelector('.signature-name')?.textContent.trim() || '';
-        if (title && name) {
-            signatures.push({ title, name });
-        }
-    });
+    const signatures = (typeof SignatureBlock !== 'undefined')
+        ? SignatureBlock.getSigs('performance')
+        : JSON.parse(localStorage.getItem('sb_sigs_performance') || '[]');
 
     const logoRight = document.querySelector('.logo-right')?.src || '';
     const logoLeft = document.querySelector('.logo-left')?.src || '';
@@ -3067,7 +2983,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateAllTotals();
 
     // 6. تحديث باقي عناصر الواجهة
-    updateSignaturesOnPage();
+    // updateSignaturesOnPage() — replaced by SignatureBlock system
     updateTableTitlesFromStorage();
     
     console.log("اكتمل تحميل صفحة الأداء بنجاح.");
@@ -3588,6 +3504,8 @@ document.addEventListener('DOMContentLoaded', applyDisplaySettings);
 <script src="/original/extract-submit.js"></script>
 <script src="/original/track.js"></script>
 <script src="/original/shared-nav.js"></script>
+<script src="/original/signature-block.js"></script>
+<script>SignatureBlock.init('performance', { showStamp: true });</script>
 </body>
 </html>
 

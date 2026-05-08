@@ -1050,7 +1050,7 @@ window.navigateTo = function (url) {
     <button class="ab ab-backup" onclick="backupAttendanceData()"><i class="fas fa-download"></i> حفظ نسخة</button>
     <button class="ab ab-restore" onclick="document.getElementById('restore-file-input').click()"><i class="fas fa-upload"></i> استعادة نسخة</button>
     <input type="file" id="restore-file-input" style="display:none;" onchange="restoreAttendanceData(event)" accept=".json">
-    <button class="ab ab-sig" onclick="openSignatureEditDialog()"><i class="fas fa-signature"></i> تعديل التواقيع</button>
+    <button class="ab ab-sig" onclick="SignatureBlock.open('attendance')"><i class="fas fa-signature"></i> تعديل التواقيع</button>
     <button class="ab ab-titles" onclick="openNationalityFineEditor()"><i class="fas fa-money-bill-wave"></i> غرامة الجنسية</button>
     <button class="ab ab-clear" onclick="clearData()"><i class="fas fa-eraser"></i> مسح البيانات</button>
 </div>
@@ -1750,14 +1750,8 @@ window.navigateTo = function (url) {
         </div>
     </div>
 
-    <!-- قسم التواقيع التلقائي -->
-  <div class="signatures-display-section">
-            <h3>التواقيع المعتمدة</h3>
-            <div class="signatures-grid">
-                <!-- سيتم ملء هذا الجزء بواسطة JavaScript -->
-                <p style="text-align: center; color: #888;">جاري تحميل التواقيع...</p>
-            </div>
-        </div>
+    <!-- قسم التواقيع الموحد -->
+  <div id="sb-container-attendance" class="sb-wrap"></div>
 
  
     <footer>
@@ -1765,6 +1759,7 @@ window.navigateTo = function (url) {
     </footer>
 
     <script src="/original/extract-snapshot.js"></script>
+    <script src="/original/signature-block.js"></script>
     <script src="attendance_interactive_v9_corrected.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -1913,6 +1908,26 @@ window.navigateTo = function (url) {
     document.addEventListener('DOMContentLoaded', function() { setTimeout(setup, 600); });
   } else {
     setTimeout(setup, 600);
+  }
+})();
+</script>
+<script>
+// ── نظام التواقيع الموحد ──────────────────────────────────────────────────
+(function initSharedSignatures() {
+  function tag() {
+    // ربط كل .print-signatures-grid بنظام التواقيع الموحد
+    document.querySelectorAll('.print-signatures-grid').forEach(function(el) {
+      el.setAttribute('data-sb-page', 'attendance');
+      el.innerHTML = '';
+    });
+    if (typeof SignatureBlock !== 'undefined') {
+      SignatureBlock.init('attendance', { showStamp: true });
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tag);
+  } else {
+    tag();
   }
 })();
 </script>

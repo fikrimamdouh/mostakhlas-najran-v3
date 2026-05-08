@@ -73,7 +73,7 @@
             <button class="ab ab-backup" onclick="backupData()"><i class="fas fa-download"></i> حفظ نسخة</button>
             <button class="ab ab-restore" onclick="document.getElementById('restore-file-input').click()"><i class="fas fa-upload"></i> استعادة نسخة</button>
             <input type="file" id="restore-file-input" style="display:none;" onchange="restoreData(event)" accept=".json">
-            <button class="ab ab-sig" onclick="openSignatureDialog('attendance')"><i class="fas fa-signature"></i> تعديل التواقيع</button>
+            <button class="ab ab-sig" onclick="SignatureBlock.open('admin_offices')"><i class="fas fa-signature"></i> تعديل التواقيع</button>
             <button class="ab ab-titles" onclick="openTitleEditorDialog()"><i class="fas fa-heading"></i> تعديل العناوين</button>
             <button class="ab ab-clear" onclick="clearAllData()"><i class="fas fa-eraser"></i> مسح البيانات</button>
         </section>
@@ -137,10 +137,7 @@
                     <div class="total-item net-total"><span class="total-label">صافي الاستحقاق:</span><span class="total-value" id="admin-net-total">0.00</span></div>
                 </div>
             </div>
-            <div class="signatures-display-section" id="main-signatures-section">
-                <h3>التواقيع المعتمدة</h3>
-                <div class="signatures-grid"></div>
-            </div>
+            <div id="sb-container-admin_offices" class="sb-wrap"></div>
         </section>
 
     </div>
@@ -161,5 +158,7 @@
 <script src="/original/extract-submit.js"></script>
 <script src="/original/track.js"></script>
 <script src="/original/shared-nav.js"></script>
+<script src="/original/signature-block.js"></script>
+<script>SignatureBlock.init('admin_offices', { showStamp: true });</script>
 </body>
 </html>

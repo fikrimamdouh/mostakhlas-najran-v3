@@ -776,7 +776,7 @@
                     <label class="notes-toggle"><input type="checkbox" class="notes-checkbox"> إضافة ملاحظات للطباعة</label>
                     <textarea placeholder="اكتب ملاحظاتك هنا..."></textarea>
                 </div>
-                <div class="signatures-display-section"><div class="signatures-grid"></div></div>
+                <div class="signatures-display-section"><div data-sb-page="consumables"></div></div>
             </div>
 
             <!-- قسم أداء المستهلكات -->
@@ -805,7 +805,7 @@
                     <label class="notes-toggle"><input type="checkbox" class="notes-checkbox"> إضافة ملاحظات للطباعة</label>
                     <textarea placeholder="اكتب ملاحظاتك هنا..."></textarea>
                 </div>
-                <div class="signatures-display-section"><div class="signatures-grid"></div></div>
+                <div class="signatures-display-section"><div data-sb-page="consumables"></div></div>
             </div>
 
             <!-- قسم توريد المياه -->
@@ -834,7 +834,7 @@
                     <label class="notes-toggle"><input type="checkbox" class="notes-checkbox"> إضافة ملاحظات للطباعة</label>
                     <textarea placeholder="اكتب ملاحظاتك هنا..."></textarea>
                 </div>
-                <div class="signatures-display-section"><div class="signatures-grid"></div></div>
+                <div class="signatures-display-section"><div data-sb-page="consumables"></div></div>
             </div>
 
             <!-- قسم التخلص من مياه الصرف الصحي -->
@@ -863,7 +863,7 @@
                     <label class="notes-toggle"><input type="checkbox" class="notes-checkbox"> إضافة ملاحظات للطباعة</label>
                     <textarea placeholder="اكتب ملاحظاتك هنا..."></textarea>
                 </div>
-                <div class="signatures-display-section"><div class="signatures-grid"></div></div>
+                <div class="signatures-display-section"><div data-sb-page="consumables"></div></div>
             </div>
 
             <!-- قسم الملخص -->
@@ -892,7 +892,7 @@
                     <label class="notes-toggle"><input type="checkbox" class="notes-checkbox"> إضافة ملاحظات للطباعة</label>
                     <textarea placeholder="اكتب ملاحظاتك هنا..."></textarea>
                 </div>
-                <div class="signatures-display-section"><div class="signatures-grid"></div></div>
+                <div class="signatures-display-section"><div data-sb-page="consumables"></div></div>
             </div>
         </div>
     </div>
@@ -1616,7 +1616,7 @@ function renderAllTables() {
                 startEditSession(target);
                 break;
             case 'signatures':
-                openSignaturesDialog();
+                SignatureBlock.open('consumables');
                 break;
             case 'titles':
                 openTitlesDialog();
@@ -1831,7 +1831,7 @@ if (!activeEditSession && (target.tagName === 'SELECT' || (target.tagName === 'I
         document.getElementById('export-all-btn').addEventListener('click', exportAllToExcel);
         document.getElementById('print-all-btn').addEventListener('click', printAllSections);
         document.getElementById('backup-btn').addEventListener('click', () => requestPermission('backup'));
-        document.getElementById('edit-signatures-btn').addEventListener('click', () => requestPermission('signatures'));
+        document.getElementById('edit-signatures-btn').addEventListener('click', () => SignatureBlock.open('consumables'));
         document.getElementById('edit-titles-btn').addEventListener('click', () => requestPermission('titles'));
         document.getElementById('clear-data-btn').addEventListener('click', () => requestPermission('clear'));
         
@@ -2487,6 +2487,8 @@ document.getElementById('signature-certificate-select')?.addEventListener('chang
 <script src="/original/extract-submit.js"></script>
 <script src="/original/track.js"></script>
 <script src="/original/shared-nav.js"></script>
+<script src="/original/signature-block.js"></script>
+<script>SignatureBlock.init('consumables', { showStamp: true });</script>
 </body>
 </html>
 
