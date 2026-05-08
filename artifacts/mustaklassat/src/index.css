@@ -282,20 +282,8 @@
   }
 }
 
-/* ── إخفاء شعار وإشعارات Clerk ── */
-/* بانر "Development mode" البرتقالي */
-.cl-internal-b3fm6y,
-[class*="cl-internal"][class*="development"],
-[data-clerk-component] + div > div[style*="orange"],
-div[class*="cl-"][class*="notice"],
-div[class*="cl-"][class*="badge"] {
-  display: none !important;
-}
-/* "Secured by Clerk" في footer النموذج */
-.cl-footerPages,
+/* Clerk branding cleanup: keep this narrow so auth notices/errors stay visible. */
 .cl-poweredByClerk,
-.cl-poweredByClerkTag,
-[class*="cl-"][class*="powered"],
-[class*="cl-"][class*="footer"][class*="page"] {
+.cl-poweredByClerkTag {
   display: none !important;
 }

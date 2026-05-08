@@ -73,46 +73,7 @@ const clerkAppearance = {
   },
 };
 
-function useHideClerkBadge() {
-  useEffect(() => {
-    // فقط عناصر تحتوي على هذا النص بالضبط (قصيرة لا تحوي محتوى النموذج)
-    const BADGE_TEXTS = ["Development mode", "Secured by Clerk"];
-    const hideIfBadge = (el: Element) => {
-      // نحصل على النص المباشر (بدون نصوص العناصر الفرعية)
-      const ownText = Array.from(el.childNodes)
-        .filter(n => n.nodeType === Node.TEXT_NODE)
-        .map(n => n.textContent ?? "")
-        .join("")
-        .trim();
-      // نتحقق من النص الكامل مع تضييق الحد ليكون 22 حرف فقط
-      const fullText = (el.textContent ?? "").trim();
-      if (fullText.length > 22) return;
-      if (BADGE_TEXTS.some(t => fullText === t || ownText === t)) {
-        // نخفي أكبر عنصر أب له كلاس cl-internal ولكن ليس البطاقة كلها
-        let target: Element = el;
-        let parent = el.parentElement;
-        while (parent && parent.className?.includes?.("cl-internal") && (parent.textContent ?? "").trim().length <= 22) {
-          target = parent;
-          parent = parent.parentElement;
-        }
-        (target as HTMLElement).style.setProperty("display", "none", "important");
-      }
-    };
-    const sweep = () => {
-      document.querySelectorAll("[class*='cl-internal']").forEach(hideIfBadge);
-      document.querySelectorAll(".cl-poweredByClerk,[class*='cl-poweredBy']").forEach(el => {
-        (el as HTMLElement).style.setProperty("display", "none", "important");
-      });
-    };
-    sweep();
-    const observer = new MutationObserver(sweep);
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, []);
-}
-
 function SignInPage() {
-  useHideClerkBadge();
   return (
     <div className="flex min-h-[100dvh] flex-col items-center justify-center p-4" style={{ background: "linear-gradient(135deg,#1e3c72 0%,#2a5298 100%)" }}>
       <div className="mb-6 flex flex-col items-center">
@@ -120,7 +81,7 @@ function SignInPage() {
         <span className="text-white font-bold text-xl">تجمع نجران الصحي</span>
         <span className="text-sm" style={{ color: "#d4af37" }}>وحدة الصيانة العامة</span>
       </div>
-      <SignIn routing="path" path={`${basePath}/sign-in`} />
+      <SignIn routing="path" path={`${basePath}/sign-in`} fallbackRedirectUrl={`${basePath}/dashboard`} />
     </div>
   );
 }
@@ -455,34 +416,60 @@ function PendingPage() {
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, isLoaded: isClerkLoaded } = useUser();
   const { getToken } = useAuth();
+  const { signOut } = useClerk();
   const queryClient = useQueryClient();
   const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
-  const [hasToken, setHasToken] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [tokenError, setTokenError] = useState<string | null>(null);
+  const [tokenRetryNonce, setTokenRetryNonce] = useState(0);
 
-  // Wait until getToken() returns a real JWT before firing any API call.
-  // Clerk may return null on the first call even when isLoaded+user are ready
-  // because the access token hasn't been fetched from Clerk's servers yet.
+  const retryAuth = () => {
+    setAuthToken(null);
+    setTokenError(null);
+    setSyncState('idle');
+    queryClient.removeQueries({ queryKey: ["/api/users/me"] });
+    setTokenRetryNonce(n => n + 1);
+  };
+
+  // Wait until Clerk returns a real session JWT before firing protected API calls.
+  // If token hydration fails, render a retryable error instead of staying on Loading forever.
   useEffect(() => {
-    if (!isClerkLoaded || !user?.id || hasToken) return;
+    if (!isClerkLoaded || !user?.id) {
+      setAuthToken(null);
+      setTokenError(null);
+      return;
+    }
+    if (authToken || tokenError) return;
+
     let cancelled = false;
     const tryGetToken = async () => {
-      for (let i = 0; i < 8; i++) {
-        const token = await getToken();
-        if (cancelled) return;
-        if (token) { setHasToken(true); return; }
-        await new Promise(r => setTimeout(r, 400));
+      let lastError = "تعذر إنشاء جلسة الدخول. يرجى المحاولة مرة أخرى.";
+      for (let i = 0; i < 10; i++) {
+        try {
+          const token = await getToken();
+          if (cancelled) return;
+          if (token && token.split(".").length === 3) {
+            setAuthToken(token);
+            return;
+          }
+        } catch (err: any) {
+          lastError = err?.message || lastError;
+        }
+        await new Promise(r => setTimeout(r, 500));
       }
+      if (!cancelled) setTokenError(lastError);
     };
     tryGetToken();
     return () => { cancelled = true; };
-  }, [isClerkLoaded, user?.id, getToken, hasToken]);
+  }, [isClerkLoaded, user?.id, getToken, authToken, tokenError, tokenRetryNonce]);
 
   const { data: dbUser, isLoading: isDbLoading, error } = useGetMe({
+    request: authToken ? { headers: { Authorization: `Bearer ${authToken}` } } : undefined,
     query: {
-      queryKey: ["/api/users/me"],
-      enabled: !!user?.id && isClerkLoaded && hasToken,
+      queryKey: ["/api/users/me", authToken],
+      enabled: !!user?.id && isClerkLoaded && !!authToken,
       retry: 3,
-      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
+      retryDelay: (attempt: number) => Math.min(1000 * 2 ** attempt, 10000),
     }
   });
 
@@ -562,7 +549,27 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [dbUser, getToken]);
 
-  if (!isClerkLoaded || (!!user?.id && !hasToken) || isDbLoading || syncState === 'syncing') {
+  if (tokenError || (error as any)?.status === 401) {
+    return (
+      <div className="flex h-screen items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)', direction: 'rtl' }}>
+        <div className="bg-white rounded-2xl p-8 shadow-2xl max-w-md w-full text-center">
+          <img src="/logo.png" alt="" className="h-14 w-auto mx-auto mb-4" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
+          <h2 className="text-xl font-bold mb-3" style={{ color: '#1e3c72' }}>تعذر إكمال تسجيل الدخول</h2>
+          <p className="text-gray-600 text-sm mb-6">
+            لم يتم إنشاء جلسة آمنة للتطبيق. قد تكون مفاتيح Clerk في الواجهة والخادم من بيئتين مختلفتين، أو انتهت مهلة إنشاء التوكن.
+          </p>
+          <button onClick={retryAuth} className="w-full py-3 rounded-xl font-bold text-white mb-3" style={{ background: 'linear-gradient(135deg,#1e3c72,#2a5298)' }}>
+            إعادة المحاولة
+          </button>
+          <button onClick={() => signOut({ redirectUrl: `${basePath}/sign-in` })} className="w-full py-3 rounded-xl font-bold border" style={{ borderColor: '#1e3c72', color: '#1e3c72' }}>
+            تسجيل الدخول من جديد
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isClerkLoaded || (!!user?.id && !authToken) || isDbLoading || syncState === 'syncing') {
     return (
       <div className="flex h-screen items-center justify-center flex-col gap-3" style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' }}>
         <img src="/logo.png" alt="" className="h-16 w-auto opacity-80" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
