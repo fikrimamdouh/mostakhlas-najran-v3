@@ -116,6 +116,21 @@ export const userStorageTable = pgTable("user_storage", {
 
 export type UserStorage = typeof userStorageTable.$inferSelect;
 
+// Hospital-level shared storage — all users of the same hospital share this data
+// Used for: performance tables, attendance, consumables, contract settings, names, etc.
+export const hospitalStorageTable = pgTable("hospital_storage", {
+  id: serial("id").primaryKey(),
+  hospitalName: text("hospital_name").notNull(),
+  storageKey: text("storage_key").notNull(),
+  storageValue: text("storage_value").notNull(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedByUserId: integer("updated_by_user_id").references(() => usersTable.id),
+}, (t) => [
+  uniqueIndex("hospital_storage_hospital_key").on(t.hospitalName, t.storageKey),
+]);
+
+export type HospitalStorage = typeof hospitalStorageTable.$inferSelect;
+
 // Audit log for monitoring all user actions
 export const auditLogTable = pgTable("audit_log", {
   id: serial("id").primaryKey(),

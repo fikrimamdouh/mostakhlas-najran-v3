@@ -11,6 +11,7 @@ import supportRouter from "./support";
 import submittedExtractsRouter from "./submitted-extracts";
 import adminRouter from "./admin";
 import adminBackupRouter from "./admin-backup";
+import hospitalStorageRouter from "./hospital-storage";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use("/support", supportRouter);
 router.use("/submitted-extracts", submittedExtractsRouter);
 router.use("/admin", adminRouter);
 router.use("/admin/backup", adminBackupRouter);
+router.use("/hospital-storage", hospitalStorageRouter);
 
 export default router;

@@ -1,16 +1,20 @@
 /**
- * cloud-sync.js — مزامنة سحابية للبيانات
- * يقرأ بيانات المستخدم من قاعدة البيانات عند تحميل الصفحة
- * ويرفع التغييرات تلقائياً كل 60 ثانية وعند إغلاق الصفحة
+ * cloud-sync.js — مزامنة سحابية للبيانات (V2 — مشاركة بيانات المستشفى)
+ *
+ * الآلية:
+ * — كل مفاتيح البيانات التشغيلية تُخزّن على مستوى المستشفى (hospital_storage)
+ *   → أي مستخدم من نفس المستشفى يرى نفس البيانات ويكتب في نفس المكان
+ * — المفاتيح الشخصية (سجل النسخ) تبقى خاصة بالمستخدم (user_storage)
+ * — المستخدمون بدون مستشفى (أدمن/مشرف) يستخدمون user_storage فقط
  */
 (function () {
   'use strict';
 
   const API_BASE = '/api';
-  const SYNC_INTERVAL_MS = 60 * 1000; // كل دقيقة
+  const SYNC_INTERVAL_MS = 60 * 1000;
   const SESSION_KEY = 'najran_session';
 
-  // المفاتيح التي يجب مزامنتها (جميع مفاتيح النظام الأصلي)
+  // ── المفاتيح التشغيلية (مشتركة على مستوى المستشفى) ──────────────────────
   const SYNC_KEYS = [
     'persistentContractData', 'persistentExtractData',
     'contractData', 'contractDetails', 'contractNumber', 'contractType',
@@ -25,32 +29,31 @@
     'centerNames_v3', 'departmentNames', 'distributionSettings',
     'hospitalName', 'companyName', 'directPurchaseRatio',
     'admin_staff', 'dynamicSignatures', 'contractorSignature',
-    'appTitles_v1', 'backupLog', 'backupLogs',
-    'healthCentersData', 'reviewExtractData', 'requestVisitData',
+    'appTitles_v1', 'healthCentersData', 'reviewExtractData', 'requestVisitData',
     'settings_main', 'settings_advanced',
     'finalLaborCost', 'performanceTotalDeduction', 'grand-net-total',
-    'performanceSignatures', 'performanceTableNames',
-    'najran_labor_attendance_done', 'najran_labor_performance_done', 'najran_health_attendance_done',
-    'najran_admin_offices_attendance_done',
-    // admin offices keys
+    'performanceSignatures', 'performanceSignatures_v2', 'performanceTableNames',
+    'najran_labor_attendance_done', 'najran_labor_performance_done',
+    'najran_health_attendance_done', 'najran_admin_offices_attendance_done',
     'adminOfficeNames_v1', 'adminOfficesAttendanceData_v1',
-    // admin offices consumables
     'admin_offices_consumables_v1.0',
-    // pattern-based keys handled separately in pushToCloud
+    // مفاتيح شخصية تبقى خاصة بالمستخدم
+    'backupLog', 'backupLogs',
   ];
+
+  // المفاتيح التي تبقى خاصة بالمستخدم (لا تُشارك مع زملاء المستشفى)
+  const PERSONAL_KEYS = new Set(['backupLog', 'backupLogs']);
 
   function getSession() {
     try {
       const raw = localStorage.getItem(SESSION_KEY);
       if (!raw) return null;
       const s = JSON.parse(raw);
-      // تحقق من انتهاء الصلاحية (8 ساعات)
       if (Date.now() - s.timestamp > 8 * 60 * 60 * 1000) return null;
       return s;
     } catch (_) { return null; }
   }
 
-  // نُعيد التوكن فقط إذا كان طازجاً (أقل من 55 ثانية منذ حفظه)
   function getFreshToken() {
     const s = getSession();
     if (!s?.clerkToken) return null;
@@ -58,13 +61,18 @@
     return age < 55_000 ? s.clerkToken : null;
   }
 
+  // اسم مستشفى المستخدم من الجلسة
+  function getHospitalName() {
+    const s = getSession();
+    return s?.hospital?.trim() || null;
+  }
+
   async function apiFetch(path, options = {}) {
-    if (!getSession()) return null; // لا جلسة على الإطلاق
+    if (!getSession()) return null;
     try {
       const token = getFreshToken();
       const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      // إذا لم يكن التوكن طازجاً، يعتمد clerkMiddleware على session cookies تلقائياً
       const resp = await fetch(API_BASE + path, {
         ...options,
         headers,
@@ -78,15 +86,16 @@
     } catch (_) { return null; }
   }
 
-  // مفاتيح البيانات الشهرية التي تُمسح عند تغيير الشهر
+  // ── مفاتيح البيانات الشهرية ──────────────────────────────────────────────
   const MONTH_SPECIFIC_KEYS = [
     'attendanceData', 'centersAttendanceData_v2', 'healthCentersAttendanceData',
     'consumablesTableData', 'healthCentersConsumables', 'mainHospitalConsumables',
     'consumablesTitle', 'consumablesPeriodFrom', 'consumablesPeriodTo',
     'spare_partsData', 'performanceData', 'achievementData',
-    'performanceSignatures', 'performanceTableNames', 'performanceTotalDeduction',
-    'finalLaborCost', 'grand-net-total',
-    'najran_labor_attendance_done', 'najran_labor_performance_done', 'najran_health_attendance_done',
+    'performanceSignatures', 'performanceSignatures_v2', 'performanceTableNames',
+    'performanceTotalDeduction', 'finalLaborCost', 'grand-net-total',
+    'najran_labor_attendance_done', 'najran_labor_performance_done',
+    'najran_health_attendance_done', 'najran_admin_offices_attendance_done',
     'accreditationLetterData', 'adminJobsPrintState',
     'dentalLaborCheckboxState', 'dentalLaborData',
     'achievementItemNames', 'sparePartsTotalAmount',
@@ -127,14 +136,24 @@
     setTimeout(() => { banner.remove(); }, 12000);
   }
 
-  // تحميل البيانات من السحابة إلى localStorage مع كشف تغيير الشهر
+  // ── سحب البيانات من السحابة ──────────────────────────────────────────────
+  // الترتيب: بيانات المستخدم أولاً → بيانات المستشفى تتغلب عليها
   async function pullFromCloud() {
-    const result = await apiFetch('/storage');
-    if (!result?.data) return;
+    const hospitalName = getHospitalName();
 
-    // كشف ما إذا كان الشهر تغيّر في السحابة (بعد اعتماد المستخلص من الأدمن)
+    // اجلب بيانات المستخدم وبيانات المستشفى معاً (بالتوازي)
+    const [userResult, hospitalResult] = await Promise.all([
+      apiFetch('/storage'),
+      hospitalName ? apiFetch('/hospital-storage') : Promise.resolve(null),
+    ]);
+
+    const userData     = userResult?.data     || {};
+    const hospitalData = hospitalResult?.data  || {};
+
+    // كشف تغيير الشهر — نعتمد على بيانات المستشفى إن وُجدت وإلا بيانات المستخدم
+    const cloudExtractData = hospitalData['persistentExtractData'] || userData['persistentExtractData'] || null;
     const oldMonthKey = getMonthKeyFromExtractData(localStorage.getItem('persistentExtractData'));
-    const newMonthKey = getMonthKeyFromExtractData(result.data['persistentExtractData'] || null);
+    const newMonthKey = getMonthKeyFromExtractData(cloudExtractData);
     const monthChanged = oldMonthKey && newMonthKey && oldMonthKey !== newMonthKey;
 
     if (monthChanged) {
@@ -155,24 +174,25 @@
       console.log(`[MzamanaCloud] تغيّر الشهر: ${oldMonthKey} → ${newMonthKey}`);
     }
 
-    // تطبيق البيانات السحابية
+    // تطبيق بيانات المستخدم أولاً (الطبقة الأساسية)
     let merged = 0;
-    for (const [key, value] of Object.entries(result.data)) {
-      try {
-        localStorage.setItem(key, value);
-        merged++;
-      } catch (_) {}
+    for (const [key, value] of Object.entries(userData)) {
+      try { localStorage.setItem(key, value); merged++; } catch (_) {}
+    }
+
+    // ثم تطبيق بيانات المستشفى (تتغلب على البيانات الشخصية للمفاتيح المشتركة)
+    for (const [key, value] of Object.entries(hospitalData)) {
+      if (!PERSONAL_KEYS.has(key)) {
+        try { localStorage.setItem(key, value); } catch (_) {}
+      }
     }
 
     if (monthChanged) {
-      // مسح بيانات الشهر القديم الشهرية
       MONTH_SPECIFIC_KEYS.forEach(k => localStorage.removeItem(k));
       for (let i = localStorage.length - 1; i >= 0; i--) {
         const k = localStorage.key(i);
         if (k && (k.startsWith('deptCalculatedCost_') || k.startsWith('dept_'))) localStorage.removeItem(k);
       }
-
-      // إعلام المستخدم
       const newLabel = newMonthKey.replace('_', ' — ');
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => showMonthAdvancedBanner(newLabel));
@@ -181,42 +201,70 @@
       }
     }
 
-    console.log(`[MzamanaCloud] تم جلب ${merged} مفتاح من السحابة`);
+    const hosp = hospitalName
+      ? ` + ${Object.keys(hospitalData).length} مفتاح مستشفى مشترك`
+      : '';
+    console.log(`[MzamanaCloud] ✓ ${merged} مفتاح شخصي${hosp}`);
 
-    // أخطر الصفحات بأن البيانات السحابية جُلبت — يتيح لها إعادة رسم الهيدر
     try {
       window.dispatchEvent(new CustomEvent('najranCloudPulled', { detail: { monthChanged } }));
     } catch (_) {}
 
-    // إعادة رسم بيانات الهيدر مباشرةً إن كانت الدوال موجودة في الصفحة
     try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
-    try { if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint(); } catch (_) {}
+    try { if (typeof window.updateContractDataForPrint  === 'function') window.updateContractDataForPrint();  } catch (_) {}
   }
 
-  // رفع البيانات من localStorage إلى السحابة
+  // ── رفع البيانات إلى السحابة ─────────────────────────────────────────────
+  // المفاتيح التشغيلية → hospital_storage (مشتركة مع زملاء المستشفى)
+  // المفاتيح الشخصية  → user_storage فقط
+  // كلاهما أيضاً في user_storage كنسخة احتياطية للتوافق
   async function pushToCloud() {
     if (!getSession()) return;
 
-    const data = {};
+    const hospitalName = getHospitalName();
+    const allData      = {};   // كل المفاتيح → user_storage (نسخ احتياطي)
+    const hospitalData = {};   // المفاتيح التشغيلية → hospital_storage
+
     for (const key of SYNC_KEYS) {
       const val = localStorage.getItem(key);
-      if (val !== null) data[key] = val;
+      if (val !== null) {
+        allData[key] = val;
+        if (!PERSONAL_KEYS.has(key)) {
+          hospitalData[key] = val;
+        }
+      }
     }
 
-    const count = Object.keys(data).length;
-    if (count === 0) return;
+    // مفاتيح pattern-based (deptCalculatedCost_X, dept_X)
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      if (k.startsWith('deptCalculatedCost_') || k.startsWith('dept_')) {
+        const v = localStorage.getItem(k);
+        if (v !== null) {
+          allData[k]      = v;
+          hospitalData[k] = v;
+        }
+      }
+    }
 
-    const result = await apiFetch('/storage', {
-      method: 'PUT',
-      body: JSON.stringify({ data }),
-    });
+    if (Object.keys(allData).length === 0) return;
 
-    if (result) {
-      console.log(`[MzamanaCloud] تم رفع ${result.saved} مفتاح للسحابة`);
+    // رفع الكل إلى user_storage (نسخ احتياطي + توافق مع المستخدمين بلا مستشفى)
+    const [userResult, hospitalResult] = await Promise.all([
+      apiFetch('/storage', { method: 'PUT', body: JSON.stringify({ data: allData }) }),
+      hospitalName && Object.keys(hospitalData).length > 0
+        ? apiFetch('/hospital-storage', { method: 'PUT', body: JSON.stringify({ data: hospitalData }) })
+        : Promise.resolve(null),
+    ]);
+
+    if (userResult || hospitalResult) {
+      const hosp = hospitalResult?.saved ? ` + ${hospitalResult.saved} مشترك` : '';
+      console.log(`[MzamanaCloud] ✓ رُفع ${userResult?.saved ?? 0} شخصي${hosp}`);
     }
   }
 
-  // إشعار انتهاء صلاحية التوكن
+  // ── إشعارات المستخدم ──────────────────────────────────────────────────────
   function showTokenExpiredBanner() {
     if (document.getElementById('cloud-token-expired-banner')) return;
     const banner = document.createElement('div');
@@ -236,25 +284,21 @@
     document.body.prepend(banner);
   }
 
-  // مؤشر حالة المزامنة
+  // ── مؤشر حالة المزامنة ───────────────────────────────────────────────────
   let syncIndicator = null;
 
   function showSyncStatus(status) {
-    // Prefer the auth-check.js hook if available
     if (typeof window.najranSetSyncStatus === 'function') {
       window.najranSetSyncStatus(status);
       return;
     }
-
     const bar = document.getElementById('najran-auth-bar');
     if (!bar) return;
-
     if (!syncIndicator) {
       syncIndicator = document.createElement('span');
       syncIndicator.style.cssText = 'margin-right: 12px; font-size: 11px; opacity: 0.8;';
       bar.querySelector('.bar-right')?.prepend(syncIndicator);
     }
-
     if (status === 'syncing') {
       syncIndicator.textContent = '⟳ جاري الحفظ...';
     } else if (status === 'done') {
@@ -271,37 +315,36 @@
     showSyncStatus('done');
   }
 
-  // التهيئة الرئيسية
+  // ── التهيئة الرئيسية ──────────────────────────────────────────────────────
   async function init() {
     const session = getSession();
-    if (!session) return; // لا جلسة — auth-check.js سيتولى الأمر
+    if (!session) return;
 
-    // جلب البيانات من السحابة أولاً
+    const hospitalName = getHospitalName();
+    if (hospitalName) {
+      console.log(`[MzamanaCloud] وضع المشاركة: مستشفى «${hospitalName}»`);
+    } else {
+      console.log('[MzamanaCloud] وضع شخصي (لا يوجد مستشفى مرتبط)');
+    }
+
     await pullFromCloud();
 
-    // رفع دوري
     setInterval(syncNow, SYNC_INTERVAL_MS);
-
-    // رفع عند إغلاق الصفحة
     window.addEventListener('beforeunload', () => { pushToCloud(); });
-
-    // رفع عند تغيير localStorage (يلتقط تغييرات النظام الأصلي)
     window.addEventListener('storage', () => { syncNow(); });
 
-    // Hook على localStorage.setItem لرصد التغييرات الداخلية
     const origSetItem = localStorage.setItem.bind(localStorage);
     localStorage.setItem = function (key, value) {
       origSetItem(key, value);
       if (SYNC_KEYS.includes(key)) {
         clearTimeout(localStorage._syncTimeout);
-        localStorage._syncTimeout = setTimeout(syncNow, 3000); // debounce 3 ثواني
+        localStorage._syncTimeout = setTimeout(syncNow, 3000);
       }
     };
 
-    console.log('[MzamanaCloud] تم تهيئة المزامنة السحابية');
+    console.log('[MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)');
   }
 
-  // تشغيل بعد اكتمال الصفحة
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
