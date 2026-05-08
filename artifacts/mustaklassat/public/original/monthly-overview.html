@@ -139,6 +139,20 @@
     <p id="page-sub">جاري التحميل...</p>
   </div>
 
+  <!-- Monthly progress indicator -->
+  <div id="monthly-progress-card" style="background:#fff;border-radius:16px;padding:18px 22px;margin-bottom:20px;border:1.5px solid #e2e8f0;box-shadow:0 2px 8px rgba(0,0,0,.06);display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:800;color:#1e3c72" id="progress-month-label">تقدم الشهر الحالي</div>
+      <div id="progress-percent" style="font-size:18px;font-weight:800;color:#2a5298">—</div>
+    </div>
+    <!-- Progress bar -->
+    <div style="height:10px;background:#f1f5f9;border-radius:99px;overflow:hidden;margin-bottom:14px">
+      <div id="progress-bar-fill" style="height:100%;border-radius:99px;transition:width .5s;background:linear-gradient(90deg,#16a34a,#4ade80);width:0%"></div>
+    </div>
+    <!-- Extract type indicators -->
+    <div id="progress-items" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px"></div>
+  </div>
+
   <!-- Summary -->
   <div class="summary-bar" id="summary-bar">
     <div class="sum-card" style="border-color:#bbf7d0"><div class="n" style="color:#16a34a" id="cnt-approved">—</div><div class="l">معتمدة</div></div>
@@ -162,6 +176,7 @@
       <option value="spare_parts">مستخلص قطع الغيار</option>
     </select>
     <button class="btn-hdr" onclick="loadData()" style="background:#003087;border-color:#003087;color:#fff">↻ تحديث</button>
+    <button class="btn-hdr" onclick="exportCsv()" style="background:#16a34a;border-color:#16a34a;color:#fff" title="تصدير البيانات إلى Excel/CSV">⬇ تصدير CSV</button>
   </div>
 
   <!-- Legend -->
@@ -226,6 +241,7 @@ async function loadData() {
     const data = await res.json();
     allExtracts = data.extracts || [];
     updateSummary();
+    updateProgressCard();
     populateYearFilter();
     renderTable();
     document.getElementById('page-sub').textContent =
@@ -234,6 +250,74 @@ async function loadData() {
     document.getElementById('table-area').innerHTML =
       `<div class="empty-state"><div class="ico">⚠️</div><p>تعذر التحميل — تحقق من اتصالك</p></div>`;
   }
+}
+
+function updateProgressCard() {
+  const card = document.getElementById('monthly-progress-card');
+  if (!card || allExtracts.length === 0) return;
+
+  // Find current Hijri month label OR fall back to latest period in data
+  const now = new Date();
+  const hijriFormatter = new Intl.DateTimeFormat('ar-SA-u-ca-islamic', { month: 'long', year: 'numeric' });
+  const hijriParts = hijriFormatter.formatToParts(now);
+  const hijriMonth = hijriParts.find(p => p.type === 'month')?.value || '';
+  const hijriYear = hijriParts.find(p => p.type === 'year')?.value || '';
+  const currentHijriLabel = hijriMonth + ' ' + hijriYear;
+
+  // Collect all periods
+  const allPeriods = [...new Set(allExtracts.map(e => e.periodMonth).filter(Boolean))];
+
+  // Try to match current Hijri month, otherwise use the most recent period
+  let targetPeriod = allPeriods.find(p => p.trim() === currentHijriLabel.trim());
+  if (!targetPeriod) {
+    targetPeriod = allPeriods.sort((a, b) => {
+      const [aM, aY] = parsePeriod(a), [bM, bY] = parsePeriod(b);
+      if (bY !== aY) return bY - aY; return bM - aM;
+    })[0];
+  }
+  if (!targetPeriod) return;
+
+  // Build type → best extract map for target period
+  const typeMap = {};
+  for (const e of allExtracts) {
+    if ((e.periodMonth || '').trim() !== targetPeriod.trim()) continue;
+    const cur = typeMap[e.extractType];
+    if (!cur || rankStatus(e.status) > rankStatus(cur.status)) typeMap[e.extractType] = e;
+  }
+
+  const statusIcon = { approved: '✅', under_review: '🔄', submitted: '⏳', needs_revision: '⚠️', rejected: '❌' };
+  const statusColor = { approved: '#16a34a', under_review: '#2a5298', submitted: '#b45309', needs_revision: '#c2410c', rejected: '#b91c1c' };
+  const statusLabel = { approved: 'معتمد', under_review: 'قيد المراجعة', submitted: 'بانتظار المراجعة', needs_revision: 'يحتاج تعديل', rejected: 'مرفوض' };
+
+  const approvedCount = TYPE_COLS.filter(t => typeMap[t]?.status === 'approved').length;
+  const submittedCount = TYPE_COLS.filter(t => typeMap[t]).length;
+  const pct = Math.round((approvedCount / TYPE_COLS.length) * 100);
+
+  document.getElementById('progress-month-label').textContent = 'تقدم: ' + targetPeriod;
+  document.getElementById('progress-percent').textContent = pct + '%';
+
+  const fillColor = pct === 100 ? 'linear-gradient(90deg,#16a34a,#4ade80)' :
+                    pct >= 50 ? 'linear-gradient(90deg,#b45309,#f59e0b)' : 'linear-gradient(90deg,#b91c1c,#f87171)';
+  const bar = document.getElementById('progress-bar-fill');
+  bar.style.background = fillColor;
+  bar.style.width = pct + '%';
+
+  const items = document.getElementById('progress-items');
+  items.innerHTML = TYPE_COLS.map(type => {
+    const e = typeMap[type];
+    const icon = e ? (statusIcon[e.status] || '⏳') : '—';
+    const color = e ? (statusColor[e.status] || '#64748b') : '#94a3b8';
+    const lbl = e ? (statusLabel[e.status] || e.status) : 'لم يُرفع بعد';
+    return `<div style="background:#f8fafc;border-radius:10px;padding:10px 12px;border:1px solid #e2e8f0;display:flex;align-items:center;gap:8px">
+      <span style="font-size:18px">${icon}</span>
+      <div>
+        <div style="font-size:11px;color:#64748b;font-weight:600">${TYPE_LABELS[type] || type}</div>
+        <div style="font-size:12px;font-weight:700;color:${color}">${lbl}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  card.style.display = 'block';
 }
 
 function updateSummary() {
@@ -383,6 +467,28 @@ function renderTable() {
 
 function goToExtract(id) {
   window.location.href = `/original/approval.html#extract-${id}`;
+}
+
+async function exportCsv() {
+  const session = getSession();
+  if (!session.clerkToken) { showToast('يجب تسجيل الدخول أولاً', 'error'); return; }
+  try {
+    showToast('جاري تحضير الملف...', '');
+    const res = await fetch('/api/export/submitted-extracts', {
+      headers: { Authorization: `Bearer ${session.clerkToken}` }
+    });
+    if (!res.ok) throw new Error('Export failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `مستخلصات_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('✓ تم التصدير بنجاح', 'success');
+  } catch { showToast('تعذر التصدير — تحقق من الاتصال', 'error'); }
 }
 
 loadData();

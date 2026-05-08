@@ -299,6 +299,12 @@
     </div>
     <div class="hdr-actions">
       <span class="admin-badge" id="admin-role-badge">مدير</span>
+      <button class="hdr-btn" onclick="sendReminder()" id="remind-btn" title="إرسال تذكير للمدير بالمستخلصات المعلقة">
+        <i class="fas fa-bell"></i> تذكير
+      </button>
+      <button class="hdr-btn" onclick="exportCsvAdmin()" title="تصدير جميع المستخلصات CSV">
+        <i class="fas fa-file-csv"></i> تصدير
+      </button>
       <button class="hdr-btn" onclick="refreshData()">
         <i class="fas fa-sync-alt" id="refresh-icon"></i> تحديث
       </button>
@@ -683,6 +689,52 @@
           '<p style="text-align:center;margin-top:18px;font-size:11px;color:#94a3b8">طُبع بتاريخ: ' + new Date().toLocaleDateString('ar-SA', {year:'numeric',month:'long',day:'numeric'}) + '</p>' +
         '</div>';
       window.print();
+    }
+
+    /* ─── Export CSV ─── */
+    async function exportCsvAdmin() {
+      var token = getToken();
+      if (!token) { showToast('يجب تسجيل الدخول أولاً', 'error'); return; }
+      try {
+        showToast('جاري تحضير الملف...', 'info');
+        var res = await fetch('/api/export/submitted-extracts', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) throw new Error();
+        var blob = await res.blob();
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'مستخلصات_' + new Date().toISOString().slice(0,10) + '.csv';
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('✓ تم التصدير بنجاح', 'success');
+      } catch { showToast('تعذر التصدير', 'error'); }
+    }
+
+    /* ─── Send Reminder ─── */
+    async function sendReminder() {
+      var token = getToken();
+      if (!token) { showToast('يجب تسجيل الدخول أولاً', 'error'); return; }
+      var btn = document.getElementById('remind-btn');
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري...'; }
+      try {
+        var res = await fetch('/api/remind', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'both' })
+        });
+        var data = await res.json();
+        if (data.sent) {
+          showToast('✓ تم إرسال التذكير — ' + data.count + ' مستخلص معلق', 'success');
+        } else {
+          showToast(data.message || 'لا توجد مستخلصات معلقة', 'info');
+        }
+      } catch { showToast('تعذر الإرسال', 'error'); }
+      finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bell"></i> تذكير'; }
+      }
     }
 
     /* ─── Helpers ─── */

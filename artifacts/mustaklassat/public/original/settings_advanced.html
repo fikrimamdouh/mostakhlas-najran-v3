@@ -544,97 +544,39 @@
 
         <div id="notifications" class="section">
             <h2>إعدادات الإشعارات</h2>
-            <label>إرسال إشعارات بالبريد الإلكتروني:</label>
-            <input type="radio" name="email-notifications" value="on"> تشغيل
-            <input type="radio" name="email-notifications" value="off"> إيقاف
-
-            <label>البريد الإلكتروني للإرسال:</label>
-            <input type="email" placeholder="البريد الإلكتروني">
-
-            <label>كلمة مرور البريد:</label>
-            <input type="password" placeholder="كلمة المرور">
-
-            <label>إرسال إشعارات عبر SMS:</label>
-            <input type="radio" name="sms-notifications" value="on"> تشغيل
-            <input type="radio" name="sms-notifications" value="off"> إيقاف
-
-            <label>API لخدمة SMS:</label>
-            <input type="text" placeholder="API لخدمة SMS">
-
-            <label>إرسال إشعارات للإدارة العليا:</label>
-            <input type="radio" name="admin-notifications" value="on"> تشغيل
-            <input type="radio" name="admin-notifications" value="off"> إيقاف
-
-            <label>توقيت الإشعارات اليومية:</label>
-            <input type="time">
-
-            <label>إرسال إشعار عند التأخير بأكثر من (دقائق):</label>
-            <input type="number" placeholder="عدد الدقائق">
-
-            <label>إرسال إشعار للمدير عند الغياب بدون إذن:</label>
-            <input type="radio" name="absence-notifications" value="on"> تشغيل
-            <input type="radio" name="absence-notifications" value="off"> إيقاف
-
-            <label>إرسال إشعارات لقسم معين:</label>
-            <select>
-                <option>جميع الأقسام</option>
-                <option>قسم النظافة</option>
-                <option>قسم الكهرباء</option>
-                <option>قسم الزراعة</option>
-                <option>قسم الأعمال المدنية</option>
-                <option>قسم الميكانيكا</option>
-                <option>قسم المغسلة</option>
-                <option>خدمات المرضى</option>
-            </select>
-
-            <label>رسالة إشعار مخصصة:</label>
-            <textarea placeholder="اكتب رسالتك هنا"></textarea>
-
-            <div class="buttons">
-                <button onclick="saveNotificationsData()">حفظ</button>
-                <button>إلغاء</button>
+            <div style="background:rgba(22,163,74,0.1);border:1px solid rgba(22,163,74,0.4);border-radius:12px;padding:16px;margin-bottom:16px;color:#d4af37">
+                <div style="font-size:18px;margin-bottom:8px">✅ الإشعارات تعمل تلقائياً</div>
+                <div style="font-size:13px;color:#e2e8f0;line-height:1.7">
+                    النظام يرسل إشعارات بريد إلكتروني تلقائية في الحالات التالية:<br>
+                    • عند تسجيل مستخدم جديد → إشعار للمدير<br>
+                    • عند اعتماد المستخدم → إشعار للمستخدم<br>
+                    • عند رفع مستخلص → إشعار للمدير<br>
+                    • عند تغيير حالة المستخلص → إشعار لصاحب المستخلص
+                </div>
             </div>
-            <div class="success-message" id="notifications-save-success">تم حفظ إعدادات الإشعارات بنجاح</div>
+            <label style="color:#d4af37;font-weight:700">بريد المدير (يتلقى جميع الإشعارات):</label>
+            <input type="email" id="notif-admin-email" placeholder="admin@example.com"
+                style="width:100%;padding:10px;border-radius:8px;border:1px solid #d4af37;font-family:Tajawal,sans-serif;font-size:14px;background:#f8fafc;color:#1e293b;margin-bottom:12px">
+            <div class="buttons">
+                <button onclick="saveAdminEmail()">💾 حفظ بريد المدير</button>
+            </div>
+            <div class="success-message" id="notifications-save-success" style="color:#16a34a">✓ تم الحفظ بنجاح</div>
+            <div style="margin-top:16px;padding:12px;background:rgba(212,175,55,0.1);border-radius:10px;font-size:13px;color:#cbd5e1">
+                ⚙️ إشعارات SMS و WhatsApp ستكون متاحة في تحديث قادم
+            </div>
         </div>
 
         <div id="archiving" class="section">
             <h2>إعدادات الأرشفة</h2>
-            <label>مدة الأرشفة:</label>
-            <select id="archive-duration">
-                <option>6 أشهر</option>
-                <option>1 سنة</option>
-                <option>2 سنة</option>
-            </select>
-
-            <label>ضغط البيانات المؤرشفة:</label>
-            <input type="radio" name="compress-data" value="on"> تشغيل
-            <input type="radio" name="compress-data" value="off"> إيقاف
-
-            <label>تصدير الأرشيف إلى السحابة:</label>
-            <input type="radio" name="cloud-export" value="on"> تشغيل
-            <input type="radio" name="cloud-export" value="off"> إيقاف
-
-            <div class="buttons">
-                <button onclick="saveArchivingData()">أرشفة الآن</button>
-                <button>تصفح الأرشيف</button>
-                <button>استعادة من الأرشيف</button>
-                <button>إلغاء الأرشفة</button>
+            <div style="background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.4);border-radius:12px;padding:16px;margin-bottom:16px;color:#e2e8f0;font-size:13px;line-height:1.7">
+                📦 الأرشيف متاح بنوعين:<br>
+                • <strong style="color:#d4af37">أرشيف الخادم:</strong> المستخلصات المرفوعة والمعتمدة محفوظة تلقائياً في قاعدة البيانات<br>
+                • <strong style="color:#d4af37">لقطات العمل:</strong> نسخ محلية تُحفظ عند الضغط على "حفظ" أو "طباعة" في كل صفحة
             </div>
-            <div class="success-message" id="archiving-save-success">تم أرشفة البيانات بنجاح</div>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th>اسم الأرشيف</th>
-                        <th>التاريخ</th>
-                        <th>الوقت</th>
-                        <th>إجراءات</th>
-                    </tr>
-                </thead>
-                <tbody id="archive-log">
-                    <!-- Table rows will be populated dynamically -->
-                </tbody>
-            </table>
+            <div class="buttons">
+                <button onclick="window.location.href='/original/extract-archive.html'">📋 فتح صفحة الأرشيف</button>
+                <button onclick="window.location.href='/original/monthly-overview.html'">📊 النظرة الشاملة</button>
+            </div>
         </div>
 
         <div id="formatting" class="section">
@@ -685,222 +627,60 @@
 
         <div id="security" class="section">
             <h2>إعدادات الأمان والصلاحيات</h2>
-            <label>تفعيل المصادقة الثنائية (2FA):</label>
-            <input type="radio" name="2fa" value="on"> تشغيل
-            <input type="radio" name="2fa" value="off"> إيقاف
-
-            <label>قفل النظام بعد فترة خمول (دقائق):</label>
-            <input type="number" placeholder="عدد الدقائق">
-
-            <label>فرض تغيير كلمة المرور كل (أيام):</label>
-            <input type="number" placeholder="عدد الأيام">
-
-            <label>تفعيل سجل النشاط:</label>
-            <input type="radio" name="activity-log" value="on"> تشغيل
-            <input type="radio" name="activity-log" value="off"> إيقاف
-
-            <label>تسجيل محاولات تسجيل الدخول الفاشلة:</label>
-            <input type="radio" name="failed-login" value="on"> تشغيل
-            <input type="radio" name="failed-login" value="off"> إيقاف
-
-            <label>تقييد الوصول بناءً على IP:</label>
-            <input type="text" placeholder="عنوان IP">
-
-            <div class="buttons">
-                <button onclick="saveSecurityData()">حفظ</button>
-                <button>إلغاء</button>
+            <div style="background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.4);border-radius:12px;padding:16px;margin-bottom:16px;color:#e2e8f0;font-size:13px;line-height:1.7">
+                🔐 أمان النظام يُدار بالكامل عبر <strong style="color:#d4af37">Clerk</strong> — منصة مصادقة متخصصة توفر:<br>
+                • تسجيل دخول آمن مع حماية من الاختراق<br>
+                • إدارة الجلسات والصلاحيات<br>
+                • دعم المصادقة الثنائية (2FA) عبر لوحة Clerk
             </div>
-            <div class="success-message" id="security-save-success">تم حفظ إعدادات الأمان والصلاحيات بنجاح</div>
-
-            <div class="sub-section">
-                <h3>إدارة المستخدمين</h3>
-                <label>اسم المستخدم:</label>
-                <input type="text" placeholder="اسم المستخدم">
-
-                <label>كلمة المرور:</label>
-                <input type="password" placeholder="كلمة المرور">
-
-                <label>الدور:</label>
-                <select>
-                    <option>مدير</option>
-                    <option>موظف</option>
-                </select>
-
-                <label>اسم الوظيفة:</label>
-                <select>
-                    <option>مشرف</option>
-                    <option>عامل نظافة</option>
-                    <option>فني كهرباء</option>
-                    <option>مهندس</option>
-                    <option>مدير قسم</option>
-                </select>
-
-                <label>الصلاحيات:</label>
-                <input type="checkbox" name="permissions"> تعديل الحضور
-                <input type="checkbox" name="permissions"> تعديل المستخلص
-                <input type="checkbox" name="permissions"> عرض التقارير فقط
-                <input type="checkbox" name="permissions"> تعديل الإعدادات
-
-                <label>تفعيل المستخدم:</label>
-                <input type="checkbox" name="activate-user">
-
-                <div class="buttons">
-                    <button onclick="addUser()">إضافة مستخدم</button>
-                    <button>إلغاء</button>
-                </div>
-
-                <table>
-                    <thead>
-                        <tr>
-                            <th>اسم المستخدم</th>
-                            <th>كلمة المرور</th>
-                            <th>الدور</th>
-                            <th>الوظيفة</th>
-                            <th>الصلاحيات</th>
-                            <th>الحالة</th>
-                            <th>إجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody id="users-table">
-                        <!-- Table rows will be populated dynamically -->
-                    </tbody>
-                </table>
+            <div class="buttons">
+                <button onclick="window.location.href='/admin/users'">👥 إدارة المستخدمين والصلاحيات</button>
+                <button onclick="window.location.href='/admin/audit'">📋 سجل النشاط</button>
+            </div>
+            <div style="margin-top:16px;padding:12px;background:rgba(212,175,55,0.1);border-radius:10px;font-size:12px;color:#94a3b8">
+                🔒 تقييد الوصول بالـ IP وسياسات كلمة المرور ستكون متاحة في تحديث قادم
             </div>
         </div>
 
         <div id="branches" class="section">
             <h2>إعدادات الفروع</h2>
-            <label>اسم الفرع:</label>
-            <input type="text" placeholder="اسم الفرع">
-
-            <label>العنوان:</label>
-            <input type="text" placeholder="العنوان">
-
-            <label>المدير المسؤول:</label>
-            <input type="text" placeholder="المدير المسؤول">
-
-            <label>ساعات العمل:</label>
-            <input type="text" placeholder="ساعات العمل">
-
-            <label>شعار الفرع:</label>
-            <input type="file">
-
-            <label>عدد الموظفين:</label>
-            <input type="number" placeholder="عدد الموظفين">
-
-            <div class="buttons">
-                <button onclick="addBranch()">إضافة فرع</button>
-                <button>إلغاء</button>
+            <div style="text-align:center;padding:40px 20px">
+                <div style="font-size:48px;margin-bottom:16px;opacity:0.5">🏢</div>
+                <div style="font-size:20px;color:#d4af37;font-weight:700;margin-bottom:10px">قريباً</div>
+                <div style="font-size:13px;color:#94a3b8;line-height:1.7">
+                    إدارة متعددة الفروع والمستشفيات<br>
+                    لوحة إحصائيات مقارنة بين الفروع<br>
+                    تعيين مشرفين لكل فرع بشكل مستقل
+                </div>
             </div>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th>اسم الفرع</th>
-                        <th>العنوان</th>
-                        <th>المدير</th>
-                        <th>عدد الموظفين</th>
-                        <th>إجراءات</th>
-                    </tr>
-                </thead>
-                <tbody id="branches-table">
-                    <!-- Table rows will be populated dynamically -->
-                </tbody>
-            </table>
         </div>
 
         <div id="integration" class="section">
             <h2>إعدادات التكامل</h2>
-            <label>عنوان IP لجهاز البصمة:</label>
-            <input type="text" placeholder="عنوان IP">
-
-            <button>اختبار الاتصال</button>
-            <span>الحالة: غير متصل</span>
-
-            <label>تكامل مع أنظمة المحاسبة:</label>
-            <select>
-                <option>لا يوجد</option>
-                <option>QuickBooks</option>
-                <option>SAP</option>
-            </select>
-
-            <label>تكامل مع أنظمة الدفع الإلكتروني:</label>
-            <input type="radio" name="payment-integration" value="on"> تشغيل
-            <input type="radio" name="payment-integration" value="off"> إيقاف
-
-            <label>تكامل مع تطبيقات التواصل (WhatsApp):</label>
-            <input type="radio" name="whatsapp-integration" value="on"> تشغيل
-            <input type="radio" name="whatsapp-integration" value="off"> إيقاف
-
-            <label>تكامل مع تقويم العطلات:</label>
-            <input type="radio" name="holiday-integration" value="on"> تشغيل
-            <input type="radio" name="holiday-integration" value="off"> إيقاف
-
-            <label>تصدير بيانات الموظفين إلى نظام HR:</label>
-            <input type="radio" name="hr-export" value="on"> تشغيل
-            <input type="radio" name="hr-export" value="off"> إيقاف
-
-            <label>تفعيل API:</label>
-            <input type="radio" name="api" value="on"> تشغيل
-            <input type="radio" name="api" value="off"> إيقاف
-
-            <div class="buttons">
-                <button onclick="saveIntegrationData()">حفظ</button>
-                <button>إلغاء</button>
+            <div style="text-align:center;padding:32px 20px">
+                <div style="font-size:42px;margin-bottom:14px;opacity:0.5">🔗</div>
+                <div style="font-size:20px;color:#d4af37;font-weight:700;margin-bottom:10px">قريباً</div>
+                <div style="font-size:13px;color:#94a3b8;line-height:1.8;text-align:right;max-width:380px;margin:0 auto">
+                    التكاملات المخططة في الإصدارات القادمة:<br>
+                    • <span style="color:#cbd5e1">WhatsApp Business</span> — إشعارات عبر واتساب<br>
+                    • <span style="color:#cbd5e1">جهاز البصمة</span> — سحب الحضور تلقائياً<br>
+                    • <span style="color:#cbd5e1">SAP / HRMS</span> — تصدير البيانات لنظام الموارد البشرية<br>
+                    • <span style="color:#cbd5e1">تقويم العطل الرسمية</span> — حساب أيام العمل تلقائياً
+                </div>
             </div>
-            <div class="success-message" id="integration-save-success">تم حفظ إعدادات التكامل بنجاح</div>
         </div>
 
         <div id="interface" class="section">
             <h2>تخصيص الواجهة</h2>
-            <label>لغة الواجهة:</label>
-            <select>
-                <option>العربية</option>
-                <option>الإنجليزية</option>
-            </select>
-
-            <label>لون الواجهة:</label>
-            <select>
-                <option>رمادي</option>
-                <option>أزرق</option>
-                <option>أخضر</option>
-            </select>
-
-            <label>نوع الخط:</label>
-            <select>
-                <option>Arial</option>
-                <option>Tajawal</option>
-            </select>
-
-            <label>حجم الخط:</label>
-            <select>
-                <option>صغير</option>
-                <option>متوسط</option>
-                <option>كبير</option>
-            </select>
-
-            <label>رفع خلفية مخصصة:</label>
-            <input type="file">
-
-            <label>تفعيل الوضع الليلي:</label>
-            <input type="radio" name="dark-mode" value="on"> تشغيل
-            <input type="radio" name="dark-mode" value="off"> إيقاف
-
-            <label>قالب الواجهة:</label>
-            <select>
-                <option>كلاسيكي</option>
-                <option>حديث</option>
-            </select>
-
-            <label>تفعيل التلميحات التوضيحية:</label>
-            <input type="radio" name="tooltips" value="on"> تشغيل
-            <input type="radio" name="tooltips" value="off"> إيقاف
-
-            <div class="buttons">
-                <button onclick="saveInterfaceData()">حفظ</button>
-                <button>إلغاء</button>
+            <div style="text-align:center;padding:40px 20px">
+                <div style="font-size:48px;margin-bottom:16px;opacity:0.5">🎨</div>
+                <div style="font-size:20px;color:#d4af37;font-weight:700;margin-bottom:10px">قريباً</div>
+                <div style="font-size:13px;color:#94a3b8;line-height:1.7">
+                    تخصيص الألوان والخطوط<br>
+                    الوضع الليلي (Dark Mode)<br>
+                    قوالب متعددة للواجهة
+                </div>
             </div>
-            <div class="success-message" id="interface-save-success">تم حفظ إعدادات الواجهة بنجاح</div>
         </div>
 
         <div id="header" class="section">
@@ -934,60 +714,15 @@
 
         <div id="users" class="section">
             <h2>إعدادات المستخدمين</h2>
-            <label>الاسم الكامل:</label>
-            <input type="text" placeholder="الاسم الكامل">
-
-            <label>البريد الإلكتروني:</label>
-            <input type="email" placeholder="البريد الإلكتروني">
-
-            <label>كلمة المرور:</label>
-            <input type="password" placeholder="كلمة المرور">
-
-            <label>الدور:</label>
-            <select>
-                <option>مدير</option>
-                <option>موظف</option>
-            </select>
-
-            <label>اسم الوظيفة:</label>
-            <select>
-                <option>مشرف</option>
-                <option>عامل نظافة</option>
-                <option>فني كهرباء</option>
-                <option>مهندس</option>
-                <option>مدير قسم</option>
-            </select>
-
-            <label>الصلاحيات:</label>
-            <input type="checkbox" name="permissions"> تعديل الحضور
-            <input type="checkbox" name="permissions"> تعديل المستخلص
-            <input type="checkbox" name="permissions"> عرض التقارير فقط
-            <input type="checkbox" name="permissions"> تعديل الإعدادات
-
-            <label>تفعيل المستخدم:</label>
-            <input type="checkbox" name="activate-user">
-
-            <div class="buttons">
-                <button onclick="addUser()">إضافة مستخدم</button>
-                <button>إلغاء</button>
+            <div style="background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.4);border-radius:12px;padding:16px;margin-bottom:16px;color:#e2e8f0;font-size:13px;line-height:1.7">
+                👥 إدارة المستخدمين متوفرة من لوحة تحكم المدير الكاملة — يمكنك من هناك:<br>
+                • اعتماد طلبات التسجيل الجديدة<br>
+                • تغيير أدوار المستخدمين (مدير / مشرف / مستخدم)<br>
+                • تحديد المستشفيات والصلاحيات المسموح بها
             </div>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th>الاسم الكامل</th>
-                        <th>البريد الإلكتروني</th>
-                        <th>الدور</th>
-                        <th>الوظيفة</th>
-                        <th>الصلاحيات</th>
-                        <th>الحالة</th>
-                        <th>إجراءات</th>
-                    </tr>
-                </thead>
-                <tbody id="users-table-2">
-                    <!-- Table rows will be populated dynamically -->
-                </tbody>
-            </table>
+            <div class="buttons">
+                <button onclick="window.location.href='/admin/users'">🔧 فتح لوحة إدارة المستخدمين</button>
+            </div>
         </div>
 
         <div id="custom-table" class="section">
@@ -1188,6 +923,46 @@
             }
 
             document.getElementById('contract-data').innerHTML = dataHtml;
+        }
+
+        async function saveAdminEmail() {
+            var email = (document.getElementById('notif-admin-email').value || '').trim();
+            if (!email || !email.includes('@')) { alert('أدخل بريداً إلكترونياً صحيحاً'); return; }
+            try {
+                var s = window.najranSession;
+                var headers = { 'Content-Type': 'application/json' };
+                if (s && s.clerkToken) headers['Authorization'] = 'Bearer ' + s.clerkToken;
+                var res = await fetch('/api/admin/settings', {
+                    method: 'POST',
+                    headers: headers,
+                    credentials: 'include',
+                    body: JSON.stringify({ key: 'admin_email', value: email })
+                });
+                if (res.ok) {
+                    var el = document.getElementById('notifications-save-success');
+                    el.style.display = 'block';
+                    el.textContent = '✓ تم حفظ بريد المدير: ' + email;
+                    setTimeout(() => { el.style.display = 'none'; }, 4000);
+                } else {
+                    var d = await res.json().catch(() => ({}));
+                    alert('خطأ: ' + (d.error || res.status));
+                }
+            } catch(e) { alert('تعذر الحفظ — تحقق من الاتصال'); }
+        }
+
+        async function loadAdminEmail() {
+            try {
+                var s = window.najranSession;
+                if (!s || s.role !== 'admin') return;
+                var headers = {};
+                if (s.clerkToken) headers['Authorization'] = 'Bearer ' + s.clerkToken;
+                var res = await fetch('/api/admin/settings?key=admin_email', { headers: headers, credentials: 'include' });
+                if (res.ok) {
+                    var d = await res.json();
+                    var inp = document.getElementById('notif-admin-email');
+                    if (inp && d.value) inp.value = d.value;
+                }
+            } catch(_) {}
         }
 
         function saveNotificationsData() {
@@ -1593,6 +1368,7 @@
             updateDateTime();
             setInterval(updateDateTime, 1000);
             updateSideData();
+            loadAdminEmail();
         };
     </script>
 <script src="/original/track.js"></script>

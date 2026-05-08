@@ -12,6 +12,10 @@ import submittedExtractsRouter from "./submitted-extracts";
 import adminRouter from "./admin";
 import adminBackupRouter from "./admin-backup";
 import hospitalStorageRouter from "./hospital-storage";
+import adminSettingsRouter from "./admin-settings";
+import exportRouter from "./export";
+import remindRouter from "./remind";
+import analyticsRouter from "./analytics";
 
 const router: IRouter = Router();
 
@@ -27,6 +31,10 @@ router.use("/support", supportRouter);
 router.use("/submitted-extracts", submittedExtractsRouter);
 router.use("/admin", adminRouter);
 router.use("/admin/backup", adminBackupRouter);
+router.use("/admin/settings", adminSettingsRouter);
+router.use("/export", exportRouter);
+router.use("/remind", remindRouter);
+router.use("/analytics", analyticsRouter);
 router.use("/hospital-storage", hospitalStorageRouter);
 
 export default router;

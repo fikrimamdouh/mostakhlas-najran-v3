@@ -198,6 +198,7 @@
     <a href="/original/attendance.html"   class="btn-hdr"><i class="fas fa-table"></i> الحضور</a>
     <a href="/original/settings_main.html" class="btn-hdr"><i class="fas fa-cog"></i> الإعدادات</a>
     <a href="/original/approval.html"     class="btn-hdr"><i class="fas fa-check-circle"></i> الاعتماد</a>
+    <button onclick="exportCsvArchive()" class="btn-hdr" title="تصدير المستخلصات إلى CSV"><i class="fas fa-file-csv"></i> تصدير</button>
     <a href="/dashboard"                  class="btn-hdr"><i class="fas fa-home"></i> الرئيسية</a>
   </div>
 </header>
@@ -211,39 +212,196 @@
   <!-- Stats -->
   <div class="stats-row" id="stats-row"></div>
 
-  <!-- Toolbar -->
-  <div class="toolbar">
-    <input type="text"   id="search-pn"    placeholder="🔍 ابحث برقم الدفعة…" oninput="renderArchive()">
-    <select id="filter-month" onchange="renderArchive()">
-      <option value="">كل الشهور</option>
-      <option>يناير</option><option>فبراير</option><option>مارس</option>
-      <option>أبريل</option><option>مايو</option><option>يونيو</option>
-      <option>يوليو</option><option>أغسطس</option><option>سبتمبر</option>
-      <option>أكتوبر</option><option>نوفمبر</option><option>ديسمبر</option>
-    </select>
-    <select id="filter-year" onchange="renderArchive()">
-      <option value="">كل السنوات</option>
-    </select>
-    <select id="filter-source" onchange="renderArchive()">
-      <option value="">كل المصادر</option>
-      <option value="save">حفظ يدوي</option>
-      <option value="print">طباعة</option>
-      <option value="pdf">تصدير PDF</option>
-    </select>
-    <div class="spacer"></div>
-    <button class="btn-danger" onclick="clearAllArchive()">
-      <i class="fas fa-trash-alt"></i> حذف الكل
+  <!-- Tab switcher -->
+  <div style="display:flex;gap:8px;margin-bottom:18px;">
+    <button id="tab-server" onclick="switchTab('server')"
+      style="flex:1;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #2a5298;background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;box-shadow:0 2px 8px rgba(30,60,114,.2)">
+      📡 المستخلصات المرفوعة للخادم
+    </button>
+    <button id="tab-local" onclick="switchTab('local')"
+      style="flex:1;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #e2e8f0;background:#fff;color:#64748b">
+      💾 لقطات العمل المحلية
     </button>
   </div>
 
-  <!-- Cards -->
-  <div id="archive-container"></div>
+  <!-- Server section -->
+  <div id="section-server">
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 16px;margin-bottom:14px;font-size:13px;color:#1d4ed8;">
+      ℹ️ هذه المستخلصات مرفوعة إلى الخادم — يمكن للمدير مراجعتها واعتمادها من صفحة الاعتماد
+    </div>
+    <!-- Server toolbar -->
+    <div class="toolbar">
+      <input type="text" id="srv-search" placeholder="🔍 ابحث بالمستشفى أو النوع…" oninput="renderServer()">
+      <select id="srv-filter-type" onchange="renderServer()">
+        <option value="">كل الأنواع</option>
+        <option value="labor">مستخلص العمالة</option>
+        <option value="consumables">المستهلكات</option>
+        <option value="spare_parts">قطع الغيار</option>
+        <option value="health_centers">المراكز الصحية</option>
+        <option value="admin_offices">المكاتب الإدارية</option>
+      </select>
+      <select id="srv-filter-status" onchange="renderServer()">
+        <option value="">كل الحالات</option>
+        <option value="submitted">بانتظار المراجعة</option>
+        <option value="under_review">قيد المراجعة</option>
+        <option value="approved">معتمد</option>
+        <option value="needs_revision">يحتاج تعديل</option>
+        <option value="rejected">مرفوض</option>
+      </select>
+      <div class="spacer"></div>
+      <button class="btn-hdr" onclick="loadServerData()" style="background:#2a5298;border:none;color:#fff;padding:8px 16px;border-radius:9px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;cursor:pointer">
+        ↻ تحديث
+      </button>
+    </div>
+    <div id="server-container"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>جاري التحميل...</h3></div></div>
+  </div>
+
+  <!-- Local section -->
+  <div id="section-local" style="display:none">
+    <div class="toolbar">
+      <input type="text"   id="search-pn"    placeholder="🔍 ابحث برقم الدفعة…" oninput="renderArchive()">
+      <select id="filter-month" onchange="renderArchive()">
+        <option value="">كل الشهور</option>
+        <option>يناير</option><option>فبراير</option><option>مارس</option>
+        <option>أبريل</option><option>مايو</option><option>يونيو</option>
+        <option>يوليو</option><option>أغسطس</option><option>سبتمبر</option>
+        <option>أكتوبر</option><option>نوفمبر</option><option>ديسمبر</option>
+      </select>
+      <select id="filter-year" onchange="renderArchive()">
+        <option value="">كل السنوات</option>
+      </select>
+      <select id="filter-source" onchange="renderArchive()">
+        <option value="">كل المصادر</option>
+        <option value="save">حفظ يدوي</option>
+        <option value="print">طباعة</option>
+        <option value="pdf">تصدير PDF</option>
+      </select>
+      <div class="spacer"></div>
+      <button class="btn-danger" onclick="clearAllArchive()">
+        <i class="fas fa-trash-alt"></i> حذف الكل
+      </button>
+    </div>
+    <div id="archive-container"></div>
+  </div>
 </main>
 
 <script src="/original/extract-snapshot.js"></script>
 <script src="/original/track.js"></script>
 <script src="/original/shared-nav.js"></script>
 <script>
+  /* ── Tab switching ── */
+  var currentTab = 'server';
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('section-server').style.display = tab === 'server' ? '' : 'none';
+    document.getElementById('section-local').style.display  = tab === 'local'  ? '' : 'none';
+    var btnS = document.getElementById('tab-server');
+    var btnL = document.getElementById('tab-local');
+    if (tab === 'server') {
+      btnS.style.cssText = 'flex:1;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #2a5298;background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;box-shadow:0 2px 8px rgba(30,60,114,.2)';
+      btnL.style.cssText = 'flex:1;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #e2e8f0;background:#fff;color:#64748b';
+    } else {
+      btnL.style.cssText = 'flex:1;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #2a5298;background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;box-shadow:0 2px 8px rgba(30,60,114,.2)';
+      btnS.style.cssText = 'flex:1;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #e2e8f0;background:#fff;color:#64748b';
+    }
+  }
+
+  /* ── Server data ── */
+  var serverExtracts = [];
+
+  var TYPE_AR = {
+    labor: 'مستخلص العمالة', consumables: 'المستهلكات',
+    spare_parts: 'قطع الغيار', health_centers: 'المراكز الصحية',
+    admin_offices: 'المكاتب الإدارية'
+  };
+  var STATUS_CFG_SRV = {
+    submitted:      { label:'بانتظار المراجعة', bg:'#eff6ff', color:'#1d4ed8', dot:'#2a5298' },
+    under_review:   { label:'قيد المراجعة',     bg:'#fffbeb', color:'#b45309', dot:'#f59e0b' },
+    approved:       { label:'معتمد ✓',           bg:'#f0fdf4', color:'#15803d', dot:'#16a34a' },
+    needs_revision: { label:'يحتاج تعديل',       bg:'#fff7ed', color:'#c2410c', dot:'#f97316' },
+    rejected:       { label:'مرفوض',             bg:'#fef2f2', color:'#b91c1c', dot:'#ef4444' },
+  };
+
+  function srvStatusBadge(status) {
+    var cfg = STATUS_CFG_SRV[status] || { label: status, bg:'#f8fafc', color:'#64748b', dot:'#cbd5e1' };
+    return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;background:' + cfg.bg + ';color:' + cfg.color + ';border:1px solid ' + cfg.dot + '30">' +
+      '<span style="width:7px;height:7px;border-radius:50%;background:' + cfg.dot + ';flex-shrink:0"></span>' + cfg.label + '</span>';
+  }
+
+  async function loadServerData() {
+    var s = window.najranSession;
+    if (!s) return;
+    var headers = { 'Content-Type': 'application/json' };
+    if (s.clerkToken) headers['Authorization'] = 'Bearer ' + s.clerkToken;
+    try {
+      var res = await fetch('/api/submitted-extracts', { headers: headers, credentials: 'include' });
+      if (!res.ok) throw new Error(res.status);
+      var data = await res.json();
+      serverExtracts = data.extracts || [];
+      renderServer();
+      renderStats(window.getExtractArchive(), serverExtracts.length);
+    } catch (e) {
+      document.getElementById('server-container').innerHTML =
+        '<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:#f59e0b"></i><h3>تعذر التحميل</h3><p>تحقق من اتصالك أو تسجيل الدخول</p></div>';
+    }
+  }
+
+  function renderServer() {
+    var data = serverExtracts.slice();
+    var q      = (document.getElementById('srv-search').value || '').trim().toLowerCase();
+    var typeQ  = document.getElementById('srv-filter-type').value;
+    var statQ  = document.getElementById('srv-filter-status').value;
+    if (q)      data = data.filter(function(e){ return (e.hospitalName||'').toLowerCase().includes(q) || (TYPE_AR[e.extractType]||'').includes(q); });
+    if (typeQ)  data = data.filter(function(e){ return e.extractType === typeQ; });
+    if (statQ)  data = data.filter(function(e){ return e.status === statQ; });
+
+    var container = document.getElementById('server-container');
+    if (data.length === 0) {
+      container.innerHTML = '<div class="empty-state"><i class="fas fa-cloud"></i><h3>لا توجد مستخلصات مرفوعة</h3><p>ارفع مستخلصاتك من صفحات الحضور أو المستهلكات</p></div>';
+      return;
+    }
+
+    // Sort newest first
+    data.sort(function(a, b){ return new Date(b.createdAt) - new Date(a.createdAt); });
+
+    var html = data.map(function(e) {
+      var amt = e.totalAmount ? Number(e.totalAmount).toLocaleString('ar-SA', { minimumFractionDigits:2, maximumFractionDigits:2 }) + ' ر.س' : '—';
+      var dt  = e.createdAt ? new Date(e.createdAt).toLocaleDateString('ar-SA', { year:'numeric', month:'short', day:'numeric' }) : '—';
+      var dtU = e.updatedAt ? new Date(e.updatedAt).toLocaleDateString('ar-SA', { year:'numeric', month:'short', day:'numeric' }) : '';
+      return (
+        '<div class="arc-card" style="' + (e.status === 'approved' ? 'border-color:#bbf7d0' : e.status === 'needs_revision' ? 'border-color:#fed7aa' : '') + '">' +
+          '<div class="arc-card-header" style="' + (e.status === 'approved' ? 'background:linear-gradient(135deg,#15803d,#16a34a)' : '') + '">' +
+            '<div>' +
+              '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+                '<span class="arc-badge">' + (TYPE_AR[e.extractType] || e.extractType) + '</span>' +
+                srvStatusBadge(e.status) +
+              '</div>' +
+              '<div class="arc-payment" style="font-size:16px">' + (e.hospitalName || '—') + '</div>' +
+              '<div class="arc-period">' + (e.periodMonth || '—') + '</div>' +
+            '</div>' +
+            '<div style="text-align:left;">' +
+              '<div style="color:rgba(255,255,255,.7);font-size:11px">' + (e.companyName || '') + '</div>' +
+              '<div style="color:rgba(255,255,255,.6);font-size:11px;margin-top:2px">' + (e.contractNumber || '') + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="arc-card-body">' +
+            '<div class="arc-totals">' +
+              '<div><div class="t-lbl">المبلغ الإجمالي</div><div class="t-val">' + amt + '</div></div>' +
+              '<i class="fas fa-cloud-upload-alt" style="font-size:24px;color:#7dd3fc;opacity:.6"></i>' +
+            '</div>' +
+            (e.adminNotes ? '<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 12px;font-size:12px;color:#c2410c;margin-bottom:10px"><b>ملاحظة الإدارة:</b> ' + e.adminNotes + '</div>' : '') +
+            '<div class="arc-actions">' +
+              '<a href="/original/approval.html" class="arc-btn arc-btn-print" style="text-decoration:none"><i class="fas fa-eye"></i> عرض التفاصيل</a>' +
+            '</div>' +
+            '<div class="arc-date"><i class="fas fa-upload"></i> تاريخ الرفع: ' + dt + (dtU && dtU !== dt ? ' — آخر تحديث: ' + dtU : '') + '</div>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+
+    container.innerHTML = '<div class="archive-grid">' + html + '</div>';
+  }
+
   /* ── Source label helpers ── */
   function sourceLabel(src) {
     return { save: 'حفظ يدوي', print: 'طباعة', pdf: 'تصدير PDF', manual: 'يدوي' }[src] || src;
@@ -289,30 +447,31 @@
   }
 
   /* ── Render stats ── */
-  function renderStats(archive) {
+  function renderStats(archive, srvCount) {
     const total    = archive.length;
     const saves    = archive.filter(s => s.source === 'save').length;
     const prints   = archive.filter(s => s.source === 'print').length;
     const lastSave = archive.length ? fmtDate(archive[0].savedAt) : '—';
+    const srvApproved = serverExtracts.filter(e => e.status === 'approved').length;
+    const srvPending  = serverExtracts.filter(e => e.status === 'submitted').length;
 
     const container = document.getElementById('stats-row');
     container.innerHTML = `
       <div class="stat-card">
-        <div class="icon" style="background:#eff6ff;color:#2563eb;"><i class="fas fa-archive"></i></div>
-        <div class="val">${total}</div><div class="lbl">إجمالي السجلات</div>
+        <div class="icon" style="background:#eff6ff;color:#2563eb;"><i class="fas fa-cloud"></i></div>
+        <div class="val">${srvCount !== undefined ? srvCount : serverExtracts.length}</div><div class="lbl">إجمالي الخادم</div>
       </div>
       <div class="stat-card">
-        <div class="icon" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-save"></i></div>
-        <div class="val">${saves}</div><div class="lbl">عمليات حفظ</div>
+        <div class="icon" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-check-circle"></i></div>
+        <div class="val">${srvApproved}</div><div class="lbl">معتمدة</div>
       </div>
       <div class="stat-card">
-        <div class="icon" style="background:#fef9c3;color:#ca8a04;"><i class="fas fa-print"></i></div>
-        <div class="val">${prints}</div><div class="lbl">عمليات طباعة</div>
+        <div class="icon" style="background:#fef9c3;color:#ca8a04;"><i class="fas fa-hourglass-half"></i></div>
+        <div class="val">${srvPending}</div><div class="lbl">بانتظار المراجعة</div>
       </div>
-      <div class="stat-card" style="grid-column:span 1">
-        <div class="icon" style="background:#fdf4ff;color:#a21caf;"><i class="fas fa-clock"></i></div>
-        <div class="val" style="font-size:14px;margin-top:4px;">${lastSave}</div>
-        <div class="lbl">آخر حفظ</div>
+      <div class="stat-card">
+        <div class="icon" style="background:#fdf4ff;color:#a21caf;"><i class="fas fa-archive"></i></div>
+        <div class="val">${total}</div><div class="lbl">لقطات محلية</div>
       </div>`;
   }
 
@@ -516,10 +675,34 @@
     pw.document.close();
   }
 
+  /* ── Export CSV ── */
+  async function exportCsvArchive() {
+    var session = {};
+    try { session = JSON.parse(localStorage.getItem('najran_session') || '{}'); } catch {}
+    var token = session.clerkToken || '';
+    if (!token) { alert('يجب تسجيل الدخول أولاً'); return; }
+    try {
+      var res = await fetch('/api/export/submitted-extracts', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (!res.ok) throw new Error();
+      var blob = await res.blob();
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'مستخلصات_' + new Date().toISOString().slice(0,10) + '.csv';
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch { alert('تعذر التصدير — تحقق من الاتصال'); }
+  }
+
   /* ── Init ── */
   document.addEventListener('DOMContentLoaded', function () {
     populateYearFilter();
     renderArchive();
+    renderStats(window.getExtractArchive());
+    loadServerData();
   });
 </script>
 </body>
