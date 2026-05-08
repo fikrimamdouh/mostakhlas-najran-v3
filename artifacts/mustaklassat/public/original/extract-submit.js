@@ -119,6 +119,7 @@
       labor: '/original/attendance.html',
       consumables: '/original/consumables.html',
       health_centers: '/original/health_centers_attendance.html',
+      admin_offices: '/original/admin_offices_attendance.html',
       spare_parts: '/original/spare_parts.html',
     };
     const page = pageMap[extractType] || '/original/attendance.html';
@@ -309,21 +310,62 @@
     });
   };
 
+  // ════════════════════════════════════════════════════════════
+  // مكاتب إدارية — الحضور والانصراف  →  الانتقال للمستهلكات
+  // ════════════════════════════════════════════════════════════
+  window.initAdminOfficesAttendanceApproveBtn = function () {
+    createApproveBtn({
+      label: 'اعتماد عمالة المكاتب — التالي: المستهلكات',
+      onClick: () => {
+        if (!confirm('هل تريد اعتماد بيانات عمالة المكاتب الإدارية والانتقال لمستهلكاتها؟')) return;
+        localStorage.setItem('najran_admin_offices_attendance_done', '1');
+        window.location.href = '/original/admin_offices_consumables.html';
+      },
+    });
+  };
+
+  // ════════════════════════════════════════════════════════════
+  // مكاتب إدارية — المستهلكات  →  رفع مستخلص المكاتب الإدارية
+  // ════════════════════════════════════════════════════════════
+  window.initAdminOfficesConsumablesSubmitBtn = function () {
+    createApproveBtn({
+      label: 'رفع مستخلص المكاتب الإدارية للاعتماد',
+      gradient: 'linear-gradient(135deg,#d4af37,#b8962e)',
+      color: '#1e3c72',
+      onClick: async () => {
+        if (!confirm('هل تريد رفع مستخلص المكاتب الإدارية كاملاً للاعتماد؟\n\nسيشمل المستخلص:\n✓ عمالة المكاتب الإدارية\n✓ مستهلكات المكاتب الإدارية')) return;
+        setLoading('جاري الرفع...');
+        try {
+          await submitExtract('admin_offices');
+          localStorage.removeItem('najran_admin_offices_attendance_done');
+          window.location.href = '/extracts/track';
+        } catch (e) {
+          alert('حدث خطأ: ' + e.message);
+          resetBtn('رفع مستخلص المكاتب الإدارية للاعتماد');
+        }
+      },
+    });
+  };
+
   // تشغيل تلقائي بحسب الصفحة الحالية
   document.addEventListener('DOMContentLoaded', function () {
     const path = window.location.pathname;
-    if (path.endsWith('attendance.html') && !path.includes('health_centers')) {
+    if (path.endsWith('attendance.html') && !path.includes('health_centers') && !path.includes('admin_offices')) {
       window.initAttendanceApproveBtn();
     } else if (path.endsWith('performance.html')) {
       window.initPerformanceApproveBtn();
     } else if (path.endsWith('achievement.html')) {
       window.initAchievementSubmitBtn();
-    } else if (path.endsWith('consumables.html') && !path.includes('health_centers')) {
+    } else if (path.endsWith('consumables.html') && !path.includes('health_centers') && !path.includes('admin_offices')) {
       window.initConsumablesSubmitBtn();
     } else if (path.endsWith('health_centers_attendance.html')) {
       window.initHealthAttendanceApproveBtn();
     } else if (path.endsWith('health_centers_consumables.html')) {
       window.initHealthConsumablesSubmitBtn();
+    } else if (path.endsWith('admin_offices_attendance.html')) {
+      window.initAdminOfficesAttendanceApproveBtn();
+    } else if (path.endsWith('admin_offices_consumables.html')) {
+      window.initAdminOfficesConsumablesSubmitBtn();
     } else if (path.endsWith('spare_parts.html')) {
       window.initSparePartsSubmitBtn();
     }

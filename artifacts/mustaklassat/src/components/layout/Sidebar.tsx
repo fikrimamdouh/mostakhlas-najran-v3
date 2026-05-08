@@ -69,6 +69,14 @@ export function Sidebar() {
   const isContractSup = dbUser?.role === "contract_supervisor";
   const canViewAudit = isAdmin || isSupervisor;
 
+  function getSiteType(hospital: string | null | undefined): "hospital" | "health_centers" | "admin_offices" {
+    if (!hospital) return "hospital";
+    if (hospital === "المراكز الصحية") return "health_centers";
+    if (hospital === "المكاتب الإدارية") return "admin_offices";
+    return "hospital";
+  }
+  const siteType = getSiteType(dbUser?.hospital);
+
   const navigation = [
     { name: "لوحة القيادة", href: "/dashboard", icon: LayoutDashboard },
     { name: "الإعدادات", href: "/settings", icon: Settings },
@@ -178,19 +186,27 @@ export function Sidebar() {
             <div className="h-px flex-1 opacity-20" style={{ background: "#d4af37" }} />
           </div>
           <div className="space-y-0.5">
-            {[
-              { page: "settings_main.html",        label: "الإعدادات الرئيسية" },
-              { page: "attendance.html",           label: "الحضور والانصراف" },
-              { page: "performance.html",          label: "جداول الأداء" },
-              { page: "achievement.html",          label: "شهادة الإنجاز" },
-              { page: "consumables.html",          label: "مستخلص المستهلكات" },
-              { page: "spare_parts.html",          label: "مستخلص قطع الغيار" },
-              { page: "approval.html",                    label: "اعتماد المستخلص" },
-              { page: "monthly-overview.html",            label: "النظرة الشاملة للمستخلصات" },
-              { page: "health_centers_attendance.html",   label: "المراكز الصحية — العمالة" },
-              { page: "health_centers_consumables.html",  label: "المراكز الصحية — المستهلكات" },
-              { page: "review_extract.html",              label: "مراجعة المستخلص" },
-            ].map(item => {
+            {(() => {
+              const allModules = [
+                { page: "settings_main.html",               label: "الإعدادات الرئيسية",                   types: ["hospital", "health_centers", "admin_offices"] },
+                { page: "attendance.html",                  label: "الحضور والانصراف",                     types: ["hospital"] },
+                { page: "performance.html",                 label: "جداول الأداء",                         types: ["hospital"] },
+                { page: "achievement.html",                 label: "شهادة الإنجاز",                        types: ["hospital"] },
+                { page: "consumables.html",                 label: "مستخلص المستهلكات",                    types: ["hospital"] },
+                { page: "spare_parts.html",                 label: "مستخلص قطع الغيار",                    types: ["hospital"] },
+                { page: "approval.html",                    label: "اعتماد المستخلص",                      types: ["hospital"] },
+                { page: "monthly-overview.html",            label: "النظرة الشاملة للمستخلصات",            types: ["hospital"] },
+                { page: "health_centers_attendance.html",   label: "المراكز الصحية — العمالة",             types: ["health_centers"] },
+                { page: "health_centers_consumables.html",  label: "المراكز الصحية — المستهلكات",          types: ["health_centers"] },
+                { page: "admin_offices_attendance.html",    label: "المكاتب الإدارية — العمالة",           types: ["admin_offices"] },
+                { page: "admin_offices_consumables.html",   label: "المكاتب الإدارية — المستهلكات",        types: ["admin_offices"] },
+                { page: "review_extract.html",              label: "مراجعة المستخلص",                      types: ["hospital", "health_centers", "admin_offices"] },
+              ];
+              const visibleModules = (isAdmin || isSupervisor || isContractSup)
+                ? allModules
+                : allModules.filter(m => m.types.includes(siteType));
+              return visibleModules;
+            })().map(item => {
               const href = `/original-viewer?page=${item.page}`;
               const isActive = location === href || location.startsWith(`/original-viewer`) && new URLSearchParams(location.split("?")[1] || "").get("page") === item.page;
               return (

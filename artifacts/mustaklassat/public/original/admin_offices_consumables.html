@@ -1,0 +1,2130 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <script src="/original/auth-check.js"></script>
+    <script src="/original/cloud-sync.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مستخلص مستهلكات المراكز الصحية — فرع وزارة الصحة بمنطقة نجران</title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AAABAAEAAQEAAAEAGAAoAAAAFgAAACgAAAAQAAAAIAAAAAEAGAAAAAAAAAAAAAAA">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js" defer></script>
+    
+    <!-- Scripts to connect contract and centers data -->
+    <script src="contract_data_connector.js" defer></script>
+    <script src="attendance_contract_info.js" defer></script>
+    <script src="/original/month-context.js"></script>
+    <script src="/original/extract-stepper.js"></script>
+
+    <style>
+        :root {
+            --primary-dark: #003087;
+            --primary-main: #0056b3;
+            --primary-light: #4a90e2;
+            --secondary-accent: #fd7e14;
+            --background-gradient-start: #f4f8ff;
+            --background-gradient-end: #e7efff;
+            --text-dark: #2c3e50;
+            --text-light: #5a6a7a;
+            --card-bg: #ffffff;
+            --border-color: #dee2e6;
+            --shadow-soft: 0 4px 12px rgba(0, 86, 179, 0.08   );
+            --shadow-medium: 0 8px 25px rgba(0, 86, 179, 0.1);
+            --status-yes-bg: #d4edda; --status-yes-text: #155724;
+            --status-no-bg: #f8d7da; --status-no-text: #721c24;
+        }
+        body {
+            font-family: 'Tajawal', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-image: linear-gradient(120deg, var(--background-gradient-start), var(--background-gradient-end));
+            color: var(--text-dark);
+            direction: rtl;
+            line-height: 1.7;
+        }
+        .container {
+            max-width: 1700px;
+            margin: 25px auto;
+            padding: 30px;
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: var(--shadow-medium);
+        }
+        .header-info {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+            padding-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .logo-right, .logo-left { position: absolute; top: 0; width: 90px; height: auto; }
+        .logo-right { right: 0; }
+        .logo-left { left: 0; }
+        .header-info h1 { color: var(--primary-dark); font-size: 32px; font-weight: 800; margin: 0; }
+        .header-info h3 { color: var(--text-light); font-size: 22px; margin: 8px 0; }
+        .header-info h2 { color: var(--primary-main); font-size: 26px; margin-top: 15px; font-weight: 700; }
+        .page-contract-info {
+            display: flex; flex-wrap: wrap; justify-content: space-around; gap: 20px;
+            background-color: var(--background-gradient-start); padding: 20px;
+            border-radius: 12px; margin-bottom: 30px; border: 1px solid var(--border-color);
+        }
+        .page-contract-info p { margin: 0; font-size: 15px; }
+        .page-contract-info strong { color: var(--primary-dark); }
+        .nav-bar {
+            background-color: var(--primary-dark); padding: 12px; border-radius: 12px;
+            margin-bottom: 30px; display: flex; justify-content: center; box-shadow: var(--shadow-soft);
+        }
+        .dropdown select {
+            background-color: white; border: 1px solid var(--border-color); border-radius: 8px;
+            padding: 10px 15px; font-size: 16px; width: 300px; font-weight: 500;
+        }
+        .main-action-buttons {
+            display: flex; justify-content: center; gap: 15px; margin: 30px 0;
+            flex-wrap: wrap; padding-bottom: 30px; border-bottom: 1px dashed var(--border-color);
+        }
+        .btn {
+            padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer;
+            font-size: 16px; transition: all 0.3s ease; display: flex;
+            align-items: center; gap: 10px; font-weight: 700; color: white; box-shadow: var(--shadow-soft);
+        }
+        .btn:hover { transform: translateY(-3px) scale(1.03); box-shadow: var(--shadow-medium); }
+        .btn-excel { background: linear-gradient(135deg, #1D976C, #20C997); }
+        .btn-print { background: linear-gradient(135deg, #5a6a7a, #343a40); }
+        .btn-backup { background: linear-gradient(135deg, #fd7e14, #e83e8c); }
+        .btn-signature { background: linear-gradient(135deg, #007bff, #6610f2); }
+        .btn-clear { background: linear-gradient(135deg, #dc3545, #c82333); }
+        .btn-titles { background: linear-gradient(135deg, #6f42c1, #d63384); }
+        
+        .penalty-info-bar {
+            display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+            gap: 20px; background-color: var(--background-gradient-start);
+            border: 1px solid var(--border-color); border-radius: 12px; padding: 15px 20px; margin: 30px 0;
+        }
+        .penalty-info-bar .info-group { display: flex; align-items: center; gap: 15px; }
+        .penalty-info-bar .info-item { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        .penalty-info-bar .info-item i { color: var(--primary-main); }
+        .penalty-info-bar .info-item span { font-weight: 700; color: var(--text-dark); }
+        .penalty-info-bar .info-item .value { font-weight: 800; color: var(--primary-dark); }
+        .penalty-info-bar .separator { font-size: 20px; color: var(--primary-light); }
+        .penalty-info-bar .result-group {
+            background-color: var(--primary-dark); color: white; padding: 10px 20px;
+            border-radius: 8px; display: flex; align-items: center; gap: 10px;
+        }
+        .penalty-info-bar .result-group .value { font-size: 20px; font-weight: 800; }
+        
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 25px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .dashboard-card {
+            background: #fff; border: 1px solid var(--border-color); border-radius: 10px;
+            box-shadow: var(--shadow-soft); padding: 25px; text-align: center;
+            cursor: pointer; transition: all 0.3s ease;
+        }
+        .dashboard-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-medium); border-color: var(--primary-main); }
+        .dashboard-card i { font-size: 44px; margin-bottom: 15px; color: var(--primary-main); }
+        .dashboard-card h3 { font-size: 18px; margin: 0; color: var(--text-dark); }
+        .dashboard-card p { font-size: 14px; color: var(--text-light); margin-top: 10px; line-height: 1.5; }
+        .table-section { display: none; margin-top: 30px; }
+        .table-section.active { display: block; }
+        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .table-header h2 { margin: 0; color: var(--primary-dark); font-size: 22px; }
+        .table-header .btn-group { display: flex; gap: 10px; }
+        .table-header .btn-manage { background: linear-gradient(135deg, #007bff, #6610f2); color: white; }
+        .table-header .btn-manage.edit-mode { background: linear-gradient(135deg, #ffc107, #fd7e14); color: #000; }
+        .table-header .btn-add-item { background: linear-gradient(135deg, #28a745, #20c997); }
+        .table-header .btn-remove-item { background: linear-gradient(135deg, #dc3545, #c82333); }
+        .table-header .edit-controls { display: none; gap: 10px; }
+        .table-header .edit-controls.active { display: flex; }
+
+        .table-container { overflow-x: auto; }
+        .data-table { border-collapse: collapse; width: 100%; font-size: 14px; table-layout: auto; }
+        .data-table th, .data-table td {
+            border: 1px solid var(--border-color); padding: 12px 10px; text-align: center;
+            vertical-align: middle; white-space: normal; word-wrap: break-word;
+        }
+        .data-table th { background-color: var(--primary-main); color: white !important; font-weight: 700; font-size: 15px; }
+        .data-table tbody tr:nth-child(even) { background: var(--background-gradient-start); }
+        .data-table tbody tr:hover { background-color: #e9ecef; }
+        .data-table tbody tr.selected-row { background-color: var(--secondary-accent) !important; color: white; }
+        .data-table tfoot tr { background: #fee08b; color: #a85912; font-size: 16px; font-weight: 800; }
+        .data-table input, .data-table select {
+            width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 6px;
+            font-size: 14px; box-sizing: border-box; text-align: center; background-color: transparent;
+        }
+        .data-table .editable-always { background-color: #fff !important; border: 1px solid #ced4da !important; pointer-events: auto !important; }
+        .data-table .editable-on-manage {
+            background-color: #e9ecef !important; border: 1px solid transparent !important;
+            pointer-events: none !important; -webkit-appearance: none; -moz-appearance: none; appearance: none;
+        }
+        .data-table.edit-mode .editable-on-manage { background-color: #fff !important; border: 1px solid #ced4da !important; pointer-events: auto !important; }
+        .data-table input:focus, .data-table select:focus {
+            border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.25); outline: none;
+        }
+        select.status-yes { background-color: var(--status-yes-bg) !important; color: var(--status-yes-text) !important; }
+        select.status-no { background-color: var(--status-no-bg) !important; color: var(--status-no-text) !important; }
+        .readonly-cell { background-color: #e9ecef !important; font-weight: 500; }
+        
+        .modal {
+            display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%;
+            overflow: auto; background: rgba(0, 0, 0, 0.6); justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            width: 90%; max-width: 700px; position: relative;
+        }
+        .modal-content h3 { color: var(--primary-main); margin-top: 0; }
+        .modal-content .form-group { margin-bottom: 15px; }
+        .modal-content label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .modal-content input, .modal-content textarea {
+            width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 5px; box-sizing: border-box;
+        }
+        .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .close {
+            color: #aaa; position: absolute; left: 15px; top: 10px;
+            font-size: 28px; font-weight: bold; cursor: pointer;
+        }
+        .cell-print-content, .printable-header { display: none; }
+        .back-to-dashboard {
+            margin-bottom: 20px; background-color: #f8f9fa; border: 1px solid #ddd;
+            padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 14px;
+        }
+        .signatures-display-section { margin: 35px auto 0 auto; max-width: 90%; font-size: 15px; }
+        .signatures-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 25px; text-align: center;
+        }
+        .signature-item { min-width: 200px; text-align: center; border-top: 1px dotted #bbb; padding-top: 10px; }
+        .signature-item .title { font-weight: bold; font-size: 16px; }
+        .signature-item .line { height: 1px; background-color: #333; margin: 20px 0; }
+        .signature-item .name { font-size: 15px; color: var(--text-light); }
+        
+        #save-toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background-color: #28a745; color: white; padding: 15px 25px; border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; font-size: 16px;
+            opacity: 0; visibility: hidden; transition: opacity 0.5s, visibility 0.5s;
+        }
+        #save-toast.show { opacity: 1; visibility: visible; }
+        .error-message { color: #dc3545; font-size: 12px; font-weight: bold; display: block; margin-top: 4px; }
+        .data-table input.input-error { border-color: #dc3545 !important; background-color: #f8d7da !important; }
+
+        @media print {
+            body { background: #fff !important; font-size: 10pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print, .nav-bar, .main-action-buttons, .dashboard-container, .back-to-dashboard, .table-header .btn-group, .penalty-info-bar { display: none !important; }
+            .container { box-shadow: none !important; width: 100% !important; max-width: 100% !important; margin: 0; padding: 5px; }
+.table-section {
+    display: block !important;
+    page-break-inside: avoid !important; /* يمنع كسر المحتوى داخل القسم نفسه */
+    page-break-after: always !important;  /* ✅ [التغيير] يضمن أن كل قسم يبدأ في صفحة جديدة مستقلة */
+    border: none !important;
+    box-shadow: none !important;
+    padding: 10px;
+    margin-top: 25px;
+}
+            .printable-header {
+                display: flex !important; justify-content: space-between; align-items: center; text-align: center;
+                margin-bottom: 15px; padding: 10px 0; border-bottom: 2px solid #333;
+            }
+            .printable-header .print-logo { width: 70px; height: auto; }
+            .printable-header .print-title-container { flex-grow: 1; }
+            .data-table input, .data-table select { display: none; }
+            .cell-print-content { display: block !important; }
+            .data-table th, .data-table td { border: 1px solid #333 !important; font-size: 8.5pt; padding: 4px; }
+            .data-table th { background-color: var(--primary-main) !important; color: white !important; }
+            .signatures-grid { grid-template-columns: repeat(4, 1fr) !important; }
+        }
+        .notes-section {
+            margin-top: 20px; padding: 15px; border: 1px solid #e9ecef;
+            border-radius: 8px; background-color: #f8f9fa;
+        }
+        .notes-section .notes-toggle {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 10px; cursor: pointer; font-weight: 500;
+        }
+        .notes-section textarea {
+    width: 100%;
+    min-height: 40px;   /* ✅ [تعديل] ارتفاع مبدئي صغير (تقريبًا سطر واحد) */
+    height: auto;       /* ✅ [جديد] السماح للارتفاع بأن يكون تلقائيًا */
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ced4da;
+    font-size: 14px;
+    resize: none;       /* ✅ [جديد] منع المستخدم من تغيير الحجم يدويًا */
+    overflow-y: hidden; /* ✅ [جديد] إخفاء شريط التمرير العمودي */
+    box-sizing: border-box; /* يضمن أن الـ padding لا يؤثر على الحجم الكلي */
+    line-height: 1.6;   /* تحسين المسافة بين السطور */
+}
+
+
+        /* التحكم في الطباعة */
+        @media print {
+            .notes-section:not(.print-notes-active) { 
+                display: none !important; 
+            }
+            .notes-section.print-notes-active {
+    display: block !important;
+    border: 1px solid #ccc !important;
+    margin-top: 20px;
+    page-break-before: avoid !important; /* ✅✅✅ [الحل] يمنع بدء هذا القسم في صفحة جديدة */
+    page-break-inside: avoid !important; /* يمنع كسر الملاحظات نفسها */
+}
+
+            .notes-section .notes-toggle { 
+                display: none;
+            }
+            .notes-section textarea { 
+                border: none !important; background: transparent !important;
+                padding: 0 !important; margin: 0; min-height: 0; resize: none;
+                color: #000; font-family: 'Tajawal', sans-serif; font-size: 10pt;
+            }
+        }
+        /* ✅ [جديد] تنسيقات ألوان قائمة موعد الزيارة */
+        select.visit-date-monthly { background-color: #d1ecf1 !important; color: #0c5460 !important; font-weight: bold; }
+        select.visit-date-done { background-color: #e2e3e5 !important; color: #383d41 !important; }
+        select.visit-date-future { background-color: #fff3cd !important; color: #856404 !important; }
+
+        /* ✅ [جديد] تنسيق الصف الذي لم تتم فيه الزيارة */
+        .data-table tbody tr.visit-not-done {
+            background-color: #f8d7da !important; /* خلفية حمراء فاتحة */
+            outline: 2px solid #dc3545; /* إطار أحمر واضح */
+            outline-offset: -2px;
+        }
+        .data-table tbody tr.visit-not-done td {
+            border-color: #f5c6cb;
+        }
+
+    
+  /* ══ شريط الأزرار الجديد std-action-bar ══ */
+  .std-action-bar {
+    background: #fff !important;
+    padding: 10px 16px !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 7px !important;
+    align-items: center !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,.04) !important;
+  }
+  .ab {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 7px 15px !important;
+    border-radius: 9px !important;
+    border: none !important;
+    font-family: 'Tajawal', sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    transition: transform .15s, opacity .15s, box-shadow .15s !important;
+    white-space: nowrap !important;
+    color: #fff !important;
+    background: #1e3c72 !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,.15) !important;
+  }
+  .ab:hover { opacity: .88 !important; transform: translateY(-1px) !important; box-shadow: 0 4px 12px rgba(0,0,0,.2) !important; }
+  .ab:active { transform: translateY(0) !important; opacity: 1 !important; }
+  .ab-manage   { background: #6d28d9 !important; }
+  .ab-import   { background: #0369a1 !important; }
+  .ab-excel    { background: #16a34a !important; }
+  .ab-print    { background: #475569 !important; }
+  .ab-backup   { background: #0891b2 !important; }
+  .ab-restore  { background: #b45309 !important; }
+  .ab-sig      { background: #4f46e5 !important; }
+  .ab-titles   { background: #ea580c !important; }
+  .ab-clear    { background: #dc2626 !important; }
+  .ab-update   { background: #0369a1 !important; }
+
+  </style>
+<link rel="stylesheet" href="/original/shared-styles.css">
+</head>
+<body>
+    <div id="save-toast">تم الحفظ بنجاح!</div>
+    <div class="container">
+        <header class="no-print">
+            <div class="header-info">
+                <img src="moh_logo.png" alt="شعار فرع وزارة الصحة بمنطقة نجران" class="logo-right">
+                <img src="moh_logo.png" alt="شعار فرع وزارة الصحة بمنطقة نجران" class="logo-left">
+                <h1>فرع وزارة الصحة بمنطقة نجران</h1>
+                <h3>المكاتب الإدارية</h3>
+                <h2 id="page-title">مستخلص المستهلكات والمكاتب الإدارية</h2>
+            </div>
+            <nav class="nav-bar">
+                <div class="dropdown">
+                    <select id="navigation" onchange="if(this.value) window.location.href=this.value">
+                        <option value="#">-- اختر صفحة --</option>
+                        <option value="index.html">🏠 الصفحة الرئيسية</option>
+                        <option value="admin_offices_attendance.html">👥 مستخلص العمالة للمكاتب الإدارية</option>
+                        <option value="admin_offices_consumables.html" selected>📦 مستخلص المستهلكات للمكاتب الإدارية</option>
+                        <option value="approval.html">✅ متابعة المستخلصات</option>
+                        <option value="admin-dashboard.html">🛡️ لوحة الأدمن</option>
+                    </select>
+                </div>
+            </nav>
+        </header>
+
+        <div class="page-contract-info no-print">
+            <p><strong>الجهة:</strong> <span class="hospitalName">المكاتب الإدارية (مجمع)</span></p>
+            <p><strong>تفاصيل العقد:</strong> <span class="contractDetails">غير محدد</span></p>
+            <p><strong>اسم الشركة:</strong> <span class="companyName">غير محدد</span></p>
+            <p><strong>مدة المستخلص:</strong> من <span id="extract-start-date">غير محدد</span> إلى <span id="extract-end-date">غير محدد</span></p>
+        </div>
+
+        <div class="std-action-bar no-print">
+            <button class="ab ab-excel" id="export-all-btn"><i class="fas fa-file-excel"></i> تصدير الكل</button>
+            <button class="ab ab-print" id="print-all-btn"><i class="fas fa-print"></i> طباعة الكل</button>
+            <button class="ab ab-update" id="recalculate-btn"><i class="fas fa-sync-alt"></i> تحديث الحسابات</button>
+            <button class="ab ab-backup" id="backup-btn"><i class="fas fa-save"></i> نسخ احتياطي</button>
+            <button class="ab ab-sig" id="edit-signatures-btn"><i class="fas fa-signature"></i> تعديل التواقيع</button>
+            <button class="ab ab-titles" id="edit-titles-btn"><i class="fas fa-heading"></i> تعديل العناوين</button>
+            <button class="ab ab-clear" id="clear-data-btn"><i class="fas fa-trash"></i> مسح البيانات</button>
+        </div>
+
+        <div class="penalty-info-bar no-print">
+            <div class="info-group">
+                <div class="info-item"><i class="fas fa-box-open"></i><span>المستهلكات:</span><span class="value" id="display-consumables-cost">0.00</span></div>
+                <span class="separator">+</span>
+                <div class="info-item"><i class="fas fa-hard-hat"></i><span>المقاولين:</span><span class="value" id="display-subcontractors-cost">0.00</span></div>
+                <span class="separator">+</span>
+                <div class="info-item"><i class="fas fa-users-cog"></i><span>العمالة (مكاتب):</span><span class="value" id="display-labor-cost">0.00</span></div>
+            </div>
+            <div class="result-group"><i class="fas fa-equals"></i><span>الغرامة المتوقعة (5%):</span><span class="value" id="expected-penalty">0.00</span></div>
+        </div>
+
+        <div class="dashboard-container" id="dashboard-container">
+            <div class="dashboard-card" data-section="subcontractors-section"><i class="fas fa-users"></i><h3>عقود الباطن</h3><p>عرض وتعديل بيانات عقود الباطن</p></div>
+            <div class="dashboard-card" data-section="performance-section"><i class="fas fa-award"></i><h3>أداء المستهلكات</h3><p>عرض وتعديل جدول حسم المقابل</p></div>
+            <div class="dashboard-card" data-section="water-supply-section"><i class="fas fa-tint"></i><h3>توريد المياه</h3><p>عرض وتعديل بيانات توريد المياه</p></div>
+            <div class="dashboard-card" data-section="laundry-supply-section"><i class="fas fa-shirt"></i><h3>توريد الغسيل</h3><p>عرض وتعديل بيانات توريد الغسيل</p></div>
+            <div class="dashboard-card" data-section="sewage-disposal-section"><i class="fas fa-recycle"></i><h3>التخلص من مياه الصرف</h3><p>عرض وتعديل بيانات التخلص من المياه</p></div>
+            <div class="dashboard-card" data-section="summary-section"><i class="fas fa-chart-pie"></i><h3>الملخص الشهري</h3><p>عرض وتعديل الملخص الشهري</p></div>
+        </div>
+
+        <div id="tables-area">
+            <!-- All table sections will be injected here by JS -->
+        </div>
+    </div>
+
+    <div id="unified-modal" class="modal">
+        <!-- Modal content will be injected here by JS -->
+    </div>
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // ✅✅✅ أضف هذا السطر هنا ✅✅✅
+    window.printSingleTable = printSingleTable; 
+    
+    // ... باقي الكود يبقى كما هو ...
+    const DB_VERSION = 'admin_offices_consumables_v1.0';     
+    // --- Global State Variables ---
+    let activeEditSession = false;
+    let currentActionContext = { action: null, target: null };
+    let selectedRow = { table: null, index: -1, element: null };
+    const ENCODED_PASS = 'YWRtaW4xMjM='; // "admin123"
+
+    // --- Default Data Structures ---
+      // --- Default Data Structures ---
+    // ✅ تم نسخ البيانات من ملفك الأساسي
+      // ✅ [مُحدّث] البيانات الافتراضية لعقود الباطن مطابقة للصورة
+    const defaultSubcontractors = [
+        { id: "sc_1", name: "صيانة واصلاح نظام انذار الحريق", visitValue: 24000, annualVisits: 2, status: "نعم", damagePenalty: 0 },
+        { id: "sc_2", name: "صيانة واصلاح نظام اطفاء الحريق", visitValue: 24000, annualVisits: 2, status: "نعم", damagePenalty: 0 },
+        { id: "sc_3", name: "صيانة واصلاح السنترالات", visitValue: 45000, annualVisits: 3, status: "نعم", damagePenalty: 0 },
+        { id: "sc_4", name: "صيانة مولدات الطوارئ ولوحات التحكم والتشغيل الخاصة بها", visitValue: 60000, annualVisits: 3, status: "نعم", damagePenalty: 0 },
+        { id: "sc_5", name: "مكافحة الحشرات والقوارض والافات البيئية", visitValue: 336000, annualVisits: 12, status: "نعم", damagePenalty: 0 },
+        { id: "sc_6", name: "صيانة واصلاح المصاعد الكهربائية", visitValue: 12000, annualVisits: 12, status: "نعم", damagePenalty: 0 }
+    ];
+
+       /**
+     * ✅ [مُحدّث] البيانات الافتراضية لجدول تقييم الأداء مطابقة للصورة.
+     */
+    const defaultPerformance = [ 
+        { id: "pf_1", name: "الوقود والزيوت والمحروقات ( ماعدا وقود السيارات )", maxScore: 25, score: 25 },
+        { id: "pf_2", name: "مستهلكات الاعمال المدنية", maxScore: 25, score: 25 },
+        { id: "pf_3", name: "مواد ومطهرات النظافة", maxScore: 20, score: 20 },
+        { id: "pf_4", name: "مستهلكات الزراعة والرى ومكافحة الحشرات", maxScore: 15, score: 15 },
+        { id: "pf_5", name: "مستهلكات اجهزة النسخ والتصوير والطباعة", maxScore: 15, score: 15 }
+    ];
+
+    const defaultWater = [{ id: "wt_1", name: "توريد مياه للمستشفى", unitPrice: 1, quantity: 28500 }];
+    
+    // ✅✅✅ [الإضافة الجديدة] بند توريد الغسيل كنسخة من المياه ✅✅✅
+    const defaultLaundry = [{ id: "ld_1", name: "توريد غسيل للمستشفى", unitPrice: 1, quantity: 28500 }];
+
+    const defaultSewage = [{ id: "sw_1", name: "التخلص من مياه الصرف الصحي", unitPrice: 0, quantity: 0 }];
+    
+        /**
+     * ✅ [مُحدّث] البيانات الافتراضية لجدول الملخص مع القيم الشهرية الصحيحة.
+     */
+    const defaultSummary = [ 
+        { id: "pf_1", name: "الوقود والزيوت والمحروقات ( ماعدا وقود السيارات )", value: 44400, isEditable: true, isCustom: false }, 
+        { id: "pf_2", name: "مستهلكات الاعمال المدنية", value: 66600, isEditable: true, isCustom: false },
+        { id: "pf_3", name: "مواد ومطهرات النظافة", value: 37000, isEditable: true, isCustom: false },
+        { id: "pf_4", name: "مستهلكات الزراعة والرى ومكافحة الحشرات", value: 37000, isEditable: true, isCustom: false },
+        { id: "pf_5", name: "مستهلكات اجهزة النسخ والتصوير والطباعة", value: 74000, isEditable: true, isCustom: false }
+    ];
+
+
+    // ✅ بيانات التواقيع الافتراضية
+        // ✅ [مُحدّث] بيانات التواقيع الافتراضية الموحدة للكل
+    const defaultSignatures = {
+        subcontractors: [
+            { title: 'مندوب المقاول', name: 'م / علي صالح' },
+            { title: 'إدارة الصيانة بصحة نجران', name: 'م / حمد سالم ال منيف' }
+        ],
+        performance: [
+            { title: 'مندوب المقاول', name: 'م / علي صالح' },
+            { title: 'إدارة الصيانة بصحة نجران', name: 'م / حمد سالم ال منيف' }
+        ],
+        water: [
+            { title: 'مندوب المقاول', name: 'م / علي صالح' },
+            { title: 'إدارة الصيانة بصحة نجران', name: 'م / حمد سالم ال منيف' }
+        ],
+        laundry: [
+            { title: 'مندوب المقاول', name: 'م / علي صالح' },
+            { title: 'إدارة الصيانة بصحة نجران', name: 'م / حمد سالم ال منيف' }
+        ],
+        sewage: [
+            { title: 'مندوب المقاول', name: 'م / علي صالح' },
+            { title: 'إدارة الصيانة بصحة نجران', name: 'م / حمد سالم ال منيف' }
+        ],
+        summary: [
+            { title: 'مندوب المقاول', name: 'م / علي صالح' },
+            { title: 'إدارة الصيانة بصحة نجران', name: 'م / حمد سالم ال منيف' }
+        ]
+    };
+
+
+    // ✅ بيانات العناوين الافتراضية للطباعة
+    const defaultPrintTitles = {
+        'subcontractors': '<h1>المبلغ المستحق لمقاولي الباطن للأجهزة غير الطبية</h1><h2>لموقع: {hospitalName}</h2><h3>{period}</h3>',
+        'performance': '<h1>جدول رقم (ح م 1) المستهلكات والمواد الهندسية</h1><h2>جدول حسم المقابل</h2><h3>{period}</h3>',
+        'water': '<h1>شهادة الاستحقاق الشهري لتوريد المياه</h1><h2>لإعمال النظافة والصيانة والتشغيل غير الطبي لموقع: {hospitalName}</h2><h3>{period}</h3>',
+        'laundry': '<h1>شهادة الاستحقاق الشهري لتوريد الغسيل</h1><h2>لإعمال النظافة والصيانة والتشغيل غير الطبي لموقع: {hospitalName}</h2><h3>{period}</h3>',
+        'sewage': '<h1>شهادة الاستحقاق الشهري للتخلص من مياه الصرف الصحي</h1><h2>لإعمال النظافة والصيانة والتشغيل غير الطبي لموقع: {hospitalName}</h2><h3>{period}</h3>',
+        'summary': '<h1>شهادة الاستحقاق الشهري لبنود (المستهلكات - مقاولي الباطن - والمرافق)</h1><h2>لأعمال النظافة والصيانة والتشغيل غير الطبي لموقع: {hospitalName}</h2><h3>{period}</h3>'
+    };
+
+
+    // --- Data Loading Function ---
+       /**
+     * ✅ [مُصحح ومُحصّن] دالة تحميل البيانات من الذاكرة.
+     * إذا كانت البيانات المحفوظة فارغة أو تالفة، فإنها تعود دائمًا إلى البيانات الافتراضية.
+     */
+    function loadData(key, defaultValue) {
+        try {
+            const storedData = localStorage.getItem(key);
+            if (storedData) {
+                let parsedData = JSON.parse(storedData);
+
+                // ✅ --- بداية التحسين: التأكد من وجود البنود الأساسية ---
+                if (key.includes('summary_data')) {
+                    // قائمة بالبنود المخصصة التي يجب أن تكون موجودة دائمًا
+                    const requiredCustomItems = [
+                        { id: "sm_custom_deduction_1", name: "غرامة الكهرباء + الماء للسكن", value: 0, isEditable: true, isCustom: true }
+                    ];
+
+                    requiredCustomItems.forEach(reqItem => {
+                        // تحقق إذا كان البند موجودًا بالفعل في البيانات المحفوظة
+                        const itemExists = parsedData.some(item => item.id === reqItem.id);
+                        // إذا لم يكن موجودًا، قم بإضافته
+                        if (!itemExists) {
+                            parsedData.push(reqItem);
+                        }
+                    });
+                }
+                // --- نهاية التحسين ---
+
+                if (Array.isArray(parsedData) && parsedData.length > 0) {
+                    return parsedData;
+                }
+                if (typeof parsedData === 'object' && parsedData !== null && !Array.isArray(parsedData) && Object.keys(parsedData).length > 0) {
+                    return parsedData;
+                }
+            }
+            return JSON.parse(JSON.stringify(defaultValue));
+        } catch (e) {
+            console.error(`خطأ في تحميل أو تحليل البيانات للمفتاح ${key}:`, e);
+            return JSON.parse(JSON.stringify(defaultValue));
+        }
+    }
+
+    // --- Data Initialization ---
+    let subcontractorsData = loadData(`subcontractors_data_${DB_VERSION}`, defaultSubcontractors);
+    let performanceData = loadData(`performance_data_${DB_VERSION}`, defaultPerformance);
+    let waterData = loadData(`water_supply_data_${DB_VERSION}`, defaultWater);
+    let laundryData = loadData(`laundry_supply_data_${DB_VERSION}`, defaultLaundry);
+    let sewageData = loadData(`sewage_disposal_data_${DB_VERSION}`, defaultSewage);
+    let summaryData = loadData(`summary_data_${DB_VERSION}`, defaultSummary);
+    let signaturesData = loadData(`signatures_data_${DB_VERSION}`, defaultSignatures);
+    let printTitlesData = loadData(`print_titles_data_${DB_VERSION}`, defaultPrintTitles);
+    // ✅✅✅ أضف هذا السطر الجديد ✅✅✅
+    let notesData = loadData(`notes_data_${DB_VERSION}`, {});
+
+    // --- Utility Functions ---
+    const parseNumericValue = (value) => {
+        if (typeof value === 'string') return parseFloat(value.replace(/,/g, '')) || 0;
+        return parseFloat(value) || 0;
+    };
+    const formatNumber = (num) => new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parseNumericValue(num));
+    const generateUniqueId = (prefix) => `${prefix}_${Date.now()}`;
+    // --- ✅✅✅ بداية الكود المضاف لإصلاح الخطأ ✅✅✅ ---
+
+    /**
+     * دالة مساعدة لجلب تفاصيل العقد (النوع والنسبة).
+     * @returns {{contractType: string, directPurchaseRatio: number}}
+     */
+    function getContractDetails() {
+        const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+        return {
+            contractType: contractData.contractType || 'عقد أساسي',
+            directPurchaseRatio: parseFloat(contractData.directPurchaseRatio) || 0
+        };
+    }
+
+    /**
+     * دالة مساعدة لجلب تفاصيل مدة المستخلص.
+     * @returns {{daysInExtract: number, totalDaysInMonth: number}}
+     */
+    function getPeriodDetails() {
+        const extractData = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+        const start = extractData.extractStart ? new Date(extractData.extractStart) : new Date(new Date().setDate(1));
+        const end = extractData.extractEnd ? new Date(extractData.extractEnd) : new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
+        
+        // حساب عدد أيام المستخلص الفعلية
+        const daysInExtract = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        
+        // حساب عدد أيام الشهر الميلادي الذي تبدأ فيه الفترة
+        const totalDaysInMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
+        
+        return { 
+            daysInExtract: Math.max(1, daysInExtract), 
+            totalDaysInMonth: totalDaysInMonth > 0 ? totalDaysInMonth : 30 
+        };
+    }
+
+    // --- ✅✅✅ نهاية الكود المضاف لإصلاح الخطأ ✅✅✅ ---
+
+    // --- Core Calculation Logic ---
+/**
+ * ✅ [النسخة النهائية V2 - ذكية ومستقلة]
+ * تحاول أولاً قراءة القيمة الجاهزة من صفحة العمالة.
+ * إذا لم تجدها، تقوم بحسابها بنفسها لضمان عدم ظهور الخطأ.
+ */
+function getAutomaticLaborCost() {
+    try {
+        // 1. المحاولة الأولى: قراءة القيمة الجاهزة والمحفوظة
+        const grandNetTotal = localStorage.getItem('grand-net-total'); 
+        if (grandNetTotal !== null) {
+            return parseNumericValue(grandNetTotal);
+        }
+
+        // 2. الخطة البديلة: إذا لم نجد القيمة، نحسبها هنا مباشرة
+        console.warn("لم يتم العثور على 'grand-net-total'. سيتم الحساب مباشرة من بيانات العمالة.");
+        
+        const attendanceData = JSON.parse(localStorage.getItem('centersAttendanceData_v2') || '{}');
+        const extractData = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+        const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+
+        const start = new Date(extractData.extractStart || new Date());
+        const end = new Date(extractData.extractEnd || new Date());
+        const daysInExtract = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+        const totalDaysInMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
+        
+        const contractType = contractData.contractType || 'عقد أساسي';
+        const directPurchaseRatio = parseFloat(contractData.directPurchaseRatio) || 0;
+
+        let calculatedNetTotal = 0;
+
+        for (const centerKey in attendanceData) {
+            if (centerKey === 'admin_staff') continue; // تجاهل الإداريين
+
+            const centerEmployees = attendanceData[centerKey] || [];
+            centerEmployees.forEach(emp => {
+                const fullMonthSalary = parseFloat(emp.salary) || 0;
+                const dailyRate = totalDaysInMonth > 0 ? fullMonthSalary / totalDaysInMonth : 0;
+                let actualCostForPeriod = dailyRate * daysInExtract;
+
+                if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) {
+                    actualCostForPeriod += actualCostForPeriod * (directPurchaseRatio / 100);
+                }
+
+                const nationalityFine = parseFloat(emp.nationalityFine) || 0;
+                const absenceDays = (emp.days || []).filter(day => day === 'غ').length;
+                const deduction = absenceDays * dailyRate;
+                
+                // تقدير بسيط للغرامة (يمكن تحسينه إذا لزم الأمر)
+                const absenceFine = absenceDays * 50; // متوسط تقديري للغرامة
+                
+                calculatedNetTotal += actualCostForPeriod - deduction - absenceFine - nationalityFine;
+            });
+        }
+        
+        return calculatedNetTotal;
+
+    } catch (e) {
+        console.error("خطأ في جلب أو حساب تكلفة العمالة:", e);
+        return 0;
+    }
+}
+
+
+    function updatePenaltyDataSourcePanel() {
+        const laborCost = getAutomaticLaborCost();
+        document.getElementById('display-labor-cost').textContent = formatNumber(laborCost);
+
+        const totalConsumables = summaryData.filter(item => !item.isSubTotal && !item.isCustom).reduce((sum, item) => sum + parseNumericValue(item.value), 0);
+        document.getElementById('display-consumables-cost').textContent = formatNumber(totalConsumables);
+
+        const totalSubcontractors = subcontractorsData.reduce((sum, item) => sum + parseNumericValue(item.visitValue), 0);
+        document.getElementById('display-subcontractors-cost').textContent = formatNumber(totalSubcontractors);
+
+        const totalForPenalty = laborCost + totalConsumables + totalSubcontractors;
+        document.getElementById('expected-penalty').textContent = formatNumber(totalForPenalty * 0.05);
+    }
+
+    // --- Table Rendering Functions ---
+ 
+
+
+       // --- ✅✅✅ بداية الكود الجديد والمُحسّن ✅✅✅ ---
+
+    // --- Table Rendering Functions ---
+
+    /**
+     * يعرض جدول عقود الباطن مع كل الأعمدة والتفاصيل الصحيحة.
+     */
+    /**
+     * ✅ [النسخة النهائية الكاملة]
+     * يعرض جدول عقود الباطن مع كل الأعمدة والتفاصيل الصحيحة.
+     */
+     /**
+     * ✅ [النسخة النهائية الكاملة V2]
+     * يعرض جدول عقود الباطن مع كل الأعمدة، التلوين الديناميكي، والإطارات التحذيرية.
+     */
+   
+    function renderSubcontractorsTable() {
+        const table = document.getElementById('subcontractors-table');
+        table.querySelector('thead').innerHTML = `<tr><th>البيان</th><th>تكلفة الزيارة حسب العقد</th><th>زيارات سنوية</th><th>موعد الزيارة</th><th>القيمة المستحقة للزيارة</th><th>هل تمت الزيارة؟</th><th>أيام التأخير</th><th>غرامة التأخير</th><th>غرامة أضرار</th><th>صافي المستحقات</th></tr>`;
+        
+        const tbody = table.querySelector('tbody');
+        const tfoot = table.querySelector('tfoot');
+        tbody.innerHTML = '';
+        let totals = { visitValue: 0, dueVisitCost: 0, latePenalty: 0, damagePenalty: 0, netDue: 0 };
+        
+        const penaltyValue = parseNumericValue(document.getElementById('expected-penalty').textContent);
+        const { contractType, directPurchaseRatio } = getContractDetails();
+        
+        const visitDateOptions = ['خلال هذا الشهر', 'تمت الزيارة من قبل', "يناير القادم", "فبراير القادم", "مارس القادم", "أبريل القادم", "مايو القادم", "يونيو القادم", "يوليو القادم", "أغسطس القادم", "سبتمبر القادم", "أكتوبر القادم", "نوفمبر القادم", "ديسمبر القادم"];
+
+        subcontractorsData.forEach((item, index) => {
+            let visitValue = parseNumericValue(item.visitValue);
+            if (contractType === 'شراء مباشر') {
+                visitValue += visitValue * (directPurchaseRatio / 100);
+            }
+            const annualVisits = parseInt(item.annualVisits) || 1;
+            const damagePenalty = parseNumericValue(item.damagePenalty);
+ 
+const dueVisitCost = (item.visitDate || '').includes("خلال هذا الشهر") ? (visitValue / annualVisits) : 0;
+            const latePenalty = (item.status === 'لا' && dueVisitCost > 0) ? penaltyValue : 0;
+            const baseValue = (item.status === "نعم") ? dueVisitCost : 0;
+            const netDue = baseValue - latePenalty - damagePenalty;
+            
+            totals.visitValue += visitValue;
+            totals.dueVisitCost += dueVisitCost;
+            totals.latePenalty += latePenalty;
+            totals.damagePenalty += damagePenalty;
+            totals.netDue += netDue;
+
+            const row = tbody.insertRow();
+            row.dataset.table = 'subcontractors';
+            row.dataset.index = index;
+
+            if (item.status === 'لا') {
+                row.classList.add('visit-not-done');
+            }
+            
+            let visitDateClass = 'visit-date-future';
+            if ((item.visitDate || '').includes("خلال هذا الشهر")) {
+                visitDateClass = 'visit-date-monthly';
+            } else if ((item.visitDate || '').includes("تمت الزيارة من قبل")) {
+                visitDateClass = 'visit-date-done';
+            }
+            
+            const visitDateSelect = visitDateOptions.map(option => `<option value="${option}" ${item.visitDate === option ? 'selected' : ''}>${option}</option>`).join('');
+            
+            row.innerHTML = `
+                <td><input type="text" value="${item.name}" data-field="name" class="editable-on-manage"><span class="cell-print-content">${item.name}</span></td>
+                <td><input type="text" value="${formatNumber(visitValue)}" data-field="visitValue" class="editable-on-manage"><span class="cell-print-content">${formatNumber(visitValue)}</span></td>
+                <td><input type="number" value="${annualVisits}" data-field="annualVisits" class="editable-on-manage"><span class="cell-print-content">${annualVisits}</span></td>
+                <td><select data-field="visitDate" class="editable-always ${visitDateClass}">${visitDateSelect}</select><span class="cell-print-content">${item.visitDate || ''}</span></td>
+                <td class="readonly-cell">${formatNumber(dueVisitCost)}</td>
+                <td><select data-field="status" class="editable-always status-${item.status === 'نعم' ? 'yes' : 'no'}"><option value="نعم" ${item.status === 'نعم' ? 'selected' : ''}>نعم</option><option value="لا" ${item.status === 'لا' ? 'selected' : ''}>لا</option></select><span class="cell-print-content">${item.status}</span></td>
+                <td><input type="number" value="${item.delayDays || 0}" data-field="delayDays" class="editable-always"><span class="cell-print-content">${item.delayDays || 0}</span></td>
+                <td class="readonly-cell">${formatNumber(latePenalty)}</td>
+                <td><input type="text" value="${formatNumber(damagePenalty)}" data-field="damagePenalty" class="editable-always"><span class="cell-print-content">${formatNumber(damagePenalty)}</span></td>
+                <td class="readonly-cell">${formatNumber(netDue)}</td>
+            `;
+        });
+        
+        const netDueTotal = totals.netDue;
+        tfoot.innerHTML = `
+            <tr>
+                <td>الإجمالي</td>
+                <td>${formatNumber(totals.visitValue)}</td>
+                <td></td><td></td>
+                <td>${formatNumber(totals.dueVisitCost)}</td>
+                <td></td><td></td>
+                <td>${formatNumber(totals.latePenalty)}</td>
+                <td>${formatNumber(totals.damagePenalty)}</td>
+                <td>${formatNumber(netDueTotal)}</td>
+            </tr>
+            <tr class="tafqeet-row" style="background-color: #fff9e0;">
+                <td colspan="10">فقط وقدره: ${tafqeet(netDueTotal)}</td>
+            </tr>
+        `;
+    }
+
+       /**
+     * ✅ [النسخة النهائية V2 - بحسابات دقيقة]
+     * تحسب جدول أداء المستهلكات مع الأخذ في الاعتبار:
+     * 1. مدة المستخلص الفعلية (e.g., 15 days).
+     * 2. نسبة الشراء المباشر إذا كان العقد من هذا النوع.
+     */
+    function renderPerformanceTable() {
+        const table = document.getElementById('performance-table');
+        table.querySelector('thead').innerHTML = `<tr><th>البيان</th><th>الدرجة القصوى</th><th>درجة التقدير</th><th>نسبة النقص</th><th>قيمة البند بالمستخلص</th><th>حسم المقابل</th><th>غرامة حسم المقابل</th></tr>`;
+        const tbody = table.querySelector('tbody');
+        tbody.innerHTML = '';
+        let totals = { maxScore: 0, score: 0, deduction: 0, penalty: 0, valueForPeriod: 0 };
+
+        // --- ✅ [الخطوة 1: جلب البيانات المالية] ---
+        const { contractType, directPurchaseRatio } = getContractDetails();
+        const { daysInExtract, totalDaysInMonth } = getPeriodDetails();
+
+        performanceData.forEach((item, index) => {
+            const maxScore = parseInt(item.maxScore) || 0;
+            const score = parseInt(item.score) || 0;
+            const deficiencyRatio = maxScore > 0 ? (maxScore - score) / maxScore : 0;
+            
+            const summaryItem = summaryData.find(s => s.id === item.id);
+            let monthlyValue = summaryItem ? parseNumericValue(summaryItem.value) : 0;
+            
+            // --- ✅ [الخطوة 2: تطبيق منطق الشراء المباشر] ---
+            if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) {
+                monthlyValue += monthlyValue * (directPurchaseRatio / 100);
+            }
+            
+            // --- ✅ [الخطوة 3: حساب القيمة حسب مدة المستخلص] ---
+            const valueForPeriod = (monthlyValue / totalDaysInMonth) * daysInExtract;
+            
+            const deduction = valueForPeriod * deficiencyRatio;
+            const penalty = deduction * 0.10; // غرامة 10% من قيمة الحسم
+
+            totals.maxScore += maxScore;
+            totals.score += score;
+            totals.deduction += deduction;
+            totals.penalty += penalty;
+            totals.valueForPeriod += valueForPeriod;
+
+            const row = tbody.insertRow();
+            row.dataset.table = 'performance';
+            row.dataset.index = index;
+            row.innerHTML = `
+                <td><input type="text" value="${item.name}" data-field="name" class="editable-on-manage"><span class="cell-print-content">${item.name}</span></td>
+                <td><input type="number" value="${maxScore}" data-field="maxScore" class="editable-on-manage"><span class="cell-print-content">${maxScore}</span></td>
+                <td><input type="number" value="${score}" data-field="score" class="editable-always"><span class="cell-print-content">${score}</span><span class="error-message"></span></td>
+                <td class="readonly-cell">${(deficiencyRatio * 100).toFixed(2)}%</td>
+                <td class="readonly-cell">${formatNumber(valueForPeriod)}</td>
+                <td class="readonly-cell">${formatNumber(deduction)}</td>
+                <td class="readonly-cell">${formatNumber(penalty)}</td>
+            `;
+        });
+        const totalDeficiencyRatio = totals.maxScore > 0 ? (100 * (totals.maxScore - totals.score) / totals.maxScore) : 0;
+        table.querySelector('tfoot').innerHTML = `
+            <tr>
+                <td>المجموع</td>
+                <td>${totals.maxScore}</td>
+                <td>${totals.score}</td>
+                <td>${totalDeficiencyRatio.toFixed(2)}%</td>
+                <td>${formatNumber(totals.valueForPeriod)}</td>
+                <td>${formatNumber(totals.deduction)}</td>
+                <td>${formatNumber(totals.penalty)}</td>
+            </tr>
+        `;
+    }
+
+    function renderUtilityTable(type) {
+        const isWater = type === 'water';
+        const isLaundry = type === 'laundry';
+        const tableId = isWater ? 'water-supply-table' : (isLaundry ? 'laundry-supply-table' : 'sewage-disposal-table');
+        const data = isWater ? waterData : (isLaundry ? laundryData : sewageData);
+        const unitLabel = isLaundry ? 'سعر الكيلو' : 'سعر الوحدة (م3)';
+        const quantityLabel = isLaundry ? 'الكمية (كيلو)' : 'الكمية (م3)';
+        
+        const table = document.getElementById(tableId);
+        table.querySelector('thead').innerHTML = `<tr><th>البيان</th><th>${unitLabel}</th><th>${quantityLabel}</th><th>اجمالي السعر</th></tr>`;
+        const tbody = table.querySelector('tbody');
+        tbody.innerHTML = '';
+        let totalDue = 0;
+        const { contractType, directPurchaseRatio } = getContractDetails();
+
+        data.forEach((item, index) => {
+            let unitPrice = parseNumericValue(item.unitPrice);
+            if (contractType === 'شراء مباشر') {
+                unitPrice += unitPrice * (directPurchaseRatio / 100);
+            }
+            const quantity = parseNumericValue(item.quantity);
+            const monthlyTotal = unitPrice * quantity;
+            totalDue += monthlyTotal;
+            const row = tbody.insertRow();
+            row.dataset.table = type;
+            row.dataset.index = index;
+            row.innerHTML = `
+                <td><input type="text" value="${item.name}" data-field="name" class="editable-on-manage"><span class="cell-print-content">${item.name}</span></td>
+                <td><input type="text" value="${formatNumber(unitPrice)}" data-field="unitPrice" class="editable-on-manage"><span class="cell-print-content">${formatNumber(unitPrice)}</span></td>
+                <td><input type="text" value="${formatNumber(quantity)}" data-field="quantity" class="editable-on-manage"><span class="cell-print-content">${formatNumber(quantity)}</span></td>
+                <td class="readonly-cell">${formatNumber(monthlyTotal)}</td>
+            `;
+        });
+        table.querySelector('tfoot').innerHTML = `
+            <tr>
+                <td colspan="3">اجمالي المستحق</td>
+                <td>${formatNumber(totalDue)}</td>
+            </tr>
+            <tr class="tafqeet-row" style="background-color: #fff9e0;">
+                <td colspan="4">فقط وقدره: ${tafqeet(totalDue)}</td>
+            </tr>
+        `;
+    }
+    
+             function renderSummaryTable() {
+        const table = document.getElementById('summary-table');
+        table.querySelector('thead').innerHTML = `<tr><th>البند</th><th>القيمة الشهرية</th><th>القيمة بالمستخلص</th><th>الحسم</th><th>الغرامة</th><th>الصافي</th></tr>`;
+        const tbody = table.querySelector('tbody');
+        tbody.innerHTML = '';
+        let finalTotalNet = 0;
+
+        const { contractType, directPurchaseRatio } = getContractDetails();
+        const { daysInExtract, totalDaysInMonth } = getPeriodDetails();
+
+        // --- 1. عرض بنود المستهلكات الأساسية ---
+        let consumablesTotalNet = 0;
+        const mainConsumableItems = summaryData.filter(item => !item.isCustom && !item.isSubTotal);
+        
+        mainConsumableItems.forEach(item => {
+            const perfItem = performanceData.find(p => p.id === item.id);
+            if (!perfItem) return;
+            
+            const originalMonthlyValue = parseNumericValue(item.value);
+            let valueWithPurchaseRatio = originalMonthlyValue;
+            if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) {
+                valueWithPurchaseRatio += originalMonthlyValue * (directPurchaseRatio / 100);
+            }
+            const valueForPeriod = (valueWithPurchaseRatio / totalDaysInMonth) * daysInExtract;
+
+            const maxScore = parseInt(perfItem.maxScore) || 0;
+            const score = parseInt(perfItem.score) || 0;
+            const deficiencyRatio = maxScore > 0 ? (maxScore - score) / maxScore : 0;
+            const deduction = valueForPeriod * deficiencyRatio;
+            const penalty = deduction * 0.10;
+            const net = valueForPeriod - deduction - penalty;
+            consumablesTotalNet += net;
+            
+            const summaryIndex = summaryData.findIndex(s => s.id === item.id);
+            const row = tbody.insertRow();
+            // ✅ تم إضافة data-table و data-index للصفوف لتعمل مع وضع الإدارة
+            row.dataset.table = 'summary';
+            row.dataset.index = summaryIndex;
+            row.innerHTML = `
+                <td><input type="text" value="${item.name}" data-field="name" class="editable-on-manage"><span class="cell-print-content">${item.name}</span></td>
+                <td><input type="text" value="${formatNumber(originalMonthlyValue)}" data-field="value" class="editable-on-manage"><span class="cell-print-content">${formatNumber(originalMonthlyValue)}</span></td>
+                <td class="readonly-cell">${formatNumber(valueForPeriod)}</td>
+                <td class="readonly-cell">${formatNumber(deduction)}</td>
+                <td class="readonly-cell">${formatNumber(penalty)}</td>
+                <td class="readonly-cell">${formatNumber(net)}</td>
+            `;
+        });
+        finalTotalNet += consumablesTotalNet;
+        
+        // --- 2. عرض الإجماليات والخصومات بالترتيب الصحيح ---
+        
+        const consumablesTotalRow = tbody.insertRow();
+        consumablesTotalRow.style.backgroundColor = '#e7f5ff';
+        consumablesTotalRow.innerHTML = `<td colspan="5" style="font-weight:bold;">إجمالي تكاليف بند المستهلكات</td><td style="font-weight:bold;">${formatNumber(consumablesTotalNet)}</td>`;
+
+        // ✅✅✅ السطر الثابت لغرامة السكن - الآن يعمل مع وضع الإدارة ✅✅✅
+        const housingPenaltyItem = summaryData.find(item => item.id === "sm_custom_deduction_1") || { value: 0 };
+        const housingPenaltyValue = parseNumericValue(housingPenaltyItem.value);
+        finalTotalNet -= housingPenaltyValue;
+
+        const penaltyRow = tbody.insertRow();
+        const penaltyIndex = summaryData.findIndex(item => item.id === "sm_custom_deduction_1");
+        // ✅ تم إضافة data-table و data-index للصف ليعمل مع وضع الإدارة
+        penaltyRow.dataset.table = 'summary';
+        penaltyRow.dataset.index = penaltyIndex;
+        penaltyRow.style.backgroundColor = '#f8d7da';
+        penaltyRow.innerHTML = `
+            <td colspan="5">
+                <input type="text" value="غرامة الكهرباء + الماء للسكن" data-field="name" class="editable-on-manage">
+                <span class="cell-print-content">غرامة الكهرباء + الماء للسكن</span>
+            </td>
+            <td>
+                <input type="text" value="${formatNumber(housingPenaltyValue)}" data-field="value" class="editable-on-manage">
+                <span class="cell-print-content">(${formatNumber(housingPenaltyValue)})</span>
+            </td>
+        `;
+        
+        const subNetDue = parseNumericValue(document.querySelector('#subcontractors-table tfoot tr:first-child td:last-child')?.textContent || '0');
+        finalTotalNet += subNetDue;
+        const subRow = tbody.insertRow();
+        subRow.style.backgroundColor = '#e3faf0';
+        subRow.innerHTML = `<td colspan="5" style="font-weight:bold;">إجمالي مقاولي الباطن</td><td style="font-weight:bold;">${formatNumber(subNetDue)}</td>`;
+
+        const waterNetDue = parseNumericValue(document.querySelector('#water-supply-table tfoot tr:first-child td:last-child')?.textContent || '0');
+        finalTotalNet += waterNetDue;
+        tbody.insertRow().innerHTML = `<td colspan="5" style="font-weight:bold; background-color: #fff8e1;">إجمالي توريد المياه</td><td style="font-weight:bold; background-color: #fff8e1;">${formatNumber(waterNetDue)}</td>`;
+        
+        const laundryNetDue = parseNumericValue(document.querySelector('#laundry-supply-table tfoot tr:first-child td:last-child')?.textContent || '0');
+        finalTotalNet += laundryNetDue;
+        tbody.insertRow().innerHTML = `<td colspan="5" style="font-weight:bold; background-color: #fff8e1;">إجمالي توريد الغسيل</td><td style="font-weight:bold; background-color: #fff8e1;">${formatNumber(laundryNetDue)}</td>`;
+
+        const sewageNetDue = parseNumericValue(document.querySelector('#sewage-disposal-table tfoot tr:first-child td:last-child')?.textContent || '0');
+        finalTotalNet += sewageNetDue;
+        tbody.insertRow().innerHTML = `<td colspan="5" style="font-weight:bold; background-color: #fef2e4;">إجمالي التخلص من الصرف</td><td style="font-weight:bold; background-color: #fef2e4;">${formatNumber(sewageNetDue)}</td>`;
+
+        // --- 3. عرض الإجمالي النهائي ---
+        table.querySelector('tfoot').innerHTML = `
+            <tr>
+                <td colspan="5"><strong>الصافي النهائي المستحق للمقاول</strong></td>
+                <td><strong>${formatNumber(finalTotalNet)}</strong></td>
+            </tr>
+            <tr class="tafqeet-row" style="background-color: #fff9e0;">
+                <td colspan="6">فقط وقدره: ${tafqeet(finalTotalNet)}</td>
+            </tr>
+        `;
+    }
+
+
+
+
+
+    // --- ✅✅✅ نهاية الكود الجديد والمُحسّن ✅✅✅ ---
+
+
+
+    function displayAllSignatures() {
+        document.querySelectorAll('.signatures-grid').forEach(grid => {
+            const sectionKey = grid.closest('.table-section').id.replace('-section', '').replace('-supply', '').replace('-disposal', '');
+            const sigs = signaturesData[sectionKey] || [];
+            grid.innerHTML = sigs.map(sig => `<div class="signature-item"><div class="title">${sig.title}</div><div class="line"></div><div class="name">${sig.name || '................'}</div></div>`).join('');
+        });
+    }
+
+    // --- UI Creation ---
+    function createTableSections() {
+        const tablesArea = document.getElementById('tables-area');
+        tablesArea.innerHTML = `
+            ${createSectionHTML('subcontractors', 'شهادة الأداء الشهري لعقود الباطن')}
+            ${createSectionHTML('performance', 'جدول رقم (ح م 1) المستهلكات والمواد الهندسية')}
+            ${createSectionHTML('water-supply', 'شهادة الاستحقاق الشهري لتوريد المياه', 'water')}
+            ${createSectionHTML('laundry-supply', 'شهادة الاستحقاق الشهري لتوريد الغسيل', 'laundry')}
+            ${createSectionHTML('sewage-disposal', 'شهادة الاستحقاق الشهري للتخلص من مياه الصرف الصحي', 'sewage')}
+            ${createSectionHTML('summary', 'شهادة الاستحقاق الشهري لبنود (المستهلكات - مقاولي الباطن - والمرافق)')}
+        `;
+    }
+       /**
+     * ✅ [النسخة النهائية V3 - مع تحميل الملاحظات]
+     * ينشئ كود HTML لكل قسم، ويقوم تلقائياً بملء الملاحظات وحالة الـ checkbox
+     * من البيانات المحفوظة في notesData.
+     */
+    function createSectionHTML(id, title, keyOverride = null) {
+        const key = keyOverride || id.replace('-section', '').replace('-supply', '').replace('-disposal', '');
+        
+        // جلب بيانات الملاحظات لهذا القسم
+        const sectionNotes = notesData[key] || { text: '', print: false };
+        const isChecked = sectionNotes.print ? 'checked' : '';
+
+        return `
+            <div class="table-section" id="${id}-section">
+                <button class="back-to-dashboard no-print"><i class="fas fa-arrow-right"></i> العودة</button>
+                <div class="printable-header"></div>
+                <div class="table-header">
+                    <h2>${title}</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-print" onclick="printSingleTable('${id}-section')"><i class="fas fa-print"></i> طباعة</button>
+                        <button class="btn btn-manage" data-target="${key}"><i class="fas fa-edit"></i> إدارة</button>
+                        <div class="edit-controls" data-table="${key}">
+                            <button class="btn btn-add-item"><i class="fas fa-plus"></i> إضافة</button>
+                            <button class="btn btn-remove-item"><i class="fas fa-trash"></i> حذف المحدد</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="${id}-table">
+                        <thead></thead><tbody></tbody><tfoot></tfoot>
+                    </table>
+                </div>
+                <div class="notes-section no-print" data-section-key="${key}">
+                    <label class="notes-toggle">
+                        <input type="checkbox" class="notes-checkbox" ${isChecked}> إضافة ملاحظات للطباعة
+                    </label>
+                    <textarea placeholder="اكتب ملاحظاتك هنا...">${sectionNotes.text}</textarea>
+                </div>
+                <div class="signatures-display-section">
+                    <div class="signatures-grid"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * ✅ [جديد] تتحكم في إضافة كلاس للقسم لتضمين الملاحظات في الطباعة.
+     */
+    function toggleNotesPrinting(checkbox) {
+    const notesSection = checkbox.closest('.notes-section');
+    notesSection.classList.toggle('print-notes-active', checkbox.checked);
+}
+
+          /**
+     * ✅ [النسخة النهائية V9 - مع إصلاح حفظ الغرامة]
+     * تم دمج مستمعي الأحداث المكررين في مستمع واحد.
+     * تم تنظيم الكود ليكون أسهل في القراءة والصيانة.
+     * ✅ تم إضافة معالجة خاصة لحفظ قيمة حقل الغرامة المخصص.
+     */
+    function setupEventListeners() {
+        // --- 1. مستمع حدث لأحداث النقر (Click) ---
+        document.body.addEventListener('click', (e) => {
+            const target = e.target;
+            const dashboardCard = target.closest('.dashboard-card');
+            const backBtn = target.closest('.back-to-dashboard');
+            const manageBtn = target.closest('.btn-manage');
+            const printBtn = target.closest('.btn-print');
+            const addBtn = target.closest('.btn-add-item');
+            const removeBtn = target.closest('.btn-remove-item');
+            const tableRow = target.closest('tr[data-table]');
+            const mainActionBtn = target.closest('.main-action-buttons .btn');
+
+            if (dashboardCard) showTable(dashboardCard.dataset.section);
+            if (backBtn) showDashboard();
+            if (manageBtn) requestPermission(`manage-${manageBtn.dataset.target}`, manageBtn.dataset.target);
+            if (printBtn && printBtn.closest('.table-section')) {
+                printSingleTable(printBtn.closest('.table-section').id);
+            }
+            if (addBtn) addItem(addBtn.parentElement.dataset.table);
+            if (removeBtn) removeItem(removeBtn.parentElement.dataset.table);
+            if (tableRow) selectRow(tableRow);
+            
+            if (mainActionBtn) {
+                switch (mainActionBtn.id) {
+                    case 'export-all-btn': exportAllToExcel(); break;
+                    case 'print-all-btn': printAllSections(); break;
+                    case 'backup-btn': requestPermission('backup'); break;
+                    case 'edit-signatures-btn': requestPermission('signatures'); break;
+                    case 'edit-titles-btn': requestPermission('titles'); break;
+                    case 'clear-data-btn': requestPermission('clear'); break;
+                    case 'recalculate-btn': 
+                        const toast = document.getElementById('save-toast');
+                        toast.textContent = '⏳ جاري تحديث الحسابات...';
+                        toast.style.backgroundColor = '#0056b3';
+                        toast.classList.add('show');
+                        setTimeout(() => {
+                            captureUIData(); // التأكد من التقاط كل البيانات قبل الحفظ
+                            saveAllData();   // الحفظ في localStorage
+                            renderAllTables(); // إعادة عرض كل شيء
+                            toast.textContent = '✅ تم تحديث الحسابات بنجاح!';
+                            toast.style.backgroundColor = '#28a745';
+                            setTimeout(() => {
+                                toast.classList.remove('show');
+                                toast.textContent = 'تم الحفظ بنجاح!';
+                            }, 2000);
+                        }, 50);
+                        break;
+                }
+            }
+        });
+
+        // --- 2. مستمع حدث لأحداث الإدخال والتغيير (Input & Change) ---
+        document.getElementById('tables-area').addEventListener('input', (e) => {
+            const target = e.target;
+
+            // أ. التعامل مع حفظ الملاحظات
+            const notesSection = target.closest('.notes-section');
+            if (notesSection) {
+                const key = notesSection.dataset.sectionKey;
+                const checkbox = notesSection.querySelector('.notes-checkbox');
+                const textarea = notesSection.querySelector('textarea');
+                
+                if (!notesData[key]) notesData[key] = {};
+                notesData[key].text = textarea.value;
+                notesData[key].print = checkbox.checked;
+                
+                localStorage.setItem(`notes_data_${DB_VERSION}`, JSON.stringify(notesData));
+                return;
+            }
+            
+            // ب. التعامل مع حقول الجداول
+            if (target.tagName !== 'INPUT' && target.tagName !== 'SELECT') return;
+            const tr = target.closest('tr');
+            if (!tr) return;
+
+            const tableType = tr.dataset.table;
+            const index = parseInt(tr.dataset.index);
+            const field = target.dataset.field;
+            const value = target.value.replace(/,/g, '');
+
+            if (tableType === 'performance' && field === 'score') {
+                const scoreValue = parseInt(value) || 0;
+                const maxScore = parseInt(performanceData[index]?.maxScore) || 0;
+                const errorSpan = target.parentElement.querySelector('.error-message');
+                if (scoreValue > maxScore) {
+                    target.classList.add('input-error');
+                    if (errorSpan) errorSpan.textContent = `القيمة يجب ألا تزيد عن ${maxScore}`;
+                    return;
+                } else {
+                    target.classList.remove('input-error');
+                    if (errorSpan) errorSpan.textContent = '';
+                }
+            }
+
+            let dataArray;
+            switch (tableType) {
+                case 'subcontractors': dataArray = subcontractorsData; break;
+                case 'performance': dataArray = performanceData; break;
+                case 'water': dataArray = waterData; break;
+                case 'laundry': dataArray = laundryData; break;
+                case 'sewage': dataArray = sewageData; break;
+                // ✅✅✅ هنا يتم الربط الصحيح ✅✅✅
+                case 'summary': dataArray = summaryData; break; 
+                default: return;
+            }
+
+            if (dataArray && dataArray[index] && field) {
+                dataArray[index][field] = value;
+                // تحديث اسم البند في الملخص إذا تغير في جدول الأداء
+                if (tableType === 'performance' && field === 'name') {
+                    const itemId = dataArray[index].id;
+                    const summaryItem = summaryData.find(item => item.id === itemId);
+                    if (summaryItem) summaryItem.name = value;
+                }
+            }
+        });
+    }
+
+
+
+    function requestPermission(action, target = null) {
+        currentActionContext = { action, target };
+        if (action.startsWith('manage-') && activeEditSession) {
+            endEditSession();
+        } else {
+            openPasswordDialog();
+        }
+    }
+
+    function openPasswordDialog() {
+        const modal = document.getElementById('unified-modal');
+        modal.innerHTML = `
+            <div class="modal-content">
+                <span class="close" onclick="this.closest('.modal').style.display='none'">&times;</span>
+                <h3>صلاحية التعديل</h3>
+                <p>لإجراء أي تعديلات، يرجى إدخال كلمة المرور.</p>
+                <div class="form-group">
+                    <label for="password-input">كلمة المرور:</label>
+                    <input type="password" id="password-input" placeholder="ادخل كلمة المرور هنا">
+                    <p id="password-error" style="color: red; display: none; margin-top: 5px;">كلمة المرور غير صحيحة.</p>
+                </div>
+                <div class="modal-buttons">
+                    <button class="btn btn-excel" id="verify-password-btn">دخول</button>
+                </div>
+            </div>
+        `;
+        modal.style.display = 'flex';
+        document.getElementById('verify-password-btn').onclick = verifyPassword;
+        document.getElementById('password-input').onkeypress = (e) => { if (e.key === 'Enter') verifyPassword(); };
+    }
+
+    function verifyPassword() {
+        const passwordInput = document.getElementById('password-input');
+        if (btoa(passwordInput.value) === ENCODED_PASS) {
+            passwordInput.value = '';
+            document.getElementById('password-error').style.display = 'none';
+            executeAction(currentActionContext.action, currentActionContext.target);
+        } else {
+            document.getElementById('password-error').style.display = 'block';
+        }
+    }
+
+      function executeAction(action, target) {
+        closeUnifiedModal();
+        const manageAction = action.startsWith('manage-');
+        if (manageAction) {
+            startEditSession(target);
+        } else {
+            switch (action) {
+                case 'signatures': openSignaturesDialog(); break;
+                case 'titles': openTitlesDialog(); break;
+                case 'backup': openBackupDialog(); break; // هذا السطر قد يكون موجودًا أو لا
+                case 'clear':
+                    showConfirmationDialog("تأكيد مسح البيانات", "هل أنت متأكد من مسح جميع البيانات؟ سيتم حذف كل شيء والعودة للوضع الافتراضي.", () => {
+                        Object.keys(localStorage).forEach(key => { if (key.includes('_data_')) localStorage.removeItem(key); });
+                        location.reload();
+                    });
+                    break;
+            }
+        }
+    }
+    function openBackupDialog() {
+        const modal = document.getElementById('unified-modal');
+        modal.innerHTML = `
+            <div class="modal-content">
+                <span class="close" onclick="this.closest('.modal').style.display='none'">&times;</span>
+                <h3>النسخ الاحتياطي والاستعادة</h3>
+                <p>يمكنك حفظ نسخة من جميع بيانات هذه الصفحة في ملف، أو استعادة البيانات من ملف نسخة احتياطية.</p>
+                <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 15px;">
+                    <button class="btn btn-excel" id="download-backup-btn"><i class="fas fa-download"></i> تنزيل نسخة احتياطية</button>
+                    <label class="btn btn-titles" for="backup-file-input"><i class="fas fa-upload"></i> رفع نسخة احتياطية</label>
+                    <input type="file" id="backup-file-input" style="display: none;" accept=".json">
+                </div>
+            </div>
+        `;
+        modal.style.display = 'flex';
+        document.getElementById('download-backup-btn').onclick = downloadBackup;
+        document.getElementById('backup-file-input').onchange = uploadBackup;
+    }
+
+    function downloadBackup() {
+        const allData = { 
+            subcontractors: subcontractorsData, 
+            performance: performanceData, 
+            water: waterData, 
+            laundry: laundryData,
+            sewage: sewageData, 
+            summary: summaryData, 
+            signatures: signaturesData, 
+            titles: printTitlesData 
+        };
+        const blob = new Blob([JSON.stringify(allData, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `consumables_backup_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        closeUnifiedModal();
+    }
+    
+    function uploadBackup(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    closeUnifiedModal(); // أغلق نافذة النسخ الاحتياطي أولاً
+                    setTimeout(() => { // تأخير بسيط لإظهار نافذة التأكيد
+                        showConfirmationDialog("تأكيد استعادة البيانات", "سيتم استبدال جميع البيانات الحالية بالبيانات من الملف. هل أنت متأكد؟", () => {
+                            if(data.subcontractors) localStorage.setItem(`subcontractors_data_${DB_VERSION}`, JSON.stringify(data.subcontractors));
+                            if(data.performance) localStorage.setItem(`performance_data_${DB_VERSION}`, JSON.stringify(data.performance));
+                            if(data.water) localStorage.setItem(`water_supply_data_${DB_VERSION}`, JSON.stringify(data.water));
+                            if(data.laundry) localStorage.setItem(`laundry_supply_data_${DB_VERSION}`, JSON.stringify(data.laundry));
+                            if(data.sewage) localStorage.setItem(`sewage_disposal_data_${DB_VERSION}`, JSON.stringify(data.sewage));
+                            if(data.summary) localStorage.setItem(`summary_data_${DB_VERSION}`, JSON.stringify(data.summary));
+                            if(data.signatures) localStorage.setItem(`signatures_data_${DB_VERSION}`, JSON.stringify(data.signatures));
+                            if(data.titles) localStorage.setItem(`print_titles_data_${DB_VERSION}`, JSON.stringify(data.titles));
+                            alert("تم استعادة البيانات بنجاح. سيتم إعادة تحميل الصفحة.");
+                            location.reload();
+                        });
+                    }, 100);
+                } catch (err) { alert("ملف غير صالح أو تالف."); }
+            };
+            reader.readAsText(file);
+        }
+    }
+
+
+    function startEditSession(targetTable) {
+        activeEditSession = true;
+        updateEditSessionUI(targetTable);
+    }
+
+    function endEditSession() {
+        activeEditSession = false;
+        updateEditSessionUI();
+        saveAllData();
+        renderAllTables();
+    }
+
+    function updateEditSessionUI(targetTable = null) {
+        document.querySelectorAll('.data-table').forEach(table => {
+            const tableId = table.id.replace('-table', '');
+            const key = tableId.replace('-supply', '').replace('-disposal', '');
+            const isInEditMode = activeEditSession && key === targetTable;
+            table.classList.toggle('edit-mode', isInEditMode);
+        });
+
+        document.querySelectorAll('.btn-manage').forEach(btn => {
+            const btnTarget = btn.dataset.target;
+            const isInEditMode = activeEditSession && btnTarget === targetTable;
+            btn.classList.toggle('edit-mode', isInEditMode);
+            btn.innerHTML = isInEditMode ? '<i class="fas fa-check"></i> إنهاء' : '<i class="fas fa-edit"></i> إدارة';
+            
+            const controls = btn.parentElement.querySelector('.edit-controls');
+            if (controls) {
+                controls.classList.toggle('active', isInEditMode);
+            }
+        });
+        deselectRow();
+    }
+    
+    function selectRow(rowElement) {
+        deselectRow();
+        const tableType = rowElement.dataset.table;
+        const tableId = rowElement.closest('.data-table').id;
+        if (document.getElementById(tableId)?.classList.contains('edit-mode')) {
+            rowElement.classList.add('selected-row');
+            selectedRow = { table: tableType, index: parseInt(rowElement.dataset.index), element: rowElement };
+        }
+    }
+
+    function deselectRow() {
+        if (selectedRow.element) {
+            selectedRow.element.classList.remove('selected-row');
+        }
+        selectedRow = { table: null, index: -1, element: null };
+    }
+    
+    function addItem(tableType) {
+        switch (tableType) {
+            case 'subcontractors': subcontractorsData.push({ id: generateUniqueId('sc'), name: "بند جديد", visitValue: 0, annualVisits: 1, status: "نعم", damagePenalty: 0 }); break;
+            case 'performance': 
+                const newPerfId = generateUniqueId('pf');
+                performanceData.push({ id: newPerfId, name: "بند أداء جديد", maxScore: 10, score: 10 }); 
+                summaryData.push({ id: newPerfId, name: "بند أداء جديد", value: 0, isEditable: true, isCustom: false });
+                break;
+            case 'water': waterData.push({ id: generateUniqueId('wt'), name: "توريد مياه جديد", unitPrice: 0, quantity: 0 }); break;
+            case 'laundry': laundryData.push({ id: generateUniqueId('ld'), name: "توريد غسيل جديد", unitPrice: 0, quantity: 0 }); break;
+            case 'sewage': sewageData.push({ id: generateUniqueId('sw'), name: "تخلص صرف جديد", unitPrice: 0, quantity: 0 }); break;
+        }
+        saveAllData(); 
+        renderAllTables();
+    }
+
+      function removeItem(tableType) {
+        if (selectedRow.table !== tableType || selectedRow.index === -1) {
+            alert("يرجى تحديد صف لحذفه أولاً.");
+            return;
+        }
+
+        // --- بداية التحسين ---
+        // نتحقق إذا كان المستخدم يحاول حذف بند من جدول الملخص
+        if (tableType === 'summary') {
+            const itemToRemove = summaryData[selectedRow.index];
+            // نمنع حذف أي بند أساسي (غير مخصص)
+            if (itemToRemove && !itemToRemove.isCustom) {
+                alert("لا يمكن حذف البنود الأساسية من جدول الملخص.");
+                return;
+            }
+        }
+        // --- نهاية التحسين ---
+
+        showConfirmationDialog("تأكيد الحذف", "هل أنت متأكد من حذف البند المحدد؟", () => {
+            let dataArray;
+            switch (tableType) {
+                case 'subcontractors': dataArray = subcontractorsData; break;
+                case 'performance': dataArray = performanceData; break;
+                case 'water': dataArray = waterData; break;
+                case 'laundry': dataArray = laundryData; break;
+                case 'sewage': dataArray = sewageData; break;
+                case 'summary': dataArray = summaryData; break; // أضفنا summary هنا
+            }
+            if (dataArray) {
+                if (tableType === 'performance') {
+                    const itemIdToRemove = dataArray[selectedRow.index].id;
+                    const summaryIndex = summaryData.findIndex(item => item.id === itemIdToRemove);
+                    if (summaryIndex > -1) summaryData.splice(summaryIndex, 1);
+                }
+                dataArray.splice(selectedRow.index, 1);
+                deselectRow();
+                saveAllData();
+                renderAllTables();
+            }
+        });
+    }
+
+
+    function closeUnifiedModal() {
+        const modal = document.getElementById('unified-modal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function showConfirmationDialog(title, message, onConfirm) {
+        const modal = document.getElementById('unified-modal');
+        modal.innerHTML = `
+            <div class="modal-content">
+                <span class="close" onclick="this.closest('.modal').style.display='none'">&times;</span>
+                <h3>${title}</h3>
+                <p>${message}</p>
+                <div class="modal-buttons">
+                    <button id="confirm-ok-btn" class="btn btn-clear">نعم، متأكد</button>
+                    <button id="confirm-cancel-btn" class="btn btn-print">إلغاء</button>
+                </div>
+            </div>
+        `;
+        modal.style.display = 'flex';
+        document.getElementById('confirm-ok-btn').onclick = () => { onConfirm(); closeUnifiedModal(); };
+        document.getElementById('confirm-cancel-btn').onclick = closeUnifiedModal;
+    }
+
+      function openSignaturesDialog() {
+        const modal = document.getElementById('unified-modal');
+       // --- بداية الكود الجديد ---
+        // إنشاء قائمة الخيارات بناءً على بطاقات لوحة التحكم
+        let options = '';
+        document.querySelectorAll('.dashboard-card').forEach(card => {
+            // استخراج الـ key من data-section (مثال: 'subcontractors-section' -> 'subcontractors')
+            const key = card.dataset.section.replace('-section', '').replace('-supply', '').replace('-disposal', '');
+            
+            // استخراج العنوان الرئيسي من البطاقة (h3)
+            const title = card.querySelector('h3')?.textContent || key;
+
+            // التأكد من أن لهذا القسم بيانات تواقيع معرفة مسبقًا
+            if (signaturesData[key]) {
+                options += `<option value="${key}">${title}</option>`;
+            }
+        });
+        // --- نهاية الكود الجديد ---
+
+        modal.innerHTML = `
+            <div class="modal-content">
+                <span class="close" onclick="this.closest('.modal').style.display='none'">&times;</span>
+                <h3>تعديل التواقيع</h3>
+                <div class="form-group">
+                    <label for="signature-certificate-select">اختر الشهادة:</label>
+                    <select id="signature-certificate-select" style="width: 100%; padding: 8px;">${options}</select>
+                </div>
+                <div id="sig-form-container" style="max-height: 350px; overflow-y: auto; padding: 15px 5px; border-top: 1px solid #eee; margin-top: 10px;"></div>
+                <div class="modal-buttons">
+                    <button class="btn btn-excel" id="save-signatures-btn">حفظ</button>
+                    <button class="btn btn-backup" id="add-signature-btn">إضافة توقيع</button>
+                </div>
+            </div>
+        `;
+        modal.style.display = 'flex';
+        document.getElementById('signature-certificate-select').onchange = populateSignatureForm;
+        document.getElementById('save-signatures-btn').onclick = saveSignatures;
+        document.getElementById('add-signature-btn').onclick = addSignatureField;
+        
+        // عرض تواقيع أول خيار في القائمة عند فتح النافذة
+        populateSignatureForm();
+    }
+
+
+      function populateSignatureForm() {
+        const container = document.getElementById('sig-form-container');
+        const selectedCertificate = document.getElementById('signature-certificate-select').value;
+        const currentSignatures = signaturesData[selectedCertificate] || [];
+        container.innerHTML = currentSignatures.map((sig, index) => 
+            `<div class="form-group" style="display: flex; gap: 10px; align-items: center; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 10px;">
+                <div style="flex-grow: 1;">
+                    <label style="font-size: 14px;">المسمى:</label>
+                    <input type="text" value="${sig.title || ''}" data-index="${index}" data-field="title" class="sig-input" style="flex: 1;">
+                    <label style="font-size: 14px; margin-top: 5px;">الاسم:</label>
+                    <input type="text" value="${sig.name || ''}" data-index="${index}" data-field="name" class="sig-input" style="flex: 2;">
+                </div>
+                <button class="btn btn-clear" onclick="removeSignature(${index})" style="padding: 8px 12px; min-width: 40px;"><i class="fas fa-trash"></i></button>
+            </div>`
+        ).join('');
+    }
+
+        function saveSignatures() {
+        const selectedCertificate = document.getElementById('signature-certificate-select').value;
+        const newSigs = [];
+        // المرور على كل "مجموعة" من حقول التوقيع
+        document.querySelectorAll('#sig-form-container .form-group').forEach(group => {
+            const titleInput = group.querySelector('.sig-input[data-field="title"]');
+            const nameInput = group.querySelector('.sig-input[data-field="name"]');
+            if (titleInput && nameInput && titleInput.value.trim() !== '') { // التأكد من أن المسمى ليس فارغًا
+                newSigs.push({ title: titleInput.value, name: nameInput.value });
+            }
+        });
+        signaturesData[selectedCertificate] = newSigs;
+        saveAllData();
+        displayAllSignatures();
+        closeUnifiedModal();
+    }
+
+
+    function addSignatureField() {
+        const selectedCertificate = document.getElementById('signature-certificate-select').value;
+        if (!signaturesData[selectedCertificate]) signaturesData[selectedCertificate] = [];
+        signaturesData[selectedCertificate].push({ title: '', name: '' });
+        populateSignatureForm();
+    }
+
+    // This function needs to be globally accessible for the inline onclick
+    window.removeSignature = function(index) {
+        const selectedCertificate = document.getElementById('signature-certificate-select').value;
+        if (signaturesData[selectedCertificate]) {
+            signaturesData[selectedCertificate].splice(index, 1);
+            populateSignatureForm();
+        }
+    }
+
+       function openTitlesDialog() {
+        const modal = document.getElementById('unified-modal');
+        let formHTML = '';
+        Object.keys(printTitlesData).forEach(key => {
+            const sectionId = key.replace(/([A-Z])/g, '-$1').toLowerCase().replace('-supply', '-supply-section').replace('-disposal', '-disposal-section').replace(/section$/, '') + 'section';
+            const sectionTitle = document.querySelector(`#${sectionId} h2`)?.textContent || key;
+            
+            // استخلاص النص فقط من كود HTML
+            const template = printTitlesData[key];
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = template;
+            const mainTitle = tempDiv.querySelector('h1')?.textContent || '';
+
+            formHTML += `
+                <div class="form-group">
+                    <label for="title-input-${key}">${sectionTitle}:</label>
+                    <textarea id="title-input-${key}" data-key="${key}" style="width: 100%; min-height: 60px; resize: vertical;">${mainTitle}</textarea>
+                </div>
+            `;
+        });
+        modal.innerHTML = `
+            <div class="modal-content">
+                <span class="close" onclick="this.closest('.modal').style.display='none'">&times;</span>
+                <h3>تعديل عناوين الطباعة</h3>
+                <p style="font-size: 14px; color: var(--text-light);">ملاحظة: سيتم تلقائيًا إضافة اسم المستشفى وفترة المستخلص عند الطباعة.</p>
+                <div style="max-height: 400px; overflow-y: auto; padding: 15px 5px; border-top: 1px solid #eee; margin-top: 10px;">${formHTML}</div>
+                <div class="modal-buttons">
+                    <button class="btn btn-excel" id="save-titles-btn">حفظ العناوين</button>
+                </div>
+            </div>
+        `;
+        modal.style.display = 'flex';
+        document.getElementById('save-titles-btn').onclick = saveTitles;
+    }
+
+
+     function saveTitles() {
+        document.querySelectorAll('#unified-modal textarea[data-key]').forEach(textarea => {
+            const key = textarea.dataset.key;
+            const newTitleText = textarea.value;
+            // إعادة بناء الهيكل الكامل للعنوان مع الحفاظ على المتغيرات
+            printTitlesData[key] = `<h1>${newTitleText}</h1><h2>لموقع: {hospitalName}</h2><h3>{period}</h3>`;
+        });
+        saveAllData();
+        closeUnifiedModal();
+    }
+
+
+    function saveAllData() {
+        const save = (key, data) => localStorage.setItem(key, JSON.stringify(data));
+        save(`subcontractors_data_${DB_VERSION}`, subcontractorsData);
+        save(`performance_data_${DB_VERSION}`, performanceData);
+        save(`water_supply_data_${DB_VERSION}`, waterData);
+        save(`laundry_supply_data_${DB_VERSION}`, laundryData);
+        save(`sewage_disposal_data_${DB_VERSION}`, sewageData);
+        save(`summary_data_${DB_VERSION}`, summaryData);
+        save(`signatures_data_${DB_VERSION}`, signaturesData);
+        save(`print_titles_data_${DB_VERSION}`, printTitlesData);
+        
+        const toast = document.getElementById('save-toast');
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+      /**
+     * ✅ [مُصحح] يعيد المستخدم إلى واجهة لوحة التحكم الرئيسية.
+     */
+    function showDashboard() {
+        // إظهار لوحة التحكم وإخفاء منطقة الجداول
+        document.getElementById('dashboard-container').style.display = 'grid';
+        document.getElementById('tables-area').style.display = 'none';
+        
+        // إخفاء جميع أقسام الجداول لضمان عدم تداخلها
+        document.querySelectorAll('.table-section').forEach(section => {
+            section.classList.remove('active');
+            section.style.display = 'none'; // التأكد من إخفائها تمامًا
+        });
+
+        // إنهاء أي جلسة تعديل نشطة عند العودة للوحة التحكم
+        if(activeEditSession) endEditSession();
+    }
+
+    /**
+     * ✅ [مُصحح] يظهر قسم الجدول المحدد عند الضغط على الأيقونة الخاصة به.
+     * @param {string} sectionId - الـ ID الخاص بالقسم (e.g., 'subcontractors-section').
+     */
+    function showTable(sectionId) {
+        // إخفاء لوحة التحكم وإظهار منطقة الجداول
+        document.getElementById('dashboard-container').style.display = 'none';
+        document.getElementById('tables-area').style.display = 'block';
+
+        // أولاً، قم بإخفاء جميع أقسام الجداول
+        document.querySelectorAll('.table-section').forEach(section => {
+            section.classList.remove('active');
+            section.style.display = 'none';
+        });
+
+        // ثانيًا، ابحث عن القسم المطلوب وأظهره
+        const sectionElement = document.getElementById(sectionId);
+        if (sectionElement) {
+            sectionElement.classList.add('active');
+            sectionElement.style.display = 'block'; // السطر الأهم لضمان الظهور
+        } else {
+            console.error(`خطأ: لم يتم العثور على القسم بالمعرّف: ${sectionId}`);
+        }
+    }
+
+
+    function getPrintHeaders(sectionKey) {
+        const hospitalName = document.querySelector('.hospitalName')?.textContent || 'غير محدد';
+        const extractStart = document.getElementById('extract-start-date')?.textContent || 'غير محدد';
+        const extractEnd = document.getElementById('extract-end-date')?.textContent || 'غير محدد';
+        const periodText = `عن الفترة من ${extractStart} إلى ${extractEnd}`;
+        let titleTemplate = printTitlesData[sectionKey] || `<h1>${document.querySelector(`#${sectionKey}-section h2`).textContent}</h1>`;
+        return titleTemplate.replace(/{hospitalName}/g, hospitalName).replace(/{period}/g, periodText);
+    }
+
+/**
+ * ✅ [النسخة النهائية V16 - مُصححة لدعم RTL، صفحات بالعرض، تنسيق تكيفي ذكي، إظهار الملاحظات، وإزالة الخط أسفل التواقيع]
+ * تطبع قسمًا واحدًا في مستند، مع ضبط الصفحة على الوضع بالعرض (landscape) ودعم الاتجاه من اليمين إلى اليسار.
+ * تضمن ظهور الملاحظات عند تفعيل خانة الاختيار وتنسيق الجدول بشكل تكيفي دون تقسيم النصوص أو تداخلها.
+ * @param {string} sectionId - معرف القسم المراد طباعته
+ */
+function printSingleTable(sectionId) {
+    // منع استدعاءات متعددة
+    if (window.printingInProgress) {
+        return;
+    }
+    window.printingInProgress = true;
+
+    const sectionElement = document.getElementById(sectionId);
+    if (!sectionElement) {
+        alert(`خطأ: لم يتم العثور على قسم الطباعة بالمعرف: ${sectionId}`);
+        window.printingInProgress = false;
+        return;
+    }
+
+    const sectionKey = sectionId.replace('-section', '').replace('-supply', '').replace('-disposal', '');
+    const win = window.open('', '_blank', 'width=1200,height=800');
+    if (!win) {
+        alert('يرجى السماح بفتح النوافذ المنبثقة (pop-ups) في إعدادات المتصفح لإتمام الطباعة. اذهب إلى إعدادات المتصفح > الخصوصية والأمان > النوافذ المنبثقة وإعادة التوجيه، ثم اسمح بالنوافذ المنبثقة لهذا الموقع.');
+        window.printingInProgress = false;
+        return;
+    }
+    const doc = win.document;
+
+    // --- فتح المستند للكتابة ---
+    doc.open();
+
+    // --- قراءة التواقيع والملاحظات الحية ---
+    const signaturesContainer = sectionElement.querySelector('.signatures-grid');
+    let signaturesHTML = '';
+    if (signaturesContainer) {
+        signaturesContainer.querySelectorAll('.signature-item').forEach(item => {
+            const title = item.querySelector('.title')?.textContent || 'غير محدد';
+            const name = item.querySelector('.name')?.textContent || '..............................';
+            signaturesHTML += `<div class="sign-box"><div>${title}</div><div class="name-placeholder">${name}</div></div>`;
+        });
+    }
+
+    const notesSection = sectionElement.querySelector('.notes-section');
+    let notesHTML = '';
+    if (notesSection) {
+        const checkbox = notesSection.querySelector('.notes-checkbox');
+        const notesText = notesSection.querySelector('textarea')?.value.replace(/\n/g, '<br>') || '';
+        if (checkbox && checkbox.checked && notesText.trim()) {
+            notesHTML = `<div class="printed-notes"><h3>ملاحظات:</h3><p>${notesText}</p></div>`;
+        }
+    }
+
+    const headerContent = getPrintHeaders(sectionKey);
+    const tableClone = sectionElement.querySelector('.data-table').cloneNode(true);
+    tableClone.querySelectorAll('input, select').forEach(input => {
+        const cell = input.parentElement;
+        const printSpan = cell.querySelector('.cell-print-content');
+        if (printSpan) printSpan.style.display = 'block';
+        input.style.display = 'none';
+    });
+
+    // --- كتابة المحتوى الكامل مع تعديلات CSS ---
+    doc.write(`
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+        <meta charset="UTF-8">
+        <title>طباعة - ${sectionElement.querySelector('h2')?.textContent || 'جدول'}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+        <style>
+            @page { size: A4 landscape; margin: 0.75in; } /* صفحات بالعرض مع هوامش أكبر */
+            * { box-sizing: border-box; font-family: 'Tajawal', Arial, sans-serif; }
+            html, body { margin: 0; padding: 0; background: #fff; color: #000; direction: rtl; text-align: right; -webkit-print-color-adjust: exact; }
+            .container { max-width: 95%; margin: 0 auto; } /* هوامش داخلية للجدول */
+            .header-table { width: 100%; border-bottom: 2px solid #0056b3; margin-bottom: 15px; direction: rtl; }
+            .header-table td { vertical-align: middle; text-align: center; padding: 2px 4px; }
+            .logo { width: 75px; height: auto; }
+            .title-box { text-align: center; }
+            .title-box h1 { font-size: 16pt; margin: 2px; color: #003087; font-weight: 700; }
+            .title-box h2, .title-box h3 { font-size: 12pt; margin: 2px; }
+            .data-table { width: 100%; border-collapse: collapse; font-size: 8pt; table-layout: auto; direction: rtl; }
+            .data-table th, .data-table td { border: 1px solid #333; padding: 6px 8px; text-align: center; vertical-align: middle; white-space: nowrap; }
+            .data-table th { background-color: #e9ecef !important; font-weight: 700; }
+            .data-table td { font-size: 7.5pt; min-width: 50px; max-width: 180px; text-overflow: ellipsis; }
+            .data-table tfoot tr { background-color: #fff9e0 !important; font-weight: bold; }
+            .signatures { margin-top: 20px; display: flex; justify-content: space-around; border-top: 1px solid #333; padding-top: 15px; direction: rtl; }
+            .sign-box { text-align: center; font-size: 10pt; width: 24%; font-weight: 500; }
+            .sign-box .name-placeholder { min-height: 18px; margin-top: 5px; }
+            .printed-notes { margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; page-break-inside: avoid; text-align: right; direction: rtl; }
+            .printed-notes h3 { margin-top: 0; text-align: right; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <table class="header-table">
+                <tr>
+                    <td style="width:20%;"><img class="logo" src="${document.querySelector('.logo-left')?.src || ''}" alt="Logo"></td>
+                    <td class="title-box">${headerContent}</td>
+                    <td style="width:20%;"><img class="logo" src="${document.querySelector('.logo-right')?.src || ''}" alt="Logo"></td>
+                </tr>
+            </table>
+            ${tableClone.outerHTML}
+            ${notesHTML}
+            <div class="signatures">${signaturesHTML}</div>
+        </div>
+</body>
+    </html>
+    `);
+
+    // --- إغلاق المستند بعد الكتابة ---
+    doc.close();
+
+    // --- تأخير الطباعة لضمان تحميل المحتوى ---
+    win.onload = () => {
+        setTimeout(() => {
+            win.focus();
+            win.print();
+            setTimeout(() => {
+                win.close();
+                window.printingInProgress = false; // إعادة تعيين العلم بعد الإغلاق
+            }, 500);
+        }, 200);
+    };
+}
+
+
+/**
+ * ✅ [النسخة النهائية V17 - مُصححة لدعم RTL، صفحات بالعرض، تنسيق تكيفي ذكي، إظهار الملاحظات، وإزالة الخط أسفل التواقيع]
+ * تطبع كل الأقسام في مستند واحد، مع ضبط الصفحات على الوضع بالعرض (landscape) ودعم الاتجاه من اليمين إلى اليسار.
+ * تضمن ظهور الملاحظات لكل قسم عند تفعيل خانة الاختيار، وتنسيق الجدول بشكل تكيفي دون تقسيم النصوص أو تداخلها.
+ */
+function printAllSections() {
+    // منع استدعاءات متعددة
+    if (window.printingInProgress) {
+        return;
+    }
+    window.printingInProgress = true;
+
+    const win = window.open('', '_blank', 'width=1200,height=800');
+    if (!win) {
+        alert('يرجى السماح بفتح النوافذ المنبثقة (pop-ups) في إعدادات المتصفح لإتمام الطباعة. اذهب إلى إعدادات المتصفح > الخصوصية والأمان > النوافذ المنبثقة وإعادة التوجيه، ثم اسمح بالنوافذ المنبثقة لهذا الموقع.');
+        window.printingInProgress = false;
+        return;
+    }
+    const doc = win.document;
+
+    // --- فتح المستند للكتابة ---
+    doc.open();
+
+    doc.write(`
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+        <meta charset="UTF-8">
+        <title>مستخلص المستهلكات والمكاتب الإدارية</title>
+        <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+        <style>
+            @page { size: A4 landscape; margin: 0.75in; } /* صفحات بالعرض مع هوامش أكبر */
+            * { box-sizing: border-box; font-family: 'Tajawal', Arial, sans-serif; }
+            html, body { margin: 0; padding: 0; background: #fff; color: #000; direction: rtl; text-align: right; -webkit-print-color-adjust: exact; }
+            .container { max-width: 95%; margin: 0 auto; } /* هوامش داخلية للجدول */
+            .page-break { page-break-after: always; }
+            .printable-section { page-break-inside: avoid; direction: rtl; }
+            .header-table { width: 100%; border-bottom: 2px solid #0056b3; margin-bottom: 15px; direction: rtl; }
+            .header-table td { vertical-align: middle; text-align: center; padding: 2px 4px; }
+            .logo { width: 75px; height: auto; }
+            .title-box { text-align: center; }
+            .title-box h1 { font-size: 16pt; margin: 2px; color: #003087; font-weight: 700; }
+            .title-box h2, .title-box h3 { font-size: 12pt; margin: 2px; }
+            .data-table { width: 100%; border-collapse: collapse; font-size: 8pt; table-layout: auto; direction: rtl; }
+            .data-table th, .data-table td { border: 1px solid #333; padding: 6px 8px; text-align: center; vertical-align: middle; white-space: nowrap; }
+            .data-table th { background-color: #e9ecef !important; font-weight: 700; }
+            .data-table td { font-size: 7.5pt; min-width: 50px; max-width: 180px; text-overflow: ellipsis; }
+            .data-table tfoot tr { background-color: #fff9e0 !important; font-weight: bold; }
+            .signatures { margin-top: 20px; display: flex; justify-content: space-around; border-top: 1px solid #333; padding-top: 15px; direction: rtl; }
+            .sign-box { text-align: center; font-size: 10pt; width: 24%; font-weight: 500; }
+            .sign-box .name-placeholder { min-height: 18px; margin-top: 5px; }
+            .printed-notes { margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; page-break-inside: avoid; text-align: right; direction: rtl; }
+            .printed-notes h3 { margin-top: 0; text-align: right; }
+            .first-two-pages .data-table th, .first-two-pages .data-table td { font-size: 7.5pt; padding: 6px 10px; }
+        </style>
+    </head>
+    <body>
+    `);
+
+    document.querySelectorAll('.table-section').forEach((section, index) => {
+        const sectionKey = section.id.replace('-section', '').replace('-supply', '').replace('-disposal', '');
+
+        // --- قراءة التواقيع والملاحظات الحية ---
+        const signaturesContainer = section.querySelector('.signatures-grid');
+        let signaturesHTML = '';
+        if (signaturesContainer) {
+            signaturesContainer.querySelectorAll('.signature-item').forEach(item => {
+                const title = item.querySelector('.title')?.textContent || 'غير محدد';
+                const name = item.querySelector('.name')?.textContent || '..............................';
+                signaturesHTML += `<div class="sign-box"><div>${title}</div><div class="name-placeholder">${name}</div></div>`;
+            });
+        }
+
+        let notesHTML = '';
+        const notesSection = section.querySelector('.notes-section');
+        if (notesSection) {
+            const checkbox = notesSection.querySelector('.notes-checkbox');
+            const notesText = notesSection.querySelector('textarea')?.value.replace(/\n/g, '<br>') || '';
+            if (checkbox && checkbox.checked && notesText.trim()) {
+                notesHTML = `<div class="printed-notes"><h3>ملاحظات:</h3><p>${notesText}</p></div>`;
+            }
+        }
+
+        const tableClone = section.querySelector('.data-table').cloneNode(true);
+        tableClone.querySelectorAll('input, select').forEach(input => {
+            const cell = input.parentElement;
+            const printSpan = cell.querySelector('.cell-print-content');
+            if (printSpan) printSpan.style.display = 'block';
+            input.style.display = 'none';
+        });
+
+        // إضافة كلاس first-two-pages لأول صفحتين (index 0 و1)
+        const sectionClass = index < 2 ? 'printable-section first-two-pages' : 'printable-section';
+        doc.write(`<div class="container"><div class="${sectionClass}">`);
+        doc.write(`
+            <table class="header-table">
+                <tr>
+                    <td style="width:20%;"><img class="logo" src="${document.querySelector('.logo-left')?.src || ''}" alt="Logo Left"></td>
+                    <td class="title-box">${getPrintHeaders(sectionKey)}</td>
+                    <td style="width:20%;"><img class="logo" src="${document.querySelector('.logo-right')?.src || ''}" alt="Logo Right"></td>
+                </tr>
+            </table>
+            ${tableClone.outerHTML}
+            ${notesHTML}
+            <div class="signatures">${signaturesHTML}</div>
+        `);
+        doc.write(`</div></div>`);
+
+        if (index < document.querySelectorAll('.table-section').length - 1) {
+            doc.write('<div class="page-break"></div>');
+        }
+    });
+
+    doc.write('<\/body><\/html>');
+
+    // --- إغلاق المستند بعد الكتابة ---
+    doc.close();
+
+    // --- تأخير الطباعة لضمان تحميل المحتوى ---
+    win.onload = () => {
+        setTimeout(() => {
+            win.focus();
+            win.print();
+            setTimeout(() => {
+                win.close();
+                window.printingInProgress = false; // إعادة تعيين العلم بعد الإغلاق
+            }, 500);
+        }, 200);
+    };
+}
+   function exportAllToExcel() {
+        const wb = XLSX.utils.book_new();
+        let sheetIndex = 1; // متغير لضمان عدم تكرار الأسماء
+
+        document.querySelectorAll('.table-section').forEach(section => {
+            const titleElement = section.querySelector('h2');
+            if (titleElement) {
+                // نستخدم ID القسم كأساس للاسم لأنه فريد دائمًا
+                const sectionId = section.id.replace('-section', ''); 
+                // ننشئ اسمًا قصيرًا وواضحًا
+                const shortTitle = titleElement.textContent.trim().substring(0, 25);
+                const sheetName = `(${sheetIndex}) ${shortTitle}`; // مثال: (1) عقود الباطن
+
+                const table = section.querySelector('.data-table');
+                if (table) {
+                    const ws = XLSX.utils.table_to_sheet(table);
+                    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+                    sheetIndex++; // زيادة العداد للورقة التالية
+                }
+            }
+        });
+        XLSX.writeFile(wb, 'مستخلص_المستهلكات_الكامل.xlsx');
+    }
+        /**
+     * ✅ [جديد ومفقود] يلتقط البيانات الحالية من حقول الإدخال في الواجهة ويحدث مصفوفات البيانات.
+     */
+    function captureUIData() {
+        document.querySelectorAll('tr[data-table]').forEach(row => {
+            const tableType = row.dataset.table;
+            const index = parseInt(row.dataset.index);
+
+            let dataArray;
+            switch (tableType) {
+                case 'subcontractors': dataArray = subcontractorsData; break;
+                case 'performance': dataArray = performanceData; break;
+                case 'water': dataArray = waterData; break;
+                case 'laundry': dataArray = laundryData; break;
+                case 'sewage': dataArray = sewageData; break;
+                case 'summary': dataArray = summaryData; break;
+                default: return;
+            }
+
+            if (dataArray && dataArray[index] !== undefined) {
+                row.querySelectorAll('input[data-field], select[data-field]').forEach(input => {
+                    const field = input.dataset.field;
+                    const value = input.value.replace(/,/g, ''); // إزالة الفواصل للأرقام
+                    dataArray[index][field] = value;
+                });
+            }
+        });
+    }
+
+    // ▼▼▼ يجب أن تكون دالة renderAllTables() هنا بعد الدالة الجديدة ▼▼▼
+   
+
+    function renderAllTables() {
+        updatePenaltyDataSourcePanel();
+        renderSubcontractorsTable();
+        renderPerformanceTable();
+        renderUtilityTable('water');
+        renderUtilityTable('laundry');
+        renderUtilityTable('sewage');
+        renderSummaryTable();
+        displayAllSignatures();
+        updateEditSessionUI();
+    }
+    function tafqeet(number) {
+        if (number === null || isNaN(number)) return "غير محدد";
+        let numberStr = Number(number).toFixed(2).toString();
+        let [integerPart, decimalPart] = numberStr.split('.');
+        
+        const ones = ["", "واحد", "اثنان", "ثلاثة", "أربعة", "خمسة", "ستة", "سبعة", "ثمانية", "تسعة"];
+        const tens = ["", "عشرة", "عشرون", "ثلاثون", "أربعون", "خمسون", "ستون", "سبعون", "ثمانون", "تسعون"];
+        const teens = ["عشرة", "أحد عشر", "اثنا عشر", "ثلاثة عشر", "أربعة عشر", "خمسة عشر", "ستة عشر", "سبعة عشر", "ثمانية عشر", "تسعة عشر"];
+
+        function convertLessThanOneThousand(num) {
+            num = parseInt(num);
+            if (num === 0) return "";
+            if (num < 10) return ones[num];
+            if (num < 20) return teens[num - 10];
+            if (num < 100) {
+                const one = num % 10;
+                const ten = Math.floor(num / 10);
+                return ones[one] + (one > 0 ? " و" : "") + tens[ten];
+            }
+            const hundred = Math.floor(num / 100);
+            const remainder = num % 100;
+            let res = "";
+            if (hundred === 1) res = "مئة";
+            else if (hundred === 2) res = "مئتان";
+            else res = ["", "مئة", "مئتان", "ثلاثمئة", "أربعمئة", "خمسمئة", "ستمئة", "سبعمئة", "ثمانمئة", "تسعمئة"][hundred];
+            if (remainder > 0) res += " و" + convertLessThanOneThousand(remainder);
+            return res;
+        }
+    /**
+     * ✅ [جديد] يلتقط البيانات الحالية من حقول الإدخال في الواجهة ويحدث مصفوفات البيانات.
+     */
+   
+
+        function convert(num) {
+            num = parseInt(num);
+            if (num === 0) return "صفر";
+            let result = "";
+            const billions = Math.floor(num / 1000000000); num %= 1000000000;
+            const millions = Math.floor(num / 1000000); num %= 1000000;
+            const thousands = Math.floor(num / 1000); const remainder = num % 1000;
+
+            if (billions > 0) {
+                if (billions === 1) result += "مليار";
+                else if (billions === 2) result += "ملياران";
+                else if (billions >= 3 && billions <= 10) result += convertLessThanOneThousand(billions) + " مليارات";
+                else result += convertLessThanOneThousand(billions) + " مليار";
+            }
+            if (millions > 0) {
+                if (result !== "") result += " و";
+                if (millions === 1) result += "مليون";
+                else if (millions === 2) result += "مليونان";
+                else if (millions >= 3 && millions <= 10) result += convertLessThanOneThousand(millions) + " ملايين";
+                else result += convertLessThanOneThousand(millions) + " مليون";
+            }
+            if (thousands > 0) {
+                if (result !== "") result += " و";
+                if (thousands === 1) result += "ألف";
+                else if (thousands === 2) result += "ألفان";
+                else if (thousands >= 3 && thousands <= 10) result += convertLessThanOneThousand(thousands) + " آلاف";
+                else result += convertLessThanOneThousand(thousands) + " ألف";
+            }
+            if (remainder > 0) {
+                if (result !== "") result += " و";
+                result += convertLessThanOneThousand(remainder);
+            }
+            return result;
+        }
+
+        let integerText = convert(integerPart);
+        let decimalText = convert(decimalPart);
+        let finalResult = "فقط " + integerText + " ريال سعودي";
+        if (parseInt(decimalPart) > 0) {
+            finalResult += " و" + decimalText + " هللة";
+        }
+        return finalResult + " لا غير.";
+    }
+/**
+ * ✅ [جديد] دالة لجعل صناديق الملاحظات تنمو تلقائيًا مع الكتابة.
+ */
+function autoGrowTextarea(textarea) {
+    textarea.style.height = 'auto'; // إعادة تعيين الارتفاع أولاً
+    textarea.style.height = (textarea.scrollHeight) + 'px'; // ضبط الارتفاع ليساوي حجم المحتوى
+}
+
+    // --- Application Initialization ---
+    function initialize() {
+        createTableSections();
+        setupEventListeners();
+        if (typeof updateContractDisplayData === 'function') {
+            updateContractDisplayData();
+        }
+        renderAllTables();
+    }
+
+    initialize();
+});
+</script>
+
+<script src="/original/extract-submit.js"></script>
+<script src="/original/track.js"></script>
+<script src="/original/shared-nav.js"></script>
+</body>
+</html>
+
+
+ 

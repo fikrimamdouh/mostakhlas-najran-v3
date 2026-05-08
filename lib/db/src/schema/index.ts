@@ -66,7 +66,7 @@ export const submittedExtractsTable = pgTable("submitted_extracts", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => usersTable.id),
   extractType: text("extract_type", {
-    enum: ["labor", "consumables", "spare_parts", "health_centers"],
+    enum: ["labor", "consumables", "spare_parts", "health_centers", "admin_offices"],
   }).notNull(),
   companyName: text("company_name"),
   contractNumber: text("contract_number"),
