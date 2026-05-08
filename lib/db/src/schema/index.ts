@@ -82,9 +82,22 @@ export const submittedExtractsTable = pgTable("submitted_extracts", {
   adminNotes: text("admin_notes"),
   approvedBy: text("approved_by"),
   approvedAt: timestamp("approved_at"),
+  extractData: text("extract_data"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+export const extractRevisionsTable = pgTable("extract_revisions", {
+  id: serial("id").primaryKey(),
+  extractId: integer("extract_id").notNull().references(() => submittedExtractsTable.id),
+  changedBy: text("changed_by").notNull(),
+  changedByRole: text("changed_by_role"),
+  previousStatus: text("previous_status"),
+  newStatus: text("new_status"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type ExtractRevision = typeof extractRevisionsTable.$inferSelect;
 
 export const insertSubmittedExtractSchema = createInsertSchema(submittedExtractsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertSubmittedExtract = z.infer<typeof insertSubmittedExtractSchema>;

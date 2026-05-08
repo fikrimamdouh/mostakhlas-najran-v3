@@ -31,6 +31,27 @@
     } catch { return {}; }
   }
 
+  /** لقطة كاملة من localStorage عند الإرسال — تُحفظ في DB */
+  function captureStorageSnapshot() {
+    const SKIP_PREFIXES = ['najran_session', '__clerk', 'clerk_', 'loglevel', 'amplitude', 'chakra', 'persist:'];
+    const snapshot = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key) continue;
+        if (SKIP_PREFIXES.some(p => key.startsWith(p))) continue;
+        const val = localStorage.getItem(key);
+        if (val !== null) {
+          try { snapshot[key] = JSON.parse(val); }
+          catch { snapshot[key] = val; }
+        }
+      }
+    } catch (err) {
+      console.warn('snapshot error', err);
+    }
+    return snapshot;
+  }
+
   const REVISION_KEY = 'najran_revision_extract_id';
 
   async function submitExtract(type, extraData = {}) {
@@ -42,7 +63,8 @@
     }
 
     const contractData = getContractData();
-    const payload = { extractType: type, ...contractData, ...extraData };
+    const extractData = captureStorageSnapshot();
+    const payload = { extractType: type, ...contractData, ...extraData, extractData };
 
     // Check if this is a revision of an existing extract
     const revisionId = localStorage.getItem(REVISION_KEY);

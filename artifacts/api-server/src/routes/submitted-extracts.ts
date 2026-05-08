@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, submittedExtractsTable, userStorageTable } from "@workspace/db";
+import { db, usersTable, submittedExtractsTable, userStorageTable, extractRevisionsTable } from "@workspace/db";
 import { requireAuth } from "../middleware/requireAuth";
 import { eq, desc, and } from "drizzle-orm";
 
@@ -117,11 +117,15 @@ router.get("/", requireAuth, requireApproved, async (req: any, res) => {
         periodMonth: submittedExtractsTable.periodMonth,
         totalAmount: submittedExtractsTable.totalAmount,
         status: submittedExtractsTable.status,
+        revisionCount: submittedExtractsTable.revisionCount,
+        revisedAt: submittedExtractsTable.revisedAt,
         notes: submittedExtractsTable.notes,
         adminNotes: submittedExtractsTable.adminNotes,
         approvedBy: submittedExtractsTable.approvedBy,
         approvedAt: submittedExtractsTable.approvedAt,
+        extractData: submittedExtractsTable.extractData,
         createdAt: submittedExtractsTable.createdAt,
+        updatedAt: submittedExtractsTable.updatedAt,
         submittedByName: usersTable.name,
         submittedByEmail: usersTable.email,
         submittedByHospital: usersTable.hospital,
@@ -142,7 +146,7 @@ router.get("/", requireAuth, requireApproved, async (req: any, res) => {
 // POST /api/submitted-extracts — submit a new extract from HTML page
 router.post("/", requireAuth, requireApproved, async (req: any, res) => {
   try {
-    const { extractType, periodMonth, totalAmount, notes, contractNumber } = req.body;
+    const { extractType, periodMonth, totalAmount, notes, contractNumber, extractData } = req.body;
 
     if (!extractType) {
       return res.status(400).json({ error: "extractType is required" });
@@ -157,6 +161,7 @@ router.post("/", requireAuth, requireApproved, async (req: any, res) => {
     const companyName = user.company ? (COMPANY_LABELS[user.company] || user.company) : (req.body.companyName || null);
     const hospitalName = user.hospital || req.body.hospitalName || null;
     const resolvedContractNumber = contractNumber || user.contractNumber || null;
+    const extractDataJson = extractData ? JSON.stringify(extractData) : null;
 
     const [row] = await db.insert(submittedExtractsTable).values({
       userId: user.id,
@@ -168,7 +173,18 @@ router.post("/", requireAuth, requireApproved, async (req: any, res) => {
       totalAmount: totalAmount != null ? String(totalAmount) : null,
       notes: notes || null,
       status: "submitted",
+      extractData: extractDataJson,
     }).returning();
+
+    // Log revision entry
+    await db.insert(extractRevisionsTable).values({
+      extractId: row.id,
+      changedBy: user.name,
+      changedByRole: user.role,
+      previousStatus: null,
+      newStatus: "submitted",
+      notes: "تقديم مستخلص جديد",
+    });
 
     return res.status(201).json(row);
   } catch (err) {
@@ -189,7 +205,8 @@ router.put("/:id", requireAuth, requireApproved, async (req: any, res) => {
       return res.status(400).json({ error: "Can only revise extracts that need revision or were rejected" });
     }
 
-    const { companyName, contractNumber, hospitalName, periodMonth, totalAmount, notes } = req.body;
+    const { companyName, contractNumber, hospitalName, periodMonth, totalAmount, notes, extractData } = req.body;
+    const extractDataJson = extractData ? JSON.stringify(extractData) : existing.extractData;
 
     const [row] = await db.update(submittedExtractsTable).set({
       companyName: companyName ?? existing.companyName,
@@ -197,6 +214,7 @@ router.put("/:id", requireAuth, requireApproved, async (req: any, res) => {
       hospitalName: hospitalName ?? existing.hospitalName,
       periodMonth: periodMonth ?? existing.periodMonth,
       totalAmount: totalAmount != null ? String(totalAmount) : existing.totalAmount,
+      extractData: extractDataJson,
       notes: notes ?? existing.notes,
       status: "submitted",
       revisionCount: (existing.revisionCount ?? 0) + 1,
@@ -204,6 +222,16 @@ router.put("/:id", requireAuth, requireApproved, async (req: any, res) => {
       adminNotes: null,
       updatedAt: new Date(),
     }).where(eq(submittedExtractsTable.id, Number(req.params.id))).returning();
+
+    // Log revision entry
+    await db.insert(extractRevisionsTable).values({
+      extractId: row.id,
+      changedBy: req.currentUser.name,
+      changedByRole: req.currentUser.role,
+      previousStatus: existing.status,
+      newStatus: "submitted",
+      notes: `تعديل رقم ${row.revisionCount}`,
+    });
 
     return res.json(row);
   } catch (err) {
@@ -254,12 +282,25 @@ router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (r
       updates.approvedAt = new Date();
     }
 
+    const [existing] = await db.select().from(submittedExtractsTable)
+      .where(eq(submittedExtractsTable.id, Number(req.params.id))).limit(1);
+
     const [row] = await db.update(submittedExtractsTable)
       .set(updates)
       .where(eq(submittedExtractsTable.id, Number(req.params.id)))
       .returning();
 
     if (!row) return res.status(404).json({ error: "Not found" });
+
+    // Log status change
+    await db.insert(extractRevisionsTable).values({
+      extractId: row.id,
+      changedBy: req.currentUser.name,
+      changedByRole: req.currentUser.role,
+      previousStatus: existing?.status ?? null,
+      newStatus: status,
+      notes: adminNotes || null,
+    }).catch(() => {});
 
     if (status === "approved" && row.userId) {
       try {
@@ -280,6 +321,29 @@ router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (r
     return res.json({ ...row, monthAdvanced: status === "approved" });
   } catch (err) {
     req.log.error({ err }, "Failed to update extract status");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /api/submitted-extracts/:id/revisions — get revision history
+router.get("/:id/revisions", requireAuth, requireApproved, async (req: any, res) => {
+  try {
+    const extractId = Number(req.params.id);
+    const [extract] = await db.select({ userId: submittedExtractsTable.userId })
+      .from(submittedExtractsTable).where(eq(submittedExtractsTable.id, extractId)).limit(1);
+    if (!extract) return res.status(404).json({ error: "Not found" });
+
+    const isOwner = extract.userId === req.currentUser.id;
+    const isAdminOrSup = ["admin", "supervisor", "contract_supervisor"].includes(req.currentUser.role);
+    if (!isOwner && !isAdminOrSup) return res.status(403).json({ error: "Forbidden" });
+
+    const revisions = await db.select().from(extractRevisionsTable)
+      .where(eq(extractRevisionsTable.extractId, extractId))
+      .orderBy(desc(extractRevisionsTable.createdAt));
+
+    return res.json({ revisions });
+  } catch (err) {
+    req.log.error({ err }, "Failed to get revisions");
     return res.status(500).json({ error: "Internal server error" });
   }
 });
