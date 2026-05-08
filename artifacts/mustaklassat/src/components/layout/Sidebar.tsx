@@ -3,7 +3,7 @@ import { useUser, useClerk } from "@clerk/react";
 import { useGetMe } from "@workspace/api-client-react";
 import {
   LayoutDashboard, Settings, Users, LogOut, ShieldAlert, ClipboardList,
-  Clock, CalendarDays, Building2, Briefcase, ChevronLeft, MapPin
+  Clock, CalendarDays, Building2, Briefcase, ChevronLeft, MapPin, BarChart3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -85,8 +85,9 @@ export function Sidebar() {
       { name: "النسخ الاحتياطي", href: "/admin/backup", icon: Briefcase },
     ] : []),
     ...(canViewAudit ? [
-      { name: "سجل المراقبة", href: "/admin/audit", icon: ClipboardList },
-      { name: "قائمة المستخدمين", href: "/admin/users-view", icon: Users },
+      { name: "إحصائيات المستخلصات", href: "/admin/extracts-stats", icon: BarChart3 },
+      { name: "سجل المراقبة",        href: "/admin/audit",          icon: ClipboardList },
+      { name: "قائمة المستخدمين",    href: "/admin/users-view",     icon: Users },
     ] : []),
     ...(isContractSup ? [
       { name: "لوحة مشرف العقد", href: "/contract-supervisor", icon: Building2 },

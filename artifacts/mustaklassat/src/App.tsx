@@ -30,6 +30,7 @@ import AuditLog from "@/pages/admin/audit";
 import UsersView from "@/pages/admin/users-view";
 import ContractSupervisorPage from "@/pages/admin/contract-supervisor";
 import AdminBackup from "@/pages/admin/backup";
+import ExtractsStats from "@/pages/admin/stats";
 import Settings from "@/pages/settings";
 import OriginalViewer from "@/pages/OriginalViewer";
 import ExtractsTrack from "@/pages/extracts/track";
@@ -495,6 +496,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         name: dbUser.name,
         email: dbUser.email,
         role: dbUser.role,
+        hospital: dbUser.hospital,
+        company: dbUser.company,
         clerkToken: token,
         timestamp: Date.now(),
       }));
@@ -599,6 +602,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/admin/audit" component={() => <ProtectedRoute component={AuditLog} />} />
           <Route path="/admin/users-view" component={() => <ProtectedRoute component={UsersView} />} />
           <Route path="/admin/backup" component={() => <ProtectedRoute component={AdminBackup} adminOnly />} />
+          <Route path="/admin/extracts-stats" component={() => <ProtectedRoute component={ExtractsStats} />} />
           <Route path="/contract-supervisor" component={() => <ProtectedRoute component={ContractSupervisorPage} />} />
           <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
           <Route path="/original-viewer" component={() => (

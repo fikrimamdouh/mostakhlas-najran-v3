@@ -369,7 +369,141 @@ export async function sendRejectionEmail(toEmail: string, name: string): Promise
   } catch (err) { logger.error({ err, toEmail }, "Failed to send rejection email"); }
 }
 
-// ── 5. Support ticket email ───────────────────────────────────────────────────
+// ── 5. New extract submitted — notify admin + hospital supervisors ────────────
+export async function sendNewExtractEmail(
+  recipientEmails: string[],
+  extract: {
+    submitterName: string;
+    submitterEmail: string;
+    hospitalName: string;
+    extractType: string;
+    periodMonth?: string | null;
+    totalAmount?: string | null;
+    extractId: number;
+  }
+): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend || recipientEmails.length === 0) return;
+  const domain = getAppDomain();
+
+  const typeLabels: Record<string, string> = {
+    labor: "مستخلص عمالة",
+    consumables: "مستخلص مستهلكات",
+    spare_parts: "مستخلص قطع غيار",
+    health_centers: "مستخلص مراكز صحية",
+    admin_offices: "مستخلص مكاتب إدارية",
+  };
+  const typeLabel = typeLabels[extract.extractType] || extract.extractType;
+
+  try {
+    const content = `
+      <p style="color:#1e3c72;font-size:21px;font-weight:800;margin:0 0 6px;">
+        📋 &nbsp;مستخلص جديد مقدم
+      </p>
+      ${subheading("تم تقديم مستخلص جديد ويحتاج إلى مراجعة واعتماد")}
+      ${divider()}
+
+      ${sectionTitle("تفاصيل المستخلص")}
+      <table width="100%" cellpadding="0" cellspacing="0"
+        style="border-radius:12px;overflow:hidden;border:1px solid #e0e7ef;margin-bottom:24px;">
+        ${infoRow("نوع المستخلص", typeLabel, true)}
+        ${infoRow("الموقع / المستشفى", extract.hospitalName)}
+        ${infoRow("الفترة", extract.periodMonth || "—", true)}
+        ${infoRow("المبلغ الإجمالي", extract.totalAmount ? `${Number(extract.totalAmount).toLocaleString("ar-SA")} ريال` : "—")}
+      </table>
+
+      ${sectionTitle("المقدِّم")}
+      <table width="100%" cellpadding="0" cellspacing="0"
+        style="border-radius:12px;overflow:hidden;border:1px solid #e0e7ef;margin-bottom:24px;">
+        ${infoRow("الاسم", extract.submitterName, true)}
+        ${infoRow("البريد الإلكتروني", extract.submitterEmail)}
+      </table>
+
+      <table width="100%" cellpadding="0" cellspacing="0"
+        style="background:linear-gradient(135deg,#fffbeb,#fef3c7);
+               border-radius:12px;border:1px solid #fcd34d;padding:16px 20px;margin-bottom:8px;">
+        <tr><td>
+          <p style="margin:0;color:#92400e;font-size:13px;font-weight:600;">⚡ &nbsp;إجراء مطلوب</p>
+          <p style="margin:6px 0 0;color:#78350f;font-size:13px;line-height:1.8;">
+            يرجى مراجعة المستخلص واتخاذ القرار المناسب (موافقة / رفض / طلب تعديل).
+          </p>
+        </td></tr>
+      </table>
+
+      ${domain ? actionButton("مراجعة المستخلص", `${domain}/submitted-extracts/${extract.extractId}`, "#1e3c72") : ""}
+    `;
+    await resend.client.emails.send({
+      from: resend.fromField,
+      to: recipientEmails,
+      subject: `📋 مستخلص جديد: ${typeLabel} — ${extract.hospitalName || "—"}`,
+      html: emailLayout(content, "مستخلص جديد مقدم"),
+    });
+    logger.info({ recipientEmails, extractId: extract.extractId }, "New extract notification sent");
+  } catch (err) { logger.error({ err }, "Failed to send new extract email"); }
+}
+
+// ── 6. Inactivity alert — hospitals with no extract for 45+ days ──────────────
+export async function sendInactivityAlertEmail(
+  adminEmail: string,
+  inactiveHospitals: { hospital: string; daysSince: number; lastDate: string | null }[]
+): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend || inactiveHospitals.length === 0) return;
+  const domain = getAppDomain();
+
+  try {
+    const rows = inactiveHospitals.map((h, i) =>
+      infoRow(h.hospital, h.lastDate ? `آخر تقديم: ${h.lastDate} (منذ ${h.daysSince} يوم)` : "لم يُقدَّم مستخلص بعد", i % 2 === 0)
+    ).join("");
+
+    const content = `
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="display:inline-flex;align-items:center;justify-content:center;
+                    width:64px;height:64px;border-radius:50%;
+                    background:linear-gradient(135deg,#fef3c7,#fde68a);
+                    border:2px solid #f59e0b;margin-bottom:16px;">
+          <span style="font-size:28px;">⏰</span>
+        </div>
+        <h2 style="color:#92400e;font-size:22px;font-weight:800;margin:0 0 6px;">
+          تنبيه: مواقع متأخرة في تقديم المستخلصات
+        </h2>
+        <p style="color:#64748b;font-size:13px;margin:0;">
+          المواقع التالية لم تقدم مستخلصات منذ أكثر من 45 يوماً
+        </p>
+      </div>
+
+      ${divider()}
+
+      ${sectionTitle(`المواقع المتأخرة (${inactiveHospitals.length})`)}
+      <table width="100%" cellpadding="0" cellspacing="0"
+        style="border-radius:12px;overflow:hidden;border:1px solid #e0e7ef;margin-bottom:24px;">
+        ${rows}
+      </table>
+
+      <table width="100%" cellpadding="0" cellspacing="0"
+        style="background:linear-gradient(135deg,#fef2f2,#fee2e2);
+               border-radius:12px;border-right:4px solid #dc2626;padding:18px 20px;margin-bottom:8px;">
+        <tr><td>
+          <p style="margin:0 0 8px;color:#b91c1c;font-size:14px;font-weight:700;">📌 تذكير</p>
+          <p style="margin:0;color:#7f1d1d;font-size:13px;line-height:1.9;">
+            يرجى التواصل مع المشرفين المسؤولين عن هذه المواقع وحثهم على تقديم المستخلصات المتأخرة.
+          </p>
+        </td></tr>
+      </table>
+
+      ${domain ? actionButton("عرض إحصائيات المستخلصات", `${domain}/admin/extracts-stats`, "#92400e") : ""}
+    `;
+    await resend.client.emails.send({
+      from: resend.fromField,
+      to: adminEmail,
+      subject: `⏰ تنبيه: ${inactiveHospitals.length} موقع متأخر في تقديم المستخلصات`,
+      html: emailLayout(content, "تنبيه مواقع متأخرة", "#92400e"),
+    });
+    logger.info({ adminEmail, count: inactiveHospitals.length }, "Inactivity alert sent");
+  } catch (err) { logger.error({ err }, "Failed to send inactivity alert email"); }
+}
+
+// ── 7. Support ticket email ───────────────────────────────────────────────────
 export async function sendSupportEmail(adminEmail: string, ticket: {
   name: string; email: string; subject: string; message: string;
 }): Promise<void> {

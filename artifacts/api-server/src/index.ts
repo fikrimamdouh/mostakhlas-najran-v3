@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { startInactivityScheduler } from "./lib/inactivity";
 
 const rawPort = process.env["PORT"];
 
@@ -22,4 +23,7 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // بدء فحص المواقع المتأخرة تلقائياً كل 24 ساعة
+  startInactivityScheduler();
 });

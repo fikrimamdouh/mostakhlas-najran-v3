@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, usersTable, submittedExtractsTable, userStorageTable, extractRevisionsTable } from "@workspace/db";
 import { requireAuth } from "../middleware/requireAuth";
 import { eq, desc, and } from "drizzle-orm";
+import { sendNewExtractEmail } from "../lib/email";
 
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 
@@ -185,6 +186,46 @@ router.post("/", requireAuth, requireApproved, async (req: any, res) => {
       newStatus: "submitted",
       notes: "تقديم مستخلص جديد",
     });
+
+    // إشعار فوري للمدير ومشرفي الموقع — fire-and-forget
+    void (async () => {
+      try {
+        const admins = await db
+          .select({ email: usersTable.email })
+          .from(usersTable)
+          .where(and(eq(usersTable.role, "admin"), eq(usersTable.status, "approved")));
+
+        const hospitalSupervisors = hospitalName
+          ? await db
+              .select({ email: usersTable.email })
+              .from(usersTable)
+              .where(
+                and(
+                  eq(usersTable.role, "supervisor"),
+                  eq(usersTable.supervisedHospital, hospitalName),
+                  eq(usersTable.status, "approved"),
+                )
+              )
+          : [];
+
+        const recipients = [
+          ...admins.map(a => a.email),
+          ...hospitalSupervisors.map(s => s.email),
+        ].filter((e): e is string => !!e);
+
+        if (recipients.length > 0) {
+          await sendNewExtractEmail(recipients, {
+            submitterName:  user.name,
+            submitterEmail: user.email,
+            hospitalName:   hospitalName || "—",
+            extractType,
+            periodMonth,
+            totalAmount:    totalAmount != null ? String(totalAmount) : null,
+            extractId:      row.id,
+          });
+        }
+      } catch (_) {}
+    })();
 
     return res.status(201).json(row);
   } catch (err) {
