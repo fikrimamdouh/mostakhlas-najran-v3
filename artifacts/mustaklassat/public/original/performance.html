@@ -2024,9 +2024,12 @@ function exportSectionToExcel() {
         const _sbSigsExcel = (typeof SignatureBlock !== 'undefined')
             ? SignatureBlock.getSigs('performance')
             : JSON.parse(localStorage.getItem('sb_sigs_performance') || '[]');
+        const _sbPrefsExcel = (typeof SignatureBlock !== 'undefined')
+            ? SignatureBlock.getPrefs('performance')
+            : { includeSigs: true, includeStamp: true };
         const signatures = _sbSigsExcel.map(s => [`${s.title}:`, s.name || '']);
 
-        if (signatures.length > 0) {
+        if (_sbPrefsExcel.includeSigs && signatures.length > 0) {
             const sigData = [["التواقيع المعتمدة"], [], ...signatures];
             const sig_ws = XLSX.utils.aoa_to_sheet(sigData);
             sig_ws['!cols'] = [ { wch: 30 }, { wch: 30 } ];
@@ -2232,8 +2235,9 @@ function exportToPDF(sectionId) {
 const signatures = (typeof SignatureBlock !== 'undefined')
     ? SignatureBlock.getSigs('performance')
     : JSON.parse(localStorage.getItem('sb_sigs_performance') || '[]');
-
-
+const _sbPrefs1 = (typeof SignatureBlock !== 'undefined')
+    ? SignatureBlock.getPrefs('performance')
+    : { includeSigs: true, includeStamp: true };
 
     const printDate = new Date();
     const dateString = printDate.toLocaleDateString('ar-EG', {
@@ -2571,6 +2575,7 @@ const signatures = (typeof SignatureBlock !== 'undefined')
                 ${footerText}
             </div>
             
+            ${_sbPrefs1.includeSigs && signatures.length > 0 ? `
             <div class="signatures-section">
                 <div class="signatures-title">التواقيع</div>
                 <div class="signatures-grid">
@@ -2581,8 +2586,16 @@ const signatures = (typeof SignatureBlock !== 'undefined')
                             <div class="signature-name">${sig.name}</div>
                         </div>
                     `).join('')}
+                    ${_sbPrefs1.includeStamp ? `
+                    <div class="signature-item" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:60px;height:60px;color:#1e3c72;">
+                          <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="5,3"/>
+                          <circle cx="50" cy="50" r="33" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                          <text x="50" y="56" text-anchor="middle" font-family="Tajawal,Arial,sans-serif" font-size="17" fill="currentColor" font-weight="bold">ختم</text>
+                        </svg>
+                    </div>` : ''}
                 </div>
-            </div>
+            </div>` : ''}
             
             
         </div>
@@ -2692,6 +2705,9 @@ function printSingleTable(tableId) {
     const signatures = (typeof SignatureBlock !== 'undefined')
         ? SignatureBlock.getSigs('performance')
         : JSON.parse(localStorage.getItem('sb_sigs_performance') || '[]');
+    const _sbPrefs2 = (typeof SignatureBlock !== 'undefined')
+        ? SignatureBlock.getPrefs('performance')
+        : { includeSigs: true, includeStamp: true };
 
     const logoRight = document.querySelector('.logo-right')?.src || '';
     const logoLeft = document.querySelector('.logo-left')?.src || '';
@@ -2745,6 +2761,7 @@ function printSingleTable(tableId) {
             
             <div class="summary-section">${summaryText}</div>
             <div class="footer-text">${footerText}</div>
+            ${_sbPrefs2.includeSigs && signatures.length > 0 ? `
             <div class="signatures-section">
                 <div class="signatures-grid">
                     ${signatures.map(sig => `
@@ -2754,8 +2771,16 @@ function printSingleTable(tableId) {
                             <div class="signature-name">${sig.name}</div>
                         </div>
                     `).join('')}
+                    ${_sbPrefs2.includeStamp ? `
+                    <div class="signature-item" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:60px;height:60px;color:#1e3c72;">
+                          <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="5,3"/>
+                          <circle cx="50" cy="50" r="33" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                          <text x="50" y="56" text-anchor="middle" font-family="Tajawal,Arial,sans-serif" font-size="17" fill="currentColor" font-weight="bold">ختم</text>
+                        </svg>
+                    </div>` : ''}
                 </div>
-            </div>
+            </div>` : ''}
         </div>
 </body>
     </html>

@@ -829,13 +829,24 @@ function preparePrint() {
         el.style.opacity = '1';
     });
 
-    // إظهار التواقيع للطباعة
+    // إظهار التواقيع للطباعة — مع احترام تفضيلات التضمين
+    const _attPrefs = (typeof SignatureBlock !== 'undefined')
+        ? SignatureBlock.getPrefs('attendance')
+        : { includeSigs: true, includeStamp: true };
     const printSignatures = document.querySelectorAll('.print-signatures');
-    printSignatures.forEach(sig => {
-        sig.style.display = 'block';
-        sig.style.visibility = 'visible';
-        sig.style.opacity = '1';
-    });
+    if (_attPrefs.includeSigs) {
+        printSignatures.forEach(sig => {
+            sig.style.display = 'block';
+            sig.style.visibility = 'visible';
+            sig.style.opacity = '1';
+        });
+        // إخفاء الختم إن طُلب ذلك
+        if (!_attPrefs.includeStamp) {
+            document.querySelectorAll('.print-signatures .sb-stamp').forEach(s => {
+                s.style.display = 'none';
+            });
+        }
+    }
 
     // تحديث البيانات
     updateContractDataForPrint();
@@ -849,6 +860,10 @@ function preparePrint() {
             sig.style.display = 'none';
             sig.style.visibility = 'hidden';
             sig.style.opacity = '0';
+        });
+        // إعادة الختم للوضع الافتراضي
+        document.querySelectorAll('.print-signatures .sb-stamp').forEach(s => {
+            s.style.display = '';
         });
     }, 1000);
 }
