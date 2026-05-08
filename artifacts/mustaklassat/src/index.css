@@ -281,3 +281,21 @@
     inset: -1px;
   }
 }
+
+/* ── إخفاء شعار وإشعارات Clerk ── */
+/* بانر "Development mode" البرتقالي */
+.cl-internal-b3fm6y,
+[class*="cl-internal"][class*="development"],
+[data-clerk-component] + div > div[style*="orange"],
+div[class*="cl-"][class*="notice"],
+div[class*="cl-"][class*="badge"] {
+  display: none !important;
+}
+/* "Secured by Clerk" في footer النموذج */
+.cl-footerPages,
+.cl-poweredByClerk,
+.cl-poweredByClerkTag,
+[class*="cl-"][class*="powered"],
+[class*="cl-"][class*="footer"][class*="page"] {
+  display: none !important;
+}

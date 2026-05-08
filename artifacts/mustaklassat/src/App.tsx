@@ -72,7 +72,46 @@ const clerkAppearance = {
   },
 };
 
+function useHideClerkBadge() {
+  useEffect(() => {
+    // فقط عناصر تحتوي على هذا النص بالضبط (قصيرة لا تحوي محتوى النموذج)
+    const BADGE_TEXTS = ["Development mode", "Secured by Clerk"];
+    const hideIfBadge = (el: Element) => {
+      // نحصل على النص المباشر (بدون نصوص العناصر الفرعية)
+      const ownText = Array.from(el.childNodes)
+        .filter(n => n.nodeType === Node.TEXT_NODE)
+        .map(n => n.textContent ?? "")
+        .join("")
+        .trim();
+      // نتحقق من النص الكامل مع تضييق الحد ليكون 22 حرف فقط
+      const fullText = (el.textContent ?? "").trim();
+      if (fullText.length > 22) return;
+      if (BADGE_TEXTS.some(t => fullText === t || ownText === t)) {
+        // نخفي أكبر عنصر أب له كلاس cl-internal ولكن ليس البطاقة كلها
+        let target: Element = el;
+        let parent = el.parentElement;
+        while (parent && parent.className?.includes?.("cl-internal") && (parent.textContent ?? "").trim().length <= 22) {
+          target = parent;
+          parent = parent.parentElement;
+        }
+        (target as HTMLElement).style.setProperty("display", "none", "important");
+      }
+    };
+    const sweep = () => {
+      document.querySelectorAll("[class*='cl-internal']").forEach(hideIfBadge);
+      document.querySelectorAll(".cl-poweredByClerk,[class*='cl-poweredBy']").forEach(el => {
+        (el as HTMLElement).style.setProperty("display", "none", "important");
+      });
+    };
+    sweep();
+    const observer = new MutationObserver(sweep);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+}
+
 function SignInPage() {
+  useHideClerkBadge();
   return (
     <div className="flex min-h-[100dvh] flex-col items-center justify-center p-4" style={{ background: "linear-gradient(135deg,#1e3c72 0%,#2a5298 100%)" }}>
       <div className="mb-6 flex flex-col items-center">

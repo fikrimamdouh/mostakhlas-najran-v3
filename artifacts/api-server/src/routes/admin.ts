@@ -3,6 +3,7 @@ import { db, usersTable, submittedExtractsTable, userStorageTable, auditLogTable
 import { eq, ne, and, isNotNull } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 import { runInactivityCheck } from "../lib/inactivity";
+import { sendAdminNewUserEmail } from "../lib/email";
 
 const router = Router();
 
@@ -88,6 +89,26 @@ router.post("/reset-system", requireAuth, requireAdmin, async (req: any, res: an
   } catch (err: any) {
     req.log.error(err, "System reset failed");
     return res.status(500).json({ error: "فشل في تهيئة النظام" });
+  }
+});
+
+// POST /api/admin/test-email — send a test admin notification email to verify delivery
+router.post("/test-email", requireAuth, requireAdmin, async (req: any, res: any) => {
+  try {
+    const adminEmail = req.currentUser.email as string;
+    await sendAdminNewUserEmail(adminEmail, {
+      name: "مستخدم تجريبي",
+      email: "test@example.com",
+      phone: "0500000000",
+      hospital: "مستشفى نجران العام",
+      jobTitle: "مهندس صيانة",
+      contractNumber: "TEST-001",
+    });
+    req.log.info({ adminEmail }, "Test email sent");
+    return res.json({ ok: true, sentTo: adminEmail, message: `تم إرسال إيميل تجريبي إلى ${adminEmail}` });
+  } catch (err) {
+    req.log.error({ err }, "Test email failed");
+    return res.status(500).json({ error: "فشل إرسال الإيميل التجريبي" });
   }
 });
 
