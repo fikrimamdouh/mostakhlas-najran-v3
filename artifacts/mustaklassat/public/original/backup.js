@@ -1,8 +1,9 @@
 /**
  * ===================================================================
- *      ===>   ✅ نظام النسخ الاحتياطي والاستعادة (V15 - النهائي والموحد)   <===
+ *      ===>   ✅ نظام النسخ الاحتياطي والاستعادة (V16 - شامل لكل الأقسام)   <===
  * ===================================================================
  * @description ملف JavaScript موحد يحتوي على كل ما يخص النسخ الاحتياطي والاستعادة.
+ * يغطي: المستشفى الرئيسي + المراكز الصحية + المكاتب الإدارية + الإعدادات.
  */
 
 // === 1. دوال الواجهة (فتح/إغلاق النوافذ) ===
@@ -68,14 +69,14 @@ function renderBackupLog() {
     `).join('');
 }
 
-// === 3. ✅✅✅ إنشاء النسخة الاحتياطية (الكود الصحيح) ✅✅✅ ===
+// === 3. إنشاء النسخة الاحتياطية ===
 
 function createSpecificBackup(backupType) {
     try {
         const backupObject = collectDataForBackup(backupType);
         
         if (Object.keys(backupObject.data.data).length === 0) {
-            alert(`لا توجد بيانات لإنشاء نسخة احتياطية من نوع "${getSectionName(backupType)}".`);
+            alert(`لا توجد بيانات لإنشاء نسخة احتياطية من نوع "${getSectionName(backupType)}".\nتأكد من أنك أدخلت بيانات في هذا القسم أولاً.`);
             return;
         }
 
@@ -90,7 +91,7 @@ function createSpecificBackup(backupType) {
         URL.revokeObjectURL(url);
 
         addLogEntry('إنشاء نسخة', getSectionName(backupType), 'نجاح');
-        alert(`تم إنشاء النسخة الاحتياطية "${backupObject.filename}" بنجاح.`);
+        alert(`✅ تم إنشاء النسخة الاحتياطية بنجاح.\nالملف: "${backupObject.filename}"`);
 
     } catch (error) {
         console.error(`خطأ في إنشاء النسخة (${backupType}):`, error);
@@ -99,13 +100,14 @@ function createSpecificBackup(backupType) {
     }
 }
 
-// === 4. ✅✅✅ جمع البيانات (الكود الصحيح) ✅✅✅ ===
+// === 4. جمع البيانات حسب النوع ===
 
 function collectDataForBackup(backupType) {
     const allData = {};
     const timestamp = new Date().toISOString().slice(0, 10);
     const hospitalName = JSON.parse(localStorage.getItem('persistentContractData') || '{}').hospitalName || 'النظام';
 
+    // النسخة الشاملة — كل مفاتيح localStorage
     if (backupType === 'full_system') {
         const allKeys = Object.keys(localStorage);
         allKeys.forEach(key => {
@@ -119,28 +121,129 @@ function collectDataForBackup(backupType) {
         return { filename, data: { type: 'full_system', entityName: 'النظام_الشامل', timestamp: new Date().toISOString(), data: allData } };
     }
 
-    // للحالات المخصصة
+    /**
+     * مفاتيح كل قسم — نوعان:
+     *  - string  → مطابقة تامة
+     *  - RegExp  → نمط (prefix)
+     *
+     * المفاتيح المشتركة بين جميع الأقسام: persistentContractData, persistentExtractData
+     */
+    const SHARED_KEYS = ['persistentContractData', 'persistentExtractData', 'appTitles_v1'];
+
     const keyPatterns = {
-        settings: ['persistentContractData', 'persistentExtractData', 'distributionSettings', 'performanceTableNames', 'performanceSignatures_v2'],
-        main_hospital_attendance: ['attendanceData', 'performanceTotalDeduction', /^tableData_/],
-        main_hospital_consumables: [/^main_hospital_consumables_/, /^sparePartsData_/],
+
+        // ── إعدادات النظام ──────────────────────────────────────────
+        settings: [
+            'persistentContractData', 'persistentExtractData',
+            'distributionSettings', 'performanceTableNames', 'performanceSignatures_v2',
+            'contractData', 'contractDetails', 'contractNumber', 'contractType',
+            'contractStartDate', 'contractEndDate', 'contractSignatureData',
+            'extractMonth', 'extractYear', 'extractNumber', 'extractStart', 'extractEnd',
+            'extractFromDate', 'extractToDate',
+            'hospitalName', 'companyName', 'directPurchaseRatio',
+            'centerNames_v3', 'departmentNames', 'admin_staff',
+            'adminOfficeNames_v1', 'appTitles_v1',
+            'settings_main', 'settings_advanced',
+            'dynamicSignatures', 'contractorSignature',
+        ],
+
+        // ── عمالة وأداء المستشفى الرئيسي ───────────────────────────
+        main_hospital_attendance: [
+            ...SHARED_KEYS,
+            'attendanceData', 'performanceTotalDeduction',
+            'finalLaborCost', 'grand-net-total',
+            'performanceData', 'performanceSignatures', 'performanceTableNames',
+            'achievementData', 'achievementTitles_v1',
+            'najran_labor_attendance_done', 'najran_labor_performance_done',
+            /^tableData_/,
+            /^deptCalculatedCost_/,
+            /^dept_/,
+        ],
+
+        // ── مستهلكات المستشفى الرئيسي ──────────────────────────────
+        main_hospital_consumables: [
+            ...SHARED_KEYS,
+            /^main_hospital_consumables_/,
+            /^sparePartsData_/,
+            'spare_partsData',
+        ],
+
+        // ── عمالة وأداء المراكز الصحية ──────────────────────────────
+        health_centers_attendance: [
+            ...SHARED_KEYS,
+            'centerNames_v3',
+            'centersAttendanceData_v2',
+            'healthCentersAttendanceData',
+            'performanceData_v4',
+            'performanceDeductions',
+            'grand-net-total',
+            'admin_staff',
+            'najran_health_attendance_done',
+            /^table-/,
+        ],
+
+        // ── مستهلكات المراكز الصحية ──────────────────────────────────
+        health_centers_consumables: [
+            ...SHARED_KEYS,
+            'consumables_final_v1.0',
+            /^subcontractors_data_consumables_final_/,
+            /^performance_data_consumables_final_/,
+            /^water_supply_data_consumables_final_/,
+            /^laundry_supply_data_consumables_final_/,
+            /^sewage_disposal_data_consumables_final_/,
+            /^summary_data_consumables_final_/,
+            /^signatures_data_consumables_final_/,
+            /^print_titles_data_consumables_final_/,
+            /^notes_data_consumables_final_/,
+        ],
+
+        // ── عمالة وأداء المكاتب الإدارية ────────────────────────────
+        admin_offices_attendance: [
+            ...SHARED_KEYS,
+            'adminOfficeNames_v1',
+            'adminOfficesAttendanceData_v1',
+            'performanceData_v4',
+            'performanceDeductions',
+            'grand-net-total',
+            'admin_staff',
+            'najran_admin_offices_attendance_done',
+            /^table-/,
+        ],
+
+        // ── مستهلكات المكاتب الإدارية ────────────────────────────────
+        admin_offices_consumables: [
+            ...SHARED_KEYS,
+            'admin_offices_consumables_v1.0',
+            /^subcontractors_data_admin_offices_consumables_/,
+            /^performance_data_admin_offices_consumables_/,
+            /^water_supply_data_admin_offices_consumables_/,
+            /^laundry_supply_data_admin_offices_consumables_/,
+            /^sewage_disposal_data_admin_offices_consumables_/,
+            /^summary_data_admin_offices_consumables_/,
+            /^signatures_data_admin_offices_consumables_/,
+            /^print_titles_data_admin_offices_consumables_/,
+            /^notes_data_admin_offices_consumables_/,
+        ],
     };
 
     const keysToCollect = keyPatterns[backupType] || [];
     keysToCollect.forEach(pattern => {
-        const regex = (typeof pattern === 'string') ? new RegExp(`^${pattern}$`) : pattern;
-        for (const key in localStorage) {
+        const regex = (typeof pattern === 'string')
+            ? new RegExp(`^${pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&')}$`)
+            : pattern;
+        for (const key of Object.keys(localStorage)) {
             if (regex.test(key)) {
-                try { allData[key] = JSON.parse(localStorage.getItem(key)); } catch { allData[key] = localStorage.getItem(key); }
+                try { allData[key] = JSON.parse(localStorage.getItem(key)); }
+                catch { allData[key] = localStorage.getItem(key); }
             }
         }
     });
-    
+
     const filename = `نسخة_${getSectionName(backupType)}_${hospitalName.replace(/\s/g, '_')}_${timestamp}.json`;
     return { filename, data: { type: backupType, entityName: hospitalName, timestamp: new Date().toISOString(), data: allData } };
 }
 
-// === 5. ✅✅✅ استعادة النسخة الاحتياطية (الكود الصحيح) ✅✅✅ ===
+// === 5. استعادة النسخة الاحتياطية ===
 
 function confirmRestore() {
     const fileInput = document.getElementById('restore-file-input');
@@ -150,7 +253,7 @@ function confirmRestore() {
     }
     const file = fileInput.files[0];
 
-    if (!confirm(`هل أنت متأكد من استعادة البيانات من الملف "${file.name}"؟ سيتم الكتابة فوق كل البيانات الحالية.`)) {
+    if (!confirm(`هل أنت متأكد من استعادة البيانات من الملف "${file.name}"؟\nسيتم الكتابة فوق كل البيانات الحالية.`)) {
         return;
     }
 
@@ -158,16 +261,15 @@ function confirmRestore() {
     reader.onload = function(event) {
         try {
             const backupWrapper = JSON.parse(event.target.result);
-            
-            // التحقق من بنية الملف الجديدة
+
             if (!backupWrapper.data || !backupWrapper.timestamp) {
                 throw new Error('صيغة ملف النسخة الاحتياطية غير صحيحة أو قديمة.');
             }
-            
-            const backupData = backupWrapper.data; // البيانات الفعلية موجودة هنا
 
-            localStorage.clear(); // امسح الذاكرة الحالية بالكامل
-            
+            const backupData = backupWrapper.data;
+
+            localStorage.clear();
+
             for (const key in backupData) {
                 if (Object.prototype.hasOwnProperty.call(backupData, key)) {
                     const value = backupData[key];
@@ -176,9 +278,9 @@ function confirmRestore() {
                     }
                 }
             }
-            
+
             addLogEntry('استعادة نسخة', file.name, 'نجاح');
-            alert('تمت استعادة البيانات بنجاح! سيتم إعادة تحميل الصفحة الآن.');
+            alert('✅ تمت استعادة البيانات بنجاح!\nسيتم إعادة تحميل الصفحة الآن.');
             setTimeout(() => window.location.reload(), 1500);
 
         } catch (error) {
@@ -193,10 +295,14 @@ function confirmRestore() {
 // === 6. دالة مساعدة لترجمة الأنواع ===
 function getSectionName(type) {
     const names = {
-        settings: 'الإعدادات',
-        main_hospital_attendance: 'عمالة وأداء المستشفى',
-        main_hospital_consumables: 'مستهلكات المستشفى',
-        full_system: 'شاملة'
+        settings:                  'الإعدادات',
+        main_hospital_attendance:  'عمالة_المستشفى',
+        main_hospital_consumables: 'مستهلكات_المستشفى',
+        health_centers_attendance: 'عمالة_المراكز_الصحية',
+        health_centers_consumables:'مستهلكات_المراكز_الصحية',
+        admin_offices_attendance:  'عمالة_المكاتب_الإدارية',
+        admin_offices_consumables: 'مستهلكات_المكاتب_الإدارية',
+        full_system:               'شاملة',
     };
     return names[type] || type;
 }
