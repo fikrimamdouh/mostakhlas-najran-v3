@@ -190,6 +190,7 @@ export function Sidebar() {
             {(() => {
               const allModules = [
                 { page: "settings_main.html",               label: "الإعدادات الرئيسية",                   types: ["hospital", "health_centers", "admin_offices"] },
+                { page: "settings_advanced.html",           label: "الإعدادات المتقدمة",                   types: ["hospital", "health_centers", "admin_offices"] },
                 { page: "attendance.html",                  label: "الحضور والانصراف",                     types: ["hospital"] },
                 { page: "performance.html",                 label: "جداول الأداء",                         types: ["hospital"] },
                 { page: "achievement.html",                 label: "شهادة الإنجاز",                        types: ["hospital"] },
@@ -197,11 +198,13 @@ export function Sidebar() {
                 { page: "spare_parts.html",                 label: "مستخلص قطع الغيار",                    types: ["hospital"] },
                 { page: "approval.html",                    label: "اعتماد المستخلص",                      types: ["hospital"] },
                 { page: "monthly-overview.html",            label: "النظرة الشاملة للمستخلصات",            types: ["hospital"] },
+                { page: "request-visit.html",               label: "تسجيل ومتابعة الزيارات",               types: ["hospital"] },
                 { page: "health_centers_attendance.html",   label: "المراكز الصحية — العمالة",             types: ["health_centers"] },
                 { page: "health_centers_consumables.html",  label: "المراكز الصحية — المستهلكات",          types: ["health_centers"] },
                 { page: "admin_offices_attendance.html",    label: "المكاتب الإدارية — العمالة",           types: ["admin_offices"] },
                 { page: "admin_offices_consumables.html",   label: "المكاتب الإدارية — المستهلكات",        types: ["admin_offices"] },
                 { page: "review_extract.html",              label: "مراجعة المستخلص",                      types: ["hospital", "health_centers", "admin_offices"] },
+                { page: "extract-archive.html",             label: "أرشيف المستخلصات",                     types: ["hospital", "health_centers", "admin_offices"] },
               ];
               const visibleModules = (isAdmin || isSupervisor || isContractSup)
                 ? allModules
