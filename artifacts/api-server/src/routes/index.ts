@@ -10,6 +10,7 @@ import auditRouter from "./audit";
 import supportRouter from "./support";
 import submittedExtractsRouter from "./submitted-extracts";
 import adminRouter from "./admin";
+import adminBackupRouter from "./admin-backup";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use("/audit", auditRouter);
 router.use("/support", supportRouter);
 router.use("/submitted-extracts", submittedExtractsRouter);
 router.use("/admin", adminRouter);
+router.use("/admin/backup", adminBackupRouter);
 
 export default router;

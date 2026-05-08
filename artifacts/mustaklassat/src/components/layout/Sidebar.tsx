@@ -82,6 +82,7 @@ export function Sidebar() {
     { name: "الإعدادات", href: "/settings", icon: Settings },
     ...(isAdmin ? [
       { name: "إدارة المستخدمين", href: "/admin/users", icon: ShieldAlert },
+      { name: "النسخ الاحتياطي", href: "/admin/backup", icon: Briefcase },
     ] : []),
     ...(canViewAudit ? [
       { name: "سجل المراقبة", href: "/admin/audit", icon: ClipboardList },

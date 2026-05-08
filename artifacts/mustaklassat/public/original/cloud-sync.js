@@ -31,6 +31,12 @@
     'finalLaborCost', 'performanceTotalDeduction', 'grand-net-total',
     'performanceSignatures', 'performanceTableNames',
     'najran_labor_attendance_done', 'najran_labor_performance_done', 'najran_health_attendance_done',
+    'najran_admin_offices_attendance_done',
+    // admin offices keys
+    'adminOfficeNames_v1', 'adminOfficesAttendanceData_v1',
+    // admin offices consumables
+    'admin_offices_consumables_v1.0',
+    // pattern-based keys handled separately in pushToCloud
   ];
 
   function getSession() {
