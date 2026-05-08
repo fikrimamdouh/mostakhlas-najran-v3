@@ -38,16 +38,32 @@ router.get("/me", requireAuth, async (req: any, res) => {
     let [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkUserId)).limit(1);
 
     if (!user) {
+      // clerk_id not found — fetch email from Clerk and try matching by email
+      // (handles test→live Clerk migration where clerk_id changes for same email)
       const clerkUser = await clerk.users.getUser(clerkUserId);
       const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
       const name = `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() || "مستخدم جديد";
-      [user] = await db.insert(usersTable).values({
-        clerkId: clerkUserId,
-        email,
-        name,
-        role: "user",
-        status: "pending",
-      }).returning();
+
+      // Try to find existing record by email
+      const [byEmail] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+
+      if (byEmail) {
+        // Migrate: update stored clerk_id to the new live one
+        req.log.info({ oldClerkId: byEmail.clerkId, newClerkId: clerkUserId, email }, "Migrating clerk_id for existing user");
+        [user] = await db.update(usersTable)
+          .set({ clerkId: clerkUserId })
+          .where(eq(usersTable.id, byEmail.id))
+          .returning();
+      } else {
+        // Genuinely new user
+        [user] = await db.insert(usersTable).values({
+          clerkId: clerkUserId,
+          email,
+          name,
+          role: "user",
+          status: "pending",
+        }).returning();
+      }
     }
 
     return res.json(user);
