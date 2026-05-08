@@ -369,7 +369,7 @@ components:
           nullable: true
         role:
           type: string
-          enum: [admin, supervisor, contract_supervisor, user]
+          enum: [admin, supervisor, contract_supervisor, viewer, user]
         contractCompany:
           type: string
           nullable: true

@@ -208,7 +208,7 @@ router.patch("/:userId/role", requireAuth, requireAdmin, async (req: any, res) =
   try {
     const { userId } = req.params;
     const { role, contractCompany } = req.body;
-    if (!["admin", "supervisor", "contract_supervisor", "user"].includes(role)) return res.status(400).json({ error: "Invalid role" });
+    if (!["admin", "supervisor", "contract_supervisor", "viewer", "user"].includes(role)) return res.status(400).json({ error: "Invalid role" });
     const updates: Record<string, any> = { role };
     if (role === "contract_supervisor") {
       if (!contractCompany) return res.status(400).json({ error: "contractCompany required for contract_supervisor" });

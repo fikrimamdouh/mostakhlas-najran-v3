@@ -3,7 +3,7 @@ import { useUser, useClerk } from "@clerk/react";
 import { useGetMe } from "@workspace/api-client-react";
 import {
   LayoutDashboard, Settings, Users, LogOut, ShieldAlert, ClipboardList,
-  Clock, CalendarDays, Building2, Briefcase, ChevronLeft, MapPin, BarChart3
+  Clock, CalendarDays, Building2, Briefcase, ChevronLeft, MapPin, BarChart3, Eye
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -43,12 +43,15 @@ function formatLastLogin(iso: string | null | undefined) {
 const roleLabel = (role: string) => {
   if (role === "admin") return "مدير النظام";
   if (role === "supervisor") return "مشرف";
+  if (role === "contract_supervisor") return "مشرف عقد";
+  if (role === "viewer") return "مراقب";
   return "مستخدم";
 };
 
 const roleColor = (role: string) => {
   if (role === "admin") return "#f59e0b";
   if (role === "supervisor") return "#60a5fa";
+  if (role === "viewer") return "#c084fc";
   return "#d4af37";
 };
 
@@ -67,6 +70,7 @@ export function Sidebar() {
   const isAdmin = dbUser?.role === "admin";
   const isSupervisor = dbUser?.role === "supervisor";
   const isContractSup = dbUser?.role === "contract_supervisor";
+  const isViewer = dbUser?.role === "viewer";
   const canViewAudit = isAdmin || isSupervisor;
 
   function getSiteType(hospital: string | null | undefined): "hospital" | "health_centers" | "admin_offices" {
@@ -78,8 +82,15 @@ export function Sidebar() {
   const siteType = getSiteType(dbUser?.hospital);
 
   const navigation = [
-    { name: "لوحة القيادة", href: "/dashboard", icon: LayoutDashboard },
-    { name: "الإعدادات", href: "/settings", icon: Settings },
+    ...(!isViewer ? [
+      { name: "لوحة القيادة", href: "/dashboard", icon: LayoutDashboard },
+    ] : []),
+    ...(isViewer ? [
+      { name: "لوحة المراقبة", href: "/viewer", icon: Eye },
+    ] : []),
+    ...(!isViewer ? [
+      { name: "الإعدادات", href: "/settings", icon: Settings },
+    ] : []),
     ...(isAdmin ? [
       { name: "إدارة المستخدمين", href: "/admin/users", icon: ShieldAlert },
       { name: "النسخ الاحتياطي", href: "/admin/backup", icon: Briefcase },

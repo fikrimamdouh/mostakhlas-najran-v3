@@ -91,7 +91,7 @@ const COMPANY_SITES: Record<string, { sites: string[] }> = {
 router.get("/", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const role = req.currentUser.role;
-    const isAdminOrSup = role === "admin" || role === "supervisor";
+    const isAdminOrSup = role === "admin" || role === "supervisor" || role === "viewer";
     const isContractSup = role === "contract_supervisor";
 
     let whereClause: any = undefined;

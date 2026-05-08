@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  Check, X, ShieldAlert, UserCheck, UserX, Shield, User,
+  Check, X, ShieldAlert, UserCheck, UserX, Shield, User, Eye,
   Search, RefreshCw, ClipboardList, Users, Clock, LayoutGrid, Save, Trash2, AlertTriangle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -278,7 +278,7 @@ export default function AdminUsers() {
       return res.json();
     },
     onSuccess: (_, { role }) => {
-      const label = role === "admin" ? "مدير النظام" : role === "supervisor" ? "مدير مستخلصات" : role === "contract_supervisor" ? "مشرف عقد" : "مستخدم";
+      const label = role === "admin" ? "مدير النظام" : role === "supervisor" ? "مدير مستخلصات" : role === "contract_supervisor" ? "مشرف عقد" : role === "viewer" ? "مراقب" : "مستخدم";
       toast({ title: "✅ تم", description: `تم تغيير الصلاحية إلى ${label}` });
       queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
     },
@@ -464,6 +464,8 @@ export default function AdminUsers() {
                           ? <Badge className="bg-amber-600 text-white gap-1"><Shield className="h-3 w-3" />مدير مستخلصات</Badge>
                           : user.role === "contract_supervisor"
                           ? <Badge className="bg-teal-600 text-white gap-1"><Shield className="h-3 w-3" />مشرف عقد</Badge>
+                          : user.role === "viewer"
+                          ? <Badge className="bg-purple-600 text-white gap-1"><Eye className="h-3 w-3" />مراقب</Badge>
                           : <Badge variant="outline" className="gap-1"><User className="h-3 w-3" />مستخدم</Badge>
                         }
                         {me?.id !== user.id && (
@@ -482,6 +484,7 @@ export default function AdminUsers() {
                               className="text-xs border border-gray-200 rounded px-1 py-0.5 text-gray-600 bg-white cursor-pointer hover:border-blue-400"
                             >
                               <option value="user">مستخدم</option>
+                              <option value="viewer">مراقب</option>
                               <option value="supervisor">مدير مستخلصات</option>
                               <option value="contract_supervisor">مشرف عقد</option>
                               <option value="admin">مدير النظام</option>

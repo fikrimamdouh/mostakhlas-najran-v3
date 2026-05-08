@@ -16,6 +16,7 @@ export const UserProfileRole = {
   admin: "admin",
   supervisor: "supervisor",
   contract_supervisor: "contract_supervisor",
+  viewer: "viewer",
   user: "user",
 } as const;
 

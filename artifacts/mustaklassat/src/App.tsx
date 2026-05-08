@@ -32,6 +32,7 @@ import UsersView from "@/pages/admin/users-view";
 import ContractSupervisorPage from "@/pages/admin/contract-supervisor";
 import AdminBackup from "@/pages/admin/backup";
 import ExtractsStats from "@/pages/admin/stats";
+import ViewerDashboard from "@/pages/viewer/dashboard";
 import Settings from "@/pages/settings";
 import OriginalViewer from "@/pages/OriginalViewer";
 import ExtractsTrack from "@/pages/extracts/track";
@@ -663,6 +664,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/admin/backup" component={() => <ProtectedRoute component={AdminBackup} adminOnly />} />
           <Route path="/admin/extracts-stats" component={() => <ProtectedRoute component={ExtractsStats} />} />
           <Route path="/contract-supervisor" component={() => <ProtectedRoute component={ContractSupervisorPage} />} />
+          <Route path="/viewer" component={() => <ProtectedRoute component={ViewerDashboard} />} />
           <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
           <Route path="/original-viewer" component={() => (
             <Show when="signed-in" fallback={<Redirect to="/sign-in" />}>
