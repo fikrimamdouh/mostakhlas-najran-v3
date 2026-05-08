@@ -78,11 +78,11 @@ router.patch("/me", requireAuth, async (req: any, res) => {
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
     if (!user) return res.status(404).json({ error: "User not found" });
-    const { name, phone, company } = req.body;
+    const { name, phone, jobTitle } = req.body;
     const updates: Record<string, any> = {};
     if (name) updates.name = name;
     if (phone !== undefined) updates.phone = phone;
-    if (company !== undefined) updates.company = company;
+    if (jobTitle !== undefined) updates.jobTitle = jobTitle;
     const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, user.id)).returning();
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
     logAudit(user.id, user.email, user.name, "تحديث الملف الشخصي", JSON.stringify(updates), ip);

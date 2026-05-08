@@ -465,6 +465,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
             email: user?.primaryEmailAddress?.emailAddress,
             name: preReg?.fullName || user?.fullName || user?.firstName || 'مستخدم',
             phone: preReg?.phone || '',
+            company: preReg?.company || '',
             hospital: preReg?.hospital || '',
             jobTitle: preReg?.jobTitle || '',
             contractNumber: preReg?.contractNumber || '',

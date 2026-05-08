@@ -10,9 +10,21 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
 import {
-  User, Mail, Phone, Building, Calendar,
-  ShieldCheck, Edit2, Save, X, Key, LogOut
+  User, Mail, Phone, Building2, Calendar,
+  ShieldCheck, Edit2, Save, X, Key, LogOut, Lock, MapPin, Hash, Briefcase
 } from "lucide-react";
+
+const COMPANY_LABELS: Record<string, string> = {
+  "بيت_العرب": "شركة مجموعة بيت العرب الحديثة المحدودة",
+  "سراكو": "شركة سراكو",
+};
+
+function roleLabel(role: string) {
+  if (role === "admin") return "🔑 مدير النظام";
+  if (role === "supervisor") return "🔍 مدير مستخلصات";
+  if (role === "contract_supervisor") return "📋 مشرف عقد";
+  return "👤 مستخدم";
+}
 
 export default function Settings() {
   const { data: user, isLoading } = useGetMe({ query: { queryKey: getGetMeQueryKey() } });
@@ -23,10 +35,14 @@ export default function Settings() {
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: "", phone: "", company: "" });
+  const [form, setForm] = useState({ name: "", phone: "", jobTitle: "" });
 
   const startEdit = () => {
-    setForm({ name: user?.name || "", phone: user?.phone || "", company: user?.company || "" });
+    setForm({
+      name: user?.name || "",
+      phone: (user as any)?.phone || "",
+      jobTitle: (user as any)?.jobTitle || "",
+    });
     setEditing(true);
   };
 
@@ -68,6 +84,13 @@ export default function Settings() {
 
   if (!user) return <div>خطأ في تحميل البيانات</div>;
 
+  const companyKey = (user as any)?.company as string | undefined;
+  const companyLabel = companyKey ? (COMPANY_LABELS[companyKey] || companyKey) : null;
+  const hospital = (user as any)?.hospital as string | undefined;
+  const jobTitle = (user as any)?.jobTitle as string | undefined;
+  const contractNumber = (user as any)?.contractNumber as string | undefined;
+  const phone = (user as any)?.phone as string | undefined;
+
   return (
     <div className="space-y-6 max-w-3xl mx-auto animate-in fade-in duration-500" style={{ direction: "rtl" }}>
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -98,7 +121,7 @@ export default function Settings() {
               <h2 className="text-2xl font-bold" style={{ color: "#1e3c72" }}>{user.name}</h2>
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge className={user.role === "admin" ? "bg-[#1e3c72] text-white" : "bg-gray-100 text-gray-700"}>
-                  {user.role === "admin" ? "🔑 مدير النظام" : "👤 مستخدم"}
+                  {roleLabel(user.role)}
                 </Badge>
                 <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
                   ✓ حساب معتمد
@@ -108,12 +131,13 @@ export default function Settings() {
           </div>
 
           {!editing ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+              {/* Editable fields */}
               {[
                 { icon: User, label: "الاسم الكامل", value: user.name },
                 { icon: Mail, label: "البريد الإلكتروني", value: user.email },
-                { icon: Phone, label: "رقم الهاتف", value: user.phone || "غير محدد" },
-                { icon: Building, label: "الشركة / الجهة", value: user.company || "غير محدد" },
+                { icon: Phone, label: "رقم الهاتف", value: phone || "غير محدد" },
+                { icon: Briefcase, label: "المسمى الوظيفي", value: jobTitle || "غير محدد" },
                 { icon: Calendar, label: "تاريخ الانضمام", value: formatDate(user.createdAt) },
               ].map(item => (
                 <div key={item.label} className="flex items-start gap-3">
@@ -126,6 +150,56 @@ export default function Settings() {
                   </div>
                 </div>
               ))}
+
+              {/* Locked contract fields */}
+              {(companyLabel || hospital || contractNumber) && (
+                <div className="md:col-span-2 mt-2">
+                  <div className="rounded-xl p-4 space-y-4" style={{ background: "#f8f9fe", border: "1px solid #e8edf7" }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Lock className="h-4 w-4" style={{ color: "#1e3c72" }} />
+                      <span className="text-sm font-bold" style={{ color: "#1e3c72" }}>بيانات العقد — (محمية / لا يمكن تعديلها)</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {companyLabel && (
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 rounded-lg" style={{ background: "#e8edf7" }}>
+                            <Building2 className="h-4 w-4" style={{ color: "#2a5298" }} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-gray-500">الشركة المقاولة</p>
+                            <p className="text-sm mt-0.5 font-bold" style={{ color: "#1e3c72" }}>{companyLabel}</p>
+                          </div>
+                        </div>
+                      )}
+                      {hospital && (
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 rounded-lg" style={{ background: "#e8edf7" }}>
+                            <MapPin className="h-4 w-4" style={{ color: "#2a5298" }} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-gray-500">المستشفى / الموقع</p>
+                            <p className="text-sm mt-0.5 font-bold" style={{ color: "#1e3c72" }}>{hospital}</p>
+                          </div>
+                        </div>
+                      )}
+                      {contractNumber && (
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 rounded-lg" style={{ background: "#e8edf7" }}>
+                            <Hash className="h-4 w-4" style={{ color: "#2a5298" }} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-gray-500">رقم العقد</p>
+                            <p className="text-sm mt-0.5 font-bold" style={{ color: "#1e3c72" }}>{contractNumber}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      لتغيير بيانات العقد، تواصل مع مدير النظام.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-4 mt-4">
@@ -141,13 +215,44 @@ export default function Settings() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">رقم الهاتف</Label>
-                  <Input id="phone" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+966 5x xxx xxxx" />
+                  <Input id="phone" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="05XXXXXXXX" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="company">الشركة / الجهة</Label>
-                  <Input id="company" value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} placeholder="اسم الشركة أو الجهة" />
+                  <Label htmlFor="jobTitle">المسمى الوظيفي</Label>
+                  <Input id="jobTitle" value={form.jobTitle} onChange={e => setForm(f => ({ ...f, jobTitle: e.target.value }))} placeholder="مهندس صيانة / محاسب / مشرف" />
                 </div>
               </div>
+
+              {/* Show locked fields as read-only during edit too */}
+              {(companyLabel || hospital) && (
+                <div className="rounded-xl p-4" style={{ background: "#f8f9fe", border: "1px dashed #c7d2e8" }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Lock className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-500 font-medium">بيانات العقد — مقفلة (غير قابلة للتعديل)</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {companyLabel && (
+                      <div className="space-y-1">
+                        <Label className="text-gray-400 text-xs">الشركة المقاولة</Label>
+                        <Input value={companyLabel} disabled className="bg-gray-100 text-gray-500 text-sm" />
+                      </div>
+                    )}
+                    {hospital && (
+                      <div className="space-y-1">
+                        <Label className="text-gray-400 text-xs">المستشفى / الموقع</Label>
+                        <Input value={hospital} disabled className="bg-gray-100 text-gray-500 text-sm" />
+                      </div>
+                    )}
+                    {contractNumber && (
+                      <div className="space-y-1">
+                        <Label className="text-gray-400 text-xs">رقم العقد</Label>
+                        <Input value={contractNumber} disabled className="bg-gray-100 text-gray-500 text-sm" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-3 pt-2">
                 <Button onClick={saveProfile} disabled={saving} style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)" }} className="gap-2 text-white">
                   <Save className="h-4 w-4" />
@@ -167,7 +272,6 @@ export default function Settings() {
       <Card className="border" style={{ borderColor: "#e8edf7" }}>
         <CardContent className="pt-6 space-y-4">
           <h3 className="font-bold text-lg" style={{ color: "#1e3c72" }}>إجراءات الحساب</h3>
-
           <div className="flex flex-wrap gap-3">
             <Button variant="outline" className="gap-2" onClick={() => openUserProfile()}>
               <Key className="h-4 w-4" />
@@ -192,7 +296,7 @@ export default function Settings() {
           <div>
             <h3 className="font-semibold mb-1" style={{ color: "#1e3c72" }}>حماية البيانات والخصوصية</h3>
             <p className="text-sm text-gray-500 leading-relaxed">
-              بياناتك مشفّرة ومحمية. كل إجراء تقوم به مسجّل في سجل المراقبة لضمان الشفافية. لاستعادة كلمة السر، اضغط على "تغيير كلمة السر" أعلاه.
+              بياناتك مشفّرة ومحمية. بيانات العقد (الشركة والمستشفى) مقفلة ولا يمكن تعديلها إلا من مدير النظام لضمان دقة المستخلصات.
             </p>
           </div>
         </CardContent>

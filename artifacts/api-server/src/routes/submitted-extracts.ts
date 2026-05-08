@@ -142,18 +142,28 @@ router.get("/", requireAuth, requireApproved, async (req: any, res) => {
 // POST /api/submitted-extracts — submit a new extract from HTML page
 router.post("/", requireAuth, requireApproved, async (req: any, res) => {
   try {
-    const { extractType, companyName, contractNumber, hospitalName, periodMonth, totalAmount, notes } = req.body;
+    const { extractType, periodMonth, totalAmount, notes, contractNumber } = req.body;
 
     if (!extractType) {
       return res.status(400).json({ error: "extractType is required" });
     }
 
+    // Auto-fill company and hospital from the user's profile — cannot be overridden by the client
+    const user = req.currentUser;
+    const COMPANY_LABELS: Record<string, string> = {
+      "بيت_العرب": "شركة مجموعة بيت العرب الحديثة المحدودة",
+      "سراكو": "شركة سراكو",
+    };
+    const companyName = user.company ? (COMPANY_LABELS[user.company] || user.company) : (req.body.companyName || null);
+    const hospitalName = user.hospital || req.body.hospitalName || null;
+    const resolvedContractNumber = contractNumber || user.contractNumber || null;
+
     const [row] = await db.insert(submittedExtractsTable).values({
-      userId: req.currentUser.id,
+      userId: user.id,
       extractType,
-      companyName: companyName || null,
-      contractNumber: contractNumber || null,
-      hospitalName: hospitalName || null,
+      companyName,
+      contractNumber: resolvedContractNumber,
+      hospitalName,
       periodMonth: periodMonth || null,
       totalAmount: totalAmount != null ? String(totalAmount) : null,
       notes: notes || null,

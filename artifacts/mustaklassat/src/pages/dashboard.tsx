@@ -213,26 +213,39 @@ export default function Dashboard() {
           </div>
 
           {/* User details */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3"
-            style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "1rem" }}>
-            {[
+          {(() => {
+            const COMPANY_LABELS: Record<string, string> = {
+              "بيت_العرب": "بيت العرب",
+              "سراكو": "سراكو",
+            };
+            const companyKey = (dbUser as any)?.company as string | undefined;
+            const companyLabel = companyKey ? (COMPANY_LABELS[companyKey] || companyKey) : null;
+            const hospital = (dbUser as any)?.hospital as string | undefined;
+            const items = [
               { icon: Phone, label: "الهاتف", value: (dbUser as any)?.phone },
-              { icon: Building2, label: "المستشفى / الجهة", value: (dbUser as any)?.hospital || dbUser?.company },
+              { icon: Building2, label: "الشركة المقاولة", value: companyLabel },
+              { icon: Building2, label: "المستشفى / الموقع", value: hospital },
               { icon: Briefcase, label: "الوظيفة", value: (dbUser as any)?.jobTitle },
               { icon: Hash, label: "رقم العقد", value: (dbUser as any)?.contractNumber },
-            ].map(({ icon: Icon, label, value }) => (
-              <div key={label} className="flex items-start gap-2.5" style={{ opacity: value ? 1 : 0.35 }}>
-                <div className="mt-0.5 h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: "rgba(212,175,55,0.15)" }}>
-                  <Icon className="h-3.5 w-3.5" style={{ color: "#d4af37" }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
-                  <div className="font-semibold text-white" style={{ fontSize: 13, marginTop: 1 }}>{value || "—"}</div>
-                </div>
+            ].filter(i => i.value);
+            return (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3"
+                style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "1rem" }}>
+                {items.map(({ icon: Icon, label, value }) => (
+                  <div key={label} className="flex items-start gap-2.5">
+                    <div className="mt-0.5 h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: "rgba(212,175,55,0.15)" }}>
+                      <Icon className="h-3.5 w-3.5" style={{ color: "#d4af37" }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: "0.05em" }}>{label}</div>
+                      <div className="font-semibold text-white" style={{ fontSize: 13, marginTop: 1 }}>{value}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            );
+          })()}
 
           {/* Resume last work */}
           {lastModule && (

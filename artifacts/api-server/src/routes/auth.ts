@@ -20,9 +20,10 @@ router.post("/sync", requireAuth, async (req: any, res) => {
 
     if (existing.length > 0) {
       // If returning user, update profile fields if provided
-      if (phone || hospital || jobTitle || contractNumber) {
+      if (phone || company || hospital || jobTitle || contractNumber) {
         const updates: Record<string, any> = {};
         if (phone) updates.phone = phone;
+        if (company) updates.company = company;
         if (hospital) updates.hospital = hospital;
         if (jobTitle) updates.jobTitle = jobTitle;
         if (contractNumber) updates.contractNumber = contractNumber;
