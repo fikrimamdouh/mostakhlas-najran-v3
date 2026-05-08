@@ -1023,11 +1023,7 @@ const dueVisitCost = (item.visitDate || '').includes("خلال هذا الشهر
 
 
     function displayAllSignatures() {
-        document.querySelectorAll('.signatures-grid').forEach(grid => {
-            const sectionKey = grid.closest('.table-section').id.replace('-section', '').replace('-supply', '').replace('-disposal', '');
-            const sigs = signaturesData[sectionKey] || [];
-            grid.innerHTML = sigs.map(sig => `<div class="signature-item"><div class="title">${sig.title}</div><div class="line"></div><div class="name">${sig.name || '................'}</div></div>`).join('');
-        });
+        // replaced by SignatureBlock system — renders automatically via data-sb-page attribute
     }
 
     // --- UI Creation ---
@@ -1081,7 +1077,7 @@ const dueVisitCost = (item.visitDate || '').includes("خلال هذا الشهر
                     <textarea placeholder="اكتب ملاحظاتك هنا...">${sectionNotes.text}</textarea>
                 </div>
                 <div class="signatures-display-section">
-                    <div class="signatures-grid"></div>
+                    <div data-sb-page="admin_offices_consumables"></div>
                 </div>
             </div>
         `;
@@ -1271,7 +1267,7 @@ const dueVisitCost = (item.visitDate || '').includes("خلال هذا الشهر
             startEditSession(target);
         } else {
             switch (action) {
-                case 'signatures': openSignaturesDialog(); break;
+                case 'signatures': SignatureBlock.open('admin_offices_consumables'); break;
                 case 'titles': openTitlesDialog(); break;
                 case 'backup': openBackupDialog(); break; // هذا السطر قد يكون موجودًا أو لا
                 case 'clear':
@@ -1488,6 +1484,9 @@ const dueVisitCost = (item.visitDate || '').includes("خلال هذا الشهر
     }
 
       function openSignaturesDialog() {
+        SignatureBlock.open('admin_offices_consumables');
+      }
+      function _openSignaturesDialog_old_disabled() {
         const modal = document.getElementById('unified-modal');
        // --- بداية الكود الجديد ---
         // إنشاء قائمة الخيارات بناءً على بطاقات لوحة التحكم
@@ -2114,12 +2113,16 @@ function autoGrowTextarea(textarea) {
             updateContractDisplayData();
         }
         renderAllTables();
+        if (typeof SignatureBlock !== 'undefined') {
+            SignatureBlock.init('admin_offices_consumables');
+        }
     }
 
     initialize();
 });
 </script>
 
+<script src="/original/signature-block.js"></script>
 <script src="/original/extract-submit.js"></script>
 <script src="/original/track.js"></script>
 <script src="/original/shared-nav.js"></script>
