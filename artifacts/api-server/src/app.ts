@@ -46,7 +46,9 @@ app.use(cors({
     if (!origin || allowed.includes(origin)) return callback(null, true);
     // also allow replit.app preview domains in production for admin access
     if (/\.replit\.app$/.test(origin) || /\.repl\.co$/.test(origin)) return callback(null, true);
-    callback(new Error(`CORS: origin not allowed: ${origin}`));
+    const err = new Error(`CORS: origin not allowed: ${origin}`) as Error & { status?: number };
+    err.status = 403;
+    callback(err);
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
