@@ -2,11 +2,10 @@ import { useGetMe } from "@workspace/api-client-react";
 import { useUser } from "@clerk/react";
 import { useState, useEffect } from "react";
 import {
-  Clock, BarChart2, Trophy, Package, Wrench, CheckSquare,
-  Building2, Settings, SlidersHorizontal, ClipboardList, Eye, UserPlus,
   Phone, Briefcase, Hash, Calendar, MessageSquare, PlayCircle, Activity,
-  Zap
+  Zap, UserPlus, Building2,
 } from "lucide-react";
+import { ALL_MODULES, getSiteType, parseAllowedModules, filterModules } from "@/lib/modules";
 
 const ISLAMIC_REMINDERS = [
   { type: "quran", text: "إِنَّ اللَّهَ يَأْمُرُكُمْ أَن تُؤَدُّوا الْأَمَانَاتِ إِلَىٰ أَهْلِهَا", source: "سورة النساء — الآية ٥٨" },
@@ -95,25 +94,6 @@ function IslamicReminderCard() {
 
 function ov(page: string) { return `/original-viewer?page=${page}`; }
 
-export const ALL_MODULES = [
-  { key: "settings_main",                href: ov("settings_main.html"),             icon: Settings,          label: "الإعدادات الرئيسية",         color: "#2a5298", file: "settings_main.html" },
-  { key: "settings_advanced",            href: ov("settings_advanced.html"),          icon: SlidersHorizontal, label: "الإعدادات المتقدمة",          color: "#1e3c72", file: "settings_advanced.html" },
-  { key: "attendance",                   href: ov("attendance.html"),                 icon: Clock,             label: "الحضور والانصراف",            color: "#0077b6", file: "attendance.html" },
-  { key: "performance",                  href: ov("performance.html"),                icon: BarChart2,         label: "جداول الأداء",               color: "#023e8a", file: "performance.html" },
-  { key: "achievement",                  href: ov("achievement.html"),                icon: Trophy,            label: "شهادة الإنجاز",              color: "#0096c7", file: "achievement.html" },
-  { key: "consumables",                  href: ov("consumables.html"),                icon: Package,           label: "مستخلص المستهلكات",          color: "#0077b6", file: "consumables.html" },
-  { key: "spare_parts",                  href: ov("spare_parts.html"),                icon: Wrench,            label: "مستخلص قطع الغيار",          color: "#023e8a", file: "spare_parts.html" },
-  { key: "approval",                     href: ov("approval.html"),                   icon: CheckSquare,       label: "اعتماد المستخلص",            color: "#0096c7", file: "approval.html" },
-  { key: "health_centers_attendance",    href: ov("health_centers_attendance.html"),  icon: ClipboardList,     label: "حضور المراكز الصحية",        color: "#1e3c72", file: "health_centers_attendance.html" },
-  { key: "health_centers_consumables",   href: ov("health_centers_consumables.html"), icon: Package,           label: "مستهلكات المراكز الصحية",    color: "#0077b6", file: "health_centers_consumables.html" },
-  { key: "review_extract",               href: ov("review_extract.html"),             icon: Eye,               label: "مراجعة المستخلص",            color: "#023e8a", file: "review_extract.html" },
-];
-
-// Map from Arabic page name → module
-const PAGE_NAME_TO_MODULE: Record<string, typeof ALL_MODULES[0]> = {};
-for (const m of ALL_MODULES) {
-  PAGE_NAME_TO_MODULE[m.label] = m;
-}
 
 function formatLastLogin(iso: string | null | undefined) {
   if (!iso) return null;
@@ -154,19 +134,16 @@ export default function Dashboard() {
   const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
   const lastLogin = formatLastLogin((dbUser as any)?.lastLoginAt);
 
-  const allowedRaw = (dbUser as any)?.allowedModules;
-  let allowedKeys: string[] | null = null;
-  try { allowedKeys = allowedRaw ? JSON.parse(allowedRaw) : null; } catch { allowedKeys = null; }
-
-  const visibleModules = allowedKeys
-    ? ALL_MODULES.filter(m => allowedKeys!.includes(m.key))
-    : ALL_MODULES;
+  const role = dbUser?.role ?? "user";
+  const siteType = getSiteType(dbUser?.hospital);
+  const allowedKeys = parseAllowedModules((dbUser as any)?.allowedModules);
+  const visibleModules = filterModules(siteType, allowedKeys, role);
 
   const lastPage = (dbUser as any)?.lastPage as string | null;
   const lastPageAt = (dbUser as any)?.lastPageAt as string | null;
-  const lastModule = lastPage ? PAGE_NAME_TO_MODULE[lastPage] : null;
+  const lastModule = lastPage ? ALL_MODULES.find(m => m.label === lastPage) ?? null : null;
   const isActive = isActiveNow(lastPageAt);
-  const role = dbUser?.role ? roleLabel(dbUser.role) : null;
+  const roleMeta = dbUser?.role ? roleLabel(dbUser.role) : null;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-8" style={{ direction: "rtl" }}>
@@ -201,9 +178,9 @@ export default function Dashboard() {
               <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 13, marginTop: 2 }}>
                 برنامج المستخلصات الشهرية — وحدة الصيانة العامة
               </p>
-              {role && (
-                <p className="text-xs font-semibold mt-1" style={{ color: role.color }}>
-                  ● {role.text}
+              {roleMeta && (
+                <p className="text-xs font-semibold mt-1" style={{ color: roleMeta.color }}>
+                  ● {roleMeta.text}
                 </p>
               )}
             </div>
@@ -263,7 +240,7 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
                 <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{relativeTime(lastPageAt)}</span>
-                <a href={lastModule.href}
+                <a href={ov(lastModule.file)}
                   className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold text-sm no-underline transition-all hover:scale-105"
                   style={{ background: "linear-gradient(135deg,#d4af37,#b8962e)", color: "#1e3c72" }}>
                   <PlayCircle className="h-4 w-4" />
@@ -304,7 +281,7 @@ export default function Dashboard() {
             const Icon = m.icon;
             const isCurrentPage = lastPage === m.label;
             return (
-              <a key={m.key} href={m.href}
+              <a key={m.key} href={ov(m.file)}
                 className="group rounded-xl p-4 text-center transition-all duration-200 hover:-translate-y-1 no-underline flex flex-col items-center gap-3 relative overflow-hidden"
                 style={{
                   background: isCurrentPage ? `linear-gradient(135deg,${m.color}14,${m.color}22)` : "#fff",

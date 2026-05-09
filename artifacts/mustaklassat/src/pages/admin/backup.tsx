@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useGetMe } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import {
   Download, Database, Users, FileText, ShieldCheck, RefreshCw,
   AlertTriangle, CheckCircle, Clock, HardDrive, CloudOff, Archive,
+  Upload, RotateCcw, X, ShieldAlert,
 } from "lucide-react";
 
 function fmt(iso: string | null | undefined) {
@@ -43,9 +44,76 @@ export default function AdminBackupPage() {
   const [lastDownload, setLastDownload] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Restore state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [restoreFile, setRestoreFile] = useState<any>(null);
+  const [restoreStep, setRestoreStep] = useState<"idle" | "preview" | "confirm" | "restoring" | "done">("idle");
+  const [restoreConfirmText, setRestoreConfirmText] = useState("");
+  const [restoreResult, setRestoreResult] = useState<any>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+
   if (me?.role !== "admin") {
     setLocation("/dashboard");
     return null;
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRestoreError(null);
+    setRestoreResult(null);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string);
+        if (!parsed.meta || !parsed.tables) {
+          setRestoreError("الملف غير صالح — يجب أن يحتوي على meta وtables");
+          return;
+        }
+        setRestoreFile(parsed);
+        setRestoreStep("preview");
+      } catch {
+        setRestoreError("فشل في قراءة الملف — تأكد أنه ملف JSON صالح");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  async function executeRestore() {
+    if (restoreConfirmText !== "تأكيد الاستعادة الكاملة") {
+      setRestoreError("يجب كتابة عبارة التأكيد بالضبط");
+      return;
+    }
+    setRestoreStep("restoring");
+    setRestoreError(null);
+    try {
+      const session = JSON.parse(localStorage.getItem("najran_session") || "{}");
+      const res = await fetch("/api/admin/backup/restore", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.clerkToken}`,
+        },
+        credentials: "include",
+        body: JSON.stringify({ confirmation: restoreConfirmText, backup: restoreFile }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "فشل الاستعادة");
+      setRestoreResult(data);
+      setRestoreStep("done");
+    } catch (e: any) {
+      setRestoreError(e.message);
+      setRestoreStep("confirm");
+    }
+  }
+
+  function resetRestore() {
+    setRestoreFile(null);
+    setRestoreStep("idle");
+    setRestoreConfirmText("");
+    setRestoreResult(null);
+    setRestoreError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   async function fetchStats() {
@@ -191,6 +259,148 @@ export default function AdminBackupPage() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Restore Section */}
+        <div style={{ ...cardStyle, marginBottom: 24, border: "1.5px solid #fde68a", background: restoreStep === "done" ? "#f0fdf4" : "#fffbeb" }}>
+          <div className="flex items-center gap-3 mb-3">
+            <div style={{ background: "#fef3c7", borderRadius: "10px", padding: "8px" }}>
+              <RotateCcw className="h-5 w-5" style={{ color: "#d97706" }} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold" style={{ color: "#92400e" }}>♻️ استعادة من نسخة احتياطية</h2>
+              <p className="text-xs text-amber-600">يعمل بدون حذف — يستعيد البيانات المفقودة فقط، ويحتفظ بالموجود</p>
+            </div>
+            {restoreStep !== "idle" && (
+              <button onClick={resetRestore} className="mr-auto p-1.5 rounded-lg hover:bg-amber-100 transition-colors" title="إلغاء">
+                <X className="h-4 w-4 text-amber-700" />
+              </button>
+            )}
+          </div>
+
+          {restoreError && (
+            <div className="flex items-center gap-2 rounded-lg p-3 mb-3" style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              <span className="text-sm font-medium">{restoreError}</span>
+            </div>
+          )}
+
+          {/* Step: idle — upload button */}
+          {restoreStep === "idle" && (
+            <div>
+              <p className="text-sm mb-4" style={{ color: "#78350f" }}>
+                اختر ملف النسخة الاحتياطية (نسخة_احتياطية_شاملة_نجران_....json) لاستعادة البيانات منه.
+                <strong> لا يُعيد الكتابة على بيانات موجودة.</strong>
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,application/json"
+                onChange={handleFileSelect}
+                style={{ display: "none" }}
+                id="restore-file-input"
+              />
+              <label
+                htmlFor="restore-file-input"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold cursor-pointer transition-all"
+                style={{ background: "#d97706", color: "#fff", fontSize: "14px", boxShadow: "0 3px 10px rgba(217,119,6,0.3)" }}
+              >
+                <Upload className="h-4 w-4" />
+                اختيار ملف النسخة الاحتياطية
+              </label>
+            </div>
+          )}
+
+          {/* Step: preview — show backup info */}
+          {(restoreStep === "preview" || restoreStep === "confirm") && restoreFile && (
+            <div>
+              <div className="rounded-xl p-4 mb-4" style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
+                <p className="font-bold text-sm mb-2" style={{ color: "#92400e" }}>📋 معلومات النسخة الاحتياطية المختارة:</p>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div><span className="text-gray-500">الإصدار:</span> <strong>{restoreFile.meta.version}</strong></div>
+                  <div><span className="text-gray-500">تاريخ الإنشاء:</span> <strong>{fmt(restoreFile.meta.exportedAt)}</strong></div>
+                  <div><span className="text-gray-500">أُنشئت بواسطة:</span> <strong>{restoreFile.meta.exportedBy || "—"}</strong></div>
+                  <div />
+                  <div><span className="text-gray-500">المستخدمون:</span> <strong>{restoreFile.meta.counts?.users ?? (restoreFile.tables?.users?.length ?? "—")}</strong></div>
+                  <div><span className="text-gray-500">المستخلصات:</span> <strong>{restoreFile.meta.counts?.extracts ?? (restoreFile.tables?.extracts?.length ?? "—")}</strong></div>
+                  <div><span className="text-gray-500">مفاتيح السحابة:</span> <strong>{restoreFile.meta.counts?.storageKeys ?? (restoreFile.tables?.storage?.length ?? "—")}</strong></div>
+                </div>
+              </div>
+
+              <div className="rounded-xl p-4 mb-4" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <ShieldAlert className="h-4 w-4 text-red-600" />
+                  <p className="font-bold text-sm text-red-700">تأكيد الاستعادة</p>
+                </div>
+                <p className="text-xs text-red-600 mb-3">اكتب بالضبط: <strong>تأكيد الاستعادة الكاملة</strong></p>
+                <input
+                  type="text"
+                  value={restoreConfirmText}
+                  onChange={e => setRestoreConfirmText(e.target.value)}
+                  placeholder="اكتب عبارة التأكيد هنا..."
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                  style={{ direction: "rtl", borderColor: restoreConfirmText === "تأكيد الاستعادة الكاملة" ? "#22c55e" : "#fca5a5" }}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={executeRestore}
+                  disabled={restoreConfirmText !== "تأكيد الاستعادة الكاملة"}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-white transition-all"
+                  style={{
+                    background: restoreConfirmText === "تأكيد الاستعادة الكاملة" ? "#dc2626" : "#9ca3af",
+                    cursor: restoreConfirmText === "تأكيد الاستعادة الكاملة" ? "pointer" : "not-allowed",
+                    border: "none",
+                    fontSize: "14px",
+                  }}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  بدء الاستعادة
+                </button>
+                <button onClick={resetRestore} className="px-4 py-2.5 rounded-xl font-semibold text-sm transition-all"
+                  style={{ background: "#f1f5f9", border: "1px solid #e2e8f0", color: "#475569", cursor: "pointer" }}>
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step: restoring */}
+          {restoreStep === "restoring" && (
+            <div className="flex items-center gap-3 py-4">
+              <RefreshCw className="h-6 w-6 animate-spin text-amber-600" />
+              <div>
+                <p className="font-bold text-amber-800">جاري الاستعادة...</p>
+                <p className="text-xs text-amber-600">يرجى الانتظار ولا تغلق الصفحة</p>
+              </div>
+            </div>
+          )}
+
+          {/* Step: done */}
+          {restoreStep === "done" && restoreResult && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <p className="font-bold text-green-800">✅ اكتملت الاستعادة بنجاح</p>
+              </div>
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                {Object.entries(restoreResult.report as Record<string, { restored: number; skipped: number; errors: string[] }>).map(([table, r]) => (
+                  <div key={table} className="rounded-xl p-3 text-center" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+                    <p className="text-xs text-gray-500 mb-1">{table === "users" ? "مستخدمون" : table === "extracts" ? "مستخلصات" : "بيانات سحابية"}</p>
+                    <p className="text-lg font-bold text-green-700">{r.restored} ✓</p>
+                    <p className="text-xs text-gray-400">{r.skipped} تجاوز</p>
+                    {r.errors.length > 0 && <p className="text-xs text-red-500 mt-1">{r.errors.length} خطأ</p>}
+                  </div>
+                ))}
+              </div>
+              <button onClick={resetRestore} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+                style={{ background: "#f1f5f9", border: "1px solid #e2e8f0", color: "#475569", cursor: "pointer" }}>
+                <RotateCcw className="h-4 w-4" />
+                استعادة أخرى
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Main Action */}

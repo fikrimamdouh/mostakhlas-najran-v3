@@ -3,6 +3,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { usePageTracking } from "@/hooks/usePageTracking";
 import { useGetMe } from "@workspace/api-client-react";
 import { Rocket, Zap, Lock, BarChart3, Globe, Workflow, ShieldOff } from "lucide-react";
+import { getModuleKey, parseAllowedModules, isModuleAllowed } from "@/lib/modules";
 
 function ComingSoonPage() {
   return (
@@ -91,10 +92,6 @@ function UnauthorizedPage() {
   );
 }
 
-function getModuleKey(page: string): string {
-  return page.replace(".html", "");
-}
-
 export default function OriginalViewer() {
   usePageTracking();
   const search = useSearch();
@@ -107,19 +104,10 @@ export default function OriginalViewer() {
   const isComingSoon = page === "settings_advanced.html";
 
   // Determine if user is allowed to view this page (permissions check)
-  const isAdmin = dbUser?.role === "admin";
-  const isSupervisor = dbUser?.role === "supervisor";
-
-  let allowedModuleKeys: string[] | null = null;
-  try {
-    const raw = (dbUser as any)?.allowedModules;
-    allowedModuleKeys = raw ? JSON.parse(raw) : null;
-  } catch { allowedModuleKeys = null; }
-
-  // Admins and supervisors always have full access
-  const hasFullAccess = isAdmin || isSupervisor || allowedModuleKeys === null;
+  const role = dbUser?.role ?? "user";
+  const allowedModuleKeys = parseAllowedModules((dbUser as any)?.allowedModules);
   const moduleKey = getModuleKey(page);
-  const isAllowed = hasFullAccess || (allowedModuleKeys?.includes(moduleKey) ?? false);
+  const isAllowed = isModuleAllowed(moduleKey, allowedModuleKeys, role);
 
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <div className="flex h-screen overflow-hidden" style={{ background: "#f0f4ff" }}>

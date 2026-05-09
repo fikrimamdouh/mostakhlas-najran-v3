@@ -1,14 +1,15 @@
 import { Link, useLocation } from "wouter";
 import { useUser, useClerk } from "@clerk/react";
-import { useGetMe } from "@workspace/api-client-react";
+import { useGetMe, useListUsers } from "@workspace/api-client-react";
 import {
   LayoutDashboard, Settings, Users, LogOut, ShieldAlert, ClipboardList,
-  Clock, Building2, ChevronLeft, BarChart3, Eye,
-  ChevronRight, CalendarDays, PanelLeftClose, PanelLeftOpen,
-  BookOpen, ContactRound,
+  Building2, ChevronLeft, BarChart3, Eye,
+  ChevronRight, PanelLeftClose, PanelLeftOpen,
+  BookOpen, ContactRound, Bell, X, Check, Clock, UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { ALL_MODULES, getSiteType, parseAllowedModules, filterModules } from "@/lib/modules";
 
 const ARABIC_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 const ARABIC_MONTHS = [
@@ -61,33 +62,40 @@ const roleBg = (role: string) => {
   return "rgba(212,175,55,0.12)";
 };
 
-function getSiteType(hospital: string | null | undefined): "hospital" | "health_centers" | "admin_offices" {
-  if (!hospital) return "hospital";
-  if (hospital === "المراكز الصحية") return "health_centers";
-  if (hospital === "المكاتب الإدارية") return "admin_offices";
-  return "hospital";
-}
-
-const ALL_MODULES = [
-  { page: "settings_main.html",               label: "الإعدادات الرئيسية",              icon: "⚙️", types: ["hospital", "health_centers", "admin_offices"] },
-  { page: "settings_advanced.html",           label: "الإعدادات المتقدمة",              icon: "🔧", types: ["hospital", "health_centers", "admin_offices"] },
-  { page: "attendance.html",                  label: "الحضور والانصراف",                icon: "📋", types: ["hospital"] },
-  { page: "performance.html",                 label: "جداول الأداء",                    icon: "📊", types: ["hospital"] },
-  { page: "achievement.html",                 label: "شهادة الإنجاز",                   icon: "🏆", types: ["hospital"] },
-  { page: "consumables.html",                 label: "مستخلص المستهلكات",               icon: "🧪", types: ["hospital"] },
-  { page: "spare_parts.html",                 label: "مستخلص قطع الغيار",               icon: "🔩", types: ["hospital"] },
-  { page: "approval.html",                    label: "اعتماد المستخلص",                 icon: "✅", types: ["hospital"] },
-  { page: "monthly-overview.html",            label: "النظرة الشاملة",                  icon: "📈", types: ["hospital"] },
-  { page: "request-visit.html",               label: "تسجيل الزيارات",                  icon: "🏥", types: ["hospital"] },
-  { page: "health_centers_attendance.html",   label: "المراكز — العمالة",               icon: "👷", types: ["health_centers"] },
-  { page: "health_centers_consumables.html",  label: "المراكز — المستهلكات",            icon: "🧪", types: ["health_centers"] },
-  { page: "admin_offices_attendance.html",    label: "المكاتب — العمالة",               icon: "👷", types: ["admin_offices"] },
-  { page: "admin_offices_consumables.html",   label: "المكاتب — المستهلكات",            icon: "🧪", types: ["admin_offices"] },
-  { page: "review_extract.html",              label: "مراجعة المستخلص",                 icon: "🔍", types: ["hospital", "health_centers", "admin_offices"] },
-  { page: "extract-archive.html",             label: "أرشيف المستخلصات",                icon: "🗂️", types: ["hospital", "health_centers", "admin_offices"] },
-] as const;
-
 const COLLAPSE_KEY = "sidebar_collapsed";
+const READ_NOTIFS_KEY = "najran_read_notifications";
+
+function useNotifications(isAdmin: boolean, pendingUsersCount: number) {
+  const [readIds, setReadIds] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(READ_NOTIFS_KEY) || "[]")); } catch { return new Set(); }
+  });
+
+  const notifications = isAdmin && pendingUsersCount > 0
+    ? [{ id: "pending_users", type: "warning" as const, title: "مستخدمون بانتظار الموافقة", body: `يوجد ${pendingUsersCount} مستخدم بانتظار موافقتك`, href: "/admin/users", time: "" }]
+    : [];
+
+  const unread = notifications.filter(n => !readIds.has(n.id));
+
+  function markRead(id: string) {
+    setReadIds(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      try { localStorage.setItem(READ_NOTIFS_KEY, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }
+
+  function markAllRead() {
+    const ids = notifications.map(n => n.id);
+    setReadIds(prev => {
+      const next = new Set([...prev, ...ids]);
+      try { localStorage.setItem(READ_NOTIFS_KEY, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }
+
+  return { notifications, unread, markRead, markAllRead };
+}
 
 export function Sidebar() {
   const [location] = useLocation();
@@ -99,10 +107,22 @@ export function Sidebar() {
     try { return localStorage.getItem(COLLAPSE_KEY) === "true"; } catch { return false; }
   });
   const [modulesOpen, setModulesOpen] = useState(true);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
   const toggleCollapse = useCallback(() => {
@@ -118,15 +138,26 @@ export function Sidebar() {
   const isContractSup = dbUser?.role === "contract_supervisor";
   const isViewer = dbUser?.role === "viewer";
   const canViewAudit = isAdmin || isSupervisor;
+  const role = dbUser?.role ?? "user";
 
   const siteType = getSiteType(dbUser?.hospital);
+  const allowedModuleKeys = parseAllowedModules((dbUser as any)?.allowedModules);
+  const visibleModules = filterModules(siteType, allowedModuleKeys, role);
 
-  // Parse allowedModules: null → all permitted, array → only listed keys
-  let allowedModuleKeys: string[] | null = null;
-  try {
-    const raw = (dbUser as any)?.allowedModules;
-    allowedModuleKeys = raw ? JSON.parse(raw) : null;
-  } catch { allowedModuleKeys = null; }
+  const { data: usersData } = useListUsers(
+    { status: "pending" },
+    {
+      query: {
+        queryKey: ["/api/users", "pending"],
+        enabled: isAdmin,
+        refetchInterval: 60000,
+      },
+    }
+  );
+  const pendingUsersCount = isAdmin ? (usersData?.users?.length ?? 0) : 0;
+  const { notifications, unread, markRead, markAllRead } = useNotifications(isAdmin, pendingUsersCount);
+
+  const initials = (dbUser?.name || user?.fullName || "م").charAt(0);
 
   const mainNav = [
     ...(!isViewer ? [
@@ -158,30 +189,9 @@ export function Sidebar() {
 
   const hasAdminNav = adminNav.length > 0;
 
-  const visibleModules = (() => {
-    // Step 1: filter by site type (unless admin/supervisor/contract_sup who sees all)
-    const byType = (isAdmin || isSupervisor || isContractSup)
-      ? ALL_MODULES
-      : ALL_MODULES.filter(m => (m.types as readonly string[]).includes(siteType));
-
-    // Step 2: filter by allowedModules if set (null = all allowed)
-    // Admins and supervisors bypass module restrictions
-    if (allowedModuleKeys !== null && !isAdmin && !isSupervisor) {
-      const keySet = new Set(allowedModuleKeys);
-      return byType.filter(m => {
-        const key = m.page.replace(".html", "");
-        return keySet.has(key);
-      });
-    }
-    return byType;
-  })();
-
-  const initials = (dbUser?.name || user?.fullName || "م").charAt(0);
-  const role = dbUser?.role ?? "user";
-
-  function isModuleActive(page: string) {
+  function isModuleActive(file: string) {
     const search = location.split("?")[1] || "";
-    return location.startsWith("/original-viewer") && new URLSearchParams(search).get("page") === page;
+    return location.startsWith("/original-viewer") && new URLSearchParams(search).get("page") === file;
   }
 
   const NavItem = ({ item }: { item: { name: string; href: string; icon: any } }) => {
@@ -221,276 +231,306 @@ export function Sidebar() {
   };
 
   return (
-    <div
-      className="flex flex-col h-full text-white relative overflow-hidden flex-shrink-0 transition-all duration-300"
+    <aside
+      className="flex flex-col h-screen flex-shrink-0 overflow-hidden transition-all duration-300 relative"
       style={{
-        width: collapsed ? "64px" : "256px",
-        minWidth: collapsed ? "64px" : "256px",
-        background: "linear-gradient(175deg, #0d1e3d 0%, #162f58 35%, #1e3c72 70%, #243d6e 100%)",
-        borderLeft: "1px solid rgba(255,255,255,0.07)",
-        boxShadow: "4px 0 20px rgba(0,0,0,0.2)",
+        width: collapsed ? 56 : 230,
+        minWidth: collapsed ? 56 : 230,
+        background: "linear-gradient(180deg, #0f2050 0%, #1e3c72 50%, #2a5298 100%)",
+        direction: "rtl",
+        boxShadow: "2px 0 20px rgba(0,0,0,0.25)",
+        zIndex: 40,
       }}
     >
-
-      {/* ───── Header: Logo + System Name ───── */}
-      <div
-        className="flex-shrink-0"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+      {/* Collapse toggle */}
+      <button
+        onClick={toggleCollapse}
+        title={collapsed ? "توسيع القائمة" : "طي القائمة"}
+        className="absolute top-2 left-2 z-50 rounded-lg p-1.5 transition-all hover:bg-white/10"
+        style={{ color: "rgba(255,255,255,0.5)" }}
       >
-        {/* Logo row */}
-        <div className={cn(
-          "flex items-center gap-2.5 px-3 pt-4 pb-3",
-          collapsed ? "justify-center" : ""
-        )}>
-          <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
-            <div className="relative flex-shrink-0">
-              <div
-                className="absolute inset-0 rounded-full opacity-25 blur-sm"
-                style={{ background: "#d4af37" }}
-              />
-              <img
-                src="/logo.png"
-                alt="تجمع نجران الصحي"
-                className="relative h-8 w-8 object-contain drop-shadow-md"
-                onError={e => (e.target as HTMLImageElement).style.display = "none"}
-              />
-            </div>
-            {!collapsed && (
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-bold text-white leading-tight truncate">
-                  تجمع نجران الصحي
-                </span>
-                <span className="text-[10px] font-medium leading-tight truncate" style={{ color: "#d4af37" }}>
-                  نظام إدارة المستخلصات
-                </span>
-              </div>
-            )}
-          </Link>
-        </div>
+        {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+      </button>
 
-        {/* Clock / Date compact row */}
+      {/* Header: Logo + Title */}
+      <div className={cn(
+        "flex items-center gap-2.5 px-3 pt-3 pb-2 border-b",
+        collapsed ? "justify-center px-2" : ""
+      )}
+        style={{ borderColor: "rgba(255,255,255,0.1)", minHeight: 52 }}
+      >
+        <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden shadow-md" style={{ background: "#fff" }}>
+          <img src="/najran_health_cluster_logo.png" alt="شعار" className="w-full h-full object-cover" />
+        </div>
         {!collapsed && (
-          <div
-            className="mx-3 mb-3 px-3 py-1.5 rounded-lg flex items-center justify-between"
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)" }}
-          >
-            <div className="flex items-center gap-1.5">
-              <Clock className="h-3 w-3 flex-shrink-0" style={{ color: "#d4af37" }} />
-              <span className="text-xs font-mono font-semibold" style={{ color: "#d4af37" }}>
-                {formatTime(now)}
-              </span>
-            </div>
-            <div className="flex items-center gap-1 text-white/45">
-              <CalendarDays className="h-3 w-3 flex-shrink-0" />
-              <span className="text-[10px]">{formatDateShort(now)}</span>
-            </div>
+          <div className="min-w-0">
+            <p className="text-xs font-bold leading-tight text-white truncate">تجمع نجران الصحي</p>
+            <p className="text-[10px] leading-tight truncate" style={{ color: "rgba(212,175,55,0.8)" }}>وحدة الصيانة العامة</p>
           </div>
         )}
       </div>
 
-      {/* ───── Navigation ───── */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden py-2">
+      {/* Clock + Date */}
+      {!collapsed && (
+        <div className="px-3 py-1.5 text-center" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <div className="text-base font-bold tabular-nums" style={{ color: "#d4af37" }}>{formatTime(now)}</div>
+          <div className="text-[10px]" style={{ color: "rgba(255,255,255,0.45)" }}>{formatDateShort(now)}</div>
+        </div>
+      )}
+
+      {/* Scrollable nav */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 space-y-0.5" style={{ scrollbarWidth: "none" }}>
 
         {/* Main nav */}
-        <nav className={cn("space-y-0.5", collapsed ? "px-1.5" : "px-2")}>
-          {mainNav.map(item => <NavItem key={item.href} item={item} />)}
-        </nav>
+        {mainNav.map(item => <NavItem key={item.href} item={item} />)}
 
-        {/* Admin / supervisor section */}
-        {hasAdminNav && (
-          <div className={cn("mt-3", collapsed ? "px-1.5" : "px-2")}>
-            {!collapsed && (
-              <div className="flex items-center gap-2 mb-1.5 px-1">
-                <div className="h-px flex-1 opacity-15" style={{ background: "#d4af37" }} />
-                <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: "rgba(212,175,55,0.6)" }}>
-                  إداري
+        {/* Notifications bell */}
+        <div className="relative" ref={notifRef}>
+          <button
+            onClick={() => setNotifOpen(p => !p)}
+            title={collapsed ? "الإشعارات" : undefined}
+            className={cn(
+              "w-full flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium transition-all duration-150 cursor-pointer group relative",
+              collapsed ? "justify-center px-2" : "",
+              notifOpen ? "bg-white/10 text-white" : "text-white/70 hover:text-white hover:bg-white/10"
+            )}
+          >
+            <div className="relative flex-shrink-0">
+              <Bell className={cn(collapsed ? "h-5 w-5" : "h-4 w-4")} style={{ color: unread.length > 0 ? "#d4af37" : "rgba(255,255,255,0.55)" }} />
+              {unread.length > 0 && (
+                <span className="absolute -top-1 -left-1 min-w-[14px] h-3.5 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+                  style={{ background: "#ef4444", padding: "0 3px" }}>
+                  {unread.length}
                 </span>
-                <div className="h-px flex-1 opacity-15" style={{ background: "#d4af37" }} />
+              )}
+            </div>
+            {!collapsed && <span className="flex-1 text-right">الإشعارات</span>}
+            {!collapsed && unread.length > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: "#ef4444" }}>
+                {unread.length}
+              </span>
+            )}
+            {collapsed && (
+              <div className="absolute right-full mr-2 px-2 py-1 text-xs rounded-md bg-gray-900 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                الإشعارات {unread.length > 0 ? `(${unread.length})` : ""}
               </div>
             )}
-            {collapsed && <div className="h-px mx-1.5 my-2 opacity-15" style={{ background: "#d4af37" }} />}
-            <nav className="space-y-0.5">
-              {adminNav.map(item => <NavItem key={item.href} item={item} />)}
-            </nav>
-          </div>
-        )}
+          </button>
 
-        {/* System modules */}
+          {/* Notifications Dropdown */}
+          {notifOpen && (
+            <div
+              className="absolute z-50 rounded-xl shadow-2xl overflow-hidden"
+              style={{
+                background: "#fff",
+                border: "1px solid #e8edf7",
+                width: 280,
+                right: collapsed ? "calc(100% + 8px)" : 0,
+                top: collapsed ? 0 : "calc(100% + 4px)",
+                direction: "rtl",
+              }}
+            >
+              <div className="flex items-center justify-between px-4 py-3" style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)", color: "#fff" }}>
+                <div className="flex items-center gap-2">
+                  <Bell className="h-4 w-4" />
+                  <span className="font-bold text-sm">الإشعارات</span>
+                  {unread.length > 0 && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: "#ef4444" }}>
+                      {unread.length}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {unread.length > 0 && (
+                    <button onClick={markAllRead} className="text-[11px] opacity-70 hover:opacity-100" title="قراءة الكل">
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                  <button onClick={() => setNotifOpen(false)} className="opacity-70 hover:opacity-100">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {notifications.length === 0 ? (
+                <div className="py-8 text-center">
+                  <Bell className="h-8 w-8 mx-auto mb-2" style={{ color: "#d1d5db" }} />
+                  <p className="text-sm text-gray-400">لا توجد إشعارات</p>
+                </div>
+              ) : (
+                <div className="max-h-72 overflow-y-auto">
+                  {notifications.map(n => {
+                    const isRead = !unread.find(u => u.id === n.id);
+                    return (
+                      <Link key={n.id} href={n.href}>
+                        <div
+                          onClick={() => { markRead(n.id); setNotifOpen(false); }}
+                          className="flex gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 border-b transition-colors"
+                          style={{ borderColor: "#f1f5f9", opacity: isRead ? 0.6 : 1 }}
+                        >
+                          <div className="mt-0.5 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+                            style={{ background: n.type === "warning" ? "#fef3c7" : "#dbeafe" }}>
+                            {n.type === "warning"
+                              ? <UserCheck className="h-4 w-4" style={{ color: "#d97706" }} />
+                              : <Clock className="h-4 w-4" style={{ color: "#2563eb" }} />
+                            }
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-800 truncate">{n.title}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{n.body}</p>
+                          </div>
+                          {!isRead && (
+                            <div className="mt-1.5 w-2 h-2 rounded-full flex-shrink-0" style={{ background: "#ef4444" }} />
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Modules section */}
         {visibleModules.length > 0 && (
-          <div className={cn("mt-3", collapsed ? "px-1.5" : "px-2")}>
-            {!collapsed ? (
+          <div className="pt-1">
+            {!collapsed && (
               <button
                 onClick={() => setModulesOpen(p => !p)}
-                className="w-full flex items-center gap-2 mb-1.5 px-1 group"
+                className="w-full flex items-center justify-between px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-white/5"
+                style={{ color: "rgba(212,175,55,0.7)" }}
               >
-                <div className="h-px flex-1 opacity-15" style={{ background: "#d4af37" }} />
-                <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: "rgba(212,175,55,0.6)" }}>
-                  وحدات النظام
-                </span>
-                <ChevronRight
-                  className="h-3 w-3 transition-transform duration-200 opacity-40"
-                  style={{
-                    color: "#d4af37",
-                    transform: modulesOpen ? "rotate(90deg)" : "rotate(0deg)",
-                  }}
-                />
-                <div className="h-px flex-1 opacity-15" style={{ background: "#d4af37" }} />
+                <span>الوحدات</span>
+                {modulesOpen ? <ChevronRight className="h-3 w-3 rotate-90" /> : <ChevronRight className="h-3 w-3" />}
               </button>
-            ) : (
-              <div className="h-px mx-1.5 my-2 opacity-15" style={{ background: "#d4af37" }} />
             )}
-
             {(modulesOpen || collapsed) && (
-              <nav className="space-y-0.5">
-                {visibleModules.map(item => {
-                  const href = `/original-viewer?page=${item.page}`;
-                  const isActive = isModuleActive(item.page);
+              <div className="space-y-0.5 mt-0.5">
+                {visibleModules.map(m => {
+                  const isActive = isModuleActive(m.file);
+                  const href = `/original-viewer?page=${m.file}`;
                   return (
-                    <Link key={item.page} href={href}>
+                    <Link key={m.key} href={href}>
                       <div
-                        title={collapsed ? item.label : undefined}
+                        title={collapsed ? m.label : undefined}
                         className={cn(
-                          "flex items-center gap-2 rounded-lg py-1.5 text-xs font-medium transition-all duration-150 cursor-pointer group relative",
-                          collapsed ? "justify-center px-2" : "px-2.5",
+                          "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 cursor-pointer group relative",
+                          collapsed ? "justify-center px-2" : "",
                           isActive
-                            ? "text-[#1a3660] font-bold shadow-sm"
-                            : "text-white/55 hover:text-white hover:bg-white/10"
+                            ? "text-[#1a3660] font-bold shadow-md"
+                            : "text-white/65 hover:text-white hover:bg-white/10"
                         )}
                         style={isActive ? {
-                          background: "linear-gradient(135deg,#d4af37,#e8c84a)",
-                          boxShadow: "0 2px 6px rgba(212,175,55,0.25)",
+                          background: "linear-gradient(135deg, #d4af37 0%, #e8c84a 100%)",
+                          boxShadow: "0 2px 8px rgba(212,175,55,0.3)",
                         } : {}}
                       >
-                        {collapsed ? (
-                          <span className="text-sm leading-none">{item.icon}</span>
-                        ) : (
-                          <>
-                            <span
-                              className="h-1 w-1 rounded-full flex-shrink-0"
-                              style={{ background: isActive ? "#1a3660" : "rgba(212,175,55,0.4)" }}
-                            />
-                            <span className="flex-1 truncate">{item.label}</span>
-                          </>
+                        <span
+                          className="flex-shrink-0 text-sm leading-none"
+                          style={isActive ? { filter: "brightness(0)" } : {}}
+                        >
+                          {m.emoji}
+                        </span>
+                        {!collapsed && (
+                          <span className="flex-1 truncate leading-tight">{m.label}</span>
                         )}
                         {collapsed && (
                           <div className="absolute right-full mr-2 px-2 py-1 text-xs rounded-md bg-gray-900 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-                            {item.label}
+                            {m.label}
                           </div>
                         )}
                       </div>
                     </Link>
                   );
                 })}
-              </nav>
+              </div>
             )}
+          </div>
+        )}
+
+        {/* Admin section */}
+        {hasAdminNav && (
+          <div className="pt-2">
+            {!collapsed && (
+              <p className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(212,175,55,0.7)" }}>
+                الإدارة
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {adminNav.map(item => <NavItem key={item.href} item={item} />)}
+            </div>
           </div>
         )}
       </div>
 
-      {/* ───── User info + collapse toggle ───── */}
+      {/* User panel */}
       <div
-        className="flex-shrink-0"
-        style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
+        className="border-t px-2 py-2"
+        style={{ borderColor: "rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.15)" }}
       >
-        {/* Collapse toggle */}
-        <div className={cn(
-          "flex items-center px-2 pt-2",
-          collapsed ? "justify-center" : "justify-end"
-        )}>
-          <button
-            onClick={toggleCollapse}
-            title={collapsed ? "توسيع القائمة" : "تصغير القائمة"}
-            className="p-1.5 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/10 transition-all duration-150"
-          >
-            {collapsed
-              ? <PanelLeftClose className="h-3.5 w-3.5" />
-              : <PanelLeftOpen className="h-3.5 w-3.5" />
-            }
-          </button>
-        </div>
-
-        {/* User card */}
-        <div className={cn("p-2", collapsed ? "flex justify-center" : "")}>
-          {collapsed ? (
-            <div className="flex flex-col items-center gap-1.5">
+        {!collapsed ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 px-1">
               <div
-                className="flex h-8 w-8 items-center justify-center rounded-full font-bold text-sm flex-shrink-0"
-                style={{
-                  background: `linear-gradient(135deg, ${roleColor(role)}33, ${roleColor(role)}11)`,
-                  color: roleColor(role),
-                  outline: `1.5px solid ${roleColor(role)}44`,
-                  outlineOffset: "1px",
-                }}
+                className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+                style={{ background: "linear-gradient(135deg,#d4af37,#b8962e)", color: "#fff" }}
               >
                 {initials}
               </div>
-              <button
-                onClick={() => { localStorage.removeItem("najran_session"); signOut(); }}
-                title="تسجيل الخروج"
-                className="p-1 rounded-md text-white/30 hover:text-red-400 hover:bg-white/10 transition-all"
-              >
-                <LogOut className="h-3.5 w-3.5 rotate-180" />
-              </button>
-            </div>
-          ) : (
-            <div
-              className="rounded-xl p-2.5"
-              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
-            >
-              {/* Avatar + name */}
-              <div className="flex items-center gap-2.5 mb-2">
-                <div
-                  className="flex h-9 w-9 items-center justify-center rounded-full font-bold text-sm flex-shrink-0"
-                  style={{
-                    background: `linear-gradient(135deg, ${roleColor(role)}33, ${roleColor(role)}11)`,
-                    color: roleColor(role),
-                    outline: `1.5px solid ${roleColor(role)}44`,
-                    outlineOffset: "1px",
-                  }}
-                >
-                  {initials}
-                </div>
-                <div className="flex flex-col min-w-0 flex-1">
-                  <span className="text-xs font-semibold text-white truncate leading-tight">
-                    {dbUser?.name || user?.fullName}
-                  </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-white truncate leading-tight">
+                  {dbUser?.name || user?.fullName || "—"}
+                </p>
+                <div className="flex items-center gap-1 mt-0.5">
                   <span
-                    className="text-[10px] font-medium mt-0.5 px-1.5 py-0.5 rounded-full inline-block w-fit"
-                    style={{ color: roleColor(role), background: roleBg(role) }}
+                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                    style={{ background: roleBg(role), color: roleColor(role) }}
                   >
                     {roleLabel(role)}
                   </span>
                 </div>
               </div>
-
-              {/* Compact details */}
-              <div className="space-y-1">
-                {dbUser?.hospital && (
-                  <div className="flex items-center gap-1.5 text-white/45">
-                    <Building2 className="h-2.5 w-2.5 flex-shrink-0" style={{ color: "#60a5fa" }} />
-                    <span className="text-[10px] truncate">{dbUser.hospital}</span>
-                  </div>
-                )}
-                {dbUser?.lastLoginAt && (
-                  <div className="flex items-center gap-1.5 text-white/35">
-                    <Clock className="h-2.5 w-2.5 flex-shrink-0" style={{ color: "#d4af37" }} />
-                    <span className="text-[10px] truncate">{formatLastLogin(dbUser.lastLoginAt)}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Sign out */}
-              <button
-                onClick={() => { localStorage.removeItem("najran_session"); signOut(); }}
-                className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-white/8 transition-all duration-150 text-[11px] font-medium"
-              >
-                <LogOut className="h-3 w-3 rotate-180" style={{ color: "inherit" }} />
-                <span>تسجيل الخروج</span>
-              </button>
             </div>
-          )}
-        </div>
+            {dbUser?.hospital && (
+              <p className="text-[10px] px-1 truncate" style={{ color: "rgba(255,255,255,0.4)" }}>
+                🏥 {dbUser.hospital}
+              </p>
+            )}
+            {(dbUser as any)?.lastLoginAt && (
+              <p className="text-[10px] px-1" style={{ color: "rgba(255,255,255,0.3)" }}>
+                آخر دخول: {formatLastLogin((dbUser as any).lastLoginAt)}
+              </p>
+            )}
+            <button
+              onClick={() => signOut()}
+              className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:bg-red-500/20"
+              style={{ color: "rgba(255,100,100,0.8)" }}
+            >
+              <LogOut className="h-3.5 w-3.5 flex-shrink-0" />
+              <span>تسجيل الخروج</span>
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+              style={{ background: "linear-gradient(135deg,#d4af37,#b8962e)", color: "#fff" }}
+              title={dbUser?.name || ""}
+            >
+              {initials}
+            </div>
+            <button
+              onClick={() => signOut()}
+              title="تسجيل الخروج"
+              className="p-1.5 rounded-lg transition-all hover:bg-red-500/20"
+              style={{ color: "rgba(255,100,100,0.7)" }}
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
-    </div>
+    </aside>
   );
 }

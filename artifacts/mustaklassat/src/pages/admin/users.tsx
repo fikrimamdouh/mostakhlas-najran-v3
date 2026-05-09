@@ -13,7 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
-import { ALL_MODULES } from "../dashboard";
+import { ALL_MODULES } from "@/lib/modules";
 
 // ── نافذة تأكيد تهيئة النظام ────────────────────────────────────────────────
 function ResetSystemModal({ onClose, onConfirm, isPending }: {

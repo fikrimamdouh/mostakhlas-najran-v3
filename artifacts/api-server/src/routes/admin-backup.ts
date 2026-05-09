@@ -115,4 +115,159 @@ router.get("/stats", requireAuth, requireAdmin, async (req: any, res: any) => {
   }
 });
 
+/**
+ * POST /api/admin/backup/restore
+ * Restore system from a full backup JSON file.
+ * Admin only. Requires explicit confirmation string in body.
+ */
+router.post("/restore", requireAuth, requireAdmin, async (req: any, res: any) => {
+  try {
+    const { confirmation, backup } = req.body;
+
+    if (confirmation !== "تأكيد الاستعادة الكاملة") {
+      return res.status(400).json({ error: "يجب تأكيد الاستعادة بكتابة العبارة المطلوبة" });
+    }
+
+    if (!backup || typeof backup !== "object") {
+      return res.status(400).json({ error: "ملف النسخة الاحتياطية غير صالح" });
+    }
+
+    const meta = backup.meta;
+    const tables = backup.tables;
+
+    if (!meta || !tables) {
+      return res.status(400).json({ error: "هيكل النسخة الاحتياطية غير مكتمل — يجب أن يحتوي على meta وtables" });
+    }
+
+    if (!meta.version || !["1.0", "2.0"].includes(meta.version)) {
+      return res.status(400).json({ error: `إصدار النسخة غير متوافق: ${meta.version}. الإصدارات المدعومة: 1.0, 2.0` });
+    }
+
+    const requiredTables = ["users", "extracts", "storage"];
+    const missingTables = requiredTables.filter(t => !tables[t]);
+    if (missingTables.length > 0) {
+      return res.status(400).json({ error: `النسخة الاحتياطية ناقصة — تفتقد الجداول: ${missingTables.join(", ")}` });
+    }
+
+    const report: Record<string, { restored: number; skipped: number; errors: string[] }> = {
+      users: { restored: 0, skipped: 0, errors: [] },
+      extracts: { restored: 0, skipped: 0, errors: [] },
+      storage: { restored: 0, skipped: 0, errors: [] },
+    };
+
+    const adminClerkId = req.clerkUserId;
+
+    for (const userData of (tables.users || [])) {
+      try {
+        if (!userData.clerkId || !userData.email) { report.users.skipped++; continue; }
+        if (userData.clerkId === adminClerkId) { report.users.skipped++; continue; }
+        const existing = await db.select({ id: usersTable.id })
+          .from(usersTable)
+          .where(eq(usersTable.clerkId, userData.clerkId))
+          .limit(1);
+        if (existing.length > 0) {
+          await db.update(usersTable)
+            .set({
+              name: userData.name,
+              email: userData.email,
+              role: userData.role,
+              status: userData.status,
+              phone: userData.phone,
+              hospital: userData.hospital,
+              jobTitle: userData.jobTitle,
+              contractNumber: userData.contractNumber,
+              company: userData.company,
+              allowedModules: userData.allowedModules,
+            })
+            .where(eq(usersTable.clerkId, userData.clerkId));
+        } else {
+          await db.insert(usersTable).values({
+            clerkId: userData.clerkId,
+            name: userData.name,
+            email: userData.email,
+            role: userData.role || "user",
+            status: userData.status || "pending",
+            phone: userData.phone,
+            hospital: userData.hospital,
+            jobTitle: userData.jobTitle,
+            contractNumber: userData.contractNumber,
+            company: userData.company,
+            allowedModules: userData.allowedModules,
+          });
+        }
+        report.users.restored++;
+      } catch (e: any) {
+        report.users.errors.push(`${userData.email}: ${e.message}`);
+      }
+    }
+
+    for (const extractData of (tables.extracts || [])) {
+      try {
+        if (!extractData.id) { report.extracts.skipped++; continue; }
+        const existing = await db.select({ id: submittedExtractsTable.id })
+          .from(submittedExtractsTable)
+          .where(eq(submittedExtractsTable.id, extractData.id))
+          .limit(1);
+        if (existing.length > 0) {
+          report.extracts.skipped++;
+        } else {
+          await db.insert(submittedExtractsTable).values({
+            userId: extractData.userId,
+            hospitalName: extractData.hospitalName,
+            extractType: extractData.extractType,
+            status: extractData.status || "submitted",
+            extractData: extractData.extractData ?? extractData.payload ?? null,
+            periodMonth: extractData.periodMonth,
+            totalAmount: extractData.totalAmount,
+          });
+          report.extracts.restored++;
+        }
+      } catch (e: any) {
+        report.extracts.errors.push(`extract#${extractData.id}: ${e.message}`);
+      }
+    }
+
+    for (const storageData of (tables.storage || [])) {
+      try {
+        if (!storageData.userId || !storageData.storageKey) { report.storage.skipped++; continue; }
+        const existing = await db.select({ id: userStorageTable.id })
+          .from(userStorageTable)
+          .where(eq(userStorageTable.userId, storageData.userId))
+          .limit(1);
+        if (existing.length > 0) {
+          report.storage.skipped++;
+        } else {
+          await db.insert(userStorageTable).values({
+            userId: storageData.userId,
+            storageKey: storageData.storageKey,
+            storageValue: storageData.storageValue ?? storageData.value ?? "",
+          });
+          report.storage.restored++;
+        }
+      } catch (e: any) {
+        report.storage.errors.push(`storage#${storageData.userId}/${storageData.storageKey}: ${e.message}`);
+      }
+    }
+
+    req.log.info(
+      { adminId: req.currentUser.id, backupVersion: meta.version, backupDate: meta.exportedAt, report },
+      "System restore completed"
+    );
+
+    return res.json({
+      success: true,
+      backupInfo: {
+        version: meta.version,
+        exportedAt: meta.exportedAt,
+        exportedBy: meta.exportedBy,
+      },
+      report,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Backup restore failed");
+    return res.status(500).json({ error: "فشل في استعادة النسخة الاحتياطية — تحقق من صحة الملف" });
+  }
+});
+
 export default router;
+
