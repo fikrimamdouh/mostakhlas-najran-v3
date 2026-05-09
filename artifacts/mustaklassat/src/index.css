@@ -282,8 +282,8 @@
   }
 }
 
-/* ── إخفاء شعار وإشعارات Clerk ── */
-/* بانر "Development mode" البرتقالي */
+/* ── إخفاء شعار وإشعارات Clerk (Development mode / Secured by Clerk) ── */
+/* بانر "Development mode" البرتقالي في أي مكان */
 .cl-internal-b3fm6y,
 [class*="cl-internal"][class*="development"],
 [data-clerk-component] + div > div[style*="orange"],
@@ -298,4 +298,22 @@ div[class*="cl-"][class*="badge"] {
 [class*="cl-"][class*="powered"],
 [class*="cl-"][class*="footer"][class*="page"] {
   display: none !important;
+}
+/* بانر Development mode الثابت أثناء OAuth/Google redirect */
+[data-clerk-environment-badge],
+[class*="cl-environmentBadge"],
+[class*="cl-devBrowser"],
+[class*="cl-development"],
+div[style*="background: rgb(255, 153, 0)"],
+div[style*="background:rgb(255, 153, 0)"],
+div[style*="background: orange"],
+div[style*="background:orange"],
+div[style*="background-color: orange"],
+div[style*="background-color:orange"],
+div[style*="#FF9900"],
+div[style*="#ff9900"],
+div[style*="rgb(255,153,0)"],
+div[style*="rgb(255, 153, 0)"] {
+  display: none !important;
+  visibility: hidden !important;
 }

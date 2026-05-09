@@ -607,6 +607,11 @@ function HomeRedirect() {
   );
 }
 
+function GlobalClerkBadgeHider() {
+  useHideClerkBadge();
+  return null;
+}
+
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
 
@@ -644,6 +649,7 @@ function ClerkProviderWithRoutes() {
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >
       <QueryClientProvider client={queryClient}>
+        <GlobalClerkBadgeHider />
         <ClerkTokenSyncer />
         <ClerkQueryClientCacheInvalidator />
         <Switch>
