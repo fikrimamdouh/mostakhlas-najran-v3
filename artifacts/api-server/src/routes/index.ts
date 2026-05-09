@@ -16,6 +16,7 @@ import adminSettingsRouter from "./admin-settings";
 import exportRouter from "./export";
 import remindRouter from "./remind";
 import analyticsRouter from "./analytics";
+import visitsRouter from "./visits";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use("/export", exportRouter);
 router.use("/remind", remindRouter);
 router.use("/analytics", analyticsRouter);
 router.use("/hospital-storage", hospitalStorageRouter);
+router.use("/visits", visitsRouter);
 
 export default router;

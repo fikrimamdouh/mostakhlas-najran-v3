@@ -850,7 +850,6 @@ function preparePrint() {
 
     // تحديث البيانات
     updateContractDataForPrint();
-    updatePrintSignatures();
 
     window.print();
 
@@ -913,7 +912,7 @@ function preparePrint() {
                 el.textContent = directPurchaseRatio;
             });
 
-            if (typeof updatePrintSignatures === 'function') updatePrintSignatures();
+            
         } catch (error) {
             console.error('خطأ في تحديث بيانات العقد للطباعة:', error);
         }
@@ -1118,12 +1117,7 @@ window.navigateTo = function (url) {
             <!-- التواقيع للطباعة - جدول النظافة -->
             <div class="print-signatures" style="display: none;">
                 <h4>التواقيع</h4>
-                <div class="print-signatures-grid">
-                    <div class="print-signature-item">
-                        <div class="print-signature-title">مدير المشروع:</div>
-                        <div class="print-signature-line"></div>
-                        <div class="print-signature-name" id="print-project-manager-1">غير محدد</div>
-                    </div>
+                <div class="print-signatures-grid" data-sb-page="attendance"></div>
                     <div class="print-signature-item">
                         <div class="print-signature-title">رئيس قسم الصيانة:</div>
                         <div class="print-signature-line"></div>
@@ -1189,12 +1183,7 @@ window.navigateTo = function (url) {
             <!-- التواقيع للطباعة - جدول الكهرباء -->
             <div class="print-signatures" style="display: none;">
                 <h4>التواقيع</h4>
-                <div class="print-signatures-grid">
-                    <div class="print-signature-item">
-                        <div class="print-signature-title">مدير المشروع:</div>
-                        <div class="print-signature-line"></div>
-                        <div class="print-signature-name" id="print-project-manager-2">غير محدد</div>
-                    </div>
+                <div class="print-signatures-grid" data-sb-page="attendance"></div>
                     <div class="print-signature-item">
                         <div class="print-signature-title">رئيس قسم الصيانة:</div>
                         <div class="print-signature-line"></div>
@@ -1262,12 +1251,7 @@ window.navigateTo = function (url) {
             <!-- التواقيع للطباعة - جدول الزراعة -->
             <div class="print-signatures" style="display: none;">
                 <h4>التواقيع</h4>
-                <div class="print-signatures-grid">
-                    <div class="print-signature-item">
-                        <div class="print-signature-title">مدير المشروع:</div>
-                        <div class="print-signature-line"></div>
-                        <div class="print-signature-name" id="print-project-manager-3">غير محدد</div>
-                    </div>
+                <div class="print-signatures-grid" data-sb-page="attendance"></div>
                     <div class="print-signature-item">
                         <div class="print-signature-title">رئيس قسم الصيانة:</div>
                         <div class="print-signature-line"></div>
@@ -1335,12 +1319,7 @@ window.navigateTo = function (url) {
 <!-- التواقيع للطباعة - جدول الأعمال المدنية -->
 <div class="print-signatures" style="display: none;">
     <h4>التواقيع</h4>
-    <div class="print-signatures-grid">
-        <div class="print-signature-item">
-            <div class="print-signature-title">مدير المشروع:</div>
-            <div class="print-signature-line"></div>
-            <div class="print-signature-name" id="print-project-manager-4">غير محدد</div>
-        </div>
+    <div class="print-signatures-grid" data-sb-page="attendance"></div>
         <div class="print-signature-item">
             <div class="print-signature-title">رئيس قسم الصيانة:</div>
             <div class="print-signature-line"></div>
@@ -1408,12 +1387,7 @@ window.navigateTo = function (url) {
             <!-- التواقيع للطباعة - جدول الميكانيكا -->
             <div class="print-signatures" style="display: none;">
                 <h4>التواقيع</h4>
-                <div class="print-signatures-grid">
-                    <div class="print-signature-item">
-                        <div class="print-signature-title">مدير المشروع:</div>
-                        <div class="print-signature-line"></div>
-                        <div class="print-signature-name" id="print-project-manager-5">غير محدد</div>
-                    </div>
+                <div class="print-signatures-grid" data-sb-page="attendance"></div>
                     <div class="print-signature-item">
                         <div class="print-signature-title">رئيس قسم الصيانة:</div>
                         <div class="print-signature-line"></div>
@@ -1481,12 +1455,7 @@ window.navigateTo = function (url) {
             <!-- التواقيع للطباعة - جدول المغسلة -->
             <div class="print-signatures" style="display: none;">
                 <h4>التواقيع</h4>
-                <div class="print-signatures-grid">
-                    <div class="print-signature-item">
-                        <div class="print-signature-title">مدير المشروع:</div>
-                        <div class="print-signature-line"></div>
-                        <div class="print-signature-name" id="print-project-manager-6">غير محدد</div>
-                    </div>
+                <div class="print-signatures-grid" data-sb-page="attendance"></div>
                     <div class="print-signature-item">
                         <div class="print-signature-title">رئيس قسم الصيانة:</div>
                         <div class="print-signature-line"></div>
@@ -1554,12 +1523,7 @@ window.navigateTo = function (url) {
 <!-- التواقيع للطباعة - جدول خدمات المرضى -->
 <div class="print-signatures" style="display: none;">
     <h4>التواقيع</h4>
-    <div class="print-signatures-grid">
-        <div class="print-signature-item">
-            <div class="print-signature-title">مدير المشروع:</div>
-            <div class="print-signature-line"></div>
-            <div class="print-signature-name" id="print-project-manager-7">غير محدد</div>
-        </div>
+    <div class="print-signatures-grid" data-sb-page="attendance"></div>
         <div class="print-signature-item">
             <div class="print-signature-title">رئيس قسم الصيانة:</div>
             <div class="print-signature-line"></div>
@@ -1626,12 +1590,7 @@ window.navigateTo = function (url) {
             <!-- التواقيع للطباعة - جدول الوظائف الإدارية السعوديين -->
             <div class="print-signatures" style="display: none;">
                 <h4>التواقيع</h4>
-                <div class="print-signatures-grid">
-                    <div class="print-signature-item">
-                        <div class="print-signature-title">مدير المشروع:</div>
-                        <div class="print-signature-line"></div>
-                        <div class="print-signature-name" id="print-project-manager-8">غير محدد</div>
-                    </div>
+                <div class="print-signatures-grid" data-sb-page="attendance"></div>
                     <div class="print-signature-item">
                         <div class="print-signature-title">رئيس قسم الصيانة:</div>
                         <div class="print-signature-line"></div>
@@ -1782,7 +1741,7 @@ window.navigateTo = function (url) {
             updateContractDataForPrint();
             renderTables();
             updateDateTime();
-    updateSignaturesFromLocalStorage(); // ✅ هذا هو السطر الصحيح
+    // ✅ التواقيع يديرها SignatureBlock — لا حاجة للنظام القديم
 
             if (typeof particlesJS !== 'undefined') {
                 particlesJS('particles-js-bg', {

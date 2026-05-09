@@ -146,6 +146,31 @@ export const auditLogTable = pgTable("audit_log", {
 
 export type AuditLog = typeof auditLogTable.$inferSelect;
 
+// Visit requests — submitted by users, reviewed by admin
+export const visitRequestsTable = pgTable("visit_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => usersTable.id),
+  repName: text("rep_name").notNull(),
+  siteLocation: text("site_location").notNull(),
+  repId: text("rep_id").notNull(),
+  visitDate: date("visit_date").notNull(),
+  repMobile: text("rep_mobile").notNull(),
+  systemName: text("system_name").notNull(),
+  mainContractor: text("main_contractor").notNull(),
+  subContractor: text("sub_contractor").notNull(),
+  repIdPhoto: text("rep_id_photo"),
+  status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
+  adminNotes: text("admin_notes"),
+  submittedByName: text("submitted_by_name"),
+  submittedByHospital: text("submitted_by_hospital"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertVisitRequestSchema = createInsertSchema(visitRequestsTable).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertVisitRequest = z.infer<typeof insertVisitRequestSchema>;
+export type VisitRequest = typeof visitRequestsTable.$inferSelect;
+
 // System-level key-value settings (admin_email, etc.)
 export const systemSettingsTable = pgTable("system_settings", {
   id: serial("id").primaryKey(),

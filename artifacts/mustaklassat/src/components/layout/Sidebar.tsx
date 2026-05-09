@@ -278,19 +278,14 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* Scrollable nav */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 space-y-0.5" style={{ scrollbarWidth: "none" }}>
-
-        {/* Main nav */}
-        {mainNav.map(item => <NavItem key={item.href} item={item} />)}
-
-        {/* Notifications bell */}
-        <div className="relative" ref={notifRef}>
+      {/* Notifications bell — outside scroll container to avoid overflow clipping */}
+      {isAdmin && (
+        <div className="px-2 pt-1 pb-0.5" ref={notifRef} style={{ position: "relative", zIndex: 50 }}>
           <button
             onClick={() => setNotifOpen(p => !p)}
             title={collapsed ? "الإشعارات" : undefined}
             className={cn(
-              "w-full flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium transition-all duration-150 cursor-pointer group relative",
+              "w-full flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium transition-all duration-150 cursor-pointer group",
               collapsed ? "justify-center px-2" : "",
               notifOpen ? "bg-white/10 text-white" : "text-white/70 hover:text-white hover:bg-white/10"
             )}
@@ -311,23 +306,24 @@ export function Sidebar() {
               </span>
             )}
             {collapsed && (
-              <div className="absolute right-full mr-2 px-2 py-1 text-xs rounded-md bg-gray-900 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+              <div className="absolute right-full mr-2 px-2 py-1 text-xs rounded-md bg-gray-900 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg" style={{ zIndex: 200 }}>
                 الإشعارات {unread.length > 0 ? `(${unread.length})` : ""}
               </div>
             )}
           </button>
 
-          {/* Notifications Dropdown */}
+          {/* Notifications Dropdown — fixed to avoid any clipping */}
           {notifOpen && (
             <div
-              className="absolute z-50 rounded-xl shadow-2xl overflow-hidden"
+              className="absolute rounded-xl shadow-2xl overflow-hidden"
               style={{
                 background: "#fff",
                 border: "1px solid #e8edf7",
-                width: 280,
+                width: 300,
                 right: collapsed ? "calc(100% + 8px)" : 0,
-                top: collapsed ? 0 : "calc(100% + 4px)",
+                top: "calc(100% + 4px)",
                 direction: "rtl",
+                zIndex: 9999,
               }}
             >
               <div className="flex items-center justify-between px-4 py-3" style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)", color: "#fff" }}>
@@ -391,6 +387,13 @@ export function Sidebar() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Scrollable nav */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 space-y-0.5" style={{ scrollbarWidth: "none" }}>
+
+        {/* Main nav */}
+        {mainNav.map(item => <NavItem key={item.href} item={item} />)}
 
         {/* Modules section */}
         {visibleModules.length > 0 && (
