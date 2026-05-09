@@ -36,6 +36,7 @@ import ViewerDashboard from "@/pages/viewer/dashboard";
 import Settings from "@/pages/settings";
 import OriginalViewer from "@/pages/OriginalViewer";
 import ExtractsTrack from "@/pages/extracts/track";
+import ContactsRegistry from "@/pages/contacts";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -672,6 +673,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/contract-supervisor" component={() => <ProtectedRoute component={ContractSupervisorPage} />} />
           <Route path="/viewer" component={() => <ProtectedRoute component={ViewerDashboard} />} />
           <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
+          <Route path="/contacts" component={() => <ProtectedRoute component={ContactsRegistry} />} />
           <Route path="/original-viewer" component={() => (
             <Show when="signed-in" fallback={<Redirect to="/sign-in" />}>
               <AuthGuard>

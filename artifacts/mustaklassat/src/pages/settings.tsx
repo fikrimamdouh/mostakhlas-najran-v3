@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
-import { useAuth, useClerk } from "@clerk/react";
+import { useAuth, useClerk, useUser } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ export default function Settings() {
   const { data: user, isLoading } = useGetMe({ query: { queryKey: getGetMeQueryKey() } });
   const { getToken } = useAuth();
   const { openUserProfile, signOut } = useClerk();
+  const { user: clerkUser } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -111,11 +112,29 @@ export default function Settings() {
         <div className="h-28" style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)" }} />
         <CardContent className="pt-0">
           <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-end -mt-10 mb-6">
-            <div
-              className="flex h-20 w-20 items-center justify-center rounded-full text-white text-3xl font-bold shadow-lg border-4 border-white"
-              style={{ background: "linear-gradient(135deg,#d4af37,#b8962e)" }}
-            >
-              {(user?.name || "م").charAt(0)}
+            <div className="relative">
+              {clerkUser?.imageUrl ? (
+                <img
+                  src={clerkUser.imageUrl ?? undefined}
+                  alt={user.name ?? undefined}
+                  className="h-20 w-20 rounded-full object-cover shadow-lg border-4 border-white"
+                />
+              ) : (
+                <div
+                  className="flex h-20 w-20 items-center justify-center rounded-full text-white text-3xl font-bold shadow-lg border-4 border-white"
+                  style={{ background: "linear-gradient(135deg,#d4af37,#b8962e)" }}
+                >
+                  {(user?.name || "م").charAt(0)}
+                </div>
+              )}
+              <button
+                onClick={() => openUserProfile()}
+                className="absolute bottom-0 left-0 w-6 h-6 rounded-full flex items-center justify-center text-white shadow-md"
+                style={{ background: "#1e3c72" }}
+                title="تغيير الصورة"
+              >
+                <Edit2 className="h-3 w-3" />
+              </button>
             </div>
             <div className="space-y-1 mb-2">
               <h2 className="text-2xl font-bold" style={{ color: "#1e3c72" }}>{user.name}</h2>

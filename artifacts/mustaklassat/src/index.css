@@ -282,6 +282,43 @@
   }
 }
 
+/* ── Anti-flicker: prevent layout shifts during initial render ── */
+html {
+  /* Ensure RTL body doesn't flash LTR */
+  direction: rtl;
+}
+
+/* Prevent FOUC on page transitions */
+#root {
+  min-height: 100dvh;
+}
+
+/* Smooth transitions for sidebar collapse */
+.sidebar-transition {
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Prevent content flash during Clerk auth loading */
+.clerk-loading {
+  opacity: 0;
+  animation: fadeInApp 0.2s ease-out 0.1s forwards;
+}
+
+@keyframes fadeInApp {
+  to { opacity: 1; }
+}
+
+/* Stable skeleton for initial load */
+.page-skeleton {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 /* ── إخفاء شعار وإشعارات Clerk (Development mode / Secured by Clerk) ── */
 /* بانر "Development mode" البرتقالي في أي مكان */
 .cl-internal-b3fm6y,
