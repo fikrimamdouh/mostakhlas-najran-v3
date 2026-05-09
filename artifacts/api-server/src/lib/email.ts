@@ -4,13 +4,21 @@ import { logger } from "./logger";
 const SENDER_NAME = "نظام إدارة المستخلصات — تجمع نجران الصحي";
 
 async function getResendClient(): Promise<{ client: Resend; fromField: string } | null> {
+  // 1. Try RESEND_API_KEY env secret first (direct, no connector overhead)
+  const envApiKey = process.env.RESEND_API_KEY;
+  if (envApiKey) {
+    const fromField = `${SENDER_NAME} <onboarding@resend.dev>`;
+    return { client: new Resend(envApiKey), fromField };
+  }
+
+  // 2. Fallback: Replit Resend connector
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? "repl " + process.env.REPL_IDENTITY
     : process.env.WEB_REPL_RENEWAL
       ? "depl " + process.env.WEB_REPL_RENEWAL
       : null;
-  if (!xReplitToken || !hostname) { logger.warn("Resend integration not available"); return null; }
+  if (!xReplitToken || !hostname) { logger.warn("Resend: no env key and no connector token"); return null; }
   try {
     const data = await fetch(
       "https://" + hostname + "/api/v2/connection?include_secrets=true&connector_names=resend",
@@ -22,7 +30,6 @@ async function getResendClient(): Promise<{ client: Resend; fromField: string } 
     const isPersonal = personalDomains.some(d => rawFrom.toLowerCase().endsWith("@" + d));
     const emailAddr = isPersonal ? "onboarding@resend.dev" : (rawFrom || "onboarding@resend.dev");
     if (isPersonal) logger.warn({ rawFrom }, "from_email is a personal domain — using onboarding@resend.dev instead");
-    // Format: "Display Name" <email> so recipient sees the Arabic name
     const fromField = `${SENDER_NAME} <${emailAddr}>`;
     return { client: new Resend(data.settings.api_key), fromField };
   } catch (err) { logger.error({ err }, "Failed to get Resend client"); return null; }
