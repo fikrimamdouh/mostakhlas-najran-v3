@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useSearch } from "wouter";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { usePageTracking } from "@/hooks/usePageTracking";
@@ -99,6 +100,25 @@ export default function OriginalViewer() {
   const page = params.get("page") || "index.html";
 
   const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
+
+  // Inject hospital name from user profile into localStorage so HTML print headers auto-fill
+  useEffect(() => {
+    const hospital = (dbUser as any)?.hospital as string | undefined;
+    if (!hospital) return;
+    try {
+      const existing = localStorage.getItem("hospitalName");
+      if (!existing || existing === "غير محدد" || existing === "اسم المستشفى الافتراضي") {
+        localStorage.setItem("hospitalName", hospital);
+      }
+    } catch {}
+    try {
+      const contractData = JSON.parse(localStorage.getItem("persistentContractData") || "{}");
+      if (!contractData.hospitalName || contractData.hospitalName === "—" || contractData.hospitalName === "غير محدد") {
+        contractData.hospitalName = hospital;
+        localStorage.setItem("persistentContractData", JSON.stringify(contractData));
+      }
+    } catch {}
+  }, [dbUser]);
 
   // Check if this page is blocked by coming soon
   const isComingSoon = page === "settings_advanced.html";

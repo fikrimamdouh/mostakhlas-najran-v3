@@ -426,12 +426,10 @@ export function Sidebar() {
                           boxShadow: "0 2px 8px rgba(212,175,55,0.3)",
                         } : {}}
                       >
-                        <span
-                          className="flex-shrink-0 text-sm leading-none"
-                          style={isActive ? { filter: "brightness(0)" } : {}}
-                        >
-                          {m.emoji}
-                        </span>
+                        <m.icon
+                          className={cn("flex-shrink-0", collapsed ? "h-5 w-5" : "h-4 w-4")}
+                          style={isActive ? { color: "#1a3660" } : { color: "rgba(255,255,255,0.65)" }}
+                        />
                         {!collapsed && (
                           <span className="flex-1 truncate leading-tight">{m.label}</span>
                         )}
