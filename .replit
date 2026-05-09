@@ -24,6 +24,7 @@ timeoutMs = 20000
 
 [userenv.shared]
 VITE_CLERK_PUBLISHABLE_KEY = "pk_test_YW1wbGUtcG9zc3VtLTg2LmNsZXJrLmFjY291bnRzLmRldiQ"
+RESEND_API_KEY = "re_YGuGWvgs_PewXMvQfbSbsbGdNSTfao2Pd"
 
 [userenv.production]
 VITE_CLERK_PROXY_URL = "https://mostakhlas-najran.com/api/__clerk"
