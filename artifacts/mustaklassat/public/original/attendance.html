@@ -655,10 +655,10 @@
   .department-table {
     background: #fff !important;
     margin: 16px !important;
+    padding: 0 !important;
     border-radius: 16px !important;
     box-shadow: 0 2px 14px rgba(0,0,0,.08) !important;
-    overflow-x: auto !important;
-    overflow-y: visible !important;
+    overflow: hidden !important;
     border: 1px solid #e2e8f0 !important;
     width: calc(100% - 32px) !important;
     box-sizing: border-box !important;
@@ -1855,6 +1855,11 @@ window.navigateTo = function (url) {
 <script>
 (function initScreenEnhancements() {
   function setup() {
+    // ── 0. إعادة تعيين zoom لكل الجداول عند التحميل ──────────
+    document.querySelectorAll('.department-table table').forEach(function(t) {
+      t.style.zoom = '1';
+    });
+
     // ── 1. حاوية scroll أفقي لكل جدول ──────────────────────
     document.querySelectorAll('.department-table').forEach(function(card) {
       const table = card.querySelector('table');
