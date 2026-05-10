@@ -1,0 +1,456 @@
+ PRODUCTION_BUILD_MARKER_2026_05_07_V4_LIVE_KEY
+ content script loaded
+refresh.js:27 WebSocket connection to 'ws://localhost:8081/' failed: 
+initClient @ refresh.js:27
+ [MzamanaCloud] وضع شخصي (لا يوجد مستشفى مرتبط)
+ الصفحة جاهزة. بدء التهيئة...
+ >> الآن يتم فرض تحميل البيانات من localStorage...
+ >> اكتمل فرض تحميل البيانات.
+ content script loaded
+ [MzamanaCloud] ✓ 19 مفتاح شخصي
+ [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+ [MzamanaCloud] وضع شخصي (لا يوجد مستشفى مرتبط)
+ الصفحة جاهزة. بدء التهيئة...
+ >> الآن يتم فرض تحميل البيانات من localStorage...
+ >> اكتمل فرض تحميل البيانات.
+ content script loaded
+ [MzamanaCloud] وضع شخصي (لا يوجد مستشفى مرتبط)
+ تم تحميل صفحة الحضور والانصراف التفاعلية المصححة بنجاح
+ content script loaded
+ [MzamanaCloud] ✓ 19 مفتاح شخصي
+ [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+ [MzamanaCloud] وضع شخصي (لا يوجد مستشفى مرتبط)
+ الصفحة جاهزة. بدء التهيئة...
+ >> الآن يتم فرض تحميل البيانات من localStorage...
+ >> اكتمل فرض تحميل البيانات.
+ content script loaded
+ [MzamanaCloud] ✓ 19 مفتاح شخصي
+ [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+ [MzamanaCloud] وضع شخصي (لا يوجد مستشفى مرتبط)
+ تم تحميل صفحة الحضور والانصراف التفاعلية المصححة بنجاح
+ content script loaded
+ [MzamanaCloud] ✓ 20 مفتاح شخصي
+ [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+ [MzamanaCloud] وضع شخصي (لا يوجد مستشفى مرتبط)
+ الصفحة جاهزة. بدء التهيئة...
+ >> الآن يتم فرض تحميل البيانات من localStorage...
+ >> اكتمل فرض تحميل البيانات.
+ content script loaded
+ [MzamanaCloud] ✓ 20 مفتاح شخصي
+ [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+ [MzamanaCloud] ✓ رُفع 20 شخصي
+ بدء تشغيل دالة saveExtractData
+ البيانات المجمعة: [object Object]
+ البيانات المحفوظة في localStorage: [object Object]
+ تم حفظ البيانات بنجاح!
+ [MzamanaCloud] ✓ رُفع 20 شخصي
+ [MzamanaCloud] وضع شخصي (لا يوجد مستشفى مرتبط)
+ تم تحميل صفحة الحضور والانصراف التفاعلية المصححة بنجاح
+ content script loaded
+ [MzamanaCloud] ✓ 20 مفتاح شخصي
+ [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+ [MzamanaCloud] ✓ رُفع 20 شخصي
+ [MzamanaCloud] وضع شخصي (لا يوجد مستشفى مرتبط)
+ بدء تحميل صفحة الأداء...
+ تم تحديث بيانات العقد بنجاح في الواجهة.
+ تطبيق إعدادات العرض...
+ تطبيق إعدادات العرض على البطاقات...
+ بدء تحميل بيانات الجدول: cleaning
+ بدء تحميل بيانات الجدول: electricity
+ بدء تحميل بيانات الجدول: agriculture
+ بدء تحميل بيانات الجدول: civil
+ بدء تحميل بيانات الجدول: mechanics
+ بدء تحميل بيانات الجدول: laundry
+ بدء تحميل بيانات الجدول: security
+ اكتمل تحميل صفحة الأداء بنجاح.
+ تم تحديث بيانات العقد بنجاح في الواجهة.
+ content script loaded
+ [MzamanaCloud] ✓ 20 مفتاح شخصي
+ تم تحديث بيانات العقد بنجاح في الواجهة.
+ [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+ [MzamanaCloud] وضع شخصي (لا يوجد مستشفى مرتبط)
+ content script loaded
+ [MzamanaCloud] ✓ 21 مفتاح شخصي
+ [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+ [MzamanaCloud] ✓ رُفع 22 شخصي
+ PRODUCTION_BUILD_MARKER_2026_05_07_V4_LIVE_KEY
+ content script loaded
+ content script loaded
+ content script loaded
+/assets/index-i0PAP93M.js:78 Uncaught TypeError: b.map is not a function
+    at /assets/index-i0PAP93M.js:78:90458
+    at Object.pp [as useMemo] (/assets/index-i0PAP93M.js:8:42755)
+    at Ie.useMemo (/assets/index-i0PAP93M.js:1:13415)
+    at SP (/assets/index-i0PAP93M.js:78:90432)
+    at kd (/assets/index-i0PAP93M.js:8:34178)
+    at Yd (/assets/index-i0PAP93M.js:8:62405)
+    at Zp (/assets/index-i0PAP93M.js:8:72927)
+    at j2 (/assets/index-i0PAP93M.js:8:106989)
+    at Bw (/assets/index-i0PAP93M.js:8:106052)
+    at g6 (/assets/index-i0PAP93M.js:8:105882)
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
+proxy.js:1 Uncaught Error: Attempting to use a disconnected port object
+    at handleMessageFromPage (proxy.js:1:850)
+handleMessageFromPage @ proxy.js:1
+postMessage
+send @ backendManager.js:1
+(anonymous) @ react_devtools_backend_compact.js:1
