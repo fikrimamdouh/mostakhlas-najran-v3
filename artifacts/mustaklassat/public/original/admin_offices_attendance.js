@@ -159,20 +159,20 @@ function saveAttendanceData(data) { localStorage.setItem('adminOfficesAttendance
 // ✅✅✅ [الكود النهائي والمطابق للصورة] ✅✅✅
 function initializeCenterNames() {
     const defaultNames = {
-        'center_1': 'مكتب إداري 1',
-        'center_2': 'مكتب إداري 2',
-        'center_3': 'مكتب إداري 3',
-        'center_4': 'مكتب إداري 4',
-        'center_5': 'مكتب إداري 5',
-        'center_6': 'مكتب إداري 6',
-        'center_7': 'مكتب إداري 7',
-        'center_8': 'مكتب إداري 8',
-        'center_9': 'مكتب إداري 9',
-        'center_10': 'مكتب إداري 10',
-        'center_11': 'مكتب إداري 11',
-        'center_12': 'مكتب إداري 12',
-        'center_13': 'مكتب إداري 13',
-        'center_14': 'مكتب إداري 14',
+        'center_1':  'مبنى فرع وزارة الصحة بنجران',
+        'center_2':  'المختبر الإقليمي',
+        'center_3':  'نواقل المرضى والأمراض المشتركة',
+        'center_4':  'مبنى الطب الشرعي وثلاجة الموتى بالشرفة',
+        'center_5':  'الأزمات والكوارث الصحية بفرع وزارة الصحة',
+        'center_6':  'مبنى مستودعات الشرفة',
+        'center_7':  'إدارة الشئون الهندسية والفريق الجوال',
+        'center_8':  'مكتب هيئة الصحة العامة (وقاية)',
+        'center_9':  'سكن الممرضات بالإثايبة',
+        'center_10': 'مبنى التجمع الصحي',
+        'center_11': 'التدريب والابتعاث',
+        'center_12': 'إدارة مركز التحكم والكوارث بالفيصلية',
+        'center_13': 'التموين الطبي',
+        'center_14': 'الخدمات العامة',
         'center_15': 'مكتب إداري 15',
         'center_16': 'مكتب إداري 16',
         'center_17': 'مكتب إداري 17',
@@ -194,6 +194,17 @@ function initializeCenterNames() {
     let names = getCenterNames();
     if (Object.keys(names).length === 0) {
         saveCenterNames(defaultNames);
+    } else {
+        // Migrate: overwrite any center that still has the old generic "مكتب إداري N" name
+        let changed = false;
+        for (let i = 1; i <= 14; i++) {
+            const key = 'center_' + i;
+            if (!names[key] || /^مكتب إداري \d+$/.test(names[key])) {
+                names[key] = defaultNames[key];
+                changed = true;
+            }
+        }
+        if (changed) saveCenterNames(names);
     }
 }
 
