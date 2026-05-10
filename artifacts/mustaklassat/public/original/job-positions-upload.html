@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>رفع مناصب الوظائف — تجمع نجران الصحي</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh;direction:rtl}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,#0f2050,#1e3c72 55%,#2a5298);padding:18px 28px;display:flex;align-items:center;gap:16px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.header img{height:54px;width:54px;object-fit:contain;border-radius:8px;background:#fff;padding:4px}
+.header-text h1{font-size:1.2rem;color:#fff;font-weight:800}
+.header-text p{font-size:.82rem;color:#d4af37;margin-top:2px}
+.back-btn{margin-right:auto;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);padding:8px 18px;border-radius:8px;cursor:pointer;font-size:.85rem;text-decoration:none;display:flex;align-items:center;gap:6px;transition:background .2s}
+.back-btn:hover{background:rgba(255,255,255,.22)}
+
+.wrap{max-width:960px;margin:28px auto;padding:0 16px;display:flex;flex-direction:column;gap:22px}
+
+/* CARD */
+.card{background:#fff;border-radius:14px;box-shadow:0 2px 16px rgba(30,60,114,.09);overflow:hidden}
+.card-head{padding:16px 22px;background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;display:flex;align-items:center;gap:10px;font-size:1rem;font-weight:700}
+.card-head i{color:#d4af37;font-size:1.1rem}
+.card-body{padding:22px}
+
+/* UPLOAD AREA */
+.drop-zone{border:2.5px dashed #c7d2e8;border-radius:12px;padding:38px 24px;text-align:center;cursor:pointer;transition:all .2s;background:#f8faff}
+.drop-zone:hover,.drop-zone.drag-over{border-color:#1e3c72;background:#eef2ff}
+.drop-zone i{font-size:2.8rem;color:#1e3c72;margin-bottom:10px;display:block}
+.drop-zone p{color:#555;font-size:.95rem;margin-bottom:6px}
+.drop-zone span{font-size:.8rem;color:#999}
+.drop-zone input[type=file]{display:none}
+
+.hospital-field{display:flex;flex-direction:column;gap:6px;margin-top:16px}
+.hospital-field label{font-size:.88rem;font-weight:600;color:#1e3c72}
+.hospital-field input{width:100%;padding:10px 14px;border:1.5px solid #d1d5db;border-radius:8px;font-size:.95rem;direction:rtl;outline:none;transition:border-color .2s}
+.hospital-field input:focus{border-color:#1e3c72}
+
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:9px;border:none;cursor:pointer;font-size:.9rem;font-weight:600;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-danger{background:#fef2f2;color:#dc2626;border:1px solid #fca5a5}
+.btn-danger:hover{background:#fee2e2}
+.btn-warning{background:#fffbeb;color:#d97706;border:1px solid #fcd34d}
+.btn-warning:hover{background:#fef3c7}
+.btn-sm{padding:6px 14px;font-size:.82rem}
+
+/* PREVIEW TABLE */
+.preview-wrap{overflow-x:auto;max-height:380px;overflow-y:auto;border-radius:10px;border:1px solid #e5e7eb}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+thead th{background:#1e3c72;color:#fff;padding:10px 12px;text-align:right;position:sticky;top:0;z-index:1;white-space:nowrap}
+tbody tr:nth-child(even){background:#f8faff}
+tbody td{padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#374151}
+.badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:.76rem;font-weight:600}
+.badge-ok{background:#dcfce7;color:#166534}
+.badge-warn{background:#fef9c3;color:#92400e}
+
+/* STATS */
+.stats-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:18px}
+.stat-box{flex:1;min-width:130px;background:#f0f4ff;border-radius:10px;padding:14px 16px;text-align:center;border:1px solid #dbeafe}
+.stat-box .val{font-size:1.7rem;font-weight:800;color:#1e3c72}
+.stat-box .lbl{font-size:.78rem;color:#6b7280;margin-top:3px}
+
+/* SAVED LIST */
+.hospital-item{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #f1f5f9;gap:12px}
+.hospital-item:last-child{border-bottom:none}
+.hospital-item:hover{background:#f8faff}
+.h-name{font-weight:700;color:#1e3c72;font-size:.95rem}
+.h-meta{font-size:.8rem;color:#9ca3af;margin-top:3px}
+.h-actions{display:flex;gap:8px;flex-shrink:0}
+
+/* INSTRUCTIONS */
+.info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:16px 20px;font-size:.88rem;color:#1e40af;line-height:1.7}
+.info-box strong{display:block;margin-bottom:6px;font-size:.92rem}
+.info-box code{background:#dbeafe;padding:2px 7px;border-radius:5px;font-family:monospace;font-size:.83rem}
+
+/* ALERTS */
+.alert{padding:12px 18px;border-radius:9px;font-size:.9rem;margin-top:14px;display:none}
+.alert-success{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
+.alert-error{background:#fef2f2;color:#dc2626;border:1px solid #fca5a5}
+
+/* EMPTY */
+.empty-state{text-align:center;padding:40px 20px;color:#9ca3af}
+.empty-state i{font-size:2.5rem;margin-bottom:12px;display:block;color:#cbd5e1}
+
+footer{text-align:center;padding:20px;color:#9ca3af;font-size:.8rem}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <img src="najran_health_cluster_logo.png" alt="شعار" onerror="this.style.display='none'">
+  <div class="header-text">
+    <h1>رفع مناصب الوظائف</h1>
+    <p>تحميل مسميات الوظائف والرواتب لكل مستشفى</p>
+  </div>
+  <a class="back-btn" href="javascript:history.back()"><i class="fas fa-arrow-right"></i> رجوع</a>
+</div>
+
+<div class="wrap">
+
+  <!-- تعليمات -->
+  <div class="card">
+    <div class="card-head"><i class="fas fa-info-circle"></i> تعليمات الرفع</div>
+    <div class="card-body">
+      <div class="info-box">
+        <strong>شكل ملف الإكسل المطلوب:</strong>
+        الصف الأول هو عناوين الأعمدة. الأعمدة المطلوبة بالترتيب:
+        <br><br>
+        <code>اسم المستشفى</code> &nbsp;|&nbsp;
+        <code>القسم</code> &nbsp;|&nbsp;
+        <code>مسمى الوظيفة</code> &nbsp;|&nbsp;
+        <code>التكلفة الشهرية</code> &nbsp;|&nbsp;
+        <code>الفئة</code> (اختياري) &nbsp;|&nbsp;
+        <code>الجنسية</code> (اختياري)
+        <br><br>
+        أسماء الأقسام المقبولة: <code>نظافة</code> / <code>كهرباء</code> / <code>زراعة</code> / <code>مدني</code> / <code>ميكانيكا</code> / <code>مغسلة</code> / <code>خدمات مرضى</code> / <code>إدارية</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- رفع ملف -->
+  <div class="card">
+    <div class="card-head"><i class="fas fa-file-upload"></i> رفع ملف جديد</div>
+    <div class="card-body">
+
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(this.files[0])">
+        <i class="fas fa-file-excel"></i>
+        <p>اضغط هنا أو اسحب ملف الإكسل</p>
+        <span>يدعم .xlsx و .xls</span>
+      </div>
+
+      <div id="uploadAlert" class="alert"></div>
+
+      <!-- معاينة -->
+      <div id="previewSection" style="display:none;margin-top:20px">
+
+        <div class="stats-row" id="statsRow"></div>
+
+        <div class="preview-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>اسم المستشفى</th>
+                <th>القسم</th>
+                <th>مسمى الوظيفة</th>
+                <th>التكلفة الشهرية</th>
+                <th>الفئة</th>
+                <th>الجنسية</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody id="previewBody"></tbody>
+          </table>
+        </div>
+
+        <div style="margin-top:18px;display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="saveBtn" onclick="saveAll()">
+            <i class="fas fa-save"></i> حفظ المناصب
+          </button>
+          <button class="btn btn-warning" onclick="resetUpload()">
+            <i class="fas fa-times"></i> إلغاء
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- المستشفيات المحفوظة -->
+  <div class="card">
+    <div class="card-head"><i class="fas fa-hospital"></i> المستشفيات المحفوظة</div>
+    <div class="card-body" style="padding:0" id="savedListBody">
+      <div class="empty-state"><i class="fas fa-folder-open"></i> جاري التحميل...</div>
+    </div>
+  </div>
+
+</div>
+<footer>© 2025 تجمع نجران الصحي — وحدة الصيانة العامة</footer>
+
+<script src="/original/job-positions-helper.js"></script>
+<script>
+// ====== المتغيرات ======
+let parsedRows = [];   // الصفوف بعد القراءة
+
+const DEPT_LABELS = {
+  cleaning:        'النظافة',
+  electricity:     'الكهرباء',
+  agriculture:     'الزراعة',
+  civil_works:     'الأعمال المدنية',
+  mechanical:      'الميكانيكا',
+  laundry:         'المغسلة',
+  patient_services:'خدمات المرضى',
+  admin_saudi:     'الوظائف الإدارية السعوديين',
+};
+
+// ====== Drag & Drop ======
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+
+// ====== قراءة الملف ======
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb  = XLSX.read(e.target.result, { type: 'binary' });
+      const ws  = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      if (raw.length < 2) { showAlert('الملف فارغ أو لا يحتوي على بيانات', 'error'); return; }
+
+      // تحديد مؤشرات الأعمدة من الصف الأول (header detection)
+      const headers = raw[0].map(h => String(h).trim());
+      const idx = detectColumns(headers);
+
+      parsedRows = [];
+      for (let r = 1; r < raw.length; r++) {
+        const row = raw[r];
+        const hospitalName = idx.hospital >= 0 ? String(row[idx.hospital] || '').trim() : '';
+        const deptAr       = idx.dept    >= 0 ? String(row[idx.dept]    || '').trim() : '';
+        const jobTitle     = idx.job     >= 0 ? String(row[idx.job]     || '').trim() : '';
+        const salary       = idx.salary  >= 0 ? parseFloat(row[idx.salary]) || 0 : 0;
+        const category     = idx.cat     >= 0 ? String(row[idx.cat]     || '1').trim() : '1';
+        const nationality  = idx.nat     >= 0 ? String(row[idx.nat]     || 'غير سعودي').trim() : 'غير سعودي';
+
+        if (!deptAr && !jobTitle) continue; // تجاهل الصفوف الفارغة
+
+        const deptKey = JobPositionsDB.mapDept(deptAr);
+        parsedRows.push({ hospitalName, deptAr, deptKey, jobTitle, salary, category, nationality, valid: !!deptKey && !!jobTitle });
+      }
+
+      renderPreview();
+    } catch (err) {
+      showAlert('خطأ في قراءة الملف: ' + err.message, 'error');
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function detectColumns(headers) {
+  const find = (...keys) => {
+    const i = headers.findIndex(h => keys.some(k => h.includes(k)));
+    return i;
+  };
+  return {
+    hospital: find('مستشفى', 'اسم المستشفى', 'hospital'),
+    dept:     find('قسم', 'القسم', 'dept'),
+    job:      find('مسمى', 'وظيفة', 'الوظيفة', 'job'),
+    salary:   find('تكلفة', 'راتب', 'salary', 'التكلفة'),
+    cat:      find('فئة', 'الفئة', 'cat'),
+    nat:      find('جنسية', 'الجنسية', 'nat'),
+  };
+}
+
+function renderPreview() {
+  if (!parsedRows.length) { showAlert('لم يُعثر على بيانات صالحة في الملف', 'error'); return; }
+
+  // إحصائيات
+  const hospitals = [...new Set(parsedRows.map(r => r.hospitalName).filter(Boolean))];
+  const valid     = parsedRows.filter(r => r.valid).length;
+  const invalid   = parsedRows.length - valid;
+  const totalCost = parsedRows.filter(r => r.valid).reduce((s, r) => s + r.salary, 0);
+
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-box"><div class="val">${parsedRows.length}</div><div class="lbl">إجمالي الصفوف</div></div>
+    <div class="stat-box"><div class="val" style="color:#16a34a">${valid}</div><div class="lbl">صفوف صالحة</div></div>
+    <div class="stat-box"><div class="val" style="color:#dc2626">${invalid}</div><div class="lbl">صفوف غير معروفة</div></div>
+    <div class="stat-box"><div class="val">${hospitals.length}</div><div class="lbl">مستشفى</div></div>
+    <div class="stat-box"><div class="val" style="font-size:1.1rem">${totalCost.toLocaleString('ar-SA')} ﷼</div><div class="lbl">إجمالي الرواتب</div></div>
+  `;
+
+  // الجدول
+  const tbody = document.getElementById('previewBody');
+  tbody.innerHTML = parsedRows.map((r, i) => `
+    <tr style="${!r.valid ? 'opacity:.55' : ''}">
+      <td>${i + 1}</td>
+      <td>${r.hospitalName || '—'}</td>
+      <td>${r.deptKey ? DEPT_LABELS[r.deptKey] : `<span style="color:#dc2626">${r.deptAr}</span>`}</td>
+      <td>${r.jobTitle || '—'}</td>
+      <td>${r.salary ? r.salary.toLocaleString('ar-SA') + ' ﷼' : '—'}</td>
+      <td>${r.category}</td>
+      <td>${r.nationality}</td>
+      <td>${r.valid
+        ? '<span class="badge badge-ok">✓ صالح</span>'
+        : '<span class="badge badge-warn">⚠ قسم غير معروف</span>'}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('previewSection').style.display = 'block';
+}
+
+// ====== حفظ ======
+async function saveAll() {
+  const validRows = parsedRows.filter(r => r.valid);
+  if (!validRows.length) { showAlert('لا توجد صفوف صالحة للحفظ', 'error'); return; }
+
+  // تجميع حسب المستشفى
+  const byHospital = {};
+  validRows.forEach(r => {
+    const key = r.hospitalName || 'غير محدد';
+    if (!byHospital[key]) byHospital[key] = [];
+    byHospital[key].push({ dept: r.deptKey, jobTitle: r.jobTitle, salary: r.salary, category: r.category, nationality: r.nationality });
+  });
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+  try {
+    for (const [hospital, rows] of Object.entries(byHospital)) {
+      await JobPositionsDB.save(hospital, rows);
+    }
+    const hospitals = Object.keys(byHospital);
+    showAlert(`✅ تم الحفظ بنجاح لـ ${hospitals.length} مستشفى: ${hospitals.join(' — ')}`, 'success');
+    resetUpload();
+    renderSavedList();
+  } catch (err) {
+    showAlert('خطأ في الحفظ: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> حفظ المناصب';
+  }
+}
+
+function resetUpload() {
+  parsedRows = [];
+  document.getElementById('fileInput').value = '';
+  document.getElementById('previewSection').style.display = 'none';
+  document.getElementById('previewBody').innerHTML = '';
+  document.getElementById('statsRow').innerHTML = '';
+}
+
+// ====== قائمة المحفوظة ======
+async function renderSavedList() {
+  const container = document.getElementById('savedListBody');
+  try {
+    const all = await JobPositionsDB.loadAll();
+    if (!all.length) {
+      container.innerHTML = '<div class="empty-state"><i class="fas fa-folder-open"></i><p>لا توجد مستشفيات محفوظة بعد</p></div>';
+      return;
+    }
+    container.innerHTML = all.map(rec => {
+      const count = rec.rows ? rec.rows.length : 0;
+      const cost  = rec.rows ? rec.rows.reduce((s, r) => s + (r.salary || 0), 0) : 0;
+      const depts = rec.rows ? [...new Set(rec.rows.map(r => DEPT_LABELS[r.dept] || r.dept))].join(' / ') : '';
+      const date  = rec.savedAt ? new Date(rec.savedAt).toLocaleDateString('ar-SA') : '';
+      return `
+        <div class="hospital-item">
+          <div>
+            <div class="h-name"><i class="fas fa-hospital-alt" style="color:#1e3c72;margin-left:6px"></i>${rec.hospitalName}</div>
+            <div class="h-meta">${count} منصب | ${cost.toLocaleString('ar-SA')} ﷼ | ${depts}</div>
+            <div class="h-meta" style="margin-top:2px"><i class="fas fa-clock" style="margin-left:4px"></i>آخر تحديث: ${date}</div>
+          </div>
+          <div class="h-actions">
+            <button class="btn btn-warning btn-sm" onclick="viewHospital('${rec.hospitalName}')">
+              <i class="fas fa-eye"></i> عرض
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="deleteHospital('${rec.hospitalName}')">
+              <i class="fas fa-trash"></i> حذف
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+  } catch (err) {
+    container.innerHTML = `<div class="empty-state" style="color:#dc2626"><i class="fas fa-exclamation-circle"></i><p>خطأ: ${err.message}</p></div>`;
+  }
+}
+
+async function viewHospital(name) {
+  const rec = await JobPositionsDB.load(name);
+  if (!rec) return;
+  const rows = rec.rows || [];
+  const win  = window.open('', '_blank', 'width=900,height=600');
+  win.document.write(`
+    <html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${name}</title>
+    <style>body{font-family:Arial,sans-serif;padding:20px;direction:rtl}
+    h2{color:#1e3c72;margin-bottom:16px}
+    table{border-collapse:collapse;width:100%;font-size:.9rem}
+    th{background:#1e3c72;color:#fff;padding:9px 12px;text-align:right}
+    td{padding:8px 12px;border-bottom:1px solid #e5e7eb}
+    tr:nth-child(even){background:#f8faff}</style></head><body>
+    <h2>مناصب وظائف: ${name}</h2>
+    <table><thead><tr><th>#</th><th>القسم</th><th>مسمى الوظيفة</th><th>التكلفة الشهرية</th><th>الفئة</th><th>الجنسية</th></tr></thead>
+    <tbody>${rows.map((r, i) => `<tr><td>${i+1}</td><td>${DEPT_LABELS[r.dept]||r.dept}</td><td>${r.jobTitle}</td><td>${(r.salary||0).toLocaleString('ar-SA')} ﷼</td><td>${r.category||1}</td><td>${r.nationality||'—'}</td></tr>`).join('')}</tbody></table>
+    </body></html>`);
+  win.document.close();
+}
+
+async function deleteHospital(name) {
+  if (!confirm(`هل تريد حذف مناصب "${name}"؟ لا يمكن التراجع.`)) return;
+  await JobPositionsDB.remove(name);
+  renderSavedList();
+}
+
+// ====== الإشعارات ======
+function showAlert(msg, type) {
+  const el = document.getElementById('uploadAlert');
+  el.textContent = msg;
+  el.className   = `alert alert-${type}`;
+  el.style.display = 'block';
+  if (type === 'success') setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+// ====== تحميل أولي ======
+renderSavedList();
+</script>
+</body>
+</html>
