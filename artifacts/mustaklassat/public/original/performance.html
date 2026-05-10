@@ -931,17 +931,22 @@ tr.total-row th, tr.total-row td {
 <!-- ================================================== -->
 <!-- === نافذة تعديل أسماء الجداول (الكود الجديد) === -->
 <!-- ================================================== -->
-<div id="table-names-overlay" class="overlay"></div>
-<div id="table-names-dialog" class="edit-dialog">
-    <h3 style="text-align: center; color: #6f42c1;">تعديل أسماء الجداول</h3>
-    <p style="text-align: center; color: #6c757d; margin-top: -10px; margin-bottom: 20px;">يمكنك تغيير العناوين التي تظهر فوق كل جدول.</p>
-    
-    <div id="table-names-form-container">
-        <!-- سيتم ملء الحقول هنا بواسطة JavaScript -->
+<div id="table-names-overlay" class="overlay" onclick="closeEditTableNamesDialog()"></div>
+<div id="table-names-dialog" class="edit-dialog" style="display:none; flex-direction:column; padding:0; max-height:85vh;">
+    <!-- رأس الديالوج ثابت -->
+    <div style="padding:16px 20px 12px; border-bottom:1px solid #e0e0e0; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
+        <h3 style="margin:0; color:#6f42c1; font-size:16px;"><i class="fas fa-heading"></i> تعديل أسماء الجداول</h3>
+        <button onclick="closeEditTableNamesDialog()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;line-height:1;" title="إغلاق">×</button>
+    </div>
+    <p style="text-align:center; color:#6c757d; font-size:13px; margin:10px 20px 0;">يمكنك تغيير العناوين التي تظهر فوق كل جدول.</p>
+
+    <!-- محتوى الفورم قابل للتمرير -->
+    <div id="table-names-form-container" style="overflow-y:auto; padding:12px 20px; flex:1;">
         <p>جاري تحميل أسماء الجداول...</p>
     </div>
 
-    <div class="dialog-buttons" style="text-align: center; margin-top: 20px;">
+    <!-- أزرار ثابتة في الأسفل -->
+    <div style="padding:12px 20px; border-top:1px solid #e0e0e0; text-align:center; flex-shrink:0; background:#fff; border-radius:0 0 10px 10px;">
         <button class="confirm-btn" onclick="saveTableNames()">
             <i class="fas fa-save"></i> حفظ الأسماء
         </button>
@@ -3091,7 +3096,7 @@ function openEditTableNamesDialog() {
     // تحميل الأسماء الحالية في الحقول
     populateTableNamesForm();
 
-    dialog.style.display = 'block';
+    dialog.style.display = 'flex';
     overlay.style.display = 'block';
 }
 
@@ -3114,7 +3119,7 @@ function populateTableNamesForm() {
         const tableId = tableDiv.id;
         if (tableId === 'certificate') return; // استثناء جدول الشهادة
 
-        const defaultTitle = tableDiv.querySelector('.table-title').textContent;
+        const defaultTitle = tableDiv.querySelector('.table-title')?.textContent || tableId;
         const currentTitle = savedNames[tableId] || defaultTitle;
 
         const formGroup = document.createElement('div');
