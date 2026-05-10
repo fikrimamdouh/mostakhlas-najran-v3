@@ -1,6 +1,6 @@
 import {
   Settings, SlidersHorizontal, Clock, BarChart2, Trophy, Package, Wrench,
-  CheckSquare, MapPin, ClipboardList, Eye, Archive, type LucideIcon,
+  CheckSquare, MapPin, ClipboardList, Eye, Archive, UploadCloud, type LucideIcon,
 } from "lucide-react";
 
 export type SiteType = "hospital" | "health_centers" | "admin_offices";
@@ -28,6 +28,7 @@ export const ALL_MODULES: ModuleDef[] = [
   { key: "health_centers_consumables", file: "health_centers_consumables.html", label: "المراكز — المستهلكات",      emoji: "🧪",  icon: Package,           color: "#0077b6", types: ["health_centers"] },
   { key: "admin_offices_attendance",   file: "admin_offices_attendance.html",   label: "المكاتب — العمالة",         emoji: "👷",  icon: ClipboardList,     color: "#2a5298", types: ["admin_offices"] },
   { key: "admin_offices_consumables",  file: "admin_offices_consumables.html",  label: "المكاتب — المستهلكات",      emoji: "🧪",  icon: Package,           color: "#0077b6", types: ["admin_offices"] },
+  { key: "job-positions-upload",       file: "job-positions-upload.html",       label: "رفع مناصب الوظائف",         emoji: "📤",  icon: UploadCloud,       color: "#1e3c72", types: ["hospital", "health_centers", "admin_offices"] },
 ];
 
 export function getModuleKey(filename: string): string {
