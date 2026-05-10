@@ -352,8 +352,11 @@
   <div class="contract-info no-print">
     <p><strong>اسم المستشفى / الجهة:</strong> <span id="ci-hospital">—</span></p>
     <p><strong>اسم الشركة:</strong> <span id="ci-company">—</span></p>
-    <p><strong>رقم العقد:</strong> <span id="ci-contract">—</span></p>
-    <p><strong>فترة المستخلص:</strong> <span id="ci-period">—</span></p>
+    <p><strong>تفاصيل العقد:</strong> <span id="ci-contract">—</span></p>
+    <p><strong>نوع العقد:</strong> <span id="ci-type">—</span></p>
+    <p><strong>رقم الدفعة:</strong> <span id="ci-payment">—</span></p>
+    <p><strong>الشهر / السنة:</strong> <span id="ci-period">—</span></p>
+    <p><strong>مدة المستخلص:</strong> من <span id="ci-start">—</span> إلى <span id="ci-end">—</span></p>
   </div>
 
   <!-- ── Action buttons ── -->
@@ -437,15 +440,32 @@ function showToast(msg, type = '') {
 }
 
 // ── Contract info from localStorage ─────────────────────────────────────────
+function formatDate(d) {
+  if (!d) return '—';
+  try {
+    const dt = new Date(d);
+    if (isNaN(dt)) return d;
+    return dt.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+  } catch { return d; }
+}
+
 function loadContractInfo() {
   try {
     const c = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-    document.getElementById('ci-hospital').textContent = localStorage.getItem('hospitalName') || c.hospitalName || '—';
-    document.getElementById('ci-company').textContent  = localStorage.getItem('companyName')  || c.companyName  || '—';
-    document.getElementById('ci-contract').textContent = c.contractNumber || localStorage.getItem('contractDetails') || '—';
-    const month = localStorage.getItem('extractMonth') || c.extractMonth || '';
-    const year  = localStorage.getItem('extractYear')  || c.extractYear  || new Date().getFullYear();
+    const e = JSON.parse(localStorage.getItem('persistentExtractData')  || '{}');
+
+    document.getElementById('ci-hospital').textContent = c.hospitalName  || localStorage.getItem('hospitalName') || '—';
+    document.getElementById('ci-company').textContent  = c.companyName   || localStorage.getItem('companyName')  || '—';
+    document.getElementById('ci-contract').textContent = c.contractDetails || c.contractNumber || localStorage.getItem('contractDetails') || '—';
+    document.getElementById('ci-type').textContent     = c.contractType  || '—';
+    document.getElementById('ci-payment').textContent  = e.paymentNumber || '—';
+
+    const month = e.extractMonth || localStorage.getItem('extractMonth') || '';
+    const year  = e.extractYear  || localStorage.getItem('extractYear')  || new Date().getFullYear();
     document.getElementById('ci-period').textContent = month ? `${month} ${year}` : '—';
+
+    document.getElementById('ci-start').textContent = formatDate(e.extractStart) || '—';
+    document.getElementById('ci-end').textContent   = formatDate(e.extractEnd)   || '—';
   } catch { /* ignore */ }
 }
 
