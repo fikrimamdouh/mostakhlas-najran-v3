@@ -488,14 +488,23 @@ body {
     background-color: white;
     border-radius: 12px;
     border: 1px solid #d1d9e8;
-    /* box-shadow الطبقة الأولى: overlay داكن خلف الديالوج — الطبقة الثانية: ظل الديالوج نفسه */
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55), 0 8px 32px rgba(0, 0, 60, 0.22);
+    box-shadow: 0 8px 32px rgba(0, 0, 60, 0.22);
     z-index: 1000;
     width: 90%;
     max-width: 700px;
     max-height: 90vh;
     flex-direction: column;
     overflow: hidden;
+}
+
+/* ── overlay تلقائي خلف أي ديالوج مفتوح (CSS-only) ── */
+body:has(.dialog[style*="flex"])::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 999;
+    pointer-events: auto;
 }
 
 /* تنسيق للشبابيك العريضة مثل إدارة الموظفين */
