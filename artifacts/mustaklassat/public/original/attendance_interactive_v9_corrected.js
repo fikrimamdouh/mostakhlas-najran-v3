@@ -2560,22 +2560,32 @@ const currentMonthYear = extractStartDate.toLocaleDateString('ar-EG', { month: '
     selectedCount++;
   }); // نهاية forEach
 
-  // الإجمالي العام — مرة واحدة فقط في النهاية
+  // الإجمالي العام — مرة واحدة فقط في النهاية، بدون page-break لكي يظهر فوق التواقيع مباشرة
   const grandTotalEl = document.getElementById('grand-total-container');
   if (grandTotalEl) {
-    doc.write('<div class="print-break"></div>');
-    doc.write('<div style="margin:20px 0;font-size:15px;font-weight:bold;color:#003087;border:2px solid #003087;border-radius:8px;padding:12px 16px;direction:rtl;">');
-    doc.write('<div style="font-size:17px;font-weight:900;color:#003087;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #c7d7f9;">الإجماليات العامة</div>');
-    grandTotalEl.querySelectorAll('.total-card').forEach(card => {
-      const label = card.querySelector('.label')?.textContent || '';
-      const value = card.querySelector('.value')?.textContent || '';
-      doc.write(`<span style="display:inline-block;margin:4px 8px;"><b>${label}:</b> ${value}</span> | `);
-    });
-    doc.write('</div>');
+    const cards = grandTotalEl.querySelectorAll('.total-card');
+    if (cards.length > 0) {
+      let gtRows = '';
+      cards.forEach(card => {
+        const label = card.querySelector('.label')?.textContent || '';
+        const value = card.querySelector('.value')?.textContent || '';
+        gtRows += `<td style="padding:8px 14px;text-align:center;border:1px solid #003087;"><div style="font-size:11px;color:#555;margin-bottom:4px;">${label}</div><div style="font-size:14px;font-weight:900;color:#003087;">${value}</div></td>`;
+      });
+      doc.write(`
+        <table style="width:100%;border-collapse:collapse;margin:20px 0;direction:rtl;page-break-inside:avoid;">
+          <thead>
+            <tr><th colspan="${cards.length}" style="background:#003087;color:#fff;padding:8px;font-size:14px;text-align:center;border:1px solid #003087;">الإجماليات العامة</th></tr>
+          </thead>
+          <tbody><tr>${gtRows}</tr></tbody>
+        </table>
+      `);
+    }
   }
 
-  // التواقيع — مرة واحدة فقط في النهاية
-  const latestSignatures = getSignatures();
+  // التواقيع — مرة واحدة فقط في النهاية — تُقرأ من SignatureBlock (النظام الجديد)
+  const latestSignatures = (typeof SignatureBlock !== 'undefined')
+    ? SignatureBlock.getSigs('attendance')
+    : getSignatures();
   let signaturesHTML = `
     <div class="signatures-block" style="page-break-inside:avoid;margin-top:30px;">
       <div class="signatures-title">التواقيع</div>
