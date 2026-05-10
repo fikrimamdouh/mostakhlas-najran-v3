@@ -92,7 +92,8 @@ export default function ExtractsStats() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to load");
-      return res.json();
+      const data = await res.json();
+      return Array.isArray(data) ? data : (data.extracts ?? []);
     },
     enabled: !!me,
   });
