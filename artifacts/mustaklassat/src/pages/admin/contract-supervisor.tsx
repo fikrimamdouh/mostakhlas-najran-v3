@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import ExtractDataViewer from "@/components/extracts/ExtractDataViewer";
 
 const COMPANY_LABELS: Record<string, string> = {
+  "تجمع_نجران": "تجمع نجران الصحي",
   "بيت_العرب": "بيت العرب",
   "سراكو": "سراكو",
 };
