@@ -155,6 +155,21 @@ function getCenterNames() { return JSON.parse(localStorage.getItem('adminOfficeN
 function saveCenterNames(names) { localStorage.setItem('adminOfficeNames_v1', JSON.stringify(names)); }
 function getAttendanceData() { return JSON.parse(localStorage.getItem('adminOfficesAttendanceData_v1')) || {}; }
 function saveAttendanceData(data) { localStorage.setItem('adminOfficesAttendanceData_v1', JSON.stringify(data)); }
+function getAffiliations() { return JSON.parse(localStorage.getItem('adminOfficeAffiliations_v1')) || {}; }
+function saveAffiliations(aff) { localStorage.setItem('adminOfficeAffiliations_v1', JSON.stringify(aff)); }
+
+const AFFILIATION_LABELS = {
+    moh:    'فرع وزارة الصحة',
+    wiqaya: 'هيئة الصحة العامة وقاية',
+    najran: 'تجمع نجران الصحي',
+};
+const DEFAULT_AFFILIATIONS = {
+    center_1:  'moh', center_2:  'moh', center_3:  'moh', center_4:  'moh',
+    center_5:  'moh', center_6:  'moh', center_7:  'moh',
+    center_8:  'wiqaya',
+    center_9:  'najran', center_10: 'najran', center_11: 'najran',
+    center_12: 'najran', center_13: 'najran', center_14: 'najran',
+};
 
 // ✅✅✅ [الكود النهائي والمطابق للصورة] ✅✅✅
 function initializeCenterNames() {
@@ -173,22 +188,6 @@ function initializeCenterNames() {
         'center_12': 'إدارة مركز التحكم والكوارث بالفيصلية',
         'center_13': 'التموين الطبي',
         'center_14': 'الخدمات العامة',
-        'center_15': 'مكتب إداري 15',
-        'center_16': 'مكتب إداري 16',
-        'center_17': 'مكتب إداري 17',
-        'center_18': 'مكتب إداري 18',
-        'center_19': 'مكتب إداري 19',
-        'center_20': 'مكتب إداري 20',
-        'center_21': 'مكتب إداري 21',
-        'center_22': 'مكتب إداري 22',
-        'center_23': 'مكتب إداري 23',
-        'center_24': 'مكتب إداري 24',
-        'center_25': 'مكتب إداري 25',
-        'center_26': 'مكتب إداري 26',
-        'center_27': 'مكتب إداري 27',
-        'center_28': 'مكتب إداري 28',
-        'center_29': 'مكتب إداري 29',
-        'center_30': 'مكتب إداري 30',
         'admin_staff': 'فئات إدارية أخرى',
     };
     let names = getCenterNames();
@@ -204,8 +203,23 @@ function initializeCenterNames() {
                 changed = true;
             }
         }
+        // Remove old generic centers 15-30
+        for (let i = 15; i <= 30; i++) {
+            const key = 'center_' + i;
+            if (names[key] && /^مكتب إداري \d+$/.test(names[key])) {
+                delete names[key];
+                changed = true;
+            }
+        }
         if (changed) saveCenterNames(names);
     }
+    // Initialize affiliations if missing
+    let aff = getAffiliations();
+    let affChanged = false;
+    Object.keys(DEFAULT_AFFILIATIONS).forEach(key => {
+        if (!aff[key]) { aff[key] = DEFAULT_AFFILIATIONS[key]; affChanged = true; }
+    });
+    if (affChanged) saveAffiliations(aff);
 }
 
 function getExtractPeriodDetails() {
@@ -2574,11 +2588,15 @@ function showCenterNameManagement() {
     const searchSortControls = document.querySelector('.search-sort-controls');
     const footer = document.getElementById('management-footer-v3');
 
-    // ✅ [الإصلاح]: تعديل الواجهة الحالية بدلاً من فتح نافذة جديدة
-    title.innerHTML = `<i class="fas fa-edit"></i> إدارة أسماء المراكز`;
-    if(searchSortControls) searchSortControls.style.display = 'none'; // إخفاء البحث والفرز
+    title.innerHTML = `<i class="fas fa-edit"></i> إدارة أسماء المراكز وجهاتها`;
+    if(searchSortControls) searchSortControls.style.display = 'none';
 
     const names = getCenterNames();
+    const aff = getAffiliations();
+    const affOptions = (currentVal) => Object.entries(AFFILIATION_LABELS).map(([k, v]) =>
+        `<option value="${k}" ${currentVal === k ? 'selected' : ''}>${v}</option>`
+    ).join('');
+
     let editorHTML = `<div class="center-editor-grid">`;
     Object.keys(names).sort((a, b) => {
         if (a.startsWith('center_') && !b.startsWith('center_')) return -1;
@@ -2589,36 +2607,25 @@ function showCenterNameManagement() {
         return a.localeCompare(b);
     }).forEach(key => {
         const isSpecial = !key.startsWith('center_');
+        const currentAff = aff[key] || 'moh';
         editorHTML += `
-            <div class="center-name-card">
-                <span class="center-number">${isSpecial ? names[key] : `المركز ${key.split('_')[1]}`}</span>
-                <input type="text" class="center-name-input" data-key="${key}" value="${names[key]}">
-                ${!isSpecial ? `<button class="btn-danger" onclick="confirmDeleteCenter('${key}')" title="حذف المركز"><i class="fas fa-trash"></i></button>` : ''}
+            <div class="center-name-card" style="flex-direction:column;align-items:stretch;gap:6px;padding:10px;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span class="center-number" style="min-width:90px;">${isSpecial ? 'خاص' : `م ${key.split('_')[1]}`}</span>
+                    <input type="text" class="center-name-input" data-key="${key}" value="${names[key]}" style="flex:1;">
+                    ${!isSpecial ? `<button class="btn-danger" onclick="confirmDeleteCenter('${key}')" title="حذف المركز" style="flex-shrink:0;"><i class="fas fa-trash"></i></button>` : ''}
+                </div>
+                ${!isSpecial ? `<select class="center-aff-select" data-key="${key}" style="width:100%;padding:4px 8px;border:1px solid #ccc;border-radius:6px;font-size:12px;font-family:inherit;">${affOptions(currentAff)}</select>` : ''}
             </div>`;
     });
     editorHTML += '</div>';
     contentArea.innerHTML = editorHTML;
 
-    // ✅ [الإصلاح]: تعديل أزرار الجزء السفلي لتناسب واجهة تعديل المراكز
     footer.innerHTML = `
         <button class="btn btn-primary" onclick="showAddNewCenterFormInPlace()"><i class="fas fa-plus-circle"></i> إضافة مركز جديد</button>
         <button class="btn btn-success" onclick="saveAllCenterNames(true)"><i class="fas fa-save"></i> حفظ كل التغييرات</button>
-        <button class="btn btn-secondary" onclick="showUpgradedManagementInterface()"> العودة لإدارة الموظفين</button>
+        <button class="btn btn-secondary" onclick="showUpgradedManagementInterface()">العودة لإدارة الموظفين</button>
     `;
-}
-
-function saveAllCenterNames() {
-    const inputs = document.querySelectorAll('#center-name-editor-area .center-name-input');
-    let names = getCenterNames();
-    inputs.forEach(input => {
-        names[input.dataset.key] = input.value.trim();
-    });
-    saveCenterNames(names);
-    showSuccessMessage("تم حفظ أسماء المراكز بنجاح.");
-    closeDialog('form-dialog');
-    // Refresh the main management interface to show new names
-    populateCentersSidebar();
-    renderCenterIcons();
 }
 
 function confirmDeleteCenter(centerKey) {
@@ -2637,36 +2644,47 @@ function confirmDeleteCenter(centerKey) {
         renderCenterIcons();
     }
 }
-// ✅ [دالة جديدة]: لحفظ الأسماء ثم العودة لواجهة تعديل الأسماء
+// ✅ [دالة جديدة]: لحفظ الأسماء والجهات ثم العودة لواجهة تعديل الأسماء
 function saveAllCenterNames(andReturn = false) {
     const inputs = document.querySelectorAll('#management-content-area .center-name-input');
+    const affSelects = document.querySelectorAll('#management-content-area .center-aff-select');
     let names = getCenterNames();
+    let aff = getAffiliations();
     inputs.forEach(input => {
-        names[input.dataset.key] = input.value.trim();
+        if (input.value.trim()) names[input.dataset.key] = input.value.trim();
+    });
+    affSelects.forEach(sel => {
+        aff[sel.dataset.key] = sel.value;
     });
     saveCenterNames(names);
-    showSuccessMessage("تم حفظ أسماء المراكز بنجاح.");
-    
+    saveAffiliations(aff);
+    showSuccessMessage("تم حفظ أسماء المراكز وجهاتها بنجاح.");
     populateCentersSidebar();
     renderCenterIcons();
-
     if (andReturn) {
-        showCenterNameManagement(); // العودة لنفس الشاشة بعد الحفظ
+        showCenterNameManagement();
     }
 }
 
 // ✅ [دالة جديدة]: لعرض نموذج إضافة مركز جديد داخل الواجهة نفسها
 function showAddNewCenterFormInPlace() {
     const contentArea = document.getElementById('management-content-area');
+    const affOptions = Object.entries(AFFILIATION_LABELS).map(([k, v]) =>
+        `<option value="${k}">${v}</option>`
+    ).join('');
     contentArea.innerHTML = `
         <div class="edit-form-container" style="margin-top: 20px;">
-            <h4>إضافة مركز صحي جديد</h4>
-            <p>أدخل اسم المركز الجديد الذي تريد إضافته إلى القائمة.</p>
+            <h4>إضافة مكتب إداري جديد</h4>
+            <p>أدخل اسم المكتب واختر الجهة التابعة له.</p>
             <fieldset>
-                <legend>بيانات المركز الجديد</legend>
+                <legend>بيانات المكتب الجديد</legend>
                 <div class="form-group">
-                    <label for="new-center-name">اسم المركز الجديد:</label>
-                    <input type="text" id="new-center-name" placeholder="مثال: مركز صحي العزيزية">
+                    <label for="new-center-name">اسم المكتب الجديد:</label>
+                    <input type="text" id="new-center-name" placeholder="مثال: مبنى الإدارة المساعدة" style="width:100%;">
+                </div>
+                <div class="form-group" style="margin-top:12px;">
+                    <label for="new-center-aff">الجهة التابعة له:</label>
+                    <select id="new-center-aff" style="width:100%;padding:6px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit;">${affOptions}</select>
                 </div>
             </fieldset>
         </div>
@@ -2681,11 +2699,12 @@ function showAddNewCenterFormInPlace() {
 // ✅ [تعديل بسيط]: تعديل دالة تأكيد الإضافة لتقبل متغير العودة
 function confirmAddNewCenter(andReturn = false) {
     const newName = document.getElementById('new-center-name').value.trim();
+    const newAff = (document.getElementById('new-center-aff') || {}).value || 'moh';
     if (!newName) {
-        alert("الرجاء إدخال اسم للمركز الجديد.");
+        alert("الرجاء إدخال اسم للمكتب الجديد.");
         return;
     }
-    if (!confirm(`هل أنت متأكد من إضافة "${newName}" إلى القائمة؟`)) {
+    if (!confirm(`هل أنت متأكد من إضافة "${newName}" (${AFFILIATION_LABELS[newAff] || newAff}) إلى القائمة؟`)) {
         return;
     }
     const names = getCenterNames();
@@ -2694,6 +2713,9 @@ function confirmAddNewCenter(andReturn = false) {
     const newCenterKey = `center_${lastCenterNum + 1}`;
     names[newCenterKey] = newName;
     saveCenterNames(names);
+    const aff = getAffiliations();
+    aff[newCenterKey] = newAff;
+    saveAffiliations(aff);
     showSuccessMessage(`تمت إضافة "${newName}" بنجاح!`);
     renderCenterIcons();
     populateCentersSidebar();
