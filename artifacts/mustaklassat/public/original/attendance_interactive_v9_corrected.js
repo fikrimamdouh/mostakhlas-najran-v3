@@ -907,9 +907,9 @@ function updateGrandTotals(count, cost, deduction, fine) {
       grandTotalContainer.id = 'grand-total-container';
       grandTotalContainer.className = 'grand-total-professional'; // اسم كلاس جديد للتصميم الاحترافي
       
-      const signaturesSection = document.querySelector('.signatures-display-section');
-      if (signaturesSection) {
-        signaturesSection.parentNode.insertBefore(grandTotalContainer, signaturesSection);
+      const anchor = document.getElementById('grand-total-anchor');
+      if (anchor) {
+        anchor.appendChild(grandTotalContainer);
       } else {
         document.querySelector('.container').appendChild(grandTotalContainer);
       }

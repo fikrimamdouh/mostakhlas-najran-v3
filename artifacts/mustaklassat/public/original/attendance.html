@@ -340,43 +340,47 @@
 
   /* ── ترويسة الصفحة ── */
   .header-info {
-    background: linear-gradient(135deg, #0f2444 0%, #1a3660 45%, #2a5298 100%) !important;
+    background: linear-gradient(135deg, #0a1a35 0%, #0f2444 40%, #1e3c72 100%) !important;
     color: #fff !important;
-    padding: 18px 80px !important;
+    padding: 20px 110px !important;
     text-align: center !important;
     position: relative !important;
-    box-shadow: 0 4px 20px rgba(15,36,68,.35) !important;
+    box-shadow: 0 4px 24px rgba(10,26,53,.45) !important;
     margin-bottom: 0 !important;
+    border-bottom: 3px solid #d4af37 !important;
   }
   .header-info h1 {
-    font-size: 20px !important; font-weight: 800 !important;
-    color: #fff !important; margin: 0 0 2px !important; letter-spacing: .5px !important;
+    font-size: 22px !important; font-weight: 900 !important;
+    color: #fff !important; margin: 0 0 3px !important; letter-spacing: .5px !important;
   }
   .header-info h3 {
     font-size: 13px !important; font-weight: 500 !important;
-    color: rgba(255,255,255,.7) !important; margin: 0 0 4px !important;
+    color: rgba(255,255,255,.75) !important; margin: 0 0 5px !important;
   }
   .header-info h2 {
-    font-size: 16px !important; font-weight: 800 !important;
-    color: #d4af37 !important; margin: 4px 0 0 !important;
+    font-size: 17px !important; font-weight: 800 !important;
+    color: #d4af37 !important; margin: 5px 0 0 !important;
+    letter-spacing: .3px !important;
   }
   .header-info .date {
-    font-size: 11px !important; color: rgba(255,255,255,.55) !important;
+    font-size: 11px !important; color: rgba(255,255,255,.5) !important;
     margin-top: 6px !important;
   }
   .logo-right {
     position: absolute !important; right: 18px !important;
     top: 50% !important; transform: translateY(-50%) !important;
-    width: 52px !important; height: 52px !important;
-    border-radius: 10px !important; box-shadow: 0 2px 10px rgba(0,0,0,.25) !important;
-    object-fit: contain !important;
+    width: 70px !important; height: 70px !important;
+    border-radius: 12px !important; box-shadow: 0 3px 12px rgba(0,0,0,.3) !important;
+    object-fit: contain !important; background: rgba(255,255,255,.08) !important;
+    padding: 4px !important;
   }
   .logo-left {
     position: absolute !important; left: 18px !important;
     top: 50% !important; transform: translateY(-50%) !important;
-    width: 52px !important; height: 52px !important;
-    border-radius: 10px !important; box-shadow: 0 2px 10px rgba(0,0,0,.25) !important;
-    object-fit: contain !important;
+    width: 70px !important; height: 70px !important;
+    border-radius: 12px !important; box-shadow: 0 3px 12px rgba(0,0,0,.3) !important;
+    object-fit: contain !important; background: rgba(255,255,255,.08) !important;
+    padding: 4px !important;
   }
 
   /* ── شريط بيانات العقد (grid منظم) ── */
@@ -693,13 +697,13 @@
   .dept-table-scroll::-webkit-scrollbar-track { background: #f1f5f9 !important; }
   .dept-table-scroll::-webkit-scrollbar-thumb { background: #94a3b8 !important; border-radius: 3px !important; }
 
-  /* ══ رأس الجدول وخلاياه بحجم موحد (بدون display:block) ══ */
+  /* ══ رأس الجدول وخلاياه بحجم موحد ══ */
   .department-table table {
     font-size: 11px !important;
     border-collapse: collapse !important;
     table-layout: auto !important;
     width: 100% !important;
-    min-width: 100% !important;
+    min-width: 1150px !important;
   }
   .department-table table thead th {
     background: #1e3c72 !important;
@@ -1053,9 +1057,9 @@ function preparePrint() {
     <div class="container">
         <div class="header-info">
             <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-right">
-            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-left">
+            <img src="moh_logo.png" alt="شعار وزارة الصحة" class="logo-left">
             <h1>تجمع نجران الصحي</h1>
-            <!-- removed -->
+            <h3>وحدة الصيانة العامة</h3>
             <h2>بيان بالحضور والغياب</h2>
             <p class="date" id="current-date-time"></p>
         </div>
@@ -1660,6 +1664,9 @@ window.navigateTo = function (url) {
 <!-- ✅ 6. كود HTML المحدث لقسم الإجمالي العام ✅ -->
 <!-- ================================================================ -->
 
+
+    <!-- ═══ مكان ثابت لشاشة الإجماليات العامة — في نهاية جميع الجداول ═══ -->
+    <div id="grand-total-anchor"></div>
 
         <div class="status-legend" id="status-legend" style="display: none;">
             <h4>دليل الحالات المستخدمة:</h4>
