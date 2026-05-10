@@ -273,15 +273,20 @@
       position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
       background: #d97706; color: white; text-align: center;
       padding: 10px; font-size: 14px; font-family: Arial, sans-serif;
-      direction: rtl;
+      direction: rtl; display: flex; align-items: center; justify-content: center; gap: 12px;
     `;
     banner.innerHTML = `
-      ⚠️ انتهت صلاحية الجلسة — بياناتك محفوظة محلياً.
-      <a href="/dashboard" style="color:white;font-weight:bold;margin-right:10px;text-decoration:underline;">
-        ← العودة للوحة القيادة لتجديد الجلسة
+      <span>⚠️ انتهت صلاحية الجلسة — بياناتك محفوظة محلياً.</span>
+      <a href="/dashboard" style="color:white;font-weight:bold;text-decoration:underline;">
+        ← تجديد الجلسة
       </a>
+      <button onclick="this.parentElement.remove()" style="
+        background:rgba(255,255,255,0.25);border:none;color:white;
+        border-radius:6px;padding:3px 10px;cursor:pointer;font-size:13px;font-family:inherit;
+      ">✕</button>
     `;
     document.body.prepend(banner);
+    setTimeout(() => { if (banner.parentElement) banner.remove(); }, 8000);
   }
 
   // ── مؤشر حالة المزامنة ───────────────────────────────────────────────────

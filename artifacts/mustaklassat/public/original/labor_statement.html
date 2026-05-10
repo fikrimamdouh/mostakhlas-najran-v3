@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>بيان بأعداد وفئات العمالة - فرع وزارة الصحة بمنطقة نجران</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', Arial, sans-serif; }
+body { background: #f0f4ff; direction: rtl; }
+
+/* ══ ترويسة ══ */
+.page-header {
+  background: #fff;
+  position: relative;
+  overflow: hidden;
+  padding: 0 0 12px 0;
+  border-bottom: 3px solid #27ae60;
+  box-shadow: 0 2px 10px rgba(0,0,0,.1);
+  margin-bottom: 20px;
+}
+.header-wave {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 10px;
+  background: linear-gradient(90deg, #27ae60, #a8d5a2, #f0c040, #27ae60);
+}
+.header-wave-top {
+  position: absolute;
+  top: 0; left: 0;
+  width: 220px; height: 220px;
+  background: linear-gradient(135deg, #27ae60 0%, #a8e063 50%, transparent 70%);
+  border-radius: 0 0 100% 0;
+  opacity: .18;
+  pointer-events: none;
+}
+.header-wave-top2 {
+  position: absolute;
+  top: 0; left: 0;
+  width: 160px; height: 160px;
+  background: linear-gradient(135deg, #c8e6b0 0%, transparent 70%);
+  border-radius: 0 0 100% 0;
+  opacity: .22;
+  pointer-events: none;
+}
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 30px 10px;
+  position: relative;
+  z-index: 2;
+}
+.header-logo { text-align: center; }
+.header-logo img { height: 80px; object-fit: contain; }
+.header-text { text-align: center; flex: 1; padding: 0 20px; }
+.header-text h1 { font-size: 17px; font-weight: 800; color: #006633; margin-bottom: 4px; }
+.header-text h2 { font-size: 15px; font-weight: 700; color: #333; margin-bottom: 4px; }
+.header-text h3 { font-size: 13px; font-weight: 600; color: #555; }
+.doc-title {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: #003087;
+  background: #eaf2ff;
+  border: 2px solid #003087;
+  border-radius: 8px;
+  padding: 10px 30px;
+  margin: 8px 30px 0;
+}
+.header-footer {
+  text-align: center;
+  font-size: 11px;
+  color: #777;
+  padding: 8px 30px 2px;
+  border-top: 1px solid #e8f0e8;
+  margin-top: 10px;
+}
+.header-footer span { margin: 0 8px; }
+
+/* ══ محتوى ══ */
+.container { max-width: 1400px; margin: 0 auto; padding: 10px 20px 40px; }
+
+/* ══ عنوان القسم ══ */
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 20px;
+  border-radius: 10px 10px 0 0;
+  margin-top: 30px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+}
+.group-moh  { background: linear-gradient(135deg, #006633, #27ae60); }
+.group-najran { background: linear-gradient(135deg, #003087, #1e6ab0); }
+.group-wiqaya { background: linear-gradient(135deg, #7b5e00, #c8960c); }
+.group-header img { height: 44px; background: #fff; border-radius: 50%; padding: 4px; }
+.group-total-badge {
+  margin-right: auto;
+  background: rgba(255,255,255,.25);
+  border-radius: 20px;
+  padding: 3px 14px;
+  font-size: 13px;
+}
+
+/* ══ شبكة المواقع ══ */
+.locations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+  padding: 16px;
+  background: #e8f5ee;
+  border: 2px solid #27ae60;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  margin-bottom: 10px;
+}
+.locations-grid.najran-grid {
+  background: #e8f0ff;
+  border-color: #003087;
+}
+.locations-grid.wiqaya-grid {
+  background: #fff8e1;
+  border-color: #c8960c;
+}
+
+/* ══ بطاقة الموقع ══ */
+.location-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.09);
+  overflow: hidden;
+}
+.location-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+}
+.moh-title   { background: linear-gradient(135deg, #006633, #1a8f4a); }
+.najran-title { background: linear-gradient(135deg, #003087, #1e5ab0); }
+.wiqaya-title { background: linear-gradient(135deg, #7b5e00, #b8860b); }
+.location-title img { height: 30px; background: rgba(255,255,255,.9); border-radius: 50%; padding: 2px; flex-shrink: 0; }
+.location-total {
+  margin-right: auto;
+  background: rgba(255,255,255,.25);
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+/* ══ جدول الوظائف ══ */
+.jobs-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.jobs-table thead tr { background: #f0f4ff; }
+.jobs-table th { padding: 7px 10px; text-align: center; font-weight: 700; color: #003087; border-bottom: 2px solid #003087; font-size: 12px; }
+.jobs-table td { padding: 6px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+.jobs-table tr:last-child td { border-bottom: none; }
+.jobs-table tr:hover { background: #f9fbff; }
+.td-num { text-align: center; font-weight: 700; font-size: 15px; color: #003087; }
+.nationality-badge {
+  display: inline-block;
+  background: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #a5d6a7;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.jobs-table .total-row td { background: #eaf2ff; font-weight: 800; color: #003087; border-top: 2px solid #003087; }
+
+/* ══ ملاحظة الجنسية ══ */
+.nationality-note { text-align: center; padding: 6px; color: #555; font-size: 11px; }
+
+/* ══ إجمالي عام ══ */
+.grand-summary {
+  background: #003087;
+  color: #fff;
+  border-radius: 10px;
+  padding: 16px 24px;
+  margin-top: 30px;
+  display: flex;
+  gap: 30px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+.grand-summary .g-item { text-align: center; }
+.grand-summary .g-label { font-size: 12px; opacity: .8; }
+.grand-summary .g-value { font-size: 22px; font-weight: 800; }
+
+/* ══ أزرار ══ */
+.action-bar {
+  text-align: center;
+  padding: 14px;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2px 6px rgba(0,0,0,.08);
+}
+.btn-print {
+  background: linear-gradient(135deg, #003087, #1e5ab0);
+  color: #fff;
+  border: none;
+  padding: 10px 28px;
+  border-radius: 8px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-print:hover { opacity: .9; }
+
+/* ══ طباعة ══ */
+@media print {
+  body { background: #fff !important; }
+  .action-bar { display: none !important; }
+  .page-header { box-shadow: none; }
+  .location-card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
+  .locations-grid { display: grid !important; }
+  .group-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .location-title { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .grand-summary { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+/* ══ استجابة ══ */
+@media (max-width: 700px) {
+  .locations-grid { grid-template-columns: 1fr; }
+  .header-inner { flex-direction: column; gap: 10px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ ترويسة الوزارة ══ -->
+<div class="page-header">
+  <div class="header-wave"></div>
+  <div class="header-wave-top"></div>
+  <div class="header-wave-top2"></div>
+  <div class="header-inner">
+    <div class="header-logo">
+      <img src="moh_logo.png" alt="شعار وزارة الصحة" onerror="this.style.display='none'">
+    </div>
+    <div class="header-text">
+      <h1>المملكة العربية السعودية — وزارة الصحة</h1>
+      <h2>فرع وزارة الصحة بمنطقة نجران</h2>
+      <h3>الإدارة المساعدة للدعم المساند</h3>
+    </div>
+    <div class="header-logo">
+      <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" onerror="this.style.display='none'">
+    </div>
+  </div>
+  <div class="doc-title">
+    بيان بأعداد وفئات العمالة بموقع المكاتب الإدارية والمرافق الصحية<br>
+    <span style="font-size:14px;color:#555;">لمنافسة العقد البديل</span>
+  </div>
+  <div class="header-footer">
+    <span>🌐 www.moh.gov.sa</span>
+    <span>📞 937</span>
+    <span>🐦 SaudiMOH</span>
+    <span>🌐 MOHPortal</span>
+    <span>📸 SaudiMOH</span>
+    <span>🔗 Saudi_Moh</span>
+  </div>
+</div>
+
+<!-- ══ شريط الإجراءات ══ -->
+<div class="action-bar no-print">
+  <button class="btn-print" onclick="window.print()">🖨️ طباعة البيان</button>
+</div>
+
+<div class="container">
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- ═══════ مواقع فرع وزارة الصحة ═══════ -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="group-header group-moh">
+  <img src="moh_logo.png" alt="وزارة الصحة" onerror="this.style.display='none'">
+  مواقع فرع وزارة الصحة بمنطقة نجران
+  <span class="group-total-badge">إجمالي العمالة: 238 عنصر</span>
+</div>
+
+<div class="locations-grid">
+
+  <!-- 1. مبنى فرع وزارة الصحة بنجران -->
+  <div class="location-card">
+    <div class="location-title moh-title">
+      <img src="moh_logo.png" alt="" onerror="this.style.display='none'">
+      مبنى فرع وزارة الصحة بنجران
+      <span class="location-total">63</span>
+    </div>
+    <table class="jobs-table">
+      <thead><tr><th>م</th><th>مسمى الوظيفة</th><th>العدد</th><th>الجنسية</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>فني كهرباء مولدات</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>2</td><td>فني كهرباء</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>3</td><td>فني مصاعد</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>4</td><td>فني سنترال وشبكات</td><td class="td-num">1</td><td><span class="nationality-badge">سعودي</span></td></tr>
+        <tr><td>5</td><td>فني الكترونيات</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>6</td><td>فني آلات تصوير</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>7</td><td>فني تبريد وتكييف عام</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>8</td><td>سباك</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>9</td><td>نجار</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>10</td><td>عامل زراعي</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>11</td><td>مشرف نظافة</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>12</td><td>عامل نظافة</td><td class="td-num">33</td><td></td></tr>
+        <tr><td>13</td><td>عامل ساحات خارجية</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>14</td><td>عاملة نظافة</td><td class="td-num">5</td><td></td></tr>
+        <tr><td>15</td><td>مشرف أمن وسلامة</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>16</td><td>رجل أمن وسلامة</td><td class="td-num">12</td><td></td></tr>
+        <tr class="total-row"><td colspan="2">الإجمالي</td><td class="td-num">63</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 2. المختبر الإقليمي -->
+  <div class="location-card">
+    <div class="location-title moh-title">
+      <img src="moh_logo.png" alt="" onerror="this.style.display='none'">
+      المختبر الإقليمي
+      <span class="location-total">35</span>
+    </div>
+    <table class="jobs-table">
+      <thead><tr><th>م</th><th>مسمى الوظيفة</th><th>العدد</th><th>الجنسية</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>فني كهرباء مولدات</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>2</td><td>فني كهرباء</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>3</td><td>عامل زراعي</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>4</td><td>عامل نظافة</td><td class="td-num">16</td><td></td></tr>
+        <tr><td>5</td><td>عاملة نظافة</td><td class="td-num">8</td><td></td></tr>
+        <tr><td>6</td><td>رجل أمن وسلامة</td><td class="td-num">8</td><td></td></tr>
+        <tr class="total-row"><td colspan="2">الإجمالي</td><td class="td-num">35</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 3. نواقل المرضى والأمراض المشتركة -->
+  <div class="location-card">
+    <div class="location-title moh-title">
+      <img src="moh_logo.png" alt="" onerror="this.style.display='none'">
+      نواقل المرضى والأمراض المشتركة
+      <span class="location-total">12</span>
+    </div>
+    <table class="jobs-table">
+      <thead><tr><th>م</th><th>مسمى الوظيفة</th><th>العدد</th><th>الجنسية</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>عامل نظافة</td><td class="td-num">9</td><td></td></tr>
+        <tr><td>2</td><td>عامل ساحات خارجية</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>3</td><td>رجل أمن وسلامة</td><td class="td-num">2</td><td></td></tr>
+        <tr class="total-row"><td colspan="2">الإجمالي</td><td class="td-num">12</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 4. مبنى الطب الشرعي -->
+  <div class="location-card">
+    <div class="location-title moh-title">
+      <img src="moh_logo.png" alt="" onerror="this.style.display='none'">
+      مبنى الطب الشرعي وثلاجة الموتى بالشرفة
+      <span class="location-total">3</span>
+    </div>
+    <table class="jobs-table">
+      <thead><tr><th>م</th><th>مسمى الوظيفة</th><th>العدد</th><th>الجنسية</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>عامل نظافة</td><td class="td-num">2</td><td></td></tr>
+        <tr><td>2</td><td>رجل أمن وسلامة</td><td class="td-num">1</td><td></td></tr>
+        <tr class="total-row"><td colspan="2">الإجمالي</td><td class="td-num">3</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 5. الأزمات والكوارث -->
+  <div class="location-card">
+    <div class="location-title moh-title">
+      <img src="moh_logo.png" alt="" onerror="this.style.display='none'">
+      الأزمات والكوارث الصحية بفرع وزارة الصحة
+      <span class="location-total">13</span>
+    </div>
+    <table class="jobs-table">
+      <thead><tr><th>م</th><th>مسمى الوظيفة</th><th>العدد</th><th>الجنسية</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>فني كهرباء مولدات</td><td class="td-num">1</td><td><span class="nationality-badge">سعودي</span></td></tr>
+        <tr><td>2</td><td>عامل نظافة</td><td class="td-num">8</td><td></td></tr>
+        <tr><td>3</td><td>رجل أمن وسلامة</td><td class="td-num">4</td><td></td></tr>
+        <tr class="total-row"><td colspan="2">الإجمالي</td><td class="td-num">13</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 6. مبنى مستودعات الشرفة -->
+  <div class="location-card">
+    <div class="location-title moh-title">
+      <img src="moh_logo.png" alt="" onerror="this.style.display='none'">
+      مبنى مستودعات الشرفة
+      <span class="location-total">17</span>
+    </div>
+    <table class="jobs-table">
+      <thead><tr><th>م</th><th>مسمى الوظيفة</th><th>العدد</th><th>الجنسية</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>عامل نظافة</td><td class="td-num">3</td><td></td></tr>
+        <tr><td>2</td><td>عامل تحميل وتنزيل</td><td class="td-num">9</td><td></td></tr>
+        <tr><td>3</td><td>رجل أمن وسلامة</td><td class="td-num">5</td><td></td></tr>
+        <tr class="total-row"><td colspan="2">الإجمالي</td><td class="td-num">17</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 7. إدارة الشئون الهندسية -->
+  <div class="location-card" style="grid-column: 1 / -1;">
+    <div class="location-title moh-title">
+      <img src="moh_logo.png" alt="" onerror="this.style.display='none'">
+      إدارة الشئون الهندسية والفريق الجوال
+      <span class="location-total">81</span>
+    </div>
+    <table class="jobs-table">
+      <thead><tr><th>م</th><th>مسمى الوظيفة</th><th>العدد</th><th>الجنسية</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>مدير موقع</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>2</td><td>مهندس كهرباء قوى</td><td class="td-num">2</td><td></td></tr>
+        <tr><td>3</td><td>مهندس الكترونيات</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>4</td><td>مهندس مدني</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>5</td><td>مهندس ميكانيكا</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>6</td><td>فني كهرباء مولدات</td><td class="td-num">2</td><td><span class="nationality-badge">1 سعودي</span></td></tr>
+        <tr><td>7</td><td>فني كهرباء</td><td class="td-num">4</td><td></td></tr>
+        <tr><td>8</td><td>فني سنترال وشبكات</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>9</td><td>فني الكترونيات</td><td class="td-num">3</td><td><span class="nationality-badge">2 سعودي</span></td></tr>
+        <tr><td>10</td><td>فني آلات تصوير</td><td class="td-num">2</td><td></td></tr>
+        <tr><td>11</td><td>فني تبريد وتكييف عام</td><td class="td-num">3</td><td></td></tr>
+        <tr><td>12</td><td>فني مضخات</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>13</td><td>فني ميكانيكا مولدات</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>14</td><td>بناء ومبلط</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>15</td><td>دهان</td><td class="td-num">3</td><td></td></tr>
+        <tr><td>16</td><td>سباك</td><td class="td-num">6</td><td></td></tr>
+        <tr><td>17</td><td>نجار</td><td class="td-num">3</td><td></td></tr>
+        <tr><td>18</td><td>عامل زراعي</td><td class="td-num">4</td><td></td></tr>
+        <tr><td>19</td><td>فني زراعي</td><td class="td-num">2</td><td></td></tr>
+        <tr><td>20</td><td>مشرف نظافة</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>21</td><td>عامل نظافة</td><td class="td-num">18</td><td></td></tr>
+        <tr><td>22</td><td>عامل ساحات خارجية</td><td class="td-num">5</td><td></td></tr>
+        <tr><td>23</td><td>عامل تحميل وتنزيل</td><td class="td-num">3</td><td></td></tr>
+        <tr><td>24</td><td>مشرف أمن وسلامة</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>25</td><td>رجل أمن وسلامة</td><td class="td-num">11</td><td></td></tr>
+        <tr class="total-row"><td colspan="2">الإجمالي</td><td class="td-num">81</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div><!-- end locations-grid moh -->
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- ═══════ موقع الوقاية ═══════ -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="group-header group-wiqaya" style="margin-top:24px;">
+  <img src="moh_logo.png" alt="وزارة الصحة" onerror="this.style.display='none'">
+  هيئة الصحة العامة — وقاية
+  <span class="group-total-badge">إجمالي العمالة: 12 عنصر</span>
+</div>
+
+<div class="locations-grid wiqaya-grid">
+
+  <!-- 8. مكتب هيئة الصحة العامة (وقاية) -->
+  <div class="location-card">
+    <div class="location-title wiqaya-title">
+      <img src="moh_logo.png" alt="" onerror="this.style.display='none'">
+      مكتب هيئة الصحة العامة (وقاية)
+      <span class="location-total">12</span>
+    </div>
+    <table class="jobs-table">
+      <thead><tr><th>م</th><th>مسمى الوظيفة</th><th>العدد</th><th>الجنسية</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>عامل نظافة</td><td class="td-num">8</td><td></td></tr>
+        <tr><td>2</td><td>عاملة نظافة</td><td class="td-num">2</td><td></td></tr>
+        <tr><td>3</td><td>رجل أمن وسلامة</td><td class="td-num">2</td><td></td></tr>
+        <tr class="total-row"><td colspan="2">الإجمالي</td><td class="td-num">12</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div><!-- end wiqaya-grid -->
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- ═══════ مواقع تجمع نجران الصحي ═══════ -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="group-header group-najran" style="margin-top:24px;">
+  <img src="najran_health_cluster_logo.png" alt="تجمع نجران الصحي" onerror="this.style.display='none'">
+  مواقع تجمع نجران الصحي
+  <span class="group-total-badge">إجمالي العمالة: 92 عنصر</span>
+</div>
+
+<div class="locations-grid najran-grid">
+
+  <!-- 9. سكن الممرضات بالإثايبة -->
+  <div class="location-card">
+    <div class="location-title najran-title">
+      <img src="najran_health_cluster_logo.png" alt="" onerror="this.style.display='none'">
+      سكن الممرضات بالإثايبة
+      <span class="location-total">3</span>
+    </div>
+    <table class="jobs-table">
+      <thead><tr><th>م</th><th>مسمى الوظيفة</th><th>العدد</th><th>الجنسية</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>عاملة نظافة</td><td class="td-num">3</td><td></td></tr>
+        <tr class="total-row"><td colspan="2">الإجمالي</td><td class="td-num">3</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 10. مبنى التجمع الصحي -->
+  <div class="location-card">
+    <div class="location-title najran-title">
+      <img src="najran_health_cluster_logo.png" alt="" onerror="this.style.display='none'">
+      مبنى التجمع الصحي
+      <span class="location-total">36</span>
+    </div>
+    <table class="jobs-table">
+      <thead><tr><th>م</th><th>مسمى الوظيفة</th><th>العدد</th><th>الجنسية</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>فني كهرباء</td><td class="td-num">1</td><td><span class="nationality-badge">سعودي</span></td></tr>
+        <tr><td>2</td><td>فني آلات تصوير</td><td class="td-num">2</td><td></td></tr>
+        <tr><td>3</td><td>مشرف نظافة</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>4</td><td>عامل نظافة</td><td class="td-num">25</td><td></td></tr>
+        <tr><td>5</td><td>عامل ساحات خارجية</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>6</td><td>مشرف أمن وسلامة</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>7</td><td>رجل أمن وسلامة</td><td class="td-num">5</td><td></td></tr>
+        <tr class="total-row"><td colspan="2">الإجمالي</td><td class="td-num">36</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 11. التدريب والابتعاث -->
+  <div class="location-card">
+    <div class="location-title najran-title">
+      <img src="najran_health_cluster_logo.png" alt="" onerror="this.style.display='none'">
+      التدريب والابتعاث
+      <span class="location-total">11</span>
+    </div>
+    <table class="jobs-table">
+      <thead><tr><th>م</th><th>مسمى الوظيفة</th><th>العدد</th><th>الجنسية</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>عامل نظافة</td><td class="td-num">9</td><td></td></tr>
+        <tr><td>2</td><td>رجل أمن وسلامة</td><td class="td-num">2</td><td></td></tr>
+        <tr class="total-row"><td colspan="2">الإجمالي</td><td class="td-num">11</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 12. إدارة مركز التحكم والكوارث بالفيصلية -->
+  <div class="location-card">
+    <div class="location-title najran-title">
+      <img src="najran_health_cluster_logo.png" alt="" onerror="this.style.display='none'">
+      إدارة مركز التحكم والكوارث بالفيصلية
+      <span class="location-total">4</span>
+    </div>
+    <table class="jobs-table">
+      <thead><tr><th>م</th><th>مسمى الوظيفة</th><th>العدد</th><th>الجنسية</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>عامل نظافة</td><td class="td-num">2</td><td></td></tr>
+        <tr><td>2</td><td>عامل ساحات خارجية</td><td class="td-num">2</td><td></td></tr>
+        <tr class="total-row"><td colspan="2">الإجمالي</td><td class="td-num">4</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 13. التموين الطبي -->
+  <div class="location-card">
+    <div class="location-title najran-title">
+      <img src="najran_health_cluster_logo.png" alt="" onerror="this.style.display='none'">
+      التموين الطبي
+      <span class="location-total">33</span>
+    </div>
+    <table class="jobs-table">
+      <thead><tr><th>م</th><th>مسمى الوظيفة</th><th>العدد</th><th>الجنسية</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>فني كهرباء مولدات</td><td class="td-num">2</td><td></td></tr>
+        <tr><td>2</td><td>فني كهرباء</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>3</td><td>فني تبريد وتكييف عام</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>4</td><td>فني مضخات</td><td class="td-num">1</td><td><span class="nationality-badge">سعودي</span></td></tr>
+        <tr><td>5</td><td>فني ميكانيكا مولدات</td><td class="td-num">1</td><td><span class="nationality-badge">سعودي</span></td></tr>
+        <tr><td>6</td><td>عامل زراعي</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>7</td><td>عامل نظافة</td><td class="td-num">14</td><td></td></tr>
+        <tr><td>8</td><td>عاملة نظافة</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>9</td><td>عامل تحميل وتنزيل</td><td class="td-num">4</td><td></td></tr>
+        <tr><td>10</td><td>رجل أمن وسلامة</td><td class="td-num">6</td><td></td></tr>
+        <tr><td>11</td><td>مشرف أمن وسلامة</td><td class="td-num">1</td><td></td></tr>
+        <tr class="total-row"><td colspan="2">الإجمالي</td><td class="td-num">33</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 14. الخدمات العامة -->
+  <div class="location-card">
+    <div class="location-title najran-title">
+      <img src="najran_health_cluster_logo.png" alt="" onerror="this.style.display='none'">
+      الخدمات العامة
+      <span class="location-total">19</span>
+    </div>
+    <table class="jobs-table">
+      <thead><tr><th>م</th><th>مسمى الوظيفة</th><th>العدد</th><th>الجنسية</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>مشرفة نظافة</td><td class="td-num">1</td><td></td></tr>
+        <tr><td>2</td><td>عامل نظافة</td><td class="td-num">11</td><td></td></tr>
+        <tr><td>3</td><td>رجل أمن وسلامة</td><td class="td-num">6</td><td></td></tr>
+        <tr><td>4</td><td>عامل تحميل وتنزيل</td><td class="td-num">1</td><td></td></tr>
+        <tr class="total-row"><td colspan="2">الإجمالي</td><td class="td-num">19</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div><!-- end najran-grid -->
+
+
+<!-- ══ إجمالي عام ══ -->
+<div class="grand-summary">
+  <div class="g-item">
+    <div class="g-label">إجمالي مواقع فرع الوزارة</div>
+    <div class="g-value">238</div>
+  </div>
+  <div style="border-right: 1px solid rgba(255,255,255,.3); height: 40px;"></div>
+  <div class="g-item">
+    <div class="g-label">هيئة الصحة العامة (وقاية)</div>
+    <div class="g-value">12</div>
+  </div>
+  <div style="border-right: 1px solid rgba(255,255,255,.3); height: 40px;"></div>
+  <div class="g-item">
+    <div class="g-label">إجمالي مواقع التجمع الصحي</div>
+    <div class="g-value">92</div>
+  </div>
+  <div style="border-right: 1px solid rgba(255,255,255,.3); height: 40px;"></div>
+  <div class="g-item">
+    <div class="g-label">🏆 الإجمالي الكلي للعناصر</div>
+    <div class="g-value">342</div>
+  </div>
+</div>
+
+</div><!-- container -->
+</body>
+</html>
