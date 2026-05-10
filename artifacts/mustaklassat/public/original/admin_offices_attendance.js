@@ -171,6 +171,31 @@ const DEFAULT_AFFILIATIONS = {
     center_12: 'najran', center_13: 'najran', center_14: 'najran',
 };
 
+// يُرجع بيانات الشعار والعنوان بناءً على انتماء المركز
+function getHeaderForCenter(centerKey) {
+    const affiliations = getAffiliations();
+    const aff = affiliations[centerKey] || DEFAULT_AFFILIATIONS[centerKey] || 'moh';
+    if (aff === 'najran') {
+        return {
+            logoSrc: 'najran_health_cluster_logo.png',
+            h1: 'تجمع نجران الصحي',
+            h3: 'وحدة الصيانة العامة',
+        };
+    } else if (aff === 'wiqaya') {
+        return {
+            logoSrc: 'moh_logo.png',
+            h1: 'هيئة الصحة العامة وقاية',
+            h3: 'المكاتب الإدارية',
+        };
+    } else {
+        return {
+            logoSrc: 'moh_logo.png',
+            h1: 'فرع وزارة الصحة بمنطقة نجران',
+            h3: 'المكاتب الإدارية',
+        };
+    }
+}
+
 // ✅✅✅ [الكود النهائي والمطابق للصورة] ✅✅✅
 function initializeCenterNames() {
     const defaultNames = {
@@ -792,16 +817,20 @@ function printTabContent(elementId) {
     // 4. إزالة الأزرار غير المرغوب فيها من نسخة الجدول
     tableClone.querySelectorAll('.tab-action-buttons').forEach(btn => btn.remove());
 
+    // 4b. تحديد الشعار والعنوان بناءً على انتماء المركز
+    const centerKey = elementId.replace('table-div-', '');
+    const ch = getHeaderForCenter(centerKey);
+
     // 5. بناء الهيدر الرسمي للطباعة من النسخة المستنسخة
     const printableHeader = `
         <div class="printable-header">
-            <img src="${headerClone.querySelector('.logo-left')?.src}" alt="Logo">
+            <img src="${ch.logoSrc}" alt="Logo">
             <div class="header-text">
-                <h1>${headerClone.querySelector('h1')?.textContent}</h1>
-                <h3>${headerClone.querySelector('h3')?.textContent}</h3>
+                <h1>${ch.h1}</h1>
+                <h3>${ch.h3}</h3>
                 <h2>${headerClone.querySelector('h2')?.textContent}</h2>
             </div>
-            <img src="${headerClone.querySelector('.logo-right')?.src}" alt="Logo">
+            <img src="${ch.logoSrc}" alt="Logo">
         </div>
     `;
     
@@ -1362,8 +1391,9 @@ function printSelected() {
         
         const headerClone = document.querySelector('.header-info').cloneNode(true);
         const contractInfoClone = document.querySelector('.page-contract-info-v2').cloneNode(true);
-        const headerHTML = `<div class="printable-header"><img src="${headerClone.querySelector('.logo-left')?.src}" class="logo"><div class="header-text"><h1>${headerClone.querySelector('h1')?.textContent}</h1><h3>${headerClone.querySelector('h3')?.textContent}</h3><h2>${headerClone.querySelector('h2')?.textContent}</h2></div><img src="${headerClone.querySelector('.logo-right')?.src}" class="logo"></div>`;
-        const headerTableHTML = `<table class="header-table"><tr><td><img class="logo" src="${headerClone.querySelector('.logo-left')?.src}"></td><td class="title-box"><h1>${headerClone.querySelector('h1')?.textContent}</h1><h2>${headerClone.querySelector('h3')?.textContent}</h2></td><td><img class="logo" src="${headerClone.querySelector('.logo-right')?.src}"></td></tr></table>`;
+        const ch = getHeaderForCenter(centerKey);
+        const headerHTML = `<div class="printable-header"><img src="${ch.logoSrc}" class="logo"><div class="header-text"><h1>${ch.h1}</h1><h3>${ch.h3}</h3><h2>${headerClone.querySelector('h2')?.textContent}</h2></div><img src="${ch.logoSrc}" class="logo"></div>`;
+        const headerTableHTML = `<table class="header-table"><tr><td><img class="logo" src="${ch.logoSrc}"></td><td class="title-box"><h1>${ch.h1}</h1><h2>${ch.h3}</h2></td><td><img class="logo" src="${ch.logoSrc}"></td></tr></table>`;
 
         // =================================================================
         //  الجزء الأول: طباعة تقرير الحضور (الكود الكامل)
