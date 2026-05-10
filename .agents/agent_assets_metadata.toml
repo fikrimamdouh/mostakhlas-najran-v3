@@ -1,0 +1,14 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "JiXFuU2eQCf84CEldy9QH"
+uri = "file://offline-app/dist/نظام-المستخلصات-Windows-64bit.zip"
+type = "unspecified"
+title = "Windows 64-bit — الأجهزة الحديثة"
+
+[[outputs]]
+id = "Y0x3XgArWUm0uAVWklAY8"
+uri = "file://offline-app/dist/نظام-المستخلصات-Windows-32bit.zip"
+type = "unspecified"
+title = "Windows 32-bit — الأجهزة القديمة"

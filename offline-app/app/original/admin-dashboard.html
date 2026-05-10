@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<script src="/original/offline-user-proxy.js"></script>
+  <script src="/original/offline-auth-check.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة الأدمن — إدارة المستخلصات</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background: #eef2f7;
+      color: #1e293b;
+      min-height: 100vh;
+      direction: rtl;
+    }
+
+    /* ── Header ── */
+    .top-header {
+      background: linear-gradient(135deg, #0d2454 0%, #1e3c72 60%, #2a5298 100%);
+      padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+      height: 62px;
+      box-shadow: 0 3px 16px rgba(13,36,84,.4);
+      position: sticky; top: 0; z-index: 200;
+    }
+    .hdr-brand { display: flex; align-items: center; gap: 12px; }
+    .hdr-brand img { width: 38px; height: 38px; border-radius: 9px; }
+    .hdr-brand h1 { font-size: 16px; font-weight: 800; color: #fff; }
+    .hdr-brand p { font-size: 11px; color: rgba(255,255,255,.65); }
+    .hdr-actions { display: flex; align-items: center; gap: 10px; }
+    .hdr-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 16px; border-radius: 9px;
+      background: rgba(255,255,255,.13); color: #fff;
+      border: 1px solid rgba(255,255,255,.22);
+      font-family: 'Tajawal', sans-serif; font-size: 13px; font-weight: 600;
+      cursor: pointer; text-decoration: none;
+      transition: background .18s;
+    }
+    .hdr-btn:hover { background: rgba(255,255,255,.24); }
+    .admin-badge {
+      background: rgba(212,175,55,.2); border: 1px solid rgba(212,175,55,.45);
+      color: #d4af37; font-size: 11px; font-weight: 700;
+      padding: 4px 12px; border-radius: 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinning { animation: spin .7s linear infinite; }
+
+    /* ── Split layout ── */
+    .split-layout {
+      display: flex;
+      height: calc(100vh - 62px - 44px);
+    }
+
+    /* ── Left panel — hospitals ── */
+    .left-panel {
+      width: 300px; min-width: 250px; flex-shrink: 0;
+      background: #fff;
+      border-left: 1px solid #e2e8f0;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .lp-header {
+      padding: 16px 18px 12px;
+      border-bottom: 2px solid #e8edf5;
+      background: linear-gradient(135deg, #f8faff, #eef4ff);
+    }
+    .lp-header h2 { font-size: 14px; font-weight: 800; color: #1e3c72; display: flex; align-items: center; gap: 8px; }
+    .lp-header p { font-size: 11px; color: #64748b; margin-top: 3px; }
+    .lp-search { padding: 10px 14px 8px; border-bottom: 1px solid #f1f5f9; }
+    .lp-search input {
+      width: 100%; padding: 8px 12px;
+      border: 1.5px solid #e2e8f0; border-radius: 9px;
+      font-family: 'Tajawal', sans-serif; font-size: 13px; color: #334155;
+      background: #f8fafc; outline: none; transition: border-color .2s;
+    }
+    .lp-search input:focus { border-color: #1e3c72; background: #fff; }
+    .hospital-list { flex: 1; overflow-y: auto; padding: 8px 10px; }
+    .hospital-list::-webkit-scrollbar { width: 5px; }
+    .hospital-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .hosp-card {
+      padding: 12px 14px; border-radius: 12px; margin-bottom: 7px;
+      cursor: pointer; border: 2px solid transparent;
+      background: #f8fafc; transition: all .18s;
+    }
+    .hosp-card:hover { background: #eef4ff; border-color: #bfdbfe; }
+    .hosp-card.active { background: linear-gradient(135deg,#1e3c72,#2a5298); border-color: #1e3c72; color: #fff; }
+    .hosp-name { font-size: 13px; font-weight: 700; margin-bottom: 5px; display: flex; align-items: center; gap: 7px; }
+    .hosp-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+    .hosp-tag {
+      font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+      background: rgba(30,60,114,.1); color: #1e3c72;
+    }
+    .hosp-card.active .hosp-tag { background: rgba(255,255,255,.2); color: #fff; }
+    .hosp-tag.t-pending { background: rgba(245,158,11,.15); color: #92400e; }
+    .hosp-card.active .hosp-tag.t-pending { background: rgba(255,200,80,.25); color: #fff5cc; }
+    .hosp-tag.t-approved { background: rgba(22,163,74,.15); color: #14532d; }
+    .hosp-card.active .hosp-tag.t-approved { background: rgba(80,255,160,.2); color: #ccffe0; }
+
+    /* ── Right panel ── */
+    .right-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .rp-header {
+      padding: 14px 22px 10px; background: #fff;
+      border-bottom: 2px solid #e8edf5;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    }
+    .rp-title { font-size: 15px; font-weight: 800; color: #1e3c72; display: flex; align-items: center; gap: 8px; }
+    .rp-subtitle { font-size: 11px; color: #64748b; margin-top: 2px; }
+    .stats-row {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      padding: 10px 18px; background: #f8fafc; border-bottom: 1px solid #e8edf5;
+    }
+    .stat-pill {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
+      cursor: pointer; border: 2px solid transparent; transition: all .18s;
+    }
+    .stat-pill.sp-all { background: #e8edf5; color: #334155; }
+    .stat-pill.sp-submitted { background: #eff6ff; color: #1d4ed8; }
+    .stat-pill.sp-under_review { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+    .stat-pill.sp-approved { background: #dcfce7; color: #14532d; }
+    .stat-pill.sp-rejected { background: #fef2f2; color: #dc2626; }
+    .stat-pill.sp-needs_revision { background: #fffbeb; color: #92400e; }
+    .stat-pill.active { border-color: currentColor; box-shadow: 0 0 0 2px rgba(30,60,114,.1); }
+    .stat-num { font-size: 15px; }
+    .extract-grid { flex: 1; overflow-y: auto; padding: 16px 18px; }
+    .extract-grid::-webkit-scrollbar { width: 6px; }
+    .extract-grid::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+    /* ── Empty / Loading ── */
+    .empty-state { text-align: center; padding: 50px 20px; color: #94a3b8; }
+    .empty-state .es-icon { font-size: 44px; margin-bottom: 14px; }
+    .empty-state h3 { font-size: 17px; font-weight: 700; color: #475569; margin-bottom: 6px; }
+    .empty-state p { font-size: 13px; }
+    .loading-spinner { display: flex; align-items: center; justify-content: center; padding: 50px 20px; }
+    .spinner { width: 36px; height: 36px; border: 4px solid #e2e8f0; border-top-color: #1e3c72; border-radius: 50%; animation: spin .8s linear infinite; }
+
+    /* ── Extract card ── */
+    .extract-card {
+      background: #fff; border-radius: 14px; border: 1.5px solid #e8edf5;
+      padding: 16px 18px; margin-bottom: 12px;
+      transition: all .2s; box-shadow: 0 2px 6px rgba(0,0,0,.04);
+    }
+    .extract-card:hover { box-shadow: 0 6px 18px rgba(30,60,114,.1); border-color: #bfdbfe; transform: translateY(-1px); }
+    .ec-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .ec-info { flex: 1; min-width: 0; }
+    .ec-type { font-size: 14px; font-weight: 800; color: #1e3c72; margin-bottom: 3px; display: flex; align-items: center; gap: 7px; }
+    .ec-company { font-size: 12px; color: #64748b; }
+    .ec-period { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 11px; border-radius: 20px; font-size: 12px; font-weight: 700; white-space: nowrap;
+    }
+    .sb-submitted { background: #eff6ff; color: #1d4ed8; }
+    .sb-under_review { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+    .sb-approved { background: #dcfce7; color: #14532d; }
+    .sb-rejected { background: #fef2f2; color: #dc2626; }
+    .sb-needs_revision { background: #fffbeb; color: #92400e; }
+
+    .ec-amount { font-size: 18px; font-weight: 800; color: #1e3c72; margin-bottom: 8px; }
+    .ec-amount span { font-size: 11px; font-weight: 500; color: #94a3b8; }
+    .ec-meta { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+    .ec-meta-item { font-size: 11px; color: #64748b; display: flex; align-items: center; gap: 4px; }
+    .ec-footer {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 10px; flex-wrap: wrap;
+      border-top: 1px solid #f1f5f9; padding-top: 10px;
+    }
+    .ec-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+    .ec-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 7px 14px; border-radius: 9px;
+      font-family: 'Tajawal', sans-serif; font-size: 12px; font-weight: 600;
+      border: none; cursor: pointer; transition: all .18s;
+    }
+    .ec-btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
+    .ec-btn-preview { background: linear-gradient(135deg,#1e3c72,#2a5298); color: #fff; }
+    .ec-btn-print { background: linear-gradient(135deg,#0f766e,#14b8a6); color: #fff; }
+
+    .ec-status-change { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .status-select {
+      padding: 6px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+      font-family: 'Tajawal', sans-serif; font-size: 12px; font-weight: 600;
+      color: #334155; background: #f8fafc; cursor: pointer; outline: none; transition: border-color .2s;
+    }
+    .status-select:focus { border-color: #1e3c72; }
+    .ec-btn-save { background: linear-gradient(135deg,#065f46,#059669); color: #fff; }
+
+    .admin-notes-area {
+      margin-top: 8px; padding: 10px 12px;
+      background: #fffbeb; border-radius: 9px; border: 1px solid #fde68a;
+    }
+    .admin-notes-area label { font-size: 11px; font-weight: 700; color: #92400e; display: block; margin-bottom: 5px; }
+    .admin-notes-area textarea {
+      width: 100%; padding: 7px 10px;
+      border: 1.5px solid #fde68a; border-radius: 7px;
+      font-family: 'Tajawal', sans-serif; font-size: 12px; color: #1e293b;
+      background: #fff; resize: vertical; min-height: 52px; outline: none;
+    }
+    .admin-notes-area textarea:focus { border-color: #f59e0b; }
+    .existing-notes {
+      font-size: 12px; padding: 7px 10px; border-radius: 7px; margin-bottom: 6px;
+    }
+    .user-notes-box { background: #f0f9ff; border: 1px solid #bae6fd; color: #0369a1; }
+    .admin-prev-notes { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+
+    /* ── Preview dialog ── */
+    .preview-overlay {
+      position: fixed; inset: 0; z-index: 5000;
+      background: rgba(5,20,55,.75); backdrop-filter: blur(6px);
+      display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .preview-overlay.open { display: flex; animation: fadeIn .18s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .preview-card {
+      background: #fff; border-radius: 20px;
+      width: 100%; max-width: 660px; max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 30px 80px rgba(0,30,90,.4);
+      animation: slideUp .22s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes slideUp {
+      from { transform: translateY(28px) scale(.96); opacity: 0; }
+      to   { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .preview-header {
+      background: linear-gradient(135deg,#0d2454,#2a5298);
+      padding: 22px 26px 18px; border-radius: 20px 20px 0 0;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    }
+    .preview-header h2 { font-size: 17px; font-weight: 800; color: #fff; margin-bottom: 3px; }
+    .preview-header p { font-size: 11px; color: rgba(255,255,255,.7); }
+    .preview-close {
+      background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25); color: #fff;
+      width: 32px; height: 32px; border-radius: 50%; font-size: 18px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .preview-close:hover { background: rgba(255,255,255,.3); }
+    .preview-body { padding: 22px 26px; }
+    .preview-section { margin-bottom: 18px; }
+    .preview-section h4 {
+      font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase;
+      letter-spacing: .5px; margin-bottom: 9px; padding-bottom: 5px; border-bottom: 1px solid #f1f5f9;
+    }
+    .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .preview-field label { font-size: 11px; font-weight: 700; color: #94a3b8; display: block; margin-bottom: 2px; }
+    .preview-field p { font-size: 13px; font-weight: 600; color: #1e293b; }
+    .preview-amount-big {
+      font-size: 26px; font-weight: 800; color: #1e3c72;
+      text-align: center; padding: 18px; background: #f0f6ff; border-radius: 12px; margin-bottom: 14px;
+    }
+    .preview-amount-big span { font-size: 13px; color: #64748b; display: block; margin-bottom: 3px; }
+    .preview-notes-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 9px; padding: 10px 14px; font-size: 12px; color: #92400e; }
+    .preview-admin-notes { background: #fef2f2; border: 1px solid #fecaca; border-radius: 9px; padding: 10px 14px; font-size: 12px; color: #dc2626; margin-top: 8px; }
+    .preview-footer {
+      padding: 14px 26px 20px; border-top: 1px solid #f1f5f9;
+      display: flex; gap: 9px; flex-wrap: wrap; justify-content: flex-end;
+    }
+
+    /* ── Print ── */
+    .print-area { display: none; }
+    @media print {
+      body > *:not(.print-area) { display: none !important; }
+      .print-area { display: block !important; }
+      .print-receipt { font-family: 'Tajawal', Arial; direction: rtl; padding: 20px; }
+      .print-receipt h1 { font-size: 18px; text-align: center; margin-bottom: 5px; }
+      .print-receipt .pr-org { text-align: center; font-size: 11px; color: #555; margin-bottom: 18px; }
+      .print-receipt table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+      .print-receipt td, .print-receipt th { border: 1px solid #333; padding: 5px 9px; font-size: 13px; }
+      .print-receipt th { background: #003087; color: #fff; }
+      .print-receipt .pr-notes { background: #fffbeb; border: 1px solid #fde68a; padding: 9px; margin-top: 10px; border-radius: 4px; font-size: 12px; }
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 56px; right: 22px;
+      background: #1e293b; color: #fff; padding: 11px 18px; border-radius: 11px;
+      font-size: 13px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.2);
+      z-index: 9999; transform: translateY(10px); opacity: 0; transition: all .25s; pointer-events: none;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: #065f46; }
+    .toast.error { background: #991b1b; }
+    @media print { #najran-auth-bar { display: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="print-area" id="print-area"></div>
+
+  <header class="top-header no-print">
+    <div class="hdr-brand">
+      <img src="/original/najran_health_cluster_logo.png" alt="شعار" onerror="this.style.display='none'">
+      <div>
+        <h1>تجمع نجران الصحي</h1>
+        <p>وحدة الصيانة العامة — لوحة الأدمن</p>
+      </div>
+    </div>
+    <div class="hdr-actions">
+      <span class="admin-badge" id="admin-role-badge">مدير</span>
+      <button class="hdr-btn" onclick="sendReminder()" id="remind-btn" title="إرسال تذكير للمدير بالمستخلصات المعلقة">
+        <i class="fas fa-bell"></i> تذكير
+      </button>
+      <button class="hdr-btn" onclick="exportCsvAdmin()" title="تصدير جميع المستخلصات CSV">
+        <i class="fas fa-file-csv"></i> تصدير
+      </button>
+      <button class="hdr-btn" onclick="refreshData()">
+        <i class="fas fa-sync-alt" id="refresh-icon"></i> تحديث
+      </button>
+      <a href="/dashboard" class="hdr-btn"><i class="fas fa-home"></i> الرئيسية</a>
+    </div>
+  </header>
+
+  <div class="split-layout">
+    <!-- LEFT: Hospitals -->
+    <aside class="left-panel">
+      <div class="lp-header">
+        <h2><i class="fas fa-hospital-alt" style="color:#d4af37"></i> المستشفيات والجهات</h2>
+        <p id="hosp-count-label">جاري التحميل...</p>
+      </div>
+      <div class="lp-search">
+        <input type="text" id="hosp-search" placeholder="بحث عن مستشفى..." oninput="filterHospitals()">
+      </div>
+      <div class="hospital-list" id="hospital-list">
+        <div class="loading-spinner"><div class="spinner"></div></div>
+      </div>
+    </aside>
+
+    <!-- RIGHT: Extracts -->
+    <div class="right-panel">
+      <div class="rp-header">
+        <div>
+          <div class="rp-title" id="rp-title"><i class="fas fa-file-alt"></i> اختر مستشفى</div>
+          <div class="rp-subtitle" id="rp-subtitle">اضغط على مستشفى لعرض مستخلصاتها</div>
+        </div>
+      </div>
+
+      <div class="stats-row" id="stats-row" style="display:none">
+        <span class="stat-pill sp-all active" id="sp-all" onclick="filterExtracts('all')">
+          <span class="stat-num" id="cnt-all">0</span> الكل
+        </span>
+        <span class="stat-pill sp-submitted" id="sp-submitted" onclick="filterExtracts('submitted')">
+          <span class="stat-num" id="cnt-submitted">0</span> مرفوعة
+        </span>
+        <span class="stat-pill sp-under_review" id="sp-under_review" onclick="filterExtracts('under_review')">
+          <span class="stat-num" id="cnt-under_review">0</span> قيد المراجعة
+        </span>
+        <span class="stat-pill sp-approved" id="sp-approved" onclick="filterExtracts('approved')">
+          <span class="stat-num" id="cnt-approved">0</span> معتمدة
+        </span>
+        <span class="stat-pill sp-rejected" id="sp-rejected" onclick="filterExtracts('rejected')">
+          <span class="stat-num" id="cnt-rejected">0</span> مرفوضة
+        </span>
+        <span class="stat-pill sp-needs_revision" id="sp-needs_revision" onclick="filterExtracts('needs_revision')">
+          <span class="stat-num" id="cnt-needs_revision">0</span> تحتاج تعديل
+        </span>
+      </div>
+
+      <div class="extract-grid" id="extract-grid">
+        <div class="empty-state">
+          <div class="es-icon">🏥</div>
+          <h3>اختر مستشفى</h3>
+          <p>اضغط على أي جهة في القائمة اليسرى لعرض مستخلصاتها</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview dialog -->
+  <div class="preview-overlay" id="preview-overlay" onclick="closePreview(event)">
+    <div class="preview-card" id="preview-card">
+      <div class="preview-header">
+        <div>
+          <h2 id="pv-title">معاينة المستخلص</h2>
+          <p id="pv-subtitle"></p>
+        </div>
+        <button class="preview-close" onclick="closePreviewDirect()">×</button>
+      </div>
+      <div class="preview-body" id="preview-body"></div>
+      <div class="preview-footer">
+        <button class="ec-btn ec-btn-print" onclick="printCurrentPreview()">
+          <i class="fas fa-print"></i> طباعة
+        </button>
+        <button class="ec-btn" style="background:#e2e8f0;color:#334155" onclick="closePreviewDirect()">
+          <i class="fas fa-times"></i> إغلاق
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    var allExtracts = [];
+    var selectedHospital = null;
+    var currentFilter = 'all';
+    var currentPreviewExtract = null;
+
+    var STATUS_META = {
+      'submitted':      { label: 'مرفوعة',        cls: 'sb-submitted',      icon: '📤' },
+      'under_review':   { label: 'قيد المراجعة', cls: 'sb-under_review',   icon: '🔍' },
+      'approved':       { label: 'معتمدة',         cls: 'sb-approved',       icon: '✅' },
+      'rejected':       { label: 'مرفوضة',         cls: 'sb-rejected',       icon: '❌' },
+      'needs_revision': { label: 'تحتاج تعديل',   cls: 'sb-needs_revision', icon: '✏️' }
+    };
+
+    function getSession() {
+      try { return JSON.parse(localStorage.getItem('najran_session') || '{}'); } catch { return {}; }
+    }
+    function isAdmin() {
+      var s = getSession();
+      return s.role === 'admin' || s.role === 'supervisor';
+    }
+    function getToken() { return getSession().clerkToken || ''; }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      var session = getSession();
+      if (!isAdmin()) {
+        document.body.innerHTML =
+          '<div style="text-align:center;padding:80px 20px;font-family:Tajawal,sans-serif;direction:rtl">' +
+          '<div style="font-size:48px;margin-bottom:16px">🔒</div>' +
+          '<h2 style="color:#dc2626;font-size:22px;margin-bottom:8px">غير مصرح لك</h2>' +
+          '<p style="color:#64748b;margin-bottom:20px">هذه الصفحة للمدراء والمشرفين فقط</p>' +
+          '<a href="/dashboard" style="background:#1e3c72;color:#fff;padding:10px 24px;border-radius:10px;text-decoration:none;font-weight:bold">العودة للرئيسية</a>' +
+          '</div>';
+        return;
+      }
+      var badge = document.getElementById('admin-role-badge');
+      if (badge) badge.textContent = session.role === 'supervisor' ? 'مشرف' : 'مدير';
+      loadData();
+    });
+
+    async function loadData() {
+      var token = getToken();
+      if (!token) { window.location.href = '/sign-in'; return; }
+      var icon = document.getElementById('refresh-icon');
+      if (icon) icon.classList.add('spinning');
+      try {
+        var res = await fetch('/api/submitted-extracts', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.status === 401 || res.status === 403) { window.location.href = '/sign-in'; return; }
+        if (!res.ok) throw new Error('fetch failed');
+        var data = await res.json();
+        allExtracts = data.extracts || [];
+        renderHospitals();
+        if (selectedHospital) renderExtracts(selectedHospital);
+      } catch (e) {
+        showToast('تعذر تحميل البيانات', 'error');
+      } finally {
+        if (icon) icon.classList.remove('spinning');
+      }
+    }
+
+    function refreshData() { loadData(); }
+
+    /* ─── Hospitals ─── */
+    function getHospitals() {
+      var map = {};
+      allExtracts.forEach(function (e) {
+        var h = ((e.hospitalName || e.submittedByHospital || 'غير محدد') + '').trim();
+        if (!map[h]) map[h] = { name: h, extracts: [] };
+        map[h].extracts.push(e);
+      });
+      return Object.values(map).sort(function (a, b) { return b.extracts.length - a.extracts.length; });
+    }
+
+    function renderHospitals() {
+      var search = (document.getElementById('hosp-search').value || '').toLowerCase().trim();
+      var hospitals = getHospitals().filter(function (h) {
+        return !search || h.name.toLowerCase().includes(search);
+      });
+      var label = document.getElementById('hosp-count-label');
+      if (label) label.textContent = hospitals.length + ' جهة — ' + allExtracts.length + ' مستخلص';
+      var list = document.getElementById('hospital-list');
+      if (!hospitals.length) {
+        list.innerHTML = '<div class="empty-state" style="padding:30px 10px"><div class="es-icon" style="font-size:30px">🔍</div><p>لا توجد نتائج</p></div>';
+        return;
+      }
+      list.innerHTML = hospitals.map(function (h) {
+        var approved = h.extracts.filter(function (e) { return e.status === 'approved'; }).length;
+        var pending = h.extracts.filter(function (e) { return ['submitted','under_review','needs_revision'].includes(e.status); }).length;
+        var total = h.extracts.reduce(function (s, e) { return s + (parseFloat(e.totalAmount) || 0); }, 0);
+        var isActive = selectedHospital === h.name;
+        return '<div class="hosp-card ' + (isActive ? 'active' : '') + '" onclick="selectHospital(' + JSON.stringify(h.name) + ')">' +
+          '<div class="hosp-name"><span>🏥</span>' + esc(h.name) + '</div>' +
+          '<div class="hosp-meta">' +
+            '<span class="hosp-tag">' + h.extracts.length + ' مستخلص</span>' +
+            (pending ? '<span class="hosp-tag t-pending">' + pending + ' معلقة</span>' : '') +
+            (approved ? '<span class="hosp-tag t-approved">' + approved + ' معتمدة</span>' : '') +
+            (total > 0 ? '<span class="hosp-tag">' + fmtAmt(total) + ' ر.س</span>' : '') +
+          '</div></div>';
+      }).join('');
+    }
+
+    function filterHospitals() { renderHospitals(); }
+
+    function selectHospital(name) {
+      selectedHospital = name;
+      currentFilter = 'all';
+      renderHospitals();
+      renderExtracts(name);
+    }
+
+    /* ─── Extracts ─── */
+    function renderExtracts(hospitalName) {
+      var rpt = document.getElementById('rp-title');
+      var rps = document.getElementById('rp-subtitle');
+      var statsRow = document.getElementById('stats-row');
+      if (rpt) rpt.innerHTML = '<i class="fas fa-hospital-alt"></i> ' + esc(hospitalName);
+
+      var hospExtracts = allExtracts.filter(function (e) {
+        return ((e.hospitalName || e.submittedByHospital || 'غير محدد') + '').trim() === hospitalName;
+      });
+      if (rps) rps.textContent = hospExtracts.length + ' مستخلص';
+      if (statsRow) statsRow.style.display = 'flex';
+
+      // Update stat pills
+      var statKeys = ['submitted','under_review','approved','rejected','needs_revision'];
+      var cntAll = document.getElementById('cnt-all');
+      if (cntAll) cntAll.textContent = hospExtracts.length;
+      statKeys.forEach(function (k) {
+        var el = document.getElementById('cnt-' + k);
+        if (el) el.textContent = hospExtracts.filter(function (e) { return e.status === k; }).length;
+      });
+      document.querySelectorAll('.stat-pill').forEach(function (p) { p.classList.remove('active'); });
+      var activeP = document.getElementById('sp-' + currentFilter) || document.getElementById('sp-all');
+      if (activeP) activeP.classList.add('active');
+
+      var filtered = currentFilter === 'all' ? hospExtracts : hospExtracts.filter(function (e) { return e.status === currentFilter; });
+      var grid = document.getElementById('extract-grid');
+      if (!filtered.length) {
+        grid.innerHTML = '<div class="empty-state"><div class="es-icon">📋</div><h3>لا توجد مستخلصات</h3><p>' +
+          (currentFilter === 'all' ? 'لم يتم رفع أي مستخلصات لهذه الجهة' : 'لا يوجد مستخلصات بهذه الحالة') +
+          '</p></div>';
+        return;
+      }
+      grid.innerHTML = filtered.map(function (e) { return buildCard(e); }).join('');
+    }
+
+    function filterExtracts(f) {
+      currentFilter = f;
+      document.querySelectorAll('.stat-pill').forEach(function (p) { p.classList.remove('active'); });
+      var ap = document.getElementById('sp-' + f);
+      if (ap) ap.classList.add('active');
+      if (selectedHospital) renderExtracts(selectedHospital);
+    }
+
+    function buildCard(e) {
+      var st = STATUS_META[e.status] || { label: e.status, cls: 'sb-submitted', icon: '📄' };
+      var admin = isAdmin();
+      var canChange = admin;
+
+      var userNotes = e.notes
+        ? '<div class="existing-notes user-notes-box"><strong>ملاحظات المستخدم:</strong> ' + esc(e.notes) + '</div>' : '';
+      var adminPrevNotes = e.adminNotes
+        ? '<div class="existing-notes admin-prev-notes"><strong>ملاحظة الأدمن:</strong> ' + esc(e.adminNotes) + '</div>' : '';
+
+      var statusChange = canChange
+        ? '<div class="ec-status-change">' +
+            '<select class="status-select" id="ss-' + e.id + '">' +
+              '<option value="submitted"' + (e.status==='submitted'?' selected':'') + '>مرفوعة</option>' +
+              '<option value="under_review"' + (e.status==='under_review'?' selected':'') + '>قيد المراجعة</option>' +
+              '<option value="approved"' + (e.status==='approved'?' selected':'') + '>معتمدة ✅</option>' +
+              '<option value="rejected"' + (e.status==='rejected'?' selected':'') + '>مرفوضة ❌</option>' +
+              '<option value="needs_revision"' + (e.status==='needs_revision'?' selected':'') + '>تحتاج تعديل ✏️</option>' +
+            '</select>' +
+            '<button class="ec-btn ec-btn-save" onclick="saveStatus(' + e.id + ')">' +
+              '<i class="fas fa-check"></i> حفظ' +
+            '</button>' +
+          '</div>' +
+          '<div class="admin-notes-area" style="margin-top:7px">' +
+            '<label><i class="fas fa-sticky-note"></i> ملاحظة للمستخدم (ستظهر له)</label>' +
+            '<textarea id="ni-' + e.id + '" placeholder="اكتب ملاحظة اختيارية...">' + esc(e.adminNotes || '') + '</textarea>' +
+          '</div>'
+        : '';
+
+      return '<div class="extract-card" id="ec-' + e.id + '">' +
+        '<div class="ec-top">' +
+          '<div class="ec-info">' +
+            '<div class="ec-type"><i class="fas fa-file-contract" style="color:#1e3c72;font-size:12px"></i>' + esc(e.extractType || 'مستخلص') + '</div>' +
+            '<div class="ec-company">' + esc(e.companyName || '—') + (e.contractNumber ? ' • عقد: ' + esc(e.contractNumber) : '') + '</div>' +
+            '<div class="ec-period"><i class="fas fa-calendar-alt"></i> ' + esc(e.periodMonth || '—') + ' • ' + esc(e.submittedByName || e.submittedByEmail || '—') + '</div>' +
+          '</div>' +
+          '<span class="status-badge ' + st.cls + '">' + st.icon + ' ' + st.label + '</span>' +
+        '</div>' +
+        '<div class="ec-amount">' + fmtAmt(parseFloat(e.totalAmount) || 0) + ' <span>ريال سعودي</span></div>' +
+        '<div class="ec-meta">' +
+          '<span class="ec-meta-item"><i class="fas fa-calendar"></i> ' + fmtDate(e.createdAt) + '</span>' +
+          (e.approvedBy ? '<span class="ec-meta-item"><i class="fas fa-user-check"></i> ' + esc(e.approvedBy) + '</span>' : '') +
+        '</div>' +
+        userNotes + adminPrevNotes +
+        '<div class="ec-footer">' +
+          '<div class="ec-actions">' +
+            '<button class="ec-btn ec-btn-preview" onclick=\'openPreview(' + JSON.stringify(JSON.stringify(e)) + ')\'><i class="fas fa-eye"></i> معاينة</button>' +
+            '<button class="ec-btn ec-btn-print" onclick=\'printExtract(' + JSON.stringify(JSON.stringify(e)) + ')\'><i class="fas fa-print"></i> طباعة</button>' +
+          '</div>' +
+          statusChange +
+        '</div>' +
+      '</div>';
+    }
+
+    /* ─── Save status ─── */
+    async function saveStatus(id) {
+      var sel = document.getElementById('ss-' + id);
+      var ni = document.getElementById('ni-' + id);
+      if (!sel) return;
+      var newStatus = sel.value;
+      var adminNotes = ni ? ni.value.trim() : '';
+      var token = getToken();
+      try {
+        var body = { status: newStatus };
+        if (adminNotes) body.adminNotes = adminNotes;
+        var res = await fetch('/api/submitted-extracts/' + id + '/status', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) throw new Error();
+        showToast('تم تحديث الحالة بنجاح ✓', 'success');
+        await loadData();
+      } catch (e) {
+        showToast('فشل تحديث الحالة', 'error');
+      }
+    }
+
+    /* ─── Preview ─── */
+    function openPreview(eJson) {
+      var e = JSON.parse(eJson);
+      currentPreviewExtract = e;
+      var st = STATUS_META[e.status] || { label: e.status, cls: 'sb-submitted', icon: '📄' };
+      document.getElementById('pv-title').textContent = e.extractType || 'مستخلص';
+      document.getElementById('pv-subtitle').textContent = (e.hospitalName || e.submittedByHospital || '') + ' • ' + (e.periodMonth || '');
+      document.getElementById('preview-body').innerHTML =
+        '<div class="preview-amount-big"><span>إجمالي المستخلص</span>' + fmtAmt(parseFloat(e.totalAmount) || 0) + ' ريال سعودي</div>' +
+        '<div class="preview-section"><h4>معلومات المستخلص</h4>' +
+        '<div class="preview-grid">' +
+          '<div class="preview-field"><label>نوع المستخلص</label><p>' + esc(e.extractType || '—') + '</p></div>' +
+          '<div class="preview-field"><label>الحالة</label><p><span class="status-badge ' + st.cls + '">' + st.icon + ' ' + st.label + '</span></p></div>' +
+          '<div class="preview-field"><label>اسم الشركة</label><p>' + esc(e.companyName || '—') + '</p></div>' +
+          '<div class="preview-field"><label>رقم العقد</label><p>' + esc(e.contractNumber || '—') + '</p></div>' +
+          '<div class="preview-field"><label>الجهة / المستشفى</label><p>' + esc(e.hospitalName || e.submittedByHospital || '—') + '</p></div>' +
+          '<div class="preview-field"><label>فترة المستخلص</label><p>' + esc(e.periodMonth || '—') + '</p></div>' +
+          '<div class="preview-field"><label>رُفع بواسطة</label><p>' + esc(e.submittedByName || e.submittedByEmail || '—') + '</p></div>' +
+          '<div class="preview-field"><label>تاريخ الرفع</label><p>' + fmtDate(e.createdAt) + '</p></div>' +
+          (e.approvedBy ? '<div class="preview-field"><label>اعتمد بواسطة</label><p>' + esc(e.approvedBy) + '</p></div>' : '') +
+          (e.approvedAt ? '<div class="preview-field"><label>تاريخ الاعتماد</label><p>' + fmtDate(e.approvedAt) + '</p></div>' : '') +
+        '</div></div>' +
+        (e.notes ? '<div class="preview-section"><h4>ملاحظات المستخدم</h4><div class="preview-notes-box">' + esc(e.notes) + '</div></div>' : '') +
+        (e.adminNotes ? '<div class="preview-section"><h4>ملاحظات الأدمن</h4><div class="preview-admin-notes">' + esc(e.adminNotes) + '</div></div>' : '');
+      document.getElementById('preview-overlay').classList.add('open');
+    }
+
+    function closePreview(evt) {
+      if (evt.target === document.getElementById('preview-overlay')) closePreviewDirect();
+    }
+    function closePreviewDirect() {
+      document.getElementById('preview-overlay').classList.remove('open');
+      currentPreviewExtract = null;
+    }
+
+    /* ─── Print ─── */
+    function printCurrentPreview() { if (currentPreviewExtract) printExtract(JSON.stringify(currentPreviewExtract)); }
+
+    function printExtract(eJson) {
+      var e = JSON.parse(eJson);
+      var st = STATUS_META[e.status] || { label: e.status, icon: '📄' };
+      document.getElementById('print-area').innerHTML =
+        '<div class="print-receipt">' +
+          '<h1>تجمع نجران الصحي</h1>' +
+          '<p class="pr-org">وحدة الصيانة العامة — نظام إدارة المستخلصات</p>' +
+          '<table>' +
+            '<tr><th colspan="2">بيانات المستخلص</th></tr>' +
+            '<tr><td>نوع المستخلص</td><td>' + esc(e.extractType || '—') + '</td></tr>' +
+            '<tr><td>الحالة</td><td>' + st.icon + ' ' + st.label + '</td></tr>' +
+            '<tr><td>اسم الشركة</td><td>' + esc(e.companyName || '—') + '</td></tr>' +
+            '<tr><td>رقم العقد</td><td>' + esc(e.contractNumber || '—') + '</td></tr>' +
+            '<tr><td>الجهة / المستشفى</td><td>' + esc(e.hospitalName || e.submittedByHospital || '—') + '</td></tr>' +
+            '<tr><td>فترة المستخلص</td><td>' + esc(e.periodMonth || '—') + '</td></tr>' +
+            '<tr><td>إجمالي المبلغ</td><td><strong>' + fmtAmt(parseFloat(e.totalAmount) || 0) + ' ريال سعودي</strong></td></tr>' +
+            '<tr><td>رُفع بواسطة</td><td>' + esc(e.submittedByName || e.submittedByEmail || '—') + '</td></tr>' +
+            '<tr><td>تاريخ الرفع</td><td>' + fmtDate(e.createdAt) + '</td></tr>' +
+            (e.approvedBy ? '<tr><td>اعتمد بواسطة</td><td>' + esc(e.approvedBy) + '</td></tr>' : '') +
+            (e.approvedAt ? '<tr><td>تاريخ الاعتماد</td><td>' + fmtDate(e.approvedAt) + '</td></tr>' : '') +
+          '</table>' +
+          (e.notes ? '<div class="pr-notes"><strong>ملاحظات:</strong> ' + esc(e.notes) + '</div>' : '') +
+          (e.adminNotes ? '<div class="pr-notes" style="border-color:#fca5a5;background:#fef2f2"><strong>ملاحظات الأدمن:</strong> ' + esc(e.adminNotes) + '</div>' : '') +
+          '<p style="text-align:center;margin-top:18px;font-size:11px;color:#94a3b8">طُبع بتاريخ: ' + new Date().toLocaleDateString('ar-SA', {year:'numeric',month:'long',day:'numeric'}) + '</p>' +
+        '</div>';
+      window.print();
+    }
+
+    /* ─── Export CSV ─── */
+    async function exportCsvAdmin() {
+      var token = getToken();
+      if (!token) { showToast('يجب تسجيل الدخول أولاً', 'error'); return; }
+      try {
+        showToast('جاري تحضير الملف...', 'info');
+        var res = await fetch('/api/export/submitted-extracts', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) throw new Error();
+        var blob = await res.blob();
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'مستخلصات_' + new Date().toISOString().slice(0,10) + '.csv';
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('✓ تم التصدير بنجاح', 'success');
+      } catch { showToast('تعذر التصدير', 'error'); }
+    }
+
+    /* ─── Send Reminder ─── */
+    async function sendReminder() {
+      var token = getToken();
+      if (!token) { showToast('يجب تسجيل الدخول أولاً', 'error'); return; }
+      var btn = document.getElementById('remind-btn');
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري...'; }
+      try {
+        var res = await fetch('/api/remind', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'both' })
+        });
+        var data = await res.json();
+        if (data.sent) {
+          showToast('✓ تم إرسال التذكير — ' + data.count + ' مستخلص معلق', 'success');
+        } else {
+          showToast(data.message || 'لا توجد مستخلصات معلقة', 'info');
+        }
+      } catch { showToast('تعذر الإرسال', 'error'); }
+      finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bell"></i> تذكير'; }
+      }
+    }
+
+    /* ─── Helpers ─── */
+    function fmtDate(d) {
+      if (!d) return '—';
+      try { return new Date(d).toLocaleDateString('ar-SA', {year:'numeric',month:'long',day:'numeric'}); }
+      catch (e) { return String(d); }
+    }
+    function fmtAmt(n) { return n.toLocaleString('ar-SA', {minimumFractionDigits:2,maximumFractionDigits:2}); }
+    function esc(s) {
+      if (!s) return '';
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+    function showToast(msg, type) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast show ' + (type || '');
+      setTimeout(function () { t.className = 'toast'; }, 2800);
+    }
+  </script>
+</body>
+</html>

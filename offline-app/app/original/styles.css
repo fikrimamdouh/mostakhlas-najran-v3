@@ -1,0 +1,1575 @@
+/* Copied and adapted from settings_main.html and original styles.css */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Tajawal', sans-serif;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: #ffffff; /* Default text color for body, might be overridden */
+    min-height: 100vh;
+    position: relative;
+    direction: rtl; /* Ensure RTL is set on body */
+}
+
+#particles-js-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+
+.container {
+    max-width: 95%; /* Adjusted for potentially wider tables */
+    width: 95%;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+    backdrop-filter: blur(10px);
+    margin: 20px auto; /* Added some margin */
+}
+.extract-details {
+    margin: 10px auto;
+    padding: 10px;
+    text-align: center;
+}
+
+.extract-details-text {
+    color: #0000FF; /* لون أزرق للنص الأساسي */
+    font-size: 16px;
+    font-weight: bold;
+    margin: 0;
+}
+
+.extract-details-text span {
+    color: #2a5298; /* لون أزرق غامق للقيم الديناميكية زي الشهر والتواريخ */
+    font-weight: 700;
+}
+
+/* Header styles from settings_main.html */
+.header-info {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    position: relative; /* For logo positioning */
+}
+
+.header-info .logo-right, .header-info .logo-left {
+    width: 100px; /* Slightly larger logos */
+    height: auto;
+    transition: transform 0.5s ease, filter 0.3s ease;
+    filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.3));
+    position: absolute; /* Use absolute for precise placement */
+    top: 10px;
+}
+
+.header-info .logo-right {
+    right: 20px;
+}
+
+.header-info .logo-left {
+    left: 20px;
+}
+
+.header-info .logo-right:hover, .header-info .logo-left:hover {
+    transform: rotate(10deg) scale(1.2);
+    filter: drop-shadow(5px 5px 15px rgba(0, 0, 0, 0.5));
+}
+
+.header-info h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #2a5298;
+    margin: 10px 0; /* Adjusted margin */
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.header-info h3 {
+    font-size: 20px;
+    font-weight: 500;
+    color: #1e3c72;
+    margin: 5px 0;
+}
+
+.header-info h2 { /* This is the main page title, e.g., "بيان بالحضور والغياب" */
+    font-size: 26px; /* Made it prominent */
+    font-weight: 700; /* Bolder */
+    color: #d4af37; /* Gold color */
+    margin: 10px 0 15px 0; /* Adjusted margin */
+}
+
+.header-info .date { /* For current-date-time */
+    font-size: 16px; /* Larger date */
+    color: #7f8c8d;
+    margin-top: 10px;
+}
+
+/* Side data for contract info, from settings_main.html */
+.side-data {
+    margin: 0 auto 20px auto; /* Centered and with bottom margin */
+    padding: 15px;
+    background: rgba(30, 60, 114, 0.05); /* Light background */
+    border-radius: 10px;
+    border: 1px solid rgba(30, 60, 114, 0.2);
+    max-width: 600px; /* Limit width for better readability */
+}
+
+.side-data .contract-data p { /* Styles for contract details */
+    font-size: 15px;
+    color: #1e3c72;
+    margin: 8px 0;
+    line-height: 1.6;
+}
+
+.side-data .contract-data span { /* For the actual data values */
+    font-weight: bold;
+    color: #2a5298; /* Darker blue for values */
+}
+
+
+/* Nav-bar styles from settings_main.html */
+.nav-bar {
+    display: flex;
+    justify-content: center; /* Center the nav items */
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 30px; /* Increased margin */
+}
+
+.nav-bar .dropdown { /* Container for the select */
+    position: relative;
+    display: inline-block;
+}
+
+.nav-bar select {
+    padding: 12px 25px;
+    border: none;
+    font-size: 16px;
+    border-radius: 10px;
+    background: linear-gradient(145deg, #2a5298, #1e3c72);
+    color: #ffffff;
+    font-family: 'Tajawal', sans-serif;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 220px;
+    text-align: center;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+    background-repeat: no-repeat;
+    background-position: left 15px center;
+    background-size: 12px;
+    padding-left: 40px;
+}
+
+.nav-bar select:focus {
+    background: linear-gradient(145deg, #d4af37, #b8962e);
+    color: #2c3e50;
+    outline: none;
+}
+
+.nav-bar select:hover {
+    background: linear-gradient(145deg, #d4af37, #b8962e);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.department-table {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: inset 0 0 10px rgba(30, 60, 114, 0.1), 0 5px 15px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(30, 60, 114, 0.3);
+    margin-bottom: 25px;
+    position: relative;
+    text-align: right;
+    page-break-inside: avoid;
+}
+
+.department-table h3 {
+    font-size: 22px;
+    color: #d4af37;
+    margin-bottom: 15px;
+    text-align: center;
+    border-bottom: 2px solid #d4af37;
+    padding-bottom: 10px;
+}
+
+.department-table .total {
+    margin-bottom: 15px;
+    font-size: 15px;
+    color: #1e3c72;
+    font-weight: 500;
+    text-align: center;
+    padding: 10px;
+    background-color: rgba(212, 175, 55, 0.1);
+    border-radius: 8px;
+}
+#cleaning-status-totals, #electricity-status-totals, #agriculture-status-totals, #civil-works-status-totals, #mechanical-status-totals, #laundry-status-totals, #patient-services-status-totals {
+    font-size: 13px;
+    margin-top: 5px;
+    color: #2a5298;
+}
+
+
+.department-table table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.department-table table th,
+.department-table table td {
+    padding: 8px;
+    border: 1px solid #b0c4de;
+    text-align: center;
+    font-size: 13px;
+    color: #1e3c72;
+    white-space: nowrap;
+}
+
+.department-table table th {
+    background: linear-gradient(145deg, #2a5298, #1e3c72);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.department-table table th.day-header {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    padding: 5px 2px;
+    font-size: 11px;
+}
+
+.department-table table th.job-title,
+.department-table table th.employee-name {
+    min-width: 120px;
+}
+
+.department-table table select {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+    color: inherit;
+    text-align: center;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+}
+.department-table table select:focus {
+    outline: 1px solid #d4af37;
+    border-color: #d4af37;
+}
+
+.department-table table tbody tr:nth-child(odd) {
+    background-color: rgba(230, 230, 250, 0.3);
+}
+
+.department-table table tbody tr:nth-child(even) {
+    background-color: rgba(240, 248, 255, 0.3);
+}
+.department-table table tbody tr:hover {
+    background-color: rgba(212, 175, 55, 0.15);
+}
+
+
+.department-table .empty-message {
+    text-align: center;
+    font-size: 16px;
+    color: #d4af37;
+    margin-top: 20px;
+    padding: 15px;
+    background-color: rgba(30,60,114,0.1);
+    border-radius: 8px;
+}
+
+.department-table .zoom-buttons, .action-buttons { /* Unified button container style */
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+/* ================================================================ */
+/* ✅ 1. كود تنسيق الأزرار الموحد والنهائي (من الملف الأول) ✅ */
+/* ================================================================ */
+
+/* حاوية الأزرار الرئيسية */
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 25px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+/* التصميم الأساسي لكل الأزرار */
+.action-buttons button, .dialog button, .zoom-buttons button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 1em;
+    font-weight: 700;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    text-decoration: none;
+    background-color: #007bff; /* اللون الأزرق الافتراضي */
+    color: white;
+}
+
+/* تأثير المرور (Hover) */
+.action-buttons button:hover, .dialog button:hover, .zoom-buttons button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* تخصيص ألوان أزرار معينة (باستخدام الألوان من الملف الأول) */
+.action-buttons button[style*="#17a2b8"] { background-color: #17a2b8 !important; }
+.action-buttons button[style*="#6f42c1"] { background-color: #6f42c1 !important; }
+.action-buttons button[style*="#28a745"] { background-color: #28a745 !important; }
+.action-buttons button[style*="#ffc107"] { background-color: #ffc107 !important; color: #212529 !important; }
+.action-buttons button[style*="#dc3545"] { background-color: #dc3545 !important; }
+
+/* ألوان أزرار النوافذ المنبثقة (تأكيد، إلغاء) */
+.dialog .confirm-btn, .dialog .btn-success { background-color: #28a745 !important; }
+.dialog .cancel-btn, .dialog .btn-secondary { background-color: #6c757d !important; }
+
+.department-table .zoom-buttons button:hover,
+.action-buttons button:hover,
+.dialog button:hover { /* طبق الهوفر على أزرار الديالوج أيضاً */
+    background: linear-gradient(145deg, #d4af37, #b8962e);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+
+.department-table .zoom-buttons button:hover, .action-buttons button:hover {
+    background: linear-gradient(145deg, #d4af37, #b8962e);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.status-legend {
+    margin-top: 15px;
+    font-size: 13px;
+    color: #1e3c72;
+    text-align: center;
+    padding: 10px;
+    background-color: rgba(30,60,114,0.05);
+    border-radius: 8px;
+}
+
+.status-legend p {
+    margin: 0 8px;
+    display: inline-block;
+}
+
+.status-legend p:not(:last-child):after {
+    content: "";
+}
+
+.category-1 { background-color: #ffdde1 !important; } 
+.category-2 { background-color: #ddffdd !important; } 
+.category-3 { background-color: #dde1ff !important; } 
+.category-4 { background-color: #ffffdd !important; } 
+.category-5 { background-color: #ffddff !important; } 
+.category-6 { background-color: #ddffff !important; } 
+.category-7 { background-color: #ffe8dd !important; } 
+
+.status-ح { color: #155724 !important; background-color: #d4edda !important; } 
+.status-غ { color: #721c24 !important; background-color: #f8d7da !important; } 
+.status-ج { color: #856404 !important; background-color: #fff3cd !important; } 
+.status-ش { color: #383d41 !important; background-color: #e2e3e5 !important; } 
+.status-ت { color: #004085 !important; background-color: #cce5ff !important; } 
+.status-ب { color: #3F2E56 !important; background-color: #DCD0FF !important; } 
+.status-ن { color: #543320 !important; background-color: #F0E2D8 !important; } 
+
+
+.signatures {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 30px;
+    padding-top: 15px;
+    border-top: 1px dashed #1e3c72;
+    font-size: 15px;
+    color: #1e3c72;
+    text-align: center;
+}
+.signatures input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    border: 1px solid #b0c4de;
+    border-radius: 5px;
+    font-size: 14px;
+    color: #1e3c72;
+    font-family: 'Tajawal', sans-serif;
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+.signatures label {
+    font-size: 15px;
+    color: #1e3c72;
+    font-weight: 500;
+}
+
+.signatures input:focus {
+    border-color: #d4af37;
+    outline: none;
+    box-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
+}
+
+@media print {
+
+
+    .signatures input[type="text"] {
+        border: none;
+        background: transparent;
+        color: #000 !important;
+        font-size: 12pt;
+        padding: 0;
+        margin-top: 5px;
+        display: block;
+        width: 100%;
+        text-align: center;
+    }
+}
+.signatures div {
+    flex: 1;
+    padding-top: 5px;
+    margin: 0 10px;
+}
+
+/* Enhanced Dialog Styles */
+/* ================================================================ */
+/* ✅ 4. كود النوافذ المنبثقة (Dialogs) الموحد والنهائي ✅ */
+/* ================================================================ */
+
+.overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.55);
+    z-index: 999;
+}
+
+.dialog {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    border-radius: 12px;
+    border: 1px solid #d1d9e8;
+    box-shadow: 0 8px 32px rgba(0, 0, 60, 0.22);
+    z-index: 1000;
+    width: 90%;
+    max-width: 700px;
+    max-height: 90vh;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ── overlay تلقائي خلف أي ديالوج مفتوح (CSS-only) ── */
+body:has(.dialog[style*="flex"])::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 999;
+    pointer-events: auto;
+}
+
+/* تنسيق للشبابيك العريضة مثل إدارة الموظفين */
+.dialog.wide-dialog {
+    max-width: 1100px;
+}
+
+.dialog .dialog-header {
+    padding: 15px 25px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0; /* يمنع الرأس من التقلص */
+}
+
+.dialog .dialog-header h3 {
+    margin: 0;
+    color: #003087;
+    font-size: 1.5em;
+}
+
+.dialog .dialog-header .close {
+    font-size: 1.8em;
+    cursor: pointer;
+    color: #888;
+    line-height: 1;
+}
+
+.dialog .dialog-body {
+    padding: 20px 25px;
+    overflow-y: auto; /* هذا هو السطر السحري الذي يضيف شريط تمرير عند الحاجة */
+    flex-grow: 1; /* يجعل الجسم يتمدد ليملأ المساحة المتاحة */
+    background-color: #f8f9fa;
+}
+
+.dialog .dialog-footer {
+    padding: 15px 25px;
+    border-top: 1px solid #e9ecef;
+    background-color: #fff;
+    display: flex;
+    justify-content: flex-end; /* يضع الأزرار على اليمين */
+    gap: 10px;
+    flex-shrink: 0; /* يمنع التذييل من التقلص */
+}
+
+/* تنسيقات إضافية لمحتوى النوافذ */
+.dialog .form-group { margin-bottom: 15px; }
+.dialog label { display: block; margin-bottom: 5px; font-weight: 500; }
+.dialog input[type="text"],
+.dialog input[type="number"],
+.dialog input[type="password"],
+.dialog select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1em;
+}
+
+.dialog label {
+    display: block;
+    font-size: 16px; /* Larger label */
+    color: #1e3c72;
+    margin-bottom: 10px; /* Increased margin */
+    font-weight: 600; /* Bolder label */
+}
+
+.dialog input[type="text"],
+.dialog input[type="number"],
+.dialog input[type="password"],
+.dialog input[type="file"],
+.dialog select {
+    width: 100%;
+    padding: 12px; /* Increased padding */
+    margin-bottom: 20px; /* Increased margin */
+    border: 1px solid #b0c4de;
+    border-radius: 10px; /* Larger radius */
+    font-size: 16px; /* Larger font size */
+    color: #1e3c72;
+    font-family: 'Tajawal', sans-serif;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.dialog input:focus, .dialog select:focus {
+    border-color: #d4af37;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25); /* Enhanced focus shadow */
+}
+
+
+.dialog .error-message {
+    color: #a71d2a;
+    font-size: 15px; /* Slightly larger error message */
+    margin-bottom: 20px;
+    text-align: center;
+    background-color: #f8d7da;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #f5c6cb;
+}
+
+.dialog .buttons {
+    display: flex;
+    gap: 20px; /* Increased gap */
+    justify-content: center;
+    margin-top: 25px; /* Increased margin */
+}
+
+footer {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(30,60,114,0.2);
+    font-size: 14px;
+    color: #1e3c72;
+}
+
+footer p {
+    margin: 5px 0;
+}
+
+footer a {
+    color: #d4af37;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+footer a:hover {
+    color: #b8962e;
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+        width: 98%;
+    }
+    .header-info h1 { font-size: 24px; }
+    .header-info h2 { font-size: 20px; }
+    .header-info h3 { font-size: 16px; }
+    .header-info .logo-right, .header-info .logo-left { width: 60px; }
+    .header-info .date { font-size: 13px; }
+
+    .side-data .contract-data p { font-size: 13px; }
+    .nav-bar select { padding: 10px 20px; font-size: 14px; min-width: 180px; background-position: left 10px center; padding-left: 30px;}
+
+    .department-table h3 { font-size: 18px; }
+    .department-table .total { font-size: 13px; }
+    .department-table table th, .department-table table td { font-size: 11px; padding: 5px; }
+    .department-table table th.day-header { font-size: 9px; }
+    .department-table table select { font-size: 11px; padding: 3px; }
+
+    .dialog { 
+        width: 90%; 
+        padding: 20px; 
+        min-width: unset; 
+        max-width: 95%; /* Ensure it fits small screens */
+    }
+    .dialog h3 { font-size: 20px; margin-bottom: 15px; padding-bottom: 10px; }
+    .dialog label { font-size: 15px; margin-bottom: 8px; }
+    .dialog input[type="text"],
+    .dialog input[type="number"],
+    .dialog input[type="password"],
+    .dialog input[type="file"],
+    .dialog select { font-size: 15px; padding: 10px; margin-bottom: 15px; }
+
+    .department-table .zoom-buttons button, .action-buttons button { padding: 8px 15px; font-size: 13px; }
+    .signatures { font-size: 13px; }
+}
+
+@media print {
+   
+
+    body { 
+        margin: 0; 
+        padding: 0; 
+        background: #fff; 
+        direction: rtl; 
+        font-family: 'Tajawal', sans-serif; 
+    }
+    #particles-js-bg { 
+        display: none; 
+    }
+    .container { 
+        width: 100%; 
+        max-width: 100%; 
+        margin: 0; 
+        padding: 0; 
+        box-shadow: none; 
+        background: none; 
+        backdrop-filter: none; 
+        direction: rtl; 
+        text-align: right; 
+    }
+    .nav-bar, .zoom-buttons, .action-buttons, .dialog { 
+        display: none !important; 
+    }
+    .header-info .logo-right, .header-info .logo-left { 
+        display: block !important; 
+        width: 100px; 
+        position: absolute; 
+        top: 10px; 
+    }
+    .header-info .logo-right { 
+        right: 0; 
+    }
+    .header-info .logo-left { 
+        left: 0; 
+    }
+    .header-info h1 { 
+        font-size: 32px; 
+        font-weight: 700; 
+        color: #2a5298; 
+        text-align: right; 
+    }
+    .header-info h2 { 
+        font-size: 26px; 
+        font-weight: 700; 
+        color: #d4af37; 
+        text-align: right; 
+    }
+    .header-info h3 { 
+        font-size: 20px; 
+        font-weight: 500; 
+        color: #1e3c72; 
+        text-align: right; 
+    }
+    .header-info .date { 
+        font-size: 16px; 
+        color: #7f8c8d; 
+        text-align: right; 
+    }
+    /* ===> هذا هو الكود الجديد الذي ستضعه مكانه <=== */
+@media print {
+
+    /* ... باقي كود الطباعة الخاص بك يبقى كما هو ... */
+
+    /* ===> هذا هو الكود الجديد والمُحسَّن <=== */
+    .department-table {
+        page-break-inside: avoid; /* حاول ألا تقسم الجدول نفسه */
+        break-inside: avoid;      /* نفس الوظيفة لدعم متصفحات أحدث */
+        margin-bottom: 10mm;      /* اترك مسافة كافية بعد كل جدول */
+        border: 1px solid #ccc;   /* إطار بسيط وواضح للطباعة */
+        page-break-before: always;/* ابدأ كل جدول في صفحة جديدة */
+    }
+/* ===> أضف هذا الكود مباشرة بعد كود .department-table <=== */
+
+/* استثناء للجدول الأول فقط */
+.container > .department-table:first-of-type {
+    page-break-before: auto; /* لا تضف صفحة فارغة قبل الجدول الأول */
+}
+
+    /* استثناء للجدول الأول فقط */
+    .container > .department-table:first-of-type {
+        page-break-before: auto; /* لا تضف صفحة فارغة قبل الجدول الأول */
+    }
+    
+    /* ... باقي كود الطباعة الخاص بك ... */
+}
+
+    .department-table table { 
+        font-size: 8pt; 
+        width: 100%; 
+        break-inside: auto; 
+        table-layout: fixed; 
+        direction: rtl; 
+    }
+    .department-table table th, .department-table table td { 
+        padding: 1px; 
+        font-size: 7pt; 
+        color: #000 !important; 
+        border: 1px solid #b0c4de; 
+        text-align: center; 
+        word-wrap: break-word; 
+        overflow-wrap: break-word; 
+        white-space: normal; 
+        direction: rtl; 
+    }
+    .department-table table th { 
+        background: #2a5298 !important; 
+        color: #fff !important; 
+    }
+    .department-table table th.day-header { 
+        width: 10px; 
+        writing-mode: horizontal-tb; 
+        transform: none; 
+        padding: 1px; 
+    }
+    .department-table table th.job-title, 
+    .department-table table th.employee-name { 
+        width: 80px; 
+    }
+    .extract-details, .page-contract-info { 
+        margin-bottom: 5mm; 
+        break-inside: avoid; 
+        direction: rtl; 
+        text-align: right; 
+    }
+    .extract-details-text { 
+        color: #0000FF !important; 
+    }
+    .extract-details-text span { 
+        color: #2a5298 !important; 
+    }
+    .signatures, footer { 
+        margin-top: 5mm; 
+        border-top: 1px solid #000; 
+        color: #000 !important; 
+        break-inside: avoid; 
+        direction: rtl; 
+        text-align: right; 
+    }
+}
+
+#contract-number, #project-name, #extract-number, #period-start, #period-end {
+    font-weight: bold;
+    color: #2a5298;
+}
+
+/* Spare Parts Table Styles */
+.table-container {
+    margin: 20px 0;
+    page-break-inside: avoid;
+}
+
+.spare-parts-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background: rgba(255, 255, 255, 0.95); /* Match container background */
+    border-radius: 10px;
+    overflow: hidden; /* For rounded corners */
+}
+
+.spare-parts-table th,
+.spare-parts-table td {
+    border: 1px solid #000; /* Black borders as per setupPrintStyles */
+    padding: 8px;
+    text-align: center;
+    font-size: 14px; /* Consistent with department-table */
+    color: #1e3c72; /* Consistent text color */
+}
+
+.spare-parts-table th {
+    background: #f2f2f2; /* Light gray background as per setupPrintStyles */
+    font-weight: 600;
+    color: #2a5298; /* Darker blue for headers */
+}
+
+.spare-parts-table tbody tr:nth-child(odd) {
+    background-color: rgba(230, 230, 250, 0.3); /* Alternating rows like department-table */
+}
+
+.spare-parts-table tbody tr:nth-child(even) {
+    background-color: rgba(240, 248, 255, 0.3); /* Alternating rows like department-table */
+}
+
+.spare-parts-table tbody tr:hover {
+    background-color: rgba(212, 175, 55, 0.15); /* Hover effect like department-table */
+}
+
+/* Specific adjustments for summary table */
+.spare-parts-table.summary-table th,
+.spare-parts-table.summary-table td {
+    padding: 10px; /* Slightly larger padding for summary table */
+}
+
+/* Print-specific styles for spare parts table */
+@media print {
+
+    .spare-parts-table {
+        background: none; /* Remove background for print */
+        border-radius: 0;
+    }
+    .spare-parts-table th,
+    .spare-parts-table td {
+        border: 1px solid #000;
+        padding: 6px; /* Slightly smaller for print */
+        font-size: 9pt; /* Match department-table print font */
+        color: #000 !important;
+    }
+    .spare-parts-table th {
+        background: #eee !important; /* Match department-table print header */
+    }
+    .spare-parts-table tbody tr:nth-child(odd),
+    .spare-parts-table tbody tr:nth-child(even) {
+        background: none; /* Remove alternating backgrounds for print */
+    }
+}
+
+/* Responsive styles for spare parts table */
+@media (max-width: 768px) {
+    .spare-parts-table th,
+    .spare-parts-table td {
+        padding: 5px;
+        font-size: 12px;
+    }
+    .spare-parts-table.summary-table th,
+    .spare-parts-table.summary-table td {
+        padding: 6px;
+    }
+}
+/* أزرار التأكيد في النوافذ المنبثقة */
+.edit-dialog .confirm-btn,
+.dialog .confirm-btn {
+    background: #28a745 !important; /* لون أخضر */
+    color: #fff !important;
+}
+/* أزرار الإلغاء في النوافذ المنبثقة */
+.edit-dialog .cancel-btn,
+.dialog .cancel-btn {
+    background: #6c757d !important; /* لون رمادي */
+    color: #fff !important;
+}
+/* أزرار التحذير (مثل الحذف) */
+.dialog .warn-btn {
+    background: #dc3545 !important; /* لون أحمر */
+    color: #fff !important;
+}
+/* =================================================================== */
+/*      CSS الجديد لقسم عرض التواقيع (تصميم أنيق في سطر واحد)        */
+/* =================================================================== */
+
+.signatures-display-section {
+    margin-top: 40px;
+    padding: 30px; /* زيادة الهوامش الداخلية لمظهر أفخم */
+    background: linear-gradient(135deg, #f5f7fa 0%, #e9edf2 100%); /* خلفية متدرجة ناعمة */
+    border-top: 3px solid #d4af37; /* خط علوي ذهبي مميز */
+    box-shadow: 0 -5px 15px -5px rgba(0, 0, 0, 0.1); /* ظل علوي ناعم */
+    overflow-x: auto; /* السماح بالتمرير الأفقي على الشاشات الصغيرة جدًا */
+    white-space: nowrap; /* منع العناصر من النزول لسطر جديد */
+}
+
+.signatures-display-section h3 {
+    text-align: center;
+    color: #1e3c72; /* لون أزرق غامق */
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 25px;
+    text-transform: uppercase; /* يجعل الحروف كبيرة لمظهر رسمي */
+    letter-spacing: 1px; /* تباعد بسيط بين الحروف */
+}
+
+/* هذا هو أهم تغيير: استخدام Flexbox بدلاً من Grid */
+.signatures-grid {
+    display: flex; /* استخدام Flexbox لضمان سطر واحد */
+    justify-content: space-around; /* توزيع المسافات بالتساوي */
+    align-items: flex-start; /* محاذاة العناصر من الأعلى */
+    gap: 20px; /* مسافة بين كل توقيع والآخر */
+}
+
+.signature-item-display {
+    display: inline-block; /* مهم ليعمل مع white-space: nowrap */
+    flex: 1; /* جعل كل عنصر يأخذ مساحة متساوية */
+    min-width: 220px; /* تحديد أقل عرض لكل توقيع */
+    text-align: center;
+    padding: 20px;
+    border: 1px solid #d1d9e6;
+    border-radius: 10px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.signature-item-display:hover {
+    transform: translateY(-5px); /* تأثير رفع بسيط عند المرور بالفأرة */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.signature-item-display .title {
+    font-weight: 600;
+    color: #343a40;
+    font-size: 15px;
+    margin-bottom: 25px; /* مسافة أكبر قبل الخط */
+}
+
+.signature-item-display .line {
+    border-bottom: 1.5px solid #a0a0a0; /* خط أفتح قليلاً */
+    height: 15px;
+    margin: 0 auto 15px auto;
+    width: 85%;
+}
+
+.signature-item-display .name {
+    font-size: 16px; /* خط أكبر للاسم */
+    color: #2a5298; /* لون أزرق مميز للاسم */
+    font-weight: 700; /* خط أعرض */
+    min-height: 24px;
+    letter-spacing: 0.5px;
+}
+
+/* =================================================================== */
+/*      CSS الجديد لقسم عرض التواقيع (تصميم أنيق)                     */
+/* =================================================================== */
+
+.signatures-display-section {
+    margin-top: 40px;
+    padding: 25px;
+    background: #f8f9fa; /* خلفية رمادية فاتحة */
+    border-top: 3px solid #003087; /* خط علوي بلون مميز */
+    box-shadow: 0 -5px 15px -5px rgba(0, 0, 0, 0.1);
+}
+
+.signatures-display-section h3 {
+    text-align: center;
+    color: #003087;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 25px;
+}
+
+.signatures-grid {
+    display: flex; /* استخدام Flexbox لتوزيع العناصر بشكل أفقي */
+    justify-content: space-around; /* توزيع المسافات بالتساوي */
+    flex-wrap: wrap; /* السماح بانتقال العناصر لسطر جديد على الشاشات الصغيرة */
+    gap: 20px; /* مسافة بين كل توقيع والآخر */
+}
+
+.signature-item-display {
+    flex: 1; /* جعل كل عنصر يأخذ مساحة متساوية */
+    min-width: 220px; /* أقل عرض لكل توقيع */
+    text-align: center;
+    padding: 20px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.signature-item-display:hover {
+    transform: translateY(-5px); /* تأثير رفع بسيط عند المرور بالفأرة */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.signature-item-display .title {
+    font-weight: 600;
+    color: #343a40;
+    font-size: 15px;
+    margin-bottom: 25px; /* مسافة أكبر قبل الخط */
+}
+
+.signature-item-display .line {
+    border-bottom: 1.5px solid #adb5bd;
+    height: 15px;
+    margin: 0 auto 15px auto;
+    width: 85%;
+}
+
+.signature-item-display .name {
+    font-size: 16px;
+    color: #003087;
+    font-weight: 700;
+    min-height: 24px;
+}/* ================================================================ */
+/* ✅✅ تنسيقات جديدة وأنيقة لنافذة تعديل التواقيع ✅✅ */
+/* ================================================================ */
+
+/* الحاوية الرئيسية التي ستستخدم تصميم الشبكة */
+#signature-fields-wrapper {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+    padding-bottom: 15px;
+}
+
+/* تصميم بطاقة كل توقيع */
+.signature-edit-item {
+    border: 1px solid #e0e0e0;
+    padding: 15px;
+    padding-top: 45px;
+    border-radius: 8px;
+    background-color: #fdfdfd;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    position: relative;
+    transition: box-shadow 0.3s ease;
+}
+
+.signature-edit-item:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* تنسيق الحقول داخل البطاقة */
+.signature-edit-item .form-group {
+    margin-bottom: 12px;
+}
+
+.signature-edit-item .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #555;
+    font-size: 14px;
+}
+
+.signature-edit-item .form-group input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 14px;
+}
+
+/* تصميم زر الحذف */
+.signature-edit-item .btn-danger {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 5px 10px;
+    font-size: 12px;
+    border-radius: 5px;
+    background-color: #fbebeb;
+    color: #d32f2f;
+    border: 1px solid #d32f2f;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.signature-edit-item .btn-danger:hover {
+    background-color: #d32f2f;
+    color: #fff;
+}
+
+/* تنسيق زر "إضافة توقيع جديد" */
+#signature-fields-container .btn-primary {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    margin-top: 10px;
+    background-color: #007bff;
+    border-color: #007bff;
+    transition: background-color 0.3s;
+}
+
+#signature-fields-container .btn-primary:hover {
+    background-color: #0056b3;
+}
+/* ================================================================ */
+/* ✅ 1. كود CSS النهائي لنافذة إدارة الموظفين الاحترافية ✅ */
+/* ================================================================ */
+
+/* هذا يضمن أن النافذة المنبثقة للإدارة تستخدم كل المساحة المتاحة */
+.dialog.wide-dialog .dialog-body {
+    padding: 0; /* نزيل الحشو من الجسم الرئيسي للنافذة */
+}
+
+.management-container {
+    display: flex;
+    width: 100%;
+    height: 65vh; /* ارتفاع مناسب للنافذة، يمكنك تعديله */
+    overflow: hidden;
+}
+
+/* الشريط الجانبي (قائمة المراكز) */
+.management-sidebar {
+    flex: 0 0 280px; /* عرض ثابت للشريط الجانبي */
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-left: 1px solid #dee2e6; /* خط فاصل */
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto; /* شريط تمرير إذا كانت القائمة طويلة */
+}
+
+.management-sidebar h4 {
+    color: #003087;
+    margin: 0 0 15px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+#centers-list-sidebar a {
+    display: block;
+    padding: 12px 10px;
+    color: #343a40;
+    text-decoration: none;
+    border-radius: 5px;
+    margin-bottom: 5px;
+    transition: background-color 0.2s, color 0.2s;
+    font-weight: 500;
+}
+
+#centers-list-sidebar a:hover {
+    background-color: #e9ecef;
+}
+
+#centers-list-sidebar a.active {
+    background-color: #007bff;
+    color: white;
+    font-weight: 700;
+}
+
+/* منطقة المحتوى الرئيسية (عرض الموظفين) */
+.management-content {
+    flex-grow: 1; /* تأخذ باقي المساحة المتاحة */
+    padding: 20px;
+    overflow-y: auto; /* شريط تمرير للمحتوى الطويل */
+    display: flex;
+    flex-direction: column;
+}
+
+#management-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+#content-title {
+    color: #d4af37;
+    margin: 0;
+    font-weight: 700;
+    font-size: 1.4em;
+}
+
+/* تصميم بطاقة كل موظف */
+.employee-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.employee-info .employee-name {
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #343a40;
+}
+.employee-info .employee-job {
+    font-size: 0.9em;
+    color: #6c757d;
+}
+.employee-actions {
+    display: flex;
+    gap: 8px;
+}
+.employee-actions button {
+    padding: 6px 12px; /* أزرار أصغر حجماً داخل القائمة */
+    font-size: 0.9em;
+}
+/* ================================================================ */
+/* ✅ 1. كود CSS إضافي لدعم كل النوافذ المنبثقة ✅ */
+/* ================================================================ */
+
+/* تنسيق عام للمعلومات داخل النوافذ المنبثقة */
+.dialog .info-text {
+    padding: 10px;
+    background-color: #e9ecef;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    color: #495057;
+    text-align: center;
+}
+
+/* تنسيق خاص لمنطقة عرض النتائج أو الحالة */
+.dialog .status-area {
+    margin-top: 15px;
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    padding: 10px;
+    background-color: #fff;
+    border-radius: 5px;
+}
+.dialog .status-area p {
+    margin: 5px 0;
+    padding: 5px;
+    border-radius: 3px;
+}
+.dialog .status-area .status-success { color: #155724; background-color: #d4edda; }
+.dialog .status-area .status-error { color: #721c24; background-color: #f8d7da; }
+.dialog .status-area .status-skipped { color: #856404; background-color: #fff3cd; }
+
+/* تنسيق للشبكات داخل النوافذ (مثل اختيار الموظفين) */
+.dialog .checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+.dialog .form-group-checkbox {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+}
+.dialog .form-group-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-left: 12px;
+    cursor: pointer;
+}
+.dialog .form-group-checkbox label {
+    cursor: pointer;
+    font-weight: 500;
+    margin-bottom: 0;
+}
+/* =================================================================== */
+/*      ===>  التصميم الاحترافي والجمالي لشريط الإجمالي العام  <===      */
+/* =================================================================== */
+
+/* الحاوية الرئيسية للشريط */
+.grand-total-professional {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); /* تصميم شبكي متجاوب */
+    gap: 20px; /* مسافات بين البطاقات */
+    margin: 40px 0;
+    padding: 20px;
+    background: #f7f9fc; /* خلفية رمادية فاتحة جدًا */
+    border-radius: 12px;
+    border: 1px solid #e0e5ec;
+    box-shadow: 0 8px 25px rgba(0, 30, 80, 0.05);
+}
+
+/* تصميم كل بطاقة إحصائية */
+.total-card {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    border-radius: 10px;
+    background-color: #ffffff;
+    border-left: 5px solid; /* خط جانبي ملون لتمييز كل بطاقة */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.total-card:hover {
+    transform: translateY(-5px); /* تأثير رفع عند المرور بالماوس */
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* أيقونة البطاقة */
+.total-card .card-icon {
+    font-size: 32px;
+    margin-left: 20px; /* مسافة بين الأيقونة والنص */
+    padding: 15px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+/* محتوى البطاقة (العنوان والقيمة) */
+.total-card .card-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.total-card .label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #555; /* لون رمادي داكن للنص */
+    margin-bottom: 5px;
+}
+
+.total-card .value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a253c; /* لون كحلي داكن للقيمة */
+}
+
+/* تخصيص ألوان كل بطاقة على حدة */
+.total-card.total-employees { border-color: #4a90e2; }
+.total-card.total-employees .card-icon { background: linear-gradient(45deg, #4a90e2, #0056b3); }
+
+.total-card.total-cost { border-color: #50e3c2; }
+.total-card.total-cost .card-icon { background: linear-gradient(45deg, #50e3c2, #009688); }
+
+.total-card.total-deductions { border-color: #f5a623; }
+.total-card.total-deductions .card-icon { background: linear-gradient(45deg, #f5a623, #d9860a); }
+
+.total-card.total-net { border-color: #7ed321; }
+.total-card.total-net .card-icon { background: linear-gradient(45deg, #7ed321, #4caf50); }
+
+/* تنسيقات الطباعة */
+@media print {
+    .grand-total-professional {
+        grid-template-columns: 1fr 1fr !important; /* عمودان فقط في الطباعة */
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        background: #fff !important;
+    }
+    .total-card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+    .total-card .card-icon {
+        background: #eee !important;
+        color: #000 !important;
+    }
+}
+/* تنسيقات خاصة بنافذة إعدادات التوزيع */
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    cursor: pointer;
+    padding: 10px 15px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.radio-label input[type="radio"] {
+    display: none; /* إخفاء زر الراديو الافتراضي */
+}
+
+.radio-label i {
+    font-size: 20px;
+    color: #aaa;
+}
+
+/* تغيير الأسلوب عند الاختيار */
+.radio-label input[type="radio"]:checked + i {
+    color: #28a745; /* لون أخضر للـ "نعم" */
+}
+
+.radio-label:has(input[value="no"]:checked) + i {
+    color: #dc3545; /* لون أحمر للـ "لا" */
+}
+
+.radio-label:has(input[type="radio"]:checked) {
+    background-color: #e9f5ec;
+    border-color: #28a745;
+    font-weight: bold;
+}
+
+.radio-label:has(input[value="no"]:checked) {
+    background-color: #fbe9e7;
+    border-color: #dc3545;
+}
+/**
+ * ===================================================================
+ *      ===>   تنسيقات احترافية لنافذة إعدادات التوزيع   <===
+ * ===================================================================
+ */
+
+/* تنسيق الصندوق الرئيسي لكل إعداد */
+.setting-box {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* تنسيق عنوان كل قسم إعدادات */
+.setting-label {
+    font-size: 1.1rem; /* 17.6px */
+    font-weight: 600;
+    color: #0056b3; /* أزرق داكن */
+    margin-bottom: 15px;
+    display: block;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 10px;
+}
+
+/* تنسيق مجموعة أزرار الراديو (نعم/لا) */
+.radio-group {
+    display: flex;
+    gap: 25px;
+    justify-content: center;
+    align-items: center;
+}
+
+/* تنسيق زر الراديو نفسه وعلامته */
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem; /* 16px */
+    cursor: pointer;
+    padding: 10px 15px;
+    border-radius: 25px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.radio-label input[type="radio"] {
+    display: none; /* إخفاء زر الراديو الافتراضي */
+}
+
+.radio-label i {
+    font-size: 1.2rem; /* 19.2px */
+    color: #adb5bd; /* رمادي محايد */
+}
+
+/* تغيير اللون عند اختيار الراديو */
+.radio-label input[type="radio"]:checked + i {
+    color: #28a745; /* أخضر للنجاح */
+}
+.radio-label input[type="radio"]:checked ~ span {
+    font-weight: bold;
+}
+
+/* تأثير جميل عند المرور بالماوس */
+.radio-label:hover {
+    background-color: #e9ecef;
+}
+
+/* تنسيق شبكة مربعات الاختيار للأقسام */
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    margin-top: 10px;
+}
+
+/* تنسيق مربع الاختيار وعلامته */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: #ffffff;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    font-size: 0.95rem; /* 15.2px */
+}
+
+.checkbox-label:hover {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #007bff; /* تغيير لون علامة الصح */
+}
+
+/* ══ إخفاء الأزرار عند الطباعة - قاعدة عالمية لكل الصفحات ══ */
+@media print {
+    button,
+    .btn,
+    .table-buttons,
+    .std-action-bar,
+    .action-buttons,
+    .action-bar,
+    .btn-group,
+    .main-action-buttons,
+    .nav-bar,
+    .no-print,
+    .table-header-actions,
+    .add-row-btn,
+    .delete-btn,
+    .edit-btn,
+    .back-to-dashboard,
+    .dashboard-container,
+    .penalty-info-bar,
+    .overlay,
+    .dialog {
+        display: none !important;
+    }
+}

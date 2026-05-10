@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<script src="/original/offline-user-proxy.js"></script>
+    <script src="/original/offline-auth-check.js"></script>
+    <script src="/original/offline-cloud-sync.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مستخلص العمالة للمراكز الصحية</title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AAABAAEAAQEAAAEAGAAoAAAAFgAAACgAAAAQAAAAIAAAAAEAGAAAAAAAAAAAAAAA">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="attendance_contract_info.css">
+    <link rel="stylesheet" href="health_centers_styles.css">
+    <script src="contract_data_connector.js"></script>
+    <script src="/original/month-context.js"></script>
+    <script src="/original/extract-stepper.js"></script>
+<link rel="stylesheet" href="/original/shared-styles.css">
+</head>
+<body>
+    <!-- Background Animation -->
+    <div id="particles-js-bg"></div>
+
+    <!-- Main Container -->
+    <div class="container">
+        
+        <!-- Page Header -->
+        <header class="header-info">
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-right">
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-left">
+            <h1>تجمع نجران الصحي</h1>
+            <h3>وحدة الصيانة العامة</h3>
+            <h2 id="main-page-title">مستخلص العمالة للمراكز الصحية </h2>
+            <p class="date" id="current-date-time"></p>
+        </header>
+
+      <!-- Contract Information Section -->
+   <!-- ✅ [النسخة النهائية] قسم معلومات العقد بتصميم السطر الواحد -->
+<section class="page-contract-info-v2">
+    <p>
+        <span><strong>الجهة:</strong> <span class="hospitalName">غير محدد</span></span>
+        <span class="separator">|</span>
+        <span><strong>تفاصيل العقد:</strong> <span class="contractDetails">غير محدد</span></span>
+        <span class="separator">|</span>
+        <span><strong>اسم الشركة:</strong> <span class="companyName">غير محدد</span></span>
+        <span class="separator">|</span>
+        <span><strong>نوع العقد:</strong> <span class="contractType">غير محدد</span></span>
+        <span class="separator directPurchaseContainer" style="display: none;">|</span>
+        <span class="directPurchaseContainer" style="display: none;"><strong>نسبة الشراء المباشر:</strong> <span class="directPurchaseRatio">0</span>%</span>
+        <span class="separator">|</span>
+        <span><strong>مدة المستخلص:</strong> من <span id="extract-start-date">غير محدد</span> إلى <span id="extract-end-date">غير محدد</span></span>
+    </p>
+</section>
+
+
+
+        <!-- Main Navigation Bar -->
+        <nav class="nav-bar">
+          <div class="dropdown">
+    <select id="navigation" onchange="window.navigateTo(this.value)">
+        <option value="#">-- اختر صفحة --</option>
+        <option value="index.html">الصفحة الرئيسية</option>
+<option value="health_centers_attendance.html" selected>مستخلص العمالة للمراكز الصحية</option>
+        <option value="health_centers_consumables.html">📦 مستخلص المستهلكات المجمع</option>
+        <option value="approval.html">✅ متابعة المستخلصات</option>
+        <option value="admin-dashboard.html">🛡️ لوحة الأدمن</option>
+    </select>
+</div>
+        </nav>
+
+        <!-- Action Buttons Bar for Main View -->
+        <section class="std-action-bar no-print" id="main-action-buttons">
+            <button class="ab ab-manage" onclick="openEmployeeManagementDialog()"><i class="fas fa-users-cog"></i> إدارة الموظفين والمراكز</button>
+            <button class="ab ab-import" onclick="openImportDialog()"><i class="fas fa-file-import"></i> استيراد لمركز</button>
+            <button class="ab ab-import" onclick="openSmartUploadDialog()"><i class="fas fa-magic"></i> الرفع الذكي</button>
+            <button class="ab ab-excel" onclick="openExportDialog()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
+            <button class="ab ab-print" onclick="openPrintDialog()"><i class="fas fa-print"></i> طباعة</button>
+            <button class="ab ab-update" onclick="showGrandAchievementCertificate()"><i class="fas fa-file-invoice-dollar"></i> الشهادة الإجمالية</button>
+            <button class="ab ab-backup" onclick="backupData()"><i class="fas fa-download"></i> حفظ نسخة</button>
+            <button class="ab ab-restore" onclick="document.getElementById('restore-file-input').click()"><i class="fas fa-upload"></i> استعادة نسخة</button>
+            <input type="file" id="restore-file-input" style="display:none;" onchange="restoreData(event)" accept=".json">
+            <button class="ab ab-sig" onclick="openSignatureDialog('attendance')"><i class="fas fa-signature"></i> تعديل التواقيع</button>
+            <button class="ab ab-titles" onclick="openTitleEditorDialog()"><i class="fas fa-heading"></i> تعديل العناوين</button>
+            <button class="ab ab-clear" onclick="clearAllData()"><i class="fas fa-eraser"></i> مسح البيانات</button>
+        </section>
+
+        <!-- Main Content Area -->
+        <main>
+            <!-- Health Centers Icons Grid (Visible by default) -->
+            <div id="main-grid-view">
+                <div id="centers-grid-container">
+                    <h2><i class="fas fa-clinic-medical"></i> المراكز الصحية</h2>
+                    <div id="centers-grid">
+                        <!-- Center icons will be populated by JavaScript -->
+                    </div>
+                </div>
+                <div id="special-categories-container">
+                    <h2><i class="fas fa-star"></i> الفئات الخاصة</h2>
+                    <div id="special-categories-grid">
+                        <!-- Special category icons will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Details View (Tabs) - Hidden by default -->
+            <div id="center-details-view" style="display: none;">
+                <!-- Header for the selected center -->
+                <div class="center-header-container">
+                    <button class="back-button" onclick="backToGrid()"><i class="fas fa-arrow-right"></i> العودة للقائمة</button>
+                    <div id="center-main-title" class="dynamic-title">
+                        <!-- Title will be set by JS -->
+                    </div>
+                </div>
+                
+                <!-- Tabs Navigation -->
+                <div class="tabs-container">
+                    <button class="tab-link active" onclick="openTab(event, 'attendance-tab')">
+                        <i class="fas fa-calendar-check"></i> الحضور والانصراف
+                    </button>
+                    <button class="tab-link" onclick="openTab(event, 'performance-tab')">
+                        <i class="fas fa-chart-line"></i> تقييم الأداء
+                    </button>
+                    <button class="tab-link" onclick="openTab(event, 'achievement-tab')">
+                        <i class="fas fa-file-invoice-dollar"></i> شهادة الإنجاز
+                    </button>
+                </div>
+
+                <!-- Container for Tab Content -->
+                <div id="tab-content-container">
+                    <div id="attendance-tab" class="tab-content" style="display: block;">
+                        <!-- Attendance table will be injected here -->
+                    </div>
+                    <div id="performance-tab" class="tab-content">
+                        <!-- Performance certificate will be injected here -->
+                    </div>
+                    <div id="achievement-tab" class="tab-content">
+                        <!-- Achievement certificate will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Totals and Signatures Section for Main View -->
+        <section class="page-summary" id="main-summary-section">
+            <div class="grand-total" id="grand-total-section">
+                <h3><i class="fas fa-globe-africa"></i> الإجمالي العام لجميع المراكز الصحية</h3>
+                <div class="total-grid">
+                    <div class="total-item"><span class="total-label">إجمالي عدد الموظفين:</span><span class="total-value" id="grand-total-count">0</span></div>
+                    <div class="total-item"><span class="total-label">إجمالي التكلفة الشهرية:</span><span class="total-value" id="grand-total-cost">0.00</span></div>
+                    <div class="total-item"><span class="total-label">إجمالي الحسم:</span><span class="total-value" id="grand-total-deduction">0.00</span></div>
+                    <div class="total-item"><span class="total-label">إجمالي الغرامات:</span><span class="total-value" id="grand-total-fines">0.00</span></div>
+                    <div class="total-item net-total"><span class="total-label">إجمالي صافي الاستحقاق:</span><span class="total-value" id="grand-net-total">0.00</span></div>
+                </div>
+            </div>
+            <div class="grand-total admin-total" id="admin-total-section" style="display: none;">
+                <h3><i class="fas fa-user-tie"></i> إجمالي الوظائف الإدارية (فقط)</h3>
+                <div class="total-grid">
+                    <div class="total-item"><span class="total-label">عدد الموظفين الإداريين:</span><span class="total-value" id="admin-total-count">0</span></div>
+                    <div class="total-item"><span class="total-label">التكلفة الشهرية للإداريين:</span><span class="total-value" id="admin-total-cost">0.00</span></div>
+                    <div class="total-item net-total"><span class="total-label">صافي استحقاق الإداريين:</span><span class="total-value" id="admin-net-total">0.00</span></div>
+                </div>
+            </div>
+            <div class="signatures-display-section" id="main-signatures-section">
+                <h3>التواقيع المعتمدة</h3>
+                <div class="signatures-grid">
+                    <!-- Main signatures will be populated by JavaScript -->
+                </div>
+            </div>
+        </section>
+
+    </div> <!-- End of .container -->
+
+    <!-- Dialogs (Modals) -->
+    <!-- Dialogs (Modals) -->
+<div id="dialog-overlay" class="overlay" style="display: none;"></div>
+
+<div id="management-dialog" class="dialog" style="display: none;">
+    <!-- Employee management content will be injected here -->
+</div>
+
+<!-- ✅✅✅ هذا هو السطر الجديد والمهم الذي يجب إضافته ✅✅✅ -->
+<div id="form-dialog" class="dialog" style="display: none;">
+    <!-- Edit/Add forms will be injected here -->
+</div>
+
+<div id="signature-dialog" class="dialog wide-dialog" style="display: none;">
+    <!-- Signature editing content for all sections will be injected here -->
+</div>
+
+
+    <!-- Page Footer -->
+    <footer>
+        <p>© 2025 تجمع نجران الصحي - وحدة الصيانة العامة</p>
+    </footer>
+
+    <!-- JavaScript Files -->
+    <script src="health_centers_attendance.js"></script>
+    <script src="performance_logic.js"></script>
+    <script src="achievement_logic.js"></script>
+
+<script src="/original/extract-submit.js"></script>
+<script src="/original/track.js"></script>
+<script src="/original/shared-nav.js"></script>
+</body>
+</html>

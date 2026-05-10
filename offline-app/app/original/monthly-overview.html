@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<script src="/original/offline-user-proxy.js"></script>
+  <script src="/original/offline-auth-check.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظرة شاملة — المستخلصات الشهرية</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/original/shared-styles.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Tajawal', sans-serif; background: #f0f4f8; color: #1a202c; direction: rtl; }
+    header {
+      background: linear-gradient(135deg,#1e3c72,#2a5298);
+      padding: 0 24px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      box-shadow: 0 2px 12px rgba(30,60,114,.25); position: sticky; top: 0; z-index: 100;
+    }
+    .hb { display: flex; align-items: center; gap: 12px; }
+    .hb img { width: 38px; height: 38px; border-radius: 9px; }
+    .hb h1 { font-size: 15px; font-weight: 800; color: #fff; }
+    .hb p  { font-size: 11px; color: rgba(255,255,255,.7); }
+    .btn-hdr {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 16px; border-radius: 10px; font-family: 'Tajawal',sans-serif;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      background: rgba(255,255,255,.1); color: rgba(255,255,255,.85);
+      border: 1px solid rgba(255,255,255,.15); text-decoration: none; transition: background .2s;
+    }
+    .btn-hdr:hover { background: rgba(255,255,255,.2); color: #fff; }
+    main { max-width: 1100px; margin: 0 auto; padding: 24px 20px 60px; }
+
+    /* ── Title ── */
+    .page-title { margin-bottom: 20px; }
+    .page-title h2 { font-size: 22px; font-weight: 800; color: #1e3c72; }
+    .page-title p { font-size: 13px; color: #64748b; margin-top: 3px; }
+
+    /* ── Filters ── */
+    .toolbar {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .toolbar select, .toolbar input {
+      padding: 8px 14px; border-radius: 10px; border: 1.5px solid #e2e8f0;
+      font-family: 'Tajawal',sans-serif; font-size: 13px; background: #fff;
+      color: #334155; outline: none; transition: border .2s;
+    }
+    .toolbar select:focus, .toolbar input:focus { border-color: #2a5298; }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    /* ── Summary cards ── */
+    .summary-bar {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+      gap: 12px; margin-bottom: 24px;
+    }
+    .sum-card {
+      background: #fff; border-radius: 14px; padding: 14px 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06); border: 1.5px solid transparent;
+    }
+    .sum-card .n { font-size: 28px; font-weight: 800; }
+    .sum-card .l { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x: auto; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+    table {
+      width: 100%; border-collapse: separate; border-spacing: 0;
+      background: #fff; font-size: 13px;
+    }
+    thead th {
+      background: #1e3c72; color: #fff; padding: 12px 14px;
+      font-weight: 700; white-space: nowrap; border: none;
+    }
+    thead th:first-child { border-radius: 16px 0 0 0; }
+    thead th:last-child  { border-radius: 0 16px 0 0; }
+    tbody tr:nth-child(even) td { background: #f8fafc; }
+    tbody tr:hover td { background: #eff6ff; }
+    tbody td { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    tbody td:first-child { font-weight: 700; color: #1e3c72; white-space: nowrap; }
+    tbody tr:last-child td { border-bottom: none; }
+
+    /* ── Status chips ── */
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 700; white-space: nowrap;
+      cursor: pointer; transition: opacity .15s;
+    }
+    .chip:hover { opacity: .8; }
+    .chip-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .ch-approved    { background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; }
+    .ch-under_review{ background:#fffbeb; color:#b45309; border:1px solid #fde68a; }
+    .ch-submitted   { background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
+    .ch-needs_revision{ background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; }
+    .ch-rejected    { background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
+    .ch-none        { background:#f8fafc; color:#94a3b8; border:1px solid #e2e8f0; }
+    .ch-total       { background:#f0f9ff; color:#0369a1; border:1px solid #bae6fd; }
+
+    /* ── Total row ── */
+    tfoot td { background:#f0f4f8!important; font-weight:800; color:#1e3c72; padding:12px 14px; }
+
+    /* ── Loading / Empty ── */
+    .loading-state { text-align:center; padding:60px 20px; }
+    .spinner { width:40px;height:40px;border:4px solid #e2e8f0;border-top-color:#2a5298;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px; }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .empty-state { text-align:center; padding:40px; background:#fff; border-radius:16px; }
+    .empty-state .ico { font-size:40px; opacity:.3; margin-bottom:10px; }
+
+    /* ── Toast ── */
+    .toast { position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:11px 22px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:999;opacity:0;transition:opacity .3s;pointer-events:none; }
+    .toast.show { opacity:1; }
+    .toast.green { background:#16a34a; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="hb">
+    <img src="/original/najran_health_cluster_logo.png" alt="شعار">
+    <div>
+      <h1>تجمع نجران الصحي</h1>
+      <p>وحدة الصيانة العامة</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <a href="/original/approval.html" class="btn-hdr">📋 متابعة المستخلصات</a>
+    <a href="/original/index.html" class="btn-hdr">🏠 الرئيسية</a>
+  </div>
+</header>
+
+<main>
+  <div class="page-title">
+    <h2>النظرة الشاملة للمستخلصات الشهرية</h2>
+    <p id="page-sub">جاري التحميل...</p>
+  </div>
+
+  <!-- Monthly progress indicator -->
+  <div id="monthly-progress-card" style="background:#fff;border-radius:16px;padding:18px 22px;margin-bottom:20px;border:1.5px solid #e2e8f0;box-shadow:0 2px 8px rgba(0,0,0,.06);display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:800;color:#1e3c72" id="progress-month-label">تقدم الشهر الحالي</div>
+      <div id="progress-percent" style="font-size:18px;font-weight:800;color:#2a5298">—</div>
+    </div>
+    <!-- Progress bar -->
+    <div style="height:10px;background:#f1f5f9;border-radius:99px;overflow:hidden;margin-bottom:14px">
+      <div id="progress-bar-fill" style="height:100%;border-radius:99px;transition:width .5s;background:linear-gradient(90deg,#16a34a,#4ade80);width:0%"></div>
+    </div>
+    <!-- Extract type indicators -->
+    <div id="progress-items" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px"></div>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-bar" id="summary-bar">
+    <div class="sum-card" style="border-color:#bbf7d0"><div class="n" style="color:#16a34a" id="cnt-approved">—</div><div class="l">معتمدة</div></div>
+    <div class="sum-card" style="border-color:#bfdbfe"><div class="n" style="color:#2a5298" id="cnt-submitted">—</div><div class="l">بانتظار المراجعة</div></div>
+    <div class="sum-card" style="border-color:#fde68a"><div class="n" style="color:#b45309" id="cnt-under_review">—</div><div class="l">قيد المراجعة</div></div>
+    <div class="sum-card" style="border-color:#fed7aa"><div class="n" style="color:#c2410c" id="cnt-needs_revision">—</div><div class="l">يحتاج تعديل</div></div>
+    <div class="sum-card" style="border-color:#fecaca"><div class="n" style="color:#b91c1c" id="cnt-rejected">—</div><div class="l">مرفوضة</div></div>
+    <div class="sum-card" style="border-color:#bae6fd"><div class="n" style="color:#0369a1" id="total-amount">—</div><div class="l">إجمالي المعتمد (ر.س)</div></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <select id="filter-year" onchange="renderTable()">
+      <option value="all">كل السنوات</option>
+    </select>
+    <select id="filter-type" onchange="renderTable()">
+      <option value="all">كل الأنواع</option>
+      <option value="labor">مستخلص العمالة</option>
+      <option value="consumables">مستخلص المستهلكات</option>
+      <option value="health_centers">مستخلص المراكز الصحية</option>
+      <option value="spare_parts">مستخلص قطع الغيار</option>
+    </select>
+    <button class="btn-hdr" onclick="loadData()" style="background:#003087;border-color:#003087;color:#fff">↻ تحديث</button>
+    <button class="btn-hdr" onclick="exportCsv()" style="background:#16a34a;border-color:#16a34a;color:#fff" title="تصدير البيانات إلى Excel/CSV">⬇ تصدير CSV</button>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div> معتمد</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#b45309"></div> قيد المراجعة</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#2a5298"></div> بانتظار المراجعة</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#c2410c"></div> يحتاج تعديل</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#b91c1c"></div> مرفوض</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#cbd5e1"></div> لم يُرفع</div>
+  </div>
+
+  <!-- Table -->
+  <div id="table-area">
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p style="color:#94a3b8;font-size:14px">جاري تحميل البيانات...</p>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const TYPE_LABELS = {
+  labor: 'مستخلص العمالة',
+  consumables: 'مستخلص المستهلكات',
+  health_centers: 'مستخلص المراكز الصحية',
+  spare_parts: 'مستخلص قطع الغيار',
+};
+const TYPE_COLS = ['labor','consumables','health_centers','spare_parts'];
+const STATUS_CFG = {
+  approved:       { label:'معتمد ✓',           cls:'ch-approved',       dot:'#16a34a' },
+  under_review:   { label:'قيد المراجعة',       cls:'ch-under_review',   dot:'#b45309' },
+  submitted:      { label:'بانتظار المراجعة',   cls:'ch-submitted',      dot:'#2a5298' },
+  needs_revision: { label:'يحتاج تعديل',        cls:'ch-needs_revision', dot:'#c2410c' },
+  rejected:       { label:'مرفوض',              cls:'ch-rejected',       dot:'#b91c1c' },
+  none:           { label:'لم يُرفع',           cls:'ch-none',           dot:'#cbd5e1' },
+};
+
+let allExtracts = [];
+
+function getSession() {
+  try { return JSON.parse(localStorage.getItem('najran_session') || '{}'); } catch { return {}; }
+}
+
+function showToast(msg, cls = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + cls;
+  setTimeout(() => t.className = 'toast', 2500);
+}
+
+async function loadData() {
+  const session = getSession();
+  if (!session.clerkToken) { window.location.href = '/sign-in'; return; }
+  try {
+    const res = await fetch('/api/submitted-extracts', {
+      headers: { Authorization: `Bearer ${session.clerkToken}` }
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    allExtracts = data.extracts || [];
+    updateSummary();
+    updateProgressCard();
+    populateYearFilter();
+    renderTable();
+    document.getElementById('page-sub').textContent =
+      `إجمالي المستخلصات: ${allExtracts.length} — آخر تحديث: ${new Date().toLocaleTimeString('ar')}`;
+  } catch {
+    document.getElementById('table-area').innerHTML =
+      `<div class="empty-state"><div class="ico">⚠️</div><p>تعذر التحميل — تحقق من اتصالك</p></div>`;
+  }
+}
+
+function updateProgressCard() {
+  const card = document.getElementById('monthly-progress-card');
+  if (!card || allExtracts.length === 0) return;
+
+  // Find current Hijri month label OR fall back to latest period in data
+  const now = new Date();
+  const hijriFormatter = new Intl.DateTimeFormat('ar-SA-u-ca-islamic', { month: 'long', year: 'numeric' });
+  const hijriParts = hijriFormatter.formatToParts(now);
+  const hijriMonth = hijriParts.find(p => p.type === 'month')?.value || '';
+  const hijriYear = hijriParts.find(p => p.type === 'year')?.value || '';
+  const currentHijriLabel = hijriMonth + ' ' + hijriYear;
+
+  // Collect all periods
+  const allPeriods = [...new Set(allExtracts.map(e => e.periodMonth).filter(Boolean))];
+
+  // Try to match current Hijri month, otherwise use the most recent period
+  let targetPeriod = allPeriods.find(p => p.trim() === currentHijriLabel.trim());
+  if (!targetPeriod) {
+    targetPeriod = allPeriods.sort((a, b) => {
+      const [aM, aY] = parsePeriod(a), [bM, bY] = parsePeriod(b);
+      if (bY !== aY) return bY - aY; return bM - aM;
+    })[0];
+  }
+  if (!targetPeriod) return;
+
+  // Build type → best extract map for target period
+  const typeMap = {};
+  for (const e of allExtracts) {
+    if ((e.periodMonth || '').trim() !== targetPeriod.trim()) continue;
+    const cur = typeMap[e.extractType];
+    if (!cur || rankStatus(e.status) > rankStatus(cur.status)) typeMap[e.extractType] = e;
+  }
+
+  const statusIcon = { approved: '✅', under_review: '🔄', submitted: '⏳', needs_revision: '⚠️', rejected: '❌' };
+  const statusColor = { approved: '#16a34a', under_review: '#2a5298', submitted: '#b45309', needs_revision: '#c2410c', rejected: '#b91c1c' };
+  const statusLabel = { approved: 'معتمد', under_review: 'قيد المراجعة', submitted: 'بانتظار المراجعة', needs_revision: 'يحتاج تعديل', rejected: 'مرفوض' };
+
+  const approvedCount = TYPE_COLS.filter(t => typeMap[t]?.status === 'approved').length;
+  const submittedCount = TYPE_COLS.filter(t => typeMap[t]).length;
+  const pct = Math.round((approvedCount / TYPE_COLS.length) * 100);
+
+  document.getElementById('progress-month-label').textContent = 'تقدم: ' + targetPeriod;
+  document.getElementById('progress-percent').textContent = pct + '%';
+
+  const fillColor = pct === 100 ? 'linear-gradient(90deg,#16a34a,#4ade80)' :
+                    pct >= 50 ? 'linear-gradient(90deg,#b45309,#f59e0b)' : 'linear-gradient(90deg,#b91c1c,#f87171)';
+  const bar = document.getElementById('progress-bar-fill');
+  bar.style.background = fillColor;
+  bar.style.width = pct + '%';
+
+  const items = document.getElementById('progress-items');
+  items.innerHTML = TYPE_COLS.map(type => {
+    const e = typeMap[type];
+    const icon = e ? (statusIcon[e.status] || '⏳') : '—';
+    const color = e ? (statusColor[e.status] || '#64748b') : '#94a3b8';
+    const lbl = e ? (statusLabel[e.status] || e.status) : 'لم يُرفع بعد';
+    return `<div style="background:#f8fafc;border-radius:10px;padding:10px 12px;border:1px solid #e2e8f0;display:flex;align-items:center;gap:8px">
+      <span style="font-size:18px">${icon}</span>
+      <div>
+        <div style="font-size:11px;color:#64748b;font-weight:600">${TYPE_LABELS[type] || type}</div>
+        <div style="font-size:12px;font-weight:700;color:${color}">${lbl}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  card.style.display = 'block';
+}
+
+function updateSummary() {
+  const counts = { approved:0, submitted:0, under_review:0, needs_revision:0, rejected:0 };
+  let totalApproved = 0;
+  for (const e of allExtracts) {
+    if (counts[e.status] !== undefined) counts[e.status]++;
+    if (e.status === 'approved' && e.totalAmount) totalApproved += parseFloat(e.totalAmount) || 0;
+  }
+  for (const [k, v] of Object.entries(counts)) {
+    const el = document.getElementById('cnt-' + k);
+    if (el) el.textContent = v;
+  }
+  document.getElementById('total-amount').textContent = totalApproved > 0
+    ? totalApproved.toLocaleString('ar-SA', {maximumFractionDigits:0})
+    : '—';
+}
+
+function populateYearFilter() {
+  const years = new Set();
+  for (const e of allExtracts) {
+    if (e.periodMonth) {
+      const parts = e.periodMonth.trim().split(' ');
+      const y = parts[parts.length - 1];
+      if (/^\d{4}$/.test(y)) years.add(y);
+    }
+  }
+  const sel = document.getElementById('filter-year');
+  const existing = [...sel.options].map(o => o.value);
+  for (const y of [...years].sort().reverse()) {
+    if (!existing.includes(y)) {
+      const opt = new Option(y, y);
+      sel.appendChild(opt);
+    }
+  }
+}
+
+function buildMonthRows() {
+  const filterYear = document.getElementById('filter-year').value;
+  const filterType = document.getElementById('filter-type').value;
+
+  // Build lookup: periodMonth → type → extract
+  const lookup = {};
+  for (const e of allExtracts) {
+    if (!e.periodMonth) continue;
+    if (filterType !== 'all' && e.extractType !== filterType) continue;
+    const period = e.periodMonth.trim();
+    const parts = period.split(' ');
+    const year = parts[parts.length - 1];
+    if (filterYear !== 'all' && year !== filterYear) continue;
+    if (!lookup[period]) lookup[period] = {};
+    const cur = lookup[period][e.extractType];
+    if (!cur || rankStatus(e.status) > rankStatus(cur.status)) {
+      lookup[period][e.extractType] = e;
+    }
+  }
+
+  // Sort periods by year then month index
+  const periods = Object.keys(lookup).sort((a, b) => {
+    const [aM, aY] = parsePeriod(a);
+    const [bM, bY] = parsePeriod(b);
+    if (bY !== aY) return bY - aY;
+    return bM - aM;
+  });
+
+  return { lookup, periods };
+}
+
+function parsePeriod(period) {
+  const parts = period.trim().split(' ');
+  const monthName = parts[0];
+  const year = parseInt(parts[parts.length - 1]) || 0;
+  const monthIdx = MONTHS_AR.indexOf(monthName);
+  return [monthIdx, year];
+}
+
+function rankStatus(s) {
+  const r = { submitted:1, under_review:2, needs_revision:3, rejected:4, approved:5 };
+  return r[s] || 0;
+}
+
+function chipHTML(extract, period, type) {
+  if (!extract) {
+    return `<span class="chip ch-none"><span class="chip-dot" style="background:#cbd5e1"></span>لم يُرفع</span>`;
+  }
+  const cfg = STATUS_CFG[extract.status] || STATUS_CFG.none;
+  return `<span class="chip ${cfg.cls}" onclick="goToExtract(${extract.id})" title="انقر للتفاصيل">
+    <span class="chip-dot" style="background:${cfg.dot}"></span>${cfg.label}
+    ${extract.totalAmount ? '<br><small style=\'font-size:10px\'>' + Number(extract.totalAmount).toLocaleString('ar-SA',{maximumFractionDigits:0}) + ' ر.س</small>' : ''}
+  </span>`;
+}
+
+function renderTable() {
+  const filterType = document.getElementById('filter-type').value;
+  const { lookup, periods } = buildMonthRows();
+  const area = document.getElementById('table-area');
+
+  if (periods.length === 0) {
+    area.innerHTML = `<div class="empty-state"><div class="ico">📋</div><p style="color:#64748b">لا توجد مستخلصات بهذا التصفية</p></div>`;
+    return;
+  }
+
+  const visibleTypes = filterType === 'all' ? TYPE_COLS : [filterType];
+
+  const thead = `<thead><tr>
+    <th>الشهر</th>
+    ${visibleTypes.map(t => `<th>${TYPE_LABELS[t] || t}</th>`).join('')}
+    <th>الإجمالي المعتمد</th>
+  </tr></thead>`;
+
+  let totalApprovedAll = 0;
+  const typeTotals = {};
+
+  const tbody = periods.map(period => {
+    let rowApproved = 0;
+    const cells = visibleTypes.map(type => {
+      const e = lookup[period]?.[type];
+      if (e && e.status === 'approved' && e.totalAmount) {
+        const v = parseFloat(e.totalAmount) || 0;
+        rowApproved += v;
+        totalApprovedAll += v;
+        typeTotals[type] = (typeTotals[type] || 0) + v;
+      }
+      return `<td>${chipHTML(e, period, type)}</td>`;
+    }).join('');
+
+    const allApproved = visibleTypes.every(t => lookup[period]?.[t]?.status === 'approved');
+    const rowStyle = allApproved ? 'background:#f0fdf4!important' : '';
+
+    return `<tr style="${rowStyle}">
+      <td>${period}</td>
+      ${cells}
+      <td><span class="chip ch-total">
+        ${rowApproved > 0 ? rowApproved.toLocaleString('ar-SA',{maximumFractionDigits:0}) + ' ر.س' : '—'}
+      </span></td>
+    </tr>`;
+  }).join('');
+
+  const tfoot = `<tfoot><tr>
+    <td>الإجمالي</td>
+    ${visibleTypes.map(t => `<td style="font-size:11px;color:#0369a1">${(typeTotals[t] || 0) > 0 ? (typeTotals[t]).toLocaleString('ar-SA',{maximumFractionDigits:0}) + ' ر.س' : '—'}</td>`).join('')}
+    <td style="color:#15803d">${totalApprovedAll > 0 ? totalApprovedAll.toLocaleString('ar-SA',{maximumFractionDigits:0}) + ' ر.س' : '—'}</td>
+  </tr></tfoot>`;
+
+  area.innerHTML = `<div class="table-wrap"><table>${thead}<tbody>${tbody}</tbody>${tfoot}</table></div>`;
+}
+
+function goToExtract(id) {
+  window.location.href = `/original/approval.html#extract-${id}`;
+}
+
+async function exportCsv() {
+  const session = getSession();
+  if (!session.clerkToken) { showToast('يجب تسجيل الدخول أولاً', 'error'); return; }
+  try {
+    showToast('جاري تحضير الملف...', '');
+    const res = await fetch('/api/export/submitted-extracts', {
+      headers: { Authorization: `Bearer ${session.clerkToken}` }
+    });
+    if (!res.ok) throw new Error('Export failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `مستخلصات_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('✓ تم التصدير بنجاح', 'success');
+  } catch { showToast('تعذر التصدير — تحقق من الاتصال', 'error'); }
+}
+
+loadData();
+setInterval(loadData, 90000);
+</script>
+</body>
+</html>

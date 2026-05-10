@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<script src="/original/offline-user-proxy.js"></script>
+  <script src="/original/offline-auth-check.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>أرشيف المستخلصات المحفوظة</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/original/shared-styles.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Tajawal', sans-serif; background: #f0f4f8; color: #1a202c; direction: rtl; }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      padding: 0 24px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      box-shadow: 0 2px 12px rgba(30,60,114,.28); position: sticky; top: 0; z-index: 100;
+    }
+    .hb { display: flex; align-items: center; gap: 12px; }
+    .hb img { width: 38px; height: 38px; border-radius: 9px; }
+    .hb h1 { font-size: 15px; font-weight: 800; color: #fff; }
+    .hb p  { font-size: 11px; color: rgba(255,255,255,.7); }
+    .btn-hdr {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 16px; border-radius: 10px; font-family: 'Tajawal', sans-serif;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      background: rgba(255,255,255,.1); color: rgba(255,255,255,.85);
+      border: 1px solid rgba(255,255,255,.15); text-decoration: none; transition: background .2s;
+    }
+    .btn-hdr:hover { background: rgba(255,255,255,.2); color: #fff; }
+
+    /* ── Layout ── */
+    main { max-width: 1200px; margin: 0 auto; padding: 28px 20px 80px; }
+
+    /* ── Page title ── */
+    .page-title { margin-bottom: 24px; }
+    .page-title h2 { font-size: 22px; font-weight: 800; color: #1e3c72; display: flex; align-items: center; gap: 10px; }
+    .page-title p  { font-size: 13px; color: #64748b; margin-top: 4px; }
+
+    /* ── Summary cards ── */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px; margin-bottom: 28px;
+    }
+    .stat-card {
+      background: #fff; border-radius: 16px; padding: 18px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.06); border: 1.5px solid #e2e8f0;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .stat-card .icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; margin-bottom: 8px;
+    }
+    .stat-card .val { font-size: 26px; font-weight: 800; color: #1e3c72; }
+    .stat-card .lbl { font-size: 12px; color: #64748b; }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      margin-bottom: 18px; background: #fff; padding: 12px 16px;
+      border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.05);
+      border: 1.5px solid #e2e8f0;
+    }
+    .toolbar input, .toolbar select {
+      padding: 8px 13px; border-radius: 9px; border: 1.5px solid #e2e8f0;
+      font-family: 'Tajawal', sans-serif; font-size: 13px; background: #f8fafc;
+      color: #334155; outline: none; transition: border .2s;
+    }
+    .toolbar input:focus, .toolbar select:focus { border-color: #2a5298; background: #fff; }
+    .toolbar .spacer { flex: 1; }
+    .btn-danger {
+      background: linear-gradient(135deg, #991b1b, #dc2626);
+      color: #fff; border: none; border-radius: 9px; padding: 8px 16px;
+      font-family: 'Tajawal', sans-serif; font-size: 13px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; gap: 6px;
+      transition: filter .15s;
+    }
+    .btn-danger:hover { filter: brightness(1.1); }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center; padding: 60px 20px; background: #fff;
+      border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.06);
+      border: 1.5px dashed #cbd5e1;
+    }
+    .empty-state i { font-size: 52px; color: #cbd5e1; margin-bottom: 16px; }
+    .empty-state h3 { font-size: 17px; color: #64748b; margin-bottom: 6px; }
+    .empty-state p  { font-size: 13px; color: #94a3b8; }
+
+    /* ── Archive cards grid ── */
+    .archive-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── Single archive card ── */
+    .arc-card {
+      background: #fff; border-radius: 18px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.07); border: 1.5px solid #e2e8f0;
+      overflow: hidden; transition: box-shadow .2s, transform .15s;
+    }
+    .arc-card:hover { box-shadow: 0 6px 24px rgba(30,60,114,.12); transform: translateY(-2px); }
+
+    .arc-card-header {
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      padding: 16px 18px; display: flex; align-items: flex-start; justify-content: space-between;
+    }
+    .arc-badge {
+      background: rgba(255,255,255,.15); border-radius: 8px;
+      padding: 3px 10px; font-size: 12px; color: rgba(255,255,255,.9);
+      font-weight: 700; border: 1px solid rgba(255,255,255,.2);
+    }
+    .arc-payment {
+      font-size: 22px; font-weight: 800; color: #fff;
+      line-height: 1.2; margin-top: 6px;
+    }
+    .arc-period {
+      font-size: 13px; color: rgba(255,255,255,.8); margin-top: 2px;
+    }
+    .arc-source-badge {
+      padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+      border: 1px solid rgba(255,255,255,.3);
+    }
+    .src-save   { background: rgba(22,163,74,.25);   color: #bbf7d0; }
+    .src-print  { background: rgba(59,130,246,.25);  color: #bfdbfe; }
+    .src-pdf    { background: rgba(220,38,38,.25);   color: #fecaca; }
+    .src-manual { background: rgba(245,158,11,.25);  color: #fde68a; }
+
+    .arc-card-body { padding: 16px 18px; }
+
+    .arc-meta {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin-bottom: 12px;
+    }
+    .arc-meta-item { display: flex; flex-direction: column; gap: 2px; }
+    .arc-meta-item .ml { font-size: 11px; color: #94a3b8; }
+    .arc-meta-item .mv { font-size: 13px; font-weight: 700; color: #1e293b; }
+
+    .arc-depts {
+      background: #f8fafc; border-radius: 10px; padding: 10px 12px;
+      margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .arc-dept-chip {
+      background: #e0e7ff; color: #3730a3; border-radius: 20px;
+      padding: 3px 10px; font-size: 11px; font-weight: 700;
+    }
+
+    .arc-totals {
+      display: flex; justify-content: space-between; align-items: center;
+      background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+      border-radius: 10px; padding: 10px 14px; margin-bottom: 14px;
+      border: 1px solid #bae6fd;
+    }
+    .arc-totals .t-lbl { font-size: 12px; color: #0369a1; }
+    .arc-totals .t-val { font-size: 17px; font-weight: 800; color: #0c4a6e; }
+
+    .arc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .arc-btn {
+      flex: 1; min-width: 80px; padding: 8px 12px; border-radius: 9px;
+      font-family: 'Tajawal', sans-serif; font-size: 13px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+      border: none; transition: filter .15s, transform .1s;
+    }
+    .arc-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .arc-btn-print {
+      background: linear-gradient(135deg, #1e3c72, #2a5298); color: #fff;
+    }
+    .arc-btn-del {
+      background: linear-gradient(135deg, #7f1d1d, #dc2626); color: #fff;
+      flex: 0; min-width: 40px;
+    }
+
+    .arc-date { font-size: 11px; color: #94a3b8; margin-top: 10px; text-align: center; }
+
+    /* ── Print ── */
+    @media print {
+      header, .toolbar, .stats-row, .arc-actions { display: none !important; }
+      body { background: #fff; }
+    }
+
+    /* ── PDF cards ── */
+    .pdf-card {
+      background: #fff; border-radius: 18px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.07); border: 1.5px solid #e2e8f0;
+      overflow: hidden; transition: box-shadow .2s, transform .15s;
+    }
+    .pdf-card:hover { box-shadow: 0 6px 24px rgba(30,60,114,.12); transform: translateY(-2px); }
+    .pdf-card-header {
+      background: linear-gradient(135deg, #7f1d1d, #b91c1c);
+      padding: 16px 18px; display: flex; align-items: flex-start; justify-content: space-between;
+    }
+    .pdf-size-badge {
+      background: rgba(255,255,255,.15); border-radius: 8px;
+      padding: 3px 10px; font-size: 12px; color: rgba(255,255,255,.9);
+      font-weight: 700; border: 1px solid rgba(255,255,255,.2);
+    }
+    .pdf-card-body { padding: 16px 18px; }
+    .arc-btn-view {
+      background: linear-gradient(135deg, #7f1d1d, #b91c1c); color: #fff;
+    }
+    .arc-btn-dl {
+      background: linear-gradient(135deg, #1e3c72, #2a5298); color: #fff;
+    }
+
+    /* ── Upload dialog ── */
+    .upload-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.55); z-index: 9000;
+      align-items: center; justify-content: center;
+    }
+    .upload-overlay.open { display: flex; }
+    .upload-box {
+      background: #fff; border-radius: 20px; width: 100%; max-width: 520px;
+      padding: 0; box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow: hidden;
+    }
+    .upload-head {
+      background: linear-gradient(135deg, #7f1d1d, #b91c1c);
+      padding: 20px 24px; color: #fff; display: flex; align-items: center; justify-content: space-between;
+    }
+    .upload-head h3 { margin: 0; font-size: 17px; font-weight: 800; }
+    .upload-body { padding: 24px; }
+    .ufield { margin-bottom: 16px; }
+    .ufield label { display: block; font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 6px; }
+    .ufield input, .ufield select {
+      width: 100%; padding: 10px 14px; border-radius: 10px;
+      border: 1.5px solid #e2e8f0; font-family: 'Tajawal', sans-serif;
+      font-size: 14px; color: #1e293b; outline: none; transition: border .2s; box-sizing: border-box;
+    }
+    .ufield input:focus, .ufield select:focus { border-color: #b91c1c; }
+    .ufield-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .pdf-drop-zone {
+      border: 2.5px dashed #fca5a5; border-radius: 14px;
+      background: #fff5f5; padding: 28px; text-align: center;
+      cursor: pointer; transition: background .2s, border-color .2s; margin-bottom: 16px;
+    }
+    .pdf-drop-zone:hover, .pdf-drop-zone.drag-over { background: #fee2e2; border-color: #ef4444; }
+    .pdf-drop-zone i { font-size: 36px; color: #ef4444; margin-bottom: 8px; }
+    .pdf-drop-zone p { margin: 0; font-size: 13px; color: #6b7280; }
+    .pdf-drop-zone .chosen-name { font-weight: 700; color: #b91c1c; font-size: 14px; margin-top: 6px; }
+    .btn-upload-confirm {
+      width: 100%; padding: 13px; border-radius: 12px; border: none;
+      background: linear-gradient(135deg, #7f1d1d, #b91c1c); color: #fff;
+      font-family: 'Tajawal', sans-serif; font-size: 15px; font-weight: 800;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: filter .2s;
+    }
+    .btn-upload-confirm:hover { filter: brightness(1.1); }
+    .btn-upload-confirm:disabled { opacity: .5; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="hb">
+    <img src="/original/najran_health_cluster_logo.png" alt="شعار" onerror="this.style.display='none'">
+    <div>
+      <h1>أرشيف المستخلصات</h1>
+      <p>سجل جميع عمليات الحفظ والطباعة</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button onclick="openUploadDialog()" class="btn-hdr" style="background:rgba(185,28,28,.7);border-color:rgba(255,255,255,.3);color:#fff;" title="رفع نسخة PDF موقّعة">
+      <i class="fas fa-file-upload"></i> رفع نسخة موقّعة
+    </button>
+    <a href="/original/attendance.html"   class="btn-hdr"><i class="fas fa-table"></i> الحضور</a>
+    <a href="/original/settings_main.html" class="btn-hdr"><i class="fas fa-cog"></i> الإعدادات</a>
+    <a href="/original/approval.html"     class="btn-hdr"><i class="fas fa-check-circle"></i> الاعتماد</a>
+    <button onclick="exportCsvArchive()" class="btn-hdr" title="تصدير المستخلصات إلى CSV"><i class="fas fa-file-csv"></i> تصدير</button>
+    <a href="/dashboard"                  class="btn-hdr"><i class="fas fa-home"></i> الرئيسية</a>
+  </div>
+</header>
+
+<main>
+  <div class="page-title">
+    <h2><i class="fas fa-archive" style="color:#2a5298;"></i> أرشيف المستخلصات المحفوظة</h2>
+    <p>كل عملية حفظ أو طباعة تُسجَّل هنا تلقائياً للمراجعة والإسترداد</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="stats-row"></div>
+
+  <!-- Tab switcher -->
+  <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
+    <button id="tab-server" onclick="switchTab('server')"
+      style="flex:1;min-width:150px;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #2a5298;background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;box-shadow:0 2px 8px rgba(30,60,114,.2)">
+      📡 المستخلصات المرفوعة للخادم
+    </button>
+    <button id="tab-local" onclick="switchTab('local')"
+      style="flex:1;min-width:150px;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #e2e8f0;background:#fff;color:#64748b">
+      💾 لقطات العمل المحلية
+    </button>
+    <button id="tab-pdf" onclick="switchTab('pdf')"
+      style="flex:1;min-width:150px;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #e2e8f0;background:#fff;color:#64748b">
+      📄 النسخ الموقّعة (PDF)
+    </button>
+  </div>
+
+  <!-- Server section -->
+  <div id="section-server">
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 16px;margin-bottom:14px;font-size:13px;color:#1d4ed8;">
+      ℹ️ هذه المستخلصات مرفوعة إلى الخادم — يمكن للمدير مراجعتها واعتمادها من صفحة الاعتماد
+    </div>
+    <!-- Server toolbar -->
+    <div class="toolbar">
+      <input type="text" id="srv-search" placeholder="🔍 ابحث بالمستشفى أو النوع…" oninput="renderServer()">
+      <select id="srv-filter-type" onchange="renderServer()">
+        <option value="">كل الأنواع</option>
+        <option value="labor">مستخلص العمالة</option>
+        <option value="consumables">المستهلكات</option>
+        <option value="spare_parts">قطع الغيار</option>
+        <option value="health_centers">المراكز الصحية</option>
+        <option value="admin_offices">المكاتب الإدارية</option>
+      </select>
+      <select id="srv-filter-status" onchange="renderServer()">
+        <option value="">كل الحالات</option>
+        <option value="submitted">بانتظار المراجعة</option>
+        <option value="under_review">قيد المراجعة</option>
+        <option value="approved">معتمد</option>
+        <option value="needs_revision">يحتاج تعديل</option>
+        <option value="rejected">مرفوض</option>
+      </select>
+      <div class="spacer"></div>
+      <button class="btn-hdr" onclick="loadServerData()" style="background:#2a5298;border:none;color:#fff;padding:8px 16px;border-radius:9px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;cursor:pointer">
+        ↻ تحديث
+      </button>
+    </div>
+    <div id="server-container"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>جاري التحميل...</h3></div></div>
+  </div>
+
+  <!-- Local section -->
+  <div id="section-local" style="display:none">
+    <div class="toolbar">
+      <input type="text"   id="search-pn"    placeholder="🔍 ابحث برقم الدفعة…" oninput="renderArchive()">
+      <select id="filter-month" onchange="renderArchive()">
+        <option value="">كل الشهور</option>
+        <option>يناير</option><option>فبراير</option><option>مارس</option>
+        <option>أبريل</option><option>مايو</option><option>يونيو</option>
+        <option>يوليو</option><option>أغسطس</option><option>سبتمبر</option>
+        <option>أكتوبر</option><option>نوفمبر</option><option>ديسمبر</option>
+      </select>
+      <select id="filter-year" onchange="renderArchive()">
+        <option value="">كل السنوات</option>
+      </select>
+      <select id="filter-source" onchange="renderArchive()">
+        <option value="">كل المصادر</option>
+        <option value="save">حفظ يدوي</option>
+        <option value="print">طباعة</option>
+        <option value="pdf">تصدير PDF</option>
+      </select>
+      <div class="spacer"></div>
+      <button class="btn-danger" onclick="clearAllArchive()">
+        <i class="fas fa-trash-alt"></i> حذف الكل
+      </button>
+    </div>
+    <div id="archive-container"></div>
+  </div>
+
+  <!-- Signed PDFs section -->
+  <div id="section-pdf" style="display:none">
+    <div style="background:#fff5f5;border:1px solid #fca5a5;border-radius:10px;padding:10px 16px;margin-bottom:14px;font-size:13px;color:#b91c1c;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <span>📄 النسخ الموقّعة المرفوعة بعد اعتماد المستخلص — مخزّنة محلياً في المتصفح</span>
+      <button onclick="openUploadDialog()" style="background:linear-gradient(135deg,#7f1d1d,#b91c1c);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
+        <i class="fas fa-file-upload"></i> رفع نسخة جديدة
+      </button>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="pdf-search" placeholder="🔍 ابحث بالاسم أو رقم الدفعة…" oninput="renderPdfs()">
+      <div class="spacer"></div>
+      <button class="btn-danger" onclick="clearAllPdfs()">
+        <i class="fas fa-trash-alt"></i> حذف الكل
+      </button>
+    </div>
+    <div id="pdf-container"></div>
+  </div>
+</main>
+
+<!-- ── Upload Dialog ── -->
+<div id="upload-overlay" class="upload-overlay" onclick="if(event.target===this)closeUploadDialog()">
+  <div class="upload-box">
+    <div class="upload-head">
+      <h3><i class="fas fa-file-upload"></i> رفع نسخة موقّعة (PDF)</h3>
+      <button onclick="closeUploadDialog()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;">×</button>
+    </div>
+    <div class="upload-body">
+      <div class="ufield-row">
+        <div class="ufield">
+          <label>رقم الدفعة</label>
+          <input type="text" id="up-payment-num" placeholder="مثال: 7">
+        </div>
+        <div class="ufield">
+          <label>نوع المستخلص</label>
+          <select id="up-type">
+            <option value="labor">مستخلص العمالة</option>
+            <option value="consumables">المستهلكات</option>
+            <option value="spare_parts">قطع الغيار</option>
+            <option value="health_centers">المراكز الصحية</option>
+            <option value="admin_offices">المكاتب الإدارية</option>
+          </select>
+        </div>
+      </div>
+      <div class="ufield-row">
+        <div class="ufield">
+          <label>الشهر</label>
+          <select id="up-month">
+            <option>يناير</option><option>فبراير</option><option>مارس</option>
+            <option>أبريل</option><option>مايو</option><option>يونيو</option>
+            <option>يوليو</option><option>أغسطس</option><option>سبتمبر</option>
+            <option>أكتوبر</option><option>نوفمبر</option><option>ديسمبر</option>
+          </select>
+        </div>
+        <div class="ufield">
+          <label>السنة</label>
+          <input type="number" id="up-year" value="2025" min="2020" max="2035">
+        </div>
+      </div>
+      <div class="ufield">
+        <label>اسم المستشفى / الجهة</label>
+        <input type="text" id="up-hospital" placeholder="مثال: مستشفى نجران العام">
+      </div>
+
+      <!-- Drop zone -->
+      <div class="pdf-drop-zone" id="pdf-drop-zone" onclick="document.getElementById('pdf-file-input').click()">
+        <i class="fas fa-file-pdf"></i>
+        <p>اضغط لاختيار ملف PDF أو اسحبه هنا</p>
+        <div class="chosen-name" id="chosen-name-display"></div>
+      </div>
+      <input type="file" id="pdf-file-input" accept="application/pdf" style="display:none" onchange="onPdfChosen(this)">
+
+      <button class="btn-upload-confirm" id="btn-confirm-upload" onclick="confirmUpload()" disabled>
+        <i class="fas fa-cloud-upload-alt"></i> حفظ في الأرشيف
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="/original/extract-snapshot.js"></script>
+<script src="/original/track.js"></script>
+<script src="/original/shared-nav.js"></script>
+<script>
+  /* ════════════════════════════════════════════
+     IndexedDB — Signed PDF Storage
+  ════════════════════════════════════════════ */
+  var PDF_DB_NAME = 'najranSignedPdfs';
+  var PDF_STORE   = 'signedPdfs';
+  var _pdfDb = null;
+
+  function openPdfDb() {
+    return new Promise(function(resolve, reject) {
+      if (_pdfDb) { resolve(_pdfDb); return; }
+      var req = indexedDB.open(PDF_DB_NAME, 1);
+      req.onupgradeneeded = function(e) {
+        var db = e.target.result;
+        if (!db.objectStoreNames.contains(PDF_STORE)) {
+          db.createObjectStore(PDF_STORE, { keyPath: 'id' });
+        }
+      };
+      req.onsuccess = function(e) { _pdfDb = e.target.result; resolve(_pdfDb); };
+      req.onerror   = function(e) { reject(e.target.error); };
+    });
+  }
+
+  function idbPut(record) {
+    return openPdfDb().then(function(db) {
+      return new Promise(function(resolve, reject) {
+        var tx = db.transaction(PDF_STORE, 'readwrite');
+        tx.objectStore(PDF_STORE).put(record);
+        tx.oncomplete = resolve;
+        tx.onerror    = function(e) { reject(e.target.error); };
+      });
+    });
+  }
+
+  function idbGetAll() {
+    return openPdfDb().then(function(db) {
+      return new Promise(function(resolve, reject) {
+        var req = db.transaction(PDF_STORE, 'readonly').objectStore(PDF_STORE).getAll();
+        req.onsuccess = function(e) { resolve(e.target.result || []); };
+        req.onerror   = function(e) { reject(e.target.error); };
+      });
+    });
+  }
+
+  function idbDelete(id) {
+    return openPdfDb().then(function(db) {
+      return new Promise(function(resolve, reject) {
+        var tx = db.transaction(PDF_STORE, 'readwrite');
+        tx.objectStore(PDF_STORE).delete(id);
+        tx.oncomplete = resolve;
+        tx.onerror    = function(e) { reject(e.target.error); };
+      });
+    });
+  }
+
+  function idbClear() {
+    return openPdfDb().then(function(db) {
+      return new Promise(function(resolve, reject) {
+        var tx = db.transaction(PDF_STORE, 'readwrite');
+        tx.objectStore(PDF_STORE).clear();
+        tx.oncomplete = resolve;
+        tx.onerror    = function(e) { reject(e.target.error); };
+      });
+    });
+  }
+
+  /* ════════════════════════════════════════════
+     Upload Dialog
+  ════════════════════════════════════════════ */
+  var _chosenFile = null;
+
+  function openUploadDialog() {
+    _chosenFile = null;
+    document.getElementById('up-payment-num').value = '';
+    document.getElementById('up-hospital').value = '';
+    document.getElementById('up-year').value = new Date().getFullYear();
+    document.getElementById('chosen-name-display').textContent = '';
+    document.getElementById('pdf-file-input').value = '';
+    document.getElementById('btn-confirm-upload').disabled = true;
+    document.getElementById('upload-overlay').classList.add('open');
+  }
+
+  function closeUploadDialog() {
+    document.getElementById('upload-overlay').classList.remove('open');
+    _chosenFile = null;
+  }
+
+  function onPdfChosen(input) {
+    var file = input.files[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') { alert('الرجاء اختيار ملف PDF فقط'); input.value = ''; return; }
+    _chosenFile = file;
+    document.getElementById('chosen-name-display').textContent = '✅ ' + file.name + ' (' + fmtFileSize(file.size) + ')';
+    document.getElementById('btn-confirm-upload').disabled = false;
+  }
+
+  function fmtFileSize(bytes) {
+    if (bytes < 1024)       return bytes + ' B';
+    if (bytes < 1048576)    return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(2) + ' MB';
+  }
+
+  function confirmUpload() {
+    if (!_chosenFile) return;
+    var btn = document.getElementById('btn-confirm-upload');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var record = {
+        id:           'pdf_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+        paymentNumber: document.getElementById('up-payment-num').value.trim() || '—',
+        extractType:   document.getElementById('up-type').value,
+        month:         document.getElementById('up-month').value,
+        year:          document.getElementById('up-year').value,
+        hospitalName:  document.getElementById('up-hospital').value.trim() || '—',
+        fileName:      _chosenFile.name,
+        fileSize:      _chosenFile.size,
+        uploadDate:    new Date().toISOString(),
+        pdfData:       e.target.result
+      };
+      idbPut(record).then(function() {
+        closeUploadDialog();
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> حفظ في الأرشيف';
+        if (currentTab === 'pdf') renderPdfs();
+        updatePdfStats();
+        alert('✅ تم حفظ النسخة الموقّعة في الأرشيف بنجاح!');
+      }).catch(function(err) {
+        alert('خطأ في الحفظ: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> حفظ في الأرشيف';
+      });
+    };
+    reader.readAsDataURL(_chosenFile);
+  }
+
+  /* Drag & drop */
+  document.addEventListener('DOMContentLoaded', function() {
+    var zone = document.getElementById('pdf-drop-zone');
+    if (!zone) return;
+    zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', function()  { zone.classList.remove('drag-over'); });
+    zone.addEventListener('drop', function(e) {
+      e.preventDefault(); zone.classList.remove('drag-over');
+      var files = e.dataTransfer.files;
+      if (files && files[0]) {
+        document.getElementById('pdf-file-input').files = files;
+        onPdfChosen(document.getElementById('pdf-file-input'));
+      }
+    });
+  });
+
+  /* ════════════════════════════════════════════
+     Render Signed PDFs
+  ════════════════════════════════════════════ */
+  var TYPE_AR_PDF = {
+    labor: 'مستخلص العمالة', consumables: 'المستهلكات',
+    spare_parts: 'قطع الغيار', health_centers: 'المراكز الصحية',
+    admin_offices: 'المكاتب الإدارية'
+  };
+
+  function renderPdfs() {
+    var container = document.getElementById('pdf-container');
+    container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>جاري التحميل...</h3></div>';
+    idbGetAll().then(function(all) {
+      var q = (document.getElementById('pdf-search').value || '').trim().toLowerCase();
+      var records = all.filter(function(r) {
+        if (!q) return true;
+        return (r.paymentNumber||'').toLowerCase().includes(q) ||
+               (r.hospitalName||'').toLowerCase().includes(q) ||
+               (r.fileName||'').toLowerCase().includes(q);
+      });
+      records.sort(function(a, b) { return new Date(b.uploadDate) - new Date(a.uploadDate); });
+      updatePdfStats(all.length);
+      if (records.length === 0) {
+        container.innerHTML =
+          '<div class="empty-state"><i class="fas fa-file-pdf" style="color:#fca5a5"></i>' +
+          '<h3>لا توجد نسخ موقّعة</h3>' +
+          '<p>اضغط على "رفع نسخة موقّعة" لإضافة أول ملف PDF</p></div>';
+        return;
+      }
+      var html = records.map(function(r) {
+        var dt = r.uploadDate ? new Date(r.uploadDate).toLocaleDateString('ar-SA', {
+          year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'
+        }) : '—';
+        return (
+          '<div class="pdf-card" id="pdfcard-' + r.id + '">' +
+            '<div class="pdf-card-header">' +
+              '<div>' +
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+                  '<span class="arc-badge">دفعة ' + (r.paymentNumber || '—') + '</span>' +
+                  '<span style="background:rgba(255,255,255,.15);border-radius:6px;padding:2px 8px;font-size:11px;color:rgba(255,255,255,.9);">' +
+                    (TYPE_AR_PDF[r.extractType] || r.extractType || '—') + '</span>' +
+                '</div>' +
+                '<div style="font-size:17px;font-weight:800;color:#fff;">' + (r.hospitalName || '—') + '</div>' +
+                '<div style="font-size:13px;color:rgba(255,255,255,.75);margin-top:2px;">' + (r.month||'') + ' ' + (r.year||'') + '</div>' +
+              '</div>' +
+              '<span class="pdf-size-badge"><i class="fas fa-file-pdf"></i> ' + fmtFileSize(r.fileSize) + '</span>' +
+            '</div>' +
+            '<div class="pdf-card-body">' +
+              '<div style="background:#fff5f5;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;">' +
+                '<i class="fas fa-file-alt" style="color:#ef4444;font-size:18px;flex-shrink:0;"></i>' +
+                '<span style="word-break:break-all;">' + (r.fileName || '—') + '</span>' +
+              '</div>' +
+              '<div class="arc-actions">' +
+                '<button class="arc-btn arc-btn-view" onclick="viewPdf(\'' + r.id + '\')">' +
+                  '<i class="fas fa-eye"></i> عرض' +
+                '</button>' +
+                '<button class="arc-btn arc-btn-dl" onclick="downloadPdf(\'' + r.id + '\')">' +
+                  '<i class="fas fa-download"></i> تنزيل' +
+                '</button>' +
+                '<button class="arc-btn arc-btn-del" onclick="deletePdf(\'' + r.id + '\')" title="حذف">' +
+                  '<i class="fas fa-trash"></i>' +
+                '</button>' +
+              '</div>' +
+              '<div class="arc-date"><i class="fas fa-upload"></i> تاريخ الرفع: ' + dt + '</div>' +
+            '</div>' +
+          '</div>'
+        );
+      }).join('');
+      container.innerHTML = '<div class="archive-grid">' + html + '</div>';
+    });
+  }
+
+  function viewPdf(id) {
+    idbGetAll().then(function(all) {
+      var r = all.find(function(x) { return x.id === id; });
+      if (!r || !r.pdfData) { alert('الملف غير موجود'); return; }
+      var win = window.open('', '_blank');
+      win.document.write(
+        '<!DOCTYPE html><html><head>
+<meta charset="UTF-8"><title>' + (r.fileName||'PDF') + '</title>' +
+        '<style>body,html{margin:0;padding:0;height:100%;background:#1a1a2e;}' +
+        'iframe{width:100%;height:100%;border:none;}</style></head>' +
+        '<body><iframe src="' + r.pdfData + '"></iframe></body></html>'
+      );
+      win.document.close();
+    });
+  }
+
+  function downloadPdf(id) {
+    idbGetAll().then(function(all) {
+      var r = all.find(function(x) { return x.id === id; });
+      if (!r || !r.pdfData) { alert('الملف غير موجود'); return; }
+      var a = document.createElement('a');
+      a.href = r.pdfData;
+      a.download = r.fileName || ('مستخلص_دفعة_' + r.paymentNumber + '.pdf');
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    });
+  }
+
+  function deletePdf(id) {
+    if (!confirm('هل تريد حذف هذا الملف من الأرشيف؟')) return;
+    idbDelete(id).then(function() { renderPdfs(); });
+  }
+
+  function clearAllPdfs() {
+    if (!confirm('هل تريد حذف جميع النسخ الموقّعة؟\nلا يمكن التراجع عن هذا الإجراء.')) return;
+    idbClear().then(function() { renderPdfs(); });
+  }
+
+  function updatePdfStats(count) {
+    if (count !== undefined) {
+      var statCards = document.querySelectorAll('.stat-card');
+      if (statCards.length >= 4) {
+        var pdfCard = statCards[3];
+        var existing = document.getElementById('stat-pdf-count');
+        if (!existing) {
+          var newCard = document.createElement('div');
+          newCard.className = 'stat-card';
+          newCard.id = 'stat-pdf-card';
+          newCard.innerHTML =
+            '<div class="icon" style="background:#fff5f5;color:#b91c1c;"><i class="fas fa-file-pdf"></i></div>' +
+            '<div class="val" id="stat-pdf-count">' + count + '</div>' +
+            '<div class="lbl">نسخ موقّعة (PDF)</div>';
+          document.getElementById('stats-row').appendChild(newCard);
+        } else {
+          existing.textContent = count;
+        }
+      }
+    } else {
+      idbGetAll().then(function(all) { updatePdfStats(all.length); });
+    }
+  }
+
+  /* ── Tab switching ── */
+  var currentTab = 'server';
+  var TAB_ON  = 'flex:1;min-width:150px;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #2a5298;background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;box-shadow:0 2px 8px rgba(30,60,114,.2)';
+  var TAB_OFF = 'flex:1;min-width:150px;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #e2e8f0;background:#fff;color:#64748b';
+  var TAB_PDF_ON = 'flex:1;min-width:150px;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #b91c1c;background:linear-gradient(135deg,#7f1d1d,#b91c1c);color:#fff;box-shadow:0 2px 8px rgba(185,28,28,.2)';
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('section-server').style.display = tab === 'server' ? '' : 'none';
+    document.getElementById('section-local').style.display  = tab === 'local'  ? '' : 'none';
+    document.getElementById('section-pdf').style.display    = tab === 'pdf'    ? '' : 'none';
+    document.getElementById('tab-server').style.cssText = tab === 'server' ? TAB_ON  : TAB_OFF;
+    document.getElementById('tab-local').style.cssText  = tab === 'local'  ? TAB_ON  : TAB_OFF;
+    document.getElementById('tab-pdf').style.cssText    = tab === 'pdf'    ? TAB_PDF_ON : TAB_OFF;
+    if (tab === 'pdf') renderPdfs();
+  }
+
+  /* ── Server data ── */
+  var serverExtracts = [];
+
+  var TYPE_AR = {
+    labor: 'مستخلص العمالة', consumables: 'المستهلكات',
+    spare_parts: 'قطع الغيار', health_centers: 'المراكز الصحية',
+    admin_offices: 'المكاتب الإدارية'
+  };
+  var STATUS_CFG_SRV = {
+    submitted:      { label:'بانتظار المراجعة', bg:'#eff6ff', color:'#1d4ed8', dot:'#2a5298' },
+    under_review:   { label:'قيد المراجعة',     bg:'#fffbeb', color:'#b45309', dot:'#f59e0b' },
+    approved:       { label:'معتمد ✓',           bg:'#f0fdf4', color:'#15803d', dot:'#16a34a' },
+    needs_revision: { label:'يحتاج تعديل',       bg:'#fff7ed', color:'#c2410c', dot:'#f97316' },
+    rejected:       { label:'مرفوض',             bg:'#fef2f2', color:'#b91c1c', dot:'#ef4444' },
+  };
+
+  function srvStatusBadge(status) {
+    var cfg = STATUS_CFG_SRV[status] || { label: status, bg:'#f8fafc', color:'#64748b', dot:'#cbd5e1' };
+    return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;background:' + cfg.bg + ';color:' + cfg.color + ';border:1px solid ' + cfg.dot + '30">' +
+      '<span style="width:7px;height:7px;border-radius:50%;background:' + cfg.dot + ';flex-shrink:0"></span>' + cfg.label + '</span>';
+  }
+
+  async function loadServerData() {
+    var s = window.najranSession;
+    if (!s) return;
+    var headers = { 'Content-Type': 'application/json' };
+    if (s.clerkToken) headers['Authorization'] = 'Bearer ' + s.clerkToken;
+    try {
+      var res = await fetch('/api/submitted-extracts', { headers: headers, credentials: 'include' });
+      if (!res.ok) throw new Error(res.status);
+      var data = await res.json();
+      serverExtracts = data.extracts || [];
+      renderServer();
+      renderStats(window.getExtractArchive(), serverExtracts.length);
+    } catch (e) {
+      document.getElementById('server-container').innerHTML =
+        '<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:#f59e0b"></i><h3>تعذر التحميل</h3><p>تحقق من اتصالك أو تسجيل الدخول</p></div>';
+    }
+  }
+
+  function renderServer() {
+    var data = serverExtracts.slice();
+    var q      = (document.getElementById('srv-search').value || '').trim().toLowerCase();
+    var typeQ  = document.getElementById('srv-filter-type').value;
+    var statQ  = document.getElementById('srv-filter-status').value;
+    if (q)      data = data.filter(function(e){ return (e.hospitalName||'').toLowerCase().includes(q) || (TYPE_AR[e.extractType]||'').includes(q); });
+    if (typeQ)  data = data.filter(function(e){ return e.extractType === typeQ; });
+    if (statQ)  data = data.filter(function(e){ return e.status === statQ; });
+
+    var container = document.getElementById('server-container');
+    if (data.length === 0) {
+      container.innerHTML = '<div class="empty-state"><i class="fas fa-cloud"></i><h3>لا توجد مستخلصات مرفوعة</h3><p>ارفع مستخلصاتك من صفحات الحضور أو المستهلكات</p></div>';
+      return;
+    }
+
+    // Sort newest first
+    data.sort(function(a, b){ return new Date(b.createdAt) - new Date(a.createdAt); });
+
+    var html = data.map(function(e) {
+      var amt = e.totalAmount ? Number(e.totalAmount).toLocaleString('ar-SA', { minimumFractionDigits:2, maximumFractionDigits:2 }) + ' ر.س' : '—';
+      var dt  = e.createdAt ? new Date(e.createdAt).toLocaleDateString('ar-SA', { year:'numeric', month:'short', day:'numeric' }) : '—';
+      var dtU = e.updatedAt ? new Date(e.updatedAt).toLocaleDateString('ar-SA', { year:'numeric', month:'short', day:'numeric' }) : '';
+      return (
+        '<div class="arc-card" style="' + (e.status === 'approved' ? 'border-color:#bbf7d0' : e.status === 'needs_revision' ? 'border-color:#fed7aa' : '') + '">' +
+          '<div class="arc-card-header" style="' + (e.status === 'approved' ? 'background:linear-gradient(135deg,#15803d,#16a34a)' : '') + '">' +
+            '<div>' +
+              '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+                '<span class="arc-badge">' + (TYPE_AR[e.extractType] || e.extractType) + '</span>' +
+                srvStatusBadge(e.status) +
+              '</div>' +
+              '<div class="arc-payment" style="font-size:16px">' + (e.hospitalName || '—') + '</div>' +
+              '<div class="arc-period">' + (e.periodMonth || '—') + '</div>' +
+            '</div>' +
+            '<div style="text-align:left;">' +
+              '<div style="color:rgba(255,255,255,.7);font-size:11px">' + (e.companyName || '') + '</div>' +
+              '<div style="color:rgba(255,255,255,.6);font-size:11px;margin-top:2px">' + (e.contractNumber || '') + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="arc-card-body">' +
+            '<div class="arc-totals">' +
+              '<div><div class="t-lbl">المبلغ الإجمالي</div><div class="t-val">' + amt + '</div></div>' +
+              '<i class="fas fa-cloud-upload-alt" style="font-size:24px;color:#7dd3fc;opacity:.6"></i>' +
+            '</div>' +
+            (e.adminNotes ? '<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 12px;font-size:12px;color:#c2410c;margin-bottom:10px"><b>ملاحظة الإدارة:</b> ' + e.adminNotes + '</div>' : '') +
+            '<div class="arc-actions">' +
+              '<a href="/original/approval.html" class="arc-btn arc-btn-print" style="text-decoration:none"><i class="fas fa-eye"></i> عرض التفاصيل</a>' +
+            '</div>' +
+            '<div class="arc-date"><i class="fas fa-upload"></i> تاريخ الرفع: ' + dt + (dtU && dtU !== dt ? ' — آخر تحديث: ' + dtU : '') + '</div>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+
+    container.innerHTML = '<div class="archive-grid">' + html + '</div>';
+  }
+
+  /* ── Source label helpers ── */
+  function sourceLabel(src) {
+    return { save: 'حفظ يدوي', print: 'طباعة', pdf: 'تصدير PDF', manual: 'يدوي' }[src] || src;
+  }
+  function sourceCls(src) {
+    return { save: 'src-save', print: 'src-print', pdf: 'src-pdf', manual: 'src-manual' }[src] || 'src-manual';
+  }
+
+  /* ── Format helpers ── */
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('ar-SA', {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+  }
+  function fmtNum(n) {
+    return Number(n || 0).toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function fmtDateRange(s, e) {
+    if (!s && !e) return '—';
+    const fmt = d => d ? new Date(d).toLocaleDateString('ar-SA', { day:'numeric', month:'short', year:'numeric' }) : '';
+    return fmt(s) + (e ? ' — ' + fmt(e) : '');
+  }
+
+  /* ── Dept Arabic names ── */
+  const DEPT_NAMES = {
+    cleaning: 'النظافة', electricity: 'الكهرباء', agriculture: 'الزراعة',
+    civil_works: 'الأعمال المدنية', mechanical: 'الميكانيكا', laundry: 'المغسلة',
+    patient_services: 'خدمات المرضى', admin_saudi: 'الإداريون'
+  };
+
+  /* ── Populate year filter ── */
+  function populateYearFilter() {
+    const archive = window.getExtractArchive();
+    const years = [...new Set(archive.map(s => s.extractYear).filter(Boolean))].sort().reverse();
+    const sel = document.getElementById('filter-year');
+    years.forEach(y => {
+      const opt = document.createElement('option');
+      opt.value = y; opt.textContent = y;
+      sel.appendChild(opt);
+    });
+  }
+
+  /* ── Render stats ── */
+  function renderStats(archive, srvCount) {
+    const total    = archive.length;
+    const saves    = archive.filter(s => s.source === 'save').length;
+    const prints   = archive.filter(s => s.source === 'print').length;
+    const lastSave = archive.length ? fmtDate(archive[0].savedAt) : '—';
+    const srvApproved = serverExtracts.filter(e => e.status === 'approved').length;
+    const srvPending  = serverExtracts.filter(e => e.status === 'submitted').length;
+
+    const container = document.getElementById('stats-row');
+    container.innerHTML = `
+      <div class="stat-card">
+        <div class="icon" style="background:#eff6ff;color:#2563eb;"><i class="fas fa-cloud"></i></div>
+        <div class="val">${srvCount !== undefined ? srvCount : serverExtracts.length}</div><div class="lbl">إجمالي الخادم</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-check-circle"></i></div>
+        <div class="val">${srvApproved}</div><div class="lbl">معتمدة</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon" style="background:#fef9c3;color:#ca8a04;"><i class="fas fa-hourglass-half"></i></div>
+        <div class="val">${srvPending}</div><div class="lbl">بانتظار المراجعة</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon" style="background:#fdf4ff;color:#a21caf;"><i class="fas fa-archive"></i></div>
+        <div class="val">${total}</div><div class="lbl">لقطات محلية</div>
+      </div>`;
+  }
+
+  /* ── Main render ── */
+  function renderArchive() {
+    let archive = window.getExtractArchive();
+
+    /* filters */
+    const pnQ   = document.getElementById('search-pn').value.trim().toLowerCase();
+    const monQ  = document.getElementById('filter-month').value;
+    const yrQ   = document.getElementById('filter-year').value;
+    const srcQ  = document.getElementById('filter-source').value;
+
+    if (pnQ)  archive = archive.filter(s => (s.paymentNumber||'').toLowerCase().includes(pnQ));
+    if (monQ) archive = archive.filter(s => s.extractMonth === monQ);
+    if (yrQ)  archive = archive.filter(s => String(s.extractYear) === yrQ);
+    if (srcQ) archive = archive.filter(s => s.source === srcQ);
+
+    renderStats(window.getExtractArchive());
+
+    const container = document.getElementById('archive-container');
+
+    if (archive.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-box-open"></i>
+          <h3>لا توجد سجلات محفوظة</h3>
+          <p>كل عملية حفظ أو طباعة ستظهر هنا تلقائياً</p>
+        </div>`;
+      return;
+    }
+
+    const html = archive.map(snap => {
+      /* dept chips */
+      const deptChips = Object.keys(snap.departments || {})
+        .filter(k => snap.departments[k].count > 0)
+        .map(k => `<span class="arc-dept-chip">${DEPT_NAMES[k]||k} (${snap.departments[k].count})</span>`)
+        .join('');
+
+      return `
+        <div class="arc-card" id="card-${snap.id}">
+          <div class="arc-card-header">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span class="arc-badge">دفعة ${snap.paymentNumber || '—'}</span>
+                <span class="arc-source-badge ${sourceCls(snap.source)}">${sourceLabel(snap.source)}</span>
+              </div>
+              <div class="arc-payment">${snap.extractMonth || '—'} ${snap.extractYear || ''}</div>
+              <div class="arc-period">${fmtDateRange(snap.extractStart, snap.extractEnd)}</div>
+            </div>
+            <div style="text-align:left;">
+              <div style="color:rgba(255,255,255,.7);font-size:11px;">${snap.hospitalName||''}</div>
+              <div style="color:rgba(255,255,255,.6);font-size:11px;margin-top:2px;">${snap.companyName||''}</div>
+            </div>
+          </div>
+          <div class="arc-card-body">
+            <div class="arc-meta">
+              <div class="arc-meta-item">
+                <span class="ml">عدد الموظفين</span>
+                <span class="mv">${snap.totalEmployees || 0} موظف</span>
+              </div>
+              <div class="arc-meta-item">
+                <span class="ml">إجمالي الصافي</span>
+                <span class="mv" style="color:#0c4a6e;">${fmtNum(snap.totalNetAmount)} ر.س</span>
+              </div>
+            </div>
+            ${deptChips ? `<div class="arc-depts">${deptChips}</div>` : ''}
+            <div class="arc-totals">
+              <div>
+                <div class="t-lbl">صافي الاستحقاق الكلي</div>
+                <div class="t-val">${fmtNum(snap.totalNetAmount)} ر.س</div>
+              </div>
+              <i class="fas fa-coins" style="font-size:28px;color:#7dd3fc;opacity:.6;"></i>
+            </div>
+            <div class="arc-actions">
+              <button class="arc-btn arc-btn-print" onclick="printSnapshotCard('${snap.id}')">
+                <i class="fas fa-print"></i> طباعة البطاقة
+              </button>
+              <button class="arc-btn arc-btn-del" onclick="deleteSnap('${snap.id}')" title="حذف">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+            <div class="arc-date"><i class="fas fa-clock"></i> تم الحفظ: ${fmtDate(snap.savedAt)}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = `<div class="archive-grid">${html}</div>`;
+  }
+
+  /* ── Delete single ── */
+  function deleteSnap(id) {
+    if (!confirm('هل تريد حذف هذا السجل من الأرشيف؟')) return;
+    window.deleteExtractSnapshot(id);
+    renderArchive();
+  }
+
+  /* ── Clear all ── */
+  function clearAllArchive() {
+    if (!confirm('هل تريد حذف جميع سجلات الأرشيف؟\nلا يمكن التراجع عن هذا الإجراء.')) return;
+    localStorage.removeItem('extractArchive');
+    renderArchive();
+  }
+
+  /* ── Print snapshot card ── */
+  function printSnapshotCard(id) {
+    const snap = window.getExtractArchive().find(s => s.id === id);
+    if (!snap) return;
+
+    const DEPT_AR = {
+      cleaning: 'النظافة', electricity: 'الكهرباء', agriculture: 'الزراعة',
+      civil_works: 'الأعمال المدنية', mechanical: 'الميكانيكا', laundry: 'المغسلة',
+      patient_services: 'خدمات المرضى', admin_saudi: 'الوظائف الإدارية السعوديون'
+    };
+
+    const deptRows = Object.keys(snap.departments || {})
+      .filter(k => snap.departments[k].count > 0)
+      .map(k => `
+        <tr>
+          <td>${DEPT_AR[k] || k}</td>
+          <td>${snap.departments[k].count}</td>
+          <td>${Number(snap.departments[k].total || 0).toLocaleString('ar-SA', {minimumFractionDigits:2})}</td>
+        </tr>`).join('');
+
+    const formatDate = d => d ? new Date(d).toLocaleDateString('ar-SA', {year:'numeric',month:'long',day:'numeric'}) : '—';
+
+    const pw = window.open('', '_blank', 'width=900,height=700');
+    pw.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head>
+      <meta charset="UTF-8">
+      <title>بطاقة مستخلص — دفعة ${snap.paymentNumber}</title>
+      <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">
+      <style>
+        body { font-family:'Tajawal',Arial,sans-serif; background:#fff; color:#111; direction:rtl; padding:30px; }
+        .card { max-width:700px; margin:0 auto; border:2px solid #1e3c72; border-radius:16px; overflow:hidden; }
+        .card-head {
+          background:linear-gradient(135deg,#1e3c72,#2a5298);
+          color:#fff; padding:20px 24px; text-align:center;
+        }
+        .card-head h1 { font-size:20px; font-weight:800; margin:0 0 4px; }
+        .card-head p  { font-size:13px; opacity:.8; margin:0; }
+        .card-body { padding:20px 24px; }
+        .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+        .info-item { background:#f8fafc; border-radius:8px; padding:10px 14px; }
+        .info-item .l { font-size:11px; color:#64748b; }
+        .info-item .v { font-size:15px; font-weight:800; color:#1e293b; margin-top:2px; }
+        table { width:100%; border-collapse:collapse; margin-top:12px; }
+        th { background:#1e3c72; color:#fff; padding:8px 12px; font-size:13px; }
+        td { padding:8px 12px; font-size:13px; border-bottom:1px solid #e2e8f0; text-align:center; }
+        tr:last-child td { border-bottom:none; }
+        .total-row td { background:#1e3c72; color:#d4af37; font-weight:800; font-size:14px; }
+        .sigs { display:flex; justify-content:space-around; margin-top:28px; flex-wrap:wrap; gap:12px; }
+        .sig { text-align:center; min-width:140px; }
+        .sig-line { border-bottom:2px solid #111; height:40px; margin-bottom:4px; }
+        .sig-role { font-size:12px; font-weight:700; color:#333; }
+        .footer { text-align:center; font-size:11px; color:#94a3b8; margin-top:20px; }
+        @media print { @page { margin: 1cm; } }
+      </style>
+    </head><body>
+      <div class="card">
+        <div class="card-head">
+          <h1>مستخلص عمالة — دفعة ${snap.paymentNumber || '—'}</h1>
+          <p>${snap.extractMonth || ''} ${snap.extractYear || ''} &nbsp;|&nbsp; ${snap.hospitalName || ''}</p>
+        </div>
+        <div class="card-body">
+          <div class="info-grid">
+            <div class="info-item"><div class="l">رقم الدفعة</div><div class="v">${snap.paymentNumber||'—'}</div></div>
+            <div class="info-item"><div class="l">الشهر</div><div class="v">${snap.extractMonth||'—'} ${snap.extractYear||''}</div></div>
+            <div class="info-item"><div class="l">من تاريخ</div><div class="v">${formatDate(snap.extractStart)}</div></div>
+            <div class="info-item"><div class="l">إلى تاريخ</div><div class="v">${formatDate(snap.extractEnd)}</div></div>
+            <div class="info-item"><div class="l">المستشفى</div><div class="v">${snap.hospitalName||'—'}</div></div>
+            <div class="info-item"><div class="l">الشركة</div><div class="v">${snap.companyName||'—'}</div></div>
+            <div class="info-item"><div class="l">إجمالي الموظفين</div><div class="v">${snap.totalEmployees||0} موظف</div></div>
+            <div class="info-item"><div class="l">مصدر السجل</div><div class="v">${sourceLabel(snap.source)}</div></div>
+          </div>
+
+          <table>
+            <thead><tr><th>القسم</th><th>عدد الموظفين</th><th>صافي الاستحقاق (ر.س)</th></tr></thead>
+            <tbody>${deptRows}</tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td>الإجمالي</td>
+                <td>${snap.totalEmployees||0}</td>
+                <td>${Number(snap.totalNetAmount||0).toLocaleString('ar-SA',{minimumFractionDigits:2})}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          ${(snap.engineeringManager||snap.hospitalManager) ? `
+          <div class="sigs">
+            ${snap.engineeringManager    ? `<div class="sig"><div class="sig-line"></div><div class="sig-role">مدير المشروع<br>${snap.engineeringManager}</div></div>` : ''}
+            ${snap.generalServicesManager ? `<div class="sig"><div class="sig-line"></div><div class="sig-role">رئيس قسم الصيانة<br>${snap.generalServicesManager}</div></div>` : ''}
+            ${snap.hospitalManager        ? `<div class="sig"><div class="sig-line"></div><div class="sig-role">مدير المستشفى<br>${snap.hospitalManager}</div></div>` : ''}
+            ${snap.followUpManager        ? `<div class="sig"><div class="sig-line"></div><div class="sig-role">مندوب المقاول<br>${snap.followUpManager}</div></div>` : ''}
+          </div>` : ''}
+
+          <div class="footer">تاريخ الحفظ: ${fmtDate(snap.savedAt)} &nbsp;|&nbsp; نظام إدارة المستخلصات — تجمع نجران الصحي</div>
+        </div>
+      </div>
+      <script>window.onload = function(){ window.print(); window.onafterprint = function(){ window.close(); }; }<\/script>
+    </body></html>`);
+    pw.document.close();
+  }
+
+  /* ── Export CSV ── */
+  async function exportCsvArchive() {
+    var session = {};
+    try { session = JSON.parse(localStorage.getItem('najran_session') || '{}'); } catch {}
+    var token = session.clerkToken || '';
+    if (!token) { alert('يجب تسجيل الدخول أولاً'); return; }
+    try {
+      var res = await fetch('/api/export/submitted-extracts', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (!res.ok) throw new Error();
+      var blob = await res.blob();
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'مستخلصات_' + new Date().toISOString().slice(0,10) + '.csv';
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch { alert('تعذر التصدير — تحقق من الاتصال'); }
+  }
+
+  /* ── Init ── */
+  document.addEventListener('DOMContentLoaded', function () {
+    populateYearFilter();
+    renderArchive();
+    renderStats(window.getExtractArchive());
+    loadServerData();
+  });
+</script>
+</body>
+</html>

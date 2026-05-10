@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<script src="/original/offline-user-proxy.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الصفحة الرئيسية - برنامج المستخلصات الشهرية</title>
+    <script>
+        // Redirect to the new React dashboard
+        if (window.location.pathname === '/original/index.html' || window.location.pathname.endsWith('/original/index.html')) {
+            window.location.replace('/dashboard');
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary-blue: #0066b3;
+            --secondary-blue: #004d87;
+            --light-blue: #e6f2ff;
+            --dark-blue: #003366;
+            --accent-orange: #ff6b35;
+            --text-dark: #1a1a1a;
+            --text-light: #ffffff;
+            --bg-overlay: rgba(0, 0, 0, 0.6);
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            --transition: all 0.3s ease;
+        }
+        
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        body {
+            font-family: 'Tajawal', sans-serif;
+            color: var(--text-light);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* فيديو الخلفية */
+        .video-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            overflow: hidden;
+        }
+        
+        .video-background video {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            transform: translateX(-50%) translateY(-50%);
+            object-fit: cover;
+        }
+        
+        /* طبقة التغطية */
+        .video-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, 
+                rgba(0, 102, 179, 0.9) 0%, 
+                rgba(0, 51, 102, 0.8) 50%, 
+                rgba(0, 0, 0, 0.7) 100%);
+            z-index: -1;
+        }
+        
+        /* الحاوية الرئيسية */
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+            width: 100%;
+        }
+        
+        /* قسم الهيدر */
+        .header-section {
+            text-align: center;
+            margin-bottom: 20px;
+            animation: fadeInDown 1s ease-out;
+        }
+        
+        @keyframes fadeInDown {
+            0% {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .cluster-logo {
+            width: 120px;
+            height: auto;
+            margin-bottom: 15px;
+            filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3));
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        .header-title {
+            font-size: 36px;
+            font-weight: 900;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(135deg, #ffffff, #e0e0e0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header-subtitle {
+            font-size: 22px;
+            font-weight: 500;
+            margin-bottom: 15px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .date-time {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        /* المحتوى الرئيسي */
+        .content-wrapper {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        /* قسم الإحصائيات */
+        .stats-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            transform: rotate(45deg);
+            transition: var(--transition);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .stat-card:hover::before {
+            top: -30%;
+            left: -30%;
+        }
+        
+        .stat-icon {
+            font-size: 36px;
+            color: var(--accent-orange);
+            margin-bottom: 12px;
+            display: block;
+        }
+        
+        .stat-number {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+        
+        .stat-description {
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 1.3;
+        }
+        
+        /* قسم البرنامج والخدمات */
+        .services-section {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .program-section {
+            text-align: center;
+            position: relative;
+        }
+        
+        .program-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-blue), var(--dark-blue));
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-size: 20px;
+            font-weight: 700;
+            box-shadow: 0 10px 20px rgba(0, 102, 179, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .program-badge::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+        
+        .program-badge:hover::before {
+            left: 100%;
+        }
+        
+        /* قسم الخدمات */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            flex: 1;
+        }
+        
+        .service-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 18px 12px;
+            text-align: center;
+            transition: var(--transition);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+            color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+        
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .service-card:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .service-icon {
+            font-size: 32px;
+            color: var(--primary-blue);
+            margin-bottom: 10px;
+            transition: var(--transition);
+        }
+        
+        .service-card:hover .service-icon {
+            transform: scale(1.1);
+            color: var(--accent-orange);
+        }
+        
+        .service-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+        
+        /* الفوتر */
+        footer {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 18px 0;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .footer-text {
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 5px;
+        }
+        
+        /* تأثيرات متقدمة */
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        /* الاستجابة للأجهزة المحمولة */
+        @media (max-width: 1024px) {
+            .content-wrapper {
+                flex-direction: column;
+            }
+            
+            .services-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header-title {
+                font-size: 32px;
+            }
+            
+            .header-subtitle {
+                font-size: 20px;
+            }
+            
+            .services-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .cluster-logo {
+                width: 100px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .services-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            
+            .service-card {
+                padding: 15px 8px;
+            }
+            
+            .service-icon {
+                font-size: 28px;
+            }
+            
+            .service-title {
+                font-size: 13px;
+            }
+            
+            .stat-icon {
+                font-size: 32px;
+            }
+            
+            .stat-number {
+                font-size: 28px;
+            }
+            
+            .stat-description {
+                font-size: 14px;
+            }
+            
+            .header-title {
+                font-size: 28px;
+            }
+            
+            .header-subtitle {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- فيديو الخلفية -->
+    <div class="video-background">
+        <video autoplay muted loop playsinline>
+            <source src="pattern-1.mp4" type="video/mp4">
+        </video>
+    </div>
+    
+    <!-- طبقة التغطية -->
+    <div class="video-overlay"></div>
+    
+    <!-- المحتوى الرئيسي -->
+    <main class="main-container">
+        <!-- قسم الهيدر -->
+        <section class="header-section">
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="cluster-logo">
+            <h1 class="header-title">تجمع نجران الصحي</h1>
+            <h2 class="header-subtitle">وحدة الصيانة العامة</h2>
+            <div class="date-time" id="current-date-time"></div>
+        </section>
+        
+        <!-- المحتوى الرئيسي -->
+        <div class="content-wrapper">
+            <!-- قسم الإحصائيات -->
+            <section class="stats-section">
+                <div class="stat-card">
+                    <i class="fas fa-users stat-icon"></i>
+                    <div class="stat-number" data-target="495000">0</div>
+                    <div class="stat-description">مستفيد من خدمات الرعاية الصحية</div>
+                </div>
+                
+                <div class="stat-card">
+                    <i class="fas fa-hospital stat-icon"></i>
+                    <div class="stat-number" data-target="69">0</div>
+                    <div class="stat-description">مركز للرعاية الأولية و12 مستشفى</div>
+                </div>
+                
+                <div class="stat-card">
+                    <i class="fas fa-bed stat-icon"></i>
+                    <div class="stat-number" data-target="1300">0</div>
+                    <div class="stat-description">سرير بسعة إجمالية</div>
+                </div>
+            </section>
+            
+            <!-- قسم البرنامج والخدمات -->
+            <section class="services-section">
+                <!-- قسم البرنامج -->
+                <div class="program-section">
+                    <div class="program-badge pulse">
+                        برنامج المستخلصات الشهرية - الإصدار الموحد
+                    </div>
+                </div>
+                
+                <!-- قسم الخدمات -->
+                <div class="services-grid">
+                    <a href="settings_main.html" class="service-card">
+                        <i class="fas fa-cog service-icon"></i>
+                        <h3 class="service-title">الإعدادات الرئيسية</h3>
+                    </a>
+                    
+                    <a href="settings_advanced.html" class="service-card">
+                        <i class="fas fa-sliders-h service-icon"></i>
+                        <h3 class="service-title">الإعدادات المتقدمة</h3>
+                    </a>
+                    
+                    <a href="attendance.html" class="service-card">
+                        <i class="fas fa-clock service-icon"></i>
+                        <h3 class="service-title">الحضور والانصراف</h3>
+                    </a>
+                    
+                    <a href="performance.html" class="service-card">
+                        <i class="fas fa-chart-line service-icon"></i>
+                        <h3 class="service-title">شهادة الأداء</h3>
+                    </a>
+                    
+                    <a href="achievement.html" class="service-card">
+                        <i class="fas fa-trophy service-icon"></i>
+                        <h3 class="service-title">شهادة الإنجاز</h3>
+                    </a>
+                    
+                    <a href="consumables.html" class="service-card">
+                        <i class="fas fa-box-open service-icon"></i>
+                        <h3 class="service-title">مستخلص المستهلكات</h3>
+                    </a>
+                    
+                    <a href="spare_parts.html" class="service-card">
+                        <i class="fas fa-tools service-icon"></i>
+                        <h3 class="service-title">مستخلص قطع الغيار</h3>
+                    </a>
+                    
+                    <a href="approval.html" class="service-card">
+                        <i class="fas fa-file-signature service-icon"></i>
+                        <h3 class="service-title">اعتماد المستخلص</h3>
+                    </a>
+                    
+                    <a href="health_centers.html" class="service-card">
+                        <i class="fas fa-clinic-medical service-icon"></i>
+                        <h3 class="service-title">المراكز الصحية</h3>
+                    </a>
+                </div>
+            </section>
+        </div>
+    </main>
+    
+    <!-- الفوتر -->
+    <footer>
+        <div class="footer-content">
+            <p class="footer-text">جميع الحقوق محفوظة © 2025 تجمع نجران الصحي</p>
+            <p class="footer-text">تابع للشركة القابضة للرعاية الصحية - رؤية المملكة 2030</p>
+        </div>
+    </footer>
+    
+    <script>
+        // تحديث التاريخ والوقت
+        function updateDateTime() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            const dateTimeString = now.toLocaleDateString('ar-SA', options);
+            document.getElementById('current-date-time').textContent = dateTimeString;
+        }
+        
+        // عداد الأرقام المتحرك
+        function animateCounters() {
+            const counters = document.querySelectorAll('.stat-number');
+            
+            counters.forEach(counter => {
+                const target = +counter.getAttribute('data-target');
+                const increment = target / 100;
+                let count = 0;
+                
+                const updateCounter = () => {
+                    count += increment;
+                    
+                    if (count < target) {
+                        counter.textContent = Math.ceil(count).toLocaleString('ar-SA');
+                        requestAnimationFrame(updateCounter);
+                    } else {
+                        counter.textContent = target.toLocaleString('ar-SA');
+                    }
+                };
+                
+                updateCounter();
+            });
+        }
+        
+        // تهيئة الصفحة
+        function initializePage() {
+            updateDateTime();
+            setInterval(updateDateTime, 60000); // تحديث كل دقيقة
+            
+            // تشغيل العداد عند التمرير
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        animateCounters();
+                        observer.disconnect();
+                    }
+                });
+            });
+            
+            const statsSection = document.querySelector('.stats-section');
+            if (statsSection) {
+                observer.observe(statsSection);
+            }
+        }
+        
+        // تشغيل الكود عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', initializePage);
+        
+        // معالجة خطأ تحميل الفيديو
+        document.querySelector('video').addEventListener('error', function() {
+            console.log('Failed to load video, using fallback background');
+            document.querySelector('.video-overlay').style.background = 
+                'linear-gradient(135deg, rgba(0, 102, 179, 0.95) 0%, rgba(0, 51, 102, 0.9) 50%, rgba(0, 0, 0, 0.8) 100%)';
+        });
+    </script>
+</body>
+</html>

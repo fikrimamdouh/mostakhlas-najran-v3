@@ -1,0 +1,73 @@
+{
+  "name": "najran-offline",
+  "version": "1.0.0",
+  "description": "نظام المستخلصات — نسخة الديسكتوب الأوفلاين",
+  "main": "main.js",
+  "scripts": {
+    "build-app": "node build.js",
+    "start": "npm run build-app && electron .",
+    "dist:win32": "npm run build-app && electron-packager . \"نظام-المستخلصات\" --platform=win32 --arch=ia32 --out=dist --overwrite --asar",
+    "dist:win64": "npm run build-app && electron-packager . \"نظام-المستخلصات\" --platform=win32 --arch=x64  --out=dist --overwrite --asar",
+    "dist:win": "npm run build-app && npm run dist:win64 && npm run dist:win32",
+    "dist:linux": "npm run build-app && electron-packager . \"نظام-المستخلصات\" --platform=linux --arch=x64 --out=dist --overwrite --asar",
+    "pack": "npm run build-app && electron-packager . \"نظام-المستخلصات\" --platform=win32 --arch=x64 --out=dist --overwrite --asar"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "electron-packager": "^17.1.2"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.18.3"
+  },
+  "build": {
+    "appId": "com.najran.mostakhlas",
+    "productName": "نظام المستخلصات",
+    "copyright": "تجمع نجران الصحي",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build-resources"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "server.js",
+      "app/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "ia32"
+          ]
+        }
+      ],
+      "sign": false,
+      "signingHashAlgorithms": null,
+      "forceCodeSigning": false
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build-resources/icon.png",
+      "category": "Office"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "build-resources/icon.icns"
+    }
+  }
+}

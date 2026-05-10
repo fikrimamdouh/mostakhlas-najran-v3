@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تسجيل الدخول — نظام المستخلصات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Tajawal', Arial, sans-serif;
+  background: linear-gradient(135deg, #0d1f4a 0%, #1e3c72 50%, #2a5298 100%);
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+}
+.card {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px;
+  padding: 48px 44px 40px;
+  width: 420px;
+  max-width: 95vw;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+}
+.logo-wrap { text-align: center; margin-bottom: 28px; }
+.logo-wrap img { width: 80px; height: 80px; border-radius: 16px; border: 2px solid rgba(212,175,55,.5); }
+.org { color: rgba(255,255,255,.6); font-size: 13px; margin-top: 8px; }
+h1 { color: #fff; font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 32px; }
+label { display: block; color: rgba(255,255,255,.8); font-size: 14px; font-weight: 600; margin-bottom: 7px; }
+input {
+  width: 100%; padding: 13px 16px; border-radius: 10px;
+  border: 1.5px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.08); color: #fff; font-size: 15px;
+  font-family: 'Tajawal', Arial, sans-serif;
+  transition: border-color .2s;
+  margin-bottom: 18px;
+}
+input:focus { outline: none; border-color: #d4af37; background: rgba(255,255,255,.12); }
+input::placeholder { color: rgba(255,255,255,.35); }
+button.btn-login {
+  width: 100%; padding: 14px; border-radius: 12px; border: none;
+  background: linear-gradient(135deg, #d4af37, #c9982a);
+  color: #1a2a4a; font-size: 16px; font-weight: 800;
+  cursor: pointer; transition: transform .15s, box-shadow .15s;
+  font-family: 'Tajawal', Arial, sans-serif;
+  margin-top: 4px;
+}
+button.btn-login:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(212,175,55,.4); }
+button.btn-login:active { transform: none; }
+.error { color: #ff7e7e; font-size: 14px; text-align: center; margin-top: 14px; min-height: 20px; }
+.version { color: rgba(255,255,255,.3); font-size: 11px; text-align: center; margin-top: 28px; }
+.offline-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(74,222,128,.15); border: 1px solid rgba(74,222,128,.3);
+  color: #4ade80; font-size: 12px; font-weight: 600;
+  padding: 4px 12px; border-radius: 20px; margin: 0 auto 20px; display: block; text-align: center; width: fit-content; margin: 0 auto 20px;
+}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo-wrap">
+    <img src="/assets/icon.png" onerror="this.style.display='none'" alt="">
+    <div class="org">تجمع نجران الصحي — وحدة الصيانة العامة</div>
+  </div>
+  <div class="offline-badge">🔒 نسخة ديسكتوب — بدون انترنت</div>
+  <h1>تسجيل الدخول</h1>
+  <form id="loginForm" onsubmit="doLogin(event)">
+    <label for="username">اسم المستخدم</label>
+    <input type="text" id="username" placeholder="أدخل اسم المستخدم" autocomplete="username" required>
+    <label for="password">كلمة المرور</label>
+    <input type="password" id="password" placeholder="أدخل كلمة المرور" autocomplete="current-password" required>
+    <button type="submit" class="btn-login" id="loginBtn">دخول</button>
+  </form>
+  <div class="error" id="errMsg"></div>
+  <div class="version" id="versionTxt">نظام المستخلصات v1.0</div>
+</div>
+
+<script>
+(function() {
+  // Show version
+  if (window.electronAPI) {
+    window.electronAPI.getVersion().then(v => {
+      document.getElementById('versionTxt').textContent = 'نظام المستخلصات v' + v;
+    }).catch(()=>{});
+  }
+
+  // If already logged in, redirect
+  try {
+    var raw = localStorage.getItem('najran_session');
+    if (raw) {
+      var s = JSON.parse(raw);
+      if (s && s.timestamp && (Date.now() - s.timestamp < 10 * 60 * 60 * 1000)) {
+        window.location.href = '/index.html';
+        return;
+      }
+    }
+  } catch(_) {}
+})();
+
+async function doLogin(e) {
+  e.preventDefault();
+  var btn = document.getElementById('loginBtn');
+  var err = document.getElementById('errMsg');
+  btn.textContent = '...جاري التحقق';
+  btn.disabled = true;
+  err.textContent = '';
+
+  var username = document.getElementById('username').value.trim();
+  var password = document.getElementById('password').value;
+
+  try {
+    var result;
+    if (window.electronAPI) {
+      result = await window.electronAPI.login(username, password);
+    } else {
+      // Fallback: try local API (Capacitor/web mode)
+      var r = await fetch('/local-api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      result = await r.json();
+    }
+
+    if (result.success) {
+      var session = {
+        userId: result.user.id,
+        name: result.user.name,
+        email: result.user.username + '@local',
+        role: result.user.role,
+        hospital: result.user.hospital || '',
+        company: result.user.company || '',
+        username: result.user.username,
+        clerkToken: null,
+        timestamp: Date.now(),
+        offline: true,
+      };
+      localStorage.setItem('najran_session', JSON.stringify(session));
+      window.location.href = '/index.html';
+    } else {
+      err.textContent = result.error || 'خطأ في تسجيل الدخول';
+      btn.textContent = 'دخول';
+      btn.disabled = false;
+    }
+  } catch(ex) {
+    err.textContent = 'خطأ: ' + ex.message;
+    btn.textContent = 'دخول';
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

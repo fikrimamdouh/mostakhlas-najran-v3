@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الرئيسية — نظام المستخلصات</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Tajawal', Arial, sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+/* ── Header ── */
+.header {
+  background: linear-gradient(135deg, #0d1f4a 0%, #1e3c72 60%, #2a5298 100%);
+  padding: 16px 28px; display: flex; align-items: center; gap: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.3);
+}
+.header img { width: 52px; height: 52px; border-radius: 10px; border: 2px solid rgba(212,175,55,.5); }
+.header-text { flex: 1; }
+.org-name { color: #fff; font-size: 17px; font-weight: 700; }
+.org-sub { color: rgba(255,255,255,.6); font-size: 13px; margin-top: 2px; }
+.header-actions { display: flex; align-items: center; gap: 10px; }
+.user-badge {
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+  color: #fff; padding: 7px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;
+}
+.btn-icon {
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+  color: #fff; width: 38px; height: 38px; border-radius: 10px;
+  cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;
+  transition: background .2s;
+}
+.btn-icon:hover { background: rgba(255,255,255,.2); }
+.offline-pill {
+  background: rgba(74,222,128,.15); border: 1px solid rgba(74,222,128,.35);
+  color: #4ade80; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px;
+}
+
+/* ── Main content ── */
+.main { padding: 28px; max-width: 1200px; margin: 0 auto; }
+.section-title {
+  font-size: 15px; font-weight: 700; color: #64748b;
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 16px; margin-top: 28px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title::before { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
+
+/* ── Module grid ── */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+.card {
+  background: #fff; border-radius: 16px; padding: 22px 18px;
+  cursor: pointer; text-align: center;
+  border: 1.5px solid #e8edf3;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  transition: transform .2s, box-shadow .2s, border-color .2s;
+  text-decoration: none; display: block;
+}
+.card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,.1); border-color: #2a5298; }
+.card-emoji { font-size: 34px; margin-bottom: 12px; }
+.card-label { font-size: 14px; font-weight: 700; color: #1e3c72; line-height: 1.4; }
+.card-sub { font-size: 12px; color: #94a3b8; margin-top: 5px; }
+
+/* ── Admin panel ── */
+.admin-panel {
+  background: #fff; border-radius: 16px; padding: 24px; margin-top: 32px;
+  border: 1.5px solid #e8edf3; box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+.admin-panel h3 { font-size: 16px; font-weight: 700; color: #1e3c72; margin-bottom: 18px; }
+.users-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.users-table th { background: #f8fafc; padding: 10px 14px; text-align: right; color: #475569; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+.users-table td { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+.users-table tr:last-child td { border-bottom: none; }
+.role-badge { padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+.role-admin { background: #fef3c7; color: #92400e; }
+.role-user { background: #eff6ff; color: #1e40af; }
+.add-user-form { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; margin-top: 16px; align-items: end; }
+.add-user-form input, .add-user-form select {
+  padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  font-family: 'Tajawal', Arial, sans-serif; font-size: 13px; color: #334155;
+}
+.add-user-form input:focus, .add-user-form select:focus { outline: none; border-color: #2a5298; }
+.btn-add { padding: 8px 18px; background: #1e3c72; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-family: 'Tajawal', Arial, sans-serif; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.btn-add:hover { background: #2a5298; }
+.btn-del { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 15px; padding: 4px 8px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <img src="/assets/icon.png" onerror="this.style.display='none'" alt="">
+  <div class="header-text">
+    <div class="org-name">تجمع نجران الصحي — وحدة الصيانة العامة</div>
+    <div class="org-sub">نظام إدارة المستخلصات</div>
+  </div>
+  <div class="header-actions">
+    <span class="offline-pill">🔌 أوفلاين</span>
+    <span class="user-badge" id="userBadge">مستخدم</span>
+    <button class="btn-icon" title="فتح مجلد البيانات" onclick="openDataDir()">📁</button>
+    <button class="btn-icon" title="تسجيل الخروج" onclick="doLogout()" style="background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.3);color:#fca5a5;">⏻</button>
+  </div>
+</div>
+
+<div class="main" id="mainContent">
+  <!-- Populated by JS -->
+</div>
+
+<script>
+var session = null;
+try { session = JSON.parse(localStorage.getItem('najran_session') || '{}'); } catch(_) {}
+if (!session || !session.userId) { window.location.href = '/login.html'; }
+
+var isAdmin = session.role === 'admin';
+document.getElementById('userBadge').textContent = (session.name || session.username || 'مستخدم') + (session.hospital ? ' — ' + session.hospital : '');
+
+function openDataDir() {
+  if (window.electronAPI) window.electronAPI.openDataDir();
+}
+function doLogout() {
+  if (confirm('هل تريد تسجيل الخروج؟')) {
+    localStorage.removeItem('najran_session');
+    window.location.href = '/login.html';
+  }
+}
+
+var ALL_MODULES = [
+  // المستشفى
+  { key:'attendance',             file:'attendance.html',             label:'جدول الحضور والرواتب',    emoji:'👷', types:['hospital'], sub:'المستشفى' },
+  { key:'consumables',            file:'consumables.html',            label:'المستهلكات',               emoji:'📦', types:['hospital'], sub:'المستشفى' },
+  { key:'spare_parts',            file:'spare_parts.html',            label:'قطع الغيار',               emoji:'🔧', types:['hospital'], sub:'المستشفى' },
+  { key:'performance',            file:'performance.html',            label:'شهادات الأداء',            emoji:'📈', types:['hospital'], sub:'المستشفى' },
+  { key:'achievement',            file:'achievement.html',            label:'الإنجازات',                emoji:'🏆', types:['hospital'], sub:'المستشفى' },
+  { key:'labor_statement',        file:'labor_statement.html',        label:'كشف العمالة',              emoji:'📋', types:['hospital'], sub:'المستشفى' },
+  { key:'approval',               file:'approval.html',               label:'نموذج الاعتماد',           emoji:'✅', types:['hospital'], sub:'المستشفى' },
+  { key:'review_extract',         file:'review_extract.html',         label:'مراجعة المستخلص',          emoji:'🔍', types:['hospital'], sub:'المستشفى' },
+  { key:'request-visit',          file:'request-visit.html',          label:'تسجيل الزيارات',           emoji:'🏥', types:['hospital'], sub:'المستشفى' },
+  { key:'extract-archive',        file:'extract-archive.html',        label:'أرشيف المستخلصات',         emoji:'🗂️', types:['hospital','health_centers'], sub:'المستخلصات' },
+  { key:'monthly-overview',       file:'monthly-overview.html',       label:'النظرة الشهرية',           emoji:'📅', types:['hospital','health_centers'], sub:'المستخلصات' },
+  // المراكز الصحية
+  { key:'health_centers_attendance',  file:'health_centers_attendance.html',  label:'المراكز — الحضور',   emoji:'👷', types:['health_centers'], sub:'المراكز الصحية' },
+  { key:'health_centers_consumables', file:'health_centers_consumables.html', label:'المراكز — المستهلكات', emoji:'🧪', types:['health_centers'], sub:'المراكز الصحية' },
+  { key:'health_centers',             file:'health_centers.html',             label:'بيانات المراكز',     emoji:'🏨', types:['health_centers'], sub:'المراكز الصحية' },
+  // المكاتب الإدارية
+  { key:'admin_offices_attendance',  file:'admin_offices_attendance.html',  label:'المكاتب — الحضور',    emoji:'👷', types:['admin_offices'], sub:'المكاتب الإدارية' },
+  { key:'admin_offices_consumables', file:'admin_offices_consumables.html', label:'المكاتب — المستهلكات', emoji:'🧪', types:['admin_offices'], sub:'المكاتب الإدارية' },
+  // الإعدادات
+  { key:'settings_main',    file:'settings_main.html',    label:'إعدادات العقد',       emoji:'⚙️',  types:[], sub:'الإعدادات' },
+  { key:'settings_advanced',file:'settings_advanced.html',label:'إعدادات متقدمة',      emoji:'🛠️', types:[], sub:'الإعدادات' },
+  { key:'job-positions-upload', file:'job-positions-upload.html', label:'رفع مناصب الوظائف', emoji:'📤', types:[], sub:'الإعدادات', adminOnly: true },
+];
+
+function getVisibleModules() {
+  return ALL_MODULES.filter(function(m) {
+    if (m.adminOnly && !isAdmin) return false;
+    return true; // Show all modules — user picks what applies to their hospital
+  });
+}
+
+function renderModules() {
+  var modules = getVisibleModules();
+  var sections = {};
+  modules.forEach(function(m) {
+    if (!sections[m.sub]) sections[m.sub] = [];
+    sections[m.sub].push(m);
+  });
+
+  var html = '';
+  Object.keys(sections).forEach(function(sec) {
+    html += '<div class="section-title"><span>' + sec + '</span></div>';
+    html += '<div class="grid">';
+    sections[sec].forEach(function(m) {
+      html += '<a class="card" href="/original/' + m.file + '">';
+      html += '<div class="card-emoji">' + m.emoji + '</div>';
+      html += '<div class="card-label">' + m.label + '</div>';
+      html += '</a>';
+    });
+    html += '</div>';
+  });
+
+  if (isAdmin) {
+    html += renderAdminPanel();
+  }
+
+  document.getElementById('mainContent').innerHTML = html;
+  if (isAdmin) loadUsers();
+}
+
+function renderAdminPanel() {
+  return '<div class="admin-panel" id="adminPanel">' +
+    '<h3>🔐 إدارة المستخدمين</h3>' +
+    '<table class="users-table"><thead><tr>' +
+    '<th>الاسم</th><th>اسم المستخدم</th><th>المستشفى</th><th>الدور</th><th></th>' +
+    '</tr></thead><tbody id="usersBody"><tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">جاري التحميل...</td></tr></tbody></table>' +
+    '<div class="add-user-form" id="addForm">' +
+    '<input type="text" id="newName" placeholder="الاسم الكامل">' +
+    '<input type="text" id="newUsername" placeholder="اسم المستخدم">' +
+    '<input type="password" id="newPassword" placeholder="كلمة المرور">' +
+    '<input type="text" id="newHospital" placeholder="المستشفى">' +
+    '<button class="btn-add" onclick="addUser()">+ إضافة</button>' +
+    '</div>' +
+    '</div>';
+}
+
+async function loadUsers() {
+  if (!window.electronAPI) return;
+  var users = await window.electronAPI.listUsers();
+  var tbody = document.getElementById('usersBody');
+  if (!tbody) return;
+  if (!users.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;">لا يوجد مستخدمون</td></tr>'; return; }
+  tbody.innerHTML = users.map(function(u) {
+    return '<tr>' +
+      '<td>' + (u.name || '—') + '</td>' +
+      '<td><code>' + u.username + '</code></td>' +
+      '<td>' + (u.hospital || '—') + '</td>' +
+      '<td><span class="role-badge ' + (u.role === 'admin' ? 'role-admin' : 'role-user') + '">' + (u.role === 'admin' ? 'مدير' : 'مستخدم') + '</span></td>' +
+      '<td><button class="btn-del" onclick="delUser(' + u.id + ')" title="حذف">🗑</button></td>' +
+      '</tr>';
+  }).join('');
+}
+
+async function addUser() {
+  var name = document.getElementById('newName').value.trim();
+  var username = document.getElementById('newUsername').value.trim();
+  var password = document.getElementById('newPassword').value;
+  var hospital = document.getElementById('newHospital').value.trim();
+  if (!name || !username || !password) { alert('يرجى تعبئة الاسم واسم المستخدم وكلمة المرور'); return; }
+  if (!window.electronAPI) return;
+  var result = await window.electronAPI.addUser({ name, username, password, hospital, role: 'user', company: '' });
+  if (result.success) {
+    document.getElementById('newName').value = '';
+    document.getElementById('newUsername').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('newHospital').value = '';
+    loadUsers();
+  } else {
+    alert('خطأ: ' + result.error);
+  }
+}
+
+async function delUser(id) {
+  if (!confirm('هل تريد حذف هذا المستخدم؟')) return;
+  if (!window.electronAPI) return;
+  await window.electronAPI.deleteUser(id);
+  loadUsers();
+}
+
+renderModules();
+</script>
+</body>
+</html>

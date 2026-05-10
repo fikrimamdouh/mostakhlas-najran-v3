@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<script src="/original/offline-user-proxy.js"></script>
+    <script src="/original/offline-auth-check.js"></script>
+    <script src="/original/offline-cloud-sync.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوابة تسجيل ومتابعة الزيارات</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary-color: #1e3c72; --secondary-color: #2a5298; --accent-color: #d4af37; --accent-hover: #b8962e; --glass-bg: rgba(255, 255, 255, 0.97); }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Tajawal', sans-serif; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 40px 20px; }
+        .main-container { width: 95%; max-width: 1200px; background: var(--glass-bg); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); padding: 40px 50px; margin-bottom: 40px; }
+        .form-header { text-align: center; margin-bottom: 35px; display: flex; flex-direction: column; align-items: center; }
+        .form-header img { width: 90px; margin-bottom: 15px; }
+        .form-header h2 { font-size: 26px; color: var(--primary-color); margin: 0; }
+        .form-header p { font-size: 15px; color: #555; margin-top: 8px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 30px; }
+        .input-group { position: relative; }
+        .input-group.full-width { grid-column: 1 / -1; }
+        .input-group label { font-weight: 600; display: block; margin-bottom: 8px; color: #333; font-size: 14px; }
+        .input-group input { width: 100%; padding: 12px; font-size: 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-family: 'Tajawal', sans-serif; background: #f8fafc; transition: border .2s, box-shadow .2s; }
+        .input-group input:focus { border-color: var(--secondary-color); outline: none; box-shadow: 0 0 0 3px rgba(42,82,152,.1); background: #fff; }
+        .btn-submit { grid-column: 1 / -1; width: 100%; padding: 15px; margin-top: 10px; background: linear-gradient(145deg, var(--accent-color), var(--accent-hover)); color: var(--primary-color); border-radius: 12px; font-size: 17px; font-weight: 800; border: none; cursor: pointer; transition: opacity .2s, transform .1s; }
+        .btn-submit:hover { opacity: .92; transform: translateY(-1px); }
+        .btn-submit:disabled { opacity: .6; cursor: not-allowed; }
+        #status-message { text-align: center; margin-top: 18px; font-weight: bold; padding: 12px 20px; border-radius: 10px; display: none; font-size: 14px; }
+        #status-message.success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        #status-message.error   { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+        /* ── Loading spinner ── */
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,.15); border-top-color: #1e3c72; border-radius: 50%; animation: spin .6s linear infinite; margin-left: 8px; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Requests index ── */
+        .requests-index { margin-top: 40px; border-top: 2px solid var(--accent-color); padding-top: 30px; }
+        .index-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+        .index-header h3 { color: var(--primary-color); font-size: 20px; font-weight: 800; }
+        .search-box { position: relative; }
+        .search-box input { padding: 9px 35px 9px 14px; border-radius: 20px; border: 1.5px solid #e2e8f0; font-family: 'Tajawal', sans-serif; font-size: 13px; width: 240px; background: #f8fafc; }
+        .search-box input:focus { outline: none; border-color: var(--secondary-color); background: #fff; }
+        .search-box i { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); color: #aaa; font-size: 13px; }
+
+        .table-container { overflow-x: auto; }
+        .requests-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .requests-table th, .requests-table td { padding: 11px 13px; text-align: right; border-bottom: 1px solid #f1f5f9; }
+        .requests-table thead th { background: #f8fafc; color: #475569; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+        .requests-table tbody tr:hover { background: #f8fafc; }
+
+        .status-badge { font-weight: 700; padding: 4px 10px; border-radius: 20px; font-size: 12px; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
+        .status-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; }
+        .status-pending  { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+        .status-pending::before { background: #f59e0b; }
+        .status-approved { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .status-approved::before { background: #16a34a; }
+        .status-rejected { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+        .status-rejected::before { background: #ef4444; }
+
+        .btn-action { padding: 5px 11px; font-size: 12px; border-radius: 7px; text-decoration: none; color: #fff; background: var(--secondary-color); border: none; cursor: pointer; font-family: 'Tajawal', sans-serif; font-weight: 600; transition: opacity .15s; }
+        .btn-action:hover { opacity: .85; }
+
+        /* ── Admin badge ── */
+        .admin-badge { display: inline-block; background: linear-gradient(135deg,#1e3c72,#2a5298); color: #d4af37; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 20px; margin-right: 8px; }
+
+        /* ── Admin status change ── */
+        .admin-actions { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+        .admin-select { padding: 5px 10px; border-radius: 8px; border: 1.5px solid #e2e8f0; font-family: 'Tajawal', sans-serif; font-size: 12px; background: #f8fafc; color: #334155; cursor: pointer; }
+        .btn-save { padding: 5px 12px; border-radius: 8px; background: linear-gradient(135deg,#1e3c72,#2a5298); color: #fff; border: none; font-family: 'Tajawal', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+        .btn-save:hover { opacity: .85; }
+        .admin-notes-input { padding: 5px 10px; border-radius: 8px; border: 1.5px solid #e2e8f0; font-family: 'Tajawal', sans-serif; font-size: 12px; background: #f8fafc; width: 180px; }
+
+        .empty-row { text-align: center; color: #94a3b8; padding: 30px 0 !important; }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="form-header">
+            <img src="/original/najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي">
+            <h2>بوابة تسجيل ومتابعة الزيارات</h2>
+            <p>يرجى تعبئة بيانات الزيارة المطلوبة بدقة ومتابعة حالة طلباتك السابقة.</p>
+        </div>
+
+        <form id="visit-request-form">
+            <div class="form-grid">
+                <div class="input-group"><label for="rep_name"><i class="fas fa-user"></i> الاسم</label><input type="text" id="rep_name" placeholder="اسم الزائر" required></div>
+                <div class="input-group"><label for="site_location"><i class="fas fa-map-marker-alt"></i> الموقع</label><input type="text" id="site_location" placeholder="اسم المنشأة / الموقع" required></div>
+                <div class="input-group"><label for="rep_id"><i class="fas fa-id-card"></i> رقم الهوية / الإقامة</label><input type="text" id="rep_id" placeholder="رقم الهوية" required></div>
+                <div class="input-group"><label for="visit_date"><i class="fas fa-calendar-alt"></i> تاريخ الزيارة</label><input type="date" id="visit_date" required></div>
+                <div class="input-group"><label for="rep_mobile"><i class="fas fa-phone"></i> رقم الجوال</label><input type="tel" id="rep_mobile" placeholder="05xxxxxxxx" required></div>
+                <div class="input-group"><label for="system_name"><i class="fas fa-tools"></i> النظام</label><input type="text" id="system_name" placeholder="نظام التكييف، الكهرباء..." required></div>
+                <div class="input-group"><label for="main_contractor"><i class="fas fa-hard-hat"></i> مقاول الصيانة</label><input type="text" id="main_contractor" placeholder="اسم المقاول الرئيسي" required></div>
+                <div class="input-group"><label for="sub_contractor"><i class="fas fa-building"></i> مقاول الباطن</label><input type="text" id="sub_contractor" placeholder="اسم مقاول الباطن" required></div>
+                <div class="input-group full-width"><label for="rep_id_photo"><i class="fas fa-camera"></i> صورة هوية الزائر <span style="color:#94a3b8;font-weight:400">(اختياري)</span></label><input type="file" id="rep_id_photo" accept="image/*"></div>
+                <button type="submit" class="btn-submit" id="submit-btn"><i class="fas fa-paper-plane"></i> إرسال الطلب للمراجعة</button>
+            </div>
+        </form>
+        <div id="status-message"></div>
+
+        <div class="requests-index">
+            <div class="index-header">
+                <h3><i class="fas fa-list-alt" style="color:var(--accent-color)"></i> سجل الطلبات <span id="admin-lbl" style="display:none" class="admin-badge">عرض المدير</span></h3>
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="بحث في السجل...">
+                    <i class="fas fa-search"></i>
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="requests-table">
+                    <thead>
+                        <tr>
+                            <th>الاسم</th><th>الموقع</th><th>رقم الهوية</th><th>الجوال</th><th>النظام</th>
+                            <th>مقاول الصيانة</th><th>مقاول الباطن</th><th>تاريخ الزيارة</th><th>الحالة</th><th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requests-tbody">
+                        <tr><td colspan="10" class="empty-row"><i class="fas fa-circle-notch fa-spin"></i> جارٍ التحميل...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        var session = {};
+        try { session = JSON.parse(localStorage.getItem('najran_session') || '{}'); } catch(e) {}
+        var isAdmin = session.role === 'admin' || session.role === 'supervisor';
+        var token = session.clerkToken || '';
+
+        var allVisits = [];
+        var searchInput = document.getElementById('search-input');
+        var tbody = document.getElementById('requests-tbody');
+
+        if (isAdmin) document.getElementById('admin-lbl').style.display = '';
+
+        // ── Load visits from API ──
+        async function loadVisits() {
+            try {
+                var res = await fetch('/api/visits', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.status === 401 || res.status === 403) {
+                    tbody.innerHTML = '<tr><td colspan="10" class="empty-row">غير مصرح لك بعرض هذه البيانات</td></tr>';
+                    return;
+                }
+                var data = await res.json();
+                allVisits = data.visits || [];
+                renderVisits();
+            } catch(e) {
+                tbody.innerHTML = '<tr><td colspan="10" class="empty-row"><i class="fas fa-exclamation-triangle" style="color:#f59e0b"></i> تعذر تحميل البيانات، تحقق من اتصالك</td></tr>';
+            }
+        }
+
+        // ── Render table ──
+        function renderVisits() {
+            var q = (searchInput.value || '').toLowerCase().trim();
+            var data = allVisits.filter(function(v) {
+                return !q || Object.values(v).some(function(val) {
+                    return val && String(val).toLowerCase().includes(q);
+                });
+            });
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="empty-row"><i class="fas fa-inbox" style="font-size:20px;color:#cbd5e1"></i><br>لا توجد طلبات مطابقة</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.map(function(v) {
+                var statusCls = v.status === 'approved' ? 'status-approved' : v.status === 'rejected' ? 'status-rejected' : 'status-pending';
+                var statusTxt = v.status === 'approved' ? 'موافق عليه' : v.status === 'rejected' ? 'مرفوض' : 'قيد المراجعة';
+                var visitDt = v.visitDate ? new Date(v.visitDate).toLocaleDateString('ar-SA') : '—';
+                var photoBtn = v.repIdPhoto ? '<a href="' + v.repIdPhoto + '" target="_blank" class="btn-action"><i class="fas fa-image"></i> الهوية</a>' : '—';
+
+                var adminActions = '';
+                if (isAdmin) {
+                    adminActions = '<div class="admin-actions" style="margin-top:6px">' +
+                        '<select class="admin-select" id="st-' + v.id + '">' +
+                            '<option value="pending"'   + (v.status==='pending'  ?' selected':'') + '>قيد المراجعة</option>' +
+                            '<option value="approved"'  + (v.status==='approved' ?' selected':'') + '>موافق عليه ✅</option>' +
+                            '<option value="rejected"'  + (v.status==='rejected' ?' selected':'') + '>مرفوض ❌</option>' +
+                        '</select>' +
+                        '<input class="admin-notes-input" id="an-' + v.id + '" placeholder="ملاحظة اختيارية..." value="' + esc(v.adminNotes||'') + '">' +
+                        '<button class="btn-save" onclick="saveStatus(' + v.id + ')"><i class="fas fa-check"></i> حفظ</button>' +
+                    '</div>';
+                }
+
+                return '<tr>' +
+                    '<td>' + esc(v.repName) + (v.submittedByHospital ? '<br><small style="color:#94a3b8">' + esc(v.submittedByHospital) + '</small>' : '') + '</td>' +
+                    '<td>' + esc(v.siteLocation) + '</td>' +
+                    '<td>' + esc(v.repId) + '</td>' +
+                    '<td>' + esc(v.repMobile) + '</td>' +
+                    '<td>' + esc(v.systemName) + '</td>' +
+                    '<td>' + esc(v.mainContractor) + '</td>' +
+                    '<td>' + esc(v.subContractor) + '</td>' +
+                    '<td>' + visitDt + '</td>' +
+                    '<td><span class="status-badge ' + statusCls + '">' + statusTxt + '</span>' +
+                        (v.adminNotes ? '<br><small style="color:#64748b;font-size:11px">' + esc(v.adminNotes) + '</small>' : '') + '</td>' +
+                    '<td>' + photoBtn + adminActions + '</td>' +
+                '</tr>';
+            }).join('');
+        }
+
+        // ── Admin save status ──
+        window.saveStatus = async function(id) {
+            var sel = document.getElementById('st-' + id);
+            var notes = document.getElementById('an-' + id);
+            if (!sel) return;
+            try {
+                var res = await fetch('/api/visits/' + id + '/status', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ status: sel.value, adminNotes: notes ? notes.value : '' })
+                });
+                if (!res.ok) throw new Error();
+                showMsg('تم تحديث الحالة بنجاح ✓', 'success');
+                await loadVisits();
+            } catch(e) {
+                showMsg('فشل تحديث الحالة', 'error');
+            }
+        };
+
+        // ── Submit form ──
+        document.getElementById('visit-request-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> جارٍ الإرسال...';
+
+            var photoFile = document.getElementById('rep_id_photo').files[0];
+            var photoData = null;
+            if (photoFile) {
+                photoData = await new Promise(function(resolve) {
+                    var reader = new FileReader();
+                    reader.onload = function(ev) { resolve(ev.target.result); };
+                    reader.readAsDataURL(photoFile);
+                });
+            }
+
+            var body = {
+                repName:         document.getElementById('rep_name').value,
+                siteLocation:    document.getElementById('site_location').value,
+                repId:           document.getElementById('rep_id').value,
+                visitDate:       document.getElementById('visit_date').value,
+                repMobile:       document.getElementById('rep_mobile').value,
+                systemName:      document.getElementById('system_name').value,
+                mainContractor:  document.getElementById('main_contractor').value,
+                subContractor:   document.getElementById('sub_contractor').value,
+                repIdPhoto:      photoData,
+            };
+
+            try {
+                var res = await fetch('/api/visits', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify(body)
+                });
+                if (!res.ok) {
+                    var err = await res.json().catch(function(){ return {}; });
+                    throw new Error(err.error || 'فشل الإرسال');
+                }
+                showMsg('تم إرسال طلبك بنجاح! سيتم مراجعته من قِبل الإدارة قريباً ✓', 'success');
+                document.getElementById('visit-request-form').reset();
+                await loadVisits();
+            } catch(err) {
+                showMsg('حدث خطأ: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الطلب للمراجعة';
+            }
+        });
+
+        function showMsg(txt, type) {
+            var el = document.getElementById('status-message');
+            el.textContent = txt;
+            el.className = type;
+            el.style.display = 'block';
+            setTimeout(function() { el.style.display = 'none'; }, 6000);
+        }
+
+        function esc(s) {
+            return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        searchInput.addEventListener('input', function() { renderVisits(); });
+
+        loadVisits();
+    })();
+    </script>
+</body>
+</html>
