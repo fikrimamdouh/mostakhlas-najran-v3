@@ -1847,6 +1847,10 @@ window.navigateTo = function (url) {
       fsBtn.className = 'zoom-fullscreen-btn';
       fsBtn.innerHTML = '<i class="fas fa-expand"></i> عرض كامل';
 
+      // حفظ الأب الأصلي لإعادة الجدول مكانه عند الإغلاق
+      var _fsOrigParent = null;
+      var _fsOrigNext   = null;
+
       fsBtn.onclick = function() {
         const isFs = deptCard.classList.contains('dept-fullscreen');
         if (isFs) {
@@ -1857,18 +1861,32 @@ window.navigateTo = function (url) {
           var bd = document.getElementById('_dept_fs_backdrop');
           if (bd) bd.remove();
           document.body.style.overflow = '';
+          // إعادة الجدول لمكانه الأصلي
+          if (_fsOrigParent) {
+            if (_fsOrigNext) {
+              _fsOrigParent.insertBefore(deptCard, _fsOrigNext);
+            } else {
+              _fsOrigParent.appendChild(deptCard);
+            }
+            _fsOrigParent = null;
+            _fsOrigNext   = null;
+          }
         } else {
           // ── فتح ملء الشاشة ───────────────────────────────
+          // حفظ الموضع الأصلي
+          _fsOrigParent = deptCard.parentNode;
+          _fsOrigNext   = deptCard.nextSibling;
+          // نقل الجدول لـ body ليخرج من أي stacking context
+          document.body.appendChild(deptCard);
           deptCard.classList.add('dept-fullscreen');
           fsBtn.innerHTML = '<i class="fas fa-compress"></i> إغلاق العرض';
           // خلفية داكنة
           var bd2 = document.createElement('div');
           bd2.id = '_dept_fs_backdrop';
           bd2.className = 'dept-fullscreen-backdrop';
-          bd2.onclick = function() { fsBtn.click(); }; // إغلاق بالنقر على الخلفية
+          bd2.onclick = function() { fsBtn.click(); };
           document.body.appendChild(bd2);
           document.body.style.overflow = 'hidden';
-          // تمرير للأعلى
           deptCard.scrollTop = 0;
         }
       };
