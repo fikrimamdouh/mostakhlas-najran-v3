@@ -6,6 +6,7 @@ import {
   Building2, ChevronLeft, BarChart3, Eye,
   ChevronRight, PanelLeftClose, PanelLeftOpen,
   BookOpen, ContactRound, Bell, X, Check, Clock, UserCheck,
+  FileCheck2, FileSearch, LayoutGrid, Archive,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
@@ -107,6 +108,7 @@ export function Sidebar() {
     try { return localStorage.getItem(COLLAPSE_KEY) === "true"; } catch { return false; }
   });
   const [modulesOpen, setModulesOpen] = useState(true);
+  const [extractsOpen, setExtractsOpen] = useState(true);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifAnim, setNotifAnim] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -215,6 +217,24 @@ export function Sidebar() {
     ...(isContractSup ? [
       { name: "لوحة مشرف العقد", href: "/contract-supervisor", icon: Building2 },
     ] : []),
+  ];
+
+  // قسم المستخلصات — مرتّب حسب سير العمل الوظيفي
+  const extractsNav = [
+    // 1. مراجعة المستخلص — أول خطوة: المستخدم يراجع ويرفع
+    ...(!isViewer ? [
+      { name: "مراجعة المستخلص", file: "review_extract.html", icon: FileSearch },
+    ] : []),
+    // 2. اعتماد المستخلص — ثاني خطوة: المشرف / المدير يعتمد
+    ...(isAdmin || isSupervisor ? [
+      { name: "اعتماد المستخلص", file: "approval.html", icon: FileCheck2 },
+    ] : []),
+    // 3. النظرة الشاملة — لمن يحتاج متابعة كلية
+    ...(isAdmin || isSupervisor || isContractSup || isViewer ? [
+      { name: "النظرة الشاملة", file: "monthly_overview.html", icon: LayoutGrid },
+    ] : []),
+    // 4. أرشيف المستخلص — متاح للجميع
+    { name: "أرشيف المستخلص", file: "extract-archive.html", icon: Archive },
   ];
 
   const hasAdminNav = adminNav.length > 0;
@@ -494,6 +514,61 @@ export function Sidebar() {
                         {collapsed && (
                           <div className="absolute right-full mr-2 px-2 py-1 text-xs rounded-md bg-gray-900 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
                             {m.label}
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Extracts section */}
+        {extractsNav.length > 0 && (
+          <div className="pt-1">
+            {!collapsed && (
+              <button
+                onClick={() => setExtractsOpen(p => !p)}
+                className="w-full flex items-center justify-between px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-white/5"
+                style={{ color: "rgba(212,175,55,0.7)" }}
+              >
+                <span>المستخلصات</span>
+                {extractsOpen ? <ChevronRight className="h-3 w-3 rotate-90" /> : <ChevronRight className="h-3 w-3" />}
+              </button>
+            )}
+            {(extractsOpen || collapsed) && (
+              <div className="space-y-0.5 mt-0.5">
+                {extractsNav.map(m => {
+                  const isActive = isModuleActive(m.file);
+                  const href = `/original-viewer?page=${m.file}`;
+                  return (
+                    <Link key={m.file} href={href}>
+                      <div
+                        title={collapsed ? m.name : undefined}
+                        className={cn(
+                          "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 cursor-pointer group relative",
+                          collapsed ? "justify-center px-2" : "",
+                          isActive
+                            ? "text-[#1a3660] font-bold shadow-md"
+                            : "text-white/65 hover:text-white hover:bg-white/10"
+                        )}
+                        style={isActive ? {
+                          background: "linear-gradient(135deg, #d4af37 0%, #e8c84a 100%)",
+                          boxShadow: "0 2px 8px rgba(212,175,55,0.3)",
+                        } : {}}
+                      >
+                        <m.icon
+                          className={cn("flex-shrink-0", collapsed ? "h-5 w-5" : "h-4 w-4")}
+                          style={isActive ? { color: "#1a3660" } : { color: "rgba(255,255,255,0.65)" }}
+                        />
+                        {!collapsed && (
+                          <span className="flex-1 truncate leading-tight">{m.name}</span>
+                        )}
+                        {collapsed && (
+                          <div className="absolute right-full mr-2 px-2 py-1 text-xs rounded-md bg-gray-900 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                            {m.name}
                           </div>
                         )}
                       </div>
