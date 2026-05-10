@@ -1110,7 +1110,7 @@ const dueVisitCost = (item.visitDate || '').includes("خلال هذا الشهر
             const addBtn = target.closest('.btn-add-item');
             const removeBtn = target.closest('.btn-remove-item');
             const tableRow = target.closest('tr[data-table]');
-            const mainActionBtn = target.closest('.main-action-buttons .btn');
+            const mainActionBtn = target.closest('.std-action-bar button');
 
             if (dashboardCard) showTable(dashboardCard.dataset.section);
             if (backBtn) showDashboard();
