@@ -174,7 +174,8 @@ export function Sidebar() {
 
   const siteType = getSiteType(dbUser?.hospital);
   const allowedModuleKeys = parseAllowedModules((dbUser as any)?.allowedModules);
-  const visibleModules = filterModules(siteType, allowedModuleKeys, role);
+  const userCompany = (dbUser as any)?.company as string | undefined;
+  const visibleModules = filterModules(siteType, allowedModuleKeys, role, userCompany);
 
   const { data: usersData } = useListUsers(
     { status: "pending" },
@@ -208,8 +209,6 @@ export function Sidebar() {
     ...(isAdmin ? [
       { name: "إدارة المستخدمين", href: "/admin/users", icon: ShieldAlert },
       { name: "النسخ الاحتياطي", href: "/admin/backup", icon: BookOpen },
-    ] : []),
-    ...(canViewAudit ? [
       { name: "إحصائيات المستخلصات", href: "/admin/extracts-stats", icon: BarChart3 },
       { name: "سجل المراقبة", href: "/admin/audit", icon: ClipboardList },
       { name: "قائمة المستخدمين", href: "/admin/users-view", icon: Users },
@@ -231,7 +230,7 @@ export function Sidebar() {
     ] : []),
     // 3. النظرة الشاملة — لمن يحتاج متابعة كلية
     ...(isAdmin || isSupervisor || isContractSup || isViewer ? [
-      { name: "النظرة الشاملة", file: "monthly_overview.html", icon: LayoutGrid },
+      { name: "النظرة الشاملة", file: "monthly-overview.html", icon: LayoutGrid },
     ] : []),
     // 4. أرشيف المستخلص — متاح للجميع
     { name: "أرشيف المستخلص", file: "extract-archive.html", icon: Archive },

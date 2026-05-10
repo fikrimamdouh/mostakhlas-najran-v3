@@ -45,9 +45,24 @@ export function parseAllowedModules(raw: string | null | undefined): string[] | 
 
 export function getSiteType(hospital: string | null | undefined): SiteType {
   if (!hospital) return "hospital";
-  if (hospital === "المراكز الصحية") return "health_centers";
-  if (hospital === "المكاتب الإدارية") return "admin_offices";
+  if (hospital === "المراكز الصحية" || hospital === "المراكز الصحية (مجمع)") return "health_centers";
+  if (
+    hospital === "المكاتب الإدارية" ||
+    hospital === "المكاتب الإدارية والمرافق الصحية"
+  ) return "admin_offices";
   return "hospital";
+}
+
+// أنواع المواقع التي تمتلكها كل شركة
+const COMPANY_SITE_TYPES: Record<string, SiteType[]> = {
+  "بيت_العرب": ["hospital", "admin_offices"],
+  "سراكو":     ["hospital", "health_centers", "admin_offices"],
+  "تجمع_نجران": [],
+};
+
+export function getCompanySiteTypes(company: string | null | undefined): SiteType[] | null {
+  if (!company) return null;
+  return COMPANY_SITE_TYPES[company] ?? null;
 }
 
 export function isModuleAllowed(
@@ -64,11 +79,32 @@ export function filterModules(
   siteType: SiteType,
   allowedModuleKeys: string[] | null,
   role: string,
+  company?: string | null,
 ): ModuleDef[] {
-  const isPrivileged = role === "admin" || role === "supervisor" || role === "contract_supervisor";
-  const byType = isPrivileged
-    ? ALL_MODULES
-    : ALL_MODULES.filter(m => m.types.includes(siteType));
+  const isAdmin = role === "admin";
+  const isSupervisor = role === "supervisor";
+  const isPrivileged = isAdmin || isSupervisor || role === "contract_supervisor";
+
+  let byType: ModuleDef[];
+
+  if (isAdmin) {
+    // المدير يرى كل شيء
+    byType = ALL_MODULES;
+  } else if (isSupervisor) {
+    // المشرف يرى وحدات شركته فقط
+    const companySiteTypes = getCompanySiteTypes(company);
+    if (companySiteTypes && companySiteTypes.length > 0) {
+      const typeSet = new Set(companySiteTypes);
+      byType = ALL_MODULES.filter(m => m.types.some(t => typeSet.has(t)));
+    } else {
+      byType = ALL_MODULES;
+    }
+  } else if (isPrivileged) {
+    byType = ALL_MODULES;
+  } else {
+    byType = ALL_MODULES.filter(m => m.types.includes(siteType));
+  }
+
   if (allowedModuleKeys !== null && !isPrivileged) {
     const keySet = new Set(allowedModuleKeys);
     return byType.filter(m => keySet.has(m.key));
