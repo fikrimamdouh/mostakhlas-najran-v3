@@ -8,7 +8,7 @@ import {
   BookOpen, ContactRound, Bell, X, Check, Clock, UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
 import { ALL_MODULES, getSiteType, parseAllowedModules, filterModules } from "@/lib/modules";
 
 const ARABIC_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
@@ -108,7 +108,10 @@ export function Sidebar() {
   });
   const [modulesOpen, setModulesOpen] = useState(true);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notifAnim, setNotifAnim] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+  const bellBtnRef = useRef<HTMLButtonElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30000);
@@ -117,13 +120,40 @@ export function Sidebar() {
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
-        setNotifOpen(false);
+      if (
+        notifRef.current && !notifRef.current.contains(e.target as Node) &&
+        bellBtnRef.current && !bellBtnRef.current.contains(e.target as Node)
+      ) {
+        setNotifAnim(false);
+        setTimeout(() => setNotifOpen(false), 180);
       }
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  function openNotif() {
+    if (notifOpen) {
+      setNotifAnim(false);
+      setTimeout(() => setNotifOpen(false), 180);
+      return;
+    }
+    if (bellBtnRef.current) {
+      const rect = bellBtnRef.current.getBoundingClientRect();
+      const dropW = 320;
+      const viewW = window.innerWidth;
+      const viewH = window.innerHeight;
+      let left = collapsed ? rect.right + 8 : rect.left;
+      if (left + dropW > viewW - 8) left = viewW - dropW - 8;
+      if (left < 8) left = 8;
+      let top = rect.bottom + 6;
+      const maxH = 420;
+      if (top + maxH > viewH - 8) top = rect.top - maxH - 6;
+      setDropdownStyle({ position: "fixed", top, left, width: dropW, zIndex: 9999, direction: "rtl" });
+    }
+    setNotifOpen(true);
+    setTimeout(() => setNotifAnim(true), 10);
+  }
 
   const toggleCollapse = useCallback(() => {
     setCollapsed(prev => {
@@ -280,9 +310,10 @@ export function Sidebar() {
 
       {/* Notifications bell — outside scroll container to avoid overflow clipping */}
       {isAdmin && (
-        <div className="px-2 pt-1 pb-0.5" ref={notifRef} style={{ position: "relative", zIndex: 50 }}>
+        <div className="px-2 pt-1 pb-0.5" style={{ position: "relative", zIndex: 50 }}>
           <button
-            onClick={() => setNotifOpen(p => !p)}
+            ref={bellBtnRef}
+            onClick={openNotif}
             title={collapsed ? "الإشعارات" : undefined}
             className={cn(
               "w-full flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium transition-all duration-150 cursor-pointer group",
@@ -300,11 +331,6 @@ export function Sidebar() {
               )}
             </div>
             {!collapsed && <span className="flex-1 text-right">الإشعارات</span>}
-            {!collapsed && unread.length > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: "#ef4444" }}>
-                {unread.length}
-              </span>
-            )}
             {collapsed && (
               <div className="absolute right-full mr-2 px-2 py-1 text-xs rounded-md bg-gray-900 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg" style={{ zIndex: 200 }}>
                 الإشعارات {unread.length > 0 ? `(${unread.length})` : ""}
@@ -312,71 +338,90 @@ export function Sidebar() {
             )}
           </button>
 
-          {/* Notifications Dropdown — fixed to avoid any clipping */}
+          {/* Notifications Dropdown — position:fixed to never get clipped */}
           {notifOpen && (
             <div
-              className="absolute rounded-xl shadow-2xl overflow-hidden"
+              ref={notifRef}
+              className="rounded-2xl shadow-2xl overflow-hidden"
               style={{
+                ...dropdownStyle,
                 background: "#fff",
-                border: "1px solid #e8edf7",
-                width: 300,
-                right: collapsed ? "calc(100% + 8px)" : 0,
-                top: "calc(100% + 4px)",
-                direction: "rtl",
-                zIndex: 9999,
+                border: "1px solid #e2e8f0",
+                transformOrigin: "top right",
+                transform: notifAnim ? "scale(1) translateY(0)" : "scale(0.92) translateY(-8px)",
+                opacity: notifAnim ? 1 : 0,
+                transition: "transform 0.2s cubic-bezier(.22,.68,0,1.3), opacity 0.18s ease",
               }}
             >
-              <div className="flex items-center justify-between px-4 py-3" style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)", color: "#fff" }}>
-                <div className="flex items-center gap-2">
-                  <Bell className="h-4 w-4" />
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3.5"
+                style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)", color: "#fff" }}>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(255,255,255,0.15)" }}>
+                    <Bell className="h-3.5 w-3.5" />
+                  </div>
                   <span className="font-bold text-sm">الإشعارات</span>
                   {unread.length > 0 && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: "#ef4444" }}>
-                      {unread.length}
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "#ef4444" }}>
+                      {unread.length} جديد
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
                   {unread.length > 0 && (
-                    <button onClick={markAllRead} className="text-[11px] opacity-70 hover:opacity-100" title="قراءة الكل">
-                      <Check className="h-3.5 w-3.5" />
+                    <button onClick={markAllRead}
+                      className="text-[11px] flex items-center gap-1 px-2 py-1 rounded-lg opacity-70 hover:opacity-100 hover:bg-white/10 transition-all"
+                      title="تحديد الكل كمقروء">
+                      <Check className="h-3 w-3" />
+                      <span>قراءة الكل</span>
                     </button>
                   )}
-                  <button onClick={() => setNotifOpen(false)} className="opacity-70 hover:opacity-100">
-                    <X className="h-4 w-4" />
+                  <button onClick={() => { setNotifAnim(false); setTimeout(() => setNotifOpen(false), 180); }}
+                    className="w-6 h-6 flex items-center justify-center rounded-lg opacity-70 hover:opacity-100 hover:bg-white/10 transition-all">
+                    <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
 
+              {/* Body */}
               {notifications.length === 0 ? (
-                <div className="py-8 text-center">
-                  <Bell className="h-8 w-8 mx-auto mb-2" style={{ color: "#d1d5db" }} />
-                  <p className="text-sm text-gray-400">لا توجد إشعارات</p>
+                <div className="py-10 text-center">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "#f1f5f9" }}>
+                    <Bell className="h-5 w-5" style={{ color: "#cbd5e1" }} />
+                  </div>
+                  <p className="text-sm font-medium text-gray-400">لا توجد إشعارات</p>
+                  <p className="text-xs text-gray-300 mt-1">كل شيء على ما يرام ✓</p>
                 </div>
               ) : (
-                <div className="max-h-72 overflow-y-auto">
-                  {notifications.map(n => {
+                <div style={{ maxHeight: 320, overflowY: "auto" }}>
+                  {notifications.map((n, i) => {
                     const isRead = !unread.find(u => u.id === n.id);
                     return (
                       <Link key={n.id} href={n.href}>
                         <div
-                          onClick={() => { markRead(n.id); setNotifOpen(false); }}
-                          className="flex gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 border-b transition-colors"
-                          style={{ borderColor: "#f1f5f9", opacity: isRead ? 0.6 : 1 }}
+                          onClick={() => { markRead(n.id); setNotifAnim(false); setTimeout(() => setNotifOpen(false), 180); }}
+                          className="flex gap-3 px-4 py-3.5 cursor-pointer transition-colors"
+                          style={{
+                            borderBottom: i < notifications.length - 1 ? "1px solid #f1f5f9" : "none",
+                            background: isRead ? "transparent" : "#fefaf0",
+                            opacity: isRead ? 0.65 : 1,
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
+                          onMouseLeave={e => (e.currentTarget.style.background = isRead ? "transparent" : "#fefaf0")}
                         >
-                          <div className="mt-0.5 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
-                            style={{ background: n.type === "warning" ? "#fef3c7" : "#dbeafe" }}>
+                          <div className="mt-0.5 flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center shadow-sm"
+                            style={{ background: n.type === "warning" ? "linear-gradient(135deg,#fef3c7,#fde68a)" : "linear-gradient(135deg,#dbeafe,#bfdbfe)" }}>
                             {n.type === "warning"
                               ? <UserCheck className="h-4 w-4" style={{ color: "#d97706" }} />
                               : <Clock className="h-4 w-4" style={{ color: "#2563eb" }} />
                             }
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-800 truncate">{n.title}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">{n.body}</p>
+                            <p className="text-sm font-bold text-gray-800 leading-snug">{n.title}</p>
+                            <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{n.body}</p>
                           </div>
                           {!isRead && (
-                            <div className="mt-1.5 w-2 h-2 rounded-full flex-shrink-0" style={{ background: "#ef4444" }} />
+                            <div className="mt-2 w-2 h-2 rounded-full flex-shrink-0 ring-2 ring-white" style={{ background: "#ef4444" }} />
                           )}
                         </div>
                       </Link>
@@ -384,6 +429,16 @@ export function Sidebar() {
                   })}
                 </div>
               )}
+
+              {/* Footer */}
+              <div className="px-4 py-2.5 text-center" style={{ borderTop: "1px solid #f1f5f9", background: "#fafbff" }}>
+                <Link href="/admin/users">
+                  <span className="text-xs font-semibold cursor-pointer hover:underline" style={{ color: "#2a5298" }}
+                    onClick={() => { setNotifAnim(false); setTimeout(() => setNotifOpen(false), 180); }}>
+                    عرض إدارة المستخدمين ←
+                  </span>
+                </Link>
+              </div>
             </div>
           )}
         </div>
