@@ -368,30 +368,37 @@ tr.total-row th, tr.total-row td {
 
 
 <body>
-    <div id="overlay" class="overlay"></div>
-    <div id="edit-dialog" class="edit-dialog">
-        <div id="password-section">
-            <h3>أدخل الباسورد</h3>
-            <input type="password" id="password-input" placeholder="الباسورد">
-            <p id="password-error" style="color: red;"></p>
-            <button class="confirm-btn" onclick="verifyPassword()">تأكيد</button>
-            <button class="cancel-btn" onclick="closeEditDialog()">إلغاء</button>
+    <div id="overlay" class="overlay" onclick="closeEditDialog()"></div>
+    <div id="edit-dialog" class="edit-dialog" style="padding:0; display:none; flex-direction:column; max-height:85vh;">
+        <!-- رأس ثابت -->
+        <div style="padding:12px 16px 10px; border-bottom:1px solid #e0e0e0; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
+            <h3 style="margin:0; color:#2a5298; font-size:15px;" id="edit-dialog-title">تعديل البنود</h3>
+            <button onclick="closeEditDialog()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;line-height:1;" title="إغلاق">×</button>
         </div>
-        <div id="edit-items" style="display: none;">
-            <h3>تعديل البنود</h3>
-            <div id="edit-items-container"></div>
-            <button class="confirm-btn" onclick="saveEditedItems()">حفظ</button>
-            <button class="cancel-btn" onclick="closeEditDialog()">إلغاء</button>
+        <!-- المحتوى القابل للتمرير -->
+        <div style="overflow-y:auto; padding:16px; flex:1;">
+            <div id="password-section">
+                <p style="color:#555; margin-bottom:10px;">أدخل الباسورد للمتابعة</p>
+                <input type="password" id="password-input" placeholder="الباسورد" style="width:100%; margin-bottom:8px;">
+                <p id="password-error" style="color:red; margin:4px 0;"></p>
+                <button class="confirm-btn" onclick="verifyPassword()">تأكيد</button>
+                <button class="cancel-btn" onclick="closeEditDialog()">إلغاء</button>
+            </div>
+            <div id="edit-items" style="display: none;">
+                <div id="edit-items-container"></div>
+            </div>
+            <div id="add-item" style="display: none;">
+                <label>اسم النشاط:</label>
+                <input type="text" id="new-activity-input" style="width:100%; margin-bottom:8px;">
+                <label>الدرجة القصوى:</label>
+                <input type="number" id="new-max-score-input" min="0" style="width:100%; margin-bottom:8px;">
+                <label>التقدير:</label>
+                <input type="number" id="new-score-input" min="0" style="width:100%; margin-bottom:8px;">
+            </div>
         </div>
-        <div id="add-item" style="display: none;">
-            <h3>إضافة بند جديد</h3>
-            <label>اسم النشاط:</label>
-            <input type="text" id="new-activity-input">
-            <label>الدرجة القصوى:</label>
-            <input type="number" id="new-max-score-input" min="0">
-            <label>التقدير:</label>
-            <input type="number" id="new-score-input" min="0">
-            <button class="confirm-btn" onclick="saveNewItem()">حفظ</button>
+        <!-- أزرار ثابتة في الأسفل (تظهر فقط عند edit-items أو add-item) -->
+        <div id="edit-dialog-footer" style="padding:10px 16px; border-top:1px solid #e0e0e0; text-align:center; flex-shrink:0; background:#fff; border-radius:0 0 10px 10px; display:none;">
+            <button class="confirm-btn" id="edit-dialog-save-btn" onclick="">حفظ</button>
             <button class="cancel-btn" onclick="closeEditDialog()">إلغاء</button>
         </div>
     </div>
@@ -1572,6 +1579,7 @@ function closeEditDialog() {
     document.getElementById('edit-items').style.display = 'none';
     document.getElementById('add-item').style.display = 'none';
     document.getElementById('password-section').style.display = 'block';
+    document.getElementById('edit-dialog-footer').style.display = 'none';
     editingTableId = null;
 }
 
@@ -1579,17 +1587,22 @@ function verifyPassword() {
     const input = document.getElementById('password-input').value;
     if (input === PASSWORD) {
         document.getElementById('password-section').style.display = 'none';
-        // هنا التعديل: بناءً على الغرض من فتح النافذة
+        const footer = document.getElementById('edit-dialog-footer');
+        const saveBtn = document.getElementById('edit-dialog-save-btn');
         if (currentDialogPurpose === 'add') {
             document.getElementById('add-item').style.display = 'block';
-            // مسح الحقول عند فتح نافذة الإضافة
             document.getElementById('new-activity-input').value = '';
             document.getElementById('new-max-score-input').value = '';
             document.getElementById('new-score-input').value = '';
+            saveBtn.onclick = saveNewItem;
+            saveBtn.textContent = 'إضافة بند';
         } else if (currentDialogPurpose === 'edit') {
             document.getElementById('edit-items').style.display = 'block';
             loadTableItems(editingTableId);
+            saveBtn.onclick = saveEditedItems;
+            saveBtn.textContent = 'حفظ التعديلات';
         }
+        footer.style.display = 'block';
     } else {
         document.getElementById('password-error').textContent = 'الباسورد غير صحيح';
     }
@@ -1708,26 +1721,19 @@ function saveEditedItems() {
 
 function openAddModal(tableId) {
     editingTableId = tableId;
-    document.getElementById('edit-dialog').style.display = 'block';
+    document.getElementById('edit-dialog-title').textContent = 'إضافة بند جديد';
+    document.getElementById('edit-dialog').style.display = 'flex';
     document.getElementById('overlay').style.display = 'block';
-    
-    // إظهار قسم الباسورد أولاً
-    document.getElementById('password-section').style.display = 'block'; 
-    // إخفاء أقسام التعديل والإضافة حتى يتم التحقق من الباسورد
-    document.getElementById('edit-items').style.display = 'none'; 
-    document.getElementById('add-item').style.display = 'none'; 
-    
-    // مسح حقول الباسورد وأي رسائل خطأ سابقة
+    document.getElementById('password-section').style.display = 'block';
+    document.getElementById('edit-items').style.display = 'none';
+    document.getElementById('add-item').style.display = 'none';
+    document.getElementById('edit-dialog-footer').style.display = 'none';
     document.getElementById('password-input').value = '';
     document.getElementById('password-error').textContent = '';
-    
-    // مسح الحقول القديمة في نموذج الإضافة (للتأكد عند ظهورها)
     document.getElementById('new-activity-input').value = '';
     document.getElementById('new-max-score-input').value = '';
     document.getElementById('new-score-input').value = '';
-
-    // **جديد:** تخزين الغرض من فتح النافذة
-    currentDialogPurpose = 'add'; 
+    currentDialogPurpose = 'add';
 }
 
 function saveNewItem() {
@@ -1799,12 +1805,15 @@ function saveNewItem() {
 
 function openEditItemDialog(tableId) {
     editingTableId = tableId;
-    document.getElementById('edit-dialog').style.display = 'block';
+    document.getElementById('edit-dialog-title').textContent = 'تعديل البنود';
+    document.getElementById('edit-dialog').style.display = 'flex';
     document.getElementById('overlay').style.display = 'block';
     document.getElementById('password-input').value = '';
     document.getElementById('password-error').textContent = '';
+    document.getElementById('password-section').style.display = 'block';
     document.getElementById('edit-items').style.display = 'none';
     document.getElementById('add-item').style.display = 'none';
+    document.getElementById('edit-dialog-footer').style.display = 'none';
     currentDialogPurpose = 'edit';
 }
 
@@ -2475,6 +2484,15 @@ const _sbPrefs1 = (typeof SignatureBlock !== 'undefined')
                 page-break-inside: avoid;
             }
            @media print {
+    /* إخفاء جميع الأزرار وعناصر التحكم عند الطباعة */
+    button, .table-buttons, .std-action-bar, .no-print,
+    .action-buttons, .export-buttons, .nav-bar,
+    .btn-print, .btn-pdf, .btn-excel, .btn-add, .btn-edit,
+    .overlay, .edit-dialog, #table-names-dialog,
+    .header-controls, .settings-bar {
+        display: none !important;
+    }
+
     body {
         margin: 0;
         font-size: 9px;
