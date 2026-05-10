@@ -23,15 +23,11 @@ export const ALL_MODULES: ModuleDef[] = [
   { key: "achievement",                file: "achievement.html",                label: "شهادة الإنجاز",             emoji: "🏆",  icon: Trophy,            color: "#0096c7", types: ["hospital"] },
   { key: "consumables",                file: "consumables.html",                label: "مستخلص المستهلكات",         emoji: "🧪",  icon: Package,           color: "#0077b6", types: ["hospital"] },
   { key: "spare_parts",                file: "spare_parts.html",                label: "مستخلص قطع الغيار",         emoji: "🔩",  icon: Wrench,            color: "#023e8a", types: ["hospital"] },
-  { key: "approval",                   file: "approval.html",                   label: "اعتماد المستخلص",           emoji: "✅",  icon: CheckSquare,       color: "#0096c7", types: ["hospital"] },
-  { key: "monthly-overview",           file: "monthly-overview.html",           label: "النظرة الشاملة",            emoji: "📈",  icon: BarChart2,         color: "#1e3c72", types: ["hospital"] },
   { key: "request-visit",              file: "request-visit.html",              label: "تسجيل الزيارات",            emoji: "🏥",  icon: MapPin,            color: "#2a5298", types: ["hospital"] },
   { key: "health_centers_attendance",  file: "health_centers_attendance.html",  label: "المراكز — العمالة",         emoji: "👷",  icon: ClipboardList,     color: "#1e3c72", types: ["health_centers"] },
   { key: "health_centers_consumables", file: "health_centers_consumables.html", label: "المراكز — المستهلكات",      emoji: "🧪",  icon: Package,           color: "#0077b6", types: ["health_centers"] },
   { key: "admin_offices_attendance",   file: "admin_offices_attendance.html",   label: "المكاتب — العمالة",         emoji: "👷",  icon: ClipboardList,     color: "#2a5298", types: ["admin_offices"] },
   { key: "admin_offices_consumables",  file: "admin_offices_consumables.html",  label: "المكاتب — المستهلكات",      emoji: "🧪",  icon: Package,           color: "#0077b6", types: ["admin_offices"] },
-  { key: "review_extract",             file: "review_extract.html",             label: "مراجعة المستخلص",           emoji: "🔍",  icon: Eye,               color: "#023e8a", types: ["hospital", "health_centers", "admin_offices"] },
-  { key: "extract-archive",            file: "extract-archive.html",            label: "أرشيف المستخلصات",          emoji: "🗂️", icon: Archive,           color: "#1e3c72", types: ["hospital", "health_centers", "admin_offices"] },
 ];
 
 export function getModuleKey(filename: string): string {
