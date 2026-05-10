@@ -223,7 +223,9 @@ body { background: #f0f4ff; direction: rtl; }
 /* ══ طباعة ══ */
 @media print {
   body { background: #fff !important; }
-  .action-bar { display: none !important; }
+  .action-bar, button, .btn, .table-buttons, .std-action-bar,
+  .action-buttons, .btn-group, .no-print, .nav-bar,
+  .table-header-actions, .add-row-btn, .delete-btn, .edit-btn { display: none !important; }
   .page-header { box-shadow: none; }
   .location-card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
   .locations-grid { display: grid !important; }

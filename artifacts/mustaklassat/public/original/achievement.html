@@ -135,6 +135,10 @@
         }
         /* CSS الطباعة - صفحة واحدة */
         @media print {
+            button, .btn, .table-buttons, .std-action-bar, .action-buttons,
+            .btn-group, .no-print, .nav-bar, .action-bar,
+            .table-header-actions, .add-row-btn, .delete-btn, .edit-btn { display: none !important; }
+
             body {
                 font-family: 'Tajawal', sans-serif;
                 margin: 0;

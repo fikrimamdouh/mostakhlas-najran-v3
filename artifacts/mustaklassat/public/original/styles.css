@@ -1549,3 +1549,27 @@ footer a:hover {
     accent-color: #007bff; /* تغيير لون علامة الصح */
 }
 
+/* ══ إخفاء الأزرار عند الطباعة - قاعدة عالمية لكل الصفحات ══ */
+@media print {
+    button,
+    .btn,
+    .table-buttons,
+    .std-action-bar,
+    .action-buttons,
+    .action-bar,
+    .btn-group,
+    .main-action-buttons,
+    .nav-bar,
+    .no-print,
+    .table-header-actions,
+    .add-row-btn,
+    .delete-btn,
+    .edit-btn,
+    .back-to-dashboard,
+    .dashboard-container,
+    .penalty-info-bar,
+    .overlay,
+    .dialog {
+        display: none !important;
+    }
+}

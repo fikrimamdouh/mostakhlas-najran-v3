@@ -77,6 +77,10 @@
 #print-dialog-overlay { background-color: rgba(0, 0, 0, 0.55) !important; }
 
 @media print {
+    button, .btn, .table-buttons, .std-action-bar, .action-buttons,
+    .btn-group, .no-print, .nav-bar, .action-bar,
+    .table-header-actions, .add-row-btn, .delete-btn, .edit-btn { display: none !important; }
+
     body {
         font-family: 'Tajawal', Arial, sans-serif !important;
         font-size: 12px !important;

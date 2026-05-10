@@ -251,7 +251,9 @@
 
     /* ── Print ── */
     @media print {
-      .no-print, .nav-bar, .action-btns, .summary-bar { display: none !important; }
+      .no-print, .nav-bar, .action-btns, .summary-bar,
+      button, .btn, .table-buttons, .std-action-bar, .action-buttons, .btn-group,
+      .table-header-actions, .add-row-btn, .delete-btn, .edit-btn { display: none !important; }
       .container { box-shadow: none; margin: 0; border-radius: 0; }
       body { background: #fff; }
       .sig-box .sig-name-input { border: none; }
