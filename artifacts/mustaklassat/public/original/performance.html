@@ -3129,22 +3129,36 @@ function closeEditTableNamesDialog() {
 // 3. دالة لملء النافذة بالأسماء الحالية
 function populateTableNamesForm() {
     const container = document.getElementById('table-names-form-container');
+    if (!container) return;
     const savedNames = JSON.parse(localStorage.getItem('performanceTableNames') || '{}');
-    container.innerHTML = ''; // مسح المحتوى القديم
+    container.innerHTML = '';
 
-    // المرور على كل الجداول في الصفحة
-    document.querySelectorAll('.table-container').forEach(tableDiv => {
-        const tableId = tableDiv.id;
-        if (tableId === 'certificate') return; // استثناء جدول الشهادة
+    const tableIds = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'laundry', 'security'];
+    const defaultLabels = {
+        cleaning:    'قسم النظافة',
+        electricity: 'قسم الكهرباء',
+        agriculture: 'قسم الزراعة',
+        civil:       'قسم المدني',
+        mechanics:   'قسم الميكانيكا',
+        laundry:     'قسم الغسيل',
+        security:    'قسم الأمن',
+    };
 
-        const defaultTitle = tableDiv.querySelector('.table-title')?.textContent || tableId;
-        const currentTitle = savedNames[tableId] || defaultTitle;
+    tableIds.forEach(tableId => {
+        const tableDiv = document.getElementById(tableId);
+        if (!tableDiv) return;
+        const htmlTitle = tableDiv.querySelector('.table-title')?.textContent?.trim() || tableId;
+        const currentTitle = savedNames[tableId] || htmlTitle;
 
         const formGroup = document.createElement('div');
-        formGroup.style.marginBottom = '15px';
+        formGroup.style.cssText = 'margin-bottom:14px;';
         formGroup.innerHTML = `
-            <label for="name-input-${tableId}" style="font-weight: bold; display: block; margin-bottom: 5px;">${defaultTitle}:</label>
-            <input type="text" id="name-input-${tableId}" value="${currentTitle}" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
+            <label style="font-weight:bold;display:block;margin-bottom:5px;color:#555;">
+                ${defaultLabels[tableId] || tableId}:
+            </label>
+            <input type="text" id="name-input-${tableId}"
+                   value="${currentTitle.replace(/"/g, '&quot;')}"
+                   style="width:100%;padding:9px 12px;border-radius:6px;border:1px solid #ccc;font-family:inherit;font-size:14px;">
         `;
         container.appendChild(formGroup);
     });
@@ -3152,32 +3166,20 @@ function populateTableNamesForm() {
 
 // 4. دالة لحفظ الأسماء الجديدة
 function saveTableNames() {
-    const savedNames = JSON.parse(localStorage.getItem('performanceTableNames') || '{}');
-    let changesMade = false;
+    const tableIds = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'laundry', 'security'];
+    const savedNames = {};
 
-    document.querySelectorAll('.table-container').forEach(tableDiv => {
-        const tableId = tableDiv.id;
-        if (tableId === 'certificate') return;
-
+    tableIds.forEach(tableId => {
         const input = document.getElementById(`name-input-${tableId}`);
-        if (input) {
-            const newName = input.value.trim();
-            if (newName && savedNames[tableId] !== newName) {
-                savedNames[tableId] = newName;
-                changesMade = true;
-            }
+        const newName = input ? input.value.trim() : '';
+        if (newName) {
+            savedNames[tableId] = newName;
         }
     });
 
-    if (changesMade) {
-        localStorage.setItem('performanceTableNames', JSON.stringify(savedNames));
-        showSuccessMessage('تم حفظ أسماء الجداول بنجاح!');
-        // تحديث العناوين في الصفحة فوراً
-        updateTableTitlesFromStorage();
-    } else {
-        showSuccessMessage('لم يتم إجراء أي تغييرات.');
-    }
-
+    localStorage.setItem('performanceTableNames', JSON.stringify(savedNames));
+    updateTableTitlesFromStorage();
+    showSuccessMessage('تم حفظ أسماء الجداول بنجاح!');
     closeEditTableNamesDialog();
 }
 
