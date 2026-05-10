@@ -115,6 +115,48 @@
         padding-top: 15px !important;
     }
 
+    /* ══ شاشة الإجماليات العامة — تظهر قبل التواقيع في الطباعة ══ */
+    .grand-total-professional {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        margin: 20px 0 !important;
+        padding: 10px 14px !important;
+        border: 1.5px solid #003087 !important;
+        border-radius: 8px !important;
+        background: #f0f4ff !important;
+        page-break-inside: avoid !important;
+    }
+    .grand-total-professional .total-card {
+        display: flex !important;
+        flex: 1 1 150px !important;
+        align-items: center !important;
+        gap: 8px !important;
+        padding: 8px 12px !important;
+        border: 1px solid #c7d4f0 !important;
+        border-radius: 6px !important;
+        background: #fff !important;
+    }
+    .grand-total-professional .total-card .card-icon {
+        display: flex !important;
+        align-items: center !important;
+        font-size: 16px !important;
+    }
+    .grand-total-professional .total-card .card-content {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    .grand-total-professional .total-card .label {
+        font-size: 9px !important;
+        color: #555 !important;
+        font-weight: 600 !important;
+    }
+    .grand-total-professional .total-card .value {
+        font-size: 13px !important;
+        font-weight: 900 !important;
+        color: #003087 !important;
+    }
+
     /* تنسيق الجدول الأساسي */
     table {
         width: 100% !important;
@@ -615,8 +657,11 @@
     margin: 16px !important;
     border-radius: 16px !important;
     box-shadow: 0 2px 14px rgba(0,0,0,.08) !important;
-    overflow: hidden !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
     border: 1px solid #e2e8f0 !important;
+    width: calc(100% - 32px) !important;
+    box-sizing: border-box !important;
   }
   .department-table h3 {
     background: linear-gradient(90deg, #0f2444, #2a5298) !important;
@@ -653,7 +698,8 @@
     font-size: 11px !important;
     border-collapse: collapse !important;
     table-layout: auto !important;
-    width: auto !important;
+    width: 100% !important;
+    min-width: 100% !important;
   }
   .department-table table thead th {
     background: #1e3c72 !important;
