@@ -290,7 +290,7 @@ export function Sidebar() {
         style={{ borderColor: "rgba(255,255,255,0.1)", minHeight: 52 }}
       >
         <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden shadow-md" style={{ background: "#fff" }}>
-          <img src="/najran_health_cluster_logo.png" alt="شعار" className="w-full h-full object-cover" />
+          <img src="/original/najran_health_cluster_logo.png" alt="شعار" className="w-full h-full object-cover" />
         </div>
         {!collapsed && (
           <div className="min-w-0">
