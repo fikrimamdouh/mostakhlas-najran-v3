@@ -21,6 +21,12 @@
     'extract-archive.html': '🗂️',
   };
 
+  /* ── Foundation group pages (always shown as dropdown) ── */
+  var FOUNDATION_PAGES = [
+    { value: 'job-positions-upload.html',      label: 'رفع المناصب', icon: '👔' },
+    { value: 'contract-foundation-upload.html', label: 'التأسيس',     icon: '📝' },
+  ];
+
   /* ── Inject CSS ── */
   var css = `
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700&display=swap');
@@ -130,6 +136,93 @@
   font-weight: 700;
 }
 
+/* ── Dropdown group ── */
+.sn-dropdown {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+.sn-dropdown-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
+  color: rgba(255,255,255,.68);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  border-top: none;
+  border-right: none;
+  border-left: none;
+  background: none;
+  transition: color .18s, border-color .18s, background .18s;
+  font-family: 'Tajawal', 'Segoe UI', Arial, sans-serif;
+  line-height: 1;
+}
+.sn-dropdown-btn:hover,
+.sn-dropdown:hover .sn-dropdown-btn {
+  color: #fff;
+  background: rgba(255,255,255,.07);
+  border-bottom-color: rgba(212,175,55,.45);
+}
+.sn-dropdown-btn.sn-active {
+  color: #d4af37;
+  border-bottom-color: #d4af37;
+  background: rgba(212,175,55,.09);
+  font-weight: 700;
+}
+.sn-caret {
+  font-size: 10px;
+  opacity: .7;
+  margin-right: 2px;
+  transition: transform .15s;
+}
+.sn-dropdown:hover .sn-caret,
+.sn-dropdown.sn-open .sn-caret { transform: rotate(180deg); }
+
+.sn-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 1px);
+  right: 0;
+  background: linear-gradient(160deg, #122050 0%, #1a3562 100%);
+  border-top: 2px solid #d4af37;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.5);
+  min-width: 170px;
+  z-index: 1100;
+  overflow: hidden;
+}
+.sn-dropdown:hover .sn-dropdown-menu,
+.sn-dropdown.sn-open .sn-dropdown-menu { display: block; }
+
+.sn-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 18px;
+  color: rgba(255,255,255,.8);
+  text-decoration: none;
+  font-size: 13px;
+  font-family: 'Tajawal', sans-serif;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.sn-dropdown-item:last-child { border-bottom: none; }
+.sn-dropdown-item:hover {
+  background: rgba(255,255,255,.1);
+  color: #fff;
+}
+.sn-dropdown-item.sn-active {
+  color: #d4af37;
+  background: rgba(212,175,55,.12);
+  font-weight: 700;
+}
+.sn-dropdown-item .sn-di-icon { font-size: 15px; }
+
 /* ── Hide old elements on screen only ── */
 @media screen {
   .sn-hide-screen { display: none !important; }
@@ -181,10 +274,13 @@
       '<p class="sn-org-sub">وحدة الصيانة العامة — نظام إدارة المستخلصات</p>';
 
     /* Active tab label as page badge */
+    var foundationPage = FOUNDATION_PAGES.find(function(p) { return p.value === currentPage; });
     var activeOpt = options.find(function (o) {
       return o.selected || o.value === currentPage;
     }) || options[0];
-    var badgeLabel = activeOpt ? cleanLabel(activeOpt.text) : '';
+    var badgeLabel = foundationPage
+      ? foundationPage.label
+      : (activeOpt ? cleanLabel(activeOpt.text) : '');
 
     var badge = document.createElement('span');
     badge.className = 'sn-page-badge';
@@ -199,7 +295,7 @@
     tabs.className = 'sn-tabs';
 
     options.forEach(function (opt) {
-      var isActive = opt.selected || opt.value === currentPage;
+      var isActive = (opt.selected || opt.value === currentPage) && !foundationPage;
       var icon = ICONS[opt.value] || '📄';
       var label = cleanLabel(opt.text);
 
@@ -211,6 +307,47 @@
         '<span>' + label + '</span>';
       tabs.appendChild(tab);
     });
+
+    /* ── تأسيس العقد dropdown (always shown) ── */
+    var foundationActive = !!foundationPage;
+
+    var dropdown = document.createElement('div');
+    dropdown.className = 'sn-dropdown';
+
+    var dropBtn = document.createElement('button');
+    dropBtn.className = 'sn-dropdown-btn' + (foundationActive ? ' sn-active' : '');
+    dropBtn.innerHTML =
+      '<span class="sn-icon">📋</span>' +
+      '<span>تأسيس العقد</span>' +
+      '<span class="sn-caret">▾</span>';
+
+    var dropMenu = document.createElement('div');
+    dropMenu.className = 'sn-dropdown-menu';
+
+    FOUNDATION_PAGES.forEach(function (page) {
+      var isItemActive = page.value === currentPage;
+      var item = document.createElement('a');
+      item.href = page.value;
+      item.className = 'sn-dropdown-item' + (isItemActive ? ' sn-active' : '');
+      item.innerHTML =
+        '<span class="sn-di-icon">' + page.icon + '</span>' +
+        '<span>' + page.label + '</span>';
+      dropMenu.appendChild(item);
+    });
+
+    dropdown.appendChild(dropBtn);
+    dropdown.appendChild(dropMenu);
+
+    /* Mobile toggle — click anywhere outside closes it */
+    dropBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      dropdown.classList.toggle('sn-open');
+    });
+    document.addEventListener('click', function () {
+      dropdown.classList.remove('sn-open');
+    });
+
+    tabs.appendChild(dropdown);
 
     wrapper.appendChild(header);
     wrapper.appendChild(tabs);

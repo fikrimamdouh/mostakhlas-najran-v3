@@ -95,6 +95,24 @@ footer{text-align:center;padding:20px;color:#9ca3af;font-size:.8rem}
 </head>
 <body>
 
+<!-- nav-bar hidden — يستخدمها shared-nav.js لبناء القائمة العلوية -->
+<div class="nav-bar" style="display:none">
+  <div class="dropdown">
+    <select id="navigation">
+      <option value="#">-- اختر صفحة --</option>
+      <option value="index.html">الصفحة الرئيسية</option>
+      <option value="attendance.html">الحضور والانصراف</option>
+      <option value="performance.html">شهادة الأداء</option>
+      <option value="achievement.html">شهادة الإنجاز</option>
+      <option value="consumables.html">مستخلص المستهلكات</option>
+      <option value="spare_parts.html">مستخلص قطع الغيار</option>
+      <option value="approval.html">✅ متابعة المستخلصات</option>
+      <option value="admin-dashboard.html">🛡️ لوحة الأدمن</option>
+      <option value="extract-archive.html">🗂️ أرشيف المستخلصات</option>
+    </select>
+  </div>
+</div>
+
 <div class="header">
   <img src="najran_health_cluster_logo.png" alt="شعار" onerror="this.style.display='none'">
   <div class="header-text">
@@ -468,5 +486,6 @@ function showAlert(msg, type) {
 // ====== تحميل أولي ======
 renderSavedList();
 </script>
+<script src="/original/shared-nav.js"></script>
 </body>
 </html>
