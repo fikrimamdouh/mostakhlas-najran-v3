@@ -3511,48 +3511,48 @@ function updateTableWithImportedData(tableId, items) {
  */
 function updateContractDisplayData() {
     try {
-        // 1. قراءة بيانات العقد من الذاكرة المحلية
-        const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-        const extractData  = JSON.parse(localStorage.getItem('persistentExtractData')  || '{}');
+        // 1. قراءة بيانات العقد — من أكثر من مصدر (fallback متسلسل)
+        const cd1 = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+        const cd2 = JSON.parse(localStorage.getItem('contractData')           || '{}');
+        const extractData = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
 
-        // 2. استخراج البيانات مع توفير قيم افتراضية + fallback للمفاتيح المنفردة
-        const hospitalName       = contractData.hospitalName       || localStorage.getItem('hospitalName')       || 'غير محدد';
-        const contractDetails    = contractData.contractDetails    || localStorage.getItem('contractDetails')    || 'غير محدد';
-        const companyName        = contractData.companyName        || localStorage.getItem('companyName')        || 'غير محدد';
-        const contractType       = contractData.contractType       || localStorage.getItem('contractType')       || 'غير محدد';
-        const directPurchaseRatio = contractData.directPurchaseRatio || localStorage.getItem('directPurchaseRatio') || '0';
+        // بيانات الجلسة الحالية كـ fallback نهائي
+        const sess = window.najranSession || {};
+        const sessionHospital = (sess.hospital || sess.company || '').trim();
+        const sessionCompany  = (sess.company  || '').trim();
 
-        // 3. تنسيق التواريخ
+        const hospitalName    = cd1.hospitalName    || cd2.hospitalName    || localStorage.getItem('hospitalName')    || sessionHospital || 'غير محدد';
+        const contractDetails = cd1.contractDetails || cd2.contractDetails || localStorage.getItem('contractDetails') || 'غير محدد';
+        const companyName     = cd1.companyName     || cd2.companyName     || localStorage.getItem('companyName')     || sessionCompany  || 'غير محدد';
+        const contractType    = cd1.contractType    || cd2.contractType    || localStorage.getItem('contractType')    || 'غير محدد';
+        const directPurchaseRatio = cd1.directPurchaseRatio || cd2.directPurchaseRatio || localStorage.getItem('directPurchaseRatio') || '0';
+
+        // 2. تنسيق التواريخ
         function fmtDate(d) {
             if (!d) return 'غير محدد';
-            try {
-                const dt = new Date(d);
-                if (isNaN(dt)) return d;
-                return `${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}`;
-            } catch(_){ return d; }
+            try { const dt = new Date(d); return isNaN(dt) ? d : `${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}`; }
+            catch(_){ return d; }
         }
         const extractStart = fmtDate(extractData.extractStart);
         const extractEnd   = fmtDate(extractData.extractEnd);
 
-        // 4. تحديث جميع العناصر في الصفحة
+        // 3. تحديث العناصر في الصفحة
         document.querySelectorAll('.hospitalName').forEach(el => el.textContent = hospitalName);
         document.querySelectorAll('.contractDetails').forEach(el => el.textContent = contractDetails);
         document.querySelectorAll('.companyName').forEach(el => el.textContent = companyName);
         document.querySelectorAll('.contractType').forEach(el => el.textContent = contractType);
-
-        // تحديث فترة المستخلص
         document.querySelectorAll('#extract-start-date').forEach(el => el.textContent = extractStart);
         document.querySelectorAll('#extract-end-date').forEach(el => el.textContent = extractEnd);
 
-        // 5. حقل "الشراء المباشر"
-        const directPurchaseContainer = document.querySelector('.directPurchaseContainer');
-        if (directPurchaseContainer) {
+        // 4. حقل الشراء المباشر
+        const dpc = document.querySelector('.directPurchaseContainer');
+        if (dpc) {
             if (contractType === 'شراء مباشر') {
                 const drEl = document.querySelector('.directPurchaseRatio');
                 if (drEl) drEl.textContent = directPurchaseRatio;
-                directPurchaseContainer.style.display = 'block';
+                dpc.style.display = 'block';
             } else {
-                directPurchaseContainer.style.display = 'none';
+                dpc.style.display = 'none';
             }
         }
 
@@ -3561,8 +3561,11 @@ function updateContractDisplayData() {
     }
 }
 
-// استدعاء عند تحميل الصفحة + بعد مزامنة السحابة
-document.addEventListener('DOMContentLoaded', () => setTimeout(updateContractDisplayData, 300));
+// استدعاء عند تحميل الصفحة (مرتين: مبكر ومتأخر لضمان اكتمال المزامنة)
+document.addEventListener('DOMContentLoaded', () => {
+    updateContractDisplayData();          // مباشرة — للبيانات المحلية
+    setTimeout(updateContractDisplayData, 1500); // بعد 1.5 ثانية — بعد cloud-sync
+});
 window.addEventListener('najranCloudPulled', updateContractDisplayData);
 
 // استدعاء الدالة عند تحميل الصفحة
