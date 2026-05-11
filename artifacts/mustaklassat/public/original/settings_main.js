@@ -1057,8 +1057,11 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         console.log(">> الآن يتم فرض تحميل البيانات من localStorage...");
         loadPersistentData();
-        autoFillFromSession(); // ملء المستشفى والشركة من بيانات المستخدم إن كانت فارغة
+        autoFillFromSession();
         renderMonthsArchive();
+        // ضمان إضافي: تشغيل autoFillFromSession مرتين بعد أي كود قد يمسح الحقول
+        setTimeout(autoFillFromSession, 200);
+        setTimeout(autoFillFromSession, 600);
 
         // ── فحص إشارة اعتماد المستخلص — تقديم الفترة تلقائياً ──────────
         var advanceFlag = localStorage.getItem('najran_advance_period');
