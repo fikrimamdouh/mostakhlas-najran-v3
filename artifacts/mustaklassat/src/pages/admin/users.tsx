@@ -234,6 +234,7 @@ export default function AdminUsers() {
       return res.json();
     },
     onSuccess: () => {
+      try { localStorage.clear(); } catch {}
       toast({ title: "✅ تمت التهيئة", description: "تم مسح جميع البيانات بنجاح. النظام جاهز للإطلاق." });
       setShowReset(false);
       queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
