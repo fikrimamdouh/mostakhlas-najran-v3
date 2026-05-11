@@ -561,7 +561,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       body: JSON.stringify({ hospital: hosp }),
     });
     if (dbUser?.id) sessionStorage.setItem(`h_s_${dbUser.id}`, hosp);
-    queryClient.invalidateQueries({ queryKey: ['/api/users/me'] });
+    // انتظر اكتمال الـ refetch حتى يظهر dbUser المحدَّث قبل إخفاء الشاشة
+    await queryClient.refetchQueries({ queryKey: ['/api/users/me'] });
     setShowPicker(false);
   };
 

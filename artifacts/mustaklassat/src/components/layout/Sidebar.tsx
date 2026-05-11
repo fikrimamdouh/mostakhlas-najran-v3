@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
-import { useUser, useClerk } from "@clerk/react";
+import { useUser, useClerk, useAuth } from "@clerk/react";
 import { useGetMe, useListUsers } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard, Settings, Users, LogOut, ShieldAlert, ClipboardList,
   Building2, ChevronLeft, BarChart3, Eye,
@@ -9,7 +10,7 @@ import {
   FileCheck2, FileSearch, LayoutGrid, Archive,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
+import { useState, useEffect, useCallback, useRef, type CSSProperties, useContext, createContext } from "react";
 import { ALL_MODULES, getSiteType, parseAllowedModules, filterModules } from "@/lib/modules";
 
 const ARABIC_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
@@ -164,6 +165,33 @@ export function Sidebar() {
       return next;
     });
   }, []);
+
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
+  const [switchingHospital, setSwitchingHospital] = useState<string | null>(null);
+  const [showHospitalMenu, setShowHospitalMenu] = useState(false);
+
+  const parsedHospitals: string[] = (() => {
+    try { return JSON.parse((dbUser as any)?.hospitals || '[]'); } catch { return []; }
+  })();
+  const multiHospital = parsedHospitals.length > 1;
+
+  const handleSwitchHospital = async (h: string) => {
+    if (h === dbUser?.hospital || switchingHospital) return;
+    setSwitchingHospital(h);
+    setShowHospitalMenu(false);
+    try {
+      const token = await getToken();
+      await fetch('/api/users/me/hospital', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ hospital: h }),
+      });
+      await queryClient.refetchQueries({ queryKey: ['/api/users/me'] });
+    } finally {
+      setSwitchingHospital(null);
+    }
+  };
 
   const isAdmin = dbUser?.role === "admin";
   const isSupervisor = dbUser?.role === "supervisor";
@@ -626,9 +654,52 @@ export function Sidebar() {
               </div>
             </div>
             {dbUser?.hospital && (
-              <p className="text-[10px] px-1 truncate" style={{ color: "rgba(255,255,255,0.4)" }}>
-                🏥 {dbUser.hospital}
-              </p>
+              <div className="relative">
+                {multiHospital ? (
+                  <>
+                    <button
+                      onClick={() => setShowHospitalMenu(v => !v)}
+                      disabled={!!switchingHospital}
+                      className="w-full text-right flex items-center gap-1 px-1 rounded hover:bg-white/10 transition-colors"
+                      style={{ color: "rgba(255,255,255,0.6)" }}
+                    >
+                      <span className="text-[10px] truncate flex-1">
+                        {switchingHospital ? `⏳ ${switchingHospital}` : `🏥 ${dbUser.hospital}`}
+                      </span>
+                      <span className="text-[9px] flex-shrink-0" style={{ color: "rgba(255,255,255,0.4)" }}>▾</span>
+                    </button>
+                    {showHospitalMenu && (
+                      <div
+                        className="absolute bottom-full right-0 mb-1 rounded-lg overflow-hidden shadow-xl z-50"
+                        style={{ background: "#1e3c72", border: "1px solid rgba(255,255,255,0.15)", minWidth: 200 }}
+                      >
+                        <p className="text-[10px] px-3 py-2 font-bold" style={{ color: "rgba(255,255,255,0.5)", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                          تغيير الموقع
+                        </p>
+                        {parsedHospitals.map(h => (
+                          <button
+                            key={h}
+                            onClick={() => handleSwitchHospital(h)}
+                            className="w-full text-right px-3 py-2 text-[11px] transition-colors flex items-center gap-2"
+                            style={{
+                              color: h === dbUser.hospital ? "#d4af37" : "rgba(255,255,255,0.8)",
+                              background: h === dbUser.hospital ? "rgba(212,175,55,0.1)" : "transparent",
+                              fontWeight: h === dbUser.hospital ? 700 : 400,
+                            }}
+                          >
+                            <span>{h === dbUser.hospital ? "✓" : "○"}</span>
+                            <span>{h}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-[10px] px-1 truncate" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    🏥 {dbUser.hospital}
+                  </p>
+                )}
+              </div>
             )}
             {(dbUser as any)?.lastLoginAt && (
               <p className="text-[10px] px-1" style={{ color: "rgba(255,255,255,0.3)" }}>
