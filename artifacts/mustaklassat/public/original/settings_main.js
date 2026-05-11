@@ -979,7 +979,8 @@ function renderHospitalPicker() {
         '<div style="display:flex;flex-wrap:wrap;gap:8px">' +
         hospitals.map(function (h) {
             var active = h === currentHospital;
-            return '<button onclick="switchHospital(' + JSON.stringify(h) + ')" style="' +
+            var safeH = h.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            return '<button onclick="switchHospital(\'' + safeH + '\')" style="' +
                 'padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-family:Tajawal,sans-serif;transition:all .2s;' +
                 'border:' + (active ? '2px solid #1e3c72' : '1.5px solid #d1d5db') + ';' +
                 'background:' + (active ? '#1e3c72' : '#fff') + ';' +
