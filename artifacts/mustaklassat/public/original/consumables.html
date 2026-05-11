@@ -16,6 +16,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
     <script src="contract_data_connector.js" defer></script>
     <script src="attendance_contract_info.js" defer></script>
+    <script src="/original/contract-foundation-helper.js"></script>
 
     <style>
         :root {
@@ -765,6 +766,9 @@
     <input type="file" id="excel-import-btn" accept=".xlsx, .xls" style="display: none;">
 </label>
 <!-- ============================= -->
+<button class="btn btn-excel" style="margin-right:6px;background:#e8f4e8;color:#166534;border:1px solid #bbf7d0" onclick="loadSubcontractorsFromFoundation()">
+    <i class="fas fa-database"></i> تحميل من التأسيسي
+</button>
 
                     </div>
                 </div>
@@ -882,6 +886,9 @@
                             <button class="btn btn-add-item"><i class="fas fa-plus"></i> إضافة</button>
                             <button class="btn btn-remove-item"><i class="fas fa-trash"></i> حذف المحدد</button>
                         </div>
+                        <button class="btn btn-excel" style="background:#e8f4e8;color:#166534;border:1px solid #bbf7d0" onclick="loadConsumablesFromFoundation()">
+                            <i class="fas fa-database"></i> تحميل من التأسيسي
+                        </button>
                     </div>
                 </div>
                 <div class="table-container">
@@ -2492,6 +2499,124 @@ document.getElementById('signature-certificate-select')?.addEventListener('chang
 <script src="/original/shared-nav.js"></script>
 <script src="/original/signature-block.js"></script>
 <script>SignatureBlock.init('consumables', { showStamp: true });</script>
+
+<!-- ══ تحميل من التأسيسي ══ -->
+<script>
+(function() {
+  const DB_VERSION = 'consumables_v26_final';
+
+  function getHospitalName() {
+    try {
+      const cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+      return (cd.hospitalName || '').trim() || null;
+    } catch { return null; }
+  }
+
+  function noFoundationAlert(hospitalName) {
+    const url = location.pathname.replace('consumables.html', 'contract-foundation-upload.html');
+    if (confirm(
+      'لا توجد بيانات تأسيسي محفوظة لـ "' + hospitalName + '".\n\n' +
+      'هل تريد الانتقال إلى صفحة رفع التأسيسي الآن؟'
+    )) {
+      location.href = url;
+    }
+  }
+
+  // ── تحميل عقود الباطن من التأسيسي ──
+  window.loadSubcontractorsFromFoundation = function() {
+    const hospitalName = getHospitalName();
+    if (!hospitalName) {
+      alert('يرجى تعيين اسم المستشفى في إعدادات العقد أولاً');
+      return;
+    }
+    const data = ContractFoundationDB.load(hospitalName);
+    if (!data || !data.subcontractors || !data.subcontractors.length) {
+      noFoundationAlert(hospitalName);
+      return;
+    }
+    const sc = data.subcontractors;
+    if (!confirm(
+      'سيتم استبدال قائمة عقود الباطن الحالية بـ ' + sc.length + ' عقد من التأسيسي:\n\n' +
+      sc.slice(0, 5).map((s, i) => (i + 1) + '. ' + s.name).join('\n') +
+      (sc.length > 5 ? '\n...' : '') +
+      '\n\nهل تريد المتابعة؟'
+    )) return;
+
+    const newData = sc.map(function(s, i) {
+      return {
+        id: 'sc_f_' + (i + 1) + '_' + Date.now(),
+        name: s.name,
+        visitValue: s.contractAmount || 0,
+        annualVisits: s.annualVisits || 1,
+        visitDate: 'خلال هذا الشهر',
+        status: 'نعم',
+        delayDays: 0,
+        damagePenalty: 0
+      };
+    });
+
+    localStorage.setItem('subcontractors_data_' + DB_VERSION, JSON.stringify(newData));
+    alert('✅ تم تحميل ' + newData.length + ' عقد باطن بنجاح — ستُحدَّث الصفحة الآن.');
+    location.reload();
+  };
+
+  // ── تحميل بنود المستهلكات من التأسيسي ──
+  window.loadConsumablesFromFoundation = function() {
+    const hospitalName = getHospitalName();
+    if (!hospitalName) {
+      alert('يرجى تعيين اسم المستشفى في إعدادات العقد أولاً');
+      return;
+    }
+    const data = ContractFoundationDB.load(hospitalName);
+    if (!data || !data.consumables || !data.consumables.length) {
+      noFoundationAlert(hospitalName);
+      return;
+    }
+    const co = data.consumables;
+    if (!confirm(
+      'سيتم استبدال بنود المستهلكات في جدول الملخص بـ ' + co.length + ' بند من التأسيسي:\n\n' +
+      co.slice(0, 5).map((c, i) => (i + 1) + '. ' + c.name + ' — ' + Number(c.monthlyCost).toLocaleString('ar-SA') + ' ر.س').join('\n') +
+      (co.length > 5 ? '\n...' : '') +
+      '\n\nهل تريد المتابعة؟'
+    )) return;
+
+    // قراءة الـ summaryData الحالية، استبدال العناصر الرئيسية (غير isSubTotal وغير isCustom)
+    let summaryData;
+    try {
+      summaryData = JSON.parse(localStorage.getItem('summary_data_' + DB_VERSION)) || [];
+    } catch { summaryData = []; }
+
+    // الاحتفاظ بعناصر isSubTotal و isCustom فقط
+    const kept = summaryData.filter(function(item) {
+      return item.isSubTotal || item.isCustom;
+    });
+
+    // إنشاء العناصر الجديدة من التأسيسي
+    const newItems = co.map(function(c, i) {
+      return {
+        id: 'co_f_' + (i + 1) + '_' + Date.now(),
+        name: c.name,
+        value: c.monthlyCost || 0,
+        isEditable: true,
+        isCustom: false
+      };
+    });
+
+    // دمج: العناصر الجديدة أولاً ثم العناصر المحفوظة (إجماليات + مخصصة)
+    const merged = newItems.concat(kept);
+    localStorage.setItem('summary_data_' + DB_VERSION, JSON.stringify(merged));
+
+    // تحديث performanceData بنفس الأسماء
+    const perfData = co.map(function(c, i) {
+      return { id: 'pf_f_' + (i + 1), name: c.name, maxScore: 15, score: 0 };
+    });
+    localStorage.setItem('performance_data_' + DB_VERSION, JSON.stringify(perfData));
+
+    alert('✅ تم تحميل ' + co.length + ' بند مستهلكات بنجاح — ستُحدَّث الصفحة الآن.');
+    location.reload();
+  };
+})();
+</script>
 </body>
 </html>
 
