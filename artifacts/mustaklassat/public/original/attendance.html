@@ -2066,9 +2066,13 @@ function importPositionsTemplate() {
         if (!deptKey) { skipped++; continue; }
 
         if (!allData[deptKey]) allData[deptKey] = [];
+        var daysCount = 30;
+        try { if (typeof getExtractPeriodDetails === 'function') daysCount = getExtractPeriodDetails().daysInMonth || 30; } catch(_){}
         allData[deptKey].push({
           name: empName, jobTitle: jobTitle, category: category,
-          salary: salary, nationality: nat, iqamaId: iqamaId, days: {}, attendance: {}
+          salary: salary, nationality: nat, iqamaId: iqamaId,
+          nationalityFine: 0,
+          days: Array(daysCount).fill('ح')
         });
         added++;
       }
