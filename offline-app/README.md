@@ -16,7 +16,7 @@ npm run dist:win      # يبني 32-bit + 64-bit installer
 ## البناء — Android (APK)
 
 ### المتطلبات
-- Node.js 18+
+- Node.js 22+
 - Android Studio + Android SDK
 - Java 17
 
