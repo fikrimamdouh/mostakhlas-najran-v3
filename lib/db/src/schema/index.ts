@@ -14,6 +14,7 @@ export const usersTable = pgTable("users", {
   company: text("company"),
   phone: text("phone"),
   hospital: text("hospital"),
+  hospitals: text("hospitals"),
   jobTitle: text("job_title"),
   contractNumber: text("contract_number"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

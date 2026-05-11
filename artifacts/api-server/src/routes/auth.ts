@@ -27,6 +27,10 @@ router.post("/sync", requireAuth, async (req: any, res) => {
         if (hospital) updates.hospital = hospital;
         if (jobTitle) updates.jobTitle = jobTitle;
         if (contractNumber) updates.contractNumber = contractNumber;
+        // إذا لم تكن قائمة المواقع محددة بعد — ابدأها من الموقع الحالي
+        if (hospital && !existing[0].hospitals) {
+          updates.hospitals = JSON.stringify([hospital]);
+        }
         const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, existing[0].id)).returning();
         return res.json(updated);
       }
@@ -42,6 +46,7 @@ router.post("/sync", requireAuth, async (req: any, res) => {
       company: company || null,
       phone: phone || null,
       hospital: hospital || null,
+      hospitals: hospital ? JSON.stringify([hospital]) : null,
       jobTitle: jobTitle || null,
       contractNumber: contractNumber || null,
     }).returning();

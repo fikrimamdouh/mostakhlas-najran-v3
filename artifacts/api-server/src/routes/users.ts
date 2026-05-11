@@ -314,6 +314,47 @@ router.patch("/:userId/hospital", requireAuth, requireAdmin, async (req: any, re
   }
 });
 
+// PATCH /api/users/me/hospital — user switches their active hospital (must be in hospitals list)
+router.patch("/me/hospital", requireAuth, async (req: any, res) => {
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const { hospital } = req.body;
+    if (!hospital) return res.status(400).json({ error: "hospital required" });
+    const allowed: string[] = user.hospitals ? JSON.parse(user.hospitals) : (user.hospital ? [user.hospital] : []);
+    if (!allowed.includes(hospital) && user.role !== "admin") {
+      return res.status(403).json({ error: "Not allowed for this hospital" });
+    }
+    const [updated] = await db.update(usersTable).set({ hospital }).where(eq(usersTable.id, user.id)).returning();
+    return res.json(updated);
+  } catch (err) {
+    req.log.error({ err }, "Failed to switch hospital");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PATCH /api/users/:userId/hospitals — admin assigns multiple hospitals to a user
+router.patch("/:userId/hospitals", requireAuth, requireAdmin, async (req: any, res) => {
+  try {
+    const { userId } = req.params;
+    const { hospitals } = req.body as { hospitals: string[] };
+    if (!Array.isArray(hospitals)) return res.status(400).json({ error: "hospitals must be array" });
+    const hospitalsJson = hospitals.length > 0 ? JSON.stringify(hospitals) : null;
+    const primary = hospitals[0] || null;
+    const [user] = await db.update(usersTable)
+      .set({ hospitals: hospitalsJson, hospital: primary })
+      .where(eq(usersTable.id, Number(userId)))
+      .returning();
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
+    logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "تعيين مواقع متعددة", `مواقع ${user.name}: ${hospitals.join(" / ")}`, ip);
+    return res.json(user);
+  } catch (err) {
+    req.log.error({ err }, "Failed to update hospitals");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // POST /api/users/:userId/activate - admin only
 router.post("/:userId/activate", requireAuth, requireAdmin, async (req: any, res) => {
   try {

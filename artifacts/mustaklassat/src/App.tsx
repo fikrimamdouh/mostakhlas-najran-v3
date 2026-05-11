@@ -142,7 +142,7 @@ const COMPANY_SITES = {
   "بيت_العرب": {
     label: "شركة مجموعة بيت العرب الحديثة المحدودة",
     sites: [
-      { name: "مستشفى يدمة العام",                                         contract: "" },
+      { name: "مستشفى يدمه العام",                                         contract: "" },
       { name: "مستشفى حبونا العام",                                        contract: "" },
       { name: "مستشفى بدر الجنوب العام",                                   contract: "" },
       { name: "مستشفى الولادة والأطفال",                                   contract: "250701156483" },
@@ -461,6 +461,46 @@ function PendingPage() {
   );
 }
 
+// ======= شاشة اختيار الموقع =======
+function HospitalPickerScreen({
+  hospitals, currentHospital, onPick,
+}: { hospitals: string[]; currentHospital: string | null; onPick: (h: string) => Promise<void> }) {
+  const [loading, setLoading] = useState(false);
+  return (
+    <div style={{ display: "flex", minHeight: "100dvh", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 16, background: "linear-gradient(135deg,#1e3c72 0%,#2a5298 100%)", direction: "rtl" }}>
+      <div style={{ background: "#fff", borderRadius: 20, padding: "36px 28px", maxWidth: 480, width: "100%", boxShadow: "0 20px 60px rgba(30,60,114,0.2)" }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <img src="/logo.png" alt="" style={{ height: 52, margin: "0 auto 12px", display: "block" }} onError={e => (e.target as HTMLImageElement).style.display = "none"} />
+          <h2 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#1e3c72", marginBottom: 4 }}>اختر الموقع</h2>
+          <p style={{ color: "#6b7280", fontSize: "0.88rem" }}>اختر الموقع الذي ستعمل عليه في هذه الجلسة</p>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {hospitals.map(h => (
+            <button
+              key={h}
+              disabled={loading}
+              onClick={async () => { setLoading(true); await onPick(h); setLoading(false); }}
+              style={{
+                padding: "14px 18px", borderRadius: 12,
+                border: h === currentHospital ? "2.5px solid #1e3c72" : "1.5px solid #e2e8f0",
+                background: h === currentHospital ? "#f0f4ff" : "#fafafa",
+                textAlign: "right", cursor: loading ? "not-allowed" : "pointer",
+                fontWeight: 700, fontSize: "0.93rem", color: "#1e293b",
+                display: "flex", alignItems: "center", gap: 10, width: "100%",
+              }}
+            >
+              <span style={{ fontSize: "1.2rem" }}>🏥</span>
+              <span style={{ flex: 1 }}>{h}</span>
+              {h === currentHospital && <span style={{ fontSize: "0.75rem", color: "#1e3c72", background: "#e0e7ff", borderRadius: 6, padding: "2px 8px" }}>الحالي</span>}
+            </button>
+          ))}
+        </div>
+        {loading && <p style={{ textAlign: "center", color: "#6b7280", fontSize: "0.82rem", marginTop: 14 }}>⏳ جاري الحفظ...</p>}
+      </div>
+    </div>
+  );
+}
+
 // Ensure user is synced with DB
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, isLoaded: isClerkLoaded } = useUser();
@@ -468,6 +508,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
   const [hasToken, setHasToken] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
 
   // Wait until getToken() returns a real JWT before firing any API call.
   // Clerk may return null on the first call even when isLoaded+user are ready
@@ -497,6 +538,32 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   });
 
   const isNotFound = (error as any)?.status === 404;
+
+  // تفعيل منتقي الموقع إذا كان للمستخدم أكثر من موقع مسموح
+  const parsedHospitals: string[] = (() => {
+    try { return JSON.parse((dbUser as any)?.hospitals || '[]'); } catch { return []; }
+  })();
+  const effectiveHospitals = parsedHospitals.length > 0 ? parsedHospitals : (dbUser?.hospital ? [dbUser.hospital] : []);
+
+  useEffect(() => {
+    if (!dbUser || dbUser.status !== "approved") return;
+    if (effectiveHospitals.length <= 1) return;
+    const sessionKey = `h_s_${dbUser.id}`;
+    if (!sessionStorage.getItem(sessionKey)) setShowPicker(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dbUser?.id, dbUser?.status, effectiveHospitals.length]);
+
+  const handleHospitalPick = async (hosp: string) => {
+    const token = await getToken();
+    await fetch('/api/users/me/hospital', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ hospital: hosp }),
+    });
+    if (dbUser?.id) sessionStorage.setItem(`h_s_${dbUser.id}`, hosp);
+    queryClient.invalidateQueries({ queryKey: ['/api/users/me'] });
+    setShowPicker(false);
+  };
 
   // New user detected — auto-sync using pre-registration data from sessionStorage
   useEffect(() => {
@@ -548,7 +615,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         email: dbUser.email,
         role: dbUser.role,
         hospital: dbUser.hospital,
+        hospitals: (dbUser as any).hospitals || null,
         company: dbUser.company,
+        phone: (dbUser as any).phone || null,
+        jobTitle: (dbUser as any).jobTitle || null,
+        contractNumber: (dbUser as any).contractNumber || null,
         clerkToken: token,
         timestamp: Date.now(),
       }));
@@ -587,6 +658,16 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (dbUser?.status === "rejected") {
     return <RejectedPage />;
+  }
+
+  if (showPicker && effectiveHospitals.length > 1) {
+    return (
+      <HospitalPickerScreen
+        hospitals={effectiveHospitals}
+        currentHospital={dbUser?.hospital ?? null}
+        onPick={handleHospitalPick}
+      />
+    );
   }
 
   return <>{children}</>;

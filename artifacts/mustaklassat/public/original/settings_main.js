@@ -841,8 +841,13 @@ function autoFillFromSession() {
 
         // اسم الشركة — يُملأ فقط لو فارغ
         if (!contractData.companyName && session.company) {
-            // تحويل "بيت_العرب" → "بيت العرب"
             contractData.companyName = session.company.replace(/_/g, ' ');
+            changed = true;
+        }
+
+        // رقم العقد — يُملأ فقط لو فارغ
+        if (!contractData.contractNumber && session.contractNumber) {
+            contractData.contractNumber = session.contractNumber;
             changed = true;
         }
 

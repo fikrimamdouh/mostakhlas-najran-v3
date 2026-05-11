@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const COMPANY_SITES: Record<string, string[]> = {
   "بيت_العرب": [
-    "مستشفى يدمة العام",
+    "مستشفى يدمه العام",
     "مستشفى حبونا العام",
     "مستشفى بدر الجنوب العام",
     "مستشفى الولادة والأطفال",
@@ -53,6 +53,7 @@ type AnyUser = {
   role: string;
   status: string;
   hospital: string | null;
+  hospitals?: string | null;
   phone: string | null;
   jobTitle: string | null;
 };
@@ -166,12 +167,54 @@ function ReassignSelect({
   );
 }
 
-function UserRow({ user, onReassign, mutatingId }: {
+function MultiHospitalPanel({
+  user, onSave, onCancel, saving,
+}: { user: AnyUser; onSave: (ids: string[]) => void; onCancel: () => void; saving: boolean }) {
+  const current: string[] = (() => { try { return JSON.parse(user.hospitals || '[]'); } catch { return user.hospital ? [user.hospital] : []; } })();
+  const [sel, setSel] = useState<Set<string>>(new Set(current));
+  const toggle = (h: string) => setSel(prev => { const next = new Set(prev); next.has(h) ? next.delete(h) : next.add(h); return next; });
+  return (
+    <div style={{ marginTop: 10, padding: "14px 16px", background: "#f8faff", borderRadius: 12, border: "1.5px solid #c7d2e8" }}>
+      <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#1e3c72", marginBottom: 10 }}>🏥 مواقع متعددة — {user.name}</div>
+      {[["بيت_العرب", "بيت العرب"], ["سراكو", "سراكو"]].map(([key, label]) => (
+        <div key={key} style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: "0.72rem", color: "#6b7280", fontWeight: 700, marginBottom: 5, textTransform: "uppercase" }}>{label}</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {COMPANY_SITES[key].map((h: string) => (
+              <button key={h} onClick={() => toggle(h)}
+                style={{
+                  padding: "5px 10px", borderRadius: 8, cursor: "pointer", fontSize: "0.75rem", fontWeight: 600,
+                  border: sel.has(h) ? "2px solid #1e3c72" : "1.5px solid #d1d5db",
+                  background: sel.has(h) ? "#e0e7ff" : "#fff", color: sel.has(h) ? "#1e3c72" : "#374151",
+                }}
+              >{h}</button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <button disabled={saving || sel.size === 0} onClick={() => onSave([...sel])}
+          style={{ flex: 1, padding: "9px 14px", borderRadius: 8, border: "none", background: "linear-gradient(135deg,#1e3c72,#2a5298)", color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: saving || sel.size === 0 ? "not-allowed" : "pointer" }}>
+          {saving ? "⏳ جاري الحفظ..." : `✅ حفظ (${sel.size} موقع)`}
+        </button>
+        <button onClick={onCancel} style={{ padding: "9px 12px", borderRadius: 8, border: "none", background: "#fee2e2", color: "#dc2626", cursor: "pointer" }}>
+          <X size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function UserRow({ user, onReassign, onMultiAssign, mutatingId }: {
   user: AnyUser;
   onReassign: (id: number, h: string | null) => void;
+  onMultiAssign: (id: number, hospitals: string[]) => void;
   mutatingId: number | null;
 }) {
   const [open, setOpen] = useState(false);
+  const [multiOpen, setMultiOpen] = useState(false);
+  const userHospitals: string[] = (() => { try { return JSON.parse(user.hospitals || '[]'); } catch { return []; } })();
+  const isMulti = userHospitals.length > 1;
   return (
     <div style={{ borderBottom: "1px solid #f1f5f9", padding: "11px 16px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -185,23 +228,34 @@ function UserRow({ user, onReassign, mutatingId }: {
               {ROLE_LABELS[user.role] || user.role}
             </span>
             {user.phone && <span style={{ fontSize: "0.74rem", color: "#9ca3af" }}>{user.phone}</span>}
+            {isMulti && <span style={{ fontSize: "0.72rem", color: "#7c3aed", fontWeight: 700, background: "#f3e8ff", borderRadius: 6, padding: "1px 7px" }}>🏥 {userHospitals.length} مواقع</span>}
           </div>
         </div>
-        <button
-          onClick={() => setOpen(v => !v)}
-          title="نقل إلى مستشفى آخر"
-          style={{
-            background: open ? "#fee2e2" : "#f0f4ff",
-            color: open ? "#dc2626" : "#1e3c72",
-            border: "none", borderRadius: 8, padding: "6px 11px",
-            cursor: "pointer", flexShrink: 0,
-            display: "flex", alignItems: "center", gap: 5,
-            fontSize: "0.78rem", fontWeight: 600,
-          }}
-        >
-          {open ? <><X size={13} /> إلغاء</> : <><ArrowRightLeft size={13} /> نقل</>}
-        </button>
+        <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+          <button
+            onClick={() => { setMultiOpen(v => !v); setOpen(false); }}
+            title="تعيين مواقع متعددة"
+            style={{ background: multiOpen ? "#ede9fe" : "#f5f3ff", color: "#7c3aed", border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: "0.76rem", fontWeight: 600 }}
+          >
+            🏥 متعدد
+          </button>
+          <button
+            onClick={() => { setOpen(v => !v); setMultiOpen(false); }}
+            title="نقل إلى مستشفى آخر"
+            style={{ background: open ? "#fee2e2" : "#f0f4ff", color: open ? "#dc2626" : "#1e3c72", border: "none", borderRadius: 8, padding: "6px 11px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", fontWeight: 600 }}
+          >
+            {open ? <><X size={13} /> إلغاء</> : <><ArrowRightLeft size={13} /> نقل</>}
+          </button>
+        </div>
       </div>
+      {multiOpen && (
+        <MultiHospitalPanel
+          user={user}
+          onSave={(hs) => { onMultiAssign(user.id, hs); setMultiOpen(false); }}
+          onCancel={() => setMultiOpen(false)}
+          saving={mutatingId === user.id}
+        />
+      )}
       {open && (
         <ReassignSelect
           userId={user.id}
@@ -216,9 +270,10 @@ function UserRow({ user, onReassign, mutatingId }: {
   );
 }
 
-function HospitalCard({ name, users, onReassign, mutatingId }: {
+function HospitalCard({ name, users, onReassign, onMultiAssign, mutatingId }: {
   name: string; users: AnyUser[];
   onReassign: (id: number, h: string | null) => void;
+  onMultiAssign: (id: number, hospitals: string[]) => void;
   mutatingId: number | null;
 }) {
   const approved = users.filter(u => u.status === "approved").length;
@@ -245,7 +300,7 @@ function HospitalCard({ name, users, onReassign, mutatingId }: {
           </div>
         ) : (
           users.map(u => (
-            <UserRow key={u.id} user={u} onReassign={onReassign} mutatingId={mutatingId} />
+            <UserRow key={u.id} user={u} onReassign={onReassign} onMultiAssign={onMultiAssign} mutatingId={mutatingId} />
           ))
         )}
       </div>
@@ -305,6 +360,34 @@ export default function HospitalsAdmin() {
 
   const handleReassign = (userId: number, hospital: string | null) => {
     mutation.mutate({ userId, hospital });
+  };
+
+  const multiMutation = useMutation({
+    mutationFn: async ({ userId, hospitals }: { userId: number; hospitals: string[] }) => {
+      setMutatingId(userId);
+      const token = await getToken();
+      const res = await fetch(`/api/users/${userId}/hospitals`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ hospitals }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["/api/users"] });
+      refetch();
+      toast({ title: "✅ تم الحفظ", description: `تم تعيين ${vars.hospitals.length} موقع` });
+      setMutatingId(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "خطأ", description: err.message, variant: "destructive" });
+      setMutatingId(null);
+    },
+  });
+
+  const handleMultiAssign = (userId: number, hospitals: string[]) => {
+    multiMutation.mutate({ userId, hospitals });
   };
 
   const currentSites = COMPANY_SITES[activeCompany];
@@ -371,7 +454,7 @@ export default function HospitalsAdmin() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 12 }}>
             {filterUsers(unassigned).map(u => (
               <div key={u.id} style={{ background: "#fff", borderRadius: 10, border: "1.5px solid #fde68a", overflow: "hidden" }}>
-                <UserRow user={u} onReassign={handleReassign} mutatingId={mutatingId} />
+                <UserRow user={u} onReassign={handleReassign} onMultiAssign={handleMultiAssign} mutatingId={mutatingId} />
               </div>
             ))}
           </div>
@@ -416,6 +499,7 @@ export default function HospitalsAdmin() {
             name={hospitalName}
             users={filterUsers(byHospital[hospitalName] || [])}
             onReassign={handleReassign}
+            onMultiAssign={handleMultiAssign}
             mutatingId={mutatingId}
           />
         ))}
