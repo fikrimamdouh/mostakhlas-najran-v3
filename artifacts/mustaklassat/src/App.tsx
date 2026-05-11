@@ -565,13 +565,26 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     setShowPicker(false);
   };
 
-  // New user detected — auto-sync using pre-registration data from sessionStorage
+  // Sync user data in two cases:
+  // 1. Brand-new user (404) — create record with pre-reg data
+  // 2. Existing user whose profile is incomplete AND sessionStorage has pre-reg data
+  //    (happens when old account was deleted then re-registered with same email)
   useEffect(() => {
-    if (!isClerkLoaded || !user || !isNotFound || syncState !== 'idle') return;
+    if (!isClerkLoaded || !user || syncState !== 'idle') return;
 
     const preReg = (() => {
       try { return JSON.parse(sessionStorage.getItem(PRE_REG_KEY) || 'null'); } catch { return null; }
     })();
+
+    const isNewUser = isNotFound;
+    const isIncompleteProfile =
+      !isNotFound &&
+      dbUser &&
+      !dbUser.hospital &&
+      !(dbUser as any).phone &&
+      preReg?.hospital;
+
+    if (!isNewUser && !isIncompleteProfile) return;
 
     setSyncState('syncing');
     getToken().then(async token => {
@@ -601,7 +614,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         }
       } catch { setSyncState('error'); }
     });
-  }, [isClerkLoaded, user, isNotFound, syncState, getToken, queryClient]);
+  }, [isClerkLoaded, user, isNotFound, dbUser, syncState, getToken, queryClient]);
 
   // حفظ الجلسة + Clerk token
   useEffect(() => {
