@@ -53,7 +53,7 @@ export function getSiteType(hospital: string | null | undefined): SiteType {
 // أنواع المواقع التي تمتلكها كل شركة
 const COMPANY_SITE_TYPES: Record<string, SiteType[]> = {
   "بيت_العرب": ["hospital", "admin_offices"],   // مستشفيات + المكاتب الإدارية والمرافق الصحية
-  "سراكو":     ["hospital", "health_centers"],   // مستشفيات + المراكز الصحية (بدون مكاتب)
+  "سراكو":     ["hospital"],                       // مستشفيات فقط
   "تجمع_نجران": [],
 };
 
