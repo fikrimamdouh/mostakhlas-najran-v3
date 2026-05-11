@@ -19,6 +19,7 @@
     'admin-dashboard.html': '🛡️',
     'settings_main.html': '⚙️',
     'extract-archive.html': '🗂️',
+    'contract-foundation-upload.html': '📋',
   };
 
   /* ── Inject CSS ── */
