@@ -432,13 +432,21 @@ async function handleSingleFileImport() {
 
         saveAttendanceData(allData);
         renderCenterIcons();
-        
-        statusArea.innerHTML = `
-            <p class="status-success">✓ اكتملت العملية: تم استيراد ${addedCount} موظف بنجاح.</p>
-            ${skippedCount > 0 ? `<p class="status-error">✗ تم تجاهل ${skippedCount} موظف مكرر أو بدون رقم إقامة.</p>${skippedInfo}` : ''}
-        `;
-        
-        setTimeout(() => closeDialog('management-dialog'), 5000);
+
+        if (addedCount === 0) {
+            statusArea.innerHTML = `
+                <p class="status-error">⚠️ لم يُضف أي موظف!</p>
+                <p class="status-skipped">السبب: جميع الموظفين إما بدون رقم إقامة أو مسجلون مسبقاً في مركز آخر.</p>
+                ${skippedCount > 0 ? `<p class="status-error">✗ تم تجاهل ${skippedCount} موظف:</p>${skippedInfo}` : ''}
+                <p style="margin-top:8px;font-size:.85rem;color:#92400e">💡 تأكد من أن عمود "رقم الاقامة" ممتلئ في ملف الإكسل.</p>
+            `;
+        } else {
+            statusArea.innerHTML = `
+                <p class="status-success">✓ اكتملت العملية: تم استيراد ${addedCount} موظف بنجاح.</p>
+                ${skippedCount > 0 ? `<p class="status-error">✗ تم تجاهل ${skippedCount} موظف مكرر أو بدون رقم إقامة.</p>${skippedInfo}` : ''}
+            `;
+            setTimeout(() => closeDialog('management-dialog'), 5000);
+        }
 
     } catch (error) {
         statusArea.innerHTML = `<p class="status-error">✗ فشل استيراد الملف. السبب: ${error.message}</p>`;

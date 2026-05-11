@@ -2041,6 +2041,7 @@ function importPositionsTemplate() {
 
       var allData = getAttendanceData();
       var added = 0, skipped = 0;
+      var unknownDepts = new Set();
 
       for (var r = 1; r < raw.length; r++) {
         var row     = raw[r];
@@ -2064,7 +2065,11 @@ function importPositionsTemplate() {
             }
           }
         }
-        if (!deptKey) { skipped++; continue; }
+        if (!deptKey) {
+          unknownDepts.add(deptAr || '(فارغ)');
+          skipped++;
+          continue;
+        }
 
         if (!allData[deptKey]) allData[deptKey] = [];
         var daysCount = 30;
@@ -2076,6 +2081,15 @@ function importPositionsTemplate() {
           days: Array(daysCount).fill('ح')
         });
         added++;
+      }
+
+      if (added === 0) {
+        var foundMsg = unknownDepts.size > 0
+          ? '\n\nأسماء الأقسام الموجودة في الملف:\n• ' + Array.from(unknownDepts).join('\n• ')
+          + '\n\nالأسماء المتوقعة مثل: نظافة، كهرباء، زراعة، مدني، ميكانيكا، مغسلة، خدمات مرضى، إداري'
+          : '\n\nتحقق من أن الملف يحتوي أعمدة: "القسم" و"اسم شاغل الوظيفة"';
+        alert('⚠️ لم يُضف أي موظف!\nجميع الصفوف اتجاهلت لأن أسماء الأقسام ما تطابقت.' + foundMsg);
+        return;
       }
 
       saveAttendanceData(allData);
