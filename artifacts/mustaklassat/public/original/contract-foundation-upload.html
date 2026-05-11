@@ -32,8 +32,9 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:#f0f4f8;min-heigh
 .drop-zone input[type=file]{display:none}
 .hospital-field{display:flex;flex-direction:column;gap:6px;margin-top:16px}
 .hospital-field label{font-size:.88rem;font-weight:600;color:#1e3c72}
-.hospital-field input{width:100%;padding:10px 14px;border:1.5px solid #d1d5db;border-radius:8px;font-size:.95rem;direction:rtl;outline:none;transition:border-color .2s}
-.hospital-field input:focus{border-color:#1e3c72}
+.hospital-field select{width:100%;padding:10px 14px;border:1.5px solid #d1d5db;border-radius:8px;font-size:.95rem;direction:rtl;outline:none;transition:border-color .2s;background:#fff;cursor:pointer;appearance:auto}
+.hospital-field select:focus{border-color:#1e3c72}
+.hospital-field .hs-note{font-size:.78rem;color:#6b7280;margin-top:4px}
 .btn{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:9px;border:none;cursor:pointer;font-size:.9rem;font-weight:600;transition:all .2s}
 .btn-primary{background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff}
 .btn-primary:hover{opacity:.9;transform:translateY(-1px)}
@@ -117,8 +118,32 @@ footer{text-align:center;padding:20px;color:#9ca3af;font-size:.8rem}
     <div class="card-body">
 
       <div class="hospital-field" style="margin-bottom:16px">
-        <label><i class="fas fa-hospital"></i> اسم المستشفى / الموقع</label>
-        <input type="text" id="hospitalNameInput" placeholder="مثال: مستشفى يدمة العام" autocomplete="off">
+        <label><i class="fas fa-hospital"></i> اختر المستشفى / الموقع</label>
+        <select id="hospitalNameInput">
+          <option value="">— اختر المستشفى —</option>
+          <optgroup label="🏥 بيت العرب" id="grp-beyt">
+            <option>مستشفى يدمة العام</option>
+            <option>مستشفى حبونا العام</option>
+            <option>مستشفى بدر الجنوب العام</option>
+            <option>مستشفى الولادة والأطفال</option>
+            <option>مستشفى نجران العام القديم وسكن الممرضات الخارجي</option>
+            <option>المكاتب الإدارية والمرافق الصحية</option>
+            <option>صيانة وإصلاح السيارات والعيادات المتنقلة</option>
+          </optgroup>
+          <optgroup label="🏨 سراكو" id="grp-sarako">
+            <option>مستشفى نجران العام الجديد</option>
+            <option>مركز طب الأسنان التخصصي</option>
+            <option>مجمع الأمل للصحة النفسية</option>
+            <option>مستشفى ثار العام</option>
+            <option>مستشفى خباش العام</option>
+            <option>المراكز الصحية</option>
+            <option>مستشفى الملك خالد</option>
+            <option>مركز الأمير سلطان</option>
+            <option>مستشفى شروره العام</option>
+          </optgroup>
+          <optgroup label="📋 من قاعدة البيانات" id="grp-db" style="display:none"></optgroup>
+        </select>
+        <span class="hs-note" id="hospitalHint">⏳ جاري تحميل المستشفيات من النظام...</span>
       </div>
 
       <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
@@ -195,13 +220,59 @@ dz.addEventListener('drop', e => {
   if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
 });
 
-// Auto-fill hospital name from contract data
-(function() {
+// قائمة المستشفيات الثابتة (نفس hospitals.tsx)
+const BEYT_HOSPITALS = [
+  'مستشفى يدمة العام','مستشفى حبونا العام','مستشفى بدر الجنوب العام',
+  'مستشفى الولادة والأطفال','مستشفى نجران العام القديم وسكن الممرضات الخارجي',
+  'المكاتب الإدارية والمرافق الصحية','صيانة وإصلاح السيارات والعيادات المتنقلة'
+];
+const SARAKO_HOSPITALS = [
+  'مستشفى نجران العام الجديد','مركز طب الأسنان التخصصي','مجمع الأمل للصحة النفسية',
+  'مستشفى ثار العام','مستشفى خباش العام','المراكز الصحية',
+  'مستشفى الملك خالد','مركز الأمير سلطان','مستشفى شروره العام'
+];
+const ALL_KNOWN = new Set([...BEYT_HOSPITALS, ...SARAKO_HOSPITALS]);
+
+// تحميل المستشفيات من قاعدة البيانات (المسجلة في بروفايل المستخدمين)
+async function loadHospitalsFromUsers() {
+  const hint = document.getElementById('hospitalHint');
+  const grpDb = document.getElementById('grp-db');
+  const sel = document.getElementById('hospitalNameInput');
+  try {
+    const s = JSON.parse(localStorage.getItem('najran_session') || '{}');
+    const token = s.clerkToken || null;
+    const headers = token ? { Authorization: 'Bearer ' + token } : {};
+    const resp = await fetch('/api/users?limit=500', { headers, credentials: 'include' });
+    if (!resp.ok) { hint.textContent = '✓ المستشفيات المعروفة محملة'; return; }
+    const data = await resp.json();
+    const users = data.users || [];
+    const extra = new Set();
+    users.forEach(u => { if (u.hospital && !ALL_KNOWN.has(u.hospital.trim())) extra.add(u.hospital.trim()); });
+    if (extra.size > 0) {
+      grpDb.style.display = '';
+      extra.forEach(h => {
+        const opt = document.createElement('option');
+        opt.value = h; opt.textContent = h;
+        grpDb.appendChild(opt);
+      });
+      hint.textContent = `✓ تم تحميل ${16 + extra.size} مستشفى — اختر من القائمة`;
+    } else {
+      hint.textContent = '✓ جميع المستشفيات المعروفة محملة — اختر من القائمة';
+    }
+  } catch { hint.textContent = '✓ المستشفيات الرئيسية محملة — اختر من القائمة'; }
+
+  // Auto-select hospital from contract data
   try {
     const cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-    if (cd.hospitalName) document.getElementById('hospitalNameInput').value = cd.hospitalName;
+    if (cd.hospitalName) {
+      // حاول التطابق مع أحد الخيارات
+      const opts = Array.from(sel.options);
+      const match = opts.find(o => o.value === cd.hospitalName || o.text === cd.hospitalName);
+      if (match) { sel.value = match.value; }
+    }
   } catch {}
-})();
+}
+
 
 function fmt(n) {
   if (!n && n !== 0) return '—';
@@ -430,6 +501,7 @@ function btnSm() {
 document.addEventListener('DOMContentLoaded', () => {
   renderSavedList();
   btnSm();
+  loadHospitalsFromUsers();
 });
 </script>
 <script src="/original/shared-nav.js"></script>

@@ -205,7 +205,7 @@ export default function HospitalsAdmin() {
   const { getToken } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
-  const { data: usersData, isLoading } = useListUsers({});
+  const { data: usersData, isLoading, refetch } = useListUsers({});
   const [activeCompany, setActiveCompany] = useState<"بيت_العرب" | "سراكو">("بيت_العرب");
   const [mutatingId, setMutatingId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -239,7 +239,9 @@ export default function HospitalsAdmin() {
       return res.json();
     },
     onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: getListUsersQueryKey({}) });
+      // invalidate all user queries broadly then force-refetch
+      qc.invalidateQueries({ queryKey: ["/api/users"] });
+      refetch();
       toast({ title: "✅ تم التغيير", description: vars.hospital ? `تم الربط بـ: ${vars.hospital}` : "تم إزالة الربط" });
       setMutatingId(null);
     },
