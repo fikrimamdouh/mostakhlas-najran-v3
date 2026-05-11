@@ -21,12 +21,6 @@
     'extract-archive.html': '🗂️',
   };
 
-  /* ── Foundation group pages (always shown as dropdown) ── */
-  var FOUNDATION_PAGES = [
-    { value: 'job-positions-upload.html',      label: 'رفع المناصب', icon: '👔' },
-    { value: 'contract-foundation-upload.html', label: 'التأسيس',     icon: '📝' },
-  ];
-
   /* ── Inject CSS ── */
   var css = `
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700&display=swap');
@@ -274,13 +268,10 @@
       '<p class="sn-org-sub">وحدة الصيانة العامة — نظام إدارة المستخلصات</p>';
 
     /* Active tab label as page badge */
-    var foundationPage = FOUNDATION_PAGES.find(function(p) { return p.value === currentPage; });
     var activeOpt = options.find(function (o) {
       return o.selected || o.value === currentPage;
     }) || options[0];
-    var badgeLabel = foundationPage
-      ? foundationPage.label
-      : (activeOpt ? cleanLabel(activeOpt.text) : '');
+    var badgeLabel = activeOpt ? cleanLabel(activeOpt.text) : '';
 
     var badge = document.createElement('span');
     badge.className = 'sn-page-badge';
@@ -295,7 +286,7 @@
     tabs.className = 'sn-tabs';
 
     options.forEach(function (opt) {
-      var isActive = (opt.selected || opt.value === currentPage) && !foundationPage;
+      var isActive = opt.selected || opt.value === currentPage;
       var icon = ICONS[opt.value] || '📄';
       var label = cleanLabel(opt.text);
 
@@ -307,47 +298,6 @@
         '<span>' + label + '</span>';
       tabs.appendChild(tab);
     });
-
-    /* ── تأسيس العقد dropdown (always shown) ── */
-    var foundationActive = !!foundationPage;
-
-    var dropdown = document.createElement('div');
-    dropdown.className = 'sn-dropdown';
-
-    var dropBtn = document.createElement('button');
-    dropBtn.className = 'sn-dropdown-btn' + (foundationActive ? ' sn-active' : '');
-    dropBtn.innerHTML =
-      '<span class="sn-icon">📋</span>' +
-      '<span>تأسيس العقد</span>' +
-      '<span class="sn-caret">▾</span>';
-
-    var dropMenu = document.createElement('div');
-    dropMenu.className = 'sn-dropdown-menu';
-
-    FOUNDATION_PAGES.forEach(function (page) {
-      var isItemActive = page.value === currentPage;
-      var item = document.createElement('a');
-      item.href = page.value;
-      item.className = 'sn-dropdown-item' + (isItemActive ? ' sn-active' : '');
-      item.innerHTML =
-        '<span class="sn-di-icon">' + page.icon + '</span>' +
-        '<span>' + page.label + '</span>';
-      dropMenu.appendChild(item);
-    });
-
-    dropdown.appendChild(dropBtn);
-    dropdown.appendChild(dropMenu);
-
-    /* Mobile toggle — click anywhere outside closes it */
-    dropBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      dropdown.classList.toggle('sn-open');
-    });
-    document.addEventListener('click', function () {
-      dropdown.classList.remove('sn-open');
-    });
-
-    tabs.appendChild(dropdown);
 
     wrapper.appendChild(header);
     wrapper.appendChild(tabs);
