@@ -143,6 +143,7 @@ footer{text-align:center;padding:20px;color:#9ca3af;font-size:.8rem}
         <label><i class="fas fa-hospital"></i> اختر المستشفى / الموقع</label>
         <select id="hospitalNameInput">
           <option value="">— اختر المستشفى —</option>
+          <option value="__ALL__" style="font-weight:700;background:#fef9c3;color:#92400e">🌐 كل المستشفيات (رفع لجميع المواقع دفعة واحدة)</option>
           <optgroup label="🏥 بيت العرب" id="grp-beyt">
             <option>مستشفى يدمه العام</option>
             <option>مستشفى حبونا العام</option>
@@ -425,9 +426,9 @@ function switchTab(id) {
 }
 
 async function saveAll() {
-  const hospitalName = document.getElementById('hospitalNameInput').value.trim();
-  if (!hospitalName) {
-    showAlert('يرجى كتابة اسم المستشفى أو الموقع أولاً', 'error');
+  const selected = document.getElementById('hospitalNameInput').value.trim();
+  if (!selected) {
+    showAlert('يرجى اختيار المستشفى أو الموقع أولاً', 'error');
     return;
   }
   if (!parsedSubcontractors.length && !parsedConsumables.length) {
@@ -437,27 +438,44 @@ async function saveAll() {
 
   const btn = document.getElementById('saveBtn');
   btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
 
-  // 1. حفظ محلي (localStorage)
-  ContractFoundationDB.save(hospitalName, parsedSubcontractors, parsedConsumables);
+  // ═══ تحديد قائمة المستشفيات المستهدفة ═══
+  const saveToAll = (selected === '__ALL__');
+  let targetHospitals;
+  if (saveToAll) {
+    // اجمع كل المستشفيات المعروفة + أي مستشفيات إضافية من القائمة
+    const extraOpts = Array.from(document.getElementById('grp-db').options || []).map(o => o.value).filter(Boolean);
+    targetHospitals = [...BEYT_HOSPITALS, ...SARAKO_HOSPITALS, ...extraOpts];
+  } else {
+    targetHospitals = [selected];
+  }
 
-  // 2. رفع للسيرفر حتى يراه جميع المستخدمين
-  const serverResult = await ContractFoundationDB.saveToServer(hospitalName, parsedSubcontractors, parsedConsumables);
+  btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري الحفظ لـ ${targetHospitals.length} موقع...`;
+
+  let successCount = 0, failCount = 0;
+  for (const hn of targetHospitals) {
+    ContractFoundationDB.save(hn, parsedSubcontractors, parsedConsumables);
+    const result = await ContractFoundationDB.saveToServer(hn, parsedSubcontractors, parsedConsumables);
+    if (result.ok) successCount++; else failCount++;
+  }
 
   btn.disabled = false;
   btn.innerHTML = '<i class="fas fa-save"></i> حفظ البيانات';
 
-  if (serverResult.ok) {
+  if (failCount === 0) {
     showAlert(
-      `✅ تم رفع البيانات للسيرفر بنجاح — "${hospitalName}" · ${parsedSubcontractors.length} عقد باطن · ${parsedConsumables.length} بند مستهلكات\n` +
-      `🌐 جميع مستخدمي هذا المستشفى سيشاهدون البيانات تلقائياً`,
+      saveToAll
+        ? `✅ تم رفع البيانات لجميع المواقع بنجاح (${successCount} موقع)\n` +
+          `· ${parsedSubcontractors.length} عقد باطن · ${parsedConsumables.length} بند مستهلكات`
+        : `✅ تم رفع البيانات للسيرفر بنجاح — "${selected}"\n` +
+          `· ${parsedSubcontractors.length} عقد باطن · ${parsedConsumables.length} بند مستهلكات\n` +
+          `🌐 جميع مستخدمي هذا المستشفى سيشاهدون البيانات تلقائياً`,
       'success'
     );
   } else {
     showAlert(
-      `⚠️ تم الحفظ محلياً، لكن فشل الرفع للسيرفر: ${serverResult.error || 'تأكد من صلاحية الأدمن'}\n` +
-      `البيانات محفوظة على هذا الجهاز فقط.`,
+      `⚠️ تم الحفظ لـ ${successCount} موقع بنجاح، وفشل لـ ${failCount} موقع.\n` +
+      `البيانات الناجحة محفوظة على السيرفر، والباقي على هذا الجهاز فقط.`,
       'warn'
     );
   }
