@@ -971,8 +971,6 @@ function autoFillFromSession() {
         }
 
         // ── تحديث DOM مباشرة — بضمان مستقل عن localStorage وعن changed ──
-        // يضمن ظهور البيانات حتى لو كانت persistentContractData محدّثة
-        // ولكن DOM لم يُحدَّث بعد لأي سبب (timing، overwrite، إلخ)
         if (session.hospital) {
             var _hn = document.getElementById('hospital-name');
             if (_hn) _hn.value = session.hospital;
@@ -982,6 +980,57 @@ function autoFillFromSession() {
                 session.company.replace(/_/g, ' ');
             var _cn = document.getElementById('company-name');
             if (_cn) _cn.value = _fullCo;
+        }
+
+        // ── إذا كان المستشفى أو الشركة غائبَّين في الجلسة — اجلب من API ──
+        if ((!session.hospital || !session.company) && session.clerkToken) {
+            fetch('/api/users/me', {
+                headers: { 'Authorization': 'Bearer ' + session.clerkToken }
+            }).then(function(r) { return r.ok ? r.json() : null; })
+              .then(function(user) {
+                if (!user) return;
+                var needsUpdate = (!session.hospital && user.hospital) ||
+                                  (!session.company  && user.company);
+                if (!needsUpdate) return;
+                // حدّث الجلسة
+                var updated = Object.assign({}, session, {
+                    hospital: user.hospital || session.hospital || null,
+                    company:  user.company  || session.company  || null,
+                });
+                try {
+                    Storage.prototype.setItem.call(localStorage, 'najran_session',
+                        JSON.stringify(updated));
+                } catch(e2) {}
+                // تطبيق على DOM مباشرة
+                if (user.hospital) {
+                    var hn2 = document.getElementById('hospital-name');
+                    if (hn2) hn2.value = user.hospital;
+                }
+                if (user.company) {
+                    var co2 = COMPANY_LABELS_MAP[user.company] ||
+                              user.company.replace(/_/g, ' ');
+                    var cn2 = document.getElementById('company-name');
+                    if (cn2) cn2.value = co2;
+                }
+                // حفظ في persistentContractData
+                try {
+                    var cd2 = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+                    var ch2 = false;
+                    if (user.hospital && cd2.hospitalName !== user.hospital) {
+                        cd2.hospitalName = user.hospital; ch2 = true;
+                    }
+                    if (user.company) {
+                        var fc2 = COMPANY_LABELS_MAP[user.company] ||
+                                  user.company.replace(/_/g, ' ');
+                        if (cd2.companyName !== fc2) { cd2.companyName = fc2; ch2 = true; }
+                    }
+                    if (ch2) {
+                        localStorage.setItem('persistentContractData', JSON.stringify(cd2));
+                        updateMainHospitalName();
+                    }
+                } catch(e3) {}
+                renderHospitalPicker();
+              }).catch(function() {});
         }
 
         // اعرض منتقي المستشفى دائماً
