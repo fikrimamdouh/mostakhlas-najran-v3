@@ -2,12 +2,14 @@ import { Resend } from "resend";
 import { logger } from "./logger";
 
 const SENDER_NAME = "نظام إدارة المستخلصات — تجمع نجران الصحي";
+const APP_FROM_EMAIL = "noreply@mostakhlas-najran.com";
 
 export async function getResendClient(): Promise<{ client: Resend; fromField: string } | null> {
+  const fromField = `${SENDER_NAME} <${APP_FROM_EMAIL}>`;
+
   // 1. Try RESEND_API_KEY env secret first (direct, no connector overhead)
   const envApiKey = process.env.RESEND_API_KEY;
   if (envApiKey) {
-    const fromField = `${SENDER_NAME} <onboarding@resend.dev>`;
     return { client: new Resend(envApiKey), fromField };
   }
 
@@ -25,12 +27,6 @@ export async function getResendClient(): Promise<{ client: Resend; fromField: st
       { headers: { Accept: "application/json", "X-Replit-Token": xReplitToken } },
     ).then((res) => res.json()).then((d: { items?: any[] }) => d.items?.[0]);
     if (!data?.settings?.api_key) { logger.warn("Resend not connected or missing api_key"); return null; }
-    const rawFrom: string = data.settings.from_email || "";
-    const personalDomains = ["gmail.com", "hotmail.com", "yahoo.com", "outlook.com", "live.com"];
-    const isPersonal = personalDomains.some(d => rawFrom.toLowerCase().endsWith("@" + d));
-    const emailAddr = isPersonal ? "onboarding@resend.dev" : (rawFrom || "onboarding@resend.dev");
-    if (isPersonal) logger.warn({ rawFrom }, "from_email is a personal domain — using onboarding@resend.dev instead");
-    const fromField = `${SENDER_NAME} <${emailAddr}>`;
     return { client: new Resend(data.settings.api_key), fromField };
   } catch (err) { logger.error({ err }, "Failed to get Resend client"); return null; }
 }
