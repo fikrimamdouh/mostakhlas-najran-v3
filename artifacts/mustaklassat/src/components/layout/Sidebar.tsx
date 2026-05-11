@@ -217,6 +217,7 @@ export function Sidebar() {
       { name: "إحصائيات المستخلصات", href: "/admin/extracts-stats", icon: BarChart3 },
       { name: "سجل المراقبة", href: "/admin/audit", icon: ClipboardList },
       { name: "قائمة المستخدمين", href: "/admin/users-view", icon: Users },
+      { name: "الإشعارات والبريد", href: "/admin/notifications", icon: Bell },
     ] : []),
     ...(isContractSup ? [
       { name: "لوحة مشرف العقد", href: "/contract-supervisor", icon: Building2 },

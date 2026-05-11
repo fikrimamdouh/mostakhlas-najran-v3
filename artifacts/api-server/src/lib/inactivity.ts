@@ -2,11 +2,19 @@
  * inactivity.ts — فحص المواقع المتأخرة في تقديم المستخلصات
  * يُشغَّل تلقائياً كل 24 ساعة ويرسل بريداً للمدير إن وُجد تأخير
  */
-import { db, usersTable, submittedExtractsTable } from "@workspace/db";
+import { db, usersTable, submittedExtractsTable, systemSettingsTable } from "@workspace/db";
 import { eq, and, max, isNotNull } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { sendInactivityAlertEmail } from "./email";
 import { logger } from "./logger";
+
+async function isAutoNotifyEnabled(key: string): Promise<boolean> {
+  try {
+    const [row] = await db.select().from(systemSettingsTable).where(eq(systemSettingsTable.key, key)).limit(1);
+    if (!row) return true; // default: enabled
+    return row.value !== "false";
+  } catch { return true; }
+}
 
 const ADMIN_EMAIL = "rorofikri@gmail.com";
 const INACTIVITY_DAYS = 45;
@@ -55,8 +63,13 @@ export async function runInactivityCheck(): Promise<{
 
     let emailSent = false;
     if (inactiveHospitals.length > 0) {
-      await sendInactivityAlertEmail(ADMIN_EMAIL, inactiveHospitals);
-      emailSent = true;
+      const autoEnabled = await isAutoNotifyEnabled("notify_auto_inactivity");
+      if (autoEnabled) {
+        await sendInactivityAlertEmail(ADMIN_EMAIL, inactiveHospitals);
+        emailSent = true;
+      } else {
+        logger.info("Inactivity check: auto-notify disabled, skipping email");
+      }
     }
 
     logger.info(

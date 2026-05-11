@@ -1,10 +1,18 @@
 import {
   db, usersTable, submittedExtractsTable, userStorageTable,
-  auditLogTable, extractRevisionsTable, scheduledBackupsTable,
+  auditLogTable, extractRevisionsTable, scheduledBackupsTable, systemSettingsTable,
 } from "@workspace/db";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { logger } from "./logger";
 import { sendDailyBackupEmail } from "./email";
+
+async function isAutoBackupEmailEnabled(): Promise<boolean> {
+  try {
+    const [row] = await db.select().from(systemSettingsTable).where(eq(systemSettingsTable.key, "notify_auto_backup")).limit(1);
+    if (!row) return true;
+    return row.value !== "false";
+  } catch { return true; }
+}
 
 const ADMIN_EMAIL = "rorofikri@gmail.com";
 const INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -62,11 +70,16 @@ export async function runScheduledBackup(triggeredBy: "scheduler" | "manual" = "
         .where(inArray(scheduledBackupsTable.id, toDelete));
     }
 
-    // Send email notification
+    // Send email notification (only if enabled)
     let emailSent = false;
     try {
-      await sendDailyBackupEmail(ADMIN_EMAIL, counts, backup.meta.exportedAt);
-      emailSent = true;
+      const emailEnabled = await isAutoBackupEmailEnabled();
+      if (emailEnabled) {
+        await sendDailyBackupEmail(ADMIN_EMAIL, counts, backup.meta.exportedAt);
+        emailSent = true;
+      } else {
+        logger.info("Auto-backup: email notification disabled, skipping");
+      }
       const { eq } = await import("drizzle-orm");
       await db.update(scheduledBackupsTable)
         .set({ emailSent: true })
@@ -74,6 +87,7 @@ export async function runScheduledBackup(triggeredBy: "scheduler" | "manual" = "
     } catch (emailErr) {
       logger.warn({ emailErr }, "Auto-backup: email send failed (backup still saved)");
     }
+
 
     logger.info({ counts, backupId: saved.id, emailSent }, "Auto-backup: completed");
     return { ok: true, backupId: saved.id, counts, emailSent };

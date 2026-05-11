@@ -33,6 +33,7 @@ import ContractSupervisorPage from "@/pages/admin/contract-supervisor";
 import AdminBackup from "@/pages/admin/backup";
 import ExtractsStats from "@/pages/admin/stats";
 import HospitalsAdmin from "@/pages/admin/hospitals";
+import AdminNotifications from "@/pages/admin/notifications";
 import ViewerDashboard from "@/pages/viewer/dashboard";
 import Settings from "@/pages/settings";
 import OriginalViewer from "@/pages/OriginalViewer";
@@ -678,6 +679,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/admin/backup" component={() => <ProtectedRoute component={AdminBackup} adminOnly />} />
           <Route path="/admin/hospitals" component={() => <ProtectedRoute component={HospitalsAdmin} adminOnly />} />
           <Route path="/admin/extracts-stats" component={() => <ProtectedRoute component={ExtractsStats} />} />
+          <Route path="/admin/notifications" component={() => <ProtectedRoute component={AdminNotifications} adminOnly />} />
           <Route path="/contract-supervisor" component={() => <ProtectedRoute component={ContractSupervisorPage} />} />
           <Route path="/viewer" component={() => <ProtectedRoute component={ViewerDashboard} />} />
           <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />

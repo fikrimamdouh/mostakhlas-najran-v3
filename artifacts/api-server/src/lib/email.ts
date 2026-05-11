@@ -3,7 +3,7 @@ import { logger } from "./logger";
 
 const SENDER_NAME = "نظام إدارة المستخلصات — تجمع نجران الصحي";
 
-async function getResendClient(): Promise<{ client: Resend; fromField: string } | null> {
+export async function getResendClient(): Promise<{ client: Resend; fromField: string } | null> {
   // 1. Try RESEND_API_KEY env secret first (direct, no connector overhead)
   const envApiKey = process.env.RESEND_API_KEY;
   if (envApiKey) {
@@ -35,14 +35,14 @@ async function getResendClient(): Promise<{ client: Resend; fromField: string } 
   } catch (err) { logger.error({ err }, "Failed to get Resend client"); return null; }
 }
 
-function getAppDomain(): string {
+export function getAppDomain(): string {
   const domains = process.env.REPLIT_DOMAINS || "";
   const first = domains.split(",")[0]?.trim();
   return first ? `https://${first}` : "";
 }
 
 // ── Shared layout ─────────────────────────────────────────────────────────────
-function emailLayout(content: string, subject: string, accentColor = "#1e3c72"): string {
+export function emailLayout(content: string, subject: string, accentColor = "#1e3c72"): string {
   const domain = getAppDomain();
   const logoUrl = domain ? `${domain}/original/najran_health_cluster_logo.png` : "";
 
