@@ -176,10 +176,7 @@ export function Sidebar() {
   const allowedModuleKeys = parseAllowedModules((dbUser as any)?.allowedModules);
   const userCompany = (dbUser as any)?.company as string | undefined;
   const allVisibleModules = filterModules(siteType, allowedModuleKeys, role, userCompany);
-  const ADMIN_ONLY_MODULES = new Set(['job-positions-upload']);
-  const visibleModules = allVisibleModules.filter(m =>
-    ADMIN_ONLY_MODULES.has(m.key) ? (isAdmin || isSupervisor) : true
-  );
+  const visibleModules = allVisibleModules;
 
   const { data: usersData } = useListUsers(
     { status: "pending" },
