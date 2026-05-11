@@ -948,12 +948,14 @@ function autoFillFromSession() {
             changed = true;
         }
 
-        // اسم الشركة — يُملأ فقط لو فارغ، باستخدام الاسم الكامل من الخريطة
-        if (!contractData.companyName && session.company) {
-            contractData.companyName =
-                COMPANY_LABELS_MAP[session.company] ||
+        // اسم الشركة — يُزامَن دائماً من الجلسة (كما يُزامَن المستشفى)
+        if (session.company) {
+            var fullCompany = COMPANY_LABELS_MAP[session.company] ||
                 session.company.replace(/_/g, ' ');
-            changed = true;
+            if (contractData.companyName !== fullCompany) {
+                contractData.companyName = fullCompany;
+                changed = true;
+            }
         }
 
         // رقم العقد — يُملأ فقط لو فارغ
