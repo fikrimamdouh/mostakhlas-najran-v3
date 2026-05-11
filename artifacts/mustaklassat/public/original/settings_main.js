@@ -843,28 +843,116 @@ function saveCurrentMonthManually() {
     const btn = document.getElementById('btn-save-month-snap');
     if (btn) { btn.textContent = '✓ تم الحفظ'; setTimeout(() => { btn.textContent = '💾 حفظ snapshot الشهر الحالي'; }, 1500); }
 }
-// ── ملء اسم المستشفى والشركة تلقائياً من بيانات المستخدم (أول مرة فقط) ──────
+// ── خريطة أسماء الشركات الكاملة ─────────────────────────────────────────────
+var COMPANY_LABELS_MAP = {
+    'تجمع_نجران': 'تجمع نجران الصحي — وحدة الصيانة العامة',
+    'بيت_العرب':  'شركة مجموعة بيت العرب الحديثة المحدودة',
+    'سراكو':      'شركة سراكو',
+};
+
+// ── قراءة بيانات الجلسة الحالية ──────────────────────────────────────────────
+function _getSession() {
+    try {
+        var raw = Storage.prototype.getItem.call(localStorage, 'najran_session');
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+}
+
+// ── مفتاح localStorage لبيانات عقد مستشفى معين ────────────────────────────
+function _hospitalContractKey(hospitalName) {
+    return 'contractData__h__' + encodeURIComponent(hospitalName || '');
+}
+
+// ── تبديل المستشفى النشط وتحميل بياناته ─────────────────────────────────────
+function switchHospital(hospitalName) {
+    var session = _getSession();
+    if (!session) return;
+
+    var currentHospital = session.hospital || '';
+
+    // احفظ بيانات المستشفى الحالي في مفتاحه الخاص
+    if (currentHospital) {
+        var currentRaw = localStorage.getItem('persistentContractData');
+        if (currentRaw) {
+            localStorage.setItem(_hospitalContractKey(currentHospital), currentRaw);
+        }
+    }
+
+    // حدّث الجلسة بالمستشفى الجديد (raw لتجاوز الـ proxy)
+    try {
+        var updated = Object.assign({}, session, { hospital: hospitalName });
+        Storage.prototype.setItem.call(localStorage, 'najran_session', JSON.stringify(updated));
+    } catch (e) {}
+
+    // حمّل بيانات المستشفى الجديد إن وُجدت، وإلا ابدأ بأسمه فقط
+    var savedForNew = localStorage.getItem(_hospitalContractKey(hospitalName));
+    if (savedForNew) {
+        localStorage.setItem('persistentContractData', savedForNew);
+    } else {
+        var current = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+        current.hospitalName = hospitalName;
+        // امسح اسم المستشفى القديم فقط ← باقي البيانات (مديرين، ختم) قد تكون مشتركة
+        localStorage.setItem('persistentContractData', JSON.stringify(current));
+    }
+
+    loadPersistentData();
+    autoFillFromSession();
+    renderHospitalPicker();
+}
+
+// ── عرض منتقي المستشفى (للمستخدمين الذين لديهم أكثر من موقع) ─────────────
+function renderHospitalPicker() {
+    var container = document.getElementById('hospital-picker-container');
+    if (!container) return;
+
+    var session = _getSession();
+    if (!session) { container.style.display = 'none'; return; }
+
+    var hospitals = [];
+    try { hospitals = JSON.parse(session.hospitals || '[]'); } catch (e) {}
+    if (!hospitals.length && session.hospital) hospitals = [session.hospital];
+
+    if (hospitals.length <= 1) { container.style.display = 'none'; return; }
+
+    var currentHospital = session.hospital || hospitals[0];
+    container.style.display = 'block';
+    container.innerHTML =
+        '<div style="margin-bottom:14px;padding:14px 16px;background:rgba(30,60,114,0.07);border-radius:12px;border:1px solid rgba(30,60,114,0.18)">' +
+        '<p style="font-weight:700;color:#1e3c72;margin:0 0 10px;font-size:14px;font-family:Tajawal,sans-serif">🏥 اختر الموقع لعرض إعداداته:</p>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:8px">' +
+        hospitals.map(function (h) {
+            var active = h === currentHospital;
+            return '<button onclick="switchHospital(' + JSON.stringify(h) + ')" style="' +
+                'padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-family:Tajawal,sans-serif;transition:all .2s;' +
+                'border:' + (active ? '2px solid #1e3c72' : '1.5px solid #d1d5db') + ';' +
+                'background:' + (active ? '#1e3c72' : '#fff') + ';' +
+                'color:' + (active ? '#fff' : '#374151') + ';' +
+                'font-weight:' + (active ? '700' : '500') + '">' +
+                (active ? '✓ ' : '') + h + '</button>';
+        }).join('') +
+        '</div></div>';
+}
+
+// ── ملء اسم المستشفى والشركة تلقائياً من بيانات المستخدم ────────────────────
 function autoFillFromSession() {
     try {
-        var raw = Storage.prototype.getItem
-            ? Storage.prototype.getItem.call(localStorage, 'najran_session')
-            : localStorage.getItem('najran_session');
-        if (!raw) return;
-        var session = JSON.parse(raw);
+        var session = _getSession();
         if (!session) return;
 
         var contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
         var changed = false;
 
-        // اسم المستشفى — يُملأ فقط لو فارغ
-        if (!contractData.hospitalName && session.hospital) {
+        // اسم المستشفى — يُملأ إذا كان فارغاً أو مختلفاً عن الجلسة الحالية
+        if (session.hospital && contractData.hospitalName !== session.hospital) {
             contractData.hospitalName = session.hospital;
             changed = true;
         }
 
-        // اسم الشركة — يُملأ فقط لو فارغ
+        // اسم الشركة — يُملأ فقط لو فارغ، باستخدام الاسم الكامل من الخريطة
         if (!contractData.companyName && session.company) {
-            contractData.companyName = session.company.replace(/_/g, ' ');
+            contractData.companyName =
+                COMPANY_LABELS_MAP[session.company] ||
+                session.company.replace(/_/g, ' ');
             changed = true;
         }
 
@@ -879,6 +967,9 @@ function autoFillFromSession() {
             updateContractDisplayData();
             updateMainHospitalName();
         }
+
+        // اعرض منتقي المستشفى دائماً
+        renderHospitalPicker();
     } catch (e) { /* تجاهل أي خطأ */ }
 }
 
