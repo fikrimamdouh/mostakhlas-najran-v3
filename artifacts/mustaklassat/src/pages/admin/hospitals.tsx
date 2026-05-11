@@ -64,20 +64,71 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function ReassignSelect({
-  userId, currentHospital, onConfirm, onCancel, isPending,
+  userId, userName, currentHospital, onConfirm, onCancel, isPending,
 }: {
-  userId: number; currentHospital: string | null;
+  userId: number; userName: string; currentHospital: string | null;
   onConfirm: (id: number, h: string | null) => void;
   onCancel: () => void; isPending: boolean;
 }) {
   const [sel, setSel] = useState("");
+  const [confirming, setConfirming] = useState(false);
+
+  const targetLabel = sel === "__none__" ? "إزالة الربط" : sel;
+  const isRemove = sel === "__none__";
+
+  if (confirming && sel) {
+    return (
+      <div style={{ marginTop: 10, padding: "14px 16px", background: isRemove ? "#fef2f2" : "#f0fdf4", borderRadius: 10, border: `1.5px solid ${isRemove ? "#fca5a5" : "#86efac"}` }}>
+        <div style={{ fontSize: "0.82rem", fontWeight: 700, color: isRemove ? "#b91c1c" : "#15803d", marginBottom: 10 }}>
+          {isRemove ? "⚠️ تأكيد إزالة الربط" : "✅ تأكيد الربط"}
+        </div>
+        <div style={{ fontSize: "0.83rem", color: "#374151", marginBottom: 14, lineHeight: 1.7, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e5e7eb" }}>
+          <div>👤 <strong>الموظف:</strong> {userName}</div>
+          {isRemove
+            ? <div style={{ color: "#dc2626" }}>🏥 <strong>الإجراء:</strong> إزالة ربطه بـ «{currentHospital}»</div>
+            : <>
+                {currentHospital && <div style={{ color: "#6b7280", textDecoration: "line-through", fontSize: "0.78rem" }}>من: {currentHospital}</div>}
+                <div>🏥 <strong>الموقع الجديد:</strong> {targetLabel}</div>
+              </>
+          }
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            disabled={isPending}
+            onClick={() => { onConfirm(userId, sel === "__none__" ? null : sel); }}
+            style={{
+              flex: 1, padding: "9px 14px", borderRadius: 8, border: "none",
+              background: isRemove ? "linear-gradient(135deg,#dc2626,#b91c1c)" : "linear-gradient(135deg,#16a34a,#15803d)",
+              color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: isPending ? "not-allowed" : "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            }}
+          >
+            {isPending ? "⏳ جاري الحفظ..." : isRemove ? "نعم، إزالة الربط" : "✅ نعم، تأكيد الربط"}
+          </button>
+          <button
+            onClick={() => setConfirming(false)}
+            style={{ padding: "9px 14px", borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", color: "#374151", fontWeight: 600, fontSize: "0.82rem", cursor: "pointer" }}
+          >
+            ← تعديل
+          </button>
+          <button
+            onClick={onCancel}
+            style={{ padding: "9px 12px", borderRadius: 8, border: "none", background: "#fee2e2", color: "#dc2626", cursor: "pointer" }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ marginTop: 10, padding: "10px 12px", background: "#f0f4ff", borderRadius: 10, border: "1px solid #c7d2e8" }}>
       <div style={{ fontSize: "0.8rem", color: "#1e3c72", fontWeight: 700, marginBottom: 8 }}>اختر المستشفى الجديد:</div>
       <div style={{ display: "flex", gap: 6 }}>
         <select
           value={sel}
-          onChange={e => setSel(e.target.value)}
+          onChange={e => { setSel(e.target.value); setConfirming(false); }}
           style={{ flex: 1, padding: "7px 10px", borderRadius: 8, border: "1.5px solid #c7d2e8", fontSize: "0.82rem", direction: "rtl", outline: "none", background: "#fff" }}
         >
           <option value="">— اختر —</option>
@@ -94,15 +145,15 @@ function ReassignSelect({
           {currentHospital && <option value="__none__">— إزالة الربط —</option>}
         </select>
         <button
-          disabled={!sel || isPending}
-          onClick={() => onConfirm(userId, sel === "__none__" ? null : sel)}
+          disabled={!sel}
+          onClick={() => setConfirming(true)}
           style={{
-            background: sel ? "#16a34a" : "#9ca3af", color: "#fff", border: "none",
+            background: sel ? "#1e3c72" : "#9ca3af", color: "#fff", border: "none",
             borderRadius: 8, padding: "7px 14px", cursor: sel ? "pointer" : "not-allowed",
             fontSize: "0.82rem", fontWeight: 700, whiteSpace: "nowrap",
           }}
         >
-          {isPending ? "⏳" : "✓ نقل"}
+          التالي ←
         </button>
         <button
           onClick={onCancel}
@@ -154,6 +205,7 @@ function UserRow({ user, onReassign, mutatingId }: {
       {open && (
         <ReassignSelect
           userId={user.id}
+          userName={user.name}
           currentHospital={user.hospital}
           onConfirm={(id, h) => { onReassign(id, h); setOpen(false); }}
           onCancel={() => setOpen(false)}
