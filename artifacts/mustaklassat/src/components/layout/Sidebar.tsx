@@ -212,6 +212,7 @@ export function Sidebar() {
   const adminNav = [
     ...(isAdmin ? [
       { name: "إدارة المستخدمين", href: "/admin/users", icon: ShieldAlert },
+      { name: "ربط المستخدمين بالمستشفيات", href: "/admin/hospitals", icon: Building2 },
       { name: "النسخ الاحتياطي", href: "/admin/backup", icon: BookOpen },
       { name: "إحصائيات المستخلصات", href: "/admin/extracts-stats", icon: BarChart3 },
       { name: "سجل المراقبة", href: "/admin/audit", icon: ClipboardList },

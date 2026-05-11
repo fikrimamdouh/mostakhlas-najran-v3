@@ -295,6 +295,25 @@ router.patch("/:userId/modules", requireAuth, requireAdmin, async (req: any, res
   }
 });
 
+// PATCH /api/users/:userId/hospital - admin only
+router.patch("/:userId/hospital", requireAuth, requireAdmin, async (req: any, res) => {
+  try {
+    const { userId } = req.params;
+    const { hospital } = req.body;
+    const [user] = await db.update(usersTable)
+      .set({ hospital: hospital || null })
+      .where(eq(usersTable.id, Number(userId)))
+      .returning();
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
+    logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "تغيير مستشفى", `تغيير مستشفى ${user.name} إلى: ${hospital || "بدون مستشفى"}`, ip);
+    return res.json(user);
+  } catch (err) {
+    req.log.error({ err }, "Failed to update hospital");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // POST /api/users/:userId/activate - admin only
 router.post("/:userId/activate", requireAuth, requireAdmin, async (req: any, res) => {
   try {
