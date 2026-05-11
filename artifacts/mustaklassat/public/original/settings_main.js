@@ -812,6 +812,40 @@ function saveCurrentMonthManually() {
     const btn = document.getElementById('btn-save-month-snap');
     if (btn) { btn.textContent = '✓ تم الحفظ'; setTimeout(() => { btn.textContent = '💾 حفظ snapshot الشهر الحالي'; }, 1500); }
 }
+// ── ملء اسم المستشفى والشركة تلقائياً من بيانات المستخدم (أول مرة فقط) ──────
+function autoFillFromSession() {
+    try {
+        var raw = Storage.prototype.getItem
+            ? Storage.prototype.getItem.call(localStorage, 'najran_session')
+            : localStorage.getItem('najran_session');
+        if (!raw) return;
+        var session = JSON.parse(raw);
+        if (!session) return;
+
+        var contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+        var changed = false;
+
+        // اسم المستشفى — يُملأ فقط لو فارغ
+        if (!contractData.hospitalName && session.hospital) {
+            contractData.hospitalName = session.hospital;
+            changed = true;
+        }
+
+        // اسم الشركة — يُملأ فقط لو فارغ
+        if (!contractData.companyName && session.company) {
+            // تحويل "بيت_العرب" → "بيت العرب"
+            contractData.companyName = session.company.replace(/_/g, ' ');
+            changed = true;
+        }
+
+        if (changed) {
+            localStorage.setItem('persistentContractData', JSON.stringify(contractData));
+            updateContractDisplayData();
+            updateMainHospitalName();
+        }
+    } catch (e) { /* تجاهل أي خطأ */ }
+}
+
 // ✅✅✅ الحل النهائي: استبدل كتلة DOMContentLoaded بالكامل بهذا الكود ✅✅✅
 document.addEventListener('DOMContentLoaded', () => {
     console.log("الصفحة جاهزة. بدء التهيئة...");
@@ -830,9 +864,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         console.log(">> الآن يتم فرض تحميل البيانات من localStorage...");
         loadPersistentData();
+        autoFillFromSession(); // ملء المستشفى والشركة من بيانات المستخدم إن كانت فارغة
         renderMonthsArchive();
         console.log(">> اكتمل فرض تحميل البيانات.");
-    }, 10); // تأخير بسيط جداً لكنه حاسم
+    }, 10);
 });
 
 function openBackupOptionsMenu() {
