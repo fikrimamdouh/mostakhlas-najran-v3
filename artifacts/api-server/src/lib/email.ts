@@ -563,3 +563,92 @@ export async function sendSupportEmail(adminEmail: string, ticket: {
     logger.info({ adminEmail }, "Support ticket email sent");
   } catch (err) { logger.error({ err }, "Failed to send support email"); }
 }
+
+// ── Daily auto-backup notification ────────────────────────────────────────────
+export async function sendDailyBackupEmail(
+  adminEmail: string,
+  counts: { users: number; extracts: number; storageKeys: number; auditLogs: number; revisions: number },
+  exportedAt: string,
+) {
+  try {
+    const resend = await getResendClient();
+    if (!resend) { logger.warn("sendDailyBackupEmail: no Resend client"); return; }
+    const domain = getAppDomain();
+    const backupUrl = domain ? `${domain}/admin/backup` : "";
+    const dateStr = new Date(exportedAt).toLocaleDateString("ar-SA", {
+      weekday: "long", year: "numeric", month: "long", day: "numeric",
+    });
+
+    const content = `
+      <tr><td style="padding:32px 40px;">
+        <div style="text-align:center;margin-bottom:24px;">
+          <div style="display:inline-block;background:linear-gradient(135deg,#1e3c72,#2a5298);
+               border-radius:50%;padding:14px;margin-bottom:12px;">
+            <span style="font-size:28px;">🛡️</span>
+          </div>
+          <h2 style="margin:0;color:#1e3c72;font-size:20px;font-weight:700;">نسخة احتياطية تلقائية — تمت بنجاح</h2>
+          <p style="margin:6px 0 0;color:#64748b;font-size:14px;">${dateStr}</p>
+        </div>
+
+        <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-radius:12px;
+             border:1px solid #bbf7d0;padding:20px;margin-bottom:20px;text-align:center;">
+          <p style="margin:0 0 8px;color:#15803d;font-size:13px;font-weight:700;">✅ تم حفظ النسخة الاحتياطية على السيرفر تلقائياً</p>
+          <p style="margin:0;color:#166534;font-size:12px;">البيانات محفوظة ويمكن تحميلها في أي وقت</p>
+        </div>
+
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+          <tr>
+            <td style="padding:4px;">
+              <div style="background:#eff6ff;border-radius:10px;padding:14px;text-align:center;">
+                <div style="font-size:24px;font-weight:800;color:#1e3c72;">${counts.users}</div>
+                <div style="font-size:12px;color:#64748b;margin-top:2px;">مستخدم</div>
+              </div>
+            </td>
+            <td style="padding:4px;">
+              <div style="background:#fefce8;border-radius:10px;padding:14px;text-align:center;">
+                <div style="font-size:24px;font-weight:800;color:#854d0e;">${counts.extracts}</div>
+                <div style="font-size:12px;color:#64748b;margin-top:2px;">مستخلص</div>
+              </div>
+            </td>
+            <td style="padding:4px;">
+              <div style="background:#fdf4ff;border-radius:10px;padding:14px;text-align:center;">
+                <div style="font-size:24px;font-weight:800;color:#6b21a8;">${counts.storageKeys}</div>
+                <div style="font-size:12px;color:#64748b;margin-top:2px;">مفتاح بيانات</div>
+              </div>
+            </td>
+            <td style="padding:4px;">
+              <div style="background:#fff7ed;border-radius:10px;padding:14px;text-align:center;">
+                <div style="font-size:24px;font-weight:800;color:#c2410c;">${counts.auditLogs}</div>
+                <div style="font-size:12px;color:#64748b;margin-top:2px;">سجل مراقبة</div>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <div style="background:#fffbeb;border-radius:10px;border:1px solid #fde68a;padding:16px;margin-bottom:20px;">
+          <p style="margin:0;color:#92400e;font-size:13px;font-weight:700;">⚠️ تذكير مهم</p>
+          <p style="margin:6px 0 0;color:#78350f;font-size:13px;">
+            النسخة الاحتياطية محفوظة على السيرفر لمدة 7 أيام فقط. يُنصح بتحميل نسخة يدوية وحفظها على جهازك أو Google Drive بشكل دوري.
+          </p>
+        </div>
+
+        ${backupUrl ? `
+        <div style="text-align:center;">
+          <a href="${backupUrl}" style="display:inline-block;background:linear-gradient(135deg,#1e3c72,#2a5298);
+               color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;
+               font-size:14px;font-weight:700;box-shadow:0 4px 12px rgba(30,60,114,0.3);">
+            📥 تحميل النسخة الاحتياطية الآن
+          </a>
+        </div>` : ""}
+      </td></tr>
+    `;
+
+    await resend.client.emails.send({
+      from: resend.fromField,
+      to: adminEmail,
+      subject: `🛡️ نسخة احتياطية تلقائية — ${dateStr}`,
+      html: emailLayout(content, "نسخة احتياطية تلقائية يومية"),
+    });
+    logger.info({ adminEmail, counts }, "Daily backup email sent");
+  } catch (err) { logger.error({ err }, "Failed to send daily backup email"); }
+}

@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startInactivityScheduler } from "./lib/inactivity";
+import { startBackupScheduler } from "./lib/backup-scheduler";
 
 const rawPort = process.env["PORT"];
 
@@ -26,4 +27,7 @@ app.listen(port, (err) => {
 
   // بدء فحص المواقع المتأخرة تلقائياً كل 24 ساعة
   startInactivityScheduler();
+
+  // بدء النسخ الاحتياطي التلقائي اليومي
+  startBackupScheduler();
 });

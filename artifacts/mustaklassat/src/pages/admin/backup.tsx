@@ -44,6 +44,14 @@ export default function AdminBackupPage() {
   const [lastDownload, setLastDownload] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Scheduled backup state
+  const [scheduledBackup, setScheduledBackup] = useState<any>(null);
+  const [scheduledList, setScheduledList] = useState<any[]>([]);
+  const [loadingScheduled, setLoadingScheduled] = useState(false);
+  const [triggeringBackup, setTriggeringBackup] = useState(false);
+  const [downloadingScheduled, setDownloadingScheduled] = useState(false);
+  const [scheduledMsg, setScheduledMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
   // Restore state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [restoreFile, setRestoreFile] = useState<any>(null);
@@ -55,6 +63,79 @@ export default function AdminBackupPage() {
   if (me?.role !== "admin") {
     setLocation("/dashboard");
     return null;
+  }
+
+  function getSession() {
+    try { return JSON.parse(localStorage.getItem("najran_session") || "{}"); } catch { return {}; }
+  }
+
+  async function fetchScheduledBackups() {
+    setLoadingScheduled(true);
+    try {
+      const session = getSession();
+      const [latestRes, listRes] = await Promise.all([
+        fetch("/api/admin/backup/scheduled/latest", {
+          headers: { Authorization: `Bearer ${session.clerkToken}` },
+          credentials: "include",
+        }),
+        fetch("/api/admin/backup/scheduled/list", {
+          headers: { Authorization: `Bearer ${session.clerkToken}` },
+          credentials: "include",
+        }),
+      ]);
+      if (latestRes.ok) { const d = await latestRes.json(); setScheduledBackup(d.backup); }
+      if (listRes.ok) { const d = await listRes.json(); setScheduledList(d.backups || []); }
+    } catch { /* silent */ }
+    finally { setLoadingScheduled(false); }
+  }
+
+  async function triggerManualBackup() {
+    setTriggeringBackup(true);
+    setScheduledMsg(null);
+    try {
+      const session = getSession();
+      const res = await fetch("/api/admin/backup/scheduled/trigger", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.clerkToken}` },
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setScheduledMsg({ type: "ok", text: `✅ تم إنشاء النسخة بنجاح — ${data.counts?.users ?? 0} مستخدم، ${data.counts?.extracts ?? 0} مستخلص` });
+        await fetchScheduledBackups();
+      } else {
+        setScheduledMsg({ type: "err", text: data.error || "فشل إنشاء النسخة" });
+      }
+    } catch (e: any) {
+      setScheduledMsg({ type: "err", text: e.message });
+    } finally {
+      setTriggeringBackup(false);
+    }
+  }
+
+  async function downloadScheduledBackup() {
+    setDownloadingScheduled(true);
+    try {
+      const session = getSession();
+      const res = await fetch("/api/admin/backup/scheduled/download", {
+        headers: { Authorization: `Bearer ${session.clerkToken}` },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("فشل تحميل النسخة التلقائية");
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.download = `نسخة_احتياطية_تلقائية_نجران_${dateStr}.json`;
+      a.href = url;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      setScheduledMsg({ type: "err", text: e.message });
+    } finally {
+      setDownloadingScheduled(false);
+    }
   }
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -213,6 +294,131 @@ export default function AdminBackupPage() {
             <span className="font-medium">{error}</span>
           </div>
         )}
+
+        {/* Auto Backup Section */}
+        <div style={{ ...cardStyle, marginBottom: 24, border: "1.5px solid #bfdbfe", background: "#f0f6ff" }}>
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)", borderRadius: "10px", padding: "8px" }}>
+                <CloudOff className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold" style={{ color: "#1e3c72" }}>🤖 النسخ الاحتياطي التلقائي</h2>
+                <p className="text-xs text-blue-600">يعمل تلقائياً كل 24 ساعة — يُرسَل إشعار بريدي للمدير</p>
+              </div>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={fetchScheduledBackups}
+                disabled={loadingScheduled}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all"
+                style={{ background: "#dbeafe", border: "1px solid #93c5fd", color: "#1e40af", cursor: "pointer" }}
+              >
+                {loadingScheduled ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                تحديث
+              </button>
+              <button
+                onClick={triggerManualBackup}
+                disabled={triggeringBackup}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all text-white"
+                style={{
+                  background: triggeringBackup ? "#9ca3af" : "linear-gradient(135deg,#1e3c72,#2a5298)",
+                  border: "none", cursor: triggeringBackup ? "not-allowed" : "pointer",
+                }}
+              >
+                {triggeringBackup ? <RefreshCw className="h-4 w-4 animate-spin" /> : <HardDrive className="h-4 w-4" />}
+                {triggeringBackup ? "جاري الحفظ..." : "احفظ الآن"}
+              </button>
+              {scheduledBackup && (
+                <button
+                  onClick={downloadScheduledBackup}
+                  disabled={downloadingScheduled}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all text-white"
+                  style={{
+                    background: downloadingScheduled ? "#9ca3af" : "linear-gradient(135deg,#15803d,#16a34a)",
+                    border: "none", cursor: downloadingScheduled ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {downloadingScheduled ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  تحميل آخر نسخة
+                </button>
+              )}
+            </div>
+          </div>
+
+          {scheduledMsg && (
+            <div className="flex items-center gap-2 rounded-lg p-3 mb-3 text-sm font-medium"
+              style={{
+                background: scheduledMsg.type === "ok" ? "#f0fdf4" : "#fef2f2",
+                border: `1px solid ${scheduledMsg.type === "ok" ? "#bbf7d0" : "#fecaca"}`,
+                color: scheduledMsg.type === "ok" ? "#15803d" : "#dc2626",
+              }}>
+              {scheduledMsg.text}
+            </div>
+          )}
+
+          {!scheduledBackup && !loadingScheduled ? (
+            <div className="text-center py-6">
+              <p className="text-sm text-blue-600 mb-3">لا توجد نسخة تلقائية بعد — اضغط "احفظ الآن" لإنشاء أول نسخة أو انتظر 10 دقائق بعد إعادة تشغيل السيرفر</p>
+            </div>
+          ) : scheduledBackup && (
+            <>
+              {/* Latest backup card */}
+              <div className="rounded-xl p-4 mb-4" style={{ background: "#fff", border: "1px solid #bfdbfe" }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <span className="font-bold text-sm" style={{ color: "#1e3c72" }}>آخر نسخة احتياطية تلقائية</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-semibold text-white"
+                    style={{ background: scheduledBackup.triggeredBy === "manual" ? "#d97706" : "#2563eb" }}>
+                    {scheduledBackup.triggeredBy === "manual" ? "يدوي" : "تلقائي"}
+                  </span>
+                  {scheduledBackup.emailSent && (
+                    <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "#dcfce7", color: "#15803d" }}>
+                      ✉ أُرسل بريد
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mb-3">{fmt(scheduledBackup.createdAt)}</p>
+                {scheduledBackup.counts && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { label: "مستخدم", val: (scheduledBackup.counts as any).users, color: "#1e3c72" },
+                      { label: "مستخلص", val: (scheduledBackup.counts as any).extracts, color: "#854d0e" },
+                      { label: "مفتاح بيانات", val: (scheduledBackup.counts as any).storageKeys, color: "#6b21a8" },
+                      { label: "سجل مراقبة", val: (scheduledBackup.counts as any).auditLogs, color: "#c2410c" },
+                    ].map(s => (
+                      <div key={s.label} className="text-center rounded-lg p-2" style={{ background: "#f8faff" }}>
+                        <div className="text-lg font-bold" style={{ color: s.color }}>{s.val ?? "—"}</div>
+                        <div className="text-xs text-gray-500">{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Backup history list */}
+              {scheduledList.length > 1 && (
+                <div>
+                  <p className="text-xs font-bold text-blue-700 mb-2">سجل النسخ الأخيرة (آخر 7 أيام)</p>
+                  <div className="space-y-1">
+                    {scheduledList.map((b: any) => (
+                      <div key={b.id} className="flex items-center gap-3 py-1.5 px-3 rounded-lg text-xs"
+                        style={{ background: "#fff", border: "1px solid #e8edf7" }}>
+                        <span className="text-gray-500 flex-1">{fmt(b.createdAt)}</span>
+                        <span className="px-1.5 py-0.5 rounded text-white text-xs"
+                          style={{ background: b.triggeredBy === "manual" ? "#d97706" : "#2563eb" }}>
+                          {b.triggeredBy === "manual" ? "يدوي" : "تلقائي"}
+                        </span>
+                        {b.emailSent && <span className="text-green-600">✉</span>}
+                        <span style={{ color: "#1e3c72" }}>{(b.counts as any)?.users ?? 0} مستخدم</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
         {/* Layers Explanation */}
         <div style={{ ...cardStyle, marginBottom: 24 }}>

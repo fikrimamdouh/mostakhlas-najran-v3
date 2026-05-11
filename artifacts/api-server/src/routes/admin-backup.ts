@@ -1,10 +1,11 @@
 import { Router } from "express";
 import {
   db, usersTable, submittedExtractsTable, userStorageTable,
-  auditLogTable, extractRevisionsTable,
+  auditLogTable, extractRevisionsTable, scheduledBackupsTable,
 } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
+import { runScheduledBackup } from "../lib/backup-scheduler";
 
 const router = Router();
 
@@ -266,6 +267,93 @@ router.post("/restore", requireAuth, requireAdmin, async (req: any, res: any) =>
   } catch (err) {
     req.log.error({ err }, "Backup restore failed");
     return res.status(500).json({ error: "فشل في استعادة النسخة الاحتياطية — تحقق من صحة الملف" });
+  }
+});
+
+/**
+ * GET /api/admin/backup/scheduled/latest
+ * Returns the latest auto-backup metadata (without full JSON for speed).
+ */
+router.get("/scheduled/latest", requireAuth, requireAdmin, async (req: any, res: any) => {
+  try {
+    const [latest] = await db
+      .select({
+        id: scheduledBackupsTable.id,
+        createdAt: scheduledBackupsTable.createdAt,
+        triggeredBy: scheduledBackupsTable.triggeredBy,
+        counts: scheduledBackupsTable.counts,
+        emailSent: scheduledBackupsTable.emailSent,
+      })
+      .from(scheduledBackupsTable)
+      .orderBy(desc(scheduledBackupsTable.createdAt))
+      .limit(1);
+
+    return res.json({ backup: latest || null });
+  } catch (err) {
+    req.log.error({ err }, "Failed to get latest scheduled backup");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /api/admin/backup/scheduled/download
+ * Downloads the full JSON of the latest auto-backup.
+ */
+router.get("/scheduled/download", requireAuth, requireAdmin, async (req: any, res: any) => {
+  try {
+    const [latest] = await db
+      .select()
+      .from(scheduledBackupsTable)
+      .orderBy(desc(scheduledBackupsTable.createdAt))
+      .limit(1);
+
+    if (!latest) return res.status(404).json({ error: "لا توجد نسخة احتياطية تلقائية بعد" });
+
+    const parsed = JSON.parse(latest.backupJson);
+    return res.json(parsed);
+  } catch (err) {
+    req.log.error({ err }, "Failed to download scheduled backup");
+    return res.status(500).json({ error: "فشل في تحميل النسخة الاحتياطية التلقائية" });
+  }
+});
+
+/**
+ * POST /api/admin/backup/scheduled/trigger
+ * Manually trigger a backup now (admin only).
+ */
+router.post("/scheduled/trigger", requireAuth, requireAdmin, async (req: any, res: any) => {
+  try {
+    const result = await runScheduledBackup("manual");
+    req.log.info({ adminId: req.currentUser.id, result }, "Manual backup triggered");
+    return res.json(result);
+  } catch (err) {
+    req.log.error({ err }, "Failed to trigger manual backup");
+    return res.status(500).json({ error: "فشل في إنشاء النسخة الاحتياطية" });
+  }
+});
+
+/**
+ * GET /api/admin/backup/scheduled/list
+ * Returns list of last 7 auto-backups (metadata only).
+ */
+router.get("/scheduled/list", requireAuth, requireAdmin, async (req: any, res: any) => {
+  try {
+    const backups = await db
+      .select({
+        id: scheduledBackupsTable.id,
+        createdAt: scheduledBackupsTable.createdAt,
+        triggeredBy: scheduledBackupsTable.triggeredBy,
+        counts: scheduledBackupsTable.counts,
+        emailSent: scheduledBackupsTable.emailSent,
+      })
+      .from(scheduledBackupsTable)
+      .orderBy(desc(scheduledBackupsTable.createdAt))
+      .limit(7);
+
+    return res.json({ backups });
+  } catch (err) {
+    req.log.error({ err }, "Failed to list scheduled backups");
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

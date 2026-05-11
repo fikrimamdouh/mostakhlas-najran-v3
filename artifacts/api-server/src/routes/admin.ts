@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, submittedExtractsTable, userStorageTable, auditLogTable, extractsTable, projectsTable } from "@workspace/db";
+import { db, usersTable, submittedExtractsTable, userStorageTable, auditLogTable, extractsTable, projectsTable, hospitalStorageTable } from "@workspace/db";
 import { eq, ne, and, isNotNull } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 import { runInactivityCheck } from "../lib/inactivity";
@@ -73,6 +73,9 @@ router.post("/reset-system", requireAuth, requireAdmin, async (req: any, res: an
 
     // Delete all user storage (cloud localStorage)
     await db.delete(userStorageTable);
+
+    // Delete all hospital shared storage (attendance, consumables, etc.)
+    await db.delete(hospitalStorageTable);
 
     // Delete all audit logs
     await db.delete(auditLogTable);

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, numeric, timestamp, date, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, numeric, timestamp, date, uniqueIndex, json, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -170,6 +170,18 @@ export const visitRequestsTable = pgTable("visit_requests", {
 export const insertVisitRequestSchema = createInsertSchema(visitRequestsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertVisitRequest = z.infer<typeof insertVisitRequestSchema>;
 export type VisitRequest = typeof visitRequestsTable.$inferSelect;
+
+// Scheduled automatic backups — saved daily by the server scheduler
+export const scheduledBackupsTable = pgTable("scheduled_backups", {
+  id: serial("id").primaryKey(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  triggeredBy: text("triggered_by").notNull().default("scheduler"),
+  counts: json("counts"),
+  backupJson: text("backup_json").notNull(),
+  emailSent: boolean("email_sent").notNull().default(false),
+});
+
+export type ScheduledBackup = typeof scheduledBackupsTable.$inferSelect;
 
 // System-level key-value settings (admin_email, etc.)
 export const systemSettingsTable = pgTable("system_settings", {
