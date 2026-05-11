@@ -1116,6 +1116,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // هذا يضمن أنها ستكون آخر عملية تحدث، وتتجاوز أي كود آخر قد يفرّغ الحقول.
     setTimeout(() => {
         console.log(">> الآن يتم فرض تحميل البيانات من localStorage...");
+
+        // إذا كان session.hospital فارغاً لكن session.hospitals لها قيم → اختر الأول تلقائياً
+        (function autoSelectFirstHospital() {
+            try {
+                var _s = _getSession();
+                if (!_s) return;
+                if (_s.hospital) return; // يوجد بالفعل مستشفى محدد
+                var _hs = [];
+                try { _hs = JSON.parse(_s.hospitals || '[]'); } catch(e) {}
+                if (!_hs.length) return;
+                var _cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+                // اختر المستشفى المحفوظ سابقاً أو الأول في القائمة
+                var _target = (_cd.hospitalName && _hs.indexOf(_cd.hospitalName) !== -1)
+                    ? _cd.hospitalName : _hs[0];
+                console.log('[autoSelect] تحديد المستشفى تلقائياً:', _target);
+                switchHospital(_target);
+            } catch(e) {}
+        })();
+
         loadPersistentData();
         autoFillFromSession();
         renderMonthsArchive();
