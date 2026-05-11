@@ -219,6 +219,13 @@
           await submitExtract('labor');
           localStorage.removeItem(STEP_KEY.labor_attendance);
           localStorage.removeItem(STEP_KEY.labor_performance);
+          // ── تسجيل قفل العمالة للشهر الحالي ──────────────────────────
+          try {
+            const _ed = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+            const _mk = String(_ed.extractYear || '') + '_' + String(_ed.extractMonth || '').trim();
+            if (_mk !== '_') localStorage.setItem('najran_labor_locked_' + _mk, '1');
+          } catch(_) {}
+          // ─────────────────────────────────────────────────────────────
           window.location.href = '/extracts/track';
         } catch (e) {
           alert('حدث خطأ: ' + e.message);
@@ -241,6 +248,13 @@
         setLoading('جاري الرفع...');
         try {
           await submitExtract('consumables');
+          // ── تسجيل قفل المستهلكات للشهر الحالي ───────────────────────
+          try {
+            const _ed = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+            const _mk = String(_ed.extractYear || '') + '_' + String(_ed.extractMonth || '').trim();
+            if (_mk !== '_') localStorage.setItem('najran_consumables_locked_' + _mk, '1');
+          } catch(_) {}
+          // ─────────────────────────────────────────────────────────────
           window.location.href = '/extracts/track';
         } catch (e) {
           alert('حدث خطأ: ' + e.message);
