@@ -1977,9 +1977,10 @@ function downloadPositionsTemplate() {
       civil_works:'الأعمال المدنية', mechanical:'الميكانيكا', laundry:'المغسلة',
       patient_services:'خدمات المرضى', admin_saudi:'الوظائف الإدارية السعوديين'
     };
-    const headers = ['اسم الموظف', 'القسم', 'مسمى الوظيفة', 'التكلفة الشهرية', 'الفئة', 'الجنسية'];
+    const headers = ['اسم الموظف', 'رقم الهوية / الإقامة', 'القسم', 'مسمى الوظيفة', 'التكلفة الشهرية', 'الفئة', 'الجنسية'];
     const dataRows = rec.rows.map(function(r) {
       return [
+        '',
         '',
         deptLabels[r.dept] || r.dept || '',
         r.jobTitle || '',
@@ -1990,7 +1991,7 @@ function downloadPositionsTemplate() {
     });
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([headers].concat(dataRows));
-    ws['!cols'] = [{wch:25},{wch:22},{wch:32},{wch:18},{wch:8},{wch:15}];
+    ws['!cols'] = [{wch:25},{wch:22},{wch:22},{wch:32},{wch:18},{wch:8},{wch:15}];
     XLSX.utils.book_append_sheet(wb, ws, hospitalName.substring(0, 31));
     XLSX.writeFile(wb, 'تامبلت-' + hospitalName + '.xlsx');
     closeDialog('upload-excel-dialog');
@@ -2027,6 +2028,7 @@ function importPositionsTemplate() {
 
       var headers = raw[0].map(function(h){ return String(h).trim(); });
       var iName   = headers.findIndex(function(h){ return h.includes('اسم') && !h.includes('مستشفى'); });
+      var iId     = headers.findIndex(function(h){ return h.includes('هوية') || h.includes('إقامة') || h.includes('اقامة') || h.includes('iqama'); });
       var iDept   = headers.findIndex(function(h){ return h.includes('قسم') || h === 'القسم'; });
       var iJob    = headers.findIndex(function(h){ return h.includes('مسمى') || h.includes('وظيفة'); });
       var iSalary = headers.findIndex(function(h){ return h.includes('تكلفة') || h.includes('راتب'); });
@@ -2042,6 +2044,7 @@ function importPositionsTemplate() {
       for (var r = 1; r < raw.length; r++) {
         var row     = raw[r];
         var empName = String(row[iName]   || '').trim();
+        var iqamaId = iId     >= 0 ? String(row[iId]     || '').trim() : '';
         var deptAr  = String(row[iDept]   || '').trim();
         var jobTitle= iJob    >= 0 ? String(row[iJob]    || '').trim() : '';
         var salary  = iSalary >= 0 ? parseFloat(row[iSalary]) || 0 : 0;
@@ -2065,7 +2068,7 @@ function importPositionsTemplate() {
         if (!allData[deptKey]) allData[deptKey] = [];
         allData[deptKey].push({
           name: empName, jobTitle: jobTitle, category: category,
-          salary: salary, nationality: nat, iqamaId: '', days: {}, attendance: {}
+          salary: salary, nationality: nat, iqamaId: iqamaId, days: {}, attendance: {}
         });
         added++;
       }

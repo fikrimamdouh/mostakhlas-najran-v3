@@ -439,8 +439,9 @@ async function downloadHospitalTemplate(hospitalName) {
     alert('لا توجد مناصب محفوظة لـ "' + hospitalName + '"');
     return;
   }
-  const headers = ['اسم الموظف', 'القسم', 'مسمى الوظيفة', 'التكلفة الشهرية', 'الفئة', 'الجنسية'];
+  const headers = ['اسم الموظف', 'رقم الهوية / الإقامة', 'القسم', 'مسمى الوظيفة', 'التكلفة الشهرية', 'الفئة', 'الجنسية'];
   const rows = rec.rows.map(r => [
+    '',
     '',
     DEPT_LABELS[r.dept] || r.dept,
     r.jobTitle || '',
