@@ -889,15 +889,46 @@ function switchHospital(hospitalName) {
     if (savedForNew) {
         localStorage.setItem('persistentContractData', savedForNew);
     } else {
-        var current = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-        current.hospitalName = hospitalName;
-        // امسح اسم المستشفى القديم فقط ← باقي البيانات (مديرين، ختم) قد تكون مشتركة
-        localStorage.setItem('persistentContractData', JSON.stringify(current));
+        // بيانات جديدة للمستشفى: اسم المستشفى + اسم الشركة + باقي البيانات المشتركة
+        var oldData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+        var fullCompanyNew = COMPANY_LABELS_MAP[(session.company || '')] ||
+                            (session.company || '').replace(/_/g, ' ');
+        var freshData = {
+            hospitalName:           hospitalName,
+            companyName:            fullCompanyNew,
+            // احتفظ بالبيانات المشتركة (مديرو المستشفى / الختم) فقط
+            projectManager:         oldData.projectManager         || '',
+            maintenanceHead:        oldData.maintenanceHead        || '',
+            operationsAssistant:    oldData.operationsAssistant    || '',
+            engineeringManager:     oldData.engineeringManager     || '',
+            financialManager:       oldData.financialManager       || '',
+            hospitalManager:        oldData.hospitalManager        || '',
+            contractorRepresentative: oldData.contractorRepresentative || '',
+            hospitalAccountant:     oldData.hospitalAccountant     || '',
+            directPurchaseRatio:    oldData.directPurchaseRatio    || '0',
+        };
+        localStorage.setItem('persistentContractData', JSON.stringify(freshData));
     }
 
     loadPersistentData();
-    autoFillFromSession();
+
+    // تحديث DOM مباشرة للحقول الثلاثة الرئيسية
+    var _hn = document.getElementById('hospital-name');
+    if (_hn) _hn.value = hospitalName;
+
+    var _cd = document.getElementById('contract-details');
+    var newData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+    if (_cd) _cd.value = newData.contractDetails || '';
+
+    var fullCompanyFinal = COMPANY_LABELS_MAP[(session.company || '')] ||
+                           (session.company || '').replace(/_/g, ' ');
+    var _cn = document.getElementById('company-name');
+    if (_cn) _cn.value = fullCompanyFinal;
+
+    updateMainHospitalName();
     renderHospitalPicker();
+    // ضمان نهائي
+    setTimeout(autoFillFromSession, 100);
 }
 
 // ── عرض منتقي المستشفى (للمستخدمين الذين لديهم أكثر من موقع) ─────────────
