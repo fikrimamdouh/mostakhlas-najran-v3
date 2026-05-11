@@ -204,7 +204,8 @@ export function Sidebar() {
   const allowedModuleKeys = parseAllowedModules((dbUser as any)?.allowedModules);
   const userCompany = (dbUser as any)?.company as string | undefined;
   const allVisibleModules = filterModules(siteType, allowedModuleKeys, role, userCompany);
-  const visibleModules = allVisibleModules;
+  // approval يُعرض في قسم المستخلصات وليس في قسم الوحدات — تجنّباً للتكرار
+  const visibleModules = allVisibleModules.filter(m => m.key !== 'approval');
 
   const { data: usersData } = useListUsers(
     { status: "pending" },
@@ -256,8 +257,8 @@ export function Sidebar() {
     ...(!isViewer ? [
       { name: "مراجعة المستخلص", file: "review_extract.html", icon: FileSearch },
     ] : []),
-    // 2. اعتماد المستخلص — ثاني خطوة: المشرف / المدير يعتمد
-    ...(isAdmin || isSupervisor ? [
+    // 2. اعتماد المستخلص — للمشرف/الأدمن أو من منحه الأدمن هذه الصلاحية
+    ...(isAdmin || isSupervisor || (allowedModuleKeys !== null && allowedModuleKeys.includes('approval')) ? [
       { name: "اعتماد المستخلص", file: "approval.html", icon: FileCheck2 },
     ] : []),
     // 3. النظرة الشاملة — لمن يحتاج متابعة كلية

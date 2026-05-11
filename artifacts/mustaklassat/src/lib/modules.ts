@@ -16,6 +16,7 @@ export interface ModuleDef {
 }
 
 export const ALL_MODULES: ModuleDef[] = [
+  { key: "approval",                   file: "approval.html",                   label: "اعتماد المستخلص",           emoji: "✅",  icon: CheckSquare,       color: "#15803d", types: [] },
   { key: "settings_main",              file: "settings_main.html",              label: "الإعدادات الرئيسية",         emoji: "⚙️",  icon: Settings,          color: "#2a5298", types: ["hospital", "health_centers", "admin_offices"] },
   { key: "settings_advanced",          file: "settings_advanced.html",          label: "الإعدادات المتقدمة",         emoji: "🔧",  icon: SlidersHorizontal, color: "#1e3c72", types: ["hospital", "health_centers", "admin_offices"] },
   { key: "attendance",                 file: "attendance.html",                 label: "الحضور والانصراف",           emoji: "📋",  icon: Clock,             color: "#0077b6", types: ["hospital"] },
