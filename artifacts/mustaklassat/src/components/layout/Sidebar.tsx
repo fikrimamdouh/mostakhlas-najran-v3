@@ -236,6 +236,7 @@ export function Sidebar() {
 
   const adminNav = [
     ...(isAdmin ? [
+      { name: "تأسيس العقد", href: "/original-viewer?page=contract-foundation-upload.html", icon: FileCheck2 },
       { name: "إدارة المستخدمين", href: "/admin/users", icon: ShieldAlert },
       { name: "ربط المستخدمين بالمستشفيات", href: "/admin/hospitals", icon: Building2 },
       { name: "النسخ الاحتياطي", href: "/admin/backup", icon: BookOpen },
