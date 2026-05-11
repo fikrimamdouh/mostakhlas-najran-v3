@@ -74,9 +74,21 @@ router.get("/", requireAuth, async (req: any, res: any) => {
       hospitalName = dbUser.hospital.trim();
     }
 
-    const [row] = await db.select().from(hospitalStorageTable)
+    // حاول بالاسم الأصلي أولاً
+    let [row] = await db.select().from(hospitalStorageTable)
       .where(and(eq(hospitalStorageTable.hospitalName, hospitalName), eq(hospitalStorageTable.storageKey, JOB_KEY)))
       .limit(1);
+
+    // لغير الأدمن: إذا لم يوجد وكان هناك query param مختلف — جرّب الـ query param أيضاً
+    if (!row && dbUser.role !== "admin") {
+      const qParam = ((req.query["hospital"] as string) || "").trim();
+      if (qParam && qParam !== hospitalName) {
+        [row] = await db.select().from(hospitalStorageTable)
+          .where(and(eq(hospitalStorageTable.hospitalName, qParam), eq(hospitalStorageTable.storageKey, JOB_KEY)))
+          .limit(1);
+        if (row) hospitalName = qParam;
+      }
+    }
 
     if (!row) return res.json({ hospitalName, rows: [], savedAt: null });
     try {
