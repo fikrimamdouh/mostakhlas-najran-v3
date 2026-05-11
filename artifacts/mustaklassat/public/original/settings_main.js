@@ -369,6 +369,11 @@ function saveContractData() {
 // تحديث عرض بيانات العقد
 function updateContractDisplayData() {
     const data = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+    // استنتج اسم الشركة من اسم المستشفى إن كان فارغاً
+    if (!data.companyName && data.hospitalName && HOSPITAL_COMPANY_MAP) {
+        data.companyName = HOSPITAL_COMPANY_MAP[data.hospitalName] || '';
+        if (data.companyName) localStorage.setItem('persistentContractData', JSON.stringify(data));
+    }
     document.getElementById('hospital-name').value = data.hospitalName || '';
     document.getElementById('contract-details').value = data.contractDetails || '';
     document.getElementById('company-name').value = data.companyName || '';
@@ -1007,8 +1012,9 @@ function autoFillFromSession() {
             changed = true;
         }
 
-        // اسم الشركة — من الجلسة أو من اسم المستشفى إن كانت الجلسة فارغة
-        var fullCompany = _resolveCompanyName(session, session.hospital || '');
+        // اسم الشركة — من الجلسة أو من اسم المستشفى (من الجلسة أو من localStorage)
+        var _hospitalForCompany = session.hospital || contractData.hospitalName || '';
+        var fullCompany = _resolveCompanyName(session, _hospitalForCompany);
         if (fullCompany && contractData.companyName !== fullCompany) {
             contractData.companyName = fullCompany;
             changed = true;
@@ -1031,7 +1037,7 @@ function autoFillFromSession() {
             var _hn = document.getElementById('hospital-name');
             if (_hn) _hn.value = session.hospital;
         }
-        var _fullCo = _resolveCompanyName(session, session.hospital || '');
+        var _fullCo = _resolveCompanyName(session, session.hospital || contractData.hospitalName || '');
         if (_fullCo) {
             var _cn = document.getElementById('company-name');
             if (_cn) _cn.value = _fullCo;
