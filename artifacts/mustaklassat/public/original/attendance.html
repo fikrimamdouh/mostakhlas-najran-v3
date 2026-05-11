@@ -2083,7 +2083,8 @@ function importPositionsTemplate() {
           var category = iCat >= 0 ? String(row[iCat] || '1').trim() : '1';
           var nat      = iNat >= 0 ? String(row[iNat] || 'غير سعودي').trim() : 'غير سعودي';
 
-          if (!empName) { totalSkipped++; continue; }
+          // تجاهل الصفوف الفارغة تماماً (لا اسم ولا مسمى وظيفي ولا راتب)
+          if (!empName && !jobTitle && !salary) { totalSkipped++; continue; }
 
           var deptKey = fixedDeptKey || resolveDeptKey(deptAr);
           if (!deptKey) {
