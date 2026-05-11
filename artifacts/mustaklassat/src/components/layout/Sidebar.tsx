@@ -6,7 +6,7 @@ import {
   Building2, ChevronLeft, BarChart3, Eye,
   ChevronRight, PanelLeftClose, PanelLeftOpen,
   BookOpen, ContactRound, Bell, X, Check, Clock, UserCheck,
-  FileCheck2, FileSearch, LayoutGrid, Archive,
+  FileCheck2, FileSearch, LayoutGrid, Archive, FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
@@ -218,6 +218,7 @@ export function Sidebar() {
       { name: "سجل المراقبة", href: "/admin/audit", icon: ClipboardList },
       { name: "قائمة المستخدمين", href: "/admin/users-view", icon: Users },
       { name: "الإشعارات والبريد", href: "/admin/notifications", icon: Bell },
+      { name: "تأسيس العقد", href: "/original-viewer?page=contract-foundation-upload.html", icon: FileText },
     ] : []),
     ...(isContractSup ? [
       { name: "لوحة مشرف العقد", href: "/contract-supervisor", icon: Building2 },
