@@ -331,7 +331,7 @@ function switchTab(id) {
   document.getElementById('tab-co').classList.toggle('active', id === 'co');
 }
 
-function saveAll() {
+async function saveAll() {
   const hospitalName = document.getElementById('hospitalNameInput').value.trim();
   if (!hospitalName) {
     showAlert('يرجى كتابة اسم المستشفى أو الموقع أولاً', 'error');
@@ -342,8 +342,33 @@ function saveAll() {
     return;
   }
 
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+  // 1. حفظ محلي (localStorage)
   ContractFoundationDB.save(hospitalName, parsedSubcontractors, parsedConsumables);
-  showAlert(`✅ تم حفظ البيانات لـ "${hospitalName}" بنجاح — ${parsedSubcontractors.length} عقد باطن، ${parsedConsumables.length} بند مستهلكات`, 'success');
+
+  // 2. رفع للسيرفر حتى يراه جميع المستخدمين
+  const serverResult = await ContractFoundationDB.saveToServer(hospitalName, parsedSubcontractors, parsedConsumables);
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-save"></i> حفظ البيانات';
+
+  if (serverResult.ok) {
+    showAlert(
+      `✅ تم رفع البيانات للسيرفر بنجاح — "${hospitalName}" · ${parsedSubcontractors.length} عقد باطن · ${parsedConsumables.length} بند مستهلكات\n` +
+      `🌐 جميع مستخدمي هذا المستشفى سيشاهدون البيانات تلقائياً`,
+      'success'
+    );
+  } else {
+    showAlert(
+      `⚠️ تم الحفظ محلياً، لكن فشل الرفع للسيرفر: ${serverResult.error || 'تأكد من صلاحية الأدمن'}\n` +
+      `البيانات محفوظة على هذا الجهاز فقط.`,
+      'warn'
+    );
+  }
+
   document.getElementById('previewSection').style.display = 'none';
   document.getElementById('fileInput').value = '';
   parsedSubcontractors = [];
