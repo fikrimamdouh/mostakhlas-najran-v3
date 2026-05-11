@@ -3513,50 +3513,57 @@ function updateContractDisplayData() {
     try {
         // 1. قراءة بيانات العقد من الذاكرة المحلية
         const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-        const extractData = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+        const extractData  = JSON.parse(localStorage.getItem('persistentExtractData')  || '{}');
 
-        // 2. استخراج البيانات مع توفير قيم افتراضية آمنة
-        const hospitalName = contractData.hospitalName || 'غير محدد';
-        const contractDetails = contractData.contractDetails || 'غير محدد';
-        const companyName = contractData.companyName || 'غير محدد';
-        const contractType = contractData.contractType || 'غير محدد';
-        const directPurchaseRatio = contractData.directPurchaseRatio || '0';
-        
-        // 3. تنسيق التواريخ بشكل صحيح
-        const extractStart = extractData.extractStart ? new Date(extractData.extractStart).toLocaleDateString('ar-SA') : 'غير محدد';
-        const extractEnd = extractData.extractEnd ? new Date(extractData.extractEnd).toLocaleDateString('ar-SA') : 'غير محدد';
+        // 2. استخراج البيانات مع توفير قيم افتراضية + fallback للمفاتيح المنفردة
+        const hospitalName       = contractData.hospitalName       || localStorage.getItem('hospitalName')       || 'غير محدد';
+        const contractDetails    = contractData.contractDetails    || localStorage.getItem('contractDetails')    || 'غير محدد';
+        const companyName        = contractData.companyName        || localStorage.getItem('companyName')        || 'غير محدد';
+        const contractType       = contractData.contractType       || localStorage.getItem('contractType')       || 'غير محدد';
+        const directPurchaseRatio = contractData.directPurchaseRatio || localStorage.getItem('directPurchaseRatio') || '0';
 
-        // 4. تحديث جميع العناصر في الصفحة التي تحمل الكلاسات المخصصة
+        // 3. تنسيق التواريخ
+        function fmtDate(d) {
+            if (!d) return 'غير محدد';
+            try {
+                const dt = new Date(d);
+                if (isNaN(dt)) return d;
+                return `${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}`;
+            } catch(_){ return d; }
+        }
+        const extractStart = fmtDate(extractData.extractStart);
+        const extractEnd   = fmtDate(extractData.extractEnd);
+
+        // 4. تحديث جميع العناصر في الصفحة
         document.querySelectorAll('.hospitalName').forEach(el => el.textContent = hospitalName);
         document.querySelectorAll('.contractDetails').forEach(el => el.textContent = contractDetails);
         document.querySelectorAll('.companyName').forEach(el => el.textContent = companyName);
         document.querySelectorAll('.contractType').forEach(el => el.textContent = contractType);
-        
+
         // تحديث فترة المستخلص
         document.querySelectorAll('#extract-start-date').forEach(el => el.textContent = extractStart);
         document.querySelectorAll('#extract-end-date').forEach(el => el.textContent = extractEnd);
 
-        // 5. التعامل مع حقل "الشراء المباشر"
+        // 5. حقل "الشراء المباشر"
         const directPurchaseContainer = document.querySelector('.directPurchaseContainer');
         if (directPurchaseContainer) {
             if (contractType === 'شراء مباشر') {
-                document.querySelector('.directPurchaseRatio').textContent = directPurchaseRatio;
-                directPurchaseContainer.style.display = 'block'; // إظهار الحقل
+                const drEl = document.querySelector('.directPurchaseRatio');
+                if (drEl) drEl.textContent = directPurchaseRatio;
+                directPurchaseContainer.style.display = 'block';
             } else {
-                directPurchaseContainer.style.display = 'none'; // إخفاء الحقل
+                directPurchaseContainer.style.display = 'none';
             }
         }
-        
-        console.log("تم تحديث بيانات العقد بنجاح في الواجهة.");
 
     } catch (error) {
         console.error("حدث خطأ أثناء عرض بيانات العقد:", error);
     }
 }
 
-// 6. تأكد من استدعاء الدالة عند تحميل الصفحة
-// أضف هذا السطر في نهاية ملف الجافا سكريبت الرئيسي أو داخل مستمع `DOMContentLoaded`
-document.addEventListener('DOMContentLoaded', updateContractDisplayData);
+// استدعاء عند تحميل الصفحة + بعد مزامنة السحابة
+document.addEventListener('DOMContentLoaded', () => setTimeout(updateContractDisplayData, 300));
+window.addEventListener('najranCloudPulled', updateContractDisplayData);
 
 // استدعاء الدالة عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', applyDisplaySettings);
