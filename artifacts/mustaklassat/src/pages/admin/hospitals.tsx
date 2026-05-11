@@ -125,39 +125,39 @@ function ReassignSelect({
   return (
     <div style={{ marginTop: 10, padding: "10px 12px", background: "#f0f4ff", borderRadius: 10, border: "1px solid #c7d2e8" }}>
       <div style={{ fontSize: "0.8rem", color: "#1e3c72", fontWeight: 700, marginBottom: 8 }}>اختر المستشفى الجديد:</div>
+      <select
+        value={sel}
+        onChange={e => { setSel(e.target.value); setConfirming(false); }}
+        style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1.5px solid #c7d2e8", fontSize: "0.82rem", direction: "rtl", outline: "none", background: "#fff", marginBottom: 8, boxSizing: "border-box" }}
+      >
+        <option value="">— اختر —</option>
+        <optgroup label="بيت العرب">
+          {COMPANY_SITES["بيت_العرب"].filter(h => h !== currentHospital).map(h => (
+            <option key={h} value={h}>{h}</option>
+          ))}
+        </optgroup>
+        <optgroup label="سراكو">
+          {COMPANY_SITES["سراكو"].filter(h => h !== currentHospital).map(h => (
+            <option key={h} value={h}>{h}</option>
+          ))}
+        </optgroup>
+        {currentHospital && <option value="__none__">— إزالة الربط —</option>}
+      </select>
       <div style={{ display: "flex", gap: 6 }}>
-        <select
-          value={sel}
-          onChange={e => { setSel(e.target.value); setConfirming(false); }}
-          style={{ flex: 1, padding: "7px 10px", borderRadius: 8, border: "1.5px solid #c7d2e8", fontSize: "0.82rem", direction: "rtl", outline: "none", background: "#fff" }}
-        >
-          <option value="">— اختر —</option>
-          <optgroup label="بيت العرب">
-            {COMPANY_SITES["بيت_العرب"].filter(h => h !== currentHospital).map(h => (
-              <option key={h} value={h}>{h}</option>
-            ))}
-          </optgroup>
-          <optgroup label="سراكو">
-            {COMPANY_SITES["سراكو"].filter(h => h !== currentHospital).map(h => (
-              <option key={h} value={h}>{h}</option>
-            ))}
-          </optgroup>
-          {currentHospital && <option value="__none__">— إزالة الربط —</option>}
-        </select>
         <button
           disabled={!sel}
           onClick={() => setConfirming(true)}
           style={{
-            background: sel ? "#1e3c72" : "#9ca3af", color: "#fff", border: "none",
-            borderRadius: 8, padding: "7px 14px", cursor: sel ? "pointer" : "not-allowed",
-            fontSize: "0.82rem", fontWeight: 700, whiteSpace: "nowrap",
+            flex: 1, background: sel ? "linear-gradient(135deg,#1e3c72,#2a5298)" : "#d1d5db",
+            color: "#fff", border: "none", borderRadius: 8, padding: "9px 14px",
+            cursor: sel ? "pointer" : "not-allowed", fontSize: "0.85rem", fontWeight: 700,
           }}
         >
-          التالي ←
+          {sel ? "التالي ←" : "اختر مستشفى أولاً"}
         </button>
         <button
           onClick={onCancel}
-          style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 8, padding: "7px 10px", cursor: "pointer", fontSize: "0.82rem" }}
+          style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 8, padding: "9px 12px", cursor: "pointer" }}
         >
           <X size={14} />
         </button>
