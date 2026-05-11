@@ -727,10 +727,18 @@ function saveExtractData() {
 
         saveSectionData('extract', data, 'extract-save-success');
 
-        // ── تقديم تلقائي للفترة التالية ─────────────────────────────────
+        // ── فحص إشارة الاعتماد من النظام — التقديم للفترة التالية ──────
         var autoIncResult = null;
-        if (typeof window.autoIncrementExtractPeriod === 'function') {
-            autoIncResult = window.autoIncrementExtractPeriod();
+        var advanceFlag = localStorage.getItem('najran_advance_period');
+        if (advanceFlag) {
+            try {
+                var flagData = JSON.parse(advanceFlag);
+                // استخدم الإشارة مرة واحدة فقط ثم احذفها
+                localStorage.removeItem('najran_advance_period');
+                if (typeof window.autoIncrementExtractPeriod === 'function') {
+                    autoIncResult = window.autoIncrementExtractPeriod();
+                }
+            } catch(e) { localStorage.removeItem('najran_advance_period'); }
         }
         // ─────────────────────────────────────────────────────────────────
 
@@ -866,6 +874,26 @@ document.addEventListener('DOMContentLoaded', () => {
         loadPersistentData();
         autoFillFromSession(); // ملء المستشفى والشركة من بيانات المستخدم إن كانت فارغة
         renderMonthsArchive();
+
+        // ── فحص إشارة اعتماد المستخلص — تقديم الفترة تلقائياً ──────────
+        var advanceFlag = localStorage.getItem('najran_advance_period');
+        if (advanceFlag) {
+            try {
+                localStorage.removeItem('najran_advance_period');
+                if (typeof window.autoIncrementExtractPeriod === 'function') {
+                    var result = window.autoIncrementExtractPeriod();
+                    if (result) {
+                        loadPersistentData();
+                        renderMonthsArchive();
+                        if (typeof showSuccessMessage === 'function') {
+                            showSuccessMessage('✅ تم اعتماد المستخلص — الفترة والدفعة جُهّزت تلقائياً: دفعة ' + result.paymentNumber + ' / ' + result.extractMonth + ' ' + result.extractYear);
+                        }
+                    }
+                }
+            } catch(e) { localStorage.removeItem('najran_advance_period'); }
+        }
+        // ─────────────────────────────────────────────────────────────────
+
         console.log(">> اكتمل فرض تحميل البيانات.");
     }, 10);
 });

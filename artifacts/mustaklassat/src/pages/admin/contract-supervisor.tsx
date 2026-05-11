@@ -112,7 +112,7 @@ export default function ContractSupervisorPage() {
       if (!res.ok) throw new Error("failed");
       return res.json();
     },
-    onSuccess: (_, { status }) => {
+    onSuccess: (_, { id, status }) => {
       const label = STATUS_CONFIG[status]?.label ?? status;
       toast({ title: "✅ تم", description: `تم تغيير حالة المستخلص إلى: ${label}` });
       queryClient.invalidateQueries({ queryKey: ["/api/submitted-extracts", "company", company] });
@@ -120,6 +120,15 @@ export default function ContractSupervisorPage() {
       if (selectedExtract) {
         const updated = extractsData?.extracts.find((e: any) => e.id === selectedExtract.id);
         if (updated) setSelectedExtract({ ...updated, status });
+      }
+      // عند الاعتماد — ضع إشارة في localStorage حتى تقدّم صفحة الإعدادات للفترة التالية
+      if (status === "approved") {
+        try {
+          localStorage.setItem('najran_advance_period', JSON.stringify({
+            approvedAt: new Date().toISOString(),
+            extractId: id,
+          }));
+        } catch (_) {}
       }
     },
     onError: () => toast({ title: "خطأ", description: "فشل تحديث الحالة", variant: "destructive" }),

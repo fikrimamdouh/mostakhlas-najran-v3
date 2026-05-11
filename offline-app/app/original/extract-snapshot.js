@@ -96,18 +96,33 @@
     }) || null;
   };
 
+  /* ───── مساعد: تنسيق التاريخ محلياً بدون تحويل UTC ───── */
+  function toLocalDateStr(d) {
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+  }
+
+  /* ───── مساعد: تحليل سلسلة YYYY-MM-DD كتاريخ محلي ───── */
+  function parseLocalDate(str) {
+    var parts = (str || '').split('-');
+    if (parts.length < 3) return new Date(str);
+    return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  }
+
   /* ───── تقديم تلقائي للفترة التالية ───── */
   window.autoIncrementExtractPeriod = function () {
     try {
       var data = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
       if (!data.extractStart) return null;
 
-      /* تقديم تاريخ البداية شهرًا */
-      var start = new Date(data.extractStart);
+      /* تقديم تاريخ البداية شهرًا — نحلل كتاريخ محلي لتجنب إزاحة المنطقة الزمنية */
+      var start = parseLocalDate(data.extractStart);
       start.setDate(1);
       start.setMonth(start.getMonth() + 1);
 
-      /* آخر يوم في الشهر الجديد */
+      /* آخر يوم في الشهر الجديد — new Date(y, m+1, 0) يُعطي آخر يوم بالتوقيت المحلي */
       var end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
 
       /* زيادة رقم الدفعة */
@@ -119,8 +134,8 @@
         extractMonth: MONTH_NAMES[start.getMonth()],
         extractYear:  start.getFullYear(),
         paymentNumber: newPn,
-        extractStart: start.toISOString().split('T')[0],
-        extractEnd:   end.toISOString().split('T')[0]
+        extractStart: toLocalDateStr(start),
+        extractEnd:   toLocalDateStr(end)
       });
 
       localStorage.setItem('persistentExtractData', JSON.stringify(newData));
