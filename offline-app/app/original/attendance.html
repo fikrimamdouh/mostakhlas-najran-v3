@@ -2001,12 +2001,8 @@ function downloadPositionsTemplate() {
   });
 }
 
-// ======= استيراد التامبلت بعد تعبئة الأسماء =======
-function importPositionsTemplate() {
-  var file = document.getElementById('template-file-input').files[0];
-  if (!file) { alert('يرجى اختيار الملف أولاً'); return; }
-  if (typeof XLSX === 'undefined') { alert('مكتبة Excel غير محملة، يرجى تحديث الصفحة'); return; }
-
+// ======= دالة مساعدة: تحويل اسم القسم → مفتاح =======
+function resolveDeptKey(deptAr) {
   var deptMap = {
     'نظافة':'cleaning','النظافة':'cleaning','تنظيف':'cleaning',
     'كهرباء':'electricity','الكهرباء':'electricity','كهربا':'electricity',
@@ -2018,85 +2014,106 @@ function importPositionsTemplate() {
     'إداري':'admin_saudi','إدارية':'admin_saudi','وظائف إدارية':'admin_saudi',
     'الوظائف الإدارية السعوديين':'admin_saudi','الوظائف الإدارية':'admin_saudi'
   };
+  if (!deptAr) return null;
+  // أشيل بادئة "جدول رقم X: " أو "جدول رقم X: "
+  var cleaned = deptAr.replace(/^جدول\s+رقم\s+\d+\s*[: ]\s*/,'').trim();
+  // بحث مباشر
+  if (deptMap[cleaned]) return deptMap[cleaned];
+  if (deptMap[deptAr])  return deptMap[deptAr];
+  // بحث جزئي في الاسم المنظّف ثم الأصلي
+  var targets = [cleaned, deptAr];
+  for (var t = 0; t < targets.length; t++) {
+    var src = targets[t];
+    if (!src) continue;
+    var keys = Object.keys(deptMap);
+    for (var ki = 0; ki < keys.length; ki++) {
+      if (src.includes(keys[ki]) || keys[ki].includes(src)) return deptMap[keys[ki]];
+    }
+  }
+  return null;
+}
+
+// ======= استيراد التامبلت بعد تعبئة الأسماء =======
+function importPositionsTemplate() {
+  var file = document.getElementById('template-file-input').files[0];
+  if (!file) { alert('يرجى اختيار الملف أولاً'); return; }
+  if (typeof XLSX === 'undefined') { alert('مكتبة Excel غير محملة، يرجى تحديث الصفحة'); return; }
 
   var reader = new FileReader();
   reader.onload = function(e) {
     try {
       var wb = XLSX.read(e.target.result, { type: 'binary' });
-      var ws = wb.Sheets[wb.SheetNames[0]];
-      var raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-      if (raw.length < 2) { alert('الملف فارغ أو لا يحتوي بيانات'); return; }
-
-      var headers = raw[0].map(function(h){ return String(h).trim(); });
-      var iName   = headers.findIndex(function(h){ return h.includes('اسم') && !h.includes('مستشفى'); });
-      var iId     = headers.findIndex(function(h){ return h.includes('هوية') || h.includes('إقامة') || h.includes('اقامة') || h.includes('iqama'); });
-      var iDept   = headers.findIndex(function(h){ return h.includes('قسم') || h === 'القسم'; });
-      var iJob    = headers.findIndex(function(h){ return h.includes('مسمى') || h.includes('وظيفة'); });
-      var iSalary = headers.findIndex(function(h){ return h.includes('تكلفة') || h.includes('راتب'); });
-      var iCat    = headers.findIndex(function(h){ return h.includes('فئة'); });
-      var iNat    = headers.findIndex(function(h){ return h.includes('جنسية'); });
-
-      if (iName < 0) { alert('لم أجد عمود "اسم الموظف" في الملف'); return; }
-      if (iDept < 0) { alert('لم أجد عمود "القسم" في الملف'); return; }
-
       var allData = getAttendanceData();
-      var added = 0, skipped = 0;
+      var totalAdded = 0, totalSkipped = 0;
       var unknownDepts = new Set();
+      var daysCount = 30;
+      try { if (typeof getExtractPeriodDetails === 'function') daysCount = getExtractPeriodDetails().daysInMonth || 30; } catch(_){}
 
-      for (var r = 1; r < raw.length; r++) {
-        var row     = raw[r];
-        var empName = String(row[iName]   || '').trim();
-        var iqamaId = iId     >= 0 ? String(row[iId]     || '').trim() : '';
-        var deptAr  = String(row[iDept]   || '').trim();
-        var jobTitle= iJob    >= 0 ? String(row[iJob]    || '').trim() : '';
-        var salary  = iSalary >= 0 ? parseFloat(row[iSalary]) || 0 : 0;
-        var category= iCat    >= 0 ? String(row[iCat]    || '1').trim() : '1';
-        var nat     = iNat    >= 0 ? String(row[iNat]    || 'غير سعودي').trim() : 'غير سعودي';
+      // ═══ معالجة كل شيت على حدة ═══
+      for (var si = 0; si < wb.SheetNames.length; si++) {
+        var sheetName = wb.SheetNames[si];
+        var ws = wb.Sheets[sheetName];
+        var raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        if (raw.length < 2) continue;
 
-        if (!empName) { skipped++; continue; }
+        var headers = raw[0].map(function(h){ return String(h).trim(); });
+        var iName   = headers.findIndex(function(h){ return (h.includes('اسم') && !h.includes('مستشفى') && !h.includes('مسمى')); });
+        var iId     = headers.findIndex(function(h){ return h.includes('هوية') || h.includes('إقامة') || h.includes('اقامة') || h.includes('iqama'); });
+        var iDept   = headers.findIndex(function(h){ return h.includes('قسم'); });
+        var iJob    = headers.findIndex(function(h){ return h.includes('مسمى') || (h.includes('وظيفة') && !h.includes('اسم')); });
+        var iSalary = headers.findIndex(function(h){ return h.includes('تكلفة') || h.includes('راتب'); });
+        var iCat    = headers.findIndex(function(h){ return h === 'الفئة' || h.includes('فئة'); });
+        var iNat    = headers.findIndex(function(h){ return h.includes('جنسية'); });
 
-        // تحديد القسم
-        var deptKey = deptMap[deptAr];
-        if (!deptKey) {
-          var keys = Object.keys(deptMap);
-          for (var ki = 0; ki < keys.length; ki++) {
-            if (deptAr.includes(keys[ki]) || keys[ki].includes(deptAr)) {
-              deptKey = deptMap[keys[ki]]; break;
-            }
+        if (iName < 0) continue; // شيت بدون عمود أسماء → تخطى
+
+        // لو ما فيه عمود قسم → استخدم اسم الشيت كقسم ثابت لكل صفوف هذا الشيت
+        var fixedDeptKey = (iDept < 0) ? resolveDeptKey(sheetName) : null;
+
+        for (var r = 1; r < raw.length; r++) {
+          var row      = raw[r];
+          var empName  = String(row[iName] || '').trim();
+          var iqamaId  = iId  >= 0 ? String(row[iId]  || '').trim() : '';
+          var deptAr   = iDept >= 0 ? String(row[iDept]|| '').trim() : '';
+          var jobTitle = iJob  >= 0 ? String(row[iJob] || '').trim() : '';
+          var salary   = iSalary >= 0 ? parseFloat(row[iSalary]) || 0 : 0;
+          var category = iCat >= 0 ? String(row[iCat] || '1').trim() : '1';
+          var nat      = iNat >= 0 ? String(row[iNat] || 'غير سعودي').trim() : 'غير سعودي';
+
+          if (!empName) { totalSkipped++; continue; }
+
+          var deptKey = fixedDeptKey || resolveDeptKey(deptAr);
+          if (!deptKey) {
+            unknownDepts.add(deptAr || ('شيت: ' + sheetName));
+            totalSkipped++;
+            continue;
           }
-        }
-        if (!deptKey) {
-          unknownDepts.add(deptAr || '(فارغ)');
-          skipped++;
-          continue;
-        }
 
-        if (!allData[deptKey]) allData[deptKey] = [];
-        var daysCount = 30;
-        try { if (typeof getExtractPeriodDetails === 'function') daysCount = getExtractPeriodDetails().daysInMonth || 30; } catch(_){}
-        allData[deptKey].push({
-          name: empName, jobTitle: jobTitle, category: category,
-          salary: salary, nationality: nat, iqamaId: iqamaId,
-          nationalityFine: 0,
-          days: Array(daysCount).fill('ح')
-        });
-        added++;
+          if (!allData[deptKey]) allData[deptKey] = [];
+          allData[deptKey].push({
+            name: empName, jobTitle: jobTitle, category: category,
+            salary: salary, nationality: nat, iqamaId: iqamaId,
+            nationalityFine: 0,
+            days: Array(daysCount).fill('ح')
+          });
+          totalAdded++;
+        }
       }
 
-      if (added === 0) {
+      if (totalAdded === 0) {
         var foundMsg = unknownDepts.size > 0
           ? '\n\nأسماء الأقسام الموجودة في الملف:\n• ' + Array.from(unknownDepts).join('\n• ')
-          + '\n\nالأسماء المتوقعة مثل: نظافة، كهرباء، زراعة، مدني، ميكانيكا، مغسلة، خدمات مرضى، إداري'
-          : '\n\nتحقق من أن الملف يحتوي أعمدة: "القسم" و"اسم شاغل الوظيفة"';
-        alert('⚠️ لم يُضف أي موظف!\nجميع الصفوف اتجاهلت لأن أسماء الأقسام ما تطابقت.' + foundMsg);
+          + '\n\nالأسماء المتوقعة: نظافة، كهرباء، زراعة، الأعمال المدنية، ميكانيكا، مغسلة، خدمات المرضى، الوظائف الإدارية'
+          : '\n\nتحقق من أن الملف يحتوي عمود "القسم" أو اسم شيت يطابق اسم القسم';
+        alert('⚠️ لم يُضف أي موظف!\n' + foundMsg);
         return;
       }
 
       saveAttendanceData(allData);
       renderTables();
       closeDialog('upload-excel-dialog');
-      alert('✅ تم الاستيراد بنجاح!\nتمت إضافة ' + added + ' موظف' +
-            (skipped ? '\n(تجاهل ' + skipped + ' صف فارغ أو غير معروف القسم)' : ''));
+      alert('✅ تم الاستيراد بنجاح!\nتمت إضافة ' + totalAdded + ' موظف' +
+            (totalSkipped ? '\n(تجاهل ' + totalSkipped + ' صف فارغ أو غير معروف القسم)' : ''));
     } catch(err) {
       alert('خطأ في قراءة الملف: ' + err.message);
     }
