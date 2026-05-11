@@ -202,7 +202,9 @@ function PreRegistrationForm({ onNext }: { onNext: () => void }) {
   };
 
   const handleSiteChange = (siteName: string) => {
-    setForm(f => ({ ...f, hospital: siteName }));
+    const site = companySites.find(s => s.name === siteName);
+    const contract = site?.contract || "";
+    setForm(f => ({ ...f, hospital: siteName, contractNumber: contract }));
     setErrors(er => ({ ...er, hospital: "" }));
   };
 
