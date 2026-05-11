@@ -1751,11 +1751,40 @@ window.navigateTo = function (url) {
     </div>
 
     <div id="upload-excel-dialog" class="dialog" style="display: none;">
-        <div class="dialog-content">
+        <div class="dialog-content" style="max-width:540px;width:95vw">
             <span class="close" onclick="closeDialog('upload-excel-dialog')">×</span>
-            <h3>استيراد بيانات الموظفين من Excel</h3>
-            <input type="file" id="excel-file-input" accept=".xlsx,.xls">
-<button onclick="importExcelWithDepartment()" class="confirm-btn"><i class="fas fa-file-import"></i> استيراد</button>
+            <h3 style="margin-bottom:18px">📂 استيراد بيانات من Excel</h3>
+
+            <!-- قسم 1: تامبلت المناصب -->
+            <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:18px;margin-bottom:16px">
+              <div style="font-weight:800;color:#1e3c72;font-size:.95rem;margin-bottom:8px">
+                📋 تامبلت الوظائف — الطريقة الموصى بها
+              </div>
+              <p style="font-size:.84rem;color:#374151;line-height:1.6;margin-bottom:14px">
+                ١. نزّل التامبلت ← يحتوي مسميات وظائف مستشفاك<br>
+                ٢. افتحه في Excel وأدخل <strong>اسم الموظف</strong> في كل صف<br>
+                ٣. ارفع الملف ← يتوزّع الموظفون على أقسامهم تلقائياً
+              </p>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+                <button onclick="downloadPositionsTemplate()" style="background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;font-size:.88rem;font-weight:700;display:flex;align-items:center;gap:6px">
+                  <i class="fas fa-file-download"></i> تنزيل التامبلت
+                </button>
+              </div>
+              <div style="border-top:1px dashed #93c5fd;padding-top:14px">
+                <div style="font-size:.84rem;font-weight:700;color:#1e3c72;margin-bottom:8px">رفع التامبلت بعد تعبئة الأسماء:</div>
+                <input type="file" id="template-file-input" accept=".xlsx,.xls" style="font-size:.84rem;margin-bottom:10px;display:block">
+                <button onclick="importPositionsTemplate()" style="background:#16a34a;color:#fff;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;font-size:.88rem;font-weight:700;display:inline-flex;align-items:center;gap:6px">
+                  <i class="fas fa-file-import"></i> استيراد التامبلت
+                </button>
+              </div>
+            </div>
+
+            <!-- قسم 2: استيراد عادي -->
+            <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px">
+              <div style="font-weight:700;color:#475569;font-size:.88rem;margin-bottom:10px">📁 استيراد Excel عادي (بقسم محدد)</div>
+              <input type="file" id="excel-file-input" accept=".xlsx,.xls" style="font-size:.84rem;display:block;margin-bottom:10px">
+              <button onclick="importExcelWithDepartment()" class="confirm-btn" style="font-size:.88rem"><i class="fas fa-file-import"></i> استيراد</button>
+            </div>
         </div>
     </div>
 
@@ -1927,6 +1956,130 @@ async function loadJobPositionsFromTemplate() {
   } catch (err) {
     alert('خطأ في تحميل المناصب: ' + err.message);
   }
+}
+
+// ======= تنزيل التامبلت بالوظائف =======
+function downloadPositionsTemplate() {
+  if (typeof XLSX === 'undefined') { alert('مكتبة Excel غير محملة، يرجى تحديث الصفحة'); return; }
+  if (typeof JobPositionsDB === 'undefined') { alert('مكتبة المناصب غير محملة، يرجى تحديث الصفحة'); return; }
+  const hospitalName = document.querySelector('.hospitalName')?.textContent?.trim();
+  if (!hospitalName || hospitalName === '—' || hospitalName === 'غير محدد') {
+    alert('يرجى تعيين اسم المستشفى في الإعدادات أولاً، ثم حاول مرة أخرى.');
+    return;
+  }
+  JobPositionsDB.load(hospitalName).then(function(rec) {
+    if (!rec || !rec.rows || !rec.rows.length) {
+      alert('لا توجد مناصب محفوظة لـ "' + hospitalName + '".\n\nيرجى رفعها أولاً من:\nالإعدادات ← رفع مناصب الوظائف');
+      return;
+    }
+    const deptLabels = {
+      cleaning:'النظافة', electricity:'الكهرباء', agriculture:'الزراعة',
+      civil_works:'الأعمال المدنية', mechanical:'الميكانيكا', laundry:'المغسلة',
+      patient_services:'خدمات المرضى', admin_saudi:'الوظائف الإدارية السعوديين'
+    };
+    const headers = ['اسم الموظف', 'القسم', 'مسمى الوظيفة', 'التكلفة الشهرية', 'الفئة', 'الجنسية'];
+    const dataRows = rec.rows.map(function(r) {
+      return [
+        '',
+        deptLabels[r.dept] || r.dept || '',
+        r.jobTitle || '',
+        r.salary || 0,
+        r.category || '1',
+        r.nationality || 'غير سعودي'
+      ];
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers].concat(dataRows));
+    ws['!cols'] = [{wch:25},{wch:22},{wch:32},{wch:18},{wch:8},{wch:15}];
+    XLSX.utils.book_append_sheet(wb, ws, hospitalName.substring(0, 31));
+    XLSX.writeFile(wb, 'تامبلت-' + hospitalName + '.xlsx');
+    closeDialog('upload-excel-dialog');
+  }).catch(function(err) {
+    alert('خطأ: ' + err.message);
+  });
+}
+
+// ======= استيراد التامبلت بعد تعبئة الأسماء =======
+function importPositionsTemplate() {
+  var file = document.getElementById('template-file-input').files[0];
+  if (!file) { alert('يرجى اختيار الملف أولاً'); return; }
+  if (typeof XLSX === 'undefined') { alert('مكتبة Excel غير محملة، يرجى تحديث الصفحة'); return; }
+
+  var deptMap = {
+    'نظافة':'cleaning','النظافة':'cleaning','تنظيف':'cleaning',
+    'كهرباء':'electricity','الكهرباء':'electricity','كهربا':'electricity',
+    'زراعة':'agriculture','الزراعة':'agriculture','مساحات خضراء':'agriculture',
+    'مدني':'civil_works','الأعمال المدنية':'civil_works','أعمال مدنية':'civil_works','أعمال مدنيه':'civil_works',
+    'ميكانيكا':'mechanical','الميكانيكا':'mechanical','ميكانيك':'mechanical','ميكانيكي':'mechanical',
+    'مغسلة':'laundry','المغسلة':'laundry','غسيل':'laundry',
+    'خدمات مرضى':'patient_services','خدمات المرضى':'patient_services','خدمة مرضى':'patient_services',
+    'إداري':'admin_saudi','إدارية':'admin_saudi','وظائف إدارية':'admin_saudi',
+    'الوظائف الإدارية السعوديين':'admin_saudi','الوظائف الإدارية':'admin_saudi'
+  };
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, { type: 'binary' });
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      if (raw.length < 2) { alert('الملف فارغ أو لا يحتوي بيانات'); return; }
+
+      var headers = raw[0].map(function(h){ return String(h).trim(); });
+      var iName   = headers.findIndex(function(h){ return h.includes('اسم') && !h.includes('مستشفى'); });
+      var iDept   = headers.findIndex(function(h){ return h.includes('قسم') || h === 'القسم'; });
+      var iJob    = headers.findIndex(function(h){ return h.includes('مسمى') || h.includes('وظيفة'); });
+      var iSalary = headers.findIndex(function(h){ return h.includes('تكلفة') || h.includes('راتب'); });
+      var iCat    = headers.findIndex(function(h){ return h.includes('فئة'); });
+      var iNat    = headers.findIndex(function(h){ return h.includes('جنسية'); });
+
+      if (iName < 0) { alert('لم أجد عمود "اسم الموظف" في الملف'); return; }
+      if (iDept < 0) { alert('لم أجد عمود "القسم" في الملف'); return; }
+
+      var allData = getAttendanceData();
+      var added = 0, skipped = 0;
+
+      for (var r = 1; r < raw.length; r++) {
+        var row     = raw[r];
+        var empName = String(row[iName]   || '').trim();
+        var deptAr  = String(row[iDept]   || '').trim();
+        var jobTitle= iJob    >= 0 ? String(row[iJob]    || '').trim() : '';
+        var salary  = iSalary >= 0 ? parseFloat(row[iSalary]) || 0 : 0;
+        var category= iCat    >= 0 ? String(row[iCat]    || '1').trim() : '1';
+        var nat     = iNat    >= 0 ? String(row[iNat]    || 'غير سعودي').trim() : 'غير سعودي';
+
+        if (!empName) { skipped++; continue; }
+
+        // تحديد القسم
+        var deptKey = deptMap[deptAr];
+        if (!deptKey) {
+          var keys = Object.keys(deptMap);
+          for (var ki = 0; ki < keys.length; ki++) {
+            if (deptAr.includes(keys[ki]) || keys[ki].includes(deptAr)) {
+              deptKey = deptMap[keys[ki]]; break;
+            }
+          }
+        }
+        if (!deptKey) { skipped++; continue; }
+
+        if (!allData[deptKey]) allData[deptKey] = [];
+        allData[deptKey].push({
+          name: empName, jobTitle: jobTitle, category: category,
+          salary: salary, nationality: nat, iqamaId: '', days: {}, attendance: {}
+        });
+        added++;
+      }
+
+      saveAttendanceData(allData);
+      renderTables();
+      closeDialog('upload-excel-dialog');
+      alert('✅ تم الاستيراد بنجاح!\nتمت إضافة ' + added + ' موظف' +
+            (skipped ? '\n(تجاهل ' + skipped + ' صف فارغ أو غير معروف القسم)' : ''));
+    } catch(err) {
+      alert('خطأ في قراءة الملف: ' + err.message);
+    }
+  };
+  reader.readAsBinaryString(file);
 }
 </script>
 <script src="/original/extract-submit.js"></script>
