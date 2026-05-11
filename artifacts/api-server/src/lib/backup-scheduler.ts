@@ -75,7 +75,7 @@ export async function runScheduledBackup(triggeredBy: "scheduler" | "manual" = "
     try {
       const emailEnabled = await isAutoBackupEmailEnabled();
       if (emailEnabled) {
-        await sendDailyBackupEmail(ADMIN_EMAIL, counts, backup.meta.exportedAt);
+        await sendDailyBackupEmail(ADMIN_EMAIL, counts, backup.meta.exportedAt, backupJson);
         emailSent = true;
       } else {
         logger.info("Auto-backup: email notification disabled, skipping");
