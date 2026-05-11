@@ -629,7 +629,7 @@ const monthName = new Date(extractData.extractStart || new Date()).toLocaleStrin
 
     // تحديث العنوان الرئيسي في واجهة التفاصيل بالتنسيق الجديد
     document.getElementById('center-main-title').innerHTML = `
-        <h2>مستخلص العمالة للمراكز الصحية</h2>
+        <h2>مستخلص العمالة للمكاتب الإدارية والمرافق الصحية</h2>
         <h3>لمركز: ${centerName} - عن شهر ${monthName}</h3>
         <p>الفترة من: ${extractStart}م إلى: ${extractEnd}م</p>
     `;

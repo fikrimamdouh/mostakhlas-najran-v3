@@ -130,6 +130,93 @@
   font-weight: 700;
 }
 
+/* ── Dropdown group ── */
+.sn-dropdown {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+.sn-dropdown-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
+  color: rgba(255,255,255,.68);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  border-top: none;
+  border-right: none;
+  border-left: none;
+  background: none;
+  transition: color .18s, border-color .18s, background .18s;
+  font-family: 'Tajawal', 'Segoe UI', Arial, sans-serif;
+  line-height: 1;
+}
+.sn-dropdown-btn:hover,
+.sn-dropdown:hover .sn-dropdown-btn {
+  color: #fff;
+  background: rgba(255,255,255,.07);
+  border-bottom-color: rgba(212,175,55,.45);
+}
+.sn-dropdown-btn.sn-active {
+  color: #d4af37;
+  border-bottom-color: #d4af37;
+  background: rgba(212,175,55,.09);
+  font-weight: 700;
+}
+.sn-caret {
+  font-size: 10px;
+  opacity: .7;
+  margin-right: 2px;
+  transition: transform .15s;
+}
+.sn-dropdown:hover .sn-caret,
+.sn-dropdown.sn-open .sn-caret { transform: rotate(180deg); }
+
+.sn-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 1px);
+  right: 0;
+  background: linear-gradient(160deg, #122050 0%, #1a3562 100%);
+  border-top: 2px solid #d4af37;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.5);
+  min-width: 170px;
+  z-index: 1100;
+  overflow: hidden;
+}
+.sn-dropdown:hover .sn-dropdown-menu,
+.sn-dropdown.sn-open .sn-dropdown-menu { display: block; }
+
+.sn-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 18px;
+  color: rgba(255,255,255,.8);
+  text-decoration: none;
+  font-size: 13px;
+  font-family: 'Tajawal', sans-serif;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.sn-dropdown-item:last-child { border-bottom: none; }
+.sn-dropdown-item:hover {
+  background: rgba(255,255,255,.1);
+  color: #fff;
+}
+.sn-dropdown-item.sn-active {
+  color: #d4af37;
+  background: rgba(212,175,55,.12);
+  font-weight: 700;
+}
+.sn-dropdown-item .sn-di-icon { font-size: 15px; }
+
 /* ── Hide old elements on screen only ── */
 @media screen {
   .sn-hide-screen { display: none !important; }

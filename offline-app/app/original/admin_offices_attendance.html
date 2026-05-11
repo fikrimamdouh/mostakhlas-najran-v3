@@ -6,7 +6,7 @@
     <script src="/original/offline-cloud-sync.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>مستخلص العمالة للمكاتب الإدارية</title>
+<title>مستخلص العمالة للمكاتب الإدارية والمرافق الصحية</title>
     <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AAABAAEAAQEAAAEAGAAoAAAAFgAAACgAAAAQAAAAIAAAAAEAGAAAAAAAAAAAAAAA">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
@@ -26,13 +26,11 @@
     <div class="container">
         
         <header class="header-info">
-            <img src="moh_logo.png" alt="شعار وزارة الصحة السعودية" class="logo-right"
-                 onerror="this.style.display='none'">
-            <img src="moh_logo.png" alt="شعار وزارة الصحة السعودية" class="logo-left"
-                 onerror="this.style.display='none'">
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-right">
+            <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-left">
             <h1>فرع وزارة الصحة بمنطقة نجران</h1>
-            <h3>المكاتب الإدارية</h3>
-            <h2 id="main-page-title">مستخلص العمالة للمكاتب الإدارية</h2>
+            <h3>المكاتب الإدارية والمرافق الصحية</h3>
+            <h2 id="main-page-title">مستخلص العمالة للمكاتب الإدارية والمرافق الصحية</h2>
             <p class="date" id="current-date-time"></p>
         </header>
 
@@ -57,7 +55,7 @@
     <select id="navigation" onchange="window.navigateTo(this.value)">
         <option value="#">-- اختر صفحة --</option>
         <option value="index.html">الصفحة الرئيسية</option>
-        <option value="admin_offices_attendance.html" selected>مستخلص العمالة للمكاتب الإدارية</option>
+        <option value="admin_offices_attendance.html" selected>مستخلص العمالة للمكاتب الإدارية والمرافق الصحية</option>
         <option value="admin_offices_consumables.html">📦 مستخلص المستهلكات للمكاتب الإدارية</option>
         <option value="approval.html">✅ متابعة المستخلصات</option>
     </select>
@@ -65,8 +63,8 @@
         </nav>
 
         <section class="std-action-bar no-print" id="main-action-buttons">
-            <button class="ab ab-manage" onclick="openEmployeeManagementDialog()"><i class="fas fa-users-cog"></i> إدارة الموظفين والمكاتب</button>
-            <button class="ab ab-import" onclick="openImportDialog()"><i class="fas fa-file-import"></i> استيراد لمكتب</button>
+            <button class="ab ab-manage" onclick="openEmployeeManagementDialog()"><i class="fas fa-users-cog"></i> إدارة الموظفين والمكاتب والمرافق</button>
+            <button class="ab ab-import" onclick="openImportDialog()"><i class="fas fa-file-import"></i> استيراد لمكتب/مرفق</button>
             <button class="ab ab-import" onclick="openSmartUploadDialog()"><i class="fas fa-magic"></i> الرفع الذكي</button>
             <button class="ab ab-excel" onclick="openExportDialog()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
             <button class="ab ab-print" onclick="openPrintDialog()"><i class="fas fa-print"></i> طباعة</button>
@@ -82,7 +80,7 @@
         <main>
             <div id="main-grid-view">
                 <div id="centers-grid-container">
-                    <h2><i class="fas fa-building"></i> المكاتب الإدارية</h2>
+                    <h2><i class="fas fa-building"></i> المكاتب الإدارية والمرافق الصحية</h2>
                     <div id="centers-grid">
                     </div>
                 </div>
@@ -121,7 +119,7 @@
 
         <section class="page-summary" id="main-summary-section">
             <div class="grand-total" id="grand-total-section">
-                <h3><i class="fas fa-building"></i> الإجمالي العام لجميع المكاتب الإدارية</h3>
+                <h3><i class="fas fa-building"></i> الإجمالي العام لجميع المكاتب الإدارية والمرافق الصحية</h3>
                 <div class="total-grid">
                     <div class="total-item"><span class="total-label">إجمالي عدد الموظفين:</span><span class="total-value" id="grand-total-count">0</span></div>
                     <div class="total-item"><span class="total-label">إجمالي التكلفة الشهرية:</span><span class="total-value" id="grand-total-cost">0.00</span></div>
@@ -149,7 +147,7 @@
 <div id="signature-dialog" class="dialog wide-dialog" style="display: none;"></div>
 
     <footer>
-        <p>© 2025 فرع وزارة الصحة بمنطقة نجران - المكاتب الإدارية</p>
+        <p>© 2025 فرع وزارة الصحة بمنطقة نجران - المكاتب الإدارية والمرافق الصحية</p>
     </footer>
 
     <script src="admin_offices_attendance.js"></script>

@@ -106,8 +106,9 @@ async function createWindow() {
   mainWindow.setMenuBarVisibility(false);
   mainWindow.loadURL(`http://localhost:${serverPort}/login.html`);
 
-  // Open external links in default browser
+  // Allow about:blank popups (used for print windows), open external http links in browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (!url || url === 'about:blank') return { action: 'allow' };
     if (url.startsWith('http')) shell.openExternal(url);
     return { action: 'deny' };
   });

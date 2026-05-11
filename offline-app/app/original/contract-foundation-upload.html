@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<script src="/original/offline-user-proxy.js"></script>
+<script src="/original/offline-auth-check.js"></script>
+<script src="/original/offline-cloud-sync.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>رفع بيانات التأسيسي — تجمع نجران الصحي</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="/original/contract-foundation-helper.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:#f0f4f8;min-height:100vh;direction:rtl}
+.header{background:linear-gradient(135deg,#0f2050,#1e3c72 55%,#2a5298);padding:18px 28px;display:flex;align-items:center;gap:16px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.header img{height:54px;width:54px;object-fit:contain;border-radius:8px;background:#fff;padding:4px}
+.header-text h1{font-size:1.2rem;color:#fff;font-weight:800}
+.header-text p{font-size:.82rem;color:#d4af37;margin-top:2px}
+.back-btn{margin-right:auto;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);padding:8px 18px;border-radius:8px;cursor:pointer;font-size:.85rem;text-decoration:none;display:flex;align-items:center;gap:6px;transition:background .2s}
+.back-btn:hover{background:rgba(255,255,255,.22)}
+.wrap{max-width:1000px;margin:28px auto;padding:0 16px;display:flex;flex-direction:column;gap:22px}
+.card{background:#fff;border-radius:14px;box-shadow:0 2px 16px rgba(30,60,114,.09);overflow:hidden}
+.card-head{padding:16px 22px;background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;display:flex;align-items:center;gap:10px;font-size:1rem;font-weight:700}
+.card-head i{color:#d4af37;font-size:1.1rem}
+.card-body{padding:22px}
+.drop-zone{border:2.5px dashed #c7d2e8;border-radius:12px;padding:38px 24px;text-align:center;cursor:pointer;transition:all .2s;background:#f8faff}
+.drop-zone:hover,.drop-zone.drag-over{border-color:#1e3c72;background:#eef2ff}
+.drop-zone i{font-size:2.8rem;color:#1e3c72;margin-bottom:10px;display:block}
+.drop-zone p{color:#555;font-size:.95rem;margin-bottom:6px}
+.drop-zone span{font-size:.8rem;color:#999}
+.drop-zone input[type=file]{display:none}
+.hospital-field{display:flex;flex-direction:column;gap:6px;margin-top:16px}
+.hospital-field label{font-size:.88rem;font-weight:600;color:#1e3c72}
+.hospital-field select{width:100%;padding:10px 14px;border:1.5px solid #d1d5db;border-radius:8px;font-size:.95rem;direction:rtl;outline:none;transition:border-color .2s;background:#fff;cursor:pointer;appearance:auto}
+.hospital-field select:focus{border-color:#1e3c72}
+.hospital-field .hs-note{font-size:.78rem;color:#6b7280;margin-top:4px}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:9px;border:none;cursor:pointer;font-size:.9rem;font-weight:600;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-danger{background:#fef2f2;color:#dc2626;border:1px solid #fca5a5}
+.btn-danger:hover{background:#fee2e2}
+.btn-warning{background:#fffbeb;color:#d97706;border:1px solid #fcd34d}
+.preview-wrap{overflow-x:auto;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:16px}
+.preview-title{font-size:.88rem;font-weight:700;color:#1e3c72;padding:10px 14px;background:#f0f6ff;border-bottom:1px solid #e5e7eb}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+thead th{background:#1e3c72;color:#fff;padding:9px 12px;text-align:right;white-space:nowrap}
+tbody tr:nth-child(even){background:#f8faff}
+tbody td{padding:7px 12px;border-bottom:1px solid #f1f5f9;color:#374151}
+.stats-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:18px}
+.stat-box{flex:1;min-width:130px;background:#f0f4ff;border-radius:10px;padding:14px 16px;text-align:center;border:1px solid #dbeafe}
+.stat-box .val{font-size:1.7rem;font-weight:800;color:#1e3c72}
+.stat-box .lbl{font-size:.78rem;color:#6b7280;margin-top:3px}
+.hospital-item{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #f1f5f9;gap:12px}
+.hospital-item:last-child{border-bottom:none}
+.hospital-item:hover{background:#f8faff}
+.h-name{font-weight:700;color:#1e3c72;font-size:.95rem}
+.h-meta{font-size:.8rem;color:#9ca3af;margin-top:3px}
+.h-actions{display:flex;gap:8px;flex-shrink:0}
+.info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:16px 20px;font-size:.88rem;color:#1e40af;line-height:1.8}
+.info-box strong{display:block;margin-bottom:6px;font-size:.92rem}
+.info-box code{background:#dbeafe;padding:2px 7px;border-radius:5px;font-family:monospace;font-size:.83rem}
+.alert{padding:12px 18px;border-radius:9px;font-size:.9rem;margin-top:14px}
+.alert-success{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
+.alert-error{background:#fef2f2;color:#dc2626;border:1px solid #fca5a5}
+.alert-warn{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+.empty-state{text-align:center;padding:40px 20px;color:#9ca3af}
+.empty-state i{font-size:2.5rem;margin-bottom:12px;display:block;color:#cbd5e1}
+footer{text-align:center;padding:20px;color:#9ca3af;font-size:.8rem}
+.tabs{display:flex;gap:0;border-bottom:2px solid #e5e7eb;margin-bottom:20px}
+.tab{padding:10px 22px;cursor:pointer;font-size:.9rem;font-weight:600;color:#6b7280;border-bottom:2.5px solid transparent;margin-bottom:-2px;transition:all .2s}
+.tab.active{color:#1e3c72;border-bottom-color:#1e3c72}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+</style>
+</head>
+<body>
+
+<!-- nav-bar hidden — يستخدمها shared-nav.js لبناء القائمة العلوية -->
+<div class="nav-bar" style="display:none">
+  <div class="dropdown">
+    <select id="navigation">
+      <option value="#">-- اختر صفحة --</option>
+      <option value="index.html">الصفحة الرئيسية</option>
+      <option value="attendance.html">الحضور والانصراف</option>
+      <option value="performance.html">شهادة الأداء</option>
+      <option value="achievement.html">شهادة الإنجاز</option>
+      <option value="consumables.html">مستخلص المستهلكات</option>
+      <option value="spare_parts.html">مستخلص قطع الغيار</option>
+      <option value="approval.html">✅ متابعة المستخلصات</option>
+      <option value="admin-dashboard.html">🛡️ لوحة الأدمن</option>
+      <option value="extract-archive.html">🗂️ أرشيف المستخلصات</option>
+    </select>
+  </div>
+</div>
+
+<div class="header">
+  <img src="najran_health_cluster_logo.png" alt="شعار" onerror="this.style.display='none'">
+  <div class="header-text">
+    <h1>رفع بيانات التأسيسي</h1>
+    <p>تحميل عقود الباطن وبنود المستهلكات لكل مستشفى/موقع</p>
+  </div>
+  <button class="back-btn" style="background:rgba(212,175,55,.18);border-color:rgba(212,175,55,.45);margin-right:0;" onclick="window.open('/original-viewer?page=job-positions-upload.html','_blank')">
+    <i class="fas fa-user-tie"></i> رفع المناصب
+  </button>
+  <a class="back-btn" href="javascript:history.back()"><i class="fas fa-arrow-right"></i> رجوع</a>
+</div>
+
+<div class="wrap">
+
+  <!-- تعليمات -->
+  <div class="card">
+    <div class="card-head"><i class="fas fa-info-circle"></i> تعليمات الرفع</div>
+    <div class="card-body">
+      <div class="info-box">
+        <strong>شكل ملف الإكسل المطلوب:</strong>
+        الملف يجب أن يحتوي على <strong>جدولين</strong> في نفس الورقة:
+        <br><br>
+        📋 <strong>الجدول الأول — عقود الباطن:</strong>
+        يجب أن يحتوي على الأعمدة:
+        <code>البيان</code> &nbsp;|&nbsp;
+        <code>عدد المرات سنوياً</code> &nbsp;|&nbsp;
+        <code>مبلغ العقد</code>
+        <br><br>
+        📋 <strong>الجدول الثاني — المستهلكات:</strong>
+        يجب أن يحتوي على الأعمدة:
+        <code>البيان</code> &nbsp;|&nbsp;
+        <code>التكلفة الشهرية</code>
+        <br><br>
+        ⚡ النظام يكتشف الجدولين تلقائياً بمجرد رفع الملف.
+      </div>
+    </div>
+  </div>
+
+  <!-- رفع ملف -->
+  <div class="card">
+    <div class="card-head"><i class="fas fa-file-upload"></i> رفع ملف جديد</div>
+    <div class="card-body">
+
+      <div class="hospital-field" style="margin-bottom:16px">
+        <label><i class="fas fa-hospital"></i> اختر المستشفى / الموقع</label>
+        <select id="hospitalNameInput">
+          <option value="">— اختر المستشفى —</option>
+          <optgroup label="🏥 بيت العرب" id="grp-beyt">
+            <option>مستشفى يدمة العام</option>
+            <option>مستشفى حبونا العام</option>
+            <option>مستشفى بدر الجنوب العام</option>
+            <option>مستشفى الولادة والأطفال</option>
+            <option>مستشفى نجران العام القديم وسكن الممرضات الخارجي</option>
+            <option>المكاتب الإدارية والمرافق الصحية</option>
+            <option>صيانة وإصلاح السيارات والعيادات المتنقلة</option>
+          </optgroup>
+          <optgroup label="🏨 سراكو" id="grp-sarako">
+            <option>مستشفى نجران العام الجديد</option>
+            <option>مركز طب الأسنان التخصصي</option>
+            <option>مجمع الأمل للصحة النفسية</option>
+            <option>مستشفى ثار العام</option>
+            <option>مستشفى خباش العام</option>
+            <option>المراكز الصحية</option>
+            <option>مستشفى الملك خالد</option>
+            <option>مركز الأمير سلطان</option>
+            <option>مستشفى شروره العام</option>
+          </optgroup>
+          <optgroup label="📋 من قاعدة البيانات" id="grp-db" style="display:none"></optgroup>
+        </select>
+        <span class="hs-note" id="hospitalHint">⏳ جاري تحميل المستشفيات من النظام...</span>
+      </div>
+
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(this.files[0])">
+        <i class="fas fa-file-excel"></i>
+        <p>اضغط هنا أو اسحب ملف الإكسل</p>
+        <span>يدعم .xlsx و .xls</span>
+      </div>
+
+      <div id="uploadAlert" style="display:none"></div>
+
+      <!-- معاينة -->
+      <div id="previewSection" style="display:none;margin-top:20px">
+
+        <div class="tabs">
+          <div class="tab active" onclick="switchTab('sc')">عقود الباطن (<span id="scCount">0</span>)</div>
+          <div class="tab" onclick="switchTab('co')">المستهلكات (<span id="coCount">0</span>)</div>
+        </div>
+
+        <div id="tab-sc" class="tab-panel active">
+          <div class="preview-wrap">
+            <div class="preview-title">عقود الباطن المستخرجة</div>
+            <table>
+              <thead><tr><th>#</th><th>البيان</th><th>عدد الزيارات سنوياً</th><th>مبلغ العقد السنوي</th></tr></thead>
+              <tbody id="scBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="tab-co" class="tab-panel">
+          <div class="preview-wrap">
+            <div class="preview-title">بنود المستهلكات المستخرجة</div>
+            <table>
+              <thead><tr><th>#</th><th>البيان</th><th>التكلفة الشهرية</th></tr></thead>
+              <tbody id="coBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="saveBtn" onclick="saveAll()">
+            <i class="fas fa-save"></i> حفظ البيانات
+          </button>
+          <button class="btn btn-warning" onclick="resetUpload()">
+            <i class="fas fa-times"></i> إلغاء
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- المحفوظة -->
+  <div class="card">
+    <div class="card-head"><i class="fas fa-hospital"></i> المواقع المحفوظة</div>
+    <div class="card-body" style="padding:0" id="savedListBody">
+      <div class="empty-state"><i class="fas fa-folder-open"></i> جاري التحميل...</div>
+    </div>
+  </div>
+
+</div>
+<footer>© 2025 تجمع نجران الصحي — وحدة الصيانة العامة</footer>
+
+<script>
+let parsedSubcontractors = [];
+let parsedConsumables = [];
+
+// Drag & Drop
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+// قائمة المستشفيات الثابتة (نفس hospitals.tsx)
+const BEYT_HOSPITALS = [
+  'مستشفى يدمة العام','مستشفى حبونا العام','مستشفى بدر الجنوب العام',
+  'مستشفى الولادة والأطفال','مستشفى نجران العام القديم وسكن الممرضات الخارجي',
+  'المكاتب الإدارية والمرافق الصحية','صيانة وإصلاح السيارات والعيادات المتنقلة'
+];
+const SARAKO_HOSPITALS = [
+  'مستشفى نجران العام الجديد','مركز طب الأسنان التخصصي','مجمع الأمل للصحة النفسية',
+  'مستشفى ثار العام','مستشفى خباش العام','المراكز الصحية',
+  'مستشفى الملك خالد','مركز الأمير سلطان','مستشفى شروره العام'
+];
+const ALL_KNOWN = new Set([...BEYT_HOSPITALS, ...SARAKO_HOSPITALS]);
+
+// تحميل المستشفيات من قاعدة البيانات (المسجلة في بروفايل المستخدمين)
+async function loadHospitalsFromUsers() {
+  const hint = document.getElementById('hospitalHint');
+  const grpDb = document.getElementById('grp-db');
+  const sel = document.getElementById('hospitalNameInput');
+  try {
+    const s = JSON.parse(localStorage.getItem('najran_session') || '{}');
+    const token = s.clerkToken || null;
+    const headers = token ? { Authorization: 'Bearer ' + token } : {};
+    const resp = await fetch('/api/users?limit=500', { headers, credentials: 'include' });
+    if (!resp.ok) { hint.textContent = '✓ المستشفيات المعروفة محملة'; return; }
+    const data = await resp.json();
+    const users = data.users || [];
+    const extra = new Set();
+    users.forEach(u => { if (u.hospital && !ALL_KNOWN.has(u.hospital.trim())) extra.add(u.hospital.trim()); });
+    if (extra.size > 0) {
+      grpDb.style.display = '';
+      extra.forEach(h => {
+        const opt = document.createElement('option');
+        opt.value = h; opt.textContent = h;
+        grpDb.appendChild(opt);
+      });
+      hint.textContent = `✓ تم تحميل ${16 + extra.size} مستشفى — اختر من القائمة`;
+    } else {
+      hint.textContent = '✓ جميع المستشفيات المعروفة محملة — اختر من القائمة';
+    }
+  } catch { hint.textContent = '✓ المستشفيات الرئيسية محملة — اختر من القائمة'; }
+
+  // Auto-select hospital from contract data
+  try {
+    const cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+    if (cd.hospitalName) {
+      // حاول التطابق مع أحد الخيارات
+      const opts = Array.from(sel.options);
+      const match = opts.find(o => o.value === cd.hospitalName || o.text === cd.hospitalName);
+      if (match) { sel.value = match.value; }
+    }
+  } catch {}
+}
+
+
+function fmt(n) {
+  if (!n && n !== 0) return '—';
+  return Number(n).toLocaleString('ar-SA');
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'binary' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      parsedSubcontractors = [];
+      parsedConsumables = [];
+
+      let mode = null; // 'sc' | 'co'
+      let scHeaders = {}; // {name, visits, amount}
+      let coHeaders = {}; // {name, monthly}
+
+      for (let r = 0; r < raw.length; r++) {
+        const row = raw[r];
+        const rowStr = row.map(c => String(c).trim()).join(' ');
+        const cells = row.map(c => String(c).trim());
+
+        // Detect subcontractors header
+        if ((rowStr.includes('عدد المرات') || rowStr.includes('مرات سنوياً') || rowStr.includes('مرات سنوية'))
+            && (rowStr.includes('مبلغ') || rowStr.includes('العقد'))) {
+          mode = 'sc';
+          scHeaders.name    = cells.findIndex(c => c === 'البيان' || c === 'بيان');
+          scHeaders.visits  = cells.findIndex(c => c.includes('عدد') && (c.includes('مرات') || c.includes('زيارات')));
+          scHeaders.amount  = cells.findIndex(c => c.includes('مبلغ') || (c.includes('العقد') && !c.includes('عقود')));
+          if (scHeaders.name < 0) scHeaders.name = 0;
+          continue;
+        }
+
+        // Detect consumables header
+        if (rowStr.includes('التكلفة الشهرية') || rowStr.includes('تكلفة شهرية') || rowStr.includes('شهرية')) {
+          if (mode !== 'sc') {
+            mode = 'co';
+          } else {
+            // may be second table
+            mode = 'co';
+          }
+          coHeaders.name    = cells.findIndex(c => c === 'البيان' || c === 'بيان');
+          coHeaders.monthly = cells.findIndex(c => c.includes('شهري') || c.includes('شهرية'));
+          if (coHeaders.name < 0) coHeaders.name = 0;
+          continue;
+        }
+
+        if (!mode) continue;
+
+        // Stop at total rows
+        if (rowStr.includes('إجمالي') || rowStr.includes('الإجمالي') || rowStr.includes('المجموع')) {
+          if (mode === 'sc' && parsedSubcontractors.length > 0) {
+            mode = null; // reset, looking for next table
+          }
+          continue;
+        }
+
+        const nameIdx = mode === 'sc' ? scHeaders.name : coHeaders.name;
+        const name = cells[nameIdx] || '';
+        if (!name || name === 'البيان' || name === 'بيان') continue;
+
+        if (mode === 'sc') {
+          const visits = parseFloat(cells[scHeaders.visits] || '1') || 1;
+          const amount = parseFloat(String(cells[scHeaders.amount] || '0').replace(/,/g, '')) || 0;
+          if (name) parsedSubcontractors.push({ name, annualVisits: visits, contractAmount: amount });
+        } else if (mode === 'co') {
+          const monthly = parseFloat(String(cells[coHeaders.monthly] || '0').replace(/,/g, '')) || 0;
+          if (name) parsedConsumables.push({ name, monthlyCost: monthly });
+        }
+      }
+
+      if (!parsedSubcontractors.length && !parsedConsumables.length) {
+        showAlert('لم يتم العثور على بيانات صالحة — تأكد من وجود الأعمدة الصحيحة في الملف', 'error');
+        return;
+      }
+
+      renderPreview();
+    } catch (err) {
+      showAlert('خطأ في قراءة الملف: ' + err.message, 'error');
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function renderPreview() {
+  const scBody = document.getElementById('scBody');
+  const coBody = document.getElementById('coBody');
+  scBody.innerHTML = '';
+  coBody.innerHTML = '';
+
+  parsedSubcontractors.forEach((s, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td>${s.name}</td><td>${s.annualVisits}</td><td>${fmt(s.contractAmount)}</td>`;
+    scBody.appendChild(tr);
+  });
+
+  parsedConsumables.forEach((c, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td>${c.name}</td><td>${fmt(c.monthlyCost)}</td>`;
+    coBody.appendChild(tr);
+  });
+
+  document.getElementById('scCount').textContent = parsedSubcontractors.length;
+  document.getElementById('coCount').textContent = parsedConsumables.length;
+
+  const warnings = [];
+  if (!parsedSubcontractors.length) warnings.push('لم يتم العثور على جدول عقود الباطن');
+  if (!parsedConsumables.length) warnings.push('لم يتم العثور على جدول المستهلكات');
+
+  if (warnings.length) {
+    showAlert('تحذير: ' + warnings.join(' — '), 'warn');
+  } else {
+    hideAlert();
+  }
+
+  document.getElementById('previewSection').style.display = 'block';
+}
+
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (i === 0 && id === 'sc') || (i === 1 && id === 'co')));
+  document.getElementById('tab-sc').classList.toggle('active', id === 'sc');
+  document.getElementById('tab-co').classList.toggle('active', id === 'co');
+}
+
+async function saveAll() {
+  const hospitalName = document.getElementById('hospitalNameInput').value.trim();
+  if (!hospitalName) {
+    showAlert('يرجى كتابة اسم المستشفى أو الموقع أولاً', 'error');
+    return;
+  }
+  if (!parsedSubcontractors.length && !parsedConsumables.length) {
+    showAlert('لا توجد بيانات للحفظ', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+  // 1. حفظ محلي (localStorage)
+  ContractFoundationDB.save(hospitalName, parsedSubcontractors, parsedConsumables);
+
+  // 2. رفع للسيرفر حتى يراه جميع المستخدمين
+  const serverResult = await ContractFoundationDB.saveToServer(hospitalName, parsedSubcontractors, parsedConsumables);
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-save"></i> حفظ البيانات';
+
+  if (serverResult.ok) {
+    showAlert(
+      `✅ تم رفع البيانات للسيرفر بنجاح — "${hospitalName}" · ${parsedSubcontractors.length} عقد باطن · ${parsedConsumables.length} بند مستهلكات\n` +
+      `🌐 جميع مستخدمي هذا المستشفى سيشاهدون البيانات تلقائياً`,
+      'success'
+    );
+  } else {
+    showAlert(
+      `⚠️ تم الحفظ محلياً، لكن فشل الرفع للسيرفر: ${serverResult.error || 'تأكد من صلاحية الأدمن'}\n` +
+      `البيانات محفوظة على هذا الجهاز فقط.`,
+      'warn'
+    );
+  }
+
+  document.getElementById('previewSection').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+  parsedSubcontractors = [];
+  parsedConsumables = [];
+  renderSavedList();
+}
+
+function resetUpload() {
+  document.getElementById('previewSection').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+  hideAlert();
+  parsedSubcontractors = [];
+  parsedConsumables = [];
+}
+
+async function renderSavedList() {
+  const body = document.getElementById('savedListBody');
+  body.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> جاري التحميل من السيرفر...</div>';
+  try {
+    // اقرأ القائمة من السيرفر أولاً
+    const tok = (() => { try { return JSON.parse(localStorage.getItem('najran_session') || '{}').clerkToken; } catch { return null; } })();
+    const headers = tok ? { Authorization: 'Bearer ' + tok } : {};
+    const resp = await fetch('/api/admin/foundation/list', { headers, credentials: 'include' });
+    let serverList = [];
+    if (resp.ok) {
+      const data = await resp.json();
+      serverList = data.list || [];
+    }
+
+    // أضف أي بيانات محلية غير موجودة على السيرفر
+    const localAll = ContractFoundationDB.loadAll();
+    const serverNames = new Set(serverList.map(r => r.hospitalName));
+    const localOnly = localAll.filter(r => !serverNames.has(r.hospitalName));
+    const combined = [
+      ...serverList.map(r => ({ ...r, fromServer: true })),
+      ...localOnly.map(r => ({ hospitalName: r.hospitalName, subcontractorsCount: r.subcontractors?.length || 0, consumablesCount: r.consumables?.length || 0, savedAt: r.savedAt, fromServer: false })),
+    ];
+
+    if (!combined.length) {
+      body.innerHTML = '<div class="empty-state"><i class="fas fa-folder-open"></i><p>لا توجد مواقع محفوظة بعد</p></div>';
+      return;
+    }
+    body.innerHTML = combined.map(rec => {
+      const date = rec.savedAt ? new Date(rec.savedAt).toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' }) : '—';
+      const storageIcon = rec.fromServer
+        ? '<i class="fas fa-cloud" style="color:#16a34a;margin-left:4px"></i> محفوظ على السيرفر'
+        : '<i class="fas fa-laptop" style="color:#f59e0b;margin-left:4px"></i> محفوظ محلياً فقط';
+      return `<div class="hospital-item">
+        <div>
+          <div class="h-name"><i class="fas fa-hospital" style="color:#1e3c72;margin-left:6px"></i>${rec.hospitalName}</div>
+          <div class="h-meta">${rec.subcontractorsCount} عقد باطن &nbsp;|&nbsp; ${rec.consumablesCount} بند مستهلكات &nbsp;|&nbsp; ${date}</div>
+          <div class="h-meta" style="margin-top:2px;font-size:.77rem">${storageIcon}</div>
+        </div>
+        <div class="h-actions">
+          <button class="btn btn-danger btn-sm" onclick="deleteRec('${rec.hospitalName.replace(/'/g,"\\'")}', ${rec.fromServer})">
+            <i class="fas fa-trash"></i> حذف
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (err) {
+    body.innerHTML = `<div class="empty-state" style="color:#dc2626"><i class="fas fa-exclamation-circle"></i><p>خطأ: ${err.message}</p></div>`;
+  }
+}
+
+async function deleteRec(name, fromServer) {
+  if (!confirm(`هل تريد حذف بيانات تأسيسي "${name}"؟`)) return;
+  ContractFoundationDB.remove(name);
+  if (fromServer) {
+    try {
+      const tok = (() => { try { return JSON.parse(localStorage.getItem('najran_session') || '{}').clerkToken; } catch { return null; } })();
+      const headers = tok ? { Authorization: 'Bearer ' + tok } : {};
+      await fetch('/api/admin/foundation?hospital=' + encodeURIComponent(name), { method: 'DELETE', headers, credentials: 'include' });
+    } catch {}
+  }
+  renderSavedList();
+}
+
+function showAlert(msg, type) {
+  const el = document.getElementById('uploadAlert');
+  el.className = 'alert alert-' + type;
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideAlert() {
+  document.getElementById('uploadAlert').style.display = 'none';
+}
+
+function btnSm() {
+  document.querySelectorAll('.btn-sm').forEach(b => { b.style.padding = '6px 14px'; b.style.fontSize = '.82rem'; });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderSavedList();
+  btnSm();
+  loadHospitalsFromUsers();
+});
+</script>
+<script src="/original/shared-nav.js"></script>
+</body>
+</html>

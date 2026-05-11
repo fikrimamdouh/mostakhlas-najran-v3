@@ -674,8 +674,7 @@
       if (!r || !r.pdfData) { alert('الملف غير موجود'); return; }
       var win = window.open('', '_blank');
       win.document.write(
-        '<!DOCTYPE html><html><head>
-<meta charset="UTF-8"><title>' + (r.fileName||'PDF') + '</title>' +
+        '<!DOCTYPE html><html><head><script src="/original/user-storage-proxy.js"><\/script><meta charset="UTF-8"><title>' + (r.fileName||'PDF') + '</title>' +
         '<style>body,html{margin:0;padding:0;height:100%;background:#1a1a2e;}' +
         'iframe{width:100%;height:100%;border:none;}</style></head>' +
         '<body><iframe src="' + r.pdfData + '"></iframe></body></html>'
@@ -1040,6 +1039,7 @@
 
     const pw = window.open('', '_blank', 'width=900,height=700');
     pw.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head>
+<script src="/original/user-storage-proxy.js"><\/script>
       <meta charset="UTF-8">
       <title>بطاقة مستخلص — دفعة ${snap.paymentNumber}</title>
       <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">

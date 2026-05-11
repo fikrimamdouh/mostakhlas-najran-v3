@@ -37,6 +37,8 @@
     'najran_health_attendance_done', 'najran_admin_offices_attendance_done',
     'adminOfficeNames_v1', 'adminOfficesAttendanceData_v1',
     'admin_offices_consumables_v1.0',
+    // بيانات التأسيسي (عقود الباطن + المستهلكات) — يرفعها الأدمن وتُوزَّع على كل مستخدمي المستشفى
+    'contract_foundation_data',
     // مفاتيح شخصية تبقى خاصة بالمستخدم
     'backupLog', 'backupLogs',
   ];

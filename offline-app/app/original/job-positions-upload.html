@@ -2,6 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
 <script src="/original/offline-user-proxy.js"></script>
+<script src="/original/offline-auth-check.js"></script>
+<script src="/original/offline-cloud-sync.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>رفع مناصب الوظائف — تجمع نجران الصحي</title>
@@ -92,6 +94,24 @@ footer{text-align:center;padding:20px;color:#9ca3af;font-size:.8rem}
 </style>
 </head>
 <body>
+
+<!-- nav-bar hidden — يستخدمها shared-nav.js لبناء القائمة العلوية -->
+<div class="nav-bar" style="display:none">
+  <div class="dropdown">
+    <select id="navigation">
+      <option value="#">-- اختر صفحة --</option>
+      <option value="index.html">الصفحة الرئيسية</option>
+      <option value="attendance.html">الحضور والانصراف</option>
+      <option value="performance.html">شهادة الأداء</option>
+      <option value="achievement.html">شهادة الإنجاز</option>
+      <option value="consumables.html">مستخلص المستهلكات</option>
+      <option value="spare_parts.html">مستخلص قطع الغيار</option>
+      <option value="approval.html">✅ متابعة المستخلصات</option>
+      <option value="admin-dashboard.html">🛡️ لوحة الأدمن</option>
+      <option value="extract-archive.html">🗂️ أرشيف المستخلصات</option>
+    </select>
+  </div>
+</div>
 
 <div class="header">
   <img src="najran_health_cluster_logo.png" alt="شعار" onerror="this.style.display='none'">
@@ -345,6 +365,7 @@ function resetUpload() {
 // ====== قائمة المحفوظة ======
 async function renderSavedList() {
   const container = document.getElementById('savedListBody');
+  container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> جاري التحميل من السيرفر...</div>';
   try {
     const all = await JobPositionsDB.loadAll();
     if (!all.length) {
@@ -352,22 +373,25 @@ async function renderSavedList() {
       return;
     }
     container.innerHTML = all.map(rec => {
-      const count = rec.rows ? rec.rows.length : 0;
-      const cost  = rec.rows ? rec.rows.reduce((s, r) => s + (r.salary || 0), 0) : 0;
-      const depts = rec.rows ? [...new Set(rec.rows.map(r => DEPT_LABELS[r.dept] || r.dept))].join(' / ') : '';
+      // من السيرفر: count + totalCost | من IndexedDB: rows[]
+      const count = rec.count != null ? rec.count : (rec.rows ? rec.rows.length : 0);
+      const cost  = rec.totalCost != null ? rec.totalCost : (rec.rows ? rec.rows.reduce((s, r) => s + (r.salary || 0), 0) : 0);
       const date  = rec.savedAt ? new Date(rec.savedAt).toLocaleDateString('ar-SA') : '';
       return `
         <div class="hospital-item">
           <div>
             <div class="h-name"><i class="fas fa-hospital-alt" style="color:#1e3c72;margin-left:6px"></i>${rec.hospitalName}</div>
-            <div class="h-meta">${count} منصب | ${cost.toLocaleString('ar-SA')} ﷼ | ${depts}</div>
-            <div class="h-meta" style="margin-top:2px"><i class="fas fa-clock" style="margin-left:4px"></i>آخر تحديث: ${date}</div>
+            <div class="h-meta">${count} منصب | ${cost.toLocaleString('ar-SA')} ﷼</div>
+            <div class="h-meta" style="margin-top:2px"><i class="fas fa-cloud" style="color:#16a34a;margin-left:4px"></i>محفوظ على السيرفر &nbsp;|&nbsp; <i class="fas fa-clock" style="margin-left:4px"></i>آخر تحديث: ${date}</div>
           </div>
           <div class="h-actions">
-            <button class="btn btn-warning btn-sm" onclick="viewHospital('${rec.hospitalName}')">
+            <button class="btn btn-primary btn-sm" onclick="downloadHospitalTemplate('${rec.hospitalName.replace(/'/g,"\\'")}')">
+              <i class="fas fa-file-download"></i> تنزيل التامبلت
+            </button>
+            <button class="btn btn-warning btn-sm" onclick="viewHospital('${rec.hospitalName.replace(/'/g,"\\'")}')">
               <i class="fas fa-eye"></i> عرض
             </button>
-            <button class="btn btn-danger btn-sm" onclick="deleteHospital('${rec.hospitalName}')">
+            <button class="btn btn-danger btn-sm" onclick="deleteHospital('${rec.hospitalName.replace(/'/g,"\\'")}')">
               <i class="fas fa-trash"></i> حذف
             </button>
           </div>
@@ -382,27 +406,73 @@ async function viewHospital(name) {
   const rec = await JobPositionsDB.load(name);
   if (!rec) return;
   const rows = rec.rows || [];
-  const win  = window.open('', '_blank', 'width=900,height=600');
-  win.document.write(`
-    <html lang="ar" dir="rtl"><head>
-<meta charset="UTF-8"><title>${name}</title>
-    <style>body{font-family:Arial,sans-serif;padding:20px;direction:rtl}
-    h2{color:#1e3c72;margin-bottom:16px}
-    table{border-collapse:collapse;width:100%;font-size:.9rem}
-    th{background:#1e3c72;color:#fff;padding:9px 12px;text-align:right}
-    td{padding:8px 12px;border-bottom:1px solid #e5e7eb}
-    tr:nth-child(even){background:#f8faff}</style></head><body>
-    <h2>مناصب وظائف: ${name}</h2>
-    <table><thead><tr><th>#</th><th>القسم</th><th>مسمى الوظيفة</th><th>التكلفة الشهرية</th><th>الفئة</th><th>الجنسية</th></tr></thead>
-    <tbody>${rows.map((r, i) => `<tr><td>${i+1}</td><td>${DEPT_LABELS[r.dept]||r.dept}</td><td>${r.jobTitle}</td><td>${(r.salary||0).toLocaleString('ar-SA')} ﷼</td><td>${r.category||1}</td><td>${r.nationality||'—'}</td></tr>`).join('')}</tbody></table>
-    </body></html>`);
-  win.document.close();
+  // عرض داخل الصفحة بدلاً من نافذة منبثقة (متوافق مع iframe)
+  const existing = document.getElementById('viewModal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'viewModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:14px;max-width:860px;width:100%;max-height:85vh;overflow:auto;padding:28px;direction:rtl">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h2 style="color:#1e3c72;font-size:1.1rem">مناصب وظائف: ${name} (${rows.length} منصب)</h2>
+        <button onclick="document.getElementById('viewModal').remove()" style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:6px 16px;cursor:pointer;font-size:.9rem">✕ إغلاق</button>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:.88rem">
+        <thead><tr style="background:#1e3c72;color:#fff">
+          <th style="padding:9px 12px;text-align:right">#</th>
+          <th style="padding:9px 12px;text-align:right">القسم</th>
+          <th style="padding:9px 12px;text-align:right">مسمى الوظيفة</th>
+          <th style="padding:9px 12px;text-align:right">التكلفة الشهرية</th>
+          <th style="padding:9px 12px;text-align:right">الفئة</th>
+          <th style="padding:9px 12px;text-align:right">الجنسية</th>
+        </tr></thead>
+        <tbody>${rows.map((r, i) => `<tr style="background:${i%2?'#f8faff':'#fff'}">
+          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${i+1}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${DEPT_LABELS[r.dept]||r.dept}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${r.jobTitle||'—'}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${(r.salary||0).toLocaleString('ar-SA')} ﷼</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${r.category||1}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${r.nationality||'—'}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 }
 
 async function deleteHospital(name) {
   if (!confirm(`هل تريد حذف مناصب "${name}"؟ لا يمكن التراجع.`)) return;
   await JobPositionsDB.remove(name);
   renderSavedList();
+}
+
+// ====== تنزيل التامبلت ======
+async function downloadHospitalTemplate(hospitalName) {
+  if (typeof XLSX === 'undefined') {
+    alert('مكتبة Excel غير محملة، يرجى تحديث الصفحة');
+    return;
+  }
+  const rec = await JobPositionsDB.load(hospitalName);
+  if (!rec || !rec.rows || !rec.rows.length) {
+    alert('لا توجد مناصب محفوظة لـ "' + hospitalName + '"');
+    return;
+  }
+  const headers = ['اسم الموظف', 'رقم الهوية / الإقامة', 'القسم', 'مسمى الوظيفة', 'التكلفة الشهرية', 'الفئة', 'الجنسية'];
+  const rows = rec.rows.map(r => [
+    '',
+    '',
+    DEPT_LABELS[r.dept] || r.dept,
+    r.jobTitle || '',
+    r.salary || 0,
+    r.category || '1',
+    r.nationality || 'غير سعودي',
+  ]);
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws['!cols'] = [{wch:25},{wch:20},{wch:30},{wch:18},{wch:8},{wch:15}];
+  XLSX.utils.book_append_sheet(wb, ws, hospitalName.substring(0, 31));
+  XLSX.writeFile(wb, 'تامبلت-' + hospitalName + '.xlsx');
 }
 
 // ====== الإشعارات ======
@@ -417,5 +487,6 @@ function showAlert(msg, type) {
 // ====== تحميل أولي ======
 renderSavedList();
 </script>
+<script src="/original/shared-nav.js"></script>
 </body>
 </html>
