@@ -67,32 +67,30 @@ router.post("/reset-system", requireAuth, requireAdmin, async (req: any, res: an
     return res.status(400).json({ error: "يجب إرسال جملة التأكيد الصحيحة" });
   }
 
+  const errors: string[] = [];
+  const tryDelete = async (label: string, fn: () => Promise<any>) => {
+    try { await fn(); } catch (e: any) { errors.push(`${label}: ${e.message}`); req.log.warn(e, `reset-system: skipped ${label}`); }
+  };
+
+  await tryDelete("extract_revisions", () => db.execute(`DELETE FROM extract_revisions`));
+  await tryDelete("submitted_extracts", () => db.delete(submittedExtractsTable));
+  await tryDelete("user_storage", () => db.delete(userStorageTable));
+  await tryDelete("hospital_storage", () => db.delete(hospitalStorageTable));
+  await tryDelete("audit_log", () => db.delete(auditLogTable));
+  await tryDelete("extracts", () => db.delete(extractsTable));
+  await tryDelete("projects", () => db.delete(projectsTable));
+  await tryDelete("scheduled_backups", () => db.execute(`DELETE FROM scheduled_backups`));
+  await tryDelete("visit_requests", () => db.execute(`DELETE FROM visit_requests`));
+
   try {
-    // Delete all submitted extracts
-    await db.delete(submittedExtractsTable);
-
-    // Delete all user storage (cloud localStorage)
-    await db.delete(userStorageTable);
-
-    // Delete all hospital shared storage (attendance, consumables, etc.)
-    await db.delete(hospitalStorageTable);
-
-    // Delete all audit logs
-    await db.delete(auditLogTable);
-
-    // Delete all old extracts & projects
-    await db.delete(extractsTable);
-    await db.delete(projectsTable);
-
-    // Delete all users EXCEPT the current admin
     await db.delete(usersTable).where(ne(usersTable.id, req.currentUser.id));
-
-    req.log.info({ adminId: req.currentUser.id }, "System reset performed");
-    return res.json({ ok: true, message: "تمت تهيئة النظام بنجاح" });
   } catch (err: any) {
-    req.log.error(err, "System reset failed");
-    return res.status(500).json({ error: "فشل في تهيئة النظام" });
+    req.log.error(err, "System reset: failed to delete users");
+    return res.status(500).json({ error: "فشل في حذف المستخدمين" });
   }
+
+  req.log.info({ adminId: req.currentUser.id, skipped: errors }, "System reset performed");
+  return res.json({ ok: true, message: "تمت تهيئة النظام بنجاح", skipped: errors });
 });
 
 // POST /api/admin/test-email — send a test admin notification email to verify delivery
