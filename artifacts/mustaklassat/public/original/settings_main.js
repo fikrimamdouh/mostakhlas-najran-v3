@@ -937,6 +937,7 @@ function renderHospitalPicker() {
 function autoFillFromSession() {
     try {
         var session = _getSession();
+        console.log('[autoFill] session.hospital=', session && session.hospital, '| session.company=', session && session.company);
         if (!session) return;
 
         var contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
