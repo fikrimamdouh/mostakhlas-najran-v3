@@ -850,6 +850,34 @@ var COMPANY_LABELS_MAP = {
     'سراكو':      'شركة سراكو',
 };
 
+// خريطة: اسم المستشفى → اسم الشركة الكامل
+var HOSPITAL_COMPANY_MAP = {
+    'مستشفى يدمه العام':                                        'شركة مجموعة بيت العرب الحديثة المحدودة',
+    'مستشفى حبونا العام':                                       'شركة مجموعة بيت العرب الحديثة المحدودة',
+    'مستشفى بدر الجنوب العام':                                  'شركة مجموعة بيت العرب الحديثة المحدودة',
+    'مستشفى الولادة والأطفال':                                  'شركة مجموعة بيت العرب الحديثة المحدودة',
+    'مستشفى نجران العام القديم وسكن الممرضات الخارجي':         'شركة مجموعة بيت العرب الحديثة المحدودة',
+    'المكاتب الإدارية والمرافق الصحية':                        'شركة مجموعة بيت العرب الحديثة المحدودة',
+    'صيانة وإصلاح السيارات والعيادات المتنقلة':                 'شركة مجموعة بيت العرب الحديثة المحدودة',
+    'مستشفى نجران العام الجديد':                                'شركة سراكو',
+    'مركز طب الأسنان التخصصي':                                  'شركة سراكو',
+    'مجمع الأمل للصحة النفسية':                                 'شركة سراكو',
+    'مستشفى ثار العام':                                         'شركة سراكو',
+    'مستشفى خباش العام':                                        'شركة سراكو',
+    'المراكز الصحية':                                           'شركة سراكو',
+    'مستشفى الملك خالد':                                        'شركة سراكو',
+    'مركز الأمير سلطان':                                        'شركة سراكو',
+    'مستشفى شروره العام':                                       'شركة سراكو',
+};
+
+// إرجاع اسم الشركة الكامل من الجلسة أو من اسم المستشفى
+function _resolveCompanyName(session, hospitalName) {
+    if (session && session.company && COMPANY_LABELS_MAP[session.company]) {
+        return COMPANY_LABELS_MAP[session.company];
+    }
+    return HOSPITAL_COMPANY_MAP[hospitalName] || '';
+}
+
 // ── قراءة بيانات الجلسة الحالية ──────────────────────────────────────────────
 function _getSession() {
     try {
@@ -891,8 +919,7 @@ function switchHospital(hospitalName) {
     } else {
         // بيانات جديدة للمستشفى: اسم المستشفى + اسم الشركة + باقي البيانات المشتركة
         var oldData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-        var fullCompanyNew = COMPANY_LABELS_MAP[(session.company || '')] ||
-                            (session.company || '').replace(/_/g, ' ');
+        var fullCompanyNew = _resolveCompanyName(session, hospitalName);
         var freshData = {
             hospitalName:           hospitalName,
             companyName:            fullCompanyNew,
@@ -920,8 +947,7 @@ function switchHospital(hospitalName) {
     var newData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
     if (_cd) _cd.value = newData.contractDetails || '';
 
-    var fullCompanyFinal = COMPANY_LABELS_MAP[(session.company || '')] ||
-                           (session.company || '').replace(/_/g, ' ');
+    var fullCompanyFinal = _resolveCompanyName(session, hospitalName);
     var _cn = document.getElementById('company-name');
     if (_cn) _cn.value = fullCompanyFinal;
 
@@ -980,14 +1006,11 @@ function autoFillFromSession() {
             changed = true;
         }
 
-        // اسم الشركة — يُزامَن دائماً من الجلسة (كما يُزامَن المستشفى)
-        if (session.company) {
-            var fullCompany = COMPANY_LABELS_MAP[session.company] ||
-                session.company.replace(/_/g, ' ');
-            if (contractData.companyName !== fullCompany) {
-                contractData.companyName = fullCompany;
-                changed = true;
-            }
+        // اسم الشركة — من الجلسة أو من اسم المستشفى إن كانت الجلسة فارغة
+        var fullCompany = _resolveCompanyName(session, session.hospital || '');
+        if (fullCompany && contractData.companyName !== fullCompany) {
+            contractData.companyName = fullCompany;
+            changed = true;
         }
 
         // رقم العقد — يُملأ فقط لو فارغ
@@ -1007,9 +1030,8 @@ function autoFillFromSession() {
             var _hn = document.getElementById('hospital-name');
             if (_hn) _hn.value = session.hospital;
         }
-        if (session.company) {
-            var _fullCo = COMPANY_LABELS_MAP[session.company] ||
-                session.company.replace(/_/g, ' ');
+        var _fullCo = _resolveCompanyName(session, session.hospital || '');
+        if (_fullCo) {
             var _cn = document.getElementById('company-name');
             if (_cn) _cn.value = _fullCo;
         }
