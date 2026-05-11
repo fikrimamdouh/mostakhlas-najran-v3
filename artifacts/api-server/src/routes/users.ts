@@ -295,6 +295,25 @@ router.patch("/:userId/modules", requireAuth, requireAdmin, async (req: any, res
   }
 });
 
+// PATCH /api/users/me/hospital — يجب أن يكون قبل /:userId/hospital حتى لا يُطابقه Express
+router.patch("/me/hospital", requireAuth, async (req: any, res) => {
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const { hospital } = req.body;
+    if (!hospital) return res.status(400).json({ error: "hospital required" });
+    const allowed: string[] = user.hospitals ? JSON.parse(user.hospitals) : (user.hospital ? [user.hospital] : []);
+    if (!allowed.includes(hospital) && user.role !== "admin") {
+      return res.status(403).json({ error: "Not allowed for this hospital" });
+    }
+    const [updated] = await db.update(usersTable).set({ hospital }).where(eq(usersTable.id, user.id)).returning();
+    return res.json(updated);
+  } catch (err) {
+    req.log.error({ err }, "Failed to switch hospital");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // PATCH /api/users/:userId/hospital - admin only
 router.patch("/:userId/hospital", requireAuth, requireAdmin, async (req: any, res) => {
   try {
@@ -310,25 +329,6 @@ router.patch("/:userId/hospital", requireAuth, requireAdmin, async (req: any, re
     return res.json(user);
   } catch (err) {
     req.log.error({ err }, "Failed to update hospital");
-    return res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// PATCH /api/users/me/hospital — user switches their active hospital (must be in hospitals list)
-router.patch("/me/hospital", requireAuth, async (req: any, res) => {
-  try {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
-    if (!user) return res.status(404).json({ error: "User not found" });
-    const { hospital } = req.body;
-    if (!hospital) return res.status(400).json({ error: "hospital required" });
-    const allowed: string[] = user.hospitals ? JSON.parse(user.hospitals) : (user.hospital ? [user.hospital] : []);
-    if (!allowed.includes(hospital) && user.role !== "admin") {
-      return res.status(403).json({ error: "Not allowed for this hospital" });
-    }
-    const [updated] = await db.update(usersTable).set({ hospital }).where(eq(usersTable.id, user.id)).returning();
-    return res.json(updated);
-  } catch (err) {
-    req.log.error({ err }, "Failed to switch hospital");
     return res.status(500).json({ error: "Internal server error" });
   }
 });
