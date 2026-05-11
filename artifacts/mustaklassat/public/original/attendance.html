@@ -1938,6 +1938,8 @@ async function loadJobPositionsFromTemplate() {
   const summary = Object.entries(byDept).map(([k,v]) => '• ' + (deptLabels[k]||k) + ': ' + v.length + ' منصب').join('\n');
   if (!confirm('وُجدت ' + rows.length + ' منصب وظيفي لـ "' + hospitalName + '":\n\n' + summary + '\n\nهل تريد تحميلها؟\n(سيتم إضافة صفوف تنتظر إدخال اسم الموظف)')) return;
   try {
+    var daysCount = 30;
+    try { if (typeof getExtractPeriodDetails === 'function') daysCount = getExtractPeriodDetails().daysInMonth || 30; } catch(_){}
     const allData = getAttendanceData();
     let added = 0;
     rows.forEach(r => {
@@ -1946,14 +1948,15 @@ async function loadJobPositionsFromTemplate() {
       allData[r.dept].push({
         name: '', jobTitle: r.jobTitle || '', category: String(r.category || '1'),
         salary: parseFloat(r.salary) || 0, nationality: r.nationality || 'غير سعودي',
-        iqamaId: '_tpl_' + Date.now() + '_' + Math.random().toString(36).slice(2),
-        days: {}, attendance: {}
+        nationalityFine: 0,
+        iqamaId: '',
+        days: Array(daysCount).fill('ح')
       });
       added++;
     });
     saveAttendanceData(allData);
     renderTables();
-    alert('✅ تم تحميل ' + added + ' منصب بنجاح.\nأدخل أسماء الموظفين في خانة "اسم شاغل الوظيفة".');
+    alert('✅ تم تحميل ' + added + ' منصب بنجاح.\nأدخل أسماء الموظفين وأرقام الهويات في الجداول أدناه.');
   } catch (err) {
     alert('خطأ في تحميل المناصب: ' + err.message);
   }
