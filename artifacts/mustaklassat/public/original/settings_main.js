@@ -970,6 +970,20 @@ function autoFillFromSession() {
             updateMainHospitalName();
         }
 
+        // ── تحديث DOM مباشرة — بضمان مستقل عن localStorage وعن changed ──
+        // يضمن ظهور البيانات حتى لو كانت persistentContractData محدّثة
+        // ولكن DOM لم يُحدَّث بعد لأي سبب (timing، overwrite، إلخ)
+        if (session.hospital) {
+            var _hn = document.getElementById('hospital-name');
+            if (_hn) _hn.value = session.hospital;
+        }
+        if (session.company) {
+            var _fullCo = COMPANY_LABELS_MAP[session.company] ||
+                session.company.replace(/_/g, ' ');
+            var _cn = document.getElementById('company-name');
+            if (_cn) _cn.value = _fullCo;
+        }
+
         // اعرض منتقي المستشفى دائماً
         renderHospitalPicker();
     } catch (e) { /* تجاهل أي خطأ */ }
