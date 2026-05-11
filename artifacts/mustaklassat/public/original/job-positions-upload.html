@@ -365,6 +365,7 @@ function resetUpload() {
 // ====== قائمة المحفوظة ======
 async function renderSavedList() {
   const container = document.getElementById('savedListBody');
+  container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> جاري التحميل من السيرفر...</div>';
   try {
     const all = await JobPositionsDB.loadAll();
     if (!all.length) {
@@ -372,16 +373,16 @@ async function renderSavedList() {
       return;
     }
     container.innerHTML = all.map(rec => {
-      const count = rec.rows ? rec.rows.length : 0;
-      const cost  = rec.rows ? rec.rows.reduce((s, r) => s + (r.salary || 0), 0) : 0;
-      const depts = rec.rows ? [...new Set(rec.rows.map(r => DEPT_LABELS[r.dept] || r.dept))].join(' / ') : '';
+      // من السيرفر: count + totalCost | من IndexedDB: rows[]
+      const count = rec.count != null ? rec.count : (rec.rows ? rec.rows.length : 0);
+      const cost  = rec.totalCost != null ? rec.totalCost : (rec.rows ? rec.rows.reduce((s, r) => s + (r.salary || 0), 0) : 0);
       const date  = rec.savedAt ? new Date(rec.savedAt).toLocaleDateString('ar-SA') : '';
       return `
         <div class="hospital-item">
           <div>
             <div class="h-name"><i class="fas fa-hospital-alt" style="color:#1e3c72;margin-left:6px"></i>${rec.hospitalName}</div>
-            <div class="h-meta">${count} منصب | ${cost.toLocaleString('ar-SA')} ﷼ | ${depts}</div>
-            <div class="h-meta" style="margin-top:2px"><i class="fas fa-clock" style="margin-left:4px"></i>آخر تحديث: ${date}</div>
+            <div class="h-meta">${count} منصب | ${cost.toLocaleString('ar-SA')} ﷼</div>
+            <div class="h-meta" style="margin-top:2px"><i class="fas fa-cloud" style="color:#16a34a;margin-left:4px"></i>محفوظ على السيرفر &nbsp;|&nbsp; <i class="fas fa-clock" style="margin-left:4px"></i>آخر تحديث: ${date}</div>
           </div>
           <div class="h-actions">
             <button class="btn btn-primary btn-sm" onclick="downloadHospitalTemplate('${rec.hospitalName.replace(/'/g,"\\'")}')">

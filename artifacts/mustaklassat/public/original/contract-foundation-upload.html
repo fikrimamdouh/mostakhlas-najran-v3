@@ -473,32 +473,66 @@ function resetUpload() {
   parsedConsumables = [];
 }
 
-function renderSavedList() {
+async function renderSavedList() {
   const body = document.getElementById('savedListBody');
-  const all = ContractFoundationDB.loadAll();
-  if (!all.length) {
-    body.innerHTML = '<div class="empty-state"><i class="fas fa-folder-open"></i><p>لا توجد مواقع محفوظة بعد</p></div>';
-    return;
+  body.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> جاري التحميل من السيرفر...</div>';
+  try {
+    // اقرأ القائمة من السيرفر أولاً
+    const tok = (() => { try { return JSON.parse(localStorage.getItem('najran_session') || '{}').clerkToken; } catch { return null; } })();
+    const headers = tok ? { Authorization: 'Bearer ' + tok } : {};
+    const resp = await fetch('/api/admin/foundation/list', { headers, credentials: 'include' });
+    let serverList = [];
+    if (resp.ok) {
+      const data = await resp.json();
+      serverList = data.list || [];
+    }
+
+    // أضف أي بيانات محلية غير موجودة على السيرفر
+    const localAll = ContractFoundationDB.loadAll();
+    const serverNames = new Set(serverList.map(r => r.hospitalName));
+    const localOnly = localAll.filter(r => !serverNames.has(r.hospitalName));
+    const combined = [
+      ...serverList.map(r => ({ ...r, fromServer: true })),
+      ...localOnly.map(r => ({ hospitalName: r.hospitalName, subcontractorsCount: r.subcontractors?.length || 0, consumablesCount: r.consumables?.length || 0, savedAt: r.savedAt, fromServer: false })),
+    ];
+
+    if (!combined.length) {
+      body.innerHTML = '<div class="empty-state"><i class="fas fa-folder-open"></i><p>لا توجد مواقع محفوظة بعد</p></div>';
+      return;
+    }
+    body.innerHTML = combined.map(rec => {
+      const date = rec.savedAt ? new Date(rec.savedAt).toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' }) : '—';
+      const storageIcon = rec.fromServer
+        ? '<i class="fas fa-cloud" style="color:#16a34a;margin-left:4px"></i> محفوظ على السيرفر'
+        : '<i class="fas fa-laptop" style="color:#f59e0b;margin-left:4px"></i> محفوظ محلياً فقط';
+      return `<div class="hospital-item">
+        <div>
+          <div class="h-name"><i class="fas fa-hospital" style="color:#1e3c72;margin-left:6px"></i>${rec.hospitalName}</div>
+          <div class="h-meta">${rec.subcontractorsCount} عقد باطن &nbsp;|&nbsp; ${rec.consumablesCount} بند مستهلكات &nbsp;|&nbsp; ${date}</div>
+          <div class="h-meta" style="margin-top:2px;font-size:.77rem">${storageIcon}</div>
+        </div>
+        <div class="h-actions">
+          <button class="btn btn-danger btn-sm" onclick="deleteRec('${rec.hospitalName.replace(/'/g,"\\'")}', ${rec.fromServer})">
+            <i class="fas fa-trash"></i> حذف
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (err) {
+    body.innerHTML = `<div class="empty-state" style="color:#dc2626"><i class="fas fa-exclamation-circle"></i><p>خطأ: ${err.message}</p></div>`;
   }
-  body.innerHTML = all.map(rec => {
-    const date = rec.savedAt ? new Date(rec.savedAt).toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' }) : '—';
-    return `<div class="hospital-item">
-      <div>
-        <div class="h-name"><i class="fas fa-hospital" style="color:#1e3c72;margin-left:6px"></i>${rec.hospitalName}</div>
-        <div class="h-meta">${rec.subcontractors.length} عقد باطن &nbsp;|&nbsp; ${rec.consumables.length} بند مستهلكات &nbsp;|&nbsp; ${date}</div>
-      </div>
-      <div class="h-actions">
-        <button class="btn btn-danger btn-sm" onclick="deleteRec('${rec.hospitalName.replace(/'/g,"\\'")}')">
-          <i class="fas fa-trash"></i> حذف
-        </button>
-      </div>
-    </div>`;
-  }).join('');
 }
 
-function deleteRec(name) {
+async function deleteRec(name, fromServer) {
   if (!confirm(`هل تريد حذف بيانات تأسيسي "${name}"؟`)) return;
   ContractFoundationDB.remove(name);
+  if (fromServer) {
+    try {
+      const tok = (() => { try { return JSON.parse(localStorage.getItem('najran_session') || '{}').clerkToken; } catch { return null; } })();
+      const headers = tok ? { Authorization: 'Bearer ' + tok } : {};
+      await fetch('/api/admin/foundation?hospital=' + encodeURIComponent(name), { method: 'DELETE', headers, credentials: 'include' });
+    } catch {}
+  }
   renderSavedList();
 }
 

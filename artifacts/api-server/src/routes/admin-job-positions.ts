@@ -1,11 +1,17 @@
+/**
+ * admin-job-positions.ts — حفظ وجلب مناصب الوظائف من السيرفر
+ * POST /api/admin/job-positions           — حفظ مناصب مستشفى
+ * GET  /api/admin/job-positions?hospital= — جلب مناصب مستشفى
+ * GET  /api/admin/job-positions/list      — قائمة جميع المستشفيات
+ * DELETE /api/admin/job-positions?hospital= — حذف مستشفى
+ */
 import { Router } from "express";
 import { db, usersTable, hospitalStorageTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
-
-const FOUNDATION_KEY = "contract_foundation_data";
+const JOB_KEY = "job_positions_data";
 
 const requireAdmin = async (req: any, res: any, next: any) => {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
@@ -14,33 +20,24 @@ const requireAdmin = async (req: any, res: any, next: any) => {
   next();
 };
 
-// POST /api/admin/foundation — admin saves foundation data for a named hospital
-// Body: { hospitalName, subcontractors: [...], consumables: [...] }
+// POST /api/admin/job-positions — حفظ/تحديث مناصب مستشفى
 router.post("/", requireAuth, requireAdmin, async (req: any, res: any) => {
   try {
-    const { hospitalName, subcontractors, consumables } = req.body as {
-      hospitalName?: string;
-      subcontractors?: unknown[];
-      consumables?: unknown[];
-    };
-
-    if (!hospitalName?.trim()) {
-      return res.status(400).json({ error: "hospitalName مطلوب" });
-    }
+    const { hospitalName, rows } = req.body as { hospitalName?: string; rows?: unknown[] };
+    if (!hospitalName?.trim()) return res.status(400).json({ error: "hospitalName مطلوب" });
+    if (!Array.isArray(rows) || rows.length === 0) return res.status(400).json({ error: "rows مطلوب" });
 
     const rec = {
       hospitalName: hospitalName.trim(),
-      subcontractors: subcontractors || [],
-      consumables: consumables || [],
+      rows,
       savedAt: new Date().toISOString(),
       savedByAdmin: req.currentUser.email,
     };
 
-    await db
-      .insert(hospitalStorageTable)
+    await db.insert(hospitalStorageTable)
       .values({
         hospitalName: hospitalName.trim(),
-        storageKey: FOUNDATION_KEY,
+        storageKey: JOB_KEY,
         storageValue: JSON.stringify(rec),
         updatedAt: new Date(),
         updatedByUserId: req.currentUser.id,
@@ -54,107 +51,90 @@ router.post("/", requireAuth, requireAdmin, async (req: any, res: any) => {
         },
       });
 
-    req.log.info(
-      { hospitalName: hospitalName.trim(), sc: rec.subcontractors.length, co: rec.consumables.length, admin: req.currentUser.email },
-      "Foundation data saved"
-    );
-
-    return res.json({
-      ok: true,
-      hospitalName: hospitalName.trim(),
-      count: { subcontractors: rec.subcontractors.length, consumables: rec.consumables.length },
-    });
+    req.log.info({ hospital: hospitalName.trim(), count: rows.length, admin: req.currentUser.email }, "Job positions saved");
+    return res.json({ ok: true, hospitalName: hospitalName.trim(), count: rows.length });
   } catch (err) {
-    req.log.error({ err }, "Failed to save foundation data");
+    req.log.error({ err }, "Failed to save job positions");
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// GET /api/admin/foundation?hospital=<name> — get foundation data for a hospital (admin reads any, users read own)
+// GET /api/admin/job-positions?hospital=<name>
 router.get("/", requireAuth, async (req: any, res: any) => {
   try {
     const [dbUser] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
     if (!dbUser || dbUser.status !== "approved") return res.status(403).json({ error: "Forbidden" });
 
-    // Admin can query any hospital; regular users are restricted to their own hospital
     let hospitalName: string;
     if (dbUser.role === "admin") {
       hospitalName = ((req.query["hospital"] as string) || "").trim();
-      if (!hospitalName) return res.status(400).json({ error: "hospital query param required for admin" });
+      if (!hospitalName) return res.status(400).json({ error: "hospital query param required" });
     } else {
-      if (!dbUser.hospital?.trim()) return res.json({ hospitalName: null, subcontractors: [], consumables: [] });
+      if (!dbUser.hospital?.trim()) return res.json({ hospitalName: null, rows: [] });
       hospitalName = dbUser.hospital.trim();
     }
 
-    const [row] = await db
-      .select()
-      .from(hospitalStorageTable)
-      .where(eq(hospitalStorageTable.hospitalName, hospitalName))
+    const [row] = await db.select().from(hospitalStorageTable)
+      .where(and(eq(hospitalStorageTable.hospitalName, hospitalName), eq(hospitalStorageTable.storageKey, JOB_KEY)))
       .limit(1);
 
-    if (!row) return res.json({ hospitalName, subcontractors: [], consumables: [], savedAt: null });
-
+    if (!row) return res.json({ hospitalName, rows: [], savedAt: null });
     try {
-      const parsed = JSON.parse(row.storageValue);
-      return res.json(parsed);
+      return res.json(JSON.parse(row.storageValue));
     } catch {
-      return res.json({ hospitalName, subcontractors: [], consumables: [], savedAt: null });
+      return res.json({ hospitalName, rows: [], savedAt: null });
     }
   } catch (err) {
-    req.log.error({ err }, "Failed to get foundation data");
+    req.log.error({ err }, "Failed to get job positions");
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// GET /api/admin/foundation/list — admin lists all hospitals that have foundation data
+// GET /api/admin/job-positions/list
 router.get("/list", requireAuth, async (req: any, res: any) => {
   try {
     const [dbUser] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
     if (!dbUser || dbUser.role !== "admin") return res.status(403).json({ error: "Admin only" });
 
-    const rows = await db
-      .select()
-      .from(hospitalStorageTable)
-      .where(eq(hospitalStorageTable.storageKey, FOUNDATION_KEY));
+    const rows = await db.select().from(hospitalStorageTable)
+      .where(eq(hospitalStorageTable.storageKey, JOB_KEY));
 
     const list = rows.map(r => {
       try {
         const parsed = JSON.parse(r.storageValue);
+        const totalCost = (parsed.rows || []).reduce((s: number, x: any) => s + (x.salary || 0), 0);
         return {
           hospitalName: r.hospitalName,
-          subcontractorsCount: parsed.subcontractors?.length || 0,
-          consumablesCount: parsed.consumables?.length || 0,
+          count: parsed.rows?.length || 0,
+          totalCost,
           savedAt: parsed.savedAt || null,
           savedByAdmin: parsed.savedByAdmin || null,
         };
       } catch {
-        return { hospitalName: r.hospitalName, subcontractorsCount: 0, consumablesCount: 0, savedAt: null };
+        return { hospitalName: r.hospitalName, count: 0, totalCost: 0, savedAt: null };
       }
     });
 
     return res.json({ list, total: list.length });
   } catch (err) {
-    req.log.error({ err }, "Failed to list foundation data");
+    req.log.error({ err }, "Failed to list job positions");
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// DELETE /api/admin/foundation?hospital=<name> — حذف بيانات تأسيسي مستشفى
+// DELETE /api/admin/job-positions?hospital=<name>
 router.delete("/", requireAuth, requireAdmin, async (req: any, res: any) => {
   try {
     const hospitalName = ((req.query["hospital"] as string) || "").trim();
     if (!hospitalName) return res.status(400).json({ error: "hospital query param required" });
 
     await db.delete(hospitalStorageTable)
-      .where(and(
-        eq(hospitalStorageTable.hospitalName, hospitalName),
-        eq(hospitalStorageTable.storageKey, FOUNDATION_KEY),
-      ));
+      .where(and(eq(hospitalStorageTable.hospitalName, hospitalName), eq(hospitalStorageTable.storageKey, JOB_KEY)));
 
-    req.log.info({ hospital: hospitalName, admin: req.currentUser.email }, "Foundation data deleted");
+    req.log.info({ hospital: hospitalName, admin: req.currentUser.email }, "Job positions deleted");
     return res.json({ ok: true });
   } catch (err) {
-    req.log.error({ err }, "Failed to delete foundation data");
+    req.log.error({ err }, "Failed to delete job positions");
     return res.status(500).json({ error: "Internal server error" });
   }
 });

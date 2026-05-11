@@ -19,6 +19,7 @@ import analyticsRouter from "./analytics";
 import visitsRouter from "./visits";
 import adminFoundationRouter from "./admin-foundation";
 import adminNotifyRouter from "./admin-notify";
+import adminJobPositionsRouter from "./admin-job-positions";
 
 const router: IRouter = Router();
 
@@ -42,5 +43,6 @@ router.use("/hospital-storage", hospitalStorageRouter);
 router.use("/visits", visitsRouter);
 router.use("/admin/foundation", adminFoundationRouter);
 router.use("/admin/notify", adminNotifyRouter);
+router.use("/admin/job-positions", adminJobPositionsRouter);
 
 export default router;
