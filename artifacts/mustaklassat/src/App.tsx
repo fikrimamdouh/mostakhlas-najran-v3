@@ -73,6 +73,7 @@ const clerkAppearance = {
     footerActionLink: { color: "#1e3c72", fontWeight: "600" },
     formFieldInput: { borderColor: "#d1d5db" },
     logoBox: { display: "none" },
+    footer: { display: "none" },
   },
 };
 
