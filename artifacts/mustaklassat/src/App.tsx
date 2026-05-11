@@ -634,6 +634,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         phone: (dbUser as any).phone || null,
         jobTitle: (dbUser as any).jobTitle || null,
         contractNumber: (dbUser as any).contractNumber || null,
+        allowedModules: (dbUser as any).allowedModules || null,
         clerkToken: token,
         timestamp: Date.now(),
       }));

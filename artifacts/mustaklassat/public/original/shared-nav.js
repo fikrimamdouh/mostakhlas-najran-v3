@@ -249,6 +249,51 @@
     });
     if (!options.length) return;
 
+    /* ── فلترة حسب صلاحيات المستخدم من najran_session ── */
+    try {
+      var _raw = Storage.prototype.getItem.call(localStorage, 'najran_session');
+      var _sess = _raw ? JSON.parse(_raw) : null;
+      if (_sess) {
+        var _role = _sess.role || 'user';
+        var _isPriv = _role === 'admin' || _role === 'supervisor' || _role === 'contract_supervisor';
+        // allowedModules: null = كل الوحدات مسموح بها، مصفوفة = وحدات محددة فقط
+        var _allowed = null;
+        try { _allowed = _sess.allowedModules ? JSON.parse(_sess.allowedModules) : null; } catch(e) {}
+
+        // صفحات تظهر دائماً لكل المستخدمين
+        var _always = ['index.html', 'extract-archive.html', 'review_extract.html', 'monthly-overview.html'];
+        // صفحات للأدمن/المشرف فقط
+        var _privOnly = ['admin-dashboard.html', 'contract-foundation-upload.html'];
+        // خريطة اسم الملف → مفتاح الوحدة (من modules.ts)
+        var _fileKey = {
+          'approval.html':                   'approval',
+          'settings_main.html':              'settings_main',
+          'settings_advanced.html':          'settings_advanced',
+          'attendance.html':                 'attendance',
+          'performance.html':                'performance',
+          'achievement.html':                'achievement',
+          'consumables.html':                'consumables',
+          'spare_parts.html':                'spare_parts',
+          'request-visit.html':              'request-visit',
+          'health_centers_attendance.html':  'health_centers_attendance',
+          'health_centers_consumables.html': 'health_centers_consumables',
+          'admin_offices_attendance.html':   'admin_offices_attendance',
+          'admin_offices_consumables.html':  'admin_offices_consumables',
+        };
+
+        options = options.filter(function(opt) {
+          var file = opt.value.split('/').pop().split('?')[0];
+          if (_always.indexOf(file) !== -1) return true;          // دائماً مرئي
+          if (_privOnly.indexOf(file) !== -1) return _isPriv;     // للمشرفين فقط
+          if (_isPriv) return true;                                // المشرف يرى الكل
+          if (_allowed === null) return true;                      // بدون قيود = يرى الكل
+          var key = _fileKey[file];
+          if (!key) return true;                                   // ملف غير معروف → اعرضه
+          return _allowed.indexOf(key) !== -1;
+        });
+      }
+    } catch(e) {}
+
     /* ── Build wrapper ── */
     var wrapper = document.createElement('div');
     wrapper.className = 'sn-wrapper no-print';
