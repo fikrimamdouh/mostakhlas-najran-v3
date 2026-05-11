@@ -159,6 +159,7 @@ const COMPANY_SITES = {
       { name: "مجمع الأمل للصحة النفسية",           contract: "" },
       { name: "مستشفى ثار العام",                   contract: "" },
       { name: "مستشفى خباش العام",                  contract: "" },
+      { name: "المراكز الصحية",                    contract: "" },
       { name: "مستشفى الملك خالد",                  contract: "" },
       { name: "مركز الأمير سلطان",                  contract: "" },
       { name: "مستشفى شروره العام",                 contract: "" },
