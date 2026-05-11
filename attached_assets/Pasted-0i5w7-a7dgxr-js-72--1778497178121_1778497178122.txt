@@ -1,0 +1,149 @@
+0i5w7~a7dgxr~.js:72 
+      /////////////////////
+   ///////////////////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////        Curious and driven?
+  ///////////////@@@@@@@///////        Work with us!
+  ///////////////@@@@@@@///////
+  ///////////////@@@@@@@///////        https://join.replit.com/hack.with.us
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+   ///////////////////////////
+      /////////////////////
+      
+0i5w7~a7dgxr~.js:72 Download the Apollo DevTools for a better development experience: https://chrome.google.com/webstore/detail/apollo-client-developer-t/jdkknkkbebbapilgoeccciglkfbmbnfm
+ content script loaded
+0i5w7~a7dgxr~.js:72 [LaunchDarkly] LaunchDarkly client initialized
+ content script loaded
+refresh.js:27 WebSocket connection to 'ws://localhost:8081/' failed: 
+initClient @ refresh.js:27
+ content script loaded
+jquery.js:1040 [Violation] Permissions policy violation: unload is not allowed in this document.
+Sizzle.setDocument @ jquery.js:1040
+16856c2xsfe6c.js:2 [Intervention] Slow network is detected. See https://www.chromestatus.com/feature/5636954674692096 for more details. Fallback font will be used while loading: https://replit.com/public/fonts/replit-icons.woff
+ content script loaded
+ content script loaded
+mostakhlas-najran-v3:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+mostakhlas-najran-v3:1 Access to image at 'https://d13d6df4-53d4-4cbf-81f9-35fd21f57218-00-cokelte2d5dg.pike.replit.dev:5904//asset_-1963126522.png' from origin 'https://replit.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+d13d6df4-53d4-4cbf-81f9-35fd21f57218-00-cokelte2d5dg.pike.replit.dev:5904//asset_-1963126522.png:1  Failed to load resource: net::ERR_FAILED
+0i8wy8tbht2ow.js:2 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+C @ 0i8wy8tbht2ow.js:2
+0i8wy8tbht2ow.js:2 Unrecognized feature: 'ambient-light-sensor'.
+C @ 0i8wy8tbht2ow.js:2
+0i8wy8tbht2ow.js:2 Unrecognized feature: 'battery'.
+C @ 0i8wy8tbht2ow.js:2
+0i8wy8tbht2ow.js:2 Unrecognized feature: 'execution-while-not-rendered'.
+C @ 0i8wy8tbht2ow.js:2
+0i8wy8tbht2ow.js:2 Unrecognized feature: 'execution-while-out-of-viewport'.
+C @ 0i8wy8tbht2ow.js:2
+0i8wy8tbht2ow.js:2 Unrecognized feature: 'layout-animations'.
+C @ 0i8wy8tbht2ow.js:2
+0i8wy8tbht2ow.js:2 Unrecognized feature: 'legacy-image-formats'.
+C @ 0i8wy8tbht2ow.js:2
+0i8wy8tbht2ow.js:2 Unrecognized feature: 'navigation-override'.
+C @ 0i8wy8tbht2ow.js:2
+0i8wy8tbht2ow.js:2 Unrecognized feature: 'oversized-images'.
+C @ 0i8wy8tbht2ow.js:2
+0i8wy8tbht2ow.js:2 Unrecognized feature: 'publickey-credentials'.
+C @ 0i8wy8tbht2ow.js:2
+0i8wy8tbht2ow.js:2 Unrecognized feature: 'speaker-selection'.
+C @ 0i8wy8tbht2ow.js:2
+0i8wy8tbht2ow.js:2 Unrecognized feature: 'unoptimized-images'.
+C @ 0i8wy8tbht2ow.js:2
+0i8wy8tbht2ow.js:2 Unrecognized feature: 'unsized-media'.
+C @ 0i8wy8tbht2ow.js:2
+0i8wy8tbht2ow.js:2 Unrecognized feature: 'pointer-lock'.
+C @ 0i8wy8tbht2ow.js:2
+0i8wy8tbht2ow.js:2 Allow attribute will take precedence over 'allowfullscreen'.
+C @ 0i8wy8tbht2ow.js:2
+0i8wy8tbht2ow.js:2 Allow attribute will take precedence over 'allowpaymentrequest'.
+C @ 0i8wy8tbht2ow.js:2
+0sw7z~c36ipw5.js:2 Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://d13d6df4-53d4-4cbf-81f9-35fd21f57218-00-cokelte2d5dg.pike.replit.dev') does not match the recipient window's origin ('https://replit.com').
+b @ 0sw7z~c36ipw5.js:2
+installHook.js:1 Haven't heard from the server in a while, resetting connection...
+overrideMethod @ installHook.js:1
+installHook.js:1 Haven't heard from the server in a while, resetting connection...
+overrideMethod @ installHook.js:1
+installHook.js:1 Haven't heard from the server in a while, resetting connection...
+overrideMethod @ installHook.js:1
+0i8wy8tbht2ow.js:2 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+C @ 0i8wy8tbht2ow.js:2
+0sw7z~c36ipw5.js:2 Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://d13d6df4-53d4-4cbf-81f9-35fd21f57218-00-cokelte2d5dg.pike.replit.dev') does not match the recipient window's origin ('https://replit.com').
+b @ 0sw7z~c36ipw5.js:2
+installHook.js:1 Haven't heard from the server in a while, resetting connection...
+overrideMethod @ installHook.js:1
+installHook.js:1 Haven't heard from the server in a while, resetting connection...
+overrideMethod @ installHook.js:1
+installHook.js:1 Haven't heard from the server in a while, resetting connection...
+overrideMethod @ installHook.js:1
+installHook.js:1 Haven't heard from the server in a while, resetting connection...
+overrideMethod @ installHook.js:1
+installHook.js:1 Haven't heard from the server in a while, resetting connection...
+overrideMethod @ installHook.js:1
+installHook.js:1 Haven't heard from the server in a while, resetting connection...
+overrideMethod @ installHook.js:1
+installHook.js:1 Haven't heard from the server in a while, resetting connection...
+overrideMethod @ installHook.js:1
+0i8wy8tbht2ow.js:2 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+C @ 0i8wy8tbht2ow.js:2
+0sw7z~c36ipw5.js:2 Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://d13d6df4-53d4-4cbf-81f9-35fd21f57218-00-cokelte2d5dg.pike.replit.dev') does not match the recipient window's origin ('https://replit.com').
+b @ 0sw7z~c36ipw5.js:2
+workspace_iframe.html?initialPath=%2Foriginal-viewer%3Fpage%3Dattendance.html&id=artifacts%2Fmustak…:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+workspace_iframe.html?initialPath=%2Foriginal-viewer%3Fpage%3Dattendance.html&id=artifacts%2Fmustak…:32 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.html?initialPath=%2Foriginal-viewer%3Fpage%3Dattendance.html&id=artifacts%2Fmustak…:32 Unrecognized feature: 'battery'.
+workspace_iframe.html?initialPath=%2Foriginal-viewer%3Fpage%3Dattendance.html&id=artifacts%2Fmustak…:32 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.html?initialPath=%2Foriginal-viewer%3Fpage%3Dattendance.html&id=artifacts%2Fmustak…:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.html?initialPath=%2Foriginal-viewer%3Fpage%3Dattendance.html&id=artifacts%2Fmustak…:32 Unrecognized feature: 'layout-animations'.
+workspace_iframe.html?initialPath=%2Foriginal-viewer%3Fpage%3Dattendance.html&id=artifacts%2Fmustak…:32 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.html?initialPath=%2Foriginal-viewer%3Fpage%3Dattendance.html&id=artifacts%2Fmustak…:32 Unrecognized feature: 'navigation-override'.
+workspace_iframe.html?initialPath=%2Foriginal-viewer%3Fpage%3Dattendance.html&id=artifacts%2Fmustak…:32 Unrecognized feature: 'oversized-images'.
+workspace_iframe.html?initialPath=%2Foriginal-viewer%3Fpage%3Dattendance.html&id=artifacts%2Fmustak…:32 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.html?initialPath=%2Foriginal-viewer%3Fpage%3Dattendance.html&id=artifacts%2Fmustak…:32 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.html?initialPath=%2Foriginal-viewer%3Fpage%3Dattendance.html&id=artifacts%2Fmustak…:32 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.html?initialPath=%2Foriginal-viewer%3Fpage%3Dattendance.html&id=artifacts%2Fmustak…:32 Unrecognized feature: 'unsized-media'.
+workspace_iframe.html?initialPath=%2Foriginal-viewer%3Fpage%3Dattendance.html&id=artifacts%2Fmustak…:32 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.html?initialPath=%2Foriginal-viewer%3Fpage%3Dattendance.html&id=artifacts%2Fmustak…:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+index.iife.js:1 content script loaded
+injected.js:37 PRODUCTION_BUILD_MARKER_2026_05_07_V4_LIVE_KEY
+index.iife.js:1 content script loaded
+injected.js:37 Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+(anonymous) @ injected.js:37
+injected.js:37 [MzamanaCloud] وضع شخصي (لا يوجد مستشفى مرتبط)
+injected.js:37 خطأ في عرض الجداول: TypeError: (emp.days || []).forEach is not a function
+    at attendance_interactive_v9_corrected.js:577:26
+    at Array.forEach (<anonymous>)
+    at attendance_interactive_v9_corrected.js:576:14
+    at Array.forEach (<anonymous>)
+    at renderTables (attendance_interactive_v9_corrected.js:558:21)
+    at HTMLDocument.<anonymous> (attendance_interactive_v9_corrected.js:1217:5)
+(anonymous) @ injected.js:37
+injected.js:37 تم تحميل صفحة الحضور والانصراف التفاعلية المصححة بنجاح
+injected.js:37 خطأ في عرض الجداول: TypeError: (emp.days || []).forEach is not a function
+    at attendance_interactive_v9_corrected.js:577:26
+    at Array.forEach (<anonymous>)
+    at attendance_interactive_v9_corrected.js:576:14
+    at Array.forEach (<anonymous>)
+    at renderTables (attendance_interactive_v9_corrected.js:558:21)
+    at HTMLDocument.<anonymous> (attendance.html:1853:13)
+(anonymous) @ injected.js:37
+index.iife.js:1 content script loaded
+injected.js:37 [MzamanaCloud] ✓ 28 مفتاح شخصي
+injected.js:37 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+injected.js:37 خطأ في عرض الجداول: TypeError: (emp.days || []).forEach is not a function
+    at attendance_interactive_v9_corrected.js:577:26
+    at Array.forEach (<anonymous>)
+    at attendance_interactive_v9_corrected.js:576:14
+    at Array.forEach (<anonymous>)
+    at renderTables (attendance_interactive_v9_corrected.js:558:21)
+    at loadJobPositionsFromTemplate (attendance.html:1959:5)
+(anonymous) @ injected.js:37
+injected.js:37 خطأ في عرض الجداول: TypeError: (emp.days || []).forEach is not a function
+    at attendance_interactive_v9_corrected.js:577:26
+    at Array.forEach (<anonymous>)
+    at attendance_interactive_v9_corrected.js:576:14
+    at Array.forEach (<anonymous>)
+    at renderTables (attendance_interactive_v9_corrected.js:558:21)
+    at reader.onload (attendance.html:2118:7)
+(anonymous) @ injected.js:37

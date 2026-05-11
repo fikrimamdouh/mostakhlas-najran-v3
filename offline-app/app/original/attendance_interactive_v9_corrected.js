@@ -574,7 +574,7 @@ function processAndFilterExcelData(file) {
             }
   const allSpecialStatusesInDept = new Set();
     deptData.forEach(emp => {
-        (emp.days || []).forEach(day => {
+        (Array.isArray(emp.days) ? emp.days : []).forEach(day => {
             if (STATUS_CODES[day]?.isSpecial) {
                 allSpecialStatusesInDept.add(day);
             }
@@ -640,7 +640,7 @@ if (emptyMessage) {
 
                 grandTotalCostBeforePMDeduction += adjustedSalary; // <--- أضف هذا السطر
 
-                let days = emp.days || Array(daysInMonth).fill('ح');
+                let days = Array.isArray(emp.days) ? emp.days : Array(daysInMonth).fill('ح');
                 if (days.length < daysInMonth) {
                     days = [...days, ...Array(daysInMonth - days.length).fill('ح')];
                 }
@@ -1979,7 +1979,7 @@ function exportSelectedDepartmentsToExcel() {
             employees.forEach((emp, index) => {
                 try { // <--- بداية بلوك الحماية
                     const row = [index + 1, emp.jobTitle || '', emp.category || '', emp.name || ''];
-                    const days = emp.days || [];
+                    const days = Array.isArray(emp.days) ? emp.days : [];
                     for (let i = 0; i < daysInMonth; i++) {
                         row.push(days[i] || 'ح');
                     }
