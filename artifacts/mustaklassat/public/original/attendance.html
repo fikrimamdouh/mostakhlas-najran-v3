@@ -2254,6 +2254,78 @@ function importPositionsTemplate() {
   }
 })();
 </script>
+
+<script>
+/* ── تعديل اسم جدول رقم 7 حسب المستشفى (عرض فقط، بدون تغيير المعادلات) ── */
+(function () {
+  var NEW_NAME  = 'قسم السلامة والحراسات الأمنية';
+  var EXCLUDED  = 'مجمع الأمل للصحة النفسية';
+  var OLD_NAME  = 'خدمات المرضى';
+
+  function getHospital() {
+    try {
+      var s = Storage.prototype.getItem.call(localStorage, 'najran_session');
+      if (s) return JSON.parse(s).hospital || '';
+    } catch (e) {}
+    try { return localStorage.getItem('hospitalName') || ''; } catch (e) {}
+    return '';
+  }
+
+  function applyRename() {
+    var hospital  = getHospital();
+    var targetName = (hospital === EXCLUDED) ? OLD_NAME : NEW_NAME;
+    var replaceFrom = (hospital === EXCLUDED) ? NEW_NAME : OLD_NAME;
+
+    /* 1. عناوين H3 */
+    document.querySelectorAll('h3').forEach(function (h3) {
+      if (h3.textContent.indexOf(replaceFrom) !== -1) {
+        h3.textContent = h3.textContent.replace(replaceFrom, targetName);
+      }
+    });
+
+    /* 2. قوائم option */
+    document.querySelectorAll('option[value="patient_services"], option[value="patient-services"]').forEach(function (opt) {
+      if (opt.textContent.trim() === replaceFrom) {
+        opt.textContent = targetName;
+      }
+    });
+
+    /* 3. تحديث مفتاح departmentNames في localStorage
+       حتى تعمل getDepartmentName() بالاسم الصحيح في كل مكان */
+    try {
+      var dn = JSON.parse(localStorage.getItem('departmentNames') || '{}');
+      if (hospital === EXCLUDED) {
+        delete dn.patient_services;
+      } else {
+        dn.patient_services = NEW_NAME;
+      }
+      if (Object.keys(dn).length === 0) {
+        localStorage.removeItem('departmentNames');
+      } else {
+        localStorage.setItem('departmentNames', JSON.stringify(dn));
+      }
+    } catch (e) {}
+  }
+
+  /* تطبيق فور اكتمال DOM */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyRename);
+  } else {
+    applyRename();
+  }
+
+  /* مراقبة أي محتوى ديناميكي (نوافذ، فلاتر، PDF…) */
+  document.addEventListener('DOMContentLoaded', function () {
+    var busy = false;
+    var observer = new MutationObserver(function () {
+      if (busy) return;
+      busy = true;
+      requestAnimationFrame(function () { applyRename(); busy = false; });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
+})();
+</script>
 </body>
 </html>
 
