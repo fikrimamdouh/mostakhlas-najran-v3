@@ -1051,21 +1051,38 @@ function switchHospital(hospitalName) {
     setTimeout(autoFillFromSession, 100);
 }
 
-// ── عرض منتقي المستشفى (للمستخدمين الذين لديهم أكثر من موقع) ─────────────
+// ── عرض منتقي المستشفى (للمستخدمين الذين لديهم أكثر من موقع أو بدون context) ─
 function renderHospitalPicker() {
     var container = document.getElementById('hospital-picker-container');
     if (!container) return;
 
     var session = _getSession();
-    if (!session) { container.style.display = 'none'; return; }
 
+    // اجمع قائمة المستشفيات: من session أولاً، ثم HOSPITAL_CONTRACT_MAP كـ fallback
     var hospitals = [];
-    try { hospitals = JSON.parse(session.hospitals || '[]'); } catch (e) {}
-    if (!hospitals.length && session.hospital) hospitals = [session.hospital];
+    if (session) {
+        try { hospitals = JSON.parse(session.hospitals || '[]'); } catch (e) {}
+        if (!hospitals.length && session.hospital) hospitals = [session.hospital];
+    }
 
-    if (hospitals.length <= 1) { container.style.display = 'none'; return; }
+    // إذا لا توجد مستشفيات في session → استخدم كل المستشفيات من HOSPITAL_CONTRACT_MAP
+    if (!hospitals.length) {
+        hospitals = Object.keys(HOSPITAL_CONTRACT_MAP);
+    }
 
-    var currentHospital = session.hospital || hospitals[0];
+    if (!hospitals.length) { container.style.display = 'none'; return; }
+
+    // إذا كان هناك مستشفى واحد فقط محدد مسبقاً → أخفِ المنتقي (لا يحتاج اختيار)
+    var currentHospital = (session && session.hospital) || '';
+    try {
+        var _pcd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+        if (!currentHospital) currentHospital = _pcd.hospitalName || '';
+    } catch(e) {}
+    if (hospitals.length === 1 && currentHospital === hospitals[0]) {
+        container.style.display = 'none';
+        return;
+    }
+
     container.style.display = 'block';
     container.innerHTML =
         '<div style="margin-bottom:14px;padding:14px 16px;background:rgba(30,60,114,0.07);border-radius:12px;border:1px solid rgba(30,60,114,0.18)">' +
@@ -1074,7 +1091,7 @@ function renderHospitalPicker() {
         hospitals.map(function (h) {
             var active = h === currentHospital;
             var safeH = h.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-            return '<button onclick="switchHospital(\'' + safeH + '\')" style="' +
+            return '<button onclick="_selectHospitalFromOverlay(\'' + safeH + '\')" style="' +
                 'padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-family:Tajawal,sans-serif;transition:all .2s;' +
                 'border:' + (active ? '2px solid #1e3c72' : '1.5px solid #d1d5db') + ';' +
                 'background:' + (active ? '#1e3c72' : '#fff') + ';' +
@@ -1219,86 +1236,22 @@ window._selectHospitalFromOverlay = function(hospitalName) {
     var ov = document.getElementById('_najran_ctx_overlay');
     if (ov) { ov.style.opacity = '0'; setTimeout(function(){ if(ov && ov.parentNode) ov.parentNode.removeChild(ov); }, 300); }
 
-    // 6. عبّئ الحقول
+    // 6. عبّئ الحقول وحدّث المنتقي
     updateContractDisplayData();
     if (typeof loadPersistentData === 'function') loadPersistentData();
+    renderHospitalPicker();
 };
 
-// ── دالة مشتركة لإزالة overlay التحميل وإعادة تعبئة الصفحة ─────────────────
-function _revealSettingsPage() {
-    // إذا كان context لا يزال مفقوداً → أبقِ الـ overlay (لا تمسحه)
-    var hasCached = false;
-    try { var _rc = JSON.parse(localStorage.getItem('persistentContractData') || '{}'); hasCached = !!_rc.hospitalName; } catch(e) {}
-    if (!hasCached) hasCached = !!(localStorage.getItem('hospitalName'));
-    var _rs = _getSession();
-    if (!hasCached) hasCached = !!(_rs && _rs.hospital);
-
-    if (!hasCached) return; // الـ picker لا يزال ضرورياً — لا تمسحه
-
-    var ov = document.getElementById('_najran_ctx_overlay');
-    if (ov) { ov.style.opacity = '0'; setTimeout(function(){ if(ov.parentNode) ov.parentNode.removeChild(ov); }, 300); }
+// ── إعادة تعبئة الصفحة بعد انتهاء cloud-sync من السحب ──────────────────────
+window.addEventListener('najranCloudPulled', function() {
     updateContractDisplayData();
     autoFillFromSession();
-}
-
-// ── إعادة تعبئة الصفحة بعد انتهاء cloud-sync من السحب ──────────────────────
-window.addEventListener('najranCloudPulled', _revealSettingsPage);
+    renderHospitalPicker();
+});
 
 // ✅✅✅ الحل النهائي: استبدل كتلة DOMContentLoaded بالكامل بهذا الكود ✅✅✅
 document.addEventListener('DOMContentLoaded', () => {
     console.log("الصفحة جاهزة. بدء التهيئة...");
-
-    // ── فحص إذا كان hospital context غير موجود بعد → أظهر overlay انتظار ─────
-    (function _maybeShowLoadingOverlay() {
-        var hasCached = false;
-        try {
-            var _cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-            hasCached = !!_cd.hospitalName;
-        } catch(e) {}
-        if (!hasCached) hasCached = !!(localStorage.getItem('hospitalName'));
-        var _s = _getSession();
-        if (!hasCached) hasCached = !!(_s && _s.hospital);
-        if (hasCached) return; // context موجود → لا حاجة للـ overlay
-
-        var ov = document.createElement('div');
-        ov.id = '_najran_ctx_overlay';
-        ov.style.cssText = [
-            'position:fixed;top:0;left:0;width:100%;height:100%',
-            'background:rgba(245,247,252,0.97)',
-            'z-index:99999;display:flex;align-items:center;justify-content:center',
-            'font-family:Tajawal,sans-serif;direction:rtl',
-            'transition:opacity .3s;overflow-y:auto'
-        ].join(';');
-
-        // بناء أزرار المستشفيات من HOSPITAL_CONTRACT_MAP
-        var hospitalBtns = Object.keys(HOSPITAL_CONTRACT_MAP).map(function(h) {
-            var safeH = h.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-            var info = HOSPITAL_CONTRACT_MAP[h];
-            return '<button onclick="_selectHospitalFromOverlay(\'' + safeH + '\')" style="'
-                + 'display:block;width:100%;text-align:right;padding:12px 16px;margin-bottom:8px;'
-                + 'border:1.5px solid #d1d5db;border-radius:10px;background:#fff;cursor:pointer;'
-                + 'font-size:14px;font-family:Tajawal,sans-serif;color:#1e3c72;font-weight:600;'
-                + 'transition:all .15s;" '
-                + 'onmouseover="this.style.background=\'#1e3c72\';this.style.color=\'#fff\';this.style.borderColor=\'#1e3c72\'" '
-                + 'onmouseout="this.style.background=\'#fff\';this.style.color=\'#1e3c72\';this.style.borderColor=\'#d1d5db\'">'
-                + '<span style="font-size:16px;margin-left:8px">🏥</span>' + h
-                + '<div style="font-size:11px;font-weight:400;color:#6b7280;margin-top:2px">' + (info.contractNumber || '') + '</div>'
-                + '</button>';
-        }).join('');
-
-        ov.innerHTML = '<div style="background:#fff;border-radius:16px;padding:32px;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(30,60,114,.15)">'
-            + '<div style="text-align:center;margin-bottom:20px">'
-            + '<div style="font-size:40px;margin-bottom:10px">🏥</div>'
-            + '<div style="font-size:18px;font-weight:700;color:#1e3c72;margin-bottom:4px">اختر المستشفى / الموقع</div>'
-            + '<div style="font-size:12px;color:#6b7280">اختر الموقع لعرض بيانات عقده تلقائياً</div>'
-            + '</div>'
-            + hospitalBtns
-            + '</div>';
-        document.body.appendChild(ov);
-
-        // fallback: أزل الـ overlay بعد 15 ثانية إذا لم يختر المستخدم شيئاً
-        setTimeout(function() { _revealSettingsPage(); }, 15000);
-    })();
 
     // 1. قم بكل الإعدادات الأولية
     showSection('contract');
