@@ -1004,6 +1004,9 @@ function updateGrandTotals(count, cost, deduction, fine) {
     const totalFines = deduction + fine;
     const netTotal = cost - totalFines;
 
+    // حفظ صافي الاستحقاق للربط مع صفحة المستهلكات
+    try { localStorage.setItem('finalLaborCost', netTotal.toFixed(2)); } catch (_) {}
+
     // ====> التعديل هنا: إضافة class لكل عنصر <====
     grandTotalContainer.innerHTML = `
       <div class="total-card total-employees">

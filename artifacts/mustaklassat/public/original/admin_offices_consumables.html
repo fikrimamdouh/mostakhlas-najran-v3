@@ -628,16 +628,16 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 function getAutomaticLaborCost() {
     try {
-        // 1. المحاولة الأولى: قراءة القيمة الجاهزة والمحفوظة
-        const grandNetTotal = localStorage.getItem('grand-net-total'); 
+        // 1. المحاولة الأولى: قراءة القيمة الجاهزة والمحفوظة (مفتاح خاص بالمكاتب الإدارية)
+        const grandNetTotal = localStorage.getItem('grand-net-total-admin'); 
         if (grandNetTotal !== null) {
             return parseNumericValue(grandNetTotal);
         }
 
         // 2. الخطة البديلة: إذا لم نجد القيمة، نحسبها هنا مباشرة
-        console.warn("لم يتم العثور على 'grand-net-total'. سيتم الحساب مباشرة من بيانات العمالة.");
+        console.warn("لم يتم العثور على 'grand-net-total-admin'. سيتم الحساب مباشرة من بيانات العمالة.");
         
-        const attendanceData = JSON.parse(localStorage.getItem('centersAttendanceData_v2') || '{}');
+        const attendanceData = JSON.parse(localStorage.getItem('adminOfficesAttendanceData_v1') || '{}');
         const extractData = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
         const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
 
@@ -691,7 +691,12 @@ function getAutomaticLaborCost() {
         const totalConsumables = summaryData.filter(item => !item.isSubTotal && !item.isCustom).reduce((sum, item) => sum + parseNumericValue(item.value), 0);
         document.getElementById('display-consumables-cost').textContent = formatNumber(totalConsumables);
 
-        const totalSubcontractors = subcontractorsData.reduce((sum, item) => sum + parseNumericValue(item.visitValue), 0);
+        const totalSubcontractors = subcontractorsData.reduce((sum, item) => {
+            if (!item.visitDate || !item.visitDate.includes('خلال هذا الشهر')) return sum;
+            const annualVisits = parseInt(item.annualVisits) || 1;
+            const visitValue = parseNumericValue(item.visitValue);
+            return sum + (annualVisits > 0 ? visitValue / annualVisits : visitValue);
+        }, 0);
         document.getElementById('display-subcontractors-cost').textContent = formatNumber(totalSubcontractors);
 
         const totalForPenalty = laborCost + totalConsumables + totalSubcontractors;

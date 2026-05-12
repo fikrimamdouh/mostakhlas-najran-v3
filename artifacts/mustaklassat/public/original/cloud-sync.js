@@ -99,7 +99,7 @@
     'consumablesTitle', 'consumablesPeriodFrom', 'consumablesPeriodTo',
     'spare_partsData', 'performanceData', 'achievementData',
     'performanceSignatures', 'performanceSignatures_v2', 'performanceTableNames',
-    'performanceTotalDeduction', 'finalLaborCost', 'grand-net-total',
+    'performanceTotalDeduction', 'finalLaborCost', 'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin',
     'najran_labor_attendance_done', 'najran_labor_performance_done',
     'najran_health_attendance_done', 'najran_admin_offices_attendance_done',
     'accreditationLetterData', 'adminJobsPrintState',

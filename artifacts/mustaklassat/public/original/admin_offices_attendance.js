@@ -1920,8 +1920,8 @@ function calculateAndDisplayGrandTotal() {
     document.getElementById('grand-total-fines').textContent = grandTotalFines.toFixed(2);
     document.getElementById('grand-net-total').textContent = grandNetTotal.toFixed(2);
 
-    // --- 5. [مهم للربط] حفظ صافي الاستحقاق الإجمالي (الذي يشمل الآن كل شيء) ---
-    localStorage.setItem('grand-net-total', grandNetTotal.toFixed(2));
+    // --- 5. [مهم للربط] حفظ صافي الاستحقاق الإجمالي (مفتاح خاص بالمكاتب الإدارية) ---
+    localStorage.setItem('grand-net-total-admin', grandNetTotal.toFixed(2));
 }
 
 
