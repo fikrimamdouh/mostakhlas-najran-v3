@@ -338,18 +338,35 @@
       console.log('[MzamanaCloud] وضع شخصي (لا يوجد مستشفى مرتبط)');
     }
 
-    await pullFromCloud();
+    // علامة لمنع الـ setItem override من إطلاق sync أثناء السحب من السيرفر
+    let _pulling = false;
+
+    const origPullFromCloud = pullFromCloud;
+    async function pullFromCloudSafe() {
+      _pulling = true;
+      try { await origPullFromCloud(); } finally { _pulling = false; }
+    }
+
+    await pullFromCloudSafe();
 
     setInterval(syncNow, SYNC_INTERVAL_MS);
     window.addEventListener('beforeunload', () => { pushToCloud(); });
-    window.addEventListener('storage', () => { syncNow(); });
 
+    // debounce على storage event (30 ث) — يمنع الحلقة اللانهائية بين التابات
+    let _storageDebounce = null;
+    window.addEventListener('storage', (e) => {
+      if (!SYNC_KEYS.includes(e.key)) return;
+      clearTimeout(_storageDebounce);
+      _storageDebounce = setTimeout(syncNow, 30_000);
+    });
+
+    // override setItem مع debounce 30 ثانية
     const origSetItem = localStorage.setItem.bind(localStorage);
     localStorage.setItem = function (key, value) {
       origSetItem(key, value);
-      if (SYNC_KEYS.includes(key)) {
+      if (!_pulling && SYNC_KEYS.includes(key)) {
         clearTimeout(localStorage._syncTimeout);
-        localStorage._syncTimeout = setTimeout(syncNow, 3000);
+        localStorage._syncTimeout = setTimeout(syncNow, 30_000);
       }
     };
 
