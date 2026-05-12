@@ -12,7 +12,7 @@ const ABSENCE_FINES_BY_CATEGORY = {
   1: { saudi: 500, non_saudi: 500 },
   2: { saudi: 500, non_saudi: 500 },
   3: { saudi: 250, non_saudi: 100 },
-  4: { saudi: 180, non_saudi: 100 },
+  4: { saudi: 180, non_saudi: 80  },
   5: { saudi: 150, non_saudi: 80  },
   6: { saudi: 20,  non_saudi: 20  },
   7: { saudi: 10,  non_saudi: 10  },
