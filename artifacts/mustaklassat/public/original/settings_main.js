@@ -1194,8 +1194,47 @@ function autoFillFromSession() {
     } catch (e) { /* تجاهل أي خطأ */ }
 }
 
+// ── اختيار مستشفى من الـ overlay مباشرة (لا يحتاج session) ─────────────────
+window._selectHospitalFromOverlay = function(hospitalName) {
+    // 1. ابنِ بيانات المستشفى من HOSPITAL_CONTRACT_MAP
+    var freshData = { hospitalName: hospitalName };
+    _applyFixedContractData(freshData, hospitalName);
+
+    // 2. احفظ في persistentContractData
+    localStorage.setItem('persistentContractData', JSON.stringify(freshData));
+    // 3. احفظ مفتاح hospitalName المنفصل
+    localStorage.setItem('hospitalName', hospitalName);
+
+    // 4. حدّث الجلسة إن كانت موجودة
+    try {
+        var raw = Storage.prototype.getItem.call(localStorage, 'najran_session');
+        if (raw) {
+            var s = JSON.parse(raw);
+            s.hospital = hospitalName;
+            Storage.prototype.setItem.call(localStorage, 'najran_session', JSON.stringify(s));
+        }
+    } catch(e) {}
+
+    // 5. أزل الـ overlay
+    var ov = document.getElementById('_najran_ctx_overlay');
+    if (ov) { ov.style.opacity = '0'; setTimeout(function(){ if(ov && ov.parentNode) ov.parentNode.removeChild(ov); }, 300); }
+
+    // 6. عبّئ الحقول
+    updateContractDisplayData();
+    if (typeof loadPersistentData === 'function') loadPersistentData();
+};
+
 // ── دالة مشتركة لإزالة overlay التحميل وإعادة تعبئة الصفحة ─────────────────
 function _revealSettingsPage() {
+    // إذا كان context لا يزال مفقوداً → أبقِ الـ overlay (لا تمسحه)
+    var hasCached = false;
+    try { var _rc = JSON.parse(localStorage.getItem('persistentContractData') || '{}'); hasCached = !!_rc.hospitalName; } catch(e) {}
+    if (!hasCached) hasCached = !!(localStorage.getItem('hospitalName'));
+    var _rs = _getSession();
+    if (!hasCached) hasCached = !!(_rs && _rs.hospital);
+
+    if (!hasCached) return; // الـ picker لا يزال ضرورياً — لا تمسحه
+
     var ov = document.getElementById('_najran_ctx_overlay');
     if (ov) { ov.style.opacity = '0'; setTimeout(function(){ if(ov.parentNode) ov.parentNode.removeChild(ov); }, 300); }
     updateContractDisplayData();
@@ -1235,7 +1274,7 @@ document.addEventListener('DOMContentLoaded', () => {
         var hospitalBtns = Object.keys(HOSPITAL_CONTRACT_MAP).map(function(h) {
             var safeH = h.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
             var info = HOSPITAL_CONTRACT_MAP[h];
-            return '<button onclick="switchHospital(\'' + safeH + '\');document.getElementById(\'_najran_ctx_overlay\').style.opacity=\'0\';setTimeout(function(){var e=document.getElementById(\'_najran_ctx_overlay\');if(e)e.parentNode.removeChild(e);},300);" style="'
+            return '<button onclick="_selectHospitalFromOverlay(\'' + safeH + '\')" style="'
                 + 'display:block;width:100%;text-align:right;padding:12px 16px;margin-bottom:8px;'
                 + 'border:1.5px solid #d1d5db;border-radius:10px;background:#fff;cursor:pointer;'
                 + 'font-size:14px;font-family:Tajawal,sans-serif;color:#1e3c72;font-weight:600;'
