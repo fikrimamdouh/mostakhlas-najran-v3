@@ -134,7 +134,7 @@
   })();
 
   // ── مشترك: إنشاء الزر المثبّت ──────────────────────────────────────────────
-  function createApproveBtn({ label, color = '#1e3c72', gradient = 'linear-gradient(135deg,#1e3c72,#2a5298)', onClick }) {
+  function createApproveBtn({ label, color = '#1e3c72', gradient = 'linear-gradient(135deg,#d4af37,#b8962e)', onClick }) {
     const existing = document.getElementById('_najran_approve_btn');
     if (existing) existing.remove();
 
