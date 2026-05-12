@@ -1556,6 +1556,8 @@ function renderSummaryTable(contractType, directPurchaseRatio) {
     }
 
     tfoot.innerHTML = `<tr class="final-total-row"><td colspan="5">الصافي النهائي المستحق للمقاول</td><td>${formatNumber(finalTotalNet)}</td></tr><tr class="tafqeet-row"><td colspan="6">فقط وقدره: ${tafqeet(finalTotalNet)}</td></tr>`;
+    // حفظ الصافي النهائي لمستخلص المستهلكات
+    try { localStorage.setItem('finalConsumablesCost', finalTotalNet.toFixed(2)); } catch(_) {}
 }
 // ===================================================
 // == الدالة الجديدة للتحديث الفوري للحسابات ==

@@ -26,7 +26,7 @@
         hospitalName: c.hospitalName || localStorage.getItem('hospitalName') || '',
         periodMonth: (localStorage.getItem('extractMonth') || c.extractMonth || '') +
           ' ' + (localStorage.getItem('extractYear') || c.extractYear || new Date().getFullYear()),
-        totalAmount: parseFloat(localStorage.getItem('finalLaborCost') || e.totalCost || '0') || 0,
+        totalAmount: parseFloat(localStorage.getItem('finalConsumablesCost') || localStorage.getItem('finalLaborCost') || e.totalCost || '0') || 0,
       };
     } catch { return {}; }
   }
@@ -134,7 +134,7 @@
   })();
 
   // ── مشترك: إنشاء الزر المثبّت ──────────────────────────────────────────────
-  function createApproveBtn({ label, color = '#1e3c72', gradient = 'linear-gradient(135deg,#d4af37,#b8962e)', onClick }) {
+  function createApproveBtn({ label, color = '#fff', gradient = 'linear-gradient(135deg,#1565c0,#0ea5e9)', onClick }) {
     const existing = document.getElementById('_najran_approve_btn');
     if (existing) existing.remove();
 
@@ -146,7 +146,7 @@
     btn.id = '_najran_approve_btn_inner';
     btn.style.cssText = `
       background:${gradient};
-      color:${color === '#1e3c72' ? '#fff' : color};
+      color:${color};
       border:none;border-radius:18px;
       padding:15px 30px;
       font-size:1.05rem;font-weight:700;
@@ -255,7 +255,7 @@
             if (_mk !== '_') localStorage.setItem('najran_consumables_locked_' + _mk, '1');
           } catch(_) {}
           // ─────────────────────────────────────────────────────────────
-          window.location.href = '/extracts/track';
+          window.location.href = '/original/settings_main.html';
         } catch (e) {
           alert('حدث خطأ: ' + e.message);
           resetBtn('رفع مستخلص المستهلكات للاعتماد');
