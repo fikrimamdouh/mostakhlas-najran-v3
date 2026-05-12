@@ -211,6 +211,17 @@ footer{text-align:center;padding:20px;color:#9ca3af;font-size:.8rem}
 // ====== المتغيرات ======
 let parsedRows = [];   // الصفوف بعد القراءة
 
+function _getHospitalNameFromSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem('najran_session') || '{}');
+    return (s.hospital || '').trim();
+  } catch (_) { return ''; }
+}
+function _patientServicesLabel() {
+  const h = _getHospitalNameFromSession();
+  if (h.includes('الأمل')) return 'خدمات المرضى';
+  return 'قسم السلامة والحراسات الأمنية';
+}
 const DEPT_LABELS = {
   cleaning:        'النظافة',
   electricity:     'الكهرباء',
@@ -218,7 +229,7 @@ const DEPT_LABELS = {
   civil_works:     'الأعمال المدنية',
   mechanical:      'الميكانيكا',
   laundry:         'المغسلة',
-  patient_services:'خدمات المرضى',
+  get patient_services() { return _patientServicesLabel(); },
   admin_saudi:     'الوظائف الإدارية السعوديين',
 };
 

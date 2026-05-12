@@ -216,6 +216,14 @@ const JobPositionsDB = (function () {
     'وظيفة إدارية':                   'admin_saudi',
   };
 
+  function _getPatientServicesLabel() {
+    try {
+      const s = JSON.parse(localStorage.getItem('najran_session') || '{}');
+      if ((s.hospital || '').includes('الأمل')) return 'خدمات المرضى';
+    } catch (_) {}
+    return 'قسم السلامة والحراسات الأمنية';
+  }
+
   const DEPT_LABELS = {
     cleaning:        'النظافة',
     electricity:     'الكهرباء',
@@ -223,7 +231,7 @@ const JobPositionsDB = (function () {
     civil_works:     'الأعمال المدنية',
     mechanical:      'الميكانيكا',
     laundry:         'المغسلة',
-    patient_services:'خدمات المرضى',
+    get patient_services() { return _getPatientServicesLabel(); },
     admin_saudi:     'الوظائف الإدارية السعوديين',
   };
 
