@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Component, useEffect, useRef, useState } from "react";
 import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser, useAuth } from '@clerk/react';
 import { shadcn } from '@clerk/themes';
 import { arSA } from '@clerk/localizations';
@@ -725,6 +725,78 @@ function GlobalClerkBadgeHider() {
   return null;
 }
 
+// ===== صفحة فشل تحميل Clerk =====
+function ClerkFailPage() {
+  return (
+    <div dir="rtl" style={{
+      minHeight: "100dvh", display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center", gap: "20px",
+      background: "linear-gradient(135deg,#1e3c72 0%,#2a5298 100%)",
+      fontFamily: "inherit", padding: "24px", textAlign: "center"
+    }}>
+      <img src="/logo.png" alt="شعار تجمع نجران الصحي" style={{ height: 64, marginBottom: 8 }}
+        onError={e => (e.target as HTMLImageElement).style.display = "none"} />
+      <div style={{
+        background: "#fff", borderRadius: 16, padding: "32px 40px",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.2)", maxWidth: 420, width: "100%"
+      }}>
+        <div style={{ fontSize: 48, marginBottom: 12 }}>⚠️</div>
+        <h2 style={{ color: "#1e3c72", fontSize: "1.3rem", fontWeight: 800, marginBottom: 8 }}>
+          تعذّر تحميل نظام الدخول
+        </h2>
+        <p style={{ color: "#6b7280", fontSize: "0.95rem", marginBottom: 24, lineHeight: 1.7 }}>
+          لم يتمكن النظام من الاتصال بخدمة المصادقة.<br />
+          تحقق من اتصالك بالإنترنت ثم أعد المحاولة.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            background: "linear-gradient(135deg,#1e3c72,#2a5298)",
+            color: "#fff", border: "none", borderRadius: 10,
+            padding: "12px 32px", fontSize: "1rem", fontWeight: 700,
+            cursor: "pointer", width: "100%"
+          }}
+        >
+          🔄 إعادة المحاولة
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ErrorBoundary يلتقط أي خطأ رمي من Clerk
+class ClerkErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) return <ClerkFailPage />;
+    return this.props.children;
+  }
+}
+
+// حارس داخل ClerkProvider — يكشف لو isLoaded ما اكتمل خلال 10 ثوانٍ
+function ClerkLoadingGuard({ children }: { children: React.ReactNode }) {
+  const { isLoaded } = useAuth();
+  const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    if (isLoaded) return;
+    const t = setTimeout(() => setTimedOut(true), 10000);
+    return () => clearTimeout(t);
+  }, [isLoaded]);
+
+  if (timedOut && !isLoaded) return <ClerkFailPage />;
+  return <>{children}</>;
+}
+
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
 
@@ -762,6 +834,7 @@ function ClerkProviderWithRoutes() {
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >
       <QueryClientProvider client={queryClient}>
+        <ClerkLoadingGuard>
         <GlobalClerkBadgeHider />
         <ClerkTokenSyncer />
         <ClerkQueryClientCacheInvalidator />
@@ -797,6 +870,7 @@ function ClerkProviderWithRoutes() {
           )} />
           <Route component={NotFound} />
         </Switch>
+        </ClerkLoadingGuard>
       </QueryClientProvider>
     </ClerkProvider>
   );
@@ -806,7 +880,9 @@ function App() {
   return (
     <TooltipProvider>
       <WouterRouter base={basePath}>
-        <ClerkProviderWithRoutes />
+        <ClerkErrorBoundary>
+          <ClerkProviderWithRoutes />
+        </ClerkErrorBoundary>
       </WouterRouter>
       <Toaster />
     </TooltipProvider>
