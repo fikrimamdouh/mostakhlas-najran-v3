@@ -1051,11 +1051,50 @@ const defaultSignatures = {
         'summary': '<h1>شهادة الاستحقاق الشهري لبنود (المستهلكات - مقاولي الباطن - المياه)</h1><h2>لأعمال النظافة والصيانة والتشغيل غير الطبي لموقع: {hospitalName}</h2><h3>{period}</h3>'
     };
 
-    let subcontractorsData = JSON.parse(localStorage.getItem(`subcontractors_data_${DB_VERSION}`)) || defaultSubcontractors;
-    let performanceData = JSON.parse(localStorage.getItem(`performance_data_${DB_VERSION}`)) || defaultPerformance;
-    let waterData = JSON.parse(localStorage.getItem(`water_supply_data_${DB_VERSION}`)) || defaultWater;
-    let sewageData = JSON.parse(localStorage.getItem(`sewage_disposal_data_${DB_VERSION}`)) || defaultSewage;
-    let summaryData = JSON.parse(localStorage.getItem(`summary_data_${DB_VERSION}`)) || defaultSummary;
+    function _fromStorage(key) {
+        try { var d = JSON.parse(localStorage.getItem(key)); return (d && d.length > 0) ? d : null; } catch(e) { return null; }
+    }
+    function _getBuiltinHospitalData() {
+        try {
+            var cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+            var hn = (cd.hospitalName || '').trim();
+            if (!hn) return null;
+            return ContractFoundationDB.load(hn) || null;
+        } catch(e) { return null; }
+    }
+    function _builtinSubcontractors() {
+        var data = _getBuiltinHospitalData();
+        if (!data || !data.subcontractors || !data.subcontractors.length) return null;
+        return data.subcontractors.map(function(s, i) {
+            return { id: 'sc_f_' + (i+1) + '_auto', name: s.name, visitValue: s.contractAmount || 0, annualVisits: s.annualVisits || 1, visitDate: 'خلال هذا الشهر', status: 'نعم', delayDays: 0, damagePenalty: 0 };
+        });
+    }
+    function _builtinPerformance() {
+        var data = _getBuiltinHospitalData();
+        if (!data || !data.consumables || !data.consumables.length) return null;
+        return data.consumables.map(function(c, i) {
+            return { id: 'pf_f_' + (i+1), name: c.name, maxScore: 15, score: 0 };
+        });
+    }
+    function _builtinSummary() {
+        var data = _getBuiltinHospitalData();
+        if (!data || !data.consumables || !data.consumables.length) return null;
+        var items = data.consumables.map(function(c, i) {
+            return { id: 'item_f_' + (i+1), name: c.name, value: c.monthlyCost || 0, isEditable: true, isCustom: false };
+        });
+        return items.concat([
+            { id: 'sm_total_1', name: 'اجمالى تكاليف بند المستهلكات', value: 0, isSubTotal: true, type: 'consumablesTotal' },
+            { id: 'sm_total_2', name: 'تكاليف مقاولي الباطن', value: 0, isSubTotal: true, type: 'subcontractorsTotal' },
+            { id: 'sm_total_3', name: 'تكاليف تامين بند المياه', value: 0, isSubTotal: true, type: 'waterTotal' },
+            { id: 'sm_total_4', name: 'تكاليف التخلص من مياه الصرف الصحي', value: 0, isSubTotal: true, type: 'sewageTotal' },
+        ]);
+    }
+
+    let subcontractorsData = _fromStorage(`subcontractors_data_${DB_VERSION}`) || _builtinSubcontractors() || defaultSubcontractors;
+    let performanceData    = _fromStorage(`performance_data_${DB_VERSION}`)    || _builtinPerformance()    || defaultPerformance;
+    let waterData          = JSON.parse(localStorage.getItem(`water_supply_data_${DB_VERSION}`)) || defaultWater;
+    let sewageData         = JSON.parse(localStorage.getItem(`sewage_disposal_data_${DB_VERSION}`)) || defaultSewage;
+    let summaryData        = _fromStorage(`summary_data_${DB_VERSION}`)        || _builtinSummary()        || defaultSummary;
 // السطر الجديد والمحسن
 let signaturesData = (data => data && typeof data === 'object' && !Array.isArray(data) ? data : defaultSignatures)(JSON.parse(localStorage.getItem(`signatures_data_${DB_VERSION}`)));
     let printTitlesData = JSON.parse(localStorage.getItem(`print_titles_data_${DB_VERSION}`)) || defaultPrintTitles;

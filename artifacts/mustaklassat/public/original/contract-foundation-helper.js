@@ -12,7 +12,7 @@ const ContractFoundationDB = (function () {
 
   // ── عقود الباطن المشتركة بين المستشفيات الثلاثة ──────────────────────────
   const _SHARED_SUBCONTRACTORS = [
-    { name: 'تعقيم ونظافة مجاري الهواء والدكتات',                                                            contractAmount: 100000, annualVisits: 1  },
+    { name: 'تعقيم ونظافة مجاري الهواء والدكتات',                                                            contractAmount: 100000, annualVisits: 2  },
     { name: 'صيانة أنظمة التكييف والتبريد وأنظمة التهوية',                                                    contractAmount: 7000,   annualVisits: 4  },
     { name: 'صيانة المصاعد الكهربائية',                                                                       contractAmount: 6000,   annualVisits: 12 },
     { name: 'صيانة وإصلاح نظام إطفاء الحريق',                                                                 contractAmount: 8000,   annualVisits: 4  },
