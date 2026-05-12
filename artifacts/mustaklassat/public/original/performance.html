@@ -1275,10 +1275,10 @@ function updateCertificateFromPerformance() {
         const due = amount - actualDeduction;
 
         // تحديث باقي خلايا الصف في شهادة الأداء
-        document.getElementById(dept + '-allocated').textContent = amount.toFixed(2);
+        document.getElementById(dept + '-allocated').textContent = Math.round(amount);
         document.getElementById(dept + '-certificate-score').textContent = score + '/' + maxScore;
         document.getElementById(dept + '-percentage').textContent = percentage.toFixed(0) + '%';
-        document.getElementById(dept + '-due').textContent = due.toFixed(2);
+        document.getElementById(dept + '-due').textContent = Math.round(due);
 
         // إضافة للإجماليات
         totalAllocated += amount;
@@ -1287,12 +1287,12 @@ function updateCertificateFromPerformance() {
     });
 
     // تحديث الإجماليات النهائية في شهادة الأداء
-    document.getElementById('total-allocated').textContent = totalAllocated.toFixed(2);
-    document.getElementById('total-due').textContent = totalDue.toFixed(2);
-    document.getElementById('certificate-total-amount').textContent = totalDue.toFixed(2);
-    document.getElementById('total-due-text').textContent = totalDue.toFixed(2);
-    document.getElementById('total-due-text-arabic').textContent = tafqitSAR(totalDue);
-    document.getElementById('total-deducted-amount').textContent = totalDeducted.toFixed(2);
+    document.getElementById('total-allocated').textContent = Math.round(totalAllocated);
+    document.getElementById('total-due').textContent = Math.round(totalDue);
+    document.getElementById('certificate-total-amount').textContent = Math.round(totalDue);
+    document.getElementById('total-due-text').textContent = Math.round(totalDue);
+    document.getElementById('total-due-text-arabic').textContent = tafqitSAR(Math.round(totalDue));
+    document.getElementById('total-deducted-amount').textContent = Math.round(totalDeducted);
 
     // حفظ البيانات الهامة في localStorage
     localStorage.setItem('performanceTotalDeduction', totalDeducted.toFixed(2));
@@ -1417,10 +1417,10 @@ function updateTotalAmount(tableId) {
             }
         }
 
-        // 6. تحديث الواجهة
+        // 6. تحديث الواجهة (بدون هللات)
         const amountInput = document.getElementById(tableId + '-amount');
         if (amountInput) {
-            amountInput.value = finalAmountForSection.toFixed(2);
+            amountInput.value = Math.round(finalAmountForSection);
         }
         
     } catch (error) {
