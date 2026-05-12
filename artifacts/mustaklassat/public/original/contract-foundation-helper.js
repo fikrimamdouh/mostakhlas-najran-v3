@@ -10,6 +10,69 @@ const ContractFoundationDB = (function () {
   const LOCAL_KEY_PREFIX = 'contract_foundation_v2';
   const SERVER_SYNC_KEY  = 'contract_foundation_data'; // مفتاح cloud-sync
 
+  // ── عقود الباطن المشتركة بين المستشفيات الثلاثة ──────────────────────────
+  const _SHARED_SUBCONTRACTORS = [
+    { name: 'تعقيم ونظافة مجاري الهواء والدكتات',                                                            contractAmount: 100000, annualVisits: 1  },
+    { name: 'صيانة أنظمة التكييف والتبريد وأنظمة التهوية',                                                    contractAmount: 7000,   annualVisits: 4  },
+    { name: 'صيانة المصاعد الكهربائية',                                                                       contractAmount: 6000,   annualVisits: 12 },
+    { name: 'صيانة وإصلاح نظام إطفاء الحريق',                                                                 contractAmount: 8000,   annualVisits: 4  },
+    { name: 'صيانة وإصلاح نظام إنذار الحريق',                                                                 contractAmount: 7000,   annualVisits: 4  },
+    { name: 'صيانة السنترالات والنداء الآلي والإذاعة الداخلية والساعة المركزية واستدعاء الممرضات',            contractAmount: 8000,   annualVisits: 2  },
+    { name: 'صيانة محطات التوليد الكهربائية ولوحات التحكم والتشغيل و(ATS)',                                   contractAmount: 10000,  annualVisits: 2  },
+    { name: 'صيانة شبكة الغازات الطبية وملحقاتها وخزانات الغاز',                                             contractAmount: 7000,   annualVisits: 4  },
+    { name: 'صيانة الـ (UPS)',                                                                                 contractAmount: 4000,   annualVisits: 2  },
+    { name: 'صيانة محولات الكهرباء والقواطع الكهربائية وكامل اللوحات الكهربائية',                             contractAmount: 5000,   annualVisits: 2  },
+    { name: 'صيانة معدات المغسلة',                                                                            contractAmount: 3750,   annualVisits: 2  },
+    { name: 'صيانة محطات تحلية مياه الشرب وملحقاتها',                                                         contractAmount: 6000,   annualVisits: 4  },
+    { name: 'صيانة محطة معالجة مياه الصرف الصحي',                                                             contractAmount: 7000,   annualVisits: 4  },
+    { name: 'مكافحة الحشرات والقوارض والآفات البيئية',                                                        contractAmount: 2250,   annualVisits: 12 },
+    { name: 'صيانة ثلاجة الموتى',                                                                             contractAmount: 4000,   annualVisits: 2  },
+    { name: 'صيانة نظم المراقبات الأمنية',                                                                    contractAmount: 6000,   annualVisits: 2  },
+    { name: 'عمرات المولدات',                                                                                  contractAmount: 150000, annualVisits: 1  },
+  ];
+
+  // ── بيانات مدمجة لكل مستشفى (تُستخدم إذا لم يُرفع ملف تأسيسي يدوياً) ─────
+  const BUILTIN_HOSPITALS = {
+    'مستشفى بدر الجنوب العام': {
+      subcontractors: _SHARED_SUBCONTRACTORS,
+      consumables: [
+        { name: 'الوقود والزيوت والمحروقات (ماعدا وقود السيارات)', monthlyCost: 5031 },
+        { name: 'المستهلكات الكيميائية والفلاتر',                  monthlyCost: 5488 },
+        { name: 'مستهلكات الأعمال المدنية',                        monthlyCost: 6403 },
+        { name: 'مواد ومطهرات النظافة',                            monthlyCost: 12349 },
+        { name: 'مستهلكات الزراعة والري',                          monthlyCost: 3665 },
+        { name: 'مستهلكات مكافحة الحشرات',                        monthlyCost: 457 },
+      ],
+    },
+    'مستشفى حبونا العام': {
+      subcontractors: _SHARED_SUBCONTRACTORS,
+      consumables: [
+        { name: 'الوقود والزيوت والمحروقات (ماعدا وقود السيارات)', monthlyCost: 7321 },
+        { name: 'المستهلكات الكيميائية والفلاتر',                  monthlyCost: 7987 },
+        { name: 'مستهلكات الأعمال المدنية',                        monthlyCost: 9318 },
+        { name: 'مواد ومطهرات النظافة',                            monthlyCost: 3594 },
+        { name: 'مستهلكات الزراعة والري',                          monthlyCost: 5324 },
+        { name: 'مستهلكات مكافحة الحشرات',                        monthlyCost: 666 },
+      ],
+    },
+    'مستشفى يدمه العام': {
+      subcontractors: _SHARED_SUBCONTRACTORS,
+      consumables: [
+        { name: 'الوقود والزيوت والمحروقات (ماعدا وقود السيارات)', monthlyCost: 5031 },
+        { name: 'المستهلكات الكيميائية والفلاتر',                  monthlyCost: 5488 },
+        { name: 'مستهلكات الأعمال المدنية',                        monthlyCost: 6403 },
+        { name: 'مواد ومطهرات النظافة',                            monthlyCost: 24698 },
+        { name: 'مستهلكات الزراعة والري',                          monthlyCost: 3659 },
+        { name: 'مستهلكات مكافحة الحشرات',                        monthlyCost: 457 },
+      ],
+    },
+  };
+
+  function _builtinKey(hospitalName) {
+    const hn = (hospitalName || '').trim();
+    return BUILTIN_HOSPITALS[hn] ? { hospitalName: hn, ...BUILTIN_HOSPITALS[hn], savedAt: '2026-01-01T00:00:00.000Z' } : null;
+  }
+
   function _localKey(hospitalName) {
     return LOCAL_KEY_PREFIX + '_' + (hospitalName || 'default').trim();
   }
@@ -43,14 +106,14 @@ const ContractFoundationDB = (function () {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && (parsed.subcontractors?.length || parsed.consumables?.length)) {
-          // إذا تطابق اسم المستشفى أو لا يوجد اسم محدد
           const hn = (hospitalName || '').trim();
           if (!hn || !parsed.hospitalName || parsed.hospitalName === hn) return parsed;
         }
       }
     } catch {}
 
-    return null;
+    // 3. fallback: بيانات مدمجة في الكود (لا تحتاج رفعاً)
+    return _builtinKey(hospitalName);
   }
 
   function loadAll() {
