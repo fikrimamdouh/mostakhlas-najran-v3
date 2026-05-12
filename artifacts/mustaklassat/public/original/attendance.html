@@ -1913,7 +1913,15 @@ window.navigateTo = function (url) {
 <script>
 // ======= تحميل المناصب من القاعدة =======
 async function loadJobPositionsFromTemplate() {
-  const hospitalName = document.querySelector('.hospitalName')?.textContent?.trim();
+  // اقرأ اسم المستشفى من الجلسة أولاً (أدق من DOM)
+  var sessionHospital = '';
+  try {
+    var _s = JSON.parse(localStorage.getItem('najran_session') || '{}');
+    sessionHospital = (_s.hospital || '').trim();
+  } catch(_){}
+  const hospitalName = sessionHospital
+    || document.querySelector('.hospitalName')?.textContent?.trim()
+    || '';
   if (!hospitalName || hospitalName === '—' || hospitalName === 'غير محدد') {
     alert('يرجى تعيين اسم المستشفى في الإعدادات أولاً');
     return;
@@ -1927,20 +1935,53 @@ async function loadJobPositionsFromTemplate() {
     alert('لا توجد مناصب محفوظة لـ "' + hospitalName + '".\n\nيمكن رفعها من: الإعدادات ← رفع مناصب الوظائف');
     return;
   }
+
+  // ── تحقق من تطابق اسم المستشفى في السجل ────────────────────────────────
+  if (record.hospitalName && record.hospitalName !== hospitalName) {
+    if (!confirm(
+      '⚠️ تنبيه: المناصب المحفوظة تخص "' + record.hospitalName + '"\n' +
+      'وأنت حالياً في "' + hospitalName + '".\n\n' +
+      'هل تريد تحميلها رغم ذلك؟'
+    )) return;
+  }
+
   const rows = record.rows;
+  const _isAmal = hospitalName.includes('الأمل');
   const deptLabels = {
     cleaning:'النظافة', electricity:'الكهرباء', agriculture:'الزراعة',
     civil_works:'الأعمال المدنية', mechanical:'الميكانيكا', laundry:'المغسلة',
-    patient_services:'خدمات المرضى', admin_saudi:'الوظائف الإدارية السعوديين'
+    patient_services: _isAmal ? 'خدمات المرضى' : 'قسم السلامة والحراسات الأمنية',
+    admin_saudi:'الوظائف الإدارية السعوديين'
   };
   const byDept = {};
   rows.forEach(r => { if (!byDept[r.dept]) byDept[r.dept] = []; byDept[r.dept].push(r); });
   const summary = Object.entries(byDept).map(([k,v]) => '• ' + (deptLabels[k]||k) + ': ' + v.length + ' منصب').join('\n');
-  if (!confirm('وُجدت ' + rows.length + ' منصب وظيفي لـ "' + hospitalName + '":\n\n' + summary + '\n\nهل تريد تحميلها؟\n(سيتم إضافة صفوف تنتظر إدخال اسم الموظف)')) return;
+
+  // ── خيار الاستبدال أو الإضافة ───────────────────────────────────────────
+  const currentData = getAttendanceData();
+  const hasExisting = Object.values(currentData).some(arr => Array.isArray(arr) && arr.length > 0);
+  var replaceMode = true;
+  if (hasExisting) {
+    const choice = confirm(
+      'وُجدت ' + rows.length + ' منصب وظيفي لـ "' + hospitalName + '":\n\n' + summary +
+      '\n\n⚠️ يوجد بيانات حالية في الجداول.\n' +
+      'اضغط "موافق" للاستبدال الكامل (تُمسح البيانات الحالية).\n' +
+      'اضغط "إلغاء" لإلغاء العملية.'
+    );
+    if (!choice) return;
+    replaceMode = true;
+  } else {
+    if (!confirm('وُجدت ' + rows.length + ' منصب وظيفي لـ "' + hospitalName + '":\n\n' + summary + '\n\nهل تريد تحميلها؟')) return;
+    replaceMode = false;
+  }
+
   try {
     var daysCount = 30;
     try { if (typeof getExtractPeriodDetails === 'function') daysCount = getExtractPeriodDetails().daysInMonth || 30; } catch(_){}
-    const allData = getAttendanceData();
+
+    // استبدال كامل: ابدأ بجداول فارغة للأقسام الموجودة في السجل
+    var allData = replaceMode ? {} : getAttendanceData();
+
     let added = 0;
     rows.forEach(r => {
       if (!r.dept) return;
