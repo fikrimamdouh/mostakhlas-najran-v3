@@ -2489,7 +2489,12 @@ const currentMonthYear = extractStartDate.toLocaleDateString('ar-EG', { month: '
   'الأعمال المدنية': 'civil_works',   // ← underscore
   'الميكانيكا': 'mechanical',
   'المغسلة': 'laundry',
-  'خدمات المرضى': 'patient_services',// ← underscore
+  'خدمات المرضى': 'patient_services',
+  'قسم السلامة والحراسات الأمنية': 'patient_services',
+  'السلامة والحراسات الأمنية': 'patient_services',
+  'السلامة والحراسات': 'patient_services',
+  'الحراسات الأمنية': 'patient_services',
+  'حراسات': 'patient_services',
   'الوظائف الإدارية السعوديين': 'admin_saudi'
 };
 
