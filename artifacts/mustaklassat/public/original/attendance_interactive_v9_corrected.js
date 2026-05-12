@@ -1062,8 +1062,7 @@ function saveAttendanceData(data) {
   }
 }
 
-// ✅✅✅ [تعديل رقم 2: دالة منع التكرار النهائية] ✅✅✅
-// ✅✅✅ [تعديل رقم 2: دالة منع التكرار النهائية] ✅✅✅
+// ✅ دالة منع التكرار — تفحص رقم الإقامة والاسم معاً عبر جميع الأقسام
 function addEmployeesToDepartment(departmentKey, newEmployees) {
     try {
         const allData = getAttendanceData();
@@ -1072,30 +1071,44 @@ function addEmployeesToDepartment(departmentKey, newEmployees) {
         let skippedInfo = '';
 
         newEmployees.forEach(newEmp => {
-            let isDuplicate = false;
+            const newIqama = (newEmp.iqamaId || '').trim();
+            const newName  = (newEmp.name  || '').trim().toLowerCase();
+            let dupReason  = null;
+            let dupDept    = null;
+
             for (const deptKey in allData) {
-                if (allData[deptKey].some(emp => emp.iqamaId === newEmp.iqamaId)) {
-                    skippedCount++;
-                    skippedInfo += `\n- الموظف "${newEmp.name}" (إقامة: ${newEmp.iqamaId}) موجود بالفعل في قسم "${getDepartmentName(deptKey)}".`;
-                    isDuplicate = true;
-                    break;
+                for (const emp of (allData[deptKey] || [])) {
+                    // فحص تكرار رقم الإقامة (إذا كان غير فارغ)
+                    if (newIqama && (emp.iqamaId || '').trim() === newIqama) {
+                        dupReason = `رقم إقامة مكرر (${newIqama})`;
+                        dupDept   = deptKey;
+                        break;
+                    }
+                    // فحص تكرار اسم شاغل الوظيفة (إذا كان غير فارغ)
+                    if (newName && (emp.name || '').trim().toLowerCase() === newName) {
+                        dupReason = `اسم مكرر`;
+                        dupDept   = deptKey;
+                        break;
+                    }
                 }
+                if (dupReason) break;
             }
 
-            if (!isDuplicate) {
-                if (!allData[departmentKey]) {
-                    allData[departmentKey] = [];
-                }
+            if (dupReason) {
+                skippedCount++;
+                skippedInfo += `\n- "${newEmp.name}" — ${dupReason} (موجود في: ${getDepartmentName(dupDept)})`;
+            } else {
+                if (!allData[departmentKey]) allData[departmentKey] = [];
                 allData[departmentKey].push(newEmp);
                 addedCount++;
             }
         });
 
         saveAttendanceData(allData);
-        
-        let alertMessage = `اكتملت العملية:\n- تم استيراد ${addedCount} موظف جديد بنجاح.`;
+
+        let alertMessage = `اكتملت العملية:\n- تم إضافة ${addedCount} موظف بنجاح.`;
         if (skippedCount > 0) {
-            alertMessage += `\n\n- تم تجاهل ${skippedCount} موظف للأسباب التالية:${skippedInfo}`;
+            alertMessage += `\n\n- تم تجاهل ${skippedCount} موظف (تكرار):${skippedInfo}`;
         }
         alert(alertMessage);
 
@@ -2184,8 +2197,10 @@ function addEmployee() {
     const salary = parseFloat(document.getElementById('add-employee-salary').value) || 0;
     const nationality = document.getElementById('add-employee-nationality').value;
 
-    if (!jobTitle || !name) {
-      alert('الرجاء إدخال مسمى الوظيفة واسم الموظف');
+    const iqamaId = (document.getElementById('add-employee-iqama')?.value || '').trim();
+
+    if (!jobTitle || !name || !iqamaId) {
+      alert('الرجاء إدخال مسمى الوظيفة واسم الموظف ورقم الإقامة');
       return;
     }
 
@@ -2197,8 +2212,7 @@ function addEmployee() {
       salary,
       days: Array(daysInMonth).fill('ح'),
       nationality: nationality || 'سعودي',
-      iqamaId: "قيمة رقم الإقامة هنا", // تأكد من أن هذه الخاصية تضاف
-
+      iqamaId,
       nationalityFine: 0
     };
 
@@ -4437,9 +4451,28 @@ function openEditEmployeeForm(deptKey, index) {
 function saveEmployeeChanges(deptKey, index) {
     const data = getAttendanceData();
     const emp = data[deptKey][index];
+    const newIqama = document.getElementById('edit-emp-iqama').value.trim();
+    const newName  = document.getElementById('edit-emp-name').value.trim();
+
+    // فحص التكرار — يستثني الموظف الحالي نفسه
+    for (const dk in data) {
+        const arr = data[dk] || [];
+        for (let i = 0; i < arr.length; i++) {
+            if (dk === deptKey && i === index) continue; // نفس الموظف
+            if (newIqama && (arr[i].iqamaId || '').trim() === newIqama) {
+                alert(`⚠️ رقم الإقامة (${newIqama}) مكرر — موجود عند الموظف "${arr[i].name}" في قسم "${getDepartmentName(dk)}".`);
+                return;
+            }
+            if (newName && (arr[i].name || '').trim().toLowerCase() === newName.toLowerCase()) {
+                alert(`⚠️ الاسم "${newName}" مكرر — موجود بالفعل في قسم "${getDepartmentName(dk)}".`);
+                return;
+            }
+        }
+    }
+
     emp.jobTitle = document.getElementById('edit-emp-job').value.trim();
-    emp.name = document.getElementById('edit-emp-name').value.trim();
-    emp.iqamaId = document.getElementById('edit-emp-iqama').value.trim();
+    emp.name = newName;
+    emp.iqamaId = newIqama;
     emp.salary = parseFloat(document.getElementById('edit-emp-salary').value) || 0;
     emp.category = document.getElementById('edit-emp-category').value;
     emp.nationality = document.getElementById('edit-emp-nationality').value;
