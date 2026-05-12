@@ -268,7 +268,27 @@ function confirmRestore() {
 
             const backupData = backupWrapper.data;
 
+            // ── احفظ المفاتيح المحمية قبل المسح ─────────────────────────────
+            // بيانات التأسيسي والمناصب لا تُمسح إلا بحذف صريح من المستخدم
+            const protectedSnapshot = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (!k) continue;
+                // بيانات التأسيسي: contract_foundation_v2_<مستشفى> + المفتاح السحابي
+                if (k.startsWith('contract_foundation_v2_') || k === 'contract_foundation_data') {
+                    protectedSnapshot[k] = localStorage.getItem(k);
+                }
+            }
+            // احفظ الجلسة أيضاً حتى لا يُقطع التوكن
+            const savedSession = Storage.prototype.getItem.call(localStorage, 'najran_session');
+
             localStorage.clear();
+
+            // ── استعد البيانات المحمية فوراً (تتغلب على الـ backup) ──────────
+            for (const [k, v] of Object.entries(protectedSnapshot)) {
+                if (v !== null) localStorage.setItem(k, v);
+            }
+            if (savedSession) Storage.prototype.setItem.call(localStorage, 'najran_session', savedSession);
 
             for (const key in backupData) {
                 if (Object.prototype.hasOwnProperty.call(backupData, key)) {
