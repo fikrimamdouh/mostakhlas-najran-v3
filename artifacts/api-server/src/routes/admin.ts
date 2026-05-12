@@ -61,6 +61,30 @@ router.patch("/users/:id/supervised-hospital", requireAuth, requireAdmin, async 
   }
 });
 
+/**
+ * POST /api/admin/reset-extracts
+ * Deletes extracts + projects only — keeps users, storage, templates.
+ */
+router.post("/reset-extracts", requireAuth, requireAdmin, async (req: any, res: any) => {
+  const { confirmation } = req.body ?? {};
+  if (confirmation !== "حذف المستخلصات") {
+    return res.status(400).json({ error: "جملة التأكيد غير صحيحة" });
+  }
+
+  const errors: string[] = [];
+  const tryDelete = async (label: string, fn: () => Promise<any>) => {
+    try { await fn(); } catch (e: any) { errors.push(`${label}: ${e.message}`); req.log.warn(e, `reset-extracts: skipped ${label}`); }
+  };
+
+  await tryDelete("extract_revisions", () => db.execute(`DELETE FROM extract_revisions`));
+  await tryDelete("submitted_extracts", () => db.delete(submittedExtractsTable));
+  await tryDelete("extracts",           () => db.delete(extractsTable));
+  await tryDelete("projects",           () => db.delete(projectsTable));
+
+  req.log.info({ adminId: req.currentUser.id, skipped: errors }, "Extracts reset performed");
+  return res.json({ ok: true, message: "تم مسح المستخلصات والمشاريع بنجاح", skipped: errors });
+});
+
 router.post("/reset-system", requireAuth, requireAdmin, async (req: any, res: any) => {
   const { confirmation } = req.body ?? {};
   if (confirmation !== "تأكيد التهيئة الكاملة") {

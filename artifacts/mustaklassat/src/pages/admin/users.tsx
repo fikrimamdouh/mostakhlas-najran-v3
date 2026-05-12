@@ -55,6 +55,67 @@ function DeleteUserModal({ user, onClose, onConfirm, isPending }: {
   );
 }
 
+// ── نافذة تأكيد مسح المستخلصات فقط ──────────────────────────────────────────
+function ResetExtractsModal({ onClose, onConfirm, isPending }: {
+  onClose: () => void;
+  onConfirm: () => void;
+  isPending: boolean;
+}) {
+  const [typed, setTyped] = useState("");
+  const PHRASE = "حذف المستخلصات";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.55)", direction: "rtl" }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="p-5 flex items-center gap-3" style={{ background: "linear-gradient(135deg,#92400e,#d97706)", color: "#fff" }}>
+          <AlertTriangle className="h-7 w-7 shrink-0" />
+          <div>
+            <h2 className="text-lg font-bold">مسح المستخلصات فقط</h2>
+            <p className="text-sm opacity-80">المستخدمون وبيانات الموظفين والتامبلت تبقى كما هي</p>
+          </div>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 space-y-2">
+            <p className="font-bold">سيتم حذف الآتي نهائياً:</p>
+            <ul className="list-disc list-inside space-y-1 opacity-90">
+              <li>جميع المستخلصات والمشاريع</li>
+              <li>جميع المستخلصات المرفوعة</li>
+            </ul>
+            <p className="font-bold text-green-700 mt-2">يبقى محفوظاً:</p>
+            <ul className="list-disc list-inside space-y-1 text-green-800 opacity-90">
+              <li>جميع المستخدمين وصلاحياتهم</li>
+              <li>بيانات الموظفين المحفوظة</li>
+              <li>التامبلت المرفوعة</li>
+            </ul>
+          </div>
+          <p className="text-gray-700 text-sm font-medium">
+            للتأكيد، اكتب بالضبط: <span className="font-bold text-amber-700">«{PHRASE}»</span>
+          </p>
+          <Input
+            value={typed}
+            onChange={e => setTyped(e.target.value)}
+            placeholder={PHRASE}
+            className="text-center text-lg border-amber-300 focus:border-amber-500"
+            autoFocus
+          />
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" className="flex-1" onClick={onClose} disabled={isPending}>إلغاء</Button>
+            <Button
+              className="flex-1 text-white gap-2"
+              style={{ background: typed === PHRASE && !isPending ? "#d97706" : undefined }}
+              disabled={typed !== PHRASE || isPending}
+              onClick={onConfirm}
+            >
+              <Trash2 className="h-4 w-4" />
+              {isPending ? "جاري المسح..." : "مسح المستخلصات"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── نافذة تأكيد تهيئة النظام ────────────────────────────────────────────────
 function ResetSystemModal({ onClose, onConfirm, isPending }: {
   onClose: () => void;
@@ -261,7 +322,26 @@ export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [modulesUser, setModulesUser] = useState<any | null>(null);
   const [showReset, setShowReset] = useState(false);
+  const [showResetExtracts, setShowResetExtracts] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; email: string } | null>(null);
+
+  const resetExtracts = useMutation({
+    mutationFn: async () => {
+      const token = await getToken();
+      const res = await fetch("/api/admin/reset-extracts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ confirmation: "حذف المستخلصات" }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "فشل"); }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "✅ تم المسح", description: "تم حذف جميع المستخلصات والمشاريع. المستخدمون والبيانات الأخرى بخير." });
+      setShowResetExtracts(false);
+    },
+    onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
+  });
 
   const resetSystem = useMutation({
     mutationFn: async () => {
@@ -403,6 +483,15 @@ export default function AdminUsers() {
         />
       )}
 
+      {/* Reset extracts modal */}
+      {showResetExtracts && (
+        <ResetExtractsModal
+          onClose={() => setShowResetExtracts(false)}
+          onConfirm={() => resetExtracts.mutate()}
+          isPending={resetExtracts.isPending}
+        />
+      )}
+
       {/* Delete user modal */}
       {deleteTarget && (
         <DeleteUserModal
@@ -445,6 +534,15 @@ export default function AdminUsers() {
               سجل المراقبة
             </Button>
           </Link>
+          <Button
+            size="sm"
+            className="gap-2 text-white border-0"
+            style={{ background: "#d97706" }}
+            onClick={() => setShowResetExtracts(true)}
+          >
+            <Trash2 className="h-4 w-4" />
+            مسح المستخلصات
+          </Button>
           <Button
             size="sm"
             className="gap-2 bg-red-700 hover:bg-red-800 text-white border-0"
