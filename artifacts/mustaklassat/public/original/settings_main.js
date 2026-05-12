@@ -369,6 +369,13 @@ function saveContractData() {
 // تحديث عرض بيانات العقد
 function updateContractDisplayData() {
     const data = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+
+    // ── fallback: اقرأ المفاتيح المنفصلة التي يحفظها cloud-sync ──────────────
+    if (!data.hospitalName)    data.hospitalName    = localStorage.getItem('hospitalName')    || '';
+    if (!data.companyName)     data.companyName     = localStorage.getItem('companyName')     || '';
+    if (!data.contractNumber)  data.contractNumber  = localStorage.getItem('contractNumber')  || '';
+    if (!data.contractDetails) data.contractDetails = localStorage.getItem('contractDetails') || '';
+
     // طبّق البيانات الثابتة (رقم العقد، التواريخ، الشركة) على الحقول الفارغة
     if (data.hospitalName) {
         var before = JSON.stringify(data);
@@ -1088,6 +1095,12 @@ function autoFillFromSession() {
         var contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
         var changed = false;
 
+        // fallback: اقرأ hospitalName من المفتاح المنفصل إن لم يكن في persistentContractData
+        if (!contractData.hospitalName) {
+            var _fallbackHN = localStorage.getItem('hospitalName') || (session.hospital || '');
+            if (_fallbackHN) { contractData.hospitalName = _fallbackHN; changed = true; }
+        }
+
         // اسم المستشفى — يُملأ إذا كان فارغاً أو مختلفاً عن الجلسة الحالية
         if (session.hospital && contractData.hospitalName !== session.hospital) {
             contractData.hospitalName = session.hospital;
@@ -1245,6 +1258,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log(">> اكتمل فرض تحميل البيانات.");
     }, 10);
+});
+
+// ── إعادة تعبئة الصفحة بعد انتهاء cloud-sync من السحب ──────────────────────
+window.addEventListener('najranCloudPulled', function () {
+    updateContractDisplayData();
+    autoFillFromSession();
 });
 
 function openBackupOptionsMenu() {
