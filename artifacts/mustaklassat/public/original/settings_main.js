@@ -1194,9 +1194,52 @@ function autoFillFromSession() {
     } catch (e) { /* تجاهل أي خطأ */ }
 }
 
+// ── دالة مشتركة لإزالة overlay التحميل وإعادة تعبئة الصفحة ─────────────────
+function _revealSettingsPage() {
+    var ov = document.getElementById('_najran_ctx_overlay');
+    if (ov) { ov.style.opacity = '0'; setTimeout(function(){ if(ov.parentNode) ov.parentNode.removeChild(ov); }, 300); }
+    updateContractDisplayData();
+    autoFillFromSession();
+}
+
+// ── إعادة تعبئة الصفحة بعد انتهاء cloud-sync من السحب ──────────────────────
+window.addEventListener('najranCloudPulled', _revealSettingsPage);
+
 // ✅✅✅ الحل النهائي: استبدل كتلة DOMContentLoaded بالكامل بهذا الكود ✅✅✅
 document.addEventListener('DOMContentLoaded', () => {
     console.log("الصفحة جاهزة. بدء التهيئة...");
+
+    // ── فحص إذا كان hospital context غير موجود بعد → أظهر overlay انتظار ─────
+    (function _maybeShowLoadingOverlay() {
+        var hasCached = false;
+        try {
+            var _cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+            hasCached = !!_cd.hospitalName;
+        } catch(e) {}
+        if (!hasCached) hasCached = !!(localStorage.getItem('hospitalName'));
+        var _s = _getSession();
+        if (!hasCached) hasCached = !!(_s && _s.hospital);
+        if (hasCached) return; // context موجود → لا حاجة للـ overlay
+
+        var ov = document.createElement('div');
+        ov.id = '_najran_ctx_overlay';
+        ov.style.cssText = [
+            'position:fixed;top:0;left:0;width:100%;height:100%',
+            'background:rgba(245,247,252,0.96)',
+            'z-index:99999;display:flex;align-items:center;justify-content:center',
+            'font-family:Tajawal,sans-serif;direction:rtl',
+            'transition:opacity .3s'
+        ].join(';');
+        ov.innerHTML = '<div style="text-align:center;color:#1e3c72">'
+            + '<div style="font-size:48px;margin-bottom:16px">🏥</div>'
+            + '<div style="font-size:18px;font-weight:700;margin-bottom:8px">جارٍ تحميل بيانات المستشفى…</div>'
+            + '<div style="font-size:13px;color:#6b7280">يرجى الانتظار لحظة</div>'
+            + '</div>';
+        document.body.appendChild(ov);
+
+        // fallback: أزل الـ overlay بعد 10 ثوانٍ على أي حال
+        setTimeout(function() { _revealSettingsPage(); }, 10000);
+    })();
 
     // 1. قم بكل الإعدادات الأولية
     showSection('contract');
@@ -1258,12 +1301,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log(">> اكتمل فرض تحميل البيانات.");
     }, 10);
-});
-
-// ── إعادة تعبئة الصفحة بعد انتهاء cloud-sync من السحب ──────────────────────
-window.addEventListener('najranCloudPulled', function () {
-    updateContractDisplayData();
-    autoFillFromSession();
 });
 
 function openBackupOptionsMenu() {
