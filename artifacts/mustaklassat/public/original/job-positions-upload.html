@@ -335,7 +335,7 @@ function renderPreview() {
   document.getElementById('previewSection').style.display = 'block';
 }
 
-// ====== حفظ ======
+// ====== حفظ (مع الدمج — يحتفظ بالموجود ويضيف الجديد) ======
 async function saveAll() {
   const validRows = parsedRows.filter(r => r.valid);
   if (!validRows.length) { showAlert('لا توجد صفوف صالحة للحفظ', 'error'); return; }
@@ -352,11 +352,32 @@ async function saveAll() {
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
 
   try {
-    for (const [hospital, rows] of Object.entries(byHospital)) {
-      await JobPositionsDB.save(hospital, rows);
+    let totalAdded = 0, totalUpdated = 0;
+    for (const [hospital, newRows] of Object.entries(byHospital)) {
+      // جلب المناصب الموجودة أولاً
+      let existingRows = [];
+      try {
+        const existing = await JobPositionsDB.load(hospital);
+        existingRows = (existing && existing.rows) ? existing.rows : [];
+      } catch (_) {}
+
+      // دمج: حدّث الموجود (بنفس القسم + المسمى) أو أضف جديداً
+      const merged = [...existingRows];
+      for (const nr of newRows) {
+        const idx = merged.findIndex(e => e.dept === nr.dept && e.jobTitle === nr.jobTitle);
+        if (idx >= 0) {
+          merged[idx] = { ...merged[idx], ...nr }; // تحديث
+          totalUpdated++;
+        } else {
+          merged.push(nr); // إضافة جديد
+          totalAdded++;
+        }
+      }
+
+      await JobPositionsDB.save(hospital, merged);
     }
     const hospitals = Object.keys(byHospital);
-    showAlert(`✅ تم الحفظ بنجاح لـ ${hospitals.length} مستشفى: ${hospitals.join(' — ')}`, 'success');
+    showAlert(`✅ تم الحفظ لـ ${hospitals.length} مستشفى — ${totalAdded} منصب جديد · ${totalUpdated} محدَّث`, 'success');
     resetUpload();
     renderSavedList();
   } catch (err) {
