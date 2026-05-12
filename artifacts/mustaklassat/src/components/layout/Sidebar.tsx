@@ -181,15 +181,32 @@ export function Sidebar() {
     setSwitchingHospital(h);
     setShowHospitalMenu(false);
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10_000);
       const token = await getToken();
       await fetch('/api/users/me/hospital', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ hospital: h }),
+        signal: controller.signal,
       });
-      await queryClient.refetchQueries({ queryKey: ['/api/users/me'] });
-      // أبلِغ صفحات الـ original-viewer بتغيير الموقع
+      clearTimeout(timeoutId);
+      // حدّث najran_session في localStorage فوراً حتى تقرأ باقي الصفحات المستشفى الجديد
+      try {
+        const raw = localStorage.getItem('najran_session');
+        if (raw) {
+          const sess = JSON.parse(raw);
+          sess.hospital = h;
+          localStorage.setItem('najran_session', JSON.stringify(sess));
+        }
+        localStorage.setItem('hospitalName', h);
+      } catch {}
+      // أبلِغ صفحات الـ original-viewer بتغيير الموقع فوراً (قبل انتظار refetch)
       try { window.dispatchEvent(new CustomEvent('najranHospitalChanged', { detail: { hospital: h } })); } catch {}
+      // أعِد جلب بيانات المستخدم في الخلفية (بدون انتظار)
+      queryClient.refetchQueries({ queryKey: ['/api/users/me'] });
+    } catch {
+      // timeout أو خطأ شبكة — نحرر الزر فوراً
     } finally {
       setSwitchingHospital(null);
     }

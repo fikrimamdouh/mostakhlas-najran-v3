@@ -72,6 +72,8 @@
   async function apiFetch(path, options = {}) {
     if (!getSession()) return null;
     try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10_000);
       const token = getFreshToken();
       const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
       if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -79,7 +81,9 @@
         ...options,
         headers,
         credentials: 'include',
+        signal: controller.signal,
       });
+      clearTimeout(timer);
       if (resp.status === 401) {
         showTokenExpiredBanner();
         return null;
@@ -343,9 +347,13 @@
 
     const origPullFromCloud = pullFromCloud;
     async function pullFromCloudSafe() {
+      if (_pulling) return;
       _pulling = true;
       try { await origPullFromCloud(); } finally { _pulling = false; }
     }
+
+    // تحديث التعريض العام بنسخة آمنة (مع _pulling guard)
+    window.najranPullFromCloud = pullFromCloudSafe;
 
     await pullFromCloudSafe();
 
