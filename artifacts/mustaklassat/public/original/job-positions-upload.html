@@ -427,12 +427,12 @@ function applyDeptMappings() {
   }
 }
 
-// ====== حفظ (مع الدمج — يحتفظ بالموجود ويضيف الجديد) ======
+// ====== حفظ (استبدال كامل لبيانات كل مستشفى) ======
 async function saveAll() {
   const validRows = parsedRows.filter(r => r.valid);
   if (!validRows.length) { showAlert('لا توجد صفوف صالحة للحفظ', 'error'); return; }
 
-  // تجميع حسب المستشفى
+  // تجميع حسب المستشفى — يحتفظ بكل الصفوف بما فيها المكررة في المسمى
   const byHospital = {};
   validRows.forEach(r => {
     const key = r.hospitalName || 'غير محدد';
@@ -444,32 +444,14 @@ async function saveAll() {
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
 
   try {
-    let totalAdded = 0, totalUpdated = 0;
+    let totalSaved = 0;
     for (const [hospital, newRows] of Object.entries(byHospital)) {
-      // جلب المناصب الموجودة أولاً
-      let existingRows = [];
-      try {
-        const existing = await JobPositionsDB.load(hospital);
-        existingRows = (existing && existing.rows) ? existing.rows : [];
-      } catch (_) {}
-
-      // دمج: حدّث الموجود (بنفس القسم + المسمى) أو أضف جديداً
-      const merged = [...existingRows];
-      for (const nr of newRows) {
-        const idx = merged.findIndex(e => e.dept === nr.dept && e.jobTitle === nr.jobTitle);
-        if (idx >= 0) {
-          merged[idx] = { ...merged[idx], ...nr }; // تحديث
-          totalUpdated++;
-        } else {
-          merged.push(nr); // إضافة جديد
-          totalAdded++;
-        }
-      }
-
-      await JobPositionsDB.save(hospital, merged);
+      // استبدال كامل — لا دمج، لأن نفس المسمى الوظيفي يمكن تكراره (عدة موظفين بنفس المسمى)
+      await JobPositionsDB.save(hospital, newRows);
+      totalSaved += newRows.length;
     }
     const hospitals = Object.keys(byHospital);
-    showAlert(`✅ تم الحفظ لـ ${hospitals.length} مستشفى — ${totalAdded} منصب جديد · ${totalUpdated} محدَّث`, 'success');
+    showAlert(`✅ تم الحفظ لـ ${hospitals.length} مستشفى — ${totalSaved} منصب`, 'success');
     resetUpload();
     renderSavedList();
   } catch (err) {
