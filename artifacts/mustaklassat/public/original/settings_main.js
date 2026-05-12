@@ -886,6 +886,7 @@ var HOSPITAL_CONTRACT_MAP = {
         startDate:      '2026-01-02',
         endDate:        '2031-01-01',
         contractType:   'عقد أساسي',
+        contractValue:  '111691036.01',
     },
     'مستشفى حبونا العام': {
         contractNumber: '250811180425',
@@ -893,6 +894,7 @@ var HOSPITAL_CONTRACT_MAP = {
         startDate:      '2026-01-02',
         endDate:        '2031-01-01',
         contractType:   'عقد أساسي',
+        contractValue:  '111691036.01',
     },
     'مستشفى بدر الجنوب العام': {
         contractNumber: '250811180425',
@@ -900,6 +902,7 @@ var HOSPITAL_CONTRACT_MAP = {
         startDate:      '2026-01-02',
         endDate:        '2031-01-01',
         contractType:   'عقد أساسي',
+        contractValue:  '111691036.01',
     },
     'مستشفى الولادة والأطفال': {
         contractNumber: '250701156483',
@@ -907,6 +910,7 @@ var HOSPITAL_CONTRACT_MAP = {
         startDate:      '2026-02-05',
         endDate:        '2031-02-04',
         contractType:   'عقد أساسي',
+        contractValue:  '272601114.35',
     },
     'مستشفى نجران العام القديم وسكن الممرضات الخارجي': {
         contractNumber: '250701156483',
@@ -914,6 +918,7 @@ var HOSPITAL_CONTRACT_MAP = {
         startDate:      '2026-02-04',
         endDate:        '2031-02-03',
         contractType:   'عقد أساسي',
+        contractValue:  '272601114.35',
     },
     'المكاتب الإدارية والمرافق الصحية': {
         contractNumber: '250701156483',
@@ -921,6 +926,7 @@ var HOSPITAL_CONTRACT_MAP = {
         startDate:      '2026-02-05',
         endDate:        '2031-02-04',
         contractType:   'عقد أساسي',
+        contractValue:  '272601114.35',
     },
     'صيانة وإصلاح السيارات والعيادات المتنقلة': {
         contractNumber: '250701156483',
@@ -928,6 +934,7 @@ var HOSPITAL_CONTRACT_MAP = {
         startDate:      '2026-02-05',
         endDate:        '2031-02-04',
         contractType:   'عقد أساسي',
+        contractValue:  '272601114.35',
     },
 };
 
@@ -940,6 +947,7 @@ function _applyFixedContractData(data, hospitalName) {
     if (!data.startDate)      data.startDate      = fixed.startDate;
     if (!data.endDate)        data.endDate        = fixed.endDate;
     if (!data.contractType)   data.contractType   = fixed.contractType;
+    if (!data.contractValue)  data.contractValue  = fixed.contractValue;
     return data;
 }
 
