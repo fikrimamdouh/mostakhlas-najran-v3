@@ -1237,8 +1237,8 @@ window._selectHospitalFromOverlay = function(hospitalName) {
         }
     } catch(e) {}
 
-    // 2. احفظ مفتاح hospitalName المنفصل
-    Storage.prototype.setItem.call(localStorage, 'hospitalName', hospitalName);
+    // 2. احفظ مفتاح hospitalName المنفصل (عبر الـ proxy حتى تقرأه باقي الصفحات)
+    localStorage.setItem('hospitalName', hospitalName);
 
     // 3. أزل الـ overlay
     var ov = document.getElementById('_najran_ctx_overlay');
@@ -1255,8 +1255,8 @@ window._selectHospitalFromOverlay = function(hospitalName) {
     function _applyDefaults() {
         var freshData = { hospitalName: hospitalName };
         _applyFixedContractData(freshData, hospitalName);
-        // استخدم Storage.prototype مباشرة لتفادي trigger المزامنة بالبيانات الافتراضية
-        Storage.prototype.setItem.call(localStorage, 'persistentContractData', JSON.stringify(freshData));
+        // اكتب عبر الـ proxy حتى تقرأ باقي الصفحات البيانات من المكان الصحيح
+        localStorage.setItem('persistentContractData', JSON.stringify(freshData));
     }
 
     // 4. جلب بيانات المستشفى من السيرفر (التعديلات المحفوظة سابقاً)
