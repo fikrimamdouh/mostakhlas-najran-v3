@@ -248,9 +248,10 @@ function updateEmployeeAttendance(departmentKey, employeeIndex, dayIndex, newSta
         if (!employee) return;
 
         const { daysInMonth } = getExtractPeriodDetails();
-        // تهيئة days كمصفوفة كاملة بقيم "ح" لو مش موجودة
-        if (!employee.days || employee.days.length < daysInMonth) {
-            employee.days = Array(daysInMonth).fill('ح');
+        // تهيئة days كمصفوفة كاملة بقيم "ح" لو مش موجودة أو مش array
+        if (!Array.isArray(employee.days) || employee.days.length < daysInMonth) {
+            const existing = Array.isArray(employee.days) ? employee.days : [];
+            employee.days = Array(daysInMonth).fill('ح').map((v, i) => existing[i] || v);
         }
 
         // تحديث حالة اليوم المحدد فقط
