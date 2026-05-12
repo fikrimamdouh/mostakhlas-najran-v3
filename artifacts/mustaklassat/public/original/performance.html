@@ -1223,6 +1223,10 @@ function updateCertificateFromPerformance() {
     // قائمة بجميع الجداول الممكنة في النظام
     const allPossibleDepartments = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'laundry', 'security', 'new_section_8']; // أضف أي جداول مستقبلية هنا
 
+    // ── تحديث مبالغ الـ7 أقسام من localStorage أولاً (يضمن تطابق الإجمالي) ──
+    const CORE_TABLE_IDS = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'laundry', 'security'];
+    CORE_TABLE_IDS.forEach(tid => { try { updateTotalAmount(tid); } catch(_){} });
+
     let totalAllocated = 0;
     let totalDue = 0;
     let totalDeducted = 0;
