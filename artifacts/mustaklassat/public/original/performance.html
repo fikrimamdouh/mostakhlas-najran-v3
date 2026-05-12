@@ -1275,10 +1275,10 @@ function updateCertificateFromPerformance() {
         const due = amount - actualDeduction;
 
         // تحديث باقي خلايا الصف في شهادة الأداء
-        document.getElementById(dept + '-allocated').textContent = Math.round(amount);
+        document.getElementById(dept + '-allocated').textContent = amount.toFixed(2);
         document.getElementById(dept + '-certificate-score').textContent = score + '/' + maxScore;
         document.getElementById(dept + '-percentage').textContent = percentage.toFixed(0) + '%';
-        document.getElementById(dept + '-due').textContent = Math.round(due);
+        document.getElementById(dept + '-due').textContent = due.toFixed(2);
 
         // إضافة للإجماليات
         totalAllocated += amount;
@@ -1417,10 +1417,10 @@ function updateTotalAmount(tableId) {
             }
         }
 
-        // 6. تحديث الواجهة (بدون هللات)
+        // 6. تحديث الواجهة
         const amountInput = document.getElementById(tableId + '-amount');
         if (amountInput) {
-            amountInput.value = Math.round(finalAmountForSection);
+            amountInput.value = finalAmountForSection.toFixed(2);
         }
         
     } catch (error) {
