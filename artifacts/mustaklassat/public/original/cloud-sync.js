@@ -322,6 +322,9 @@
     showSyncStatus('done');
   }
 
+  // كشف syncNow للاستخدام الخارجي (مثل saveContractData في settings_main.js)
+  window.najranSyncNow = syncNow;
+
   // ── التهيئة الرئيسية ──────────────────────────────────────────────────────
   async function init() {
     const session = getSession();

@@ -332,16 +332,21 @@ function saveContractData() {
 
         // دالة الحفظ النهائية (سنستدعيها في كل الحالات)
         const finalizeSave = (finalData) => {
-            // 1. الحفظ في localStorage (أهم خطوة)
+            // 1. الحفظ في localStorage
             localStorage.setItem('persistentContractData', JSON.stringify(finalData));
             
-            // 2. إرسال إشعار لباقي الصفحات (اختياري)
+            // 2. رفع فوري إلى السيرفر (بدون انتظار المزامنة الدورية)
+            if (typeof window.najranSyncNow === 'function') {
+                window.najranSyncNow().catch(() => {});
+            }
+
+            // 3. إرسال إشعار لباقي الصفحات
             window.dispatchEvent(new StorageEvent('storage', { key: 'persistentContractData' }));
 
-            // 3. إظهار رسالة النجاح وإغلاق وضع التعديل
+            // 4. إظهار رسالة النجاح وإغلاق وضع التعديل
             saveSectionData('contract', 'contract-save-success');
             
-            // 4. تحديث الواجهة
+            // 5. تحديث الواجهة
             updateMainHospitalName();
             alert('تم حفظ البيانات بنجاح!');
         };
