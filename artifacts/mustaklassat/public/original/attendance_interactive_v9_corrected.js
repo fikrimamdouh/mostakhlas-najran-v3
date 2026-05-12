@@ -381,6 +381,10 @@ function updateContractDisplayData() {
 
 // ===== 4. استيراد إكسل للعمالة =====
 
+// متغيرات مؤقتة لتخزين بيانات الاستيراد حتى يختار المستخدم
+let _pendingImportEmployees = [];
+let _pendingImportDeptId    = null;
+
 function importExcelWithDepartment() {
   const fileInput = document.getElementById('excel-file-input');
   const file = fileInput?.files?.[0];
@@ -391,7 +395,93 @@ function importExcelWithDepartment() {
   openDialog('select-department-dialog');
 }
 
-// ✅✅✅ [تعديل رقم 1: دالة معالجة الإكسل النهائية مع تأكيد ذكي] ✅✅✅
+// ✅ دالة استبدال: تمسح موظفي القسم المحدد وتضع الجدد مباشرة
+function replaceEmployeesInDepartment(departmentKey, newEmployees) {
+    try {
+        const allData = getAttendanceData();
+        allData[departmentKey] = newEmployees;
+        saveAttendanceData(allData);
+        renderTables();
+        alert(`✅ تم استبدال بيانات القسم بـ ${newEmployees.length} موظف.`);
+    } catch (error) {
+        console.error('خطأ في استبدال الموظفين:', error);
+        alert('حدث خطأ أثناء الاستبدال');
+    }
+}
+
+// ✅ نافذة الاختيار: استبدال أم تحديث؟
+function showImportModeDialog(departmentId, employees) {
+    _pendingImportEmployees = employees;
+    _pendingImportDeptId    = departmentId;
+
+    const existing = (getAttendanceData()[departmentId] || []).length;
+    const deptName = getDepartmentName(departmentId);
+
+    let dlg = document.getElementById('import-mode-dialog');
+    if (!dlg) {
+        dlg = document.createElement('div');
+        dlg.id = 'import-mode-dialog';
+        dlg.className = 'dialog';
+        document.body.appendChild(dlg);
+        const ov = document.createElement('div');
+        ov.id = 'import-mode-overlay';
+        ov.className = 'overlay';
+        ov.onclick = () => closeDialog('import-mode-dialog');
+        document.body.appendChild(ov);
+    }
+
+    dlg.innerHTML = `
+        <div class="dialog-header">
+            <h3><i class="fas fa-file-excel"></i> كيف تريد استيراد الملف؟</h3>
+            <span class="close" onclick="closeDialog('import-mode-dialog')">×</span>
+        </div>
+        <div class="dialog-body" style="text-align:center; padding: 20px 16px;">
+            <p style="margin-bottom:6px; font-size:.95rem;">
+                القسم: <strong>${deptName}</strong><br>
+                موظفون حاليون: <strong>${existing}</strong> &nbsp;|&nbsp;
+                موظفون في الملف: <strong>${employees.length}</strong>
+            </p>
+            <div style="display:flex; gap:12px; justify-content:center; margin-top:20px; flex-wrap:wrap;">
+                <button onclick="confirmImportReplace()"
+                    style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:1rem;font-weight:700;cursor:pointer;">
+                    <i class="fas fa-trash-alt"></i> استبدال<br>
+                    <small style="font-weight:400;font-size:.78rem;">يمسح الحاليين ويضع الجدد</small>
+                </button>
+                <button onclick="confirmImportUpdate()"
+                    style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:1rem;font-weight:700;cursor:pointer;">
+                    <i class="fas fa-sync-alt"></i> تحديث<br>
+                    <small style="font-weight:400;font-size:.78rem;">يضيف الجدد ويتجاهل المكررين</small>
+                </button>
+                <button onclick="closeDialog('import-mode-dialog')"
+                    style="background:#6b7280;color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:1rem;cursor:pointer;">
+                    <i class="fas fa-times"></i> إلغاء
+                </button>
+            </div>
+        </div>`;
+
+    openDialog('import-mode-dialog');
+}
+
+function confirmImportReplace() {
+    closeDialog('import-mode-dialog');
+    closeDialog('select-department-dialog');
+    closeDialog('upload-excel-dialog');
+    replaceEmployeesInDepartment(_pendingImportDeptId, _pendingImportEmployees);
+    _pendingImportEmployees = [];
+    _pendingImportDeptId    = null;
+}
+
+function confirmImportUpdate() {
+    closeDialog('import-mode-dialog');
+    closeDialog('select-department-dialog');
+    closeDialog('upload-excel-dialog');
+    addEmployeesToDepartment(_pendingImportDeptId, _pendingImportEmployees);
+    renderTables();
+    _pendingImportEmployees = [];
+    _pendingImportDeptId    = null;
+}
+
+// ✅ دالة معالجة الإكسل النهائية
 async function processExcelFile(departmentId) {
     const fileInput = document.getElementById('excel-file-input');
     const file = fileInput?.files?.[0];
@@ -400,23 +490,21 @@ async function processExcelFile(departmentId) {
         return;
     }
 
-    // إظهار رسالة "جاري المعالجة" للمستخدم
-    const statusArea = document.getElementById('import-status-area'); // نفترض وجود هذا العنصر في نافذة الاستيراد
+    const statusArea = document.getElementById('import-status-area');
     if (statusArea) statusArea.innerHTML = `<h4><i class="fas fa-spinner fa-spin"></i> جاري معالجة الملف...</h4>`;
 
     try {
-        const newEmployees = await processAndFilterExcelData(file); // استدعاء دالة المعالجة الجديدة
+        const newEmployees = await processAndFilterExcelData(file);
         if (newEmployees.length === 0) {
             throw new Error("لم يتم العثور على بيانات موظفين صالحة في الملف.");
         }
 
-        // --- المنطق الجديد للتحقق والتأكيد ---
         const employeesWithoutIqama = newEmployees.filter(emp => !emp.iqamaId);
-        const employeesWithIqama = newEmployees.filter(emp => emp.iqamaId);
+        let employeesWithIqama = newEmployees.filter(emp => emp.iqamaId);
 
         if (employeesWithoutIqama.length > 0) {
             const names = employeesWithoutIqama.map(e => e.name).join('، ');
-            const msg = `تحذير: تم العثور على ${employeesWithoutIqama.length} موظف بدون رقم إقامة:\n\n(${names})\n\nهل تريد استيراد الموظفين الآخرين فقط وتجاهل هؤلاء؟`;
+            const msg = `تحذير: ${employeesWithoutIqama.length} موظف بدون رقم إقامة:\n\n(${names})\n\nهل تريد استيراد الآخرين فقط؟`;
             if (!confirm(msg)) {
                 if (statusArea) statusArea.innerHTML = `<p class="status-skipped">تم إلغاء العملية.</p>`;
                 fileInput.value = '';
@@ -424,11 +512,8 @@ async function processExcelFile(departmentId) {
             }
         }
 
-        addEmployeesToDepartment(departmentId, employeesWithIqama); // إضافة الموظفين الذين لديهم إقامة فقط
-        
-        renderTables();
-        closeDialog('select-department-dialog');
-        closeDialog('upload-excel-dialog');
+        // عرض نافذة الاختيار بدلاً من الإضافة المباشرة
+        showImportModeDialog(departmentId, employeesWithIqama);
 
     } catch (error) {
         if (statusArea) statusArea.innerHTML = `<p class="status-error">✗ فشل استيراد الملف: ${error.message}</p>`;
