@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListUsers, useApproveUser, useRejectUser, getListUsersQueryKey, useGetMe } from "@workspace/api-client-react";
+import { useListUsers, useApproveUser, useRejectUser, getListUsersQueryKey, useGetMe, useDeleteUser } from "@workspace/api-client-react";
 import { useAuth } from "@clerk/react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,6 +14,46 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 import { ALL_MODULES } from "@/lib/modules";
+
+// ── نافذة تأكيد حذف مستخدم واحد ─────────────────────────────────────────────
+function DeleteUserModal({ user, onClose, onConfirm, isPending }: {
+  user: { name: string; email: string };
+  onClose: () => void;
+  onConfirm: () => void;
+  isPending: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.55)", direction: "rtl" }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="p-5 flex items-center gap-3" style={{ background: "linear-gradient(135deg,#7f1d1d,#b91c1c)", color: "#fff" }}>
+          <AlertTriangle className="h-6 w-6 shrink-0" />
+          <div>
+            <h2 className="text-base font-bold">حذف مستخدم نهائياً</h2>
+            <p className="text-xs opacity-80">لا يمكن التراجع عن هذا الإجراء</p>
+          </div>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 space-y-1">
+            <p className="font-bold">{user.name}</p>
+            <p className="opacity-80 text-xs">{user.email}</p>
+            <p className="mt-2">سيتم حذف هذا المستخدم نهائياً من النظام ومن نظام تسجيل الدخول. لن يتمكن من الدخول مرة أخرى.</p>
+          </div>
+          <div className="flex gap-3 pt-1">
+            <Button variant="outline" className="flex-1" onClick={onClose} disabled={isPending}>إلغاء</Button>
+            <Button
+              className="flex-1 bg-red-700 hover:bg-red-800 text-white gap-2"
+              onClick={onConfirm}
+              disabled={isPending}
+            >
+              <Trash2 className="h-4 w-4" />
+              {isPending ? "جاري الحذف..." : "حذف نهائي"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── نافذة تأكيد تهيئة النظام ────────────────────────────────────────────────
 function ResetSystemModal({ onClose, onConfirm, isPending }: {
@@ -221,6 +261,7 @@ export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [modulesUser, setModulesUser] = useState<any | null>(null);
   const [showReset, setShowReset] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; email: string } | null>(null);
 
   const resetSystem = useMutation({
     mutationFn: async () => {
@@ -302,6 +343,21 @@ export default function AdminUsers() {
     },
   });
 
+  const { mutate: deleteUser, isPending: isDeleting } = useDeleteUser({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "✅ تم الحذف", description: "تم حذف المستخدم نهائياً من النظام" });
+        setDeleteTarget(null);
+        queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
+      },
+      onError: (e: any) => {
+        const msg = e?.response?.data?.error || "فشل حذف المستخدم";
+        toast({ title: "خطأ", description: msg, variant: "destructive" });
+        setDeleteTarget(null);
+      },
+    },
+  });
+
   const saveModules = useMutation({
     mutationFn: async ({ userId, modules }: { userId: number; modules: string[] | null }) => {
       const token = await getToken();
@@ -344,6 +400,16 @@ export default function AdminUsers() {
           user={modulesUser}
           onClose={() => setModulesUser(null)}
           onSave={(modules) => saveModules.mutate({ userId: modulesUser.id, modules })}
+        />
+      )}
+
+      {/* Delete user modal */}
+      {deleteTarget && (
+        <DeleteUserModal
+          user={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={() => deleteUser({ userId: deleteTarget.id.toString() })}
+          isPending={isDeleting}
         />
       )}
 
@@ -577,6 +643,19 @@ export default function AdminUsers() {
                             onClick={() => toggleActive.mutate({ userId: user.id, activate: true })}
                             disabled={toggleActive.isPending}>
                             <UserCheck className="h-3 w-3" /> تفعيل
+                          </Button>
+                        )}
+                        {/* زر الحذف النهائي — لجميع المستخدمين ما عدا المدير الحالي */}
+                        {me?.id !== user.id && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            title="حذف نهائي"
+                            onClick={() => setDeleteTarget({ id: user.id, name: user.name ?? "", email: user.email })}
+                            disabled={isDeleting}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         )}
                       </div>

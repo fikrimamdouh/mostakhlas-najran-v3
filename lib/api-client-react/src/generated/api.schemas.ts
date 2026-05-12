@@ -199,6 +199,10 @@ export const ListUsersStatus = {
   rejected: "rejected",
 } as const;
 
+export type DeleteUser200 = {
+  ok?: boolean;
+};
+
 export type ListExtractsParams = {
   status?: ListExtractsStatus;
   projectId?: number;

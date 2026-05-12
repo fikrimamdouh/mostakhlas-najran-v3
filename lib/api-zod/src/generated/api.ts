@@ -22,7 +22,13 @@ export const GetMeResponse = zod.object({
   clerkId: zod.string(),
   email: zod.string(),
   name: zod.string().nullish(),
-  role: zod.enum(["admin", "supervisor", "contract_supervisor", "viewer", "user"]),
+  role: zod.enum([
+    "admin",
+    "supervisor",
+    "contract_supervisor",
+    "viewer",
+    "user",
+  ]),
   contractCompany: zod.string().nullish(),
   status: zod.enum(["pending", "approved", "rejected"]),
   company: zod.string().nullish(),
@@ -55,7 +61,13 @@ export const ListUsersResponse = zod.object({
       clerkId: zod.string(),
       email: zod.string(),
       name: zod.string().nullish(),
-      role: zod.enum(["admin", "supervisor", "contract_supervisor", "viewer", "user"]),
+      role: zod.enum([
+        "admin",
+        "supervisor",
+        "contract_supervisor",
+        "viewer",
+        "user",
+      ]),
       contractCompany: zod.string().nullish(),
       status: zod.enum(["pending", "approved", "rejected"]),
       company: zod.string().nullish(),
@@ -75,6 +87,17 @@ export const ListUsersResponse = zod.object({
 });
 
 /**
+ * @summary Permanently delete a user from DB and Clerk (admin only)
+ */
+export const DeleteUserParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const DeleteUserResponse = zod.object({
+  ok: zod.boolean().optional(),
+});
+
+/**
  * @summary Approve a user registration (admin only)
  */
 export const ApproveUserParams = zod.object({
@@ -86,7 +109,13 @@ export const ApproveUserResponse = zod.object({
   clerkId: zod.string(),
   email: zod.string(),
   name: zod.string().nullish(),
-  role: zod.enum(["admin", "supervisor", "contract_supervisor", "viewer", "user"]),
+  role: zod.enum([
+    "admin",
+    "supervisor",
+    "contract_supervisor",
+    "viewer",
+    "user",
+  ]),
   contractCompany: zod.string().nullish(),
   status: zod.enum(["pending", "approved", "rejected"]),
   company: zod.string().nullish(),
@@ -112,7 +141,13 @@ export const RejectUserResponse = zod.object({
   clerkId: zod.string(),
   email: zod.string(),
   name: zod.string().nullish(),
-  role: zod.enum(["admin", "supervisor", "contract_supervisor", "viewer", "user"]),
+  role: zod.enum([
+    "admin",
+    "supervisor",
+    "contract_supervisor",
+    "viewer",
+    "user",
+  ]),
   contractCompany: zod.string().nullish(),
   status: zod.enum(["pending", "approved", "rejected"]),
   company: zod.string().nullish(),

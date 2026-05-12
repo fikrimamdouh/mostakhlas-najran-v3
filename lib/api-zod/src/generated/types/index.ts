@@ -10,6 +10,7 @@ export * from "./createExtractBody";
 export * from "./createExtractBodyStatus";
 export * from "./createProjectBody";
 export * from "./dashboardStats";
+export * from "./deleteUser200";
 export * from "./extract";
 export * from "./extractActivity";
 export * from "./extractListResponse";

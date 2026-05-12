@@ -20,6 +20,7 @@ import type {
   CreateExtractBody,
   CreateProjectBody,
   DashboardStats,
+  DeleteUser200,
   Extract,
   ExtractActivity,
   ExtractListResponse,
@@ -274,6 +275,90 @@ export function useListUsers<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Permanently delete a user from DB and Clerk (admin only)
+ */
+export const getDeleteUserUrl = (userId: string) => {
+  return `/api/users/${userId}`;
+};
+
+export const deleteUser = async (
+  userId: string,
+  options?: RequestInit,
+): Promise<DeleteUser200> => {
+  return customFetch<DeleteUser200>(getDeleteUserUrl(userId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteUserMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteUser>>,
+    TError,
+    { userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteUser>>,
+  TError,
+  { userId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteUser"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteUser>>,
+    { userId: string }
+  > = (props) => {
+    const { userId } = props ?? {};
+
+    return deleteUser(userId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteUserMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteUser>>
+>;
+
+export type DeleteUserMutationError = ErrorType<void>;
+
+/**
+ * @summary Permanently delete a user from DB and Clerk (admin only)
+ */
+export const useDeleteUser = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteUser>>,
+    TError,
+    { userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteUser>>,
+  TError,
+  { userId: string },
+  TContext
+> => {
+  return useMutation(getDeleteUserMutationOptions(options));
+};
 
 /**
  * @summary Approve a user registration (admin only)

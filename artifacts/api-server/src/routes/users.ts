@@ -355,6 +355,38 @@ router.patch("/:userId/hospitals", requireAuth, requireAdmin, async (req: any, r
   }
 });
 
+// DELETE /api/users/:userId - admin only — حذف نهائي من DB + Clerk
+router.delete("/:userId", requireAuth, requireAdmin, async (req: any, res) => {
+  try {
+    const { userId } = req.params;
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, Number(userId))).limit(1);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // لا يمكن حذف نفسك
+    if (user.clerkId === req.clerkUserId) {
+      return res.status(403).json({ error: "لا يمكنك حذف حسابك أنت" });
+    }
+
+    // حذف من Clerk أولاً (حتى لو فشل نكمل)
+    try {
+      await clerk.users.deleteUser(user.clerkId);
+    } catch (clerkErr) {
+      req.log.warn({ clerkErr, userId }, "Clerk delete failed — continuing with DB delete");
+    }
+
+    // حذف من قاعدة البيانات
+    await db.delete(usersTable).where(eq(usersTable.id, Number(userId)));
+
+    const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
+    logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "حذف مستخدم نهائي", `تم حذف ${user.name} (${user.email}) نهائياً من النظام`, ip);
+
+    return res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete user");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // POST /api/users/:userId/activate - admin only
 router.post("/:userId/activate", requireAuth, requireAdmin, async (req: any, res) => {
   try {
