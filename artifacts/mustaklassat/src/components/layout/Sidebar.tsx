@@ -188,6 +188,8 @@ export function Sidebar() {
         body: JSON.stringify({ hospital: h }),
       });
       await queryClient.refetchQueries({ queryKey: ['/api/users/me'] });
+      // أبلِغ صفحات الـ original-viewer بتغيير الموقع
+      try { window.dispatchEvent(new CustomEvent('najranHospitalChanged', { detail: { hospital: h } })); } catch {}
     } finally {
       setSwitchingHospital(null);
     }

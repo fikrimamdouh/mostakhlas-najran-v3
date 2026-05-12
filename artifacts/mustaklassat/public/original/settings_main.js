@@ -1257,6 +1257,15 @@ window.addEventListener('najranCloudPulled', function() {
     renderHospitalPicker();
 });
 
+// ── تغيير الموقع من الشريط الجانبي (sidebar) ───────────────────────────────
+window.addEventListener('najranHospitalChanged', function(e) {
+    var h = e && e.detail && e.detail.hospital;
+    if (!h) return;
+    if (typeof window._selectHospitalFromOverlay === 'function') {
+        window._selectHospitalFromOverlay(h);
+    }
+});
+
 // ✅✅✅ الحل النهائي: استبدل كتلة DOMContentLoaded بالكامل بهذا الكود ✅✅✅
 document.addEventListener('DOMContentLoaded', () => {
     console.log("الصفحة جاهزة. بدء التهيئة...");

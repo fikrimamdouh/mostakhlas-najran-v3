@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useSearch } from "wouter";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { usePageTracking } from "@/hooks/usePageTracking";
@@ -98,8 +98,25 @@ export default function OriginalViewer() {
   const search = useSearch();
   const params = new URLSearchParams(search);
   const page = params.get("page") || "index.html";
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
+
+  // إعادة توجيه حدث تغيير الموقع من النافذة الأم إلى الـ iframe
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const hospital = (e as CustomEvent<{ hospital: string }>).detail?.hospital;
+      if (!hospital) return;
+      try {
+        const iwin = iframeRef.current?.contentWindow;
+        if (iwin) {
+          iwin.dispatchEvent(new CustomEvent('najranHospitalChanged', { detail: { hospital } }));
+        }
+      } catch {}
+    };
+    window.addEventListener('najranHospitalChanged', handler);
+    return () => window.removeEventListener('najranHospitalChanged', handler);
+  }, []);
 
   // Inject hospital name from user profile into localStorage so HTML print headers auto-fill
   useEffect(() => {
@@ -149,6 +166,7 @@ export default function OriginalViewer() {
       <Sidebar />
       <main className="flex-1 overflow-hidden">
         <iframe
+          ref={iframeRef}
           key={page}
           src={`/original/${page}`}
           className="w-full h-full border-0 block"
