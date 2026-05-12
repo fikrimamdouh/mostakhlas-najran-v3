@@ -46,6 +46,13 @@
   // المفاتيح التي تبقى خاصة بالمستخدم (لا تُشارك مع زملاء المستشفى)
   const PERSONAL_KEYS = new Set(['backupLog', 'backupLogs']);
 
+  // المفاتيح المحسوبة — لا تُكتب فوقها من السحابة إلا لو القيمة السحابية أكبر
+  const COMPUTED_KEYS = new Set([
+    'finalLaborCost', 'grand-net-total',
+    'grand-net-total-centers', 'grand-net-total-admin',
+    'performanceTotalDeduction',
+  ]);
+
   function getSession() {
     try {
       const raw = localStorage.getItem(SESSION_KEY);
@@ -183,13 +190,25 @@
     // تطبيق بيانات المستخدم أولاً (الطبقة الأساسية)
     let merged = 0;
     for (const [key, value] of Object.entries(userData)) {
-      try { localStorage.setItem(key, value); merged++; } catch (_) {}
+      try {
+        if (COMPUTED_KEYS.has(key)) {
+          const local = localStorage.getItem(key);
+          if (local !== null && parseFloat(local) > parseFloat(value)) { merged++; continue; }
+        }
+        localStorage.setItem(key, value); merged++;
+      } catch (_) {}
     }
 
     // ثم تطبيق بيانات المستشفى (تتغلب على البيانات الشخصية للمفاتيح المشتركة)
     for (const [key, value] of Object.entries(hospitalData)) {
       if (!PERSONAL_KEYS.has(key)) {
-        try { localStorage.setItem(key, value); } catch (_) {}
+        try {
+          if (COMPUTED_KEYS.has(key)) {
+            const local = localStorage.getItem(key);
+            if (local !== null && parseFloat(local) > parseFloat(value)) continue;
+          }
+          localStorage.setItem(key, value);
+        } catch (_) {}
       }
     }
 
