@@ -2501,7 +2501,7 @@ document.getElementById('signature-certificate-select')?.addEventListener('chang
 <!-- ══ تحميل من التأسيسي ══ -->
 <script>
 (function() {
-  const DB_VERSION = 'consumables_v26_final';
+  const DB_VERSION = 'consumables_v27';
 
   function getHospitalName() {
     try {
@@ -2613,6 +2613,75 @@ document.getElementById('signature-certificate-select')?.addEventListener('chang
     alert('✅ تم تحميل ' + co.length + ' بند مستهلكات بنجاح — ستُحدَّث الصفحة الآن.');
     location.reload();
   };
+
+  // ══ تطبيق تلقائي عند تحميل الصفحة وعند cloud pull ══
+  async function autoApplyFoundationData() {
+    const hospitalName = getHospitalName();
+    if (!hospitalName) return;
+
+    const hasCustomSC  = localStorage.getItem('subcontractors_data_' + DB_VERSION) !== null;
+    const hasCustomSum = localStorage.getItem('summary_data_'        + DB_VERSION) !== null;
+    if (hasCustomSC && hasCustomSum) return; // بيانات موجودة بالفعل
+
+    // جرّب محلياً أولاً ثم السيرفر
+    let data = ContractFoundationDB.load(hospitalName);
+    if (!data || (!data.subcontractors?.length && !data.consumables?.length)) {
+      data = await ContractFoundationDB.loadFromServer(hospitalName);
+    }
+    if (!data) return;
+
+    let changed = false;
+
+    if (!hasCustomSC && data.subcontractors?.length) {
+      const newSC = data.subcontractors.map(function(s, i) {
+        return {
+          id: 'sc_f_' + (i + 1) + '_auto',
+          name: s.name,
+          visitValue: s.contractAmount || 0,
+          annualVisits: s.annualVisits || 1,
+          visitDate: 'خلال هذا الشهر',
+          status: 'نعم',
+          delayDays: 0,
+          damagePenalty: 0
+        };
+      });
+      localStorage.setItem('subcontractors_data_' + DB_VERSION, JSON.stringify(newSC));
+      changed = true;
+    }
+
+    if (!hasCustomSum && data.consumables?.length) {
+      const newItems = data.consumables.map(function(c, i) {
+        return { id: 'item_f_' + (i + 1), name: c.name, value: c.monthlyCost || 0, isEditable: true, isCustom: false };
+      });
+      const subtotals = [
+        { id: 'sm_total_1', name: 'اجمالى تكاليف بند المستهلكات', value: 0, isSubTotal: true, type: 'consumablesTotal' },
+        { id: 'sm_total_2', name: 'تكاليف مقاولي الباطن',          value: 0, isSubTotal: true, type: 'subcontractorsTotal' },
+        { id: 'sm_total_3', name: 'تكاليف تامين بند المياه',       value: 0, isSubTotal: true, type: 'waterTotal' },
+        { id: 'sm_total_4', name: 'تكاليف التخلص من مياه الصرف الصحي', value: 0, isSubTotal: true, type: 'sewageTotal' },
+      ];
+      localStorage.setItem('summary_data_' + DB_VERSION, JSON.stringify(newItems.concat(subtotals)));
+      const perfData = data.consumables.map(function(c, i) {
+        return { id: 'pf_f_' + (i + 1), name: c.name, maxScore: 15, score: 0 };
+      });
+      localStorage.setItem('performance_data_' + DB_VERSION, JSON.stringify(perfData));
+      changed = true;
+    }
+
+    if (changed) { location.reload(); }
+  }
+
+  // شغّل عند تحميل الصفحة
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', autoApplyFoundationData);
+  } else {
+    autoApplyFoundationData();
+  }
+
+  // شغّل عند كل cloud pull جديد
+  window.addEventListener('najranCloudPulled', function() {
+    autoApplyFoundationData();
+  });
+
 })();
 </script>
 </body>
