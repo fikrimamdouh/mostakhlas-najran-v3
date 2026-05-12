@@ -9,13 +9,13 @@
 // ===== 0. إعدادات وقيم ثابتة =====
 
 const ABSENCE_FINES_BY_CATEGORY = {
-  1: { saudi: 300, non_saudi: 300 },
-  2: { saudi: 250, non_saudi: 250 },
-  3: { saudi: 100, non_saudi: 100 },
-  4: { saudi: 80, non_saudi: 50 },
-  5: { saudi: 80, non_saudi: 50 },
-  6: { saudi: 50, non_saudi: 20 },
-  7: { saudi: 10, non_saudi: 10 },
+  1: { saudi: 500, non_saudi: 500 },
+  2: { saudi: 500, non_saudi: 500 },
+  3: { saudi: 250, non_saudi: 100 },
+  4: { saudi: 180, non_saudi: 100 },
+  5: { saudi: 150, non_saudi: 80  },
+  6: { saudi: 20,  non_saudi: 20  },
+  7: { saudi: 10,  non_saudi: 10  },
   default: { saudi: 0, non_saudi: 0 }
 };
 
