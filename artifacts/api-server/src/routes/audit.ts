@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable, auditLogTable } from "@workspace/db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, lt } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
@@ -66,6 +66,8 @@ router.post("/", requireAuth, async (req: any, res) => {
   }
 });
 
+const MAX_AUDIT_ROWS = 500;
+
 export async function logAudit(userId: number | null, userEmail: string | null, userName: string | null, action: string, details?: string, ip?: string) {
   try {
     await db.insert(auditLogTable).values({
@@ -73,6 +75,19 @@ export async function logAudit(userId: number | null, userEmail: string | null, 
       details: details || null,
       ipAddress: ip || null,
     });
+
+    // تنظيف تلقائي: احتفظ بآخر MAX_AUDIT_ROWS سطر فقط
+    const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(auditLogTable);
+    if (Number(count) > MAX_AUDIT_ROWS) {
+      const oldest = await db.select({ id: auditLogTable.id })
+        .from(auditLogTable)
+        .orderBy(desc(auditLogTable.createdAt))
+        .limit(1)
+        .offset(MAX_AUDIT_ROWS - 1);
+      if (oldest[0]) {
+        await db.delete(auditLogTable).where(lt(auditLogTable.id, oldest[0].id));
+      }
+    }
   } catch (_) {}
 }
 

@@ -84,8 +84,6 @@ router.patch("/me", requireAuth, async (req: any, res) => {
     if (phone !== undefined) updates.phone = phone;
     if (jobTitle !== undefined) updates.jobTitle = jobTitle;
     const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, user.id)).returning();
-    const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
-    logAudit(user.id, user.email, user.name, "تحديث الملف الشخصي", JSON.stringify(updates), ip);
     return res.json(updated);
   } catch (err) {
     req.log.error({ err }, "Failed to update profile");
