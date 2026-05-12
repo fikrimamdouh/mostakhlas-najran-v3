@@ -1225,20 +1225,40 @@ document.addEventListener('DOMContentLoaded', () => {
         ov.id = '_najran_ctx_overlay';
         ov.style.cssText = [
             'position:fixed;top:0;left:0;width:100%;height:100%',
-            'background:rgba(245,247,252,0.96)',
+            'background:rgba(245,247,252,0.97)',
             'z-index:99999;display:flex;align-items:center;justify-content:center',
             'font-family:Tajawal,sans-serif;direction:rtl',
-            'transition:opacity .3s'
+            'transition:opacity .3s;overflow-y:auto'
         ].join(';');
-        ov.innerHTML = '<div style="text-align:center;color:#1e3c72">'
-            + '<div style="font-size:48px;margin-bottom:16px">🏥</div>'
-            + '<div style="font-size:18px;font-weight:700;margin-bottom:8px">جارٍ تحميل بيانات المستشفى…</div>'
-            + '<div style="font-size:13px;color:#6b7280">يرجى الانتظار لحظة</div>'
+
+        // بناء أزرار المستشفيات من HOSPITAL_CONTRACT_MAP
+        var hospitalBtns = Object.keys(HOSPITAL_CONTRACT_MAP).map(function(h) {
+            var safeH = h.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+            var info = HOSPITAL_CONTRACT_MAP[h];
+            return '<button onclick="switchHospital(\'' + safeH + '\');document.getElementById(\'_najran_ctx_overlay\').style.opacity=\'0\';setTimeout(function(){var e=document.getElementById(\'_najran_ctx_overlay\');if(e)e.parentNode.removeChild(e);},300);" style="'
+                + 'display:block;width:100%;text-align:right;padding:12px 16px;margin-bottom:8px;'
+                + 'border:1.5px solid #d1d5db;border-radius:10px;background:#fff;cursor:pointer;'
+                + 'font-size:14px;font-family:Tajawal,sans-serif;color:#1e3c72;font-weight:600;'
+                + 'transition:all .15s;" '
+                + 'onmouseover="this.style.background=\'#1e3c72\';this.style.color=\'#fff\';this.style.borderColor=\'#1e3c72\'" '
+                + 'onmouseout="this.style.background=\'#fff\';this.style.color=\'#1e3c72\';this.style.borderColor=\'#d1d5db\'">'
+                + '<span style="font-size:16px;margin-left:8px">🏥</span>' + h
+                + '<div style="font-size:11px;font-weight:400;color:#6b7280;margin-top:2px">' + (info.contractNumber || '') + '</div>'
+                + '</button>';
+        }).join('');
+
+        ov.innerHTML = '<div style="background:#fff;border-radius:16px;padding:32px;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(30,60,114,.15)">'
+            + '<div style="text-align:center;margin-bottom:20px">'
+            + '<div style="font-size:40px;margin-bottom:10px">🏥</div>'
+            + '<div style="font-size:18px;font-weight:700;color:#1e3c72;margin-bottom:4px">اختر المستشفى / الموقع</div>'
+            + '<div style="font-size:12px;color:#6b7280">اختر الموقع لعرض بيانات عقده تلقائياً</div>'
+            + '</div>'
+            + hospitalBtns
             + '</div>';
         document.body.appendChild(ov);
 
-        // fallback: أزل الـ overlay بعد 10 ثوانٍ على أي حال
-        setTimeout(function() { _revealSettingsPage(); }, 10000);
+        // fallback: أزل الـ overlay بعد 15 ثانية إذا لم يختر المستخدم شيئاً
+        setTimeout(function() { _revealSettingsPage(); }, 15000);
     })();
 
     // 1. قم بكل الإعدادات الأولية
