@@ -65,28 +65,33 @@ router.get("/", requireAuth, async (req: any, res: any) => {
     const [dbUser] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
     if (!dbUser || dbUser.status !== "approved") return res.status(403).json({ error: "Forbidden" });
 
+    // اقرأ query param أولاً لجميع الأدوار — المناصب ليست بيانات سرية
+    const qParam = ((req.query["hospital"] as string) || "").trim();
+
     let hospitalName: string;
-    if (dbUser.role === "admin") {
-      hospitalName = ((req.query["hospital"] as string) || "").trim();
-      if (!hospitalName) return res.status(400).json({ error: "hospital query param required" });
+    if (qParam) {
+      // أي مستخدم موافق يستطيع طلب مناصب أي مستشفى بالاسم
+      hospitalName = qParam;
+    } else if (dbUser.role === "admin") {
+      return res.status(400).json({ error: "hospital query param required" });
     } else {
       if (!dbUser.hospital?.trim()) return res.json({ hospitalName: null, rows: [] });
       hospitalName = dbUser.hospital.trim();
     }
 
-    // حاول بالاسم الأصلي أولاً
     let [row] = await db.select().from(hospitalStorageTable)
       .where(and(eq(hospitalStorageTable.hospitalName, hospitalName), eq(hospitalStorageTable.storageKey, JOB_KEY)))
       .limit(1);
 
-    // لغير الأدمن: إذا لم يوجد وكان هناك query param مختلف — جرّب الـ query param أيضاً
-    if (!row && dbUser.role !== "admin") {
-      const qParam = ((req.query["hospital"] as string) || "").trim();
-      if (qParam && qParam !== hospitalName) {
-        [row] = await db.select().from(hospitalStorageTable)
-          .where(and(eq(hospitalStorageTable.hospitalName, qParam), eq(hospitalStorageTable.storageKey, JOB_KEY)))
-          .limit(1);
-        if (row) hospitalName = qParam;
+    // لم توجد بيانات بالاسم المطلوب — جرّب مستشفى المستخدم كـ fallback (للمستخدمين فقط)
+    if (!row && dbUser.role !== "admin" && dbUser.hospital?.trim() && dbUser.hospital.trim() !== hospitalName) {
+      const fallback = dbUser.hospital.trim();
+      const [fbRow] = await db.select().from(hospitalStorageTable)
+        .where(and(eq(hospitalStorageTable.hospitalName, fallback), eq(hospitalStorageTable.storageKey, JOB_KEY)))
+        .limit(1);
+      if (fbRow) {
+        row = fbRow;
+        hospitalName = fallback;
       }
     }
 
