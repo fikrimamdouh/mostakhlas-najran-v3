@@ -276,8 +276,8 @@ function updateEmployeeAttendance(departmentKey, employeeIndex, dayIndex, newSta
         const dailySalary = salary / totalDaysInMonth;
         const extractBaseSalary = dailySalary * daysInMonth;
         const deduction = (absenceDays + deductionOnlyDays) * dailySalary;
-        const fineConfig = ABSENCE_FINES_BY_CATEGORY[employee.category || 'default'] || ABSENCE_FINES_BY_CATEGORY.default;
-        const isSaudi = (employee.nationality || '').toLowerCase().includes('سعودي');
+        const fineConfig = ABSENCE_FINES_BY_CATEGORY[employee.category || '1'] || ABSENCE_FINES_BY_CATEGORY[1];
+        const isSaudi = (employee.nationality || 'سعودي').trim() === 'سعودي';
         const fine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
         const nationalityFine = parseFloat(employee.nationalityFine) || 0;
         const totalFine = fine + nationalityFine;
@@ -715,7 +715,7 @@ if (emptyMessage) {
                 const salary = parseFloat(emp.salary) || 0;
                 const category = emp.category || '1';
                 const nationality = emp.nationality || 'سعودي';
-                const isSaudi = nationality.toLowerCase().includes('سعودي');
+                const isSaudi = nationality.trim() === 'سعودي';
 
                 let adjustedSalary = salary;
                 if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) {
@@ -2103,8 +2103,8 @@ function exportSelectedDepartmentsToExcel() {
                     });
 
                     const deduction = (absenceDays + deductionOnlyDays) * dailySalary;
-                    const fineConfig = ABSENCE_FINES_BY_CATEGORY[emp.category || 'default'] || ABSENCE_FINES_BY_CATEGORY.default;
-                    const isSaudi = (emp.nationality || '').toLowerCase().includes('سعودي');
+                    const fineConfig = ABSENCE_FINES_BY_CATEGORY[emp.category || '1'] || ABSENCE_FINES_BY_CATEGORY[1];
+                    const isSaudi = (emp.nationality || 'سعودي').trim() === 'سعودي';
                     const absenceFine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
                     const nationalityFine = parseFloat(emp.nationalityFine) || 0;
                     const totalFine = absenceFine + nationalityFine;
