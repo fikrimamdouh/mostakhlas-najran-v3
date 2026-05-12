@@ -883,22 +883,22 @@ var HOSPITAL_CONTRACT_MAP = {
     'مستشفى يدمه العام': {
         contractNumber: '250811180425',
         companyName:    'شركة مجموعة بيت العرب الحديثة المحدودة',
-        startDate:      '2026-01-20',
-        endDate:        '2031-01-20',
+        startDate:      '2026-01-02',
+        endDate:        '2031-01-01',
         contractType:   'عقد أساسي',
     },
     'مستشفى حبونا العام': {
         contractNumber: '250811180425',
         companyName:    'شركة مجموعة بيت العرب الحديثة المحدودة',
-        startDate:      '2026-01-20',
-        endDate:        '2031-01-20',
+        startDate:      '2026-01-02',
+        endDate:        '2031-01-01',
         contractType:   'عقد أساسي',
     },
     'مستشفى بدر الجنوب العام': {
         contractNumber: '250811180425',
         companyName:    'شركة مجموعة بيت العرب الحديثة المحدودة',
-        startDate:      '2026-01-20',
-        endDate:        '2031-01-20',
+        startDate:      '2026-01-02',
+        endDate:        '2031-01-01',
         contractType:   'عقد أساسي',
     },
     'مستشفى الولادة والأطفال': {
