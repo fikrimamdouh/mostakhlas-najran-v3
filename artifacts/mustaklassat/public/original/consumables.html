@@ -1200,17 +1200,8 @@ function updatePenaltyDataSourcePanel() {
         // 1. حساب تكلفة العمالة
         let currentLaborCost;
         if (laborCostInput.style.display === 'none') {
-            // أ. نحسب تكلفة العمالة الأساسية باستخدام الدالة الأصلية.
-            const baseLaborCost = getAutomaticLaborCost(); 
-
-            // ب. نقرأ تكلفة عمالة الأسنان من البيانات المحفوظة.
-            const dentalData = JSON.parse(localStorage.getItem('dentalLaborData') || '{}');
-            const dentalCost = parseFloat(dentalData.monthlyValue) || 0;
-
-            // ج. نجمع القيمتين للحصول على الإجمالي الشامل.
-            currentLaborCost = baseLaborCost + dentalCost;
-            
-            // د. نعرض الإجمالي المحدث في الواجهة.
+            // نقرأ المبلغ الصافي الشهري للعمالة من شهادة الإنجاز مباشرة
+            currentLaborCost = getAutomaticLaborCost();
             laborCostDisplay.textContent = formatNumber(currentLaborCost);
         } else {
             currentLaborCost = parseNumericValue(laborCostInput.value);
