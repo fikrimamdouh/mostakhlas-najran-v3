@@ -563,6 +563,74 @@ export async function sendSupportEmail(adminEmail: string, ticket: {
   }
 }
 
+// ── 8. Support confirmation — sent to the user who submitted the ticket ────────
+export async function sendSupportConfirmationEmail(ticket: {
+  name: string; email: string; subject: string; message: string;
+}): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend) return;
+  try {
+    const content = `
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="display:inline-flex;align-items:center;justify-content:center;
+                    width:64px;height:64px;border-radius:50%;
+                    background:linear-gradient(135deg,#eff6ff,#dbeafe);
+                    border:2px solid #60a5fa;margin-bottom:16px;">
+          <span style="font-size:28px;">📬</span>
+        </div>
+        <h2 style="color:#1e3c72;font-size:22px;font-weight:800;margin:0 0 6px;">
+          وصلت مذكرتك بنجاح
+        </h2>
+        <p style="color:#64748b;font-size:13px;margin:0;">
+          تم استلام مذكرة الدعم الخاصة بك وسيتم الرد عليها في أقرب وقت
+        </p>
+      </div>
+
+      ${divider()}
+
+      ${greeting(ticket.name)}
+      ${subheading("نؤكد استلام مذكرة الدعم التي أرسلتها. فيما يلي ملخص بمحتواها:")}
+
+      ${sectionTitle("تفاصيل المذكرة")}
+      <table width="100%" cellpadding="0" cellspacing="0"
+        style="border-radius:12px;overflow:hidden;border:1px solid #e0e7ef;margin-bottom:24px;">
+        ${infoRow("الموضوع", ticket.subject, true)}
+      </table>
+
+      ${sectionTitle("نص الرسالة")}
+      <table width="100%" cellpadding="0" cellspacing="0"
+        style="background:#f8fafc;border-radius:12px;border:1px solid #e0e7ef;
+               padding:20px;margin-bottom:24px;">
+        <tr><td>
+          <p style="margin:0;color:#374151;font-size:14px;line-height:2;
+                    white-space:pre-wrap;">${ticket.message}</p>
+        </td></tr>
+      </table>
+
+      <table width="100%" cellpadding="0" cellspacing="0"
+        style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);
+               border-radius:12px;border-right:4px solid #16a34a;padding:18px 20px;">
+        <tr><td>
+          <p style="margin:0 0 6px;color:#15803d;font-size:14px;font-weight:700;">
+            ✅ ما الذي يحدث الآن؟
+          </p>
+          <p style="margin:0;color:#166534;font-size:13px;line-height:1.9;">
+            تم إرسال مذكرتك إلى مدير النظام للمراجعة. سيتم الرد عليك
+            على هذا البريد الإلكتروني في أقرب وقت ممكن.
+          </p>
+        </td></tr>
+      </table>
+    `;
+    await resend.client.emails.send({
+      from: resend.fromField,
+      to: ticket.email,
+      subject: `📬 تم استلام مذكرتك: ${ticket.subject} — نظام إدارة المستخلصات`,
+      html: emailLayout(content, "تم استلام مذكرة الدعم"),
+    });
+    logger.info({ toEmail: ticket.email }, "Support confirmation email sent");
+  } catch (err) { logger.error({ err }, "Failed to send support confirmation email"); }
+}
+
 // ── Daily auto-backup notification ────────────────────────────────────────────
 export async function sendDailyBackupEmail(
   adminEmail: string,

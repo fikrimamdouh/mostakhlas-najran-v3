@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { sendSupportEmail } from "../lib/email";
+import { sendSupportEmail, sendSupportConfirmationEmail } from "../lib/email";
 import { db, systemSettingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
@@ -25,6 +25,7 @@ router.post("/", async (req, res) => {
   try {
     const adminEmail = await getAdminEmail();
     await sendSupportEmail(adminEmail, { name, email, subject, message });
+    sendSupportConfirmationEmail({ name, email, subject, message }).catch(() => {});
     return res.json({ sent: true });
   } catch (err) {
     req.log.error({ err }, "Failed to send support ticket");
