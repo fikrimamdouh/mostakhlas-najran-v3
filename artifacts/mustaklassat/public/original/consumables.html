@@ -1069,11 +1069,38 @@ const defaultSignatures = {
             return { id: 'sc_f_' + (i+1) + '_auto', name: s.name, visitValue: s.contractAmount || 0, annualVisits: s.annualVisits || 1, visitDate: 'خلال هذا الشهر', status: 'نعم', delayDays: 0, damagePenalty: 0 };
         });
     }
+    // ══ جدول الدرجات القصوى الثابتة لجدول (ح م 1) ══════════════════
+    var FIXED_MAX_SCORES = [
+        { keywords: ['وقود','محروق','زيوت','شحوم'],          maxScore: 20 },
+        { keywords: ['نظافة','مطهر'],                         maxScore: 20 },
+        { keywords: ['زراع','ري'],                             maxScore: 10 },
+        { keywords: ['مدني','مدنية','عمران'],                  maxScore: 20 },
+        { keywords: ['حشر','مبيد','مكافح'],                   maxScore: 15 },
+        { keywords: ['كيميائي','كيميائية','فلتر','فلاتر'],    maxScore: 15 },
+    ];
+    function _getFixedMaxScore(name) {
+        var n = (name || '').trim();
+        for (var i = 0; i < FIXED_MAX_SCORES.length; i++) {
+            var entry = FIXED_MAX_SCORES[i];
+            for (var j = 0; j < entry.keywords.length; j++) {
+                if (n.indexOf(entry.keywords[j]) !== -1) return entry.maxScore;
+            }
+        }
+        return 15; // افتراضي للبنود الإضافية
+    }
+    function _correctPerformanceMaxScores(arr) {
+        if (!arr || !arr.length) return arr;
+        return arr.map(function(item) {
+            return Object.assign({}, item, { maxScore: _getFixedMaxScore(item.name) });
+        });
+    }
+    // ═════════════════════════════════════════════════════════════════
+
     function _builtinPerformance() {
         var data = _getBuiltinHospitalData();
         if (!data || !data.consumables || !data.consumables.length) return null;
         return data.consumables.map(function(c, i) {
-            return { id: 'pf_f_' + (i+1), name: c.name, maxScore: 15, score: 0 };
+            return { id: 'pf_f_' + (i+1), name: c.name, maxScore: _getFixedMaxScore(c.name), score: 0 };
         });
     }
     function _builtinSummary() {
@@ -1091,7 +1118,7 @@ const defaultSignatures = {
     }
 
     let subcontractorsData = _fromStorage(`subcontractors_data_${DB_VERSION}`) || _builtinSubcontractors() || defaultSubcontractors;
-    let performanceData    = _fromStorage(`performance_data_${DB_VERSION}`)    || _builtinPerformance()    || defaultPerformance;
+    let performanceData    = _correctPerformanceMaxScores(_fromStorage(`performance_data_${DB_VERSION}`)    || _builtinPerformance()    || defaultPerformance);
     let waterData          = JSON.parse(localStorage.getItem(`water_supply_data_${DB_VERSION}`)) || defaultWater;
     let sewageData         = JSON.parse(localStorage.getItem(`sewage_disposal_data_${DB_VERSION}`)) || defaultSewage;
     let summaryData        = _fromStorage(`summary_data_${DB_VERSION}`)        || _builtinSummary()        || defaultSummary;
@@ -2639,7 +2666,7 @@ document.getElementById('signature-certificate-select')?.addEventListener('chang
 
     // تحديث performanceData بنفس الأسماء
     const perfData = co.map(function(c, i) {
-      return { id: 'pf_f_' + (i + 1), name: c.name, maxScore: 15, score: 0 };
+      return { id: 'pf_f_' + (i + 1), name: c.name, maxScore: _getFixedMaxScore(c.name), score: 0 };
     });
     localStorage.setItem('performance_data_' + DB_VERSION, JSON.stringify(perfData));
 
@@ -2694,7 +2721,7 @@ document.getElementById('signature-certificate-select')?.addEventListener('chang
       ];
       localStorage.setItem('summary_data_' + DB_VERSION, JSON.stringify(newItems.concat(subtotals)));
       const perfData = data.consumables.map(function(c, i) {
-        return { id: 'pf_f_' + (i + 1), name: c.name, maxScore: 15, score: 0 };
+        return { id: 'pf_f_' + (i + 1), name: c.name, maxScore: _getFixedMaxScore(c.name), score: 0 };
       });
       localStorage.setItem('performance_data_' + DB_VERSION, JSON.stringify(perfData));
       changed = true;
