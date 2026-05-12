@@ -369,10 +369,13 @@ function saveContractData() {
 // تحديث عرض بيانات العقد
 function updateContractDisplayData() {
     const data = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-    // استنتج اسم الشركة من اسم المستشفى إن كان فارغاً
-    if (!data.companyName && data.hospitalName && HOSPITAL_COMPANY_MAP) {
-        data.companyName = HOSPITAL_COMPANY_MAP[data.hospitalName] || '';
-        if (data.companyName) localStorage.setItem('persistentContractData', JSON.stringify(data));
+    // طبّق البيانات الثابتة (رقم العقد، التواريخ، الشركة) على الحقول الفارغة
+    if (data.hospitalName) {
+        var before = JSON.stringify(data);
+        _applyFixedContractData(data, data.hospitalName);
+        if (JSON.stringify(data) !== before) {
+            localStorage.setItem('persistentContractData', JSON.stringify(data));
+        }
     }
     document.getElementById('hospital-name').value = data.hospitalName || '';
     document.getElementById('contract-details').value = data.contractDetails || '';
@@ -875,6 +878,71 @@ var HOSPITAL_COMPANY_MAP = {
     'مستشفى شروره العام':                                       'شركة سراكو',
 };
 
+// ── بيانات العقود الثابتة (تُملأ تلقائياً ولا تتأثر بإعادة التهيئة) ──────────
+var HOSPITAL_CONTRACT_MAP = {
+    'مستشفى يدمه العام': {
+        contractNumber: '250811180425',
+        companyName:    'شركة مجموعة بيت العرب الحديثة المحدودة',
+        startDate:      '2026-01-20',
+        endDate:        '2031-01-20',
+        contractType:   'عقد أساسي',
+    },
+    'مستشفى حبونا العام': {
+        contractNumber: '250811180425',
+        companyName:    'شركة مجموعة بيت العرب الحديثة المحدودة',
+        startDate:      '2026-01-20',
+        endDate:        '2031-01-20',
+        contractType:   'عقد أساسي',
+    },
+    'مستشفى بدر الجنوب العام': {
+        contractNumber: '250811180425',
+        companyName:    'شركة مجموعة بيت العرب الحديثة المحدودة',
+        startDate:      '2026-01-20',
+        endDate:        '2031-01-20',
+        contractType:   'عقد أساسي',
+    },
+    'مستشفى الولادة والأطفال': {
+        contractNumber: '250701156483',
+        companyName:    'شركة مجموعة بيت العرب الحديثة المحدودة',
+        startDate:      '2026-02-05',
+        endDate:        '2031-02-05',
+        contractType:   'عقد أساسي',
+    },
+    'مستشفى نجران العام القديم وسكن الممرضات الخارجي': {
+        contractNumber: '250701156483',
+        companyName:    'شركة مجموعة بيت العرب الحديثة المحدودة',
+        startDate:      '2026-02-04',
+        endDate:        '2031-02-04',
+        contractType:   'عقد أساسي',
+    },
+    'المكاتب الإدارية والمرافق الصحية': {
+        contractNumber: '250701156483',
+        companyName:    'شركة مجموعة بيت العرب الحديثة المحدودة',
+        startDate:      '2026-02-05',
+        endDate:        '2031-02-05',
+        contractType:   'عقد أساسي',
+    },
+    'صيانة وإصلاح السيارات والعيادات المتنقلة': {
+        contractNumber: '250701156483',
+        companyName:    'شركة مجموعة بيت العرب الحديثة المحدودة',
+        startDate:      '2026-02-05',
+        endDate:        '2031-02-05',
+        contractType:   'عقد أساسي',
+    },
+};
+
+// دمج البيانات الثابتة في بيانات المستشفى (لا تُكتب فوق قيم مدخلة يدوياً)
+function _applyFixedContractData(data, hospitalName) {
+    var fixed = HOSPITAL_CONTRACT_MAP[hospitalName];
+    if (!fixed) return data;
+    if (!data.contractNumber) data.contractNumber = fixed.contractNumber;
+    if (!data.companyName)    data.companyName    = fixed.companyName;
+    if (!data.startDate)      data.startDate      = fixed.startDate;
+    if (!data.endDate)        data.endDate        = fixed.endDate;
+    if (!data.contractType)   data.contractType   = fixed.contractType;
+    return data;
+}
+
 // إرجاع اسم الشركة الكامل من الجلسة أو من اسم المستشفى
 function _resolveCompanyName(session, hospitalName) {
     if (session && session.company && COMPANY_LABELS_MAP[session.company]) {
@@ -928,6 +996,10 @@ function switchHospital(hospitalName) {
         var freshData = {
             hospitalName:           hospitalName,
             companyName:            fullCompanyNew,
+            contractNumber:         '',
+            startDate:              '',
+            endDate:                '',
+            contractType:           '',
             // احتفظ بالبيانات المشتركة (مديرو المستشفى / الختم) فقط
             projectManager:         oldData.projectManager         || '',
             maintenanceHead:        oldData.maintenanceHead        || '',
@@ -939,6 +1011,8 @@ function switchHospital(hospitalName) {
             hospitalAccountant:     oldData.hospitalAccountant     || '',
             directPurchaseRatio:    oldData.directPurchaseRatio    || '0',
         };
+        // طبّق البيانات الثابتة (رقم العقد، التواريخ، الشركة)
+        _applyFixedContractData(freshData, hospitalName);
         localStorage.setItem('persistentContractData', JSON.stringify(freshData));
     }
 
