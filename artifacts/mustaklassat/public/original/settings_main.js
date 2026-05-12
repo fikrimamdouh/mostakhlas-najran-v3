@@ -1072,8 +1072,9 @@ function renderHospitalPicker() {
         if (!hospitals.length && session.hospital) hospitals = [session.hospital];
     }
 
-    // إذا لا توجد مستشفيات في session → استخدم كل المستشفيات من HOSPITAL_CONTRACT_MAP
-    if (!hospitals.length) {
+    // إذا لا توجد مستشفيات في session → للأدمن والمشرف فقط: استخدم كل HOSPITAL_CONTRACT_MAP
+    var _isAdmin = session && (session.role === 'admin' || session.role === 'supervisor');
+    if (!hospitals.length && _isAdmin) {
         hospitals = Object.keys(HOSPITAL_CONTRACT_MAP);
     }
 
