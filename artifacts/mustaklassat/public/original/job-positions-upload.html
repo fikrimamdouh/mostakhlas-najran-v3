@@ -90,6 +90,16 @@ tbody td{padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#374151}
 .empty-state{text-align:center;padding:40px 20px;color:#9ca3af}
 .empty-state i{font-size:2.5rem;margin-bottom:12px;display:block;color:#cbd5e1}
 
+/* UNKNOWN DEPTS MAPPER */
+.unknown-box{background:#fffbeb;border:1.5px solid #fcd34d;border-radius:11px;padding:16px 20px;margin-bottom:16px}
+.unknown-box-head{display:flex;align-items:center;gap:8px;font-weight:700;color:#92400e;margin-bottom:12px;font-size:.95rem}
+.unknown-box-head i{color:#d97706}
+.unknown-table{width:100%;border-collapse:collapse;font-size:.88rem}
+.unknown-table th{background:#fef3c7;color:#78350f;padding:8px 12px;text-align:right;font-weight:600}
+.unknown-table td{border-bottom:1px solid #fde68a}
+.btn-apply{background:linear-gradient(135deg,#d97706,#b45309);color:#fff;border:none;border-radius:8px;padding:9px 22px;font-size:.9rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;margin-top:12px}
+.btn-apply:hover{opacity:.9}
+
 footer{text-align:center;padding:20px;color:#9ca3af;font-size:.8rem}
 </style>
 </head>
@@ -163,6 +173,29 @@ footer{text-align:center;padding:20px;color:#9ca3af;font-size:.8rem}
       <div id="previewSection" style="display:none;margin-top:20px">
 
         <div class="stats-row" id="statsRow"></div>
+
+        <!-- تعيين الأقسام غير المعروفة -->
+        <div id="unknownDeptsSection" style="display:none">
+          <div class="unknown-box">
+            <div class="unknown-box-head">
+              <i class="fas fa-exclamation-triangle"></i>
+              أقسام غير معروفة — حدد القسم الصحيح لكل منها حتى تُحفظ
+            </div>
+            <table class="unknown-table">
+              <thead>
+                <tr>
+                  <th>اسم القسم في الملف</th>
+                  <th>عيّنه على</th>
+                  <th>عدد الصفوف</th>
+                </tr>
+              </thead>
+              <tbody id="unknownDeptsBody"></tbody>
+            </table>
+            <button class="btn-apply" onclick="applyDeptMappings()">
+              <i class="fas fa-check-circle"></i> تطبيق التعيين وتحديث المعاينة
+            </button>
+          </div>
+        </div>
 
         <div class="preview-wrap">
           <table>
@@ -298,10 +331,20 @@ function detectColumns(headers) {
   };
 }
 
+const DEPT_OPTIONS = [
+  { key: 'cleaning',         label: 'النظافة' },
+  { key: 'electricity',      label: 'الكهرباء' },
+  { key: 'agriculture',      label: 'الزراعة' },
+  { key: 'civil_works',      label: 'الأعمال المدنية' },
+  { key: 'mechanical',       label: 'الميكانيكا' },
+  { key: 'laundry',          label: 'المغسلة' },
+  { key: 'patient_services', label: 'السلامة والحراسات' },
+  { key: 'admin_saudi',      label: 'الوظائف الإدارية' },
+];
+
 function renderPreview() {
   if (!parsedRows.length) { showAlert('لم يُعثر على بيانات صالحة في الملف', 'error'); return; }
 
-  // إحصائيات
   const hospitals = [...new Set(parsedRows.map(r => r.hospitalName).filter(Boolean))];
   const valid     = parsedRows.filter(r => r.valid).length;
   const invalid   = parsedRows.length - valid;
@@ -310,18 +353,17 @@ function renderPreview() {
   document.getElementById('statsRow').innerHTML = `
     <div class="stat-box"><div class="val">${parsedRows.length}</div><div class="lbl">إجمالي الصفوف</div></div>
     <div class="stat-box"><div class="val" style="color:#16a34a">${valid}</div><div class="lbl">صفوف صالحة</div></div>
-    <div class="stat-box"><div class="val" style="color:#dc2626">${invalid}</div><div class="lbl">صفوف غير معروفة</div></div>
+    <div class="stat-box"><div class="val" style="color:${invalid ? '#d97706' : '#16a34a'}">${invalid}</div><div class="lbl">أقسام غير معروفة</div></div>
     <div class="stat-box"><div class="val">${hospitals.length}</div><div class="lbl">مستشفى</div></div>
     <div class="stat-box"><div class="val" style="font-size:1.1rem">${totalCost.toLocaleString('ar-SA')} ﷼</div><div class="lbl">إجمالي الرواتب</div></div>
   `;
 
-  // الجدول
   const tbody = document.getElementById('previewBody');
   tbody.innerHTML = parsedRows.map((r, i) => `
-    <tr style="${!r.valid ? 'opacity:.55' : ''}">
+    <tr style="${!r.valid ? 'background:#fffbeb' : ''}">
       <td>${i + 1}</td>
       <td>${r.hospitalName || '—'}</td>
-      <td>${r.deptKey ? DEPT_LABELS[r.deptKey] : `<span style="color:#dc2626">${r.deptAr}</span>`}</td>
+      <td>${r.deptKey ? DEPT_LABELS[r.deptKey] : `<span style="color:#d97706;font-weight:600">${r.deptAr || '—'}</span>`}</td>
       <td>${r.jobTitle || '—'}</td>
       <td>${r.salary ? r.salary.toLocaleString('ar-SA') + ' ﷼' : '—'}</td>
       <td>${r.category}</td>
@@ -333,6 +375,56 @@ function renderPreview() {
   `).join('');
 
   document.getElementById('previewSection').style.display = 'block';
+  renderUnknownDepts();
+}
+
+function renderUnknownDepts() {
+  const unknownNames = [...new Set(
+    parsedRows.filter(r => !r.valid && r.deptAr).map(r => r.deptAr)
+  )];
+
+  const section = document.getElementById('unknownDeptsSection');
+  if (!unknownNames.length) { section.style.display = 'none'; return; }
+
+  section.style.display = 'block';
+  document.getElementById('unknownDeptsBody').innerHTML = unknownNames.map(name => `
+    <tr>
+      <td style="padding:9px 12px;font-weight:600;color:#374151">${name}</td>
+      <td style="padding:9px 12px">
+        <select data-dept-name="${name.replace(/"/g,'&quot;')}"
+          style="width:100%;padding:7px 10px;border:1.5px solid #d1d5db;border-radius:7px;font-size:.88rem;direction:rtl">
+          <option value="">-- تجاهل هذا القسم --</option>
+          ${DEPT_OPTIONS.map(d => `<option value="${d.key}">${d.label}</option>`).join('')}
+        </select>
+      </td>
+      <td style="padding:9px 12px;color:#6b7280;font-size:.82rem;white-space:nowrap">
+        ${parsedRows.filter(r => r.deptAr === name).length} صف
+      </td>
+    </tr>
+  `).join('');
+}
+
+function applyDeptMappings() {
+  const selects = document.querySelectorAll('[data-dept-name]');
+  let changed = 0;
+  selects.forEach(sel => {
+    const deptName = sel.getAttribute('data-dept-name');
+    const deptKey  = sel.value;
+    if (!deptKey) return;
+    parsedRows.forEach(r => {
+      if (r.deptAr === deptName) {
+        r.deptKey = deptKey;
+        r.valid   = !!r.jobTitle;
+        changed++;
+      }
+    });
+  });
+  if (changed) {
+    renderPreview();
+    showAlert(`✅ تم تعيين ${changed} صف — راجع الإحصائيات المحدثة`, 'success');
+  } else {
+    showAlert('لم يتم اختيار أي تعيين بعد', 'error');
+  }
 }
 
 // ====== حفظ (مع الدمج — يحتفظ بالموجود ويضيف الجديد) ======
