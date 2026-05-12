@@ -60,6 +60,10 @@ Full-stack Arabic RTL construction extracts management system with Clerk authent
 4. Admin approves at `/admin/users` → approval email sent
 5. Approved user sees full dashboard + all modules
 
+## User Preferences
+
+- **ناقش أولاً قبل التنفيذ**: عند أي طلب جديد، ناقشه مع المستخدم أولاً واشرح الخطة — ولا تبدأ التنفيذ إلا بعد أن يقول "نفذ" صراحةً.
+
 ## Admin Setup
 
 ```sql
