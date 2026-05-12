@@ -251,6 +251,42 @@
             if (_mk !== '_') localStorage.setItem('najran_consumables_locked_' + _mk, '1');
           } catch(_) {}
           // ─────────────────────────────────────────────────────────────
+
+          // ── فتح مستخلص الشهر التالي تلقائياً ────────────────────────
+          try {
+            const MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+            const _ed2 = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+            const _oldKey = String(_ed2.extractYear || '') + '_' + String(_ed2.extractMonth || '').trim();
+
+            // حفظ snapshot الشهر المنتهي أولاً
+            if (_oldKey !== '_' && window.saveMonthSnapshot) window.saveMonthSnapshot(_oldKey);
+
+            const curIdx = MONTHS.indexOf((_ed2.extractMonth || '').trim());
+            const curYear = parseInt(_ed2.extractYear || new Date().getFullYear(), 10);
+            const newIdx  = curIdx === -1 ? 0 : (curIdx + 1) % 12;
+            const newYear = (curIdx === 11) ? curYear + 1 : curYear;
+            const newMonth = MONTHS[newIdx];
+            const newMonthNum = newIdx + 1;
+            const newStart = `${newYear}-${String(newMonthNum).padStart(2,'0')}-01`;
+            const lastDay  = new Date(newYear, newMonthNum, 0).getDate();
+            const newEnd   = `${newYear}-${String(newMonthNum).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+            const prevPn   = parseInt(_ed2.paymentNumber || '0', 10);
+            const newPn    = String(prevPn + 1).padStart(Math.max(3, String(prevPn + 1).length), '0');
+
+            const newEd = Object.assign({}, _ed2, {
+              extractMonth: newMonth,
+              extractYear: String(newYear),
+              paymentNumber: newPn,
+              extractStart: newStart,
+              extractEnd: newEnd,
+            });
+            localStorage.setItem('persistentExtractData', JSON.stringify(newEd));
+            localStorage.setItem('najran_new_extract_opened', JSON.stringify({
+              month: newMonth, year: String(newYear), paymentNumber: newPn
+            }));
+          } catch(_) {}
+          // ─────────────────────────────────────────────────────────────
+
           window.location.href = '/original/settings_main.html';
         } catch (e) {
           alert('حدث خطأ: ' + e.message);
