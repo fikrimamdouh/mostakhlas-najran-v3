@@ -452,11 +452,12 @@ document.addEventListener('DOMContentLoaded', function() {
      * ✅ [مُحدّث] البيانات الافتراضية لجدول تقييم الأداء مطابقة للصورة.
      */
     const defaultPerformance = [ 
-        { id: "pf_1", name: "الوقود والزيوت والمحروقات ( ماعدا وقود السيارات )", maxScore: 25, score: 25 },
-        { id: "pf_2", name: "مستهلكات الاعمال المدنية", maxScore: 25, score: 25 },
-        { id: "pf_3", name: "مواد ومطهرات النظافة", maxScore: 20, score: 20 },
-        { id: "pf_4", name: "مستهلكات الزراعة والرى ومكافحة الحشرات", maxScore: 15, score: 15 },
-        { id: "pf_5", name: "مستهلكات اجهزة النسخ والتصوير والطباعة", maxScore: 15, score: 15 }
+        { id: "pf_1", name: "الوقود والمحروقات والزيوت والشحوم", maxScore: 20, score: 20 },
+        { id: "pf_2", name: "مواد ومطهرات النظافة", maxScore: 20, score: 20 },
+        { id: "pf_3", name: "مستهلكات الزراعة والري", maxScore: 10, score: 10 },
+        { id: "pf_4", name: "المستهلكات المدنية", maxScore: 20, score: 20 },
+        { id: "pf_5", name: "المبيدات الحشرية", maxScore: 15, score: 15 },
+        { id: "pf_6", name: "المستهلكات الكيميائية", maxScore: 15, score: 15 }
     ];
 
     const defaultWater = [{ id: "wt_1", name: "توريد مياه للمستشفى", unitPrice: 1, quantity: 28500 }];
@@ -470,11 +471,12 @@ document.addEventListener('DOMContentLoaded', function() {
      * ✅ [مُحدّث] البيانات الافتراضية لجدول الملخص مع القيم الشهرية الصحيحة.
      */
     const defaultSummary = [ 
-        { id: "pf_1", name: "الوقود والزيوت والمحروقات ( ماعدا وقود السيارات )", value: 44400, isEditable: true, isCustom: false }, 
-        { id: "pf_2", name: "مستهلكات الاعمال المدنية", value: 66600, isEditable: true, isCustom: false },
-        { id: "pf_3", name: "مواد ومطهرات النظافة", value: 37000, isEditable: true, isCustom: false },
-        { id: "pf_4", name: "مستهلكات الزراعة والرى ومكافحة الحشرات", value: 37000, isEditable: true, isCustom: false },
-        { id: "pf_5", name: "مستهلكات اجهزة النسخ والتصوير والطباعة", value: 74000, isEditable: true, isCustom: false }
+        { id: "pf_1", name: "الوقود والمحروقات والزيوت والشحوم", value: 44400, isEditable: true, isCustom: false }, 
+        { id: "pf_2", name: "مواد ومطهرات النظافة", value: 37000, isEditable: true, isCustom: false },
+        { id: "pf_3", name: "مستهلكات الزراعة والري", value: 37000, isEditable: true, isCustom: false },
+        { id: "pf_4", name: "المستهلكات المدنية", value: 66600, isEditable: true, isCustom: false },
+        { id: "pf_5", name: "المبيدات الحشرية", value: 37000, isEditable: true, isCustom: false },
+        { id: "pf_6", name: "المستهلكات الكيميائية", value: 37000, isEditable: true, isCustom: false }
     ];
 
 
