@@ -210,8 +210,6 @@
   window.initAchievementSubmitBtn = function () {
     createApproveBtn({
       label: 'رفع مستخلص العمالة للاعتماد',
-      gradient: 'linear-gradient(135deg,#d4af37,#b8962e)',
-      color: '#1e3c72',
       onClick: async () => {
         if (!confirm('هل تريد رفع مستخلص العمالة كاملاً للاعتماد؟\n\nسيشمل المستخلص:\n✓ الحضور والانصراف\n✓ جداول الأداء\n✓ شهادة الإنجاز')) return;
         setLoading('جاري الرفع...');
@@ -241,8 +239,6 @@
   window.initConsumablesSubmitBtn = function () {
     createApproveBtn({
       label: 'رفع مستخلص المستهلكات للاعتماد',
-      gradient: 'linear-gradient(135deg,#d4af37,#b8962e)',
-      color: '#1e3c72',
       onClick: async () => {
         if (!confirm('هل تريد رفع مستخلص المستهلكات للاعتماد؟')) return;
         setLoading('جاري الرفع...');
@@ -284,8 +280,6 @@
   window.initHealthConsumablesSubmitBtn = function () {
     createApproveBtn({
       label: 'رفع مستخلص المراكز الصحية للاعتماد',
-      gradient: 'linear-gradient(135deg,#d4af37,#b8962e)',
-      color: '#1e3c72',
       onClick: async () => {
         if (!confirm('هل تريد رفع مستخلص المراكز الصحية كاملاً للاعتماد؟\n\nسيشمل المستخلص:\n✓ عمالة المراكز\n✓ مستهلكات المراكز')) return;
         setLoading('جاري الرفع...');
@@ -307,8 +301,6 @@
   window.initSparePartsSubmitBtn = function () {
     createApproveBtn({
       label: 'رفع مستخلص قطع الغيار للاعتماد',
-      gradient: 'linear-gradient(135deg,#d4af37,#b8962e)',
-      color: '#1e3c72',
       onClick: async () => {
         if (!confirm('هل تريد رفع مستخلص قطع الغيار للاعتماد؟')) return;
         setLoading('جاري الرفع...');
@@ -344,8 +336,6 @@
   window.initAdminOfficesConsumablesSubmitBtn = function () {
     createApproveBtn({
       label: 'رفع مستخلص المكاتب الإدارية للاعتماد',
-      gradient: 'linear-gradient(135deg,#d4af37,#b8962e)',
-      color: '#1e3c72',
       onClick: async () => {
         if (!confirm('هل تريد رفع مستخلص المكاتب الإدارية كاملاً للاعتماد؟\n\nسيشمل المستخلص:\n✓ عمالة المكاتب الإدارية\n✓ مستهلكات المكاتب الإدارية')) return;
         setLoading('جاري الرفع...');
