@@ -322,8 +322,9 @@
     showSyncStatus('done');
   }
 
-  // كشف syncNow للاستخدام الخارجي (مثل saveContractData في settings_main.js)
-  window.najranSyncNow = syncNow;
+  // كشف syncNow و pullFromCloud للاستخدام الخارجي
+  window.najranSyncNow      = syncNow;
+  window.najranPullFromCloud = pullFromCloud;
 
   // ── التهيئة الرئيسية ──────────────────────────────────────────────────────
   async function init() {

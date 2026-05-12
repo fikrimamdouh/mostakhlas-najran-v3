@@ -1227,16 +1227,7 @@ function autoFillFromSession() {
 
 // ── اختيار مستشفى من الـ overlay مباشرة (لا يحتاج session) ─────────────────
 window._selectHospitalFromOverlay = function(hospitalName) {
-    // 1. ابنِ بيانات المستشفى من HOSPITAL_CONTRACT_MAP
-    var freshData = { hospitalName: hospitalName };
-    _applyFixedContractData(freshData, hospitalName);
-
-    // 2. احفظ في persistentContractData
-    localStorage.setItem('persistentContractData', JSON.stringify(freshData));
-    // 3. احفظ مفتاح hospitalName المنفصل
-    localStorage.setItem('hospitalName', hospitalName);
-
-    // 4. حدّث الجلسة إن كانت موجودة
+    // 1. حدّث الجلسة أولاً (حتى يعرف pullFromCloud أي مستشفى يجلب بياناته)
     try {
         var raw = Storage.prototype.getItem.call(localStorage, 'najran_session');
         if (raw) {
@@ -1246,14 +1237,48 @@ window._selectHospitalFromOverlay = function(hospitalName) {
         }
     } catch(e) {}
 
-    // 5. أزل الـ overlay
+    // 2. احفظ مفتاح hospitalName المنفصل
+    Storage.prototype.setItem.call(localStorage, 'hospitalName', hospitalName);
+
+    // 3. أزل الـ overlay
     var ov = document.getElementById('_najran_ctx_overlay');
     if (ov) { ov.style.opacity = '0'; setTimeout(function(){ if(ov && ov.parentNode) ov.parentNode.removeChild(ov); }, 300); }
 
-    // 6. عبّئ الحقول وحدّث المنتقي
-    updateContractDisplayData();
-    if (typeof loadPersistentData === 'function') loadPersistentData();
-    renderHospitalPicker();
+    // دالة مشتركة لتحديث الواجهة
+    function _refreshUI() {
+        updateContractDisplayData();
+        if (typeof loadPersistentData === 'function') loadPersistentData();
+        renderHospitalPicker();
+    }
+
+    // دالة تطبيق الافتراضي (إن لم يوجد تعديل محفوظ على السيرفر)
+    function _applyDefaults() {
+        var freshData = { hospitalName: hospitalName };
+        _applyFixedContractData(freshData, hospitalName);
+        // استخدم Storage.prototype مباشرة لتفادي trigger المزامنة بالبيانات الافتراضية
+        Storage.prototype.setItem.call(localStorage, 'persistentContractData', JSON.stringify(freshData));
+    }
+
+    // 4. جلب بيانات المستشفى من السيرفر (التعديلات المحفوظة سابقاً)
+    if (typeof window.najranPullFromCloud === 'function') {
+        window.najranPullFromCloud().then(function() {
+            // تحقق هل جاءت بيانات حقيقية للمستشفى المختار
+            var cd = {};
+            try { cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}'); } catch(e) {}
+            if (!cd.hospitalName || cd.hospitalName !== hospitalName) {
+                // لا يوجد شيء محفوظ للمستشفى → استخدم الافتراضي
+                _applyDefaults();
+            }
+            _refreshUI();
+        }).catch(function() {
+            _applyDefaults();
+            _refreshUI();
+        });
+    } else {
+        // cloud-sync لم يُهيَّأ بعد → افتراضي
+        _applyDefaults();
+        _refreshUI();
+    }
 };
 
 // ── إعادة تعبئة الصفحة بعد انتهاء cloud-sync من السحب ──────────────────────
