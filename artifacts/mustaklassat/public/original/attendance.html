@@ -2084,6 +2084,11 @@ function resolveDeptKey(deptAr) {
 }
 
 // ======= استيراد التامبلت بعد تعبئة الأسماء =======
+// بيانات التامبلت المعلّقة حتى يختار المستخدم استبدال أم تحديث
+var _pendingTemplateData   = {};  // { deptKey: [employees] }
+var _pendingTemplateSkipped = 0;
+var _pendingTemplateUnknown = [];
+
 function importPositionsTemplate() {
   var file = document.getElementById('template-file-input').files[0];
   if (!file) { alert('يرجى اختيار الملف أولاً'); return; }
@@ -2093,13 +2098,12 @@ function importPositionsTemplate() {
   reader.onload = function(e) {
     try {
       var wb = XLSX.read(e.target.result, { type: 'binary' });
-      var allData = getAttendanceData();
-      var totalAdded = 0, totalSkipped = 0;
-      var unknownDepts = new Set();
+      var parsed = {};   // deptKey → [employees]
+      var totalFound = 0, totalSkipped = 0;
+      var unknownDepts = [];
       var daysCount = 30;
       try { if (typeof getExtractPeriodDetails === 'function') daysCount = getExtractPeriodDetails().daysInMonth || 30; } catch(_){}
 
-      // ═══ معالجة كل شيت على حدة ═══
       for (var si = 0; si < wb.SheetNames.length; si++) {
         var sheetName = wb.SheetNames[si];
         var ws = wb.Sheets[sheetName];
@@ -2115,9 +2119,8 @@ function importPositionsTemplate() {
         var iCat    = headers.findIndex(function(h){ return h === 'الفئة' || h.includes('فئة'); });
         var iNat    = headers.findIndex(function(h){ return h.includes('جنسية'); });
 
-        if (iName < 0) continue; // شيت بدون عمود أسماء → تخطى
+        if (iName < 0) continue;
 
-        // لو ما فيه عمود قسم → استخدم اسم الشيت كقسم ثابت لكل صفوف هذا الشيت
         var fixedDeptKey = (iDept < 0) ? resolveDeptKey(sheetName) : null;
 
         for (var r = 1; r < raw.length; r++) {
@@ -2130,46 +2133,173 @@ function importPositionsTemplate() {
           var category = iCat >= 0 ? String(row[iCat] || '1').trim() : '1';
           var nat      = iNat >= 0 ? String(row[iNat] || 'غير سعودي').trim() : 'غير سعودي';
 
-          // تجاهل الصفوف الفارغة تماماً (لا اسم ولا مسمى وظيفي ولا راتب)
           if (!empName && !jobTitle && !salary) { totalSkipped++; continue; }
 
           var deptKey = fixedDeptKey || resolveDeptKey(deptAr);
           if (!deptKey) {
-            unknownDepts.add(deptAr || ('شيت: ' + sheetName));
+            if (deptAr && unknownDepts.indexOf(deptAr) < 0) unknownDepts.push(deptAr);
             totalSkipped++;
             continue;
           }
 
-          if (!allData[deptKey]) allData[deptKey] = [];
-          allData[deptKey].push({
+          if (!parsed[deptKey]) parsed[deptKey] = [];
+          parsed[deptKey].push({
             name: empName, jobTitle: jobTitle, category: category,
             salary: salary, nationality: nat, iqamaId: iqamaId,
             nationalityFine: 0,
             days: Array(daysCount).fill('ح')
           });
-          totalAdded++;
+          totalFound++;
         }
       }
 
-      if (totalAdded === 0) {
-        var foundMsg = unknownDepts.size > 0
-          ? '\n\nأسماء الأقسام الموجودة في الملف:\n• ' + Array.from(unknownDepts).join('\n• ')
+      if (totalFound === 0) {
+        var msg = unknownDepts.length > 0
+          ? '\n\nأقسام غير معروفة في الملف:\n• ' + unknownDepts.join('\n• ')
           + '\n\nالأسماء المتوقعة: نظافة، كهرباء، زراعة، الأعمال المدنية، ميكانيكا، مغسلة، خدمات المرضى، الوظائف الإدارية'
           : '\n\nتحقق من أن الملف يحتوي عمود "القسم" أو اسم شيت يطابق اسم القسم';
-        alert('⚠️ لم يُضف أي موظف!\n' + foundMsg);
+        alert('⚠️ لم يُعثر على بيانات صالحة!\n' + msg);
         return;
       }
 
-      saveAttendanceData(allData);
-      renderTables();
-      closeDialog('upload-excel-dialog');
-      alert('✅ تم الاستيراد بنجاح!\nتمت إضافة ' + totalAdded + ' موظف' +
-            (totalSkipped ? '\n(تجاهل ' + totalSkipped + ' صف فارغ أو غير معروف القسم)' : ''));
+      // حفظ البيانات المعلّقة وعرض نافذة الاختيار
+      _pendingTemplateData    = parsed;
+      _pendingTemplateSkipped = totalSkipped;
+      _pendingTemplateUnknown = unknownDepts;
+
+      _showTemplateImportModeDialog(totalFound);
+
     } catch(err) {
       alert('خطأ في قراءة الملف: ' + err.message);
     }
   };
   reader.readAsBinaryString(file);
+}
+
+function _showTemplateImportModeDialog(totalFound) {
+  var currentData = getAttendanceData();
+  var deptKeys    = Object.keys(_pendingTemplateData);
+
+  // بناء صف المعلومات لكل قسم
+  var rows = deptKeys.map(function(dk) {
+    var cur = (currentData[dk] || []).length;
+    var nw  = _pendingTemplateData[dk].length;
+    return '<tr style="border-bottom:1px solid #e5e7eb;">'
+      + '<td style="padding:4px 8px;font-weight:600;">' + (typeof getDepartmentName === 'function' ? getDepartmentName(dk) : dk) + '</td>'
+      + '<td style="padding:4px 8px;text-align:center;color:#6b7280;">' + cur + '</td>'
+      + '<td style="padding:4px 8px;text-align:center;color:#16a34a;font-weight:700;">+' + nw + '</td>'
+      + '</tr>';
+  }).join('');
+
+  var dlgId = 'template-import-mode-dialog';
+  var existing = document.getElementById(dlgId);
+  if (existing) existing.remove();
+  var ov = document.getElementById(dlgId + '-overlay');
+  if (ov) ov.remove();
+
+  var dlg = document.createElement('div');
+  dlg.id = dlgId;
+  dlg.className = 'dialog';
+  dlg.innerHTML = `
+    <div class="dialog-header">
+      <h3><i class="fas fa-file-excel"></i> كيف تريد استيراد التامبلت؟</h3>
+      <span class="close" onclick="closeDialog('${dlgId}')">×</span>
+    </div>
+    <div class="dialog-body" style="padding:16px;">
+      <p style="font-size:.88rem;color:#374151;margin-bottom:10px;">
+        عدد الموظفين في الملف: <strong>${totalFound}</strong>
+      </p>
+      <table style="width:100%;border-collapse:collapse;font-size:.84rem;margin-bottom:16px;">
+        <thead>
+          <tr style="background:#f1f5f9;">
+            <th style="padding:4px 8px;text-align:right;">القسم</th>
+            <th style="padding:4px 8px;text-align:center;">حاليون</th>
+            <th style="padding:4px 8px;text-align:center;">في الملف</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button onclick="_confirmTemplateReplace()"
+          style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:11px 24px;font-size:.92rem;font-weight:700;cursor:pointer;">
+          <i class="fas fa-trash-alt"></i> استبدال<br>
+          <small style="font-weight:400;font-size:.75rem;">يمسح الحاليين ويضع الجدد</small>
+        </button>
+        <button onclick="_confirmTemplateUpdate()"
+          style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:11px 24px;font-size:.92rem;font-weight:700;cursor:pointer;">
+          <i class="fas fa-sync-alt"></i> تحديث<br>
+          <small style="font-weight:400;font-size:.75rem;">يضيف الجدد ويتجاهل المكررين</small>
+        </button>
+        <button onclick="closeDialog('${dlgId}')"
+          style="background:#6b7280;color:#fff;border:none;border-radius:8px;padding:11px 20px;font-size:.92rem;cursor:pointer;">
+          <i class="fas fa-times"></i> إلغاء
+        </button>
+      </div>
+    </div>`;
+
+  var overlay = document.createElement('div');
+  overlay.id = dlgId + '-overlay';
+  overlay.className = 'overlay';
+  overlay.onclick = function(){ closeDialog(dlgId); };
+  document.body.appendChild(overlay);
+  document.body.appendChild(dlg);
+  openDialog(dlgId);
+}
+
+function _confirmTemplateReplace() {
+  closeDialog('template-import-mode-dialog');
+  closeDialog('upload-excel-dialog');
+  var allData = getAttendanceData();
+  var totalAdded = 0;
+  Object.keys(_pendingTemplateData).forEach(function(dk) {
+    allData[dk] = _pendingTemplateData[dk];
+    totalAdded += _pendingTemplateData[dk].length;
+  });
+  saveAttendanceData(allData);
+  renderTables();
+  var msg = '✅ تم الاستبدال بنجاح!\nتمت إضافة ' + totalAdded + ' موظف';
+  if (_pendingTemplateSkipped) msg += '\n(تجاهل ' + _pendingTemplateSkipped + ' صف فارغ)';
+  alert(msg);
+  _pendingTemplateData = {}; _pendingTemplateSkipped = 0; _pendingTemplateUnknown = [];
+}
+
+function _confirmTemplateUpdate() {
+  closeDialog('template-import-mode-dialog');
+  closeDialog('upload-excel-dialog');
+  var totalAdded = 0, totalDup = 0;
+  var allData = getAttendanceData();
+
+  Object.keys(_pendingTemplateData).forEach(function(dk) {
+    var newEmps = _pendingTemplateData[dk];
+    newEmps.forEach(function(newEmp) {
+      var newIqama = (newEmp.iqamaId || '').trim();
+      var newName  = (newEmp.name || '').trim().toLowerCase();
+      var dup = false;
+      for (var deptKey in allData) {
+        for (var i = 0; i < (allData[deptKey] || []).length; i++) {
+          var emp = allData[deptKey][i];
+          if (newIqama && (emp.iqamaId || '').trim() === newIqama) { dup = true; break; }
+          if (newName  && (emp.name  || '').trim().toLowerCase() === newName)  { dup = true; break; }
+        }
+        if (dup) break;
+      }
+      if (!dup) {
+        if (!allData[dk]) allData[dk] = [];
+        allData[dk].push(newEmp);
+        totalAdded++;
+      } else {
+        totalDup++;
+      }
+    });
+  });
+
+  saveAttendanceData(allData);
+  renderTables();
+  var msg = '✅ تم التحديث!\nأُضيف: ' + totalAdded + ' موظف جديد';
+  if (totalDup) msg += '\nتجاهل مكرر: ' + totalDup;
+  if (_pendingTemplateSkipped) msg += '\nصفوف فارغة: ' + _pendingTemplateSkipped;
+  alert(msg);
+  _pendingTemplateData = {}; _pendingTemplateSkipped = 0; _pendingTemplateUnknown = [];
 }
 </script>
 <script src="/original/extract-submit.js"></script>
