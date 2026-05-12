@@ -1003,8 +1003,12 @@ function renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeducti
         <td colspan="7" style="text-align: right;">إجمالي المستحق للمقاول فقط وقدره: ${convertNumberToArabicWords(grandTotalNetMonthly)} ريال سعودي</td>
     `;
 
-    // حفظ الإجمالي الصافي لمستخلص العمالة حتى يُرسل صحيحاً عند الرفع
-    try { localStorage.setItem('finalLaborCost', grandTotalNetMonthly.toFixed(2)); } catch (_) {}
+    // حفظ الإجمالي الصافي لمستخلص العمالة — مرتبط باسم المستشفى
+    try {
+        const _hn = (localStorage.getItem('hospitalName') || '').trim();
+        if (_hn) localStorage.setItem('finalLaborCost_' + _hn, grandTotalNetMonthly.toFixed(2));
+        localStorage.setItem('finalLaborCost', grandTotalNetMonthly.toFixed(2));
+    } catch (_) {}
 }
 
 // --- START: كود JavaScript الجديد والكامل لإدارة التواقيع ---

@@ -1124,8 +1124,9 @@ let signaturesData = (data => data && typeof data === 'object' && !Array.isArray
 // ===== ✅ استبدل الدالة القديمة بهذه النسخة النهائية والأكثر دقة ✅ =====
 function getAutomaticLaborCost() {
     try {
-        // 1. الأولوية للقيمة الجاهزة والدقيقة من صفحة الحضور
-        const finalCost = localStorage.getItem('finalLaborCost');
+        // 1. الأولوية للقيمة الجاهزة والدقيقة من شهادة الإنجاز — مرتبطة باسم المستشفى
+        const _hn = (JSON.parse(localStorage.getItem('persistentContractData') || '{}').hospitalName || localStorage.getItem('hospitalName') || '').trim();
+        const finalCost = (_hn ? localStorage.getItem('finalLaborCost_' + _hn) : null) || localStorage.getItem('finalLaborCost');
         if (finalCost !== null) {
             return parseFloat(finalCost);
         }
