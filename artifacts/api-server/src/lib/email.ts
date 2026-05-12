@@ -511,7 +511,7 @@ export async function sendSupportEmail(adminEmail: string, ticket: {
   name: string; email: string; subject: string; message: string;
 }): Promise<void> {
   const resend = await getResendClient();
-  if (!resend) return;
+  if (!resend) throw new Error("Resend client unavailable — check RESEND_API_KEY or connector");
   try {
     const content = `
       <p style="color:#1e3c72;font-size:21px;font-weight:800;margin:0 0 6px;">
@@ -557,7 +557,10 @@ export async function sendSupportEmail(adminEmail: string, ticket: {
       html: emailLayout(content, "مذكرة دعم جديدة"),
     });
     logger.info({ adminEmail }, "Support ticket email sent");
-  } catch (err) { logger.error({ err }, "Failed to send support email"); }
+  } catch (err) {
+    logger.error({ err }, "Failed to send support email");
+    throw err;
+  }
 }
 
 // ── Daily auto-backup notification ────────────────────────────────────────────
