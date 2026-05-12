@@ -1394,19 +1394,21 @@ function updateTotalAmount(tableId) {
             }
         }
 
-        // 3. العد التلقائي للأقسام النشطة (باستثناء الكهرباء)
-        const divisionCount = settings.activeDepartments.filter(key => key !== 'electricity').length;
-        const distributedShare = (pmFullSalary > 0 && divisionCount > 0) ? pmFullSalary / divisionCount : 0;
+        // 3. القسمة دائماً على 7 جداول (جميع الأقسام بما فيها الكهرباء)
+        const TOTAL_DEPTS = 7;
+        const distributedShare = pmFullSalary > 0 ? pmFullSalary / TOTAL_DEPTS : 0;
 
         // 4. حساب التكلفة النهائية للقسم
         let finalAmountForSection = parseFloat(localStorage.getItem(`deptCalculatedCost_${deptInfo.key}`)) || 0;
 
         // 5. تطبيق منطق الخصم والإضافة بناءً على الإعدادات
-        if (settings.hasProjectManager === true) {
+        if (settings.hasProjectManager === true && pmFullSalary > 0) {
             if (deptInfo.key === 'electricity') {
-                finalAmountForSection -= pmFullSalary; // خصم الراتب الكامل من الكهرباء
-            } else if (settings.activeDepartments.includes(deptInfo.key)) {
-                // أضف الحصة فقط إذا كان القسم نشطًا
+                // خصم الراتب الكامل من الكهرباء ثم أضف حصتها من السبع
+                finalAmountForSection -= pmFullSalary;
+                finalAmountForSection += distributedShare;
+            } else {
+                // كل قسم آخر يأخذ حصته من السبع
                 finalAmountForSection += distributedShare;
             }
         }
