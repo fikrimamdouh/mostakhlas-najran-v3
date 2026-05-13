@@ -249,8 +249,13 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
   var session = {};
   try { session = JSON.parse(localStorage.getItem('najran_session') || '{}'); } catch(e) {}
   var isAdmin = session.role === 'admin' || session.role === 'supervisor';
+  var hasVisitReview = false;
+  try {
+    var mods = session.allowedModules ? JSON.parse(session.allowedModules) : null;
+    hasVisitReview = Array.isArray(mods) && mods.indexOf('visit_review') !== -1;
+  } catch(e) {}
   var token = session.clerkToken || '';
-  if (!isAdmin) { alert('هذه الصفحة مخصصة للإدارة فقط'); window.location.href = 'index.html'; return; }
+  if (!isAdmin && !hasVisitReview) { alert('هذه الصفحة مخصصة للإدارة فقط'); window.location.href = 'index.html'; return; }
 
   var allVisits = [];
   var visitSettings = { stamp: null, signature: null, managerName: 'م. محمد عباس المكرمي' };

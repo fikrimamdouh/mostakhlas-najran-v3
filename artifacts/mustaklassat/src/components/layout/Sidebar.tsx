@@ -255,7 +255,7 @@ export function Sidebar() {
   ];
 
   const adminNav = [
-    ...(isAdmin || isSupervisor ? [
+    ...(isAdmin || isSupervisor || (allowedModuleKeys !== null && allowedModuleKeys.includes('visit_review')) ? [
       { name: "مراجعة زيارات مقاولي الباطن", href: "/original-viewer?page=visit-admin-review.html", icon: BadgeCheck },
     ] : []),
     ...(isAdmin ? [

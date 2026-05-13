@@ -18,11 +18,15 @@ const requireApproved = async (req: any, res: any, next: any) => {
   next();
 };
 
-const requireAdmin = async (req: any, res: any, next: any) => {
-  if ((req as any).currentUser?.role !== "admin") {
-    return res.status(403).json({ error: "Admin required" });
-  }
-  next();
+const requireVisitReviewer = async (req: any, res: any, next: any) => {
+  const user = (req as any).currentUser;
+  if (!user) return res.status(403).json({ error: "Unauthorized" });
+  if (user.role === "admin" || user.role === "supervisor") return next();
+  try {
+    const modules: string[] | null = user.allowedModules ? JSON.parse(user.allowedModules) : null;
+    if (modules && modules.includes("visit_review")) return next();
+  } catch {}
+  return res.status(403).json({ error: "Visit review permission required" });
 };
 
 async function getSetting(key: string): Promise<string | null> {
@@ -52,7 +56,7 @@ router.get("/settings", requireAuth, requireApproved, async (req: any, res) => {
 });
 
 // POST /api/visits/settings — admin only
-router.post("/settings", requireAuth, requireApproved, requireAdmin, async (req: any, res) => {
+router.post("/settings", requireAuth, requireApproved, requireVisitReviewer, async (req: any, res) => {
   const user = req.currentUser;
   const { stamp, signature, managerName } = req.body;
   const ops: Promise<void>[] = [];
@@ -117,7 +121,7 @@ router.get("/", requireAuth, requireApproved, async (req: any, res) => {
 });
 
 // PATCH /api/visits/:id/status — admin approve/reject
-router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (req: any, res) => {
+router.patch("/:id/status", requireAuth, requireApproved, requireVisitReviewer, async (req: any, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
   const { status, adminNotes } = req.body;
@@ -182,7 +186,7 @@ router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (r
 });
 
 // PATCH /api/visits/:id/signed-permit — admin upload scanned signed copy
-router.patch("/:id/signed-permit", requireAuth, requireApproved, requireAdmin, async (req: any, res) => {
+router.patch("/:id/signed-permit", requireAuth, requireApproved, requireVisitReviewer, async (req: any, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
   const { signedPermitFile } = req.body;
