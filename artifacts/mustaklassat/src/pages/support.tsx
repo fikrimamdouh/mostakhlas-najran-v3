@@ -6,11 +6,31 @@ import { MessageSquare, Send, CheckCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link } from "wouter";
+import { parseAllowedModules } from "@/lib/modules";
 
 export default function Support() {
   const { user } = useUser();
   const { getToken } = useAuth();
   const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
+
+  // Access control — admin/supervisor أو من لديه صلاحية support
+  const role = dbUser?.role ?? "";
+  const allowedModuleKeys = parseAllowedModules((dbUser as any)?.allowedModules);
+  const isPrivileged = role === "admin" || role === "supervisor";
+  const hasAccess = isPrivileged || allowedModuleKeys === null || allowedModuleKeys.includes("support");
+
+  if (dbUser && !hasAccess) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4" style={{ direction: "rtl" }}>
+        <MessageSquare size={48} color="#7c3aed" />
+        <h2 className="text-xl font-bold" style={{ color: "#1e3c72" }}>غير مصرح بالوصول</h2>
+        <p className="text-gray-500">ليس لديك صلاحية لفتح صفحة مذكرة الدعم.</p>
+        <Link href="/dashboard">
+          <Button variant="outline">العودة للرئيسية</Button>
+        </Link>
+      </div>
+    );
+  }
 
   const [form, setForm] = useState({
     name: "",

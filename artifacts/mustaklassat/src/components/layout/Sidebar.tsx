@@ -7,7 +7,7 @@ import {
   Building2, ChevronLeft, BarChart3, Eye,
   ChevronRight, PanelLeftClose, PanelLeftOpen,
   BookOpen, ContactRound, Bell, X, Check, Clock, UserCheck,
-  FileCheck2, FileSearch, LayoutGrid, Archive, BadgeCheck,
+  FileCheck2, FileSearch, LayoutGrid, Archive, BadgeCheck, MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useCallback, useRef, type CSSProperties, useContext, createContext } from "react";
@@ -257,6 +257,9 @@ export function Sidebar() {
   const adminNav = [
     ...(isAdmin || isSupervisor || (allowedModuleKeys !== null && allowedModuleKeys.includes('visit_review')) ? [
       { name: "مراجعة زيارات مقاولي الباطن", href: "/original-viewer?page=visit-admin-review.html", icon: BadgeCheck },
+    ] : []),
+    ...(isAdmin || isSupervisor || (allowedModuleKeys !== null && allowedModuleKeys.includes('support')) ? [
+      { name: "مذكرة الدعم", href: "/support", icon: MessageSquare },
     ] : []),
     ...(isAdmin ? [
       { name: "تأسيس العقد", href: "/original-viewer?page=contract-foundation-upload.html", icon: FileCheck2 },
