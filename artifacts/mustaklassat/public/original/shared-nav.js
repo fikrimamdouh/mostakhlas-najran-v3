@@ -345,6 +345,10 @@
       tabs.appendChild(tab);
     });
 
+    /* ── Visit group dropdown ── */
+    var visitDrop = buildVisitGroup(currentPage);
+    if (visitDrop) tabs.appendChild(visitDrop);
+
     wrapper.appendChild(header);
     wrapper.appendChild(tabs);
 
@@ -376,6 +380,63 @@
       .replace(/[^\u0600-\u06FF\u0750-\u077F\s\w]/g, '')
       .replace(/^\s*[-–—]\s*|\s*[-–—]\s*$/g, '')
       .trim();
+  }
+
+  /* ── Build visit dropdown group (always injected based on role) ── */
+  function buildVisitGroup(currentPage) {
+    var sess = {};
+    try {
+      var rawS = Storage.prototype.getItem.call(localStorage, 'najran_session');
+      sess = rawS ? JSON.parse(rawS) : {};
+    } catch(e) {}
+    var role = sess.role || 'user';
+    var isAdmin = role === 'admin' || role === 'supervisor';
+
+    var items = [
+      { href: 'request-visit.html', icon: '🪪', label: 'تسجيل زيارة' }
+    ];
+    if (isAdmin) {
+      items.push({ href: 'visit-admin-review.html',   icon: '📋', label: 'مراجعة الطلبات' });
+      items.push({ href: 'visit-admin-settings.html', icon: '⚙️', label: 'إعدادات التصاريح' });
+    }
+
+    var visitPages = items.map(function(i) { return i.href; });
+    var isActive   = visitPages.indexOf(currentPage) !== -1;
+
+    var dropdown = document.createElement('div');
+    dropdown.className = 'sn-dropdown';
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'sn-dropdown-btn' + (isActive ? ' sn-active' : '');
+    btn.innerHTML =
+      '<span class="sn-icon">🪪</span>' +
+      '<span>زيارة مقاولي الباطن</span>' +
+      '<span class="sn-caret">▾</span>';
+
+    var menu = document.createElement('div');
+    menu.className = 'sn-dropdown-menu';
+
+    items.forEach(function(item) {
+      var a = document.createElement('a');
+      a.href = item.href;
+      a.className = 'sn-dropdown-item' + (currentPage === item.href ? ' sn-active' : '');
+      a.innerHTML = '<span class="sn-di-icon">' + item.icon + '</span>' + item.label;
+      menu.appendChild(a);
+    });
+
+    dropdown.appendChild(btn);
+    dropdown.appendChild(menu);
+
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      dropdown.classList.toggle('sn-open');
+    });
+    document.addEventListener('click', function() {
+      dropdown.classList.remove('sn-open');
+    });
+
+    return dropdown;
   }
 
   if (document.readyState === 'loading') {
