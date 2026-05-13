@@ -2,6 +2,9 @@ import { Router } from "express";
 import { db, usersTable, visitRequestsTable, systemSettingsTable } from "@workspace/db";
 import { requireAuth } from "../middleware/requireAuth";
 import { eq, desc } from "drizzle-orm";
+import { sendVisitNewRequestEmail, sendVisitApprovedEmail, sendVisitRejectedEmail } from "../lib/email";
+
+const ADMIN_EMAIL = "rorofikri@gmail.com";
 
 const router = Router();
 
@@ -83,6 +86,19 @@ router.post("/", requireAuth, requireApproved, async (req: any, res) => {
     submittedByHospital: user.hospital || null,
     submittedByContract: user.contractNumber || null,
   }).returning();
+
+  // Notify admin
+  sendVisitNewRequestEmail(ADMIN_EMAIL, {
+    repName,
+    siteLocation,
+    systemName,
+    mainContractor,
+    subContractor,
+    visitDate,
+    submittedByName: user.name,
+    submittedByHospital: user.hospital || null,
+  }).catch(() => {});
+
   return res.status(201).json({ visit: inserted });
 });
 
@@ -112,10 +128,12 @@ router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (r
   let serialNumber: string | null = null;
   let approvedAt: Date | null = null;
 
+  const [visit] = await db.select().from(visitRequestsTable).where(eq(visitRequestsTable.id, id)).limit(1);
+  if (!visit) return res.status(404).json({ error: "Visit request not found" });
+
   if (status === "approved") {
     approvedAt = new Date();
-    const [visit] = await db.select().from(visitRequestsTable).where(eq(visitRequestsTable.id, id)).limit(1);
-    if (visit && !visit.serialNumber) {
+    if (!visit.serialNumber) {
       const year = new Date().getFullYear();
       const hospital = (visit.submittedByHospital || "unknown").replace(/\s+/g, "_");
       const contract = (visit.submittedByContract || "unknown").replace(/\s+/g, "_");
@@ -135,7 +153,31 @@ router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (r
     .set(updateData)
     .where(eq(visitRequestsTable.id, id))
     .returning();
+
   if (!updated) return res.status(404).json({ error: "Visit request not found" });
+
+  // Send email notification to user
+  const [submitter] = await db.select().from(usersTable).where(eq(usersTable.id, visit.userId)).limit(1);
+  if (submitter?.email) {
+    if (status === "approved") {
+      const sn = serialNumber || updated.serialNumber || "—";
+      const approvedDate = approvedAt ? approvedAt.toLocaleDateString("ar-SA") : "—";
+      sendVisitApprovedEmail(submitter.email, submitter.name, {
+        repName: visit.repName,
+        siteLocation: visit.siteLocation,
+        visitDate: visit.visitDate,
+        serialNumber: sn,
+        approvedAt: approvedDate,
+      }).catch(() => {});
+    } else if (status === "rejected") {
+      sendVisitRejectedEmail(submitter.email, submitter.name, {
+        repName: visit.repName,
+        siteLocation: visit.siteLocation,
+        adminNotes: adminNotes || null,
+      }).catch(() => {});
+    }
+  }
+
   return res.json({ visit: updated });
 });
 

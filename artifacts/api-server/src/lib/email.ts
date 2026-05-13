@@ -722,3 +722,179 @@ export async function sendDailyBackupEmail(
     logger.info({ adminEmail, counts, hasAttachment: !!backupJson }, "Daily backup email sent");
   } catch (err) { logger.error({ err }, "Failed to send daily backup email"); }
 }
+
+// ── 9. Visit request — notify admin ──────────────────────────────────────────
+export async function sendVisitNewRequestEmail(adminEmail: string, visit: {
+  repName: string; siteLocation: string; systemName: string;
+  mainContractor: string; subContractor: string; visitDate: string;
+  submittedByName: string; submittedByHospital?: string | null;
+}): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend) return;
+  const domain = getAppDomain();
+  try {
+    const content = `
+      <p style="color:#1e3c72;font-size:21px;font-weight:800;margin:0 0 6px;">
+        🔔 &nbsp;طلب زيارة مقاول باطن جديد
+      </p>
+      ${subheading("وردت زيارة جديدة تحتاج إلى مراجعة واعتماد")}
+      ${divider()}
+
+      ${sectionTitle("بيانات الزيارة")}
+      <table width="100%" cellpadding="0" cellspacing="0"
+        style="border-radius:12px;overflow:hidden;border:1px solid #e0e7ef;margin-bottom:24px;">
+        ${infoRow("اسم الزائر", visit.repName, true)}
+        ${infoRow("الموقع", visit.siteLocation)}
+        ${infoRow("تاريخ الزيارة", visit.visitDate, true)}
+        ${infoRow("النظام", visit.systemName)}
+        ${infoRow("مقاول الصيانة", visit.mainContractor, true)}
+        ${infoRow("مقاول الباطن", visit.subContractor)}
+      </table>
+
+      ${sectionTitle("مقدِّم الطلب")}
+      <table width="100%" cellpadding="0" cellspacing="0"
+        style="border-radius:12px;overflow:hidden;border:1px solid #e0e7ef;margin-bottom:24px;">
+        ${infoRow("الاسم", visit.submittedByName, true)}
+        ${infoRow("الجهة", visit.submittedByHospital || "—")}
+      </table>
+
+      <table width="100%" cellpadding="0" cellspacing="0"
+        style="background:linear-gradient(135deg,#fffbeb,#fef3c7);
+               border-radius:12px;border:1px solid #fcd34d;padding:16px 20px;margin-bottom:8px;">
+        <tr><td>
+          <p style="margin:0;color:#92400e;font-size:13px;font-weight:600;">⚡ &nbsp;إجراء مطلوب</p>
+          <p style="margin:6px 0 0;color:#78350f;font-size:13px;line-height:1.8;">
+            يرجى مراجعة الطلب واتخاذ قرار الموافقة أو الرفض.
+          </p>
+        </td></tr>
+      </table>
+
+      ${domain ? actionButton("مراجعة الطلب", `${domain}/original/request-visit.html`, "#1e3c72") : ""}
+    `;
+    await resend.client.emails.send({
+      from: resend.fromField,
+      to: adminEmail,
+      subject: `🔔 زيارة مقاول باطن جديدة: ${visit.repName} — ${visit.submittedByHospital || visit.siteLocation}`,
+      html: emailLayout(content, "طلب زيارة جديد"),
+    });
+    logger.info({ adminEmail, repName: visit.repName }, "Visit request admin email sent");
+  } catch (err) { logger.error({ err }, "Failed to send visit request email"); }
+}
+
+// ── 10. Visit approved — notify user ─────────────────────────────────────────
+export async function sendVisitApprovedEmail(toEmail: string, userName: string, visit: {
+  repName: string; siteLocation: string; visitDate: string; serialNumber: string; approvedAt: string;
+}): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend) return;
+  const domain = getAppDomain();
+  try {
+    const content = `
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="display:inline-flex;align-items:center;justify-content:center;
+                    width:64px;height:64px;border-radius:50%;
+                    background:linear-gradient(135deg,#dcfce7,#bbf7d0);
+                    border:2px solid #4ade80;margin-bottom:16px;">
+          <span style="font-size:28px;">✅</span>
+        </div>
+        <h2 style="color:#15803d;font-size:22px;font-weight:800;margin:0 0 6px;">
+          تمت الموافقة على طلب الزيارة
+        </h2>
+        <p style="color:#64748b;font-size:13px;margin:0;">يمكنك الآن طباعة تصريح الزيارة</p>
+      </div>
+
+      ${divider()}
+
+      ${greeting(userName)}
+      ${subheading("نُبلغك بأن طلب زيارة مقاول الباطن قد تمت الموافقة عليه.")}
+
+      ${sectionTitle("بيانات التصريح")}
+      <table width="100%" cellpadding="0" cellspacing="0"
+        style="border-radius:12px;overflow:hidden;border:1px solid #e0e7ef;margin-bottom:24px;">
+        ${infoRow("رقم الصادر", visit.serialNumber, true)}
+        ${infoRow("اسم الزائر", visit.repName)}
+        ${infoRow("الموقع", visit.siteLocation, true)}
+        ${infoRow("تاريخ الزيارة", visit.visitDate)}
+        ${infoRow("تاريخ الاعتماد", visit.approvedAt, true)}
+      </table>
+
+      <table width="100%" cellpadding="0" cellspacing="0"
+        style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);
+               border-radius:12px;border-right:4px solid #16a34a;padding:18px 20px;margin-bottom:24px;">
+        <tr><td>
+          <p style="margin:0 0 6px;color:#15803d;font-size:14px;font-weight:700;">📄 خطوة واحدة فقط</p>
+          <p style="margin:0;color:#166534;font-size:13px;line-height:1.9;">
+            ادخل على النظام واضغط زر "تحميل التصريح" لتوليد ملف PDF جاهز للطباعة يحمل الختم والتوقيع الرسمي.
+          </p>
+        </td></tr>
+      </table>
+
+      ${domain ? actionButton("الدخول وطباعة التصريح", `${domain}/original/request-visit.html`, "#16a34a") : ""}
+    `;
+    await resend.client.emails.send({
+      from: resend.fromField,
+      to: toEmail,
+      subject: `✅ تمت الموافقة على طلب الزيارة — رقم الصادر ${visit.serialNumber}`,
+      html: emailLayout(content, "تمت الموافقة على طلب الزيارة", "#16a34a"),
+    });
+    logger.info({ toEmail, serialNumber: visit.serialNumber }, "Visit approved email sent");
+  } catch (err) { logger.error({ err }, "Failed to send visit approved email"); }
+}
+
+// ── 11. Visit rejected — notify user ─────────────────────────────────────────
+export async function sendVisitRejectedEmail(toEmail: string, userName: string, visit: {
+  repName: string; siteLocation: string; adminNotes?: string | null;
+}): Promise<void> {
+  const resend = await getResendClient();
+  if (!resend) return;
+  const domain = getAppDomain();
+  try {
+    const content = `
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="display:inline-flex;align-items:center;justify-content:center;
+                    width:64px;height:64px;border-radius:50%;
+                    background:linear-gradient(135deg,#fef2f2,#fee2e2);
+                    border:2px solid #f87171;margin-bottom:16px;">
+          <span style="font-size:28px;">❌</span>
+        </div>
+        <h2 style="color:#b91c1c;font-size:22px;font-weight:800;margin:0 0 6px;">
+          بخصوص طلب الزيارة
+        </h2>
+        <p style="color:#64748b;font-size:13px;margin:0;">نظام إدارة المستخلصات — تجمع نجران الصحي</p>
+      </div>
+
+      ${divider()}
+
+      ${greeting(userName)}
+      ${subheading("نُبلغك بأن طلب زيارة مقاول الباطن لم تتم الموافقة عليه.")}
+
+      ${sectionTitle("بيانات الطلب")}
+      <table width="100%" cellpadding="0" cellspacing="0"
+        style="border-radius:12px;overflow:hidden;border:1px solid #e0e7ef;margin-bottom:24px;">
+        ${infoRow("اسم الزائر", visit.repName, true)}
+        ${infoRow("الموقع", visit.siteLocation)}
+        ${visit.adminNotes ? infoRow("سبب الرفض", visit.adminNotes, true) : ""}
+      </table>
+
+      <table width="100%" cellpadding="0" cellspacing="0"
+        style="background:linear-gradient(135deg,#fff7ed,#ffedd5);
+               border-radius:12px;border-right:4px solid #f97316;padding:18px 20px;margin-bottom:8px;">
+        <tr><td>
+          <p style="margin:0 0 6px;color:#c2410c;font-size:14px;font-weight:700;">📞 للاستفسار</p>
+          <p style="margin:0;color:#7c2d12;font-size:13px;line-height:1.9;">
+            يرجى التواصل مع وحدة الصيانة العامة للحصول على مزيد من التوضيح أو إعادة تقديم الطلب بعد التصحيح.
+          </p>
+        </td></tr>
+      </table>
+
+      ${domain ? actionButton("تقديم طلب جديد", `${domain}/original/request-visit.html`, "#c2410c") : ""}
+    `;
+    await resend.client.emails.send({
+      from: resend.fromField,
+      to: toEmail,
+      subject: `بخصوص طلب زيارة مقاول الباطن — نظام إدارة المستخلصات`,
+      html: emailLayout(content, "بخصوص طلب الزيارة", "#b91c1c"),
+    });
+    logger.info({ toEmail }, "Visit rejected email sent");
+  } catch (err) { logger.error({ err }, "Failed to send visit rejected email"); }
+}
