@@ -3,6 +3,7 @@ import { db, usersTable, visitRequestsTable, systemSettingsTable } from "@worksp
 import { requireAuth } from "../middleware/requireAuth";
 import { eq, desc } from "drizzle-orm";
 import { sendVisitNewRequestEmail, sendVisitApprovedEmail, sendVisitRejectedEmail } from "../lib/email";
+import multer from "multer";
 
 const ADMIN_EMAIL = "rorofikri@gmail.com";
 
@@ -185,12 +186,27 @@ router.patch("/:id/status", requireAuth, requireApproved, requireVisitReviewer, 
   return res.json({ visit: updated });
 });
 
-// PATCH /api/visits/:id/signed-permit — admin upload scanned signed copy
-router.patch("/:id/signed-permit", requireAuth, requireApproved, requireVisitReviewer, async (req: any, res) => {
+// PATCH /api/visits/:id/signed-permit — admin upload scanned signed copy (multipart/form-data)
+const uploadMemory = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+});
+router.patch("/:id/signed-permit", requireAuth, requireApproved, requireVisitReviewer, uploadMemory.single("file"), async (req: any, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
-  const { signedPermitFile } = req.body;
+
+  let signedPermitFile: string | undefined;
+  if (req.file) {
+    // Convert uploaded buffer to base64 data URL
+    const mime = req.file.mimetype || "application/octet-stream";
+    signedPermitFile = `data:${mime};base64,${req.file.buffer.toString("base64")}`;
+  } else if (req.body?.signedPermitFile) {
+    // Fallback: accept JSON base64 if sent that way
+    signedPermitFile = req.body.signedPermitFile;
+  }
+
   if (!signedPermitFile) return res.status(400).json({ error: "No file provided" });
+
   const [updated] = await db.update(visitRequestsTable)
     .set({ signedPermitFile, updatedAt: new Date() })
     .where(eq(visitRequestsTable.id, id))

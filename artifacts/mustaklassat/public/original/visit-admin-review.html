@@ -260,7 +260,7 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
   var allVisits = [];
   var visitSettings = { stamp: null, signature: null, managerName: 'م. محمد عباس المكرمي' };
   window.currentVisitId = null;
-  var signedFileData = null;
+  var signedFileObj = null;
 
   async function loadSettings() {
     try {
@@ -334,7 +334,7 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
     var v = allVisits.find(function(x){ return x.id===id; });
     if (!v) return;
     window.currentVisitId = id;
-    signedFileData = null;
+    signedFileObj = null;
 
     var isApproved = v.status==='approved', isRejected = v.status==='rejected';
     var dt = v.visitDate ? new Date(v.visitDate).toLocaleDateString('ar-SA') : '—';
@@ -460,85 +460,52 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
     if (file) processSignedFile(file, id);
   };
 
-  var MAX_UPLOAD_BYTES = 900 * 1024; // 900KB base64 target (safe for proxy)
-
-  function compressImage(dataUrl, callback) {
-    var img = new Image();
-    img.onload = function() {
-      var MAX_W = 1200, MAX_H = 1700;
-      var w = img.width, h = img.height;
-      var scale = Math.min(1, MAX_W / w, MAX_H / h);
-      var canvas = document.createElement('canvas');
-      canvas.width  = Math.round(w * scale);
-      canvas.height = Math.round(h * scale);
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      var quality = 0.75;
-      var result = canvas.toDataURL('image/jpeg', quality);
-      while (result.length > MAX_UPLOAD_BYTES && quality > 0.2) {
-        quality = Math.round((quality - 0.1) * 10) / 10;
-        result = canvas.toDataURL('image/jpeg', quality);
-      }
-      callback(result);
-    };
-    img.onerror = function() { callback(dataUrl); };
-    img.src = dataUrl;
-  }
-
   function processSignedFile(file, id) {
-    // ── حد الحجم لـ PDFs والملفات الأخرى
-    var SIZE_LIMIT = 700 * 1024; // 700KB raw
-    if (!file.type.startsWith('image/') && file.size > SIZE_LIMIT) {
-      alert('حجم الملف كبير جداً (' + Math.round(file.size/1024) + ' KB). الحد الأقصى للـ PDF هو 700 KB. يرجى ضغط الملف أو تحويله لصورة.');
+    var MAX_MB = 20;
+    if (file.size > MAX_MB * 1024 * 1024) {
+      alert('حجم الملف كبير جداً (' + Math.round(file.size/1024/1024) + ' MB). الحد الأقصى هو ' + MAX_MB + ' MB.');
       return;
     }
-
-    var reader = new FileReader();
-    reader.onload = function(ev) {
-      var raw = ev.target.result;
-      function finish(data) {
-        var sizeKB = Math.round(data.length * 0.75 / 1024);
-        signedFileData = data;
-        var preview = document.getElementById('signed-preview');
-        if (preview && file.type.startsWith('image/')) {
-          preview.src = data;
-          preview.style.display = '';
-        }
-        var uploadBtn = document.getElementById('btn-upload-signed');
-        if (uploadBtn) {
-          uploadBtn.style.display = '';
-          uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> رفع "' + file.name + '" (~' + sizeKB + ' KB)';
-        }
-      }
-      if (file.type.startsWith('image/')) {
-        compressImage(raw, finish);
-      } else {
-        finish(raw);
-      }
-    };
-    reader.readAsDataURL(file);
+    signedFileObj = file;
+    var sizeKB = Math.round(file.size / 1024);
+    var preview = document.getElementById('signed-preview');
+    if (preview && file.type.startsWith('image/')) {
+      var url = URL.createObjectURL(file);
+      preview.src = url;
+      preview.style.display = '';
+    }
+    var uploadBtn = document.getElementById('btn-upload-signed');
+    if (uploadBtn) {
+      uploadBtn.style.display = '';
+      uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> رفع "' + file.name + '" (' + sizeKB + ' KB)';
+    }
   }
 
   window.uploadSigned = async function(id) {
-    if (!signedFileData) return;
+    if (!signedFileObj) return;
     var btn = document.getElementById('btn-upload-signed');
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> جارٍ الرفع...'; }
     var msgEl = document.getElementById('modal-msg');
     try {
+      var fd = new FormData();
+      fd.append('file', signedFileObj);
       var r = await fetch('/api/visits/' + id + '/signed-permit', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ signedPermitFile: signedFileData })
+        headers: { 'Authorization': 'Bearer ' + token },
+        body: fd
       });
-      if (!r.ok) throw new Error();
+      if (!r.ok) {
+        var errText = await r.text().catch(function(){ return ''; });
+        throw new Error(r.status + ': ' + errText);
+      }
       msgEl.textContent = 'تم رفع النسخة الموقعة بنجاح ✓';
       msgEl.className = 'modal-msg success';
       msgEl.style.display = '';
       await loadVisits();
-      /* Refresh signed panel */
       var v = allVisits.find(function(x){ return x.id===id; });
       if (v) buildSignedPanel(v);
     } catch(e) {
-      msgEl.textContent = 'فشل الرفع، حاول مجدداً';
+      msgEl.textContent = 'فشل الرفع: ' + (e.message || 'حاول مجدداً');
       msgEl.className = 'modal-msg error';
       msgEl.style.display = '';
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> رفع وحفظ النسخة الموقعة'; }
@@ -576,7 +543,7 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
     document.getElementById('detail-modal').classList.remove('active');
     document.body.style.overflow = '';
     window.currentVisitId = null;
-    signedFileData = null;
+    signedFileObj = null;
   };
   document.getElementById('detail-modal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
 
