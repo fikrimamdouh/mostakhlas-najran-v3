@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <script src="/original/user-storage-proxy.js"></script>
+    <script src="/original/auth-check.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إعدادات تصاريح الزيارة</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #1e3c72; --secondary: #2a5298; --accent: #d4af37; --glass: rgba(255,255,255,0.97); }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Tajawal', sans-serif; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); min-height: 100vh; padding: 40px 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: var(--glass); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,.2); padding: 40px 50px; }
+        .header { text-align: center; margin-bottom: 35px; }
+        .header img { width: 80px; margin-bottom: 12px; }
+        .header h2 { color: var(--primary); font-size: 24px; margin-bottom: 6px; }
+        .header p { color: #555; font-size: 14px; }
+        .back-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--primary); color: #fff; padding: 9px 20px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 700; margin-bottom: 25px; transition: opacity .2s; }
+        .back-btn:hover { opacity: .85; }
+        .section { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 25px 30px; margin-bottom: 22px; }
+        .section h3 { color: var(--primary); font-size: 16px; font-weight: 800; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 12px; }
+        .upload-area { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+        .preview-box { width: 200px; height: 140px; border: 2px dashed #c7d7f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: #fff; overflow: hidden; cursor: pointer; transition: border-color .2s; }
+        .preview-box:hover { border-color: var(--secondary); }
+        .preview-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .preview-box .placeholder { text-align: center; color: #94a3b8; font-size: 13px; }
+        .preview-box .placeholder i { font-size: 32px; margin-bottom: 8px; display: block; }
+        .file-input { display: none; }
+        .btn-upload { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; border: none; padding: 10px 22px; border-radius: 10px; font-family: 'Tajawal', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity .2s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-upload:hover { opacity: .88; }
+        .btn-remove { background: #fee2e2; color: #b91c1c; border: none; padding: 8px 18px; border-radius: 10px; font-family: 'Tajawal', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .2s; display: none; }
+        .btn-remove:hover { opacity: .88; }
+        .input-group label { font-weight: 700; color: #334155; font-size: 14px; display: block; margin-bottom: 8px; }
+        .input-group input { width: 100%; padding: 12px 16px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-family: 'Tajawal', sans-serif; font-size: 14px; background: #fff; transition: border .2s; }
+        .input-group input:focus { outline: none; border-color: var(--secondary); box-shadow: 0 0 0 3px rgba(42,82,152,.1); }
+        .btn-save { width: 100%; padding: 14px; background: linear-gradient(135deg, #1565c0, #0ea5e9); color: #fff; border: none; border-radius: 12px; font-family: 'Tajawal', sans-serif; font-size: 16px; font-weight: 800; cursor: pointer; transition: opacity .2s, transform .1s; margin-top: 10px; }
+        .btn-save:hover { opacity: .9; transform: translateY(-1px); }
+        .btn-save:disabled { opacity: .6; cursor: not-allowed; }
+        .toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); padding: 14px 28px; border-radius: 12px; font-size: 14px; font-weight: 700; display: none; z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,.15); }
+        .toast.success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .toast.error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+        .status-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; }
+        .status-ok { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .status-missing { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-btn"><i class="fas fa-arrow-right"></i> العودة للرئيسية</a>
+        <div class="header">
+            <img src="/original/najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي">
+            <h2>إعدادات تصاريح الزيارة</h2>
+            <p>رفع الختم الرسمي والتوقيع الرقمي واسم مدير إدارة الصيانة</p>
+        </div>
+
+        <div class="section">
+            <h3><i class="fas fa-stamp" style="color:var(--accent)"></i> الختم الرسمي <span id="stamp-status"></span></h3>
+            <div class="upload-area">
+                <div class="preview-box" onclick="document.getElementById('stamp-file').click()">
+                    <img id="stamp-preview" src="" style="display:none">
+                    <div class="placeholder" id="stamp-placeholder"><i class="fas fa-stamp"></i>انقر لرفع الختم</div>
+                </div>
+                <div style="display:flex;gap:10px;align-items:center">
+                    <button class="btn-upload" onclick="document.getElementById('stamp-file').click()"><i class="fas fa-upload"></i> رفع صورة الختم</button>
+                    <button class="btn-remove" id="stamp-remove" onclick="removeImage('stamp')">حذف</button>
+                </div>
+                <input type="file" id="stamp-file" class="file-input" accept="image/*" onchange="previewImage(this,'stamp')">
+            </div>
+        </div>
+
+        <div class="section">
+            <h3><i class="fas fa-signature" style="color:var(--accent)"></i> التوقيع الرقمي <span id="sig-status"></span></h3>
+            <div class="upload-area">
+                <div class="preview-box" onclick="document.getElementById('sig-file').click()">
+                    <img id="sig-preview" src="" style="display:none">
+                    <div class="placeholder" id="sig-placeholder"><i class="fas fa-pen-nib"></i>انقر لرفع التوقيع</div>
+                </div>
+                <div style="display:flex;gap:10px;align-items:center">
+                    <button class="btn-upload" onclick="document.getElementById('sig-file').click()"><i class="fas fa-upload"></i> رفع صورة التوقيع</button>
+                    <button class="btn-remove" id="sig-remove" onclick="removeImage('sig')">حذف</button>
+                </div>
+                <input type="file" id="sig-file" class="file-input" accept="image/*" onchange="previewImage(this,'sig')">
+            </div>
+        </div>
+
+        <div class="section">
+            <h3><i class="fas fa-user-tie" style="color:var(--accent)"></i> اسم مدير إدارة الصيانة</h3>
+            <div class="input-group">
+                <label>الاسم الكامل</label>
+                <input type="text" id="manager-name" placeholder="م. محمد عباس المكرمي">
+            </div>
+        </div>
+
+        <button class="btn-save" id="save-btn" onclick="saveSettings()"><i class="fas fa-save"></i> حفظ الإعدادات</button>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+    (function() {
+        var session = {};
+        try { session = JSON.parse(localStorage.getItem('najran_session') || '{}'); } catch(e) {}
+        if (session.role !== 'admin') {
+            document.body.innerHTML = '<div style="text-align:center;padding:80px;font-family:Tajawal,sans-serif;"><h2 style="color:#b91c1c;">غير مصرح لك بالوصول</h2><a href="index.html" style="color:#1e3c72">العودة للرئيسية</a></div>';
+            return;
+        }
+
+        var token = session.clerkToken || '';
+        var pendingData = { stamp: undefined, sig: undefined };
+
+        async function loadSettings() {
+            try {
+                var res = await fetch('/api/visits/settings', { headers: { 'Authorization': 'Bearer ' + token } });
+                var data = await res.json();
+                if (data.stamp) { setImagePreview('stamp', data.stamp); }
+                if (data.signature) { setImagePreview('sig', data.signature); }
+                if (data.managerName) { document.getElementById('manager-name').value = data.managerName; }
+                updateStatus('stamp-status', !!data.stamp);
+                updateStatus('sig-status', !!data.signature);
+            } catch(e) {}
+        }
+
+        function setImagePreview(type, src) {
+            var preview = document.getElementById(type + '-preview');
+            var placeholder = document.getElementById(type + '-placeholder');
+            var removeBtn = document.getElementById(type + '-remove');
+            preview.src = src;
+            preview.style.display = '';
+            placeholder.style.display = 'none';
+            removeBtn.style.display = '';
+            if (type === 'stamp') pendingData.stamp = src;
+            else pendingData.sig = src;
+        }
+
+        function updateStatus(elId, hasValue) {
+            var el = document.getElementById(elId);
+            if (!el) return;
+            el.innerHTML = hasValue
+                ? '<span class="status-tag status-ok"><i class="fas fa-check-circle"></i> مرفوع</span>'
+                : '<span class="status-tag status-missing"><i class="fas fa-exclamation-circle"></i> غير مرفوع</span>';
+        }
+
+        window.previewImage = function(input, type) {
+            var file = input.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                setImagePreview(type, e.target.result);
+                updateStatus(type === 'stamp' ? 'stamp-status' : 'sig-status', true);
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.removeImage = function(type) {
+            var preview = document.getElementById(type + '-preview');
+            var placeholder = document.getElementById(type + '-placeholder');
+            var removeBtn = document.getElementById(type + '-remove');
+            var fileInput = document.getElementById(type + '-file');
+            preview.src = '';
+            preview.style.display = 'none';
+            placeholder.style.display = '';
+            removeBtn.style.display = 'none';
+            fileInput.value = '';
+            if (type === 'stamp') pendingData.stamp = '';
+            else pendingData.sig = '';
+            updateStatus(type === 'stamp' ? 'stamp-status' : 'sig-status', false);
+        };
+
+        window.saveSettings = async function() {
+            var btn = document.getElementById('save-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ الحفظ...';
+            var managerName = document.getElementById('manager-name').value.trim();
+            var body = { managerName: managerName || 'م. محمد عباس المكرمي' };
+            if (pendingData.stamp !== undefined) body.stamp = pendingData.stamp;
+            if (pendingData.sig !== undefined) body.signature = pendingData.sig;
+            try {
+                var res = await fetch('/api/visits/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify(body)
+                });
+                if (!res.ok) throw new Error();
+                showToast('تم حفظ الإعدادات بنجاح ✓', 'success');
+            } catch(e) {
+                showToast('فشل حفظ الإعدادات', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> حفظ الإعدادات';
+            }
+        };
+
+        function showToast(msg, type) {
+            var t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast ' + type;
+            t.style.display = 'block';
+            setTimeout(function() { t.style.display = 'none'; }, 4000);
+        }
+
+        loadSettings();
+    })();
+    </script>
+</body>
+</html>

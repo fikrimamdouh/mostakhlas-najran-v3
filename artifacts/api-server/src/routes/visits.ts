@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { db, usersTable, visitRequestsTable } from "@workspace/db";
+import { db, usersTable, visitRequestsTable, systemSettingsTable } from "@workspace/db";
 import { requireAuth } from "../middleware/requireAuth";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 const router = Router();
 
@@ -21,6 +21,44 @@ const requireAdmin = async (req: any, res: any, next: any) => {
   }
   next();
 };
+
+async function getSetting(key: string): Promise<string | null> {
+  const [row] = await db.select().from(systemSettingsTable).where(eq(systemSettingsTable.key, key)).limit(1);
+  return row?.value ?? null;
+}
+
+async function setSetting(key: string, value: string, updatedBy: string) {
+  const existing = await getSetting(key);
+  if (existing !== null) {
+    await db.update(systemSettingsTable)
+      .set({ value, updatedAt: new Date(), updatedBy })
+      .where(eq(systemSettingsTable.key, key));
+  } else {
+    await db.insert(systemSettingsTable).values({ key, value, updatedBy });
+  }
+}
+
+// GET /api/visits/settings
+router.get("/settings", requireAuth, requireApproved, async (req: any, res) => {
+  const [stamp, signature, managerName] = await Promise.all([
+    getSetting("visit_stamp"),
+    getSetting("visit_signature"),
+    getSetting("visit_manager_name"),
+  ]);
+  return res.json({ stamp, signature, managerName: managerName || "م. محمد عباس المكرمي" });
+});
+
+// POST /api/visits/settings — admin only
+router.post("/settings", requireAuth, requireApproved, requireAdmin, async (req: any, res) => {
+  const user = req.currentUser;
+  const { stamp, signature, managerName } = req.body;
+  const ops: Promise<void>[] = [];
+  if (stamp !== undefined) ops.push(setSetting("visit_stamp", stamp, user.email));
+  if (signature !== undefined) ops.push(setSetting("visit_signature", signature, user.email));
+  if (managerName !== undefined) ops.push(setSetting("visit_manager_name", managerName || "م. محمد عباس المكرمي", user.email));
+  await Promise.all(ops);
+  return res.json({ success: true });
+});
 
 // POST /api/visits — submit a new visit request
 router.post("/", requireAuth, requireApproved, async (req: any, res) => {
@@ -43,11 +81,12 @@ router.post("/", requireAuth, requireApproved, async (req: any, res) => {
     status: "pending",
     submittedByName: user.name,
     submittedByHospital: user.hospital || null,
+    submittedByContract: user.contractNumber || null,
   }).returning();
   return res.status(201).json({ visit: inserted });
 });
 
-// GET /api/visits — list visit requests (own for user, all for admin)
+// GET /api/visits — list visit requests
 router.get("/", requireAuth, requireApproved, async (req: any, res) => {
   const user = req.currentUser;
   let rows;
@@ -62,15 +101,38 @@ router.get("/", requireAuth, requireApproved, async (req: any, res) => {
 });
 
 // PATCH /api/visits/:id/status — admin approve/reject
-router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (req, res) => {
+router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (req: any, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
   const { status, adminNotes } = req.body;
   if (!["approved", "rejected", "pending"].includes(status)) {
     return res.status(400).json({ error: "Invalid status" });
   }
+
+  let serialNumber: string | null = null;
+  let approvedAt: Date | null = null;
+
+  if (status === "approved") {
+    approvedAt = new Date();
+    const [visit] = await db.select().from(visitRequestsTable).where(eq(visitRequestsTable.id, id)).limit(1);
+    if (visit && !visit.serialNumber) {
+      const year = new Date().getFullYear();
+      const hospital = (visit.submittedByHospital || "unknown").replace(/\s+/g, "_");
+      const contract = (visit.submittedByContract || "unknown").replace(/\s+/g, "_");
+      const counterKey = `visit_serial_${year}_${hospital}_${contract}`;
+      const currentVal = await getSetting(counterKey);
+      const nextNum = parseInt(currentVal || "0", 10) + 1;
+      await setSetting(counterKey, String(nextNum), "system");
+      serialNumber = String(nextNum).padStart(4, "0");
+    }
+  }
+
+  const updateData: any = { status, adminNotes: adminNotes || null, updatedAt: new Date() };
+  if (approvedAt) updateData.approvedAt = approvedAt;
+  if (serialNumber) updateData.serialNumber = serialNumber;
+
   const [updated] = await db.update(visitRequestsTable)
-    .set({ status, adminNotes: adminNotes || null, updatedAt: new Date() })
+    .set(updateData)
     .where(eq(visitRequestsTable.id, id))
     .returning();
   if (!updated) return res.status(404).json({ error: "Visit request not found" });

@@ -164,6 +164,9 @@ export const visitRequestsTable = pgTable("visit_requests", {
   adminNotes: text("admin_notes"),
   submittedByName: text("submitted_by_name"),
   submittedByHospital: text("submitted_by_hospital"),
+  submittedByContract: text("submitted_by_contract"),
+  serialNumber: text("serial_number"),
+  approvedAt: timestamp("approved_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

@@ -9,6 +9,8 @@
     <title>بوابة تسجيل ومتابعة الزيارات</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root { --primary-color: #1e3c72; --secondary-color: #2a5298; --accent-color: #d4af37; --accent-hover: #b8962e; --glass-bg: rgba(255, 255, 255, 0.97); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -24,32 +26,29 @@
         .input-group label { font-weight: 600; display: block; margin-bottom: 8px; color: #333; font-size: 14px; }
         .input-group input { width: 100%; padding: 12px; font-size: 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-family: 'Tajawal', sans-serif; background: #f8fafc; transition: border .2s, box-shadow .2s; }
         .input-group input:focus { border-color: var(--secondary-color); outline: none; box-shadow: 0 0 0 3px rgba(42,82,152,.1); background: #fff; }
-        .btn-submit { grid-column: 1 / -1; width: 100%; padding: 15px; margin-top: 10px; background: linear-gradient(145deg, var(--accent-color), var(--accent-hover)); color: var(--primary-color); border-radius: 12px; font-size: 17px; font-weight: 800; border: none; cursor: pointer; transition: opacity .2s, transform .1s; }
+        .btn-submit { grid-column: 1 / -1; width: 100%; padding: 15px; margin-top: 10px; background: linear-gradient(135deg, #1565c0, #0ea5e9); color: #fff; border-radius: 12px; font-size: 17px; font-weight: 800; border: none; cursor: pointer; transition: opacity .2s, transform .1s; font-family: 'Tajawal', sans-serif; }
         .btn-submit:hover { opacity: .92; transform: translateY(-1px); }
         .btn-submit:disabled { opacity: .6; cursor: not-allowed; }
         #status-message { text-align: center; margin-top: 18px; font-weight: bold; padding: 12px 20px; border-radius: 10px; display: none; font-size: 14px; }
         #status-message.success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
         #status-message.error   { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
-
-        /* ── Loading spinner ── */
         .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,.15); border-top-color: #1e3c72; border-radius: 50%; animation: spin .6s linear infinite; margin-left: 8px; vertical-align: middle; }
         @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* ── Requests index ── */
         .requests-index { margin-top: 40px; border-top: 2px solid var(--accent-color); padding-top: 30px; }
         .index-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
         .index-header h3 { color: var(--primary-color); font-size: 20px; font-weight: 800; }
+        .index-header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .search-box { position: relative; }
         .search-box input { padding: 9px 35px 9px 14px; border-radius: 20px; border: 1.5px solid #e2e8f0; font-family: 'Tajawal', sans-serif; font-size: 13px; width: 240px; background: #f8fafc; }
         .search-box input:focus { outline: none; border-color: var(--secondary-color); background: #fff; }
         .search-box i { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); color: #aaa; font-size: 13px; }
-
+        .btn-admin-settings { padding: 8px 16px; border-radius: 20px; background: linear-gradient(135deg,var(--primary-color),var(--secondary-color)); color: var(--accent-color); border: none; font-family: 'Tajawal', sans-serif; font-size: 12px; font-weight: 800; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-admin-settings:hover { opacity: .85; }
         .table-container { overflow-x: auto; }
         .requests-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .requests-table th, .requests-table td { padding: 11px 13px; text-align: right; border-bottom: 1px solid #f1f5f9; }
-        .requests-table thead th { background: #f8fafc; color: #475569; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+        .requests-table thead th { background: #f8fafc; color: #475569; font-weight: 700; font-size: 12px; }
         .requests-table tbody tr:hover { background: #f8fafc; }
-
         .status-badge { font-weight: 700; padding: 4px 10px; border-radius: 20px; font-size: 12px; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
         .status-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; }
         .status-pending  { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
@@ -58,25 +57,24 @@
         .status-approved::before { background: #16a34a; }
         .status-rejected { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
         .status-rejected::before { background: #ef4444; }
-
-        .btn-action { padding: 5px 11px; font-size: 12px; border-radius: 7px; text-decoration: none; color: #fff; background: var(--secondary-color); border: none; cursor: pointer; font-family: 'Tajawal', sans-serif; font-weight: 600; transition: opacity .15s; }
+        .btn-action { padding: 5px 11px; font-size: 12px; border-radius: 7px; text-decoration: none; color: #fff; background: var(--secondary-color); border: none; cursor: pointer; font-family: 'Tajawal', sans-serif; font-weight: 600; transition: opacity .15s; display: inline-flex; align-items: center; gap: 5px; }
         .btn-action:hover { opacity: .85; }
-
-        /* ── Admin badge ── */
+        .btn-pdf { background: linear-gradient(135deg,#16a34a,#15803d); margin-top: 5px; }
         .admin-badge { display: inline-block; background: linear-gradient(135deg,#1e3c72,#2a5298); color: #d4af37; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 20px; margin-right: 8px; }
-
-        /* ── Admin status change ── */
-        .admin-actions { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+        .admin-actions { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 6px; }
         .admin-select { padding: 5px 10px; border-radius: 8px; border: 1.5px solid #e2e8f0; font-family: 'Tajawal', sans-serif; font-size: 12px; background: #f8fafc; color: #334155; cursor: pointer; }
         .btn-save { padding: 5px 12px; border-radius: 8px; background: linear-gradient(135deg,#1e3c72,#2a5298); color: #fff; border: none; font-family: 'Tajawal', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; transition: opacity .15s; }
         .btn-save:hover { opacity: .85; }
         .admin-notes-input { padding: 5px 10px; border-radius: 8px; border: 1.5px solid #e2e8f0; font-family: 'Tajawal', sans-serif; font-size: 12px; background: #f8fafc; width: 180px; }
-
+        .serial-badge { font-size: 11px; color: #1e3c72; font-weight: 800; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 2px 7px; display: inline-block; margin-top: 3px; }
         .empty-row { text-align: center; color: #94a3b8; padding: 30px 0 !important; }
+        .back-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--primary-color); color: #fff; padding: 8px 18px; border-radius: 10px; text-decoration: none; font-size: 13px; font-weight: 700; margin-bottom: 20px; transition: opacity .2s; }
+        .back-btn:hover { opacity: .85; }
     </style>
 </head>
 <body>
     <div class="main-container">
+        <a href="index.html" class="back-btn"><i class="fas fa-arrow-right"></i> الرئيسية</a>
         <div class="form-header">
             <img src="/original/najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي">
             <h2>بوابة تسجيل ومتابعة الزيارات</h2>
@@ -102,9 +100,12 @@
         <div class="requests-index">
             <div class="index-header">
                 <h3><i class="fas fa-list-alt" style="color:var(--accent-color)"></i> سجل الطلبات <span id="admin-lbl" style="display:none" class="admin-badge">عرض المدير</span></h3>
-                <div class="search-box">
-                    <input type="text" id="search-input" placeholder="بحث في السجل...">
-                    <i class="fas fa-search"></i>
+                <div class="index-header-actions">
+                    <a href="visit-admin-settings.html" id="settings-link" class="btn-admin-settings" style="display:none"><i class="fas fa-cog"></i> إعدادات التصاريح</a>
+                    <div class="search-box">
+                        <input type="text" id="search-input" placeholder="بحث في السجل...">
+                        <i class="fas fa-search"></i>
+                    </div>
                 </div>
             </div>
             <div class="table-container">
@@ -131,17 +132,25 @@
         var token = session.clerkToken || '';
 
         var allVisits = [];
+        var visitSettings = { stamp: null, signature: null, managerName: 'م. محمد عباس المكرمي' };
         var searchInput = document.getElementById('search-input');
         var tbody = document.getElementById('requests-tbody');
 
-        if (isAdmin) document.getElementById('admin-lbl').style.display = '';
+        if (isAdmin) {
+            document.getElementById('admin-lbl').style.display = '';
+            document.getElementById('settings-link').style.display = '';
+        }
 
-        // ── Load visits from API ──
+        async function loadSettings() {
+            try {
+                var res = await fetch('/api/visits/settings', { headers: { 'Authorization': 'Bearer ' + token } });
+                if (res.ok) visitSettings = await res.json();
+            } catch(e) {}
+        }
+
         async function loadVisits() {
             try {
-                var res = await fetch('/api/visits', {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
+                var res = await fetch('/api/visits', { headers: { 'Authorization': 'Bearer ' + token } });
                 if (res.status === 401 || res.status === 403) {
                     tbody.innerHTML = '<tr><td colspan="10" class="empty-row">غير مصرح لك بعرض هذه البيانات</td></tr>';
                     return;
@@ -154,7 +163,6 @@
             }
         }
 
-        // ── Render table ──
         function renderVisits() {
             var q = (searchInput.value || '').toLowerCase().trim();
             var data = allVisits.filter(function(v) {
@@ -172,9 +180,16 @@
                 var visitDt = v.visitDate ? new Date(v.visitDate).toLocaleDateString('ar-SA') : '—';
                 var photoBtn = v.repIdPhoto ? '<a href="' + v.repIdPhoto + '" target="_blank" class="btn-action"><i class="fas fa-image"></i> الهوية</a>' : '—';
 
+                var pdfBtn = '';
+                if (v.status === 'approved') {
+                    pdfBtn = '<br><button class="btn-action btn-pdf" onclick="generatePDF(' + v.id + ')"><i class="fas fa-file-pdf"></i> تحميل التصريح</button>';
+                }
+
+                var serialHtml = v.serialNumber ? '<div class="serial-badge"><i class="fas fa-hashtag"></i> صادر ' + v.serialNumber + '/' + (v.approvedAt ? new Date(v.approvedAt).getFullYear() : new Date().getFullYear()) + '</div>' : '';
+
                 var adminActions = '';
                 if (isAdmin) {
-                    adminActions = '<div class="admin-actions" style="margin-top:6px">' +
+                    adminActions = '<div class="admin-actions">' +
                         '<select class="admin-select" id="st-' + v.id + '">' +
                             '<option value="pending"'   + (v.status==='pending'  ?' selected':'') + '>قيد المراجعة</option>' +
                             '<option value="approved"'  + (v.status==='approved' ?' selected':'') + '>موافق عليه ✅</option>' +
@@ -194,14 +209,16 @@
                     '<td>' + esc(v.mainContractor) + '</td>' +
                     '<td>' + esc(v.subContractor) + '</td>' +
                     '<td>' + visitDt + '</td>' +
-                    '<td><span class="status-badge ' + statusCls + '">' + statusTxt + '</span>' +
-                        (v.adminNotes ? '<br><small style="color:#64748b;font-size:11px">' + esc(v.adminNotes) + '</small>' : '') + '</td>' +
-                    '<td>' + photoBtn + adminActions + '</td>' +
+                    '<td>' +
+                        '<span class="status-badge ' + statusCls + '">' + statusTxt + '</span>' +
+                        (v.adminNotes ? '<br><small style="color:#64748b;font-size:11px">' + esc(v.adminNotes) + '</small>' : '') +
+                        serialHtml +
+                    '</td>' +
+                    '<td>' + photoBtn + pdfBtn + adminActions + '</td>' +
                 '</tr>';
             }).join('');
         }
 
-        // ── Admin save status ──
         window.saveStatus = async function(id) {
             var sel = document.getElementById('st-' + id);
             var notes = document.getElementById('an-' + id);
@@ -220,7 +237,107 @@
             }
         };
 
-        // ── Submit form ──
+        window.generatePDF = async function(id) {
+            var v = allVisits.find(function(x) { return x.id === id; });
+            if (!v) return;
+
+            var btn = document.querySelector('[onclick="generatePDF(' + id + ')"]');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ التوليد...'; }
+
+            var year = v.approvedAt ? new Date(v.approvedAt).getFullYear() : new Date().getFullYear();
+            var approvedDate = v.approvedAt ? new Date(v.approvedAt).toLocaleDateString('ar-SA') : '—';
+            var visitDt = v.visitDate ? new Date(v.visitDate).toLocaleDateString('ar-SA') : '—';
+
+            var rows = [
+                ['الاسم', esc(v.repName)],
+                ['المستشفى / المنشأة', esc(v.submittedByHospital || '—')],
+                ['الموقع', esc(v.siteLocation)],
+                ['تاريخ الزيارة', visitDt],
+                ['النظام', esc(v.systemName)],
+                ['رقم الهوية (الإقامة)', esc(v.repId)],
+                ['رقم الجوال', esc(v.repMobile)],
+                ['مقاول الصيانة', esc(v.mainContractor)],
+                ['مقاول الباطن', esc(v.subContractor)],
+            ];
+
+            var stampHtml = visitSettings.stamp
+                ? '<img src="' + visitSettings.stamp + '" style="max-width:110px;max-height:110px;object-fit:contain;">'
+                : '<div style="width:110px;height:110px;border:2px dashed #ccc;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:#aaa;">الختم</div>';
+
+            var sigHtml = visitSettings.signature
+                ? '<img src="' + visitSettings.signature + '" style="max-width:150px;max-height:70px;object-fit:contain;">'
+                : '<div style="width:150px;height:2px;background:#333;margin-top:40px;"></div>';
+
+            var idPhotoHtml = v.repIdPhoto
+                ? '<div style="margin-top:24px;border:1.5px solid #d1d5db;border-radius:10px;overflow:hidden;">' +
+                  '<div style="background:#f1f5f9;padding:9px 14px;font-weight:800;font-size:13px;border-bottom:1px solid #d1d5db;color:#1e3c72;">صورة الهوية / الإقامة</div>' +
+                  '<div style="padding:16px;text-align:center;"><img src="' + v.repIdPhoto + '" style="max-width:320px;max-height:220px;border-radius:6px;"></div></div>'
+                : '';
+
+            var tmpl = document.createElement('div');
+            tmpl.style.cssText = 'position:fixed;left:-9999px;top:0;width:790px;min-height:200px;background:#fff;padding:44px 48px;font-family:Tajawal,sans-serif;direction:rtl;color:#1a1a1a;';
+            tmpl.innerHTML =
+                '<div style="display:flex;align-items:center;gap:18px;border-bottom:3px solid #1e3c72;padding-bottom:16px;margin-bottom:20px;">' +
+                    '<img src="/original/najran_health_cluster_logo.png" style="width:70px;height:70px;object-fit:contain;">' +
+                    '<div>' +
+                        '<div style="font-size:11px;color:#64748b;margin-bottom:4px;">تجمع نجران الصحي — وحدة الصيانة العامة</div>' +
+                        '<h2 style="font-size:20px;color:#1e3c72;margin:0 0 4px 0;font-weight:800;">موافقة زيارة مقاولي الباطن</h2>' +
+                        '<div style="font-size:13px;color:#475569;">رقم الصادر: <strong>' + (v.serialNumber || '—') + ' / ' + year + '</strong></div>' +
+                    '</div>' +
+                '</div>' +
+                '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;">' +
+                rows.map(function(r) {
+                    return '<tr>' +
+                        '<td style="border:1px solid #d1d5db;padding:9px 12px;font-weight:700;background:#f8fafc;width:32%;font-size:13px;">' + r[0] + '</td>' +
+                        '<td style="border:1px solid #d1d5db;padding:9px 12px;font-size:13px;">' + r[1] + '</td>' +
+                    '</tr>';
+                }).join('') +
+                '</table>' +
+                '<div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:22px;line-height:2;font-size:13px;text-align:justify;">' +
+                    'توافق إدارة الصيانة بتجمع نجران الصحي بقيام مندوب مقاول الباطن الموضح اسمه وبياناته بعالية لزيارة الموقع لتنفيذ أعمال الصيانة الوقائية للنظام حسب شروط ومواصفات العقد.' +
+                    '<br>وعلى ذلك جرى التوقيع ،،،' +
+                '</div>' +
+                '<div style="display:flex;justify-content:space-between;align-items:flex-end;border:1.5px solid #d1d5db;border-radius:10px;padding:16px 20px;">' +
+                    '<div>' +
+                        '<p style="font-weight:800;font-size:14px;color:#1e3c72;margin-bottom:6px;">مدير إدارة الصيانة</p>' +
+                        '<p style="font-size:13px;margin-bottom:4px;">الاسم: ' + esc(visitSettings.managerName || 'م. محمد عباس المكرمي') + '</p>' +
+                        '<p style="font-size:13px;margin-bottom:12px;">التاريخ: ' + approvedDate + ' م</p>' +
+                        sigHtml +
+                    '</div>' +
+                    stampHtml +
+                '</div>' +
+                idPhotoHtml;
+
+            document.body.appendChild(tmpl);
+
+            try {
+                var canvas = await html2canvas(tmpl, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', logging: false });
+                document.body.removeChild(tmpl);
+
+                var imgData = canvas.toDataURL('image/png');
+                var pdf = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                var pageW = pdf.internal.pageSize.getWidth();
+                var pageH = pdf.internal.pageSize.getHeight();
+                var margin = 10;
+                var imgW = pageW - margin * 2;
+                var imgH = (canvas.height * imgW) / canvas.width;
+
+                if (imgH <= pageH - margin * 2) {
+                    pdf.addImage(imgData, 'PNG', margin, margin, imgW, imgH);
+                } else {
+                    var scale = (pageH - margin * 2) / imgH;
+                    pdf.addImage(imgData, 'PNG', margin, margin, imgW * scale, pageH - margin * 2);
+                }
+
+                pdf.save('تصريح-زيارة-' + (v.serialNumber || v.id) + '.pdf');
+            } catch(e) {
+                if (document.body.contains(tmpl)) document.body.removeChild(tmpl);
+                showMsg('حدث خطأ في توليد الملف، حاول مجدداً', 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf"></i> تحميل التصريح'; }
+            }
+        };
+
         document.getElementById('visit-request-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             var btn = document.getElementById('submit-btn');
@@ -284,7 +401,7 @@
 
         searchInput.addEventListener('input', function() { renderVisits(); });
 
-        loadVisits();
+        Promise.all([loadSettings(), loadVisits()]);
     })();
     </script>
 </body>
