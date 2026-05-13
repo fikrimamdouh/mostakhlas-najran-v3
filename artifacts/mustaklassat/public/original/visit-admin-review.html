@@ -460,19 +460,49 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
     if (file) processSignedFile(file, id);
   };
 
+  function compressImage(dataUrl, maxSizeBytes, callback) {
+    var img = new Image();
+    img.onload = function() {
+      var MAX_W = 1600, MAX_H = 2200;
+      var w = img.width, h = img.height;
+      var scale = Math.min(1, MAX_W / w, MAX_H / h);
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.round(w * scale);
+      canvas.height = Math.round(h * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      var quality = 0.85;
+      var result = canvas.toDataURL('image/jpeg', quality);
+      while (result.length > maxSizeBytes && quality > 0.3) {
+        quality -= 0.1;
+        result = canvas.toDataURL('image/jpeg', quality);
+      }
+      callback(result);
+    };
+    img.src = dataUrl;
+  }
+
   function processSignedFile(file, id) {
     var reader = new FileReader();
     reader.onload = function(ev) {
-      signedFileData = ev.target.result;
-      var preview = document.getElementById('signed-preview');
-      if (preview && file.type.startsWith('image/')) {
-        preview.src = signedFileData;
-        preview.style.display = '';
+      var raw = ev.target.result;
+      var MAX = 8 * 1024 * 1024; // 8MB base64 limit
+      function finish(data) {
+        signedFileData = data;
+        var preview = document.getElementById('signed-preview');
+        if (preview && file.type.startsWith('image/')) {
+          preview.src = data;
+          preview.style.display = '';
+        }
+        var uploadBtn = document.getElementById('btn-upload-signed');
+        if (uploadBtn) {
+          uploadBtn.style.display = '';
+          uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> رفع "' + file.name + '"';
+        }
       }
-      var uploadBtn = document.getElementById('btn-upload-signed');
-      if (uploadBtn) {
-        uploadBtn.style.display = '';
-        uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> رفع "' + file.name + '"';
+      if (file.type.startsWith('image/') && raw.length > MAX) {
+        compressImage(raw, MAX, finish);
+      } else {
+        finish(raw);
       }
     };
     reader.readAsDataURL(file);
