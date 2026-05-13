@@ -55,7 +55,7 @@ function DeleteUserModal({ user, onClose, onConfirm, isPending }: {
   );
 }
 
-// ── نافذة تأكيد مسح المستخلصات فقط ──────────────────────────────────────────
+// ── نافذة تأكيد مسح المستخلصات والزيارات ────────────────────────────────────
 function ResetExtractsModal({ onClose, onConfirm, isPending }: {
   onClose: () => void;
   onConfirm: () => void;
@@ -70,7 +70,7 @@ function ResetExtractsModal({ onClose, onConfirm, isPending }: {
         <div className="p-5 flex items-center gap-3" style={{ background: "linear-gradient(135deg,#92400e,#d97706)", color: "#fff" }}>
           <AlertTriangle className="h-7 w-7 shrink-0" />
           <div>
-            <h2 className="text-lg font-bold">مسح المستخلصات فقط</h2>
+            <h2 className="text-lg font-bold">مسح المستخلصات والزيارات</h2>
             <p className="text-sm opacity-80">المستخدمون وبيانات الموظفين والتامبلت تبقى كما هي</p>
           </div>
         </div>
@@ -80,6 +80,7 @@ function ResetExtractsModal({ onClose, onConfirm, isPending }: {
             <ul className="list-disc list-inside space-y-1 opacity-90">
               <li>جميع المستخلصات والمشاريع</li>
               <li>جميع المستخلصات المرفوعة</li>
+              <li>جميع طلبات زيارة مقاولي الباطن</li>
             </ul>
             <p className="font-bold text-green-700 mt-2">يبقى محفوظاً:</p>
             <ul className="list-disc list-inside space-y-1 text-green-800 opacity-90">
@@ -107,7 +108,7 @@ function ResetExtractsModal({ onClose, onConfirm, isPending }: {
               onClick={onConfirm}
             >
               <Trash2 className="h-4 w-4" />
-              {isPending ? "جاري المسح..." : "مسح المستخلصات"}
+              {isPending ? "جاري المسح..." : "مسح المستخلصات والزيارات"}
             </Button>
           </div>
         </div>
@@ -337,7 +338,7 @@ export default function AdminUsers() {
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "✅ تم المسح", description: "تم حذف جميع المستخلصات والمشاريع. المستخدمون والبيانات الأخرى بخير." });
+      toast({ title: "✅ تم المسح", description: "تم حذف جميع المستخلصات والمشاريع وطلبات الزيارة. المستخدمون والبيانات الأخرى بخير." });
       setShowResetExtracts(false);
     },
     onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
@@ -541,7 +542,7 @@ export default function AdminUsers() {
             onClick={() => setShowResetExtracts(true)}
           >
             <Trash2 className="h-4 w-4" />
-            مسح المستخلصات
+            مسح المستخلصات والزيارات
           </Button>
           <Button
             size="sm"

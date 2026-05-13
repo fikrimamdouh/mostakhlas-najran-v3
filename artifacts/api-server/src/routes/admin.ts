@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, submittedExtractsTable, userStorageTable, auditLogTable, extractsTable, projectsTable, hospitalStorageTable } from "@workspace/db";
+import { db, usersTable, submittedExtractsTable, userStorageTable, auditLogTable, extractsTable, projectsTable, hospitalStorageTable, visitRequestsTable } from "@workspace/db";
 import { eq, ne, and, isNotNull } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 import { runInactivityCheck } from "../lib/inactivity";
@@ -80,9 +80,10 @@ router.post("/reset-extracts", requireAuth, requireAdmin, async (req: any, res: 
   await tryDelete("submitted_extracts", () => db.delete(submittedExtractsTable));
   await tryDelete("extracts",           () => db.delete(extractsTable));
   await tryDelete("projects",           () => db.delete(projectsTable));
+  await tryDelete("visit_requests",     () => db.delete(visitRequestsTable));
 
-  req.log.info({ adminId: req.currentUser.id, skipped: errors }, "Extracts reset performed");
-  return res.json({ ok: true, message: "تم مسح المستخلصات والمشاريع بنجاح", skipped: errors });
+  req.log.info({ adminId: req.currentUser.id, skipped: errors }, "Extracts + visits reset performed");
+  return res.json({ ok: true, message: "تم مسح المستخلصات والمشاريع وطلبات الزيارة بنجاح", skipped: errors });
 });
 
 router.post("/reset-system", requireAuth, requireAdmin, async (req: any, res: any) => {
