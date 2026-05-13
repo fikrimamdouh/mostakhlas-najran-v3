@@ -393,7 +393,7 @@
     var isAdmin = role === 'admin' || role === 'supervisor';
 
     var items = [
-      { href: 'request-visit.html', icon: '🪪', label: 'تسجيل زيارة' }
+      { href: 'request-visit.html', icon: '🪪', label: 'زيارة عقود الباطن' }
     ];
     if (isAdmin) {
       items.push({ href: 'visit-admin-review.html',   icon: '📋', label: 'مراجعة الطلبات' });
