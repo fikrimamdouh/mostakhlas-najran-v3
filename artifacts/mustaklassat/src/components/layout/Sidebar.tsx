@@ -7,7 +7,7 @@ import {
   Building2, ChevronLeft, BarChart3, Eye,
   ChevronRight, PanelLeftClose, PanelLeftOpen,
   BookOpen, ContactRound, Bell, X, Check, Clock, UserCheck,
-  FileCheck2, FileSearch, LayoutGrid, Archive,
+  FileCheck2, FileSearch, LayoutGrid, Archive, BadgeCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useCallback, useRef, type CSSProperties, useContext, createContext } from "react";
@@ -255,6 +255,9 @@ export function Sidebar() {
   ];
 
   const adminNav = [
+    ...(isAdmin || isSupervisor ? [
+      { name: "مراجعة زيارات مقاولي الباطن", href: "/original-viewer?page=visit-admin-review.html", icon: BadgeCheck },
+    ] : []),
     ...(isAdmin ? [
       { name: "تأسيس العقد", href: "/original-viewer?page=contract-foundation-upload.html", icon: FileCheck2 },
       { name: "إدارة المستخدمين", href: "/admin/users", icon: ShieldAlert },
