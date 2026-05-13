@@ -124,6 +124,70 @@ router.post("/broadcast", requireAuth, requireAdmin, async (req: any, res) => {
   }
 });
 
+// GET /api/admin/notify/diagnose — تشخيص نظام الإيميل
+router.get("/diagnose", requireAuth, requireAdmin, async (req: any, res) => {
+  const envKey = process.env.RESEND_API_KEY;
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  const replIdentity = process.env.REPL_IDENTITY;
+  const webReplRenewal = process.env.WEB_REPL_RENEWAL;
+
+  const diag: Record<string, any> = {
+    env_key_set: !!envKey,
+    env_key_prefix: envKey ? envKey.slice(0, 6) + "..." : null,
+    connector_hostname_set: !!hostname,
+    repl_identity_set: !!replIdentity,
+    web_repl_renewal_set: !!webReplRenewal,
+    resend_client_ok: false,
+    connector_api_key_found: false,
+    error: null as string | null,
+  };
+
+  try {
+    // Test env key path
+    if (envKey) {
+      const { Resend } = await import("resend");
+      const client = new Resend(envKey);
+      // Ping Resend to check key validity
+      try {
+        const resp = await client.domains.list();
+        diag.resend_client_ok = true;
+        diag.env_key_valid = true;
+        diag.domains = (resp as any)?.data?.map((d: any) => d.name) ?? [];
+      } catch (pingErr: any) {
+        diag.env_key_valid = false;
+        diag.env_key_error = String(pingErr?.message || pingErr);
+      }
+    }
+
+    // Test connector path
+    if (hostname) {
+      const xToken = replIdentity ? "repl " + replIdentity : webReplRenewal ? "depl " + webReplRenewal : null;
+      if (xToken) {
+        try {
+          const data = await fetch(
+            `https://${hostname}/api/v2/connection?include_secrets=true&connector_names=resend`,
+            { headers: { Accept: "application/json", "X-Replit-Token": xToken } }
+          ).then(r => r.json()).then((d: any) => d.items?.[0]);
+          diag.connector_api_key_found = !!data?.settings?.api_key;
+          diag.connector_api_key_prefix = data?.settings?.api_key ? String(data.settings.api_key).slice(0, 6) + "..." : null;
+        } catch (connErr: any) {
+          diag.connector_error = String(connErr?.message || connErr);
+        }
+      } else {
+        diag.connector_no_token = true;
+      }
+    }
+
+    const resend = await (await import("../lib/email")).getResendClient();
+    diag.resend_client_ok = !!resend;
+    if (!resend) diag.error = "getResendClient returned null — check RESEND_API_KEY or connector";
+  } catch (err: any) {
+    diag.error = String(err?.message || err);
+  }
+
+  return res.json({ diag });
+});
+
 // POST /api/admin/notify/test — إرسال بريد تجريبي للأدمن نفسه
 router.post("/test", requireAuth, requireAdmin, async (req: any, res) => {
   const { subject = "بريد اختبار", message = "هذا بريد اختبار من نظام الإشعارات." } = req.body;

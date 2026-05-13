@@ -102,7 +102,7 @@ router.post("/", requireAuth, requireApproved, async (req: any, res) => {
     visitDate,
     submittedByName: user.name,
     submittedByHospital: user.hospital || null,
-  }).catch(() => {});
+  }).catch((err) => { req.log.error({ err }, "Failed to send visit request email"); });
 
   return res.status(201).json({ visit: inserted });
 });
