@@ -460,33 +460,43 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
     if (file) processSignedFile(file, id);
   };
 
-  function compressImage(dataUrl, maxSizeBytes, callback) {
+  var MAX_UPLOAD_BYTES = 900 * 1024; // 900KB base64 target (safe for proxy)
+
+  function compressImage(dataUrl, callback) {
     var img = new Image();
     img.onload = function() {
-      var MAX_W = 1600, MAX_H = 2200;
+      var MAX_W = 1200, MAX_H = 1700;
       var w = img.width, h = img.height;
       var scale = Math.min(1, MAX_W / w, MAX_H / h);
       var canvas = document.createElement('canvas');
-      canvas.width = Math.round(w * scale);
+      canvas.width  = Math.round(w * scale);
       canvas.height = Math.round(h * scale);
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      var quality = 0.85;
+      var quality = 0.75;
       var result = canvas.toDataURL('image/jpeg', quality);
-      while (result.length > maxSizeBytes && quality > 0.3) {
-        quality -= 0.1;
+      while (result.length > MAX_UPLOAD_BYTES && quality > 0.2) {
+        quality = Math.round((quality - 0.1) * 10) / 10;
         result = canvas.toDataURL('image/jpeg', quality);
       }
       callback(result);
     };
+    img.onerror = function() { callback(dataUrl); };
     img.src = dataUrl;
   }
 
   function processSignedFile(file, id) {
+    // ── حد الحجم لـ PDFs والملفات الأخرى
+    var SIZE_LIMIT = 700 * 1024; // 700KB raw
+    if (!file.type.startsWith('image/') && file.size > SIZE_LIMIT) {
+      alert('حجم الملف كبير جداً (' + Math.round(file.size/1024) + ' KB). الحد الأقصى للـ PDF هو 700 KB. يرجى ضغط الملف أو تحويله لصورة.');
+      return;
+    }
+
     var reader = new FileReader();
     reader.onload = function(ev) {
       var raw = ev.target.result;
-      var MAX = 8 * 1024 * 1024; // 8MB base64 limit
       function finish(data) {
+        var sizeKB = Math.round(data.length * 0.75 / 1024);
         signedFileData = data;
         var preview = document.getElementById('signed-preview');
         if (preview && file.type.startsWith('image/')) {
@@ -496,11 +506,11 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
         var uploadBtn = document.getElementById('btn-upload-signed');
         if (uploadBtn) {
           uploadBtn.style.display = '';
-          uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> رفع "' + file.name + '"';
+          uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> رفع "' + file.name + '" (~' + sizeKB + ' KB)';
         }
       }
-      if (file.type.startsWith('image/') && raw.length > MAX) {
-        compressImage(raw, MAX, finish);
+      if (file.type.startsWith('image/')) {
+        compressImage(raw, finish);
       } else {
         finish(raw);
       }
