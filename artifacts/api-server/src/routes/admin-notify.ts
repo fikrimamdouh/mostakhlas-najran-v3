@@ -124,8 +124,8 @@ router.post("/broadcast", requireAuth, requireAdmin, async (req: any, res) => {
   }
 });
 
-// GET /api/admin/notify/diagnose — تشخيص نظام الإيميل
-router.get("/diagnose", requireAuth, requireAdmin, async (req: any, res) => {
+// GET /api/admin/notify/diagnose — تشخيص نظام الإيميل (أي مستخدم مُسجّل)
+router.get("/diagnose", requireAuth, async (req: any, res) => {
   const envKey = process.env.RESEND_API_KEY;
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const replIdentity = process.env.REPL_IDENTITY;
