@@ -181,4 +181,19 @@ router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (r
   return res.json({ visit: updated });
 });
 
+// PATCH /api/visits/:id/signed-permit — admin upload scanned signed copy
+router.patch("/:id/signed-permit", requireAuth, requireApproved, requireAdmin, async (req: any, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+  const { signedPermitFile } = req.body;
+  if (!signedPermitFile) return res.status(400).json({ error: "No file provided" });
+  const [updated] = await db.update(visitRequestsTable)
+    .set({ signedPermitFile, updatedAt: new Date() })
+    .where(eq(visitRequestsTable.id, id))
+    .returning();
+  if (!updated) return res.status(404).json({ error: "Visit request not found" });
+  req.log.info({ id }, "Signed permit uploaded");
+  return res.json({ visit: updated });
+});
+
 export default router;

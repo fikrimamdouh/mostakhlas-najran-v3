@@ -29,93 +29,122 @@
 </nav>
 
 <style>
-:root { --primary: #1e3c72; --secondary: #2a5298; --gold: #d4af37; --glass: rgba(255,255,255,0.97); }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Tajawal', sans-serif; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); min-height: 100vh; }
-.page-wrap { max-width: 1300px; margin: 0 auto; padding: 30px 20px 60px; }
-.page-card { background: var(--glass); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,.2); overflow: hidden; }
-.page-header { background: linear-gradient(135deg, var(--primary), var(--secondary)); padding: 28px 36px; color: #fff; display: flex; align-items: center; gap: 18px; }
-.page-header img { width: 60px; height: 60px; border-radius: 10px; border: 2px solid rgba(212,175,55,.5); object-fit: contain; }
-.page-header h1 { font-size: 22px; font-weight: 800; margin: 0; }
-.page-header p  { font-size: 13px; opacity: .75; margin: 4px 0 0; }
-.page-body { padding: 28px 36px; }
+:root{--pr:#1e3c72;--sc:#2a5298;--go:#d4af37;--glass:rgba(255,255,255,.97);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr),var(--sc));min-height:100vh;}
+.page-wrap{max-width:1300px;margin:0 auto;padding:28px 20px 60px;}
+.page-card{background:var(--glass);border-radius:20px;box-shadow:0 20px 50px rgba(0,0,0,.2);overflow:hidden;}
+.page-header{background:linear-gradient(135deg,var(--pr),var(--sc));padding:26px 34px;color:#fff;display:flex;align-items:center;gap:16px;}
+.page-header img{width:56px;height:56px;border-radius:10px;border:2px solid rgba(212,175,55,.5);object-fit:contain;}
+.page-header h1{font-size:21px;font-weight:800;margin:0;}
+.page-header p{font-size:13px;opacity:.75;margin:3px 0 0;}
+.page-body{padding:26px 34px;}
 
 /* Stats */
-.stats-row { display: flex; gap: 14px; margin-bottom: 28px; flex-wrap: wrap; }
-.stat-card { flex: 1; min-width: 120px; background: #f8fafc; border-radius: 14px; padding: 16px 20px; text-align: center; border: 1.5px solid #e2e8f0; }
-.stat-card .num { font-size: 28px; font-weight: 800; line-height: 1; }
-.stat-card .lbl { font-size: 12px; color: #64748b; margin-top: 4px; font-weight: 600; }
-.stat-pending  .num { color: #b45309; }
-.stat-approved .num { color: #15803d; }
-.stat-rejected .num { color: #b91c1c; }
-.stat-total    .num { color: var(--primary); }
+.stats-row{display:flex;gap:13px;margin-bottom:26px;flex-wrap:wrap;}
+.stat-card{flex:1;min-width:110px;background:#f8fafc;border-radius:13px;padding:14px 18px;text-align:center;border:1.5px solid #e2e8f0;}
+.stat-card .num{font-size:27px;font-weight:800;line-height:1;}
+.stat-card .lbl{font-size:12px;color:#64748b;margin-top:4px;font-weight:600;}
+.stat-pending .num{color:#b45309;} .stat-approved .num{color:#15803d;} .stat-rejected .num{color:#b91c1c;} .stat-total .num{color:var(--pr);}
 
 /* Toolbar */
-.toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px; }
-.toolbar-left { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.search-box { position: relative; }
-.search-box input { padding: 9px 36px 9px 14px; border-radius: 20px; border: 1.5px solid #e2e8f0; font-family: 'Tajawal', sans-serif; font-size: 13px; width: 220px; background: #f8fafc; }
-.search-box input:focus { outline: none; border-color: var(--secondary); background: #fff; }
-.search-box i { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); color: #aaa; }
-.filter-select { padding: 9px 14px; border-radius: 20px; border: 1.5px solid #e2e8f0; font-family: 'Tajawal', sans-serif; font-size: 13px; background: #f8fafc; color: #334155; cursor: pointer; }
-.btn-refresh { padding: 9px 18px; border-radius: 20px; background: var(--primary); color: #fff; border: none; font-family: 'Tajawal', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: opacity .15s; }
-.btn-refresh:hover { opacity: .85; }
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.toolbar-left{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.search-box{position:relative;}
+.search-box input{padding:9px 35px 9px 13px;border-radius:20px;border:1.5px solid #e2e8f0;font-family:'Tajawal',sans-serif;font-size:13px;width:210px;background:#f8fafc;}
+.search-box input:focus{outline:none;border-color:var(--sc);background:#fff;}
+.search-box i{position:absolute;top:50%;right:11px;transform:translateY(-50%);color:#aaa;}
+.filter-select{padding:9px 13px;border-radius:20px;border:1.5px solid #e2e8f0;font-family:'Tajawal',sans-serif;font-size:13px;background:#f8fafc;color:#334155;cursor:pointer;}
+.btn-refresh{padding:9px 17px;border-radius:20px;background:var(--pr);color:#fff;border:none;font-family:'Tajawal',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:opacity .15s;}
+.btn-refresh:hover{opacity:.85;}
 
 /* Table */
-.table-wrap { overflow-x: auto; }
-.req-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.req-table th, .req-table td { padding: 12px 13px; text-align: right; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-.req-table thead th { background: #f1f5f9; color: #475569; font-weight: 700; font-size: 12px; position: sticky; top: 0; z-index: 2; }
-.req-table tbody tr:hover { background: #fafbff; }
-.status-badge { font-weight: 700; padding: 4px 11px; border-radius: 20px; font-size: 12px; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
-.status-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.status-pending  { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; } .status-pending::before  { background: #f59e0b; }
-.status-approved { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; } .status-approved::before { background: #16a34a; }
-.status-rejected { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; } .status-rejected::before { background: #ef4444; }
-.serial-badge { font-size: 11px; color: #1e3c72; font-weight: 800; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 2px 7px; display: inline-block; margin-top: 3px; }
-.btn-open { padding: 7px 16px; border-radius: 9px; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; border: none; font-family: 'Tajawal', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; transition: opacity .15s; display: inline-flex; align-items: center; gap: 5px; }
-.btn-open:hover { opacity: .85; }
-.empty-row { text-align: center; color: #94a3b8; padding: 40px 0 !important; }
+.table-wrap{overflow-x:auto;}
+.req-table{width:100%;border-collapse:collapse;font-size:13px;}
+.req-table th,.req-table td{padding:11px 12px;text-align:right;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
+.req-table thead th{background:#f1f5f9;color:#475569;font-weight:700;font-size:12px;}
+.req-table tbody tr:hover{background:#fafbff;}
+.status-badge{font-weight:700;padding:4px 10px;border-radius:20px;font-size:12px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;}
+.status-badge::before{content:'';width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.status-pending{background:#fffbeb;color:#b45309;border:1px solid #fde68a;}.status-pending::before{background:#f59e0b;}
+.status-approved{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;}.status-approved::before{background:#16a34a;}
+.status-rejected{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;}.status-rejected::before{background:#ef4444;}
+.serial-badge{font-size:11px;color:#1e3c72;font-weight:800;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:2px 7px;display:inline-block;margin-top:3px;}
+.signed-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#7c3aed;margin-right:4px;}
+.btn-open{padding:7px 15px;border-radius:9px;background:linear-gradient(135deg,var(--pr),var(--sc));color:#fff;border:none;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .15s;display:inline-flex;align-items:center;gap:5px;}
+.btn-open:hover{opacity:.85;}
+.empty-row{text-align:center;color:#94a3b8;padding:40px 0!important;}
 
 /* ── Modal ── */
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 9000; overflow-y: auto; padding: 20px; justify-content: center; align-items: flex-start; }
-.modal-overlay.active { display: flex; }
-.modal-box { background: #fff; border-radius: 20px; width: 100%; max-width: 780px; margin: auto; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.3); animation: slideIn .25s ease; }
-@keyframes slideIn { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.modal-header { background: linear-gradient(135deg, var(--primary), var(--secondary)); padding: 20px 28px; color: #fff; display: flex; justify-content: space-between; align-items: center; }
-.modal-header h2 { font-size: 18px; font-weight: 800; margin: 0; }
-.modal-close { background: rgba(255,255,255,.15); border: none; color: #fff; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: background .15s; }
-.modal-close:hover { background: rgba(255,255,255,.3); }
-.modal-body { padding: 28px; }
-.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; margin-bottom: 22px; }
-.detail-item { }
-.detail-item .d-label { font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; letter-spacing: .3px; }
-.detail-item .d-value { font-size: 14px; color: #1e293b; font-weight: 600; }
-.detail-item.full { grid-column: 1 / -1; }
-.id-photo-box { border: 1.5px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin-bottom: 22px; }
-.id-photo-box .id-photo-label { background: #f8fafc; padding: 10px 16px; font-size: 13px; font-weight: 700; color: var(--primary); border-bottom: 1px solid #e2e8f0; }
-.id-photo-box img { display: block; max-width: 100%; max-height: 260px; object-fit: contain; margin: 16px auto; }
-.id-photo-box .no-photo { text-align: center; color: #94a3b8; padding: 30px; font-size: 13px; }
-.action-box { background: #f8fafc; border-radius: 14px; padding: 20px; border: 1.5px solid #e2e8f0; }
-.action-box h3 { font-size: 15px; font-weight: 800; color: var(--primary); margin-bottom: 14px; }
-.action-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
-.notes-group { flex: 1; min-width: 200px; }
-.notes-group label { font-size: 12px; font-weight: 700; color: #475569; display: block; margin-bottom: 6px; }
-.notes-group textarea { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #e2e8f0; font-family: 'Tajawal', sans-serif; font-size: 13px; resize: none; background: #fff; min-height: 70px; }
-.notes-group textarea:focus { outline: none; border-color: var(--secondary); }
-.action-btns { display: flex; gap: 10px; flex-shrink: 0; }
-.btn-approve { padding: 10px 22px; border-radius: 10px; background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; border: none; font-family: 'Tajawal', sans-serif; font-size: 14px; font-weight: 800; cursor: pointer; transition: opacity .15s; display: inline-flex; align-items: center; gap: 7px; }
-.btn-approve:hover { opacity: .88; }
-.btn-reject  { padding: 10px 22px; border-radius: 10px; background: linear-gradient(135deg, #dc2626, #b91c1c); color: #fff; border: none; font-family: 'Tajawal', sans-serif; font-size: 14px; font-weight: 800; cursor: pointer; transition: opacity .15s; display: inline-flex; align-items: center; gap: 7px; }
-.btn-reject:hover { opacity: .88; }
-.btn-pdf-modal { padding: 10px 22px; border-radius: 10px; background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; border: none; font-family: 'Tajawal', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s; display: inline-flex; align-items: center; gap: 6px; }
-.btn-pdf-modal:hover { opacity: .88; }
-.modal-footer { padding: 16px 28px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-.modal-status-msg { font-size: 13px; font-weight: 700; padding: 8px 16px; border-radius: 8px; display: none; }
-.modal-status-msg.success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-.modal-status-msg.error   { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
-.spinner { display: inline-block; width: 15px; height: 15px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;overflow-y:auto;padding:18px;justify-content:center;align-items:flex-start;}
+.modal-overlay.active{display:flex;}
+.modal-box{background:#fff;border-radius:20px;width:100%;max-width:800px;margin:auto;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.3);animation:slideIn .22s ease;}
+@keyframes slideIn{from{transform:translateY(-28px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.modal-header{background:linear-gradient(135deg,var(--pr),var(--sc));padding:18px 26px;color:#fff;display:flex;justify-content:space-between;align-items:center;}
+.modal-header h2{font-size:17px;font-weight:800;margin:0;}
+.modal-close{background:rgba(255,255,255,.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+.modal-close:hover{background:rgba(255,255,255,.3);}
+.modal-body{padding:26px;}
+
+/* Detail grid */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px 22px;margin-bottom:20px;}
+.detail-item .d-label{font-size:11px;color:#94a3b8;font-weight:700;margin-bottom:3px;}
+.detail-item .d-value{font-size:14px;color:#1e293b;font-weight:600;}
+.detail-item.full{grid-column:1/-1;}
+
+/* Photo */
+.id-photo-box{border:1.5px solid #e2e8f0;border-radius:11px;overflow:hidden;margin-bottom:20px;}
+.id-photo-label{background:#f8fafc;padding:9px 15px;font-size:13px;font-weight:700;color:var(--pr);border-bottom:1px solid #e2e8f0;}
+.id-photo-box img{display:block;max-width:100%;max-height:250px;object-fit:contain;margin:14px auto;}
+.no-photo{text-align:center;color:#94a3b8;padding:24px;font-size:13px;}
+
+/* Permit section */
+.permit-section{background:#f8fafc;border-radius:13px;padding:18px;border:1.5px solid #e2e8f0;margin-bottom:20px;}
+.permit-section h3{font-size:14px;font-weight:800;color:var(--pr);margin-bottom:14px;}
+.permit-tabs{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.permit-tab{flex:1;padding:10px;border-radius:10px;border:1.5px solid #e2e8f0;background:#fff;font-family:'Tajawal',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s;color:#475569;}
+.permit-tab:hover{border-color:var(--sc);color:var(--sc);}
+.permit-tab.active-tab{background:linear-gradient(135deg,var(--pr),var(--sc));color:#fff;border-color:transparent;}
+.permit-panel{display:none;} .permit-panel.active{display:block;}
+.btn-dl-pdf{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:10px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;font-family:'Tajawal',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s;width:100%;justify-content:center;}
+.btn-dl-pdf:hover{opacity:.88;}
+.upload-area{border:2px dashed #cbd5e1;border-radius:11px;padding:22px;text-align:center;cursor:pointer;transition:border .15s;background:#fff;}
+.upload-area:hover,.upload-area.drag{border-color:var(--sc);}
+.upload-area i{font-size:30px;color:#94a3b8;margin-bottom:10px;display:block;}
+.upload-area p{font-size:13px;color:#64748b;margin:0;}
+.upload-area small{font-size:11px;color:#94a3b8;}
+#signed-upload-input{display:none;}
+.preview-signed{max-width:100%;max-height:200px;border-radius:8px;margin:10px auto;display:block;object-fit:contain;}
+.btn-upload-signed{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:10px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;font-family:'Tajawal',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .15s;width:100%;justify-content:center;margin-top:10px;}
+.btn-upload-signed:hover{opacity:.88;}
+.btn-upload-signed:disabled{opacity:.6;cursor:not-allowed;}
+.signed-exists-box{background:#faf5ff;border:1.5px solid #e9d5ff;border-radius:10px;padding:14px;text-align:center;}
+.signed-exists-box p{font-size:13px;color:#7c3aed;font-weight:700;margin-bottom:10px;}
+.btn-view-signed{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:9px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;font-family:'Tajawal',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;transition:opacity .15s;}
+.btn-view-signed:hover{opacity:.85;}
+.btn-replace{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:8px;background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;font-family:'Tajawal',sans-serif;font-size:12px;cursor:pointer;margin-top:8px;transition:background .15s;}
+.btn-replace:hover{background:#e5e7eb;}
+
+/* Decision box */
+.action-box{background:#f8fafc;border-radius:13px;padding:18px;border:1.5px solid #e2e8f0;}
+.action-box h3{font-size:14px;font-weight:800;color:var(--pr);margin-bottom:13px;}
+.action-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+.notes-group{flex:1;min-width:180px;}
+.notes-group label{font-size:12px;font-weight:700;color:#475569;display:block;margin-bottom:5px;}
+.notes-group textarea{width:100%;padding:9px 11px;border-radius:9px;border:1.5px solid #e2e8f0;font-family:'Tajawal',sans-serif;font-size:13px;resize:none;background:#fff;min-height:65px;}
+.notes-group textarea:focus{outline:none;border-color:var(--sc);}
+.action-btns{display:flex;gap:9px;flex-shrink:0;}
+.btn-approve{padding:10px 20px;border-radius:10px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;font-family:'Tajawal',sans-serif;font-size:13px;font-weight:800;cursor:pointer;transition:opacity .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-approve:hover{opacity:.88;}
+.btn-reject{padding:10px 20px;border-radius:10px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;font-family:'Tajawal',sans-serif;font-size:13px;font-weight:800;cursor:pointer;transition:opacity .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-reject:hover{opacity:.88;}
+
+.modal-footer{padding:14px 26px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+.modal-msg{font-size:13px;font-weight:700;padding:7px 14px;border-radius:8px;display:none;}
+.modal-msg.success{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;}
+.modal-msg.error{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
@@ -131,7 +160,6 @@ body { font-family: 'Tajawal', sans-serif; background: linear-gradient(135deg, v
     </div>
     <div class="page-body">
 
-      <!-- Stats -->
       <div class="stats-row">
         <div class="stat-card stat-total"><div class="num" id="cnt-total">—</div><div class="lbl">إجمالي الطلبات</div></div>
         <div class="stat-card stat-pending"><div class="num" id="cnt-pending">—</div><div class="lbl">قيد المراجعة</div></div>
@@ -139,7 +167,6 @@ body { font-family: 'Tajawal', sans-serif; background: linear-gradient(135deg, v
         <div class="stat-card stat-rejected"><div class="num" id="cnt-rejected">—</div><div class="lbl">مرفوض</div></div>
       </div>
 
-      <!-- Toolbar -->
       <div class="toolbar">
         <div class="toolbar-left">
           <div class="search-box">
@@ -156,20 +183,12 @@ body { font-family: 'Tajawal', sans-serif; background: linear-gradient(135deg, v
         <button class="btn-refresh" onclick="loadVisits()"><i class="fas fa-sync-alt"></i> تحديث</button>
       </div>
 
-      <!-- Table -->
       <div class="table-wrap">
         <table class="req-table">
           <thead>
             <tr>
-              <th>#</th>
-              <th>الاسم</th>
-              <th>المستشفى / المنشأة</th>
-              <th>مقاول الباطن</th>
-              <th>النظام</th>
-              <th>تاريخ الزيارة</th>
-              <th>الحالة</th>
-              <th>رقم الصادر</th>
-              <th>الإجراء</th>
+              <th>#</th><th>اسم الزائر</th><th>المستشفى</th><th>النظام</th>
+              <th>مقاول الباطن</th><th>التاريخ</th><th>الحالة</th><th>رقم الصادر</th><th>الإجراء</th>
             </tr>
           </thead>
           <tbody id="req-tbody">
@@ -177,7 +196,6 @@ body { font-family: 'Tajawal', sans-serif; background: linear-gradient(135deg, v
           </tbody>
         </table>
       </div>
-
     </div>
   </div>
 </div>
@@ -191,28 +209,35 @@ body { font-family: 'Tajawal', sans-serif; background: linear-gradient(135deg, v
     </div>
     <div class="modal-body">
       <div class="detail-grid" id="modal-details"></div>
-      <div class="id-photo-box" id="modal-photo-box"></div>
-      <div class="action-box" id="modal-action-box">
-        <h3><i class="fas fa-gavel"></i> قرار المراجعة</h3>
-        <div class="action-row">
-          <div class="notes-group">
-            <label for="modal-notes">ملاحظة للمستخدم (اختياري)</label>
-            <textarea id="modal-notes" placeholder="أدخل ملاحظة أو سبب الرفض هنا..."></textarea>
-          </div>
-          <div class="action-btns">
-            <button class="btn-approve" id="btn-approve" onclick="submitDecision('approved')">
-              <i class="fas fa-check-circle"></i> موافقة
-            </button>
-            <button class="btn-reject" id="btn-reject" onclick="submitDecision('rejected')">
-              <i class="fas fa-times-circle"></i> رفض
-            </button>
-          </div>
+      <div id="modal-photo-box"></div>
+
+      <!-- Permit section: electronic + manual -->
+      <div class="permit-section" id="permit-section" style="display:none">
+        <h3><i class="fas fa-file-contract" style="color:var(--go)"></i> التصريح</h3>
+        <div class="permit-tabs">
+          <button class="permit-tab active-tab" onclick="switchPermitTab('electronic',this)">
+            <i class="fas fa-file-pdf"></i> إلكتروني (PDF)
+          </button>
+          <button class="permit-tab" onclick="switchPermitTab('manual',this)">
+            <i class="fas fa-signature"></i> نسخة موقعة يدوياً
+          </button>
+        </div>
+        <div class="permit-panel active" id="panel-electronic">
+          <button class="btn-dl-pdf" id="btn-pdf-modal" onclick="genPDF(currentVisitId)">
+            <i class="fas fa-download"></i> تحميل التصريح الإلكتروني للطباعة والتوقيع
+          </button>
+        </div>
+        <div class="permit-panel" id="panel-manual">
+          <div id="signed-content"></div>
         </div>
       </div>
+
+      <!-- Decision -->
+      <div class="action-box" id="modal-action-box"></div>
     </div>
     <div class="modal-footer">
-      <span class="modal-status-msg" id="modal-msg"></span>
-      <div id="modal-pdf-area"></div>
+      <span class="modal-msg" id="modal-msg"></span>
+      <span style="font-size:12px;color:#94a3b8" id="modal-meta"></span>
     </div>
   </div>
 </div>
@@ -224,16 +249,12 @@ body { font-family: 'Tajawal', sans-serif; background: linear-gradient(135deg, v
   try { session = JSON.parse(localStorage.getItem('najran_session') || '{}'); } catch(e) {}
   var isAdmin = session.role === 'admin' || session.role === 'supervisor';
   var token = session.clerkToken || '';
-
-  if (!isAdmin) {
-    alert('هذه الصفحة مخصصة للإدارة فقط');
-    window.location.href = 'index.html';
-    return;
-  }
+  if (!isAdmin) { alert('هذه الصفحة مخصصة للإدارة فقط'); window.location.href = 'index.html'; return; }
 
   var allVisits = [];
   var visitSettings = { stamp: null, signature: null, managerName: 'م. محمد عباس المكرمي' };
-  var currentVisitId = null;
+  window.currentVisitId = null;
+  var signedFileData = null;
 
   async function loadSettings() {
     try {
@@ -259,245 +280,308 @@ body { font-family: 'Tajawal', sans-serif; background: linear-gradient(135deg, v
 
   function updateStats() {
     document.getElementById('cnt-total').textContent    = allVisits.length;
-    document.getElementById('cnt-pending').textContent  = allVisits.filter(function(v){ return v.status === 'pending'; }).length;
-    document.getElementById('cnt-approved').textContent = allVisits.filter(function(v){ return v.status === 'approved'; }).length;
-    document.getElementById('cnt-rejected').textContent = allVisits.filter(function(v){ return v.status === 'rejected'; }).length;
+    document.getElementById('cnt-pending').textContent  = allVisits.filter(function(v){ return v.status==='pending'; }).length;
+    document.getElementById('cnt-approved').textContent = allVisits.filter(function(v){ return v.status==='approved'; }).length;
+    document.getElementById('cnt-rejected').textContent = allVisits.filter(function(v){ return v.status==='rejected'; }).length;
   }
 
   function renderTable() {
-    var q = (document.getElementById('search-input').value || '').toLowerCase().trim();
+    var q = (document.getElementById('search-input').value||'').toLowerCase().trim();
     var sf = document.getElementById('status-filter').value;
-    var data = allVisits.filter(function(v) {
+    var data = allVisits.filter(function(v){
       if (sf && v.status !== sf) return false;
       if (q) return Object.values(v).some(function(x){ return x && String(x).toLowerCase().includes(q); });
       return true;
     });
     var tbody = document.getElementById('req-tbody');
-    if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="9" class="empty-row"><i class="fas fa-inbox" style="font-size:22px;color:#cbd5e1"></i><br>لا توجد طلبات مطابقة</td></tr>';
-      return;
-    }
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="9" class="empty-row"><i class="fas fa-inbox" style="font-size:22px;color:#cbd5e1"></i><br>لا توجد طلبات</td></tr>'; return; }
     tbody.innerHTML = data.map(function(v, i) {
-      var sc = v.status === 'approved' ? 'status-approved' : v.status === 'rejected' ? 'status-rejected' : 'status-pending';
-      var st = v.status === 'approved' ? 'موافق عليه' : v.status === 'rejected' ? 'مرفوض' : 'قيد المراجعة';
+      var sc = v.status==='approved'?'status-approved':v.status==='rejected'?'status-rejected':'status-pending';
+      var st = v.status==='approved'?'موافق عليه':v.status==='rejected'?'مرفوض':'قيد المراجعة';
       var dt = v.visitDate ? new Date(v.visitDate).toLocaleDateString('ar-SA') : '—';
-      var serial = v.serialNumber ? '<div class="serial-badge"><i class="fas fa-hashtag"></i> ' + esc(v.serialNumber) + '/' + (v.approvedAt ? new Date(v.approvedAt).getFullYear() : new Date().getFullYear()) + '</div>' : '—';
+      var serial = v.serialNumber
+        ? '<div class="serial-badge"><i class="fas fa-hashtag"></i> ' + esc(v.serialNumber) + '/' + (v.approvedAt ? new Date(v.approvedAt).getFullYear() : new Date().getFullYear()) + '</div>'
+        : '—';
+      var signedMark = v.signedPermitFile ? '<br><span style="font-size:11px;color:#7c3aed;font-weight:700"><span class="signed-dot"></span>نسخة موقعة</span>' : '';
       return '<tr>' +
         '<td style="color:#94a3b8;font-size:12px">' + (i+1) + '</td>' +
         '<td><strong>' + esc(v.repName) + '</strong><br><small style="color:#94a3b8">' + esc(v.repId) + '</small></td>' +
         '<td>' + esc(v.submittedByHospital || v.siteLocation || '—') + '</td>' +
-        '<td>' + esc(v.subContractor) + '</td>' +
         '<td>' + esc(v.systemName) + '</td>' +
+        '<td>' + esc(v.subContractor) + '</td>' +
         '<td>' + dt + '</td>' +
-        '<td><span class="status-badge ' + sc + '">' + st + '</span>' + (v.adminNotes ? '<br><small style="color:#64748b;font-size:11px">' + esc(v.adminNotes) + '</small>' : '') + '</td>' +
-        '<td>' + serial + '</td>' +
-        '<td><button class="btn-open" onclick="openModal(' + v.id + ')"><i class="fas fa-folder-open"></i> فتح الطلب</button></td>' +
+        '<td><span class="status-badge ' + sc + '">' + st + '</span>' + (v.adminNotes?'<br><small style="color:#64748b;font-size:11px">'+esc(v.adminNotes)+'</small>':'') + '</td>' +
+        '<td>' + serial + signedMark + '</td>' +
+        '<td><button class="btn-open" onclick="openModal(' + v.id + ')"><i class="fas fa-folder-open"></i> فتح</button></td>' +
       '</tr>';
     }).join('');
   }
 
-  window.openModal = function(id) {
-    var v = allVisits.find(function(x){ return x.id === id; });
-    if (!v) return;
-    currentVisitId = id;
+  window.switchPermitTab = function(tab, btn) {
+    document.querySelectorAll('.permit-tab').forEach(function(b){ b.classList.remove('active-tab'); });
+    document.querySelectorAll('.permit-panel').forEach(function(p){ p.classList.remove('active'); });
+    btn.classList.add('active-tab');
+    document.getElementById('panel-' + tab).classList.add('active');
+  };
 
-    var isApproved = v.status === 'approved';
-    var isRejected = v.status === 'rejected';
+  window.openModal = function(id) {
+    var v = allVisits.find(function(x){ return x.id===id; });
+    if (!v) return;
+    window.currentVisitId = id;
+    signedFileData = null;
+
+    var isApproved = v.status==='approved', isRejected = v.status==='rejected';
     var dt = v.visitDate ? new Date(v.visitDate).toLocaleDateString('ar-SA') : '—';
     var approvedDt = v.approvedAt ? new Date(v.approvedAt).toLocaleDateString('ar-SA') : '—';
 
+    var sc = isApproved?'status-approved':isRejected?'status-rejected':'status-pending';
+    var st = isApproved?'موافق عليه':isRejected?'مرفوض':'قيد المراجعة';
     document.getElementById('modal-title').innerHTML =
       '<i class="fas fa-folder-open"></i> طلب زيارة — ' + esc(v.repName) +
-      ' &nbsp;<span class="status-badge ' + (isApproved ? 'status-approved' : isRejected ? 'status-rejected' : 'status-pending') + '" style="font-size:12px">' +
-      (isApproved ? 'موافق عليه' : isRejected ? 'مرفوض' : 'قيد المراجعة') + '</span>';
+      ' &nbsp;<span class="status-badge ' + sc + '" style="font-size:12px">' + st + '</span>';
 
-    document.getElementById('modal-details').innerHTML = [
-      ['الاسم الكامل', esc(v.repName)],
-      ['رقم الهوية / الإقامة', esc(v.repId)],
-      ['رقم الجوال', esc(v.repMobile)],
-      ['تاريخ الزيارة', dt],
-      ['المستشفى / المنشأة', esc(v.submittedByHospital || '—')],
-      ['الموقع', esc(v.siteLocation)],
-      ['النظام', esc(v.systemName)],
-      ['مقاول الصيانة', esc(v.mainContractor)],
+    var details = [
+      ['الاسم الكامل', esc(v.repName)], ['رقم الهوية / الإقامة', esc(v.repId)],
+      ['رقم الجوال', esc(v.repMobile)], ['تاريخ الزيارة', dt],
+      ['المستشفى / المنشأة', esc(v.submittedByHospital || '—')], ['الموقع', esc(v.siteLocation)],
+      ['النظام', esc(v.systemName)], ['مقاول الصيانة', esc(v.mainContractor)],
       ['مقاول الباطن', esc(v.subContractor)],
-      isApproved ? ['رقم الصادر', '<span class="serial-badge" style="font-size:13px"><i class="fas fa-hashtag"></i> ' + esc(v.serialNumber || '—') + '/' + new Date(v.approvedAt || Date.now()).getFullYear() + '</span>'] : null,
-      isApproved ? ['تاريخ الاعتماد', approvedDt] : null,
-      v.adminNotes ? ['ملاحظة الإدارة', '<em style="color:#64748b">' + esc(v.adminNotes) + '</em>'] : null,
-    ].filter(Boolean).map(function(row) {
-      return '<div class="detail-item"><div class="d-label">' + row[0] + '</div><div class="d-value">' + row[1] + '</div></div>';
+    ];
+    if (isApproved) {
+      details.push(['رقم الصادر', '<span class="serial-badge" style="font-size:13px"><i class="fas fa-hashtag"></i> ' + esc(v.serialNumber||'—') + '/' + new Date(v.approvedAt||Date.now()).getFullYear() + '</span>']);
+      details.push(['تاريخ الاعتماد', approvedDt]);
+    }
+    if (v.adminNotes) details.push(['ملاحظة الإدارة', '<em style="color:#64748b">' + esc(v.adminNotes) + '</em>']);
+
+    document.getElementById('modal-details').innerHTML = details.map(function(r){
+      return '<div class="detail-item"><div class="d-label">' + r[0] + '</div><div class="d-value">' + r[1] + '</div></div>';
     }).join('');
 
+    /* ID Photo */
     var photoBox = document.getElementById('modal-photo-box');
-    if (v.repIdPhoto) {
-      photoBox.style.display = '';
-      photoBox.innerHTML =
-        '<div class="id-photo-label"><i class="fas fa-id-card"></i> صورة الهوية / الإقامة</div>' +
-        '<img src="' + v.repIdPhoto + '" alt="صورة الهوية">';
+    photoBox.innerHTML = '<div class="id-photo-box"><div class="id-photo-label"><i class="fas fa-id-card"></i> صورة الهوية / الإقامة</div>' +
+      (v.repIdPhoto
+        ? '<img src="' + v.repIdPhoto + '" alt="صورة الهوية">'
+        : '<div class="no-photo"><i class="fas fa-image" style="font-size:26px;color:#cbd5e1"></i><br>لم يتم رفع صورة الهوية</div>') +
+      '</div>';
+
+    /* Permit section — show only if approved */
+    var permitSec = document.getElementById('permit-section');
+    if (isApproved) {
+      permitSec.style.display = '';
+      /* Switch back to electronic tab */
+      document.querySelectorAll('.permit-tab').forEach(function(b,i){ b.classList.toggle('active-tab', i===0); });
+      document.getElementById('panel-electronic').classList.add('active');
+      document.getElementById('panel-manual').classList.remove('active');
+      /* Build signed content */
+      buildSignedPanel(v);
     } else {
-      photoBox.style.display = '';
-      photoBox.innerHTML =
-        '<div class="id-photo-label"><i class="fas fa-id-card"></i> صورة الهوية / الإقامة</div>' +
-        '<div class="no-photo"><i class="fas fa-image" style="font-size:28px;color:#cbd5e1"></i><br>لم يتم رفع صورة الهوية</div>';
+      permitSec.style.display = 'none';
     }
 
-    document.getElementById('modal-notes').value = v.adminNotes || '';
+    /* Decision box */
+    buildActionBox(v, isApproved, isRejected);
+
+    /* Footer meta */
+    document.getElementById('modal-meta').textContent = 'مقدَّم بتاريخ: ' + new Date(v.createdAt).toLocaleDateString('ar-SA');
     document.getElementById('modal-msg').style.display = 'none';
 
-    var actionBox = document.getElementById('modal-action-box');
-    if (isApproved || isRejected) {
-      actionBox.innerHTML = '<h3><i class="fas fa-check-double" style="color:' + (isApproved?'#15803d':'#b91c1c') + '"></i> ' +
-        (isApproved ? 'تمت الموافقة على هذا الطلب' : 'تم رفض هذا الطلب') + '</h3>' +
-        '<p style="color:#64748b;font-size:13px">يمكنك تغيير الحالة من خلال اختيار قرار جديد:</p>' +
-        '<div class="action-row" style="margin-top:14px">' +
-          '<div class="notes-group"><label>ملاحظة جديدة (اختياري)</label><textarea id="modal-notes" placeholder="ملاحظة...">' + esc(v.adminNotes || '') + '</textarea></div>' +
-          '<div class="action-btns">' +
-            (isRejected ? '<button class="btn-approve" onclick="submitDecision(\'approved\')"><i class="fas fa-check-circle"></i> موافقة</button>' : '') +
-            (isApproved ? '<button class="btn-reject" onclick="submitDecision(\'rejected\')"><i class="fas fa-times-circle"></i> رفض</button>' : '') +
-          '</div>' +
+    document.getElementById('detail-modal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+  };
+
+  function buildSignedPanel(v) {
+    var box = document.getElementById('signed-content');
+    if (v.signedPermitFile) {
+      box.innerHTML =
+        '<div class="signed-exists-box">' +
+          '<p><i class="fas fa-check-circle" style="color:#7c3aed"></i> &nbsp;تم رفع نسخة موقعة يدوياً</p>' +
+          '<a class="btn-view-signed" href="' + v.signedPermitFile + '" download="تصريح-موقع-' + esc(v.serialNumber||v.id) + '"><i class="fas fa-download"></i> تحميل النسخة الموقعة</a>' +
+          '<br><button class="btn-replace" onclick="showUploadArea(' + v.id + ')"><i class="fas fa-sync-alt"></i> استبدال بنسخة جديدة</button>' +
         '</div>';
     } else {
-      actionBox.innerHTML =
-        '<h3><i class="fas fa-gavel"></i> قرار المراجعة</h3>' +
+      showUploadArea(v.id);
+    }
+  }
+
+  window.showUploadArea = function(id) {
+    var box = document.getElementById('signed-content');
+    box.innerHTML =
+      '<div class="upload-area" id="upload-area" onclick="document.getElementById(\'signed-upload-input\').click()">' +
+        '<i class="fas fa-cloud-upload-alt"></i>' +
+        '<p>اضغط لرفع النسخة الموقعة يدوياً</p>' +
+        '<small>صورة أو PDF — سيظهر للمستخدم زر تحميل النسخة الموقعة</small>' +
+      '</div>' +
+      '<input type="file" id="signed-upload-input" accept="image/*,application/pdf" onchange="handleSignedFile(event,' + id + ')">' +
+      '<img id="signed-preview" class="preview-signed" style="display:none">' +
+      '<button class="btn-upload-signed" id="btn-upload-signed" onclick="uploadSigned(' + id + ')" style="display:none">' +
+        '<i class="fas fa-cloud-upload-alt"></i> رفع وحفظ النسخة الموقعة' +
+      '</button>';
+
+    /* Drag & drop */
+    var area = document.getElementById('upload-area');
+    if (area) {
+      area.addEventListener('dragover', function(e){ e.preventDefault(); area.classList.add('drag'); });
+      area.addEventListener('dragleave', function(){ area.classList.remove('drag'); });
+      area.addEventListener('drop', function(e){
+        e.preventDefault(); area.classList.remove('drag');
+        var file = e.dataTransfer.files[0];
+        if (file) processSignedFile(file, id);
+      });
+    }
+  };
+
+  window.handleSignedFile = function(e, id) {
+    var file = e.target.files[0];
+    if (file) processSignedFile(file, id);
+  };
+
+  function processSignedFile(file, id) {
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      signedFileData = ev.target.result;
+      var preview = document.getElementById('signed-preview');
+      if (preview && file.type.startsWith('image/')) {
+        preview.src = signedFileData;
+        preview.style.display = '';
+      }
+      var uploadBtn = document.getElementById('btn-upload-signed');
+      if (uploadBtn) {
+        uploadBtn.style.display = '';
+        uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> رفع "' + file.name + '"';
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  window.uploadSigned = async function(id) {
+    if (!signedFileData) return;
+    var btn = document.getElementById('btn-upload-signed');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> جارٍ الرفع...'; }
+    var msgEl = document.getElementById('modal-msg');
+    try {
+      var r = await fetch('/api/visits/' + id + '/signed-permit', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ signedPermitFile: signedFileData })
+      });
+      if (!r.ok) throw new Error();
+      msgEl.textContent = 'تم رفع النسخة الموقعة بنجاح ✓';
+      msgEl.className = 'modal-msg success';
+      msgEl.style.display = '';
+      await loadVisits();
+      /* Refresh signed panel */
+      var v = allVisits.find(function(x){ return x.id===id; });
+      if (v) buildSignedPanel(v);
+    } catch(e) {
+      msgEl.textContent = 'فشل الرفع، حاول مجدداً';
+      msgEl.className = 'modal-msg error';
+      msgEl.style.display = '';
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> رفع وحفظ النسخة الموقعة'; }
+    }
+  };
+
+  function buildActionBox(v, isApproved, isRejected) {
+    var box = document.getElementById('modal-action-box');
+    var noteVal = esc(v.adminNotes || '');
+    if (isApproved) {
+      box.innerHTML = '<h3><i class="fas fa-check-double" style="color:#15803d"></i> تمت الموافقة — تغيير القرار</h3>' +
         '<div class="action-row">' +
-          '<div class="notes-group"><label for="modal-notes">ملاحظة للمستخدم (اختياري)</label><textarea id="modal-notes" placeholder="أدخل ملاحظة أو سبب الرفض هنا...">' + esc(v.adminNotes || '') + '</textarea></div>' +
+          '<div class="notes-group"><label>ملاحظة جديدة</label><textarea id="modal-notes">' + noteVal + '</textarea></div>' +
+          '<div class="action-btns"><button class="btn-reject" onclick="submitDecision(\'rejected\')"><i class="fas fa-times-circle"></i> تحويل لمرفوض</button></div>' +
+        '</div>';
+    } else if (isRejected) {
+      box.innerHTML = '<h3><i class="fas fa-times-circle" style="color:#b91c1c"></i> تم الرفض — تغيير القرار</h3>' +
+        '<div class="action-row">' +
+          '<div class="notes-group"><label>ملاحظة جديدة</label><textarea id="modal-notes">' + noteVal + '</textarea></div>' +
+          '<div class="action-btns"><button class="btn-approve" onclick="submitDecision(\'approved\')"><i class="fas fa-check-circle"></i> تحويل لموافقة</button></div>' +
+        '</div>';
+    } else {
+      box.innerHTML = '<h3><i class="fas fa-gavel"></i> قرار المراجعة</h3>' +
+        '<div class="action-row">' +
+          '<div class="notes-group"><label for="modal-notes">ملاحظة للمستخدم (اختياري)</label><textarea id="modal-notes" placeholder="سبب الرفض أو ملاحظة..."></textarea></div>' +
           '<div class="action-btns">' +
             '<button class="btn-approve" onclick="submitDecision(\'approved\')"><i class="fas fa-check-circle"></i> موافقة</button>' +
             '<button class="btn-reject" onclick="submitDecision(\'rejected\')"><i class="fas fa-times-circle"></i> رفض</button>' +
           '</div>' +
         '</div>';
     }
-
-    var pdfArea = document.getElementById('modal-pdf-area');
-    if (isApproved) {
-      pdfArea.innerHTML = '<button class="btn-pdf-modal" onclick="generatePDF(' + v.id + ')"><i class="fas fa-file-pdf"></i> تحميل التصريح PDF</button>';
-    } else {
-      pdfArea.innerHTML = '';
-    }
-
-    document.getElementById('detail-modal').classList.add('active');
-    document.body.style.overflow = 'hidden';
-  };
+  }
 
   window.closeModal = function() {
     document.getElementById('detail-modal').classList.remove('active');
     document.body.style.overflow = '';
-    currentVisitId = null;
+    window.currentVisitId = null;
+    signedFileData = null;
   };
-
-  document.getElementById('detail-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeModal();
-  });
+  document.getElementById('detail-modal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
 
   window.submitDecision = async function(status) {
-    if (!currentVisitId) return;
+    if (!window.currentVisitId) return;
     var notes = document.getElementById('modal-notes');
     var msgEl = document.getElementById('modal-msg');
-    var approveBtn = document.querySelector('.btn-approve');
-    var rejectBtn  = document.querySelector('.btn-reject');
-    if (approveBtn) { approveBtn.disabled = true; approveBtn.innerHTML = '<span class="spinner"></span> جارٍ...'; }
-    if (rejectBtn)  { rejectBtn.disabled  = true; }
+    var btns = document.querySelectorAll('.btn-approve,.btn-reject');
+    btns.forEach(function(b){ b.disabled = true; });
     try {
-      var r = await fetch('/api/visits/' + currentVisitId + '/status', {
+      var r = await fetch('/api/visits/' + window.currentVisitId + '/status', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
         body: JSON.stringify({ status: status, adminNotes: notes ? notes.value : '' })
       });
       if (!r.ok) throw new Error();
-      msgEl.textContent = status === 'approved' ? 'تمت الموافقة وإرسال إشعار للمستخدم ✓' : 'تم رفض الطلب وإشعار المستخدم ✓';
-      msgEl.className = 'modal-status-msg success';
-      msgEl.style.display = 'block';
+      msgEl.textContent = status==='approved' ? 'تمت الموافقة ✓ سيصل إشعار للمستخدم' : 'تم الرفض ✓ سيصل إشعار للمستخدم';
+      msgEl.className = 'modal-msg success';
+      msgEl.style.display = '';
       await loadVisits();
-      setTimeout(function() { closeModal(); }, 1800);
+      setTimeout(function(){ closeModal(); }, 1800);
     } catch(e) {
       msgEl.textContent = 'فشلت العملية، حاول مجدداً';
-      msgEl.className = 'modal-status-msg error';
-      msgEl.style.display = 'block';
-      if (approveBtn) { approveBtn.disabled = false; approveBtn.innerHTML = '<i class="fas fa-check-circle"></i> موافقة'; }
-      if (rejectBtn)  { rejectBtn.disabled  = false; }
+      msgEl.className = 'modal-msg error';
+      msgEl.style.display = '';
+      btns.forEach(function(b){ b.disabled = false; });
     }
   };
 
-  window.generatePDF = async function(id) {
-    var v = allVisits.find(function(x){ return x.id === id; });
+  /* ── PDF generator ── */
+  window.genPDF = async function(id) {
+    var v = allVisits.find(function(x){ return x.id===id; });
     if (!v) return;
-    var btn = document.querySelector('.btn-pdf-modal');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> جارٍ التوليد...'; }
+    var btn = document.getElementById('btn-pdf-modal');
+    if (btn) { btn.disabled=true; btn.innerHTML='<span class="spinner"></span> جارٍ التوليد...'; }
     var year = v.approvedAt ? new Date(v.approvedAt).getFullYear() : new Date().getFullYear();
     var approvedDate = v.approvedAt ? new Date(v.approvedAt).toLocaleDateString('ar-SA') : '—';
     var visitDt = v.visitDate ? new Date(v.visitDate).toLocaleDateString('ar-SA') : '—';
-    var rows = [
-      ['الاسم', esc(v.repName)],
-      ['المستشفى / المنشأة', esc(v.submittedByHospital || '—')],
-      ['الموقع', esc(v.siteLocation)],
-      ['تاريخ الزيارة', visitDt],
-      ['النظام', esc(v.systemName)],
-      ['رقم الهوية (الإقامة)', esc(v.repId)],
-      ['رقم الجوال', esc(v.repMobile)],
-      ['مقاول الصيانة', esc(v.mainContractor)],
-      ['مقاول الباطن', esc(v.subContractor)],
-    ];
-    var stampHtml = visitSettings.stamp
-      ? '<img src="' + visitSettings.stamp + '" style="max-width:110px;max-height:110px;object-fit:contain;">'
-      : '<div style="width:110px;height:110px;border:2px dashed #ccc;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:#aaa;">الختم</div>';
-    var sigHtml = visitSettings.signature
-      ? '<img src="' + visitSettings.signature + '" style="max-width:150px;max-height:70px;object-fit:contain;">'
-      : '<div style="width:150px;height:2px;background:#333;margin-top:40px;"></div>';
-    var idPhotoHtml = v.repIdPhoto
-      ? '<div style="margin-top:24px;border:1.5px solid #d1d5db;border-radius:10px;overflow:hidden;">' +
-        '<div style="background:#f1f5f9;padding:9px 14px;font-weight:800;font-size:13px;border-bottom:1px solid #d1d5db;color:#1e3c72;">صورة الهوية / الإقامة</div>' +
-        '<div style="padding:16px;text-align:center;"><img src="' + v.repIdPhoto + '" style="max-width:320px;max-height:220px;border-radius:6px;"></div></div>'
-      : '';
-    var tmpl = document.createElement('div');
-    tmpl.style.cssText = 'position:fixed;left:-9999px;top:0;width:790px;min-height:200px;background:#fff;padding:44px 48px;font-family:Tajawal,sans-serif;direction:rtl;color:#1a1a1a;';
-    tmpl.innerHTML =
-      '<div style="display:flex;align-items:center;gap:18px;border-bottom:3px solid #1e3c72;padding-bottom:16px;margin-bottom:20px;">' +
-        '<img src="/original/najran_health_cluster_logo.png" style="width:70px;height:70px;object-fit:contain;">' +
-        '<div><div style="font-size:11px;color:#64748b;margin-bottom:4px;">تجمع نجران الصحي — وحدة الصيانة العامة</div>' +
-        '<h2 style="font-size:20px;color:#1e3c72;margin:0 0 4px 0;font-weight:800;">موافقة زيارة مقاولي الباطن</h2>' +
-        '<div style="font-size:13px;color:#475569;">رقم الصادر: <strong>' + (v.serialNumber || '—') + ' / ' + year + '</strong></div></div>' +
-      '</div>' +
-      '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;">' +
-      rows.map(function(r){ return '<tr><td style="border:1px solid #d1d5db;padding:9px 12px;font-weight:700;background:#f8fafc;width:32%;font-size:13px;">' + r[0] + '</td><td style="border:1px solid #d1d5db;padding:9px 12px;font-size:13px;">' + r[1] + '</td></tr>'; }).join('') +
-      '</table>' +
-      '<div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:22px;line-height:2;font-size:13px;text-align:justify;">' +
-        'توافق إدارة الصيانة بتجمع نجران الصحي بقيام مندوب مقاول الباطن الموضح اسمه وبياناته بعالية لزيارة الموقع لتنفيذ أعمال الصيانة الوقائية للنظام حسب شروط ومواصفات العقد.<br>وعلى ذلك جرى التوقيع ،،،' +
-      '</div>' +
-      '<div style="display:flex;justify-content:space-between;align-items:flex-end;border:1.5px solid #d1d5db;border-radius:10px;padding:16px 20px;">' +
-        '<div><p style="font-weight:800;font-size:14px;color:#1e3c72;margin-bottom:6px;">مدير إدارة الصيانة</p>' +
-        '<p style="font-size:13px;margin-bottom:4px;">الاسم: ' + esc(visitSettings.managerName || 'م. محمد عباس المكرمي') + '</p>' +
-        '<p style="font-size:13px;margin-bottom:12px;">التاريخ: ' + approvedDate + ' م</p>' + sigHtml + '</div>' +
-        stampHtml +
-      '</div>' + idPhotoHtml;
+    var rows=[['الاسم',esc(v.repName)],['المستشفى / المنشأة',esc(v.submittedByHospital||'—')],['الموقع',esc(v.siteLocation)],['تاريخ الزيارة',visitDt],['النظام',esc(v.systemName)],['رقم الهوية (الإقامة)',esc(v.repId)],['رقم الجوال',esc(v.repMobile)],['مقاول الصيانة',esc(v.mainContractor)],['مقاول الباطن',esc(v.subContractor)]];
+    var stampHtml=visitSettings.stamp?'<img src="'+visitSettings.stamp+'" style="max-width:110px;max-height:110px;object-fit:contain;">':'<div style="width:110px;height:110px;border:2px dashed #ccc;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:#aaa;">الختم</div>';
+    var sigHtml=visitSettings.signature?'<img src="'+visitSettings.signature+'" style="max-width:150px;max-height:70px;object-fit:contain;">':'<div style="width:150px;height:2px;background:#333;margin-top:40px;"></div>';
+    var idPhotoHtml=v.repIdPhoto?'<div style="margin-top:24px;border:1.5px solid #d1d5db;border-radius:10px;overflow:hidden;"><div style="background:#f1f5f9;padding:9px 14px;font-weight:800;font-size:13px;border-bottom:1px solid #d1d5db;color:#1e3c72;">صورة الهوية / الإقامة</div><div style="padding:16px;text-align:center;"><img src="'+v.repIdPhoto+'" style="max-width:320px;max-height:220px;border-radius:6px;"></div></div>':'';
+    var tmpl=document.createElement('div');
+    tmpl.style.cssText='position:fixed;left:-9999px;top:0;width:790px;min-height:200px;background:#fff;padding:44px 48px;font-family:Tajawal,sans-serif;direction:rtl;color:#1a1a1a;';
+    tmpl.innerHTML='<div style="display:flex;align-items:center;gap:18px;border-bottom:3px solid #1e3c72;padding-bottom:16px;margin-bottom:20px;"><img src="/original/najran_health_cluster_logo.png" style="width:70px;height:70px;object-fit:contain;"><div><div style="font-size:11px;color:#64748b;margin-bottom:4px;">تجمع نجران الصحي — وحدة الصيانة العامة</div><h2 style="font-size:20px;color:#1e3c72;margin:0 0 4px;font-weight:800;">موافقة زيارة مقاولي الباطن</h2><div style="font-size:13px;color:#475569;">رقم الصادر: <strong>'+(v.serialNumber||'—')+' / '+year+'</strong></div></div></div>'+
+      '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;">'+rows.map(function(r){return'<tr><td style="border:1px solid #d1d5db;padding:9px 12px;font-weight:700;background:#f8fafc;width:32%;font-size:13px;">'+r[0]+'</td><td style="border:1px solid #d1d5db;padding:9px 12px;font-size:13px;">'+r[1]+'</td></tr>';}).join('')+'</table>'+
+      '<div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:22px;line-height:2;font-size:13px;text-align:justify;">توافق إدارة الصيانة بتجمع نجران الصحي بقيام مندوب مقاول الباطن الموضح اسمه وبياناته بعالية لزيارة الموقع لتنفيذ أعمال الصيانة الوقائية للنظام حسب شروط ومواصفات العقد.<br>وعلى ذلك جرى التوقيع ،،،</div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-end;border:1.5px solid #d1d5db;border-radius:10px;padding:16px 20px;"><div><p style="font-weight:800;font-size:14px;color:#1e3c72;margin-bottom:6px;">مدير إدارة الصيانة</p><p style="font-size:13px;margin-bottom:4px;">الاسم: '+esc(visitSettings.managerName||'م. محمد عباس المكرمي')+'</p><p style="font-size:13px;margin-bottom:12px;">التاريخ: '+approvedDate+' م</p>'+sigHtml+'</div>'+stampHtml+'</div>'+idPhotoHtml;
     document.body.appendChild(tmpl);
     try {
-      var canvas = await html2canvas(tmpl, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', logging: false });
+      var canvas=await html2canvas(tmpl,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',logging:false});
       document.body.removeChild(tmpl);
-      var imgData = canvas.toDataURL('image/png');
-      var pdf = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      var pageW = pdf.internal.pageSize.getWidth();
-      var pageH = pdf.internal.pageSize.getHeight();
-      var margin = 10;
-      var imgW = pageW - margin * 2;
-      var imgH = (canvas.height * imgW) / canvas.width;
-      if (imgH <= pageH - margin * 2) {
-        pdf.addImage(imgData, 'PNG', margin, margin, imgW, imgH);
-      } else {
-        var scale = (pageH - margin * 2) / imgH;
-        pdf.addImage(imgData, 'PNG', margin, margin, imgW * scale, pageH - margin * 2);
-      }
-      pdf.save('تصريح-زيارة-' + (v.serialNumber || v.id) + '.pdf');
+      var imgData=canvas.toDataURL('image/png');
+      var pdf=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+      var pageW=pdf.internal.pageSize.getWidth(),pageH=pdf.internal.pageSize.getHeight(),margin=10;
+      var imgW=pageW-margin*2,imgH=(canvas.height*imgW)/canvas.width;
+      if(imgH<=pageH-margin*2){pdf.addImage(imgData,'PNG',margin,margin,imgW,imgH);}
+      else{var sc=(pageH-margin*2)/imgH;pdf.addImage(imgData,'PNG',margin,margin,imgW*sc,pageH-margin*2);}
+      pdf.save('تصريح-زيارة-'+(v.serialNumber||v.id)+'.pdf');
     } catch(e) {
-      if (document.body.contains(tmpl)) document.body.removeChild(tmpl);
+      if(document.body.contains(tmpl)) document.body.removeChild(tmpl);
     } finally {
-      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf"></i> تحميل التصريح PDF'; }
+      if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-download"></i> تحميل التصريح الإلكتروني للطباعة والتوقيع';}
     }
   };
 
   document.getElementById('search-input').addEventListener('input', renderTable);
   document.getElementById('status-filter').addEventListener('change', renderTable);
-
-  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
   Promise.all([loadSettings(), loadVisits()]);
 })();
