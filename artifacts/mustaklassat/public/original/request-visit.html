@@ -11,6 +11,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+(function(){
+  try {
+    var s = JSON.parse(Storage.prototype.getItem.call(localStorage,'najran_session')||'{}');
+    if (s.role === 'admin' || s.role === 'supervisor') {
+      window.location.replace('visit-admin-review.html');
+    }
+  } catch(e) {}
+})();
+</script>
 
 <nav class="nav-bar" style="display:none">
   <select id="navigation">
