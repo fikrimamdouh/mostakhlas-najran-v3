@@ -631,6 +631,13 @@
     width: 100% !important;
     box-sizing: border-box !important;
   }
+
+  /* ── Wide dialog override: lift max-width for header/body/footer ── */
+  .dialog.wide-dialog > .dialog-header,
+  .dialog.wide-dialog > .dialog-body,
+  .dialog.wide-dialog > .dialog-footer {
+    max-width: min(1260px, 96vw) !important;
+  }
   .dialog > .dialog-header {
     border-radius: 20px 20px 0 0 !important;
     padding: 20px 28px 16px !important;
