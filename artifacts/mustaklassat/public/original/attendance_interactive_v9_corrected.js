@@ -126,6 +126,8 @@ function createAttendanceSelect(currentStatus, departmentKey, employeeIndex, day
     { code: 'ج', name: 'إجازة' },
     { code: 'ش', name: 'شاغرة' },
     { code: 'ت', name: 'تحت الإجراء' },
+    { code: 'ب', name: 'بداية العقد' },
+    { code: 'ن', name: 'نهاية العقد' },
   ];
   
   const select = document.createElement('select');
