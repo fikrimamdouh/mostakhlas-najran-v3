@@ -158,6 +158,18 @@ function calculateExtractDurationDays() {
     }
 }
 
+// حفظ تواريخ المستخلص فوراً عند تغييرها
+function saveExtractDatesOnly() {
+    try {
+        const current = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+        const startVal = document.getElementById('extract-start')?.value || '';
+        const endVal   = document.getElementById('extract-end')?.value   || '';
+        if (startVal) current.extractStart = startVal;
+        if (endVal)   current.extractEnd   = endVal;
+        localStorage.setItem('persistentExtractData', JSON.stringify(current));
+    } catch(e) {}
+}
+
 // حفظ بيانات قسم معين
 // ✅✅✅ الكود الجديد لدالة saveSectionData ✅✅✅
 // ✅ 2. استبدل هذه الدالة
@@ -545,8 +557,14 @@ function setupExtractDateListeners() {
     const startDateInput = document.getElementById('extract-start');
     const endDateInput = document.getElementById('extract-end');
     if (startDateInput && endDateInput) {
-        startDateInput.addEventListener('change', calculateExtractDurationDays);
-        endDateInput.addEventListener('change', calculateExtractDurationDays);
+        startDateInput.addEventListener('change', function() {
+            calculateExtractDurationDays();
+            saveExtractDatesOnly();
+        });
+        endDateInput.addEventListener('change', function() {
+            calculateExtractDurationDays();
+            saveExtractDatesOnly();
+        });
     }
 }
 
