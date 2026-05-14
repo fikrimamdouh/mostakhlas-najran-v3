@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <script src="/original/auth-check.js"></script>
+    <script src="/original/cloud-sync.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مستشفى نجران العام الجديد وطب الأسنان</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/original/shared-styles.css">
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; direction: rtl; background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%); min-height: 100vh; font-family: 'Tajawal', sans-serif; }
+
+        .hub-page {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 40px 20px 60px;
+            text-align: center;
+        }
+
+        /* ── Header ── */
+        .hub-header {
+            background: linear-gradient(135deg, #003087 0%, #1565c0 60%, #0277bd 100%);
+            border-radius: 24px;
+            padding: 36px 30px 30px;
+            margin-bottom: 36px;
+            color: #fff;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,48,135,.35);
+        }
+        .hub-header::before {
+            content: '';
+            position: absolute;
+            top: -40px; left: -40px;
+            width: 220px; height: 220px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.06);
+        }
+        .hub-header::after {
+            content: '';
+            position: absolute;
+            bottom: -60px; right: -30px;
+            width: 200px; height: 200px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.05);
+        }
+        .hub-logo {
+            width: 80px; height: 80px;
+            border-radius: 14px;
+            border: 3px solid rgba(255,255,255,.35);
+            background: #fff;
+            padding: 6px;
+            margin: 0 auto 16px;
+            display: block;
+        }
+        .hub-title { font-size: 26px; font-weight: 800; margin: 0 0 6px; }
+        .hub-sub   { font-size: 14px; color: rgba(255,255,255,.75); margin: 0; }
+
+        /* ── Section labels ── */
+        .section-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #64748b;
+            text-align: right;
+            margin: 28px 0 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-label::before {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e2e8f0;
+            order: 1;
+        }
+        .section-label span { order: 0; }
+
+        /* ── Cards grid ── */
+        .hub-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 8px;
+        }
+        .hub-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .hub-grid, .hub-grid-3 { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 400px) {
+            .hub-grid, .hub-grid-3 { grid-template-columns: 1fr; }
+        }
+
+        /* ── Big hub card ── */
+        .big-card {
+            background: #fff;
+            border-radius: 18px;
+            padding: 26px 16px 22px;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            border: 2px solid #e2e8f0;
+            transition: transform .18s, box-shadow .18s, border-color .18s;
+            position: relative;
+            overflow: hidden;
+        }
+        .big-card::before {
+            content: '';
+            position: absolute;
+            top: 0; right: 0; left: 0;
+            height: 4px;
+            background: var(--card-color, #003087);
+            opacity: 0;
+            transition: opacity .18s;
+        }
+        .big-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,.12); border-color: var(--card-color, #003087); }
+        .big-card:hover::before { opacity: 1; }
+
+        .card-icon-wrap {
+            width: 70px; height: 70px;
+            border-radius: 18px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 30px;
+            background: var(--card-bg, #eff6ff);
+            color: var(--card-color, #003087);
+        }
+        .big-card h3 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
+            line-height: 1.4;
+        }
+        .big-card p {
+            font-size: 12px;
+            color: #94a3b8;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* colour themes */
+        .c-blue   { --card-color:#1565c0; --card-bg:#eff6ff; }
+        .c-teal   { --card-color:#0d9488; --card-bg:#f0fdfa; }
+        .c-purple { --card-color:#7c3aed; --card-bg:#f5f3ff; }
+        .c-orange { --card-color:#d97706; --card-bg:#fffbeb; }
+        .c-rose   { --card-color:#e11d48; --card-bg:#fff1f2; }
+        .c-green  { --card-color:#059669; --card-bg:#ecfdf5; }
+        .c-indigo { --card-color:#4f46e5; --card-bg:#eef2ff; }
+
+        /* ── Certificate row ── */
+        .cert-card {
+            background: linear-gradient(135deg, var(--card-color, #003087), color-mix(in srgb, var(--card-color, #003087) 70%, #fff));
+            color: #fff;
+            border-radius: 18px;
+            padding: 22px 16px;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            border: none;
+            transition: transform .18s, box-shadow .18s;
+        }
+        .cert-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,.22); }
+        .cert-card .card-icon-wrap { background: rgba(255,255,255,.2); color: #fff; }
+        .cert-card h3, .cert-card p { color: #fff; }
+        .cert-card p { color: rgba(255,255,255,.75); }
+
+        /* ── Back button ── */
+        .hub-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #fff;
+            color: #475569;
+            padding: 11px 26px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            border: 1.5px solid #e2e8f0;
+            margin-top: 32px;
+            transition: background .15s, border-color .15s;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        }
+        .hub-back:hover { background: #f8fafc; border-color: #94a3b8; }
+    </style>
+</head>
+<body>
+    <div id="particles-js-bg"></div>
+
+    <!-- Hidden nav for shared-nav context -->
+    <div class="nav-bar" style="display:none">
+        <div class="dropdown">
+            <select id="navigation" onchange="if(this.value) window.location.href=this.value">
+                <option value="#">-- اختر صفحة --</option>
+                <option value="attendance.html">الحضور والانصراف</option>
+                <option value="performance.html">شهادة الأداء</option>
+                <option value="achievement.html">شهادة الإنجاز</option>
+                <option value="consumables.html">مستخلص المستهلكات</option>
+                <option value="spare_parts.html">مستخلص قطع الغيار</option>
+                <option value="health_centers.html">المراكز الصحية</option>
+                <option value="najran_general.html" selected>مستشفى نجران العام الجديد</option>
+                <option value="approval.html">متابعة المستخلصات</option>
+                <option value="admin-dashboard.html">🛡️ لوحة الأدمن</option>
+                <option value="settings_main.html">الإعدادات</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="hub-page">
+
+        <!-- Header -->
+        <div class="hub-header">
+            <img src="/original/najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="hub-logo">
+            <h1 class="hub-title">مستشفى نجران العام الجديد وطب الأسنان</h1>
+            <p class="hub-sub">تجمع نجران الصحي — وحدة الصيانة العامة</p>
+        </div>
+
+        <!-- ── الحضور والانصراف ── -->
+        <div class="section-label"><span>🗂 الحضور والانصراف</span></div>
+        <div class="hub-grid">
+            <a href="najran_general_attendance.html" class="big-card c-blue">
+                <div class="card-icon-wrap"><i class="fas fa-hospital-alt"></i></div>
+                <h3>حضور المستشفى</h3>
+                <p>8 أقسام — مستشفى نجران العام الجديد</p>
+            </a>
+            <a href="najran_dental_attendance.html" class="big-card c-teal">
+                <div class="card-icon-wrap"><i class="fas fa-tooth"></i></div>
+                <h3>حضور الأسنان</h3>
+                <p>5 أقسام — مركز طب الأسنان</p>
+            </a>
+        </div>
+
+        <!-- ── الأداء ── -->
+        <div class="section-label"><span>📊 جداول الأداء</span></div>
+        <div class="hub-grid">
+            <a href="najran_general_performance.html" class="big-card c-indigo">
+                <div class="card-icon-wrap"><i class="fas fa-chart-bar"></i></div>
+                <h3>أداء المستشفى</h3>
+                <p>8 أقسام — جداول تقييم الأداء الشهري</p>
+            </a>
+            <a href="najran_dental_performance.html" class="big-card c-purple">
+                <div class="card-icon-wrap"><i class="fas fa-chart-line"></i></div>
+                <h3>أداء الأسنان</h3>
+                <p>5 أقسام — جداول تقييم الأداء الشهري</p>
+            </a>
+        </div>
+
+        <!-- ── المستهلكات ── -->
+        <div class="section-label"><span>📦 المستهلكات</span></div>
+        <div class="hub-grid" style="grid-template-columns:1fr;">
+            <a href="najran_general_consumables.html" class="big-card c-orange">
+                <div class="card-icon-wrap"><i class="fas fa-boxes"></i></div>
+                <h3>مستخلص المستهلكات</h3>
+                <p>المستهلكات ومقاولو الباطن — مستشفى نجران العام الجديد</p>
+            </a>
+        </div>
+
+        <!-- ── شهادات الإنجاز ── -->
+        <div class="section-label"><span>🏆 شهادات الإنجاز</span></div>
+        <div class="hub-grid">
+            <a href="najran_dental_achievement.html" class="cert-card c-rose">
+                <div class="card-icon-wrap"><i class="fas fa-certificate"></i></div>
+                <h3>شهادة إنجاز الأسنان</h3>
+                <p>مركز طب الأسنان</p>
+            </a>
+            <a href="najran_general_achievement.html" class="cert-card c-green">
+                <div class="card-icon-wrap"><i class="fas fa-award"></i></div>
+                <h3>شهادة إنجاز المستشفى</h3>
+                <p>مستشفى نجران العام الجديد</p>
+            </a>
+        </div>
+
+        <a href="attendance.html" class="hub-back">
+            <i class="fas fa-arrow-right"></i> العودة للقائمة الرئيسية
+        </a>
+    </div>
+
+    <script src="/original/shared-nav.js"></script>
+    <script src="/original/track.js"></script>
+</body>
+</html>
