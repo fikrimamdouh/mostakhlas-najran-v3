@@ -1554,11 +1554,11 @@ window.navigateTo = function (url) {
         </div>
  
 
-        <!-- جدول رقم 7: خدمات المرضى -->
+        <!-- جدول رقم 7: الأمن والسلامة -->
  
 
         <div class="department-table">
-            <h3>جدول رقم 7: خدمات المرضى</h3>
+            <h3>جدول رقم 7: الأمن والسلامة</h3>
             <div class="total">
                 الإجمالي - عدد الموظفين: <span id="patient-services-count">0</span> | التكلفة الشهرية: <span id="patient-services-total-cost">0.00</span> | حسم وغرامة الغياب: <span id="patient-services-total-fines">0.00</span> | صافي الاستحقاق: <span id="patient-services-net-total">0.00</span> | إجمالي الحسم: <span id="patient-services-total-deduction">0.00</span> | إجمالي الغرامة: <span id="patient-services-total-fine">0.00</span> | موظفين بغياب: <span id="patient-services-absent-employees">0</span>
                 <div id="patient-services-status-totals"></div>
@@ -1598,7 +1598,7 @@ window.navigateTo = function (url) {
             </div>
             <div class="empty-message" id="patient-services-empty">لا يوجد موظفون في هذا القسم</div>
         </div>
-<!-- التواقيع للطباعة - جدول خدمات المرضى -->
+<!-- التواقيع للطباعة - جدول الأمن والسلامة -->
 <div class="print-signatures" style="display: none;">
     <h4>التواقيع</h4>
     <div class="print-signatures-grid" data-sb-page="attendance"></div>
@@ -1716,7 +1716,7 @@ window.navigateTo = function (url) {
                     <option value="civil_works">الأعمال المدنية</option>
                     <option value="mechanical">الميكانيكا</option>
                     <option value="laundry">المغسلة</option>
-                    <option value="patient_services">خدمات المرضى</option>
+                    <option value="patient_services">الأمن والسلامة</option>
                     <option value="admin_saudi">الوظائف الإدارية السعوديين</option>
                 </select>
 
@@ -1803,7 +1803,7 @@ window.navigateTo = function (url) {
                 <option value="civil_works">الأعمال المدنية</option>
                 <option value="mechanical">الميكانيكا</option>
                 <option value="laundry">المغسلة</option>
-                <option value="patient_services">خدمات المرضى</option>
+                <option value="patient_services">الأمن والسلامة</option>
                 <option value="admin_saudi">الوظائف الإدارية السعوديين</option>
             </select>
 <button onclick="processExcelFile(document.getElementById('department-select').value)" class="confirm-btn"><i class="fas fa-check-circle"></i> تأكيد الاستيراد</button>
@@ -1953,7 +1953,7 @@ async function loadJobPositionsFromTemplate() {
   const deptLabels = {
     cleaning:'النظافة', electricity:'الكهرباء', agriculture:'الزراعة',
     civil_works:'الأعمال المدنية', mechanical:'الميكانيكا', laundry:'المغسلة',
-    patient_services: _isAmal ? 'خدمات المرضى' : 'قسم السلامة والحراسات الأمنية',
+    patient_services: 'الأمن والسلامة',
     admin_saudi:'الوظائف الإدارية السعوديين'
   };
   const byDept = {};
@@ -2023,7 +2023,7 @@ function downloadPositionsTemplate() {
     const deptLabels = {
       cleaning:'النظافة', electricity:'الكهرباء', agriculture:'الزراعة',
       civil_works:'الأعمال المدنية', mechanical:'الميكانيكا', laundry:'المغسلة',
-      patient_services:'خدمات المرضى', admin_saudi:'الوظائف الإدارية السعوديين'
+      patient_services:'الأمن والسلامة', admin_saudi:'الوظائف الإدارية السعوديين'
     };
     const headers = ['اسم الموظف', 'رقم الهوية / الإقامة', 'القسم', 'مسمى الوظيفة', 'التكلفة الشهرية', 'الفئة', 'الجنسية'];
     const dataRows = rec.rows.map(function(r) {
@@ -2061,6 +2061,7 @@ function resolveDeptKey(deptAr) {
     'السلامة والحراسات':'patient_services','السلامة والحراسات الأمنية':'patient_services',
     'قسم السلامة والحراسات الأمنية':'patient_services','سلامة وحراسة':'patient_services',
     'الحراسات الأمنية':'patient_services','حراسات':'patient_services',
+    'الأمن والسلامة':'patient_services','أمن وسلامة':'patient_services','قسم الأمن والسلامة':'patient_services',
     'إداري':'admin_saudi','إدارية':'admin_saudi','وظائف إدارية':'admin_saudi',
     'الوظائف الإدارية السعوديين':'admin_saudi','الوظائف الإدارية':'admin_saudi'
   };
@@ -2435,7 +2436,7 @@ function _confirmTemplateUpdate() {
 <script>
 /* ── تعديل اسم جدول رقم 7 حسب المستشفى (عرض فقط، بدون تغيير المعادلات) ── */
 (function () {
-  var NEW_NAME  = 'قسم السلامة والحراسات الأمنية';
+  var NEW_NAME  = 'الأمن والسلامة';
   var EXCLUDED  = 'مجمع الأمل للصحة النفسية';
   var OLD_NAME  = 'خدمات المرضى';
 

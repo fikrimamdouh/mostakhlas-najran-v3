@@ -26,7 +26,7 @@ const STATUS_CODES = {
   'ش': { name: 'شاغرة', color: '#d1ecf1', isAbsence: false, isSpecial: true },
   'ت': { name: 'تحت الإجراء', color: '#e2e3e5', isAbsence: false, isSpecial: true },
   'ب': { name: 'بداية العقد', color: '#e8d5f5', isAbsence: false, isSpecial: true },
-  'ن': { name: 'نوبة', color: '#cfe2ff', isAbsence: false, isSpecial: true },
+  'ن': { name: 'نهاية العقد', color: '#fde8c8', isAbsence: false, isSpecial: true },
   default: { name: 'غير معروف', color: '#ffffff', isAbsence: false }
 };
 const PASSWORD = "admin123"; // تعريف الباسورد هنا
@@ -1710,7 +1710,7 @@ function getDepartmentName(deptKey, returnAll = false) {
     civil_works: 'الأعمال المدنية',
     mechanical: 'الميكانيكا',
     laundry: 'المغسلة',
-    patient_services: 'خدمات المرضى',
+    patient_services: 'الأمن والسلامة',
     admin_saudi: 'الوظائف الإدارية السعوديين'
   };
 
@@ -1847,7 +1847,7 @@ function openPDFExportDialog() {
     { key: 'civil-works',      name: 'الأعمال المدنية' },
     { key: 'mechanical',       name: 'الميكانيكا' },
     { key: 'laundry',          name: 'المغسلة' },
-    { key: 'patient-services', name: 'خدمات المرضى' },
+    { key: 'patient-services', name: 'الأمن والسلامة' },
     { key: 'admin-saudi',      name: 'الوظائف الإدارية السعوديين' }
   ];
 
@@ -2226,7 +2226,7 @@ function exportToExcel(tableId = 'cleaning-table') {
         case 'ر': cell.textContent = 'راحة'; break;
         case 'ط': cell.textContent = 'طوارئ'; break;
         case 'د': cell.textContent = 'دورة'; break;
-        case 'ن': cell.textContent = 'نوبة'; break;
+        case 'ن': cell.textContent = 'نهاية العقد'; break;
         case 'س': cell.textContent = 'سفر'; break;
       }
     });
@@ -4654,7 +4654,7 @@ function showPerformanceControlCenter() {
         civil_works: 'الأعمال المدنية',
         mechanical: 'الميكانيكا',
         laundry: 'المغسلة',
-        patient_services: 'خدمات المرضى'
+        patient_services: 'الأمن والسلامة'
     };
 
     // بناء مربعات الاختيار مع التحقق من القائمة النشطة
