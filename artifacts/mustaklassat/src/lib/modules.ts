@@ -112,8 +112,9 @@ export function filterModules(
     if (allowedModuleKeys !== null) {
       const keySet = new Set(allowedModuleKeys);
       const filtered = byType.filter(m => keySet.has(m.key));
-      // إذا لم يتطابق أي مفتاح (مثلاً تغيّر نوع الموقع) — أرجع كل وحدات الموقع الجديد
-      return filtered.length > 0 ? filtered : byType;
+      // fallback فقط لو كانت القائمة تحوي مفاتيح (أي تغيّر siteType) — لا تُطبَّق على [] الفارغة
+      if (filtered.length === 0 && allowedModuleKeys.length > 0) return byType;
+      return filtered;
     }
     // null = "كل الوحدات المسموحة لهذا الـ siteType"
     return byType;

@@ -103,7 +103,7 @@ export function Sidebar() {
   const [location] = useLocation();
   const { user } = useUser();
   const { signOut } = useClerk();
-  const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
+  const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"], refetchInterval: 60_000 } });
   const [now, setNow] = useState(new Date());
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem(COLLAPSE_KEY) === "true"; } catch { return false; }
