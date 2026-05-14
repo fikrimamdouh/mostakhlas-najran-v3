@@ -108,9 +108,13 @@ export function filterModules(
     byType = ALL_MODULES.filter(m => !m.adminOnly && m.types.includes(siteType));
   }
 
-  if (allowedModuleKeys !== null && !isPrivileged) {
-    const keySet = new Set(allowedModuleKeys);
-    return byType.filter(m => keySet.has(m.key));
+  if (!isPrivileged) {
+    if (allowedModuleKeys !== null) {
+      const keySet = new Set(allowedModuleKeys);
+      return byType.filter(m => keySet.has(m.key));
+    }
+    // null = "كل الوحدات المسموحة لهذا الـ siteType" — لا تُرجع أكثر مما يخص موقعه
+    return byType;
   }
   return byType;
 }
