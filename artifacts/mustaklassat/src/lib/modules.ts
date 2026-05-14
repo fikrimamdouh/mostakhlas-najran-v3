@@ -1,6 +1,6 @@
 import {
   Settings, SlidersHorizontal, Clock, BarChart2, Trophy, Package, Wrench,
-  CheckSquare, MapPin, ClipboardList, Eye, Archive, BadgeCheck, MessageSquare, Building2, type LucideIcon,
+  CheckSquare, MapPin, ClipboardList, Eye, Archive, BadgeCheck, Building2, type LucideIcon,
 } from "lucide-react";
 
 export type SiteType = "hospital" | "health_centers" | "admin_offices";
@@ -18,7 +18,6 @@ export interface ModuleDef {
 export const ALL_MODULES: ModuleDef[] = [
   { key: "approval",                   file: "approval.html",                   label: "اعتماد المستخلص",           emoji: "✅",  icon: CheckSquare,       color: "#15803d", types: [] },
   { key: "visit_review",               file: "visit-admin-review.html",         label: "مراجعة زيارات مقاولي الباطن", emoji: "🪪",  icon: BadgeCheck,        color: "#1e3c72", types: [] },
-  { key: "support",                    file: "",                                label: "مذكرة الدعم",               emoji: "💬",  icon: MessageSquare,     color: "#7c3aed", types: [] },
   { key: "settings_main",              file: "settings_main.html",              label: "الإعدادات الرئيسية",         emoji: "⚙️",  icon: Settings,          color: "#2a5298", types: ["hospital", "health_centers", "admin_offices"] },
   { key: "settings_advanced",          file: "settings_advanced.html",          label: "الإعدادات المتقدمة",         emoji: "🔧",  icon: SlidersHorizontal, color: "#1e3c72", types: ["hospital", "health_centers", "admin_offices"] },
   { key: "attendance",                 file: "attendance.html",                 label: "الحضور والانصراف",           emoji: "📋",  icon: Clock,             color: "#0077b6", types: ["hospital"] },

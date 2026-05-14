@@ -1,42 +1,45 @@
 // najran_data_init.js — بيانات نجران العام الجديد وطب الأسنان
 // مستخلص أبريل 2026 — الفترة من 01/04/2026 إلى 18/04/2026 (18 يوم عمل)
-// مجموع العمالة: مستشفى نجران 276 موظف | طب الأسنان 25 موظف
 
 window.initAllNajranData = function() {
   try {
 
   // ===== بيانات المستخلص =====
-  var extractData = {
-    extractMonth: 'أبريل',
-    extractYear: '2026',
-    extractStart: '2026-04-01',
-    extractEnd: '2026-04-18',
-    extractNumber: '1'
-  };
-  localStorage.setItem('persistentExtractData', JSON.stringify(extractData));
+  localStorage.setItem('persistentExtractData', JSON.stringify({
+    extractMonth: 'أبريل', extractYear: '2026',
+    extractStart: '2026-04-01', extractEnd: '2026-04-18', extractNumber: '1'
+  }));
 
   // ===== بيانات العقد =====
-  var contractData = {
-    hospitalName: 'مستشفى نجران العام الجديد',
-    companyName: 'شركة ايمان للخدمات',
-    contractNumber: '275/1100',
-    contractValue: '899006.75',
+  localStorage.setItem('persistentContractData', JSON.stringify({
+    hospitalName: 'مستشفى نجران العام الجديد', companyName: 'شركة ايمان للخدمات',
+    contractNumber: '275/1100', contractValue: '899006.75',
     maintenanceHead: 'م/ محمد حسين محمد آل منصور',
-    operationsAssistant: '',
     hospitalManager: 'أ/ إبراهيم على آل قريشة',
     contractorRepresentative: 'م/ إبراهيم آل منصور',
     assistantManager: 'م/ حسين جابر آل سرار',
-    siteRepresentative: ''
-  };
-  localStorage.setItem('persistentContractData', JSON.stringify(contractData));
+    operationsAssistant: '', siteRepresentative: ''
+  }));
 
-  // ===== أسماء الأقسام - المستشفى =====
-  var ng_deptNames = {"cleaning": "النظافة", "electricity": "الكهرباء", "agriculture": "الزراعة والري", "civil_works": "الأعمال المدنية", "mechanical": "الميكانيكا", "laundry": "المغسلة", "patient_services": "خدمات المرضى", "admin_saudi": "الإداريون (سعوديون)"};
-  localStorage.setItem('ng_departmentNames', JSON.stringify(ng_deptNames));
+  // ===== إعدادات جداول الأداء (ng_) =====
+  localStorage.setItem('ng_distributionSettings', JSON.stringify({
+    hasProjectManager: true,
+    activeDepartments: ['cleaning','electricity','agriculture','civil_works','mechanical','laundry','patient_services']
+  }));
+  localStorage.setItem('ng_performanceTotalDeduction', '0.00');
 
-  // ===== أسماء الأقسام - طب الأسنان =====
-  var nd_deptNames = {"cleaning": "النظافة", "electricity": "الكهرباء", "civil_works": "الأعمال المدنية", "mechanical": "الميكانيكا", "patient_services": "خدمات المرضى"};
-  localStorage.setItem('nd_departmentNames', JSON.stringify(nd_deptNames));
+  // ===== بيانات المستهلكات — ملخص (consumables_v27) =====
+  localStorage.setItem('summary_data_consumables_v27', JSON.stringify([{"id": "item_1", "name": "الوقود والزيوت والمحروقات (ماعدا وقود السيارات)", "value": 25000, "isEditable": true, "isCustom": false}, {"id": "item_2", "name": "المستهلكات الكيميائية والفلاتر", "value": 12000, "isEditable": true, "isCustom": false}, {"id": "item_3", "name": "مستهلكات الأعمال المدنية", "value": 15000, "isEditable": true, "isCustom": false}, {"id": "item_4", "name": "مواد ومطهرات النظافة", "value": 85000, "isEditable": true, "isCustom": false}, {"id": "item_5", "name": "مستهلكات الزراعة والري", "value": 5000, "isEditable": true, "isCustom": false}, {"id": "item_6", "name": "مستهلكات مكافحة الحشرات", "value": 1000, "isEditable": true, "isCustom": false}, {"id": "item_7", "name": "مستهلكات أجهزة النسخ والتصوير والطباعة", "value": 15000, "isEditable": true, "isCustom": true}, {"id": "item_8", "name": "مستهلكات أنظمة المراقبة والتحكم المركزية", "value": 5000, "isEditable": true, "isCustom": true}, {"id": "item_9", "name": "مستهلكات عمرات المولدات", "value": 50, "isEditable": true, "isCustom": true}, {"id": "sm_total_1", "name": "اجمالى تكاليف بند المستهلكات", "value": 0, "isSubTotal": true, "type": "consumablesTotal"}, {"id": "sm_total_2", "name": "تكاليف مقاولي الباطن", "value": 0, "isSubTotal": true, "type": "subcontractorsTotal"}, {"id": "sm_total_3", "name": "تكاليف تامين بند المياه", "value": 0, "isSubTotal": true, "type": "waterTotal"}, {"id": "sm_total_4", "name": "تكاليف التخلص من مياه الصرف الصحي", "value": 0, "isSubTotal": true, "type": "sewageTotal"}, {"id": "sm_total_5", "name": "غرامة الكهرباء + الماء للسكن", "value": 50, "isEditable": true, "isCustom": true}]));
+
+  // ===== بيانات المياه =====
+  localStorage.setItem('water_supply_data_consumables_v27', JSON.stringify([{"id": "wt_1", "name": "توريد مياه للمستشفى", "unitPrice": 1, "quantity": 35000}]));
+
+  // ===== بيانات مقاولي الباطن (أبريل 2026) =====
+  localStorage.setItem('subcontractors_data_consumables_v27', JSON.stringify([{"id": "sc_1", "name": "صيانة ونظافة مجارى الهواء والدكتات (زيارة واحدة مدة العقد)", "visitValue": 80000, "annualVisits": 1, "visitDate": "نوفمبر القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_2", "name": "صيانة انظمة التكيف والتبريد وانظمة التهوية وملحقاتها", "visitValue": 12000, "annualVisits": 4, "visitDate": "خلال هذا الشهر", "status": "نعم", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_3", "name": "صيانة المصاعد الكهربائية", "visitValue": 9000, "annualVisits": 12, "visitDate": "خلال هذا الشهر", "status": "نعم", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_4", "name": "صيانة واصلاح نظام اطفاء الحريق", "visitValue": 8000, "annualVisits": 2, "visitDate": "خلال هذا الشهر", "status": "نعم", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_5", "name": "صيانة واصلاح نظام انذار الحريق", "visitValue": 8000, "annualVisits": 2, "visitDate": "خلال هذا الشهر", "status": "نعم", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_6", "name": "صيانة نظام المراقبات الامنية", "visitValue": 5000, "annualVisits": 2, "visitDate": "يونيو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_7", "name": "صيانة واصلاح السنترالات والنداء الالى والاذاعة الداخلية والساعة المركزية واستدعاء الممرضات", "visitValue": 20000, "annualVisits": 3, "visitDate": "مايو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_8", "name": "صيانة محطات التوليد الكهربائية (مولدات الطوارى) ولوحات التحكم والتشغيل (ATS)", "visitValue": 10000, "annualVisits": 3, "visitDate": "يوليو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_9", "name": "صيانة شبكة الغازات الطبية وملحقاتها وخزانات الغاز", "visitValue": 10000, "annualVisits": 3, "visitDate": "مايو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_10", "name": "صيانة معدات المغسلة", "visitValue": 8000, "annualVisits": 3, "visitDate": "خلال هذا الشهر", "status": "نعم", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_11", "name": "صيانة محولات الكهرباء والقواطع الكهربائية وكامل اللوحات الكهربائية", "visitValue": 10000, "annualVisits": 2, "visitDate": "يوليو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_12", "name": "صيانة نظام الغلايات البخارية وخطوط الخار وملحقاته وخزانات الوقود والسخانات المركزية", "visitValue": 8000, "annualVisits": 3, "visitDate": "خلال هذا الشهر", "status": "نعم", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_13", "name": "صيانة محطات تحلية مياه الشرب وملحقاتها", "visitValue": 8000, "annualVisits": 4, "visitDate": "مايو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_14", "name": "صيانة اجهزة المراقبة المركزية ولوحاتها الفرعية وملحقاتها BMS", "visitValue": 12000, "annualVisits": 2, "visitDate": "يونيو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_15", "name": "صيانة جهاز UPS", "visitValue": 10000, "annualVisits": 2, "visitDate": "يونيو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_16", "name": "صيانة ثلاجة الموتى", "visitValue": 5000, "annualVisits": 2, "visitDate": "يونيو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_17", "name": "مكافحة الحشرات والقوارض والافات البيئية", "visitValue": 5000, "annualVisits": 12, "visitDate": "خلال هذا الشهر", "status": "نعم", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_18", "name": "صيانة محطة معالجة مياه الصرف الصحى", "visitValue": 6000, "annualVisits": 4, "visitDate": "أبريل القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}]));
+
+  // ===== أسماء الأقسام =====
+  localStorage.setItem('ng_departmentNames', JSON.stringify({"cleaning": "النظافة", "electricity": "الكهرباء", "agriculture": "الزراعة والري", "civil_works": "الأعمال المدنية", "mechanical": "الميكانيكا", "laundry": "المغسلة", "patient_services": "خدمات المرضى", "admin_saudi": "الإداريون (سعوديون)"}));
+  localStorage.setItem('nd_departmentNames', JSON.stringify({"cleaning": "النظافة", "electricity": "الكهرباء", "civil_works": "الأعمال المدنية", "mechanical": "الميكانيكا", "patient_services": "خدمات المرضى"}));
 
   // ===== بيانات الحضور - مستشفى نجران العام الجديد =====
   var ng_att = {};
@@ -375,7 +378,9 @@ window.initAllNajranData = function() {
   alert('✅ تم تحميل بيانات نجران بنجاح!\n\n'
     + 'مستشفى نجران العام الجديد: 276 موظف\n'
     + 'مركز طب الأسنان: 25 موظف\n'
-    + 'الفترة: 01/04/2026 — 18/04/2026 (18 يوم)');
+    + 'الفترة: 01/04/2026 — 18/04/2026 (18 يوم)\n'
+    + 'جداول الأداء: جميع الحسميات صفر ✓\n'
+    + 'المستهلكات: 163,050 ريال | مقاولو الباطن: 58,000 ريال | المياه: 35,000 ريال');
 
   } catch(e) {
     alert('❌ خطأ في تحميل البيانات: ' + e.message);
