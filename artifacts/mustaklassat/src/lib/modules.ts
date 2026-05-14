@@ -111,9 +111,11 @@ export function filterModules(
   if (!isPrivileged) {
     if (allowedModuleKeys !== null) {
       const keySet = new Set(allowedModuleKeys);
-      return byType.filter(m => keySet.has(m.key));
+      const filtered = byType.filter(m => keySet.has(m.key));
+      // إذا لم يتطابق أي مفتاح (مثلاً تغيّر نوع الموقع) — أرجع كل وحدات الموقع الجديد
+      return filtered.length > 0 ? filtered : byType;
     }
-    // null = "كل الوحدات المسموحة لهذا الـ siteType" — لا تُرجع أكثر مما يخص موقعه
+    // null = "كل الوحدات المسموحة لهذا الـ siteType"
     return byType;
   }
   return byType;
