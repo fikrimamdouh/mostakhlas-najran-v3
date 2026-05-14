@@ -319,6 +319,11 @@ html {
   50% { opacity: 0.5; }
 }
 
+/* ── إخفاء السايدبار عند الطباعة ── */
+@media print {
+  aside { display: none !important; }
+}
+
 /* ── إخفاء شعار وإشعارات Clerk (Development mode / Secured by Clerk) ── */
 /* بانر "Development mode" البرتقالي في أي مكان */
 .cl-internal-b3fm6y,
