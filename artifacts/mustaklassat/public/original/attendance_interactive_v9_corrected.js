@@ -1254,8 +1254,14 @@ function getExtractPeriodDetails(startDate, endDate) {
     const extractStart = startDate || persistentData.extractStart || null;
     const extractEnd = endDate || persistentData.extractEnd || null;
     
-    const start = extractStart ? new Date(extractStart) : new Date();
-    const end = extractEnd ? new Date(extractEnd) : new Date();
+    function parseLocalDate(str) {
+      if (!str) return null;
+      const parts = str.split('-');
+      if (parts.length === 3) return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      return new Date(str);
+    }
+    const start = extractStart ? parseLocalDate(extractStart) : new Date();
+    const end = extractEnd ? parseLocalDate(extractEnd) : new Date();
     
     // لو مفيش تواريخ محفوظة، نحسب المدة من أول الشهر لنهايته
     if (!extractStart || !extractEnd) {
