@@ -283,6 +283,24 @@
             </a>
         </div>
 
+        <!-- ── زر تهيئة بيانات Excel ── -->
+        <div style="margin:32px 0 16px;text-align:center;">
+            <button onclick="initNajranExcelData()" style="
+                background:linear-gradient(135deg,#1e3c72,#2a5298);
+                color:#fff;border:none;border-radius:14px;
+                padding:16px 36px;font-size:16px;font-weight:700;
+                font-family:'Tajawal',sans-serif;cursor:pointer;
+                box-shadow:0 4px 20px rgba(30,60,114,.35);
+                display:inline-flex;align-items:center;gap:10px;
+                transition:transform .15s,box-shadow .15s;">
+                <i class="fas fa-file-excel" style="font-size:20px;color:#4ade80;"></i>
+                تحميل بيانات Excel (276 موظف مستشفى + 25 أسنان)
+            </button>
+            <p style="font-size:12px;color:#94a3b8;margin:8px 0 0;font-family:'Tajawal',sans-serif;">
+                يُحمّل بيانات الحضور المستخرجة مباشرة من ملفات الإكسل ويحفظها تلقائياً في المتصفح
+            </p>
+        </div>
+
         <a href="attendance.html" class="hub-back">
             <i class="fas fa-arrow-right"></i> العودة للقائمة الرئيسية
         </a>
@@ -290,5 +308,18 @@
 
     <script src="/original/shared-nav.js"></script>
     <script src="/original/track.js"></script>
+    <script src="/original/najran_data_init.js"></script>
+    <script>
+    /* ── زر تهيئة بيانات Excel ─────────────────────────────────────── */
+    function initNajranExcelData() {
+      if (!confirm('سيتم تحميل بيانات الحضور والانصراف المستخرجة من ملفات Excel (276 موظف للمستشفى + 25 للأسنان) إلى ذاكرة المتصفح.\n\n⚠️ سيتم استبدال أي بيانات حضور موجودة حالياً.\n\nهل تريد المتابعة؟')) return;
+      try {
+        var result = window.initAllNajranData();
+        alert('✅ تم تحميل البيانات بنجاح!\n\n• مستشفى نجران العام: ' + result.hospital + ' موظف\n• مركز طب الأسنان: ' + result.dental + ' موظف\n\nيمكنك الآن فتح صفحات الحضور والانصراف للمراجعة والطباعة.');
+      } catch(e) {
+        alert('خطأ في تحميل البيانات: ' + e.message);
+      }
+    }
+    </script>
 </body>
 </html>
