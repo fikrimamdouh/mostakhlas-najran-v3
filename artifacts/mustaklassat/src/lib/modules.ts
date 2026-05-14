@@ -13,11 +13,12 @@ export interface ModuleDef {
   icon: LucideIcon;
   color: string;
   types: SiteType[];
+  adminOnly?: boolean;
 }
 
 export const ALL_MODULES: ModuleDef[] = [
   { key: "approval",                   file: "approval.html",                   label: "اعتماد المستخلص",           emoji: "✅",  icon: CheckSquare,       color: "#15803d", types: [] },
-  { key: "visit_review",               file: "visit-admin-review.html",         label: "مراجعة زيارات مقاولي الباطن", emoji: "🪪",  icon: BadgeCheck,        color: "#1e3c72", types: [] },
+  { key: "visit_review",               file: "visit-admin-review.html",         label: "مراجعة زيارات مقاولي الباطن", emoji: "🪪",  icon: BadgeCheck,        color: "#1e3c72", types: [], adminOnly: true },
   { key: "settings_main",              file: "settings_main.html",              label: "الإعدادات الرئيسية",         emoji: "⚙️",  icon: Settings,          color: "#2a5298", types: ["hospital", "health_centers", "admin_offices"] },
   { key: "settings_advanced",          file: "settings_advanced.html",          label: "الإعدادات المتقدمة",         emoji: "🔧",  icon: SlidersHorizontal, color: "#1e3c72", types: ["hospital", "health_centers", "admin_offices"] },
   { key: "attendance",                 file: "attendance.html",                 label: "الحضور والانصراف",           emoji: "📋",  icon: Clock,             color: "#0077b6", types: ["hospital"] },
@@ -74,6 +75,9 @@ export function isModuleAllowed(
   return allowedModuleKeys.includes(moduleKey);
 }
 
+// الوحدات القابلة للتعيين في صلاحيات الموظفين (تستثني adminOnly)
+export const ASSIGNABLE_MODULES = ALL_MODULES.filter(m => !m.adminOnly);
+
 export function filterModules(
   siteType: SiteType,
   allowedModuleKeys: string[] | null,
@@ -90,18 +94,18 @@ export function filterModules(
     // المدير يرى كل شيء
     byType = ALL_MODULES;
   } else if (isSupervisor) {
-    // المشرف يرى وحدات شركته فقط
+    // المشرف يرى وحدات شركته فقط (بدون adminOnly)
     const companySiteTypes = getCompanySiteTypes(company);
     if (companySiteTypes && companySiteTypes.length > 0) {
       const typeSet = new Set(companySiteTypes);
-      byType = ALL_MODULES.filter(m => m.types.some(t => typeSet.has(t)));
+      byType = ALL_MODULES.filter(m => !m.adminOnly && m.types.some(t => typeSet.has(t)));
     } else {
-      byType = ALL_MODULES;
+      byType = ALL_MODULES.filter(m => !m.adminOnly);
     }
   } else if (isPrivileged) {
-    byType = ALL_MODULES;
+    byType = ALL_MODULES.filter(m => !m.adminOnly);
   } else {
-    byType = ALL_MODULES.filter(m => m.types.includes(siteType));
+    byType = ALL_MODULES.filter(m => !m.adminOnly && m.types.includes(siteType));
   }
 
   if (allowedModuleKeys !== null && !isPrivileged) {

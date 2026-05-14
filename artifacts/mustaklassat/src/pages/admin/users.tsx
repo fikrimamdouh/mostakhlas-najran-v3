@@ -13,7 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
-import { ALL_MODULES } from "@/lib/modules";
+import { ALL_MODULES, ASSIGNABLE_MODULES } from "@/lib/modules";
 
 // ── نافذة تأكيد حذف مستخدم واحد ─────────────────────────────────────────────
 function DeleteUserModal({ user, onClose, onConfirm, isPending }: {
@@ -219,7 +219,7 @@ function ModulePermissionsModal({ user, onClose, onSave }: {
   const allSelected = selected === null;
 
   const toggle = (key: string) => {
-    const current = selected ?? ALL_MODULES.map(m => m.key);
+    const current = selected ?? ASSIGNABLE_MODULES.map(m => m.key);
     if (current.includes(key)) {
       const next = current.filter(k => k !== key);
       setSelected(next.length === 0 ? [] : next);
@@ -251,7 +251,7 @@ function ModulePermissionsModal({ user, onClose, onSave }: {
             <input
               type="checkbox"
               checked={allSelected}
-              onChange={() => setSelected(allSelected ? ALL_MODULES.map(m => m.key) : null)}
+              onChange={() => setSelected(allSelected ? ASSIGNABLE_MODULES.map(m => m.key) : null)}
               className="h-4 w-4 accent-blue-600"
             />
             <span className="font-semibold text-sm" style={{ color: "#1e3c72" }}>
@@ -260,14 +260,14 @@ function ModulePermissionsModal({ user, onClose, onSave }: {
           </label>
           {!allSelected && (
             <span className="text-xs text-gray-500">
-              مختار: {(selected || []).length} من {ALL_MODULES.length}
+              مختار: {(selected || []).length} من {ASSIGNABLE_MODULES.length}
             </span>
           )}
         </div>
 
         {/* Modules list */}
         <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-2">
-          {ALL_MODULES.map(m => {
+          {ASSIGNABLE_MODULES.map(m => {
             const Icon = m.icon;
             const checked = allSelected || (selected || []).includes(m.key);
             return (
@@ -613,7 +613,7 @@ export default function AdminUsers() {
                 let allowedCount: string;
                 try {
                   const mods = (user as any).allowedModules;
-                  allowedCount = mods ? `${JSON.parse(mods).length}/${ALL_MODULES.length}` : "الكل";
+                  allowedCount = mods ? `${JSON.parse(mods).length}/${ASSIGNABLE_MODULES.length}` : "الكل";
                 } catch { allowedCount = "الكل"; }
 
                 return (
