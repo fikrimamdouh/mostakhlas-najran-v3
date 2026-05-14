@@ -635,9 +635,12 @@
 <link rel="stylesheet" href="/original/shared-styles.css">
 <style>
 @media print {
-    .ab, [class*="ab-"], .btn-control, .std-action-bar, .confirm-btn, .cancel-btn,
-    .btn-success, .btn-secondary, .no-print, .table-header, .dashboard-container,
-    .penalty-info-bar, .nav-bar, button, .btn { display: none !important; }
+    /* إخفاء كل العناصر التفاعلية — هذه الكتلة تأتي آخر شيء لتتغلب على أي !important سابق */
+    .ab, [class*="ab-"], .btn-control,
+    .std-action-bar, .confirm-btn, .cancel-btn, .btn-success, .btn-secondary,
+    .no-print, .table-header, .dashboard-container, .penalty-info-bar,
+    .nav-bar, .sn-wrapper, #save-toast, .modal,
+    button, .btn, input[type="button"], input[type="submit"] { display: none !important; }
 }
 </style>
 </head>
