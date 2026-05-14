@@ -666,26 +666,27 @@ function saveExtractData() {
         const newKey    = newMonth  && newYear  ? `${newYear}_${newMonth}`   : null;
 
         if (prevKey && newKey && prevKey !== newKey) {
-            // ── فحص قفل الشهر: لا انتقال قبل رفع كلا المستخلصين للاعتماد ──
+            // ── تحذير (غير إلزامي) عند الانتقال قبل رفع المستخلصين للاعتماد ──
             const _laborLocked      = localStorage.getItem('najran_labor_locked_' + prevKey);
             const _consumablesLocked = localStorage.getItem('najran_consumables_locked_' + prevKey);
             if (!_laborLocked && !_consumablesLocked) {
-                alert('⛔ لا يمكن الانتقال لشهر جديد\n\nلم يتم رفع مستخلص العمالة ولا مستخلص المستهلكات للاعتماد بعد.\n\nيجب رفع كليهما أولاً قبل الانتقال.');
-                document.getElementById('extract-month').value = prevMonth;
-                document.getElementById('extract-year').value  = prevYear;
-                return;
-            }
-            if (!_laborLocked) {
-                alert('⛔ لا يمكن الانتقال لشهر جديد\n\nلم يتم رفع مستخلص العمالة للاعتماد بعد.\n\nأكمل رفع العمالة أولاً ثم انتقل.');
-                document.getElementById('extract-month').value = prevMonth;
-                document.getElementById('extract-year').value  = prevYear;
-                return;
-            }
-            if (!_consumablesLocked) {
-                alert('⛔ لا يمكن الانتقال لشهر جديد\n\nلم يتم رفع مستخلص المستهلكات للاعتماد بعد.\n\nأكمل رفع المستهلكات أولاً ثم انتقل.');
-                document.getElementById('extract-month').value = prevMonth;
-                document.getElementById('extract-year').value  = prevYear;
-                return;
+                if (!confirm('⚠️ تنبيه: لم يتم رفع مستخلص العمالة ولا مستخلص المستهلكات للاعتماد بعد.\n\nهل تريد الانتقال لشهر جديد على أي حال؟')) {
+                    document.getElementById('extract-month').value = prevMonth;
+                    document.getElementById('extract-year').value  = prevYear;
+                    return;
+                }
+            } else if (!_laborLocked) {
+                if (!confirm('⚠️ تنبيه: لم يتم رفع مستخلص العمالة للاعتماد بعد.\n\nهل تريد الانتقال لشهر جديد على أي حال؟')) {
+                    document.getElementById('extract-month').value = prevMonth;
+                    document.getElementById('extract-year').value  = prevYear;
+                    return;
+                }
+            } else if (!_consumablesLocked) {
+                if (!confirm('⚠️ تنبيه: لم يتم رفع مستخلص المستهلكات للاعتماد بعد.\n\nهل تريد الانتقال لشهر جديد على أي حال؟')) {
+                    document.getElementById('extract-month').value = prevMonth;
+                    document.getElementById('extract-year').value  = prevYear;
+                    return;
+                }
             }
             // ─────────────────────────────────────────────────────────────────
 

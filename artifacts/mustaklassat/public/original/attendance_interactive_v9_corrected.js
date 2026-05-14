@@ -206,7 +206,7 @@ function updateEmployeeCategory(departmentKey, employeeIndex, newCategory) {
   }
 }
 function rebuildTableHeaders() {
-  const { daysInMonth } = getExtractPeriodDetails();
+  const { daysInMonth, monthDaysArray } = getExtractPeriodDetails();
 
   const departments = [
     'cleaning',
@@ -229,12 +229,12 @@ function rebuildTableHeaders() {
     if (!headerRow) return;
     headerRow.innerHTML = ''; // امسح الرؤوس القديمة
 
-    for (let i = 1; i <= daysInMonth; i++) {
+    monthDaysArray.forEach(dayNumber => {
       const th = document.createElement('th');
-      th.textContent = i;
+      th.textContent = dayNumber;
       th.className = 'day-header';
       headerRow.appendChild(th);
-    }
+    });
 
     // رؤوس الملخصات
     ['حضور', 'غياب', 'الحسم', 'غرامة الغياب'].forEach(label => {
