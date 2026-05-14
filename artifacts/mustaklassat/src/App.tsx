@@ -635,7 +635,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         name: dbUser.name,
         email: dbUser.email,
         role: dbUser.role,
-        hospital: dbUser.hospital || existingHospital,
+        hospital: existingHospital || dbUser.hospital,
         hospitals: (dbUser as any).hospitals || null,
         company: dbUser.company,
         phone: (dbUser as any).phone || null,
