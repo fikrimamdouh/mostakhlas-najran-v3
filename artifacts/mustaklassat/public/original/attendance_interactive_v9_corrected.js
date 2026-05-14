@@ -26,7 +26,7 @@ const STATUS_CODES = {
   'ش': { name: 'شاغرة', color: '#d1ecf1', isAbsence: false, isSpecial: true },
   'ت': { name: 'تحت الإجراء', color: '#e2e3e5', isAbsence: false, isSpecial: true },
   'ب': { name: 'بداية العقد', color: '#e8d5f5', isAbsence: false, isSpecial: true },
-  'ن': { name: 'نهاية العقد', color: '#fde8c8', isAbsence: false, isSpecial: true },
+  'ن': { name: 'نوبة', color: '#cfe2ff', isAbsence: false, isSpecial: true },
   default: { name: 'غير معروف', color: '#ffffff', isAbsence: false }
 };
 const PASSWORD = "admin123"; // تعريف الباسورد هنا
