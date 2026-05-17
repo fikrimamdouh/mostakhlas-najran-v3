@@ -643,6 +643,8 @@
     .no-print, .table-header, .dashboard-container, .penalty-info-bar,
     .nav-bar, .sn-wrapper, #save-toast, .modal,
     button, .btn, input[type="button"], input[type="submit"] { display: none !important; }
+    /* إخفاء بند الغرامة في الطباعة لو القيمة صفر */
+    .hide-in-print-if-zero { display: none !important; }
 }
 </style>
 </head>
@@ -1554,25 +1556,24 @@ function renderSummaryTable(contractType, directPurchaseRatio) {
     const housingDeductionItem = summaryData.find(item => item.id === 'sm_total_5');
     if (housingDeductionItem) {
         const housingDeductionValue = Math.abs(parseNumericValue(housingDeductionItem.value));
-        // إن وجد: يظهر البند ويُطرح فقط لو القيمة أكبر من صفر
-        if (housingDeductionValue > 0) {
-            finalTotalNet -= housingDeductionValue;
-            const deductionRow = tbody.insertRow();
-            deductionRow.className = 'deduction-row';
-            const deductionIndex = summaryData.findIndex(d => d.id === 'sm_total_5');
-            deductionRow.dataset.table = 'summary';
-            deductionRow.dataset.index = deductionIndex;
-            deductionRow.innerHTML = `
-                <td colspan="5">
-                    <input type="text" value="${housingDeductionItem.name}" data-index="${deductionIndex}" data-field="name" data-table="summary" class="editable-on-manage">
-                    <span class="cell-print-content">${housingDeductionItem.name}</span>
-                </td>
-                <td>
-                    <input type="text" inputmode="decimal" value="${housingDeductionValue}" data-index="${deductionIndex}" data-field="value" data-table="summary" class="editable-on-manage">
-                    <span class="cell-print-content">(<b>${formatNumber(housingDeductionValue)}</b>)</span>
-                </td>
-            `;
-        }
+        // دائماً يظهر في الشاشة للتعديل — يُطرح من الإجمالي فقط لو القيمة > 0
+        if (housingDeductionValue > 0) finalTotalNet -= housingDeductionValue;
+        const deductionRow = tbody.insertRow();
+        const deductionIndex = summaryData.findIndex(d => d.id === 'sm_total_5');
+        // في الطباعة: يختفي لو القيمة = 0
+        deductionRow.className = 'deduction-row' + (housingDeductionValue === 0 ? ' hide-in-print-if-zero' : '');
+        deductionRow.dataset.table = 'summary';
+        deductionRow.dataset.index = deductionIndex;
+        deductionRow.innerHTML = `
+            <td colspan="5">
+                <input type="text" value="${housingDeductionItem.name}" data-index="${deductionIndex}" data-field="name" data-table="summary" class="editable-on-manage">
+                <span class="cell-print-content">${housingDeductionItem.name}</span>
+            </td>
+            <td>
+                <input type="text" inputmode="decimal" value="${housingDeductionValue}" data-index="${deductionIndex}" data-field="value" data-table="summary" class="editable-on-manage">
+                <span class="cell-print-content">(<b>${formatNumber(housingDeductionValue)}</b>)</span>
+            </td>
+        `;
     }
 
     const subNetDue = parseNumericValue(document.querySelector('#subcontractors-table tfoot tr:first-child td:nth-of-type(10)')?.textContent || '0');
