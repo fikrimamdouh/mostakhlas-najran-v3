@@ -109,6 +109,7 @@
 
     var bar = document.createElement('div');
     bar.id = 'najran-auth-bar';
+    bar.className = 'no-print';
     bar.style.cssText = [
       'position:fixed','bottom:0','left:0','right:0','z-index:99999',
       'background:linear-gradient(90deg,#0f2050,#1e3c72,#2a5298)',

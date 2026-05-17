@@ -128,6 +128,7 @@
     if (document.getElementById('cloud-month-advanced-banner')) return;
     const banner = document.createElement('div');
     banner.id = 'cloud-month-advanced-banner';
+    banner.className = 'no-print';
     banner.style.cssText = `
       position: fixed; top: 0; left: 0; right: 0; z-index: 999999;
       background: linear-gradient(135deg,#15803d,#166534);
@@ -294,6 +295,7 @@
     if (document.getElementById('cloud-token-expired-banner')) return;
     const banner = document.createElement('div');
     banner.id = 'cloud-token-expired-banner';
+    banner.className = 'no-print';
     banner.style.cssText = `
       position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
       background: #d97706; color: white; text-align: center;
