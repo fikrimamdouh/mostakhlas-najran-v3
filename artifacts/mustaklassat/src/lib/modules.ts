@@ -1,6 +1,6 @@
 import {
   Settings, SlidersHorizontal, Clock, BarChart2, Trophy, Package, Wrench,
-  CheckSquare, MapPin, ClipboardList, Eye, Archive, BadgeCheck, Building2, type LucideIcon,
+  CheckSquare, MapPin, ClipboardList, Eye, Archive, BadgeCheck, type LucideIcon,
 } from "lucide-react";
 
 export type SiteType = "hospital" | "health_centers" | "admin_offices";
@@ -27,7 +27,6 @@ export const ALL_MODULES: ModuleDef[] = [
   { key: "consumables",                file: "consumables.html",                label: "مستخلص المستهلكات",         emoji: "🧪",  icon: Package,           color: "#0077b6", types: ["hospital"] },
   { key: "spare_parts",                file: "spare_parts.html",                label: "مستخلص قطع الغيار",         emoji: "🔩",  icon: Wrench,            color: "#023e8a", types: ["hospital"] },
   { key: "request-visit",              file: "request-visit.html",              label: "تسجيل الزيارات",            emoji: "🏥",  icon: MapPin,            color: "#2a5298", types: ["hospital"] },
-  { key: "najran_general",             file: "najran_general.html",             label: "نجران العام الجديد وطب الأسنان", emoji: "🏥", icon: Building2,        color: "#003087", types: ["hospital"] },
   { key: "health_centers_attendance",  file: "health_centers_attendance.html",  label: "المراكز — العمالة",         emoji: "👷",  icon: ClipboardList,     color: "#1e3c72", types: ["health_centers"] },
   { key: "health_centers_consumables", file: "health_centers_consumables.html", label: "المراكز — المستهلكات",      emoji: "🧪",  icon: Package,           color: "#0077b6", types: ["health_centers"] },
   { key: "admin_offices_attendance",   file: "admin_offices_attendance.html",   label: "المكاتب — العمالة",         emoji: "👷",  icon: ClipboardList,     color: "#2a5298", types: ["admin_offices"] },
