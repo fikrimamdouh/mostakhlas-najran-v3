@@ -2,7 +2,7 @@
 // مستخلص أبريل 2026 — الفترة من 01/04/2026 إلى 18/04/2026 (18 يوم عمل)
 
 window.initAllNajranData = function() {
-  try {
+  {
 
   // ===== بيانات المستخلص =====
   localStorage.setItem('persistentExtractData', JSON.stringify({
@@ -376,9 +376,5 @@ window.initAllNajranData = function() {
   localStorage.setItem('nd_attendanceData', JSON.stringify(nd_att));
 
   return { hospital: 276, dental: 25 };
-
-  } catch(e) {
-    alert('❌ خطأ في تحميل البيانات: ' + e.message);
-    console.error(e);
   }
 };
