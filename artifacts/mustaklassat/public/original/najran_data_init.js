@@ -1,49 +1,10 @@
 // najran_data_init.js — بيانات نجران العام الجديد وطب الأسنان
-// مستخلص أبريل 2026 — الفترة من 01/04/2026 إلى 18/04/2026 (18 يوم عمل)
+// بيانات الموظفين فقط — مدة المستخلص تُحدَّد من إعدادات الصفحة
 
 window.initAllNajranData = function() {
-  {
 
-  // ===== بيانات المستخلص =====
-  localStorage.setItem('persistentExtractData', JSON.stringify({
-    extractMonth: 'أبريل', extractYear: '2026',
-    extractStart: '2026-04-01', extractEnd: '2026-04-18', extractNumber: '1'
-  }));
-
-  // ===== بيانات العقد =====
-  localStorage.setItem('persistentContractData', JSON.stringify({
-    hospitalName: 'مستشفى نجران العام الجديد', companyName: 'شركة ايمان للخدمات',
-    contractNumber: '275/1100', contractValue: '899006.75',
-    maintenanceHead: 'م/ محمد حسين محمد آل منصور',
-    hospitalManager: 'أ/ إبراهيم على آل قريشة',
-    contractorRepresentative: 'م/ إبراهيم آل منصور',
-    assistantManager: 'م/ حسين جابر آل سرار',
-    operationsAssistant: '', siteRepresentative: ''
-  }));
-
-  // ===== إعدادات جداول الأداء (ng_) =====
-  localStorage.setItem('ng_distributionSettings', JSON.stringify({
-    hasProjectManager: true,
-    activeDepartments: ['cleaning','electricity','agriculture','civil_works','mechanical','laundry','patient_services']
-  }));
-  localStorage.setItem('ng_performanceTotalDeduction', '0.00');
-
-  // ===== بيانات المستهلكات — ملخص (consumables_v27) =====
-  localStorage.setItem('summary_data_consumables_v27', JSON.stringify([{"id": "item_1", "name": "الوقود والزيوت والمحروقات (ماعدا وقود السيارات)", "value": 25000, "isEditable": true, "isCustom": false}, {"id": "item_2", "name": "المستهلكات الكيميائية والفلاتر", "value": 12000, "isEditable": true, "isCustom": false}, {"id": "item_3", "name": "مستهلكات الأعمال المدنية", "value": 15000, "isEditable": true, "isCustom": false}, {"id": "item_4", "name": "مواد ومطهرات النظافة", "value": 85000, "isEditable": true, "isCustom": false}, {"id": "item_5", "name": "مستهلكات الزراعة والري", "value": 5000, "isEditable": true, "isCustom": false}, {"id": "item_6", "name": "مستهلكات مكافحة الحشرات", "value": 1000, "isEditable": true, "isCustom": false}, {"id": "item_7", "name": "مستهلكات أجهزة النسخ والتصوير والطباعة", "value": 15000, "isEditable": true, "isCustom": true}, {"id": "item_8", "name": "مستهلكات أنظمة المراقبة والتحكم المركزية", "value": 5000, "isEditable": true, "isCustom": true}, {"id": "item_9", "name": "مستهلكات عمرات المولدات", "value": 50, "isEditable": true, "isCustom": true}, {"id": "sm_total_1", "name": "اجمالى تكاليف بند المستهلكات", "value": 0, "isSubTotal": true, "type": "consumablesTotal"}, {"id": "sm_total_2", "name": "تكاليف مقاولي الباطن", "value": 0, "isSubTotal": true, "type": "subcontractorsTotal"}, {"id": "sm_total_3", "name": "تكاليف تامين بند المياه", "value": 0, "isSubTotal": true, "type": "waterTotal"}, {"id": "sm_total_4", "name": "تكاليف التخلص من مياه الصرف الصحي", "value": 0, "isSubTotal": true, "type": "sewageTotal"}, {"id": "sm_total_5", "name": "غرامة الكهرباء + الماء للسكن", "value": 50, "isEditable": true, "isCustom": true}]));
-
-  // ===== بيانات المياه =====
-  localStorage.setItem('water_supply_data_consumables_v27', JSON.stringify([{"id": "wt_1", "name": "توريد مياه للمستشفى", "unitPrice": 1, "quantity": 35000}]));
-
-  // ===== بيانات مقاولي الباطن (أبريل 2026) =====
-  localStorage.setItem('subcontractors_data_consumables_v27', JSON.stringify([{"id": "sc_1", "name": "صيانة ونظافة مجارى الهواء والدكتات (زيارة واحدة مدة العقد)", "visitValue": 80000, "annualVisits": 1, "visitDate": "نوفمبر القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_2", "name": "صيانة انظمة التكيف والتبريد وانظمة التهوية وملحقاتها", "visitValue": 12000, "annualVisits": 4, "visitDate": "خلال هذا الشهر", "status": "نعم", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_3", "name": "صيانة المصاعد الكهربائية", "visitValue": 9000, "annualVisits": 12, "visitDate": "خلال هذا الشهر", "status": "نعم", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_4", "name": "صيانة واصلاح نظام اطفاء الحريق", "visitValue": 8000, "annualVisits": 2, "visitDate": "خلال هذا الشهر", "status": "نعم", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_5", "name": "صيانة واصلاح نظام انذار الحريق", "visitValue": 8000, "annualVisits": 2, "visitDate": "خلال هذا الشهر", "status": "نعم", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_6", "name": "صيانة نظام المراقبات الامنية", "visitValue": 5000, "annualVisits": 2, "visitDate": "يونيو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_7", "name": "صيانة واصلاح السنترالات والنداء الالى والاذاعة الداخلية والساعة المركزية واستدعاء الممرضات", "visitValue": 20000, "annualVisits": 3, "visitDate": "مايو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_8", "name": "صيانة محطات التوليد الكهربائية (مولدات الطوارى) ولوحات التحكم والتشغيل (ATS)", "visitValue": 10000, "annualVisits": 3, "visitDate": "يوليو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_9", "name": "صيانة شبكة الغازات الطبية وملحقاتها وخزانات الغاز", "visitValue": 10000, "annualVisits": 3, "visitDate": "مايو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_10", "name": "صيانة معدات المغسلة", "visitValue": 8000, "annualVisits": 3, "visitDate": "خلال هذا الشهر", "status": "نعم", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_11", "name": "صيانة محولات الكهرباء والقواطع الكهربائية وكامل اللوحات الكهربائية", "visitValue": 10000, "annualVisits": 2, "visitDate": "يوليو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_12", "name": "صيانة نظام الغلايات البخارية وخطوط الخار وملحقاته وخزانات الوقود والسخانات المركزية", "visitValue": 8000, "annualVisits": 3, "visitDate": "خلال هذا الشهر", "status": "نعم", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_13", "name": "صيانة محطات تحلية مياه الشرب وملحقاتها", "visitValue": 8000, "annualVisits": 4, "visitDate": "مايو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_14", "name": "صيانة اجهزة المراقبة المركزية ولوحاتها الفرعية وملحقاتها BMS", "visitValue": 12000, "annualVisits": 2, "visitDate": "يونيو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_15", "name": "صيانة جهاز UPS", "visitValue": 10000, "annualVisits": 2, "visitDate": "يونيو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_16", "name": "صيانة ثلاجة الموتى", "visitValue": 5000, "annualVisits": 2, "visitDate": "يونيو القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_17", "name": "مكافحة الحشرات والقوارض والافات البيئية", "visitValue": 5000, "annualVisits": 12, "visitDate": "خلال هذا الشهر", "status": "نعم", "delayDays": 0, "damagePenalty": 0}, {"id": "sc_18", "name": "صيانة محطة معالجة مياه الصرف الصحى", "visitValue": 6000, "annualVisits": 4, "visitDate": "أبريل القادم", "status": "لا", "delayDays": 0, "damagePenalty": 0}]));
-
-  // ===== أسماء الأقسام =====
-  localStorage.setItem('ng_departmentNames', JSON.stringify({"cleaning": "النظافة", "electricity": "الكهرباء", "agriculture": "الزراعة والري", "civil_works": "الأعمال المدنية", "mechanical": "الميكانيكا", "laundry": "المغسلة", "patient_services": "خدمات المرضى", "admin_saudi": "الإداريون (سعوديون)"}));
-  localStorage.setItem('nd_departmentNames', JSON.stringify({"cleaning": "النظافة", "electricity": "الكهرباء", "civil_works": "الأعمال المدنية", "mechanical": "الميكانيكا", "patient_services": "خدمات المرضى"}));
-
-  // ===== بيانات الحضور - مستشفى نجران العام الجديد =====
-  var ng_att = {};
-  ng_att['cleaning'] = [
+  // ===== بيانات مستشفى نجران العام الجديد (276 موظف) =====
+  var ng_att = [
     {seq:1,jobTitle:"مشرف عام للنظافة",category:"4",name:"محمد هادي مهدي آل شهي",salary:5865.0,attendance:18,absence:0,netPay:3519.0,nationality:"سعودي",iqamaId:"1088499106",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:2,jobTitle:"مشرف نظافة",category:"4",name:"محمد مسعود حسين ال منصور",salary:4887.5,attendance:18,absence:0,netPay:2932.5,nationality:"سعودي",iqamaId:"1056753096",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:3,jobTitle:"مشرف نظافة",category:"4",name:"دايل دويل دايل الدوسرى",salary:4887.5,attendance:18,absence:0,netPay:2932.5,nationality:"سعودي",iqamaId:"1083722148",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
@@ -78,8 +39,8 @@ window.initAllNajranData = function() {
     {seq:32,jobTitle:"عامل نظافة",category:"7",name:"رومان احمد برهان الدين",salary:2052.75,attendance:18,absence:0,netPay:1231.65,nationality:"بنجلاديش",iqamaId:"2566347296",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:33,jobTitle:"عامل نظافة",category:"7",name:"شمساد احمد",salary:2052.75,attendance:18,absence:0,netPay:1231.65,nationality:"بنجلاديش",iqamaId:"2279685875",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:34,jobTitle:"عامل نظافة",category:"7",name:"عمران مخلص الدين",salary:2052.75,attendance:18,absence:0,netPay:1231.65,nationality:"بنجلاديش",iqamaId:"2505589198",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-    {seq:35,jobTitle:"عامل نظافة",category:"7",name:"رانا شاهو عبد ال كرم",salary:2052.75,attendance:0,absence:0,netPay:0.0,nationality:"بنجلاديش",iqamaId:"2496305489",days:["ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج"]},
-    {seq:36,jobTitle:"عامل نظافة",category:"7",name:"مد جهاد مياه مد",salary:2052.75,attendance:18,absence:0,netPay:1231.65,nationality:"بنجلاديش",iqamaId:"2496305539",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
+    {seq:35,jobTitle:"عامل نظافة",category:"7",name:"رانا شاهو عبد ال كرم",salary:2052.75,attendance:0,absence:0,netPay:0.0,nationality:"بنجلاديش",iqamaId:"",days:["ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج"]},
+    {seq:36,jobTitle:"عامل نظافة",category:"7",name:"مد جهاد مياه مد",salary:2052.75,attendance:18,absence:0,netPay:1231.65,nationality:"بنجلاديش",iqamaId:"",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:37,jobTitle:"عامل نظافة",category:"7",name:"ساكيل ميا اليجان",salary:2052.75,attendance:18,absence:0,netPay:1231.65,nationality:"الهند",iqamaId:"2366903264",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:38,jobTitle:"عامل نظافة",category:"7",name:"نازمال حق",salary:2052.75,attendance:18,absence:0,netPay:1231.65,nationality:"بنجلاديش",iqamaId:"2618519413",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:39,jobTitle:"عامل نظافة",category:"7",name:"مد سعيد حسن",salary:2052.75,attendance:18,absence:0,netPay:1231.65,nationality:"بنجلاديش",iqamaId:"2496355260",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
@@ -160,8 +121,6 @@ window.initAllNajranData = function() {
     {seq:114,jobTitle:"عاملة ترحيل",category:"7",name:"راتنا بيغوم رسمت بويان",salary:2443.75,attendance:18,absence:0,netPay:1466.25,nationality:"بنجلاديش",iqamaId:"2476323049",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:115,jobTitle:"عاملة ترحيل",category:"7",name:"شيفالى اختر",salary:2443.75,attendance:18,absence:0,netPay:1466.25,nationality:"نيبال",iqamaId:"2566349227",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:116,jobTitle:"عاملة ترحيل",category:"7",name:"سبا سردار",salary:2443.75,attendance:18,absence:0,netPay:1466.25,nationality:"باكساان",iqamaId:"2554208419",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-  ];
-  ng_att['electricity'] = [
     {seq:1,jobTitle:"مدير الموقع",category:"1",name:"ابراهيم حصين علي ال منصور",salary:14662.5,attendance:18,absence:0,netPay:8797.5,nationality:"سعودي",iqamaId:"1036440970",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:2,jobTitle:"مساعد مدير الموقع",category:"2",name:"صالح بن محمد ال جعره",salary:11730.0,attendance:18,absence:0,netPay:7038.0,nationality:"سعودي",iqamaId:"1084271855",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:3,jobTitle:"مهندس كهرباء قوى",category:"3",name:"محمد اسماعيل",salary:9286.25,attendance:4,absence:0,netPay:1238.17,nationality:"مصري",iqamaId:"2410151498",days:["ح", "ح", "ح", "ح", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج"]},
@@ -201,15 +160,11 @@ window.initAllNajranData = function() {
     {seq:37,jobTitle:"فنى الات تصوير",category:"4",name:"محمد افروز اقبال",salary:4105.5,attendance:18,absence:0,netPay:2463.3,nationality:"الهند",iqamaId:"2483112963",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:38,jobTitle:"فنى الات تصوير",category:"4",name:"سالم محمد حسين آل شرية",salary:4105.5,attendance:18,absence:0,netPay:2463.3,nationality:"سعودي",iqamaId:"1029870365",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:39,jobTitle:"كهربائى سيارات",category:"5",name:"عمران على",salary:3519.0,attendance:18,absence:0,netPay:2111.4,nationality:"باكستان",iqamaId:"2396678282",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-  ];
-  ng_att['agriculture'] = [
     {seq:1,jobTitle:"فنى زراعى",category:"4",name:"محمد رحيم سليم انصارى",salary:2932.5,attendance:18,absence:0,netPay:1759.5,nationality:"الهند",iqamaId:"2484814625",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:2,jobTitle:"عامل زراعى",category:"6",name:"جاسم مياة اول مياة",salary:2052.75,attendance:18,absence:0,netPay:1231.65,nationality:"بنجلاديش",iqamaId:"2496858578",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:3,jobTitle:"عامل زراعى",category:"6",name:"خوكون ملا مد شمس",salary:2052.75,attendance:18,absence:0,netPay:1231.65,nationality:"بنجلاديش",iqamaId:"2487707800",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:4,jobTitle:"عامل زراعى",category:"6",name:"محمد فياز الدين",salary:2052.75,attendance:18,absence:0,netPay:1231.65,nationality:"بنجلاديش",iqamaId:"2496640877",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:5,jobTitle:"عامل زراعى",category:"6",name:"محمد علام",salary:2052.75,attendance:18,absence:0,netPay:1231.65,nationality:"بنجلاديش",iqamaId:"2453996460",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-  ];
-  ng_att['civil_works'] = [
     {seq:1,jobTitle:"مهندس مدنى",category:"3",name:"زيدان نقطان سعيد ال بحري",salary:9286.25,attendance:18,absence:0,netPay:5571.75,nationality:"سعودي",iqamaId:"1098284456",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:2,jobTitle:"بناء ومبلط",category:"5",name:"محمد اكرم",salary:3128.0,attendance:18,absence:0,netPay:1876.8,nationality:"الهند",iqamaId:"2469285841",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:3,jobTitle:"دهان",category:"5",name:"سفير احمد شبير",salary:3128.0,attendance:18,absence:0,netPay:1876.8,nationality:"باكستان",iqamaId:"2531998009",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
@@ -226,8 +181,6 @@ window.initAllNajranData = function() {
     {seq:14,jobTitle:"خياط ومنجد",category:"5",name:"صالح بن سالم ال مريح",salary:3128.0,attendance:18,absence:0,netPay:1876.8,nationality:"سعودي",iqamaId:"1032483834",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:15,jobTitle:"عامل ورشة",category:"6",name:"علم منجير مجيد",salary:2443.75,attendance:18,absence:0,netPay:1466.25,nationality:"بنجلادش",iqamaId:"2333910855",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:16,jobTitle:"عامل ورشة",category:"6",name:"امام خان",salary:2443.75,attendance:18,absence:0,netPay:1466.25,nationality:"الهند",iqamaId:"2441030729",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-  ];
-  ng_att['mechanical'] = [
     {seq:1,jobTitle:"مهندس ميكانيكا",category:"3",name:"فيصل ابراهيم",salary:9286.25,attendance:18,absence:0,netPay:5571.75,nationality:"الهند",iqamaId:"2461634806",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:2,jobTitle:"مهندس ميكانيكا تبريد وتكيف",category:"3",name:"محمد ازار الدين",salary:9286.25,attendance:18,absence:0,netPay:5571.75,nationality:"الهند",iqamaId:"2617809153",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:3,jobTitle:"فنى تبريد وتكيف عام",category:"4",name:"عاطف عثمان عثمان",salary:3323.5,attendance:18,absence:0,netPay:1994.1,nationality:"باكستان",iqamaId:"2416457105",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
@@ -266,11 +219,9 @@ window.initAllNajranData = function() {
     {seq:36,jobTitle:"ميكانيكى سيارات",category:"5",name:"محمد برويز علم",salary:3421.25,attendance:18,absence:0,netPay:2052.75,nationality:"الهند",iqamaId:"2613451695",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:37,jobTitle:"عامل ورشة ( لحام و خراطة)",category:"6",name:"مستعين موليك",salary:2443.75,attendance:0,absence:0,netPay:0.0,nationality:"الهند",iqamaId:"2350857393",days:["ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج"]},
     {seq:38,jobTitle:"عامل ورشة ( لحام و خراطة )",category:"6",name:"رابيل حسين",salary:2443.75,attendance:18,absence:0,netPay:1466.25,nationality:"الهند",iqamaId:"2368149155",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-  ];
-  ng_att['laundry'] = [
     {seq:1,jobTitle:"مشرف مغسلة",category:"4",name:"فهد نقطان آل بحري",salary:4887.5,attendance:18,absence:0,netPay:2932.5,nationality:"سعودي",iqamaId:"1079874945",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-    {seq:2,jobTitle:"مشغل معدات مغسلة",category:"5",name:"مد رومان مياه لقمان مياه",salary:2346.0,attendance:18,absence:0,netPay:1407.6,nationality:"الهند",iqamaId:"2496305604",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-    {seq:3,jobTitle:"مشغل معدات مغسلة",category:"5",name:"مد مشود رنا",salary:2346.0,attendance:18,absence:0,netPay:1407.6,nationality:"الهند",iqamaId:"2554084265",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
+    {seq:2,jobTitle:"مشغل معدات مغسلة",category:"5",name:"مد رومان مياه لقمان مياه",salary:2346.0,attendance:18,absence:0,netPay:1407.6,nationality:"الهند",iqamaId:"",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
+    {seq:3,jobTitle:"مشغل معدات مغسلة",category:"5",name:"مد مشود رنا",salary:2346.0,attendance:18,absence:0,netPay:1407.6,nationality:"الهند",iqamaId:"",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:4,jobTitle:"مشغل معدات مغسلة",category:"5",name:"مايدول",salary:2346.0,attendance:18,absence:0,netPay:1407.6,nationality:"بنجلادش",iqamaId:"2466298011",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:5,jobTitle:"مشغل معدات مغسلة",category:"5",name:"ابو ال خشيم",salary:2346.0,attendance:18,absence:0,netPay:1407.6,nationality:"بنجلاديش",iqamaId:"2487684256",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:6,jobTitle:"عامل فرز غسيل",category:"6",name:"محمد مسعود او سيد",salary:2150.5,attendance:18,absence:0,netPay:1290.3,nationality:"بنجلاديش",iqamaId:"2496116993",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
@@ -287,8 +238,6 @@ window.initAllNajranData = function() {
     {seq:17,jobTitle:"عاملة جمع وتوزيع غسيل",category:"6",name:"سالينا بيجم",salary:2346.0,attendance:18,absence:0,netPay:1407.6,nationality:"بنجلاديش",iqamaId:"2442911273",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:18,jobTitle:"عامل تخزين ملابس",category:"6",name:"رونى مياة",salary:2150.5,attendance:18,absence:0,netPay:1290.3,nationality:"بنجلاديش",iqamaId:"2497554150",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:19,jobTitle:"عامل تخزين ملابس",category:"6",name:"شاة علم",salary:2150.5,attendance:18,absence:0,netPay:1290.3,nationality:"بنجلاديش",iqamaId:"2533375735",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-  ];
-  ng_att['patient_services'] = [
     {seq:1,jobTitle:"مشرف عام امن وسلامة",category:"3",name:"صالح علي محمد ال شيبان",salary:8308.75,attendance:18,absence:0,netPay:4985.25,nationality:"سعودى",iqamaId:"1043803905",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:2,jobTitle:"مشرف امن وسلامة",category:"4",name:"على حسين مانع المنصور",salary:5865.0,attendance:18,absence:0,netPay:3519.0,nationality:"سعودى",iqamaId:"1100135829",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:3,jobTitle:"مشرف امن وسلامة",category:"4",name:"جازع مهدي محمد الغبر",salary:5865.0,attendance:18,absence:0,netPay:3519.0,nationality:"سعودى",iqamaId:"1043674405",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
@@ -318,7 +267,7 @@ window.initAllNajranData = function() {
     {seq:27,jobTitle:"رجل امن وسلامة",category:"5",name:"عبدالله سعد مبروك ال ريحان",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"1093687281",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:28,jobTitle:"رجل امن وسلامة",category:"5",name:"مشعل محمد حسين ال مستنير",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"1063868655",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:29,jobTitle:"رجل امن وسلامة",category:"5",name:"مرضي هادي مطلق النجراني",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"1025305002",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-    {seq:30,jobTitle:"رجل امن وسلامة",category:"5",name:"عبدالله صالح مانع",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"1100631777",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
+    {seq:30,jobTitle:"رجل امن وسلامة",category:"5",name:"عبدالله صالح مانع",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:31,jobTitle:"رجل امن وسلامة",category:"5",name:"حسين راشد ال سعيدة",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"1029312624",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:32,jobTitle:"رجل امن وسلامة",category:"5",name:"محمد صالح ال منصور",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"1095200497",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:33,jobTitle:"رجل امن وسلامة",category:"5",name:"محيمد راشد غنام الدوسري",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"1099258210",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
@@ -331,14 +280,12 @@ window.initAllNajranData = function() {
     {seq:40,jobTitle:"حارسة امن وسلامة",category:"5",name:"نورة سعيد بن سالم ال سعد الله",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودية",iqamaId:"1058943232",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:41,jobTitle:"حارسة امن وسلامة",category:"5",name:"راحة مشيب هادى",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودية",iqamaId:"1101877015",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:42,jobTitle:"حارسة امن وسلامة",category:"5",name:"وفقة صالح سعيد الصقور",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودية",iqamaId:"1056175472",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-    {seq:43,jobTitle:"حارسة امن وسلامة",category:"5",name:"نورة مسعود مرزوق ال ريحان",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودية",iqamaId:"1070102601",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
+    {seq:43,jobTitle:"حارسة امن وسلامة",category:"5",name:"نورة مسعود مرزوق ال ريحان",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودية",iqamaId:"1070102601",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]}
   ];
-  ng_att['admin_saudi'] = [];
   localStorage.setItem('ng_attendanceData', JSON.stringify(ng_att));
 
-  // ===== بيانات الحضور - مركز طب الأسنان =====
-  var nd_att = {};
-  nd_att['cleaning'] = [
+  // ===== بيانات مركز طب الأسنان (25 موظف) =====
+  var nd_att = [
     {seq:1,jobTitle:"عامل نظافة",category:"7",name:"مد فيصل احمد",salary:2052.75,attendance:0,absence:0,netPay:0.0,nationality:"بنجلاديش",iqamaId:"2497553731",days:["ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج"]},
     {seq:2,jobTitle:"عامل نظافة",category:"7",name:"اسف اقبال",salary:2052.75,attendance:18,absence:0,netPay:1231.65,nationality:"الهند",iqamaId:"2454989050",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:3,jobTitle:"عامل نظافة",category:"7",name:"محمد احمد حسين بيجوي",salary:2052.75,attendance:18,absence:0,netPay:1231.65,nationality:"بنجلاديش",iqamaId:"2569710706",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
@@ -352,29 +299,20 @@ window.initAllNajranData = function() {
     {seq:11,jobTitle:"عاملة نظافة",category:"7",name:"مارس نسيمة بيجوم",salary:2443.75,attendance:18,absence:0,netPay:1466.25,nationality:"بنجلاديش",iqamaId:"2559276056",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:12,jobTitle:"عاملة نظافة",category:"7",name:"مست عطية مد عزيز",salary:2443.75,attendance:18,absence:0,netPay:1466.25,nationality:"بنجلاديش",iqamaId:"2496116423",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:13,jobTitle:"عاملة نظافة",category:"7",name:"شولى بيجم",salary:2443.75,attendance:18,absence:0,netPay:1466.25,nationality:"بنجلاديش",iqamaId:"2611193117",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-  ];
-  nd_att['electricity'] = [
     {seq:1,jobTitle:"فنى  الكترونيات",category:"4",name:"طارق محمود احمد",salary:3421.25,attendance:18,absence:0,netPay:2052.75,nationality:"باكستان",iqamaId:"2570170957",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:2,jobTitle:"فنى  مصاعد",category:"4",name:"نصير حسين",salary:3421.25,attendance:18,absence:0,netPay:2052.75,nationality:"الهند",iqamaId:"2456205760",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:3,jobTitle:"كهربائي",category:"4",name:"شميم علم",salary:3225.75,attendance:18,absence:0,netPay:1935.45,nationality:"الهند",iqamaId:"2578367233",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-  ];
-  nd_att['civil_works'] = [
     {seq:1,jobTitle:"سباك",category:"5",name:"جنيد احمد مختار",salary:3128.0,attendance:18,absence:0,netPay:1876.8,nationality:"باكستان",iqamaId:"2473739619",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-  ];
-  nd_att['mechanical'] = [
     {seq:1,jobTitle:"فنى تبريد وتكيف عام",category:"4",name:"محمد اكلاج خان",salary:3323.5,attendance:18,absence:0,netPay:1994.1,nationality:"الهند",iqamaId:"2468317991",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:2,jobTitle:"فني ميكانيكا مولدات",category:"4",name:"اون كريشان",salary:3519.0,attendance:18,absence:0,netPay:2111.4,nationality:"الهند",iqamaId:"2534686841",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-  ];
-  nd_att['patient_services'] = [
     {seq:1,jobTitle:"رجل امن وسلامة",category:"5",name:"عبد اللة مانع حمد ال رديف",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"1106332644",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-    {seq:2,jobTitle:"رجل امن وسلامة",category:"5",name:"على مانع حمد",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودي",iqamaId:"1067642478",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-    {seq:3,jobTitle:"رجل امن وسلامة",category:"5",name:"عبد الله سعيدان مانع",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"1090045343",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
+    {seq:2,jobTitle:"رجل امن وسلامة",category:"5",name:"على مانع حمد",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودي",iqamaId:"",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
+    {seq:3,jobTitle:"رجل امن وسلامة",category:"5",name:"عبد الله سعيدان مانع",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:4,jobTitle:"رجل امن وسلامة",category:"5",name:"محمد ظافر  محمد اليامى",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"1048693459",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-    {seq:5,jobTitle:"رجل امن وسلامة",category:"5",name:"غانم صالح محمد",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"1020640361",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
-    {seq:6,jobTitle:"رجل امن وسلامة",category:"5",name:"محسن مرجع محمد",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"1028297305",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
+    {seq:5,jobTitle:"رجل امن وسلامة",category:"5",name:"غانم صالح محمد",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
+    {seq:6,jobTitle:"رجل امن وسلامة",category:"5",name:"محسن مرجع محمد",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"1028297305",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]}
   ];
   localStorage.setItem('nd_attendanceData', JSON.stringify(nd_att));
 
   return { hospital: 276, dental: 25 };
-  }
 };
