@@ -388,12 +388,14 @@ window.initAllNajranData = function() {
   ]));
 
   localStorage.setItem('performance_data_' + _DB, JSON.stringify([
-    {id:"item_1", name:"الوقود والزيوت والمحروقات (ماعدا وقود السيارات)", maxScore:20, score:20},
-    {id:"item_2", name:"المستهلكات الكيميائية والفلاتر",                  maxScore:15, score:15},
-    {id:"item_3", name:"مستهلكات الأعمال المدنية",                        maxScore:20, score:20},
-    {id:"item_4", name:"مواد ومطهرات النظافة",                            maxScore:20, score:20},
-    {id:"item_5", name:"مستهلكات الزراعة والري",                          maxScore:10, score:10},
-    {id:"item_6", name:"مستهلكات مكافحة الحشرات",                        maxScore:15, score:15}
+    {id:"item_1", name:"الوقود والزيوت والمحروقات",                           maxScore:20, score:20},
+    {id:"item_2", name:"المستهلكات الكيميائية والفلاتر",                      maxScore:15, score:15},
+    {id:"item_3", name:"مستهلكات الاعمال المدنية",                            maxScore:10, score:10},
+    {id:"item_4", name:"مواد ومطهرات النظافة",                                maxScore:15, score:15},
+    {id:"item_5", name:"مستهلكات الزراعة والري",                              maxScore:10, score:10},
+    {id:"item_6", name:"مستهلكات اجهزة النسخ والتصوير والطباعة",             maxScore:10, score:10},
+    {id:"item_7", name:"المبيدات الحشرية",                                    maxScore:10, score:10},
+    {id:"item_8", name:"مستهلكات انطمة المراقبة والتحكم المركزية",           maxScore:10, score:10}
   ]));
 
   localStorage.setItem('water_supply_data_' + _DB, JSON.stringify([
