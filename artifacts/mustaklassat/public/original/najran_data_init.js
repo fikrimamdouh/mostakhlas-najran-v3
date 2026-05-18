@@ -314,5 +314,56 @@ window.initAllNajranData = function() {
   ];
   localStorage.setItem('nd_attendanceData', JSON.stringify(nd_att));
 
+  // ===== إعدادات الأداء — نجران العام (ng_ prefix) =====
+  localStorage.setItem('ng_distributionSettings', JSON.stringify({
+    hasProjectManager: true,
+    activeDepartments: ['cleaning','electricity','agriculture','civil_works','mechanical','laundry','patient_services']
+  }));
+
+  // ===== إعدادات الأداء — طب الأسنان (nd_ prefix) =====
+  localStorage.setItem('nd_distributionSettings', JSON.stringify({
+    hasProjectManager: false,
+    activeDepartments: ['cleaning','electricity','civil_works','mechanical']
+  }));
+
+  // ===== بيانات المستهلكات ومقاولي الباطن (مشتركة) =====
+  var _DB = 'consumables_v27';
+
+  localStorage.setItem('subcontractors_data_' + _DB, JSON.stringify([
+    {id:"sc_1",  name:"صيانة ونظافة مجارى الهواء والدكتات (زيارة واحدة مدة العقد)",                                    visitValue:32000, annualVisits:1,  visitDate:"تمت الزيارة من قبل", status:"نعم", delayDays:0, damagePenalty:0},
+    {id:"sc_2",  name:"صيانة انظمة التكيف والتبريد وانظمة التهوية وملحقاتها",                                          visitValue:7400,  annualVisits:4,  visitDate:"خلال هذا الشهر",    status:"نعم", delayDays:0, damagePenalty:0},
+    {id:"sc_3",  name:"صيانة المصاعد الكهربائية",                                                                      visitValue:4200,  annualVisits:12, visitDate:"خلال هذا الشهر",    status:"لا",  delayDays:0, damagePenalty:0},
+    {id:"sc_4",  name:"صيانة واصلاح نظام اطفاء الحريق",                                                               visitValue:8400,  annualVisits:2,  visitDate:"خلال هذا الشهر",    status:"نعم", delayDays:0, damagePenalty:0},
+    {id:"sc_5",  name:"صيانة واصلاح نظام انذار الحريق",                                                               visitValue:8400,  annualVisits:2,  visitDate:"خلال هذا الشهر",    status:"نعم", delayDays:0, damagePenalty:0},
+    {id:"sc_6",  name:"صيانة واصلاح السنترالات والنداء الالى والاذاعة الداخلية والساعة المركزية واستدعاء الممرضات",   visitValue:8400,  annualVisits:3,  visitDate:"تمت الزيارة من قبل", status:"نعم", delayDays:0, damagePenalty:0},
+    {id:"sc_7",  name:"صيانة محطات التوليد الكهربائية (مولدات الطوارى) ولوحات التحكم والتشغيل والـ ATS",              visitValue:8400,  annualVisits:3,  visitDate:"تمت الزيارة من قبل", status:"نعم", delayDays:0, damagePenalty:0},
+    {id:"sc_8",  name:"صيانة شبكة الغازات الطبية وملحقاتها وخزانات الغاز",                                           visitValue:8400,  annualVisits:3,  visitDate:"تمت الزيارة من قبل", status:"نعم", delayDays:0, damagePenalty:0},
+    {id:"sc_9",  name:"صيانة معدات المغسلة",                                                                           visitValue:7300,  annualVisits:3,  visitDate:"تمت الزيارة من قبل", status:"نعم", delayDays:0, damagePenalty:0},
+    {id:"sc_10", name:"صيانة محولات الكهرباء والقواطع الكهربائية وكامل اللوحات الكهربائية",                            visitValue:6300,  annualVisits:2,  visitDate:"خلال هذا الشهر",    status:"نعم", delayDays:0, damagePenalty:0},
+    {id:"sc_11", name:"صيانة محطات تحلية مياه الشرب وملحقاتها",                                                       visitValue:5200,  annualVisits:4,  visitDate:"خلال هذا الشهر",    status:"نعم", delayDays:0, damagePenalty:0},
+    {id:"sc_12", name:"صيانة جهاز UPS",                                                                                visitValue:8400,  annualVisits:2,  visitDate:"تمت الزيارة من قبل", status:"نعم", delayDays:0, damagePenalty:0},
+    {id:"sc_13", name:"صيانة نظم المراقبات الامنية",                                                                  visitValue:5200,  annualVisits:2,  visitDate:"خلال هذا الشهر",    status:"نعم", delayDays:0, damagePenalty:0},
+    {id:"sc_14", name:"صيانة ثلاجة الموتى",                                                                           visitValue:5200,  annualVisits:2,  visitDate:"خلال هذا الشهر",    status:"نعم", delayDays:0, damagePenalty:0},
+    {id:"sc_15", name:"مكافحة الحشرات والقوارض والافات البيئية",                                                      visitValue:3200,  annualVisits:12, visitDate:"خلال هذا الشهر",    status:"نعم", delayDays:0, damagePenalty:0},
+    {id:"sc_16", name:"صيانة محطة معالجة مياه الصرف الصحى",                                                          visitValue:5200,  annualVisits:4,  visitDate:"خلال هذا الشهر",    status:"نعم", delayDays:0, damagePenalty:0}
+  ]));
+
+  localStorage.setItem('performance_data_' + _DB, JSON.stringify([
+    {id:"item_1", name:"الوقود والزيوت والمحروقات (ماعدا وقود السيارات)", maxScore:20, score:20},
+    {id:"item_2", name:"المستهلكات الكيميائية والفلاتر",                  maxScore:15, score:15},
+    {id:"item_3", name:"مستهلكات الأعمال المدنية",                        maxScore:20, score:20},
+    {id:"item_4", name:"مواد ومطهرات النظافة",                            maxScore:20, score:20},
+    {id:"item_5", name:"مستهلكات الزراعة والري",                          maxScore:10, score:10},
+    {id:"item_6", name:"مستهلكات مكافحة الحشرات",                        maxScore:15, score:15}
+  ]));
+
+  localStorage.setItem('water_supply_data_' + _DB, JSON.stringify([
+    {id:"wt_1", name:"توريد مياه للمستشفى", unitPrice:1, quantity:28500}
+  ]));
+
+  localStorage.setItem('sewage_disposal_data_' + _DB, JSON.stringify([
+    {id:"sw_1", name:"التخلص من مياه الصرف الصحي", unitPrice:0, quantity:0}
+  ]));
+
   return { hospital: 276, dental: 25 };
 };
