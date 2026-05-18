@@ -134,6 +134,16 @@ export default function Dashboard() {
   const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
   const lastLogin = formatLastLogin((dbUser as any)?.lastLoginAt);
 
+  if (
+    dbUser &&
+    dbUser.role !== "admin" &&
+    dbUser.role !== "supervisor" &&
+    (dbUser as any).hospital === "مستشفى نجران العام الجديد"
+  ) {
+    window.location.replace("/original-viewer?page=najran_general.html");
+    return null;
+  }
+
   const role = dbUser?.role ?? "user";
   const siteType = getSiteType(dbUser?.hospital);
   const allowedKeys = parseAllowedModules((dbUser as any)?.allowedModules);
