@@ -282,8 +282,6 @@ window.initAllNajranData = function() {
     {seq:42,jobTitle:"حارسة امن وسلامة",category:"5",name:"وفقة صالح سعيد الصقور",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودية",iqamaId:"1056175472",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:43,jobTitle:"حارسة امن وسلامة",category:"5",name:"نورة مسعود مرزوق ال ريحان",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودية",iqamaId:"1070102601",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]}
   ];
-  localStorage.setItem('ng_attendanceData', JSON.stringify(ng_att));
-
   // ===== بيانات مركز طب الأسنان (25 موظف) =====
   var nd_att = [
     {seq:1,jobTitle:"عامل نظافة",category:"7",name:"مد فيصل احمد",salary:2052.75,attendance:0,absence:0,netPay:0.0,nationality:"بنجلاديش",iqamaId:"2497553731",days:["ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج", "ج"]},
@@ -312,7 +310,48 @@ window.initAllNajranData = function() {
     {seq:5,jobTitle:"رجل امن وسلامة",category:"5",name:"غانم صالح محمد",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]},
     {seq:6,jobTitle:"رجل امن وسلامة",category:"5",name:"محسن مرجع محمد",salary:4692.0,attendance:18,absence:0,netPay:2815.2,nationality:"سعودى",iqamaId:"1028297305",days:["ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح", "ح"]}
   ];
-  localStorage.setItem('nd_attendanceData', JSON.stringify(nd_att));
+  // ===== تجميع الموظفين بأقسامهم (البنية المطلوبة للصفحة) =====
+  function _getDept(jobTitle) {
+    var t = (jobTitle || '').trim();
+    if (/نظافة|ترحيل|مشرف عام/.test(t))           return 'cleaning';
+    if (/زراعة|ساحات خارجية/.test(t))              return 'agriculture';
+    if (/كهرب|الكترون|مصاعد/.test(t))              return 'electricity';
+    if (/سباك|مدني/.test(t))                        return 'civil_works';
+    if (/ميكانيكا|تبريد|تكيف|مولدات/.test(t))     return 'mechanical';
+    if (/مغسلة|غسيل/.test(t))                       return 'laundry';
+    if (/أمن|سلامة|حراسة|حارس/.test(t))            return 'patient_services';
+    if (/إداري|اداري|سكرتير/.test(t))               return 'admin_saudi';
+    return 'cleaning';
+  }
+
+  function _toEmp(e) {
+    return {
+      name:            e.name        || '',
+      jobTitle:        e.jobTitle    || '',
+      category:        String(e.category || '7'),
+      salary:          e.salary      || 0,
+      nationality:     e.nationality || 'غير سعودي',
+      nationalityFine: 0,
+      iqamaId:         e.iqamaId     || '',
+      days:            e.days        || []
+    };
+  }
+
+  function _groupByDept(arr) {
+    var result = {
+      cleaning:[], electricity:[], agriculture:[],
+      civil_works:[], mechanical:[], laundry:[],
+      patient_services:[], admin_saudi:[]
+    };
+    arr.forEach(function(e) {
+      var dept = _getDept(e.jobTitle);
+      result[dept].push(_toEmp(e));
+    });
+    return result;
+  }
+
+  localStorage.setItem('ng_attendanceData', JSON.stringify(_groupByDept(ng_att)));
+  localStorage.setItem('nd_attendanceData', JSON.stringify(_groupByDept(nd_att)));
 
   // ===== إعدادات الأداء — نجران العام (ng_ prefix) =====
   localStorage.setItem('ng_distributionSettings', JSON.stringify({
