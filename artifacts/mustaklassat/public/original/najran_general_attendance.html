@@ -967,7 +967,7 @@ function preparePrint() {
             const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
             const extractData  = JSON.parse(localStorage.getItem('persistentExtractData')  || '{}');
 
-            const hospitalName       = contractData.hospitalName       || '—';
+            const hospitalName       = 'مستشفى نجران العام الجديد';
             const companyName        = contractData.companyName        || '—';
             const contractDetails    = contractData.contractDetails    || '—';
             const contractType       = contractData.contractType       || '—';
@@ -1119,118 +1119,7 @@ function preparePrint() {
 
         <div class="extract-details">
             <p class="extract-details-text">مستخلص العمالة — دفعة رقم <span id="extract-payment-number" style="font-weight:900;color:#1e3c72;">—</span> — شهر <span id="extract-month">غير محدد</span> <span id="extract-year">غير محدد</span> من تاريخ <span id="extract-start">غير محدد</span> إلى <span id="extract-end">غير محدد</span></p>
-        </div>
-
-        <div class="nav-bar">
-            <div class="dropdown">
-                <select id="navigation" onchange="window.navigateTo(this.value)">
-                    <option value="#">-- اختر صفحة --</option>
-                    <option value="index.html">الصفحة الرئيسية</option>
-                    <option value="attendance.html" selected>الحضور والانصراف</option>
-                    <option value="performance.html">شهادة الأداء</option>
-                    <option value="achievement.html">شهادة الإنجاز</option>
-                    <option value="consumables.html">مستخلص المستهلكات</option>
-                    <option value="spare_parts.html">مستخلص قطع الغيار</option>
-                    <option value="approval.html">✅ متابعة المستخلصات</option>
-                    <option value="contract-foundation-upload.html">📋 تأسيس العقد</option>
-                    <option value="admin-dashboard.html">🛡️ لوحة الأدمن</option>
-                    <option value="extract-archive.html">🗂️ أرشيف المستخلصات</option>
-                </select>
-            </div>
-        </div>
-<script>
-window.navigateTo = function (url) {
-    if (url && url !== '#') {
-        window.location.href = url;
-    }
-};
-</script>
-    <!-- ================================================================ -->
-<!-- ✅ 2. كود الأزرار المحدث في HTML (بدون تنسيقات مضمنة) ✅ -->
-<!-- ================================================================ -->
-<div class="std-action-bar no-print">
-    <button class="ab ab-manage" onclick="openEmployeeManagement()" title="الوصول إلى لوحة الإدارة لتعديل الموظفين، أسماء الأقسام، وغيرها"><i class="fas fa-cog"></i> الإعدادات والإدارة</button>
-    <button class="ab ab-manage" onclick="openPerformanceControlCenter()" title="التحكم في توزيع الراتب وتفعيل شهادات الأداء"><i class="fas fa-cogs"></i> إعدادات الأداء</button>
-    <button class="ab ab-import" style="background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;font-weight:700;" onclick="loadJobPositionsFromTemplate()" title="تحميل مسميات الوظائف والرواتب المحفوظة لهذا المستشفى"><i class="fas fa-clipboard-list"></i> تحميل المناصب</button>
-    <button class="ab ab-import" onclick="openDialog('upload-excel-dialog')"><i class="fas fa-file-import"></i> استيراد من Excel</button>
-    <button class="ab ab-import" onclick="openSmartUploadDialog()"><i class="fas fa-magic"></i> الرفع الذكي</button>
-    <button class="ab ab-import" onclick="openBulkAttendanceDialog()"><i class="fas fa-calendar-alt"></i> تعديل جماعي</button>
-    <button class="ab ab-excel" onclick="openExcelExportDialog()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
-    <button class="ab ab-print" onclick="openPrintDialog()"><i class="fas fa-print"></i> طباعة</button>
-    <button class="ab ab-backup" onclick="backupAttendanceData()"><i class="fas fa-download"></i> حفظ نسخة</button>
-    <button class="ab ab-restore" onclick="document.getElementById('restore-file-input').click()"><i class="fas fa-upload"></i> استعادة نسخة</button>
-    <input type="file" id="restore-file-input" style="display:none;" onchange="restoreAttendanceData(event)" accept=".json">
-    <button class="ab ab-sig" onclick="SignatureBlock.open('attendance')"><i class="fas fa-signature"></i> تعديل التواقيع</button>
-    <button class="ab ab-titles" onclick="openNationalityFineEditor()"><i class="fas fa-money-bill-wave"></i> غرامة الجنسية</button>
-    <button class="ab ab-clear" onclick="clearData()"><i class="fas fa-eraser"></i> مسح البيانات</button>
-</div>
-
-
-
-        <!-- جدول رقم 1: النظافة -->
-        <div class="department-table">
-            <h3>جدول رقم 1: النظافة</h3>
-            <div class="total">
-                الإجمالي - عدد الموظفين: <span id="cleaning-count">0</span> | التكلفة الشهرية: <span id="cleaning-total-cost">0.00</span> | حسم وغرامة الغياب: <span id="cleaning-total-fines">0.00</span> | صافي الاستحقاق: <span id="cleaning-net-total">0.00</span> | إجمالي الحسم: <span id="cleaning-total-deduction">0.00</span> | إجمالي الغرامة: <span id="cleaning-total-fine">0.00</span> | موظفين بغياب: <span id="cleaning-absent-employees">0</span>
-                <div id="cleaning-status-totals"></div>
-            </div>
-            <table id="cleaning-table">
-                <thead>
-                    <tr>
-                        <th rowspan="2">م</th>
-                        <th rowspan="2" class="job-title">مسمى الوظيفة</th>
-                        <th rowspan="2">الفئة</th>
-                        <th rowspan="2" class="employee-name">اسم شاغل الوظيفة</th>
-                        <th colspan="30" id="cleaning-days-header">الأيام</th>
-                        <th rowspan="2">التكلفة الشهرية</th>
-                        <th colspan="2">عدد الأيام</th>
-                        <th colspan="2">حسم وغرامة الغياب</th>
-                        <th rowspan="2">صافي الاستحقاق</th>
-                        <th rowspan="2">الجنسية</th>
-                        <th rowspan="2">غرامة جنسية</th>
-<th rowspan="2">رقم الإقامة/الهوية</th> <!-- ✅ السطر المضاف في المكان الجديد -->
-
-                        <th class="status-ج-col" style="display: none;" rowspan="2">إجازة</th>
-                        <th class="status-ش-col" style="display: none;" rowspan="2">شاغرة</th>
-                        <th class="status-ت-col" style="display: none;" rowspan="2">تحت الإجراء</th>
-                    </tr>
-                    <tr id="cleaning-table-header">
-                        <!-- Day headers will be populated by JS -->
-                        <th>حضور</th>
-                        <th>غياب</th>
-                        <th>الحسم</th>
-                        <th>غرامة الغياب</th>
-                    </tr>
-                </thead>
-                <tbody id="cleaning-table-body"></tbody>
-            </table>
-            <div class="zoom-buttons">
-                <button onclick="zoomInTable('cleaning-table')"><i class="fas fa-search-plus"></i> تكبير</button>
-                <button onclick="zoomOutTable('cleaning-table')"><i class="fas fa-search-minus"></i> تصغير</button>
-            </div>
-            <div class="empty-message" id="cleaning-empty">لا يوجد موظفون في هذا القسم</div>
-            
-            <!-- التواقيع للطباعة - جدول النظافة -->
-            <div class="print-signatures" style="display: none;">
-                <h4>التواقيع</h4>
-                <div class="print-signatures-grid" data-sb-page="attendance"></div>
-                    <div class="print-signature-item">
-                        <div class="print-signature-title">رئيس قسم الصيانة:</div>
-                        <div class="print-signature-line"></div>
-                        <div class="print-signature-name" id="print-maintenance-head-1">غير محدد</div>
-                    </div>
-                    <div class="print-signature-item">
-                        <div class="print-signature-title">مدير المستشفى:</div>
-                        <div class="print-signature-line"></div>
-                        <div class="print-signature-name" id="print-hospital-manager-1">غير محدد</div>
-                    </div>
-                    <div class="print-signature-item">
-                        <div class="print-signature-title">مندوب المقاول:</div>
-                        <div class="print-signature-line"></div>
-                        <div class="print-signature-name" id="print-contractor-rep-1">غير محدد</div>
-                    </div>
-                </div>
-            </div>
+        </div></div>
         </div>
 
  

@@ -673,148 +673,7 @@
                 <h3>وحدة الصيانة العامة</h3>
                 <h2 id="page-title">مستخلص المستهلكات ومقاولي الباطن</h2>
             </div>
-            <nav>
-                <div class="nav-bar">
-                    <div class="dropdown">
-                        <select onchange="if(this.value) window.location.href=this.value;">
-                            <option value="">-- اختر صفحة --</option>
-                            <option value="index.html">الصفحة الرئيسية</option>
-                            <option value="attendance.html">📋 الحضور والانصراف</option>
-                            <option value="consumables.html" selected>📦 مستخلص المستهلكات</option>
-                            <option value="spare_parts.html">🔧 مستخلص قطع الغيار</option>
-                            <option value="approval.html">✅ متابعة المستخلصات</option>
-                            <option value="admin-dashboard.html">🛡️ لوحة الأدمن</option>
-                        </select>
-                    </div>
-                </div>
-            </nav>
-        </header>
-
-      <div class="page-contract-info no-print">
-    <p><strong>اسم المستشفى:</strong> <span class="hospitalName">غير محدد</span></p>
-    <p><strong>تفاصيل العقد:</strong> <span class="contractDetails">غير محدد</span></p>
-    <p><strong>اسم الشركة:</strong> <span class="companyName">غير محدد</span></p>
-    <p><strong>نوع العقد:</strong> <span class="contractType">غير محدد</span></p>
-    <!-- === السطر الجديد المضاف === -->
-    <p id="direct-purchase-display-container" style="display: none;"><strong>نسبة الشراء المباشر:</strong> <span class="directPurchaseRatio">0</span>%</p>
-    <!-- ======================== -->
-    <p><strong>رقم الدفعة:</strong> دفعة رقم <span id="extract-payment-number">—</span> &nbsp;|&nbsp; شهر <span class="extract-month-display">—</span> <span class="extract-year-display">—</span></p>
-    <p><strong>مدة المستخلص:</strong> من <span id="extract-start-date">غير محدد</span> إلى <span id="extract-end-date">غير محدد</span></p>
-</div>
-
-
-        <div class="std-action-bar no-print">
-            <button class="ab ab-excel" id="export-all-btn"><i class="fas fa-file-excel"></i> تصدير الكل</button>
-            <button class="ab ab-print" id="print-all-btn"><i class="fas fa-print"></i> طباعة الكل</button>
-            <button class="ab ab-update" id="recalculate-btn"><i class="fas fa-sync-alt"></i> تحديث الحسابات</button>
-            <button class="ab ab-backup" id="backup-btn"><i class="fas fa-save"></i> نسخ احتياطي</button>
-            <button class="ab ab-sig" id="edit-signatures-btn"><i class="fas fa-signature"></i> تعديل التواقيع</button>
-            <button class="ab ab-titles" id="edit-titles-btn"><i class="fas fa-heading"></i> تعديل العناوين</button>
-            <button class="ab ab-clear" id="clear-data-btn"><i class="fas fa-trash"></i> مسح البيانات</button>
-        </div>
-
-        <div class="penalty-info-bar no-print">
-            <div class="info-group">
-                <div class="info-item">
-                    <i class="fas fa-box-open"></i>
-                    <span>المستهلكات:</span>
-                    <span class="value" id="display-consumables-cost">0.00</span>
-                </div>
-                <span class="separator">+</span>
-                <div class="info-item">
-                    <i class="fas fa-hard-hat"></i>
-                    <span>المقاولين:</span>
-                    <span class="value" id="display-subcontractors-cost">0.00</span>
-                </div>
-                <span class="separator">+</span>
-                <div class="info-item">
-                    <i class="fas fa-users-cog"></i>
-                    <span>العمالة:</span>
-                    <input type="text" id="manual-labor-cost" inputmode="decimal" style="display:none;">
-                    <span class="value" id="display-labor-cost">0.00</span>
-                </div>
-            </div>
-            <div class="controls">
-                <button id="refresh-labor-cost" class="btn-control" title="تحديث القيمة التلقائية"><i class="fas fa-sync-alt"></i></button>
-                <button id="toggle-manual-labor-cost" class="btn-control" title="تفعيل التعديل اليدوي"><i class="fas fa-lock"></i></button>
-            </div>
-            <div class="result-group">
-                <i class="fas fa-equals"></i>
-                <span>الغرامة المتوقعة (5%):</span>
-                <span class="value" id="expected-penalty">0.00</span>
-            </div>
-        </div>
-
-        <div class="dashboard-container" id="dashboard-container">
-            <div class="dashboard-card" data-section="subcontractors-section">
-                <i class="fas fa-users"></i>
-                <h3>عقود الباطن</h3>
-                <p>عرض وتعديل بيانات عقود الباطن</p>
-            </div>
-            <div class="dashboard-card" data-section="performance-section">
-                <i class="fas fa-award"></i>
-                <h3>أداء المستهلكات</h3>
-                <p>عرض وتعديل جدول حسم المقابل</p>
-            </div>
-            <div class="dashboard-card" data-section="water-supply-section">
-                <i class="fas fa-tint"></i>
-                <h3>توريد المياه</h3>
-                <p>عرض وتعديل بيانات توريد المياه</p>
-            </div>
-            <div class="dashboard-card" data-section="sewage-disposal-section">
-                <i class="fas fa-recycle"></i>
-                <h3>التخلص من مياه الصرف</h3>
-                <p>عرض وتعديل بيانات التخلص من المياه</p>
-            </div>
-            <div class="dashboard-card" data-section="summary-section">
-                <i class="fas fa-chart-pie"></i>
-                <h3>الملخص الشهري</h3>
-                <p>عرض وتعديل الملخص الشهري</p>
-            </div>
-        </div>
-
-        <div id="tables-area">
-            <!-- قسم مقاولي الباطن -->
-            <div class="table-section" id="subcontractors-section">
-                <button class="back-to-dashboard no-print"><i class="fas fa-arrow-right"></i> العودة</button>
-                <div class="printable-header"></div>
-                <div class="table-header">
-                    <h2>شهادة الأداء الشهري لعقود الباطن</h2>
-                    <div class="btn-group">
-                        <button class="btn btn-print" data-section="subcontractors"><i class="fas fa-print"></i> طباعة</button>
-                        <button class="btn btn-manage" data-target="subcontractors"><i class="fas fa-edit"></i> إدارة</button>
-                        <div class="edit-controls" data-table="subcontractors">
-                            <button class="btn btn-add-item"><i class="fas fa-plus"></i> إضافة</button>
-                            <button class="btn btn-remove-item"><i class="fas fa-trash"></i> حذف المحدد</button>
-
-                        </div>
-<!-- ===== الزر الجديد المضاف ===== -->
-<label class="btn btn-excel" style="margin-right: 10px;">
-    <i class="fas fa-file-import"></i> استيراد من Excel
-    <input type="file" id="excel-import-btn" accept=".xlsx, .xls" style="display: none;">
-</label>
-<!-- ============================= -->
-<button class="btn btn-excel" style="margin-right:6px;background:#e8f4e8;color:#166534;border:1px solid #bbf7d0" onclick="loadSubcontractorsFromFoundation()">
-    <i class="fas fa-database"></i> تحميل من التأسيسي
-</button>
-
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table class="data-table" id="subcontractors-table">
-                        <thead></thead>
-                        <tbody></tbody>
-                        <tfoot></tfoot>
-                    </table>
-                </div>
-                <div class="notes-section">
-                    <label class="notes-toggle"><input type="checkbox" class="notes-checkbox"> إضافة ملاحظات للطباعة</label>
-                    <textarea placeholder="اكتب ملاحظاتك هنا..."></textarea>
-                </div>
-                <div class="signatures-display-section"><div data-sb-page="consumables"></div></div>
-            </div>
-
-            <!-- قسم أداء المستهلكات -->
+            <nav><!-- قسم أداء المستهلكات -->
             <div class="table-section" id="performance-section">
                 <button class="back-to-dashboard no-print"><i class="fas fa-arrow-right"></i> العودة</button>
                 <div class="printable-header"></div>
@@ -1085,7 +944,7 @@ const defaultSignatures = {
     function _getBuiltinHospitalData() {
         try {
             var cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-            var hn = (cd.hospitalName || '').trim();
+            var hn = 'مستشفى نجران العام الجديد';
             if (!hn) return null;
             return ContractFoundationDB.load(hn) || null;
         } catch(e) { return null; }

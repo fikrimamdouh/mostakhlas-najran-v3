@@ -674,100 +674,10 @@
             <p style="margin: 5px 0;"><strong>مدة المستخلص:</strong> من <span id="extract-start-date">01/06/2025</span> إلى <span id="extract-end-date">16/06/2025</span></p>
         </div>
 
-        <!-- Unified Nav-bar -->
-        <div class="nav-bar">
-            <div class="dropdown">
-                <select id="navigation" onchange="window.navigateTo(this.value)">
-                    <option value="#">-- اختر صفحة --</option>
-                    <option value="index.html">الصفحة الرئيسية</option>
-                    <option value="attendance.html">الحضور والانصراف</option>
-                    <option value="performance.html">شهادة الأداء</option>
-                    <option value="achievement.html" selected>شهادة الإنجاز</option>
-                    <option value="consumables.html">مستخلص المستهلكات</option>
-                    <option value="spare_parts.html">مستخلص قطع الغيار</option>
-                    <option value="approval.html">✅ متابعة المستخلصات</option>
-                    <option value="contract-foundation-upload.html">📋 تأسيس العقد</option>
-                    <option value="admin-dashboard.html">🛡️ لوحة الأدمن</option>
-                </select>
-            </div>
-        </div>
-
-               <!-- Main Content Area -->
-        <div class="main-content-area" id="mainContent">
-            <div class="text-center mb-4 achievement-header">
-                <p class="text-sm mt-1">تاريخ الإصدار: <span id="issueDate"></span></p>
-            </div>
-
-            <div class="std-action-bar no-print">
-                <button class="ab ab-excel" onclick="exportAchievementToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
-                <button class="ab ab-print" onclick="window.print()"><i class="fas fa-print"></i> طباعة</button>
-                <button class="ab ab-update" onclick="refreshAllData()"><i class="fas fa-sync-alt"></i> تحديث البيانات</button>
-                <button class="ab ab-sig" onclick="SignatureBlock.open('achievement')"><i class="fas fa-signature"></i> تعديل التواقيع</button>
-                <button class="ab ab-titles" onclick="openItemNameDialog()"><i class="fas fa-edit"></i> تعديل أسماء البنود</button>
-            </div>
-
-            <!-- START: NEW Print Toggles -->
-            <div class="print-toggles no-print">
-                <div class="toggle-switch">
-                    <label for="dental-labor-checkbox">
-                        <input type="checkbox" id="dental-labor-checkbox" onchange="toggleDentalRow()">
-                        طباعة عمالة مركز الأسنان
-                    </label>
-                </div>
-                <div class="toggle-switch">
-                    <label for="admin-jobs-print-checkbox">
-                        <input type="checkbox" id="admin-jobs-print-checkbox" onchange="toggleAdminRowPrint(this.checked)">
-                        طباعة الوظائف الإدارية
-                    </label>
-                </div>
-            </div>
-            <!-- END: NEW Print Toggles -->
-
-            <!-- *** END: NEW DENTAL LABOR TOGGLE *** -->
-
-            <div class="overflow-x-auto mb-4">
-                <table class="cosmic-table achievement-table" id="achievementTable">
-                    <thead>
-                        <tr>
-                            <th>البند</th>
-                            <th>القيمة الشهرية حسب العقد</th>
-                            <th>حسم الغياب</th>
-                            <th>غرامة الغياب</th>
-                            <th>غرامة الأداء</th>
-                            <th>غرامة الجنسية</th>
-                            <th>المبلغ الصافي الشهري</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <!-- Data populated dynamically -->
-                        <!-- *** START: NEW DENTAL LABOR ROW *** -->
-                        <tr id="dental-row" style="display: none;">
-                            <td>عمالة مركز الأسنان</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-monthlyValue" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-absenceDeduction" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-absencePenalty" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-performancePenalty" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-nationalityPenalty" onblur="saveDentalData()">0</td>
-                            <td id="dental-netMonthly">0.00 ر.س.</td>
-                        </tr>
-                        <!-- *** END: NEW DENTAL LABOR ROW *** -->
-                    </tbody>
-                </table>
-            </div>
-
-           
-
-            <!-- التواقيع الموحدة -->
-            <div id="sb-container-achievement" class="sb-wrap"></div>
-
-           
-        </div>
-    </div>
-
- <script>
+        <!-- Unified Nav-bar --><script>
     let departmentDataForAchievement = [];
     const departmentKeysForAchievement = [
-        'cleaning', 'electricity', 'agriculture', 'civil_works', 'mechanical', 'security', 'laundry', 'patient_services'
+        'cleaning', 'electricity', 'civil_works', 'mechanical', 'security'
     ];
 
     window.navigateTo = function(page) {
@@ -893,7 +803,7 @@ function loadAndProcessAchievementData() {
         let workforceAbsencePenalty = 0;
         let workforceNationalityPenalty = 0;
 
-        const mainDepts = ['cleaning', 'electricity', 'agriculture', 'civil_works', 'mechanical', 'laundry', 'patient_services'];
+        const mainDepts = ['cleaning', 'electricity', 'civil_works', 'mechanical', 'security'];
         mainDepts.forEach(deptKey => {
             const deptCost = parseFloat(localStorage.getItem(`deptCalculatedCost_${deptKey}`)) || 0;
             workforceMonthlyValue += deptCost;
@@ -906,12 +816,9 @@ function loadAndProcessAchievementData() {
         });
 
         // 2. حساب إجمالي الإداريين السعوديين
-        let saudiMonthlyValue = parseFloat(localStorage.getItem('deptCalculatedCost_admin_saudi')) || 0;
         let saudiAbsenceDeduction = 0;
         let saudiAbsencePenalty = 0;
         let saudiNationalityPenalty = 0;
-
-        (attendanceData['admin_saudi'] || []).forEach(emp => {
             saudiAbsenceDeduction += parseFloat(emp.deduction) || 0;
             saudiAbsencePenalty += parseFloat(emp.absencePenalty) || 0;
             saudiNationalityPenalty += parseFloat(emp.nationalityFine) || 0;
@@ -1426,7 +1333,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     function updateContractDisplayData() {
-        const hospitalName = localStorage.getItem('hospitalName') || 'غير محدد';
+        const hospitalName = 'مركز طب الأسنان';
         const contractDetails = localStorage.getItem('contractDetails') || 'غير محدد';
         const companyName = localStorage.getItem('companyName') || 'غير محدد';
         const contractType = localStorage.getItem('contractType') || 'غير محدد';
