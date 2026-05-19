@@ -770,15 +770,16 @@
             <button class="btn" id="recalculate-btn" style="background:linear-gradient(135deg,#0369a1,#0ea5e9)"><i class="fas fa-calculator"></i> إعادة الحساب</button>
         </div>
 
-        <!-- شريط تكلفة العمالة -->
+        <!-- شريط الغرامة والتكاليف -->
         <div class="penalty-info-bar no-print">
             <div class="info-group">
-                <div class="info-item">
-                    <i class="fas fa-users"></i>
-                    <span>تكلفة العمالة الشهرية:</span>
-                    <span class="value" id="display-labor-cost">0.00 ر.س</span>
-                </div>
+                <div class="info-item"><i class="fas fa-box-open"></i><span>المستهلكات:</span><span class="value" id="display-consumables-cost">0.00</span></div>
+                <span class="separator">+</span>
+                <div class="info-item"><i class="fas fa-hard-hat"></i><span>مقاولو الباطن:</span><span class="value" id="display-subcontractors-cost">0.00</span></div>
+                <span class="separator">+</span>
+                <div class="info-item"><i class="fas fa-users"></i><span>العمالة:</span><span class="value" id="display-labor-cost">0.00</span></div>
             </div>
+            <div class="result-group"><i class="fas fa-equals"></i><span>الغرامة المتوقعة (5%):</span><span class="value" id="expected-penalty">0.00</span></div>
             <div class="controls">
                 <button class="btn-control" id="refresh-labor-cost"><i class="fas fa-sync"></i> تحديث</button>
                 <input type="number" id="manual-labor-cost" placeholder="أدخل التكلفة يدوياً" style="display:none">
@@ -788,6 +789,11 @@
 
         <!-- لوحة التحكم الرئيسية -->
         <div class="dashboard-container" id="dashboard-container" style="display:flex">
+            <div class="dashboard-card" data-section="subcontractors-section">
+                <i class="fas fa-users-cog"></i>
+                <h3>عقود الباطن</h3>
+                <p>شهادة مقاولي الباطن والتحقق من الأداء</p>
+            </div>
             <div class="dashboard-card" data-section="performance-section">
                 <i class="fas fa-boxes"></i>
                 <h3>المستهلكات والمواد الهندسية</h3>
@@ -812,6 +818,35 @@
 
         <!-- منطقة الجداول -->
         <div id="tables-area">
+            <!-- قسم عقود الباطن -->
+            <div class="table-section" id="subcontractors-section">
+                <button class="back-to-dashboard no-print"><i class="fas fa-arrow-right"></i> العودة</button>
+                <div class="printable-header"></div>
+                <div class="table-header">
+                    <h2>شهادة عقود الباطن</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-print" data-section="subcontractors"><i class="fas fa-print"></i> طباعة</button>
+                        <button class="btn btn-manage" data-target="subcontractors"><i class="fas fa-edit"></i> إدارة</button>
+                        <div class="edit-controls" data-table="subcontractors">
+                            <button class="btn btn-add-item"><i class="fas fa-plus"></i> إضافة</button>
+                            <button class="btn btn-remove-item"><i class="fas fa-trash"></i> حذف المحدد</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="subcontractors-table">
+                        <thead></thead>
+                        <tbody></tbody>
+                        <tfoot></tfoot>
+                    </table>
+                </div>
+                <div class="notes-section">
+                    <label class="notes-toggle"><input type="checkbox" class="notes-checkbox"> إضافة ملاحظات للطباعة</label>
+                    <textarea placeholder="اكتب ملاحظاتك هنا..."></textarea>
+                </div>
+                <div class="signatures-display-section"><div data-sb-page="consumables"></div></div>
+            </div>
+
             <div class="table-section" id="performance-section">
                 <button class="back-to-dashboard no-print"><i class="fas fa-arrow-right"></i> العودة</button>
                 <div class="printable-header"></div>
