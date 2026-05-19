@@ -796,6 +796,7 @@
     function toggleDentalRow() {
         const checkbox = document.getElementById('dental-labor-checkbox');
         const dentalRow = document.getElementById('dental-row');
+        if (!checkbox || !dentalRow) return;
         
         if (checkbox.checked) {
             dentalRow.style.display = ''; // Show the row
@@ -820,14 +821,20 @@
             };
         }
         
-        const monthlyValue = parseFloat(document.getElementById('dental-monthlyValue').textContent) || 0;
-        const absenceDeduction = parseFloat(document.getElementById('dental-absenceDeduction').textContent) || 0;
-        const absencePenalty = parseFloat(document.getElementById('dental-absencePenalty').textContent) || 0;
-        const performancePenalty = parseFloat(document.getElementById('dental-performancePenalty').textContent) || 0;
-        const nationalityPenalty = parseFloat(document.getElementById('dental-nationalityPenalty').textContent) || 0;
+        const _mv = document.getElementById('dental-monthlyValue');
+        const _ad = document.getElementById('dental-absenceDeduction');
+        const _ap = document.getElementById('dental-absencePenalty');
+        const _pp = document.getElementById('dental-performancePenalty');
+        const _np = document.getElementById('dental-nationalityPenalty');
+        const _nm = document.getElementById('dental-netMonthly');
+        const monthlyValue = parseFloat(_mv ? _mv.textContent : '0') || 0;
+        const absenceDeduction = parseFloat(_ad ? _ad.textContent : '0') || 0;
+        const absencePenalty = parseFloat(_ap ? _ap.textContent : '0') || 0;
+        const performancePenalty = parseFloat(_pp ? _pp.textContent : '0') || 0;
+        const nationalityPenalty = parseFloat(_np ? _np.textContent : '0') || 0;
         const netMonthly = monthlyValue - (absenceDeduction + absencePenalty + performancePenalty + nationalityPenalty);
 
-        document.getElementById('dental-netMonthly').textContent = netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
+        if (_nm) _nm.textContent = netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
 
         return { monthlyValue, absenceDeduction, absencePenalty, performancePenalty, nationalityPenalty, netMonthly };
     }
@@ -840,9 +847,11 @@
     function _loadDentalFallback() {
         ['dental-monthlyValue','dental-absenceDeduction','dental-absencePenalty',
          'dental-performancePenalty','dental-nationalityPenalty'].forEach(function(id) {
-            document.getElementById(id).textContent = '0';
+            var el = document.getElementById(id);
+            if (el) el.textContent = '0';
         });
-        document.getElementById('dental-netMonthly').textContent = '0.00 ر.س.';
+        var nmEl = document.getElementById('dental-netMonthly');
+        if (nmEl) nmEl.textContent = '0.00 ر.س.';
     }
 
     function loadDentalData() {
@@ -876,12 +885,13 @@
                         var performancePenalty = parseFloat(rawGet(ndPfx + 'performanceTotalDeduction')) || 0;
                         var netMonthly = monthlyValue - absenceDeduction - absencePenalty - performancePenalty - nationalityPenalty;
 
-                        document.getElementById('dental-monthlyValue').textContent     = monthlyValue.toFixed(2);
-                        document.getElementById('dental-absenceDeduction').textContent = absenceDeduction.toFixed(2);
-                        document.getElementById('dental-absencePenalty').textContent   = absencePenalty.toFixed(2);
-                        document.getElementById('dental-performancePenalty').textContent= performancePenalty.toFixed(2);
-                        document.getElementById('dental-nationalityPenalty').textContent= nationalityPenalty.toFixed(2);
-                        document.getElementById('dental-netMonthly').textContent       = netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
+                        var _e; 
+                        _e = document.getElementById('dental-monthlyValue');      if (_e) _e.textContent = monthlyValue.toFixed(2);
+                        _e = document.getElementById('dental-absenceDeduction');  if (_e) _e.textContent = absenceDeduction.toFixed(2);
+                        _e = document.getElementById('dental-absencePenalty');    if (_e) _e.textContent = absencePenalty.toFixed(2);
+                        _e = document.getElementById('dental-performancePenalty');if (_e) _e.textContent = performancePenalty.toFixed(2);
+                        _e = document.getElementById('dental-nationalityPenalty');if (_e) _e.textContent = nationalityPenalty.toFixed(2);
+                        _e = document.getElementById('dental-netMonthly');        if (_e) _e.textContent = netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
                     }
                 }
             }
@@ -892,9 +902,11 @@
         // تفعيل صف الأسنان تلقائياً دائماً
         var checkbox  = document.getElementById('dental-labor-checkbox');
         var dentalRow = document.getElementById('dental-row');
-        checkbox.checked = true;
-        dentalRow.style.display = '';
-        dentalRow.classList.remove('no-print-row');
+        if (checkbox) checkbox.checked = true;
+        if (dentalRow) {
+            dentalRow.style.display = '';
+            dentalRow.classList.remove('no-print-row');
+        }
         
         toggleDentalRow(); // Apply visibility based on saved state
     }
