@@ -1,6 +1,6 @@
 import {
   Settings, SlidersHorizontal, Clock, BarChart2, Trophy, Package, Wrench,
-  CheckSquare, MapPin, ClipboardList, Eye, Archive, BadgeCheck, type LucideIcon,
+  CheckSquare, MapPin, ClipboardList, Eye, Archive, BadgeCheck, Building2, type LucideIcon,
 } from "lucide-react";
 
 export type SiteType = "hospital" | "health_centers" | "admin_offices" | "najran_general";
@@ -17,6 +17,7 @@ export interface ModuleDef {
 }
 
 export const ALL_MODULES: ModuleDef[] = [
+  { key: "najran_general",              file: "najran_general.html",             label: "مستشفى نجران العام الجديد وطب الأسنان", emoji: "🏥", icon: Building2, color: "#1e3c72", types: ["najran_general"] },
   { key: "approval",                   file: "approval.html",                   label: "اعتماد المستخلص",           emoji: "✅",  icon: CheckSquare,       color: "#15803d", types: [] },
   { key: "visit_review",               file: "visit-admin-review.html",         label: "مراجعة زيارات مقاولي الباطن", emoji: "🪪",  icon: BadgeCheck,        color: "#1e3c72", types: [], adminOnly: true },
   { key: "settings_main",              file: "settings_main.html",              label: "الإعدادات الرئيسية",         emoji: "⚙️",  icon: Settings,          color: "#2a5298", types: ["hospital", "health_centers", "admin_offices"] },
@@ -87,9 +88,6 @@ export function filterModules(
   const isAdmin = role === "admin";
   const isSupervisor = role === "supervisor";
   const isPrivileged = isAdmin || isSupervisor || role === "contract_supervisor";
-
-  // قسم نجران العام مستقل تماماً — لا يرى أي وحدة من النظام الأساسي
-  if (siteType === "najran_general" && !isPrivileged) return [];
 
   let byType: ModuleDef[];
 
