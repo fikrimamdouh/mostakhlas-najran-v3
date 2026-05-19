@@ -1011,7 +1011,8 @@ function renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeducti
             row.id = 'admin-jobs-row'; // أعطِ الصف ID للتحكم به
             
             // تحقق من حالة خانة الاختيار وطبق الكلاس عند إعادة الرسم
-            const isAdminPrintChecked = document.getElementById('admin-jobs-print-checkbox').checked;
+            const _adminChk = document.getElementById('admin-jobs-print-checkbox');
+            const isAdminPrintChecked = _adminChk ? _adminChk.checked : true;
             if (!isAdminPrintChecked) {
                 row.classList.add('no-print-row');
             }

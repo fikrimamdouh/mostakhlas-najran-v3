@@ -2981,7 +2981,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const departments = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'laundry', 'security'];
     departments.forEach(tableId => {
         const tableElement = document.getElementById(tableId);
-        if (tableElement && tableElement.style.display !== 'none') {
+        if (tableElement) {
             loadTableData(tableId);
         }
     });
