@@ -4,7 +4,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { usePageTracking } from "@/hooks/usePageTracking";
 import { useGetMe } from "@workspace/api-client-react";
 import { Rocket, Zap, Lock, BarChart3, Globe, Workflow, ShieldOff } from "lucide-react";
-import { getModuleKey, parseAllowedModules, isModuleAllowed } from "@/lib/modules";
+import { getModuleKey, parseAllowedModules, isModuleAllowed, getSiteType } from "@/lib/modules";
 
 function ComingSoonPage() {
   return (
@@ -136,6 +136,25 @@ export default function OriginalViewer() {
       }
     } catch {}
   }, [dbUser]);
+
+  // قسم نجران العام — برنامج مستقل بالكامل بدون sidebar
+  const siteType = getSiteType(dbUser?.hospital);
+  const isNajranUser = siteType === "najran_general" &&
+    dbUser?.role !== "admin" && dbUser?.role !== "supervisor";
+
+  if (isNajranUser) {
+    return (
+      <div className="w-screen h-screen overflow-hidden">
+        <iframe
+          ref={iframeRef}
+          key={page}
+          src={`/original/${page}`}
+          className="w-full h-full border-0 block"
+          title={page}
+        />
+      </div>
+    );
+  }
 
   // Check if this page is blocked by coming soon
   const isComingSoon = page === "settings_advanced.html";
