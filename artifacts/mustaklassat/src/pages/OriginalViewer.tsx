@@ -100,7 +100,7 @@ export default function OriginalViewer() {
   const page = params.get("page") || "index.html";
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
+  const { data: dbUser, isLoading: userLoading } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
 
   // إعادة توجيه حدث تغيير الموقع من النافذة الأم إلى الـ iframe
   useEffect(() => {
@@ -136,6 +136,11 @@ export default function OriginalViewer() {
       }
     } catch {}
   }, [dbUser]);
+
+  // انتظر بيانات المستخدم قبل العرض لتجنب وميض الـ Sidebar
+  if (userLoading) {
+    return <div className="w-screen h-screen" style={{ background: "#f0f4ff" }} />;
+  }
 
   // قسم نجران العام — برنامج مستقل بالكامل بدون sidebar
   const siteType = getSiteType(dbUser?.hospital);
