@@ -648,7 +648,9 @@ function processAndFilterExcelData(file) {
         departments.forEach(dept => {
             // تحديث عنوان الجدول (h3)
             const deptName = getDepartmentName(dept.key);
-            const tableHeader = document.querySelector(`#${dept.id}-table`).closest('.department-table').querySelector('h3');
+            const _tableEl = document.querySelector(`#${dept.id}-table`);
+            if (!_tableEl) return; // هذا القسم غير موجود في هذه الصفحة — تجاهله
+            const tableHeader = _tableEl.closest('.department-table').querySelector('h3');
 
             if (tableHeader) {
                 tableHeader.textContent = `جدول رقم ${dept.number}: ${deptName}`;

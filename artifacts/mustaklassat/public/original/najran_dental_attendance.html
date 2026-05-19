@@ -1205,6 +1205,69 @@ function preparePrint() {
         </div>
 
  
+        <!-- جدول رقم 1: النظافة -->
+        <div class="department-table">
+            <h3>جدول رقم 1: النظافة</h3>
+            <div class="total">
+                الإجمالي - عدد الموظفين: <span id="cleaning-count">0</span> | التكلفة الشهرية: <span id="cleaning-total-cost">0.00</span> | حسم وغرامة الغياب: <span id="cleaning-total-fines">0.00</span> | صافي الاستحقاق: <span id="cleaning-net-total">0.00</span> | إجمالي الحسم: <span id="cleaning-total-deduction">0.00</span> | إجمالي الغرامة: <span id="cleaning-total-fine">0.00</span> | موظفين بغياب: <span id="cleaning-absent-employees">0</span>
+                <div id="cleaning-status-totals"></div>
+            </div>
+            <table id="cleaning-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2">م</th>
+                        <th rowspan="2" class="job-title">مسمى الوظيفة</th>
+                        <th rowspan="2">الفئة</th>
+                        <th rowspan="2" class="employee-name">اسم شاغل الوظيفة</th>
+                        <th colspan="30" id="cleaning-days-header">الأيام</th>
+                        <th rowspan="2">التكلفة الشهرية</th>
+                        <th colspan="2">عدد الأيام</th>
+                        <th colspan="2">حسم وغرامة الغياب</th>
+                        <th rowspan="2">صافي الاستحقاق</th>
+                        <th rowspan="2">الجنسية</th>
+                        <th rowspan="2">غرامة جنسية</th>
+                        <th rowspan="2">رقم الإقامة/الهوية</th>
+                        <th class="status-ج-col" style="display: none;" rowspan="2">إجازة</th>
+                        <th class="status-ش-col" style="display: none;" rowspan="2">شاغرة</th>
+                        <th class="status-ت-col" style="display: none;" rowspan="2">تحت الإجراء</th>
+                    </tr>
+                    <tr id="cleaning-table-header">
+                        <th>حضور</th>
+                        <th>غياب</th>
+                        <th>الحسم</th>
+                        <th>غرامة الغياب</th>
+                    </tr>
+                </thead>
+                <tbody id="cleaning-table-body"></tbody>
+            </table>
+            <div class="zoom-buttons">
+                <button onclick="zoomInTable('cleaning-table')"><i class="fas fa-search-plus"></i> تكبير</button>
+                <button onclick="zoomOutTable('cleaning-table')"><i class="fas fa-search-minus"></i> تصغير</button>
+            </div>
+            <div class="empty-message" id="cleaning-empty">لا يوجد موظفون في هذا القسم</div>
+            <!-- التواقيع للطباعة - جدول النظافة -->
+            <div class="print-signatures" style="display: none;">
+                <h4>التواقيع</h4>
+                <div class="print-signatures-grid" data-sb-page="attendance"></div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">رئيس قسم الصيانة:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-maintenance-head-1">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مدير المستشفى:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-hospital-manager-1">غير محدد</div>
+                    </div>
+                    <div class="print-signature-item">
+                        <div class="print-signature-title">مندوب المقاول:</div>
+                        <div class="print-signature-line"></div>
+                        <div class="print-signature-name" id="print-contractor-rep-1">غير محدد</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- جدول رقم 2: الكهرباء -->
         <div class="department-table">
             <h3>جدول رقم 2: الكهرباء</h3>
