@@ -755,7 +755,63 @@
                 <h3>تجمع نجران الصحي — وحدة الصيانة العامة</h3>
                 <h2 id="page-title">مستخلص المستهلكات ومقاولي الباطن</h2>
             </div>
-            <nav><!-- قسم أداء المستهلكات -->
+        </header>
+
+        <!-- أزرار الإجراءات الرئيسية -->
+        <div class="main-action-buttons no-print">
+            <label for="excel-import-btn" class="btn btn-excel"><i class="fas fa-file-excel"></i> استيراد Excel</label>
+            <input type="file" id="excel-import-btn" accept=".xlsx,.xls" style="display:none">
+            <button class="btn btn-excel" id="export-all-btn"><i class="fas fa-download"></i> تصدير Excel</button>
+            <button class="btn btn-print" id="print-all-btn"><i class="fas fa-print"></i> طباعة الكل</button>
+            <button class="btn btn-backup" id="backup-btn"><i class="fas fa-save"></i> نسخ احتياطي</button>
+            <button class="btn btn-signature" id="edit-signatures-btn"><i class="fas fa-pen-nib"></i> التواقيع</button>
+            <button class="btn btn-titles" id="edit-titles-btn"><i class="fas fa-heading"></i> عناوين الطباعة</button>
+            <button class="btn btn-clear" id="clear-data-btn"><i class="fas fa-trash-alt"></i> مسح البيانات</button>
+            <button class="btn" id="recalculate-btn" style="background:linear-gradient(135deg,#0369a1,#0ea5e9)"><i class="fas fa-calculator"></i> إعادة الحساب</button>
+        </div>
+
+        <!-- شريط تكلفة العمالة -->
+        <div class="penalty-info-bar no-print">
+            <div class="info-group">
+                <div class="info-item">
+                    <i class="fas fa-users"></i>
+                    <span>تكلفة العمالة الشهرية:</span>
+                    <span class="value" id="display-labor-cost">0.00 ر.س</span>
+                </div>
+            </div>
+            <div class="controls">
+                <button class="btn-control" id="refresh-labor-cost"><i class="fas fa-sync"></i> تحديث</button>
+                <input type="number" id="manual-labor-cost" placeholder="أدخل التكلفة يدوياً" style="display:none">
+                <button class="btn-control" id="toggle-manual-labor-cost"><i class="fas fa-edit"></i> تعديل يدوي</button>
+            </div>
+        </div>
+
+        <!-- لوحة التحكم الرئيسية -->
+        <div class="dashboard-container" id="dashboard-container" style="display:flex">
+            <div class="dashboard-card" data-section="performance-section">
+                <i class="fas fa-boxes"></i>
+                <h3>المستهلكات والمواد الهندسية</h3>
+                <p>جدول رقم (ح م 1)</p>
+            </div>
+            <div class="dashboard-card" data-section="water-supply-section">
+                <i class="fas fa-water"></i>
+                <h3>توريد المياه</h3>
+                <p>شهادة الاستحقاق الشهري</p>
+            </div>
+            <div class="dashboard-card" data-section="sewage-disposal-section">
+                <i class="fas fa-recycle"></i>
+                <h3>التخلص من مياه الصرف</h3>
+                <p>شهادة الاستحقاق الشهري</p>
+            </div>
+            <div class="dashboard-card" data-section="summary-section">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <h3>الملخص الإجمالي</h3>
+                <p>شهادة الاستحقاق لجميع البنود</p>
+            </div>
+        </div>
+
+        <!-- منطقة الجداول -->
+        <div id="tables-area">
             <div class="table-section" id="performance-section">
                 <button class="back-to-dashboard no-print"><i class="fas fa-arrow-right"></i> العودة</button>
                 <div class="printable-header"></div>
