@@ -742,12 +742,12 @@
                         <!-- Data populated dynamically -->
                         <!-- *** START: NEW DENTAL LABOR ROW *** -->
                         <tr id="dental-row" style="display: none;">
-                            <td>عمالة مركز الأسنان</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-monthlyValue" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-absenceDeduction" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-absencePenalty" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-performancePenalty" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-nationalityPenalty" onblur="saveDentalData()">0</td>
+                            <td>عمالة مركز الأسنان <small style="color:#64748b;font-size:11px;">(تلقائي)</small></td>
+                            <td class="editable-cell" id="dental-monthlyValue">0</td>
+                            <td class="editable-cell" id="dental-absenceDeduction">0</td>
+                            <td class="editable-cell" id="dental-absencePenalty">0</td>
+                            <td class="editable-cell" id="dental-performancePenalty">0</td>
+                            <td class="editable-cell" id="dental-nationalityPenalty">0</td>
                             <td id="dental-netMonthly">0.00 ر.س.</td>
                         </tr>
                         <!-- *** END: NEW DENTAL LABOR ROW *** -->
@@ -813,29 +813,68 @@
     }
 
     function saveDentalData() {
-        const data = {
-            monthlyValue: document.getElementById('dental-monthlyValue').textContent,
-            absenceDeduction: document.getElementById('dental-absenceDeduction').textContent,
-            absencePenalty: document.getElementById('dental-absencePenalty').textContent,
-            performancePenalty: document.getElementById('dental-performancePenalty').textContent,
-            nationalityPenalty: document.getElementById('dental-nationalityPenalty').textContent,
-        };
-        localStorage.setItem('dentalLaborData', JSON.stringify(data));
-        // Recalculate totals after editing a value
+        // القيم تلقائية من namespace الأسنان — لا حاجة للحفظ اليدوي
         loadAndProcessAchievementData();
     }
 
-    function loadDentalData() {
-        const checkbox = document.getElementById('dental-labor-checkbox');
-        const savedState = localStorage.getItem('dentalLaborCheckboxState') === 'true';
-        checkbox.checked = savedState;
+    function _loadDentalFallback() {
+        ['dental-monthlyValue','dental-absenceDeduction','dental-absencePenalty',
+         'dental-performancePenalty','dental-nationalityPenalty'].forEach(function(id) {
+            document.getElementById(id).textContent = '0';
+        });
+        document.getElementById('dental-netMonthly').textContent = '0.00 ر.س.';
+    }
 
-        const savedData = JSON.parse(localStorage.getItem('dentalLaborData')) || {};
-        document.getElementById('dental-monthlyValue').textContent = savedData.monthlyValue || '0';
-        document.getElementById('dental-absenceDeduction').textContent = savedData.absenceDeduction || '0';
-        document.getElementById('dental-absencePenalty').textContent = savedData.absencePenalty || '0';
-        document.getElementById('dental-performancePenalty').textContent = savedData.performancePenalty || '0';
-        document.getElementById('dental-nationalityPenalty').textContent = savedData.nationalityPenalty || '0';
+    function loadDentalData() {
+        // ── قراءة بيانات الأسنان مباشرة من namespace nd_ المستقل ──
+        try {
+            var rawGet = Storage.prototype.getItem.bind(localStorage);
+            var sessionRaw = rawGet('najran_session');
+            if (!sessionRaw) { _loadDentalFallback(); }
+            else {
+                var session = JSON.parse(sessionRaw);
+                var userPfx = (session && session.userId) ? '_u' + session.userId + '_' : '';
+                if (!userPfx) { _loadDentalFallback(); }
+                else {
+                    var ndPfx = userPfx + 'nd_';
+                    var attRaw = rawGet(ndPfx + 'attendanceData');
+                    if (!attRaw) { _loadDentalFallback(); }
+                    else {
+                        var attData = JSON.parse(attRaw);
+                        var monthlyValue = 0, absenceDeduction = 0,
+                            absencePenalty = 0, nationalityPenalty = 0;
+
+                        Object.keys(attData).forEach(function(deptKey) {
+                            monthlyValue += parseFloat(rawGet(ndPfx + 'deptCalculatedCost_' + deptKey)) || 0;
+                            (attData[deptKey] || []).forEach(function(emp) {
+                                absenceDeduction  += parseFloat(emp.deduction)       || 0;
+                                absencePenalty    += parseFloat(emp.absencePenalty)  || 0;
+                                nationalityPenalty+= parseFloat(emp.nationalityFine) || 0;
+                            });
+                        });
+
+                        var performancePenalty = parseFloat(rawGet(ndPfx + 'performanceTotalDeduction')) || 0;
+                        var netMonthly = monthlyValue - absenceDeduction - absencePenalty - performancePenalty - nationalityPenalty;
+
+                        document.getElementById('dental-monthlyValue').textContent     = monthlyValue.toFixed(2);
+                        document.getElementById('dental-absenceDeduction').textContent = absenceDeduction.toFixed(2);
+                        document.getElementById('dental-absencePenalty').textContent   = absencePenalty.toFixed(2);
+                        document.getElementById('dental-performancePenalty').textContent= performancePenalty.toFixed(2);
+                        document.getElementById('dental-nationalityPenalty').textContent= nationalityPenalty.toFixed(2);
+                        document.getElementById('dental-netMonthly').textContent       = netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
+                    }
+                }
+            }
+        } catch(e) {
+            _loadDentalFallback();
+        }
+
+        // تفعيل صف الأسنان تلقائياً دائماً
+        var checkbox  = document.getElementById('dental-labor-checkbox');
+        var dentalRow = document.getElementById('dental-row');
+        checkbox.checked = true;
+        dentalRow.style.display = '';
+        dentalRow.classList.remove('no-print-row');
         
         toggleDentalRow(); // Apply visibility based on saved state
     }
