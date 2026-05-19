@@ -1644,6 +1644,42 @@ function closeDialog(dialogId, overlayId) {
 </script>
     <script src="attendance_contract_info.js"></script>
 
+            <div class="print-toggles no-print" style="text-align:center;margin:8px 0;">
+                <div class="toggle-switch">
+                    <label for="dental-labor-checkbox">
+                        <input type="checkbox" id="dental-labor-checkbox" onchange="toggleDentalRow()">
+                        طباعة عمالة مركز الأسنان
+                    </label>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto mb-4">
+                <table class="cosmic-table achievement-table" id="achievementTable">
+                    <thead>
+                        <tr>
+                            <th>البند</th>
+                            <th>القيمة الشهرية حسب العقد</th>
+                            <th>حسم الغياب</th>
+                            <th>غرامة الغياب</th>
+                            <th>غرامة الأداء</th>
+                            <th>غرامة الجنسية</th>
+                            <th>المبلغ الصافي الشهري</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr id="dental-row" style="display: none;">
+                            <td>عمالة مركز الأسنان</td>
+                            <td contenteditable="true" class="editable-cell" id="dental-monthlyValue" onblur="saveDentalData()">0</td>
+                            <td contenteditable="true" class="editable-cell" id="dental-absenceDeduction" onblur="saveDentalData()">0</td>
+                            <td contenteditable="true" class="editable-cell" id="dental-absencePenalty" onblur="saveDentalData()">0</td>
+                            <td contenteditable="true" class="editable-cell" id="dental-performancePenalty" onblur="saveDentalData()">0</td>
+                            <td contenteditable="true" class="editable-cell" id="dental-nationalityPenalty" onblur="saveDentalData()">0</td>
+                            <td id="dental-netMonthly">0.00 ر.س.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="sb-container-achievement" class="sb-wrap"></div>
     </div>
 </div>
 <!-- START: NEW Item Name Edit Dialog -->

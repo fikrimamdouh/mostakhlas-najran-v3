@@ -796,7 +796,7 @@
     function toggleDentalRow() {
         const checkbox = document.getElementById('dental-labor-checkbox');
         const dentalRow = document.getElementById('dental-row');
-        
+        if (!checkbox || !dentalRow) return;
         if (checkbox.checked) {
             dentalRow.style.display = ''; // Show the row
             dentalRow.classList.remove('no-print-row');
@@ -810,7 +810,8 @@
     }
 
     function getDentalData() {
-        const isEnabled = document.getElementById('dental-labor-checkbox').checked;
+        const checkboxEl = document.getElementById('dental-labor-checkbox');
+        const isEnabled = checkboxEl ? checkboxEl.checked : false;
         if (!isEnabled) {
             return {
                 monthlyValue: 0, absenceDeduction: 0, absencePenalty: 0,
@@ -818,14 +819,15 @@
             };
         }
         
-        const monthlyValue = parseFloat(document.getElementById('dental-monthlyValue').textContent) || 0;
-        const absenceDeduction = parseFloat(document.getElementById('dental-absenceDeduction').textContent) || 0;
-        const absencePenalty = parseFloat(document.getElementById('dental-absencePenalty').textContent) || 0;
-        const performancePenalty = parseFloat(document.getElementById('dental-performancePenalty').textContent) || 0;
-        const nationalityPenalty = parseFloat(document.getElementById('dental-nationalityPenalty').textContent) || 0;
+        const monthlyValue = parseFloat((document.getElementById('dental-monthlyValue') || {}).textContent) || 0;
+        const absenceDeduction = parseFloat((document.getElementById('dental-absenceDeduction') || {}).textContent) || 0;
+        const absencePenalty = parseFloat((document.getElementById('dental-absencePenalty') || {}).textContent) || 0;
+        const performancePenalty = parseFloat((document.getElementById('dental-performancePenalty') || {}).textContent) || 0;
+        const nationalityPenalty = parseFloat((document.getElementById('dental-nationalityPenalty') || {}).textContent) || 0;
         const netMonthly = monthlyValue - (absenceDeduction + absencePenalty + performancePenalty + nationalityPenalty);
 
-        document.getElementById('dental-netMonthly').textContent = netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
+        const nmEl = document.getElementById('dental-netMonthly');
+        if (nmEl) nmEl.textContent = netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
 
         return { monthlyValue, absenceDeduction, absencePenalty, performancePenalty, nationalityPenalty, netMonthly };
     }
@@ -845,15 +847,16 @@
 
     function loadDentalData() {
         const checkbox = document.getElementById('dental-labor-checkbox');
+        if (!checkbox) return;
         const savedState = localStorage.getItem('dentalLaborCheckboxState') === 'true';
         checkbox.checked = savedState;
 
         const savedData = JSON.parse(localStorage.getItem('dentalLaborData')) || {};
-        document.getElementById('dental-monthlyValue').textContent = savedData.monthlyValue || '0';
-        document.getElementById('dental-absenceDeduction').textContent = savedData.absenceDeduction || '0';
-        document.getElementById('dental-absencePenalty').textContent = savedData.absencePenalty || '0';
-        document.getElementById('dental-performancePenalty').textContent = savedData.performancePenalty || '0';
-        document.getElementById('dental-nationalityPenalty').textContent = savedData.nationalityPenalty || '0';
+        const mvEl = document.getElementById('dental-monthlyValue'); if (mvEl) mvEl.textContent = savedData.monthlyValue || '0';
+        const adEl = document.getElementById('dental-absenceDeduction'); if (adEl) adEl.textContent = savedData.absenceDeduction || '0';
+        const apEl = document.getElementById('dental-absencePenalty'); if (apEl) apEl.textContent = savedData.absencePenalty || '0';
+        const ppEl = document.getElementById('dental-performancePenalty'); if (ppEl) ppEl.textContent = savedData.performancePenalty || '0';
+        const npEl = document.getElementById('dental-nationalityPenalty'); if (npEl) npEl.textContent = savedData.nationalityPenalty || '0';
         
         toggleDentalRow(); // Apply visibility based on saved state
     }
@@ -1590,6 +1593,42 @@ function closeDialog(dialogId, overlayId) {
 </script>
     <script src="attendance_contract_info.js"></script>
 
+            <div class="print-toggles no-print" style="text-align:center;margin:8px 0;">
+                <div class="toggle-switch">
+                    <label for="dental-labor-checkbox">
+                        <input type="checkbox" id="dental-labor-checkbox" onchange="toggleDentalRow()">
+                        طباعة عمالة مركز الأسنان
+                    </label>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto mb-4">
+                <table class="cosmic-table achievement-table" id="achievementTable">
+                    <thead>
+                        <tr>
+                            <th>البند</th>
+                            <th>القيمة الشهرية حسب العقد</th>
+                            <th>حسم الغياب</th>
+                            <th>غرامة الغياب</th>
+                            <th>غرامة الأداء</th>
+                            <th>غرامة الجنسية</th>
+                            <th>المبلغ الصافي الشهري</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr id="dental-row" style="display: none;">
+                            <td>عمالة مركز الأسنان</td>
+                            <td contenteditable="true" class="editable-cell" id="dental-monthlyValue" onblur="saveDentalData()">0</td>
+                            <td contenteditable="true" class="editable-cell" id="dental-absenceDeduction" onblur="saveDentalData()">0</td>
+                            <td contenteditable="true" class="editable-cell" id="dental-absencePenalty" onblur="saveDentalData()">0</td>
+                            <td contenteditable="true" class="editable-cell" id="dental-performancePenalty" onblur="saveDentalData()">0</td>
+                            <td contenteditable="true" class="editable-cell" id="dental-nationalityPenalty" onblur="saveDentalData()">0</td>
+                            <td id="dental-netMonthly">0.00 ر.س.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="sb-container-achievement" class="sb-wrap"></div>
     </div>
 </div>
 <!-- START: NEW Item Name Edit Dialog -->
