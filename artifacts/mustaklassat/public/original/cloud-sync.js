@@ -53,6 +53,15 @@
     'performanceTotalDeduction',
   ]);
 
+  // المفاتيح المحمية — لا تُكتب فوقها من السحابة إذا كان المحلي موجوداً
+  // (البيانات تُدخَل بالرفع اليدوي للـ Excel ولا يجب أن تتغير تلقائياً)
+  const PREFER_LOCAL_KEYS = new Set([
+    'attendanceData',
+    'centersAttendanceData_v2',
+    'healthCentersAttendanceData',
+    'adminOfficesAttendanceData_v1',
+  ]);
+
   function getSession() {
     try {
       const raw = localStorage.getItem(SESSION_KEY);
@@ -196,6 +205,10 @@
           const local = localStorage.getItem(key);
           if (local !== null && parseFloat(local) > parseFloat(value)) { merged++; continue; }
         }
+        if (PREFER_LOCAL_KEYS.has(key)) {
+          const local = localStorage.getItem(key);
+          if (local !== null) { merged++; continue; }
+        }
         localStorage.setItem(key, value); merged++;
       } catch (_) {}
     }
@@ -207,6 +220,10 @@
           if (COMPUTED_KEYS.has(key)) {
             const local = localStorage.getItem(key);
             if (local !== null && parseFloat(local) > parseFloat(value)) continue;
+          }
+          if (PREFER_LOCAL_KEYS.has(key)) {
+            const local = localStorage.getItem(key);
+            if (local !== null) continue;
           }
           localStorage.setItem(key, value);
         } catch (_) {}
