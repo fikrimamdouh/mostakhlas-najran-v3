@@ -11,7 +11,7 @@
   'use strict';
 
   const API_BASE = '/api';
-  const SYNC_INTERVAL_MS = 60 * 1000;
+  const SYNC_INTERVAL_MS = 5 * 1000;
   const SESSION_KEY = 'najran_session';
 
   // ── المفاتيح التشغيلية (مشتركة على مستوى المستشفى) ──────────────────────
@@ -380,6 +380,17 @@
 
     setInterval(syncNow, SYNC_INTERVAL_MS);
     window.addEventListener('beforeunload', () => { pushToCloud(); });
+
+    // مزامنة فورية عند تغيير أي حقل إدخال أو خلية (debounce 2 ث)
+    let _inputDebounce = null;
+    document.addEventListener('input', () => {
+      clearTimeout(_inputDebounce);
+      _inputDebounce = setTimeout(syncNow, 2_000);
+    });
+    document.addEventListener('change', () => {
+      clearTimeout(_inputDebounce);
+      _inputDebounce = setTimeout(syncNow, 2_000);
+    });
 
     // debounce على storage event (30 ث) — يمنع الحلقة اللانهائية بين التابات
     let _storageDebounce = null;
