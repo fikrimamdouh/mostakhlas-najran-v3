@@ -756,7 +756,14 @@
             <p style="margin: 5px 0;"><strong>مدة المستخلص:</strong> من <span id="extract-start-date">01/06/2025</span> إلى <span id="extract-end-date">16/06/2025</span></p>
         </div>
 
-        <!-- Unified Nav-bar --><script>
+        <!-- Unified Nav-bar -->
+        <div class="action-bar no-print">
+            <button class="action-btn" onclick="exportAchievementToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
+            <button class="action-btn" onclick="window.print()"><i class="fas fa-print"></i> طباعة</button>
+            <button class="action-btn" onclick="openSignatureEditDialog()"><i class="fas fa-pen-nib"></i> تعديل التواقيع</button>
+            <button class="action-btn" onclick="openItemNameDialog()"><i class="fas fa-tag"></i> تعديل أسماء البنود</button>
+        </div>
+        <script>
     let departmentDataForAchievement = [];
     const departmentKeysForAchievement = [
         'cleaning', 'electricity', 'civil_works', 'mechanical', 'security'

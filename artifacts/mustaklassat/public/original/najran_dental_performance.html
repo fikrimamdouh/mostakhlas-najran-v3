@@ -522,6 +522,18 @@ tr.total-row th, tr.total-row td {
                 <h2 id="spare-parts-title">مستخلص العمالة</h2>
                 <p class="date" id="current-date-time"></p>
             </div>
+        </header>
+
+        <!-- شريط الأزرار الرئيسية -->
+        <div class="std-action-bar no-print">
+            <button class="ab ab-excel" onclick="exportSectionToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
+            <button class="ab ab-print" onclick="printPage()"><i class="fas fa-print"></i> طباعة</button>
+            <button class="ab ab-backup" onclick="createBackup()"><i class="fas fa-save"></i> حفظ نسخة</button>
+            <button class="ab" onclick="restoreBackup()" style="background:#f59e0b"><i class="fas fa-folder-open"></i> استعادة نسخة</button>
+            <button class="ab ab-sig" onclick="openSignatureEditDialog()"><i class="fas fa-pen-nib"></i> تعديل التواقيع</button>
+            <button class="ab ab-titles" onclick="openEditTableNamesDialog()"><i class="fas fa-heading"></i> تعديل العناوين</button>
+        </div>
+
             <nav><!-- قسم التواقيع الموحد -->
 <div id="sb-container-performance" class="sb-wrap"></div>
 <!-- ================================================== -->
