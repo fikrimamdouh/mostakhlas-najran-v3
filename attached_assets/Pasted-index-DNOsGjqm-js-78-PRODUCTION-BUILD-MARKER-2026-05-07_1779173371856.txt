@@ -1,0 +1,100 @@
+index-DNOsGjqm.js:78 PRODUCTION_BUILD_MARKER_2026_05_07_V4_LIVE_KEY
+index.iife.js:1 content script loaded
+VM2574 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM2578 index.iife.js:1 content script loaded
+VM2574 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM2574 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM2586 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM2589 najran_general_consumables.html:314 خطأ في تحديث شريط الغرامة: TypeError: Cannot set properties of null (setting 'textContent')
+    at updatePenaltyDataSourcePanel (VM2589 najran_general_consumables.html:306:44)
+    at renderAllTables (VM2589 najran_general_consumables.html:668:5)
+    at HTMLDocument.<anonymous> (VM2589 najran_general_consumables.html:1579:5)
+updatePenaltyDataSourcePanel @ VM2589 najran_general_consumables.html:314
+renderAllTables @ VM2589 najran_general_consumables.html:668
+(anonymous) @ VM2589 najran_general_consumables.html:1579
+VM2589 najran_general_consumables.html:322 Uncaught TypeError: Cannot read properties of null (reading 'querySelector')
+    at renderSubcontractorsTable (VM2589 najran_general_consumables.html:322:11)
+    at renderAllTables (VM2589 najran_general_consumables.html:669:5)
+    at HTMLDocument.<anonymous> (VM2589 najran_general_consumables.html:1579:5)
+renderSubcontractorsTable @ VM2589 najran_general_consumables.html:322
+renderAllTables @ VM2589 najran_general_consumables.html:669
+(anonymous) @ VM2589 najran_general_consumables.html:1579
+VM2600 index.iife.js:1 content script loaded
+VM2586 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM2586 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+refresh.js:27 WebSocket connection to 'ws://localhost:8081/' failed: 
+initClient @ refresh.js:27
+addRefresh @ refresh.js:45
+(anonymous) @ refresh.js:71
+(anonymous) @ refresh.js:72
+VM2615 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM2619 index.iife.js:1 content script loaded
+VM2615 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM2615 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM2632 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM2633 najran_general_consumables.html:314 خطأ في تحديث شريط الغرامة: TypeError: Cannot set properties of null (setting 'textContent')
+    at updatePenaltyDataSourcePanel (VM2633 najran_general_consumables.html:306:44)
+    at renderAllTables (VM2633 najran_general_consumables.html:668:5)
+    at HTMLDocument.<anonymous> (VM2633 najran_general_consumables.html:1579:5)
+updatePenaltyDataSourcePanel @ VM2633 najran_general_consumables.html:314
+renderAllTables @ VM2633 najran_general_consumables.html:668
+(anonymous) @ VM2633 najran_general_consumables.html:1579
+VM2633 najran_general_consumables.html:322 Uncaught TypeError: Cannot read properties of null (reading 'querySelector')
+    at renderSubcontractorsTable (VM2633 najran_general_consumables.html:322:11)
+    at renderAllTables (VM2633 najran_general_consumables.html:669:5)
+    at HTMLDocument.<anonymous> (VM2633 najran_general_consumables.html:1579:5)
+renderSubcontractorsTable @ VM2633 najran_general_consumables.html:322
+renderAllTables @ VM2633 najran_general_consumables.html:669
+(anonymous) @ VM2633 najran_general_consumables.html:1579
+VM2645 index.iife.js:1 content script loaded
+VM2632 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM2632 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM2655 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM2659 index.iife.js:1 content script loaded
+VM2655 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM2655 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM2671 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM2678 najran_general_achievement.html:136 Uncaught TypeError: Cannot set properties of null (setting 'textContent')
+    at updateDateTime (VM2678 najran_general_achievement.html:136:58)
+    at HTMLDocument.<anonymous> (VM2678 najran_general_achievement.html:677:5)
+updateDateTime @ VM2678 najran_general_achievement.html:136
+(anonymous) @ VM2678 najran_general_achievement.html:677
+VM2685 index.iife.js:1 content script loaded
+VM2671 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM2671 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM2695 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM2699 index.iife.js:1 content script loaded
+VM2695 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM2695 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM2718 najran_dental_achievement.html:149 Uncaught SyntaxError: Missing catch or finally after try (at VM2718 najran_dental_achievement.html:149:9)
+VM2710 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM2725 index.iife.js:1 content script loaded
+VM2710 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM2710 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM2735 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM2739 index.iife.js:1 content script loaded
+VM2735 cloud-sync.js:233 [MzamanaCloud] ✓ 0 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM2735 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM2755 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM2757 najran_dental_performance.html:2015 بدء تحميل صفحة الأداء...
+VM2757 najran_dental_performance.html:2356 تطبيق إعدادات العرض...
+VM2757 najran_dental_performance.html:458 تطبيق إعدادات العرض على البطاقات...
+VM2757 najran_dental_performance.html:313 Uncaught TypeError: Cannot set properties of null (setting 'textContent')
+    at updateCertificateFromPerformance (VM2757 najran_dental_performance.html:313:60)
+    at updateAllTotals (VM2757 najran_dental_performance.html:2085:5)
+    at HTMLDocument.<anonymous> (VM2757 najran_dental_performance.html:2064:5)
+updateCertificateFromPerformance @ VM2757 najran_dental_performance.html:313
+updateAllTotals @ VM2757 najran_dental_performance.html:2085
+(anonymous) @ VM2757 najran_dental_performance.html:2064
+VM2757 najran_dental_performance.html:313 Uncaught TypeError: Cannot set properties of null (setting 'textContent')
+    at updateCertificateFromPerformance (VM2757 najran_dental_performance.html:313:60)
+    at HTMLDocument.applyDisplaySettings (VM2757 najran_dental_performance.html:2347:5)
+updateCertificateFromPerformance @ VM2757 najran_dental_performance.html:313
+applyDisplaySettings @ VM2757 najran_dental_performance.html:2347
+VM2763 index.iife.js:1 content script loaded
+VM2755 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM2755 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+index.iife.js:1 content script loaded
+cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)

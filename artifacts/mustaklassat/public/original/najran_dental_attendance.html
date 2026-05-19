@@ -1205,6 +1205,23 @@ function preparePrint() {
         </div>
 
  
+        <!-- أزرار الإجراءات -->
+        <div class="action-buttons no-print">
+            <button onclick="openManagementPasswordDialog()" style="background:linear-gradient(135deg,#6f42c1,#a855f7)"><i class="fas fa-cogs"></i> الإعدادات والإدارة</button>
+            <button onclick="openPerformanceControlCenter()" style="background:linear-gradient(135deg,#6f42c1,#9333ea)"><i class="fas fa-sliders-h"></i> إعدادات الأداء</button>
+            <button onclick="loadJobPositionsFromTemplate()" style="background:linear-gradient(135deg,#0369a1,#0ea5e9)"><i class="fas fa-briefcase"></i> تحميل المناصب</button>
+            <button onclick="openDialog('upload-excel-dialog')" style="background:linear-gradient(135deg,#17a2b8,#0369a1)"><i class="fas fa-file-excel"></i> استيراد من Excel</button>
+            <button onclick="openSmartUploadDialog()" style="background:linear-gradient(135deg,#0369a1,#2563eb)"><i class="fas fa-magic"></i> الرفع الذكي</button>
+            <button onclick="openBulkAttendanceDialog()" style="background:linear-gradient(135deg,#17a2b8,#0284c7)"><i class="fas fa-users-cog"></i> تعديل جماعي</button>
+            <button onclick="openExcelExportDialog()" style="background:linear-gradient(135deg,#28a745,#16a34a)"><i class="fas fa-download"></i> تصدير Excel</button>
+            <button onclick="preparePrint()" style="background:linear-gradient(135deg,#343a40,#495057)"><i class="fas fa-print"></i> طباعة</button>
+            <button onclick="backupAttendanceData()" style="background:linear-gradient(135deg,#28a745,#059669)"><i class="fas fa-save"></i> حفظ نسخة</button>
+            <label style="background:linear-gradient(135deg,#ffc107,#f59e0b);padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:700;color:#1a1a1a;display:inline-flex;align-items:center;gap:8px;font-size:14px"><i class="fas fa-folder-open"></i> استعادة نسخة<input type="file" accept=".json" onchange="restoreAttendanceData(event)" style="display:none"></label>
+            <button onclick="SignatureBlock.open('attendance')" style="background:linear-gradient(135deg,#0369a1,#4f46e5)"><i class="fas fa-pen-nib"></i> تعديل التواقيع</button>
+            <button onclick="openNationalityFineEditor()" style="background:linear-gradient(135deg,#17a2b8,#0891b2)"><i class="fas fa-exclamation-triangle"></i> غرامة الجنسية</button>
+            <button onclick="openDialog('clear-data-dialog')" style="background:linear-gradient(135deg,#dc3545,#dc2626)"><i class="fas fa-trash-alt"></i> مسح البيانات</button>
+        </div>
+
         <!-- جدول رقم 1: النظافة -->
         <div class="department-table">
             <h3>جدول رقم 1: النظافة</h3>
