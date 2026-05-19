@@ -81,9 +81,6 @@
     }
 
     document.body.appendChild(nav);
-    document.body.style.paddingBottom = Math.max(
-      parseInt(document.body.style.paddingBottom || '0', 10), 80
-    ) + 'px';
   }
 
   if (document.readyState === 'loading') {

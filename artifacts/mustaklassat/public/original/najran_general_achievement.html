@@ -810,7 +810,9 @@
     }
 
     function getDentalData() {
-        const isEnabled = document.getElementById('dental-labor-checkbox').checked;
+        const _chk = document.getElementById('dental-labor-checkbox');
+        if (!_chk) return { monthlyValue: 0, absenceDeduction: 0, absencePenalty: 0, performancePenalty: 0, nationalityPenalty: 0, netMonthly: 0 };
+        const isEnabled = _chk.checked;
         if (!isEnabled) {
             return {
                 monthlyValue: 0, absenceDeduction: 0, absencePenalty: 0,
@@ -916,8 +918,8 @@
         const now = new Date();
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
         const gregorianDateTime = now.toLocaleDateString('ar-SA', options);
-        document.getElementById('current-date-time').textContent = gregorianDateTime;
-        document.getElementById('issueDate').textContent = now.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+        const _cdt = document.getElementById('current-date-time'); if (_cdt) _cdt.textContent = gregorianDateTime;
+        const _id = document.getElementById('issueDate'); if (_id) _id.textContent = now.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
     }
 
     function calculateDaysInMonth(dateString) {

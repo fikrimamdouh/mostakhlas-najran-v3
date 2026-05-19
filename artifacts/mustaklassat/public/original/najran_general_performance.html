@@ -891,12 +891,12 @@ function updateCertificateFromPerformance() {
     });
 
     // تحديث الإجماليات النهائية في شهادة الأداء
-    document.getElementById('total-allocated').textContent = Math.round(totalAllocated);
-    document.getElementById('total-due').textContent = Math.round(totalDue);
-    document.getElementById('certificate-total-amount').textContent = Math.round(totalDue);
-    document.getElementById('total-due-text').textContent = Math.round(totalDue);
-    document.getElementById('total-due-text-arabic').textContent = tafqitSAR(Math.round(totalDue));
-    document.getElementById('total-deducted-amount').textContent = Math.round(totalDeducted);
+    const _ta = document.getElementById('total-allocated'); if (_ta) _ta.textContent = Math.round(totalAllocated);
+    const _td = document.getElementById('total-due'); if (_td) _td.textContent = Math.round(totalDue);
+    const _cta = document.getElementById('certificate-total-amount'); if (_cta) _cta.textContent = Math.round(totalDue);
+    const _tdt = document.getElementById('total-due-text'); if (_tdt) _tdt.textContent = Math.round(totalDue);
+    const _tdta = document.getElementById('total-due-text-arabic'); if (_tdta) _tdta.textContent = tafqitSAR(Math.round(totalDue));
+    const _tda = document.getElementById('total-deducted-amount'); if (_tda) _tda.textContent = Math.round(totalDeducted);
 
     // حفظ البيانات الهامة في localStorage
     localStorage.setItem('performanceTotalDeduction', totalDeducted.toFixed(2));

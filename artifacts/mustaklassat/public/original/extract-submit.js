@@ -390,7 +390,33 @@
   // تشغيل تلقائي بحسب الصفحة الحالية
   document.addEventListener('DOMContentLoaded', function () {
     const path = window.location.pathname;
-    if (path.endsWith('attendance.html') && !path.includes('health_centers') && !path.includes('admin_offices')) {
+    // ── صفحات نجران الخاصة (تُعالَج قبل الشروط العامة) ─────────────
+    if (path.includes('najran_general_attendance')) {
+      createApproveBtn({ label: 'اعتماد الحضور والانصراف', onClick: () => {
+        if (!confirm('هل تريد اعتماد بيانات الحضور والانصراف والانتقال لجداول الأداء؟')) return;
+        localStorage.setItem(STEP_KEY.labor_attendance, '1');
+        window.location.href = '/original/najran_general_performance.html';
+      }});
+    } else if (path.includes('najran_dental_attendance')) {
+      createApproveBtn({ label: 'اعتماد الحضور والانصراف', onClick: () => {
+        if (!confirm('هل تريد اعتماد بيانات الحضور والانصراف والانتقال لجداول الأداء؟')) return;
+        localStorage.setItem(STEP_KEY.labor_attendance, '1');
+        window.location.href = '/original/najran_dental_performance.html';
+      }});
+    } else if (path.includes('najran_general_performance')) {
+      createApproveBtn({ label: 'اعتماد جداول الأداء', onClick: () => {
+        if (!confirm('هل تريد اعتماد جداول الأداء والانتقال لشهادة الإنجاز؟')) return;
+        localStorage.setItem(STEP_KEY.labor_performance, '1');
+        window.location.href = '/original/najran_general_achievement.html';
+      }});
+    } else if (path.includes('najran_dental_performance')) {
+      createApproveBtn({ label: 'اعتماد جداول الأداء', onClick: () => {
+        if (!confirm('هل تريد اعتماد جداول الأداء والانتقال لشهادة الإنجاز؟')) return;
+        localStorage.setItem(STEP_KEY.labor_performance, '1');
+        window.location.href = '/original/najran_general_achievement.html';
+      }});
+    // ── الصفحات العامة ────────────────────────────────────────────────
+    } else if (path.endsWith('attendance.html') && !path.includes('health_centers') && !path.includes('admin_offices')) {
       window.initAttendanceApproveBtn();
     } else if (path.endsWith('performance.html')) {
       window.initPerformanceApproveBtn();

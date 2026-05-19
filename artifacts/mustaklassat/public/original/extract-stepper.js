@@ -5,12 +5,31 @@
 (function () {
   'use strict';
 
-  const STEPS_LABOR = [
-    { key: 'labor_attendance',  label: 'الحضور والانصراف', page: '/original/attendance.html' },
-    { key: 'labor_performance', label: 'جداول الأداء',     page: '/original/performance.html', needsFlag: 'najran_labor_attendance_done' },
-    { key: 'labor_achievement', label: 'شهادة الإنجاز',   page: '/original/achievement.html',  needsFlag: 'najran_labor_performance_done' },
-    { key: 'labor_submit',      label: 'رفع للاعتماد',     page: null, isLast: true },
-  ];
+  function buildLaborSteps() {
+    const p = window.location.pathname;
+    if (p.includes('najran_dental')) {
+      return [
+        { key: 'labor_attendance',  label: 'الحضور والانصراف', page: '/original/najran_dental_attendance.html' },
+        { key: 'labor_performance', label: 'جداول الأداء',     page: '/original/najran_dental_performance.html', needsFlag: 'najran_labor_attendance_done' },
+        { key: 'labor_achievement', label: 'شهادة الإنجاز',   page: '/original/najran_general_achievement.html', needsFlag: 'najran_labor_performance_done' },
+        { key: 'labor_submit',      label: 'رفع للاعتماد',     page: null, isLast: true },
+      ];
+    }
+    if (p.includes('najran_general')) {
+      return [
+        { key: 'labor_attendance',  label: 'الحضور والانصراف', page: '/original/najran_general_attendance.html' },
+        { key: 'labor_performance', label: 'جداول الأداء',     page: '/original/najran_general_performance.html', needsFlag: 'najran_labor_attendance_done' },
+        { key: 'labor_achievement', label: 'شهادة الإنجاز',   page: '/original/najran_general_achievement.html', needsFlag: 'najran_labor_performance_done' },
+        { key: 'labor_submit',      label: 'رفع للاعتماد',     page: null, isLast: true },
+      ];
+    }
+    return [
+      { key: 'labor_attendance',  label: 'الحضور والانصراف', page: '/original/attendance.html' },
+      { key: 'labor_performance', label: 'جداول الأداء',     page: '/original/performance.html', needsFlag: 'najran_labor_attendance_done' },
+      { key: 'labor_achievement', label: 'شهادة الإنجاز',   page: '/original/achievement.html',  needsFlag: 'najran_labor_performance_done' },
+      { key: 'labor_submit',      label: 'رفع للاعتماد',     page: null, isLast: true },
+    ];
+  }
 
   const STEPS_HEALTH = [
     { key: 'health_attendance',  label: 'عمالة المراكز',     page: '/original/health_centers_attendance.html' },
@@ -41,7 +60,7 @@
     const current = detectCurrentStep();
     if (!current) return;
 
-    const steps = current.type === 'health' ? STEPS_HEALTH : STEPS_LABOR;
+    const steps = current.type === 'health' ? STEPS_HEALTH : buildLaborSteps();
     const flowTitle = current.type === 'health' ? 'مستخلص المراكز الصحية' : 'مستخلص العمالة';
     const currentIdx = steps.findIndex(s => s.key === current.key);
     const monthLabel = getMonthLabel();
