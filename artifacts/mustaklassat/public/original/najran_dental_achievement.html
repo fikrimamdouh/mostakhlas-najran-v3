@@ -6,7 +6,7 @@
 /* ── Hospital namespace patch ── */
 (function(){
   var P='nd_';
-  var KK=['performanceTotalDeduction','distributionSettings','sb_sigs_','attendanceData','deptCalculatedCost_','achievementData','finalLaborCost','dynamicSignatures'];
+  var KK=['performanceTotalDeduction','distributionSettings','sb_sigs_','attendanceData','deptCalculatedCost_','achievementData','finalLaborCost','dynamicSignatures','dentalAchievementTotals'];
   function pfx(k){for(var i=0;i<KK.length;i++){if(k===KK[i]||k.startsWith(KK[i]))return P+k;}return k;}
   try{
     var _ls=window.localStorage;
@@ -1049,6 +1049,14 @@ function renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeducti
         const _hn = (localStorage.getItem('hospitalName') || '').trim();
         if (_hn) localStorage.setItem('finalLaborCost_' + _hn, grandTotalNetMonthly.toFixed(2));
         localStorage.setItem('finalLaborCost', grandTotalNetMonthly.toFixed(2));
+        localStorage.setItem('dentalAchievementTotals', JSON.stringify({
+            monthlyValue:       grandTotalMonthlyValue,
+            absenceDeduction:   grandTotalAbsenceDeduction,
+            absencePenalty:     grandTotalAbsencePenalty,
+            performancePenalty: grandTotalPerformancePenalty,
+            nationalityPenalty: grandTotalNationalityPenalty,
+            netMonthly:         grandTotalNetMonthly
+        }));
     } catch (_) {}
 }
 

@@ -885,11 +885,21 @@
                         var performancePenalty = parseFloat(rawGet(ndPfx + 'performanceTotalDeduction')) || 0;
                         var netMonthly = monthlyValue - absenceDeduction - absencePenalty - performancePenalty - nationalityPenalty;
 
-                        // إذا اكتملت شهادة إنجاز الأسنان — استخدم قيمتها النهائية الرسمية مباشرة
-                        var dentalFinalCost = parseFloat(rawGet(ndPfx + 'finalLaborCost'));
-                        if (!isNaN(dentalFinalCost) && dentalFinalCost > 0) {
-                            netMonthly = dentalFinalCost;
-                        }
+                        // إذا اكتملت شهادة إنجاز الأسنان — استخدم جميع قيمها الرسمية مباشرة
+                        try {
+                            var totalsRaw = rawGet(ndPfx + 'dentalAchievementTotals');
+                            if (totalsRaw) {
+                                var t = JSON.parse(totalsRaw);
+                                if (t && t.netMonthly > 0) {
+                                    monthlyValue       = t.monthlyValue       || monthlyValue;
+                                    absenceDeduction   = t.absenceDeduction   || absenceDeduction;
+                                    absencePenalty     = t.absencePenalty     || absencePenalty;
+                                    performancePenalty = t.performancePenalty || performancePenalty;
+                                    nationalityPenalty = t.nationalityPenalty || nationalityPenalty;
+                                    netMonthly         = t.netMonthly;
+                                }
+                            }
+                        } catch (_) {}
 
                         var _e; 
                         _e = document.getElementById('dental-monthlyValue');      if (_e) _e.textContent = monthlyValue.toFixed(2);
