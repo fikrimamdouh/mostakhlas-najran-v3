@@ -1,0 +1,54 @@
+index-DNOsGjqm.js:78 PRODUCTION_BUILD_MARKER_2026_05_07_V4_LIVE_KEY
+index.iife.js:1 content script loaded
+refresh.js:27 WebSocket connection to 'ws://localhost:8081/' failed: 
+initClient @ refresh.js:27
+addRefresh @ refresh.js:45
+(anonymous) @ refresh.js:71
+(anonymous) @ refresh.js:72
+VM3709 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM3713 index.iife.js:1 content script loaded
+VM3709 cloud-sync.js:233 [MzamanaCloud] ✓ 11 مفتاح شخصي + 11 مفتاح مستشفى مشترك
+VM3709 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM3724 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM3728 najran_dental_performance.html:2015 بدء تحميل صفحة الأداء...
+VM3728 najran_dental_performance.html:2356 تطبيق إعدادات العرض...
+VM3728 najran_dental_performance.html:458 تطبيق إعدادات العرض على البطاقات...
+VM3728 najran_dental_performance.html:313 Uncaught TypeError: Cannot set properties of null (setting 'textContent')
+    at updateCertificateFromPerformance (VM3728 najran_dental_performance.html:313:60)
+    at updateAllTotals (VM3728 najran_dental_performance.html:2085:5)
+    at HTMLDocument.<anonymous> (VM3728 najran_dental_performance.html:2064:5)
+updateCertificateFromPerformance @ VM3728 najran_dental_performance.html:313
+updateAllTotals @ VM3728 najran_dental_performance.html:2085
+(anonymous) @ VM3728 najran_dental_performance.html:2064
+VM3728 najran_dental_performance.html:313 Uncaught TypeError: Cannot set properties of null (setting 'textContent')
+    at updateCertificateFromPerformance (VM3728 najran_dental_performance.html:313:60)
+    at HTMLDocument.applyDisplaySettings (VM3728 najran_dental_performance.html:2347:5)
+updateCertificateFromPerformance @ VM3728 najran_dental_performance.html:313
+applyDisplaySettings @ VM3728 najran_dental_performance.html:2347
+VM3734 index.iife.js:1 content script loaded
+VM3724 cloud-sync.js:233 [MzamanaCloud] ✓ 11 مفتاح شخصي + 11 مفتاح مستشفى مشترك
+VM3724 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM3744 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM3748 index.iife.js:1 content script loaded
+VM3744 cloud-sync.js:233 [MzamanaCloud] ✓ 0 مفتاح شخصي + 11 مفتاح مستشفى مشترك
+VM3744 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM3767 najran_dental_achievement.html:149 Uncaught SyntaxError: Missing catch or finally after try (at VM3767 najran_dental_achievement.html:149:9)
+VM3766 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM3774 index.iife.js:1 content script loaded
+VM3766 cloud-sync.js:233 [MzamanaCloud] ✓ 11 مفتاح شخصي + 11 مفتاح مستشفى مشترك
+VM3766 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM3784 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM3788 index.iife.js:1 content script loaded
+VM3802 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM3809 attendance_interactive_v9_corrected.js:1336 تم تحميل صفحة الحضور والانصراف التفاعلية المصححة بنجاح
+VM3818 index.iife.js:1 content script loaded
+VM3802 cloud-sync.js:233 [MzamanaCloud] ✓ 11 مفتاح شخصي + 11 مفتاح مستشفى مشترك
+VM3802 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+attendance_interactive_v9_corrected.js:1336 تم تحميل صفحة الحضور والانصراف التفاعلية المصححة بنجاح
+index.iife.js:1 content script loaded
+cloud-sync.js:233 [MzamanaCloud] ✓ 11 مفتاح شخصي + 11 مفتاح مستشفى مشترك
+cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+cloud-sync.js:289 [MzamanaCloud] ✓ رُفع 11 شخصي + 11 مشترك
+cloud-sync.js:289 [MzamanaCloud] ✓ رُفع 11 شخصي + 11 مشترك
+cloud-sync.js:289 [MzamanaCloud] ✓ رُفع 11 شخصي + 11 مشترك

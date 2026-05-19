@@ -924,9 +924,11 @@ function loadAndProcessAchievementData() {
         });
 
         // 2. حساب إجمالي الإداريين السعوديين
+        let saudiMonthlyValue = parseFloat(localStorage.getItem('deptCalculatedCost_saudi_admin')) || 0;
         let saudiAbsenceDeduction = 0;
         let saudiAbsencePenalty = 0;
         let saudiNationalityPenalty = 0;
+        (attendanceData['saudi_admin'] || []).forEach(emp => {
             saudiAbsenceDeduction += parseFloat(emp.deduction) || 0;
             saudiAbsencePenalty += parseFloat(emp.absencePenalty) || 0;
             saudiNationalityPenalty += parseFloat(emp.nationalityFine) || 0;

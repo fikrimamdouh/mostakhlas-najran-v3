@@ -1,0 +1,82 @@
+index-DNOsGjqm.js:78 PRODUCTION_BUILD_MARKER_2026_05_07_V4_LIVE_KEY
+index.iife.js:1 content script loaded
+VM4121 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM4125 index.iife.js:1 content script loaded
+refresh.js:27 WebSocket connection to 'ws://localhost:8081/' failed: 
+initClient @ refresh.js:27
+addRefresh @ refresh.js:45
+(anonymous) @ refresh.js:71
+(anonymous) @ refresh.js:72
+VM4121 cloud-sync.js:233 [MzamanaCloud] ✓ 11 مفتاح شخصي + 11 مفتاح مستشفى مشترك
+VM4121 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM4135 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM4143 attendance_interactive_v9_corrected.js:1336 تم تحميل صفحة الحضور والانصراف التفاعلية المصححة بنجاح
+VM4152 index.iife.js:1 content script loaded
+VM4135 cloud-sync.js:233 [MzamanaCloud] ✓ 11 مفتاح شخصي + 11 مفتاح مستشفى مشترك
+VM4135 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM4135 cloud-sync.js:289 [MzamanaCloud] ✓ رُفع 11 شخصي + 11 مشترك
+VM4135 cloud-sync.js:289 [MzamanaCloud] ✓ رُفع 11 شخصي + 11 مشترك
+VM4135 cloud-sync.js:289 [MzamanaCloud] ✓ رُفع 11 شخصي + 11 مشترك
+VM4168 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM4173 najran_general_performance.html:2021 بدء تحميل صفحة الأداء...
+VM4173 najran_general_performance.html:2369 تطبيق إعدادات العرض...
+VM4173 najran_general_performance.html:460 تطبيق إعدادات العرض على البطاقات...
+VM4173 najran_general_performance.html:313 Uncaught TypeError: Cannot set properties of null (setting 'textContent')
+    at updateCertificateFromPerformance (VM4173 najran_general_performance.html:313:60)
+    at updateAllTotals (VM4173 najran_general_performance.html:2094:5)
+    at HTMLDocument.<anonymous> (VM4173 najran_general_performance.html:2073:5)
+updateCertificateFromPerformance @ VM4173 najran_general_performance.html:313
+updateAllTotals @ VM4173 najran_general_performance.html:2094
+(anonymous) @ VM4173 najran_general_performance.html:2073
+VM4173 najran_general_performance.html:313 Uncaught TypeError: Cannot set properties of null (setting 'textContent')
+    at updateCertificateFromPerformance (VM4173 najran_general_performance.html:313:60)
+    at HTMLDocument.applyDisplaySettings (VM4173 najran_general_performance.html:2360:5)
+updateCertificateFromPerformance @ VM4173 najran_general_performance.html:313
+applyDisplaySettings @ VM4173 najran_general_performance.html:2360
+VM4179 index.iife.js:1 content script loaded
+VM4168 cloud-sync.js:233 [MzamanaCloud] ✓ 11 مفتاح شخصي + 11 مفتاح مستشفى مشترك
+VM4168 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM4200 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM4213 index.iife.js:1 content script loaded
+VM4200 cloud-sync.js:233 [MzamanaCloud] ✓ 11 مفتاح شخصي + 11 مفتاح مستشفى مشترك
+VM4200 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM4229 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM4238 attendance_interactive_v9_corrected.js:1336 تم تحميل صفحة الحضور والانصراف التفاعلية المصححة بنجاح
+VM4247 index.iife.js:1 content script loaded
+VM4229 cloud-sync.js:233 [MzamanaCloud] ✓ 11 مفتاح شخصي + 11 مفتاح مستشفى مشترك
+VM4229 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM4263 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM4268 najran_general_performance.html:2021 بدء تحميل صفحة الأداء...
+VM4268 najran_general_performance.html:2369 تطبيق إعدادات العرض...
+VM4268 najran_general_performance.html:460 تطبيق إعدادات العرض على البطاقات...
+VM4268 najran_general_performance.html:313 Uncaught TypeError: Cannot set properties of null (setting 'textContent')
+    at updateCertificateFromPerformance (VM4268 najran_general_performance.html:313:60)
+    at updateAllTotals (VM4268 najran_general_performance.html:2094:5)
+    at HTMLDocument.<anonymous> (VM4268 najran_general_performance.html:2073:5)
+updateCertificateFromPerformance @ VM4268 najran_general_performance.html:313
+updateAllTotals @ VM4268 najran_general_performance.html:2094
+(anonymous) @ VM4268 najran_general_performance.html:2073
+VM4268 najran_general_performance.html:313 Uncaught TypeError: Cannot set properties of null (setting 'textContent')
+    at updateCertificateFromPerformance (VM4268 najran_general_performance.html:313:60)
+    at HTMLDocument.applyDisplaySettings (VM4268 najran_general_performance.html:2360:5)
+updateCertificateFromPerformance @ VM4268 najran_general_performance.html:313
+applyDisplaySettings @ VM4268 najran_general_performance.html:2360
+VM4274 index.iife.js:1 content script loaded
+VM4263 cloud-sync.js:233 [MzamanaCloud] ✓ 11 مفتاح شخصي + 11 مفتاح مستشفى مشترك
+VM4263 cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+najran_general_achievement.html:920 Uncaught TypeError: Cannot set properties of null (setting 'textContent')
+    at updateDateTime (najran_general_achievement.html:920:58)
+    at HTMLDocument.<anonymous> (najran_general_achievement.html:1461:5)
+updateDateTime @ najran_general_achievement.html:920
+(anonymous) @ najran_general_achievement.html:1461
+index.iife.js:1 content script loaded
+cloud-sync.js:233 [MzamanaCloud] ✓ 11 مفتاح شخصي + 11 مفتاح مستشفى مشترك
+cloud-sync.js:402 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+najran_general_achievement.html:1295 بدء تصدير شهادة الإنجاز إلى Excel
+najran_general_achievement.html:1373 خطأ في تصدير Excel: TypeError: Cannot read properties of null (reading 'checked')
+    at getDentalData (najran_general_achievement.html:813:75)
+    at exportAchievementToExcel (najran_general_achievement.html:1325:28)
+    at HTMLButtonElement.onclick (najran_general_achievement.html:780:77)
+exportAchievementToExcel @ najran_general_achievement.html:1373
+onclick @ najran_general_achievement.html:780
