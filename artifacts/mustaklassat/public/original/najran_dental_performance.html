@@ -26,6 +26,83 @@
 <style>
 /* مركز طب الأسنان — إخفاء الأقسام غير المتوفرة */
 /* [dental: 5 departments only] */
+
+  :root {
+    --unit-color: #0d7065;
+    --unit-accent: #5eead4;
+  }
+
+  /* ══ PAGE IDENTITY BAR (screen only) ══ */
+  .page-unit-bar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    background: var(--unit-color, #003087) !important;
+    color: #fff !important;
+    padding: 10px 20px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    font-family: 'Tajawal', sans-serif !important;
+    letter-spacing: .3px !important;
+    position: relative !important;
+  }
+  .page-unit-bar .unit-badge {
+    background: rgba(255,255,255,.18) !important;
+    border: 1px solid rgba(255,255,255,.25) !important;
+    border-radius: 20px !important;
+    padding: 3px 14px !important;
+    font-size: 12px !important;
+  }
+  @media print { .page-unit-bar { display: none !important; } }
+
+  /* ══ HEADER CLEAN-UP ══ */
+  .header-info {
+    background: linear-gradient(135deg, #080e24 0%, #0e1e45 40%, #1a336e 100%) !important;
+    border-bottom: 4px solid var(--unit-color, #003087) !important;
+    padding: 22px 100px !important;
+  }
+
+  .logo-right {
+    position: absolute !important; right: 18px !important;
+    top: 50% !important; transform: translateY(-50%) !important;
+    width: 72px !important; height: 72px !important;
+    border-radius: 14px !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,.35) !important;
+    object-fit: contain !important;
+    background: rgba(255,255,255,.1) !important;
+    padding: 5px !important;
+  }
+  /* شعار اليسار نفس التجمع */
+  .logo-left {
+    position: absolute !important; left: 18px !important;
+    top: 50% !important; transform: translateY(-50%) !important;
+    width: 72px !important; height: 72px !important;
+    border-radius: 14px !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,.35) !important;
+    object-fit: contain !important;
+    background: rgba(255,255,255,.1) !important;
+    padding: 5px !important;
+  }
+
+  .header-info h1 {
+    font-size: 20px !important; font-weight: 900 !important;
+    color: #fff !important; margin: 0 0 4px !important;
+    font-family: 'Tajawal', sans-serif !important;
+  }
+  .header-info h3 {
+    font-size: 12px !important; font-weight: 500 !important;
+    color: rgba(255,255,255,.6) !important; margin: 0 0 6px !important;
+  }
+  .header-info h2 {
+    font-size: 16px !important; font-weight: 800 !important;
+    color: var(--unit-accent, #d4af37) !important; margin: 4px 0 0 !important;
+  }
+  .header-info .date {
+    font-size: 11px !important; color: rgba(255,255,255,.4) !important;
+    margin-top: 5px !important;
+  }
+
 </style>
     <script src="/original/auth-check.js"></script>
     <script src="/original/cloud-sync.js"></script>
@@ -432,10 +509,15 @@ tr.total-row th, tr.total-row td {
     <div id="particles-js-bg"></div>
     <div class="container">
         <header>
-            <div class="header-info">
+            <div class="page-unit-bar" style="--unit-color:#0d7065;">
+        <i class="fas fa-chart-line"></i>
+        مركز طب الأسنان
+        <span class="unit-badge">جداول الأداء</span>
+    </div>
+        <div class="header-info">
                 <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-right">
                 <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-left">
-                <h1>تجمع نجران الصحي</h1>
+                <h1>مركز طب الأسنان</h1>
                 <!-- removed -->
                 <h2 id="spare-parts-title">مستخلص العمالة</h2>
                 <p class="date" id="current-date-time"></p>
@@ -1703,7 +1785,7 @@ function printPage() {
         headerInfo.innerHTML = `
             <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-right">
             <div class="center-content">
-                <h1>تجمع نجران الصحي</h1>
+                <h1>مركز طب الأسنان</h1>
                 <!-- removed -->
                 <h2>جداول الأداء</h2>
             </div>
