@@ -3,7 +3,7 @@ import {
   CheckSquare, MapPin, ClipboardList, Eye, Archive, BadgeCheck, type LucideIcon,
 } from "lucide-react";
 
-export type SiteType = "hospital" | "health_centers" | "admin_offices";
+export type SiteType = "hospital" | "health_centers" | "admin_offices" | "najran_general";
 
 export interface ModuleDef {
   key: string;
@@ -44,6 +44,7 @@ export function parseAllowedModules(raw: string | null | undefined): string[] | 
 
 export function getSiteType(hospital: string | null | undefined): SiteType {
   if (!hospital) return "hospital";
+  if (hospital === "مستشفى نجران العام الجديد") return "najran_general";
   if (hospital === "المراكز الصحية" || hospital === "المراكز الصحية (مجمع)") return "health_centers";
   if (
     hospital === "المكاتب الإدارية" ||
@@ -86,6 +87,9 @@ export function filterModules(
   const isAdmin = role === "admin";
   const isSupervisor = role === "supervisor";
   const isPrivileged = isAdmin || isSupervisor || role === "contract_supervisor";
+
+  // قسم نجران العام مستقل تماماً — لا يرى أي وحدة من النظام الأساسي
+  if (siteType === "najran_general" && !isPrivileged) return [];
 
   let byType: ModuleDef[];
 
