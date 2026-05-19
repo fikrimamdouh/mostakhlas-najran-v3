@@ -6,7 +6,7 @@
 /* ── Hospital namespace patch ── */
 (function(){
   var P='ng_';
-  var KK=['consumablesData','sb_sigs_consumables','consumables_'];
+  var KK=['consumablesData','sb_sigs_consumables','consumables_','finalLaborCost'];
   function pfx(k){for(var i=0;i<KK.length;i++){if(k===KK[i]||k.startsWith(KK[i]))return P+k;}return k;}
   try{
     var _ls=window.localStorage;

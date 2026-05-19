@@ -6,7 +6,7 @@
 /* ── Hospital namespace patch ── */
 (function(){
   var P='ng_';
-  var KK=['departmentNames','attendanceData','ng_attendanceData','nd_attendanceData'];
+  var KK=['departmentNames','attendanceData','ng_attendanceData','nd_attendanceData','finalLaborCost','deptCalculatedCost','dynamicSignatures','distributionSettings'];
   function pfx(k){return KK.some(function(x){return k===x||k.startsWith(x+'_');})?P+k:k;}
   try{
     var _ls=window.localStorage;
