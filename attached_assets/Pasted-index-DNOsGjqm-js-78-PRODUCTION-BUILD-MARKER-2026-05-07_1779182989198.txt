@@ -1,0 +1,109 @@
+index-DNOsGjqm.js:78 PRODUCTION_BUILD_MARKER_2026_05_07_V4_LIVE_KEY
+index.iife.js:1 content script loaded
+VM10832 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM10836 index.iife.js:1 content script loaded
+VM10832 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM10832 cloud-sync.js:413 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+refresh.js:27 WebSocket connection to 'ws://localhost:8081/' failed: 
+initClient @ refresh.js:27
+addRefresh @ refresh.js:45
+(anonymous) @ refresh.js:71
+(anonymous) @ refresh.js:72
+VM10844 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM10858 index.iife.js:1 content script loaded
+VM10844 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM10844 cloud-sync.js:413 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM10868 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM10872 index.iife.js:1 content script loaded
+VM10868 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM10868 cloud-sync.js:413 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM10868 cloud-sync.js:289 [MzamanaCloud] ✓ رُفع 14 شخصي
+VM10884 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM10891 najran_dental_performance.html:2015 بدء تحميل صفحة الأداء...
+VM10891 najran_dental_performance.html:2356 تطبيق إعدادات العرض...
+VM10891 najran_dental_performance.html:458 تطبيق إعدادات العرض على البطاقات...
+VM10891 najran_dental_performance.html:328 بدء تحميل بيانات الجدول: cleaning
+VM10891 najran_dental_performance.html:328 بدء تحميل بيانات الجدول: electricity
+VM10891 najran_dental_performance.html:328 بدء تحميل بيانات الجدول: civil
+VM10891 najran_dental_performance.html:328 بدء تحميل بيانات الجدول: mechanics
+VM10891 najran_dental_performance.html:2070 اكتمل تحميل صفحة الأداء بنجاح.
+VM10897 index.iife.js:1 content script loaded
+VM10884 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM10884 cloud-sync.js:413 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM10884 cloud-sync.js:289 [MzamanaCloud] ✓ رُفع 14 شخصي
+VM10884 cloud-sync.js:289 [MzamanaCloud] ✓ رُفع 14 شخصي
+VM10884 cloud-sync.js:289 [MzamanaCloud] ✓ رُفع 14 شخصي
+VM10918 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM10927 attendance_interactive_v9_corrected.js:1336 تم تحميل صفحة الحضور والانصراف التفاعلية المصححة بنجاح
+VM10935 index.iife.js:1 content script loaded
+VM10918 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM10918 cloud-sync.js:413 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM10918 cloud-sync.js:289 [MzamanaCloud] ✓ رُفع 14 شخصي
+VM10918 cloud-sync.js:289 [MzamanaCloud] ✓ رُفع 14 شخصي
+VM10918 cloud-sync.js:289 [MzamanaCloud] ✓ رُفع 14 شخصي
+VM10918 cloud-sync.js:289 [MzamanaCloud] ✓ رُفع 14 شخصي
+VM10918 cloud-sync.js:289 [MzamanaCloud] ✓ رُفع 14 شخصي
+VM10918 cloud-sync.js:289 [MzamanaCloud] ✓ رُفع 14 شخصي
+VM10954 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM10959 najran_dental_performance.html:2015 بدء تحميل صفحة الأداء...
+VM10959 najran_dental_performance.html:2356 تطبيق إعدادات العرض...
+VM10959 najran_dental_performance.html:458 تطبيق إعدادات العرض على البطاقات...
+VM10959 najran_dental_performance.html:328 بدء تحميل بيانات الجدول: cleaning
+VM10959 najran_dental_performance.html:328 بدء تحميل بيانات الجدول: electricity
+VM10959 najran_dental_performance.html:328 بدء تحميل بيانات الجدول: civil
+VM10959 najran_dental_performance.html:328 بدء تحميل بيانات الجدول: mechanics
+VM10959 najran_dental_performance.html:2070 اكتمل تحميل صفحة الأداء بنجاح.
+VM10965 index.iife.js:1 content script loaded
+VM10954 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM10954 cloud-sync.js:413 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM10982 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM10988 attendance_interactive_v9_corrected.js:1336 تم تحميل صفحة الحضور والانصراف التفاعلية المصححة بنجاح
+VM10998 index.iife.js:1 content script loaded
+VM10982 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM10982 cloud-sync.js:413 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM11011 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM11016 najran_dental_performance.html:2015 بدء تحميل صفحة الأداء...
+VM11016 najran_dental_performance.html:2356 تطبيق إعدادات العرض...
+VM11016 najran_dental_performance.html:458 تطبيق إعدادات العرض على البطاقات...
+VM11016 najran_dental_performance.html:328 بدء تحميل بيانات الجدول: cleaning
+VM11016 najran_dental_performance.html:328 بدء تحميل بيانات الجدول: electricity
+VM11016 najran_dental_performance.html:328 بدء تحميل بيانات الجدول: civil
+VM11016 najran_dental_performance.html:328 بدء تحميل بيانات الجدول: mechanics
+VM11016 najran_dental_performance.html:2070 اكتمل تحميل صفحة الأداء بنجاح.
+VM11022 index.iife.js:1 content script loaded
+VM11011 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM11011 cloud-sync.js:413 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM11034 cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+VM11042 najran_general_achievement.html:249 خطأ في loadAndProcessAchievementData: TypeError: Cannot read properties of null (reading 'checked')
+    at VM11042 najran_general_achievement.html:279:93
+    at Array.forEach (<anonymous>)
+    at renderAchievementTable (VM11042 najran_general_achievement.html:263:34)
+    at loadAndProcessAchievementData (VM11042 najran_general_achievement.html:245:9)
+    at toggleDentalRow (VM11042 najran_general_achievement.html:26:9)
+    at loadDentalData (VM11042 najran_general_achievement.html:127:9)
+    at HTMLDocument.<anonymous> (VM11042 najran_general_achievement.html:694:5)
+loadAndProcessAchievementData @ VM11042 najran_general_achievement.html:249
+toggleDentalRow @ VM11042 najran_general_achievement.html:26
+loadDentalData @ VM11042 najran_general_achievement.html:127
+(anonymous) @ VM11042 najran_general_achievement.html:694
+VM11042 najran_general_achievement.html:249 خطأ في loadAndProcessAchievementData: TypeError: Cannot read properties of null (reading 'checked')
+    at VM11042 najran_general_achievement.html:279:93
+    at Array.forEach (<anonymous>)
+    at renderAchievementTable (VM11042 najran_general_achievement.html:263:34)
+    at loadAndProcessAchievementData (VM11042 najran_general_achievement.html:245:9)
+    at HTMLDocument.<anonymous> (VM11042 najran_general_achievement.html:707:5)
+loadAndProcessAchievementData @ VM11042 najran_general_achievement.html:249
+(anonymous) @ VM11042 najran_general_achievement.html:707
+VM11048 index.iife.js:1 content script loaded
+VM11034 cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+VM11034 cloud-sync.js:413 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)
+VM11034 cloud-sync.js:289 [MzamanaCloud] ✓ رُفع 14 شخصي
+cloud-sync.js:361 [MzamanaCloud] وضع المشاركة: مستشفى «مستشفى نجران العام الجديد»
+najran_dental_achievement.html:884 Uncaught TypeError: Cannot set properties of null (setting 'textContent')
+    at updateDateTime (najran_dental_achievement.html:884:58)
+    at HTMLDocument.<anonymous> (najran_dental_achievement.html:1424:5)
+updateDateTime @ najran_dental_achievement.html:884
+(anonymous) @ najran_dental_achievement.html:1424
+index.iife.js:1 content script loaded
+cloud-sync.js:233 [MzamanaCloud] ✓ 14 مفتاح شخصي + 0 مفتاح مستشفى مشترك
+cloud-sync.js:413 [MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)

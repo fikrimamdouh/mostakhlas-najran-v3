@@ -880,8 +880,10 @@
         const now = new Date();
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
         const gregorianDateTime = now.toLocaleDateString('ar-SA', options);
-        document.getElementById('current-date-time').textContent = gregorianDateTime;
-        document.getElementById('issueDate').textContent = now.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+        const _dtEl = document.getElementById('current-date-time');
+        if (_dtEl) _dtEl.textContent = gregorianDateTime;
+        const _issueEl = document.getElementById('issueDate');
+        if (_issueEl) _issueEl.textContent = now.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
     }
 
     function calculateDaysInMonth(dateString) {
