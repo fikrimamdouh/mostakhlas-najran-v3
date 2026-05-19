@@ -1,20 +1,25 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script src="/original/user-storage-proxy.js"></script>
 <script>
 /* ── Hospital namespace patch ── */
 (function(){
   var P='nd_';
   var KK=['departmentNames','attendanceData','ng_attendanceData','nd_attendanceData'];
-  var _g=Storage.prototype.getItem, _s=Storage.prototype.setItem, _r=Storage.prototype.removeItem;
-  function pfx(k){return KK.some(function(x){return k===x||k.startsWith(x+'_')||k===x;})?P+k:k;}
-  Storage.prototype.getItem=function(k){return _g.call(this,pfx(k));};
-  Storage.prototype.setItem=function(k,v){return _s.call(this,pfx(k),v);};
-  Storage.prototype.removeItem=function(k){return _r.call(this,pfx(k));};
+  function pfx(k){return KK.some(function(x){return k===x||k.startsWith(x+'_');})?P+k:k;}
+  try{
+    var _ls=window.localStorage;
+    var np=new Proxy(_ls,{get:function(t,p){
+      if(p==='getItem')return function(k){return t.getItem(pfx(k));};
+      if(p==='setItem')return function(k,v){return t.setItem(pfx(k),v);};
+      if(p==='removeItem')return function(k){return t.removeItem(pfx(k));};
+      var v=t[p];return typeof v==='function'?v.bind(t):v;
+    }});
+    Object.defineProperty(window,'localStorage',{value:np,configurable:true,writable:false});
+  }catch(_){}
 })();
 </script>
-
-<script src="/original/user-storage-proxy.js"></script>
     <script src="/original/auth-check.js"></script>
     <script src="/original/cloud-sync.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">

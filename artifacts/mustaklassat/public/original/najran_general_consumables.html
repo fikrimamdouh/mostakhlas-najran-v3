@@ -1,20 +1,25 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script src="/original/user-storage-proxy.js"></script>
 <script>
 /* ── Hospital namespace patch ── */
 (function(){
   var P='ng_';
   var KK=['consumablesData','sb_sigs_consumables','consumables_'];
   function pfx(k){for(var i=0;i<KK.length;i++){if(k===KK[i]||k.startsWith(KK[i]))return P+k;}return k;}
-  var _g=Storage.prototype.getItem,_s=Storage.prototype.setItem,_r=Storage.prototype.removeItem;
-  Storage.prototype.getItem=function(k){return _g.call(this,pfx(k));};
-  Storage.prototype.setItem=function(k,v){return _s.call(this,pfx(k),v);};
-  Storage.prototype.removeItem=function(k){return _r.call(this,pfx(k));};
+  try{
+    var _ls=window.localStorage;
+    var np=new Proxy(_ls,{get:function(t,p){
+      if(p==='getItem')return function(k){return t.getItem(pfx(k));};
+      if(p==='setItem')return function(k,v){return t.setItem(pfx(k),v);};
+      if(p==='removeItem')return function(k){return t.removeItem(pfx(k));};
+      var v=t[p];return typeof v==='function'?v.bind(t):v;
+    }});
+    Object.defineProperty(window,'localStorage',{value:np,configurable:true,writable:false});
+  }catch(_){}
 })();
 </script>
-
-<script src="/original/user-storage-proxy.js"></script>
     <script src="/original/auth-check.js"></script>
     <script src="/original/cloud-sync.js"></script>
     <meta charset="UTF-8">
