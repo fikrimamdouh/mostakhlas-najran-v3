@@ -688,23 +688,16 @@
                 <button class="ab ab-titles" onclick="openItemNameDialog()"><i class="fas fa-edit"></i> تعديل أسماء البنود</button>
             </div>
 
-            <!-- START: NEW Print Toggles -->
-            <div class="print-toggles no-print">
-                <div class="toggle-switch">
-                    <label for="dental-labor-checkbox">
-                        <input type="checkbox" id="dental-labor-checkbox" onchange="toggleDentalRow()">
-                        طباعة عمالة مركز الأسنان
-                    </label>
-                </div>
-                <div class="toggle-switch">
-                    <label for="admin-jobs-print-checkbox">
-                        <input type="checkbox" id="admin-jobs-print-checkbox" onchange="toggleAdminRowPrint(this.checked)">
-                        طباعة الوظائف الإدارية
-                    </label>
-                </div>
-            </div>
-            <!-- END: NEW Print Toggles -->
-
+          <!-- START: Print Toggles -->
+<div class="print-toggles no-print">
+    <div class="toggle-switch">
+        <label for="admin-jobs-print-checkbox">
+            <input type="checkbox" id="admin-jobs-print-checkbox" onchange="toggleAdminRowPrint(this.checked)">
+            طباعة الوظائف الإدارية
+        </label>
+    </div>
+</div>
+<!-- END: Print Toggles -->
             <!-- *** END: NEW DENTAL LABOR TOGGLE *** -->
 
             <div class="overflow-x-auto mb-4">
@@ -723,15 +716,7 @@
                     <tbody id="tableBody">
                         <!-- Data populated dynamically -->
                         <!-- *** START: NEW DENTAL LABOR ROW *** -->
-                        <tr id="dental-row" style="display: none;">
-                            <td>عمالة مركز الأسنان</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-monthlyValue" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-absenceDeduction" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-absencePenalty" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-performancePenalty" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-nationalityPenalty" onblur="saveDentalData()">0</td>
-                            <td id="dental-netMonthly">0.00 ر.س.</td>
-                        </tr>
+                      
                         <!-- *** END: NEW DENTAL LABOR ROW *** -->
                     </tbody>
                 </table>
@@ -757,70 +742,16 @@
     }
 
     // *** START: NEW DENTAL LABOR FUNCTIONS ***
-    function toggleDentalRow() {
-        const checkbox = document.getElementById('dental-labor-checkbox');
-        const dentalRow = document.getElementById('dental-row');
-        
-        if (checkbox.checked) {
-            dentalRow.style.display = ''; // Show the row
-            dentalRow.classList.remove('no-print-row');
-        } else {
-            dentalRow.style.display = 'none'; // Hide the row
-            dentalRow.classList.add('no-print-row');
-        }
-        localStorage.setItem('dentalLaborCheckboxState', checkbox.checked);
-        // Recalculate totals when toggling
-        loadAndProcessAchievementData();
-    }
-
-    function getDentalData() {
-        const isEnabled = document.getElementById('dental-labor-checkbox').checked;
-        if (!isEnabled) {
-            return {
-                monthlyValue: 0, absenceDeduction: 0, absencePenalty: 0,
-                performancePenalty: 0, nationalityPenalty: 0, netMonthly: 0
-            };
-        }
-        
-        const monthlyValue = parseFloat(document.getElementById('dental-monthlyValue').textContent) || 0;
-        const absenceDeduction = parseFloat(document.getElementById('dental-absenceDeduction').textContent) || 0;
-        const absencePenalty = parseFloat(document.getElementById('dental-absencePenalty').textContent) || 0;
-        const performancePenalty = parseFloat(document.getElementById('dental-performancePenalty').textContent) || 0;
-        const nationalityPenalty = parseFloat(document.getElementById('dental-nationalityPenalty').textContent) || 0;
-        const netMonthly = monthlyValue - (absenceDeduction + absencePenalty + performancePenalty + nationalityPenalty);
-
-        document.getElementById('dental-netMonthly').textContent = netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
-
-        return { monthlyValue, absenceDeduction, absencePenalty, performancePenalty, nationalityPenalty, netMonthly };
-    }
-
-    function saveDentalData() {
-        const data = {
-            monthlyValue: document.getElementById('dental-monthlyValue').textContent,
-            absenceDeduction: document.getElementById('dental-absenceDeduction').textContent,
-            absencePenalty: document.getElementById('dental-absencePenalty').textContent,
-            performancePenalty: document.getElementById('dental-performancePenalty').textContent,
-            nationalityPenalty: document.getElementById('dental-nationalityPenalty').textContent,
-        };
-        localStorage.setItem('dentalLaborData', JSON.stringify(data));
-        // Recalculate totals after editing a value
-        loadAndProcessAchievementData();
-    }
-
-    function loadDentalData() {
-        const checkbox = document.getElementById('dental-labor-checkbox');
-        const savedState = localStorage.getItem('dentalLaborCheckboxState') === 'true';
-        checkbox.checked = savedState;
-
-        const savedData = JSON.parse(localStorage.getItem('dentalLaborData')) || {};
-        document.getElementById('dental-monthlyValue').textContent = savedData.monthlyValue || '0';
-        document.getElementById('dental-absenceDeduction').textContent = savedData.absenceDeduction || '0';
-        document.getElementById('dental-absencePenalty').textContent = savedData.absencePenalty || '0';
-        document.getElementById('dental-performancePenalty').textContent = savedData.performancePenalty || '0';
-        document.getElementById('dental-nationalityPenalty').textContent = savedData.nationalityPenalty || '0';
-        
-        toggleDentalRow(); // Apply visibility based on saved state
-    }
+  function getDentalData() {
+    return {
+        monthlyValue: 0,
+        absenceDeduction: 0,
+        absencePenalty: 0,
+        performancePenalty: 0,
+        nationalityPenalty: 0,
+        netMonthly: 0
+    };
+}
     // *** END: NEW DENTAL LABOR FUNCTIONS ***
 
 
@@ -1243,15 +1174,7 @@ function exportAchievementToExcel() {
         ];
 
         let allItems = [...departmentDataForAchievement];
-        const dentalData = getDentalData();
-        const isDentalEnabled = document.getElementById('dental-labor-checkbox').checked;
-
-        if (isDentalEnabled) {
-            allItems.push({
-                name: getItemName('dental'),
-                ...dentalData
-            });
-        }
+       
 
         allItems.forEach(item => {
             ws_data.push([
@@ -1382,7 +1305,6 @@ document.addEventListener('DOMContentLoaded', function() {
     updateDateTime();
     updateContractDisplayData();
     updateSignaturesOnPage();
-    loadDentalData();
     
     // --- تعديل طريقة عرض التواريخ ---
     const extractDataString = localStorage.getItem('extractData'); // اقرأ الكائن
@@ -1461,7 +1383,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const itemKeys = {
         workforce: 'العمالة',
         saudi_admin: 'الوظائف الإدارية السعوديين',
-        dental: 'عمالة مركز الأسنان'
     };
 
     // Function to refresh data
@@ -1568,7 +1489,7 @@ function closeDialog(dialogId, overlayId) {
         </button>
     </div>
 </div>
-<div id="item-name-overlay" class="overlay" style="display: none;"></div>
+<div id="item-name-overlay" class="overlay" style="display: none;" onclick="closeDialog('item-name-dialog','item-name-overlay')"></div>
 <!-- END: NEW Item Name Edit Dialog -->
 
 <script src="/original/extract-submit.js"></script>
