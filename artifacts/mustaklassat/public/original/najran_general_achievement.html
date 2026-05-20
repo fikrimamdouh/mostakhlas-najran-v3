@@ -451,7 +451,12 @@
     let departmentDataForAchievement = [];
 
     const SIGNATURE_STORAGE_KEY = 'achievementSignatures_v3';
+    const ITEM_NAMES_KEY        = 'achievementItemNames_ng';
     const PASSWORD = "admin123";
+
+    /* rawGet/rawSet — يتجاوز ng_ proxy تماماً للمفاتيح الخاصة بهذه الصفحة */
+    const _rawGet = Storage.prototype.getItem.bind(localStorage);
+    const _rawSet = Storage.prototype.setItem.bind(localStorage);
 
     const itemKeys = {
         workforce:   'العمالة الأساسية',
@@ -467,24 +472,46 @@
     }
 
     /* ================================================================
-       getDentalData — يقرأ من localStorage مباشرة (لا يعتمد على DOM)
+       getDentalData — يجرب كل مفاتيح ممكنة لإيجاد بيانات الأسنان
+       المشكلة: namespace patch بيضيف ng_ على الصفحة دي
+       لكن صفحة الأسنان بتحفظ تحت nd_ — فالمفتاح الحقيقي في المتصفح
+       ممكن يكون: nd_dentalAchievementTotals أو ng_nd_... أو بدون prefix
     ================================================================ */
     function getDentalData() {
         try {
+            /* rawGet يتجاوز الـ proxy تماماً ويقرأ من المتصفح مباشرة */
             var rawGet = Storage.prototype.getItem.bind(localStorage);
-            var sessionRaw = rawGet('najran_session');
-            var session = sessionRaw ? JSON.parse(sessionRaw) : null;
-            var userPfx = (session && session.userId) ? '_u' + session.userId + '_' : '';
-            var ndPfx = userPfx + 'nd_';
 
-            var totalsRaw =
-                rawGet(ndPfx + 'dentalAchievementTotals') ||
-                rawGet('nd_dentalAchievementTotals')       ||
-                rawGet('dentalAchievementTotals');
+            /* جمع session لبناء user prefix */
+            var sessionRaw = rawGet('najran_session') || rawGet('ng_najran_session');
+            var session = null;
+            try { session = JSON.parse(sessionRaw || '{}'); } catch(e){}
+            var userPfx = (session && session.userId) ? '_u' + session.userId + '_' : '';
+
+            /* جرب كل تركيبات ممكنة للمفتاح */
+            var keysToTry = [
+                /* مع user prefix */
+                userPfx + 'nd_dentalAchievementTotals',
+                userPfx + 'ng_nd_dentalAchievementTotals',
+                /* بدون user prefix — الأكثر شيوعاً */
+                'nd_dentalAchievementTotals',
+                'ng_nd_dentalAchievementTotals',
+                /* احتياطي بدون namespace */
+                'dentalAchievementTotals',
+                'ng_dentalAchievementTotals',
+            ];
+
+            var totalsRaw = null;
+            var foundKey  = null;
+            for (var ki = 0; ki < keysToTry.length; ki++) {
+                var val = rawGet(keysToTry[ki]);
+                if (val) { totalsRaw = val; foundKey = keysToTry[ki]; break; }
+            }
 
             if (totalsRaw) {
                 var t = JSON.parse(totalsRaw);
-                if (t) {
+                if (t && (t.netMonthly !== undefined || t.monthlyValue !== undefined)) {
+                    console.log('✅ dental data found at key:', foundKey, t);
                     return {
                         monthlyValue:       parseFloat(t.monthlyValue)       || 0,
                         absenceDeduction:   parseFloat(t.absenceDeduction)   || 0,
@@ -496,16 +523,42 @@
                 }
             }
 
-            /* مصدر احتياطي: احسب من attendanceData */
-            if (!userPfx) return _dentalZero();
-            var attRaw = rawGet(ndPfx + 'attendanceData');
-            if (!attRaw) return _dentalZero();
+            /* ── المصدر الاحتياطي: احسب من attendanceData لصفحة الأسنان ── */
+            console.warn('⚠️ dentalAchievementTotals غير موجود، سيتم الحساب من attendanceData');
+
+            var attKeysToTry = [
+                userPfx + 'nd_attendanceData',
+                'nd_attendanceData',
+                userPfx + 'ng_nd_attendanceData',
+                'ng_nd_attendanceData',
+            ];
+
+            var attRaw = null;
+            for (var ai = 0; ai < attKeysToTry.length; ai++) {
+                var av = rawGet(attKeysToTry[ai]);
+                if (av) { attRaw = av; break; }
+            }
+
+            if (!attRaw) {
+                console.warn('⚠️ لا توجد بيانات أسنان على الإطلاق');
+                return _dentalZero();
+            }
 
             var attData = JSON.parse(attRaw);
             var monthlyValue = 0, absenceDeduction = 0, absencePenalty = 0, nationalityPenalty = 0;
 
+            /* ابحث عن تكاليف الأقسام بنفس منطق البحث */
             Object.keys(attData).forEach(function(dk) {
-                monthlyValue += parseFloat(rawGet(ndPfx + 'deptCalculatedCost_' + dk)) || 0;
+                var costKeysToTry = [
+                    userPfx + 'nd_deptCalculatedCost_' + dk,
+                    'nd_deptCalculatedCost_' + dk,
+                    userPfx + 'ng_nd_deptCalculatedCost_' + dk,
+                    'ng_nd_deptCalculatedCost_' + dk,
+                ];
+                for (var ci = 0; ci < costKeysToTry.length; ci++) {
+                    var cv = rawGet(costKeysToTry[ci]);
+                    if (cv) { monthlyValue += parseFloat(cv) || 0; break; }
+                }
                 (attData[dk] || []).forEach(function(emp) {
                     absenceDeduction   += parseFloat(emp.deduction)       || 0;
                     absencePenalty     += parseFloat(emp.absencePenalty)  || 0;
@@ -513,19 +566,59 @@
                 });
             });
 
-            var performancePenalty = parseFloat(rawGet(ndPfx + 'performanceTotalDeduction')) || 0;
-            var netMonthly = monthlyValue - absenceDeduction - absencePenalty - performancePenalty - nationalityPenalty;
+            var perfKeysToTry = [
+                userPfx + 'nd_performanceTotalDeduction',
+                'nd_performanceTotalDeduction',
+                'ng_nd_performanceTotalDeduction',
+            ];
+            var performancePenalty = 0;
+            for (var pi = 0; pi < perfKeysToTry.length; pi++) {
+                var pv = rawGet(perfKeysToTry[pi]);
+                if (pv) { performancePenalty = parseFloat(pv) || 0; break; }
+            }
 
+            var netMonthly = monthlyValue - absenceDeduction - absencePenalty - performancePenalty - nationalityPenalty;
             return { monthlyValue, absenceDeduction, absencePenalty, performancePenalty, nationalityPenalty, netMonthly };
 
         } catch(e) {
-            console.warn('getDentalData error:', e);
+            console.error('getDentalData error:', e);
             return _dentalZero();
         }
     }
 
     function _dentalZero() {
         return { monthlyValue: 0, absenceDeduction: 0, absencePenalty: 0, performancePenalty: 0, nationalityPenalty: 0, netMonthly: 0 };
+    }
+
+    /* ================================================================
+       scanDentalKeys — أداة تشخيص: تطبع كل مفاتيح الأسنان الموجودة
+    ================================================================ */
+    function scanDentalKeys() {
+        var rawGet = Storage.prototype.getItem.bind(localStorage);
+        var found = [];
+        for (var i = 0; i < localStorage.length; i++) {
+            /* نقرأ المفاتيح الحقيقية عبر الـ raw storage */
+            var key = Object.getOwnPropertyNames(localStorage.__proto__).length
+                ? localStorage.key(i) : null;
+            if (!key) {
+                /* fallback: نعدد عبر Storage مباشرة */
+                break;
+            }
+            if (key.toLowerCase().includes('dental') || key.toLowerCase().includes('nd_')) {
+                found.push(key + ' → ' + (rawGet(key) || '').substring(0, 80));
+            }
+        }
+        /* طريقة أخرى أكثر موثوقية */
+        var allKeys = [];
+        try {
+            var rawStorage = window._rawLocalStorage || localStorage;
+            for (var j = 0; j < rawStorage.length; j++) {
+                allKeys.push(rawStorage.key(j));
+            }
+        } catch(e) {}
+        var dentalKeys = allKeys.filter(function(k){ return k && (k.includes('dental') || k.includes('nd_')); });
+        console.log('🦷 مفاتيح الأسنان الموجودة في localStorage:', dentalKeys);
+        return dentalKeys;
     }
 
     /* ================================================================
@@ -737,7 +830,8 @@
     function populateSignatureFields() {
         const container = document.getElementById('signature-fields-container');
         container.innerHTML = '';
-        const signatures = JSON.parse(localStorage.getItem(SIGNATURE_STORAGE_KEY) || '[]');
+        const raw = _rawGet(SIGNATURE_STORAGE_KEY);
+        const signatures = raw ? JSON.parse(raw) : [];
         if (signatures.length === 0) {
             addSignatureField('مندوب المقاول', '');
             addSignatureField('رئيس قسم الصيانة', '');
@@ -776,8 +870,24 @@
             const name  = field.querySelector('.sig-name-input').value.trim();
             if (title) signaturesToSave.push({ title, name });
         });
-        localStorage.setItem(SIGNATURE_STORAGE_KEY, JSON.stringify(signaturesToSave));
-        showSuccessMessage('تم حفظ التواقيع بنجاح!');
+        _rawSet(SIGNATURE_STORAGE_KEY, JSON.stringify(signaturesToSave));
+
+        /* تحديث صندوق التواقيع في الصفحة مباشرة */
+        const sbWrap = document.getElementById('sb-container-achievement');
+        if (sbWrap) {
+            sbWrap.innerHTML = '';
+            const sigSection = document.createElement('div');
+            sigSection.className = 'signatures-section';
+            signaturesToSave.forEach(sig => {
+                const box = document.createElement('div');
+                box.className = 'signature-box';
+                box.innerHTML = `<p><strong>${sig.title}</strong></p><div class="signature-line"></div><p class="signature-name">${sig.name || ''}</p>`;
+                sigSection.appendChild(box);
+            });
+            sbWrap.appendChild(sigSection);
+        }
+
+        showSuccessMessage('✅ تم حفظ التواقيع بنجاح!\nسيتم تطبيقها على الطباعة.');
         closeSignatureEditDialog();
     }
 
@@ -835,14 +945,68 @@
 
     function showSuccessMessage(msg) { alert(msg); }
 
+    /* ================================================================
+       refreshAllData — تحديث شامل مع تقرير تشخيصي
+    ================================================================ */
     function refreshAllData() {
-        try {
-            loadAndProcessAchievementData();
-            showSuccessMessage('تم تحديث البيانات بنجاح!');
-        } catch (e) {
-            console.error('فشل التحديث:', e);
-            alert('حدث خطأ أثناء تحديث البيانات.');
+        /* 1. فحص بيانات الأسنان */
+        var rawGet = Storage.prototype.getItem.bind(localStorage);
+        var dentalData = getDentalData();
+        var dentalOK = dentalData.monthlyValue > 0 || dentalData.netMonthly > 0;
+
+        /* 2. فحص بيانات الحضور */
+        var attData = localStorage.getItem('attendanceData');
+        var attOK   = !!attData && attData !== '{}';
+
+        /* 3. فحص بيانات الأداء */
+        var perfData = localStorage.getItem('performanceTotalDeduction');
+        var perfOK   = !!perfData;
+
+        /* 4. فحص بيانات العمالة الأساسية */
+        var depts = ['cleaning','electricity','agriculture','civil_works','mechanical','laundry','patient_services'];
+        var workforceOK = depts.some(d => parseFloat(localStorage.getItem('deptCalculatedCost_' + d)) > 0);
+
+        /* 5. إعادة بناء الجدول */
+        loadAndProcessAchievementData();
+        updateContractDisplayData();
+        updateDateTime();
+
+        /* 6. تقرير الحالة */
+        var lines = [
+            '📊 تقرير تحديث البيانات',
+            '─────────────────────────',
+            (attOK       ? '✅' : '❌') + ' بيانات الحضور والغياب',
+            (workforceOK ? '✅' : '⚠️') + ' تكاليف العمالة الأساسية',
+            (perfOK      ? '✅' : '⚠️') + ' غرامة الأداء',
+            (dentalOK    ? '✅' : '❌') + ' بيانات الأسنان'
+                + (dentalOK ? ' (صافي: ' + fmt(dentalData.netMonthly) + ')' : ' — يرجى فتح صفحة إنجاز الأسنان أولاً'),
+            '─────────────────────────',
+        ];
+
+        if (!dentalOK) {
+            lines.push('⚠️ بيانات الأسنان = صفر');
+            lines.push('');
+            /* ابحث عن المفاتيح الموجودة فعلاً */
+            var found = [];
+            try {
+                var rawLS = Storage.prototype.key.bind(localStorage);
+                for (var i = 0; i < localStorage.length; i++) {
+                    var k = rawLS.call(localStorage, i);
+                    if (k && (k.includes('dental') || k.includes('nd_'))) found.push(k);
+                }
+            } catch(e) {}
+            if (found.length > 0) {
+                lines.push('🔍 مفاتيح الأسنان الموجودة:');
+                found.slice(0, 6).forEach(function(k){ lines.push('   ' + k); });
+            } else {
+                lines.push('🔍 لا توجد أي مفاتيح مرتبطة بالأسنان!');
+                lines.push('   → افتح صفحة إنجاز الأسنان وتأكد من حفظ البيانات');
+            }
+        } else {
+            lines.push('✅ تم تحديث جميع البيانات بنجاح');
         }
+
+        alert(lines.join('\n'));
     }
 
     /* ================================================================
