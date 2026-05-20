@@ -461,8 +461,11 @@ async function pushToCloud() {
 const shouldSync =
   e.key &&
   (
-    SYNC_KEYS.some(k => e.key === k || e.key.endsWith(k)) ||
-    e.key.includes('deptCalculatedCost_') ||
+SYNC_KEYS.some(k =>
+  e.key === k ||
+  e.key.endsWith(k) ||
+  e.key.includes(k)
+) ||    e.key.includes('deptCalculatedCost_') ||
     e.key.includes('dept_') ||
     e.key.includes('sb_sigs_')
   );
@@ -478,7 +481,11 @@ localStorage.setItem = function (key, value) {
   origSetItem(key, value);
 
 const shouldSync =
-  SYNC_KEYS.some(k => key === k || key.endsWith(k)) ||
+  SYNC_KEYS.some(k =>
+  key === k ||
+  key.endsWith(k) ||
+  key.includes(k)
+) ||
   key.includes('deptCalculatedCost_') ||
   key.includes('dept_') ||
   key.includes('sb_sigs_');
