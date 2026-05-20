@@ -299,95 +299,86 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
 
-        /* تنسيق النافذة المنبثقة العامة */
-        .edit-dialog {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            z-index: 1000;
-            text-align: right;
-            max-height: 80vh;
-            overflow-y: auto;
-            width: 350px; /* عرض افتراضي لشاشة الباسورد */
-            max-width: 90vw; /* لا تتجاوز 90% من عرض الشاشة */
-        }
-        .edit-dialog input, .edit-dialog select {
-            margin: 5px 0;
-            padding: 5px;
-            width: 100%;
-            border: 1px solid #d1d5db;
-            border-radius: 5px;
-        }
-        .edit-dialog button {
-            padding: 8px 15px;
-            margin: 5px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .edit-dialog .confirm-btn {
-            background: #2a5298;
-            color: #fff;
-        }
-        .edit-dialog .cancel-btn {
-            background: #d1d5db;
-            color: #2c3e50;
-        }
-        .overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.55);
-            z-index: 999;
-        }
+      /* ══ النوافذ المنبثقة ══ */
+.edit-dialog {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    z-index: 10000;
+    text-align: right;
+    max-height: 80vh;
+    overflow-y: auto;
+    width: 350px;
+    max-width: 90vw;
+    pointer-events: auto !important;
+}
 
-        /* تنسيق الخطوط والأسماء داخل صناديق التوقيع */
-        .signature-box .signature-line {
-            border-bottom: 1px solid #000;
-            height: 40px; /* مساحة للتوقيع */
-            margin: 10px 0;
-        }
-        .signature-box .signature-name {
-            font-size: 14px;
-            margin-top: 5px;
-            color: black; /* تأكد من لون النص */
-        }
+.edit-dialog input,
+.edit-dialog select {
+    margin: 5px 0;
+    padding: 5px;
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    pointer-events: auto !important;
+}
 
-        /* تحسين تنسيق النصوص داخل النوافذ المنبثقة (لحل مشكلة اللون الأبيض) */
-        .edit-dialog h3,
-        .edit-dialog label,
-        .edit-dialog p {
-            color: #333333 !important; /* لون غامق للنصوص */
-        }
-        .edit-dialog input[type="text"],
-        .edit-dialog input[type="number"],
-        .edit-dialog input[type="password"] {
-            color: #000000 !important; /* لون أسود لقيم الإدخال */
-            background-color: #f8f8f8 !important; /* خلفية فاتحة لحقول الإدخال */
-            border: 1px solid #cccccc !important; /* حدود واضحة */
-        }
-        .edit-dialog button {
-            color: #ffffff !important; /* لون أبيض لأزرار التأكيد */
-        }
-        .edit-dialog .cancel-btn {
-            color: #333333 !important; /* لون غامق لزر الإلغاء */
-        }
+.edit-dialog button {
+    padding: 8px 15px;
+    margin: 5px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    pointer-events: auto !important;
+}
 
-        /* كلاس لتوسيع النافذة المنبثقة (لشاشات التعديل/الإضافة) */
-        .wide-dialog {
-            width: 95% !important;
-            max-width: 900px !important;
-            min-width: 400px !important;
-        }
+.edit-dialog .confirm-btn {
+    background: #2a5298;
+    color: #fff;
+}
+
+.edit-dialog .cancel-btn {
+    background: #d1d5db;
+    color: #2c3e50;
+}
+
+.overlay {
+    display: none !important;
+}
+
+.edit-dialog h3,
+.edit-dialog label,
+.edit-dialog p {
+    color: #333333 !important;
+}
+
+.edit-dialog input[type="text"],
+.edit-dialog input[type="number"],
+.edit-dialog input[type="password"] {
+    color: #000000 !important;
+    background-color: #f8f8f8 !important;
+    border: 1px solid #cccccc !important;
+}
+
+.edit-dialog button {
+    color: #ffffff !important;
+}
+
+.edit-dialog .cancel-btn {
+    color: #333333 !important;
+}
+
+.wide-dialog {
+    width: 95% !important;
+    max-width: 900px !important;
+    min-width: 400px !important;
+}
 
         /* تنسيق حقول الإدخال داخل نافذة تعديل التواقيع */
         #signature-fields-container .form-group {
@@ -781,7 +772,7 @@
         <div class="action-bar no-print">
             <button class="action-btn" onclick="exportAchievementToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
             <button class="action-btn" onclick="window.print()"><i class="fas fa-print"></i> طباعة</button>
-            <button class="action-btn" onclick="openSignatureEditDialog()"><i class="fas fa-pen-nib"></i> تعديل التواقيع</button>
+            <button class="action-btn" onclick="SignatureBlock.open('achievement')"><i class="fas fa-pen-nib"></i> تعديل التواقيع</button>
             <button class="action-btn" onclick="openItemNameDialog()"><i class="fas fa-tag"></i> تعديل أسماء البنود</button>
         </div>
         <script>
@@ -1022,111 +1013,6 @@ function renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeducti
     } catch (_) {}
 }
 
-// --- START: كود JavaScript الجديد والكامل لإدارة التواقيع ---
-
-// 1. المفتاح الجديد لتخزين التواقيع وكلمة المرور
-const SIGNATURE_STORAGE_KEY = 'achievementSignatures_v3';
-const PASSWORD = "admin123";
-
-// 2. دوال فتح وإغلاق نافذة التعديل
-function openSignatureEditDialog() {
-    document.getElementById('signature-edit-dialog').style.display = 'block';
-    document.getElementById('signature-edit-overlay').style.display = 'block';
-    document.getElementById('signature-password-section').style.display = 'block';
-    document.getElementById('signature-edit-content').style.display = 'none';
-    document.getElementById('signature-password-input').value = '';
-    document.getElementById('signature-password-error').textContent = '';
-}
-
-function closeSignatureEditDialog() {
-    document.getElementById('signature-edit-dialog').style.display = 'none';
-    document.getElementById('signature-edit-overlay').style.display = 'none';
-    document.getElementById('signature-edit-dialog').classList.remove('wide-dialog');
-}
-
-// 3. دالة التحقق من كلمة المرور
-function verifySignaturePassword() {
-    const input = document.getElementById('signature-password-input').value;
-    if (input === PASSWORD) {
-        document.getElementById('signature-password-section').style.display = 'none';
-        document.getElementById('signature-edit-content').style.display = 'block';
-        document.getElementById('signature-edit-dialog').classList.add('wide-dialog');
-        populateSignatureFields(); 
-    } else {
-        document.getElementById('signature-password-error').textContent = 'الباسورد غير صحيح';
-    }
-}
-
-// 4. دالة لملء حقول التواقيع بالبيانات المخزنة
-// --- START: النسخة الجديدة والمحسّنة للدالة ---
-function populateSignatureFields() {
-    const container = document.getElementById('signature-fields-container');
-    container.innerHTML = ''; // امسح الحقول القديمة دائماً
-    
-    // اقرأ التواقيع المحفوظة
-    const signatures = JSON.parse(localStorage.getItem(SIGNATURE_STORAGE_KEY) || '[]');
-
-    // --- التعديل الأهم هنا ---
-    // تحقق: إذا كانت قائمة التواقيع المحفوظة فارغة...
-    if (signatures.length === 0) {
-        // ...إذن، قم بإنشاء الحقول الأربعة الافتراضية
-        addSignatureField('مندوب المقاول', '');
-        addSignatureField('رئيس قسم الصيانة', '');
-        addSignatureField('مدير المشروع', '');
-        addSignatureField('مدير المستشفى', '');
-    } else {
-        // أما إذا كانت هناك تواقيع محفوظة، فاعرضها هي
-        signatures.forEach(sig => {
-            addSignatureField(sig.title, sig.name);
-        });
-    }
-}
-// --- END: نهاية النسخة الجديدة ---
-// 5. دالة لإضافة حقل توقيع جديد (مع زر الحذف)
-function addSignatureField(title = '', name = '') {
-    const container = document.getElementById('signature-fields-container');
-    const fieldId = `sig-field-${Date.now()}-${Math.random()}`;
-    const fieldDiv = document.createElement('div');
-    fieldDiv.className = 'signature-field-group';
-    fieldDiv.id = fieldId;
-    fieldDiv.innerHTML = `
-        <div class="inputs">
-            <label>المسمى الوظيفي:</label>
-            <input type="text" class="sig-title-input" value="${title}" placeholder="مثال: مدير المشروع">
-            <label style="margin-top: 8px;">الاسم:</label>
-            <input type="text" class="sig-name-input" value="${name}" placeholder="اسم صاحب التوقيع">
-        </div>
-        <button class="delete-sig-btn" onclick="document.getElementById('${fieldId}').remove()" title="حذف هذا التوقيع">
-            <i class="fas fa-trash-alt"></i>
-        </button>
-    `;
-    container.appendChild(fieldDiv);
-}
-
-// 6. دالة لحفظ كل التواقيع
-function saveSignatures() {
-    const container = document.getElementById('signature-fields-container');
-    const signatureFields = container.querySelectorAll('.signature-field-group');
-    const signaturesToSave = [];
-    signatureFields.forEach(field => {
-        const title = field.querySelector('.sig-title-input').value.trim();
-        const name = field.querySelector('.sig-name-input').value.trim();
-        if (title) {
-            signaturesToSave.push({ title, name });
-        }
-    });
-    localStorage.setItem(SIGNATURE_STORAGE_KEY, JSON.stringify(signaturesToSave));
-    showSuccessMessage('تم حفظ التواقيع بنجاح!');
-    closeSignatureEditDialog();
-    updateSignaturesOnPage();
-}
-
-// 7. دالة لتحديث عرض التواقيع في الصفحة الرئيسية
-function updateSignaturesOnPage() {
-    // replaced by SignatureBlock system — no-op kept for backward compatibility
-}
-
-// --- END: نهاية كود JavaScript الجديد ---
 
    // =================================================================
 // START: إضافة الدوال المفقودة (الحل للخطأ 1 و 2)
@@ -1239,7 +1125,7 @@ function exportAchievementToExcel() {
         const issueDate = document.getElementById('issueDate')?.textContent?.trim() || 'غير محدد';
 
         // --- الإصلاح الرئيسي هنا: قراءة التواقيع من النظام الجديد ---
-        const signaturesData = JSON.parse(localStorage.getItem(SIGNATURE_STORAGE_KEY) || '[]');
+        const signaturesData = JSON.parse(localStorage.getItem('sb_sigs_achievement') || '[]');
         const signatures = signaturesData.map(sig => `${sig.title}: ${sig.name || ' '}`);
 
         const ws_data = [
@@ -1389,7 +1275,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // ... الكود الخاص بـ adminCheckbox و updateDateTime ...
     updateDateTime();
     updateContractDisplayData();
-    updateSignaturesOnPage();
     loadDentalData();
     
     // --- تعديل طريقة عرض التواريخ ---
@@ -1505,9 +1390,7 @@ function refreshAllData() {
 }
 function closeDialog(dialogId, overlayId) {
     const dialog = document.getElementById(dialogId);
-    const overlay = document.getElementById(overlayId);
     if (dialog) dialog.style.display = 'none';
-    if (overlay) overlay.style.display = 'none';
 }
 
     // Functions for editing item names
@@ -1526,9 +1409,7 @@ function closeDialog(dialogId, overlayId) {
             `;
             container.appendChild(fieldDiv);
         });
-
-        document.getElementById('item-name-dialog').style.display = 'block';
-        document.getElementById('item-name-overlay').style.display = 'block';
+document.getElementById('item-name-dialog').style.display = 'block';
     }
 
    function saveItemNames() {
