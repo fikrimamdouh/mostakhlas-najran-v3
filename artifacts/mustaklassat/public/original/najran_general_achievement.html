@@ -736,14 +736,14 @@ function getDentalData() {
     /* ================================================================
        دوال التواقيع
     ================================================================ */
-    function openSignatureEditDialog() {
-        document.getElementById('signature-edit-dialog').style.display = 'block';
-        document.getElementById('signature-edit-overlay').style.display = 'block';
-        document.getElementById('signature-password-section').style.display = 'block';
-        document.getElementById('signature-edit-content').style.display = 'none';
-        document.getElementById('signature-password-input').value = '';
-        document.getElementById('signature-password-error').textContent = '';
-    }
+   function openSignatureEditDialog() {
+    document.getElementById('signature-edit-dialog').style.display = 'block';
+    document.getElementById('signature-edit-overlay').style.display = 'block';
+    document.getElementById('signature-password-section').style.display = 'none';
+    document.getElementById('signature-edit-content').style.display = 'block';
+    document.getElementById('signature-edit-dialog').classList.add('wide-dialog');
+    populateSignatureFields();
+}
 
     function closeSignatureEditDialog() {
         document.getElementById('signature-edit-dialog').style.display = 'none';
