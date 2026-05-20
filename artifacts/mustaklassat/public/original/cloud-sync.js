@@ -289,58 +289,69 @@
   // المفاتيح التشغيلية → hospital_storage (مشتركة مع زملاء المستشفى)
   // المفاتيح الشخصية  → user_storage فقط
   // كلاهما أيضاً في user_storage كنسخة احتياطية للتوافق
-  async function pushToCloud() {
-    if (!getSession()) return;
+async function pushToCloud() {
+  if (!getSession()) return;
 
-    const hospitalName = getHospitalName();
-    const allData      = {};   // كل المفاتيح → user_storage (نسخ احتياطي)
-    const hospitalData = {};   // المفاتيح التشغيلية → hospital_storage
-function toSharedHospitalKey(key) {
-  return key.replace(/^_u\d+_/, '');
-}
-   for (let i = 0; i < localStorage.length; i++) {
-  const key = localStorage.key(i);
-  if (!key) continue;
+  const hospitalName = getHospitalName();
+  const allData = {};
+  const hospitalData = {};
 
-  const shouldSync = SYNC_KEYS.some(k => key === k || key.endsWith(k));
+  function toSharedHospitalKey(key) {
+    return key.replace(/^_u\d+_/, '');
+  }
 
-  const isPatternKey =
-    key.includes('deptCalculatedCost_') ||
-    key.includes('dept_') ||
-    key.includes('sb_sigs_');
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key) continue;
 
-  if (!shouldSync && !isPatternKey) continue;
+    const shouldSync = SYNC_KEYS.some(k => key === k || key.endsWith(k));
 
-  const val = localStorage.getItem(key);
-  if (val === null) continue;
+    const isPatternKey =
+      key.includes('deptCalculatedCost_') ||
+      key.includes('dept_') ||
+      key.includes('sb_sigs_');
 
-  allData[key] = val;
-const baseKey = SYNC_KEYS.find(k => key === k || key.endsWith(k)) || key;
-const personalBaseKey = baseKey.replace(/^_u\d+_/, '');
+    if (!shouldSync && !isPatternKey) continue;
 
-if (!PERSONAL_KEYS.has(personalBaseKey)) {
-  const hospitalKey = toSharedHospitalKey(key);
-  hospitalData[hospitalKey] = val;
-}  
-} // ← قفل الـ for هنا
+    const val = localStorage.getItem(key);
+    if (val === null) continue;
 
-if (Object.keys(allData).length === 0) return;
+    allData[key] = val;
 
+    const baseKey = SYNC_KEYS.find(k => key === k || key.endsWith(k)) || key;
+    const personalBaseKey = baseKey.replace(/^_u\d+_/, '');
 
-const [userResult, hospitalResult] = await Promise.all([
-    // رفع الكل إلى user_storage (نسخ احتياطي + توافق مع المستخدمين بلا مستشفى)
-    const [userResult, hospitalResult] = await Promise.all([
-      apiFetch('/storage', { method: 'PUT', body: JSON.stringify({ data: allData }) }),
-      hospitalName && Object.keys(hospitalData).length > 0
-        ? apiFetch('/hospital-storage', { method: 'PUT', body: JSON.stringify({ data: hospitalData }) })
-        : Promise.resolve(null),
-    ]);
-
-    if (userResult || hospitalResult) {
-      const hosp = hospitalResult?.saved ? ` + ${hospitalResult.saved} مشترك` : '';
-      console.log(`[MzamanaCloud] ✓ رُفع ${userResult?.saved ?? 0} شخصي${hosp}`);
+    if (!PERSONAL_KEYS.has(personalBaseKey)) {
+      const hospitalKey = toSharedHospitalKey(key);
+      hospitalData[hospitalKey] = val;
     }
   }
+
+  if (Object.keys(allData).length === 0) return;
+
+  console.log('[DEBUG hospitalName]', hospitalName);
+  console.log('[DEBUG allData count]', Object.keys(allData).length);
+  console.log('[DEBUG hospitalData count]', Object.keys(hospitalData).length);
+  console.log('[DEBUG hospitalData keys]', Object.keys(hospitalData));
+
+  const [userResult, hospitalResult] = await Promise.all([
+    apiFetch('/storage', {
+      method: 'PUT',
+      body: JSON.stringify({ data: allData })
+    }),
+    hospitalName && Object.keys(hospitalData).length > 0
+      ? apiFetch('/hospital-storage', {
+          method: 'PUT',
+          body: JSON.stringify({ data: hospitalData })
+        })
+      : Promise.resolve(null),
+  ]);
+
+  if (userResult || hospitalResult) {
+    const hosp = hospitalResult?.saved ? ` + ${hospitalResult.saved} مشترك` : '';
+    console.log(`[MzamanaCloud] ✓ رُفع ${userResult?.saved ?? 0} شخصي${hosp}`);
+  }
+}
 
   // ── إشعارات المستخدم ──────────────────────────────────────────────────────
   function showTokenExpiredBanner() {
