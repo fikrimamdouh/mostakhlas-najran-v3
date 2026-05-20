@@ -312,9 +312,7 @@ const shouldSync =
   normalizedKey.includes('dept_') ||
   normalizedKey.includes('sb_sigs_');
 
-const isPatternKey = shouldSync;
-
-    if (!shouldSync && !isPatternKey) continue;
+if (!shouldSync) continue;
 
     const val = localStorage.getItem(key);
     if (val === null) continue;
