@@ -137,6 +137,72 @@
         .logo-right { right: 10px; }
         .logo-left  { left: 10px; }
 
+        /* ══ شريط التحكم في الإداريين ══ */
+        .admin-toggle-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin: 0 0 8px 0;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #fff8e1, #fff3cd);
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            font-family: 'Tajawal', sans-serif;
+        }
+        .admin-toggle-bar label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 700;
+            color: #5c3d00;
+            user-select: none;
+        }
+        /* الـ checkbox المخصص */
+        .admin-toggle-bar input[type="checkbox"] {
+            display: none;
+        }
+        .admin-toggle-bar .toggle-box {
+            width: 26px;
+            height: 26px;
+            border: 2px solid #f0a000;
+            border-radius: 6px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, border-color 0.2s;
+            flex-shrink: 0;
+        }
+        .admin-toggle-bar input[type="checkbox"]:checked + .toggle-box {
+            background: #28a745;
+            border-color: #28a745;
+        }
+        .admin-toggle-bar input[type="checkbox"]:checked + .toggle-box::after {
+            content: '✓';
+            color: white;
+            font-size: 16px;
+            font-weight: 900;
+            line-height: 1;
+        }
+        .admin-toggle-bar .badge-hint {
+            font-size: 12px;
+            font-weight: 500;
+            color: #856404;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 20px;
+            padding: 2px 10px;
+        }
+        /* في الطباعة نخفي شريط التحكم */
+        @media print {
+            .admin-toggle-bar { display: none !important; }
+            /* صف الإداريين يُخفى فقط إذا كان عليه كلاس no-print-row */
+            .no-print-row { display: none !important; }
+        }
+
         /* ══ طباعة ══ */
         @media print {
             button, .btn, .table-buttons, .std-action-bar, .action-buttons,
@@ -310,6 +376,16 @@
             <button class="action-btn" style="background:#17a2b8;" onclick="refreshAllData()"><i class="fas fa-sync-alt"></i> تحديث البيانات</button>
             <button class="action-btn" style="background:#6f42c1;" onclick="openSignatureEditDialog()"><i class="fas fa-pen-nib"></i> تعديل التواقيع</button>
             <button class="action-btn" style="background:#fd7e14;" onclick="openItemNameDialog()"><i class="fas fa-tag"></i> تعديل أسماء البنود</button>
+        </div>
+
+        <!-- شريط التحكم في طباعة الإداريين -->
+        <div class="admin-toggle-bar no-print" id="admin-toggle-bar">
+            <label for="admin-print-checkbox">
+                <input type="checkbox" id="admin-print-checkbox" onchange="toggleAdminRowPrint(this.checked)">
+                <span class="toggle-box"></span>
+                تضمين صف «الوظائف الإدارية السعوديين» في الطباعة والجدول
+            </label>
+            <span class="badge-hint" id="admin-toggle-status">مخفي حالياً</span>
         </div>
 
         <!-- الجدول -->
@@ -623,6 +699,9 @@
             if (_hn) localStorage.setItem('finalLaborCost_' + _hn, grandTotalNetMonthly.toFixed(2));
             localStorage.setItem('finalLaborCost', grandTotalNetMonthly.toFixed(2));
         } catch (_) {}
+
+        /* استعادة حالة toggle الإداريين بعد بناء الجدول */
+        restoreAdminToggleState();
     }
 
     /* ================================================================
@@ -766,12 +845,43 @@
         }
     }
 
+    /* ================================================================
+       التحكم في صف الإداريين السعوديين (إظهار/إخفاء في الجدول والطباعة)
+    ================================================================ */
     function toggleAdminRowPrint(isChecked) {
-        const adminRow = document.getElementById('admin-jobs-row');
+        const adminRow   = document.getElementById('admin-jobs-row');
+        const statusBadge = document.getElementById('admin-toggle-status');
+        const checkbox   = document.getElementById('admin-print-checkbox');
+
         if (adminRow) {
-            adminRow.classList.toggle('no-print-row', !isChecked);
+            if (isChecked) {
+                adminRow.classList.remove('no-print-row');
+                adminRow.style.display = ''; /* أظهره في الجدول */
+            } else {
+                adminRow.classList.add('no-print-row');
+                adminRow.style.display = 'none'; /* أخفه من الجدول */
+            }
         }
-        localStorage.setItem('adminJobsPrintState', isChecked);
+
+        /* تحديث شارة الحالة */
+        if (statusBadge) {
+            statusBadge.textContent = isChecked ? '✅ سيظهر في الطباعة' : '🚫 مخفي حالياً';
+            statusBadge.style.background   = isChecked ? '#d4edda' : '#fff3cd';
+            statusBadge.style.borderColor  = isChecked ? '#28a745' : '#ffc107';
+            statusBadge.style.color        = isChecked ? '#155724' : '#856404';
+        }
+
+        /* حفظ الاختيار */
+        localStorage.setItem('adminJobsPrintState', isChecked ? '1' : '0');
+    }
+
+    /* استعادة الحالة المحفوظة بعد بناء الجدول */
+    function restoreAdminToggleState() {
+        const saved    = localStorage.getItem('adminJobsPrintState');
+        const isChecked = (saved === '1'); /* الافتراضي = مخفي */
+        const checkbox = document.getElementById('admin-print-checkbox');
+        if (checkbox) checkbox.checked = isChecked;
+        toggleAdminRowPrint(isChecked);
     }
 
     function updateDateTime() {
