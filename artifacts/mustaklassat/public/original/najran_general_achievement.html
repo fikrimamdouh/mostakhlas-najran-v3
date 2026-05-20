@@ -42,46 +42,41 @@
             font-family: 'Tajawal', sans-serif;
             color: black;
         }
-       /* --- START: استبدل كود الجدول داخل @media print بهذا الكود --- */
-/* --- START: هذا هو الكود الجديد للعرض على الشاشة --- */
-.cosmic-table.achievement-table {
-    border-collapse: collapse;
-    width: 100%;
-    font-family: 'Tajawal', sans-serif;
-    table-layout: fixed; /* لفرض عرض الأعمدة المحدد */
-}
 
-.cosmic-table.achievement-table th,
-.cosmic-table.achievement-table td {
-    border: 1px solid #ccc;
-    padding: 10px 8px;
-    font-size: 14px;
-    font-weight: 500;
-    vertical-align: middle;
-    word-wrap: break-word;
-}
-
-/* تحديد عرض الأعمدة */
-.cosmic-table.achievement-table th:nth-child(1), .cosmic-table.achievement-table td:nth-child(1) { width: 28%; text-align: right; font-weight: bold; }
-.cosmic-table.achievement-table th:nth-child(2), .cosmic-table.achievement-table td:nth-child(2) { width: 12%; }
-.cosmic-table.achievement-table th:nth-child(3), .cosmic-table.achievement-table td:nth-child(3) { width: 12%; }
-.cosmic-table.achievement-table th:nth-child(4), .cosmic-table.achievement-table td:nth-child(4) { width: 12%; }
-.cosmic-table.achievement-table th:nth-child(5), .cosmic-table.achievement-table td:nth-child(5) { width: 12%; }
-.cosmic-table.achievement-table th:nth-child(6), .cosmic-table.achievement-table td:nth-child(6) { width: 12%; }
-.cosmic-table.achievement-table th:nth-child(7), .cosmic-table.achievement-table td:nth-child(7) { width: 12%; font-weight: bold; }
-
-/* محاذاة الأرقام لليسار لتحسين القراءة */
-.cosmic-table.achievement-table td:not(:first-child) {
-    text-align: left;
-    padding-left: 10px;
-}
-/* --- END: نهاية الكود الجديد --- */
+        /* ══ جدول الإنجاز ══ */
+        .cosmic-table.achievement-table {
+            border-collapse: collapse;
+            width: 100%;
+            font-family: 'Tajawal', sans-serif;
+            table-layout: fixed;
+        }
+        .cosmic-table.achievement-table th,
+        .cosmic-table.achievement-table td {
+            border: 1px solid #ccc;
+            padding: 10px 8px;
+            font-size: 14px;
+            font-weight: 500;
+            vertical-align: middle;
+            word-wrap: break-word;
+        }
+        .cosmic-table.achievement-table th:nth-child(1), .cosmic-table.achievement-table td:nth-child(1) { width: 28%; text-align: right; font-weight: bold; }
+        .cosmic-table.achievement-table th:nth-child(2), .cosmic-table.achievement-table td:nth-child(2) { width: 12%; }
+        .cosmic-table.achievement-table th:nth-child(3), .cosmic-table.achievement-table td:nth-child(3) { width: 12%; }
+        .cosmic-table.achievement-table th:nth-child(4), .cosmic-table.achievement-table td:nth-child(4) { width: 12%; }
+        .cosmic-table.achievement-table th:nth-child(5), .cosmic-table.achievement-table td:nth-child(5) { width: 12%; }
+        .cosmic-table.achievement-table th:nth-child(6), .cosmic-table.achievement-table td:nth-child(6) { width: 12%; }
+        .cosmic-table.achievement-table th:nth-child(7), .cosmic-table.achievement-table td:nth-child(7) { width: 12%; font-weight: bold; }
+        .cosmic-table.achievement-table td:not(:first-child) {
+            text-align: left;
+            padding-left: 10px;
+        }
         .cosmic-table.achievement-table th {
             background-color: #e6e6e6;
             font-weight: bold;
             color: black;
+            text-align: center;
         }
-        .cosmic-table.achievement-table tr:nth-child(even ) {
+        .cosmic-table.achievement-table tr:nth-child(even) {
             background-color: #f5f5f5;
         }
         .cosmic-table.achievement-table tr:hover {
@@ -92,6 +87,8 @@
             background-color: #d9d9d9;
             color: black;
         }
+
+        /* ══ التواقيع ══ */
         .signatures-section {
             display: flex;
             justify-content: space-between;
@@ -106,1573 +103,616 @@
             border-radius: 5px;
             font-family: 'Tajawal', sans-serif;
         }
-        .signature-box i {
-            font-size: 20px;
-            color: #007bff;
-            margin-bottom: 5px;
-        }
-        .signature-box p {
-            margin: 5px 0;
-            font-size: 12px;
+        .signature-box i { font-size: 20px; color: #007bff; margin-bottom: 5px; }
+        .signature-box p { margin: 5px 0; font-size: 12px; color: black; font-weight: 500; }
+        .signature-box .signature-line { border-bottom: 1px solid #000; height: 40px; margin: 10px 0; }
+        .signature-box .signature-name { font-size: 14px; margin-top: 5px; color: black; }
+
+        /* ══ هيدر ══ */
+        .header-info h1, .header-info h2, .header-info h3,
+        .page-contract-info p, .nav-bar select,
+        .action-buttons button, .mt-2 p {
             color: black;
             font-weight: 500;
         }
-        .header-info h1, .header-info h2, .header-info h3, .page-contract-info p, .nav-bar select, .action-buttons button, .mt-2 p {
-            color: black;
-            font-weight: 500;
-        }
+
+        /* ══ خلايا قابلة للتعديل ══ */
         .editable-cell {
             width: 100px;
             padding: 5px;
             text-align: center;
-            background-color: #fffacd; /* لون مميز للخلايا القابلة للتعديل */
+            background-color: #fffacd;
         }
-        .tafqeet-row td {
-            text-align: right;
-            padding: 10px;
-        }
+        .tafqeet-row td { text-align: right; padding: 10px; }
+
         .header-info {
             text-align: center;
             position: relative;
             padding: 20px 0;
         }
         .header-info h1, .header-info h2, .header-info h3 {
-            margin: 5px 0;
-            color: black;
-            font-weight: 500;
+            margin: 5px 0; color: black; font-weight: 500;
         }
-        .logo-right, .logo-left {
-            position: absolute;
-            top: 10px;
-            width: 50px;
-        }
-        .logo-right {
-            right: 10px;
-        }
-        .logo-left {
-            left: 10px;
-        }
-        /* CSS الطباعة - صفحة واحدة */
+        .logo-right, .logo-left { position: absolute; top: 10px; width: 50px; }
+        .logo-right { right: 10px; }
+        .logo-left  { left: 10px; }
+
+        /* ══ طباعة ══ */
         @media print {
             button, .btn, .table-buttons, .std-action-bar, .action-buttons,
             .btn-group, .no-print, .nav-bar, .action-bar,
             .table-header-actions, .add-row-btn, .delete-btn, .edit-btn { display: none !important; }
-
-            body {
-                font-family: 'Tajawal', sans-serif;
-                margin: 0;
-                padding: 0;
-                background: white;
-                color: black;
-            }
-
-            .container {
-                max-width: none;
-                margin: 0;
-                padding: 0;
-                box-shadow: none;
-                border-radius: 0;
-            }
-
-            /* إخفاء العناصر غير المهمة */
-            .action-buttons, .no-print, #particles-js-bg, .dental-labor-toggle {
-                display: none !important;
-            }
-            
-            /* إخفاء صف عمالة الأسنان إذا كان الكلاس no-print-row موجودًا */
-            .no-print-row {
-                display: none !important;
-            }
-
-            /* إظهار التواقيع في الطباعة */
-            .signatures-section {
-                display: flex !important;
-                justify-content: space-between !important;
-                margin-top: 15px !important;
-                gap: 8px !important;
-                page-break-inside: avoid !important;
-            }
-
-            .signature-box {
-                flex: 1 !important;
-                text-align: center !important;
-                padding: 8px !important;
-                border: 1px solid #000 !important;
-                border-radius: 3px !important;
-                font-size: 10px !important;
-            }
-
-            /* تصغير حجم الخط للطباعة */
+            body { font-family: 'Tajawal', sans-serif; margin: 0; padding: 0; background: white; color: black; }
+            .container { max-width: none; margin: 0; padding: 0; box-shadow: none; border-radius: 0; }
+            .action-buttons, .no-print, #particles-js-bg, .dental-labor-toggle { display: none !important; }
+            .no-print-row { display: none !important; }
+            .signatures-section { display: flex !important; justify-content: space-between !important; margin-top: 15px !important; gap: 8px !important; page-break-inside: avoid !important; }
+            .signature-box { flex: 1 !important; text-align: center !important; padding: 8px !important; border: 1px solid #000 !important; border-radius: 3px !important; font-size: 10px !important; }
             .header-info h1 { font-size: 18px !important; }
             .header-info h2 { font-size: 16px !important; }
             .header-info h3 { font-size: 14px !important; }
             .page-contract-info { font-size: 12px !important; padding: 10px !important; }
-            /* تنسيق الجدول في الطباعة */
-           /* --- START: هذا هو الكود الجديد الذي يجب وضعه داخل @media print --- */
-
-.cosmic-table.achievement-table {
-    width: 100% !important;
-    table-layout: fixed !important;
-    border: 2px solid #000 !important;
-}
-
-.cosmic-table.achievement-table th,
-.cosmic-table.achievement-table td {
-    font-size: 10px !important;
-    padding: 8px 5px !important;
-    border: 1px solid #000 !important;
-    vertical-align: middle !important;
-    word-wrap: break-word !important;
-}
-
-.cosmic-table.achievement-table th {
-    background-color: #f0f0f0 !important;
-    font-weight: bold !important;
-    color: #000 !important;
-    text-align: center !important;
-}
-
-/* محاذاة مخصصة للطباعة */
-.cosmic-table.achievement-table td:first-child {
-    font-weight: bold !important;
-    text-align: right !important;
-}
-.cosmic-table.achievement-table td:not(:first-child) {
-    text-align: left !important;
-    padding-left: 8px !important;
-}
-
-.cosmic-table.achievement-table .total-row td {
-    font-weight: bold !important;
-    background-color: #e8e8e8 !important;
-}
-
-/* --- END: نهاية الكود
-
-            .cosmic-table.achievement-table th {
-                background-color: #f0f0f0 !important;
-                font-weight: bold !important;
-                color: #000 !important;
-                border: 2px solid #000 !important;
-            }
-
-            .cosmic-table.achievement-table .total-row {
-                font-weight: bold !important;
-                background-color: #e8e8e8 !important;
-                color: #000 !important;
-                border: 2px solid #000 !important;
-            }
-
-            .cosmic-table.achievement-table .total-row td {
-                border: 2px solid #000 !important;
-            }
-
-            /* تنسيق الصفحة */
-            @page {
-                size: A4;
-                margin: 10mm;
-            }
-
-            /* منع كسر الصفحة داخل العناصر المهمة */
-            .header-info, .page-contract-info, .cosmic-table, .signatures-section {
-                page-break-inside: avoid !important;
-            }
+            .cosmic-table.achievement-table { width: 100% !important; table-layout: fixed !important; border: 2px solid #000 !important; }
+            .cosmic-table.achievement-table th,
+            .cosmic-table.achievement-table td { font-size: 10px !important; padding: 8px 5px !important; border: 1px solid #000 !important; vertical-align: middle !important; word-wrap: break-word !important; }
+            .cosmic-table.achievement-table th { background-color: #f0f0f0 !important; font-weight: bold !important; color: #000 !important; text-align: center !important; }
+            .cosmic-table.achievement-table td:first-child { font-weight: bold !important; text-align: right !important; }
+            .cosmic-table.achievement-table td:not(:first-child) { text-align: left !important; padding-left: 8px !important; }
+            .cosmic-table.achievement-table .total-row td { font-weight: bold !important; background-color: #e8e8e8 !important; }
+            @page { size: A4; margin: 10mm; }
+            .header-info, .page-contract-info, .cosmic-table, .signatures-section { page-break-inside: avoid !important; }
+            .action-bar, .print-toggles { display: none !important; }
         }
-        /* تنسيق زر تعديل التواقيع */
+
+        /* ══ أزرار ══ */
         .btn-edit {
             background: linear-gradient(135deg, #007bff, #6610f2);
-            color: white;
-            padding: 8px 15px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            display: inline-flex; /* ليكون الزر في سطر واحد مع الأيقونة */
-            align-items: center;
-            gap: 6px;
+            color: white; padding: 8px 15px; border: none; border-radius: 6px;
+            cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease;
+            display: inline-flex; align-items: center; gap: 6px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .btn-edit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        }
+        .btn-edit:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
 
-        /* تنسيق النافذة المنبثقة العامة */
+        /* ══ النوافذ المنبثقة ══ */
         .edit-dialog {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            z-index: 1000;
-            text-align: right;
-            max-height: 80vh;
-            overflow-y: auto;
-            width: 350px; /* عرض افتراضي لشاشة الباسورد */
-            max-width: 90vw; /* لا تتجاوز 90% من عرض الشاشة */
+            display: none; position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); background: #fff;
+            padding: 20px; border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 1000;
+            text-align: right; max-height: 80vh; overflow-y: auto;
+            width: 350px; max-width: 90vw;
         }
-        .edit-dialog input, .edit-dialog select {
-            margin: 5px 0;
-            padding: 5px;
-            width: 100%;
-            border: 1px solid #d1d5db;
-            border-radius: 5px;
-        }
-        .edit-dialog button {
-            padding: 8px 15px;
-            margin: 5px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .edit-dialog .confirm-btn {
-            background: #2a5298;
-            color: #fff;
-        }
-        .edit-dialog .cancel-btn {
-            background: #d1d5db;
-            color: #2c3e50;
-        }
-        .overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.55);
-            z-index: 999;
-        }
-
-        /* تنسيق الخطوط والأسماء داخل صناديق التوقيع */
-        .signature-box .signature-line {
-            border-bottom: 1px solid #000;
-            height: 40px; /* مساحة للتوقيع */
-            margin: 10px 0;
-        }
-        .signature-box .signature-name {
-            font-size: 14px;
-            margin-top: 5px;
-            color: black; /* تأكد من لون النص */
-        }
-
-        /* تحسين تنسيق النصوص داخل النوافذ المنبثقة (لحل مشكلة اللون الأبيض) */
-        .edit-dialog h3,
-        .edit-dialog label,
-        .edit-dialog p {
-            color: #333333 !important; /* لون غامق للنصوص */
-        }
+        .edit-dialog input, .edit-dialog select { margin: 5px 0; padding: 5px; width: 100%; border: 1px solid #d1d5db; border-radius: 5px; }
+        .edit-dialog button { padding: 8px 15px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
+        .edit-dialog .confirm-btn { background: #2a5298; color: #fff; }
+        .edit-dialog .cancel-btn  { background: #d1d5db; color: #2c3e50; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); z-index: 999; }
+        .edit-dialog h3, .edit-dialog label, .edit-dialog p { color: #333333 !important; }
         .edit-dialog input[type="text"],
         .edit-dialog input[type="number"],
-        .edit-dialog input[type="password"] {
-            color: #000000 !important; /* لون أسود لقيم الإدخال */
-            background-color: #f8f8f8 !important; /* خلفية فاتحة لحقول الإدخال */
-            border: 1px solid #cccccc !important; /* حدود واضحة */
-        }
-        .edit-dialog button {
-            color: #ffffff !important; /* لون أبيض لأزرار التأكيد */
-        }
-        .edit-dialog .cancel-btn {
-            color: #333333 !important; /* لون غامق لزر الإلغاء */
-        }
+        .edit-dialog input[type="password"] { color: #000000 !important; background-color: #f8f8f8 !important; border: 1px solid #cccccc !important; }
+        .edit-dialog button { color: #ffffff !important; }
+        .edit-dialog .cancel-btn { color: #333333 !important; }
+        .wide-dialog { width: 95% !important; max-width: 900px !important; min-width: 400px !important; }
 
-        /* كلاس لتوسيع النافذة المنبثقة (لشاشات التعديل/الإضافة) */
-        .wide-dialog {
-            width: 95% !important;
-            max-width: 900px !important;
-            min-width: 400px !important;
-        }
+        /* ══ حقول التواقيع ══ */
+        #signature-fields-container .form-group { margin-bottom: 15px; padding: 10px; border: 1px solid #eee; border-radius: 8px; background-color: #fcfcfc; }
+        #signature-fields-container label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
+        #signature-fields-container input { width: calc(100% - 10px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; color: #000 !important; background-color: #fff !important; }
 
-        /* تنسيق حقول الإدخال داخل نافذة تعديل التواقيع */
-        #signature-fields-container .form-group {
-            margin-bottom: 15px;
-            padding: 10px;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            background-color: #fcfcfc;
-        }
-        #signature-fields-container label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #555;
-        }
-        #signature-fields-container input {
-            width: calc(100% - 10px); /* لترك مسافة بادينغ */
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            color: #000 !important;
-            background-color: #fff !important;
-        }
-        
-        /* تنسيق خانة اختيار عمالة الأسنان */
-        .dental-labor-toggle {
-            text-align: center;
-            margin: 15px 0;
-            padding: 10px;
-            background-color: #f0f8ff;
-            border: 1px solid #d1e3f3;
-            border-radius: 8px;
-        }
-        .dental-labor-toggle label {
-            font-weight: bold;
-            color: #0056b3;
-            cursor: pointer;
-        }
-        .dental-labor-toggle input[type="checkbox"] {
-            margin-left: 10px;
-            transform: scale(1.2);
-            cursor: pointer;
-        }
-        /* --- START: NEW STYLES TO BE ADDED --- */
+        /* ══ action bar ══ */
+        .action-bar { display: flex; justify-content: center; align-items: center; gap: 10px; padding: 15px; background-color: #f8f9fa; border-radius: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .action-bar .action-btn { color: white; border: none; padding: 10px 20px; margin: 5px; border-radius: 6px; cursor: pointer; font-family: 'Tajawal', sans-serif; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .action-bar .action-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
 
-        /* 1. Unified Action Bar */
-        .action-bar {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        .action-bar .action-btn {
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            margin: 5px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-family: 'Tajawal', sans-serif;
-            font-size: 14px;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        .action-bar .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-        }
-        .action-bar .btn-print { background: #007bff; }
-        .action-bar .btn-excel { background: #28a745; }
-        .action-bar .btn-refresh { background: #17a2b8; }
-        .action-bar .btn-edit-names { background: #ffc107; color: #212529; }
-        .action-bar .btn-edit-signatures { background: #6f42c1; }
+        /* ══ signature field group ══ */
+        .signature-field-group { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9; }
+        .signature-field-group .inputs { flex-grow: 1; }
+        .signature-field-group input { width: calc(100% - 16px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .signature-field-group label { display: block; font-weight: bold; margin-bottom: 5px; color: #333; font-size: 13px; }
+        .delete-sig-btn { background-color: #dc3545; color: white; border: none; border-radius: 50%; width: 35px; height: 35px; cursor: pointer; font-size: 16px; line-height: 35px; text-align: center; flex-shrink: 0; }
+        .delete-sig-btn:hover { background-color: #c82333; }
 
-        /* 2. Toggles Container */
-        .print-toggles {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin: 15px 0;
-            padding: 10px;
-            background-color: #f0f8ff;
-            border: 1px solid #d1e3f3;
-            border-radius: 8px;
-        }
-        .toggle-switch {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .toggle-switch label {
-            font-weight: bold;
-            color: #0056b3;
-            cursor: pointer;
-        }
-        .toggle-switch input[type="checkbox"] {
-            transform: scale(1.2);
-            cursor: pointer;
-        }
+        /* ══ item names ══ */
+        #item-names-container .form-group { margin-bottom: 15px; padding: 10px; border: 1px solid #eee; border-radius: 8px; background-color: #fcfcfc; }
+        #item-names-container label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
+        #item-names-container input { width: calc(100% - 10px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; color: #000 !important; background-color: #fff !important; }
 
-        /* 3. Add new selectors to the print media query */
-        @media print {
-            .action-bar, .print-toggles {
-                display: none !important;
-            }
-        }
+        /* ══ std-action-bar ══ */
+        .std-action-bar { background: #fff !important; padding: 10px 16px !important; border-bottom: 2px solid #e2e8f0 !important; display: flex !important; flex-wrap: wrap !important; gap: 7px !important; align-items: center !important; box-shadow: 0 2px 6px rgba(0,0,0,.04) !important; }
+        .ab { display: inline-flex !important; align-items: center !important; gap: 6px !important; padding: 7px 15px !important; border-radius: 9px !important; border: none !important; font-family: 'Tajawal', sans-serif !important; font-size: 13px !important; font-weight: 700 !important; cursor: pointer !important; transition: transform .15s, opacity .15s, box-shadow .15s !important; white-space: nowrap !important; color: #fff !important; background: #1e3c72 !important; box-shadow: 0 2px 6px rgba(0,0,0,.15) !important; }
+        .ab:hover { opacity: .88 !important; transform: translateY(-1px) !important; box-shadow: 0 4px 12px rgba(0,0,0,.2) !important; }
+        .ab:active { transform: translateY(0) !important; opacity: 1 !important; }
+        .ab-excel  { background: #16a34a !important; }
+        .ab-print  { background: #475569 !important; }
+        .ab-sig    { background: #4f46e5 !important; }
+        .ab-titles { background: #ea580c !important; }
 
-        /* 4. Style for the new item name dialog */
-        #item-names-container .form-group {
-            margin-bottom: 15px;
-            padding: 10px;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            background-color: #fcfcfc;
-        }
-        #item-names-container label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #555;
-        }
-        #item-names-container input {
-            width: calc(100% - 10px);
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            color: #000 !important;
-            background-color: #fff !important;
-        }
-        /* --- END: NEW STYLES TO BE ADDED --- */
-/* --- START: أضف هذا الكود إلى ملف CSS أو قسم <style> --- */
+        /* ══ page identity bar ══ */
+        :root { --unit-color: #003087; --unit-accent: #d4af37; }
+        .page-unit-bar { display: flex !important; align-items: center !important; justify-content: center !important; gap: 10px !important; background: var(--unit-color, #003087) !important; color: #fff !important; padding: 10px 20px !important; font-size: 14px !important; font-weight: 700 !important; font-family: 'Tajawal', sans-serif !important; letter-spacing: .3px !important; position: relative !important; }
+        .page-unit-bar .unit-badge { background: rgba(255,255,255,.18) !important; border: 1px solid rgba(255,255,255,.25) !important; border-radius: 20px !important; padding: 3px 14px !important; font-size: 12px !important; }
+        @media print { .page-unit-bar { display: none !important; } }
 
-/* 1. اجعل قاعدة الإخفاء للطباعة أقوى لتجاوز أي قواعد أخرى */
-@media print {
-    .no-print-row {
-        display: none !important;
-    }
-}
+        /* ══ header ══ */
+        .header-info { background: linear-gradient(135deg, #080e24 0%, #0e1e45 40%, #1a336e 100%) !important; border-bottom: 4px solid var(--unit-color, #003087) !important; padding: 22px 100px !important; }
+        .logo-right { position: absolute !important; right: 18px !important; top: 50% !important; transform: translateY(-50%) !important; width: 72px !important; height: 72px !important; border-radius: 14px !important; box-shadow: 0 4px 16px rgba(0,0,0,.35) !important; object-fit: contain !important; background: rgba(255,255,255,.1) !important; padding: 5px !important; }
+        .logo-left  { position: absolute !important; left: 18px !important; top: 50% !important; transform: translateY(-50%) !important; width: 72px !important; height: 72px !important; border-radius: 14px !important; box-shadow: 0 4px 16px rgba(0,0,0,.35) !important; object-fit: contain !important; background: rgba(255,255,255,.1) !important; padding: 5px !important; }
+        .header-info h1 { font-size: 20px !important; font-weight: 900 !important; color: #fff !important; margin: 0 0 4px !important; font-family: 'Tajawal', sans-serif !important; }
+        .header-info h3 { font-size: 12px !important; font-weight: 500 !important; color: rgba(255,255,255,.6) !important; margin: 0 0 6px !important; }
+        .header-info h2 { font-size: 16px !important; font-weight: 800 !important; color: var(--unit-accent, #d4af37) !important; margin: 4px 0 0 !important; }
+        .header-info .date { font-size: 11px !important; color: rgba(255,255,255,.4) !important; margin-top: 5px !important; }
 
-/* 2. تعديل قاعدة الألوان لتجنب الصفوف المتجاورة بنفس اللون */
-.cosmic-table.achievement-table tbody tr:not(#dental-row):nth-child(even) {
-    background-color: #f5f5f5;
-}
-
-.cosmic-table.achievement-table tbody tr:not(#dental-row):nth-child(odd) {
-    background-color: #ffffff; /* تأكد من أن الصفوف الفردية لها خلفية بيضاء */
-}
-
-/* 3. أعطِ صف الأسنان تنسيقاً خاصاً به لتمييزه */
-#dental-row {
-    background-color: #e6f7ff !important; /* لون أزرق فاتح مميز */
-    font-style: italic;
-}
-
-/* --- END: نهاية الكود المطلوب إضافته --- */
-/* --- START: أضف هذا الكود إلى قسم <style> --- */
-
-/* تنسيق حاوية حقل التوقيع الواحد مع زر الحذف */
-.signature-field-group {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 15px;
-    padding: 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    background-color: #f9f9f9;
-}
-
-.signature-field-group .inputs {
-    flex-grow: 1;
-}
-
-.signature-field-group input {
-    width: calc(100% - 16px);
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-.signature-field-group label {
-    display: block;
-    font-weight: bold;
-    margin-bottom: 5px;
-    color: #333;
-    font-size: 13px;
-}
-
-/* تنسيق زر الحذف الأحمر */
-.delete-sig-btn {
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 35px;
-    height: 35px;
-    cursor: pointer;
-    font-size: 16px;
-    line-height: 35px;
-    text-align: center;
-    flex-shrink: 0;
-}
-.delete-sig-btn:hover {
-    background-color: #c82333;
-}
-
-/* --- END: نهاية الكود --- */
-
-    
-  /* ══ شريط الأزرار الجديد std-action-bar ══ */
-  .std-action-bar {
-    background: #fff !important;
-    padding: 10px 16px !important;
-    border-bottom: 2px solid #e2e8f0 !important;
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 7px !important;
-    align-items: center !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,.04) !important;
-  }
-  .ab {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 6px !important;
-    padding: 7px 15px !important;
-    border-radius: 9px !important;
-    border: none !important;
-    font-family: 'Tajawal', sans-serif !important;
-    font-size: 13px !important;
-    font-weight: 700 !important;
-    cursor: pointer !important;
-    transition: transform .15s, opacity .15s, box-shadow .15s !important;
-    white-space: nowrap !important;
-    color: #fff !important;
-    background: #1e3c72 !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,.15) !important;
-  }
-  .ab:hover { opacity: .88 !important; transform: translateY(-1px) !important; box-shadow: 0 4px 12px rgba(0,0,0,.2) !important; }
-  .ab:active { transform: translateY(0) !important; opacity: 1 !important; }
-  .ab-manage   { background: #6d28d9 !important; }
-  .ab-import   { background: #0369a1 !important; }
-  .ab-excel    { background: #16a34a !important; }
-  .ab-print    { background: #475569 !important; }
-  .ab-backup   { background: #0891b2 !important; }
-  .ab-restore  { background: #b45309 !important; }
-  .ab-sig      { background: #4f46e5 !important; }
-  .ab-titles   { background: #ea580c !important; }
-  .ab-clear    { background: #dc2626 !important; }
-  .ab-update   { background: #0369a1 !important; }
-
-  
-  :root {
-    --unit-color: #003087;
-    --unit-accent: #d4af37;
-  }
-
-  /* ══ PAGE IDENTITY BAR (screen only) ══ */
-  .page-unit-bar {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 10px !important;
-    background: var(--unit-color, #003087) !important;
-    color: #fff !important;
-    padding: 10px 20px !important;
-    font-size: 14px !important;
-    font-weight: 700 !important;
-    font-family: 'Tajawal', sans-serif !important;
-    letter-spacing: .3px !important;
-    position: relative !important;
-  }
-  .page-unit-bar .unit-badge {
-    background: rgba(255,255,255,.18) !important;
-    border: 1px solid rgba(255,255,255,.25) !important;
-    border-radius: 20px !important;
-    padding: 3px 14px !important;
-    font-size: 12px !important;
-  }
-  @media print { .page-unit-bar { display: none !important; } }
-
-  /* ══ HEADER CLEAN-UP ══ */
-  .header-info {
-    background: linear-gradient(135deg, #080e24 0%, #0e1e45 40%, #1a336e 100%) !important;
-    border-bottom: 4px solid var(--unit-color, #003087) !important;
-    padding: 22px 100px !important;
-  }
-
-  .logo-right {
-    position: absolute !important; right: 18px !important;
-    top: 50% !important; transform: translateY(-50%) !important;
-    width: 72px !important; height: 72px !important;
-    border-radius: 14px !important;
-    box-shadow: 0 4px 16px rgba(0,0,0,.35) !important;
-    object-fit: contain !important;
-    background: rgba(255,255,255,.1) !important;
-    padding: 5px !important;
-  }
-  /* شعار اليسار نفس التجمع */
-  .logo-left {
-    position: absolute !important; left: 18px !important;
-    top: 50% !important; transform: translateY(-50%) !important;
-    width: 72px !important; height: 72px !important;
-    border-radius: 14px !important;
-    box-shadow: 0 4px 16px rgba(0,0,0,.35) !important;
-    object-fit: contain !important;
-    background: rgba(255,255,255,.1) !important;
-    padding: 5px !important;
-  }
-
-  .header-info h1 {
-    font-size: 20px !important; font-weight: 900 !important;
-    color: #fff !important; margin: 0 0 4px !important;
-    font-family: 'Tajawal', sans-serif !important;
-  }
-  .header-info h3 {
-    font-size: 12px !important; font-weight: 500 !important;
-    color: rgba(255,255,255,.6) !important; margin: 0 0 6px !important;
-  }
-  .header-info h2 {
-    font-size: 16px !important; font-weight: 800 !important;
-    color: var(--unit-accent, #d4af37) !important; margin: 4px 0 0 !important;
-  }
-  .header-info .date {
-    font-size: 11px !important; color: rgba(255,255,255,.4) !important;
-    margin-top: 5px !important;
-  }
-
-</style>
+        /* ══ صف الأسنان ══ */
+        #dental-row { background-color: #e6f7ff; }
+        .cosmic-table.achievement-table tbody tr:not(#dental-row):nth-child(even) { background-color: #f5f5f5; }
+        .cosmic-table.achievement-table tbody tr:not(#dental-row):nth-child(odd)  { background-color: #ffffff; }
+    </style>
 <link rel="stylesheet" href="/original/shared-styles.css">
 </head>
 <body>
     <div id="particles-js-bg"></div>
     <div class="container">
-        <!-- Unified Header -->
+
+        <!-- شريط الهوية -->
         <div class="page-unit-bar" style="--unit-color:#003087;">
-        <i class="fas fa-award"></i>
-        مستشفى نجران العام الجديد
-        <span class="unit-badge">شهادة الإنجاز</span>
-    </div>
+            <i class="fas fa-award"></i>
+            مستشفى نجران العام الجديد
+            <span class="unit-badge">شهادة الإنجاز</span>
+        </div>
+
+        <!-- الهيدر -->
         <div class="header-info">
             <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-right">
             <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-left">
-            <h1 style="text-align: center; margin: 5px 0;">تجمع نجران الصحي</h1>
-            <!-- removed -->
-            <h2 id="achievement-title" style="text-align: center; margin: 0;">شهادة الإنجاز - إجمالي العقد</h2>
-            <p class="date" id="current-date-time" style="text-align: center; margin: 5px 0;"></p>
+            <h1 style="text-align:center;margin:5px 0;">تجمع نجران الصحي</h1>
+            <h2 id="achievement-title" style="text-align:center;margin:0;">شهادة الإنجاز - إجمالي العقد</h2>
+            <p class="date" id="current-date-time" style="text-align:center;margin:5px 0;"></p>
         </div>
 
-        <!-- Contract Info (Direct Purchase Ratio Hidden) -->
-        <div class="page-contract-info" style="text-align: center;">
-            <p style="margin: 5px 0;"><strong>اسم المستشفى:</strong> <span class="hospitalName">etqreyet</span></p>
-            <p style="margin: 5px 0;"><strong>تفاصيل العقد:</strong> <span class="contractDetails">yteywy</span></p>
-            <p style="margin: 5px 0;"><strong>اسم الشركة:</strong> <span class="companyName">tywysty</span></p>
-            <p style="margin: 5px 0;"><strong>نوع العقد:</strong> <span class="contractType">عقد أساسي</span></p>
-            <p class="directPurchaseContainer" style="display: none; margin: 5px 0;"><strong>نسبة الشراء المباشر:</strong> <span class="directPurchaseRatio">0</span>%</p>
-            <p style="margin: 5px 0;"><strong>رقم الدفعة:</strong> دفعة رقم <span id="extract-payment-number">—</span> &nbsp;|&nbsp; شهر <span class="extract-month-display">—</span> <span class="extract-year-display">—</span></p>
-            <p style="margin: 5px 0;"><strong>مدة المستخلص:</strong> من <span id="extract-start-date">01/06/2025</span> إلى <span id="extract-end-date">16/06/2025</span></p>
+        <!-- بيانات العقد -->
+        <div class="page-contract-info" style="text-align:center;">
+            <p style="margin:5px 0;"><strong>اسم المستشفى:</strong> <span class="hospitalName">—</span></p>
+            <p style="margin:5px 0;"><strong>تفاصيل العقد:</strong> <span class="contractDetails">—</span></p>
+            <p style="margin:5px 0;"><strong>اسم الشركة:</strong> <span class="companyName">—</span></p>
+            <p style="margin:5px 0;"><strong>نوع العقد:</strong> <span class="contractType">عقد أساسي</span></p>
+            <p class="directPurchaseContainer" style="display:none;margin:5px 0;"><strong>نسبة الشراء المباشر:</strong> <span class="directPurchaseRatio">0</span>%</p>
+            <p style="margin:5px 0;"><strong>رقم الدفعة:</strong> دفعة رقم <span id="extract-payment-number">—</span> &nbsp;|&nbsp; شهر <span class="extract-month-display">—</span> <span class="extract-year-display">—</span></p>
+            <p style="margin:5px 0;"><strong>مدة المستخلص:</strong> من <span id="extract-start-date">—</span> إلى <span id="extract-end-date">—</span></p>
         </div>
 
-        <!-- Unified Nav-bar -->
-        <!-- شريط التنقل بين الصفحات -->
+        <!-- شريط التنقل -->
         <nav class="no-print" style="text-align:center;padding:8px 0;margin:6px 0;display:flex;align-items:center;justify-content:center;">
             <select onchange="if(this.value!=='#')window.location.href=this.value" style="font-family:'Tajawal',sans-serif;font-size:14px;padding:8px 20px;border:2px solid #1e3c72;border-radius:10px;background:#fff;color:#1e3c72;font-weight:700;cursor:pointer;min-width:340px;direction:rtl;">
                 <option value="#">📌 الانتقال إلى صفحة أخرى...</option>
                 <option value="najran_general.html">🏠 الصفحة الرئيسية — نجران</option>
                 <optgroup label="مركز طب الأسنان">
-                <option value="najran_dental_attendance.html">👥 الحضور والغياب — الأسنان</option>
-                <option value="najran_dental_performance.html">📊 الأداء — الأسنان</option>
-                <option value="najran_dental_achievement.html">🏆 الإنجاز — الأسنان</option>
+                    <option value="najran_dental_attendance.html">👥 الحضور والغياب — الأسنان</option>
+                    <option value="najran_dental_performance.html">📊 الأداء — الأسنان</option>
+                    <option value="najran_dental_achievement.html">🏆 الإنجاز — الأسنان</option>
                 </optgroup>
                 <optgroup label="مستشفى نجران العام الجديد">
-                <option value="najran_general_attendance.html">👥 الحضور والغياب — المستشفى العام</option>
-                <option value="najran_general_performance.html">📊 الأداء — المستشفى العام</option>
-                <option value="najran_general_achievement.html" selected>🏆 الإنجاز — المستشفى العام</option>
+                    <option value="najran_general_attendance.html">👥 الحضور والغياب — المستشفى العام</option>
+                    <option value="najran_general_performance.html">📊 الأداء — المستشفى العام</option>
+                    <option value="najran_general_achievement.html" selected>🏆 الإنجاز — المستشفى العام</option>
                 </optgroup>
                 <optgroup label="مستقل">
-                <option value="najran_general_consumables.html">📦 المستهلكات — المستشفى العام</option>
+                    <option value="najran_general_consumables.html">📦 المستهلكات — المستشفى العام</option>
                 </optgroup>
             </select>
         </nav>
 
+        <!-- أزرار الإجراءات -->
         <div class="action-bar no-print">
-            <button class="action-btn" onclick="exportAchievementToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
-            <button class="action-btn" onclick="window.print()"><i class="fas fa-print"></i> طباعة</button>
-            <button class="action-btn" onclick="openSignatureEditDialog()"><i class="fas fa-pen-nib"></i> تعديل التواقيع</button>
-            <button class="action-btn" onclick="openItemNameDialog()"><i class="fas fa-tag"></i> تعديل أسماء البنود</button>
+            <button class="action-btn" style="background:#28a745;" onclick="exportAchievementToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
+            <button class="action-btn" style="background:#007bff;" onclick="window.print()"><i class="fas fa-print"></i> طباعة</button>
+            <button class="action-btn" style="background:#17a2b8;" onclick="refreshAllData()"><i class="fas fa-sync-alt"></i> تحديث البيانات</button>
+            <button class="action-btn" style="background:#6f42c1;" onclick="openSignatureEditDialog()"><i class="fas fa-pen-nib"></i> تعديل التواقيع</button>
+            <button class="action-btn" style="background:#fd7e14;" onclick="openItemNameDialog()"><i class="fas fa-tag"></i> تعديل أسماء البنود</button>
         </div>
-        <script>
+
+        <!-- الجدول -->
+        <div class="overflow-x-auto mb-4">
+            <table class="cosmic-table achievement-table" id="achievementTable">
+                <thead>
+                    <tr>
+                        <th>البند</th>
+                        <th>القيمة الشهرية حسب العقد</th>
+                        <th>حسم الغياب</th>
+                        <th>غرامة الغياب</th>
+                        <th>غرامة الأداء</th>
+                        <th>غرامة الجنسية</th>
+                        <th>المبلغ الصافي الشهري</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- يتم ملؤه بالكامل بواسطة JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <div id="sb-container-achievement" class="sb-wrap"></div>
+    </div>
+
+    <!-- نافذة تعديل التواقيع -->
+    <div id="signature-edit-dialog" class="edit-dialog" style="display:none;">
+        <div id="signature-password-section">
+            <h3>🔒 أدخل كلمة المرور للتعديل</h3>
+            <input type="password" id="signature-password-input" placeholder="كلمة المرور">
+            <p id="signature-password-error" style="color:red;font-size:12px;"></p>
+            <button class="confirm-btn" onclick="verifySignaturePassword()"><i class="fas fa-unlock"></i> دخول</button>
+            <button class="cancel-btn" onclick="closeSignatureEditDialog()">إلغاء</button>
+        </div>
+        <div id="signature-edit-content" style="display:none;">
+            <h3>✏️ تعديل التواقيع</h3>
+            <div id="signature-fields-container"></div>
+            <button class="confirm-btn" onclick="addSignatureField()"><i class="fas fa-plus"></i> إضافة توقيع</button>
+            <hr>
+            <button class="confirm-btn" onclick="saveSignatures()"><i class="fas fa-save"></i> حفظ التواقيع</button>
+            <button class="cancel-btn" onclick="closeSignatureEditDialog()">إلغاء</button>
+        </div>
+    </div>
+    <div id="signature-edit-overlay" class="overlay" onclick="closeSignatureEditDialog()"></div>
+
+    <!-- نافذة تعديل أسماء البنود -->
+    <div id="item-name-dialog" class="edit-dialog" style="display:none;">
+        <h3>تعديل أسماء البنود</h3>
+        <div id="item-names-container"></div>
+        <div class="dialog-buttons">
+            <button class="confirm-btn" onclick="saveItemNames()"><i class="fas fa-save" style="margin-left:5px;"></i> حفظ الأسماء</button>
+            <button class="cancel-btn" onclick="closeDialog('item-name-dialog','item-name-overlay')"><i class="fas fa-times-circle" style="margin-left:5px;"></i> إلغاء</button>
+        </div>
+    </div>
+    <div id="item-name-overlay" class="overlay" style="display:none;" onclick="closeDialog('item-name-dialog','item-name-overlay')"></div>
+
+    <script src="attendance_contract_info.js"></script>
+
+    <script>
+    /* ================================================================
+       المتغيرات العامة
+    ================================================================ */
     let departmentDataForAchievement = [];
-    const departmentKeysForAchievement = [
-        'cleaning', 'electricity', 'agriculture', 'civil_works', 'mechanical', 'security', 'laundry', 'patient_services'
-    ];
 
-    window.navigateTo = function(page) {
-        if (page && page !== "#") window.location.href = page;
+    const SIGNATURE_STORAGE_KEY = 'achievementSignatures_v3';
+    const PASSWORD = "admin123";
+
+    const itemKeys = {
+        workforce:   'العمالة الأساسية',
+        saudi_admin: 'الوظائف الإدارية السعوديين',
+        dental:      'عمالة مركز الأسنان'
+    };
+
+    /* ================================================================
+       دالة التنسيق المساعدة
+    ================================================================ */
+    function fmt(n) {
+        return (parseFloat(n) || 0).toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
     }
 
-    // *** START: NEW DENTAL LABOR FUNCTIONS ***
-    function toggleDentalRow() { /* صف الأسنان دائماً ظاهر في إنجاز العام */ }
-
+    /* ================================================================
+       getDentalData — يقرأ من localStorage مباشرة (لا يعتمد على DOM)
+    ================================================================ */
     function getDentalData() {
-        // صف الأسنان دائماً مُفعَّل في إنجاز العام
-        
-        const _mv = document.getElementById('dental-monthlyValue');
-        const _ad = document.getElementById('dental-absenceDeduction');
-        const _ap = document.getElementById('dental-absencePenalty');
-        const _pp = document.getElementById('dental-performancePenalty');
-        const _np = document.getElementById('dental-nationalityPenalty');
-        const _nm = document.getElementById('dental-netMonthly');
-        const monthlyValue = parseFloat(_mv ? _mv.textContent : '0') || 0;
-        const absenceDeduction = parseFloat(_ad ? _ad.textContent : '0') || 0;
-        const absencePenalty = parseFloat(_ap ? _ap.textContent : '0') || 0;
-        const performancePenalty = parseFloat(_pp ? _pp.textContent : '0') || 0;
-        const nationalityPenalty = parseFloat(_np ? _np.textContent : '0') || 0;
-        const netMonthly = monthlyValue - (absenceDeduction + absencePenalty + performancePenalty + nationalityPenalty);
-
-        if (_nm) _nm.textContent = netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
-
-        return { monthlyValue, absenceDeduction, absencePenalty, performancePenalty, nationalityPenalty, netMonthly };
-    }
-
-    function saveDentalData() {
-        // القيم تلقائية من namespace الأسنان — لا حاجة للحفظ اليدوي
-        loadAndProcessAchievementData();
-    }
-
-    function _loadDentalFallback() {
-        ['dental-monthlyValue','dental-absenceDeduction','dental-absencePenalty',
-         'dental-performancePenalty','dental-nationalityPenalty'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.textContent = '0';
-        });
-        var nmEl = document.getElementById('dental-netMonthly');
-        if (nmEl) nmEl.textContent = '0.00 ر.س.';
-    }
-
-    function loadDentalData() {
-        // ── قراءة بيانات الأسنان مباشرة من namespace nd_ المستقل ──
         try {
             var rawGet = Storage.prototype.getItem.bind(localStorage);
             var sessionRaw = rawGet('najran_session');
-            var session    = sessionRaw ? JSON.parse(sessionRaw) : null;
-            var userPfx    = (session && session.userId) ? '_u' + session.userId + '_' : '';
-            var ndPfx      = userPfx + 'nd_';
+            var session = sessionRaw ? JSON.parse(sessionRaw) : null;
+            var userPfx = (session && session.userId) ? '_u' + session.userId + '_' : '';
+            var ndPfx = userPfx + 'nd_';
 
-            // ── المصدر الأول: إجماليات شهادة إنجاز الأسنان (الأكثر دقة) ──
-   var totalsRaw =
-    rawGet(ndPfx + 'dentalAchievementTotals') ||
-    rawGet('nd_dentalAchievementTotals') ||
-    rawGet('dentalAchievementTotals');
+            var totalsRaw =
+                rawGet(ndPfx + 'dentalAchievementTotals') ||
+                rawGet('nd_dentalAchievementTotals')       ||
+                rawGet('dentalAchievementTotals');
 
-if (totalsRaw) {
-    var t = JSON.parse(totalsRaw);
-    if (t) {
-        var _e;
-        _e = document.getElementById('dental-monthlyValue');       if (_e) _e.textContent = (t.monthlyValue || 0).toFixed(2);
-        _e = document.getElementById('dental-absenceDeduction');   if (_e) _e.textContent = (t.absenceDeduction || 0).toFixed(2);
-        _e = document.getElementById('dental-absencePenalty');     if (_e) _e.textContent = (t.absencePenalty || 0).toFixed(2);
-        _e = document.getElementById('dental-performancePenalty'); if (_e) _e.textContent = (t.performancePenalty || 0).toFixed(2);
-        _e = document.getElementById('dental-nationalityPenalty'); if (_e) _e.textContent = (t.nationalityPenalty || 0).toFixed(2);
-        _e = document.getElementById('dental-netMonthly');         if (_e) _e.textContent = (t.netMonthly || 0).toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
-        return;
-    }
-}
+            if (totalsRaw) {
+                var t = JSON.parse(totalsRaw);
+                if (t) {
+                    return {
+                        monthlyValue:       parseFloat(t.monthlyValue)       || 0,
+                        absenceDeduction:   parseFloat(t.absenceDeduction)   || 0,
+                        absencePenalty:     parseFloat(t.absencePenalty)      || 0,
+                        performancePenalty: parseFloat(t.performancePenalty) || 0,
+                        nationalityPenalty: parseFloat(t.nationalityPenalty) || 0,
+                        netMonthly:         parseFloat(t.netMonthly)         || 0
+                    };
+                }
+            }
 
-            // ── المصدر الثاني (احتياطي): حساب من بيانات الحضور ──
-            if (!userPfx) { _loadDentalFallback(); return; }
+            /* مصدر احتياطي: احسب من attendanceData */
+            if (!userPfx) return _dentalZero();
             var attRaw = rawGet(ndPfx + 'attendanceData');
-            if (!attRaw) { _loadDentalFallback(); return; }
+            if (!attRaw) return _dentalZero();
 
             var attData = JSON.parse(attRaw);
-            var monthlyValue = 0, absenceDeduction = 0,
-                absencePenalty = 0, nationalityPenalty = 0;
+            var monthlyValue = 0, absenceDeduction = 0, absencePenalty = 0, nationalityPenalty = 0;
 
-            Object.keys(attData).forEach(function(deptKey) {
-                monthlyValue += parseFloat(rawGet(ndPfx + 'deptCalculatedCost_' + deptKey)) || 0;
-                (attData[deptKey] || []).forEach(function(emp) {
-                    absenceDeduction  += parseFloat(emp.deduction)       || 0;
-                    absencePenalty    += parseFloat(emp.absencePenalty)  || 0;
-                    nationalityPenalty+= parseFloat(emp.nationalityFine) || 0;
+            Object.keys(attData).forEach(function(dk) {
+                monthlyValue += parseFloat(rawGet(ndPfx + 'deptCalculatedCost_' + dk)) || 0;
+                (attData[dk] || []).forEach(function(emp) {
+                    absenceDeduction   += parseFloat(emp.deduction)       || 0;
+                    absencePenalty     += parseFloat(emp.absencePenalty)  || 0;
+                    nationalityPenalty += parseFloat(emp.nationalityFine) || 0;
                 });
             });
 
             var performancePenalty = parseFloat(rawGet(ndPfx + 'performanceTotalDeduction')) || 0;
             var netMonthly = monthlyValue - absenceDeduction - absencePenalty - performancePenalty - nationalityPenalty;
 
-            var _e;
-            _e = document.getElementById('dental-monthlyValue');      if (_e) _e.textContent = monthlyValue.toFixed(2);
-            _e = document.getElementById('dental-absenceDeduction');  if (_e) _e.textContent = absenceDeduction.toFixed(2);
-            _e = document.getElementById('dental-absencePenalty');    if (_e) _e.textContent = absencePenalty.toFixed(2);
-            _e = document.getElementById('dental-performancePenalty');if (_e) _e.textContent = performancePenalty.toFixed(2);
-            _e = document.getElementById('dental-nationalityPenalty');if (_e) _e.textContent = nationalityPenalty.toFixed(2);
-            _e = document.getElementById('dental-netMonthly');        if (_e) _e.textContent = netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
+            return { monthlyValue, absenceDeduction, absencePenalty, performancePenalty, nationalityPenalty, netMonthly };
 
         } catch(e) {
-            _loadDentalFallback();
-        }
-
-        // تفعيل صف الأسنان تلقائياً دائماً
-        var checkbox  = document.getElementById('dental-labor-checkbox');
-        var dentalRow = document.getElementById('dental-row');
-        if (checkbox) checkbox.checked = true;
-        if (dentalRow) {
-            dentalRow.style.display = '';
-            dentalRow.classList.remove('no-print-row');
-        }
-        
-        toggleDentalRow(); // Apply visibility based on saved state
-    }
-    // *** END: NEW DENTAL LABOR FUNCTIONS ***
-
-
-
-
-    function getContractData() {
-        return JSON.parse(localStorage.getItem('contractData')) || {
-            hospitalName: "اسم المستشفى الافتراضي",
-            contractName: "اسم العقد الافتراضي",
-            extractNumber: "000",
-            startDate: "01/01/2024",
-            endDate: "31/01/2024",
-            siteManagerSalary: "0"
-        };
-    }
-
-    function updateDateTime() {
-        const now = new Date();
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
-        const gregorianDateTime = now.toLocaleDateString('ar-SA', options);
-        const _cdt = document.getElementById('current-date-time'); if (_cdt) _cdt.textContent = gregorianDateTime;
-        const _id = document.getElementById('issueDate'); if (_id) _id.textContent = now.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
-    }
-
-    function calculateDaysInMonth(dateString) {
-        const date = new Date(dateString);
-        return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-    }
-
-
-/**
- * ===================================================================
- *      ===>   دالة معالجة بيانات الإنجاز (النسخة النهائية والمُصححة)   <===
- * ===================================================================
- */
-function loadAndProcessAchievementData() {
-    try {
-        const hasPerformanceData = localStorage.getItem('performanceTotalDeduction');
-        const hasAttendanceData = localStorage.getItem('attendanceData');
-
-        if (!hasAttendanceData && !sessionStorage.getItem('dataMissingAlertShown')) {
-            alert("⚠️ لا توجد بيانات حضور وانصراف. يُرجى فتح صفحة الحضور أولًا.");
-            sessionStorage.setItem('dataMissingAlertShown', 'true');
-        }
-
-        const attendanceData = JSON.parse(hasAttendanceData || '{}');
-        const totalPerformancePenalty = parseFloat(hasPerformanceData) || 0;
-
-        // 1. حساب إجمالي العمالة (كل الأقسام ما عدا الإداريين)
-        let workforceMonthlyValue = 0;
-        let workforceAbsenceDeduction = 0;
-        let workforceAbsencePenalty = 0;
-        let workforceNationalityPenalty = 0;
-
-        const mainDepts = ['cleaning', 'electricity', 'agriculture', 'civil_works', 'mechanical', 'laundry', 'patient_services'];
-        mainDepts.forEach(deptKey => {
-            const deptCost = parseFloat(localStorage.getItem(`deptCalculatedCost_${deptKey}`)) || 0;
-            workforceMonthlyValue += deptCost;
-
-            (attendanceData[deptKey] || []).forEach(emp => {
-                workforceAbsenceDeduction += parseFloat(emp.deduction) || 0;
-                workforceAbsencePenalty += parseFloat(emp.absencePenalty) || 0;
-                workforceNationalityPenalty += parseFloat(emp.nationalityFine) || 0;
-            });
-        });
-
-        // 2. حساب إجمالي الإداريين السعوديين
-        let saudiMonthlyValue = parseFloat(localStorage.getItem('deptCalculatedCost_admin_saudi')) || 0;
-        let saudiAbsenceDeduction = 0;
-        let saudiAbsencePenalty = 0;
-        let saudiNationalityPenalty = 0;
-
-        (attendanceData['admin_saudi'] || []).forEach(emp => {
-            saudiAbsenceDeduction += parseFloat(emp.deduction) || 0;
-            saudiAbsencePenalty += parseFloat(emp.absencePenalty) || 0;
-            saudiNationalityPenalty += parseFloat(emp.nationalityFine) || 0;
-        });
-
-        // 3. حساب الصافي لكل بند
-        const workforceNetMonthly = workforceMonthlyValue - (workforceAbsenceDeduction + workforceAbsencePenalty + totalPerformancePenalty + workforceNationalityPenalty);
-        const saudiNetMonthly = saudiMonthlyValue - (saudiAbsenceDeduction + saudiAbsencePenalty + saudiNationalityPenalty);
-
-        // 4. تجهيز البيانات النهائية للعرض
-        departmentDataForAchievement = [
-            {
-                id: 'workforce',
-                name: getItemName('workforce'),
-                monthlyValue: workforceMonthlyValue,
-                absenceDeduction: workforceAbsenceDeduction,
-                absencePenalty: workforceAbsencePenalty,
-                performancePenalty: totalPerformancePenalty,
-                nationalityPenalty: workforceNationalityPenalty,
-                netMonthly: workforceNetMonthly
-            },
-            {
-                id: 'saudi_admin',
-                name: getItemName('saudi_admin'),
-                monthlyValue: saudiMonthlyValue,
-                absenceDeduction: saudiAbsenceDeduction,
-                absencePenalty: saudiAbsencePenalty,
-                performancePenalty: 0, // لا يوجد غرامة أداء للإداريين
-                nationalityPenalty: saudiNationalityPenalty,
-                netMonthly: saudiNetMonthly
-            }
-        ];
-        
-    // 5. حساب الإجماليات الكبرى بالترتيب الصحيح
-const dentalData = getDentalData();
-
-// العمالة الأساسية
-const workforceTotals = {
-    monthlyValue: workforceMonthlyValue,
-    absenceDeduction: workforceAbsenceDeduction,
-    absencePenalty: workforceAbsencePenalty,
-    performancePenalty: totalPerformancePenalty,
-    nationalityPenalty: workforceNationalityPenalty,
-    netMonthly: workforceNetMonthly
-};
-
-// الأسنان
-const dentalTotals = {
-    monthlyValue: dentalData.monthlyValue || 0,
-    absenceDeduction: dentalData.absenceDeduction || 0,
-    absencePenalty: dentalData.absencePenalty || 0,
-    performancePenalty: dentalData.performancePenalty || 0,
-    nationalityPenalty: dentalData.nationalityPenalty || 0,
-    netMonthly: dentalData.netMonthly || 0
-};
-
-// الإداريين
-const adminTotals = {
-    monthlyValue: saudiMonthlyValue,
-    absenceDeduction: saudiAbsenceDeduction,
-    absencePenalty: saudiAbsencePenalty,
-    performancePenalty: 0,
-    nationalityPenalty: saudiNationalityPenalty,
-    netMonthly: saudiNetMonthly
-};
-
-// الإجمالي النهائي
-const grandTotalMonthlyValue =
-    workforceTotals.monthlyValue +
-    dentalTotals.monthlyValue +
-    adminTotals.monthlyValue;
-
-const grandTotalAbsenceDeduction =
-    workforceTotals.absenceDeduction +
-    dentalTotals.absenceDeduction +
-    adminTotals.absenceDeduction;
-
-const grandTotalAbsencePenalty =
-    workforceTotals.absencePenalty +
-    dentalTotals.absencePenalty +
-    adminTotals.absencePenalty;
-
-const grandTotalPerformancePenalty =
-    workforceTotals.performancePenalty +
-    dentalTotals.performancePenalty +
-    adminTotals.performancePenalty;
-
-const grandTotalNationalityPenalty =
-    workforceTotals.nationalityPenalty +
-    dentalTotals.nationalityPenalty +
-    adminTotals.nationalityPenalty;
-
-const grandTotalNetMonthly =
-    workforceTotals.netMonthly +
-    dentalTotals.netMonthly +
-    adminTotals.netMonthly;
-        // 6. عرض الجدول
-        renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeduction, grandTotalAbsencePenalty, 
-            grandTotalPerformancePenalty, grandTotalNationalityPenalty, grandTotalNetMonthly);
-
-    } catch (error) {
-        console.error('خطأ في loadAndProcessAchievementData:', error);
-        alert('حدث خطأ أثناء معالجة البيانات، يرجى التحقق من البيانات في localStorage');
-    }
-}
-
-
-
-function renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeduction, grandTotalAbsencePenalty, 
-    grandTotalPerformancePenalty, grandTotalNationalityPenalty, grandTotalNetMonthly) {
-    
-    const tableBody = document.getElementById('tableBody');
-    const dentalRow = document.getElementById('dental-row');
-    tableBody.innerHTML = ''; // امسح الجدول لإعادة بنائه
-
-   // 1) صف العمالة الخاصة بالصفحة
-const workforceItem = departmentDataForAchievement.find(item => item.id === 'workforce');
-if (workforceItem) {
-    const row = tableBody.insertRow();
-    row.innerHTML = `
-        <td>${workforceItem.name}</td>
-        <td>${workforceItem.monthlyValue.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-        <td>${workforceItem.absenceDeduction.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-        <td>${workforceItem.absencePenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-        <td>${workforceItem.performancePenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-        <td>${workforceItem.nationalityPenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-        <td>${workforceItem.netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-    `;
-}
-
-// 2) صف عمالة الأسنان
-if (dentalRow) {
-    dentalRow.style.display = '';
-    dentalRow.classList.remove('no-print-row');
-    tableBody.appendChild(dentalRow);
-}
-
-// 3) صف الوظائف الإدارية السعوديين
-const adminItem = departmentDataForAchievement.find(item => item.id === 'saudi_admin');
-if (adminItem) {
-    const row = tableBody.insertRow();
-    row.id = 'admin-jobs-row';
-    row.innerHTML = `
-        <td>${adminItem.name}</td>
-        <td>${adminItem.monthlyValue.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-        <td>${adminItem.absenceDeduction.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-        <td>${adminItem.absencePenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-        <td>${adminItem.performancePenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-        <td>${adminItem.nationalityPenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-        <td>${adminItem.netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-    `;
-}
-    // أضف صف الإجمالي
-    const totalRow = tableBody.insertRow();
-    totalRow.classList.add('total-row');
-    totalRow.innerHTML = `
-        <td><strong>إجمالي المستحق للمقاول</strong></td>
-        <td><strong>${grandTotalMonthlyValue.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</strong></td>
-        <td><strong>${grandTotalAbsenceDeduction.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</strong></td>
-        <td><strong>${grandTotalAbsencePenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</strong></td>
-        <td><strong>${grandTotalPerformancePenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</strong></td>
-        <td><strong>${grandTotalNationalityPenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</strong></td>
-        <td><strong>${grandTotalNetMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</strong></td>
-    `;
-
-    // أضف صف التفقيد
-    const tafqeetRow = tableBody.insertRow();
-    tafqeetRow.classList.add('tafqeet-row');
-    tafqeetRow.innerHTML = `
-        <td colspan="7" style="text-align: right;">إجمالي المستحق للمقاول فقط وقدره: ${convertNumberToArabicWords(grandTotalNetMonthly)} ريال سعودي</td>
-    `;
-
-    // حفظ الإجمالي الصافي لمستخلص العمالة — مرتبط باسم المستشفى
-    try {
-        const _hn = (localStorage.getItem('hospitalName') || '').trim();
-        if (_hn) localStorage.setItem('finalLaborCost_' + _hn, grandTotalNetMonthly.toFixed(2));
-        localStorage.setItem('finalLaborCost', grandTotalNetMonthly.toFixed(2));
-    } catch (_) {}
-}
-
-// --- START: كود JavaScript الجديد والكامل لإدارة التواقيع ---
-
-// 1. المفتاح الجديد لتخزين التواقيع وكلمة المرور
-const SIGNATURE_STORAGE_KEY = 'achievementSignatures_v3';
-const PASSWORD = "admin123";
-
-// 2. دوال فتح وإغلاق نافذة التعديل
-function openSignatureEditDialog() {
-    document.getElementById('signature-edit-dialog').style.display = 'block';
-    document.getElementById('signature-edit-overlay').style.display = 'block';
-    document.getElementById('signature-password-section').style.display = 'block';
-    document.getElementById('signature-edit-content').style.display = 'none';
-    document.getElementById('signature-password-input').value = '';
-    document.getElementById('signature-password-error').textContent = '';
-}
-
-function closeSignatureEditDialog() {
-    document.getElementById('signature-edit-dialog').style.display = 'none';
-    document.getElementById('signature-edit-overlay').style.display = 'none';
-    document.getElementById('signature-edit-dialog').classList.remove('wide-dialog');
-}
-
-// 3. دالة التحقق من كلمة المرور
-function verifySignaturePassword() {
-    const input = document.getElementById('signature-password-input').value;
-    if (input === PASSWORD) {
-        document.getElementById('signature-password-section').style.display = 'none';
-        document.getElementById('signature-edit-content').style.display = 'block';
-        document.getElementById('signature-edit-dialog').classList.add('wide-dialog');
-        populateSignatureFields(); 
-    } else {
-        document.getElementById('signature-password-error').textContent = 'الباسورد غير صحيح';
-    }
-}
-
-// 4. دالة لملء حقول التواقيع بالبيانات المخزنة
-// --- START: النسخة الجديدة والمحسّنة للدالة ---
-function populateSignatureFields() {
-    const container = document.getElementById('signature-fields-container');
-    container.innerHTML = ''; // امسح الحقول القديمة دائماً
-    
-    // اقرأ التواقيع المحفوظة
-    const signatures = JSON.parse(localStorage.getItem(SIGNATURE_STORAGE_KEY) || '[]');
-
-    // --- التعديل الأهم هنا ---
-    // تحقق: إذا كانت قائمة التواقيع المحفوظة فارغة...
-    if (signatures.length === 0) {
-        // ...إذن، قم بإنشاء الحقول الأربعة الافتراضية
-        addSignatureField('مندوب المقاول', '');
-        addSignatureField('رئيس قسم الصيانة', '');
-        addSignatureField('مدير المشروع', '');
-        addSignatureField('مدير المستشفى', '');
-    } else {
-        // أما إذا كانت هناك تواقيع محفوظة، فاعرضها هي
-        signatures.forEach(sig => {
-            addSignatureField(sig.title, sig.name);
-        });
-    }
-}
-// --- END: نهاية النسخة الجديدة ---
-// 5. دالة لإضافة حقل توقيع جديد (مع زر الحذف)
-function addSignatureField(title = '', name = '') {
-    const container = document.getElementById('signature-fields-container');
-    const fieldId = `sig-field-${Date.now()}-${Math.random()}`;
-    const fieldDiv = document.createElement('div');
-    fieldDiv.className = 'signature-field-group';
-    fieldDiv.id = fieldId;
-    fieldDiv.innerHTML = `
-        <div class="inputs">
-            <label>المسمى الوظيفي:</label>
-            <input type="text" class="sig-title-input" value="${title}" placeholder="مثال: مدير المشروع">
-            <label style="margin-top: 8px;">الاسم:</label>
-            <input type="text" class="sig-name-input" value="${name}" placeholder="اسم صاحب التوقيع">
-        </div>
-        <button class="delete-sig-btn" onclick="document.getElementById('${fieldId}').remove()" title="حذف هذا التوقيع">
-            <i class="fas fa-trash-alt"></i>
-        </button>
-    `;
-    container.appendChild(fieldDiv);
-}
-
-// 6. دالة لحفظ كل التواقيع
-function saveSignatures() {
-    const container = document.getElementById('signature-fields-container');
-    const signatureFields = container.querySelectorAll('.signature-field-group');
-    const signaturesToSave = [];
-    signatureFields.forEach(field => {
-        const title = field.querySelector('.sig-title-input').value.trim();
-        const name = field.querySelector('.sig-name-input').value.trim();
-        if (title) {
-            signaturesToSave.push({ title, name });
-        }
-    });
-    localStorage.setItem(SIGNATURE_STORAGE_KEY, JSON.stringify(signaturesToSave));
-    showSuccessMessage('تم حفظ التواقيع بنجاح!');
-    closeSignatureEditDialog();
-    updateSignaturesOnPage();
-}
-
-// 7. دالة لتحديث عرض التواقيع في الصفحة الرئيسية
-function updateSignaturesOnPage() {
-    // replaced by SignatureBlock system — no-op kept for backward compatibility
-}
-
-// --- END: نهاية كود JavaScript الجديد ---
-
-   // =================================================================
-// START: إضافة الدوال المفقودة (الحل للخطأ 1 و 2)
-// =================================================================
-// START: دالة تجهيز وفتح صفحة خطاب الاعتماد
-function prepareAndOpenLetterPage() {
-    // 1. جلب البيانات المطلوبة من الصفحة الحالية
-    const companyName = document.querySelector('.companyName')?.textContent?.trim() || 'شركة المقاولات';
-    const hospitalName = document.querySelector('.hospitalName')?.textContent?.trim() || 'المستشفى';
-    const contractDetails = document.querySelector('.contractDetails')?.textContent?.trim() || 'تفاصيل العقد';
-    
-    // 2. حساب المبلغ الإجمالي (من نفس منطق الحسابات الموجودة)
-    const dentalData = getDentalData();
-    const workforceNetMonthly = departmentDataForAchievement.find(d => d.id === 'workforce')?.netMonthly || 0;
-    const saudiNetMonthly = departmentDataForAchievement.find(d => d.id === 'saudi_admin')?.netMonthly || 0;
-    const grandTotalNetMonthly = workforceNetMonthly + saudiNetMonthly + dentalData.netMonthly;
-
-    // 3. تحويل المبلغ إلى نص (تفقيد)
-    const totalInWords = convertNumberToArabicWords(grandTotalNetMonthly);
-
-    // 4. إنشاء كائن لتخزين البيانات
-    const letterData = {
-        sourcePage: 'شهادة الإنجاز',
-        companyName: companyName,
-        hospitalName: hospitalName,
-        contractDetails: contractDetails,
-        totalAmount: grandTotalNetMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' }),
-        totalAmountInWords: totalInWords
-    };
-
-    // 5. حفظ الكائن في localStorage لتتمكن الصفحة التالية من قراءته
-    localStorage.setItem('accreditationLetterData', JSON.stringify(letterData));
-
-    // 6. فتح الصفحة الجديدة في تبويب جديد
-    window.open('accreditation_letter.html', '_blank');
-}
-// END: دالة تجهيز وفتح صفحة خطاب الاعتماد
-
-// =================================================================
-//            استبدل الدالة القديمة بهذه النسخة النهائية
-// =================================================================
-
-function getExtractPeriodDetails() {
-    
-    // ======== الخطوة 1: ضع هنا اسم المفتاح الصحيح ========
-    // ابحث في Local Storage عن المفتاح الذي يحتوي على بيانات المستخلص
-    // واستبدل 'ضع_هنا_اسم_المفتاح_الصحيح' به.
- const KEY_NAME = 'monthlyData'; // <--- تم التغيير
- // <--- غيّر هذا الاسم فقط
-    // ======================================================
-
-
-    const extractDataString = localStorage.getItem(KEY_NAME);
-
-    if (!extractDataString) {
-        console.warn(`كائن المستخلص ('${KEY_NAME}') غير موجود في localStorage. تأكد من أن الاسم صحيح وأن البيانات محفوظة.`);
-        const today = new Date();
-        const totalDays = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-        return { daysInMonth: totalDays, totalDaysInMonth: totalDays };
-    }
-
-    try {
-        const extractDataObject = JSON.parse(extractDataString);
-
-        const startDateStr = extractDataObject.extractStart;
-        const endDateStr = extractDataObject.extractEnd;
-
-        if (!startDateStr || !endDateStr) {
-             console.error(`الكائن ('${KEY_NAME}') موجود، لكنه لا يحتوي على 'extractStart' أو 'extractEnd'.`);
-             return { daysInMonth: 30, totalDaysInMonth: 30 };
-        }
-
-        const startDate = new Date(startDateStr);
-        const endDate = new Date(endDateStr);
-        const timeDiff = endDate.getTime() - startDate.getTime();
-        const daysInMonth = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
-        const totalDaysInMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate();
-        
-        return { daysInMonth, totalDaysInMonth };
-
-    } catch (e) {
-        console.error("خطأ في تحليل كائن المستخلص أو تواريخه:", e);
-        return { daysInMonth: 30, totalDaysInMonth: 30 };
-    }
-}
-
-function showSuccessMessage(message) {
-    alert(message);
-}
-
- 
-
-// =================================================================
-// END: إضافة الدوال المفقودة
-// =================================================================
-
- // =================================================================
-// START: إصلاح دالة تصدير Excel (الحل للخطأ 3)
-// =================================================================
-
-function exportAchievementToExcel() {
-    console.log('بدء تصدير شهادة الإنجاز إلى Excel');
-    try {
-        const hospitalName = document.querySelector('.hospitalName')?.textContent?.trim() || 'مجمع نجران الصحي';
-        const companyName = document.querySelector('.companyName')?.textContent?.trim() || 'شركة المقاولات';
-        const contractDetails = document.querySelector('.contractDetails')?.textContent?.trim() || 'تفاصيل العقد';
-        const contractType = document.querySelector('.contractType')?.textContent?.trim() || 'نوع العقد';
-        const extractStart = document.getElementById('extract-start-date')?.textContent?.trim() || 'غير محدد';
-        const extractEnd = document.getElementById('extract-end-date')?.textContent?.trim() || 'غير محدد';
-        const issueDate = document.getElementById('issueDate')?.textContent?.trim() || 'غير محدد';
-
-        // --- الإصلاح الرئيسي هنا: قراءة التواقيع من النظام الجديد ---
-        const signaturesData = JSON.parse(localStorage.getItem(SIGNATURE_STORAGE_KEY) || '[]');
-        const signatures = signaturesData.map(sig => `${sig.title}: ${sig.name || ' '}`);
-
-        const ws_data = [
-            ['تجمع نجران الصحي'],
-            ['وحدة الصيانة العامة'],
-            ['شهادة الإنجاز - إجمالي العقد'],
-            [],
-            ['اسم المستشفى:', hospitalName],
-            ['اسم الشركة:', companyName],
-            ['تفاصيل العقد:', contractDetails],
-            ['نوع العقد:', contractType],
-            ['مدة المستخلص:', `من ${extractStart} إلى ${extractEnd}`],
-            ['تاريخ الإصدار:', issueDate],
-            [],
-            ['البند', 'القيمة الشهرية حسب العقد', 'حسم الغياب', 'غرامة الغياب', 'غرامة الأداء', 'غرامة الجنسية', 'المبلغ الصافي الشهري']
-        ];
-
-        let allItems = [...departmentDataForAchievement];
-        const dentalData = getDentalData();
-        const isDentalEnabled = true; // صف الأسنان دائماً مُدرج في إنجاز العام
-        if (isDentalEnabled) {
-            allItems.push({
-                name: getItemName('dental'),
-                ...dentalData
-            });
-        }
-
-        allItems.forEach(item => {
-            ws_data.push([
-                item.name,
-                item.monthlyValue,
-                item.absenceDeduction,
-                item.absencePenalty,
-                item.performancePenalty,
-                item.nationalityPenalty,
-                item.netMonthly
-            ]);
-        });
-
-        const totalNet = allItems.reduce((sum, item) => sum + item.netMonthly, 0);
-        ws_data.push([
-            'إجمالي المستحق للمقاول',
-            allItems.reduce((sum, item) => sum + item.monthlyValue, 0),
-            allItems.reduce((sum, item) => sum + item.absenceDeduction, 0),
-            allItems.reduce((sum, item) => sum + item.absencePenalty, 0),
-            allItems.reduce((sum, item) => sum + item.performancePenalty, 0),
-            allItems.reduce((sum, item) => sum + item.nationalityPenalty, 0),
-            totalNet
-        ]);
-
-        ws_data.push([
-            `إجمالي المستحق للمقاول فقط وقدره: ${convertNumberToArabicWords(totalNet)} ريال سعودي`
-        ]);
-
-        ws_data.push([], ['التواقيع:']);
-        signatures.forEach(sig => ws_data.push([sig]));
-        ws_data.push([], ['تم التصدير بتاريخ:', new Date().toLocaleString('ar-EG')]);
-
-        const worksheet = XLSX.utils.aoa_to_sheet(ws_data);
-        worksheet['!cols'] = [ { wch: 30 }, { wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 25 } ];
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'شهادة الإنجاز');
-        XLSX.writeFile(workbook, `شهادة_الإنجاز_${hospitalName}.xlsx`);
-        showSuccessMessage('تم تصدير ملف Excel بنجاح!');
-    } catch (error) {
-        console.error('خطأ في تصدير Excel:', error);
-        alert('حدث خطأ أثناء تصدير الملف إلى Excel. تحقق من الكونسول لمزيد من التفاصيل.');
-    }
-}
-
-// =================================================================
-// END: إصلاح دالة تصدير Excel
-// =================================================================
-
-
-    function convertNumberToArabicWords(number) {
-        if (isNaN(number)) return "";
-
-        const ones = ["", "واحد", "اثنان", "ثلاثة", "أربعة", "خمسة", "ستة", "سبعة", "ثمانية", "تسعة"];
-        const tens = ["", "عشرة", "عشرون", "ثلاثون", "أربعون", "خمسون", "ستون", "سبعون", "ثمانون", "تسعون"];
-        const teens = ["", "أحد عشر", "اثنا عشر", "ثلاثة عشر", "أربعة عشر", "خمسة عشر", "ستة عشر", "سبعة عشر", "ثمانية عشر", "تسعة عشر"];
-        const hundreds = ["", "مائة", "مئتان", "ثلاثمائة", "أربعمائة", "خمسمائة", "ستمائة", "سبعمائة", "ثمانمائة", "تسعمائة"];
-        const scales = [
-            { name: "", singular: "", dual: "", plural: "" },
-            { name: "ألف", singular: "ألف", dual: "ألفان", plural: "آلاف" },
-            { name: "مليون", singular: "مليون", dual: "مليونان", plural: "ملايين" },
-            { name: "مليار", singular: "مليار", dual: "ملياران", plural: "مليارات" }
-        ];
-
-        function getArabicGroup(n) {
-            let result = '';
-            let h = Math.floor(n / 100);
-            let t = Math.floor((n % 100) / 10);
-            let o = n % 10;
-
-            if (h > 0) result += hundreds[h];
-
-            if (t > 1) {
-                if (o > 0) result += (result ? " و" : "") + ones[o];
-                result += (result ? " و" : "") + tens[t];
-            } else if (t === 1 && o > 0) {
-                result += (result ? " و" : "") + teens[o];
-            } else if (t === 1 && o === 0) {
-                result += (result ? " و" : "") + tens[1];
-            } else if (t === 0 && o > 0) {
-                result += (result ? " و" : "") + ones[o];
-            }
-
-            return result;
-        }
-
-        function getScaleName(n, scale) {
-            if (n === 1) return scale.singular;
-            if (n === 2) return scale.dual;
-            if (n >= 3 && n <= 10) return scale.plural;
-            if (n > 10) return scale.singular;
-            return "";
-        }
-
-        let intPart = Math.floor(number);
-        let fracPart = Math.round((number - intPart) * 100);
-
-        if (intPart === 0 && fracPart === 0) return "صفر";
-
-        let result = [];
-        let i = 0;
-
-        while (intPart > 0) {
-            const group = intPart % 1000;
-            if (group !== 0) {
-                let groupText = getArabicGroup(group);
-                let scaleText = getScaleName(group, scales[i]);
-                result.unshift((groupText + (scaleText ? " " + scaleText : "")).trim());
-            }
-            intPart = Math.floor(intPart / 1000);
-            i++;
-        }
-
-        let final = result.join(" و ");
-
-        if (final) final += " ريال";
-
-        if (fracPart > 0) {
-            let fracText = getArabicGroup(fracPart);
-            final += " و" + fracText + " هللة";
-        }
-
-        return final.trim();
-    }
-
-// ======== ابدأ الاستبدال هنا ========
-document.addEventListener('DOMContentLoaded', function() {
-    // ── تحقق من إنجاز الأسنان قبل عرض الصفحة ──
-    (function() {
-        var _rg = Storage.prototype.getItem.bind(localStorage);
-        var _sess = null;
-        try { _sess = JSON.parse(_rg('najran_session') || '{}'); } catch(e){}
-        var _uPfx = (_sess && _sess.userId) ? '_u' + _sess.userId + '_' : '';
-        var _raw = _rg(_uPfx + 'nd_dentalAchievementTotals');
-        var _ok = false;
-        try { var _t = JSON.parse(_raw || '{}'); _ok = (_t.netMonthly > 0); } catch(e){}
-        if (!_ok) {
-            alert('⚠️ تنبيه\n\nيرجى فتح صفحة إنجاز الأسنان أولاً والتأكد من اكتمال البيانات، ثم العودة لهذه الصفحة.\n\nالمسار: القائمة ← الأسنان ← الإنجاز');
-        }
-    })();
-
-    // ... الكود الخاص بـ adminCheckbox و updateDateTime ...
-    updateDateTime();
-    updateContractDisplayData();
-    updateSignaturesOnPage();
-    loadDentalData();
-    
-    // --- تعديل طريقة عرض التواريخ ---
-    const extractDataString = localStorage.getItem('extractData'); // اقرأ الكائن
-    if (extractDataString) {
-        const extractDataObject = JSON.parse(extractDataString);
-        document.getElementById('extract-start-date').textContent = formatDate(extractDataObject.extractStart);
-        document.getElementById('extract-end-date').textContent = formatDate(extractDataObject.extractEnd);
-    } else {
-        document.getElementById('extract-start-date').textContent = 'غير محدد';
-        document.getElementById('extract-end-date').textContent = 'غير محدد';
-    }
-    
-    loadAndProcessAchievementData(); // يتم استدعاؤها بعد عرض التواريخ
-
-    // ... بقية الكود الخاص بـ window.addEventListener('storage', ...)
-});
-// ======== انتهى الاستبدال ========
-
-
-
-    function updateContractDisplayData() {
-        const hospitalName = 'مستشفى نجران العام الجديد';
-        const contractDetails = localStorage.getItem('contractDetails') || 'غير محدد';
-        const companyName = localStorage.getItem('companyName') || 'غير محدد';
-        const contractType = localStorage.getItem('contractType') || 'غير محدد';
-        const directPurchaseRatio = localStorage.getItem('directPurchaseRatio') || '0';
-
-        const hospitalNameElements = document.getElementsByClassName('hospitalName');
-        const contractDetailsElements = document.getElementsByClassName('contractDetails');
-        const companyNameElements = document.getElementsByClassName('companyName');
-        const contractTypeElements = document.getElementsByClassName('contractType');
-        const directPurchaseRatioElements = document.getElementsByClassName('directPurchaseRatio');
-        const directPurchaseContainers = document.getElementsByClassName('directPurchaseContainer');
-
-        for (let i = 0; i < hospitalNameElements.length; i++) {
-            hospitalNameElements[i].textContent = hospitalName;
-        }
-
-        for (let i = 0; i < contractDetailsElements.length; i++) {
-            contractDetailsElements[i].textContent = contractDetails;
-        }
-
-        for (let i = 0; i < companyNameElements.length; i++) {
-            companyNameElements[i].textContent = companyName;
-        }
-
-        for (let i = 0; i < contractTypeElements.length; i++) {
-            contractTypeElements[i].textContent = contractType;
-        }
-
-        for (let i = 0; i < directPurchaseRatioElements.length; i++) {
-            directPurchaseRatioElements[i].textContent = directPurchaseRatio;
-        }
-
-        for (let i = 0; i < directPurchaseContainers.length; i++) {
-            if (contractType === 'شراء مباشر') {
-                directPurchaseContainers[i].style.display = 'block';
-            } else {
-                directPurchaseContainers[i].style.display = 'none';
-            }
+            console.warn('getDentalData error:', e);
+            return _dentalZero();
         }
     }
 
-    function formatDate(dateString) {
-        if (!dateString || dateString === 'غير محدد') return 'غير محدد';
+    function _dentalZero() {
+        return { monthlyValue: 0, absenceDeduction: 0, absencePenalty: 0, performancePenalty: 0, nationalityPenalty: 0, netMonthly: 0 };
+    }
+
+    /* ================================================================
+       loadAndProcessAchievementData — يحسب كل شيء ثم يرسم الجدول
+    ================================================================ */
+    function loadAndProcessAchievementData() {
         try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('ar-SA');
-        } catch (e) {
-            return dateString;
+            const hasAttendanceData = localStorage.getItem('attendanceData');
+            if (!hasAttendanceData && !sessionStorage.getItem('dataMissingAlertShown')) {
+                alert("⚠️ لا توجد بيانات حضور وانصراف. يُرجى فتح صفحة الحضور أولًا.");
+                sessionStorage.setItem('dataMissingAlertShown', 'true');
+            }
+
+            const attendanceData = JSON.parse(hasAttendanceData || '{}');
+            const totalPerformancePenalty = parseFloat(localStorage.getItem('performanceTotalDeduction')) || 0;
+
+            /* ── العمالة الأساسية ── */
+            let workforceMonthlyValue = 0, workforceAbsenceDeduction = 0;
+            let workforceAbsencePenalty = 0, workforceNationalityPenalty = 0;
+
+            const mainDepts = ['cleaning','electricity','agriculture','civil_works','mechanical','laundry','patient_services'];
+            mainDepts.forEach(deptKey => {
+                workforceMonthlyValue += parseFloat(localStorage.getItem('deptCalculatedCost_' + deptKey)) || 0;
+                (attendanceData[deptKey] || []).forEach(emp => {
+                    workforceAbsenceDeduction   += parseFloat(emp.deduction)       || 0;
+                    workforceAbsencePenalty     += parseFloat(emp.absencePenalty)  || 0;
+                    workforceNationalityPenalty += parseFloat(emp.nationalityFine) || 0;
+                });
+            });
+
+            const workforceNetMonthly = workforceMonthlyValue
+                - workforceAbsenceDeduction - workforceAbsencePenalty
+                - totalPerformancePenalty   - workforceNationalityPenalty;
+
+            /* ── الإداريون السعوديون ── */
+            let saudiMonthlyValue = parseFloat(localStorage.getItem('deptCalculatedCost_admin_saudi')) || 0;
+            let saudiAbsenceDeduction = 0, saudiAbsencePenalty = 0, saudiNationalityPenalty = 0;
+            (attendanceData['admin_saudi'] || []).forEach(emp => {
+                saudiAbsenceDeduction   += parseFloat(emp.deduction)       || 0;
+                saudiAbsencePenalty     += parseFloat(emp.absencePenalty)  || 0;
+                saudiNationalityPenalty += parseFloat(emp.nationalityFine) || 0;
+            });
+            const saudiNetMonthly = saudiMonthlyValue - saudiAbsenceDeduction - saudiAbsencePenalty - saudiNationalityPenalty;
+
+            /* ── تجهيز مصفوفة العرض ── */
+            departmentDataForAchievement = [
+                {
+                    id: 'workforce', name: getItemName('workforce'),
+                    monthlyValue: workforceMonthlyValue,
+                    absenceDeduction: workforceAbsenceDeduction,
+                    absencePenalty: workforceAbsencePenalty,
+                    performancePenalty: totalPerformancePenalty,
+                    nationalityPenalty: workforceNationalityPenalty,
+                    netMonthly: workforceNetMonthly
+                },
+                {
+                    id: 'saudi_admin', name: getItemName('saudi_admin'),
+                    monthlyValue: saudiMonthlyValue,
+                    absenceDeduction: saudiAbsenceDeduction,
+                    absencePenalty: saudiAbsencePenalty,
+                    performancePenalty: 0,
+                    nationalityPenalty: saudiNationalityPenalty,
+                    netMonthly: saudiNetMonthly
+                }
+            ];
+
+            /* ── الأسنان: يُقرأ من localStorage مباشرة ── */
+            const dentalData = getDentalData();
+
+            /* ── الإجماليات الكبرى ── */
+            const grandTotalMonthlyValue      = workforceMonthlyValue      + dentalData.monthlyValue      + saudiMonthlyValue;
+            const grandTotalAbsenceDeduction  = workforceAbsenceDeduction  + dentalData.absenceDeduction  + saudiAbsenceDeduction;
+            const grandTotalAbsencePenalty    = workforceAbsencePenalty    + dentalData.absencePenalty    + saudiAbsencePenalty;
+            const grandTotalPerformancePenalty = totalPerformancePenalty   + (dentalData.performancePenalty || 0);
+            const grandTotalNationalityPenalty = workforceNationalityPenalty + dentalData.nationalityPenalty + saudiNationalityPenalty;
+            const grandTotalNetMonthly        = workforceNetMonthly        + dentalData.netMonthly        + saudiNetMonthly;
+
+            renderAchievementTable(
+                dentalData,
+                grandTotalMonthlyValue, grandTotalAbsenceDeduction, grandTotalAbsencePenalty,
+                grandTotalPerformancePenalty, grandTotalNationalityPenalty, grandTotalNetMonthly
+            );
+
+        } catch (error) {
+            console.error('خطأ في loadAndProcessAchievementData:', error);
+            alert('حدث خطأ أثناء معالجة البيانات، يرجى التحقق من البيانات في localStorage');
         }
     }
-    // --- START: NEW CONFIGURATION & FUNCTIONS TO BE ADDED ---
 
-    // Configuration for editable item names
-    const itemKeys = {
-        workforce: 'العمالة',
-        saudi_admin: 'الوظائف الإدارية السعوديين',
-        dental: 'عمالة مركز الأسنان'
-    };
+    /* ================================================================
+       renderAchievementTable — يبني الجدول كاملًا من الصفر
+    ================================================================ */
+    function renderAchievementTable(
+        dentalData,
+        grandTotalMonthlyValue, grandTotalAbsenceDeduction, grandTotalAbsencePenalty,
+        grandTotalPerformancePenalty, grandTotalNationalityPenalty, grandTotalNetMonthly
+    ) {
+        const tableBody = document.getElementById('tableBody');
+        tableBody.innerHTML = ''; /* امسح الجدول القديم بالكامل */
 
-    // Function to refresh data
-    // هذه هي النسخة الصحيحة والمُنظّفة
-function refreshAllData() {
-    try {
-        console.log("بدء تحديث بيانات شهادة الإنجاز...");
-        loadAndProcessAchievementData(); // قم بإعادة تحميل ومعالجة البيانات أولاً
-        showSuccessMessage("تم تحديث البيانات بنجاح!"); // اعرض رسالة النجاح بعد اكتمال العملية
-        console.log("اكتمل تحديث البيانات بنجاح.");
-    } catch (error) {
-        console.error("فشل تحديث البيانات:", error);
-        alert("حدث خطأ أثناء تحديث البيانات. يرجى مراجعة الكونسول."); // اعرض رسالة خطأ إذا فشلت العملية
+        /* 1) صف العمالة الأساسية */
+        const wf = departmentDataForAchievement.find(i => i.id === 'workforce');
+        if (wf) {
+            const row = tableBody.insertRow();
+            row.innerHTML = `
+                <td>${wf.name}</td>
+                <td>${fmt(wf.monthlyValue)}</td>
+                <td>${fmt(wf.absenceDeduction)}</td>
+                <td>${fmt(wf.absencePenalty)}</td>
+                <td>${fmt(wf.performancePenalty)}</td>
+                <td>${fmt(wf.nationalityPenalty)}</td>
+                <td>${fmt(wf.netMonthly)}</td>
+            `;
+        }
+
+        /* 2) صف الأسنان — يُبنى من dentalData المُمررة (لا يعتمد على DOM قديم) */
+        const dentalRow = document.createElement('tr');
+        dentalRow.id = 'dental-row';
+        dentalRow.innerHTML = `
+            <td>${getItemName('dental')}</td>
+            <td id="dental-monthlyValue">${fmt(dentalData.monthlyValue)}</td>
+            <td id="dental-absenceDeduction">${fmt(dentalData.absenceDeduction)}</td>
+            <td id="dental-absencePenalty">${fmt(dentalData.absencePenalty)}</td>
+            <td id="dental-performancePenalty">${fmt(dentalData.performancePenalty)}</td>
+            <td id="dental-nationalityPenalty">${fmt(dentalData.nationalityPenalty)}</td>
+            <td id="dental-netMonthly">${fmt(dentalData.netMonthly)}</td>
+        `;
+        tableBody.appendChild(dentalRow);
+
+        /* 3) صف الإداريين السعوديين */
+        const ad = departmentDataForAchievement.find(i => i.id === 'saudi_admin');
+        if (ad) {
+            const row = tableBody.insertRow();
+            row.id = 'admin-jobs-row';
+            row.innerHTML = `
+                <td>${ad.name}</td>
+                <td>${fmt(ad.monthlyValue)}</td>
+                <td>${fmt(ad.absenceDeduction)}</td>
+                <td>${fmt(ad.absencePenalty)}</td>
+                <td>${fmt(ad.performancePenalty)}</td>
+                <td>${fmt(ad.nationalityPenalty)}</td>
+                <td>${fmt(ad.netMonthly)}</td>
+            `;
+        }
+
+        /* 4) صف الإجمالي */
+        const totalRow = tableBody.insertRow();
+        totalRow.classList.add('total-row');
+        totalRow.innerHTML = `
+            <td><strong>إجمالي المستحق للمقاول</strong></td>
+            <td><strong>${fmt(grandTotalMonthlyValue)}</strong></td>
+            <td><strong>${fmt(grandTotalAbsenceDeduction)}</strong></td>
+            <td><strong>${fmt(grandTotalAbsencePenalty)}</strong></td>
+            <td><strong>${fmt(grandTotalPerformancePenalty)}</strong></td>
+            <td><strong>${fmt(grandTotalNationalityPenalty)}</strong></td>
+            <td><strong>${fmt(grandTotalNetMonthly)}</strong></td>
+        `;
+
+        /* 5) صف التفقيد */
+        const tafqeetRow = tableBody.insertRow();
+        tafqeetRow.classList.add('tafqeet-row');
+        tafqeetRow.innerHTML = `
+            <td colspan="7" style="text-align:right;">
+                إجمالي المستحق للمقاول فقط وقدره: ${convertNumberToArabicWords(grandTotalNetMonthly)} ريال سعودي
+            </td>
+        `;
+
+        /* حفظ الإجمالي الصافي */
+        try {
+            const _hn = (localStorage.getItem('hospitalName') || '').trim();
+            if (_hn) localStorage.setItem('finalLaborCost_' + _hn, grandTotalNetMonthly.toFixed(2));
+            localStorage.setItem('finalLaborCost', grandTotalNetMonthly.toFixed(2));
+        } catch (_) {}
     }
-}
 
+    /* ================================================================
+       دوال التواقيع
+    ================================================================ */
+    function openSignatureEditDialog() {
+        document.getElementById('signature-edit-dialog').style.display = 'block';
+        document.getElementById('signature-edit-overlay').style.display = 'block';
+        document.getElementById('signature-password-section').style.display = 'block';
+        document.getElementById('signature-edit-content').style.display = 'none';
+        document.getElementById('signature-password-input').value = '';
+        document.getElementById('signature-password-error').textContent = '';
+    }
 
-    // Function to handle printing of the admin row
-   function toggleAdminRowPrint(isChecked) {
-    // ابحث عن الصف باستخدام الـ ID الذي أضفته
-    const adminRow = document.getElementById('admin-jobs-row');
-    if (adminRow) {
-        if (isChecked) {
-            // إذا تم التحديد، أزل الكلاس ليظهر في الطباعة
-            adminRow.classList.remove('no-print-row');
+    function closeSignatureEditDialog() {
+        document.getElementById('signature-edit-dialog').style.display = 'none';
+        document.getElementById('signature-edit-overlay').style.display = 'none';
+        document.getElementById('signature-edit-dialog').classList.remove('wide-dialog');
+    }
+
+    function verifySignaturePassword() {
+        const input = document.getElementById('signature-password-input').value;
+        if (input === PASSWORD) {
+            document.getElementById('signature-password-section').style.display = 'none';
+            document.getElementById('signature-edit-content').style.display = 'block';
+            document.getElementById('signature-edit-dialog').classList.add('wide-dialog');
+            populateSignatureFields();
         } else {
-            // إذا لم يتم التحديد، أضف الكلاس ليختفي من الطباعة
-            adminRow.classList.add('no-print-row');
+            document.getElementById('signature-password-error').textContent = 'الباسورد غير صحيح';
         }
     }
-    // احفظ الحالة في localStorage لتذكر اختيار المستخدم
-    localStorage.setItem('adminJobsPrintState', isChecked);
-}
-function closeDialog(dialogId, overlayId) {
-    const dialog = document.getElementById(dialogId);
-    const overlay = document.getElementById(overlayId);
-    if (dialog) dialog.style.display = 'none';
-    if (overlay) overlay.style.display = 'none';
-}
 
-    // Functions for editing item names
+    function populateSignatureFields() {
+        const container = document.getElementById('signature-fields-container');
+        container.innerHTML = '';
+        const signatures = JSON.parse(localStorage.getItem(SIGNATURE_STORAGE_KEY) || '[]');
+        if (signatures.length === 0) {
+            addSignatureField('مندوب المقاول', '');
+            addSignatureField('رئيس قسم الصيانة', '');
+            addSignatureField('مدير المشروع', '');
+            addSignatureField('مدير المستشفى', '');
+        } else {
+            signatures.forEach(sig => addSignatureField(sig.title, sig.name));
+        }
+    }
+
+    function addSignatureField(title = '', name = '') {
+        const container = document.getElementById('signature-fields-container');
+        const fieldId = 'sig-field-' + Date.now() + '-' + Math.random();
+        const fieldDiv = document.createElement('div');
+        fieldDiv.className = 'signature-field-group';
+        fieldDiv.id = fieldId;
+        fieldDiv.innerHTML = `
+            <div class="inputs">
+                <label>المسمى الوظيفي:</label>
+                <input type="text" class="sig-title-input" value="${title}" placeholder="مثال: مدير المشروع">
+                <label style="margin-top:8px;">الاسم:</label>
+                <input type="text" class="sig-name-input" value="${name}" placeholder="اسم صاحب التوقيع">
+            </div>
+            <button class="delete-sig-btn" onclick="document.getElementById('${fieldId}').remove()" title="حذف">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        `;
+        container.appendChild(fieldDiv);
+    }
+
+    function saveSignatures() {
+        const container = document.getElementById('signature-fields-container');
+        const signaturesToSave = [];
+        container.querySelectorAll('.signature-field-group').forEach(field => {
+            const title = field.querySelector('.sig-title-input').value.trim();
+            const name  = field.querySelector('.sig-name-input').value.trim();
+            if (title) signaturesToSave.push({ title, name });
+        });
+        localStorage.setItem(SIGNATURE_STORAGE_KEY, JSON.stringify(signaturesToSave));
+        showSuccessMessage('تم حفظ التواقيع بنجاح!');
+        closeSignatureEditDialog();
+    }
+
+    function updateSignaturesOnPage() {
+        /* مُبقى للتوافق مع signature-block.js الخارجي */
+    }
+
+    /* ================================================================
+       دوال أسماء البنود
+    ================================================================ */
     function openItemNameDialog() {
         const container = document.getElementById('item-names-container');
         container.innerHTML = '';
-        const savedNames = JSON.parse(localStorage.getItem('achievementItemNames')) || {};
-
+        const savedNames = JSON.parse(localStorage.getItem('achievementItemNames') || '{}');
         Object.keys(itemKeys).forEach(key => {
             const currentName = savedNames[key] || itemKeys[key];
             const fieldDiv = document.createElement('div');
@@ -1683,92 +723,291 @@ function closeDialog(dialogId, overlayId) {
             `;
             container.appendChild(fieldDiv);
         });
-
         document.getElementById('item-name-dialog').style.display = 'block';
         document.getElementById('item-name-overlay').style.display = 'block';
     }
 
-   function saveItemNames() {
-    const savedNames = {};
-    Object.keys(itemKeys).forEach(key => {
-        const inputElement = document.getElementById(`item-name-${key}`);
-        if (inputElement) {
-            savedNames[key] = inputElement.value.trim();
-        }
-    });
-    localStorage.setItem('achievementItemNames', JSON.stringify(savedNames));
-    showSuccessMessage('تم حفظ أسماء البنود بنجاح!');
-    
-    // الآن سيتم استدعاء الدالة التي أضفتها في الخطوة 1 بنجاح
-    closeDialog('item-name-dialog', 'item-name-overlay'); 
-    
-    loadAndProcessAchievementData(); // تحديث الجدول بالأسماء الجديدة
-}
-
+    function saveItemNames() {
+        const savedNames = {};
+        Object.keys(itemKeys).forEach(key => {
+            const el = document.getElementById('item-name-' + key);
+            if (el) savedNames[key] = el.value.trim();
+        });
+        localStorage.setItem('achievementItemNames', JSON.stringify(savedNames));
+        showSuccessMessage('تم حفظ أسماء البنود بنجاح!');
+        closeDialog('item-name-dialog', 'item-name-overlay');
+        loadAndProcessAchievementData();
+    }
 
     function getItemName(key) {
-        const savedNames = JSON.parse(localStorage.getItem('achievementItemNames')) || {};
+        const savedNames = JSON.parse(localStorage.getItem('achievementItemNames') || '{}');
         return savedNames[key] || itemKeys[key];
     }
 
-    // --- END: NEW CONFIGURATION & FUNCTIONS TO BE ADDED ---
+    /* ================================================================
+       دوال مساعدة عامة
+    ================================================================ */
+    function closeDialog(dialogId, overlayId) {
+        const d = document.getElementById(dialogId);
+        const o = document.getElementById(overlayId);
+        if (d) d.style.display = 'none';
+        if (o) o.style.display = 'none';
+    }
 
-</script>
-    <script src="attendance_contract_info.js"></script>
+    function showSuccessMessage(msg) { alert(msg); }
 
+    function refreshAllData() {
+        try {
+            loadAndProcessAchievementData();
+            showSuccessMessage('تم تحديث البيانات بنجاح!');
+        } catch (e) {
+            console.error('فشل التحديث:', e);
+            alert('حدث خطأ أثناء تحديث البيانات.');
+        }
+    }
 
-            <div class="overflow-x-auto mb-4">
-                <table class="cosmic-table achievement-table" id="achievementTable">
-                    <thead>
-                        <tr>
-                            <th>البند</th>
-                            <th>القيمة الشهرية حسب العقد</th>
-                            <th>حسم الغياب</th>
-                            <th>غرامة الغياب</th>
-                            <th>غرامة الأداء</th>
-                            <th>غرامة الجنسية</th>
-                            <th>المبلغ الصافي الشهري</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <tr id="dental-row">
-                            <td>عمالة مركز الأسنان</td>
-                            <td id="dental-monthlyValue">0.00</td>
-                            <td id="dental-absenceDeduction">0.00</td>
-                            <td id="dental-absencePenalty">0.00</td>
-                            <td id="dental-performancePenalty">0.00</td>
-                            <td id="dental-nationalityPenalty">0.00</td>
-                            <td id="dental-netMonthly">0.00 ر.س.</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div id="sb-container-achievement" class="sb-wrap"></div>
-    </div>
-</div>
-<!-- START: NEW Item Name Edit Dialog -->
-<div id="item-name-dialog" class="edit-dialog" style="display: none;">
-    <h3>تعديل أسماء البنود</h3>
-    <div id="item-names-container">
-        <!-- Fields will be generated by JS -->
-    </div>
-    <div class="dialog-buttons">
-        <button class="confirm-btn" onclick="saveItemNames()">
-            <i class="fas fa-save" style="margin-left: 5px;"></i> حفظ الأسماء
-        </button>
-        <button class="cancel-btn" onclick="closeDialog('item-name-dialog', 'item-name-overlay')">
-            <i class="fas fa-times-circle" style="margin-left: 5px;"></i> إلغاء
-        </button>
-    </div>
-</div>
-<div id="item-name-overlay" class="overlay" style="display: none;"></div>
-<!-- END: NEW Item Name Edit Dialog -->
+    function toggleAdminRowPrint(isChecked) {
+        const adminRow = document.getElementById('admin-jobs-row');
+        if (adminRow) {
+            adminRow.classList.toggle('no-print-row', !isChecked);
+        }
+        localStorage.setItem('adminJobsPrintState', isChecked);
+    }
 
-<script src="/original/extract-submit.js"></script>
-<script src="/original/track.js"></script>
+    function updateDateTime() {
+        const now = new Date();
+        const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true };
+        const el = document.getElementById('current-date-time');
+        if (el) el.textContent = now.toLocaleDateString('ar-SA', opts);
+        const id = document.getElementById('issueDate');
+        if (id) id.textContent = now.toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' });
+    }
 
-<script src="/original/hub-nav.js"></script>
-<script src="/original/signature-block.js"></script>
-<script>SignatureBlock.init('achievement', { showStamp: true });</script>
+    function updateContractDisplayData() {
+        const hospitalName       = 'مستشفى نجران العام الجديد';
+        const contractDetails    = localStorage.getItem('contractDetails')    || 'غير محدد';
+        const companyName        = localStorage.getItem('companyName')        || 'غير محدد';
+        const contractType       = localStorage.getItem('contractType')       || 'غير محدد';
+        const directPurchaseRatio = localStorage.getItem('directPurchaseRatio') || '0';
+
+        document.querySelectorAll('.hospitalName').forEach(el => el.textContent = hospitalName);
+        document.querySelectorAll('.contractDetails').forEach(el => el.textContent = contractDetails);
+        document.querySelectorAll('.companyName').forEach(el => el.textContent = companyName);
+        document.querySelectorAll('.contractType').forEach(el => el.textContent = contractType);
+        document.querySelectorAll('.directPurchaseRatio').forEach(el => el.textContent = directPurchaseRatio);
+        document.querySelectorAll('.directPurchaseContainer').forEach(el => {
+            el.style.display = (contractType === 'شراء مباشر') ? 'block' : 'none';
+        });
+    }
+
+    function formatDate(dateString) {
+        if (!dateString || dateString === 'غير محدد') return 'غير محدد';
+        try { return new Date(dateString).toLocaleDateString('ar-SA'); }
+        catch(e) { return dateString; }
+    }
+
+    function getExtractPeriodDetails() {
+        const KEY_NAME = 'monthlyData';
+        const extractDataString = localStorage.getItem(KEY_NAME);
+        if (!extractDataString) {
+            const today = new Date();
+            const totalDays = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+            return { daysInMonth: totalDays, totalDaysInMonth: totalDays };
+        }
+        try {
+            const obj = JSON.parse(extractDataString);
+            const startDate = new Date(obj.extractStart);
+            const endDate   = new Date(obj.extractEnd);
+            const daysInMonth = Math.ceil((endDate - startDate) / (1000 * 3600 * 24)) + 1;
+            const totalDaysInMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate();
+            return { daysInMonth, totalDaysInMonth };
+        } catch(e) {
+            return { daysInMonth: 30, totalDaysInMonth: 30 };
+        }
+    }
+
+    /* ================================================================
+       تصدير Excel
+    ================================================================ */
+    function exportAchievementToExcel() {
+        try {
+            const hospitalName    = document.querySelector('.hospitalName')?.textContent?.trim()    || 'مجمع نجران الصحي';
+            const companyName     = document.querySelector('.companyName')?.textContent?.trim()     || 'شركة المقاولات';
+            const contractDetails = document.querySelector('.contractDetails')?.textContent?.trim() || 'تفاصيل العقد';
+            const contractType    = document.querySelector('.contractType')?.textContent?.trim()    || 'نوع العقد';
+            const extractStart    = document.getElementById('extract-start-date')?.textContent?.trim() || 'غير محدد';
+            const extractEnd      = document.getElementById('extract-end-date')?.textContent?.trim()   || 'غير محدد';
+
+            const signaturesData = JSON.parse(localStorage.getItem(SIGNATURE_STORAGE_KEY) || '[]');
+            const signatures = signaturesData.map(s => s.title + ': ' + (s.name || ' '));
+
+            const ws_data = [
+                ['تجمع نجران الصحي'],
+                ['شهادة الإنجاز - إجمالي العقد'],
+                [],
+                ['اسم المستشفى:', hospitalName],
+                ['اسم الشركة:', companyName],
+                ['تفاصيل العقد:', contractDetails],
+                ['نوع العقد:', contractType],
+                ['مدة المستخلص:', 'من ' + extractStart + ' إلى ' + extractEnd],
+                [],
+                ['البند','القيمة الشهرية حسب العقد','حسم الغياب','غرامة الغياب','غرامة الأداء','غرامة الجنسية','المبلغ الصافي الشهري']
+            ];
+
+            const dentalData = getDentalData();
+            const allItems = [
+                ...departmentDataForAchievement,
+                { name: getItemName('dental'), ...dentalData }
+            ];
+
+            allItems.forEach(item => {
+                ws_data.push([
+                    item.name,
+                    item.monthlyValue, item.absenceDeduction, item.absencePenalty,
+                    item.performancePenalty, item.nationalityPenalty, item.netMonthly
+                ]);
+            });
+
+            const totalNet = allItems.reduce((s, i) => s + i.netMonthly, 0);
+            ws_data.push([
+                'إجمالي المستحق للمقاول',
+                allItems.reduce((s,i) => s + i.monthlyValue, 0),
+                allItems.reduce((s,i) => s + i.absenceDeduction, 0),
+                allItems.reduce((s,i) => s + i.absencePenalty, 0),
+                allItems.reduce((s,i) => s + i.performancePenalty, 0),
+                allItems.reduce((s,i) => s + i.nationalityPenalty, 0),
+                totalNet
+            ]);
+            ws_data.push(['إجمالي المستحق فقط وقدره: ' + convertNumberToArabicWords(totalNet) + ' ريال سعودي']);
+            ws_data.push([], ['التواقيع:']);
+            signatures.forEach(s => ws_data.push([s]));
+            ws_data.push([], ['تم التصدير بتاريخ:', new Date().toLocaleString('ar-EG')]);
+
+            const worksheet = XLSX.utils.aoa_to_sheet(ws_data);
+            worksheet['!cols'] = [{wch:30},{wch:25},{wch:20},{wch:20},{wch:20},{wch:20},{wch:25}];
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'شهادة الإنجاز');
+            XLSX.writeFile(workbook, 'شهادة_الإنجاز_' + hospitalName + '.xlsx');
+            showSuccessMessage('تم تصدير ملف Excel بنجاح!');
+        } catch (error) {
+            console.error('خطأ في تصدير Excel:', error);
+            alert('حدث خطأ أثناء تصدير الملف إلى Excel.');
+        }
+    }
+
+    /* ================================================================
+       تحويل الأرقام إلى كلمات عربية
+    ================================================================ */
+    function convertNumberToArabicWords(number) {
+        if (isNaN(number)) return "";
+        const ones    = ["","واحد","اثنان","ثلاثة","أربعة","خمسة","ستة","سبعة","ثمانية","تسعة"];
+        const tens    = ["","عشرة","عشرون","ثلاثون","أربعون","خمسون","ستون","سبعون","ثمانون","تسعون"];
+        const teens   = ["","أحد عشر","اثنا عشر","ثلاثة عشر","أربعة عشر","خمسة عشر","ستة عشر","سبعة عشر","ثمانية عشر","تسعة عشر"];
+        const hundreds = ["","مائة","مئتان","ثلاثمائة","أربعمائة","خمسمائة","ستمائة","سبعمائة","ثمانمائة","تسعمائة"];
+        const scales  = [
+            {singular:"",dual:"",plural:""},
+            {singular:"ألف",dual:"ألفان",plural:"آلاف"},
+            {singular:"مليون",dual:"مليونان",plural:"ملايين"},
+            {singular:"مليار",dual:"ملياران",plural:"مليارات"}
+        ];
+
+        function getGroup(n) {
+            let res = '';
+            let h = Math.floor(n/100), t = Math.floor((n%100)/10), o = n%10;
+            if (h > 0) res += hundreds[h];
+            if (t > 1) {
+                if (o > 0) res += (res?' و':'') + ones[o];
+                res += (res?' و':'') + tens[t];
+            } else if (t===1 && o>0) { res += (res?' و':'') + teens[o]; }
+            else if (t===1 && o===0) { res += (res?' و':'') + tens[1]; }
+            else if (t===0 && o>0)   { res += (res?' و':'') + ones[o]; }
+            return res;
+        }
+        function scaleName(n, s) {
+            if (n===1) return s.singular;
+            if (n===2) return s.dual;
+            if (n>=3 && n<=10) return s.plural;
+            return s.singular;
+        }
+
+        let intPart = Math.floor(number);
+        let fracPart = Math.round((number - intPart) * 100);
+        if (intPart===0 && fracPart===0) return "صفر";
+
+        let parts = [], i = 0;
+        let tmp = intPart;
+        while (tmp > 0) {
+            const g = tmp % 1000;
+            if (g !== 0) {
+                const gt = getGroup(g);
+                const st = scales[i] ? scaleName(g, scales[i]) : '';
+                parts.unshift((gt + (st ? ' ' + st : '')).trim());
+            }
+            tmp = Math.floor(tmp / 1000);
+            i++;
+        }
+
+        let final = parts.join(' و ');
+        if (final) final += ' ريال';
+        if (fracPart > 0) final += ' و' + getGroup(fracPart) + ' هللة';
+        return final.trim();
+    }
+
+    /* ================================================================
+       DOMContentLoaded — نقطة البداية
+    ================================================================ */
+    document.addEventListener('DOMContentLoaded', function () {
+
+        /* تحقق من وجود بيانات الأسنان */
+        (function () {
+            try {
+                var rawGet = Storage.prototype.getItem.bind(localStorage);
+                var sess = null;
+                try { sess = JSON.parse(rawGet('najran_session') || '{}'); } catch(e){}
+                var uPfx = (sess && sess.userId) ? '_u' + sess.userId + '_' : '';
+                var raw  = rawGet(uPfx + 'nd_dentalAchievementTotals');
+                var ok   = false;
+                try { var t = JSON.parse(raw || '{}'); ok = (t.netMonthly > 0); } catch(e){}
+                if (!ok) {
+                    alert('⚠️ تنبيه\n\nيرجى فتح صفحة إنجاز الأسنان أولاً والتأكد من اكتمال البيانات، ثم العودة لهذه الصفحة.\n\nالمسار: القائمة ← الأسنان ← الإنجاز');
+                }
+            } catch(e) {}
+        })();
+
+        updateDateTime();
+        updateContractDisplayData();
+        updateSignaturesOnPage();
+
+        /* عرض تواريخ المستخلص */
+        const extractDataString = localStorage.getItem('extractData');
+        if (extractDataString) {
+            try {
+                const obj = JSON.parse(extractDataString);
+                document.getElementById('extract-start-date').textContent = formatDate(obj.extractStart);
+                document.getElementById('extract-end-date').textContent   = formatDate(obj.extractEnd);
+            } catch(e) {
+                document.getElementById('extract-start-date').textContent = 'غير محدد';
+                document.getElementById('extract-end-date').textContent   = 'غير محدد';
+            }
+        }
+
+        /* بناء الجدول */
+        loadAndProcessAchievementData();
+
+        /* مزامنة إذا تغيرت البيانات في تبويب آخر */
+        window.addEventListener('storage', function(e) {
+            const watchedKeys = ['attendanceData','performanceTotalDeduction','nd_dentalAchievementTotals','dentalAchievementTotals'];
+            if (watchedKeys.some(k => e.key && e.key.includes(k))) {
+                loadAndProcessAchievementData();
+            }
+        });
+    });
+    </script>
+
+    <script src="/original/extract-submit.js"></script>
+    <script src="/original/track.js"></script>
+    <script src="/original/hub-nav.js"></script>
+    <script src="/original/signature-block.js"></script>
+    <script>SignatureBlock.init('achievement', { showStamp: true });</script>
 </body>
 </html>
