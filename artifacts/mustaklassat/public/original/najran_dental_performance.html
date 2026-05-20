@@ -1239,77 +1239,25 @@ function loadTableData(tableId) {
     }
 }
 
-/**
- * ===================================================================
- *      ===>   الخطوة 3: تحديث مبلغ القسم (النسخة النهائية)   <===
- * ===================================================================
- */
 function updateTotalAmount(tableId) {
     if (tableId === 'certificate') return;
 
     const departmentMap = {
-        'cleaning': { key: 'cleaning' },
-        'electricity': { key: 'electricity' },
-        'civil': { key: 'civil_works' },
-        'mechanics': { key: 'mechanical' },
-        'security': { key: 'security' }
+        cleaning: 'cleaning',
+        electricity: 'electricity',
+        civil: 'civil_works',
+        mechanics: 'mechanical',
+        security: 'security'
     };
-    const deptInfo = departmentMap[tableId];
-    if (!deptInfo) return;
 
-    try {
-        // 1. قراءة الإعدادات الشاملة
-        const settings = JSON.parse(localStorage.getItem('distributionSettings')) || { hasProjectManager: false, activeDepartments: [] };
-        let pmFullSalary = 0;
+    const deptKey = departmentMap[tableId];
+    if (!deptKey) return;
 
-        // 2. حساب راتب المدير (فقط إذا كان الإعداد "نعم")
-        if (settings.hasProjectManager === true) {
-            const attendanceData = JSON.parse(localStorage.getItem('attendanceData') || '{}');
-            const electricityData = attendanceData['electricity'] || [];
-            if (electricityData.length > 0) {
-                const pmEmp = electricityData[0];
-                const pmSalary = parseFloat(pmEmp.salary) || 0;
-                const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-                const contractType = contractData.contractType || 'عقد أساسي';
-                const directPurchaseRatio = parseFloat(contractData.directPurchaseRatio) || 0;
-                let pmAdjustedSalary = pmSalary;
-                if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) {
-                    pmAdjustedSalary += (pmSalary * directPurchaseRatio / 100);
-                }
-                const { daysInMonth, totalDaysInMonth } = getExtractPeriodDetails();
-                const pmDailySalary = (totalDaysInMonth > 0) ? pmAdjustedSalary / totalDaysInMonth : 0;
-                pmFullSalary = pmDailySalary * daysInMonth;
-            }
-        }
+    const amountInput = document.getElementById(tableId + '-amount');
+    if (!amountInput) return;
 
-        // 3. القسمة دائماً على 7 جداول (جميع الأقسام بما فيها الكهرباء)
-        const TOTAL_DEPTS = 5;
-        const distributedShare = pmFullSalary > 0 ? pmFullSalary / TOTAL_DEPTS : 0;
-
-        // 4. حساب التكلفة النهائية للقسم
-        let finalAmountForSection = parseFloat(localStorage.getItem(`deptCalculatedCost_${deptInfo.key}`)) || 0;
-
-        // 5. تطبيق منطق الخصم والإضافة بناءً على الإعدادات
-        if (settings.hasProjectManager === true && pmFullSalary > 0) {
-            if (deptInfo.key === 'electricity') {
-                // خصم الراتب الكامل من الكهرباء ثم أضف حصتها من السبع
-                finalAmountForSection -= pmFullSalary;
-                finalAmountForSection += distributedShare;
-            } else {
-                // كل قسم آخر يأخذ حصته من السبع
-                finalAmountForSection += distributedShare;
-            }
-        }
-
-        // 6. تحديث الواجهة
-        const amountInput = document.getElementById(tableId + '-amount');
-        if (amountInput) {
-            amountInput.value = finalAmountForSection.toFixed(2);
-        }
-        
-    } catch (error) {
-        console.error(`خطأ في تحديث مبلغ القسم ${tableId}:`, error);
-    }
+    const amount = parseFloat(localStorage.getItem('deptCalculatedCost_' + deptKey)) || 0;
+    amountInput.value = amount.toFixed(2);
 }
 /**
  * ===================================================================
@@ -1390,7 +1338,6 @@ function toggleTable(tableId) {
         
         // 4. تحديث الحسابات لهذا الجدول (إذا لم يكن جدول الشهادة)
         if (tableId !== 'certificate') {
-            updateTotalAmount(tableId);
             updateTotal(tableId);
         }
         updateCertificateFromPerformance();
@@ -2867,9 +2814,7 @@ function updateSignaturesOnPage() {
         grid.innerHTML += signatureHTML;
     });
 }
-/**
- * ===================================================================
- *      ===>   التحميل المنظم لصفحة الأداء (النسخة النهائية والمصححة)   <===
+// التحميل المنظم لصفحة الأداء
 function loadDepartmentAmountsFromAttendance() {
     const map = {
         cleaning: 'cleaning',
@@ -2965,7 +2910,6 @@ hasProjectManager: false,
 });
 
 function updateAllTotals() {
-
     const departments = [
         'cleaning',
         'electricity',
@@ -2974,9 +2918,7 @@ function updateAllTotals() {
         'security'
     ];
 
-    departments.forEach(dept => {
-        updateTotalAmount(dept);
-    });
+    loadDepartmentAmountsFromAttendance();
 
     departments.forEach(dept => {
         updateTotal(dept);
