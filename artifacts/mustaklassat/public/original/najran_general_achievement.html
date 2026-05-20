@@ -477,114 +477,64 @@
        لكن صفحة الأسنان بتحفظ تحت nd_ — فالمفتاح الحقيقي في المتصفح
        ممكن يكون: nd_dentalAchievementTotals أو ng_nd_... أو بدون prefix
     ================================================================ */
-    function getDentalData() {
-        try {
-            /* rawGet يتجاوز الـ proxy تماماً ويقرأ من المتصفح مباشرة */
-            var rawGet = Storage.prototype.getItem.bind(localStorage);
+   function getDentalData() {
+    try {
+        const rawGet = Storage.prototype.getItem.bind(localStorage);
 
-            /* جمع session لبناء user prefix */
-            var sessionRaw = rawGet('najran_session') || rawGet('ng_najran_session');
-            var session = null;
-            try { session = JSON.parse(sessionRaw || '{}'); } catch(e){}
-            var userPfx = (session && session.userId) ? '_u' + session.userId + '_' : '';
+        const keysToTry = [
+            'nd_dentalAchievementTotals',
+            'dentalAchievementTotals',
+            'ng_nd_dentalAchievementTotals'
+        ];
 
-            /* جرب كل تركيبات ممكنة للمفتاح */
-            var keysToTry = [
-                /* مع user prefix */
-                userPfx + 'nd_dentalAchievementTotals',
-                userPfx + 'ng_nd_dentalAchievementTotals',
-                /* بدون user prefix — الأكثر شيوعاً */
-                'nd_dentalAchievementTotals',
-                'ng_nd_dentalAchievementTotals',
-                /* احتياطي بدون namespace */
-                'dentalAchievementTotals',
-                'ng_dentalAchievementTotals',
-            ];
+        let totalsRaw = null;
+        let foundKey = null;
 
-            var totalsRaw = null;
-            var foundKey  = null;
-            for (var ki = 0; ki < keysToTry.length; ki++) {
-                var val = rawGet(keysToTry[ki]);
-                if (val) { totalsRaw = val; foundKey = keysToTry[ki]; break; }
+        for (let i = 0; i < keysToTry.length; i++) {
+            const v = rawGet(keysToTry[i]);
+            if (v) {
+                totalsRaw = v;
+                foundKey = keysToTry[i];
+                break;
             }
-
-            if (totalsRaw) {
-                var t = JSON.parse(totalsRaw);
-                if (t && (t.netMonthly !== undefined || t.monthlyValue !== undefined)) {
-                    console.log('✅ dental data found at key:', foundKey, t);
-                    return {
-                        monthlyValue:       parseFloat(t.monthlyValue)       || 0,
-                        absenceDeduction:   parseFloat(t.absenceDeduction)   || 0,
-                        absencePenalty:     parseFloat(t.absencePenalty)      || 0,
-                        performancePenalty: parseFloat(t.performancePenalty) || 0,
-                        nationalityPenalty: parseFloat(t.nationalityPenalty) || 0,
-                        netMonthly:         parseFloat(t.netMonthly)         || 0
-                    };
-                }
-            }
-
-            /* ── المصدر الاحتياطي: احسب من attendanceData لصفحة الأسنان ── */
-            console.warn('⚠️ dentalAchievementTotals غير موجود، سيتم الحساب من attendanceData');
-
-            var attKeysToTry = [
-                userPfx + 'nd_attendanceData',
-                'nd_attendanceData',
-                userPfx + 'ng_nd_attendanceData',
-                'ng_nd_attendanceData',
-            ];
-
-            var attRaw = null;
-            for (var ai = 0; ai < attKeysToTry.length; ai++) {
-                var av = rawGet(attKeysToTry[ai]);
-                if (av) { attRaw = av; break; }
-            }
-
-            if (!attRaw) {
-                console.warn('⚠️ لا توجد بيانات أسنان على الإطلاق');
-                return _dentalZero();
-            }
-
-            var attData = JSON.parse(attRaw);
-            var monthlyValue = 0, absenceDeduction = 0, absencePenalty = 0, nationalityPenalty = 0;
-
-            /* ابحث عن تكاليف الأقسام بنفس منطق البحث */
-            Object.keys(attData).forEach(function(dk) {
-                var costKeysToTry = [
-                    userPfx + 'nd_deptCalculatedCost_' + dk,
-                    'nd_deptCalculatedCost_' + dk,
-                    userPfx + 'ng_nd_deptCalculatedCost_' + dk,
-                    'ng_nd_deptCalculatedCost_' + dk,
-                ];
-                for (var ci = 0; ci < costKeysToTry.length; ci++) {
-                    var cv = rawGet(costKeysToTry[ci]);
-                    if (cv) { monthlyValue += parseFloat(cv) || 0; break; }
-                }
-                (attData[dk] || []).forEach(function(emp) {
-                    absenceDeduction   += parseFloat(emp.deduction)       || 0;
-                    absencePenalty     += parseFloat(emp.absencePenalty)  || 0;
-                    nationalityPenalty += parseFloat(emp.nationalityFine) || 0;
-                });
-            });
-
-            var perfKeysToTry = [
-                userPfx + 'nd_performanceTotalDeduction',
-                'nd_performanceTotalDeduction',
-                'ng_nd_performanceTotalDeduction',
-            ];
-            var performancePenalty = 0;
-            for (var pi = 0; pi < perfKeysToTry.length; pi++) {
-                var pv = rawGet(perfKeysToTry[pi]);
-                if (pv) { performancePenalty = parseFloat(pv) || 0; break; }
-            }
-
-            var netMonthly = monthlyValue - absenceDeduction - absencePenalty - performancePenalty - nationalityPenalty;
-            return { monthlyValue, absenceDeduction, absencePenalty, performancePenalty, nationalityPenalty, netMonthly };
-
-        } catch(e) {
-            console.error('getDentalData error:', e);
-            return _dentalZero();
         }
+
+        if (!totalsRaw) {
+            console.warn('لم يتم العثور على dentalAchievementTotals');
+            return {
+                monthlyValue: 0,
+                absenceDeduction: 0,
+                absencePenalty: 0,
+                performancePenalty: 0,
+                nationalityPenalty: 0,
+                netMonthly: 0
+            };
+        }
+
+        const t = JSON.parse(totalsRaw);
+        console.log('Dental totals loaded from:', foundKey, t);
+
+        return {
+            monthlyValue:       parseFloat(t.monthlyValue) || 0,
+            absenceDeduction:   parseFloat(t.absenceDeduction) || 0,
+            absencePenalty:     parseFloat(t.absencePenalty) || 0,
+            performancePenalty: parseFloat(t.performancePenalty) || 0,
+            nationalityPenalty: parseFloat(t.nationalityPenalty) || 0,
+            netMonthly:         parseFloat(t.netMonthly) || 0
+        };
+
+    } catch (e) {
+        console.error('getDentalData error:', e);
+        return {
+            monthlyValue: 0,
+            absenceDeduction: 0,
+            absencePenalty: 0,
+            performancePenalty: 0,
+            nationalityPenalty: 0,
+            netMonthly: 0
+        };
     }
+}
 
     function _dentalZero() {
         return { monthlyValue: 0, absenceDeduction: 0, absencePenalty: 0, performancePenalty: 0, nationalityPenalty: 0, netMonthly: 0 };
