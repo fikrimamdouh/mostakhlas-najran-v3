@@ -55,6 +55,8 @@
             --visit-monthly-bg: #d1ecf1; --visit-monthly-text: #0c5460;
             --visit-done-bg: #e2e3e5; --visit-done-text: #383d41;
             --visit-future-bg: #fff3cd; --visit-future-text: #856404;
+          --visit-postponed-bg: #f8d7da;
+--visit-postponed-text: #721c24;
             --summary-color-1: #e7f5ff;
             --summary-color-2: #e3faf0;
             --summary-color-3: #fff8e1;
@@ -398,6 +400,10 @@
         select.visit-date-monthly { background-color: var(--visit-monthly-bg) !important; color: var(--visit-monthly-text) !important; }
         select.visit-date-done { background-color: var(--visit-done-bg) !important; color: var(--visit-done-text) !important; }
         select.visit-date-future { background-color: var(--visit-future-bg) !important; color: var(--visit-future-text) !important; }
+      select.visit-date-postponed {
+    background-color: var(--visit-postponed-bg) !important;
+    color: var(--visit-postponed-text) !important;
+}
         .readonly-cell { background-color: #e9ecef !important; font-weight: 500; }
         
         .actions-col { display: none !important; }
@@ -1377,7 +1383,7 @@ function renderSubcontractorsTable(contractType, directPurchaseRatio) {
     tbody.innerHTML = '';
     let totals = { visitValue: 0, dueVisitCost: 0, latePenalty: 0, damagePenalty: 0, netDue: 0 };
     const totalForPenalty = parseNumericValue(expectedPenaltyDiv.textContent);
-    const visitDateOptions = ['خلال هذا الشهر', 'تمت الزيارة من قبل', "يناير القادم", "فبراير القادم", "مارس القادم", "أبريل القادم", "مايو القادم", "يونيو القادم", "يوليو القادم", "أغسطس القادم", "سبتمبر القادم", "أكتوبر القادم", "نوفمبر القادم", "ديسمبر القادم"];
+    const visitDateOptions = [     'تمت هذه الزيارة من قبل',     'خلال هذا الشهر',     'زيارة قادمة',     'زيارة مؤجلة' ];
 
     subcontractorsData.forEach((item, index) => {
         let visitValue = parseNumericValue(item.visitValue);
@@ -1407,13 +1413,13 @@ function renderSubcontractorsTable(contractType, directPurchaseRatio) {
         const row = tbody.insertRow();
         row.dataset.table = 'subcontractors';
         row.dataset.index = index;
-        const visitDateSelect = visitDateOptions.map(option => `<option value="${option}" ${item.visitDate === option ? 'selected' : ''}>${option}</option>`).join('');
+        if (item.visitDate === 'تمت الزيارة من قبل') {     item.visitDate = 'تمت هذه الزيارة من قبل'; } if (item.visitDate && item.visitDate.includes('القادم')) {     item.visitDate = 'زيارة قادمة'; }  const visitDateClass =     item.visitDate === 'خلال هذا الشهر' ? 'visit-date-monthly' :     item.visitDate === 'تمت هذه الزيارة من قبل' ? 'visit-date-done' :     item.visitDate === 'زيارة قادمة' ? 'visit-date-future' :     item.visitDate === 'زيارة مؤجلة' ? 'visit-date-postponed' :     '';  const visitDateSelect = visitDateOptions.map(option =>     `<option value="${option}" ${item.visitDate === option ? 'selected' : ''}>${option}</option>` ).join('');
         
         row.innerHTML = `
             <td><input type="text" value="${item.name}" data-index="${index}" data-field="name" data-table="subcontractors" class="editable-on-manage"><span class="cell-print-content">${item.name}</span></td>
             <td><input type="text" inputmode="decimal" value="${formatNumber(visitValue)}" data-index="${index}" data-field="visitValue" data-table="subcontractors" class="editable-on-manage"><span class="cell-print-content">${formatNumber(visitValue)}</span></td>
             <td><input type="number" value="${annualVisits}" data-index="${index}" data-field="annualVisits" data-table="subcontractors" class="editable-on-manage"><span class="cell-print-content">${annualVisits}</span></td>
-            <td><select data-index="${index}" data-field="visitDate" data-table="subcontractors" class="editable-always">${visitDateSelect}</select><span class="cell-print-content">${item.visitDate}</span></td>
+            <td><select data-index="${index}" data-field="visitDate" data-table="subcontractors" class="editable-always ${visitDateClass}">${visitDateSelect}</select><span class="cell-print-content">${item.visitDate}</span></td>
             <td class="readonly-cell">${formatNumber(dueVisitCost)}</td>
             <td><select data-index="${index}" data-field="status" data-table="subcontractors" class="editable-always status-${item.status === 'نعم' ? 'yes' : 'no'}"><option value="نعم">نعم</option><option value="لا" ${item.status === 'لا' ? 'selected' : ''}>لا</option></select><span class="cell-print-content">${item.status}</span></td>
             <td><input type="number" value="${item.delayDays || 0}" data-index="${index}" data-field="delayDays" data-table="subcontractors" class="editable-always"><span class="cell-print-content">${item.delayDays || 0}</span></td>
@@ -1745,16 +1751,38 @@ function renderAllTables() {
         document.getElementById('password-input').focus();
     }
 
-    function verifyPassword() {
-        const passwordInput = document.getElementById('password-input');
-        if (btoa(passwordInput.value) === ENCODED_PASS) {
-            passwordInput.value = '';
-            document.getElementById('password-error').style.display = 'none';
-            executeAction(currentActionContext.action, currentActionContext.target);
-        } else {
-            document.getElementById('password-error').style.display = 'block';
+   function verifyPassword() {
+    const passwordInput = document.getElementById('password-input');
+    const passwordError = document.getElementById('password-error');
+
+    const enteredPassword = (passwordInput.value || '').trim();
+
+    if (enteredPassword === 'admin123') {
+        activeEditSession = true;
+        passwordError.style.display = 'none';
+        passwordInput.value = '';
+
+        document.getElementById('password-section').style.display = 'none';
+
+        if (currentActionContext.action === 'signatures') {
+            document.getElementById('signatures-section-modal').style.display = 'block';
+            renderSignaturesForm();
         }
+
+        if (currentActionContext.action === 'titles') {
+            document.getElementById('titles-section-modal').style.display = 'block';
+            renderTitlesForm();
+        }
+
+        if (currentActionContext.action === 'clearData') {
+            document.getElementById('confirm-dialog-modal').style.display = 'block';
+        }
+
+    } else {
+        passwordError.textContent = 'كلمة المرور غير صحيحة';
+        passwordError.style.display = 'block';
     }
+}
 
     function executeAction(action, target) {
         closeUnifiedModal();
