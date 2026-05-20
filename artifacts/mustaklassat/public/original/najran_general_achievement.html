@@ -1036,35 +1036,43 @@ function renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeducti
     const dentalRow = document.getElementById('dental-row');
     tableBody.innerHTML = ''; // امسح الجدول لإعادة بنائه
 
-    departmentDataForAchievement.forEach(item => {
-        const row = tableBody.insertRow();
-        row.innerHTML = `
-            <td>${item.name}</td>
-            <td>${item.monthlyValue.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-            <td>${item.absenceDeduction.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-            <td>${item.absencePenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-            <td>${item.performancePenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-            <td>${item.nationalityPenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-            <td>${item.netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
-        `;
+   // 1) صف العمالة الخاصة بالصفحة
+const workforceItem = departmentDataForAchievement.find(item => item.id === 'workforce');
+if (workforceItem) {
+    const row = tableBody.insertRow();
+    row.innerHTML = `
+        <td>${workforceItem.name}</td>
+        <td>${workforceItem.monthlyValue.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
+        <td>${workforceItem.absenceDeduction.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
+        <td>${workforceItem.absencePenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
+        <td>${workforceItem.performancePenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
+        <td>${workforceItem.nationalityPenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
+        <td>${workforceItem.netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
+    `;
+}
 
-        // صف الأسنان يأتي بعد العمالة مباشرة
-        if (item.id === 'workforce' && dentalRow) {
-            dentalRow.style.display = '';
-            dentalRow.classList.remove('no-print-row');
-            tableBody.appendChild(dentalRow);
-        }
-        
-        if (item.id === 'saudi_admin') {
-            row.id = 'admin-jobs-row';
-            const _adminChk = document.getElementById('admin-jobs-print-checkbox');
-            const isAdminPrintChecked = _adminChk ? _adminChk.checked : true;
-            if (!isAdminPrintChecked) {
-                row.classList.add('no-print-row');
-            }
-        }
-    });
+// 2) صف عمالة الأسنان
+if (dentalRow) {
+    dentalRow.style.display = '';
+    dentalRow.classList.remove('no-print-row');
+    tableBody.appendChild(dentalRow);
+}
 
+// 3) صف الوظائف الإدارية السعوديين
+const adminItem = departmentDataForAchievement.find(item => item.id === 'saudi_admin');
+if (adminItem) {
+    const row = tableBody.insertRow();
+    row.id = 'admin-jobs-row';
+    row.innerHTML = `
+        <td>${adminItem.name}</td>
+        <td>${adminItem.monthlyValue.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
+        <td>${adminItem.absenceDeduction.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
+        <td>${adminItem.absencePenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
+        <td>${adminItem.performancePenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
+        <td>${adminItem.nationalityPenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
+        <td>${adminItem.netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
+    `;
+}
     // أضف صف الإجمالي
     const totalRow = tableBody.insertRow();
     totalRow.classList.add('total-row');
