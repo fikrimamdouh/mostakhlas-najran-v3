@@ -477,9 +477,9 @@
        لكن صفحة الأسنان بتحفظ تحت nd_ — فالمفتاح الحقيقي في المتصفح
        ممكن يكون: nd_dentalAchievementTotals أو ng_nd_... أو بدون prefix
     ================================================================ */
-   function getDentalData() {
+function getDentalData() {
     try {
-        const rawGet = Storage.prototype.getItem.bind(localStorage);
+        const realStorage = window.localStorage;
 
         const keysToTry = [
             'nd_dentalAchievementTotals',
@@ -491,7 +491,7 @@
         let foundKey = null;
 
         for (let i = 0; i < keysToTry.length; i++) {
-            const v = rawGet(keysToTry[i]);
+            const v = realStorage.getItem(keysToTry[i]);
             if (v) {
                 totalsRaw = v;
                 foundKey = keysToTry[i];
@@ -501,14 +501,7 @@
 
         if (!totalsRaw) {
             console.warn('لم يتم العثور على dentalAchievementTotals');
-            return {
-                monthlyValue: 0,
-                absenceDeduction: 0,
-                absencePenalty: 0,
-                performancePenalty: 0,
-                nationalityPenalty: 0,
-                netMonthly: 0
-            };
+            return _dentalZero();
         }
 
         const t = JSON.parse(totalsRaw);
@@ -525,14 +518,7 @@
 
     } catch (e) {
         console.error('getDentalData error:', e);
-        return {
-            monthlyValue: 0,
-            absenceDeduction: 0,
-            absencePenalty: 0,
-            performancePenalty: 0,
-            nationalityPenalty: 0,
-            netMonthly: 0
-        };
+        return _dentalZero();
     }
 }
 
