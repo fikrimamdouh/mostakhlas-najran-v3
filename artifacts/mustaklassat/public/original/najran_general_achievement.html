@@ -930,8 +930,7 @@ function closeDialog(dialogId, overlayId) {
             const extractStart    = document.getElementById('extract-start-date')?.textContent?.trim() || 'غير محدد';
             const extractEnd      = document.getElementById('extract-end-date')?.textContent?.trim()   || 'غير محدد';
 
-            const signaturesData = JSON.parse(localStorage.getItem(SIGNATURE_STORAGE_KEY) || '[]');
-            const signatures = signaturesData.map(s => s.title + ': ' + (s.name || ' '));
+const signaturesData = JSON.parse(localStorage.getItem('sb_sigs_achievement') || '[]');            const signatures = signaturesData.map(s => s.title + ': ' + (s.name || ' '));
 
             const ws_data = [
                 ['تجمع نجران الصحي'],
