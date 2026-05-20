@@ -37,8 +37,26 @@
     'najran_health_attendance_done', 'najran_admin_offices_attendance_done',
     'adminOfficeNames_v1', 'adminOfficesAttendanceData_v1',
     'admin_offices_consumables_v1.0',
+    'finalConsumablesCost',
+'adminOfficeAffiliations_v1',
+'performance_data_consumables_v27',
+'sewage_disposal_data_consumables_v27',
+'subcontractors_data_consumables_v27',
+'water_supply_data_consumables_v27',
     // بيانات التأسيسي (عقود الباطن + المستهلكات) — يرفعها الأدمن وتُوزَّع على كل مستخدمي المستشفى
     'contract_foundation_data',
+'ng_attendanceData',
+'ng_departmentNames',
+'ng_distributionSettings',
+'ng_finalLaborCost',
+'ng_performanceTotalDeduction',
+
+'nd_attendanceData',
+'nd_departmentNames',
+'nd_distributionSettings',
+'nd_finalLaborCost',
+'nd_performanceTotalDeduction',
+'nd_dentalAchievementTotals',
     // مفاتيح شخصية تبقى خاصة بالمستخدم
     'backupLog', 'backupLogs',
   ];
@@ -73,11 +91,9 @@
   }
 
   function getFreshToken() {
-    const s = getSession();
-    if (!s?.clerkToken) return null;
-    const age = Date.now() - (s.timestamp || 0);
-    return age < 55_000 ? s.clerkToken : null;
-  }
+  const s = getSession();
+  return s?.clerkToken || null;
+}
 
   // اسم مستشفى المستخدم من الجلسة
   function getHospitalName() {
@@ -122,6 +138,18 @@
     'dentalLaborCheckboxState', 'dentalLaborData',
     'achievementItemNames', 'sparePartsTotalAmount',
     'dynamicSignatures',
+    'ng_attendanceData',
+'ng_departmentNames',
+'ng_distributionSettings',
+'ng_finalLaborCost',
+'ng_performanceTotalDeduction',
+
+'nd_attendanceData',
+'nd_departmentNames',
+'nd_distributionSettings',
+'nd_finalLaborCost',
+'nd_performanceTotalDeduction',
+'nd_dentalAchievementTotals',
   ];
 
   function getMonthKeyFromExtractData(raw) {
@@ -268,28 +296,31 @@
     const allData      = {};   // كل المفاتيح → user_storage (نسخ احتياطي)
     const hospitalData = {};   // المفاتيح التشغيلية → hospital_storage
 
-    for (const key of SYNC_KEYS) {
-      const val = localStorage.getItem(key);
-      if (val !== null) {
-        allData[key] = val;
-        if (!PERSONAL_KEYS.has(key)) {
-          hospitalData[key] = val;
-        }
-      }
-    }
+   for (let i = 0; i < localStorage.length; i++) {
+  const key = localStorage.key(i);
+  if (!key) continue;
 
-    // مفاتيح pattern-based (deptCalculatedCost_X, dept_X, sb_sigs_*)
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (!k) continue;
-      if (k.startsWith('deptCalculatedCost_') || k.startsWith('dept_') || k.startsWith('sb_sigs_')) {
-        const v = localStorage.getItem(k);
-        if (v !== null) {
-          allData[k]      = v;
-          hospitalData[k] = v;
-        }
-      }
-    }
+  const shouldSync = SYNC_KEYS.some(k => key === k || key.endsWith(k));
+
+  const isPatternKey =
+    key.includes('deptCalculatedCost_') ||
+    key.includes('dept_') ||
+    key.includes('sb_sigs_');
+
+  if (!shouldSync && !isPatternKey) continue;
+
+  const val = localStorage.getItem(key);
+  if (val === null) continue;
+
+  allData[key] = val;
+
+  const baseKey = SYNC_KEYS.find(k => key === k || key.endsWith(k)) || key;
+
+  if (!PERSONAL_KEYS.has(baseKey)) {
+    hospitalData[key] = val;
+  }
+}
+  
 
     if (Object.keys(allData).length === 0) return;
 
@@ -412,20 +443,30 @@
     // debounce على storage event (30 ث) — يمنع الحلقة اللانهائية بين التابات
     let _storageDebounce = null;
     window.addEventListener('storage', (e) => {
-      if (!SYNC_KEYS.includes(e.key)) return;
+      const shouldSync = SYNC_KEYS.some(   k => e.key === k || e.key.endsWith(k) ); if (!shouldSync) return;
       clearTimeout(_storageDebounce);
       _storageDebounce = setTimeout(syncNow, 30_000);
     });
 
     // override setItem مع debounce 30 ثانية
-    const origSetItem = localStorage.setItem.bind(localStorage);
-    localStorage.setItem = function (key, value) {
-      origSetItem(key, value);
-      if (!_pulling && SYNC_KEYS.includes(key)) {
-        clearTimeout(localStorage._syncTimeout);
-        localStorage._syncTimeout = setTimeout(syncNow, 30_000);
-      }
-    };
+const origSetItem = localStorage.setItem.bind(localStorage);
+
+localStorage.setItem = function (key, value) {
+  origSetItem(key, value);
+
+  const shouldSync = SYNC_KEYS.some(
+    k => key === k || key.endsWith(k)
+  );
+
+  if (!_pulling && shouldSync) {
+    clearTimeout(localStorage._syncTimeout);
+
+    localStorage._syncTimeout = setTimeout(
+      syncNow,
+      30_000
+    );
+  }
+};
 
     console.log('[MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)');
   }
