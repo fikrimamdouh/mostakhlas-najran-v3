@@ -318,8 +318,11 @@ async function pushToCloud() {
 
     allData[key] = val;
 
-    const baseKey = SYNC_KEYS.find(k => key === k || key.endsWith(k)) || key;
-    const personalBaseKey = baseKey.replace(/^_u\d+_/, '');
+const baseKey = SYNC_KEYS.find(k =>
+  key === k ||
+  key.endsWith(k) ||
+  key.includes(k)
+) || key;    const personalBaseKey = baseKey.replace(/^_u\d+_/, '');
 
     if (!PERSONAL_KEYS.has(personalBaseKey)) {
       const hospitalKey = toSharedHospitalKey(key);
