@@ -315,14 +315,13 @@ function toSharedHospitalKey(key) {
   if (val === null) continue;
 
   allData[key] = val;
+const baseKey = SYNC_KEYS.find(k => key === k || key.endsWith(k)) || key;
+const personalBaseKey = baseKey.replace(/^_u\d+_/, '');
 
-  const baseKey = SYNC_KEYS.find(k => key === k || key.endsWith(k)) || key;
-
-  if (!PERSONAL_KEYS.has(baseKey)) {
-    const hospitalKey = toSharedHospitalKey(key); hospitalData[hospitalKey] = val;
-  }
-}
-  
+if (!PERSONAL_KEYS.has(personalBaseKey)) {
+  const hospitalKey = toSharedHospitalKey(key);
+  hospitalData[hospitalKey] = val;
+}  
 
     if (Object.keys(allData).length === 0) return;
 
