@@ -443,8 +443,16 @@
     // debounce على storage event (30 ث) — يمنع الحلقة اللانهائية بين التابات
     let _storageDebounce = null;
     window.addEventListener('storage', (e) => {
-      const shouldSync = SYNC_KEYS.some(   k => e.key === k || e.key.endsWith(k) ); if (!shouldSync) return;
-      clearTimeout(_storageDebounce);
+const shouldSync =
+  e.key &&
+  (
+    SYNC_KEYS.some(k => e.key === k || e.key.endsWith(k)) ||
+    e.key.includes('deptCalculatedCost_') ||
+    e.key.includes('dept_') ||
+    e.key.includes('sb_sigs_')
+  );
+
+if (!shouldSync) return;      clearTimeout(_storageDebounce);
       _storageDebounce = setTimeout(syncNow, 30_000);
     });
 
@@ -454,9 +462,11 @@ const origSetItem = localStorage.setItem.bind(localStorage);
 localStorage.setItem = function (key, value) {
   origSetItem(key, value);
 
-  const shouldSync = SYNC_KEYS.some(
-    k => key === k || key.endsWith(k)
-  );
+const shouldSync =
+  SYNC_KEYS.some(k => key === k || key.endsWith(k)) ||
+  key.includes('deptCalculatedCost_') ||
+  key.includes('dept_') ||
+  key.includes('sb_sigs_');
 
   if (!_pulling && shouldSync) {
     clearTimeout(localStorage._syncTimeout);
