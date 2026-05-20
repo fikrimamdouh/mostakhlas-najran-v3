@@ -1417,7 +1417,9 @@ function closeDialog(dialogId, overlayId) {
         const savedNames = JSON.parse(localStorage.getItem('achievementItemNames')) || {};
         return savedNames[key] || itemKeys[key];
     }
-
+window.openItemNameDialog = openItemNameDialog;
+window.saveItemNames = saveItemNames;
+window.closeDialog = closeDialog;
     // --- END: NEW CONFIGURATION & FUNCTIONS TO BE ADDED ---
 
 </script>
