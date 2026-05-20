@@ -843,20 +843,24 @@
             var ndPfx      = userPfx + 'nd_';
 
             // ── المصدر الأول: إجماليات شهادة إنجاز الأسنان (الأكثر دقة) ──
-            var totalsRaw = rawGet(ndPfx + 'dentalAchievementTotals');
-            if (totalsRaw) {
-                var t = JSON.parse(totalsRaw);
-                if (t && t.netMonthly > 0) {
-                    var _e;
-                    _e = document.getElementById('dental-monthlyValue');      if (_e) _e.textContent = (t.monthlyValue       || 0).toFixed(2);
-                    _e = document.getElementById('dental-absenceDeduction');  if (_e) _e.textContent = (t.absenceDeduction   || 0).toFixed(2);
-                    _e = document.getElementById('dental-absencePenalty');    if (_e) _e.textContent = (t.absencePenalty     || 0).toFixed(2);
-                    _e = document.getElementById('dental-performancePenalty');if (_e) _e.textContent = (t.performancePenalty || 0).toFixed(2);
-                    _e = document.getElementById('dental-nationalityPenalty');if (_e) _e.textContent = (t.nationalityPenalty || 0).toFixed(2);
-                    _e = document.getElementById('dental-netMonthly');        if (_e) _e.textContent = t.netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
-                    return; // انتهى — تم ملء كل الأعمدة من شهادة الإنجاز
-                }
-            }
+   var totalsRaw =
+    rawGet(ndPfx + 'dentalAchievementTotals') ||
+    rawGet('nd_dentalAchievementTotals') ||
+    rawGet('dentalAchievementTotals');
+
+if (totalsRaw) {
+    var t = JSON.parse(totalsRaw);
+    if (t) {
+        var _e;
+        _e = document.getElementById('dental-monthlyValue');       if (_e) _e.textContent = (t.monthlyValue || 0).toFixed(2);
+        _e = document.getElementById('dental-absenceDeduction');   if (_e) _e.textContent = (t.absenceDeduction || 0).toFixed(2);
+        _e = document.getElementById('dental-absencePenalty');     if (_e) _e.textContent = (t.absencePenalty || 0).toFixed(2);
+        _e = document.getElementById('dental-performancePenalty'); if (_e) _e.textContent = (t.performancePenalty || 0).toFixed(2);
+        _e = document.getElementById('dental-nationalityPenalty'); if (_e) _e.textContent = (t.nationalityPenalty || 0).toFixed(2);
+        _e = document.getElementById('dental-netMonthly');         if (_e) _e.textContent = (t.netMonthly || 0).toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
+        return;
+    }
+}
 
             // ── المصدر الثاني (احتياطي): حساب من بيانات الحضور ──
             if (!userPfx) { _loadDentalFallback(); return; }
