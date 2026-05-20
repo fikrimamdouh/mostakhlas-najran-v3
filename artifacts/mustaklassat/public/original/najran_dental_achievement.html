@@ -793,43 +793,11 @@
     }
 
     // *** START: NEW DENTAL LABOR FUNCTIONS ***
-    function toggleDentalRow() {
-        const checkbox = document.getElementById('dental-labor-checkbox');
-        const dentalRow = document.getElementById('dental-row');
-        if (!checkbox || !dentalRow) return;
-        if (checkbox.checked) {
-            dentalRow.style.display = ''; // Show the row
-            dentalRow.classList.remove('no-print-row');
-        } else {
-            dentalRow.style.display = 'none'; // Hide the row
-            dentalRow.classList.add('no-print-row');
-        }
-        localStorage.setItem('dentalLaborCheckboxState', checkbox.checked);
-        // Recalculate totals when toggling
-        loadAndProcessAchievementData();
-    }
+    function toggleDentalRow() { /* لا حاجة — صفحة الأسنان ليس لها صف أسنان فرعي */ }
 
     function getDentalData() {
-        const checkboxEl = document.getElementById('dental-labor-checkbox');
-        const isEnabled = checkboxEl ? checkboxEl.checked : false;
-        if (!isEnabled) {
-            return {
-                monthlyValue: 0, absenceDeduction: 0, absencePenalty: 0,
-                performancePenalty: 0, nationalityPenalty: 0, netMonthly: 0
-            };
-        }
-        
-        const monthlyValue = parseFloat((document.getElementById('dental-monthlyValue') || {}).textContent) || 0;
-        const absenceDeduction = parseFloat((document.getElementById('dental-absenceDeduction') || {}).textContent) || 0;
-        const absencePenalty = parseFloat((document.getElementById('dental-absencePenalty') || {}).textContent) || 0;
-        const performancePenalty = parseFloat((document.getElementById('dental-performancePenalty') || {}).textContent) || 0;
-        const nationalityPenalty = parseFloat((document.getElementById('dental-nationalityPenalty') || {}).textContent) || 0;
-        const netMonthly = monthlyValue - (absenceDeduction + absencePenalty + performancePenalty + nationalityPenalty);
-
-        const nmEl = document.getElementById('dental-netMonthly');
-        if (nmEl) nmEl.textContent = netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
-
-        return { monthlyValue, absenceDeduction, absencePenalty, performancePenalty, nationalityPenalty, netMonthly };
+        // إنجاز الأسنان لا يحتوي على صف أسنان فرعي
+        return { monthlyValue: 0, absenceDeduction: 0, absencePenalty: 0, performancePenalty: 0, nationalityPenalty: 0, netMonthly: 0 };
     }
 
     function saveDentalData() {
@@ -992,7 +960,6 @@ function renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeducti
     grandTotalPerformancePenalty, grandTotalNationalityPenalty, grandTotalNetMonthly) {
     
     const tableBody = document.getElementById('tableBody');
-    const dentalRow = document.getElementById('dental-row');
     tableBody.innerHTML = ''; // امسح الجدول لإعادة بنائه
 
     departmentDataForAchievement.forEach(item => {
@@ -1008,9 +975,7 @@ function renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeducti
         `;
         
         if (item.id === 'saudi_admin') {
-            row.id = 'admin-jobs-row'; // أعطِ الصف ID للتحكم به
-            
-            // تحقق من حالة خانة الاختيار وطبق الكلاس عند إعادة الرسم
+            row.id = 'admin-jobs-row';
             const _adminChk = document.getElementById('admin-jobs-print-checkbox');
             const isAdminPrintChecked = _adminChk ? _adminChk.checked : true;
             if (!isAdminPrintChecked) {
@@ -1018,11 +983,6 @@ function renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeducti
             }
         }
     });
-    
-    // أعد إضافة صف الأسنان إلى الجدول
-    if (dentalRow) {
-        tableBody.appendChild(dentalRow);
-    }
 
     // أضف صف الإجمالي
     const totalRow = tableBody.insertRow();
@@ -1297,14 +1257,7 @@ function exportAchievementToExcel() {
 
         let allItems = [...departmentDataForAchievement];
         const dentalData = getDentalData();
-        const isDentalEnabled = document.getElementById('dental-labor-checkbox').checked;
-
-        if (isDentalEnabled) {
-            allItems.push({
-                name: getItemName('dental'),
-                ...dentalData
-            });
-        }
+        const isDentalEnabled = false; // إنجاز الأسنان ليس له صف أسنان فرعي
 
         allItems.forEach(item => {
             ws_data.push([
@@ -1604,14 +1557,6 @@ function closeDialog(dialogId, overlayId) {
 </script>
     <script src="attendance_contract_info.js"></script>
 
-            <div class="print-toggles no-print" style="text-align:center;margin:8px 0;">
-                <div class="toggle-switch">
-                    <label for="dental-labor-checkbox">
-                        <input type="checkbox" id="dental-labor-checkbox" onchange="toggleDentalRow()">
-                        طباعة عمالة مركز الأسنان
-                    </label>
-                </div>
-            </div>
 
             <div class="overflow-x-auto mb-4">
                 <table class="cosmic-table achievement-table" id="achievementTable">
@@ -1627,15 +1572,6 @@ function closeDialog(dialogId, overlayId) {
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        <tr id="dental-row" style="display: none;">
-                            <td>عمالة مركز الأسنان</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-monthlyValue" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-absenceDeduction" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-absencePenalty" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-performancePenalty" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-nationalityPenalty" onblur="saveDentalData()">0</td>
-                            <td id="dental-netMonthly">0.00 ر.س.</td>
-                        </tr>
                     </tbody>
                 </table>
             </div>

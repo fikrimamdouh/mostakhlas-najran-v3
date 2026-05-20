@@ -793,33 +793,10 @@
     }
 
     // *** START: NEW DENTAL LABOR FUNCTIONS ***
-    function toggleDentalRow() {
-        const checkbox = document.getElementById('dental-labor-checkbox');
-        const dentalRow = document.getElementById('dental-row');
-        if (!checkbox || !dentalRow) return;
-        
-        if (checkbox.checked) {
-            dentalRow.style.display = ''; // Show the row
-            dentalRow.classList.remove('no-print-row');
-        } else {
-            dentalRow.style.display = 'none'; // Hide the row
-            dentalRow.classList.add('no-print-row');
-        }
-        localStorage.setItem('dentalLaborCheckboxState', checkbox.checked);
-        // Recalculate totals when toggling
-        loadAndProcessAchievementData();
-    }
+    function toggleDentalRow() { /* صف الأسنان دائماً ظاهر في إنجاز العام */ }
 
     function getDentalData() {
-        const _chk = document.getElementById('dental-labor-checkbox');
-        if (!_chk) return { monthlyValue: 0, absenceDeduction: 0, absencePenalty: 0, performancePenalty: 0, nationalityPenalty: 0, netMonthly: 0 };
-        const isEnabled = _chk.checked;
-        if (!isEnabled) {
-            return {
-                monthlyValue: 0, absenceDeduction: 0, absencePenalty: 0,
-                performancePenalty: 0, nationalityPenalty: 0, netMonthly: 0
-            };
-        }
+        // صف الأسنان دائماً مُفعَّل في إنجاز العام
         
         const _mv = document.getElementById('dental-monthlyValue');
         const _ad = document.getElementById('dental-absenceDeduction');
@@ -1068,11 +1045,16 @@ function renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeducti
             <td>${item.nationalityPenalty.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
             <td>${item.netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</td>
         `;
+
+        // صف الأسنان يأتي بعد العمالة مباشرة
+        if (item.id === 'workforce' && dentalRow) {
+            dentalRow.style.display = '';
+            dentalRow.classList.remove('no-print-row');
+            tableBody.appendChild(dentalRow);
+        }
         
         if (item.id === 'saudi_admin') {
-            row.id = 'admin-jobs-row'; // أعطِ الصف ID للتحكم به
-            
-            // تحقق من حالة خانة الاختيار وطبق الكلاس عند إعادة الرسم
+            row.id = 'admin-jobs-row';
             const _adminChk = document.getElementById('admin-jobs-print-checkbox');
             const isAdminPrintChecked = _adminChk ? _adminChk.checked : true;
             if (!isAdminPrintChecked) {
@@ -1080,11 +1062,6 @@ function renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeducti
             }
         }
     });
-    
-    // أعد إضافة صف الأسنان إلى الجدول
-    if (dentalRow) {
-        tableBody.appendChild(dentalRow);
-    }
 
     // أضف صف الإجمالي
     const totalRow = tableBody.insertRow();
@@ -1351,8 +1328,7 @@ function exportAchievementToExcel() {
 
         let allItems = [...departmentDataForAchievement];
         const dentalData = getDentalData();
-        const isDentalEnabled = document.getElementById('dental-labor-checkbox').checked;
-
+        const isDentalEnabled = true; // صف الأسنان دائماً مُدرج في إنجاز العام
         if (isDentalEnabled) {
             allItems.push({
                 name: getItemName('dental'),
@@ -1658,14 +1634,6 @@ function closeDialog(dialogId, overlayId) {
 </script>
     <script src="attendance_contract_info.js"></script>
 
-            <div class="print-toggles no-print" style="text-align:center;margin:8px 0;">
-                <div class="toggle-switch">
-                    <label for="dental-labor-checkbox">
-                        <input type="checkbox" id="dental-labor-checkbox" onchange="toggleDentalRow()">
-                        طباعة عمالة مركز الأسنان
-                    </label>
-                </div>
-            </div>
 
             <div class="overflow-x-auto mb-4">
                 <table class="cosmic-table achievement-table" id="achievementTable">
@@ -1681,13 +1649,13 @@ function closeDialog(dialogId, overlayId) {
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        <tr id="dental-row" style="display: none;">
+                        <tr id="dental-row">
                             <td>عمالة مركز الأسنان</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-monthlyValue" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-absenceDeduction" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-absencePenalty" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-performancePenalty" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-nationalityPenalty" onblur="saveDentalData()">0</td>
+                            <td id="dental-monthlyValue">0.00</td>
+                            <td id="dental-absenceDeduction">0.00</td>
+                            <td id="dental-absencePenalty">0.00</td>
+                            <td id="dental-performancePenalty">0.00</td>
+                            <td id="dental-nationalityPenalty">0.00</td>
                             <td id="dental-netMonthly">0.00 ر.س.</td>
                         </tr>
                     </tbody>
