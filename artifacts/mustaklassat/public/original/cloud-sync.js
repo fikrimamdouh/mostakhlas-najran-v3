@@ -326,10 +326,6 @@ if (!PERSONAL_KEYS.has(personalBaseKey)) {
 
 if (Object.keys(allData).length === 0) return;
 
-console.log('[DEBUG hospitalName]', hospitalName);
-console.log('[DEBUG allData count]', Object.keys(allData).length);
-console.log('[DEBUG hospitalData count]', Object.keys(hospitalData).length);
-console.log('[DEBUG hospitalData keys]', Object.keys(hospitalData));
 
 const [userResult, hospitalResult] = await Promise.all([
     // رفع الكل إلى user_storage (نسخ احتياطي + توافق مع المستخدمين بلا مستشفى)
