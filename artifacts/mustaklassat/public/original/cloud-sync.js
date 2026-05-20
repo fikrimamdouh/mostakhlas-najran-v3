@@ -304,12 +304,15 @@ async function pushToCloud() {
     const key = localStorage.key(i);
     if (!key) continue;
 
-    const shouldSync = SYNC_KEYS.some(k =>   key === k ||   key.endsWith(k) ||   key.includes(k) );
+    const normalizedKey = key.replace(/^_u\d+_/, '');
 
-    const isPatternKey =
-      key.includes('deptCalculatedCost_') ||
-      key.includes('dept_') ||
-      key.includes('sb_sigs_');
+const shouldSync =
+  SYNC_KEYS.includes(normalizedKey) ||
+  normalizedKey.includes('deptCalculatedCost_') ||
+  normalizedKey.includes('dept_') ||
+  normalizedKey.includes('sb_sigs_');
+
+const isPatternKey = shouldSync;
 
     if (!shouldSync && !isPatternKey) continue;
 
