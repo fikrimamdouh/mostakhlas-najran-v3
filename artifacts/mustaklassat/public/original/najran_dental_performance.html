@@ -6,7 +6,7 @@
 /* ── Hospital namespace patch ── */
 (function(){
   var P='nd_';
-  var KK=['performanceTotalDeduction','distributionSettings','sb_sigs_performance','attendanceData'];
+  var KK=['performanceTotalDeduction','distributionSettings','sb_sigs_performance','attendanceData','tableData_'];
   function pfx(k){
     for(var i=0;i<KK.length;i++){if(k===KK[i]||k.startsWith(KK[i]))return P+k;}
     return k;
