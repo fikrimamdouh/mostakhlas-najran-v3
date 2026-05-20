@@ -1008,15 +1008,69 @@ function loadAndProcessAchievementData() {
             }
         ];
         
-        // 5. حساب الإجماليات الكبرى مع بيانات الأسنان
-        const dentalData = getDentalData();
-        const grandTotalMonthlyValue = workforceMonthlyValue + saudiMonthlyValue + dentalData.monthlyValue;
-        const grandTotalAbsenceDeduction = workforceAbsenceDeduction + saudiAbsenceDeduction + dentalData.absenceDeduction;
-        const grandTotalAbsencePenalty = workforceAbsencePenalty + saudiAbsencePenalty + dentalData.absencePenalty;
-        const grandTotalPerformancePenalty = totalPerformancePenalty + dentalData.performancePenalty;
-        const grandTotalNationalityPenalty = workforceNationalityPenalty + saudiNationalityPenalty + dentalData.nationalityPenalty;
-        const grandTotalNetMonthly = workforceNetMonthly + saudiNetMonthly + dentalData.netMonthly;
+    // 5. حساب الإجماليات الكبرى بالترتيب الصحيح
+const dentalData = getDentalData();
 
+// العمالة الأساسية
+const workforceTotals = {
+    monthlyValue: workforceMonthlyValue,
+    absenceDeduction: workforceAbsenceDeduction,
+    absencePenalty: workforceAbsencePenalty,
+    performancePenalty: totalPerformancePenalty,
+    nationalityPenalty: workforceNationalityPenalty,
+    netMonthly: workforceNetMonthly
+};
+
+// الأسنان
+const dentalTotals = {
+    monthlyValue: dentalData.monthlyValue || 0,
+    absenceDeduction: dentalData.absenceDeduction || 0,
+    absencePenalty: dentalData.absencePenalty || 0,
+    performancePenalty: dentalData.performancePenalty || 0,
+    nationalityPenalty: dentalData.nationalityPenalty || 0,
+    netMonthly: dentalData.netMonthly || 0
+};
+
+// الإداريين
+const adminTotals = {
+    monthlyValue: saudiMonthlyValue,
+    absenceDeduction: saudiAbsenceDeduction,
+    absencePenalty: saudiAbsencePenalty,
+    performancePenalty: 0,
+    nationalityPenalty: saudiNationalityPenalty,
+    netMonthly: saudiNetMonthly
+};
+
+// الإجمالي النهائي
+const grandTotalMonthlyValue =
+    workforceTotals.monthlyValue +
+    dentalTotals.monthlyValue +
+    adminTotals.monthlyValue;
+
+const grandTotalAbsenceDeduction =
+    workforceTotals.absenceDeduction +
+    dentalTotals.absenceDeduction +
+    adminTotals.absenceDeduction;
+
+const grandTotalAbsencePenalty =
+    workforceTotals.absencePenalty +
+    dentalTotals.absencePenalty +
+    adminTotals.absencePenalty;
+
+const grandTotalPerformancePenalty =
+    workforceTotals.performancePenalty +
+    dentalTotals.performancePenalty +
+    adminTotals.performancePenalty;
+
+const grandTotalNationalityPenalty =
+    workforceTotals.nationalityPenalty +
+    dentalTotals.nationalityPenalty +
+    adminTotals.nationalityPenalty;
+
+const grandTotalNetMonthly =
+    workforceTotals.netMonthly +
+    dentalTotals.netMonthly +
+    adminTotals.netMonthly;
         // 6. عرض الجدول
         renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeduction, grandTotalAbsencePenalty, 
             grandTotalPerformancePenalty, grandTotalNationalityPenalty, grandTotalNetMonthly);
