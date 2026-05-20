@@ -229,8 +229,7 @@
     background-color: #e8e8e8 !important;
 }
 
-/* --- END: نهاية الكود
-
+/* --- END: نهاية الكود --- */
             .cosmic-table.achievement-table th {
                 background-color: #f0f0f0 !important;
                 font-weight: bold !important;
@@ -394,25 +393,7 @@
             background-color: #fff !important;
         }
         
-        /* تنسيق خانة اختيار عمالة الأسنان */
-        .dental-labor-toggle {
-            text-align: center;
-            margin: 15px 0;
-            padding: 10px;
-            background-color: #f0f8ff;
-            border: 1px solid #d1e3f3;
-            border-radius: 8px;
-        }
-        .dental-labor-toggle label {
-            font-weight: bold;
-            color: #0056b3;
-            cursor: pointer;
-        }
-        .dental-labor-toggle input[type="checkbox"] {
-            margin-left: 10px;
-            transform: scale(1.2);
-            cursor: pointer;
-        }
+      
         /* --- START: NEW STYLES TO BE ADDED --- */
 
         /* 1. Unified Action Bar */
@@ -518,20 +499,8 @@
     }
 }
 
-/* 2. تعديل قاعدة الألوان لتجنب الصفوف المتجاورة بنفس اللون */
-.cosmic-table.achievement-table tbody tr:not(#dental-row):nth-child(even) {
-    background-color: #f5f5f5;
-}
 
-.cosmic-table.achievement-table tbody tr:not(#dental-row):nth-child(odd) {
-    background-color: #ffffff; /* تأكد من أن الصفوف الفردية لها خلفية بيضاء */
-}
 
-/* 3. أعطِ صف الأسنان تنسيقاً خاصاً به لتمييزه */
-#dental-row {
-    background-color: #e6f7ff !important; /* لون أزرق فاتح مميز */
-    font-style: italic;
-}
 
 /* --- END: نهاية الكود المطلوب إضافته --- */
 /* --- START: أضف هذا الكود إلى قسم <style> --- */
@@ -741,19 +710,7 @@
         if (page && page !== "#") window.location.href = page;
     }
 
-    // *** START: NEW DENTAL LABOR FUNCTIONS ***
-  function getDentalData() {
-    return {
-        monthlyValue: 0,
-        absenceDeduction: 0,
-        absencePenalty: 0,
-        performancePenalty: 0,
-        nationalityPenalty: 0,
-        netMonthly: 0
-    };
-}
-    // *** END: NEW DENTAL LABOR FUNCTIONS ***
-
+    
 
 
 
@@ -859,13 +816,12 @@ function loadAndProcessAchievementData() {
         ];
         
         // 5. حساب الإجماليات الكبرى مع بيانات الأسنان
-        const dentalData = getDentalData();
-        const grandTotalMonthlyValue = workforceMonthlyValue + saudiMonthlyValue + dentalData.monthlyValue;
-        const grandTotalAbsenceDeduction = workforceAbsenceDeduction + saudiAbsenceDeduction + dentalData.absenceDeduction;
-        const grandTotalAbsencePenalty = workforceAbsencePenalty + saudiAbsencePenalty + dentalData.absencePenalty;
-        const grandTotalPerformancePenalty = totalPerformancePenalty + dentalData.performancePenalty;
-        const grandTotalNationalityPenalty = workforceNationalityPenalty + saudiNationalityPenalty + dentalData.nationalityPenalty;
-        const grandTotalNetMonthly = workforceNetMonthly + saudiNetMonthly + dentalData.netMonthly;
+       const grandTotalMonthlyValue = workforceMonthlyValue + saudiMonthlyValue;
+const grandTotalAbsenceDeduction = workforceAbsenceDeduction + saudiAbsenceDeduction;
+const grandTotalAbsencePenalty = workforceAbsencePenalty + saudiAbsencePenalty;
+const grandTotalPerformancePenalty = totalPerformancePenalty;
+const grandTotalNationalityPenalty = workforceNationalityPenalty + saudiNationalityPenalty;
+const grandTotalNetMonthly = workforceNetMonthly + saudiNetMonthly;
 
         // 6. عرض الجدول
         renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeduction, grandTotalAbsencePenalty, 
@@ -883,7 +839,6 @@ function renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeducti
     grandTotalPerformancePenalty, grandTotalNationalityPenalty, grandTotalNetMonthly) {
     
     const tableBody = document.getElementById('tableBody');
-    const dentalRow = document.getElementById('dental-row');
     tableBody.innerHTML = ''; // امسح الجدول لإعادة بنائه
 
     departmentDataForAchievement.forEach(item => {
@@ -909,10 +864,7 @@ function renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeducti
         }
     });
     
-    // أعد إضافة صف الأسنان إلى الجدول
-    if (dentalRow) {
-        tableBody.appendChild(dentalRow);
-    }
+   
 
     // أضف صف الإجمالي
     const totalRow = tableBody.insertRow();
@@ -1055,10 +1007,9 @@ function prepareAndOpenLetterPage() {
     const contractDetails = document.querySelector('.contractDetails')?.textContent?.trim() || 'تفاصيل العقد';
     
     // 2. حساب المبلغ الإجمالي (من نفس منطق الحسابات الموجودة)
-    const dentalData = getDentalData();
     const workforceNetMonthly = departmentDataForAchievement.find(d => d.id === 'workforce')?.netMonthly || 0;
     const saudiNetMonthly = departmentDataForAchievement.find(d => d.id === 'saudi_admin')?.netMonthly || 0;
-    const grandTotalNetMonthly = workforceNetMonthly + saudiNetMonthly + dentalData.netMonthly;
+    const grandTotalNetMonthly = workforceNetMonthly + saudiNetMonthly;
 
     // 3. تحويل المبلغ إلى نص (تفقيد)
     const totalInWords = convertNumberToArabicWords(grandTotalNetMonthly);
