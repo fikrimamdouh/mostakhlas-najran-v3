@@ -6,8 +6,14 @@
 /* ── Hospital namespace patch ── */
 (function(){
   var P='ng_';
-  var KK=['performanceTotalDeduction','distributionSettings','sb_sigs_performance','attendanceData','tableData_'];
-  function pfx(k){
+var KK=[
+    'performanceTotalDeduction',
+    'distributionSettings',
+    'sb_sigs_performance',
+    'attendanceData',
+    'tableData_',
+    'deptCalculatedCost_'
+];  function pfx(k){
     for(var i=0;i<KK.length;i++){if(k===KK[i]||k.startsWith(KK[i]))return P+k;}
     return k;
   }
@@ -2929,7 +2935,31 @@ function updateSignaturesOnPage() {
         grid.innerHTML += signatureHTML;
     });
 }
-/**
+
+  function loadDepartmentAmountsFromAttendance() {
+    const map = {
+        cleaning: 'cleaning',
+        electricity: 'electricity',
+        agriculture: 'agriculture',
+        civil: 'civil_works',
+        mechanics: 'mechanical',
+        laundry: 'laundry',
+        security: 'security'
+    };
+
+    Object.keys(map).forEach(function(tableId) {
+        const deptKey = map[tableId];
+        const el = document.getElementById(tableId + '-amount');
+
+        if (!el) return;
+
+        const amount = parseFloat(localStorage.getItem('deptCalculatedCost_' + deptKey)) || 0;
+        el.value = amount.toFixed(2);
+    });
+
+    updateCertificateFromPerformance();
+}
+  /**
  * ===================================================================
  *      ===>   التحميل المنظم لصفحة الأداء (النسخة النهائية والمصححة)   <===
  * ===================================================================
@@ -2987,7 +3017,7 @@ document.addEventListener('DOMContentLoaded', function() {
             loadTableData(tableId);
         }
     });
-
+loadDepartmentAmountsFromAttendance();
     // 5. استدعاء دالة التحديث الشاملة لضمان سحب كل البيانات والحسابات
     updateAllTotals();
 
