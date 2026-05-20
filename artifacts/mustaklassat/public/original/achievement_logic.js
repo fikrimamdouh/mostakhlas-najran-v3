@@ -129,6 +129,9 @@ function renderAchievementCertificate(centerKey) {
                 <button class="btn-action btn-export-excel" onclick="exportAchievementToExcel('${centerKey}')"><i class="fas fa-file-excel"></i> تصدير Excel</button>
                 <button class="btn-action btn-update" onclick="handleUpdateClick('${centerKey}')"><i class="fas fa-sync-alt"></i> تحديث البيانات</button>
                 <button class="btn-action btn-signatures" onclick="openSignatureDialog('achievement', '${centerKey}')"><i class="fas fa-signature"></i> تعديل التواقيع</button>
+                <button class="btn-action btn-titles" onclick="openAchievementTitlesDialog('${centerKey}')">
+    <i class="fas fa-edit"></i> تعديل العنوان
+</button>
             </div>
             <div class="certificate-header text-center">
                 <h2>${titles.mainTitle}</h2>
