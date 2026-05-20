@@ -374,8 +374,7 @@
             <button class="action-btn" style="background:#28a745;" onclick="exportAchievementToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
             <button class="action-btn" style="background:#007bff;" onclick="window.print()"><i class="fas fa-print"></i> طباعة</button>
             <button class="action-btn" style="background:#17a2b8;" onclick="refreshAllData()"><i class="fas fa-sync-alt"></i> تحديث البيانات</button>
-            <button class="action-btn" style="background:#6f42c1;" onclick="openSignatureEditDialog()"><i class="fas fa-pen-nib"></i> تعديل التواقيع</button>
-            <button class="action-btn" style="background:#fd7e14;" onclick="openItemNameDialog()"><i class="fas fa-tag"></i> تعديل أسماء البنود</button>
+<button class="action-btn" style="background:#6f42c1;" onclick="SignatureBlock.open('achievement')"><i class="fas fa-pen-nib"></i> تعديل التواقيع</button>            <button class="action-btn" style="background:#fd7e14;" onclick="openItemNameDialog()"><i class="fas fa-tag"></i> تعديل أسماء البنود</button>
         </div>
 
         <!-- شريط التحكم في طباعة الإداريين -->
@@ -411,26 +410,7 @@
         <div id="sb-container-achievement" class="sb-wrap"></div>
     </div>
 
-    <!-- نافذة تعديل التواقيع -->
-    <div id="signature-edit-dialog" class="edit-dialog" style="display:none;">
-        <div id="signature-password-section">
-            <h3>🔒 أدخل كلمة المرور للتعديل</h3>
-            <input type="password" id="signature-password-input" placeholder="كلمة المرور">
-            <p id="signature-password-error" style="color:red;font-size:12px;"></p>
-            <button class="confirm-btn" onclick="verifySignaturePassword()"><i class="fas fa-unlock"></i> دخول</button>
-            <button class="cancel-btn" onclick="closeSignatureEditDialog()">إلغاء</button>
-        </div>
-        <div id="signature-edit-content" style="display:none;">
-            <h3>✏️ تعديل التواقيع</h3>
-            <div id="signature-fields-container"></div>
-            <button class="confirm-btn" onclick="addSignatureField()"><i class="fas fa-plus"></i> إضافة توقيع</button>
-            <hr>
-            <button class="confirm-btn" onclick="saveSignatures()"><i class="fas fa-save"></i> حفظ التواقيع</button>
-            <button class="cancel-btn" onclick="closeSignatureEditDialog()">إلغاء</button>
-        </div>
-    </div>
-    <div id="signature-edit-overlay" class="overlay" onclick="closeSignatureEditDialog()"></div>
-
+ 
     <!-- نافذة تعديل أسماء البنود -->
     <div id="item-name-dialog" class="edit-dialog" style="display:none;">
         <h3>تعديل أسماء البنود</h3>
@@ -450,10 +430,8 @@
     ================================================================ */
     let departmentDataForAchievement = [];
 
-    const SIGNATURE_STORAGE_KEY = 'achievementSignatures_v3';
-    const ITEM_NAMES_KEY        = 'achievementItemNames_ng';
-    const PASSWORD = "admin123";
-
+     const ITEM_NAMES_KEY        = 'achievementItemNames_ng';
+ 
     /* rawGet/rawSet — يتجاوز ng_ proxy تماماً للمفاتيح الخاصة بهذه الصفحة */
     const _rawGet = Storage.prototype.getItem.bind(localStorage);
     const _rawSet = Storage.prototype.setItem.bind(localStorage);
@@ -733,119 +711,7 @@ function getDentalData() {
         restoreAdminToggleState();
     }
 
-    /* ================================================================
-       دوال التواقيع
-    ================================================================ */
-function openSignatureEditDialog() {
-    const dialog = document.getElementById('signature-edit-dialog');
-    const overlay = document.getElementById('signature-edit-overlay');
-
-    if (dialog) dialog.style.display = 'block';
-    if (overlay) overlay.style.display = 'block';
-
-    const passBox = document.getElementById('signature-password-section');
-    const contentBox = document.getElementById('signature-edit-content');
-
-    if (passBox) passBox.style.display = 'none';
-    if (contentBox) contentBox.style.display = 'block';
-
-    if (dialog) dialog.classList.add('wide-dialog');
-
-    populateSignatureFields();
-}
-
-   function closeSignatureEditDialog() {
-    const dialog = document.getElementById('signature-edit-dialog');
-    const overlay = document.getElementById('signature-edit-overlay');
-
-    if (dialog) {
-        dialog.style.display = 'none';
-        dialog.classList.remove('wide-dialog');
-    }
-
-    if (overlay) overlay.style.display = 'none';
-}
-
-    function verifySignaturePassword() {
-        const input = document.getElementById('signature-password-input').value;
-        if (input === PASSWORD) {
-            document.getElementById('signature-password-section').style.display = 'none';
-            document.getElementById('signature-edit-content').style.display = 'block';
-            document.getElementById('signature-edit-dialog').classList.add('wide-dialog');
-            populateSignatureFields();
-        } else {
-            document.getElementById('signature-password-error').textContent = 'الباسورد غير صحيح';
-        }
-    }
-
-    function populateSignatureFields() {
-        const container = document.getElementById('signature-fields-container');
-        container.innerHTML = '';
-        const raw = _rawGet(SIGNATURE_STORAGE_KEY);
-        const signatures = raw ? JSON.parse(raw) : [];
-        if (signatures.length === 0) {
-            addSignatureField('مندوب المقاول', '');
-            addSignatureField('رئيس قسم الصيانة', '');
-            addSignatureField('مدير المشروع', '');
-            addSignatureField('مدير المستشفى', '');
-        } else {
-            signatures.forEach(sig => addSignatureField(sig.title, sig.name));
-        }
-    }
-
-    function addSignatureField(title = '', name = '') {
-        const container = document.getElementById('signature-fields-container');
-        const fieldId = 'sig-field-' + Date.now() + '-' + Math.random();
-        const fieldDiv = document.createElement('div');
-        fieldDiv.className = 'signature-field-group';
-        fieldDiv.id = fieldId;
-        fieldDiv.innerHTML = `
-            <div class="inputs">
-                <label>المسمى الوظيفي:</label>
-                <input type="text" class="sig-title-input" value="${title}" placeholder="مثال: مدير المشروع">
-                <label style="margin-top:8px;">الاسم:</label>
-                <input type="text" class="sig-name-input" value="${name}" placeholder="اسم صاحب التوقيع">
-            </div>
-            <button class="delete-sig-btn" onclick="document.getElementById('${fieldId}').remove()" title="حذف">
-                <i class="fas fa-trash-alt"></i>
-            </button>
-        `;
-        container.appendChild(fieldDiv);
-    }
-
-    function saveSignatures() {
-        const container = document.getElementById('signature-fields-container');
-        const signaturesToSave = [];
-        container.querySelectorAll('.signature-field-group').forEach(field => {
-            const title = field.querySelector('.sig-title-input').value.trim();
-            const name  = field.querySelector('.sig-name-input').value.trim();
-            if (title) signaturesToSave.push({ title, name });
-        });
-        _rawSet(SIGNATURE_STORAGE_KEY, JSON.stringify(signaturesToSave));
-
-        /* تحديث صندوق التواقيع في الصفحة مباشرة */
-        const sbWrap = document.getElementById('sb-container-achievement');
-        if (sbWrap) {
-            sbWrap.innerHTML = '';
-            const sigSection = document.createElement('div');
-            sigSection.className = 'signatures-section';
-            signaturesToSave.forEach(sig => {
-                const box = document.createElement('div');
-                box.className = 'signature-box';
-                box.innerHTML = `<p><strong>${sig.title}</strong></p><div class="signature-line"></div><p class="signature-name">${sig.name || ''}</p>`;
-                sigSection.appendChild(box);
-            });
-            sbWrap.appendChild(sigSection);
-        }
-
-        showSuccessMessage('✅ تم حفظ التواقيع بنجاح!\nسيتم تطبيقها على الطباعة.');
-        closeSignatureEditDialog();
-    }
-
-    function updateSignaturesOnPage() {
-        /* مُبقى للتوافق مع signature-block.js الخارجي */
-    }
-
+  
     /* ================================================================
        دوال أسماء البنود
     ================================================================ */
@@ -1202,7 +1068,6 @@ function closeDialog(dialogId, overlayId) {
 
         updateDateTime();
         updateContractDisplayData();
-        updateSignaturesOnPage();
 
         /* عرض تواريخ المستخلص */
         const extractDataString = localStorage.getItem('extractData');
