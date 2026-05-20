@@ -304,7 +304,7 @@ async function pushToCloud() {
     const key = localStorage.key(i);
     if (!key) continue;
 
-    const shouldSync = SYNC_KEYS.some(k => key === k || key.endsWith(k));
+    const shouldSync = SYNC_KEYS.some(k =>   key === k ||   key.endsWith(k) ||   key.includes(k) );
 
     const isPatternKey =
       key.includes('deptCalculatedCost_') ||
