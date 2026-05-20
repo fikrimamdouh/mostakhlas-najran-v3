@@ -26,7 +26,88 @@ function getAchievementTitles() {
         subTitle: allTitles.achievementSubTitle || DEFAULT_ACHIEVEMENT_TITLES.subTitle
     };
 }
+function openAchievementTitlesDialog(centerKey) {
+    const titles = getAchievementTitles();
 
+    let overlay = document.getElementById('achievement-titles-overlay');
+    let dialog = document.getElementById('achievement-titles-dialog');
+
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'achievement-titles-overlay';
+        overlay.className = 'overlay';
+        overlay.onclick = closeAchievementTitlesDialog;
+        document.body.appendChild(overlay);
+    }
+
+    if (!dialog) {
+        dialog = document.createElement('div');
+        dialog.id = 'achievement-titles-dialog';
+        dialog.className = 'edit-dialog wide-dialog';
+
+        document.body.appendChild(dialog);
+    }
+
+    dialog.innerHTML = `
+        <h3>تعديل عنوان شهادة الإنجاز</h3>
+
+        <label>العنوان الرئيسي:</label>
+        <input type="text" id="achievement-main-title-input" value="${titles.mainTitle}">
+
+        <label>العنوان الفرعي:</label>
+        <input type="text" id="achievement-sub-title-input" value="${titles.subTitle}">
+
+        <div style="margin-top:15px;text-align:center;">
+            <button class="confirm-btn" onclick="saveAchievementTitles('${centerKey}')">
+                حفظ
+            </button>
+
+            <button class="cancel-btn" onclick="closeAchievementTitlesDialog()">
+                إلغاء
+            </button>
+        </div>
+    `;
+
+    overlay.style.display = 'block';
+    dialog.style.display = 'block';
+}
+
+function closeAchievementTitlesDialog() {
+    const overlay = document.getElementById('achievement-titles-overlay');
+    const dialog = document.getElementById('achievement-titles-dialog');
+
+    if (overlay) overlay.style.display = 'none';
+    if (dialog) dialog.style.display = 'none';
+}
+
+function saveAchievementTitles(centerKey) {
+    const mainTitle =
+        document.getElementById('achievement-main-title-input').value.trim();
+
+    const subTitle =
+        document.getElementById('achievement-sub-title-input').value.trim();
+
+    const titlesToSave = {
+        achievementMainTitle:
+            mainTitle || DEFAULT_ACHIEVEMENT_TITLES.mainTitle,
+
+        achievementSubTitle:
+            subTitle || DEFAULT_ACHIEVEMENT_TITLES.subTitle
+    };
+
+    localStorage.setItem(
+        'achievementTitles_v1',
+        JSON.stringify(titlesToSave)
+    );
+
+    closeAchievementTitlesDialog();
+
+    renderAchievementCertificate(centerKey);
+
+    if (typeof showSuccessMessage === 'function') {
+        showSuccessMessage('تم حفظ العنوان بنجاح');
+    }
+}
 // --- 2. UI RENDERING & CORE LOGIC ---
 
 function renderAchievementCertificate(centerKey) {
