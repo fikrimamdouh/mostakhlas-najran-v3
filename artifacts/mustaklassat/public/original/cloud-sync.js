@@ -322,6 +322,7 @@ if (!PERSONAL_KEYS.has(personalBaseKey)) {
   const hospitalKey = toSharedHospitalKey(key);
   hospitalData[hospitalKey] = val;
 }  
+} // ← قفل الـ for هنا
 
     if (Object.keys(allData).length === 0) return;
 
