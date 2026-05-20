@@ -1226,8 +1226,8 @@ function preparePrint() {
         <div class="action-buttons no-print">
             <button onclick="openManagementPasswordDialog()" style="background:linear-gradient(135deg,#6f42c1,#a855f7)"><i class="fas fa-cogs"></i> الإعدادات والإدارة</button>
             <button onclick="openPerformanceControlCenter()" style="background:linear-gradient(135deg,#6f42c1,#9333ea)"><i class="fas fa-sliders-h"></i> إعدادات الأداء</button>
-            <button onclick="loadJobPositionsFromTemplate()" style="background:linear-gradient(135deg,#0369a1,#0ea5e9)"><i class="fas fa-briefcase"></i> تحميل المناصب</button>
-            <button onclick="openDialog('upload-excel-dialog')" style="background:linear-gradient(135deg,#17a2b8,#0369a1)"><i class="fas fa-file-excel"></i> استيراد من Excel</button>
+            <button onclick="showAlreadySetupMsg('positions')" style="background:linear-gradient(135deg,#0369a1,#0ea5e9)"><i class="fas fa-briefcase"></i> تحميل المناصب</button>
+            <button onclick="showAlreadySetupMsg('excel')" style="background:linear-gradient(135deg,#17a2b8,#0369a1)"><i class="fas fa-file-excel"></i> استيراد من Excel</button>
             <button onclick="openSmartUploadDialog()" style="background:linear-gradient(135deg,#0369a1,#2563eb)"><i class="fas fa-magic"></i> الرفع الذكي</button>
             <button onclick="openBulkAttendanceDialog()" style="background:linear-gradient(135deg,#17a2b8,#0284c7)"><i class="fas fa-users-cog"></i> تعديل جماعي</button>
             <button onclick="openExcelExportDialog()" style="background:linear-gradient(135deg,#28a745,#16a34a)"><i class="fas fa-download"></i> تصدير Excel</button>
@@ -1784,135 +1784,55 @@ function preparePrint() {
 </script>
 <script src="/original/job-positions-helper.js"></script>
 <script>
+// ======= رسائل الإعداد المسبق =======
+function showAlreadySetupMsg(type) {
+  if (type === 'positions') {
+    alert('✅ تم إعداد المناصب مسبقاً\nالبيانات محملة ومحفوظة — لا حاجة لإعادة التحميل.');
+  } else if (type === 'excel') {
+    alert('✅ تم تحميل بيانات الحضور مسبقاً\nالبيانات محفوظة في المتصفح — لا حاجة لإعادة الاستيراد.');
+  }
+}
+
 // ======= تحميل المناصب من القاعدة =======
 async function loadJobPositionsFromTemplate() {
-  // اقرأ اسم المستشفى من الجلسة أولاً (أدق من DOM)
-  var sessionHospital = '';
-  try {
-    var _s = JSON.parse(localStorage.getItem('najran_session') || '{}');
-    sessionHospital = (_s.hospital || '').trim();
-  } catch(_){}
-  const hospitalName = sessionHospital
-    || document.querySelector('.hospitalName')?.textContent?.trim()
-    || '';
-  if (!hospitalName || hospitalName === '—' || hospitalName === 'غير محدد') {
-    alert('يرجى تعيين اسم المستشفى في الإعدادات أولاً');
-    return;
-  }
-  if (typeof JobPositionsDB === 'undefined') {
-    alert('مكتبة المناصب غير محملة، يرجى تحديث الصفحة');
-    return;
-  }
-  const record = await JobPositionsDB.load(hospitalName);
-  if (!record || !record.rows || !record.rows.length) {
-    alert('لا توجد مناصب محفوظة لـ "' + hospitalName + '".\n\nيمكن رفعها من: الإعدادات ← رفع مناصب الوظائف');
-    return;
-  }
+  alert('✅ تم إعداد المناصب مسبقاً\nالبيانات محملة ومحفوظة — لا حاجة لإعادة التحميل.');
+}
 
-  // ── تحقق من تطابق اسم المستشفى في السجل ────────────────────────────────
-  if (record.hospitalName && record.hospitalName !== hospitalName) {
-    if (!confirm(
-      '⚠️ تنبيه: المناصب المحفوظة تخص "' + record.hospitalName + '"\n' +
-      'وأنت حالياً في "' + hospitalName + '".\n\n' +
-      'هل تريد تحميلها رغم ذلك؟'
-    )) return;
-  }
-
-  const rows = record.rows;
-  const _isAmal = hospitalName.includes('الأمل');
+// ======= تنزيل التامبلت بالبيانات الحالية =======
+function downloadPositionsTemplate() {
+  if (typeof XLSX === 'undefined') { alert('مكتبة Excel غير محملة، يرجى تحديث الصفحة'); return; }
   const deptLabels = {
     cleaning:'النظافة', electricity:'الكهرباء',
     civil_works:'الأعمال المدنية', mechanical:'الميكانيكا', security:'أمن وسلامة'
   };
-  const byDept = {};
-  rows.forEach(r => { if (!byDept[r.dept]) byDept[r.dept] = []; byDept[r.dept].push(r); });
-  const summary = Object.entries(byDept).map(([k,v]) => '• ' + (deptLabels[k]||k) + ': ' + v.length + ' منصب').join('\n');
-
-  // ── خيار الاستبدال أو الإضافة ───────────────────────────────────────────
   const currentData = getAttendanceData();
-  const hasExisting = Object.values(currentData).some(arr => Array.isArray(arr) && arr.length > 0);
-  var replaceMode = true;
-  if (hasExisting) {
-    const choice = confirm(
-      'وُجدت ' + rows.length + ' منصب وظيفي لـ "' + hospitalName + '":\n\n' + summary +
-      '\n\n⚠️ يوجد بيانات حالية في الجداول.\n' +
-      'اضغط "موافق" للاستبدال الكامل (تُمسح البيانات الحالية).\n' +
-      'اضغط "إلغاء" لإلغاء العملية.'
-    );
-    if (!choice) return;
-    replaceMode = true;
-  } else {
-    if (!confirm('وُجدت ' + rows.length + ' منصب وظيفي لـ "' + hospitalName + '":\n\n' + summary + '\n\nهل تريد تحميلها؟')) return;
-    replaceMode = false;
-  }
-
-  try {
-    var daysCount = 30;
-    try { if (typeof getExtractPeriodDetails === 'function') daysCount = getExtractPeriodDetails().daysInMonth || 30; } catch(_){}
-
-    // استبدال كامل: ابدأ بجداول فارغة للأقسام الموجودة في السجل
-    var allData = replaceMode ? {} : getAttendanceData();
-
-    let added = 0;
-    rows.forEach(r => {
-      if (!r.dept) return;
-      if (!allData[r.dept]) allData[r.dept] = [];
-      allData[r.dept].push({
-        name: '', jobTitle: r.jobTitle || '', category: String(r.category || '1'),
-        salary: parseFloat(r.salary) || 0, nationality: r.nationality || 'غير سعودي',
-        nationalityFine: 0,
-        iqamaId: '',
-        days: Array(daysCount).fill('ح')
-      });
-      added++;
+  const headers = ['اسم الموظف', 'رقم الهوية / الإقامة', 'القسم', 'مسمى الوظيفة', 'التكلفة الشهرية', 'الفئة', 'الجنسية'];
+  const dataRows = [];
+  Object.entries(currentData).forEach(function([dept, employees]) {
+    if (!Array.isArray(employees)) return;
+    employees.forEach(function(emp) {
+      dataRows.push([
+        emp.name || '',
+        emp.iqamaId || '',
+        deptLabels[dept] || dept,
+        emp.jobTitle || '',
+        emp.salary || 0,
+        emp.category || '1',
+        emp.nationality || 'غير سعودي'
+      ]);
     });
-    saveAttendanceData(allData);
-    renderTables();
-    alert('✅ تم تحميل ' + added + ' منصب بنجاح.\nأدخل أسماء الموظفين وأرقام الهويات في الجداول أدناه.');
-  } catch (err) {
-    alert('خطأ في تحميل المناصب: ' + err.message);
-  }
-}
-
-// ======= تنزيل التامبلت بالوظائف =======
-function downloadPositionsTemplate() {
-  if (typeof XLSX === 'undefined') { alert('مكتبة Excel غير محملة، يرجى تحديث الصفحة'); return; }
-  if (typeof JobPositionsDB === 'undefined') { alert('مكتبة المناصب غير محملة، يرجى تحديث الصفحة'); return; }
-  const hospitalName = document.querySelector('.hospitalName')?.textContent?.trim();
-  if (!hospitalName || hospitalName === '—' || hospitalName === 'غير محدد') {
-    alert('يرجى تعيين اسم المستشفى في الإعدادات أولاً، ثم حاول مرة أخرى.');
-    return;
-  }
-  JobPositionsDB.load(hospitalName).then(function(rec) {
-    if (!rec || !rec.rows || !rec.rows.length) {
-      alert('لا توجد مناصب محفوظة لـ "' + hospitalName + '".\n\nيرجى رفعها أولاً من:\nالإعدادات ← رفع مناصب الوظائف');
-      return;
-    }
-    const deptLabels = {
-      cleaning:'النظافة', electricity:'الكهرباء',
-      civil_works:'الأعمال المدنية', mechanical:'الميكانيكا', security:'أمن وسلامة'
-    };
-    const headers = ['اسم الموظف', 'رقم الهوية / الإقامة', 'القسم', 'مسمى الوظيفة', 'التكلفة الشهرية', 'الفئة', 'الجنسية'];
-    const dataRows = rec.rows.map(function(r) {
-      return [
-        '',
-        '',
-        deptLabels[r.dept] || r.dept || '',
-        r.jobTitle || '',
-        r.salary || 0,
-        r.category || '1',
-        r.nationality || 'غير سعودي'
-      ];
-    });
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([headers].concat(dataRows));
-    ws['!cols'] = [{wch:25},{wch:22},{wch:22},{wch:32},{wch:18},{wch:8},{wch:15}];
-    XLSX.utils.book_append_sheet(wb, ws, hospitalName.substring(0, 31));
-    XLSX.writeFile(wb, 'تامبلت-' + hospitalName + '.xlsx');
-    closeDialog('upload-excel-dialog');
-  }).catch(function(err) {
-    alert('خطأ: ' + err.message);
   });
+  if (!dataRows.length) { alert('لا توجد بيانات حالية للتصدير.'); return; }
+  const hospitalName = document.querySelector('.hospitalName')?.textContent?.trim() || 'البيانات';
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headers].concat(dataRows));
+  ws['!cols'] = [{wch:25},{wch:22},{wch:22},{wch:32},{wch:18},{wch:8},{wch:15}];
+  XLSX.utils.book_append_sheet(wb, ws, hospitalName.substring(0, 31));
+  XLSX.writeFile(wb, 'بيانات-' + hospitalName + '.xlsx');
+  closeDialog('upload-excel-dialog');
+  setTimeout(function() {
+    alert('📥 تم تنزيل القالب بالبيانات الحالية.\nقم بمراجعته وإعادة رفعه مرة أخرى.');
+  }, 300);
 }
 
 // ======= دالة مساعدة: تحويل اسم القسم → مفتاح =======
