@@ -736,20 +736,35 @@ function getDentalData() {
     /* ================================================================
        دوال التواقيع
     ================================================================ */
-   function openSignatureEditDialog() {
-    document.getElementById('signature-edit-dialog').style.display = 'block';
-    document.getElementById('signature-edit-overlay').style.display = 'block';
-    document.getElementById('signature-password-section').style.display = 'none';
-    document.getElementById('signature-edit-content').style.display = 'block';
-    document.getElementById('signature-edit-dialog').classList.add('wide-dialog');
+function openSignatureEditDialog() {
+    const dialog = document.getElementById('signature-edit-dialog');
+    const overlay = document.getElementById('signature-edit-overlay');
+
+    if (dialog) dialog.style.display = 'block';
+    if (overlay) overlay.style.display = 'block';
+
+    const passBox = document.getElementById('signature-password-section');
+    const contentBox = document.getElementById('signature-edit-content');
+
+    if (passBox) passBox.style.display = 'none';
+    if (contentBox) contentBox.style.display = 'block';
+
+    if (dialog) dialog.classList.add('wide-dialog');
+
     populateSignatureFields();
 }
 
-    function closeSignatureEditDialog() {
-        document.getElementById('signature-edit-dialog').style.display = 'none';
-        document.getElementById('signature-edit-overlay').style.display = 'none';
-        document.getElementById('signature-edit-dialog').classList.remove('wide-dialog');
+   function closeSignatureEditDialog() {
+    const dialog = document.getElementById('signature-edit-dialog');
+    const overlay = document.getElementById('signature-edit-overlay');
+
+    if (dialog) {
+        dialog.style.display = 'none';
+        dialog.classList.remove('wide-dialog');
     }
+
+    if (overlay) overlay.style.display = 'none';
+}
 
     function verifySignaturePassword() {
         const input = document.getElementById('signature-password-input').value;
@@ -872,12 +887,13 @@ function getDentalData() {
     /* ================================================================
        دوال مساعدة عامة
     ================================================================ */
-    function closeDialog(dialogId, overlayId) {
-        const d = document.getElementById(dialogId);
-        const o = document.getElementById(overlayId);
-        if (d) d.style.display = 'none';
-        if (o) o.style.display = 'none';
-    }
+function closeDialog(dialogId, overlayId) {
+    const dialog = document.getElementById(dialogId);
+    const overlay = document.getElementById(overlayId);
+
+    if (dialog) dialog.style.display = 'none';
+    if (overlay) overlay.style.display = 'none';
+}
 
     function showSuccessMessage(msg) { alert(msg); }
 
