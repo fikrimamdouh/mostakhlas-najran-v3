@@ -295,7 +295,9 @@
     const hospitalName = getHospitalName();
     const allData      = {};   // كل المفاتيح → user_storage (نسخ احتياطي)
     const hospitalData = {};   // المفاتيح التشغيلية → hospital_storage
-
+function toSharedHospitalKey(key) {
+  return key.replace(/^_u\d+_/, '');
+}
    for (let i = 0; i < localStorage.length; i++) {
   const key = localStorage.key(i);
   if (!key) continue;
@@ -317,7 +319,7 @@
   const baseKey = SYNC_KEYS.find(k => key === k || key.endsWith(k)) || key;
 
   if (!PERSONAL_KEYS.has(baseKey)) {
-    hospitalData[key] = val;
+    const hospitalKey = toSharedHospitalKey(key); hospitalData[hospitalKey] = val;
   }
 }
   
