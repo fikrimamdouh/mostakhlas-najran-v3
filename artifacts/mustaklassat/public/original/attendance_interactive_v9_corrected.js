@@ -214,6 +214,7 @@ function rebuildTableHeaders() {
     'agriculture',
     'civil-works',
     'mechanical',
+    'security',
     'laundry',
     'patient-services',
     'admin-saudi'
@@ -632,6 +633,7 @@ function processAndFilterExcelData(file) {
             { id: 'agriculture', key: 'agriculture', number: 3 },
             { id: 'civil-works', key: 'civil_works', number: 4 },
             { id: 'mechanical', key: 'mechanical', number: 5 },
+            { id: 'security', key: 'security', number: 5 },
             { id: 'laundry', key: 'laundry', number: 6 },
             { id: 'patient-services', key: 'patient_services', number: 7 },
             { id: 'admin-saudi', key: 'admin_saudi', number: 8 }
@@ -1856,6 +1858,7 @@ function openPDFExportDialog() {
     { key: 'agriculture',      name: 'الزراعة' },
     { key: 'civil-works',      name: 'الأعمال المدنية' },
     { key: 'mechanical',       name: 'الميكانيكا' },
+    { key: 'security',         name: 'أمن وسلامة' },
     { key: 'laundry',          name: 'المغسلة' },
     { key: 'patient-services', name: 'الأمن والسلامة' },
     { key: 'admin-saudi',      name: 'الوظائف الإدارية السعوديين' }
@@ -1992,6 +1995,7 @@ function openExcelExportDialog() {
     { key: 'agriculture',       name: getDepartmentName('agriculture') },
     { key: 'civil_works',       name: getDepartmentName('civil_works') },
     { key: 'mechanical',        name: getDepartmentName('mechanical') },
+    { key: 'security',          name: getDepartmentName('security') },
     { key: 'laundry',           name: getDepartmentName('laundry') },
     { key: 'patient_services',  name: getDepartmentName('patient_services') },
     { key: 'admin_saudi',       name: getDepartmentName('admin_saudi') }
@@ -2351,10 +2355,11 @@ const departments = [
     { key: 'cleaning', name: getDepartmentName('cleaning') },
     { key: 'electricity', name: getDepartmentName('electricity') },
     { key: 'agriculture', name: getDepartmentName('agriculture') },
-    { key: 'civil_works', name: getDepartmentName('civil_works') }, // <-- التصحيح هنا
+    { key: 'civil_works', name: getDepartmentName('civil_works') },
     { key: 'mechanical', name: getDepartmentName('mechanical') },
+    { key: 'security', name: getDepartmentName('security') },
     { key: 'laundry', name: getDepartmentName('laundry') },
-    { key: 'patient_services', name: getDepartmentName('patient_services') }, // <-- التصحيح هنا
+    { key: 'patient_services', name: getDepartmentName('patient_services') },
     { key: 'admin_saudi', name: getDepartmentName('admin_saudi') }
 ];
 
