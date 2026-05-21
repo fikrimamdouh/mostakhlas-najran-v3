@@ -20,6 +20,25 @@ const COMPANY_LABELS: Record<string, string> = {
   "سراكو": "شركة سراكو",
 };
 
+// مفتاح localStorage لتوقيع كل مستخدم في كل مستشفى
+function sigKey(userId: string, hospital: string) {
+  return `sig_${userId}_${hospital}`;
+}
+
+function getSavedSig(userId: string, hospital: string): { name: string; jobTitle: string } | null {
+  try {
+    const raw = localStorage.getItem(sigKey(userId, hospital));
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+function saveSig(userId: string, hospital: string, name: string, jobTitle: string) {
+  try {
+    localStorage.setItem(sigKey(userId, hospital), JSON.stringify({ name, jobTitle }));
+  } catch {}
+}
+
 function roleLabel(role: string) {
   if (role === "admin") return "🔑 مدير النظام";
   if (role === "supervisor") return "🔍 مدير مستخلصات";
@@ -39,11 +58,17 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", jobTitle: "" });
 
+  const userId = (user as any)?.id as string | undefined;
+  const hospital = (user as any)?.hospital as string | undefined;
+
+  // جلب التوقيع الخاص بالمستشفى الحالي من localStorage أولاً
+  const localSig = userId && hospital ? getSavedSig(userId, hospital) : null;
+
   const startEdit = () => {
     setForm({
-      name: user?.name || "",
+      name: localSig?.name || user?.name || "",
       phone: (user as any)?.phone || "",
-      jobTitle: (user as any)?.jobTitle || "",
+      jobTitle: localSig?.jobTitle || (user as any)?.jobTitle || "",
     });
     setEditing(true);
   };
@@ -63,6 +88,10 @@ export default function Settings() {
         body: JSON.stringify(form),
       });
       if (res.ok) {
+        // حفظ التوقيع في localStorage مربوطاً بالمستشفى الحالي
+        if (userId && hospital) {
+          saveSig(userId, hospital, form.name, form.jobTitle);
+        }
         queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
         toast({ title: "✅ تم الحفظ", description: "تم تحديث بياناتك بنجاح" });
         setEditing(false);
@@ -88,8 +117,8 @@ export default function Settings() {
 
   const companyKey = (user as any)?.company as string | undefined;
   const companyLabel = companyKey ? (COMPANY_LABELS[companyKey] || companyKey) : null;
-  const hospital = (user as any)?.hospital as string | undefined;
-  const jobTitle = (user as any)?.jobTitle as string | undefined;
+  const jobTitle = localSig?.jobTitle || (user as any)?.jobTitle as string | undefined;
+  const displayName = localSig?.name || user?.name;
   const contractNumber = (user as any)?.contractNumber as string | undefined;
   const phone = (user as any)?.phone as string | undefined;
 
@@ -108,6 +137,15 @@ export default function Settings() {
         )}
       </div>
 
+      {/* تنبيه إذا كان التوقيع مخصص للمستشفى الحالي */}
+      {hospital && localSig && (
+        <div className="rounded-xl px-4 py-3 flex items-center gap-2 text-sm"
+          style={{ background: "#f0f7ff", border: "1px solid #c7d8f0", color: "#1e3c72" }}>
+          <span>🏥</span>
+          <span>التوقيع المعروض خاص بـ: <strong>{hospital}</strong> — كل مستشفى لها توقيع مستقل</span>
+        </div>
+      )}
+
       {/* Profile card */}
       <Card className="overflow-hidden border" style={{ borderColor: "#e8edf7" }}>
         <div className="h-28" style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)" }} />
@@ -117,7 +155,7 @@ export default function Settings() {
               {clerkUser?.imageUrl ? (
                 <img
                   src={clerkUser.imageUrl ?? undefined}
-                  alt={user.name ?? undefined}
+                  alt={displayName ?? undefined}
                   className="h-20 w-20 rounded-full object-cover shadow-lg border-4 border-white"
                 />
               ) : (
@@ -125,7 +163,7 @@ export default function Settings() {
                   className="flex h-20 w-20 items-center justify-center rounded-full text-white text-3xl font-bold shadow-lg border-4 border-white"
                   style={{ background: "linear-gradient(135deg,#d4af37,#b8962e)" }}
                 >
-                  {(user?.name || "م").charAt(0)}
+                  {(displayName || "م").charAt(0)}
                 </div>
               )}
               <button
@@ -138,7 +176,7 @@ export default function Settings() {
               </button>
             </div>
             <div className="space-y-1 mb-2">
-              <h2 className="text-2xl font-bold" style={{ color: "#1e3c72" }}>{user.name}</h2>
+              <h2 className="text-2xl font-bold" style={{ color: "#1e3c72" }}>{displayName}</h2>
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge className={user.role === "admin" ? "bg-[#1e3c72] text-white" : "bg-gray-100 text-gray-700"}>
                   {roleLabel(user.role)}
@@ -152,9 +190,8 @@ export default function Settings() {
 
           {!editing ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
-              {/* Editable fields */}
               {[
-                { icon: User, label: "الاسم الكامل", value: user.name },
+                { icon: User, label: "الاسم الكامل", value: displayName },
                 { icon: Mail, label: "البريد الإلكتروني", value: user.email },
                 { icon: Phone, label: "رقم الهاتف", value: phone || "غير محدد" },
                 { icon: Briefcase, label: "المسمى الوظيفي", value: jobTitle || "غير محدد" },
@@ -171,7 +208,6 @@ export default function Settings() {
                 </div>
               ))}
 
-              {/* Locked contract fields */}
               {(companyLabel || hospital || contractNumber) && (
                 <div className="md:col-span-2 mt-2">
                   <div className="rounded-xl p-4 space-y-4" style={{ background: "#f8f9fe", border: "1px solid #e8edf7" }}>
@@ -223,6 +259,13 @@ export default function Settings() {
             </div>
           ) : (
             <div className="space-y-4 mt-4">
+              {hospital && (
+                <div className="rounded-lg px-3 py-2 text-xs flex items-center gap-2"
+                  style={{ background: "#fff8e1", border: "1px solid #ffe082", color: "#7a5c00" }}>
+                  <span>⚠️</span>
+                  <span>الاسم والمسمى الوظيفي سيُحفظ خصيصاً لـ <strong className="mx-1">{hospital}</strong> — كل مستشفى مستقل</span>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">الاسم الكامل</Label>
@@ -243,7 +286,6 @@ export default function Settings() {
                 </div>
               </div>
 
-              {/* Show locked fields as read-only during edit too */}
               {(companyLabel || hospital) && (
                 <div className="rounded-xl p-4" style={{ background: "#f8f9fe", border: "1px dashed #c7d2e8" }}>
                   <div className="flex items-center gap-2 mb-3">
