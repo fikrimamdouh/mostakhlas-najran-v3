@@ -306,8 +306,7 @@
       return key.replace(/^_u\d+_/, '');
     }
 
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
+    for (const key of Object.keys(localStorage)) {
       if (!key) continue;
 
       if (!shouldSyncKey(key)) continue;
