@@ -32,31 +32,31 @@
     'appTitles_v1', 'healthCentersData', 'reviewExtractData', 'requestVisitData',
     'settings_main', 'settings_advanced',
     'finalLaborCost', 'performanceTotalDeduction', 'grand-net-total',
+    'grand-net-total-centers', 'grand-net-total-admin',
     'performanceSignatures', 'performanceSignatures_v2', 'performanceTableNames',
     'najran_labor_attendance_done', 'najran_labor_performance_done',
     'najran_health_attendance_done', 'najran_admin_offices_attendance_done',
     'adminOfficeNames_v1', 'adminOfficesAttendanceData_v1',
     'admin_offices_consumables_v1.0',
     'finalConsumablesCost',
-'adminOfficeAffiliations_v1',
-'performance_data_consumables_v27',
-'sewage_disposal_data_consumables_v27',
-'subcontractors_data_consumables_v27',
-'water_supply_data_consumables_v27',
+    'adminOfficeAffiliations_v1',
+    'performance_data_consumables_v27',
+    'sewage_disposal_data_consumables_v27',
+    'subcontractors_data_consumables_v27',
+    'water_supply_data_consumables_v27',
     // بيانات التأسيسي (عقود الباطن + المستهلكات) — يرفعها الأدمن وتُوزَّع على كل مستخدمي المستشفى
     'contract_foundation_data',
-'ng_attendanceData',
-'ng_departmentNames',
-'ng_distributionSettings',
-'ng_finalLaborCost',
-'ng_performanceTotalDeduction',
-
-'nd_attendanceData',
-'nd_departmentNames',
-'nd_distributionSettings',
-'nd_finalLaborCost',
-'nd_performanceTotalDeduction',
-'nd_dentalAchievementTotals',
+    'ng_attendanceData',
+    'ng_departmentNames',
+    'ng_distributionSettings',
+    'ng_finalLaborCost',
+    'ng_performanceTotalDeduction',
+    'nd_attendanceData',
+    'nd_departmentNames',
+    'nd_distributionSettings',
+    'nd_finalLaborCost',
+    'nd_performanceTotalDeduction',
+    'nd_dentalAchievementTotals',
     // مفاتيح شخصية تبقى خاصة بالمستخدم
     'backupLog', 'backupLogs',
   ];
@@ -72,13 +72,29 @@
   ]);
 
   // المفاتيح المحمية — لا تُكتب فوقها من السحابة إذا كان المحلي موجوداً
-  // (البيانات تُدخَل بالرفع اليدوي للـ Excel ولا يجب أن تتغير تلقائياً)
   const PREFER_LOCAL_KEYS = new Set([
     'attendanceData',
     'centersAttendanceData_v2',
     'healthCentersAttendanceData',
     'adminOfficesAttendanceData_v1',
   ]);
+
+  // ── دالة مركزية لتحديد هل المفتاح يستحق المزامنة ──────────────────────
+  function shouldSyncKey(key) {
+    const nk = key.replace(/^_u\d+_/, '');
+    return (
+      SYNC_KEYS.includes(key) ||
+      SYNC_KEYS.includes(nk) ||
+      nk.includes('deptCalculatedCost_') ||
+      nk.includes('dept_') ||
+      nk.includes('sb_sigs_') ||
+      nk.includes('finalLaborCost') ||
+      nk.includes('grand-net-total') ||
+      nk.includes('najran_labor_') ||
+      nk.includes('najran_health_') ||
+      nk.includes('najran_admin_')
+    );
+  }
 
   function getSession() {
     try {
@@ -91,11 +107,10 @@
   }
 
   function getFreshToken() {
-  const s = getSession();
-  return s?.clerkToken || null;
-}
+    const s = getSession();
+    return s?.clerkToken || null;
+  }
 
-  // اسم مستشفى المستخدم من الجلسة
   function getHospitalName() {
     const s = getSession();
     return s?.hospital?.trim() || null;
@@ -131,7 +146,8 @@
     'consumablesTitle', 'consumablesPeriodFrom', 'consumablesPeriodTo',
     'spare_partsData', 'performanceData', 'achievementData',
     'performanceSignatures', 'performanceSignatures_v2', 'performanceTableNames',
-    'performanceTotalDeduction', 'finalLaborCost', 'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin',
+    'performanceTotalDeduction', 'finalLaborCost', 'grand-net-total',
+    'grand-net-total-centers', 'grand-net-total-admin',
     'najran_labor_attendance_done', 'najran_labor_performance_done',
     'najran_health_attendance_done', 'najran_admin_offices_attendance_done',
     'accreditationLetterData', 'adminJobsPrintState',
@@ -139,17 +155,16 @@
     'achievementItemNames', 'sparePartsTotalAmount',
     'dynamicSignatures',
     'ng_attendanceData',
-'ng_departmentNames',
-'ng_distributionSettings',
-'ng_finalLaborCost',
-'ng_performanceTotalDeduction',
-
-'nd_attendanceData',
-'nd_departmentNames',
-'nd_distributionSettings',
-'nd_finalLaborCost',
-'nd_performanceTotalDeduction',
-'nd_dentalAchievementTotals',
+    'ng_departmentNames',
+    'ng_distributionSettings',
+    'ng_finalLaborCost',
+    'ng_performanceTotalDeduction',
+    'nd_attendanceData',
+    'nd_departmentNames',
+    'nd_distributionSettings',
+    'nd_finalLaborCost',
+    'nd_performanceTotalDeduction',
+    'nd_dentalAchievementTotals',
   ];
 
   function getMonthKeyFromExtractData(raw) {
@@ -188,11 +203,9 @@
   }
 
   // ── سحب البيانات من السحابة ──────────────────────────────────────────────
-  // الترتيب: بيانات المستخدم أولاً → بيانات المستشفى تتغلب عليها
   async function pullFromCloud() {
     const hospitalName = getHospitalName();
 
-    // اجلب بيانات المستخدم وبيانات المستشفى معاً (بالتوازي)
     const [userResult, hospitalResult] = await Promise.all([
       apiFetch('/storage'),
       hospitalName ? apiFetch('/hospital-storage') : Promise.resolve(null),
@@ -201,14 +214,12 @@
     const userData     = userResult?.data     || {};
     const hospitalData = hospitalResult?.data  || {};
 
-    // كشف تغيير الشهر — نعتمد على بيانات المستشفى إن وُجدت وإلا بيانات المستخدم
     const cloudExtractData = hospitalData['persistentExtractData'] || userData['persistentExtractData'] || null;
     const oldMonthKey = getMonthKeyFromExtractData(localStorage.getItem('persistentExtractData'));
     const newMonthKey = getMonthKeyFromExtractData(cloudExtractData);
     const monthChanged = oldMonthKey && newMonthKey && oldMonthKey !== newMonthKey;
 
     if (monthChanged) {
-      // حفظ snapshot للشهر القديم
       if (typeof window.saveMonthSnapshot === 'function') {
         window.saveMonthSnapshot(oldMonthKey);
       } else {
@@ -225,7 +236,6 @@
       console.log(`[MzamanaCloud] تغيّر الشهر: ${oldMonthKey} → ${newMonthKey}`);
     }
 
-    // تطبيق بيانات المستخدم أولاً (الطبقة الأساسية)
     let merged = 0;
     for (const [key, value] of Object.entries(userData)) {
       try {
@@ -241,7 +251,6 @@
       } catch (_) {}
     }
 
-    // ثم تطبيق بيانات المستشفى (تتغلب على البيانات الشخصية للمفاتيح المشتركة)
     for (const [key, value] of Object.entries(hospitalData)) {
       if (!PERSONAL_KEYS.has(key)) {
         try {
@@ -286,83 +295,60 @@
   }
 
   // ── رفع البيانات إلى السحابة ─────────────────────────────────────────────
-  // المفاتيح التشغيلية → hospital_storage (مشتركة مع زملاء المستشفى)
-  // المفاتيح الشخصية  → user_storage فقط
-  // كلاهما أيضاً في user_storage كنسخة احتياطية للتوافق
-async function pushToCloud() {
-  if (!getSession()) return;
+  async function pushToCloud() {
+    if (!getSession()) return;
 
-  const hospitalName = getHospitalName();
-  const allData = {};
-  const hospitalData = {};
+    const hospitalName = getHospitalName();
+    const allData = {};
+    const hospitalData = {};
 
-  function toSharedHospitalKey(key) {
-    return key.replace(/^_u\d+_/, '');
-  }
+    function toSharedHospitalKey(key) {
+      return key.replace(/^_u\d+_/, '');
+    }
 
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (!key) continue;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
 
-    const normalizedKey = key.replace(/^_u\d+_/, '');
+      if (!shouldSyncKey(key)) continue;
 
-// ✅ وحط مكان كل واحدة
-const shouldSync =
-  SYNC_KEYS.includes(key) ||
-  SYNC_KEYS.includes(normalizedKey) ||
-  normalizedKey.includes('deptCalculatedCost_') ||
-  normalizedKey.includes('dept_') ||
-  normalizedKey.includes('sb_sigs_') ||
-  normalizedKey.includes('finalLaborCost') ||
-  normalizedKey.includes('grand-net-total') ||
-  normalizedKey.includes('najran_labor_') ||
-  normalizedKey.includes('najran_health_') ||
-  normalizedKey.includes('najran_admin_');
+      const val = localStorage.getItem(key);
+      if (val === null) continue;
 
-if (!shouldSync) continue;
+      allData[key] = val;
 
-    const val = localStorage.getItem(key);
-    if (val === null) continue;
+      const normalizedKey = key.replace(/^_u\d+_/, '');
+      if (!PERSONAL_KEYS.has(normalizedKey)) {
+        const hospitalKey = toSharedHospitalKey(key);
+        hospitalData[hospitalKey] = val;
+      }
+    }
 
-    allData[key] = val;
+    if (Object.keys(allData).length === 0) return;
 
-const baseKey = SYNC_KEYS.find(k =>
-  key === k ||
-  key.endsWith(k) ||
-  key.includes(k)
-) || key;    const personalBaseKey = baseKey.replace(/^_u\d+_/, '');
+    console.log('[DEBUG hospitalName]', hospitalName);
+    console.log('[DEBUG allData count]', Object.keys(allData).length);
+    console.log('[DEBUG hospitalData count]', Object.keys(hospitalData).length);
+    console.log('[DEBUG hospitalData keys]', Object.keys(hospitalData));
 
-    if (!PERSONAL_KEYS.has(personalBaseKey)) {
-      const hospitalKey = toSharedHospitalKey(key);
-      hospitalData[hospitalKey] = val;
+    const [userResult, hospitalResult] = await Promise.all([
+      apiFetch('/storage', {
+        method: 'PUT',
+        body: JSON.stringify({ data: allData })
+      }),
+      hospitalName && Object.keys(hospitalData).length > 0
+        ? apiFetch('/hospital-storage', {
+            method: 'PUT',
+            body: JSON.stringify({ data: hospitalData })
+          })
+        : Promise.resolve(null),
+    ]);
+
+    if (userResult || hospitalResult) {
+      const hosp = hospitalResult?.saved ? ` + ${hospitalResult.saved} مشترك` : '';
+      console.log(`[MzamanaCloud] ✓ رُفع ${userResult?.saved ?? 0} شخصي${hosp}`);
     }
   }
-
-  if (Object.keys(allData).length === 0) return;
-
-  console.log('[DEBUG hospitalName]', hospitalName);
-  console.log('[DEBUG allData count]', Object.keys(allData).length);
-  console.log('[DEBUG hospitalData count]', Object.keys(hospitalData).length);
-  console.log('[DEBUG hospitalData keys]', Object.keys(hospitalData));
-
-  const [userResult, hospitalResult] = await Promise.all([
-    apiFetch('/storage', {
-      method: 'PUT',
-      body: JSON.stringify({ data: allData })
-    }),
-    hospitalName && Object.keys(hospitalData).length > 0
-      ? apiFetch('/hospital-storage', {
-          method: 'PUT',
-          body: JSON.stringify({ data: hospitalData })
-        })
-      : Promise.resolve(null),
-  ]);
-
-  if (userResult || hospitalResult) {
-    const hosp = hospitalResult?.saved ? ` + ${hospitalResult.saved} مشترك` : '';
-    console.log(`[MzamanaCloud] ✓ رُفع ${userResult?.saved ?? 0} شخصي${hosp}`);
-  }
-}
 
   // ── إشعارات المستخدم ──────────────────────────────────────────────────────
   function showTokenExpiredBanner() {
@@ -421,7 +407,6 @@ const baseKey = SYNC_KEYS.find(k =>
     showSyncStatus('done');
   }
 
-  // كشف syncNow و pullFromCloud للاستخدام الخارجي
   window.najranSyncNow      = syncNow;
   window.najranPullFromCloud = pullFromCloud;
 
@@ -437,7 +422,6 @@ const baseKey = SYNC_KEYS.find(k =>
       console.log('[MzamanaCloud] وضع شخصي (لا يوجد مستشفى مرتبط)');
     }
 
-    // علامة لمنع الـ setItem override من إطلاق sync أثناء السحب من السيرفر
     let _pulling = false;
 
     const origPullFromCloud = pullFromCloud;
@@ -447,7 +431,6 @@ const baseKey = SYNC_KEYS.find(k =>
       try { await origPullFromCloud(); } finally { _pulling = false; }
     }
 
-    // تحديث التعريض العام بنسخة آمنة (مع _pulling guard)
     window.najranPullFromCloud = pullFromCloudSafe;
 
     await pullFromCloudSafe();
@@ -455,7 +438,6 @@ const baseKey = SYNC_KEYS.find(k =>
     setInterval(syncNow, SYNC_INTERVAL_MS);
     window.addEventListener('beforeunload', () => { pushToCloud(); });
 
-    // مزامنة فورية عند تغيير أي حقل إدخال أو خلية (debounce 2 ث)
     let _inputDebounce = null;
     document.addEventListener('input', () => {
       clearTimeout(_inputDebounce);
@@ -466,44 +448,23 @@ const baseKey = SYNC_KEYS.find(k =>
       _inputDebounce = setTimeout(syncNow, 2_000);
     });
 
-    // debounce على storage event (30 ث) — يمنع الحلقة اللانهائية بين التابات
+    // debounce على storage event (30 ث)
     let _storageDebounce = null;
     window.addEventListener('storage', (e) => {
-const shouldSync =
-  e.key &&
-  (
-(()=>{ const nk = e.key.replace(/^_u\d+_/,'');
-  return SYNC_KEYS.includes(e.key) || SYNC_KEYS.includes(nk) ||
-  nk.includes('deptCalculatedCost_') || nk.includes('dept_') ||
-  nk.includes('sb_sigs_') || nk.includes('finalLaborCost') ||
-  nk.includes('grand-net-total') || nk.includes('najran_labor_') ||
-  nk.includes('najran_health_') || nk.includes('najran_admin_');
-})()
-  );
-
-if (!shouldSync) return;
-clearTimeout(_storageDebounce);
+      if (!e.key || !shouldSyncKey(e.key)) return;
+      clearTimeout(_storageDebounce);
+      _storageDebounce = setTimeout(syncNow, 30_000);
+    });
 
     // override setItem مع debounce 30 ثانية
-const origSetItem = localStorage.setItem.bind(localStorage);
-
-localStorage.setItem = function (key, value) {
-  origSetItem(key, value);
-
-const shouldSync = (()=>{ const nk = key.replace(/^_u\d+_/,'');
-  return SYNC_KEYS.includes(key) || SYNC_KEYS.includes(nk) ||
-  nk.includes('deptCalculatedCost_') || nk.includes('dept_') ||
-  nk.includes('sb_sigs_') || nk.includes('finalLaborCost') ||
-  nk.includes('grand-net-total') || nk.includes('najran_labor_') ||
-  nk.includes('najran_health_') || nk.includes('najran_admin_');
-})();
-
-    localStorage._syncTimeout = setTimeout(
-      syncNow,
-      30_000
-    );
-  }
-};
+    const origSetItem = localStorage.setItem.bind(localStorage);
+    localStorage.setItem = function (key, value) {
+      origSetItem(key, value);
+      if (!_pulling && shouldSyncKey(key)) {
+        clearTimeout(localStorage._syncTimeout);
+        localStorage._syncTimeout = setTimeout(syncNow, 30_000);
+      }
+    };
 
     console.log('[MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)');
   }
