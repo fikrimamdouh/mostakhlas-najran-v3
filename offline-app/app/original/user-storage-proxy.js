@@ -58,6 +58,8 @@
 
   try {
     const proxy = new Proxy(localStorage, proxyHandler);
+        window._najranRealStorage = localStorage;
+
     Object.defineProperty(window, 'localStorage', {
       value: proxy,
       configurable: true,
