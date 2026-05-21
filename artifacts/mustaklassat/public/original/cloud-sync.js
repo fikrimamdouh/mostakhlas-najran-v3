@@ -295,6 +295,16 @@
   }
 
   // ── رفع البيانات إلى السحابة ─────────────────────────────────────────────
+  // نستخدم Storage.prototype مباشرة لتجاوز user-storage-proxy
+  const _realGet = Storage.prototype.getItem.bind(localStorage);
+  function _realKeys() {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      keys.push(Storage.prototype.key.call(localStorage, i));
+    }
+    return keys;
+  }
+
   async function pushToCloud() {
     if (!getSession()) return;
 
@@ -306,12 +316,12 @@
       return key.replace(/^_u\d+_/, '');
     }
 
-    for (const key of Object.keys(localStorage)) {
+    for (const key of _realKeys()) {
       if (!key) continue;
 
       if (!shouldSyncKey(key)) continue;
 
-      const val = localStorage.getItem(key);
+      const val = _realGet(key);
       if (val === null) continue;
 
       allData[key] = val;
