@@ -79,23 +79,21 @@
     'adminOfficesAttendanceData_v1',
   ]);
 
-  // ── دالة مركزية لتحديد هل المفتاح يستحق المزامنة ──────────────────────
-  function shouldSyncKey(key) {
-    const nk = key.replace(/^_u\d+_/, '');
-    return (
-      SYNC_KEYS.includes(key) ||
-      SYNC_KEYS.includes(nk) ||
-      nk.includes('deptCalculatedCost_') ||
-      nk.includes('dept_') ||
-      nk.includes('sb_sigs_') ||
-      nk.includes('finalLaborCost') ||
-      nk.includes('grand-net-total') ||
-      nk.includes('najran_labor_') ||
-      nk.includes('najran_health_') ||
-      nk.includes('najran_admin_')
-    );
-  }
-
+ function shouldSyncKey(key) {
+  const nk = key.replace(/^_u\d+_/, '');
+  return (
+    SYNC_KEYS.includes(key) ||
+    SYNC_KEYS.includes(nk) ||
+    nk.includes('deptCalculatedCost_') ||
+    nk.includes('dept_') ||
+    nk.includes('sb_sigs_') ||
+    nk.includes('finalLaborCost') ||
+    nk.includes('grand-net-total') ||
+    nk.includes('najran_labor_') ||
+    nk.includes('najran_health_') ||
+    nk.includes('najran_admin_')
+  );
+}
   function getSession() {
     try {
       const raw = localStorage.getItem(SESSION_KEY);
@@ -295,13 +293,25 @@
   }
 
   // ── رفع البيانات إلى السحابة ─────────────────────────────────────────────
-  // نستخدم Storage.prototype مباشرة لتجاوز user-storage-proxy
-  const _realGet = Storage.prototype.getItem.bind(localStorage);
+  const _realStorage = (function () {
+    try {
+      if (window._najranRealStorage instanceof Storage) return window._najranRealStorage;
+    } catch (_) {}
+    try {
+      const desc = Object.getOwnPropertyDescriptor(window, 'localStorage');
+      if (desc && typeof desc.get === 'function') return desc.get.call(window);
+    } catch (_) {}
+    return localStorage;
+  })();
+
+  const _realGet = Storage.prototype.getItem.bind(_realStorage);
+  const _realKey = Storage.prototype.key.bind(_realStorage);
+  const _realLenDesc = Object.getOwnPropertyDescriptor(Storage.prototype, 'length');
+
   function _realKeys() {
+    const len = _realLenDesc ? _realLenDesc.get.call(_realStorage) : _realStorage.length;
     const keys = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      keys.push(Storage.prototype.key.call(localStorage, i));
-    }
+    for (let i = 0; i < len; i++) keys.push(_realKey(i));
     return keys;
   }
 
@@ -318,7 +328,6 @@
 
     for (const key of _realKeys()) {
       if (!key) continue;
-
       if (!shouldSyncKey(key)) continue;
 
       const val = _realGet(key);
@@ -334,11 +343,6 @@
     }
 
     if (Object.keys(allData).length === 0) return;
-
-    console.log('[DEBUG hospitalName]', hospitalName);
-    console.log('[DEBUG allData count]', Object.keys(allData).length);
-    console.log('[DEBUG hospitalData count]', Object.keys(hospitalData).length);
-    console.log('[DEBUG hospitalData keys]', Object.keys(hospitalData));
 
     const [userResult, hospitalResult] = await Promise.all([
       apiFetch('/storage', {
