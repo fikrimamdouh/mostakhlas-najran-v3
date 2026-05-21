@@ -17,6 +17,7 @@
       return null;
     }
   }
+window._najranRealStorage = localStorage;
 
   const PREFIX = getPrefix();
   if (!PREFIX) return; // لا يوجد جلسة → تشغيل طبيعي
