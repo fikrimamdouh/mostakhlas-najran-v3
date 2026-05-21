@@ -3145,42 +3145,34 @@ function closeEditTableNamesDialog() {
     overlay.style.display = 'none';
 }
 
-// 3. دالة لملء النافذة بالأسماء الحالية
 function populateTableNamesForm() {
     const container = document.getElementById('table-names-form-container');
     if (!container) return;
     const savedNames = JSON.parse(localStorage.getItem('performanceTableNames') || '{}');
     container.innerHTML = '';
-
     const tableIds = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'laundry', 'security'];
-    const defaultLabels = {
-        cleaning:    'قسم النظافة',
-        electricity: 'قسم الكهرباء',
-        agriculture: 'قسم الزراعة',
-        civil:       'قسم المدني',
-        mechanics:   'قسم الميكانيكا',
-        laundry:     'قسم الغسيل',
-        security:    'قسم الأمن',
-    };
+    const defaultLabels = { cleaning: 'النظافة', electricity: 'الكهرباء', agriculture: 'الزراعة', civil: 'الأعمال المدنية', mechanics: 'الميكانيكا', laundry: 'الغسيل', security: 'الأمن' };
 
     tableIds.forEach(tableId => {
         const tableDiv = document.getElementById(tableId);
         if (!tableDiv) return;
         const htmlTitle = tableDiv.querySelector('.table-title')?.textContent?.trim() || tableId;
-// ✅ بعد
-const currentTitle = (savedNames[tableId] || htmlTitle || '').replace(/"/g, '&quot;');
+        const currentTitle = savedNames[tableId] || htmlTitle;
+
         const formGroup = document.createElement('div');
-        formGroup.style.cssText = 'margin-bottom:14px;';
-       formGroup.innerHTML = `
-    <label style="font-weight:bold;display:block;margin-bottom:5px;color:#555;">
-        ${defaultLabels[tableId] || tableId}:
-    </label>
-    <input type="text" id="name-input-${tableId}"
-           style="width:100%;padding:9px 12px;border-radius:6px;border:1px solid #ccc;font-family:inherit;font-size:14px;">
-`;
-const inputEl = formGroup.querySelector('input');
-if (inputEl) inputEl.value = currentTitle;
-container.appendChild(formGroup);
+        formGroup.style.cssText = 'margin-bottom:14px';
+        formGroup.innerHTML = `
+            <label style="font-weight:bold;display:block;margin-bottom:5px;color:#555;">
+                ${defaultLabels[tableId] || tableId}:
+            </label>
+            <input type="text" id="name-input-${tableId}"
+                   style="width:100%;padding:9px 12px;border-radius:6px;border:1px solid #ccc;font-family:inherit;font-size:14px;">
+        `;
+        const inputEl = formGroup.querySelector('input');
+        if (inputEl) inputEl.value = currentTitle;
+        container.appendChild(formGroup);
+    });
+}
 
 // 4. دالة لحفظ الأسماء الجديدة
 function saveTableNames() {
