@@ -129,8 +129,7 @@ export function Sidebar() {
       ) {
         setNotifAnim(false);
         setTimeout(() => setNotifOpen(false), 180);
-        setShowHospitalMenu(false); // ✅ أضف هذا السطر
-
+        setShowHospitalMenu(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -193,7 +192,6 @@ export function Sidebar() {
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
-      // حدّث najran_session في localStorage فوراً حتى تقرأ باقي الصفحات المستشفى الجديد
       try {
         const raw = localStorage.getItem('najran_session');
         if (raw) {
@@ -203,9 +201,7 @@ export function Sidebar() {
         }
         localStorage.setItem('hospitalName', h);
       } catch {}
-      // أبلِغ صفحات الـ original-viewer بتغيير الموقع فوراً (قبل انتظار refetch)
       try { window.dispatchEvent(new CustomEvent('najranHospitalChanged', { detail: { hospital: h } })); } catch {}
-      // أعِد جلب بيانات المستخدم في الخلفية (بدون انتظار)
       queryClient.refetchQueries({ queryKey: ['/api/users/me'] });
     } catch {
       // timeout أو خطأ شبكة — نحرر الزر فوراً
@@ -225,7 +221,6 @@ export function Sidebar() {
   const allowedModuleKeys = parseAllowedModules((dbUser as any)?.allowedModules);
   const userCompany = (dbUser as any)?.company as string | undefined;
   const allVisibleModules = filterModules(siteType, allowedModuleKeys, role, userCompany);
-  // approval يُعرض في قسم المستخلصات وليس في قسم الوحدات — تجنّباً للتكرار
   const visibleModules = allVisibleModules.filter(m => m.key !== 'approval');
 
   const { data: usersData } = useListUsers(
@@ -278,21 +273,16 @@ export function Sidebar() {
     ] : []),
   ];
 
-  // قسم المستخلصات — مرتّب حسب سير العمل الوظيفي
   const extractsNav = [
-    // 1. مراجعة المستخلص — أول خطوة: المستخدم يراجع ويرفع
     ...(!isViewer ? [
       { name: "مراجعة المستخلص", file: "review_extract.html", icon: FileSearch },
     ] : []),
-    // 2. اعتماد المستخلص — للمشرف/الأدمن أو من منحه الأدمن هذه الصلاحية
     ...(isAdmin || isSupervisor || (allowedModuleKeys !== null && allowedModuleKeys.includes('approval')) ? [
       { name: "اعتماد المستخلص", file: "approval.html", icon: FileCheck2 },
     ] : []),
-    // 3. النظرة الشاملة — لمن يحتاج متابعة كلية
     ...(isAdmin || isSupervisor || isContractSup || isViewer ? [
       { name: "النظرة الشاملة", file: "monthly-overview.html", icon: LayoutGrid },
     ] : []),
-    // 4. أرشيف المستخلص — متاح للجميع
     { name: "أرشيف المستخلص", file: "extract-archive.html", icon: Archive },
   ];
 
@@ -384,6 +374,127 @@ export function Sidebar() {
         <div className="px-3 py-1.5 text-center" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
           <div className="text-base font-bold tabular-nums" style={{ color: "#d4af37" }}>{formatTime(now)}</div>
           <div className="text-[10px]" style={{ color: "rgba(255,255,255,0.45)" }}>{formatDateShort(now)}</div>
+        </div>
+      )}
+
+      {/* Hospital Switcher */}
+      {dbUser?.hospital && multiHospital && (
+        <div className="px-2 py-1.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          {!collapsed ? (
+            <div className="relative">
+              <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5 px-1"
+                style={{ color: "rgba(212,175,55,0.6)" }}>
+                الموقع الحالي
+              </p>
+              <button
+                onClick={() => setShowHospitalMenu(v => !v)}
+                disabled={!!switchingHospital}
+                className="w-full flex items-center gap-2 rounded-lg px-2.5 py-2 transition-all hover:bg-white/10"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                }}
+              >
+                <span style={{ fontSize: 15 }}>🏥</span>
+                <span className="flex-1 text-right text-xs font-semibold text-white truncate">
+                  {switchingHospital ? `⏳ ${switchingHospital}` : dbUser.hospital}
+                </span>
+                <ChevronRight
+                  className="h-3.5 w-3.5 flex-shrink-0"
+                  style={{
+                    color: "rgba(255,255,255,0.4)",
+                    transform: showHospitalMenu ? "rotate(270deg)" : "rotate(90deg)",
+                    transition: "transform 0.2s",
+                  }}
+                />
+              </button>
+
+              {showHospitalMenu && (
+                <div
+                  className="absolute top-full right-0 mt-1 rounded-xl overflow-hidden shadow-2xl z-50 w-full"
+                  style={{
+                    background: "#0f2050",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                  }}
+                >
+                  <p
+                    className="text-[9px] px-3 py-2 font-bold uppercase tracking-widest"
+                    style={{
+                      color: "rgba(212,175,55,0.7)",
+                      borderBottom: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    اختر الموقع
+                  </p>
+                  {parsedHospitals.map((h) => (
+                    <button
+                      key={h}
+                      onClick={() => handleSwitchHospital(h)}
+                      className="w-full text-right px-3 py-2.5 text-xs transition-all flex items-center gap-2 hover:bg-white/10"
+                      style={{
+                        color: h === dbUser.hospital ? "#d4af37" : "rgba(255,255,255,0.8)",
+                        background: h === dbUser.hospital ? "rgba(212,175,55,0.12)" : "transparent",
+                        fontWeight: h === dbUser.hospital ? 700 : 400,
+                        borderBottom: "1px solid rgba(255,255,255,0.05)",
+                      }}
+                    >
+                      <span>{h === dbUser.hospital ? "✓" : "○"}</span>
+                      <span className="flex-1 truncate">{h}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="relative">
+              <button
+                onClick={() => setShowHospitalMenu(v => !v)}
+                title={`الموقع: ${dbUser.hospital}`}
+                className="w-full flex justify-center py-1.5 rounded-lg hover:bg-white/10 transition-all group relative"
+              >
+                <span style={{ fontSize: 16 }}>🏥</span>
+                <div className="absolute right-full mr-2 px-2 py-1 text-xs rounded-md bg-gray-900 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                  {dbUser.hospital}
+                </div>
+              </button>
+              {showHospitalMenu && (
+                <div
+                  className="absolute top-0 right-full mr-2 rounded-xl overflow-hidden shadow-2xl z-50"
+                  style={{
+                    background: "#0f2050",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    minWidth: 200,
+                  }}
+                >
+                  <p
+                    className="text-[9px] px-3 py-2 font-bold uppercase tracking-widest"
+                    style={{
+                      color: "rgba(212,175,55,0.7)",
+                      borderBottom: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    اختر الموقع
+                  </p>
+                  {parsedHospitals.map((h) => (
+                    <button
+                      key={h}
+                      onClick={() => handleSwitchHospital(h)}
+                      className="w-full text-right px-3 py-2.5 text-xs transition-all flex items-center gap-2 hover:bg-white/10"
+                      style={{
+                        color: h === dbUser.hospital ? "#d4af37" : "rgba(255,255,255,0.8)",
+                        background: h === dbUser.hospital ? "rgba(212,175,55,0.12)" : "transparent",
+                        fontWeight: h === dbUser.hospital ? 700 : 400,
+                        borderBottom: "1px solid rgba(255,255,255,0.05)",
+                      }}
+                    >
+                      <span>{h === dbUser.hospital ? "✓" : "○"}</span>
+                      <span className="flex-1 truncate">{h}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -522,126 +633,7 @@ export function Sidebar() {
           )}
         </div>
       )}
-{/* Hospital Switcher */}
-{dbUser?.hospital && multiHospital && (
-  <div className="px-2 py-1.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-    {!collapsed ? (
-      <div className="relative">
-        <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5 px-1"
-          style={{ color: "rgba(212,175,55,0.6)" }}>
-          الموقع الحالي
-        </p>
-        <button
-          onClick={() => setShowHospitalMenu(v => !v)}
-          disabled={!!switchingHospital}
-          className="w-full flex items-center gap-2 rounded-lg px-2.5 py-2 transition-all hover:bg-white/10"
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.12)",
-          }}
-        >
-          <span style={{ fontSize: 15 }}>🏥</span>
-          <span className="flex-1 text-right text-xs font-semibold text-white truncate">
-            {switchingHospital ? `⏳ ${switchingHospital}` : dbUser.hospital}
-          </span>
-          <ChevronRight
-            className="h-3.5 w-3.5 flex-shrink-0"
-            style={{
-              color: "rgba(255,255,255,0.4)",
-              transform: showHospitalMenu ? "rotate(270deg)" : "rotate(90deg)",
-              transition: "transform 0.2s",
-            }}
-          />
-        </button>
 
-        {showHospitalMenu && (
-          <div
-            className="absolute top-full right-0 mt-1 rounded-xl overflow-hidden shadow-2xl z-50 w-full"
-            style={{
-              background: "#0f2050",
-              border: "1px solid rgba(255,255,255,0.15)",
-            }}
-          >
-            <p
-              className="text-[9px] px-3 py-2 font-bold uppercase tracking-widest"
-              style={{
-                color: "rgba(212,175,55,0.7)",
-                borderBottom: "1px solid rgba(255,255,255,0.08)",
-              }}
-            >
-              اختر الموقع
-            </p>
-            {parsedHospitals.map((h) => (
-              <button
-                key={h}
-                onClick={() => handleSwitchHospital(h)}
-                className="w-full text-right px-3 py-2.5 text-xs transition-all flex items-center gap-2 hover:bg-white/10"
-                style={{
-                  color: h === dbUser.hospital ? "#d4af37" : "rgba(255,255,255,0.8)",
-                  background: h === dbUser.hospital ? "rgba(212,175,55,0.12)" : "transparent",
-                  fontWeight: h === dbUser.hospital ? 700 : 400,
-                  borderBottom: "1px solid rgba(255,255,255,0.05)",
-                }}
-              >
-                <span>{h === dbUser.hospital ? "✓" : "○"}</span>
-                <span className="flex-1 truncate">{h}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    ) : (
-      <div className="relative">
-        <button
-          onClick={() => setShowHospitalMenu(v => !v)}
-          title={`الموقع: ${dbUser.hospital}`}
-          className="w-full flex justify-center py-1.5 rounded-lg hover:bg-white/10 transition-all group relative"
-        >
-          <span style={{ fontSize: 16 }}>🏥</span>
-          <div className="absolute right-full mr-2 px-2 py-1 text-xs rounded-md bg-gray-900 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-            {dbUser.hospital}
-          </div>
-        </button>
-        {showHospitalMenu && (
-          <div
-            className="absolute top-0 right-full mr-2 rounded-xl overflow-hidden shadow-2xl z-50"
-            style={{
-              background: "#0f2050",
-              border: "1px solid rgba(255,255,255,0.15)",
-              minWidth: 200,
-            }}
-          >
-            <p
-              className="text-[9px] px-3 py-2 font-bold uppercase tracking-widest"
-              style={{
-                color: "rgba(212,175,55,0.7)",
-                borderBottom: "1px solid rgba(255,255,255,0.08)",
-              }}
-            >
-              اختر الموقع
-            </p>
-            {parsedHospitals.map((h) => (
-              <button
-                key={h}
-                onClick={() => handleSwitchHospital(h)}
-                className="w-full text-right px-3 py-2.5 text-xs transition-all flex items-center gap-2 hover:bg-white/10"
-                style={{
-                  color: h === dbUser.hospital ? "#d4af37" : "rgba(255,255,255,0.8)",
-                  background: h === dbUser.hospital ? "rgba(212,175,55,0.12)" : "transparent",
-                  fontWeight: h === dbUser.hospital ? 700 : 400,
-                  borderBottom: "1px solid rgba(255,255,255,0.05)",
-                }}
-              >
-                <span>{h === dbUser.hospital ? "✓" : "○"}</span>
-                <span className="flex-1 truncate">{h}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    )}
-  </div>
-)}
       {/* Scrollable nav */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 space-y-0.5" style={{ scrollbarWidth: "none" }}>
 
@@ -801,7 +793,7 @@ export function Sidebar() {
                 </div>
               </div>
             </div>
-          
+
             {(dbUser as any)?.lastLoginAt && (
               <p className="text-[10px] px-1" style={{ color: "rgba(255,255,255,0.3)" }}>
                 آخر دخول: {formatLastLogin((dbUser as any).lastLoginAt)}
