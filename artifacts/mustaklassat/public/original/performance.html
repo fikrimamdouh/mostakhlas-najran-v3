@@ -354,13 +354,19 @@ tr.total-row th, tr.total-row td {
     /* تلوين الكتابة داخل صف الإضافة والتعديل */
     #new-performance-row input,
     #new-performance-row select {
-        color: #007bff !important; /* أزرق */
+        color: #007bff !important;
         font-weight: 500;
     }
-.btn-titles { background: linear-gradient(135deg, #6f42c1, #9a67ea); }
+    .btn-titles { background: linear-gradient(135deg, #6f42c1, #9a67ea); }
 
+    #table-names-overlay {
+        z-index: 998 !important;
+    }
+    #table-names-dialog {
+        z-index: 1002 !important;
+        pointer-events: auto !important;
+    }
 </style>
-
 
 <link rel="stylesheet" href="/original/shared-styles.css">
 </head>
@@ -3125,16 +3131,14 @@ function createBackup() {
 // == كود تشغيل ميزة تعديل أسماء الجداول (جديد) ==
 // ===================================================
 
-// 1. دالة لفتح نافذة التعديل
 function openEditTableNamesDialog() {
     const dialog = document.getElementById('table-names-dialog');
     const overlay = document.getElementById('table-names-overlay');
-    
-    // تحميل الأسماء الحالية في الحقول
     populateTableNamesForm();
-
-    dialog.style.display = 'flex';
     overlay.style.display = 'block';
+    dialog.style.display = 'flex';
+    dialog.style.zIndex = '1002';
+    dialog.style.pointerEvents = 'auto';
 }
 
 // 2. دالة لإغلاق النافذة
