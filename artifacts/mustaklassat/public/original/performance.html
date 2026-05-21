@@ -3167,21 +3167,20 @@ function populateTableNamesForm() {
         const tableDiv = document.getElementById(tableId);
         if (!tableDiv) return;
         const htmlTitle = tableDiv.querySelector('.table-title')?.textContent?.trim() || tableId;
-        const currentTitle = savedNames[tableId] || htmlTitle;
-
+// ✅ بعد
+const currentTitle = (savedNames[tableId] || htmlTitle || '').replace(/"/g, '&quot;');
         const formGroup = document.createElement('div');
         formGroup.style.cssText = 'margin-bottom:14px;';
-        formGroup.innerHTML = `
-            <label style="font-weight:bold;display:block;margin-bottom:5px;color:#555;">
-                ${defaultLabels[tableId] || tableId}:
-            </label>
-            <input type="text" id="name-input-${tableId}"
-                   value="${currentTitle.replace(/"/g, '&quot;')}"
-                   style="width:100%;padding:9px 12px;border-radius:6px;border:1px solid #ccc;font-family:inherit;font-size:14px;">
-        `;
-        container.appendChild(formGroup);
-    });
-}
+       formGroup.innerHTML = `
+    <label style="font-weight:bold;display:block;margin-bottom:5px;color:#555;">
+        ${defaultLabels[tableId] || tableId}:
+    </label>
+    <input type="text" id="name-input-${tableId}"
+           style="width:100%;padding:9px 12px;border-radius:6px;border:1px solid #ccc;font-family:inherit;font-size:14px;">
+`;
+const inputEl = formGroup.querySelector('input');
+if (inputEl) inputEl.value = currentTitle;
+container.appendChild(formGroup);
 
 // 4. دالة لحفظ الأسماء الجديدة
 function saveTableNames() {
