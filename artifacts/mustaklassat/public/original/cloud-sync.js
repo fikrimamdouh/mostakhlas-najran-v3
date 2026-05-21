@@ -306,11 +306,18 @@ async function pushToCloud() {
 
     const normalizedKey = key.replace(/^_u\d+_/, '');
 
+// ✅ وحط مكان كل واحدة
 const shouldSync =
+  SYNC_KEYS.includes(key) ||
   SYNC_KEYS.includes(normalizedKey) ||
   normalizedKey.includes('deptCalculatedCost_') ||
   normalizedKey.includes('dept_') ||
-  normalizedKey.includes('sb_sigs_');
+  normalizedKey.includes('sb_sigs_') ||
+  normalizedKey.includes('finalLaborCost') ||
+  normalizedKey.includes('grand-net-total') ||
+  normalizedKey.includes('najran_labor_') ||
+  normalizedKey.includes('najran_health_') ||
+  normalizedKey.includes('najran_admin_');
 
 if (!shouldSync) continue;
 
@@ -465,14 +472,13 @@ const baseKey = SYNC_KEYS.find(k =>
 const shouldSync =
   e.key &&
   (
-SYNC_KEYS.some(k =>
-  e.key === k ||
-  e.key.endsWith(k) ||
-  e.key.includes(k)
-) ||    e.key.includes('deptCalculatedCost_') ||
-    e.key.includes('dept_') ||
-    e.key.includes('sb_sigs_')
-  );
+(()=>{ const nk = e.key.replace(/^_u\d+_/,'');
+  return SYNC_KEYS.includes(e.key) || SYNC_KEYS.includes(nk) ||
+  nk.includes('deptCalculatedCost_') || nk.includes('dept_') ||
+  nk.includes('sb_sigs_') || nk.includes('finalLaborCost') ||
+  nk.includes('grand-net-total') || nk.includes('najran_labor_') ||
+  nk.includes('najran_health_') || nk.includes('najran_admin_');
+})()
 
 if (!shouldSync) return;      clearTimeout(_storageDebounce);
       _storageDebounce = setTimeout(syncNow, 30_000);
@@ -484,15 +490,13 @@ const origSetItem = localStorage.setItem.bind(localStorage);
 localStorage.setItem = function (key, value) {
   origSetItem(key, value);
 
-const shouldSync =
-  SYNC_KEYS.some(k =>
-  key === k ||
-  key.endsWith(k) ||
-  key.includes(k)
-) ||
-  key.includes('deptCalculatedCost_') ||
-  key.includes('dept_') ||
-  key.includes('sb_sigs_');
+(()=>{ const nk = key.replace(/^_u\d+_/,'');
+  return SYNC_KEYS.includes(key) || SYNC_KEYS.includes(nk) ||
+  nk.includes('deptCalculatedCost_') || nk.includes('dept_') ||
+  nk.includes('sb_sigs_') || nk.includes('finalLaborCost') ||
+  nk.includes('grand-net-total') || nk.includes('najran_labor_') ||
+  nk.includes('najran_health_') || nk.includes('najran_admin_');
+})()
 
   if (!_pulling && shouldSync) {
     clearTimeout(localStorage._syncTimeout);
