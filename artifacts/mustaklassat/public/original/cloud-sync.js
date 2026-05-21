@@ -479,10 +479,10 @@ const shouldSync =
   nk.includes('grand-net-total') || nk.includes('najran_labor_') ||
   nk.includes('najran_health_') || nk.includes('najran_admin_');
 })()
+  );
 
-if (!shouldSync) return;      clearTimeout(_storageDebounce);
-      _storageDebounce = setTimeout(syncNow, 30_000);
-    });
+if (!shouldSync) return;
+clearTimeout(_storageDebounce);
 
     // override setItem مع debounce 30 ثانية
 const origSetItem = localStorage.setItem.bind(localStorage);
@@ -490,16 +490,13 @@ const origSetItem = localStorage.setItem.bind(localStorage);
 localStorage.setItem = function (key, value) {
   origSetItem(key, value);
 
-(()=>{ const nk = key.replace(/^_u\d+_/,'');
+const shouldSync = (()=>{ const nk = key.replace(/^_u\d+_/,'');
   return SYNC_KEYS.includes(key) || SYNC_KEYS.includes(nk) ||
   nk.includes('deptCalculatedCost_') || nk.includes('dept_') ||
   nk.includes('sb_sigs_') || nk.includes('finalLaborCost') ||
   nk.includes('grand-net-total') || nk.includes('najran_labor_') ||
   nk.includes('najran_health_') || nk.includes('najran_admin_');
-})()
-
-  if (!_pulling && shouldSync) {
-    clearTimeout(localStorage._syncTimeout);
+})();
 
     localStorage._syncTimeout = setTimeout(
       syncNow,
