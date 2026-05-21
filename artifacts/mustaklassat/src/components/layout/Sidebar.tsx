@@ -181,6 +181,12 @@ export function Sidebar() {
     if (h === dbUser?.hospital || switchingHospital) return;
     setSwitchingHospital(h);
     setShowHospitalMenu(false);
+
+    // Optimistic update — حدّث الـ UI فوراً بدون انتظار الـ API
+    queryClient.setQueryData(['/api/users/me'], (old: any) =>
+      old ? { ...old, hospital: h } : old
+    );
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10_000);
@@ -202,9 +208,11 @@ export function Sidebar() {
         localStorage.setItem('hospitalName', h);
       } catch {}
       try { window.dispatchEvent(new CustomEvent('najranHospitalChanged', { detail: { hospital: h } })); } catch {}
-      queryClient.refetchQueries({ queryKey: ['/api/users/me'] });
+      // invalidate بدل refetch — يحدّث في الخلفية بهدوء
+      queryClient.invalidateQueries({ queryKey: ['/api/users/me'] });
     } catch {
-      // timeout أو خطأ شبكة — نحرر الزر فوراً
+      // لو فشل الـ API — ارجع للقيمة الحقيقية من السيرفر
+      queryClient.invalidateQueries({ queryKey: ['/api/users/me'] });
     } finally {
       setSwitchingHospital(null);
     }
