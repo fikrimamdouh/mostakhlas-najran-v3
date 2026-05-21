@@ -320,10 +320,17 @@
 
   /* ── فتح/إغلاق الحوار ────────────────────────────────────────────────────── */
   function openDialog(pageKey) {
-    if (!instances[pageKey]) return;
+    // ── Guard Check: لا تفتح الحوار إذا لم يكن المفتاح مُهيَّأً ──
+    if (!pageKey || !instances[pageKey]) {
+      console.warn('SignatureBlock.open: pageKey غير مُهيَّأ —', pageKey);
+      return;
+    }
+
     activeKey = pageKey;
-    const sigs   = instances[pageKey].sigs || [];
-    const prefs  = instances[pageKey].prefs || {};
+    // ── Guard Check: تأكد أن sigs مصفوفة صالحة ──
+    const sigs  = Array.isArray(instances[pageKey].sigs) ? instances[pageKey].sigs : [];
+    const prefs = instances[pageKey].prefs || {};
+
     const fields = document.getElementById('sb-fields');
     fields.innerHTML = '';
     if (sigs.length === 0) { addRow(); }
@@ -525,24 +532,50 @@
     /** فتح حوار التعديل */
     open(pageKey) { openDialog(pageKey); },
 
-    /** قراءة التواقيع الحالية (للاستخدام في نوافذ الطباعة المخصصة) */
+    /**
+     * قراءة التواقيع الحالية (للاستخدام في نوافذ الطباعة المخصصة)
+     * ── Guard Check: يعيد [] إذا كان المفتاح غير موجود أو sigs ليست مصفوفة ──
+     */
     getSigs(pageKey) {
-      return (instances[pageKey]?.sigs || []).slice();
+      if (!pageKey || !instances[pageKey]) return [];
+      const sigs = instances[pageKey].sigs;
+      return Array.isArray(sigs) ? sigs.slice() : [];
     },
 
-    /** قراءة التفضيلات (includeSigs, includeStamp) */
+    /**
+     * قراءة توقيع واحد بأمان عبر الفهرس
+     * مثال: SignatureBlock.getSig('attendance', 0)?.name
+     * ── Guard Check: يعيد null بدلاً من throw عند index خارج الحدود ──
+     */
+    getSig(pageKey, index) {
+      const sigs = this.getSigs(pageKey);
+      if (index < 0 || index >= sigs.length) return null;
+      return sigs[index];
+    },
+
+    /**
+     * قراءة التفضيلات (includeSigs, includeStamp)
+     * ── Guard Check: يعيد القيم الافتراضية إذا كان المفتاح غير موجود ──
+     */
     getPrefs(pageKey) {
-      const prefs = instances[pageKey]?.prefs || {};
+      if (!pageKey || !instances[pageKey]) {
+        return { includeSigs: true, includeStamp: true };
+      }
+      const prefs = instances[pageKey].prefs || {};
       return {
         includeSigs:  prefs.includeSigs  !== false,
         includeStamp: prefs.includeStamp !== false,
       };
     },
 
-    /** بناء HTML جاهز للطباعة — يراعي تفضيلات الإظهار/الإخفاء */
+    /**
+     * بناء HTML جاهز للطباعة — يراعي تفضيلات الإظهار/الإخفاء
+     * ── Guard Check: يعيد '' إذا كانت inst أو inst.sigs غير موجودة ──
+     */
     buildPrintHTML(pageKey) {
+      if (!pageKey || !instances[pageKey]) return '';
       const inst  = instances[pageKey];
-      if (!inst) return '';
+      if (!Array.isArray(inst.sigs)) return '';
       const prefs = inst.prefs || {};
       if (prefs.includeSigs === false) return ''; // المستخدم أوقف التواقيع
       const showStamp = inst.options.showStamp !== false && prefs.includeStamp !== false;
