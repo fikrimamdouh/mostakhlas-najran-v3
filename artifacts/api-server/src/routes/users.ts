@@ -82,18 +82,9 @@ if (byEmail?.status === "deleted") {
       : byEmail.name,
 })          .where(eq(usersTable.id, byEmail.id))
           .returning();
-      } else {
-        // Genuinely new user
-        [user] = await db.insert(usersTable).values({
-          clerkId: clerkUserId,
-          email,
-          name,
-          role: "user",
-          status: "pending",
-        }).returning();
-      }
-    }
-
+    } else {
+  return res.status(404).json({ error: "User not found" });
+}
     return res.json(user);
   } catch (err) {
     req.log.error({ err }, "Failed to get user");
