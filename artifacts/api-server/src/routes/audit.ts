@@ -44,21 +44,51 @@ router.get("/", requireAuth, requireAdminOrSupervisor, async (req: any, res) => 
 // POST /api/audit — log an action
 router.post("/", requireAuth, async (req: any, res) => {
   try {
-    const [dbUser] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+    const [dbUser] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.clerkId, req.clerkUserId))
+      .limit(1);
+
     if (!dbUser) return res.status(404).json({ error: "User not found" });
 
-    const { action, details } = req.body;
-    if (!action) return res.status(400).json({ error: "action is required" });
+    const {
+      action,
+      details,
+      entityType,
+      entityId,
+      before,
+      after,
+      page,
+    } = req.body;
 
-    const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress || null;
+    if (!action) {
+      return res.status(400).json({ error: "action is required" });
+    }
+
+    const ip =
+      req.headers["x-forwarded-for"]?.toString() ||
+      req.socket.remoteAddress ||
+      null;
+
+    const auditDetails = JSON.stringify({
+      details: details || null,
+      entityType: entityType || null,
+      entityId: entityId || null,
+      page: page || null,
+      before: before || null,
+      after: after || null,
+    });
+
     await db.insert(auditLogTable).values({
       userId: dbUser.id,
       userEmail: dbUser.email,
       userName: dbUser.name,
       action,
-      details: details || null,
+      details: auditDetails,
       ipAddress: ip,
     });
+
     return res.json({ logged: true });
   } catch (err) {
     req.log.error({ err }, "Failed to log audit action");
@@ -66,7 +96,7 @@ router.post("/", requireAuth, async (req: any, res) => {
   }
 });
 
-const MAX_AUDIT_ROWS = 500;
+const MAX_AUDIT_ROWS = 5000;
 
 export async function logAudit(userId: number | null, userEmail: string | null, userName: string | null, action: string, details?: string, ip?: string) {
   try {
