@@ -49,43 +49,65 @@ const requireAdminOrSupervisor = async (req: any, res: any, next: any) => {
 router.get("/me", requireAuth, async (req: any, res) => {
   try {
     const clerkUserId = req.clerkUserId;
-    let [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkUserId)).limit(1);
-if (user?.status === "deleted") {
-  return res.status(403).json({
-    error: "ACCOUNT_DELETED",
-    message: "هذا الحساب محذوف أو غير مفعل. يرجى التواصل مع الإدارة.",
-  });
-}
-    if (!user) {
-      // clerk_id not found — fetch email from Clerk and try matching by email
-      // (handles test→live Clerk migration where clerk_id changes for same email)
-      const clerkUser = await clerk.users.getUser(clerkUserId);
-      const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
-const name = getClerkDisplayName(clerkUser, email);
-      // Try to find existing record by email
-      const [byEmail] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-if (byEmail?.status === "deleted") {
-  return res.status(403).json({
-    error: "ACCOUNT_DELETED",
-    message: "هذا الحساب محذوف أو غير مفعل. يرجى التواصل مع الإدارة.",
-  });
-}
-      if (byEmail) {
-        // Migrate: update stored clerk_id to the new live one
-        req.log.info({ oldClerkId: byEmail.clerkId, newClerkId: clerkUserId, email }, "Migrating clerk_id for existing user");
-        [user] = await db.update(usersTable)
-.set({
-  clerkId: clerkUserId,
-  name:
-    !byEmail.name || byEmail.name === "مستخدم جديد"
-      ? name
-      : byEmail.name,
-})          .where(eq(usersTable.id, byEmail.id))
-          .returning();
-    } else {
-  return res.status(404).json({ error: "User not found" });
-}
-    return res.json(user);
+
+    let [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.clerkId, clerkUserId))
+      .limit(1);
+
+    if (user?.status === "deleted") {
+      return res.status(403).json({
+        error: "ACCOUNT_DELETED",
+        message: "هذا الحساب محذوف أو غير مفعل. يرجى التواصل مع الإدارة.",
+      });
+    }
+
+    if (user) {
+      return res.json(user);
+    }
+
+    // clerk_id not found — fetch email from Clerk and try matching by email
+    const clerkUser = await clerk.users.getUser(clerkUserId);
+    const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
+    const name = getClerkDisplayName(clerkUser, email);
+
+    const [byEmail] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, email))
+      .limit(1);
+
+    if (byEmail?.status === "deleted") {
+      return res.status(403).json({
+        error: "ACCOUNT_DELETED",
+        message: "هذا الحساب محذوف أو غير مفعل. يرجى التواصل مع الإدارة.",
+      });
+    }
+
+    if (byEmail) {
+      req.log.info(
+        { oldClerkId: byEmail.clerkId, newClerkId: clerkUserId, email },
+        "Migrating clerk_id for existing user"
+      );
+
+      const [updated] = await db
+        .update(usersTable)
+        .set({
+          clerkId: clerkUserId,
+          name:
+            !byEmail.name || byEmail.name === "مستخدم جديد"
+              ? name
+              : byEmail.name,
+        })
+        .where(eq(usersTable.id, byEmail.id))
+        .returning();
+
+      return res.json(updated);
+    }
+
+    // Brand-new user: let /api/users/sync create it using pre-registration data
+    return res.status(404).json({ error: "User not found" });
   } catch (err) {
     req.log.error({ err }, "Failed to get user");
     return res.status(500).json({ error: "Internal server error" });
@@ -205,8 +227,10 @@ async function handleActivity(req: any, res: any) {
     if (!existing) {
       const clerkUser = await clerk.users.getUser(req.clerkUserId);
       const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
-const name = getClerkDisplayName(clerkUser, email);      [existing] = await db.insert(usersTable).values({
-        clerkId: req.clerkUserId,
+const name = getClerkDisplayName(clerkUser, email);
+
+[existing] = await db.insert(usersTable).values({
+  clerkId: req.clerkUserId,
         email,
         name,
         role: "user",
