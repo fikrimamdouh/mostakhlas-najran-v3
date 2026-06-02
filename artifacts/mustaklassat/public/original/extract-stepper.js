@@ -80,7 +80,7 @@
     }).join('');
 
     const css = `<style id="njs-stepper-css">
-      #njs-stepper{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,#1e3c72,#2a5298);padding:12px 20px 14px;direction:rtl;position:sticky;top:0;z-index:200}
+      #njs-stepper{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,#1e3c72,#2a5298);padding:12px 20px 14px;direction:rtl;position:relative;z-index:200}
       @media print{#njs-stepper{display:none!important}}
       .njs-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
       .njs-title{color:#fff;font-size:14px;font-weight:800}
