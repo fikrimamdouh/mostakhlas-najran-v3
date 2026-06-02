@@ -10,7 +10,8 @@ export const usersTable = pgTable("users", {
   role: text("role", { enum: ["admin", "supervisor", "contract_supervisor", "viewer", "user"] }).notNull().default("user"),
   contractCompany: text("contract_company"), // for contract_supervisor: "بيت_العرب" | "سراكو"
   supervisedHospital: text("supervised_hospital"), // for supervisor: specific hospital they monitor
-status: text("status", { enum: ["pending", "approved", "rejected", "deleted"] }).notNull().default("pending"),  company: text("company"),
+  status: text("status", { enum: ["pending", "approved", "rejected", "deleted"] }).notNull().default("pending"),
+  company: text("company"),
   phone: text("phone"),
   hospital: text("hospital"),
   hospitals: text("hospitals"),
