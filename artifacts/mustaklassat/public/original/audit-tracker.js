@@ -111,6 +111,31 @@
       key
     );
   };
+window.najranAuditLog = async function (action, details, extra) {
+  const session = getSession();
+  if (!session || !session.clerkToken) return;
 
+  extra = extra || {};
+
+  try {
+    await fetch('/api/audit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + session.clerkToken
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        action,
+        details,
+        entityType: extra.entityType || null,
+        entityId: extra.entityId || null,
+        before: extra.before || null,
+        after: extra.after || null,
+        page: getPageName()
+      })
+    });
+  } catch (_) {}
+};
   console.log('[AuditTracker] تم تفعيل مراقبة التعديلات التشغيلية');
 })();
