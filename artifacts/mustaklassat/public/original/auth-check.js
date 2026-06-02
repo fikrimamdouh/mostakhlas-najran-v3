@@ -165,8 +165,8 @@
       '</div>';
 if (window.self !== window.top) return;
 
-    document.body.style.paddingBottom = '44px';
-    document.body.appendChild(bar);
+    //document.body.style.paddingBottom = '44px';
+    //document.body.appendChild(bar);
 
     // فحص الإشعارات فور التحميل وكل دقيقتين
     setTimeout(checkNotifications, 1500);
