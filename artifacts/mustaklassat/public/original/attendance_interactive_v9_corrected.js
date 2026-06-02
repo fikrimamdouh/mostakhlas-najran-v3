@@ -252,6 +252,12 @@ function updateEmployeeAttendance(departmentKey, employeeIndex, dayIndex, newSta
         const employee = data[departmentKey]?.[employeeIndex];
         if (!employee) return;
 
+        const oldStatus = Array.isArray(employee.days) ? employee.days[dayIndex] : null;
+        const employeeName = employee.name || 'غير محدد';
+        const departmentName = typeof getDepartmentName === 'function'
+          ? getDepartmentName(departmentKey)
+          : departmentKey;
+
         const { daysInMonth } = getExtractPeriodDetails();
         // تهيئة days كمصفوفة كاملة بقيم "ح" لو مش موجودة أو مش array
         if (!Array.isArray(employee.days) || employee.days.length < daysInMonth) {
@@ -289,7 +295,7 @@ function updateEmployeeAttendance(departmentKey, employeeIndex, dayIndex, newSta
         const totalFine = fine + nationalityFine;
         const netSalary = extractBaseSalary - deduction - totalFine;
 
-        employee.absenceDays = absenceDays;
+               employee.absenceDays = absenceDays;
         employee.attendanceDays = attendanceDays;
         employee.deduction = deduction;
         employee.absencePenalty = fine;
@@ -297,6 +303,19 @@ function updateEmployeeAttendance(departmentKey, employeeIndex, dayIndex, newSta
         employee.netSalary = netSalary;
 
         saveAttendanceData(data);
+
+        if (typeof window.najranAuditLog === 'function' && oldStatus !== newStatus) {
+            window.najranAuditLog(
+                'تعديل حضور وانصراف',
+                `تم تعديل حضور الموظف ${employeeName} في قسم ${departmentName} - اليوم رقم ${dayIndex + 1} من "${oldStatus || 'غير محدد'}" إلى "${newStatus}"`,
+                {
+                    entityType: 'attendance',
+                    entityId: `${departmentKey}:${employeeIndex}:${dayIndex}`,
+                    before: oldStatus,
+                    after: newStatus
+                }
+            );
+        }
 
         // تحديث اللون في الخلية
         const select = document.querySelector(`#${departmentKey}-table tbody tr:nth-child(${employeeIndex + 1}) td.day-cell[data-day-index="${dayIndex}"] select`);
