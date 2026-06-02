@@ -163,6 +163,7 @@
         '<a href="/dashboard" style="color:rgba(255,255,255,0.8);text-decoration:none;font-size:12px;white-space:nowrap">🏠 الرئيسية</a>' +
         '<button onclick="najranSignOut()" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;padding:3px 12px;border-radius:6px;cursor:pointer;font-family:Tajawal,Arial,sans-serif;font-size:12px;white-space:nowrap">خروج</button>' +
       '</div>';
+if (window.self !== window.top) return;
 
     document.body.style.paddingBottom = '44px';
     document.body.appendChild(bar);
