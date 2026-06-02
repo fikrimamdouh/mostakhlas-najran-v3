@@ -114,29 +114,47 @@
     return s?.hospital?.trim() || null;
   }
 
-  async function apiFetch(path, options = {}) {
-    if (!getSession()) return null;
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 10_000);
-      const token = getFreshToken();
-      const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      const resp = await fetch(API_BASE + path, {
-        ...options,
-        headers,
-        credentials: 'include',
-        signal: controller.signal,
-      });
-      clearTimeout(timer);
-      if (resp.status === 401) {
-        showTokenExpiredBanner();
-        return null;
-      }
-      return resp.ok ? resp.json() : null;
-    } catch (_) { return null; }
+ async function apiFetch(path, options = {}) {
+  const session = getSession();
+  if (!session) return null;
+
+  const token = session.clerkToken;
+  if (!token) {
+    showTokenExpiredBanner();
+    console.warn('[MzamanaCloud] لا يوجد clerkToken داخل najran_session — تم إيقاف طلب المزامنة');
+    return null;
   }
 
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000);
+
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+      Authorization: `Bearer ${token}`,
+    };
+
+    const resp = await fetch(API_BASE + path, {
+      ...options,
+      headers,
+      credentials: 'include',
+      signal: controller.signal,
+    });
+
+    clearTimeout(timer);
+
+    if (resp.status === 401) {
+      showTokenExpiredBanner();
+      console.warn('[MzamanaCloud] رفض التوثيق 401 — الجلسة تحتاج تجديد');
+      return null;
+    }
+
+    return resp.ok ? resp.json() : null;
+  } catch (_) {
+    return null;
+  }
+}
   // ── مفاتيح البيانات الشهرية ──────────────────────────────────────────────
   const MONTH_SPECIFIC_KEYS = [
     'attendanceData', 'centersAttendanceData_v2', 'healthCentersAttendanceData',
