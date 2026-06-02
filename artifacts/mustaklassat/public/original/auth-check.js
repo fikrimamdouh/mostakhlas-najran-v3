@@ -199,4 +199,5 @@ if (window.self === window.top) {
       el.textContent = '☁ مزامنة'; el.style.color = '';
     }
   };
+});
 })();
