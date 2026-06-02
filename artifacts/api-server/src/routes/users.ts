@@ -131,8 +131,7 @@ async function handleActivity(req: any, res: any) {
     if (!existing) {
       const clerkUser = await clerk.users.getUser(req.clerkUserId);
       const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
-      const name = `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() || "مستخدم جديد";
-      [existing] = await db.insert(usersTable).values({
+const name = getClerkDisplayName(clerkUser, email);      [existing] = await db.insert(usersTable).values({
         clerkId: req.clerkUserId,
         email,
         name,
