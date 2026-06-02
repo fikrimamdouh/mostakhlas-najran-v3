@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, ne } from "drizzle-orm";
 import { sendApprovalEmail, sendRejectionEmail } from "../lib/email";
 import { logAudit } from "./audit";
 import { requireAuth, clerk } from "../middleware/requireAuth";
@@ -36,7 +36,12 @@ router.get("/me", requireAuth, async (req: any, res) => {
   try {
     const clerkUserId = req.clerkUserId;
     let [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkUserId)).limit(1);
-
+if (user?.status === "deleted") {
+  return res.status(403).json({
+    error: "ACCOUNT_DELETED",
+    message: "هذا الحساب محذوف أو غير مفعل. يرجى التواصل مع الإدارة.",
+  });
+}
     if (!user) {
       // clerk_id not found — fetch email from Clerk and try matching by email
       // (handles test→live Clerk migration where clerk_id changes for same email)
@@ -46,7 +51,12 @@ router.get("/me", requireAuth, async (req: any, res) => {
 
       // Try to find existing record by email
       const [byEmail] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-
+if (byEmail?.status === "deleted") {
+  return res.status(403).json({
+    error: "ACCOUNT_DELETED",
+    message: "هذا الحساب محذوف أو غير مفعل. يرجى التواصل مع الإدارة.",
+  });
+}
       if (byEmail) {
         // Migrate: update stored clerk_id to the new live one
         req.log.info({ oldClerkId: byEmail.clerkId, newClerkId: clerkUserId, email }, "Migrating clerk_id for existing user");
@@ -158,11 +168,27 @@ router.get("/", requireAuth, requireAdminOrSupervisor, async (req: any, res) => 
   try {
     const { status, page = 1, limit = 50 } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
+
     let query = db.select().from(usersTable) as any;
-    if (status) query = query.where(eq(usersTable.status, status as "pending" | "approved" | "rejected"));
+    let countQuery = db.select({ count: sql<number>`count(*)` }).from(usersTable) as any;
+
+    if (status) {
+      query = query.where(eq(usersTable.status, status as any));
+      countQuery = countQuery.where(eq(usersTable.status, status as any));
+    } else {
+      query = query.where(ne(usersTable.status, "deleted" as any));
+      countQuery = countQuery.where(ne(usersTable.status, "deleted" as any));
+    }
+
     const users = await query.limit(Number(limit)).offset(offset);
-    const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(usersTable);
-    return res.json({ users, total: Number(count), page: Number(page), limit: Number(limit) });
+    const [{ count }] = await countQuery;
+
+    return res.json({
+      users,
+      total: Number(count),
+      page: Number(page),
+      limit: Number(limit),
+    });
   } catch (err) {
     req.log.error({ err }, "Failed to list users");
     return res.status(500).json({ error: "Internal server error" });
@@ -237,7 +263,7 @@ router.get("/company/:company", requireAuth, async (req: any, res) => {
         return res.status(403).json({ error: "Forbidden" });
       }
     }
-    const { inArray } = await import("drizzle-orm");
+    const { and, inArray } = await import("drizzle-orm");
     const COMPANY_SITES: Record<string, string[]> = {
       "بيت_العرب": [
         "مستشفى يدمة العام", "مستشفى حبونا العام", "مستشفى بدر الجنوب العام",
@@ -252,8 +278,11 @@ router.get("/company/:company", requireAuth, async (req: any, res) => {
     };
     const sites = COMPANY_SITES[company];
     if (!sites) return res.status(400).json({ error: "Unknown company" });
-    const users = await db.select().from(usersTable)
-      .where(inArray(usersTable.hospital, sites));
+  const users = await db.select().from(usersTable)
+  .where(and(
+    inArray(usersTable.hospital, sites),
+    ne(usersTable.status, "deleted" as any)
+  ));
     return res.json({ users, total: users.length });
   } catch (err) {
     req.log.error({ err }, "Failed to list company users");
@@ -353,7 +382,7 @@ router.patch("/:userId/hospitals", requireAuth, requireAdmin, async (req: any, r
   }
 });
 
-// DELETE /api/users/:userId - admin only — حذف نهائي من DB + Clerk
+// DELETE /api/users/:userId - admin only — soft delete locally + delete from Clerk
 router.delete("/:userId", requireAuth, requireAdmin, async (req: any, res) => {
   try {
     const { userId } = req.params;
@@ -369,44 +398,49 @@ router.delete("/:userId", requireAuth, requireAdmin, async (req: any, res) => {
       .where(eq(usersTable.id, numericId))
       .limit(1);
 
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
     if (user.clerkId === req.clerkUserId) {
       return res.status(403).json({ error: "لا يمكنك حذف حسابك أنت" });
     }
 
+    // حذف/تعطيل المستخدم من Clerk إن كان موجودًا
     if (user.clerkId) {
       try {
         await clerk.users.deleteUser(user.clerkId);
       } catch (clerkErr: any) {
         req.log.warn(
           { clerkErr: clerkErr?.message, userId, clerkId: user.clerkId },
-          "Clerk delete failed — continuing with DB delete"
+          "Clerk delete failed — continuing with local soft delete"
         );
       }
     }
 
-    const deleted = await db
-      .delete(usersTable)
+    // Soft delete: لا نحذف الصف من DB حتى لا نكسر العلاقات
+    const [updated] = await db
+      .update(usersTable)
+      .set({
+        status: "deleted" as any,
+      })
       .where(eq(usersTable.id, numericId))
       .returning();
 
-    if (!deleted.length) {
+    if (!updated) {
       return res.status(404).json({ error: "User already deleted" });
     }
 
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket?.remoteAddress;
 
-    if (req.currentUser) {
-      logAudit(
-        req.currentUser.id,
-        req.currentUser.email,
-        req.currentUser.name,
-        "حذف مستخدم نهائي",
-        `تم حذف ${user.name} (${user.email}) نهائياً من النظام`,
-        ip
-      );
-    }
+    logAudit(
+      req.currentUser.id,
+      req.currentUser.email,
+      req.currentUser.name,
+      "حذف مستخدم",
+      `تم حذف ${user.name} (${user.email}) من شاشة المستخدمين وتعطيله من تسجيل الدخول`,
+      ip
+    );
 
     return res.json({ ok: true, deleted: user.name });
   } catch (err: any) {
@@ -419,10 +453,36 @@ router.delete("/:userId", requireAuth, requireAdmin, async (req: any, res) => {
 router.post("/:userId/activate", requireAuth, requireAdmin, async (req: any, res) => {
   try {
     const { userId } = req.params;
-    const [user] = await db.update(usersTable).set({ status: "approved" }).where(eq(usersTable.id, Number(userId))).returning();
-    if (!user) return res.status(404).json({ error: "User not found" });
+    const numericId = Number(userId);
+
+    const [existing] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, numericId))
+      .limit(1);
+
+    if (!existing) return res.status(404).json({ error: "User not found" });
+
+    if (existing.status === "deleted") {
+      return res.status(400).json({ error: "لا يمكن تفعيل مستخدم محذوف" });
+    }
+
+    const [user] = await db
+      .update(usersTable)
+      .set({ status: "approved" })
+      .where(eq(usersTable.id, numericId))
+      .returning();
+
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
-    logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "تفعيل حساب", `تم تفعيل حساب ${user.name} (${user.email})`, ip);
+    logAudit(
+      req.currentUser.id,
+      req.currentUser.email,
+      req.currentUser.name,
+      "تفعيل حساب",
+      `تم تفعيل حساب ${user.name} (${user.email})`,
+      ip
+    );
+
     return res.json(user);
   } catch (err) {
     req.log.error({ err }, "Failed to activate user");
