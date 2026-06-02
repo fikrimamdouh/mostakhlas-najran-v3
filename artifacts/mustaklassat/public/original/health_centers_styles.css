@@ -653,14 +653,7 @@ footer {
 /* === 13. FINAL FIX for Dialogs with !important === */
 /* =================================================================== */
 
-/* فرض الهيكل المقسم على كل النوافذ العريضة */
-.dialog.wide-dialog {
-    display: flex !important;
-    flex-direction: column !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-    max-height: 90vh !important; /* تحديد ارتفاع أقصى */
-}
+
 
 /* فرض أنماط الرأس الثابت */
 .dialog .dialog-header {
@@ -2352,4 +2345,11 @@ td.day-col {
 .show-stamp-checkbox {
     margin-left: 6px;
     transform: scale(0.9);
+}
+
+/* FIX: keep hidden dialogs fully hidden */
+.dialog[style*="display: none"],
+.dialog.wide-dialog[style*="display: none"],
+#signature-dialog[style*="display: none"] {
+    display: none !important;
 }
