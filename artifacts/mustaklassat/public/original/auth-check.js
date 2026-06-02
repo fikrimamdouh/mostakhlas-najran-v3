@@ -163,23 +163,19 @@
         '<a href="/dashboard" style="color:rgba(255,255,255,0.8);text-decoration:none;font-size:12px;white-space:nowrap">🏠 الرئيسية</a>' +
         '<button onclick="najranSignOut()" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;padding:3px 12px;border-radius:6px;cursor:pointer;font-family:Tajawal,Arial,sans-serif;font-size:12px;white-space:nowrap">خروج</button>' +
       '</div>';
-if (window.self !== window.top) return;
+if (window.self === window.top) {
+      document.body.style.paddingBottom = '44px';
+      document.body.appendChild(bar);
+      document.getElementById('najran-bell-btn').addEventListener('click', function () {
+        fetchNotifCount(function (count, allIds) {
+          markAllSeen(allIds);
+          updateBell(0);
+        });
+      });
+    }
 
-    //document.body.style.paddingBottom = '44px';
-    //document.body.appendChild(bar);
-
-    // فحص الإشعارات فور التحميل وكل دقيقتين
     setTimeout(checkNotifications, 1500);
     setInterval(checkNotifications, 2 * 60 * 1000);
-
-    // عند الضغط على الجرس: وضع علامة "مرئي" وتحديث البيدج
-    document.getElementById('najran-bell-btn').addEventListener('click', function () {
-      fetchNotifCount(function (count, allIds) {
-        markAllSeen(allIds);
-        updateBell(0);
-      });
-    });
-  });
 
   // ── واجهات عامة ──────────────────────────────────────────────────────────
   window.najranSignOut = function () {
