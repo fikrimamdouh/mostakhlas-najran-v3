@@ -100,7 +100,90 @@ if (byEmail?.status === "deleted") {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+// POST /api/users/sync — create or update user from pre-registration data
+router.post("/sync", requireAuth, async (req: any, res) => {
+  try {
+    const clerkUserId = req.clerkUserId;
 
+    const {
+      email,
+      name,
+      phone,
+      company,
+      hospital,
+      jobTitle,
+      contractNumber,
+    } = req.body;
+
+    const clerkUser = await clerk.users.getUser(clerkUserId);
+    const clerkEmail = clerkUser.emailAddresses[0]?.emailAddress ?? "";
+    const finalEmail = email || clerkEmail;
+    const finalName =
+      (name || "").trim() ||
+      getClerkDisplayName(clerkUser, finalEmail);
+
+    let [existing] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.clerkId, clerkUserId))
+      .limit(1);
+
+    if (!existing && finalEmail) {
+      [existing] = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.email, finalEmail))
+        .limit(1);
+    }
+
+    if (existing?.status === "deleted") {
+      return res.status(403).json({
+        error: "ACCOUNT_DELETED",
+        message: "هذا الحساب محذوف أو غير مفعل. يرجى التواصل مع الإدارة.",
+      });
+    }
+
+    if (existing) {
+      const [updated] = await db
+        .update(usersTable)
+        .set({
+          clerkId: clerkUserId,
+          email: finalEmail || existing.email,
+          name: finalName || existing.name,
+          phone: phone || existing.phone,
+          company: company || existing.company,
+          hospital: hospital || existing.hospital,
+          jobTitle: jobTitle || existing.jobTitle,
+          contractNumber: contractNumber || existing.contractNumber,
+        })
+        .where(eq(usersTable.id, existing.id))
+        .returning();
+
+      return res.json(updated);
+    }
+
+    const [created] = await db
+      .insert(usersTable)
+      .values({
+        clerkId: clerkUserId,
+        email: finalEmail,
+        name: finalName,
+        phone: phone || null,
+        company: company || null,
+        hospital: hospital || null,
+        jobTitle: jobTitle || null,
+        contractNumber: contractNumber || null,
+        role: "user",
+        status: "pending",
+      })
+      .returning();
+
+    return res.json(created);
+  } catch (err) {
+    req.log.error({ err }, "Failed to sync user");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 // PATCH /api/users/me — update own profile
 router.patch("/me", requireAuth, async (req: any, res) => {
   try {
