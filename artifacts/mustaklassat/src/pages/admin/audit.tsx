@@ -47,7 +47,21 @@ function formatDateTime(iso: string) {
     });
   } catch { return iso; }
 }
+function formatAuditDetails(details: string | null) {
+  if (!details) return "—";
 
+  try {
+    const parsed = JSON.parse(details);
+
+    if (parsed && typeof parsed === "object") {
+      return parsed.details || details;
+    }
+
+    return details;
+  } catch {
+    return details;
+  }
+}
 export default function AuditLog() {
   const { getToken } = useAuth();
   const [page, setPage] = useState(1);
@@ -138,9 +152,11 @@ export default function AuditLog() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-600 max-w-xs">
-                    <span className="truncate block">{log.details || "—"}</span>
-                  </td>
+                <td className="px-4 py-3 text-gray-600 max-w-xl">
+  <div className="whitespace-normal break-words text-xs leading-5">
+    {formatAuditDetails(log.details)}
+  </div>
+</td>
                   <td className="px-4 py-3 text-gray-400 font-mono text-xs">{log.ipAddress || "—"}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5 text-gray-500 text-xs">
