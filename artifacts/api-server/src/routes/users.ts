@@ -6,7 +6,21 @@ import { logAudit } from "./audit";
 import { requireAuth, clerk } from "../middleware/requireAuth";
 
 const router = Router();
+function getClerkDisplayName(clerkUser: any, email: string) {
+  const metadataName =
+    (clerkUser.publicMetadata?.name as string | undefined) ||
+    (clerkUser.unsafeMetadata?.name as string | undefined) ||
+    (clerkUser.publicMetadata?.fullName as string | undefined) ||
+    (clerkUser.unsafeMetadata?.fullName as string | undefined);
 
+  return (
+    metadataName?.trim() ||
+    clerkUser.fullName?.trim() ||
+    `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() ||
+    email.split("@")[0] ||
+    "مستخدم جديد"
+  );
+}
 const requireAdmin = async (req: any, res: any, next: any) => {
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
@@ -47,8 +61,7 @@ if (user?.status === "deleted") {
       // (handles test→live Clerk migration where clerk_id changes for same email)
       const clerkUser = await clerk.users.getUser(clerkUserId);
       const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
-      const name = `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() || "مستخدم جديد";
-
+const name = getClerkDisplayName(clerkUser, email);
       // Try to find existing record by email
       const [byEmail] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
 if (byEmail?.status === "deleted") {
@@ -61,8 +74,13 @@ if (byEmail?.status === "deleted") {
         // Migrate: update stored clerk_id to the new live one
         req.log.info({ oldClerkId: byEmail.clerkId, newClerkId: clerkUserId, email }, "Migrating clerk_id for existing user");
         [user] = await db.update(usersTable)
-          .set({ clerkId: clerkUserId })
-          .where(eq(usersTable.id, byEmail.id))
+.set({
+  clerkId: clerkUserId,
+  name:
+    !byEmail.name || byEmail.name === "مستخدم جديد"
+      ? name
+      : byEmail.name,
+})          .where(eq(usersTable.id, byEmail.id))
           .returning();
       } else {
         // Genuinely new user
