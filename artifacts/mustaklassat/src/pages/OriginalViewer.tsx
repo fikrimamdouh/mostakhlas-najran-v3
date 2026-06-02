@@ -146,12 +146,13 @@ export default function OriginalViewer() {
   const moduleKey = getModuleKey(page);
   const isAllowed = isModuleAllowed(moduleKey, allowedModuleKeys, role);
 
-  const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <div className="flex h-screen overflow-hidden" style={{ background: "#f0f4ff" }}>
-      <Sidebar />
-      <main className="flex-1 overflow-auto">{children}</main>
-    </div>
-  );
+// ✅ بعد
+const Wrapper = ({ children }: { children: React.ReactNode }) => (
+  <div className="flex h-screen overflow-hidden" style={{ background: "#f0f4ff" }}>
+    <Sidebar />
+    <main className="flex-1 overflow-hidden">{children}</main>
+  </div>
+);
 
   if (isComingSoon) {
     return <Wrapper><ComingSoonPage /></Wrapper>;
