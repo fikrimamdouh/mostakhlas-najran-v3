@@ -146,15 +146,38 @@ router.post("/me/activity", requireAuth, handleActivity);
 // PATCH /api/users/me/login
 router.patch("/me/login", requireAuth, async (req: any, res) => {
   try {
-    const [user] = await db.update(usersTable)
-      .set({ lastLoginAt: new Date() })
+    const [existingUser] = await db
+      .select()
+      .from(usersTable)
       .where(eq(usersTable.clerkId, req.clerkUserId))
-      .returning();
-    if (!user) return res.status(404).json({ error: "User not found" });
+      .limit(1);
 
-    // Log login in audit
-    const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
-    logAudit(user.id, user.email, user.name, "تسجيل دخول", undefined, ip);
+    if (!existingUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const now = new Date();
+    const lastLoginAt = existingUser.lastLoginAt
+      ? new Date(existingUser.lastLoginAt)
+      : null;
+
+    const shouldLogLogin =
+      !lastLoginAt ||
+      now.getTime() - lastLoginAt.getTime() > 30 * 60 * 1000;
+
+    const [user] = await db
+      .update(usersTable)
+      .set({ lastLoginAt: now })
+      .where(eq(usersTable.id, existingUser.id))
+      .returning();
+
+    if (shouldLogLogin) {
+      const ip =
+        req.headers["x-forwarded-for"]?.toString() ||
+        req.socket.remoteAddress;
+
+      logAudit(user.id, user.email, user.name, "تسجيل دخول", undefined, ip);
+    }
 
     return res.json({ ok: true });
   } catch (err) {
