@@ -677,14 +677,22 @@ if ((dbUser as any).contractNumber) localStorage.setItem('contractNumber', (dbUs
         }).catch(() => {});
       }
     });
-
+(window as any).najranGetFreshToken = async () => {
+  const token = await getToken();
+  saveSession(token);
+  return token;
+};
     // تحديث التوكن كل 50 ثانية لأن JWT ينتهي بعد 60 ثانية
     const interval = setInterval(() => {
       getToken().then(saveSession);
     }, 50_000);
 
-    return () => clearInterval(interval);
-  }, [dbUser, getToken]);
+return () => {
+  clearInterval(interval);
+  try {
+    delete (window as any).najranGetFreshToken;
+  } catch {}
+};  }, [dbUser, getToken]);
 
   if (!isClerkLoaded || (!!user?.id && !hasToken) || isDbLoading || syncState === 'syncing') {
     return (
