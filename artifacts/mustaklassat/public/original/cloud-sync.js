@@ -13,7 +13,22 @@
   const API_BASE = '/api';
   const SYNC_INTERVAL_MS = 5 * 1000;
   const SESSION_KEY = 'najran_session';
+const DIRTY_KEYS = new Set();
 
+function markDirtyKey(key) {
+  try {
+    if (!key) return;
+    if (shouldSyncKey(key)) {
+      DIRTY_KEYS.add(key);
+    }
+  } catch (_) {}
+}
+
+function clearDirtyKeys(keys) {
+  try {
+    keys.forEach(k => DIRTY_KEYS.delete(k));
+  } catch (_) {}
+}
   // ── المفاتيح التشغيلية (مشتركة على مستوى المستشفى) ──────────────────────
   const SYNC_KEYS = [
     'persistentContractData', 'persistentExtractData',
@@ -195,8 +210,8 @@ function updateHospitalActivityStatus() {
       updatedAt: new Date().toISOString(),
     };
 
-    localStorage.setItem('hospitalActivityStatus', JSON.stringify(activity));
-  } catch (_) {}
+localStorage.setItem('hospitalActivityStatus', JSON.stringify(activity));
+markDirtyKey('hospitalActivityStatus');  } catch (_) {}
 }
 
 function showHospitalActivityNotice() {
@@ -521,7 +536,13 @@ async function pushToCloud() {
     return key.replace(/^_u\d+_/, '');
   }
 
-  for (const key of _realKeys()) {
+   const keysToSync = Array.from(DIRTY_KEYS).filter(key => key && shouldSyncKey(key));
+
+  if (keysToSync.length === 0) {
+    return { ok: true, saved: 0, reason: 'NO_LOCAL_CHANGES' };
+  }
+
+  for (const key of keysToSync) {
     if (!key) continue;
     if (!shouldSyncKey(key)) continue;
 
@@ -537,8 +558,6 @@ async function pushToCloud() {
       hospitalData[hospitalKey] = val;
     }
   }
-
-  const mustSaveUser = Object.keys(userData).length > 0;
   const mustSaveHospital = !!hospitalName && Object.keys(hospitalData).length > 0;
 
   if (!mustSaveUser && !mustSaveHospital) {
@@ -567,7 +586,7 @@ const [userResult, hospitalResult] = await Promise.all([
 
   const hosp = hospitalSaved ? ` + ${hospitalSaved} مشترك` : '';
   console.log(`[MzamanaCloud] ✓ رُفع ${userSaved} شخصي${hosp}`);
-
+clearDirtyKeys(keysToSync);
   return {
     ok: true,
     userSaved,
@@ -709,14 +728,18 @@ _storageDebounce = setTimeout(() => {
 
     // override setItem مع debounce 30 ثانية
     const origSetItem = localStorage.setItem.bind(localStorage);
-    localStorage.setItem = function (key, value) {
-      origSetItem(key, value);
-      if (!_pulling && shouldSyncKey(key)) {
-        clearTimeout(localStorage._syncTimeout);
-localStorage._syncTimeout = setTimeout(() => {
-  syncNow().catch(() => {});
-}, 30_000);      }
-    };
+   localStorage.setItem = function (key, value) {
+  origSetItem(key, value);
+
+  if (!_pulling && shouldSyncKey(key)) {
+    markDirtyKey(key);
+
+    clearTimeout(localStorage._syncTimeout);
+    localStorage._syncTimeout = setTimeout(() => {
+      syncNow().catch(() => {});
+    }, 30_000);
+  }
+};
 
     console.log('[MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)');
   }
