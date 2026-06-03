@@ -424,13 +424,19 @@ if (defaultCompanyForHospital && newData.companyName && newData.companyName !== 
 function updateContractDisplayData() {
     const data = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
     const session = (typeof _getSession === 'function') ? _getSession() : null;
-const manualCompanyName = _getManualCompanyName(data.hospitalName || localStorage.getItem('hospitalName') || (session && session.hospital) || '');
+const manualCompanyName = _getManualCompanyName(
+    data.hospitalName ||
+    localStorage.getItem('hospitalName') ||
+    (session && session.hospital) ||
+    ''
+);
+
 if (manualCompanyName) {
     data.companyName = manualCompanyName;
     data._manualCompanyName = true;
-}
     localStorage.setItem('persistentContractData', JSON.stringify(data));
-localStorage.setItem('companyName', data.companyName || '');
+    localStorage.setItem('companyName', data.companyName || '');
+}
     if (!data.hospitalName) {
         data.hospitalName = localStorage.getItem('hospitalName') || (session && session.hospital) || '';
     }
