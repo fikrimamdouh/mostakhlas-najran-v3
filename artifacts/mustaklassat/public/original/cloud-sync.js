@@ -349,13 +349,14 @@ if (!token) {
     return keys;
   }
 
- async function pushToCloud() {
+async function pushToCloud() {
   if (!getSession()) {
     throw new Error('NO_SESSION');
   }
 
   const hospitalName = getHospitalName();
-  const allData = {};
+
+  const userData = {};
   const hospitalData = {};
 
   function toSharedHospitalKey(key) {
@@ -369,35 +370,40 @@ if (!token) {
     const val = _realGet(key);
     if (val === null) continue;
 
-    allData[key] = val;
-
     const normalizedKey = key.replace(/^_u\d+_/, '');
-    if (!PERSONAL_KEYS.has(normalizedKey)) {
+
+    if (PERSONAL_KEYS.has(normalizedKey)) {
+      userData[normalizedKey] = val;
+    } else {
       const hospitalKey = toSharedHospitalKey(key);
       hospitalData[hospitalKey] = val;
     }
   }
 
-  if (Object.keys(allData).length === 0) {
+  const mustSaveUser = Object.keys(userData).length > 0;
+  const mustSaveHospital = !!hospitalName && Object.keys(hospitalData).length > 0;
+
+  if (!mustSaveUser && !mustSaveHospital) {
     return { ok: true, saved: 0, reason: 'NO_DATA' };
   }
 
-  const mustSaveHospital = !!hospitalName && Object.keys(hospitalData).length > 0;
-
   const [userResult, hospitalResult] = await Promise.all([
-    apiFetch('/storage', {
-      method: 'PUT',
-      body: JSON.stringify({ data: allData })
-    }),
+    mustSaveUser
+      ? apiFetch('/storage', {
+          method: 'PUT',
+          body: JSON.stringify({ data: userData })
+        })
+      : Promise.resolve({ saved: 0 }),
+
     mustSaveHospital
       ? apiFetch('/hospital-storage', {
           method: 'PUT',
           body: JSON.stringify({ data: hospitalData })
         })
-      : Promise.resolve({ ok: true, saved: 0 }),
+      : Promise.resolve({ saved: 0 }),
   ]);
 
-  if (!userResult) {
+  if (mustSaveUser && !userResult) {
     throw new Error('USER_STORAGE_SAVE_FAILED');
   }
 
@@ -418,6 +424,8 @@ if (!token) {
     hospitalName: hospitalName || null,
   };
 }
+
+// ── إشعارات المستخدم ──────────────────────────────────────────────────────
 
   // ── إشعارات المستخدم ──────────────────────────────────────────────────────
   function showTokenExpiredBanner() {
