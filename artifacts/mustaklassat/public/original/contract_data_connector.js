@@ -37,6 +37,26 @@ function updateContractDisplayData(fields = [
         extractDuration: ''
     };
     const mergedData = { ...defaults, ...data, ...extractData };
+    // تحديث العناصر المباشرة داخل صفحات الحضور والأداء
+document.querySelectorAll('.hospitalName').forEach(el => {
+    el.textContent = mergedData.hospitalName || 'غير محدد';
+});
+
+document.querySelectorAll('.contractDetails').forEach(el => {
+    el.textContent = mergedData.contractDetails || 'غير محدد';
+});
+
+document.querySelectorAll('.companyName').forEach(el => {
+    el.textContent = mergedData.companyName || 'غير محدد';
+});
+
+document.querySelectorAll('.contractType').forEach(el => {
+    el.textContent = mergedData.contractType || 'عقد أساسي';
+});
+
+document.querySelectorAll('.directPurchaseRatio').forEach(el => {
+    el.textContent = mergedData.directPurchaseRatio || '0';
+});
     const container = document.querySelector('.side-data .contract-data');
     if (!container) return;
     const fieldLabels = {
