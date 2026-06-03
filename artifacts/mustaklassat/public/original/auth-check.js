@@ -178,10 +178,22 @@ if (window.self === window.top) {
     setInterval(checkNotifications, 2 * 60 * 1000);
 
   // ── واجهات عامة ──────────────────────────────────────────────────────────
-  window.najranSignOut = function () {
+window.najranSignOut = function () {
+  try {
     localStorage.removeItem('najran_session');
-    window.location.href = BASE + '/sign-in';
-  };
+    sessionStorage.removeItem('najran_prereg');
+
+    // امسح مفاتيح محلية قد تسبب تداخل بين المستخدمين
+    localStorage.removeItem('hospitalName');
+    localStorage.removeItem('companyName');
+    localStorage.removeItem('contractNumber');
+    localStorage.removeItem('contractDetails');
+  } catch(e) {}
+
+  // الرجوع لصفحة الدخول. Clerk سيعرض الحساب الحالي إن كان مازال مفعلاً.
+  // لذلك الإصلاح الكامل النهائي سيكون من React signOut في الخطوة التالية.
+  window.location.href = BASE + '/sign-in';
+};
 
   window.najranSession = session;
 
