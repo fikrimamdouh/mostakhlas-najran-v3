@@ -144,17 +144,21 @@ function getCurrentPageFile() {
 function getCurrentPageLabel() {
   const file = getCurrentPageFile();
 
-  const map = {
-    'attendance.html': 'الحضور والانصراف',
-    'performance.html': 'شهادة الأداء',
-    'achievement.html': 'شهادة الإنجاز',
-    'consumables.html': 'مستخلص المستهلكات',
-    'spare_parts.html': 'مستخلص قطع الغيار',
-    'settings_main.html': 'الإعدادات الرئيسية',
-    'approval.html': 'اعتماد المستخلص',
-    'review_extract.html': 'مراجعة المستخلص',
-    'monthly-overview.html': 'النظرة الشاملة',
-  };
+ const map = {
+  'attendance.html': 'الحضور والانصراف',
+  'performance.html': 'شهادة الأداء',
+  'achievement.html': 'شهادة الإنجاز',
+  'consumables.html': 'مستخلص المستهلكات',
+  'spare_parts.html': 'مستخلص قطع الغيار',
+  'settings_main.html': 'الإعدادات الرئيسية',
+  'approval.html': 'اعتماد المستخلص',
+  'review_extract.html': 'مراجعة المستخلص',
+  'monthly-overview.html': 'النظرة الشاملة',
+  'health_centers_attendance.html': 'حضور المراكز الصحية',
+  'health_centers_consumables.html': 'مستهلكات المراكز الصحية',
+  'admin_offices_attendance.html': 'حضور المكاتب الإدارية',
+  'admin_offices_consumables.html': 'مستهلكات المكاتب الإدارية',
+};
 
   return map[file] || document.title || file || 'صفحة غير محددة';
 }
