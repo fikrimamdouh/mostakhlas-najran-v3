@@ -1042,8 +1042,38 @@ function _resolveCompanyName(session, hospitalName) {
 function _getSession() {
     try {
         var raw = Storage.prototype.getItem.call(localStorage, 'najran_session');
-        return raw ? JSON.parse(raw) : null;
-    } catch (e) { return null; }
+        var session = raw ? JSON.parse(raw) : {};
+
+        var pcd = {};
+        try {
+            pcd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+        } catch (e) {}
+
+        if (!session.hospital) {
+            session.hospital =
+                localStorage.getItem('hospitalName') ||
+                pcd.hospitalName ||
+                '';
+        }
+
+        if (!session.companyName) {
+            session.companyName =
+                localStorage.getItem('companyName') ||
+                pcd.companyName ||
+                '';
+        }
+
+        if (!session.contractNumber) {
+            session.contractNumber =
+                localStorage.getItem('contractNumber') ||
+                pcd.contractNumber ||
+                '';
+        }
+
+        return session;
+    } catch (e) {
+        return null;
+    }
 }
 
 // ── مفتاح localStorage لبيانات عقد مستشفى معين ────────────────────────────
