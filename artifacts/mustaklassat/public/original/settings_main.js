@@ -351,6 +351,11 @@ if (defaultCompanyForHospital && newData.companyName && newData.companyName !== 
 } else if (defaultCompanyForHospital && newData.companyName === defaultCompanyForHospital) {
     newData._manualCompanyName = false;
 }
+    if (newData.hospitalName && newData._manualCompanyName) {
+    localStorage.setItem(_manualCompanyKey(newData.hospitalName), newData.companyName || '');
+} else if (newData.hospitalName && newData._manualCompanyName === false) {
+    localStorage.removeItem(_manualCompanyKey(newData.hospitalName));
+}
         newData._autoHospitalName = newData.hospitalName || '';
         // التحقق من صحة البيانات
         const validationError = validateContractData(newData);
@@ -419,7 +424,13 @@ if (defaultCompanyForHospital && newData.companyName && newData.companyName !== 
 function updateContractDisplayData() {
     const data = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
     const session = (typeof _getSession === 'function') ? _getSession() : null;
-
+const manualCompanyName = _getManualCompanyName(data.hospitalName || localStorage.getItem('hospitalName') || (session && session.hospital) || '');
+if (manualCompanyName) {
+    data.companyName = manualCompanyName;
+    data._manualCompanyName = true;
+}
+    localStorage.setItem('persistentContractData', JSON.stringify(data));
+localStorage.setItem('companyName', data.companyName || '');
     if (!data.hospitalName) {
         data.hospitalName = localStorage.getItem('hospitalName') || (session && session.hospital) || '';
     }
@@ -1109,7 +1120,17 @@ function _getSession() {
 function _hospitalContractKey(hospitalName) {
     return 'contractData__h__' + encodeURIComponent(hospitalName || '');
 }
+function _manualCompanyKey(hospitalName) {
+    return 'manualCompanyName__h__' + encodeURIComponent(hospitalName || '');
+}
 
+function _getManualCompanyName(hospitalName) {
+    try {
+        return localStorage.getItem(_manualCompanyKey(hospitalName || '')) || '';
+    } catch (e) {
+        return '';
+    }
+}
 // ── تبديل المستشفى النشط وتحميل بياناته ─────────────────────────────────────
 function switchHospital(hospitalName) {
     var session = _getSession();
@@ -1242,7 +1263,12 @@ function autoFillFromSession() {
 
         var contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
         var changed = false;
-
+var manualCompanyName = _getManualCompanyName(contractData.hospitalName || session.hospital || '');
+if (manualCompanyName) {
+    contractData.companyName = manualCompanyName;
+    contractData._manualCompanyName = true;
+    changed = true;
+}
         // fallback: اقرأ hospitalName من المفتاح المنفصل إن لم يكن في persistentContractData
         if (!contractData.hospitalName) {
             var _fallbackHN = localStorage.getItem('hospitalName') || (session.hospital || '');
