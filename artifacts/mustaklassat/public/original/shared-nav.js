@@ -439,9 +439,13 @@
     return dropdown;
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', buildNav);
-  } else {
-    buildNav();
-  }
+ // تم تعطيل الشريط العلوي القديم نهائياً
+// التنقل والصلاحيات أصبحت من القائمة الجانبية React فقط
+return;
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', buildNav);
+} else {
+  buildNav();
+}
 })();
