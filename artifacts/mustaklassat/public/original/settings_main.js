@@ -384,14 +384,40 @@ function saveContractData() {
 }
 
 // تحديث عرض بيانات العقد
-function updateContractDisplayData() {
-    const data = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+const data = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
 
-    // ── fallback: اقرأ المفاتيح المنفصلة التي يحفظها cloud-sync ──────────────
-    if (!data.hospitalName)    data.hospitalName    = localStorage.getItem('hospitalName')    || '';
-    if (!data.companyName)     data.companyName     = localStorage.getItem('companyName')     || '';
-    if (!data.contractNumber)  data.contractNumber  = localStorage.getItem('contractNumber')  || '';
-    if (!data.contractDetails) data.contractDetails = localStorage.getItem('contractDetails') || '';
+let session = {};
+try {
+    session = JSON.parse(localStorage.getItem('najran_session') || '{}');
+} catch(e) {}
+
+const companyNameMap = {
+    "بيت_العرب": "شركة مجموعة بيت العرب الحديثة المحدودة",
+    "سراكو": "شركة سراكو",
+    "تجمع_نجران": "تجمع نجران الصحي — وحدة الصيانة العامة"
+};
+
+// ── fallback: اقرأ أولاً من المفاتيح المحفوظة، ثم من جلسة المستخدم ──────────────
+if (!data.hospitalName) {
+    data.hospitalName = localStorage.getItem('hospitalName') || session.hospital || '';
+}
+
+if (!data.companyName) {
+    const savedCompanyName = localStorage.getItem('companyName') || '';
+    data.companyName = savedCompanyName || companyNameMap[session.company] || session.company || '';
+}
+
+if (!data.contractNumber) {
+    data.contractNumber = localStorage.getItem('contractNumber') || session.contractNumber || '';
+}
+
+if (!data.contractDetails) {
+    data.contractDetails = localStorage.getItem('contractDetails') || '';
+}
+
+if (data.hospitalName || data.companyName || data.contractNumber || data.contractDetails) {
+    localStorage.setItem('persistentContractData', JSON.stringify(data));
+}
 
     // طبّق البيانات الثابتة (رقم العقد، التواريخ، الشركة) على الحقول الفارغة
     if (data.hospitalName) {
