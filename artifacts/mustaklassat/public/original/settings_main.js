@@ -360,25 +360,41 @@ if (defaultCompanyForHospital && newData.companyName && newData.companyName !== 
         }
 
         // دالة الحفظ النهائية (سنستدعيها في كل الحالات)
-        const finalizeSave = (finalData) => {
-            // 1. الحفظ في localStorage
-            localStorage.setItem('persistentContractData', JSON.stringify(finalData));
-            
-            // 2. رفع فوري إلى السيرفر (بدون انتظار المزامنة الدورية)
-            if (typeof window.najranSyncNow === 'function') {
-                window.najranSyncNow().catch(() => {});
-            }
+       const finalizeSave = async (finalData) => {
+    try {
+        // 1. الحفظ المحلي الأساسي
+        localStorage.setItem('persistentContractData', JSON.stringify(finalData));
 
-            // 3. إرسال إشعار لباقي الصفحات
-            window.dispatchEvent(new StorageEvent('storage', { key: 'persistentContractData' }));
+        // 2. حفظ مفاتيح مختصرة تقرأها باقي الصفحات كـ fallback
+        localStorage.setItem('hospitalName', finalData.hospitalName || '');
+        localStorage.setItem('companyName', finalData.companyName || '');
+        localStorage.setItem('contractNumber', finalData.contractNumber || '');
+        localStorage.setItem('contractDetails', finalData.contractDetails || '');
 
-            // 4. إظهار رسالة النجاح وإغلاق وضع التعديل
-saveSectionData('contract', newData, 'contract-save-success');            
-            // 5. تحديث الواجهة
-            updateMainHospitalName();
-            alert('تم حفظ البيانات بنجاح!');
-        };
+        // 3. إرسال إشعار لباقي الصفحات
+        window.dispatchEvent(new StorageEvent('storage', {
+            key: 'persistentContractData',
+            newValue: JSON.stringify(finalData)
+        }));
 
+        // 4. تحديث الواجهة محليًا
+        updateContractDisplayData();
+        updateMainHospitalName();
+
+        // 5. رفع فوري للسحابة وانتظار النتيجة قبل رسالة النجاح
+        if (typeof window.najranSyncNow === 'function') {
+            await window.najranSyncNow();
+        }
+
+        // 6. إغلاق وضع التعديل بعد نجاح الحفظ
+        saveSectionData('contract', finalData, 'contract-save-success');
+
+        alert('تم حفظ البيانات ورفعها بنجاح.');
+    } catch (error) {
+        console.error('فشل حفظ/رفع بيانات العقد:', error);
+        alert('تم الحفظ محليًا، لكن فشل الرفع السحابي. لا تغادر الصفحة قبل إعادة المحاولة.');
+    }
+};
         // التعامل مع ملف الختم
         const fileInput = document.getElementById('hospital-stamp');
         if (fileInput && fileInput.files[0]) {
