@@ -461,7 +461,7 @@ if (!data.contractDetails) data.contractDetails = localStorage.getItem('contract
     } else if (stampImage) {
         stampImage.style.display = 'none';
     }
-}
+
 
 // جمع بيانات كل الأقسام
 // إنشاء نسخة احتياطية
