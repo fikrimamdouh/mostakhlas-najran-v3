@@ -247,15 +247,26 @@ export function Sidebar() {
   const initials = (dbUser?.name || user?.fullName || "م").charAt(0);
 const handleSignOut = async () => {
   try {
-    // 1) ارفع آخر تعديلات محلية قبل المسح
-    if (typeof (window as any).najranSyncNow === 'function') {
-      await (window as any).najranSyncNow();
+    const syncFn = (window as any).najranSyncNow;
+
+    if (typeof syncFn !== 'function') {
+      alert('جاري تجهيز الحفظ السحابي. انتظر ثواني ثم حاول تسجيل الخروج مرة أخرى.');
+      return;
     }
 
-    // 2) تأكيد إضافي قصير: أعطِ المتصفح فرصة لإنهاء أي عمليات تخزين/رفع
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const syncResult = await Promise.race([
+      syncFn(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('SYNC_TIMEOUT')), 15000)
+      ),
+    ]) as any;
 
-    // 3) بعد نجاح الرفع فقط امسح بيانات المستخدم الحالي من المتصفح
+    if (!syncResult || syncResult.ok !== true) {
+      throw new Error('SYNC_NOT_CONFIRMED');
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 300));
+
     localStorage.removeItem('najran_session');
     sessionStorage.removeItem('najran_prereg');
 
@@ -269,11 +280,10 @@ const handleSignOut = async () => {
 
     queryClient.clear();
 
-    // 4) خروج Clerk الكامل
     await signOut({ redirectUrl: "/sign-in" });
   } catch (error) {
     console.error('فشل رفع البيانات قبل تسجيل الخروج:', error);
-    alert('لم يتم تسجيل الخروج لأن آخر التعديلات لم يتم رفعها للنظام. حاول مرة أخرى.');
+    alert('لم يتم تسجيل الخروج لأن آخر التعديلات لم يتم تأكيد رفعها للنظام. البيانات ما زالت محفوظة على المتصفح. حاول مرة أخرى.');
   }
 };
   const mainNav = [
