@@ -118,6 +118,48 @@ function loadFromLocalStorage(key) {
         return null;
     }
 }
+function forceContractDirectDisplay() {
+    const data = loadFromLocalStorage('persistentContractData') || {};
+    const extractData = loadFromLocalStorage('persistentExtractData') || {};
+
+    const hospitalName = data.hospitalName || localStorage.getItem('hospitalName') || '—';
+    const companyName = data.companyName || localStorage.getItem('companyName') || '—';
+    const contractDetails = data.contractDetails || localStorage.getItem('contractDetails') || '—';
+    const contractType = data.contractType || 'عقد أساسي';
+    const directPurchaseRatio = data.directPurchaseRatio || '0';
+
+    document.querySelectorAll('.hospitalName').forEach(el => {
+        el.textContent = hospitalName;
+    });
+
+    document.querySelectorAll('.companyName').forEach(el => {
+        el.textContent = companyName;
+    });
+
+    document.querySelectorAll('.contractDetails').forEach(el => {
+        el.textContent = contractDetails;
+    });
+
+    document.querySelectorAll('.contractType').forEach(el => {
+        el.textContent = contractType;
+    });
+
+    document.querySelectorAll('.directPurchaseRatio').forEach(el => {
+        el.textContent = directPurchaseRatio;
+    });
+
+    if (extractData.extractStart) {
+        document.querySelectorAll('#extract-start-date, #extract-start').forEach(el => {
+            if (el.tagName === 'SPAN') el.textContent = extractData.extractStart;
+        });
+    }
+
+    if (extractData.extractEnd) {
+        document.querySelectorAll('#extract-end-date, #extract-end').forEach(el => {
+            if (el.tagName === 'SPAN') el.textContent = extractData.extractEnd;
+        });
+    }
+}
 /* ════════════════════════════════════════════════════════
    syncExtractBanner — يربط رقم الدفعة + الشهر + السنة
    على جميع الصفحات من persistentExtractData
@@ -174,7 +216,31 @@ function syncExtractBanner() {
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeContractDisplay();
-    setTimeout(syncExtractBanner, 250);
+    syncExtractBanner();
+    forceContractDirectDisplay();
+
+    setTimeout(forceContractDirectDisplay, 300);
+    setTimeout(forceContractDirectDisplay, 800);
+    setTimeout(forceContractDirectDisplay, 1500);
+    setTimeout(forceContractDirectDisplay, 3000);
+});
+window.addEventListener('najranCloudPulled', function () {
+    updateContractDisplayData();
+    syncExtractBanner();
+    forceContractDirectDisplay();
+
+    setTimeout(forceContractDirectDisplay, 300);
+    setTimeout(forceContractDirectDisplay, 1000);
+});
+
+window.addEventListener('storage', function (e) {
+    if (!e || e.key === 'persistentContractData' || e.key === 'persistentExtractData') {
+        updateContractDisplayData();
+        syncExtractBanner();
+        forceContractDirectDisplay();
+
+        setTimeout(forceContractDirectDisplay, 300);
+    }
 });
 function updateSignaturesFromLocalStorage() {
     const stored = localStorage.getItem("contractSignatureData");
