@@ -624,12 +624,18 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
     const saveSession = (token: string | null) => {
       if (!token) return;
-      // إذا كان المستخدم اختار مستشفى من المنتقي (switchHospital)، احتفظ بخياره
-      let existingHospital: string | null = null;
-      try {
-        const raw = Storage.prototype.getItem.call(localStorage, 'najran_session');
-        if (raw) existingHospital = JSON.parse(raw).hospital || null;
-      } catch { /* ignore */ }
+     // احتفظ باختيار المستشفى القديم فقط إذا كانت الجلسة تخص نفس المستخدم الحالي
+let existingHospital: string | null = null;
+
+try {
+  const raw = Storage.prototype.getItem.call(localStorage, 'najran_session');
+  if (raw) {
+    const oldSession = JSON.parse(raw);
+    if (oldSession?.userId === dbUser.id) {
+      existingHospital = oldSession.hospital || null;
+    }
+  }
+} catch { /* ignore */ }
       localStorage.setItem('najran_session', JSON.stringify({
         userId: dbUser.id,
         name: dbUser.name,
