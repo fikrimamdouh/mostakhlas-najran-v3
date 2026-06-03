@@ -384,7 +384,7 @@ function saveContractData() {
 }
 
 // تحديث عرض بيانات العقد
-const data = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+function updateContractDisplayData() {const data = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
 
 // ── fallback: اقرأ المفاتيح المنفصلة التي يحفظها cloud-sync ──────────────
 if (!data.hospitalName)    data.hospitalName    = localStorage.getItem('hospitalName')    || '';
@@ -461,7 +461,7 @@ if (!data.contractDetails) data.contractDetails = localStorage.getItem('contract
     } else if (stampImage) {
         stampImage.style.display = 'none';
     }
-
+  }
 
 // جمع بيانات كل الأقسام
 // إنشاء نسخة احتياطية
