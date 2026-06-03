@@ -7,9 +7,13 @@ function initializeContractDisplay(config = {}) {
         'hospitalName', 'contractDetails', 'companyName', 'contractType', 
         'directPurchaseRatio', 'extractPeriod'
     ] } = config;
+
     const container = document.querySelector(containerSelector);
-    if (!container) return;
-    createContractDisplayElements(container, fields);
+
+    if (container) {
+        createContractDisplayElements(container, fields);
+    }
+
     updateContractDisplayData(fields);
 }
 function createContractDisplayElements(container, fields) {
