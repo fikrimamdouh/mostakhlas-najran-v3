@@ -1064,10 +1064,9 @@ function _resolveCompanyName(session, hospitalName) {
     return HOSPITAL_COMPANY_MAP[hospitalName] || '';
 }
 
-// ── قراءة بيانات الجلسة الحالية ──────────────────────────────────────────────
 function _getSession() {
     try {
-        var raw = Storage.prototype.getItem.call(localStorage, 'najran_session');
+        var raw = localStorage.getItem('najran_session');
         var session = raw ? JSON.parse(raw) : {};
 
         var pcd = {};
@@ -1087,6 +1086,10 @@ function _getSession() {
                 localStorage.getItem('companyName') ||
                 pcd.companyName ||
                 '';
+        }
+
+        if (!session.company && session.companyName) {
+            session.company = session.companyName;
         }
 
         if (!session.contractNumber) {
