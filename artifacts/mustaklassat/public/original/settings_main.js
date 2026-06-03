@@ -1233,12 +1233,13 @@ function autoFillFromSession() {
         }
 
         // اسم الشركة — من الجلسة أو من اسم المستشفى (من الجلسة أو من localStorage)
-        var _hospitalForCompany = session.hospital || contractData.hospitalName || '';
-        var fullCompany = _resolveCompanyName(session, _hospitalForCompany);
-        if (fullCompany && contractData.companyName !== fullCompany) {
-            contractData.companyName = fullCompany;
-            changed = true;
-        }
+     var _hospitalForCompany = session.hospital || contractData.hospitalName || '';
+var fullCompany = _resolveCompanyName(session, _hospitalForCompany);
+
+if (!contractData._manualCompanyName && fullCompany && contractData.companyName !== fullCompany) {
+    contractData.companyName = fullCompany;
+    changed = true;
+}
 
         // رقم العقد — يُملأ فقط لو فارغ
         if (!contractData.contractNumber && session.contractNumber) {
@@ -1263,11 +1264,11 @@ function autoFillFromSession() {
             var _hn = document.getElementById('hospital-name');
             if (_hn) _hn.value = session.hospital;
         }
-        var _fullCo = _resolveCompanyName(session, session.hospital || contractData.hospitalName || '');
-        if (_fullCo) {
-            var _cn = document.getElementById('company-name');
-            if (_cn) _cn.value = _fullCo;
-        }
+   var _displayCompany = contractData.companyName || _resolveCompanyName(session, session.hospital || contractData.hospitalName || '');
+if (_displayCompany) {
+    var _cn = document.getElementById('company-name');
+    if (_cn) _cn.value = _displayCompany;
+}
 
         // ── إذا كان المستشفى أو الشركة غائبَّين في الجلسة — اجلب من API ──
         if ((!session.hospital || !session.company) && session.clerkToken) {
@@ -1293,10 +1294,11 @@ function autoFillFromSession() {
                     var hn2 = document.getElementById('hospital-name');
                     if (hn2) hn2.value = user.hospital;
                 }
-                if (user.company) {
-                    var co2 = COMPANY_LABELS_MAP[user.company] ||
-                              user.company.replace(/_/g, ' ');
-                    var cn2 = document.getElementById('company-name');
+               if (user.company && !cd2._manualCompanyName) {
+    var fc2 = COMPANY_LABELS_MAP[user.company] ||
+              user.company.replace(/_/g, ' ');
+    if (cd2.companyName !== fc2) { cd2.companyName = fc2; ch2 = true; }
+}
                     if (cn2) cn2.value = co2;
                 }
                 // حفظ في persistentContractData
