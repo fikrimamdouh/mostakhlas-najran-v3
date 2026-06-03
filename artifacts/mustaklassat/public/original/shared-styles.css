@@ -883,4 +883,12 @@
   .ab-cancel  { background: linear-gradient(135deg,#374151,#6b7280) !important; }
 
 } /* end @media screen */
-
+/* إخفاء شريط التنقل القديم داخل صفحات original
+   التحكم في الصلاحيات والتنقل أصبح من القائمة الجانبية React */
+.nav-bar,
+.nav-bar *,
+.dropdown,
+#navigation {
+  display: none !important;
+  visibility: hidden !important;
+}
