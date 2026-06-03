@@ -334,7 +334,15 @@ function saveContractData() {
             followUpManagerPhone: document.getElementById('follow-up-manager-phone')?.value || '',
             followUpManagerEmail: document.getElementById('follow-up-manager-email')?.value || ''
         };
+        // إذا المستخدم حفظ تفاصيل عقد مختلفة عن الافتراضي، احترم تعديله لاحقاً
+        const fixedForHospital = HOSPITAL_CONTRACT_MAP[newData.hospitalName];
+        if (fixedForHospital && newData.contractDetails && newData.contractDetails !== fixedForHospital.contractDetails) {
+            newData._manualContractDetails = true;
+        } else if (fixedForHospital && newData.contractDetails === fixedForHospital.contractDetails) {
+            newData._manualContractDetails = false;
+        }
 
+        newData._autoHospitalName = newData.hospitalName || '';
         // التحقق من صحة البيانات
         const validationError = validateContractData(newData);
         if (validationError) {
@@ -356,8 +364,7 @@ function saveContractData() {
             window.dispatchEvent(new StorageEvent('storage', { key: 'persistentContractData' }));
 
             // 4. إظهار رسالة النجاح وإغلاق وضع التعديل
-            saveSectionData('contract', 'contract-save-success');
-            
+saveSectionData('contract', newData, 'contract-save-success');            
             // 5. تحديث الواجهة
             updateMainHospitalName();
             alert('تم حفظ البيانات بنجاح!');
@@ -384,20 +391,39 @@ function saveContractData() {
 }
 
 // تحديث عرض بيانات العقد
-function updateContractDisplayData() {const data = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+function updateContractDisplayData() {
+    const data = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+    const session = (typeof _getSession === 'function') ? _getSession() : null;
 
-// ── fallback: اقرأ المفاتيح المنفصلة التي يحفظها cloud-sync ──────────────
-if (!data.hospitalName)    data.hospitalName    = localStorage.getItem('hospitalName')    || '';
-if (!data.companyName)     data.companyName     = localStorage.getItem('companyName')     || '';
-if (!data.contractNumber)  data.contractNumber  = localStorage.getItem('contractNumber')  || '';
-if (!data.contractDetails) data.contractDetails = localStorage.getItem('contractDetails') || '';
+    if (!data.hospitalName) {
+        data.hospitalName = localStorage.getItem('hospitalName') || (session && session.hospital) || '';
+    }
 
-    // طبّق البيانات الثابتة (رقم العقد، التواريخ، الشركة) على الحقول الفارغة
-    if (data.hospitalName) {
+    if (!data.companyName) {
+        data.companyName =
+            localStorage.getItem('companyName') ||
+            (session && session.companyName) ||
+            _resolveCompanyName(session, data.hospitalName) ||
+            '';
+    }
+
+    if (!data.contractNumber) {
+        data.contractNumber = localStorage.getItem('contractNumber') || (session && session.contractNumber) || '';
+    }
+
+    if (!data.contractDetails) {
+        data.contractDetails = localStorage.getItem('contractDetails') || '';
+    }
+
+    if (data.hospitalName && HOSPITAL_CONTRACT_MAP[data.hospitalName]) {
         var before = JSON.stringify(data);
-        _applyFixedContractData(data, data.hospitalName);
+        _applyFixedContractData(data, data.hospitalName, false);
         if (JSON.stringify(data) !== before) {
             localStorage.setItem('persistentContractData', JSON.stringify(data));
+            localStorage.setItem('hospitalName', data.hospitalName);
+            localStorage.setItem('companyName', data.companyName || '');
+            localStorage.setItem('contractNumber', data.contractNumber || '');
+            localStorage.setItem('contractDetails', data.contractDetails || '');
         }
     }
     document.getElementById('hospital-name').value = data.hospitalName || '';
@@ -917,7 +943,7 @@ var HOSPITAL_CONTRACT_MAP = {
         endDate:         '2031-01-01',
         contractType:    'عقد أساسي',
         contractValue:   '111691036.01',
-        contractDetails: 'عقد الصيانة والنظافة والشغل غير الطبي لمواقع (م. يدمة العام – م. حبونا العام – م. بدر الجنوب العام)',
+        contractDetails: 'عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع (م. يدمة العام - م. حبونا العام - م. بدر الجنوب العام)',
     },
     'مستشفى حبونا العام': {
         contractNumber:  '250811180425',
@@ -926,7 +952,7 @@ var HOSPITAL_CONTRACT_MAP = {
         endDate:         '2031-01-01',
         contractType:    'عقد أساسي',
         contractValue:   '111691036.01',
-        contractDetails: 'عقد الصيانة والنظافة والشغل غير الطبي لمواقع (م. يدمة العام – م. حبونا العام – م. بدر الجنوب العام)',
+        contractDetails: 'عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع (م. يدمة العام - م. حبونا العام - م. بدر الجنوب العام)',
     },
     'مستشفى بدر الجنوب العام': {
         contractNumber:  '250811180425',
@@ -935,7 +961,7 @@ var HOSPITAL_CONTRACT_MAP = {
         endDate:         '2031-01-01',
         contractType:    'عقد أساسي',
         contractValue:   '111691036.01',
-        contractDetails: 'عقد الصيانة والنظافة والشغل غير الطبي لمواقع (م. يدمة العام – م. حبونا العام – م. بدر الجنوب العام)',
+        contractDetails: 'عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع (م. يدمة العام - م. حبونا العام - م. بدر الجنوب العام)',
     },
     'مستشفى الولادة والأطفال': {
         contractNumber:  '250701156483',
@@ -944,7 +970,7 @@ var HOSPITAL_CONTRACT_MAP = {
         endDate:         '2031-02-04',
         contractType:    'عقد أساسي',
         contractValue:   '272601114.35',
-        contractDetails: 'عقد الصيانة والتشغيل غير الطبي لمواقع (مستشفى الولادة والأطفال – مستشفى نجران العام القديم وسكن الممرضات الخارجي – المكاتب الإدارية والمرافق الصحية – صيانة وإصلاح السيارات والعيادات المتنقلة)',
+        contractDetails: 'عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع (م. الولادة والأطفال – م. نجران العام القديم وسكن الممرضات الخارجي – المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة)',
     },
     'مستشفى نجران العام القديم وسكن الممرضات الخارجي': {
         contractNumber:  '250701156483',
@@ -953,7 +979,7 @@ var HOSPITAL_CONTRACT_MAP = {
         endDate:         '2031-02-03',
         contractType:    'عقد أساسي',
         contractValue:   '272601114.35',
-        contractDetails: 'عقد الصيانة والتشغيل غير الطبي لمواقع (مستشفى الولادة والأطفال – مستشفى نجران العام القديم وسكن الممرضات الخارجي – المكاتب الإدارية والمرافق الصحية – صيانة وإصلاح السيارات والعيادات المتنقلة)',
+        contractDetails: 'عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع (م. الولادة والأطفال – م. نجران العام القديم وسكن الممرضات الخارجي – المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة)',
     },
     'المكاتب الإدارية والمرافق الصحية': {
         contractNumber:  '250701156483',
@@ -962,7 +988,7 @@ var HOSPITAL_CONTRACT_MAP = {
         endDate:         '2031-02-04',
         contractType:    'عقد أساسي',
         contractValue:   '272601114.35',
-        contractDetails: 'عقد الصيانة والتشغيل غير الطبي لمواقع (مستشفى الولادة والأطفال – مستشفى نجران العام القديم وسكن الممرضات الخارجي – المكاتب الإدارية والمرافق الصحية – صيانة وإصلاح السيارات والعيادات المتنقلة)',
+        contractDetails: 'عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع (م. الولادة والأطفال – م. نجران العام القديم وسكن الممرضات الخارجي – المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة)',
     },
     'صيانة وإصلاح السيارات والعيادات المتنقلة': {
         contractNumber:  '250701156483',
@@ -971,26 +997,41 @@ var HOSPITAL_CONTRACT_MAP = {
         endDate:         '2031-02-04',
         contractType:    'عقد أساسي',
         contractValue:   '272601114.35',
-        contractDetails: 'عقد الصيانة والتشغيل غير الطبي لمواقع (مستشفى الولادة والأطفال – مستشفى نجران العام القديم وسكن الممرضات الخارجي – المكاتب الإدارية والمرافق الصحية – صيانة وإصلاح السيارات والعيادات المتنقلة)',
+        contractDetails: 'عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع (م. الولادة والأطفال – م. نجران العام القديم وسكن الممرضات الخارجي – المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة)',
     },
 };
 
-// دمج البيانات الثابتة في بيانات المستشفى (لا تُكتب فوق قيم مدخلة يدوياً)
-function _applyFixedContractData(data, hospitalName) {
+function _applyFixedContractData(data, hospitalName, force) {
     var fixed = HOSPITAL_CONTRACT_MAP[hospitalName];
     if (!fixed) return data;
-    if (!data.contractNumber) data.contractNumber = fixed.contractNumber;
-    if (!data.companyName)    data.companyName    = fixed.companyName;
-    if (!data.startDate)      data.startDate      = fixed.startDate;
-    if (!data.endDate)        data.endDate        = fixed.endDate;
-    if (!data.contractType)   data.contractType   = fixed.contractType;
-    if (!data.contractValue)  data.contractValue  = fixed.contractValue;
-    if (!data.contractDetails) data.contractDetails = fixed.contractDetails;
+
+    var hospitalChanged = data._autoHospitalName !== hospitalName;
+
+    data.hospitalName = hospitalName || data.hospitalName || '';
+
+    // بيانات أساسية ثابتة: تتعبأ تلقائياً عند أول اختيار أو عند تغيير المستشفى
+    if (force || hospitalChanged || !data.contractNumber) data.contractNumber = fixed.contractNumber;
+    if (force || hospitalChanged || !data.companyName)    data.companyName    = fixed.companyName;
+    if (force || hospitalChanged || !data.startDate)      data.startDate      = fixed.startDate;
+    if (force || hospitalChanged || !data.endDate)        data.endDate        = fixed.endDate;
+    if (force || hospitalChanged || !data.contractType)   data.contractType   = fixed.contractType;
+    if (force || hospitalChanged || !data.contractValue)  data.contractValue  = fixed.contractValue;
+
+    // تفاصيل العقد: تتعبأ تلقائياً، لكن لا تُمسح إذا المستخدم عدّلها وحفظها
+    if (!data._manualContractDetails && (force || hospitalChanged || !data.contractDetails)) {
+        data.contractDetails = fixed.contractDetails;
+    }
+
+    data._autoHospitalName = hospitalName;
+
     return data;
 }
 
 // إرجاع اسم الشركة الكامل من الجلسة أو من اسم المستشفى
 function _resolveCompanyName(session, hospitalName) {
+    if (session && session.companyName) {
+        return session.companyName;
+    }
     if (session && session.company && COMPANY_LABELS_MAP[session.company]) {
         return COMPANY_LABELS_MAP[session.company];
     }
@@ -1058,7 +1099,7 @@ function switchHospital(hospitalName) {
             directPurchaseRatio:    oldData.directPurchaseRatio    || '0',
         };
         // طبّق البيانات الثابتة (رقم العقد، التواريخ، الشركة)
-        _applyFixedContractData(freshData, hospitalName);
+_applyFixedContractData(freshData, hospitalName, true);
         localStorage.setItem('persistentContractData', JSON.stringify(freshData));
     }
 
@@ -1169,7 +1210,13 @@ function autoFillFromSession() {
             contractData.contractNumber = session.contractNumber;
             changed = true;
         }
-
+        if (contractData.hospitalName && HOSPITAL_CONTRACT_MAP[contractData.hospitalName]) {
+            var beforeFixed = JSON.stringify(contractData);
+            _applyFixedContractData(contractData, contractData.hospitalName, false);
+            if (JSON.stringify(contractData) !== beforeFixed) {
+                changed = true;
+            }
+        }
         if (changed) {
             localStorage.setItem('persistentContractData', JSON.stringify(contractData));
             updateContractDisplayData();
@@ -1272,7 +1319,7 @@ window._selectHospitalFromOverlay = function(hospitalName) {
     // دالة تطبيق الافتراضي (إن لم يوجد تعديل محفوظ على السيرفر)
     function _applyDefaults() {
         var freshData = { hospitalName: hospitalName };
-        _applyFixedContractData(freshData, hospitalName);
+_applyFixedContractData(freshData, hospitalName, true);
         // اكتب عبر الـ proxy حتى تقرأ باقي الصفحات البيانات من المكان الصحيح
         localStorage.setItem('persistentContractData', JSON.stringify(freshData));
     }
@@ -1355,8 +1402,9 @@ document.addEventListener('DOMContentLoaded', () => {
         autoFillFromSession();
         renderMonthsArchive();
         // ضمان إضافي: تشغيل autoFillFromSession مرتين بعد أي كود قد يمسح الحقول
-        setTimeout(autoFillFromSession, 200);
-        setTimeout(autoFillFromSession, 600);
+      setTimeout(autoFillFromSession, 200);
+setTimeout(autoFillFromSession, 600);
+setTimeout(autoFillFromSession, 1200);
 
         // ── فحص إشارة اعتماد المستخلص — تقديم الفترة تلقائياً ──────────
         var advanceFlag = localStorage.getItem('najran_advance_period');
