@@ -636,21 +636,36 @@ try {
     }
   }
 } catch { /* ignore */ }
-      localStorage.setItem('najran_session', JSON.stringify({
-        userId: dbUser.id,
-        name: dbUser.name,
-        email: dbUser.email,
-        role: dbUser.role,
-        hospital: existingHospital || dbUser.hospital,
-        hospitals: (dbUser as any).hospitals || null,
-        company: dbUser.company,
-        phone: (dbUser as any).phone || null,
-        jobTitle: (dbUser as any).jobTitle || null,
-        contractNumber: (dbUser as any).contractNumber || null,
-        allowedModules: (dbUser as any).allowedModules || null,
-        clerkToken: token,
-        timestamp: Date.now(),
-      }));
+     const companyLabelMap: Record<string, string> = {
+  "بيت_العرب": "شركة مجموعة بيت العرب الحديثة المحدودة",
+  "سراكو": "شركة سراكو",
+  "تجمع_نجران": "تجمع نجران الصحي — وحدة الصيانة العامة",
+};
+
+const activeHospital = existingHospital || dbUser.hospital || null;
+const companyCode = (dbUser as any).company || null;
+      const companyName = companyCode ? (companyLabelMap[companyCode] || companyCode) : null;
+
+localStorage.setItem('najran_session', JSON.stringify({
+  userId: dbUser.id,
+  name: dbUser.name,
+  email: dbUser.email,
+  role: dbUser.role,
+  hospital: activeHospital,
+  hospitals: (dbUser as any).hospitals || null,
+  company: companyCode,
+  companyName,
+  phone: (dbUser as any).phone || null,
+  jobTitle: (dbUser as any).jobTitle || null,
+  contractNumber: (dbUser as any).contractNumber || null,
+  allowedModules: (dbUser as any).allowedModules || null,
+  clerkToken: token,
+  timestamp: Date.now(),
+}));
+
+if (activeHospital) localStorage.setItem('hospitalName', activeHospital);
+if (companyName) localStorage.setItem('companyName', companyName);
+if ((dbUser as any).contractNumber) localStorage.setItem('contractNumber', (dbUser as any).contractNumber);
     };
 
     getToken().then(token => {
