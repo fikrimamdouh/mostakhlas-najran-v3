@@ -27,7 +27,8 @@
     'spare_partsData', 'approvalData', 'displayApprovalData',
     'performanceData', 'achievementData', 'achievementTitles_v1',
     'centerNames_v3', 'departmentNames', 'distributionSettings',
-    'hospitalName', 'companyName', 'directPurchaseRatio',
+'hospitalName', 'companyName', 'directPurchaseRatio',
+'hospitalActivityStatus',
     'admin_staff', 'dynamicSignatures', 'contractorSignature',
     'appTitles_v1', 'healthCentersData', 'reviewExtractData', 'requestVisitData',
     'settings_main', 'settings_advanced',
@@ -131,7 +132,128 @@ async function getFreshToken() {
     const s = getSession();
     return s?.hospital?.trim() || null;
   }
+function getCurrentUserLabel() {
+  const s = getSession();
+  return s?.name || s?.email || 'مستخدم';
+}
 
+function getCurrentPageFile() {
+  return window.location.pathname.split('/').pop() || '';
+}
+
+function getCurrentPageLabel() {
+  const file = getCurrentPageFile();
+
+  const map = {
+    'attendance.html': 'الحضور والانصراف',
+    'performance.html': 'شهادة الأداء',
+    'achievement.html': 'شهادة الإنجاز',
+    'consumables.html': 'مستخلص المستهلكات',
+    'spare_parts.html': 'مستخلص قطع الغيار',
+    'settings_main.html': 'الإعدادات الرئيسية',
+    'approval.html': 'اعتماد المستخلص',
+    'review_extract.html': 'مراجعة المستخلص',
+    'monthly-overview.html': 'النظرة الشاملة',
+  };
+
+  return map[file] || document.title || file || 'صفحة غير محددة';
+}
+
+function readExtractMeta() {
+  let d = {};
+  try {
+    d = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+  } catch (_) {}
+
+  return {
+    month: d.extractMonth || localStorage.getItem('extractMonth') || '',
+    year: d.extractYear || localStorage.getItem('extractYear') || '',
+    extractNumber: d.extractNumber || localStorage.getItem('extractNumber') || '',
+  };
+}
+
+function updateHospitalActivityStatus() {
+  try {
+    const s = getSession();
+    if (!s?.hospital) return;
+
+    const meta = readExtractMeta();
+
+    const activity = {
+      userId: s.userId || '',
+      userName: getCurrentUserLabel(),
+      hospital: s.hospital,
+      page: getCurrentPageLabel(),
+      pageFile: getCurrentPageFile(),
+      month: meta.month,
+      year: meta.year,
+      extractNumber: meta.extractNumber,
+      updatedAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem('hospitalActivityStatus', JSON.stringify(activity));
+  } catch (_) {}
+}
+
+function showHospitalActivityNotice() {
+  try {
+    const raw = localStorage.getItem('hospitalActivityStatus');
+    if (!raw) return;
+
+    const activity = JSON.parse(raw);
+    const s = getSession();
+    if (!activity || !s) return;
+
+    if (activity.userId && activity.userId === s.userId) return;
+
+    const currentPage = getCurrentPageFile();
+    if (activity.pageFile && activity.pageFile !== currentPage) return;
+
+    const updatedAt = activity.updatedAt ? new Date(activity.updatedAt) : null;
+    const ageMs = updatedAt ? Date.now() - updatedAt.getTime() : null;
+    if (ageMs !== null && ageMs > 6 * 60 * 60 * 1000) return;
+
+    const noticeKey = 'activity_notice_seen_' + activity.pageFile + '_' + activity.updatedAt;
+    if (sessionStorage.getItem(noticeKey)) return;
+    sessionStorage.setItem(noticeKey, '1');
+
+    const parts = [
+      `آخر عمل على هذه الصفحة كان بواسطة: ${activity.userName || 'مستخدم آخر'}`,
+      activity.month || activity.year ? `الفترة: ${activity.month || ''} ${activity.year || ''}`.trim() : '',
+      activity.extractNumber ? `رقم المستخلص/الدفعة: ${activity.extractNumber}` : '',
+    ].filter(Boolean);
+
+    const box = document.createElement('div');
+    box.className = 'no-print';
+    box.style.cssText = `
+      position: fixed;
+      bottom: 18px;
+      left: 18px;
+      z-index: 999999;
+      max-width: 460px;
+      background: #0f172a;
+      color: #fff;
+      padding: 13px 16px;
+      border-radius: 14px;
+      font-family: Tajawal, Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.8;
+      direction: rtl;
+      box-shadow: 0 10px 28px rgba(0,0,0,.28);
+      border-right: 4px solid #d4af37;
+    `;
+
+    box.innerHTML = `
+      <div style="font-weight:800;color:#d4af37;margin-bottom:3px;">تنبيه آخر نشاط</div>
+      <div>${parts.join('<br>')}</div>
+    `;
+
+    document.body.appendChild(box);
+    setTimeout(() => {
+      if (box.parentElement) box.remove();
+    }, 9000);
+  } catch (_) {}
+}
  async function apiFetch(path, options = {}) {
   const session = getSession();
   if (!session) return null;
@@ -520,24 +642,32 @@ async function syncNow() {
 
     window.najranPullFromCloud = pullFromCloudSafe;
 
-    await pullFromCloudSafe();
+await pullFromCloudSafe();
 
+showHospitalActivityNotice();
+updateHospitalActivityStatus();
+syncNow().catch(() => {});
 setInterval(() => {
   syncNow().catch(() => {});
-}, SYNC_INTERVAL_MS);    window.addEventListener('beforeunload', () => {
+}, SYNC_INTERVAL_MS);   window.addEventListener('beforeunload', () => {
+  updateHospitalActivityStatus();
   pushToCloud().catch(() => {});
 });
     let _inputDebounce = null;
-    document.addEventListener('input', () => {
-      clearTimeout(_inputDebounce);
-_inputDebounce = setTimeout(() => {
-  syncNow().catch(() => {});
-}, 2_000);    });
-    document.addEventListener('change', () => {
-      clearTimeout(_inputDebounce);
-_inputDebounce = setTimeout(() => {
-  syncNow().catch(() => {});
-}, 2_000);    });
+  document.addEventListener('input', () => {
+  clearTimeout(_inputDebounce);
+  updateHospitalActivityStatus();
+  _inputDebounce = setTimeout(() => {
+    syncNow().catch(() => {});
+  }, 2_000);
+});
+  document.addEventListener('change', () => {
+  clearTimeout(_inputDebounce);
+  updateHospitalActivityStatus();
+  _inputDebounce = setTimeout(() => {
+    syncNow().catch(() => {});
+  }, 2_000);
+});
 
     // debounce على storage event (30 ث)
     let _storageDebounce = null;
