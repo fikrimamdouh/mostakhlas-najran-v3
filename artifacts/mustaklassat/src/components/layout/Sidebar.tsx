@@ -245,7 +245,37 @@ export function Sidebar() {
   const { notifications, unread, markRead, markAllRead } = useNotifications(isAdmin, pendingUsersCount);
 
   const initials = (dbUser?.name || user?.fullName || "م").charAt(0);
+const handleSignOut = async () => {
+  try {
+    // 1) ارفع آخر تعديلات محلية قبل المسح
+    if (typeof (window as any).najranSyncNow === 'function') {
+      await (window as any).najranSyncNow();
+    }
 
+    // 2) تأكيد إضافي قصير: أعطِ المتصفح فرصة لإنهاء أي عمليات تخزين/رفع
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // 3) بعد نجاح الرفع فقط امسح بيانات المستخدم الحالي من المتصفح
+    localStorage.removeItem('najran_session');
+    sessionStorage.removeItem('najran_prereg');
+
+    localStorage.removeItem('hospitalName');
+    localStorage.removeItem('companyName');
+    localStorage.removeItem('contractNumber');
+    localStorage.removeItem('contractDetails');
+
+    localStorage.removeItem('persistentContractData');
+    localStorage.removeItem('persistentExtractData');
+
+    queryClient.clear();
+
+    // 4) خروج Clerk الكامل
+    await signOut({ redirectUrl: "/sign-in" });
+  } catch (error) {
+    console.error('فشل رفع البيانات قبل تسجيل الخروج:', error);
+    alert('لم يتم تسجيل الخروج لأن آخر التعديلات لم يتم رفعها للنظام. حاول مرة أخرى.');
+  }
+};
   const mainNav = [
     ...(!isViewer ? [
       { name: "لوحة القيادة", href: "/dashboard", icon: LayoutDashboard },
@@ -808,7 +838,7 @@ export function Sidebar() {
               </p>
             )}
             <button
-              onClick={() => signOut()}
+              onClick={handleSignOut}
               className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:bg-red-500/20"
               style={{ color: "rgba(255,100,100,0.8)" }}
             >
@@ -826,7 +856,7 @@ export function Sidebar() {
               {initials}
             </div>
             <button
-              onClick={() => signOut()}
+              onClick={handleSignOut}
               title="تسجيل الخروج"
               className="p-1.5 rounded-lg transition-all hover:bg-red-500/20"
               style={{ color: "rgba(255,100,100,0.7)" }}
