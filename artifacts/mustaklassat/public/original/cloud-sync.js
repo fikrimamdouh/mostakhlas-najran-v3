@@ -559,8 +559,8 @@ async function pushToCloud() {
     }
   }
 const mustSaveUser = Object.keys(userData).length > 0;
-const mustSaveHospital = !!hospitalName && Object.keys(hospitalData).length > 0;
-  if (!mustSaveUser && !mustSaveHospital) {
+const mustSaveUser = Object.keys(userData).length > 0;
+const mustSaveHospital = !!hospitalName && Object.keys(hospitalData).length > 0;  if (!mustSaveUser && !mustSaveHospital) {
     return { ok: true, saved: 0, reason: 'NO_DATA' };
   }
 const [userResult, hospitalResult] = await Promise.all([
@@ -663,10 +663,16 @@ async function syncNow() {
     throw err;
   }
 }
+window.najranSyncNow = syncNow;
+window.najranPullFromCloud = pullFromCloud;
 
-  window.najranSyncNow      = syncNow;
-  window.najranPullFromCloud = pullFromCloud;
-
+// إتاحة دوال المزامنة للواجهة الرئيسية React عند تشغيل original داخل iframe
+try {
+  if (window.parent && window.parent !== window) {
+    window.parent.najranSyncNow = syncNow;
+    window.parent.najranPullFromCloud = pullFromCloud;
+  }
+} catch (_) {}
   // ── التهيئة الرئيسية ──────────────────────────────────────────────────────
   async function init() {
     const session = getSession();
