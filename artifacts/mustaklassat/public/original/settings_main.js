@@ -1148,9 +1148,8 @@ _applyFixedContractData(freshData, hospitalName, true);
     var newData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
     if (_cd) _cd.value = newData.contractDetails || '';
 
-    var fullCompanyFinal = _resolveCompanyName(session, hospitalName);
-    var _cn = document.getElementById('company-name');
-    if (_cn) _cn.value = fullCompanyFinal;
+ var _cn = document.getElementById('company-name');
+if (_cn) _cn.value = newData.companyName || _resolveCompanyName(session, hospitalName);
 
     updateMainHospitalName();
     renderHospitalPicker();
@@ -1290,34 +1289,43 @@ if (_displayCompany) {
                         JSON.stringify(updated));
                 } catch(e2) {}
                 // تطبيق على DOM مباشرة
-                if (user.hospital) {
-                    var hn2 = document.getElementById('hospital-name');
-                    if (hn2) hn2.value = user.hospital;
-                }
-               if (user.company && !cd2._manualCompanyName) {
-    var fc2 = COMPANY_LABELS_MAP[user.company] ||
-              user.company.replace(/_/g, ' ');
-    if (cd2.companyName !== fc2) { cd2.companyName = fc2; ch2 = true; }
+if (user.hospital) {
+    var hn2 = document.getElementById('hospital-name');
+    if (hn2) hn2.value = user.hospital;
 }
-                    if (cn2) cn2.value = co2;
-                }
-                // حفظ في persistentContractData
-                try {
-                    var cd2 = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-                    var ch2 = false;
-                    if (user.hospital && cd2.hospitalName !== user.hospital) {
-                        cd2.hospitalName = user.hospital; ch2 = true;
-                    }
-                    if (user.company) {
-                        var fc2 = COMPANY_LABELS_MAP[user.company] ||
-                                  user.company.replace(/_/g, ' ');
-                        if (cd2.companyName !== fc2) { cd2.companyName = fc2; ch2 = true; }
-                    }
-                    if (ch2) {
-                        localStorage.setItem('persistentContractData', JSON.stringify(cd2));
-                        updateMainHospitalName();
-                    }
-                } catch(e3) {}
+
+// حفظ في persistentContractData مع احترام التعديل اليدوي لاسم الشركة
+try {
+    var cd2 = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+    var ch2 = false;
+
+    if (user.hospital && cd2.hospitalName !== user.hospital) {
+        cd2.hospitalName = user.hospital;
+        ch2 = true;
+    }
+
+    if (user.company && !cd2._manualCompanyName) {
+        var fc2 = COMPANY_LABELS_MAP[user.company] ||
+                  user.company.replace(/_/g, ' ');
+
+        if (cd2.companyName !== fc2) {
+            cd2.companyName = fc2;
+            ch2 = true;
+        }
+    }
+
+    if (ch2) {
+        localStorage.setItem('persistentContractData', JSON.stringify(cd2));
+        updateMainHospitalName();
+    }
+
+    var cn2 = document.getElementById('company-name');
+    if (cn2) {
+        cn2.value = cd2.companyName || '';
+    }
+} catch(e3) {}
+
+renderHospitalPicker();
                 renderHospitalPicker();
               }).catch(function() {});
         }
