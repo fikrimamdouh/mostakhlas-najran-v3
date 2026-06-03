@@ -270,8 +270,7 @@ if (!token) {
 
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10_000);
-
+const timer = setTimeout(() => controller.abort(), 20_000);
     const headers = {
       'Content-Type': 'application/json',
       ...(options.headers || {}),
@@ -474,7 +473,40 @@ if (!token) {
     for (let i = 0; i < len; i++) keys.push(_realKey(i));
     return keys;
   }
+function splitObjectIntoChunks(obj, chunkSize) {
+  const entries = Object.entries(obj || {});
+  const chunks = [];
 
+  for (let i = 0; i < entries.length; i += chunkSize) {
+    chunks.push(Object.fromEntries(entries.slice(i, i + chunkSize)));
+  }
+
+  return chunks;
+}
+
+async function putStorageInBatches(path, data, batchSize) {
+  const chunks = splitObjectIntoChunks(data, batchSize);
+  let saved = 0;
+
+  if (chunks.length === 0) {
+    return { saved: 0 };
+  }
+
+  for (const chunk of chunks) {
+    const result = await apiFetch(path, {
+      method: 'PUT',
+      body: JSON.stringify({ data: chunk })
+    });
+
+    if (!result) {
+      return null;
+    }
+
+    saved += result.saved || Object.keys(chunk).length || 0;
+  }
+
+  return { saved };
+}
 async function pushToCloud() {
   if (!getSession()) {
     throw new Error('NO_SESSION');
@@ -512,22 +544,15 @@ async function pushToCloud() {
   if (!mustSaveUser && !mustSaveHospital) {
     return { ok: true, saved: 0, reason: 'NO_DATA' };
   }
+const [userResult, hospitalResult] = await Promise.all([
+  mustSaveUser
+    ? putStorageInBatches('/storage', userData, 300)
+    : Promise.resolve({ saved: 0 }),
 
-  const [userResult, hospitalResult] = await Promise.all([
-    mustSaveUser
-      ? apiFetch('/storage', {
-          method: 'PUT',
-          body: JSON.stringify({ data: userData })
-        })
-      : Promise.resolve({ saved: 0 }),
-
-    mustSaveHospital
-      ? apiFetch('/hospital-storage', {
-          method: 'PUT',
-          body: JSON.stringify({ data: hospitalData })
-        })
-      : Promise.resolve({ saved: 0 }),
-  ]);
+  mustSaveHospital
+    ? putStorageInBatches('/hospital-storage', hospitalData, 300)
+    : Promise.resolve({ saved: 0 }),
+]);
 
   if (mustSaveUser && !userResult) {
     throw new Error('USER_STORAGE_SAVE_FAILED');
