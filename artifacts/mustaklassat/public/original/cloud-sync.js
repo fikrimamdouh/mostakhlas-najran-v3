@@ -558,8 +558,8 @@ async function pushToCloud() {
       hospitalData[hospitalKey] = val;
     }
   }
-  const mustSaveHospital = !!hospitalName && Object.keys(hospitalData).length > 0;
-
+const mustSaveUser = Object.keys(userData).length > 0;
+const mustSaveHospital = !!hospitalName && Object.keys(hospitalData).length > 0;
   if (!mustSaveUser && !mustSaveHospital) {
     return { ok: true, saved: 0, reason: 'NO_DATA' };
   }
