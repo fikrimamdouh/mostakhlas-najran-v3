@@ -104,10 +104,28 @@
     } catch (_) { return null; }
   }
 
-  function getFreshToken() {
-    const s = getSession();
-    return s?.clerkToken || null;
-  }
+async function getFreshToken() {
+  try {
+    // من React App مباشرة
+    if (typeof window.najranGetFreshToken === 'function') {
+      const token = await window.najranGetFreshToken();
+      if (token) return token;
+    }
+
+    // لو الصفحة الأصلية داخل iframe
+    if (
+      window.parent &&
+      window.parent !== window &&
+      typeof window.parent.najranGetFreshToken === 'function'
+    ) {
+      const token = await window.parent.najranGetFreshToken();
+      if (token) return token;
+    }
+  } catch (_) {}
+
+  const s = getSession();
+  return s?.clerkToken || null;
+}
 
   function getHospitalName() {
     const s = getSession();
@@ -118,12 +136,11 @@
   const session = getSession();
   if (!session) return null;
 
-  const token = session.clerkToken;
-  if (!token) {
-    showTokenExpiredBanner();
-    console.warn('[MzamanaCloud] لا يوجد clerkToken داخل najran_session — تم إيقاف طلب المزامنة');
-    return null;
-  }
+const token = await getFreshToken();
+if (!token) {
+  console.warn('[MzamanaCloud] لا يوجد clerkToken صالح — تم إيقاف طلب المزامنة داخلياً');
+  return null;
+}
 
   try {
     const controller = new AbortController();
@@ -144,11 +161,10 @@
 
     clearTimeout(timer);
 
-    if (resp.status === 401) {
-      showTokenExpiredBanner();
-      console.warn('[MzamanaCloud] رفض التوثيق 401 — الجلسة تحتاج تجديد');
-      return null;
-    }
+  if (resp.status === 401) {
+  console.warn('[MzamanaCloud] رفض التوثيق 401 — سيتم التعامل معه داخلياً بدون إظهار رسالة للمستخدم');
+  return null;
+}
 
     return resp.ok ? resp.json() : null;
   } catch (_) {
@@ -333,53 +349,75 @@
     return keys;
   }
 
-  async function pushToCloud() {
-    if (!getSession()) return;
+ async function pushToCloud() {
+  if (!getSession()) {
+    throw new Error('NO_SESSION');
+  }
 
-    const hospitalName = getHospitalName();
-    const allData = {};
-    const hospitalData = {};
+  const hospitalName = getHospitalName();
+  const allData = {};
+  const hospitalData = {};
 
-    function toSharedHospitalKey(key) {
-      return key.replace(/^_u\d+_/, '');
-    }
+  function toSharedHospitalKey(key) {
+    return key.replace(/^_u\d+_/, '');
+  }
 
-    for (const key of _realKeys()) {
-      if (!key) continue;
-      if (!shouldSyncKey(key)) continue;
+  for (const key of _realKeys()) {
+    if (!key) continue;
+    if (!shouldSyncKey(key)) continue;
 
-      const val = _realGet(key);
-      if (val === null) continue;
+    const val = _realGet(key);
+    if (val === null) continue;
 
-      allData[key] = val;
+    allData[key] = val;
 
-      const normalizedKey = key.replace(/^_u\d+_/, '');
-      if (!PERSONAL_KEYS.has(normalizedKey)) {
-        const hospitalKey = toSharedHospitalKey(key);
-        hospitalData[hospitalKey] = val;
-      }
-    }
-
-    if (Object.keys(allData).length === 0) return;
-
-    const [userResult, hospitalResult] = await Promise.all([
-      apiFetch('/storage', {
-        method: 'PUT',
-        body: JSON.stringify({ data: allData })
-      }),
-      hospitalName && Object.keys(hospitalData).length > 0
-        ? apiFetch('/hospital-storage', {
-            method: 'PUT',
-            body: JSON.stringify({ data: hospitalData })
-          })
-        : Promise.resolve(null),
-    ]);
-
-    if (userResult || hospitalResult) {
-      const hosp = hospitalResult?.saved ? ` + ${hospitalResult.saved} مشترك` : '';
-      console.log(`[MzamanaCloud] ✓ رُفع ${userResult?.saved ?? 0} شخصي${hosp}`);
+    const normalizedKey = key.replace(/^_u\d+_/, '');
+    if (!PERSONAL_KEYS.has(normalizedKey)) {
+      const hospitalKey = toSharedHospitalKey(key);
+      hospitalData[hospitalKey] = val;
     }
   }
+
+  if (Object.keys(allData).length === 0) {
+    return { ok: true, saved: 0, reason: 'NO_DATA' };
+  }
+
+  const mustSaveHospital = !!hospitalName && Object.keys(hospitalData).length > 0;
+
+  const [userResult, hospitalResult] = await Promise.all([
+    apiFetch('/storage', {
+      method: 'PUT',
+      body: JSON.stringify({ data: allData })
+    }),
+    mustSaveHospital
+      ? apiFetch('/hospital-storage', {
+          method: 'PUT',
+          body: JSON.stringify({ data: hospitalData })
+        })
+      : Promise.resolve({ ok: true, saved: 0 }),
+  ]);
+
+  if (!userResult) {
+    throw new Error('USER_STORAGE_SAVE_FAILED');
+  }
+
+  if (mustSaveHospital && !hospitalResult) {
+    throw new Error('HOSPITAL_STORAGE_SAVE_FAILED');
+  }
+
+  const userSaved = userResult?.saved ?? 0;
+  const hospitalSaved = hospitalResult?.saved ?? 0;
+
+  const hosp = hospitalSaved ? ` + ${hospitalSaved} مشترك` : '';
+  console.log(`[MzamanaCloud] ✓ رُفع ${userSaved} شخصي${hosp}`);
+
+  return {
+    ok: true,
+    userSaved,
+    hospitalSaved,
+    hospitalName: hospitalName || null,
+  };
+}
 
   // ── إشعارات المستخدم ──────────────────────────────────────────────────────
   function showTokenExpiredBanner() {
@@ -427,16 +465,26 @@
     } else if (status === 'done') {
       syncIndicator.textContent = '✓ محفوظ';
       setTimeout(() => { if (syncIndicator) syncIndicator.textContent = '☁ مزامنة'; }, 2000);
-    } else {
-      syncIndicator.textContent = '☁ مزامنة';
-    }
+   } else if (status === 'error') {
+  syncIndicator.textContent = '⚠ فشل الحفظ';
+} else {
+  syncIndicator.textContent = '☁ مزامنة';
+}
   }
 
-  async function syncNow() {
-    showSyncStatus('syncing');
-    await pushToCloud();
+async function syncNow() {
+  showSyncStatus('syncing');
+
+  try {
+    const result = await pushToCloud();
     showSyncStatus('done');
+    return result || { ok: true };
+  } catch (err) {
+    console.error('[MzamanaCloud] فشل الرفع:', err);
+    showSyncStatus('error');
+    throw err;
   }
+}
 
   window.najranSyncNow      = syncNow;
   window.najranPullFromCloud = pullFromCloud;
@@ -466,26 +514,31 @@
 
     await pullFromCloudSafe();
 
-    setInterval(syncNow, SYNC_INTERVAL_MS);
-    window.addEventListener('beforeunload', () => { pushToCloud(); });
-
+setInterval(() => {
+  syncNow().catch(() => {});
+}, SYNC_INTERVAL_MS);    window.addEventListener('beforeunload', () => {
+  pushToCloud().catch(() => {});
+});
     let _inputDebounce = null;
     document.addEventListener('input', () => {
       clearTimeout(_inputDebounce);
-      _inputDebounce = setTimeout(syncNow, 2_000);
-    });
+_inputDebounce = setTimeout(() => {
+  syncNow().catch(() => {});
+}, 2_000);    });
     document.addEventListener('change', () => {
       clearTimeout(_inputDebounce);
-      _inputDebounce = setTimeout(syncNow, 2_000);
-    });
+_inputDebounce = setTimeout(() => {
+  syncNow().catch(() => {});
+}, 2_000);    });
 
     // debounce على storage event (30 ث)
     let _storageDebounce = null;
     window.addEventListener('storage', (e) => {
       if (!e.key || !shouldSyncKey(e.key)) return;
       clearTimeout(_storageDebounce);
-      _storageDebounce = setTimeout(syncNow, 30_000);
-    });
+_storageDebounce = setTimeout(() => {
+  syncNow().catch(() => {});
+}, 30_000);    });
 
     // override setItem مع debounce 30 ثانية
     const origSetItem = localStorage.setItem.bind(localStorage);
@@ -493,8 +546,9 @@
       origSetItem(key, value);
       if (!_pulling && shouldSyncKey(key)) {
         clearTimeout(localStorage._syncTimeout);
-        localStorage._syncTimeout = setTimeout(syncNow, 30_000);
-      }
+localStorage._syncTimeout = setTimeout(() => {
+  syncNow().catch(() => {});
+}, 30_000);      }
     };
 
     console.log('[MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)');
