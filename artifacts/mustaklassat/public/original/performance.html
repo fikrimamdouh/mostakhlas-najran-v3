@@ -1365,7 +1365,37 @@ function loadTableData(tableId) {
  * ===================================================================
  *      ===>   الخطوة 3: تحديث مبلغ القسم (النسخة النهائية)   <===
  * ===================================================================
- */
+  */
+function hasAttendanceEmployeesForDept(deptKey) {
+    try {
+        const attendanceData = JSON.parse(localStorage.getItem('attendanceData') || '{}');
+        const rows = attendanceData[deptKey] || [];
+
+        if (!Array.isArray(rows)) return false;
+
+        return rows.some(emp => {
+            if (!emp || typeof emp !== 'object') return false;
+
+            const name = String(
+                emp.name ||
+                emp.employeeName ||
+                emp.workerName ||
+                emp.fullName ||
+                ''
+            ).trim();
+
+            const salary =
+                parseFloat(emp.salary) ||
+                parseFloat(emp.basicSalary) ||
+                parseFloat(emp.totalSalary) ||
+                0;
+
+            return name !== '' || salary > 0;
+        });
+    } catch (e) {
+        return false;
+    }
+}
 function updateTotalAmount(tableId) {
     if (tableId === 'certificate') return;
 
@@ -1378,9 +1408,18 @@ function updateTotalAmount(tableId) {
         'laundry': { key: 'laundry' },
         'security': { key: 'patient_services' }
     };
-    const deptInfo = departmentMap[tableId];
-    if (!deptInfo) return;
+   const deptInfo = departmentMap[tableId];
+if (!deptInfo) return;
 
+if (!hasAttendanceEmployeesForDept(deptInfo.key)) {
+    const amountInput = document.getElementById(tableId + '-amount');
+    if (amountInput) {
+        amountInput.value = '0.00';
+    }
+
+    updateCertificateFromPerformance();
+    return;
+}
     try {
         // 1. قراءة الإعدادات الشاملة
         const settings = JSON.parse(localStorage.getItem('distributionSettings')) || { hasProjectManager: false, activeDepartments: [] };
