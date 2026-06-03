@@ -41,6 +41,20 @@ function updateContractDisplayData(fields = [
         extractDuration: ''
     };
     const mergedData = { ...defaults, ...data, ...extractData };
+    const manualCompanyName = getManualCompanyName(
+    mergedData.hospitalName ||
+    localStorage.getItem('hospitalName') ||
+    ''
+);
+
+if (manualCompanyName) {
+    mergedData.companyName = manualCompanyName;
+    data.companyName = manualCompanyName;
+    data._manualCompanyName = true;
+
+    localStorage.setItem('persistentContractData', JSON.stringify(data));
+    localStorage.setItem('companyName', manualCompanyName);
+}
     // تحديث العناصر المباشرة داخل صفحات الحضور والأداء
 document.querySelectorAll('.hospitalName').forEach(el => {
     el.textContent = mergedData.hospitalName || 'غير محدد';
@@ -118,12 +132,41 @@ function loadFromLocalStorage(key) {
         return null;
     }
 }
+function manualCompanyKey(hospitalName) {
+    return 'manualCompanyName__h__' + encodeURIComponent(hospitalName || '');
+}
+
+function getManualCompanyName(hospitalName) {
+    try {
+        return localStorage.getItem(manualCompanyKey(hospitalName || '')) || '';
+    } catch (e) {
+        return '';
+    }
+}
 function forceContractDirectDisplay() {
     const data = loadFromLocalStorage('persistentContractData') || {};
     const extractData = loadFromLocalStorage('persistentExtractData') || {};
 
-    const hospitalName = data.hospitalName || localStorage.getItem('hospitalName') || '—';
-    const companyName = data.companyName || localStorage.getItem('companyName') || '—';
+    const hospitalName =
+    data.hospitalName ||
+    localStorage.getItem('hospitalName') ||
+    '—';
+
+const manualCompanyName = getManualCompanyName(hospitalName);
+
+const companyName =
+    manualCompanyName ||
+    data.companyName ||
+    localStorage.getItem('companyName') ||
+    '—';
+
+if (manualCompanyName) {
+    data.companyName = manualCompanyName;
+    data._manualCompanyName = true;
+
+    localStorage.setItem('persistentContractData', JSON.stringify(data));
+    localStorage.setItem('companyName', manualCompanyName);
+}
     const contractDetails = data.contractDetails || localStorage.getItem('contractDetails') || '—';
     const contractType = data.contractType || 'عقد أساسي';
     const directPurchaseRatio = data.directPurchaseRatio || '0';
