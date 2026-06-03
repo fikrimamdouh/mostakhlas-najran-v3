@@ -341,7 +341,11 @@ function saveContractData() {
         } else if (fixedForHospital && newData.contractDetails === fixedForHospital.contractDetails) {
             newData._manualContractDetails = false;
         }
-
+if (fixedForHospital && newData.companyName && newData.companyName !== fixedForHospital.companyName) {
+    newData._manualCompanyName = true;
+} else if (fixedForHospital && newData.companyName === fixedForHospital.companyName) {
+    newData._manualCompanyName = false;
+}
         newData._autoHospitalName = newData.hospitalName || '';
         // التحقق من صحة البيانات
         const validationError = validateContractData(newData);
@@ -1011,8 +1015,9 @@ function _applyFixedContractData(data, hospitalName, force) {
 
     // بيانات أساسية ثابتة: تتعبأ تلقائياً عند أول اختيار أو عند تغيير المستشفى
     if (force || hospitalChanged || !data.contractNumber) data.contractNumber = fixed.contractNumber;
-    if (force || hospitalChanged || !data.companyName)    data.companyName    = fixed.companyName;
-    if (force || hospitalChanged || !data.startDate)      data.startDate      = fixed.startDate;
+if (!data._manualCompanyName && (force || hospitalChanged || !data.companyName)) {
+    data.companyName = fixed.companyName;
+}    if (force || hospitalChanged || !data.startDate)      data.startDate      = fixed.startDate;
     if (force || hospitalChanged || !data.endDate)        data.endDate        = fixed.endDate;
     if (force || hospitalChanged || !data.contractType)   data.contractType   = fixed.contractType;
     if (force || hospitalChanged || !data.contractValue)  data.contractValue  = fixed.contractValue;
