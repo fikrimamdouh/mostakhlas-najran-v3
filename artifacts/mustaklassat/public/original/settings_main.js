@@ -341,9 +341,14 @@ function saveContractData() {
         } else if (fixedForHospital && newData.contractDetails === fixedForHospital.contractDetails) {
             newData._manualContractDetails = false;
         }
-if (fixedForHospital && newData.companyName && newData.companyName !== fixedForHospital.companyName) {
+const defaultCompanyForHospital =
+    (fixedForHospital && fixedForHospital.companyName) ||
+    HOSPITAL_COMPANY_MAP[newData.hospitalName] ||
+    '';
+
+if (defaultCompanyForHospital && newData.companyName && newData.companyName !== defaultCompanyForHospital) {
     newData._manualCompanyName = true;
-} else if (fixedForHospital && newData.companyName === fixedForHospital.companyName) {
+} else if (defaultCompanyForHospital && newData.companyName === defaultCompanyForHospital) {
     newData._manualCompanyName = false;
 }
         newData._autoHospitalName = newData.hospitalName || '';
