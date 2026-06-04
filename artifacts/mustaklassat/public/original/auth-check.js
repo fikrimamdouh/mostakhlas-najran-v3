@@ -96,6 +96,51 @@
     fetchNotifCount(function (count) { updateBell(count); });
   }
 
+  function logActualSignOut(done) {
+    var s = getSession() || session;
+    if (!s || !s.clerkToken) { done(); return; }
+
+    var payload = JSON.stringify({
+      action: 'تسجيل خروج فعلي',
+      details: JSON.stringify({
+        details: 'قام المستخدم بتسجيل الخروج من البرنامج',
+        page: location.pathname,
+        url: location.pathname + location.search,
+        title: document.title || null,
+        hospital: s.hospital || localStorage.getItem('hospitalName') || null,
+        company: s.companyName || localStorage.getItem('companyName') || null,
+        userName: s.name || null,
+        userEmail: s.email || null,
+        at: new Date().toISOString()
+      }),
+      entityType: 'auth',
+      entityId: String(s.userId || s.id || ''),
+      before: null,
+      after: null,
+      page: location.pathname
+    });
+
+    var finished = false;
+    function finish() {
+      if (finished) return;
+      finished = true;
+      done();
+    }
+
+    try {
+      fetch('/api/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.clerkToken },
+        credentials: 'include',
+        keepalive: true,
+        body: payload
+      }).then(finish).catch(finish);
+      setTimeout(finish, 450);
+    } catch (_) {
+      finish();
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     var styleEl = document.createElement('style');
     styleEl.textContent = [
@@ -166,15 +211,17 @@
     setInterval(checkNotifications, 2 * 60 * 1000);
 
     window.najranSignOut = function () {
-      try {
-        localStorage.removeItem('najran_session');
-        sessionStorage.removeItem('najran_prereg');
-        localStorage.removeItem('hospitalName');
-        localStorage.removeItem('companyName');
-        localStorage.removeItem('contractNumber');
-        localStorage.removeItem('contractDetails');
-      } catch(e) {}
-      window.location.href = BASE + '/sign-in';
+      logActualSignOut(function () {
+        try {
+          localStorage.removeItem('najran_session');
+          sessionStorage.removeItem('najran_prereg');
+          localStorage.removeItem('hospitalName');
+          localStorage.removeItem('companyName');
+          localStorage.removeItem('contractNumber');
+          localStorage.removeItem('contractDetails');
+        } catch(e) {}
+        window.location.href = BASE + '/sign-in';
+      });
     };
 
     window.najranSession = session;
