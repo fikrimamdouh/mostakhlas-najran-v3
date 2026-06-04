@@ -1326,8 +1326,7 @@ if (_displayCompany) {
 }
 
         // ── إذا كان المستشفى أو الشركة غائبَّين في الجلسة — اجلب من API ──
-        if ((!session.hospital || !session.company) && session.clerkToken) {
-            fetch('/api/users/me', {
+if ((!session.hospital) && session.clerkToken) {            fetch('/api/users/me', {
                 headers: { 'Authorization': 'Bearer ' + session.clerkToken }
             }).then(function(r) { return r.ok ? r.json() : null; })
               .then(function(user) {
