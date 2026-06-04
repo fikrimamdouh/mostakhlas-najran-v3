@@ -100,6 +100,8 @@ export function filterModules(siteType: SiteType, allowedModuleKeys: string[] | 
     byType = ALL_MODULES.filter(m => !m.adminOnly && m.types.includes(siteType));
   }
 
+  if (isAdmin || isSupervisor) return byType;
+
   if (allowedModuleKeys !== null) {
     const keySet = new Set(allowedModuleKeys);
     const filtered = byType.filter(m => keySet.has(m.key));
