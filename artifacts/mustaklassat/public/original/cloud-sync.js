@@ -720,8 +720,19 @@ try {
 
     window.najranPullFromCloud = pullFromCloudSafe;
 
-await pullFromCloudSafe();
+const isSettingsPageNow = getCurrentPageFile() === 'settings_main.html';
+const settingsPullKey = 'najran_settings_pull_at';
+const lastSettingsPullAt = Number(sessionStorage.getItem(settingsPullKey) || '0');
+const settingsPullIsFresh = isSettingsPageNow && (Date.now() - lastSettingsPullAt < 5 * 60 * 1000);
 
+if (!settingsPullIsFresh) {
+  await pullFromCloudSafe();
+  if (isSettingsPageNow) {
+    sessionStorage.setItem(settingsPullKey, String(Date.now()));
+  }
+} else {
+  console.log('[MzamanaCloud] تم تخطي سحب الإعدادات لأن البيانات محملة حديثاً');
+}
 showHospitalActivityNotice();
 updateHospitalActivityStatus();
 syncNow().catch(() => {});
