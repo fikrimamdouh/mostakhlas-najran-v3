@@ -402,6 +402,8 @@ const timer = setTimeout(() => controller.abort(), 20_000);
 
 const storageScope = isSettingsMainPage() ? '?scope=settings' : '';
 
+const storageScope = isSettingsMainPage() ? '?scope=settings' : '';
+
 const [userResult, hospitalResult] = await Promise.all([
   apiFetch('/storage' + storageScope),
   hospitalName ? apiFetch('/hospital-storage' + storageScope) : Promise.resolve(null),
