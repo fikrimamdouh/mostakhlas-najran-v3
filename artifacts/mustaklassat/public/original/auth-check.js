@@ -26,9 +26,16 @@
     return;
   }
 
-  // ── نظام الإشعارات ────────────────────────────────────────────────────────
-  var NOTIF_SEEN_KEY  = 'najran_notif_seen_ids';   // IDs آخر الإشعارات المرئية
-  var NOTIF_CHECK_KEY = 'najran_notif_last_check';  // timestamp آخر فحص
+  // تحميل طبقة المراجعة المهنية في صفحة الاعتماد فقط
+  if (/\/original\/approval\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) {
+    var reviewScript = document.createElement('script');
+    reviewScript.src = '/original/review-workflow.js';
+    reviewScript.defer = true;
+    document.head.appendChild(reviewScript);
+  }
+
+  var NOTIF_SEEN_KEY  = 'najran_notif_seen_ids';
+  var NOTIF_CHECK_KEY = 'najran_notif_last_check';
 
   function getSeenIds() {
     try { return JSON.parse(localStorage.getItem(NOTIF_SEEN_KEY) || '[]'); } catch (_) { return []; }
@@ -53,14 +60,11 @@
         var role = s.role || 'user';
         var seenIds = getSeenIds();
         var unseen = [];
-
         if (role === 'admin' || role === 'supervisor') {
-          // المدير يرى المستخلصات بانتظار المراجعة
           unseen = data.extracts.filter(function (e) {
             return e.status === 'submitted' && seenIds.indexOf(e.id) === -1;
           });
         } else {
-          // المستخدم يرى مستخلصاته التي تغيرت حالتها
           var lastCheck = parseInt(localStorage.getItem(NOTIF_CHECK_KEY) || '0') || (Date.now() - 7 * 24 * 3600 * 1000);
           unseen = data.extracts.filter(function (e) {
             var changed = new Date(e.updatedAt || e.createdAt).getTime();
@@ -92,9 +96,7 @@
     fetchNotifCount(function (count) { updateBell(count); });
   }
 
-  // ── DOM: شريط المعلومات السفلي ────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
-    // أضف @keyframes للجرس
     var styleEl = document.createElement('style');
     styleEl.textContent = [
       '@keyframes naj-bell-ring{',
@@ -139,31 +141,17 @@
         '<span style="color:#d4af37;font-weight:bold;white-space:nowrap">تجمع نجران الصحي</span>' +
         '<span style="color:rgba(255,255,255,0.35)">|</span>' +
         '<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (session.name || 'مستخدم') + '</span>' +
-        roleTag +
-        hospitalHtml +
+        roleTag + hospitalHtml +
       '</div>' +
       '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
         '<span id="najran-sync-status" style="font-size:11px;opacity:0.7;white-space:nowrap">☁ مزامنة</span>' +
-
-        /* ── جرس الإشعارات ── */
-        '<button id="najran-bell-btn" title="الإشعارات" ' +
-          'onclick="window.location.href=\'/original/approval.html\'" ' +
-          'style="position:relative;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);' +
-                 'color:#fff;width:32px;height:28px;border-radius:7px;cursor:pointer;' +
-                 'font-size:15px;display:inline-flex;align-items:center;justify-content:center;' +
-                 'transition:background 0.2s;transform-origin:top center;flex-shrink:0">' +
-          '🔔' +
-          '<span id="najran-bell-badge" style="display:none;position:absolute;top:-5px;left:-5px;' +
-                'background:#ef4444;color:#fff;font-size:9px;font-weight:bold;border-radius:9px;' +
-                'min-width:16px;height:16px;align-items:center;justify-content:center;padding:0 3px;' +
-                'font-family:Arial,sans-serif;line-height:1;border:1.5px solid #0f2050">0</span>' +
-        '</button>' +
-
+        '<button id="najran-bell-btn" title="الإشعارات" onclick="window.location.href=\'/original/approval.html\'" style="position:relative;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);color:#fff;width:32px;height:28px;border-radius:7px;cursor:pointer;font-size:15px;display:inline-flex;align-items:center;justify-content:center;transition:background 0.2s;transform-origin:top center;flex-shrink:0">🔔<span id="najran-bell-badge" style="display:none;position:absolute;top:-5px;left:-5px;background:#ef4444;color:#fff;font-size:9px;font-weight:bold;border-radius:9px;min-width:16px;height:16px;align-items:center;justify-content:center;padding:0 3px;font-family:Arial,sans-serif;line-height:1;border:1.5px solid #0f2050">0</span></button>' +
         '<a href="/original/approval.html" style="color:#d4af37;text-decoration:none;font-weight:bold;font-size:12px;white-space:nowrap">📋 المستخلصات</a>' +
         '<a href="/dashboard" style="color:rgba(255,255,255,0.8);text-decoration:none;font-size:12px;white-space:nowrap">🏠 الرئيسية</a>' +
         '<button onclick="najranSignOut()" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;padding:3px 12px;border-radius:6px;cursor:pointer;font-family:Tajawal,Arial,sans-serif;font-size:12px;white-space:nowrap">خروج</button>' +
       '</div>';
-if (window.self === window.top) {
+
+    if (window.self === window.top) {
       document.body.style.paddingBottom = '44px';
       document.body.appendChild(bar);
       document.getElementById('najran-bell-btn').addEventListener('click', function () {
@@ -177,39 +165,33 @@ if (window.self === window.top) {
     setTimeout(checkNotifications, 1500);
     setInterval(checkNotifications, 2 * 60 * 1000);
 
-  // ── واجهات عامة ──────────────────────────────────────────────────────────
-window.najranSignOut = function () {
-  try {
-    localStorage.removeItem('najran_session');
-    sessionStorage.removeItem('najran_prereg');
+    window.najranSignOut = function () {
+      try {
+        localStorage.removeItem('najran_session');
+        sessionStorage.removeItem('najran_prereg');
+        localStorage.removeItem('hospitalName');
+        localStorage.removeItem('companyName');
+        localStorage.removeItem('contractNumber');
+        localStorage.removeItem('contractDetails');
+      } catch(e) {}
+      window.location.href = BASE + '/sign-in';
+    };
 
-    // امسح مفاتيح محلية قد تسبب تداخل بين المستخدمين
-    localStorage.removeItem('hospitalName');
-    localStorage.removeItem('companyName');
-    localStorage.removeItem('contractNumber');
-    localStorage.removeItem('contractDetails');
-  } catch(e) {}
+    window.najranSession = session;
 
-  // الرجوع لصفحة الدخول. Clerk سيعرض الحساب الحالي إن كان مازال مفعلاً.
-  // لذلك الإصلاح الكامل النهائي سيكون من React signOut في الخطوة التالية.
-  window.location.href = BASE + '/sign-in';
-};
-
-  window.najranSession = session;
-
-  window.najranSetSyncStatus = function (status) {
-    var el = document.getElementById('najran-sync-status');
-    if (!el) return;
-    if (status === 'syncing') {
-      el.textContent = '⟳ جاري الحفظ...'; el.style.color = '#fde68a';
-    } else if (status === 'done') {
-      el.textContent = '✓ محفوظ'; el.style.color = '#86efac';
-      setTimeout(function () { if (el) { el.textContent = '☁ مزامنة'; el.style.color = ''; } }, 2500);
-    } else if (status === 'error') {
-      el.textContent = '⚠ خطأ في الحفظ'; el.style.color = '#fca5a5';
-    } else {
-      el.textContent = '☁ مزامنة'; el.style.color = '';
-    }
-  };
-});
+    window.najranSetSyncStatus = function (status) {
+      var el = document.getElementById('najran-sync-status');
+      if (!el) return;
+      if (status === 'syncing') {
+        el.textContent = '⟳ جاري الحفظ...'; el.style.color = '#fde68a';
+      } else if (status === 'done') {
+        el.textContent = '✓ محفوظ'; el.style.color = '#86efac';
+        setTimeout(function () { if (el) { el.textContent = '☁ مزامنة'; el.style.color = ''; } }, 2500);
+      } else if (status === 'error') {
+        el.textContent = '⚠ خطأ في الحفظ'; el.style.color = '#fca5a5';
+      } else {
+        el.textContent = '☁ مزامنة'; el.style.color = '';
+      }
+    };
+  });
 })();
