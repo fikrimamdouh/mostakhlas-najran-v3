@@ -20,9 +20,7 @@
 
   const SESSION_KEY = 'najran_session';
 
-  function getSession() {
-    try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; }
-  }
+  function getSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; } }
 
   async function getFreshTokenForOriginalPages() {
     try { if (typeof window.najranGetFreshToken === 'function') { const t = await window.najranGetFreshToken(); if (t) return t; } } catch (_) {}
@@ -32,15 +30,8 @@
     return session && session.clerkToken ? session.clerkToken : null;
   }
 
-  function getPageName() {
-    try { const url = new URL(window.location.href); return url.searchParams.get('page') || location.pathname; } catch (_) { return location.pathname; }
-  }
-
-  function shortValue(value) {
-    if (value == null) return null;
-    const s = String(value);
-    return s.length > 1500 ? s.slice(0, 1500) + '... [truncated]' : s;
-  }
+  function getPageName() { try { const url = new URL(window.location.href); return url.searchParams.get('page') || location.pathname; } catch (_) { return location.pathname; } }
+  function shortValue(value) { if (value == null) return null; const s = String(value); return s.length > 1500 ? s.slice(0, 1500) + '... [truncated]' : s; }
 
   function safeDetails(extra) {
     const session = getSession() || {};
@@ -110,15 +101,9 @@
       const started = Date.now();
       let res;
       try { res = await nativeFetch(input, init); }
-      catch (err) {
-        if (action) log(action + ' — فشل اتصال', { method, url, error: err && err.message, durationMs: Date.now() - started }, { entityType: 'api' });
-        throw err;
-      }
+      catch (err) { if (action) log(action + ' — فشل اتصال', { method, url, error: err && err.message, durationMs: Date.now() - started }, { entityType: 'api' }); throw err; }
       if (action && method !== 'GET') log(action + (res.ok ? ' — نجاح' : ' — فشل'), { method, url, status: res.status, durationMs: Date.now() - started }, { entityType: 'api' });
-      if (res.status === 401 && /\/api\/submitted-extracts/.test(url)) {
-        try { localStorage.removeItem('najran_revision_extract_id'); } catch (_) {}
-        console.warn('[NajranAuth] فشل اعتماد المستخلص بسبب انتهاء التوكن. تم تنظيف مفتاح التعديل القديم.');
-      }
+      if (res.status === 401 && /\/api\/submitted-extracts/.test(url)) { try { localStorage.removeItem('najran_revision_extract_id'); } catch (_) {} console.warn('[NajranAuth] فشل اعتماد المستخلص بسبب انتهاء التوكن. تم تنظيف مفتاح التعديل القديم.'); }
       return res;
     };
   })();
@@ -181,14 +166,7 @@
     const area = diff && diff.area ? diff.area : areaForKey(key);
     sendAudit(
       diff ? 'تعديل تفصيلي — ' + area : actionNameForKey(key),
-      safeDetails({
-        details: diff ? 'تغيير تفصيلي في ' + area : `تم تعديل ${key}`,
-        storageKey: key,
-        area: area,
-        changedFieldsCount: diff && diff.changedFieldsCount ? diff.changedFieldsCount : null,
-        changes: diff && diff.changes ? diff.changes : null,
-        readableSummary: diff && diff.readableSummary ? diff.readableSummary : null
-      }),
+      safeDetails({ details: diff ? 'تغيير تفصيلي في ' + area : `تم تعديل ${key}`, storageKey: key, area: area, changedFieldsCount: diff && diff.changedFieldsCount ? diff.changedFieldsCount : null, changes: diff && diff.changes ? diff.changes : null, readableSummary: diff && diff.readableSummary ? diff.readableSummary : null }),
       beforeValue,
       value,
       key,
@@ -196,21 +174,10 @@
     );
   };
 
-  window.najranAuditLog = async function (action, details, extra) {
-    extra = extra || {};
-    await sendAudit(action, safeDetails({ details, extra }), extra.before || null, extra.after || null, extra.entityId || null, { entityType: extra.entityType || 'manual' });
-  };
+  window.najranAuditLog = async function (action, details, extra) { extra = extra || {}; await sendAudit(action, safeDetails({ details, extra }), extra.before || null, extra.after || null, extra.entityId || null, { entityType: extra.entityType || 'manual' }); };
 
   function cleanText(s) { return String(s || '').replace(/\s+/g, ' ').trim(); }
-
-  function pageArea() {
-    const p = (location.pathname + ' ' + document.title).toLowerCase();
-    if (p.includes('performance')) return 'تقييم الأداء';
-    if (p.includes('consumables')) return 'المستهلكات';
-    if (p.includes('spare')) return 'قطع الغيار';
-    if (p.includes('attendance')) return 'الحضور والانصراف';
-    return null;
-  }
+  function pageArea() { const p = (location.pathname + ' ' + document.title).toLowerCase(); if (p.includes('performance')) return 'تقييم الأداء'; if (p.includes('consumables')) return 'المستهلكات'; if (p.includes('spare')) return 'قطع الغيار'; if (p.includes('attendance')) return 'الحضور والانصراف'; return null; }
 
   function tableContext(input) {
     const container = input.closest('.table-container, section, .section, .card, .tab-pane') || document.body;
@@ -221,21 +188,13 @@
     const cell = input.closest('td,th');
     const colIndex = cell ? cells.indexOf(cell) : -1;
     let field = 'قيمة';
-    if (table && colIndex >= 0) {
-      const th = table.querySelector(`thead tr th:nth-child(${colIndex + 1})`);
-      field = cleanText(th?.textContent) || field;
-    }
+    if (table && colIndex >= 0) { const th = table.querySelector(`thead tr th:nth-child(${colIndex + 1})`); field = cleanText(th?.textContent) || field; }
     const item = row ? cleanText(row.querySelector('td,th')?.textContent) : cleanText(input.getAttribute('name') || input.id || input.placeholder || 'بند غير محدد');
     return { tableTitle: title, tableId: table && table.id || null, itemName: item || 'بند غير محدد', fieldName: field };
   }
 
   const inputBefore = new WeakMap();
-  document.addEventListener('focusin', function (ev) {
-    const el = ev.target;
-    if (!el || !el.matches || !el.matches('input, textarea, select')) return;
-    inputBefore.set(el, el.value);
-  }, true);
-
+  document.addEventListener('focusin', function (ev) { const el = ev.target; if (!el || !el.matches || !el.matches('input, textarea, select')) return; inputBefore.set(el, el.value); }, true);
   document.addEventListener('change', function (ev) {
     const el = ev.target;
     if (!el || !el.matches || !el.matches('input, textarea, select')) return;
@@ -247,44 +206,15 @@
     inputBefore.set(el, after);
     const ctx = tableContext(el);
     const summary = `${area} — ${ctx.tableTitle} — ${ctx.itemName} — ${ctx.fieldName}: من "${before || 'فارغ'}" إلى "${after || 'فارغ'}"`;
-    sendAudit(
-      'تعديل مباشر — ' + area,
-      safeDetails({
-        details: summary,
-        area: area,
-        tableTitle: ctx.tableTitle,
-        tableId: ctx.tableId,
-        itemName: ctx.itemName,
-        fieldName: ctx.fieldName,
-        beforeValue: before || 'فارغ',
-        afterValue: after || 'فارغ',
-        readableSummary: [summary],
-        changes: [{ field: ctx.fieldName, path: ctx.tableTitle + ' > ' + ctx.itemName, before: before || 'فارغ', after: after || 'فارغ' }]
-      }),
-      before,
-      after,
-      ctx.tableId || area,
-      { entityType: 'direct-field-change' }
-    );
+    sendAudit('تعديل مباشر — ' + area, safeDetails({ details: summary, area: area, tableTitle: ctx.tableTitle, tableId: ctx.tableId, itemName: ctx.itemName, fieldName: ctx.fieldName, beforeValue: before || 'فارغ', afterValue: after || 'فارغ', readableSummary: [summary], changes: [{ field: ctx.fieldName, path: ctx.tableTitle + ' > ' + ctx.itemName, before: before || 'فارغ', after: after || 'فارغ' }] }), before, after, ctx.tableId || area, { entityType: 'direct-field-change' });
   }, true);
 
-  function meaningfulText(el) {
-    if (!el) return '';
-    const aria = el.getAttribute && (el.getAttribute('aria-label') || el.getAttribute('title'));
-    const txt = (aria || el.innerText || el.textContent || el.value || '').replace(/\s+/g, ' ').trim();
-    return txt.slice(0, 140);
-  }
-
-  function isImportantClick(el, text) {
-    if (!el) return false;
-    if (el.id === '_najran_approve_btn_inner') return true;
-    if (/اعتماد|رفع|إرجاع|رفض|تعديل|حفظ|طباعة|PDF|تحميل|خروج|دخول|مراجعة|المستخلص|حذف|إرسال/.test(text)) return true;
-    if (el.matches && el.matches('button,a,[role="button"],input[type="button"],input[type="submit"]')) return true;
-    return false;
-  }
+  function meaningfulText(el) { if (!el) return ''; const aria = el.getAttribute && (el.getAttribute('aria-label') || el.getAttribute('title')); const txt = (aria || el.innerText || el.textContent || el.value || '').replace(/\s+/g, ' ').trim(); return txt.slice(0, 140); }
+  function isImportantClick(el, text) { if (!el) return false; if (el.id === '_najran_approve_btn_inner') return true; if (/اعتماد|رفع|إرجاع|رفض|تعديل|حفظ|طباعة|PDF|تحميل|خروج|دخول|مراجعة|المستخلص|حذف|إرسال/.test(text)) return true; if (el.matches && el.matches('button,a,[role="button"],input[type="button"],input[type="submit"]')) return true; return false; }
 
   let lastClickSig = '';
   let lastClickAt = 0;
+  let signOutLogged = false;
   document.addEventListener('click', function (ev) {
     const target = ev.target && ev.target.closest ? ev.target.closest('button,a,[role="button"],input[type="button"],input[type="submit"]') : null;
     const text = meaningfulText(target);
@@ -294,16 +224,20 @@
     if (sig === lastClickSig && now - lastClickAt < 1200) return;
     lastClickSig = sig;
     lastClickAt = now;
-    log(text && text.includes('خروج') ? 'تسجيل خروج / ضغط زر خروج' : 'ضغط زر أو رابط', { buttonText: text || 'زر بدون نص', elementId: target && target.id || null, href: target && target.href || null }, { entityType: 'click' });
+    if (text && text.includes('خروج')) {
+      if (!signOutLogged) {
+        signOutLogged = true;
+        log('تسجيل خروج فعلي', { details: 'قام المستخدم بتسجيل الخروج من البرنامج', buttonText: text || 'خروج' }, { entityType: 'auth', keepalive: true });
+      }
+      return;
+    }
+    log('ضغط زر أو رابط', { buttonText: text || 'زر بدون نص', elementId: target && target.id || null, href: target && target.href || null }, { entityType: 'click' });
   }, true);
 
   const enteredAt = Date.now();
   function logEnter() { log('دخول صفحة', { referrer: document.referrer || null }, { entityType: 'navigation' }); }
   function logExit() { const seconds = Math.max(1, Math.round((Date.now() - enteredAt) / 1000)); log('خروج صفحة', { durationSeconds: seconds }, { entityType: 'navigation', keepalive: true }); }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', logEnter);
-  else setTimeout(logEnter, 0);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', logEnter); else setTimeout(logEnter, 0);
   window.addEventListener('pagehide', logExit);
-
   console.log('[AuditTracker] تم تفعيل مراقبة حقيقية: دخول/خروج/نقرات/تعديلات مباشرة/API');
 })();
