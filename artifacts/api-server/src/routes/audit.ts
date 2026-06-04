@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, usersTable, auditLogTable } from "@workspace/db";
-import { eq, desc, sql, lt } from "drizzle-orm";
+import { db, usersTable, auditLogTable, systemSettingsTable } from "@workspace/db";
+import { eq, desc, sql, lt, inArray, and } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
@@ -18,21 +18,63 @@ const requireAdminOrSupervisor = async (req: any, res: any, next: any) => {
   }
 };
 
+async function getSupervisorWatchedUserIds(supervisorId: number): Promise<number[]> {
+  try {
+    const [setting] = await db.select().from(systemSettingsTable).where(eq(systemSettingsTable.key, `audit_watch_users_${supervisorId}`)).limit(1);
+    if (!setting?.value) return [];
+    const arr = JSON.parse(setting.value);
+    return Array.isArray(arr) ? arr.map(Number).filter(Boolean) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+async function getSupervisorAllowedUserIds(user: any): Promise<number[]> {
+  const explicit = await getSupervisorWatchedUserIds(user.id);
+  if (explicit.length) return explicit;
+
+  if (!user.supervisedHospital) return [];
+  const users = await db.select({ id: usersTable.id }).from(usersTable).where(and(
+    eq(usersTable.hospital, user.supervisedHospital),
+    sql`${usersTable.status} <> 'deleted'`
+  ));
+  return users.map(u => u.id);
+}
+
 // GET /api/audit — list audit logs (admin + supervisor)
 router.get("/", requireAuth, requireAdminOrSupervisor, async (req: any, res) => {
   try {
     const { page = 1, limit = 50, userId } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
+    const currentUser = req.currentUser;
 
-    let query = db.select().from(auditLogTable).orderBy(desc(auditLogTable.createdAt)) as any;
-    if (userId) {
-      query = db.select().from(auditLogTable)
-        .where(eq(auditLogTable.userId, Number(userId)))
-        .orderBy(desc(auditLogTable.createdAt)) as any;
+    let whereClause: any = undefined;
+
+    if (currentUser.role === "supervisor") {
+      const allowedIds = await getSupervisorAllowedUserIds(currentUser);
+      if (!allowedIds.length) return res.json({ logs: [], total: 0, page: Number(page), limit: Number(limit) });
+
+      const requestedUserId = userId ? Number(userId) : null;
+      if (requestedUserId) {
+        if (!allowedIds.includes(requestedUserId)) return res.status(403).json({ error: "Not allowed to view this user's audit" });
+        whereClause = eq(auditLogTable.userId, requestedUserId);
+      } else {
+        whereClause = inArray(auditLogTable.userId, allowedIds);
+      }
+    } else if (userId) {
+      whereClause = eq(auditLogTable.userId, Number(userId));
     }
 
-    const logs = await query.limit(Number(limit)).offset(offset);
-    const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(auditLogTable);
+    const query = whereClause
+      ? db.select().from(auditLogTable).where(whereClause).orderBy(desc(auditLogTable.createdAt))
+      : db.select().from(auditLogTable).orderBy(desc(auditLogTable.createdAt));
+
+    const countQuery = whereClause
+      ? db.select({ count: sql<number>`count(*)` }).from(auditLogTable).where(whereClause)
+      : db.select({ count: sql<number>`count(*)` }).from(auditLogTable);
+
+    const logs = await (query as any).limit(Number(limit)).offset(offset);
+    const [{ count }] = await countQuery as any;
 
     return res.json({ logs, total: Number(count), page: Number(page), limit: Number(limit) });
   } catch (err) {
