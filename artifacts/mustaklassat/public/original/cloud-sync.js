@@ -400,7 +400,6 @@ const timer = setTimeout(() => controller.abort(), 20_000);
   async function pullFromCloud() {
     const hospitalName = getHospitalName();
 
-const storageScope = isSettingsMainPage() ? '?scope=settings' : '';
 
 const storageScope = isSettingsMainPage() ? '?scope=settings' : '';
 
