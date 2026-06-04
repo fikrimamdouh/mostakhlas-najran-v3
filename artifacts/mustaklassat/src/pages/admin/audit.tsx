@@ -5,244 +5,44 @@ import { ShieldAlert, Search, RefreshCw, Clock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-interface AuditEntry {
-  id: number;
-  userId: number | null;
-  userEmail: string | null;
-  userName: string | null;
-  action: string;
-  details: string | null;
-  ipAddress: string | null;
-  createdAt: string;
-}
-
-interface AuditResponse {
-  logs: AuditEntry[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-async function fetchAudit(token: string, page: number): Promise<AuditResponse> {
-  const res = await fetch(`/api/audit?page=${page}&limit=50`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error("Failed to fetch audit log");
-  return res.json();
-}
-
-function actionColor(action: string) {
-  if (action.includes("موافقة") || action.includes("تفعيل") || action.includes("نجاح")) return "text-green-700 bg-green-50 border-green-200";
-  if (action.includes("رفض") || action.includes("تعطيل") || action.includes("فشل")) return "text-red-700 bg-red-50 border-red-200";
-  if (action.includes("صلاحية") || action.includes("دور") || action.includes("وحدات")) return "text-blue-700 bg-blue-50 border-blue-200";
-  if (action.includes("تسجيل دخول") || action.includes("دخول") || action.includes("خروج")) return "text-purple-700 bg-purple-50 border-purple-200";
-  if (action.includes("تعديل")) return "text-amber-700 bg-amber-50 border-amber-200";
-  return "text-gray-700 bg-gray-50 border-gray-200";
-}
-
-function formatDateTime(iso: string) {
-  try {
-    return new Date(iso).toLocaleString("ar-SA", {
-      year: "numeric", month: "short", day: "numeric",
-      hour: "2-digit", minute: "2-digit",
-    });
-  } catch { return iso; }
-}
-
-function parseJson(value: any) {
-  if (!value) return null;
-  if (typeof value === "object") return value;
-  try { return JSON.parse(value); } catch { return null; }
-}
-
-function labelForKey(key: string) {
-  const map: Record<string, string> = {
-    title: "عنوان الصفحة",
-    hospital: "المستشفى",
-    company: "الشركة",
-    at: "وقت التسجيل",
-    buttonText: "الزر / الإجراء",
-    elementId: "معرف العنصر",
-    method: "طريقة الطلب",
-    status: "حالة الطلب",
-    durationMs: "مدة التنفيذ",
-    storageKey: "مفتاح البيانات",
-    area: "القسم",
-    changedFieldsCount: "عدد الحقول المعدلة",
-    referrer: "الصفحة السابقة",
-    durationSeconds: "مدة البقاء بالثواني",
-  };
-  return map[key] || key;
-}
-
-function valueText(value: any) {
-  if (value === null || value === undefined || value === "") return "—";
-  if (Array.isArray(value)) return value.join("\n");
-  if (typeof value === "object") return JSON.stringify(value, null, 2);
-  return String(value);
-}
-
-function formatAuditDetails(details: string | null) {
-  if (!details) return "—";
-
-  const parsed = parseJson(details);
-  if (!parsed || typeof parsed !== "object") return details;
-
-  const inner = parseJson(parsed.details);
-  const payload = inner && typeof inner === "object" ? inner : parsed;
-
-  if (payload.readableSummary && Array.isArray(payload.readableSummary)) {
-    return payload.readableSummary.join("\n");
-  }
-
-  if (payload.changes && Array.isArray(payload.changes)) {
-    return payload.changes
-      .slice(0, 10)
-      .map((c: any) => `${c.field || c.path || "حقل"}: من "${c.before}" إلى "${c.after}"`)
-      .join("\n");
-  }
-
-  const lines: string[] = [];
-  const base = payload.details && typeof payload.details === "string" ? payload.details : null;
-  if (base && !base.startsWith("{")) lines.push(base);
-
-  ["buttonText", "title", "hospital", "company", "status", "durationMs", "durationSeconds", "at"].forEach(key => {
-    if (payload[key] !== undefined && payload[key] !== null && payload[key] !== "") {
-      lines.push(`${labelForKey(key)}: ${valueText(payload[key])}`);
-    }
-  });
-
-  if (lines.length) return lines.join("\n");
-
-  if (typeof parsed.details === "string" && !parsed.details.trim().startsWith("{")) return parsed.details;
-  const hiddenKeys = new Set(["page", "url", "href", "referrer"]);
-  return Object.keys(payload)
-    .filter(key => !hiddenKeys.has(key))
-    .map(key => `${labelForKey(key)}: ${valueText(payload[key])}`)
-    .join("\n");
-}
+interface AuditEntry { id: number; userId: number | null; userEmail: string | null; userName: string | null; action: string; details: string | null; ipAddress: string | null; createdAt: string; }
+interface AuditResponse { logs: AuditEntry[]; total: number; page: number; limit: number; }
+async function fetchAudit(token: string, page: number): Promise<AuditResponse> { const res = await fetch(`/api/audit?page=${page}&limit=50`, { headers: { Authorization: `Bearer ${token}` } }); if (!res.ok) throw new Error("Failed to fetch audit log"); return res.json(); }
+function actionColor(action: string) { if (action.includes("موافقة") || action.includes("تفعيل") || action.includes("نجاح")) return "text-green-700 bg-green-50 border-green-200"; if (action.includes("رفض") || action.includes("تعطيل") || action.includes("فشل")) return "text-red-700 bg-red-50 border-red-200"; if (action.includes("صلاحية") || action.includes("دور") || action.includes("وحدات")) return "text-blue-700 bg-blue-50 border-blue-200"; if (action.includes("تسجيل دخول") || action.includes("دخول") || action.includes("خروج")) return "text-purple-700 bg-purple-50 border-purple-200"; if (action.includes("تعديل")) return "text-amber-700 bg-amber-50 border-amber-200"; return "text-gray-700 bg-gray-50 border-gray-200"; }
+function formatDateTime(iso: string) { try { return new Date(iso).toLocaleString("ar-SA", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); } catch { return iso; } }
+function parseJson(value: any) { if (!value) return null; if (typeof value === "object") return value; try { return JSON.parse(value); } catch { return null; } }
+function labelForKey(key: string) { const map: Record<string,string> = { title:"عنوان الصفحة", hospital:"المستشفى", company:"الشركة", at:"وقت التسجيل", buttonText:"الزر / الإجراء", elementId:"معرف العنصر", method:"طريقة الطلب", status:"حالة الطلب", durationMs:"مدة التنفيذ", storageKey:"مفتاح البيانات", area:"القسم", changedFieldsCount:"عدد الحقول المعدلة", referrer:"الصفحة السابقة", durationSeconds:"مدة البقاء بالثواني" }; return map[key] || key; }
+function valueText(value: any) { if (value === null || value === undefined || value === "") return "—"; if (Array.isArray(value)) return value.join("\n"); if (typeof value === "object") return JSON.stringify(value, null, 2); return String(value); }
+function formatAuditDetails(details: string | null) { if (!details) return "—"; const parsed = parseJson(details); if (!parsed || typeof parsed !== "object") return details; const inner = parseJson(parsed.details); const payload = inner && typeof inner === "object" ? inner : parsed; if (payload.readableSummary && Array.isArray(payload.readableSummary)) return payload.readableSummary.join("\n"); if (payload.changes && Array.isArray(payload.changes)) return payload.changes.slice(0,10).map((c:any)=>`${c.field || c.path || "حقل"}: من "${c.before}" إلى "${c.after}"`).join("\n"); const lines:string[]=[]; const base = payload.details && typeof payload.details === "string" ? payload.details : null; if (base && !base.startsWith("{")) lines.push(base); ["buttonText","title","hospital","company","status","durationMs","durationSeconds","at"].forEach(key=>{ if (payload[key] !== undefined && payload[key] !== null && payload[key] !== "") lines.push(`${labelForKey(key)}: ${valueText(payload[key])}`); }); if (lines.length) return lines.join("\n"); if (typeof parsed.details === "string" && !parsed.details.trim().startsWith("{")) return parsed.details; const hiddenKeys = new Set(["page","url","href","referrer"]); return Object.keys(payload).filter(key=>!hiddenKeys.has(key)).map(key=>`${labelForKey(key)}: ${valueText(payload[key])}`).join("\n"); }
+function csvCell(v: any) { return '"' + String(v ?? "").replace(/"/g, '""').replace(/\r?\n/g, ' | ') + '"'; }
+function exportAuditCsv(logs: AuditEntry[]) { const header = ["الإجراء","المستخدم","البريد","التفاصيل","IP","التاريخ"]; const rows = logs.map(l => [l.action, l.userName || "", l.userEmail || "", formatAuditDetails(l.details), l.ipAddress || "", formatDateTime(l.createdAt)]); const csv = "\ufeff" + [header, ...rows].map(r => r.map(csvCell).join(",")).join("\n"); const blob = new Blob([csv], { type: "text/csv;charset=utf-8" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `audit-log-${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url); }
+function lastMonthCutoff() { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d.toISOString(); }
 
 export default function AuditLog() {
   const { getToken } = useAuth();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-
-  // No auto-refresh — manual only
-  const { data, isLoading, refetch, isFetching } = useQuery<AuditResponse>({
-    queryKey: ["/api/audit", page],
-    queryFn: async () => {
-      const token = await getToken();
-      return fetchAudit(token!, page);
-    },
-    staleTime: Infinity,
-  });
-
-  const filtered = (data?.logs || []).filter(l =>
-    !search ||
-    l.action.includes(search) ||
-    l.userName?.includes(search) ||
-    l.userEmail?.includes(search) ||
-    l.details?.includes(search)
-  );
-
+  const [cleanupDate, setCleanupDate] = useState("");
+  const [cleaning, setCleaning] = useState(false);
+  const { data, isLoading, refetch, isFetching } = useQuery<AuditResponse>({ queryKey: ["/api/audit", page], queryFn: async () => { const token = await getToken(); return fetchAudit(token!, page); }, staleTime: Infinity });
+  const filtered = (data?.logs || []).filter(l => !search || l.action.includes(search) || l.userName?.includes(search) || l.userEmail?.includes(search) || l.details?.includes(search));
+  const cleanup = async (beforeIso: string) => { if (!beforeIso) return; if (!confirm(`سيتم حذف سجلات المراقبة قبل ${formatDateTime(beforeIso)}. يفضل التصدير أولاً. تأكيد الحذف؟`)) return; setCleaning(true); try { const token = await getToken(); const res = await fetch('/api/audit/cleanup', { method:'DELETE', headers:{ 'Content-Type':'application/json', ...(token ? { Authorization:`Bearer ${token}` } : {}) }, body: JSON.stringify({ before: beforeIso }) }); if (!res.ok) throw new Error('فشل حذف السجلات'); const r = await res.json(); alert(`تم حذف ${r.deleted} سجل`); refetch(); } catch(e:any) { alert(e.message || 'فشل حذف السجلات'); } finally { setCleaning(false); } };
   return (
     <div className="space-y-6 animate-in fade-in duration-500" style={{ direction: "rtl" }}>
-      {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3" style={{ color: "#1e3c72" }}>
-            <ShieldAlert className="h-8 w-8" style={{ color: "#d4af37" }} />
-            سجل المراقبة والمتابعة
-          </h1>
-          <p className="text-gray-500 mt-1">جميع الإجراءات المسجّلة — {data?.total ?? 0} إجراء إجمالاً</p>
-        </div>
-        <Button
-          variant="outline"
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-          تحديث يدوي
-        </Button>
+        <div><h1 className="text-3xl font-bold tracking-tight flex items-center gap-3" style={{ color: "#1e3c72" }}><ShieldAlert className="h-8 w-8" style={{ color: "#d4af37" }} />سجل المراقبة والمتابعة</h1><p className="text-gray-500 mt-1">جميع الإجراءات المسجّلة — {data?.total ?? 0} إجراء إجمالاً</p></div>
+        <div className="flex gap-2 flex-wrap"><Button variant="outline" onClick={() => exportAuditCsv(filtered)} disabled={!filtered.length}>تصدير Excel</Button><Button variant="outline" onClick={() => refetch()} disabled={isFetching} className="gap-2"><RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />تحديث يدوي</Button></div>
       </div>
-
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
-        <Input
-          placeholder="بحث بالإجراء، الاسم، البريد، القسم، أو التفاصيل..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="pr-9"
-        />
+      <div className="rounded-xl border bg-white p-3 flex flex-wrap items-center gap-2">
+        <span className="text-sm font-bold text-gray-700">تنظيف السجل:</span>
+        <Input type="date" value={cleanupDate} onChange={e=>setCleanupDate(e.target.value)} className="w-44" />
+        <Button variant="outline" disabled={!cleanupDate || cleaning} onClick={() => cleanup(new Date(cleanupDate + 'T00:00:00').toISOString())}>حذف قبل التاريخ</Button>
+        <Button variant="outline" disabled={cleaning} onClick={() => cleanup(lastMonthCutoff())}>حذف قبل بداية الشهر الحالي</Button>
+        <span className="text-xs text-gray-400">استخدم التصدير قبل الحذف للأرشفة.</span>
       </div>
-
-      {/* Table */}
-      <div className="rounded-xl border overflow-hidden shadow-sm" style={{ borderColor: "#e8edf7" }}>
-        <table className="w-full text-sm">
-          <thead style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)", color: "#fff" }}>
-            <tr>
-              <th className="text-right px-4 py-3 font-semibold">الإجراء</th>
-              <th className="text-right px-4 py-3 font-semibold">المستخدم</th>
-              <th className="text-right px-4 py-3 font-semibold">التفاصيل</th>
-              <th className="text-right px-4 py-3 font-semibold">IP</th>
-              <th className="text-right px-4 py-3 font-semibold">التاريخ والوقت</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr><td colSpan={5} className="text-center py-12 text-gray-400">جاري التحميل...</td></tr>
-            ) : filtered.length === 0 ? (
-              <tr><td colSpan={5} className="text-center py-12 text-gray-400">لا توجد سجلات</td></tr>
-            ) : (
-              filtered.map((log, i) => (
-                <tr key={log.id} className={i % 2 === 0 ? "bg-white" : "bg-gray-50/50"} style={{ borderBottom: "1px solid #f0f2f8" }}>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${actionColor(log.action)}`}>
-                      {log.action}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <User className="h-3.5 w-3.5 text-gray-400" />
-                      <div>
-                        <div className="font-medium text-gray-800">{log.userName || "—"}</div>
-                        <div className="text-gray-400 text-xs">{log.userEmail || ""}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600 max-w-xl">
-                    <div className="whitespace-pre-wrap break-words text-xs leading-6 rounded-lg border bg-gray-50 p-2 text-gray-700">
-                      {formatAuditDetails(log.details)}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-400 font-mono text-xs">{log.ipAddress || "—"}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5 text-gray-500 text-xs">
-                      <Clock className="h-3 w-3" />
-                      {formatDateTime(log.createdAt)}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {data && data.total > 50 && (
-        <div className="flex items-center justify-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
-            السابق
-          </Button>
-          <span className="text-sm text-gray-500">صفحة {page} من {Math.ceil(data.total / 50)}</span>
-          <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page >= Math.ceil(data.total / 50)}>
-            التالي
-          </Button>
-        </div>
-      )}
+      <div className="relative"><Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" /><Input placeholder="بحث بالإجراء، الاسم، البريد، القسم، أو التفاصيل..." value={search} onChange={e=>setSearch(e.target.value)} className="pr-9" /></div>
+      <div className="rounded-xl border overflow-hidden shadow-sm" style={{ borderColor: "#e8edf7" }}><table className="w-full text-sm"><thead style={{ background:"linear-gradient(135deg,#1e3c72,#2a5298)", color:"#fff" }}><tr><th className="text-right px-4 py-3 font-semibold">الإجراء</th><th className="text-right px-4 py-3 font-semibold">المستخدم</th><th className="text-right px-4 py-3 font-semibold">التفاصيل</th><th className="text-right px-4 py-3 font-semibold">IP</th><th className="text-right px-4 py-3 font-semibold">التاريخ والوقت</th></tr></thead><tbody>{isLoading ? (<tr><td colSpan={5} className="text-center py-12 text-gray-400">جاري التحميل...</td></tr>) : filtered.length === 0 ? (<tr><td colSpan={5} className="text-center py-12 text-gray-400">لا توجد سجلات</td></tr>) : filtered.map((log,i)=>(<tr key={log.id} className={i%2===0?"bg-white":"bg-gray-50/50"} style={{ borderBottom:"1px solid #f0f2f8" }}><td className="px-4 py-3"><span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${actionColor(log.action)}`}>{log.action}</span></td><td className="px-4 py-3"><div className="flex items-center gap-2"><User className="h-3.5 w-3.5 text-gray-400" /><div><div className="font-medium text-gray-800">{log.userName || "—"}</div><div className="text-gray-400 text-xs">{log.userEmail || ""}</div></div></div></td><td className="px-4 py-3 text-gray-600 max-w-xl"><div className="whitespace-pre-wrap break-words text-xs leading-6 rounded-lg border bg-gray-50 p-2 text-gray-700">{formatAuditDetails(log.details)}</div></td><td className="px-4 py-3 text-gray-400 font-mono text-xs">{log.ipAddress || "—"}</td><td className="px-4 py-3"><div className="flex items-center gap-1.5 text-gray-500 text-xs"><Clock className="h-3 w-3" />{formatDateTime(log.createdAt)}</div></td></tr>))}</tbody></table></div>
+      {data && data.total > 50 && (<div className="flex items-center justify-center gap-3"><Button variant="outline" size="sm" onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1}>السابق</Button><span className="text-sm text-gray-500">صفحة {page} من {Math.ceil(data.total/50)}</span><Button variant="outline" size="sm" onClick={()=>setPage(p=>p+1)} disabled={page>=Math.ceil(data.total/50)}>التالي</Button></div>)}
     </div>
   );
 }
