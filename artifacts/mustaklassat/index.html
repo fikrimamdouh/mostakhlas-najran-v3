@@ -8,6 +8,113 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <script>
+      (function () {
+        'use strict';
+
+        var SESSION_KEY = 'najran_session';
+
+        var OPERATIONAL_KEYS = [
+          'persistentContractData', 'persistentExtractData',
+          'contractData', 'contractDetails', 'contractNumber', 'contractType',
+          'contractStartDate', 'contractEndDate', 'contractSignatureData',
+          'extractMonth', 'extractYear', 'extractNumber', 'extractStart', 'extractEnd',
+          'extractFromDate', 'extractToDate',
+          'attendanceData', 'centersAttendanceData_v2', 'healthCentersAttendanceData',
+          'consumablesTableData', 'healthCentersConsumables', 'mainHospitalConsumables',
+          'consumablesTitle', 'consumablesPeriodFrom', 'consumablesPeriodTo',
+          'spare_partsData', 'approvalData', 'displayApprovalData',
+          'performanceData', 'achievementData', 'achievementTitles_v1',
+          'centerNames_v3', 'departmentNames', 'distributionSettings',
+          'hospitalName', 'companyName', 'directPurchaseRatio', 'hospitalActivityStatus',
+          'admin_staff', 'dynamicSignatures', 'contractorSignature',
+          'appTitles_v1', 'healthCentersData', 'reviewExtractData', 'requestVisitData',
+          'settings_main', 'settings_advanced',
+          'finalLaborCost', 'performanceTotalDeduction', 'grand-net-total',
+          'grand-net-total-centers', 'grand-net-total-admin',
+          'performanceSignatures', 'performanceSignatures_v2', 'performanceTableNames',
+          'najran_labor_attendance_done', 'najran_labor_performance_done',
+          'najran_health_attendance_done', 'najran_admin_offices_attendance_done',
+          'adminOfficeNames_v1', 'adminOfficesAttendanceData_v1',
+          'admin_offices_consumables_v1.0', 'finalConsumablesCost',
+          'adminOfficeAffiliations_v1',
+          'performance_data_consumables_v27', 'sewage_disposal_data_consumables_v27',
+          'subcontractors_data_consumables_v27', 'water_supply_data_consumables_v27',
+          'contract_foundation_data',
+          'ng_attendanceData', 'ng_departmentNames', 'ng_distributionSettings',
+          'ng_finalLaborCost', 'ng_performanceTotalDeduction',
+          'nd_attendanceData', 'nd_departmentNames', 'nd_distributionSettings',
+          'nd_finalLaborCost', 'nd_performanceTotalDeduction', 'nd_dentalAchievementTotals',
+          'accreditationLetterData', 'adminJobsPrintState',
+          'dentalLaborCheckboxState', 'dentalLaborData',
+          'achievementItemNames', 'sparePartsTotalAmount'
+        ];
+
+        var OPERATIONAL_PREFIXES = [
+          'deptCalculatedCost_',
+          'dept_',
+          'sb_sigs_',
+          'monthSnapshot_',
+          '_u'
+        ];
+
+        function parseSession(raw) {
+          try { return raw ? JSON.parse(raw) : null; } catch (_) { return null; }
+        }
+
+        function shouldClearByPrefix(key) {
+          for (var i = 0; i < OPERATIONAL_PREFIXES.length; i++) {
+            if (key.indexOf(OPERATIONAL_PREFIXES[i]) === 0) return true;
+          }
+          return false;
+        }
+
+        function clearOperationalLocalData() {
+          try {
+            for (var i = 0; i < OPERATIONAL_KEYS.length; i++) {
+              localStorage.removeItem(OPERATIONAL_KEYS[i]);
+            }
+
+            for (var j = localStorage.length - 1; j >= 0; j--) {
+              var key = localStorage.key(j);
+              if (key && shouldClearByPrefix(key)) localStorage.removeItem(key);
+            }
+          } catch (_) {}
+        }
+
+        var nativeSetItem = Storage.prototype.setItem;
+        var currentSetItem = localStorage.setItem;
+
+        localStorage.setItem = function (key, value) {
+          if (key === SESSION_KEY) {
+            try {
+              var oldSession = parseSession(localStorage.getItem(SESSION_KEY));
+              var newSession = parseSession(String(value));
+
+              var oldUserId = oldSession && oldSession.userId ? String(oldSession.userId) : '';
+              var newUserId = newSession && newSession.userId ? String(newSession.userId) : '';
+              var oldHospital = oldSession && oldSession.hospital ? String(oldSession.hospital).trim() : '';
+              var newHospital = newSession && newSession.hospital ? String(newSession.hospital).trim() : '';
+              var storedHospital = localStorage.getItem('hospitalName') || '';
+
+              var changedUser = !!oldUserId && !!newUserId && oldUserId !== newUserId;
+              var changedHospital = !!oldHospital && !!newHospital && oldHospital !== newHospital;
+              var staleHospitalWithoutSession = !oldSession && !!storedHospital && !!newHospital && storedHospital.trim() !== newHospital;
+
+              if (changedUser || changedHospital || staleHospitalWithoutSession) {
+                clearOperationalLocalData();
+                console.log('[NajranSessionGuard] cleared stale operational localStorage for new user context');
+              }
+            } catch (_) {}
+          }
+
+          return currentSetItem.apply(localStorage, arguments);
+        };
+
+        localStorage.setItem.__najranSessionGuard = true;
+        localStorage.setItem.__najranNativeSetItem = nativeSetItem;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
