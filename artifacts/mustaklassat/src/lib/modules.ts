@@ -18,12 +18,13 @@ export interface ModuleDef {
 }
 
 export const VISIT_MODULE_KEYS = ["request-visit", "visit_review"];
+export const COMMON_SITE_MODULE_KEYS = ["settings_main", "approval"];
 
 export const ALL_MODULES: ModuleDef[] = [
   { key: "najran_general",              file: "najran_general.html",             label: "مستشفى نجران العام الجديد وطب الأسنان", emoji: "🏥", icon: Building2, color: "#1e3c72", types: ["najran_general"] },
-  { key: "approval",                   file: "approval.html",                   label: "اعتماد المستخلص",           emoji: "✅",  icon: CheckSquare, color: "#15803d", types: [] },
+  { key: "approval",                   file: "approval.html",                   label: "اعتماد المستخلص",           emoji: "✅",  icon: CheckSquare, color: "#15803d", types: ["hospital", "health_centers", "admin_offices", "najran_general"] },
   { key: "visit_review",               file: "visit-admin-review.html",         label: "مراجعة زيارات مقاولي الباطن", emoji: "🪪", icon: BadgeCheck, color: "#1e3c72", types: ["hospital"], explicitOnly: true },
-  { key: "settings_main",              file: "settings_main.html",              label: "الإعدادات الرئيسية",         emoji: "⚙️",  icon: Settings, color: "#2a5298", types: ["hospital", "health_centers", "admin_offices"] },
+  { key: "settings_main",              file: "settings_main.html",              label: "الإعدادات الرئيسية",         emoji: "⚙️",  icon: Settings, color: "#2a5298", types: ["hospital", "health_centers", "admin_offices", "najran_general"] },
   { key: "settings_advanced",          file: "settings_advanced.html",          label: "الإعدادات المتقدمة",         emoji: "🔧",  icon: SlidersHorizontal, color: "#1e3c72", types: ["hospital", "health_centers", "admin_offices"] },
   { key: "attendance",                 file: "attendance.html",                 label: "الحضور والانصراف",           emoji: "📋",  icon: Clock, color: "#0077b6", types: ["hospital"] },
   { key: "performance",                file: "performance.html",                label: "جداول الأداء",              emoji: "📊",  icon: BarChart2, color: "#023e8a", types: ["hospital"] },
@@ -60,7 +61,7 @@ export function getSiteType(hospital: string | null | undefined): SiteType {
 
 const COMPANY_SITE_TYPES: Record<string, SiteType[]> = {
   "بيت_العرب": ["hospital", "admin_offices"],
-  "سراكو": ["hospital", "health_centers"],
+  "سراكو": ["hospital", "health_centers", "najran_general"],
   "تجمع_نجران": [],
 };
 
