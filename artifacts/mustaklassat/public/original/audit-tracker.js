@@ -9,7 +9,12 @@
  */
 (function () {
   'use strict';
-
+if (!document.querySelector('script[src="/original/audit-diff-enhancer.js"]')) {
+  const diffScript = document.createElement('script');
+  diffScript.src = '/original/audit-diff-enhancer.js';
+  diffScript.defer = true;
+  document.head.appendChild(diffScript);
+}
   const SESSION_KEY = 'najran_session';
 
   function getSession() {
@@ -146,12 +151,74 @@
   })();
 
   const AUDIT_KEYS = new Set([
-    'attendanceData', 'ng_attendanceData', 'nd_attendanceData', 'adminOfficesAttendanceData_v1',
-    'centersAttendanceData_v2', 'healthCentersAttendanceData', 'persistentContractData',
-    'persistentExtractData', 'consumablesTableData', 'healthCentersConsumables',
-    'mainHospitalConsumables', 'spare_partsData', 'performanceData', 'achievementData',
-    'dynamicSignatures', 'contractorSignature'
-  ]);
+  'attendanceData',
+  'ng_attendanceData',
+  'nd_attendanceData',
+  'adminOfficesAttendanceData_v1',
+  'centersAttendanceData_v2',
+  'healthCentersAttendanceData',
+
+  'persistentContractData',
+  'persistentExtractData',
+
+  'consumablesTableData',
+  'healthCentersConsumables',
+  'mainHospitalConsumables',
+  'admin_offices_consumables_v1.0',
+  'finalConsumablesCost',
+  'penaltyValue',
+  'water_supply_data_consumables_v27',
+  'sewage_disposal_data_consumables_v27',
+  'subcontractors_data_consumables_v27',
+
+  'spare_partsData',
+  'sparePartsTotalAmount',
+
+  'performanceData',
+  'performanceTotalDeduction',
+  'ng_performanceTotalDeduction',
+  'nd_performanceTotalDeduction',
+
+  'achievementData',
+  'achievementTitles_v1',
+  'achievementItemNames',
+  'nd_dentalAchievementTotals',
+
+  'dynamicSignatures',
+  'contractorSignature'
+]);
+
+function isAuditableKey(key) {
+  if (AUDIT_KEYS.has(key)) return true;
+  if (/^dept_/.test(key)) return true;
+  if (/^performance_/.test(key)) return true;
+  if (/^consumables_/.test(key)) return true;
+  if (/^water_/.test(key)) return true;
+  if (/^sewage_/.test(key)) return true;
+  if (/^subcontractors_/.test(key)) return true;
+  if (/^achievement_/.test(key)) return true;
+  if (/^spare_/.test(key)) return true;
+  return false;
+}
+
+function areaForKey(key) {
+  if (key.includes('attendance')) return 'الحضور والانصراف';
+  if (key.includes('performance') || /^dept_/.test(key)) return 'تقييم الأداء';
+  if (key.includes('achievement')) return 'الإنجاز';
+  if (
+    key.includes('consumables') ||
+    /^water_/.test(key) ||
+    /^sewage_/.test(key) ||
+    /^subcontractors_/.test(key) ||
+    key === 'finalConsumablesCost' ||
+    key === 'penaltyValue'
+  ) return 'المستهلكات';
+  if (key.includes('spare')) return 'قطع الغيار';
+  if (key.includes('Contract')) return 'بيانات العقد';
+  if (key.includes('Extract')) return 'بيانات المستخلص';
+  if (key.includes('Signature') || key.includes('Signatures')) return 'التوقيعات';
+  return 'بيانات النظام';
+}
 
   function actionNameForKey(key) {
     if (key.includes('attendance')) return 'تعديل حضور وانصراف';
@@ -166,14 +233,41 @@
   }
 
   const realSetItem = Storage.prototype.setItem;
-  Storage.prototype.setItem = function (key, value) {
-    const beforeValue = this.getItem(key);
-    realSetItem.call(this, key, value);
-    if (!AUDIT_KEYS.has(key)) return;
-    if (beforeValue === value) return;
+Storage.prototype.setItem = function (key, value) {
+  const beforeValue = this.getItem(key);
 
-    sendAudit(actionNameForKey(key), safeDetails({ details: `تم تعديل ${key}`, storageKey: key }), beforeValue, value, key, { entityType: 'localStorage' });
-  };
+  realSetItem.call(this, key, value);
+
+  if (!isAuditableKey(key)) return;
+  if (beforeValue === value) return;
+
+  let diff = null;
+  try {
+    if (typeof window.najranBuildAuditDiff === 'function') {
+      diff = window.najranBuildAuditDiff(key, beforeValue, value);
+    }
+  } catch (_) {
+    diff = null;
+  }
+
+  const area = diff && diff.area ? diff.area : areaForKey(key);
+
+  sendAudit(
+    diff ? 'تعديل تفصيلي — ' + area : actionNameForKey(key),
+    safeDetails({
+      details: diff ? 'تغيير تفصيلي في ' + area : `تم تعديل ${key}`,
+      storageKey: key,
+      area: area,
+      changedFieldsCount: diff && diff.changedFieldsCount ? diff.changedFieldsCount : null,
+      changes: diff && diff.changes ? diff.changes : null,
+      readableSummary: diff && diff.readableSummary ? diff.readableSummary : null
+    }),
+    beforeValue,
+    value,
+    key,
+    { entityType: diff ? 'field-diff' : 'localStorage' }
+  );
+};
 
   window.najranAuditLog = async function (action, details, extra) {
     extra = extra || {};
