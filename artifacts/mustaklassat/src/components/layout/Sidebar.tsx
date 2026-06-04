@@ -107,9 +107,14 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem(COLLAPSE_KEY) === "true"; } catch { return false; }
   });
-  const [modulesOpen, setModulesOpen] = useState(true);
-const [visitsOpen, setVisitsOpen] = useState(true);
-const [extractsOpen, setExtractsOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(true);
+  const [laborOpen, setLaborOpen] = useState(true);
+  const [consumablesOpen, setConsumablesOpen] = useState(true);
+  const [spareOpen, setSpareOpen] = useState(true);
+  const [specialOpen, setSpecialOpen] = useState(true);
+  const [otherOpen, setOtherOpen] = useState(true);
+  const [visitsOpen, setVisitsOpen] = useState(true);
+  const [extractsOpen, setExtractsOpen] = useState(true);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifAnim, setNotifAnim] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -182,7 +187,6 @@ const [extractsOpen, setExtractsOpen] = useState(true);
     setSwitchingHospital(h);
     setShowHospitalMenu(false);
 
-    // Optimistic update — حدّث الـ UI فوراً بدون انتظار الـ API
     queryClient.setQueryData(['/api/users/me'], (old: any) =>
       old ? { ...old, hospital: h } : old
     );
@@ -208,10 +212,8 @@ const [extractsOpen, setExtractsOpen] = useState(true);
         localStorage.setItem('hospitalName', h);
       } catch {}
       try { window.dispatchEvent(new CustomEvent('najranHospitalChanged', { detail: { hospital: h } })); } catch {}
-      // invalidate بدل refetch — يحدّث في الخلفية بهدوء
       queryClient.invalidateQueries({ queryKey: ['/api/users/me'] });
     } catch {
-      // لو فشل الـ API — ارجع للقيمة الحقيقية من السيرفر
       queryClient.invalidateQueries({ queryKey: ['/api/users/me'] });
     } finally {
       setSwitchingHospital(null);
@@ -222,20 +224,33 @@ const [extractsOpen, setExtractsOpen] = useState(true);
   const isSupervisor = dbUser?.role === "supervisor";
   const isContractSup = dbUser?.role === "contract_supervisor";
   const isViewer = dbUser?.role === "viewer";
-  const canViewAudit = isAdmin || isSupervisor;
   const role = dbUser?.role ?? "user";
 
   const siteType = getSiteType(dbUser?.hospital);
   const allowedModuleKeys = parseAllowedModules((dbUser as any)?.allowedModules);
   const userCompany = (dbUser as any)?.company as string | undefined;
   const allVisibleModules = filterModules(siteType, allowedModuleKeys, role, userCompany);
-const visitKeys = new Set(VISIT_MODULE_KEYS);
+  const visitKeys = new Set(VISIT_MODULE_KEYS);
 
-const visibleVisits = allVisibleModules.filter(m => visitKeys.has(m.key));
+  const visibleVisits = allVisibleModules.filter(m => visitKeys.has(m.key));
 
-const visibleModules = allVisibleModules.filter(
-  m => m.key !== 'approval' && !visitKeys.has(m.key)
-);
+  const visibleModules = allVisibleModules.filter(
+    m => m.key !== 'approval' && !visitKeys.has(m.key)
+  );
+
+  const settingsKeys = new Set(['settings_main', 'settings_advanced']);
+  const laborKeys = new Set(['attendance', 'performance', 'achievement', 'health_centers_attendance', 'admin_offices_attendance']);
+  const consumablesKeys = new Set(['consumables', 'health_centers_consumables', 'admin_offices_consumables']);
+  const spareKeys = new Set(['spare_parts']);
+  const specialKeys = new Set(['najran_general']);
+
+  const settingsModules = visibleModules.filter(m => settingsKeys.has(m.key));
+  const laborModules = visibleModules.filter(m => laborKeys.has(m.key));
+  const consumablesModules = visibleModules.filter(m => consumablesKeys.has(m.key));
+  const spareModules = visibleModules.filter(m => spareKeys.has(m.key));
+  const specialModules = visibleModules.filter(m => specialKeys.has(m.key));
+  const groupedKeys = new Set([...settingsKeys, ...laborKeys, ...consumablesKeys, ...spareKeys, ...specialKeys]);
+  const otherModules = visibleModules.filter(m => !groupedKeys.has(m.key));
 
   const { data: usersData } = useListUsers(
     { status: "pending" },
@@ -378,6 +393,78 @@ const handleSignOut = async () => {
           )}
         </div>
       </Link>
+    );
+  };
+
+  const ModuleSection = ({
+    title,
+    icon: Icon,
+    open,
+    setOpen,
+    items,
+  }: {
+    title: string;
+    icon: any;
+    open: boolean;
+    setOpen: (fn: (p: boolean) => boolean) => void;
+    items: any[];
+  }) => {
+    if (!items.length) return null;
+
+    return (
+      <div className="pt-1">
+        {!collapsed && (
+          <button
+            onClick={() => setOpen(p => !p)}
+            className="w-full flex items-center justify-between px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-white/5"
+            style={{ color: "rgba(212,175,55,0.7)" }}
+          >
+            <span className="flex items-center gap-1.5">
+              <Icon className="h-3.5 w-3.5" />
+              {title}
+            </span>
+            {open ? <ChevronRight className="h-3 w-3 rotate-90" /> : <ChevronRight className="h-3 w-3" />}
+          </button>
+        )}
+
+        {(open || collapsed) && (
+          <div className="space-y-0.5 mt-0.5">
+            {items.map(m => {
+              const isActive = isModuleActive(m.file);
+              const href = `/original-viewer?page=${m.file}`;
+              return (
+                <Link key={m.key} href={href}>
+                  <div
+                    title={collapsed ? m.label : undefined}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 cursor-pointer group relative",
+                      collapsed ? "justify-center px-2" : "",
+                      isActive
+                        ? "text-[#1a3660] font-bold shadow-md"
+                        : "text-white/65 hover:text-white hover:bg-white/10"
+                    )}
+                    style={isActive ? {
+                      background: "linear-gradient(135deg, #d4af37 0%, #e8c84a 100%)",
+                      boxShadow: "0 2px 8px rgba(212,175,55,0.3)",
+                    } : {}}
+                  >
+                    <m.icon
+                      className={cn("flex-shrink-0", collapsed ? "h-5 w-5" : "h-4 w-4")}
+                      style={isActive ? { color: "#1a3660" } : { color: "rgba(255,255,255,0.65)" }}
+                    />
+                    {!collapsed && <span className="flex-1 truncate leading-tight">{m.label}</span>}
+                    {collapsed && (
+                      <div className="absolute right-full mr-2 px-2 py-1 text-xs rounded-md bg-gray-900 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                        {m.label}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -692,119 +779,14 @@ const handleSignOut = async () => {
         {/* Main nav */}
         {mainNav.map(item => <NavItem key={item.href} item={item} />)}
 
-        {/* Modules section */}
-        {visibleModules.length > 0 && (
-          <div className="pt-1">
-            {!collapsed && (
-              <button
-                onClick={() => setModulesOpen(p => !p)}
-                className="w-full flex items-center justify-between px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-white/5"
-                style={{ color: "rgba(212,175,55,0.7)" }}
-              >
-                <span>الوحدات</span>
-                {modulesOpen ? <ChevronRight className="h-3 w-3 rotate-90" /> : <ChevronRight className="h-3 w-3" />}
-              </button>
-            )}
-            {(modulesOpen || collapsed) && (
-              <div className="space-y-0.5 mt-0.5">
-                {visibleModules.map(m => {
-                  const isActive = isModuleActive(m.file);
-                  const href = `/original-viewer?page=${m.file}`;
-                  return (
-                    <Link key={m.key} href={href}>
-                      <div
-                        title={collapsed ? m.label : undefined}
-                        className={cn(
-                          "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 cursor-pointer group relative",
-                          collapsed ? "justify-center px-2" : "",
-                          isActive
-                            ? "text-[#1a3660] font-bold shadow-md"
-                            : "text-white/65 hover:text-white hover:bg-white/10"
-                        )}
-                        style={isActive ? {
-                          background: "linear-gradient(135deg, #d4af37 0%, #e8c84a 100%)",
-                          boxShadow: "0 2px 8px rgba(212,175,55,0.3)",
-                        } : {}}
-                      >
-                        <m.icon
-                          className={cn("flex-shrink-0", collapsed ? "h-5 w-5" : "h-4 w-4")}
-                          style={isActive ? { color: "#1a3660" } : { color: "rgba(255,255,255,0.65)" }}
-                        />
-                        {!collapsed && (
-                          <span className="flex-1 truncate leading-tight">{m.label}</span>
-                        )}
-                        {collapsed && (
-                          <div className="absolute right-full mr-2 px-2 py-1 text-xs rounded-md bg-gray-900 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-                            {m.label}
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+        <ModuleSection title="إعدادات العقد والموقع" icon={Settings} open={settingsOpen} setOpen={setSettingsOpen} items={settingsModules} />
+        <ModuleSection title="مستخلص العمالة" icon={Users} open={laborOpen} setOpen={setLaborOpen} items={laborModules} />
+        <ModuleSection title="مستخلص المستهلكات" icon={ClipboardList} open={consumablesOpen} setOpen={setConsumablesOpen} items={consumablesModules} />
+        <ModuleSection title="مستخلص قطع الغيار" icon={Settings} open={spareOpen} setOpen={setSpareOpen} items={spareModules} />
+        <ModuleSection title="مستشفى نجران العام الجديد وطب الأسنان" icon={Building2} open={specialOpen} setOpen={setSpecialOpen} items={specialModules} />
+        <ModuleSection title="زيارات مقاولي الباطن" icon={BadgeCheck} open={visitsOpen} setOpen={setVisitsOpen} items={visibleVisits} />
+        <ModuleSection title="وحدات أخرى" icon={LayoutGrid} open={otherOpen} setOpen={setOtherOpen} items={otherModules} />
 
-  {/* Visits section */}
-{visibleVisits.length > 0 && (
-  <div className="pt-1">
-    {!collapsed && (
-      <button
-        onClick={() => setVisitsOpen(p => !p)}
-        className="w-full flex items-center justify-between px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-white/5"
-        style={{ color: "rgba(212,175,55,0.7)" }}
-      >
-        <span>زيارات مقاولي الباطن</span>
-        {visitsOpen ? <ChevronRight className="h-3 w-3 rotate-90" /> : <ChevronRight className="h-3 w-3" />}
-      </button>
-    )}
-
-    {(visitsOpen || collapsed) && (
-      <div className="space-y-0.5 mt-0.5">
-        {visibleVisits.map(m => {
-          const isActive = isModuleActive(m.file);
-          const href = `/original-viewer?page=${m.file}`;
-
-          return (
-            <Link key={m.key} href={href}>
-              <div
-                title={collapsed ? m.label : undefined}
-                className={cn(
-                  "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 cursor-pointer group relative",
-                  collapsed ? "justify-center px-2" : "",
-                  isActive
-                    ? "text-[#1a3660] font-bold shadow-md"
-                    : "text-white/65 hover:text-white hover:bg-white/10"
-                )}
-                style={isActive ? {
-                  background: "linear-gradient(135deg, #d4af37 0%, #e8c84a 100%)",
-                  boxShadow: "0 2px 8px rgba(212,175,55,0.3)",
-                } : {}}
-              >
-                <m.icon
-                  className={cn("flex-shrink-0", collapsed ? "h-5 w-5" : "h-4 w-4")}
-                  style={isActive ? { color: "#1a3660" } : { color: "rgba(255,255,255,0.65)" }}
-                />
-
-                {!collapsed && (
-                  <span className="flex-1 truncate leading-tight">{m.label}</span>
-                )}
-
-                {collapsed && (
-                  <div className="absolute right-full mr-2 px-2 py-1 text-xs rounded-md bg-gray-900 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-                    {m.label}
-                  </div>
-                )}
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-    )}
-  </div>
-)}
         {/* Extracts section */}
         {extractsNav.length > 0 && (
           <div className="pt-1">
