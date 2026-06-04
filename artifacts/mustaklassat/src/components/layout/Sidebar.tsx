@@ -10,8 +10,8 @@ import {
   FileCheck2, FileSearch, LayoutGrid, Archive, BadgeCheck, MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, useCallback, useRef, type CSSProperties, useContext, createContext } from "react";
-import { ALL_MODULES, getSiteType, parseAllowedModules, filterModules, VISIT_MODULE_KEYS } from "@/lib/modules";
+import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
+import { getSiteType, parseAllowedModules, filterModules, VISIT_MODULE_KEYS } from "@/lib/modules";
 const ARABIC_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 const ARABIC_MONTHS = [
   "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
