@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@clerk/react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Clock, Eye, RefreshCw, Wifi, WifiOff, MapPin } from "lucide-react";
+import { Search, Clock, Eye, RefreshCw, Wifi, WifiOff, MapPin, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ interface UserRow {
   company: string | null;
   hospital: string | null;
   phone: string | null;
+  jobTitle?: string | null;
+  contractNumber?: string | null;
   createdAt: string;
   lastLoginAt: string | null;
   lastPage: string | null;
@@ -71,6 +73,9 @@ function statusLabel(status: string) {
 export default function UsersView() {
   const { getToken } = useAuth();
   const [search, setSearch] = useState("");
+  const [editUser, setEditUser] = useState<UserRow | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", phone: "", hospital: "", company: "", jobTitle: "", contractNumber: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const { data, isLoading, refetch, isFetching } = useQuery<{ users: UserRow[]; total: number }>({
     queryKey: ["/api/users"],
@@ -83,15 +88,59 @@ export default function UsersView() {
       return res.json();
     },
     staleTime: 0,
-    refetchInterval: 30 * 1000, // auto-refresh every 30 seconds
+    refetchInterval: 30 * 1000,
   });
 
+  function openEdit(u: UserRow) {
+    setEditUser(u);
+    setEditForm({
+      name: u.name || "",
+      phone: u.phone || "",
+      hospital: u.hospital || "",
+      company: u.company || "",
+      jobTitle: u.jobTitle || "",
+      contractNumber: u.contractNumber || "",
+    });
+  }
+
+  async function saveEdit() {
+    if (!editUser) return;
+    if (!editForm.name.trim()) {
+      alert("الاسم لا يمكن أن يكون فارغاً");
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/users/${editUser.id}/profile`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          name: editForm.name,
+          phone: editForm.phone,
+          hospital: editForm.hospital,
+          company: editForm.company,
+          jobTitle: editForm.jobTitle,
+          contractNumber: editForm.contractNumber,
+        }),
+      });
+      if (!res.ok) throw new Error("failed");
+      setEditUser(null);
+      await refetch();
+    } catch {
+      alert("فشل حفظ تعديل بيانات المستخدم");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
   const allUsers = (data?.users || []).slice().sort((a, b) => {
-    // Online users first
     const aOnline = isOnline(a.lastPageAt, a.lastLoginAt) ? 1 : 0;
     const bOnline = isOnline(b.lastPageAt, b.lastLoginAt) ? 1 : 0;
     if (bOnline !== aOnline) return bOnline - aOnline;
-    // Then sort by last activity
     const at = new Date(a.lastPageAt || a.lastLoginAt || 0).getTime();
     const bt = new Date(b.lastPageAt || b.lastLoginAt || 0).getTime();
     return bt - at;
@@ -112,7 +161,49 @@ export default function UsersView() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500" style={{ direction: "rtl" }}>
-      {/* Header */}
+      {editUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.45)", direction: "rtl" }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="p-5" style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)", color: "#fff" }}>
+              <h2 className="text-lg font-bold">تعديل بيانات المستخدم</h2>
+              <p className="text-xs opacity-80 mt-1">{editUser.email}</p>
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">الاسم</label>
+                <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">الجوال</label>
+                <Input value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">المستشفى / الموقع</label>
+                <Input value={editForm.hospital} onChange={e => setEditForm(f => ({ ...f, hospital: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">الشركة</label>
+                <Input value={editForm.company} onChange={e => setEditForm(f => ({ ...f, company: e.target.value }))} placeholder="بيت_العرب / سراكو / تجمع_نجران" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">المسمى الوظيفي</label>
+                <Input value={editForm.jobTitle} onChange={e => setEditForm(f => ({ ...f, jobTitle: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">رقم العقد</label>
+                <Input value={editForm.contractNumber} onChange={e => setEditForm(f => ({ ...f, contractNumber: e.target.value }))} />
+              </div>
+              <div className="flex gap-3 pt-3">
+                <Button variant="outline" className="flex-1" onClick={() => setEditUser(null)} disabled={savingEdit}>إلغاء</Button>
+                <Button className="flex-1 text-white" style={{ background: "#1e3c72" }} onClick={saveEdit} disabled={savingEdit}>
+                  {savingEdit ? "جاري الحفظ..." : "حفظ التعديل"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3" style={{ color: "#1e3c72" }}>
@@ -141,7 +232,6 @@ export default function UsersView() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
         {[
           { label: "مجموع المستخدمين", value: data?.total ?? 0, color: "#1e3c72" },
@@ -156,7 +246,6 @@ export default function UsersView() {
         ))}
       </div>
 
-      {/* Online users highlight */}
       {onlineUsers.length > 0 && (
         <div className="rounded-xl p-4 border" style={{ background: "#f0fff4", borderColor: "#a7f3d0" }}>
           <p className="font-semibold text-green-700 text-sm mb-2 flex items-center gap-2">
@@ -180,7 +269,6 @@ export default function UsersView() {
         </div>
       )}
 
-      {/* Search */}
       <div className="relative">
         <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
         <Input
@@ -191,7 +279,6 @@ export default function UsersView() {
         />
       </div>
 
-      {/* Table */}
       <div className="rounded-xl border overflow-hidden shadow-sm" style={{ borderColor: "#e8edf7" }}>
         <table className="w-full text-sm">
           <thead style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)", color: "#fff" }}>
@@ -204,20 +291,20 @@ export default function UsersView() {
               <th className="text-right px-4 py-3 font-semibold">آخر نشاط</th>
               <th className="text-right px-4 py-3 font-semibold">آخر دخول</th>
               <th className="text-right px-4 py-3 font-semibold">تسجيل</th>
+              <th className="text-center px-4 py-3 font-semibold">تعديل</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={8} className="text-center py-12 text-gray-400">جاري التحميل...</td></tr>
+              <tr><td colSpan={9} className="text-center py-12 text-gray-400">جاري التحميل...</td></tr>
             ) : users.length === 0 ? (
-              <tr><td colSpan={8} className="text-center py-12 text-gray-400">لا توجد نتائج</td></tr>
+              <tr><td colSpan={9} className="text-center py-12 text-gray-400">لا توجد نتائج</td></tr>
             ) : users.map((u, i) => {
               const role = roleLabel(u.role);
               const status = statusLabel(u.status);
               const online = isOnline(u.lastPageAt, u.lastLoginAt);
               return (
                 <tr key={u.id} className={i % 2 === 0 ? "bg-white" : "bg-gray-50/50"} style={{ borderBottom: "1px solid #f0f2f8" }}>
-                  {/* Name + online dot */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="relative flex-shrink-0">
@@ -230,6 +317,7 @@ export default function UsersView() {
                       <div>
                         <div className="font-semibold text-gray-800">{u.name}</div>
                         <div className="text-gray-400 text-xs">{u.email}</div>
+                        {u.phone && <div className="text-gray-400 text-xs">{u.phone}</div>}
                       </div>
                     </div>
                   </td>
@@ -242,33 +330,20 @@ export default function UsersView() {
                   <td className="px-4 py-3">
                     <Badge variant="outline" className={`text-xs ${status.cls}`}>{status.text}</Badge>
                   </td>
-
-                  {/* Current location */}
                   <td className="px-4 py-3">
                     {u.lastPage ? (
                       <div className="flex items-center gap-1.5">
                         <MapPin className={`h-3.5 w-3.5 flex-shrink-0 ${online ? "text-green-500" : "text-gray-300"}`} />
-                        <span className={`text-xs font-medium ${online ? "text-green-700" : "text-gray-400"}`}>
-                          {u.lastPage}
-                        </span>
+                        <span className={`text-xs font-medium ${online ? "text-green-700" : "text-gray-400"}`}>{u.lastPage}</span>
                       </div>
-                    ) : (
-                      <span className="text-gray-300 text-xs">—</span>
-                    )}
+                    ) : <span className="text-gray-300 text-xs">—</span>}
                   </td>
-
-                  {/* Last activity (relative) */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      {online
-                        ? <Wifi className="h-3.5 w-3.5 text-green-500" />
-                        : <WifiOff className="h-3.5 w-3.5 text-gray-300" />}
-                      <span className={`text-xs ${online ? "text-green-600 font-medium" : "text-gray-400"}`}>
-                        {relativeTime(u.lastPageAt || u.lastLoginAt)}
-                      </span>
+                      {online ? <Wifi className="h-3.5 w-3.5 text-green-500" /> : <WifiOff className="h-3.5 w-3.5 text-gray-300" />}
+                      <span className={`text-xs ${online ? "text-green-600 font-medium" : "text-gray-400"}`}>{relativeTime(u.lastPageAt || u.lastLoginAt)}</span>
                     </div>
                   </td>
-
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 text-gray-400 text-xs">
                       <Clock className="h-3 w-3" />
@@ -276,6 +351,11 @@ export default function UsersView() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-gray-400 text-xs">{formatDate(u.createdAt)}</td>
+                  <td className="px-4 py-3 text-center">
+                    <Button size="sm" variant="outline" className="h-7 px-2 text-xs gap-1" onClick={() => openEdit(u)}>
+                      <Pencil className="h-3 w-3" /> تعديل
+                    </Button>
+                  </td>
                 </tr>
               );
             })}
