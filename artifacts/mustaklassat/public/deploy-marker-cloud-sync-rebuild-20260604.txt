@@ -1,0 +1,2 @@
+Trigger clean deployment after restoring cloud-sync.js.
+Created to force hosting platform to rebuild from the current safe repository state.
