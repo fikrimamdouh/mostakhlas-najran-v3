@@ -69,16 +69,17 @@
     // Check if this is a revision of an existing extract
     const revisionId = localStorage.getItem(REVISION_KEY);
     const isRevision = !!revisionId;
-let token = null;
+let token = session.clerkToken || null;
+
 try {
   if (window.najranGetFreshToken) {
-    token = await window.najranGetFreshToken();
+    const freshToken = await Promise.race([
+      window.najranGetFreshToken(),
+      new Promise(resolve => setTimeout(() => resolve(null), 1200))
+    ]);
+    if (freshToken) token = freshToken;
   }
 } catch (_) {}
-
-if (!token && session.clerkToken) {
-  token = session.clerkToken;
-}
 
 const headers = { 'Content-Type': 'application/json' };
 if (token) headers['Authorization'] = `Bearer ${token}`;
