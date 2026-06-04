@@ -102,8 +102,15 @@ export function Sidebar() {
   const [location] = useLocation();
   const { user } = useUser();
   const { signOut } = useClerk();
-  const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"], refetchInterval: 60_000 } });
-  const [now, setNow] = useState(new Date());
+const { data: dbUser } = useGetMe({ 
+  query: { 
+    queryKey: ["/api/users/me"], 
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+    gcTime: 5 * 60 * 1000,
+  } 
+});
+const [now, setNow] = useState(new Date());
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem(COLLAPSE_KEY) === "true"; } catch { return false; }
   });
@@ -265,15 +272,74 @@ export function Sidebar() {
   const pendingUsersCount = isAdmin ? (usersData?.users?.length ?? 0) : 0;
   const { notifications, unread, markRead, markAllRead } = useNotifications(isAdmin, pendingUsersCount);
 
-  const initials = (dbUser?.name || user?.fullName || "م").charAt(0);
+const initials = (dbUser?.name || user?.fullName || "م").charAt(0);
+
 const handleSignOut = async () => {
   try {
     const syncFn = (window as any).najranSyncNow;
-
     if (typeof syncFn !== 'function') {
       alert('جاري تجهيز الحفظ السحابي. انتظر ثواني ثم حاول تسجيل الخروج مرة أخرى.');
       return;
     }
+    const syncResult = await Promise.race([
+      syncFn(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('SYNC_TIMEOUT')), 15000)
+      ),
+    ]) as any;
+    if (!syncResult || syncResult.ok !== true) {
+      throw new Error('SYNC_NOT_CONFIRMED');
+    }
+    await new Promise(resolve => setTimeout(resolve, 300));
+    localStorage.removeItem('najran_session');
+    sessionStorage.removeItem('najran_prereg');
+    localStorage.removeItem('hospitalName');
+    localStorage.removeItem('companyName');
+    localStorage.removeItem('contractNumber');
+    localStorage.removeItem('contractDetails');
+    localStorage.removeItem('persistentContractData');
+    localStorage.removeItem('persistentExtractData');
+    queryClient.clear();
+    await signOut({ redirectUrl: "/sign-in" });
+  } catch (error) {
+    console.error('فشل رفع البيانات قبل تسجيل الخروج:', error);
+    alert('لم يتم تسجيل الخروج لأن آخر التعديلات لم يتم تأكيد رفعها للنظام. البيانات ما زالت محفوظة على المتصفح. حاول مرة أخرى.');
+  }
+};
+
+if (!dbUser) {
+  return (
+    <aside
+      className="flex flex-col h-screen flex-shrink-0 overflow-hidden transition-all duration-300 relative"
+      style={{
+        width: collapsed ? 56 : 230,
+        minWidth: collapsed ? 56 : 230,
+        background: "linear-gradient(180deg, #0f2050 0%, #1e3c72 50%, #2a5298 100%)",
+        direction: "rtl",
+        boxShadow: "2px 0 20px rgba(0,0,0,0.25)",
+        zIndex: 40,
+      }}
+    >
+      <div className={cn("flex items-center gap-2.5 px-3 pt-3 pb-2 border-b", collapsed ? "justify-center px-2" : "")}
+        style={{ borderColor: "rgba(255,255,255,0.1)", minHeight: 52 }}>
+        <div className="flex-shrink-0 w-8 h-8 rounded-lg overflow-hidden shadow-md" style={{ background: "#fff" }}>
+          <img src="/original/najran_health_cluster_logo.png" alt="شعار" className="w-full h-full object-cover" />
+        </div>
+        {!collapsed && (
+          <div className="min-w-0">
+            <p className="text-xs font-bold leading-tight text-white truncate">تجمع نجران الصحي</p>
+            <p className="text-[10px] leading-tight truncate" style={{ color: "rgba(212,175,55,0.8)" }}>وحدة الصيانة العامة</p>
+          </div>
+        )}
+      </div>
+      <div className="flex-1 px-2 py-3 space-y-2">
+        {[1,2,3,4,5].map(i => (
+          <div key={i} className="h-8 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.08)" }} />
+        ))}
+      </div>
+    </aside>
+  );
+}
 
     const syncResult = await Promise.race([
       syncFn(),
