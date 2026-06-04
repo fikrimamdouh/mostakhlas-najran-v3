@@ -746,7 +746,8 @@ const handleSignOut = async () => {
             )}
           </div>
         )}
-{/* Visits section */}
+
+  {/* Visits section */}
 {visibleVisits.length > 0 && (
   <div className="pt-1">
     {!collapsed && (
@@ -755,7 +756,7 @@ const handleSignOut = async () => {
         className="w-full flex items-center justify-between px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-white/5"
         style={{ color: "rgba(212,175,55,0.7)" }}
       >
-        <span>الزيارات</span>
+        <span>زيارات مقاولي الباطن</span>
         {visitsOpen ? <ChevronRight className="h-3 w-3 rotate-90" /> : <ChevronRight className="h-3 w-3" />}
       </button>
     )}
