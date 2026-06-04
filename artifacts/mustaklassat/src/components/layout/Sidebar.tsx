@@ -98,18 +98,26 @@ function useNotifications(isAdmin: boolean, pendingUsersCount: number) {
   return { notifications, unread, markRead, markAllRead };
 }
 
-export function Sidebar() {
+type SidebarProps = {
+  dbUserOverride?: any;
+};
+
+export function Sidebar({ dbUserOverride }: SidebarProps = {}) {
   const [location] = useLocation();
   const { user } = useUser();
   const { signOut } = useClerk();
-const { data: dbUser } = useGetMe({ 
-  query: { 
-    queryKey: ["/api/users/me"], 
-    refetchInterval: 60_000,
-    staleTime: 30_000,
-    gcTime: 5 * 60 * 1000,
-  } 
-});
+
+  const { data: fetchedDbUser } = useGetMe({
+    query: {
+      queryKey: ["/api/users/me"],
+      enabled: !dbUserOverride,
+      refetchInterval: dbUserOverride ? false : 60_000,
+      staleTime: 30_000,
+      gcTime: 5 * 60 * 1000,
+    },
+  });
+
+  const dbUser = dbUserOverride || fetchedDbUser;
 const [now, setNow] = useState(new Date());
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem(COLLAPSE_KEY) === "true"; } catch { return false; }
