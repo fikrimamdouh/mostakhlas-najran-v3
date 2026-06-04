@@ -6,6 +6,10 @@ import "./index.css";
 // ملف مستقل لا يلمس بيانات المستخلصات أو الحضور أو المعادلات.
 import "../public/prereg-guard.js";
 
+// يقلل ضغط سجل المراقبة بمنع تسجيل دخول/خروج الصفحات فقط.
+// لا يمنع تسجيل التعديلات الفعلية أو الحضور أو الاعتماد أو الصلاحيات.
+import "../public/audit-light-guard.js";
+
 console.log("PRODUCTION_BUILD_MARKER_2026_05_07_V4_LIVE_KEY");
 
 createRoot(document.getElementById("root")!).render(<App />);
