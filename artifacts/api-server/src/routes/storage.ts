@@ -1,27 +1,50 @@
 import { Router } from "express";
 import { db, usersTable, userStorageTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
+
+const SETTINGS_STORAGE_KEYS = [
+  "persistentContractData", "persistentExtractData",
+  "contractData", "contractDetails", "contractNumber", "contractType",
+  "contractStartDate", "contractEndDate", "contractSignatureData",
+  "extractMonth", "extractYear", "extractNumber", "extractStart", "extractEnd",
+  "extractFromDate", "extractToDate",
+  "hospitalName", "companyName", "directPurchaseRatio",
+  "settings_main", "settings_advanced",
+  "dynamicSignatures", "contractorSignature", "appTitles_v1",
+  "admin_staff", "contract_foundation_data"
+];
 
 const getDbUser = async (clerkId: string) => {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkId)).limit(1);
   return user;
 };
 
-// GET /api/storage — get all key-value pairs for current user
+function requestedKeys(req: any): string[] | null {
+  const scope = String(req.query?.scope || "").trim();
+  if (scope === "settings") return SETTINGS_STORAGE_KEYS;
+  return null;
+}
+
+// GET /api/storage — get key-value pairs for current user
 router.get("/", requireAuth, async (req: any, res) => {
   try {
     const dbUser = await getDbUser(req.clerkUserId);
     if (!dbUser || dbUser.status !== "approved") return res.status(403).json({ error: "Forbidden" });
 
-    const rows = await db.select().from(userStorageTable).where(eq(userStorageTable.userId, dbUser.id));
+    const keys = requestedKeys(req);
+    const whereClause = keys
+      ? and(eq(userStorageTable.userId, dbUser.id), inArray(userStorageTable.storageKey, keys))
+      : eq(userStorageTable.userId, dbUser.id);
+
+    const rows = await db.select().from(userStorageTable).where(whereClause);
     const result: Record<string, string> = {};
     for (const row of rows) {
       result[row.storageKey] = row.storageValue;
     }
-    return res.json({ data: result, count: rows.length });
+    return res.json({ data: result, count: rows.length, scope: keys ? "settings" : "all" });
   } catch (err) {
     req.log.error({ err }, "Failed to get user storage");
     return res.status(500).json({ error: "Internal server error" });
@@ -40,7 +63,6 @@ router.put("/", requireAuth, async (req: any, res) => {
     const entries = Object.entries(data);
     if (entries.length === 0) return res.json({ saved: 0 });
 
-    // Upsert each key
     for (const [key, value] of entries) {
       await db.insert(userStorageTable)
         .values({ userId: dbUser.id, storageKey: key, storageValue: String(value), updatedAt: new Date() })
