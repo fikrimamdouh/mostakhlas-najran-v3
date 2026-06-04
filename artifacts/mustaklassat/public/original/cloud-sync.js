@@ -95,6 +95,28 @@ function clearDirtyKeys(keys) {
     'adminOfficesAttendanceData_v1',
   ]);
 
+  const SETTINGS_PAGE_KEYS = new Set([
+    'persistentContractData', 'persistentExtractData',
+    'contractData', 'contractDetails', 'contractNumber', 'contractType',
+    'contractStartDate', 'contractEndDate', 'contractSignatureData',
+    'extractMonth', 'extractYear', 'extractNumber', 'extractStart', 'extractEnd',
+    'extractFromDate', 'extractToDate',
+    'hospitalName', 'companyName', 'directPurchaseRatio',
+    'settings_main', 'settings_advanced',
+    'dynamicSignatures', 'contractorSignature', 'appTitles_v1',
+    'admin_staff', 'contract_foundation_data'
+  ]);
+
+  function isSettingsMainPage() {
+    return getCurrentPageFile() === 'settings_main.html';
+  }
+
+  function shouldMergePulledKeyForCurrentPage(key) {
+    if (!isSettingsMainPage()) return true;
+    const nk = String(key || '').replace(/^_u\d+_/, '');
+    return SETTINGS_PAGE_KEYS.has(nk);
+  }
+
  function shouldSyncKey(key) {
   const nk = key.replace(/^_u\d+_/, '');
   return (
@@ -409,8 +431,10 @@ const timer = setTimeout(() => controller.abort(), 20_000);
     }
 
     let merged = 0;
+    let skippedByPage = 0;
     for (const [key, value] of Object.entries(userData)) {
       try {
+        if (!shouldMergePulledKeyForCurrentPage(key)) { skippedByPage++; continue; }
         if (COMPUTED_KEYS.has(key)) {
           const local = localStorage.getItem(key);
           if (local !== null && parseFloat(local) > parseFloat(value)) { merged++; continue; }
@@ -426,6 +450,7 @@ const timer = setTimeout(() => controller.abort(), 20_000);
     for (const [key, value] of Object.entries(hospitalData)) {
       if (!PERSONAL_KEYS.has(key)) {
         try {
+          if (!shouldMergePulledKeyForCurrentPage(key)) { skippedByPage++; continue; }
           if (COMPUTED_KEYS.has(key)) {
             const local = localStorage.getItem(key);
             if (local !== null && parseFloat(local) > parseFloat(value)) continue;
@@ -456,7 +481,8 @@ const timer = setTimeout(() => controller.abort(), 20_000);
     const hosp = hospitalName
       ? ` + ${Object.keys(hospitalData).length} مفتاح مستشفى مشترك`
       : '';
-    console.log(`[MzamanaCloud] ✓ ${merged} مفتاح شخصي${hosp}`);
+    const skipped = skippedByPage ? ` · تم تجاهل ${skippedByPage} مفتاح غير مطلوب لهذه الصفحة` : '';
+    console.log(`[MzamanaCloud] ✓ ${merged} مفتاح شخصي${hosp}${skipped}`);
 
     try {
       window.dispatchEvent(new CustomEvent('najranCloudPulled', { detail: { monthChanged } }));
@@ -559,7 +585,7 @@ async function pushToCloud() {
     }
   }
 const mustSaveUser = Object.keys(userData).length > 0;
- const mustSaveHospital = !!hospitalName && Object.keys(hospitalData).length > 0;  if (!mustSaveUser && !mustSaveHospital) {
+ mustSaveHospital = !!hospitalName && Object.keys(hospitalData).length > 0;  if (!mustSaveUser && !mustSaveHospital) {
     return { ok: true, saved: 0, reason: 'NO_DATA' };
   }
 const [userResult, hospitalResult] = await Promise.all([
@@ -635,7 +661,6 @@ clearDirtyKeys(keysToSync);
     if (!syncIndicator) {
       syncIndicator = document.createElement('span');
       syncIndicator.style.cssText = 'margin-right: 12px; font-size: 11px; opacity: 0.8;';
-      bar.querySelector('.bar-right')?.prepend(syncIndicator);
     }
     if (status === 'syncing') {
       syncIndicator.textContent = '⟳ جاري الحفظ...';
