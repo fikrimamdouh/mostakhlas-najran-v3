@@ -1,7 +1,11 @@
 /**
  * audit-tracker.js
- * يسجل تعديلات المستخدم داخل صفحات النظام الأصلي HTML
- * يراقب مفاتيح localStorage المهمة فقط، وليس كل شيء.
+ * مراقبة تشغيلية حقيقية داخل صفحات النظام الأصلي HTML:
+ * - دخول الصفحة
+ * - الخروج من الصفحة
+ * - الضغط على الأزرار والروابط المهمة
+ * - تغييرات localStorage المهمة
+ * - عمليات API المهمة مثل رفع/تعديل/اعتماد المستخلص
  */
 (function () {
   'use strict';
@@ -9,11 +13,7 @@
   const SESSION_KEY = 'najran_session';
 
   function getSession() {
-    try {
-      return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
-    } catch (_) {
-      return null;
-    }
+    try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; }
   }
 
   async function getFreshTokenForOriginalPages() {
@@ -39,7 +39,70 @@
     return session && session.clerkToken ? session.clerkToken : null;
   }
 
-  (function patchFetchAuth() {
+  function getPageName() {
+    try {
+      const url = new URL(window.location.href);
+      return url.searchParams.get('page') || location.pathname;
+    } catch (_) { return location.pathname; }
+  }
+
+  function shortValue(value) {
+    if (value == null) return null;
+    const s = String(value);
+    return s.length > 1500 ? s.slice(0, 1500) + '... [truncated]' : s;
+  }
+
+  function safeDetails(extra) {
+    const session = getSession() || {};
+    return Object.assign({
+      page: getPageName(),
+      url: location.pathname + location.search,
+      title: document.title || null,
+      hospital: session.hospital || localStorage.getItem('hospitalName') || null,
+      company: session.companyName || localStorage.getItem('companyName') || null,
+      at: new Date().toISOString()
+    }, extra || {});
+  }
+
+  async function sendAudit(action, details, beforeValue, afterValue, key, options) {
+    const session = getSession();
+    const token = await getFreshTokenForOriginalPages();
+    if (!session || !token) return;
+
+    try {
+      await fetch('/api/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        credentials: 'include',
+        keepalive: !!(options && options.keepalive),
+        body: JSON.stringify({
+          action,
+          details: typeof details === 'string' ? details : JSON.stringify(details || null),
+          entityType: options && options.entityType || 'page',
+          entityId: key || null,
+          before: shortValue(beforeValue),
+          after: shortValue(afterValue),
+          page: getPageName()
+        })
+      });
+    } catch (_) {}
+  }
+
+  function log(action, details, options) {
+    sendAudit(action, safeDetails(details), null, null, null, options);
+  }
+
+  function apiActionName(method, url) {
+    if (/\/api\/submitted-extracts\/\d+\/status/.test(url)) return 'تحديث حالة مستخلص';
+    if (/\/api\/submitted-extracts\/\d+/.test(url) && method === 'PUT') return 'تعديل وإعادة رفع مستخلص';
+    if (/\/api\/submitted-extracts/.test(url) && method === 'POST') return 'رفع مستخلص جديد';
+    if (/\/api\/submitted-extracts/.test(url) && method === 'GET') return 'استعراض المستخلصات';
+    if (/\/api\/users\/me\/activity/.test(url)) return 'تحديث نشاط مستخدم';
+    if (/\/api\/audit/.test(url)) return null;
+    return null;
+  }
+
+  (function patchFetchAuthAndAudit() {
     if (window.__najranOriginalFetchAuthPatched) return;
     window.__najranOriginalFetchAuthPatched = true;
     const nativeFetch = window.fetch.bind(window);
@@ -47,6 +110,7 @@
     window.fetch = async function (input, init) {
       init = init || {};
       const url = typeof input === 'string' ? input : (input && input.url) || '';
+      const method = String(init.method || (input && input.method) || 'GET').toUpperCase();
       const needsAuth = /\/api\/(submitted-extracts|users\/me|audit)/.test(url);
 
       if (needsAuth) {
@@ -58,7 +122,19 @@
         }
       }
 
-      const res = await nativeFetch(input, init);
+      const action = apiActionName(method, url);
+      const started = Date.now();
+      let res;
+      try {
+        res = await nativeFetch(input, init);
+      } catch (err) {
+        if (action) log(action + ' — فشل اتصال', { method, url, error: err && err.message, durationMs: Date.now() - started }, { entityType: 'api' });
+        throw err;
+      }
+
+      if (action && method !== 'GET') {
+        log(action + (res.ok ? ' — نجاح' : ' — فشل'), { method, url, status: res.status, durationMs: Date.now() - started }, { entityType: 'api' });
+      }
 
       if (res.status === 401 && /\/api\/submitted-extracts/.test(url)) {
         try { localStorage.removeItem('najran_revision_extract_id'); } catch (_) {}
@@ -70,41 +146,12 @@
   })();
 
   const AUDIT_KEYS = new Set([
-    'attendanceData',
-    'ng_attendanceData',
-    'nd_attendanceData',
-    'adminOfficesAttendanceData_v1',
-    'centersAttendanceData_v2',
-    'healthCentersAttendanceData',
-
-    'persistentContractData',
-    'persistentExtractData',
-
-    'consumablesTableData',
-    'healthCentersConsumables',
-    'mainHospitalConsumables',
-
-    'spare_partsData',
-    'performanceData',
-    'achievementData',
-    'dynamicSignatures',
-    'contractorSignature'
+    'attendanceData', 'ng_attendanceData', 'nd_attendanceData', 'adminOfficesAttendanceData_v1',
+    'centersAttendanceData_v2', 'healthCentersAttendanceData', 'persistentContractData',
+    'persistentExtractData', 'consumablesTableData', 'healthCentersConsumables',
+    'mainHospitalConsumables', 'spare_partsData', 'performanceData', 'achievementData',
+    'dynamicSignatures', 'contractorSignature'
   ]);
-
-  function getPageName() {
-    try {
-      const url = new URL(window.location.href);
-      return url.searchParams.get('page') || location.pathname;
-    } catch (_) {
-      return location.pathname;
-    }
-  }
-
-  function shortValue(value) {
-    if (value == null) return null;
-    const s = String(value);
-    return s.length > 1500 ? s.slice(0, 1500) + '... [truncated]' : s;
-  }
 
   function actionNameForKey(key) {
     if (key.includes('attendance')) return 'تعديل حضور وانصراف';
@@ -118,79 +165,65 @@
     return 'تعديل بيانات';
   }
 
-  async function sendAudit(action, details, beforeValue, afterValue, key) {
-    const session = getSession();
-    if (!session || !session.clerkToken) return;
-
-    try {
-      await fetch('/api/audit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + session.clerkToken
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          action,
-          details,
-          entityType: 'localStorage',
-          entityId: key,
-          before: shortValue(beforeValue),
-          after: shortValue(afterValue),
-          page: getPageName()
-        })
-      });
-    } catch (_) {}
-  }
-
   const realSetItem = Storage.prototype.setItem;
-
   Storage.prototype.setItem = function (key, value) {
     const beforeValue = this.getItem(key);
-
     realSetItem.call(this, key, value);
-
     if (!AUDIT_KEYS.has(key)) return;
     if (beforeValue === value) return;
 
-    const action = actionNameForKey(key);
-    const page = getPageName();
-
-    sendAudit(
-      action,
-      `تم تعديل ${key} في صفحة ${page}`,
-      beforeValue,
-      value,
-      key
-    );
+    sendAudit(actionNameForKey(key), safeDetails({ details: `تم تعديل ${key}`, storageKey: key }), beforeValue, value, key, { entityType: 'localStorage' });
   };
 
   window.najranAuditLog = async function (action, details, extra) {
-    const session = getSession();
-    if (!session || !session.clerkToken) return;
-
     extra = extra || {};
-
-    try {
-      await fetch('/api/audit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + session.clerkToken
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          action,
-          details,
-          entityType: extra.entityType || null,
-          entityId: extra.entityId || null,
-          before: extra.before || null,
-          after: extra.after || null,
-          page: getPageName()
-        })
-      });
-    } catch (_) {}
+    await sendAudit(action, safeDetails({ details, extra }), extra.before || null, extra.after || null, extra.entityId || null, { entityType: extra.entityType || 'manual' });
   };
 
-  console.log('[AuditTracker] تم تفعيل مراقبة التعديلات التشغيلية + حماية توكن صفحات النظام الأصلي');
+  function meaningfulText(el) {
+    if (!el) return '';
+    const aria = el.getAttribute && (el.getAttribute('aria-label') || el.getAttribute('title'));
+    const txt = (aria || el.innerText || el.textContent || el.value || '').replace(/\s+/g, ' ').trim();
+    return txt.slice(0, 140);
+  }
+
+  function isImportantClick(el, text) {
+    if (!el) return false;
+    if (el.id === '_najran_approve_btn_inner') return true;
+    if (/اعتماد|رفع|إرجاع|رفض|تعديل|حفظ|طباعة|PDF|تحميل|خروج|دخول|مراجعة|المستخلص|حذف|إرسال/.test(text)) return true;
+    if (el.matches && el.matches('button,a,[role="button"],input[type="button"],input[type="submit"]')) return true;
+    return false;
+  }
+
+  let lastClickSig = '';
+  let lastClickAt = 0;
+  document.addEventListener('click', function (ev) {
+    const target = ev.target && ev.target.closest ? ev.target.closest('button,a,[role="button"],input[type="button"],input[type="submit"]') : null;
+    const text = meaningfulText(target);
+    if (!isImportantClick(target, text)) return;
+    const sig = location.pathname + '|' + text;
+    const now = Date.now();
+    if (sig === lastClickSig && now - lastClickAt < 1200) return;
+    lastClickSig = sig;
+    lastClickAt = now;
+
+    log(text && text.includes('خروج') ? 'تسجيل خروج / ضغط زر خروج' : 'ضغط زر أو رابط', {
+      buttonText: text || 'زر بدون نص',
+      elementId: target && target.id || null,
+      href: target && target.href || null
+    }, { entityType: 'click' });
+  }, true);
+
+  const enteredAt = Date.now();
+  function logEnter() { log('دخول صفحة', { referrer: document.referrer || null }, { entityType: 'navigation' }); }
+  function logExit() {
+    const seconds = Math.max(1, Math.round((Date.now() - enteredAt) / 1000));
+    log('خروج صفحة', { durationSeconds: seconds }, { entityType: 'navigation', keepalive: true });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', logEnter);
+  else setTimeout(logEnter, 0);
+  window.addEventListener('pagehide', logExit);
+
+  console.log('[AuditTracker] تم تفعيل مراقبة حقيقية: دخول/خروج/نقرات/تعديلات/API');
 })();
