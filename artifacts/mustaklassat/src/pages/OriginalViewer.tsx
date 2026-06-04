@@ -149,7 +149,7 @@ export default function OriginalViewer() {
 // ✅ بعد
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
   <div className="flex h-screen overflow-hidden" style={{ background: "#f0f4ff" }}>
-    <Sidebar />
+    <Sidebar dbUserOverride={dbUser} />
     <main className="flex-1 overflow-hidden">{children}</main>
   </div>
 );
@@ -164,7 +164,7 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
 
 return (
     <div className="flex h-screen overflow-hidden" style={{ background: "#f0f4ff" }}>
-      <Sidebar />
+      <Sidebar dbUserOverride={dbUser} />
       <main className="flex-1 overflow-hidden">
         <iframe
           ref={iframeRef}
