@@ -32,10 +32,11 @@ async function fetchAudit(token: string, page: number): Promise<AuditResponse> {
 }
 
 function actionColor(action: string) {
-  if (action.includes("موافقة") || action.includes("تفعيل")) return "text-green-700 bg-green-50 border-green-200";
-  if (action.includes("رفض") || action.includes("تعطيل")) return "text-red-700 bg-red-50 border-red-200";
+  if (action.includes("موافقة") || action.includes("تفعيل") || action.includes("نجاح")) return "text-green-700 bg-green-50 border-green-200";
+  if (action.includes("رفض") || action.includes("تعطيل") || action.includes("فشل")) return "text-red-700 bg-red-50 border-red-200";
   if (action.includes("صلاحية") || action.includes("دور") || action.includes("وحدات")) return "text-blue-700 bg-blue-50 border-blue-200";
-  if (action.includes("تسجيل دخول")) return "text-purple-700 bg-purple-50 border-purple-200";
+  if (action.includes("تسجيل دخول") || action.includes("دخول") || action.includes("خروج")) return "text-purple-700 bg-purple-50 border-purple-200";
+  if (action.includes("تعديل")) return "text-amber-700 bg-amber-50 border-amber-200";
   return "text-gray-700 bg-gray-50 border-gray-200";
 }
 
@@ -47,21 +48,79 @@ function formatDateTime(iso: string) {
     });
   } catch { return iso; }
 }
+
+function parseJson(value: any) {
+  if (!value) return null;
+  if (typeof value === "object") return value;
+  try { return JSON.parse(value); } catch { return null; }
+}
+
+function labelForKey(key: string) {
+  const map: Record<string, string> = {
+    page: "الصفحة",
+    url: "الرابط",
+    title: "عنوان الصفحة",
+    hospital: "المستشفى",
+    company: "الشركة",
+    at: "وقت التسجيل",
+    buttonText: "الزر / الإجراء",
+    elementId: "معرف العنصر",
+    href: "الرابط المستهدف",
+    method: "طريقة الطلب",
+    status: "حالة الطلب",
+    durationMs: "مدة التنفيذ",
+    storageKey: "مفتاح البيانات",
+    area: "القسم",
+    changedFieldsCount: "عدد الحقول المعدلة",
+    referrer: "الصفحة السابقة",
+    durationSeconds: "مدة البقاء بالثواني",
+  };
+  return map[key] || key;
+}
+
+function valueText(value: any) {
+  if (value === null || value === undefined || value === "") return "—";
+  if (Array.isArray(value)) return value.join("\n");
+  if (typeof value === "object") return JSON.stringify(value, null, 2);
+  return String(value);
+}
+
 function formatAuditDetails(details: string | null) {
   if (!details) return "—";
 
-  try {
-    const parsed = JSON.parse(details);
+  const parsed = parseJson(details);
+  if (!parsed || typeof parsed !== "object") return details;
 
-    if (parsed && typeof parsed === "object") {
-      return parsed.details || details;
-    }
+  const inner = parseJson(parsed.details);
+  const payload = inner && typeof inner === "object" ? inner : parsed;
 
-    return details;
-  } catch {
-    return details;
+  if (payload.readableSummary && Array.isArray(payload.readableSummary)) {
+    return payload.readableSummary.join("\n");
   }
+
+  if (payload.changes && Array.isArray(payload.changes)) {
+    return payload.changes
+      .slice(0, 10)
+      .map((c: any) => `${c.field || c.path || "حقل"}: من "${c.before}" إلى "${c.after}"`)
+      .join("\n");
+  }
+
+  const lines: string[] = [];
+  const base = payload.details && typeof payload.details === "string" ? payload.details : null;
+  if (base && !base.startsWith("{")) lines.push(base);
+
+  ["buttonText", "page", "title", "hospital", "company", "href", "url", "status", "durationMs", "durationSeconds"].forEach(key => {
+    if (payload[key] !== undefined && payload[key] !== null && payload[key] !== "") {
+      lines.push(`${labelForKey(key)}: ${valueText(payload[key])}`);
+    }
+  });
+
+  if (lines.length) return lines.join("\n");
+
+  if (typeof parsed.details === "string" && !parsed.details.trim().startsWith("{")) return parsed.details;
+  return Object.keys(payload).map(key => `${labelForKey(key)}: ${valueText(payload[key])}`).join("\n");
 }
+
 export default function AuditLog() {
   const { getToken } = useAuth();
   const [page, setPage] = useState(1);
@@ -111,7 +170,7 @@ export default function AuditLog() {
       <div className="relative">
         <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
         <Input
-          placeholder="بحث بالإجراء، الاسم، البريد..."
+          placeholder="بحث بالإجراء، الاسم، البريد، الصفحة، أو القسم..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="pr-9"
@@ -152,11 +211,11 @@ export default function AuditLog() {
                       </div>
                     </div>
                   </td>
-                <td className="px-4 py-3 text-gray-600 max-w-xl">
-  <div className="whitespace-normal break-words text-xs leading-5">
-    {formatAuditDetails(log.details)}
-  </div>
-</td>
+                  <td className="px-4 py-3 text-gray-600 max-w-xl">
+                    <div className="whitespace-pre-wrap break-words text-xs leading-6 rounded-lg border bg-gray-50 p-2 text-gray-700">
+                      {formatAuditDetails(log.details)}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-gray-400 font-mono text-xs">{log.ipAddress || "—"}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5 text-gray-500 text-xs">
