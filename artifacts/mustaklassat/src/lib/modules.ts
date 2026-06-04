@@ -48,7 +48,11 @@ export function parseAllowedModules(raw: string | null | undefined): string[] | 
 
 export function getSiteType(hospital: string | null | undefined): SiteType {
   if (!hospital) return "hospital";
-  if (hospital === "مستشفى نجران العام الجديد") return "najran_general";
+  if (
+    hospital === "مستشفى نجران العام الجديد" ||
+    hospital === "مركز طب الأسنان التخصصي" ||
+    hospital === "مستشفى نجران العام الجديد ومركز طب الأسنان التخصصي"
+  ) return "najran_general";
   if (hospital === "المراكز الصحية" || hospital === "المراكز الصحية (مجمع)") return "health_centers";
   if (hospital === "المكاتب الإدارية" || hospital === "المكاتب الإدارية والمرافق الصحية") return "admin_offices";
   return "hospital";
