@@ -14,24 +14,27 @@ export interface ModuleDef {
   color: string;
   types: SiteType[];
   adminOnly?: boolean;
+  explicitOnly?: boolean;
 }
+
+export const VISIT_MODULE_KEYS = ["request-visit", "visit_review"];
 
 export const ALL_MODULES: ModuleDef[] = [
   { key: "najran_general",              file: "najran_general.html",             label: "مستشفى نجران العام الجديد وطب الأسنان", emoji: "🏥", icon: Building2, color: "#1e3c72", types: ["najran_general"] },
-  { key: "approval",                   file: "approval.html",                   label: "اعتماد المستخلص",           emoji: "✅",  icon: CheckSquare,       color: "#15803d", types: [] },
-  { key: "visit_review",               file: "visit-admin-review.html",         label: "مراجعة زيارات مقاولي الباطن", emoji: "🪪",  icon: BadgeCheck,        color: "#1e3c72", types: [], adminOnly: true },
-  { key: "settings_main",              file: "settings_main.html",              label: "الإعدادات الرئيسية",         emoji: "⚙️",  icon: Settings,          color: "#2a5298", types: ["hospital", "health_centers", "admin_offices"] },
+  { key: "approval",                   file: "approval.html",                   label: "اعتماد المستخلص",           emoji: "✅",  icon: CheckSquare, color: "#15803d", types: [] },
+  { key: "visit_review",               file: "visit-admin-review.html",         label: "مراجعة زيارات مقاولي الباطن", emoji: "🪪", icon: BadgeCheck, color: "#1e3c72", types: ["hospital"], explicitOnly: true },
+  { key: "settings_main",              file: "settings_main.html",              label: "الإعدادات الرئيسية",         emoji: "⚙️",  icon: Settings, color: "#2a5298", types: ["hospital", "health_centers", "admin_offices"] },
   { key: "settings_advanced",          file: "settings_advanced.html",          label: "الإعدادات المتقدمة",         emoji: "🔧",  icon: SlidersHorizontal, color: "#1e3c72", types: ["hospital", "health_centers", "admin_offices"] },
-  { key: "attendance",                 file: "attendance.html",                 label: "الحضور والانصراف",           emoji: "📋",  icon: Clock,             color: "#0077b6", types: ["hospital"] },
-  { key: "performance",                file: "performance.html",                label: "جداول الأداء",              emoji: "📊",  icon: BarChart2,         color: "#023e8a", types: ["hospital"] },
-  { key: "achievement",                file: "achievement.html",                label: "شهادة الإنجاز",             emoji: "🏆",  icon: Trophy,            color: "#0096c7", types: ["hospital"] },
-  { key: "consumables",                file: "consumables.html",                label: "مستخلص المستهلكات",         emoji: "🧪",  icon: Package,           color: "#0077b6", types: ["hospital"] },
-  { key: "spare_parts",                file: "spare_parts.html",                label: "مستخلص قطع الغيار",         emoji: "🔩",  icon: Wrench,            color: "#023e8a", types: ["hospital"] },
-  { key: "request-visit",              file: "request-visit.html",              label: "تسجيل الزيارات",            emoji: "🏥",  icon: MapPin,            color: "#2a5298", types: ["hospital"] },
-  { key: "health_centers_attendance",  file: "health_centers_attendance.html",  label: "المراكز — العمالة",         emoji: "👷",  icon: ClipboardList,     color: "#1e3c72", types: ["health_centers"] },
-  { key: "health_centers_consumables", file: "health_centers_consumables.html", label: "المراكز — المستهلكات",      emoji: "🧪",  icon: Package,           color: "#0077b6", types: ["health_centers"] },
-  { key: "admin_offices_attendance",   file: "admin_offices_attendance.html",   label: "المكاتب — العمالة",         emoji: "👷",  icon: ClipboardList,     color: "#2a5298", types: ["admin_offices"] },
-  { key: "admin_offices_consumables",  file: "admin_offices_consumables.html",  label: "المكاتب — المستهلكات",      emoji: "🧪",  icon: Package,           color: "#0077b6", types: ["admin_offices"] },
+  { key: "attendance",                 file: "attendance.html",                 label: "الحضور والانصراف",           emoji: "📋",  icon: Clock, color: "#0077b6", types: ["hospital"] },
+  { key: "performance",                file: "performance.html",                label: "جداول الأداء",              emoji: "📊",  icon: BarChart2, color: "#023e8a", types: ["hospital"] },
+  { key: "achievement",                file: "achievement.html",                label: "شهادة الإنجاز",             emoji: "🏆",  icon: Trophy, color: "#0096c7", types: ["hospital"] },
+  { key: "consumables",                file: "consumables.html",                label: "مستخلص المستهلكات",         emoji: "🧪",  icon: Package, color: "#0077b6", types: ["hospital"] },
+  { key: "spare_parts",                file: "spare_parts.html",                label: "مستخلص قطع الغيار",         emoji: "🔩",  icon: Wrench, color: "#023e8a", types: ["hospital"] },
+  { key: "request-visit",              file: "request-visit.html",              label: "تسجيل الزيارات",            emoji: "🏥",  icon: MapPin, color: "#2a5298", types: ["hospital"], explicitOnly: true },
+  { key: "health_centers_attendance",  file: "health_centers_attendance.html",  label: "المراكز — العمالة",         emoji: "👷",  icon: ClipboardList, color: "#1e3c72", types: ["health_centers"] },
+  { key: "health_centers_consumables", file: "health_centers_consumables.html", label: "المراكز — المستهلكات",      emoji: "🧪",  icon: Package, color: "#0077b6", types: ["health_centers"] },
+  { key: "admin_offices_attendance",   file: "admin_offices_attendance.html",   label: "المكاتب — العمالة",         emoji: "👷",  icon: ClipboardList, color: "#2a5298", types: ["admin_offices"] },
+  { key: "admin_offices_consumables",  file: "admin_offices_consumables.html",  label: "المكاتب — المستهلكات",      emoji: "🧪",  icon: Package, color: "#0077b6", types: ["admin_offices"] },
 ];
 
 export function getModuleKey(filename: string): string {
@@ -47,17 +50,13 @@ export function getSiteType(hospital: string | null | undefined): SiteType {
   if (!hospital) return "hospital";
   if (hospital === "مستشفى نجران العام الجديد") return "najran_general";
   if (hospital === "المراكز الصحية" || hospital === "المراكز الصحية (مجمع)") return "health_centers";
-  if (
-    hospital === "المكاتب الإدارية" ||
-    hospital === "المكاتب الإدارية والمرافق الصحية"
-  ) return "admin_offices";
+  if (hospital === "المكاتب الإدارية" || hospital === "المكاتب الإدارية والمرافق الصحية") return "admin_offices";
   return "hospital";
 }
 
-// أنواع المواقع التي تمتلكها كل شركة
 const COMPANY_SITE_TYPES: Record<string, SiteType[]> = {
-  "بيت_العرب": ["hospital", "admin_offices"],   // مستشفيات + المكاتب الإدارية والمرافق الصحية
-  "سراكو":     ["hospital", "health_centers"],   // مستشفيات + المراكز الصحية
+  "بيت_العرب": ["hospital", "admin_offices"],
+  "سراكو": ["hospital", "health_centers"],
   "تجمع_نجران": [],
 };
 
@@ -66,36 +65,23 @@ export function getCompanySiteTypes(company: string | null | undefined): SiteTyp
   return COMPANY_SITE_TYPES[company] ?? null;
 }
 
-export function isModuleAllowed(
-  moduleKey: string,
-  allowedModuleKeys: string[] | null,
-  role: string,
-): boolean {
+export function isModuleAllowed(moduleKey: string, allowedModuleKeys: string[] | null, role: string): boolean {
   if (role === "admin" || role === "supervisor") return true;
-  if (allowedModuleKeys === null) return true;
+  if (allowedModuleKeys === null) return !VISIT_MODULE_KEYS.includes(moduleKey);
   return allowedModuleKeys.includes(moduleKey);
 }
 
-// الوحدات القابلة للتعيين في صلاحيات الموظفين (تستثني adminOnly)
 export const ASSIGNABLE_MODULES = ALL_MODULES.filter(m => !m.adminOnly);
 
-export function filterModules(
-  siteType: SiteType,
-  allowedModuleKeys: string[] | null,
-  role: string,
-  company?: string | null,
-): ModuleDef[] {
+export function filterModules(siteType: SiteType, allowedModuleKeys: string[] | null, role: string, company?: string | null): ModuleDef[] {
   const isAdmin = role === "admin";
   const isSupervisor = role === "supervisor";
   const isPrivileged = isAdmin || isSupervisor || role === "contract_supervisor";
-
   let byType: ModuleDef[];
 
   if (isAdmin) {
-    // المدير يرى كل شيء
     byType = ALL_MODULES;
   } else if (isSupervisor) {
-    // المشرف يرى وحدات شركته فقط (بدون adminOnly)
     const companySiteTypes = getCompanySiteTypes(company);
     if (companySiteTypes && companySiteTypes.length > 0) {
       const typeSet = new Set(companySiteTypes);
@@ -109,16 +95,12 @@ export function filterModules(
     byType = ALL_MODULES.filter(m => !m.adminOnly && m.types.includes(siteType));
   }
 
-  if (!isPrivileged) {
-    if (allowedModuleKeys !== null) {
-      const keySet = new Set(allowedModuleKeys);
-      const filtered = byType.filter(m => keySet.has(m.key));
-      // fallback فقط لو كانت القائمة تحوي مفاتيح (أي تغيّر siteType) — لا تُطبَّق على [] الفارغة
-      if (filtered.length === 0 && allowedModuleKeys.length > 0) return byType;
-      return filtered;
-    }
-    // null = "كل الوحدات المسموحة لهذا الـ siteType"
-    return byType;
+  if (allowedModuleKeys !== null) {
+    const keySet = new Set(allowedModuleKeys);
+    const filtered = byType.filter(m => keySet.has(m.key));
+    if (!isPrivileged && filtered.length === 0 && allowedModuleKeys.length > 0) return byType.filter(m => !m.explicitOnly);
+    return filtered;
   }
-  return byType;
+
+  return byType.filter(m => !m.explicitOnly);
 }
