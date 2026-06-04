@@ -281,32 +281,7 @@ const handleSignOut = async () => {
       alert('جاري تجهيز الحفظ السحابي. انتظر ثواني ثم حاول تسجيل الخروج مرة أخرى.');
       return;
     }
-    const syncResult = await Promise.race([
-      syncFn(),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('SYNC_TIMEOUT')), 15000)
-      ),
-    ]) as any;
-    if (!syncResult || syncResult.ok !== true) {
-      throw new Error('SYNC_NOT_CONFIRMED');
-    }
-    await new Promise(resolve => setTimeout(resolve, 300));
-    localStorage.removeItem('najran_session');
-    sessionStorage.removeItem('najran_prereg');
-    localStorage.removeItem('hospitalName');
-    localStorage.removeItem('companyName');
-    localStorage.removeItem('contractNumber');
-    localStorage.removeItem('contractDetails');
-    localStorage.removeItem('persistentContractData');
-    localStorage.removeItem('persistentExtractData');
-    queryClient.clear();
-    await signOut({ redirectUrl: "/sign-in" });
-  } catch (error) {
-    console.error('فشل رفع البيانات قبل تسجيل الخروج:', error);
-    alert('لم يتم تسجيل الخروج لأن آخر التعديلات لم يتم تأكيد رفعها للنظام. البيانات ما زالت محفوظة على المتصفح. حاول مرة أخرى.');
-  }
-};
-
+ 
 if (!dbUser) {
   return (
     <aside
