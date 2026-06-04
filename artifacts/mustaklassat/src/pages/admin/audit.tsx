@@ -57,15 +57,12 @@ function parseJson(value: any) {
 
 function labelForKey(key: string) {
   const map: Record<string, string> = {
-    page: "الصفحة",
-    url: "الرابط",
     title: "عنوان الصفحة",
     hospital: "المستشفى",
     company: "الشركة",
     at: "وقت التسجيل",
     buttonText: "الزر / الإجراء",
     elementId: "معرف العنصر",
-    href: "الرابط المستهدف",
     method: "طريقة الطلب",
     status: "حالة الطلب",
     durationMs: "مدة التنفيذ",
@@ -109,7 +106,7 @@ function formatAuditDetails(details: string | null) {
   const base = payload.details && typeof payload.details === "string" ? payload.details : null;
   if (base && !base.startsWith("{")) lines.push(base);
 
-  ["buttonText", "page", "title", "hospital", "company", "href", "url", "status", "durationMs", "durationSeconds"].forEach(key => {
+  ["buttonText", "title", "hospital", "company", "status", "durationMs", "durationSeconds", "at"].forEach(key => {
     if (payload[key] !== undefined && payload[key] !== null && payload[key] !== "") {
       lines.push(`${labelForKey(key)}: ${valueText(payload[key])}`);
     }
@@ -118,7 +115,11 @@ function formatAuditDetails(details: string | null) {
   if (lines.length) return lines.join("\n");
 
   if (typeof parsed.details === "string" && !parsed.details.trim().startsWith("{")) return parsed.details;
-  return Object.keys(payload).map(key => `${labelForKey(key)}: ${valueText(payload[key])}`).join("\n");
+  const hiddenKeys = new Set(["page", "url", "href", "referrer"]);
+  return Object.keys(payload)
+    .filter(key => !hiddenKeys.has(key))
+    .map(key => `${labelForKey(key)}: ${valueText(payload[key])}`)
+    .join("\n");
 }
 
 export default function AuditLog() {
@@ -170,7 +171,7 @@ export default function AuditLog() {
       <div className="relative">
         <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
         <Input
-          placeholder="بحث بالإجراء، الاسم، البريد، الصفحة، أو القسم..."
+          placeholder="بحث بالإجراء، الاسم، البريد، القسم، أو التفاصيل..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="pr-9"
