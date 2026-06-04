@@ -11,8 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useCallback, useRef, type CSSProperties, useContext, createContext } from "react";
-import { ALL_MODULES, getSiteType, parseAllowedModules, filterModules } from "@/lib/modules";
-
+import { ALL_MODULES, getSiteType, parseAllowedModules, filterModules, VISIT_MODULE_KEYS } from "@/lib/modules";
 const ARABIC_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 const ARABIC_MONTHS = [
   "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
@@ -109,7 +108,8 @@ export function Sidebar() {
     try { return localStorage.getItem(COLLAPSE_KEY) === "true"; } catch { return false; }
   });
   const [modulesOpen, setModulesOpen] = useState(true);
-  const [extractsOpen, setExtractsOpen] = useState(true);
+const [visitsOpen, setVisitsOpen] = useState(true);
+const [extractsOpen, setExtractsOpen] = useState(true);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifAnim, setNotifAnim] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -229,7 +229,13 @@ export function Sidebar() {
   const allowedModuleKeys = parseAllowedModules((dbUser as any)?.allowedModules);
   const userCompany = (dbUser as any)?.company as string | undefined;
   const allVisibleModules = filterModules(siteType, allowedModuleKeys, role, userCompany);
-  const visibleModules = allVisibleModules.filter(m => m.key !== 'approval');
+const visitKeys = new Set(VISIT_MODULE_KEYS);
+
+const visibleVisits = allVisibleModules.filter(m => visitKeys.has(m.key));
+
+const visibleModules = allVisibleModules.filter(
+  m => m.key !== 'approval' && !visitKeys.has(m.key)
+);
 
   const { data: usersData } = useListUsers(
     { status: "pending" },
@@ -300,9 +306,7 @@ const handleSignOut = async () => {
   ];
 
   const adminNav = [
-    ...(isAdmin || isSupervisor || (allowedModuleKeys !== null && allowedModuleKeys.includes('visit_review')) ? [
-      { name: "مراجعة زيارات مقاولي الباطن", href: "/original-viewer?page=visit-admin-review.html", icon: BadgeCheck },
-    ] : []),
+  
     ...(isAdmin || isSupervisor || (allowedModuleKeys !== null && allowedModuleKeys.includes('support')) ? [
       { name: "مذكرة الدعم", href: "/support", icon: MessageSquare },
     ] : []),
@@ -742,7 +746,64 @@ const handleSignOut = async () => {
             )}
           </div>
         )}
+{/* Visits section */}
+{visibleVisits.length > 0 && (
+  <div className="pt-1">
+    {!collapsed && (
+      <button
+        onClick={() => setVisitsOpen(p => !p)}
+        className="w-full flex items-center justify-between px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-white/5"
+        style={{ color: "rgba(212,175,55,0.7)" }}
+      >
+        <span>الزيارات</span>
+        {visitsOpen ? <ChevronRight className="h-3 w-3 rotate-90" /> : <ChevronRight className="h-3 w-3" />}
+      </button>
+    )}
 
+    {(visitsOpen || collapsed) && (
+      <div className="space-y-0.5 mt-0.5">
+        {visibleVisits.map(m => {
+          const isActive = isModuleActive(m.file);
+          const href = `/original-viewer?page=${m.file}`;
+
+          return (
+            <Link key={m.key} href={href}>
+              <div
+                title={collapsed ? m.label : undefined}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 cursor-pointer group relative",
+                  collapsed ? "justify-center px-2" : "",
+                  isActive
+                    ? "text-[#1a3660] font-bold shadow-md"
+                    : "text-white/65 hover:text-white hover:bg-white/10"
+                )}
+                style={isActive ? {
+                  background: "linear-gradient(135deg, #d4af37 0%, #e8c84a 100%)",
+                  boxShadow: "0 2px 8px rgba(212,175,55,0.3)",
+                } : {}}
+              >
+                <m.icon
+                  className={cn("flex-shrink-0", collapsed ? "h-5 w-5" : "h-4 w-4")}
+                  style={isActive ? { color: "#1a3660" } : { color: "rgba(255,255,255,0.65)" }}
+                />
+
+                {!collapsed && (
+                  <span className="flex-1 truncate leading-tight">{m.label}</span>
+                )}
+
+                {collapsed && (
+                  <div className="absolute right-full mr-2 px-2 py-1 text-xs rounded-md bg-gray-900 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                    {m.label}
+                  </div>
+                )}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    )}
+  </div>
+)}
         {/* Extracts section */}
         {extractsNav.length > 0 && (
           <div className="pt-1">
