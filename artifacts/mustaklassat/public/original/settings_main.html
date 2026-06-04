@@ -3,8 +3,8 @@
 <head>
 <script src="/original/user-storage-proxy.js"></script>
     <script src="/original/auth-check.js"></script>
-    <script src="/original/cloud-sync.js"></script>
     <script src="/original/backup.js"></script>
+    <script src="/original/cloud-sync.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>إعدادات النظام - الرئيسية</title>
@@ -60,3 +60,861 @@
                     <option value="index.html">الصفحة الرئيسية</option>
                     <option value="attendance.html">الحضور والانصراف</option>
                     <option value="performance.html">شهادة الأداء</option>
+                    <option value="achievement.html">شهادة الإنجاز</option>
+                    <option value="consumables.html">مستخلص المستهلكات</option>
+                    <option value="spare_parts.html">مستخلص قطع الغيار</option>
+                    <option value="settings_main.html" selected>الإعدادات الرئيسية</option>
+                    <option value="contract-foundation-upload.html">📋 تأسيس العقد</option>
+                    <option value="admin-dashboard.html">🛡️ لوحة الأدمن</option>
+                    <option value="extract-archive.html">🗂️ أرشيف المستخلصات</option>
+                </select>
+            </div>
+        </div>
+
+
+        <div class="tabs">
+    <a href="#contract" class="active" onclick="showSection('contract')">بيانات العقد</a>
+    <a href="#extract" onclick="showSection('extract')">إعدادات المستخلص</a>
+    <a href="#backup" onclick="showSection('backup')">النسخ الاحتياطي</a>
+    
+</div>
+
+<div id="contract" class="section active">
+    <!-- منتقي المستشفى — يظهر فقط للمستخدمين الذين لديهم أكثر من موقع -->
+    <div id="hospital-picker-container" style="display:none"></div>
+    <!-- عنوان بيانات العقد -->
+    <h2 class="section-toggle" onclick="toggleSection('contract-data', event)">بيانات العقد</h2>
+    <div id="contract-data" class="section-content">
+        <div class="form-group">
+            <label for="hospital-name">اسم المستشفى:</label>
+            <input type="text" id="hospital-name" placeholder="أدخل اسم المستشفى" readonly>
+        </div>
+        <div class="form-group">
+            <label for="contract-details">تفاصيل العقد:</label>
+            <textarea id="contract-details" placeholder="أدخل تفاصيل العقد" rows="3" readonly></textarea>
+        </div>
+        <div class="form-group">
+            <label for="company-name">اسم الشركة:</label>
+            <input type="text" id="company-name" placeholder="أدخل اسم الشركة" readonly>
+        </div>
+        <div class="form-group">
+            <label>تاريخ العقد:</label>
+            <input type="date" id="contract-start-date" placeholder="تاريخ البداية" readonly>
+            <input type="date" id="contract-end-date" placeholder="تاريخ النهاية" readonly>
+        </div>
+        <div class="form-group">
+            <label>قيمة العقد:</label>
+            <input type="number" id="contract-value" placeholder="قيمة العقد المالية" min="0" step="0.01" readonly>
+        </div>
+        <div class="form-group">
+            <label>حالة العقد:</label>
+            <select id="contract-status" disabled>
+                <option value="نشط">نشط</option>
+                <option value="منتهي">منتهي</option>
+                <option value="معلق">معلق</option>
+                <option value="ملغي">ملغي</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>ملاحظات:</label>
+            <textarea id="contract-notes" placeholder="ملاحظات العقد" rows="3" readonly></textarea>
+        </div>
+        <div class="form-group">
+            <label>نوع العقد:</label>
+            <select id="contract-type" onchange="toggleDirectPurchase()" disabled>
+                <option value="عقد أساسي">عقد أساسي</option>
+                <option value="شراء مباشر">شراء مباشر</option>
+            </select>
+        </div>
+        <div class="form-group" id="direct-purchase-section" style="display: none;">
+            <label>نسبة الشراء المباشر (%):</label>
+            <input type="number" id="direct-purchase-ratio" placeholder="أدخل النسبة المئوية" min="0" max="100" step="0.01" readonly>
+        </div>
+        <div class="buttons single-row">
+            <button class="button btn-save" onclick="saveContractData()"><i class="fas fa-save"></i> حفظ البيانات</button>
+            <button class="button btn-clear" onclick="clearSectionData('contract')"><i class="fas fa-trash"></i> مسح البيانات</button>
+            <button class="button btn-cancel" onclick="cancelSection('contract')"><i class="fas fa-times"></i> إلغاء</button>
+            <button class="button btn-edit" onclick="showPasswordPrompt('contract')"><i class="fas fa-edit"></i> تعديل</button>
+        </div>
+        <div class="success-message" id="contract-save-success">تم حفظ بيانات العقد بنجاح!</div>
+    </div>
+
+    <!-- عنوان التواقيع -->
+    <h3 class="section-toggle" onclick="toggleSection('signatures', event)" data-section="signatures">التواقيع</h3>
+    <div id="signatures" class="section-content" style="display: none;">
+        <div class="form-group">
+            <label>مدير المشروع:</label>
+            <input type="text" id="project-manager-name" placeholder="اسم مدير المشروع" readonly>
+            <input type="text" id="project-manager-phone" placeholder="رقم جوال مدير المشروع" readonly>
+            <input type="email" id="project-manager-email" placeholder="إيميل مدير المشروع" readonly>
+        </div>
+        <div class="form-group">
+            <label>رئيس قسم الصيانة:</label>
+            <input type="text" id="maintenance-head-name" placeholder="اسم رئيس قسم الصيانة" readonly>
+            <input type="text" id="maintenance-head-phone" placeholder="رقم جوال رئيس قسم الصيانة" readonly>
+            <input type="email" id="maintenance-head-email" placeholder="إيميل رئيس قسم الصيانة" readonly>
+        </div>
+        <div class="form-group">
+            <label>المساعد للتشغيل والصيانة:</label>
+            <input type="text" id="operations-assistant-name" placeholder="اسم المساعد للتشغيل والصيانة" readonly>
+            <input type="text" id="operations-assistant-phone" placeholder="رقم جوال المساعد للتشغيل والصيانة" readonly>
+            <input type="email" id="operations-assistant-email" placeholder="إيميل المساعد للتشغيل والصيانة" readonly>
+        </div>
+        <div class="form-group">
+            <label>مدير الإدارة الهندسية:</label>
+            <input type="text" id="engineering-manager-name" placeholder="اسم مدير الإدارة الهندسية" readonly>
+            <input type="text" id="engineering-manager-phone" placeholder="رقم جوال مدير الإدارة الهندسية" readonly>
+            <input type="email" id="engineering-manager-email" placeholder="إيميل مدير الإدارة الهندسية" readonly>
+        </div>
+        <div class="form-group">
+            <label>مدير الإدارة المالية:</label>
+            <input type="text" id="financial-manager-name" placeholder="اسم مدير الإدارة المالية" readonly>
+            <input type="text" id="financial-manager-phone" placeholder="رقم جوال مدير الإدارة المالية" readonly>
+            <input type="email" id="financial-manager-email" placeholder="إيميل مدير الإدارة المالية" readonly>
+        </div>
+        <div class="form-group">
+            <label>مدير المستشفى:</label>
+            <input type="text" id="hospital-manager-name" placeholder="اسم مدير المستشفى" readonly>
+            <input type="text" id="hospital-manager-phone" placeholder="رقم جوال مدير المستشفى" readonly>
+            <input type="email" id="hospital-manager-email" placeholder="إيميل مدير المستشفى" readonly>
+        </div>
+        <div class="form-group">
+            <label>مندوب المقاول:</label>
+            <input type="text" id="contractor-representative-name" placeholder="اسم مندوب المقاول" readonly>
+            <input type="text" id="contractor-representative-phone" placeholder="رقم جوال مندوب المقاول" readonly>
+            <input type="email" id="contractor-representative-email" placeholder="إيميل مندوب المقاول" readonly>
+        </div>
+        <div class="form-group">
+            <label>محاسب المستشفى:</label>
+            <input type="text" id="hospital-accountant-name" placeholder="اسم محاسب المستشفى" readonly>
+            <input type="text" id="hospital-accountant-phone" placeholder="رقم جوال محاسب المستشفى" readonly>
+            <input type="email" id="hospital-accountant-email" placeholder="إيميل محاسب المستشفى" readonly>
+        </div>
+        <div class="form-group">
+            <label>مساعد مدير المستشفى للشؤون الإدارية والتشغيل:</label>
+            <input type="text" id="assistant-manager-name" placeholder="اسم مساعد مدير المستشفى للشؤون الإدارية والتشغيل" readonly>
+            <input type="text" id="assistant-manager-phone" placeholder="رقم جوال مساعد مدير المستشفى للشؤون الإدارية والتشغيل" readonly>
+            <input type="email" id="assistant-manager-email" placeholder="إيميل مساعد مدير المستشفى للشؤون الإدارية والتشغيل" readonly>
+        </div>
+        <div class="form-group">
+            <label>ممثل الموقع:</label>
+            <input type="text" id="site-representative-name" placeholder="اسم ممثل الموقع" readonly>
+            <input type="text" id="site-representative-phone" placeholder="رقم جوال ممثل الموقع" readonly>
+            <input type="email" id="site-representative-email" placeholder="إيميل ممثل الموقع" readonly>
+        </div>
+        <div class="form-group">
+            <label>مدير الشؤون الهندسية:</label>
+            <input type="text" id="engineering-affairs-manager-name" placeholder="اسم مدير الشؤون الهندسية" readonly>
+            <input type="text" id="engineering-affairs-manager-phone" placeholder="رقم جوال مدير الشؤون الهندسية" readonly>
+            <input type="email" id="engineering-affairs-manager-email" placeholder="إيميل مدير الشؤون الهندسية" readonly>
+        </div>
+        <div class="form-group">
+            <label>مدير الخدمات العامة:</label>
+            <input type="text" id="general-services-manager-name" placeholder="اسم مدير الخدمات العامة" readonly>
+            <input type="text" id="general-services-manager-phone" placeholder="رقم جوال مدير الخدمات العامة" readonly>
+            <input type="email" id="general-services-manager-email" placeholder="إيميل مدير الخدمات العامة" readonly>
+        </div>
+        <div class="form-group">
+            <label>مدير إدارة المتابعة:</label>
+            <input type="text" id="follow-up-manager-name" placeholder="اسم مدير إدارة المتابعة" readonly>
+            <input type="text" id="follow-up-manager-phone" placeholder="رقم جوال مدير إدارة المتابعة" readonly>
+            <input type="email" id="follow-up-manager-email" placeholder="إيميل مدير إدارة المتابعة" readonly>
+        </div>
+        <div class="form-group">
+            <label>ختم المستشفى:</label>
+            <input type="file" id="hospital-stamp" accept="image/*">
+            <span class="file-status">لم يتم اختيار أي ملف</span>
+        </div>
+        <div class="buttons single-row">
+            <button class="button btn-save" onclick="saveContractData()"><i class="fas fa-save"></i> حفظ البيانات</button>
+            <button class="button btn-clear" onclick="clearSectionData('contract')"><i class="fas fa-trash"></i> مسح البيانات</button>
+            <button class="button btn-cancel" onclick="cancelSection('contract')"><i class="fas fa-times"></i> إلغاء</button>
+            <button class="button btn-edit" onclick="showPasswordPrompt('contract')"><i class="fas fa-edit"></i> تعديل</button>
+        </div>
+        <div class="success-message" id="contract-save-success">تم حفظ بيانات العقد بنجاح!</div>
+    </div>
+    <div id="contract-password-prompt" class="dialog" style="display: none;">
+        <h2>إدخال كلمة المرور</h2>
+        <p>يرجى إدخال كلمة المرور لتعديل البيانات:</p>
+        <input type="password" id="contract-password-input" placeholder="كلمة المرور">
+        <div class="buttons">
+            <button class="button btn-save" onclick="verifyPassword('contract')"><i class="fas fa-check"></i> تأكيد</button>
+            <button class="button btn-cancel" onclick="closePasswordPrompt('contract')"><i class="fas fa-times"></i> إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<div id="extract" class="section">
+    <h2>إعدادات المستخلص</h2>
+    <div class="form-group">
+        <label>نوع التقويم:</label>
+        <select id="extract-calendar" disabled>
+            <option value="ميلادي" selected>ميلادي</option>
+            <option value="هجري">هجري</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="extract-month">الشهر:</label>
+        <select id="extract-month" disabled>
+            <option value="يناير">يناير</option>
+            <option value="فبراير">فبراير</option>
+            <option value="مارس">مارس</option>
+            <option value="أبريل">أبريل</option>
+            <option value="مايو">مايو</option>
+            <option value="يونيو">يونيو</option>
+            <option value="يوليو">يوليو</option>
+            <option value="أغسطس">أغسطس</option>
+            <option value="سبتمبر">سبتمبر</option>
+            <option value="أكتوبر">أكتوبر</option>
+            <option value="نوفمبر">نوفمبر</option>
+            <option value="ديسمبر">ديسمبر</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="extract-year">السنة:</label>
+        <input type="number" id="extract-year" placeholder="أدخل السنة" min="2020" max="2050" readonly>
+    </div>
+    <div class="form-group">
+        <label for="payment-number">رقم الدفعة:</label>
+        <input type="text" id="payment-number" placeholder="أدخل رقم الدفعة (مثل: 001)" readonly>
+    </div>
+    <div class="form-group">
+        <label>مستخلص نهائي:</label>
+        <input type="checkbox" id="extract-final" disabled>
+    </div>
+    <div class="form-group">
+        <label for="extract-start">تاريخ البداية:</label>
+        <input type="date" id="extract-start" readonly>
+    </div>
+    <div class="form-group">
+        <label for="extract-end">تاريخ النهاية:</label>
+        <input type="date" id="extract-end" readonly>
+    </div>
+    <div class="form-group">
+        <label>مدة المستخلص (بالأيام):</label>
+        <span id="extract-duration-days">0 أيام</span>
+    </div>
+    <div class="form-group">
+        <label for="extract-duration">مدة المستخلص:</label>
+        <select id="extract-duration" disabled>
+            <option value="شهر واحد">شهر واحد</option>
+            <option value="شهرين">شهرين</option>
+            <option value="ثلاثة أشهر">ثلاثة أشهر</option>
+            <option value="ستة أشهر">ستة أشهر</option>
+            <option value="سنة">سنة</option>
+        </select>
+    </div>
+    <div class="buttons single-row">
+<button class="button btn-save" id="save-extract-data-btn" onclick="saveExtractData()"><i class="fas fa-save"></i> حفظ البيانات</button>
+
+        <button class="button btn-clear" onclick="clearSectionData('extract')"><i class="fas fa-trash"></i> مسح البيانات</button>
+        <button class="button btn-cancel" onclick="cancelSection('extract')"><i class="fas fa-times"></i> إلغاء</button>
+        <button class="button btn-edit" onclick="showPasswordPrompt('extract')"><i class="fas fa-edit"></i> تعديل</button>
+    </div>
+    <div id="extract-password-prompt" class="dialog" style="display: none;">
+        <h2>إدخال كلمة المرور</h2>
+        <p>يرجى إدخال كلمة المرور لتعديل البيانات:</p>
+        <input type="password" id="extract-password-input" placeholder="كلمة المرور">
+        <div class="buttons">
+            <button class="button btn-save" onclick="verifyPassword('extract')"><i class="fas fa-check"></i> تأكيد</button>
+            <button class="button btn-cancel" onclick="closePasswordPrompt('extract')"><i class="fas fa-times"></i> إلغاء</button>
+        </div>
+    </div>
+    <div class="success-message" id="extract-save-success">تم حفظ بيانات المستخلص بنجاح!</div>
+</div>
+
+<!-- ── أرشيف الشهور المحفوظة ── -->
+<div id="months-archive" class="section" style="margin-top:16px">
+  <h2>📦 أرشيف الشهور المحفوظة</h2>
+  <p style="font-size:13px;color:#64748b;margin-bottom:14px">
+    عند تغيير الشهر في الإعدادات يتم حفظ بيانات الشهر الحالي تلقائياً. يمكنك هنا استعادة أي شهر سابق.
+  </p>
+  <div id="months-archive-list" style="display:flex;flex-direction:column;gap:8px;min-height:48px"></div>
+  <div style="margin-top:14px">
+    <button id="btn-save-month-snap" class="button btn-save" style="font-size:13px" onclick="saveCurrentMonthManually()">
+      💾 حفظ snapshot الشهر الحالي يدوياً
+    </button>
+    <a href="/original/monthly-overview.html" class="button" style="background:#0369a1;color:#fff;border-color:#0369a1;text-decoration:none;display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:8px 16px;border-radius:8px;margin-right:8px">
+      📊 النظرة الشاملة للمستخلصات
+    </a>
+    <a href="/original/contract-foundation-upload.html" class="button" style="background:#15803d;color:#fff;border-color:#15803d;text-decoration:none;display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:8px 16px;border-radius:8px;margin-right:8px">
+      📋 رفع بيانات التأسيسي
+    </a>
+  </div>
+  <style>
+    .month-arc-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:10px;border:1.5px solid #e2e8f0;background:#f8fafc;transition:background .2s}
+    .month-arc-item.active{background:#f0fdf4;border-color:#bbf7d0}
+    .month-arc-label{font-size:14px;font-weight:700;color:#1e3c72}
+    .month-arc-btns{display:flex;align-items:center;gap:8px}
+    .month-arc-btn{padding:5px 14px;border-radius:8px;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border:none;transition:opacity .2s}
+    .month-arc-btn.load{background:#003087;color:#fff}
+    .month-arc-btn.del{background:#fee2e2;color:#b91c1c}
+    .month-arc-btn:hover{opacity:.8}
+  </style>
+</div>
+
+            <!-- =========================================================== -->
+        <!-- ✅ قسم النسخ الاحتياطي والاستعادة (V6 — ذكي حسب نوع المستخدم) -->
+        <div id="backup" class="section">
+            <h2>النسخ الاحتياطي والاستعادة</h2>
+
+            <!-- بطاقات الحالة الثلاث -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap:12px; margin-bottom:22px;">
+
+                <!-- حالة المزامنة السحابية -->
+                <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:12px;">
+                    <div style="background:#0ea5e9; border-radius:8px; padding:8px; flex-shrink:0;">
+                        <i class="fas fa-cloud-arrow-up" style="color:white; font-size:14px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:12px; color:#0369a1; font-weight:700;">المزامنة السحابية</div>
+                        <div id="cloud-sync-info" style="font-size:11px; color:#0284c7; margin-top:2px;">جاري التحقق...</div>
+                    </div>
+                </div>
+
+                <!-- آخر نسخة احتياطية -->
+                <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:12px;">
+                    <div style="background:#16a34a; border-radius:8px; padding:8px; flex-shrink:0;">
+                        <i class="fas fa-shield-halved" style="color:white; font-size:14px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:12px; color:#15803d; font-weight:700;">آخر نسخة احتياطية</div>
+                        <div id="last-backup-info" style="font-size:11px; color:#16a34a; margin-top:2px;">جاري التحقق...</div>
+                    </div>
+                </div>
+
+                <!-- نوع الموقع -->
+                <div style="background:#faf5ff; border:1px solid #ddd6fe; border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:12px;">
+                    <div style="background:#7c3aed; border-radius:8px; padding:8px; flex-shrink:0;">
+                        <i class="fas fa-location-dot" style="color:white; font-size:14px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:12px; color:#6d28d9; font-weight:700;">نوع الموقع</div>
+                        <div id="site-type-info" style="font-size:11px; color:#7c3aed; margin-top:2px;">جاري التحقق...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- أزرار الإجراءات الرئيسية -->
+            <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:18px;">
+                <button class="button btn-backup" onclick="createSpecificBackup('full_system')"
+                    style="background:linear-gradient(135deg,#1e3c72,#2a5298); border:none; padding:10px 24px; font-size:14px; font-weight:700;">
+                    <i class="fas fa-download"></i> تحميل نسخة شاملة الآن
+                </button>
+                <button class="button btn-backup" onclick="openBackupRestoreModal()"
+                    style="padding:10px 20px; font-size:13px;">
+                    <i class="fas fa-sliders"></i> لوحة تحكم النسخ
+                </button>
+                <button class="button btn-backup" id="smart-import-btn"
+                    style="padding:10px 20px; font-size:13px;">
+                    <i class="fas fa-wand-magic-sparkles"></i> استيراد ذكي
+                </button>
+            </div>
+            <input id="smart-file" type="file" accept=".json" style="display:none">
+
+            <!-- سجل العمليات -->
+            <div class="log-section" style="margin-top:16px;">
+                <h3>سجل أحدث العمليات</h3>
+                <table id="backup-log-table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ والوقت</th>
+                            <th>العملية</th>
+                            <th>النوع / الملف</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="backup-log-body">
+                        <tr><td colspan="4">لا توجد عمليات مسجلة بعد.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <script>
+        // تحديث بطاقات الحالة في قسم النسخ الاحتياطي
+        (function initBackupStatusCards() {
+            function fmt(isoStr) {
+                if (!isoStr) return null;
+                var d = new Date(isoStr);
+                return isNaN(d.getTime()) ? null : d.toLocaleString('ar-EG', { dateStyle:'short', timeStyle:'short' });
+            }
+
+            // 1. المزامنة السحابية
+            var cloudEl = document.getElementById('cloud-sync-info');
+            if (cloudEl) {
+                try {
+                    var session = JSON.parse(localStorage.getItem('najran_session') || '{}');
+                    if (session && session.name) {
+                        cloudEl.innerHTML = '<span style="color:#15803d">✔ مفعّلة</span> · تُرفع كل دقيقة';
+                    } else {
+                        cloudEl.innerHTML = '<span style="color:#dc2626">✕ غير متاحة</span>';
+                    }
+                } catch(e) { cloudEl.textContent = 'غير محدد'; }
+            }
+
+            // 2. آخر نسخة احتياطية يدوية
+            var lastEl = document.getElementById('last-backup-info');
+            if (lastEl) {
+                try {
+                    var logs = JSON.parse(localStorage.getItem('backupLogs') || '[]');
+                    var lastSuccess = logs.find(function(l){ return l.status === 'نجاح' && l.operation === 'إنشاء نسخة'; });
+                    if (lastSuccess) {
+                        lastEl.innerHTML = '<span style="color:#15803d">✔</span> ' + lastSuccess.timestamp;
+                    } else {
+                        lastEl.innerHTML = '<span style="color:#dc2626">⚠ لم يتم بعد</span> — احفظ نسخة الآن!';
+                    }
+                } catch(e) { lastEl.textContent = 'غير محدد'; }
+            }
+
+            // 3. نوع الموقع
+            var siteEl = document.getElementById('site-type-info');
+            if (siteEl) {
+                try {
+                    var s = JSON.parse(localStorage.getItem('najran_session') || '{}');
+                    var h = s.hospital || '';
+                    var r = s.role || '';
+                    var labels = {
+                        admin:       '👑 مدير النظام',
+                        supervisor:  '🔍 مشرف',
+                        contract_supervisor: '📋 مشرف عقد',
+                    };
+                    if (labels[r]) {
+                        siteEl.textContent = labels[r];
+                    } else if (h === 'المراكز الصحية') {
+                        siteEl.textContent = '🏥 مراكز صحية';
+                    } else if (h === 'المكاتب الإدارية') {
+                        siteEl.textContent = '🏢 مكاتب إدارية';
+                    } else if (h) {
+                        siteEl.textContent = '🏥 ' + h;
+                    } else {
+                        siteEl.textContent = 'مستشفى رئيسي';
+                    }
+                } catch(e) { siteEl.textContent = 'غير محدد'; }
+            }
+        })();
+        </script>
+
+    </div> <!-- End of .container -->
+
+    <!-- =========================================================== -->
+    <!--         ✅ نافذة التحكم الموحدة للنسخ والاستعادة ✅           -->
+    <!-- =========================================================== -->
+    <div id="backup-restore-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('backup-restore-modal')">&times;</span>
+            <h3><i class="fas fa-database"></i> لوحة تحكم النسخ الاحتياطي والاستعادة</h3>
+            
+            <h4 style="margin-top: 20px; margin-bottom: 6px; color: #1e3c72;">1. إنشاء نسخة احتياطية</h4>
+
+            <!-- بادج نوع الموقع — يُحدَّث بـ JS -->
+            <div id="backup-site-badge" style="display:none; align-items:center; gap:8px; margin-bottom:14px; padding:8px 14px; border-radius:10px; font-size:13px; font-weight:600; direction:rtl;"></div>
+
+<div class="backup-options-grid" id="backup-options-grid">
+    <!-- الإعدادات — مشترك لجميع الأنواع -->
+    <button class="backup-option-btn" data-site-types="all" onclick="createSpecificBackup('settings')">
+        <i class="fas fa-cogs"></i>
+        <span>إعدادات النظام</span>
+        <small>بيانات العقد والمستخلص</small>
+    </button>
+
+    <!-- المستشفى الرئيسي فقط -->
+    <button class="backup-option-btn" data-site-types="hospital" onclick="createSpecificBackup('main_hospital_attendance')">
+        <i class="fas fa-hospital-user"></i>
+        <span>عمالة المستشفى</span>
+        <small>الحضور والأداء والإنجاز</small>
+    </button>
+    <button class="backup-option-btn" data-site-types="hospital" onclick="createSpecificBackup('main_hospital_consumables')">
+        <i class="fas fa-boxes-stacked"></i>
+        <span>مستهلكات المستشفى</span>
+        <small>المواد وعقود الباطن</small>
+    </button>
+
+    <!-- المراكز الصحية فقط -->
+    <button class="backup-option-btn" data-site-types="health_centers" onclick="createSpecificBackup('health_centers_attendance')">
+        <i class="fas fa-clinic-medical"></i>
+        <span>عمالة المراكز الصحية</span>
+        <small>الحضور والأداء للمراكز</small>
+    </button>
+    <button class="backup-option-btn" data-site-types="health_centers" onclick="createSpecificBackup('health_centers_consumables')">
+        <i class="fas fa-truck-loading"></i>
+        <span>مستهلكات المراكز</span>
+        <small>المواد وعقود الباطن</small>
+    </button>
+
+    <!-- المكاتب الإدارية فقط -->
+    <button class="backup-option-btn" data-site-types="admin_offices" onclick="createSpecificBackup('admin_offices_attendance')">
+        <i class="fas fa-building"></i>
+        <span>عمالة المكاتب الإدارية</span>
+        <small>الحضور والأداء للمكاتب</small>
+    </button>
+    <button class="backup-option-btn" data-site-types="admin_offices" onclick="createSpecificBackup('admin_offices_consumables')">
+        <i class="fas fa-boxes"></i>
+        <span>مستهلكات المكاتب</span>
+        <small>المواد وعقود الباطن للمكاتب</small>
+    </button>
+
+    <!-- نسخة شاملة — لجميع الأنواع -->
+    <button class="backup-option-btn" data-site-types="all" onclick="createSpecificBackup('full_system')"
+        style="background: linear-gradient(135deg,#1e3c72,#2a5298); color: white; border: none;">
+        <i class="fas fa-archive" style="color:white;"></i>
+        <span style="color:white; font-weight:700;">نسخة شاملة</span>
+        <small style="color:rgba(255,255,255,0.8);">حفظ كامل لكل بيانات النظام</small>
+    </button>
+</div>
+
+<script>
+// فلترة أزرار النسخ الاحتياطي حسب نوع موقع المستخدم
+(function filterBackupBtnsBySiteType() {
+    try {
+        var session = JSON.parse(localStorage.getItem('najran_session') || '{}');
+        var hospital = session.hospital || '';
+        var role = session.role || 'user';
+
+        // نوع الموقع
+        var siteType = 'hospital';
+        if (hospital === 'المراكز الصحية') siteType = 'health_centers';
+        else if (hospital === 'المكاتب الإدارية') siteType = 'admin_offices';
+
+        var isPrivileged = (role === 'admin' || role === 'supervisor' || role === 'contract_supervisor');
+
+        // بادج نوع الموقع
+        var badge = document.getElementById('backup-site-badge');
+        if (badge) {
+            var badgeConfig = {
+                hospital:       { label: '🏥 مستشفى رئيسي', bg: '#dbeafe', color: '#1d4ed8' },
+                health_centers: { label: '🏥 مراكز صحية',   bg: '#dcfce7', color: '#15803d' },
+                admin_offices:  { label: '🏢 مكاتب إدارية', bg: '#fef9c3', color: '#854d0e' },
+            };
+            var cfg = isPrivileged
+                ? { label: '👑 مدير / مشرف — جميع الأقسام مرئية', bg: '#fdf4ff', color: '#7c3aed' }
+                : badgeConfig[siteType];
+            badge.style.display = 'flex';
+            badge.style.background = cfg.bg;
+            badge.style.color = cfg.color;
+            badge.style.border = '1px solid ' + cfg.color + '33';
+            badge.innerHTML = '<i class="fas fa-circle-info"></i> <span>' + cfg.label + '</span>';
+        }
+
+        // فلترة الأزرار (المدير يرى الكل)
+        if (!isPrivileged) {
+            var btns = document.querySelectorAll('#backup-options-grid [data-site-types]');
+            btns.forEach(function(btn) {
+                var types = btn.getAttribute('data-site-types');
+                if (types !== 'all' && types !== siteType) {
+                    btn.style.display = 'none';
+                }
+            });
+        }
+    } catch (e) { /* في حال فشل القراءة نترك كل شيء ظاهراً */ }
+})();
+</script>
+
+
+            <hr style="margin: 25px 0; border: 0; border-top: 1px solid #eee;">
+
+            <div class="restore-section">
+                <h4 style="margin-bottom: 10px; color: #1e3c72;">2. استعادة من ملف</h4>
+                <p style="font-size: 14px; color: #666; margin-bottom: 15px;">اختر ملف النسخة الاحتياطية (`.json` أو `.zip`) الذي تريد استعادة البيانات منه.</p>
+                <label for="restore-file-input" class="file-upload-label">
+                    <i class="fas fa-file-import"></i> اختر ملفًا...
+                </label>
+                <input type="file" id="restore-file-input" accept=".json,.zip" onchange="updateFileName(this)" style="display: none;">
+                <div id="file-name-display" style="margin-top: 10px; color: #777; font-style: italic; text-align: center;">لم يتم اختيار أي ملف.</div>
+                <button class="button btn-restore" onclick="confirmRestore()" style="width: 100%; margin-top: 10px;">
+                    <i class="fas fa-check-circle"></i> تأكيد الاستعادة
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>جميع الحقوق محفوظة &copy; 2025 تجمع نجران الصحي</p>
+    </footer>
+<!-- ✅ مودال الاستيراد الذكي بنفس ستايل القديم -->
+<div id="smart-import-modal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal('smart-import-modal')">&times;</span>
+    <h3><i class="fas fa-magic"></i> استيراد ذكي — فحص ثم استعادة انتقائية</h3>
+    <p style="font-size:14px;color:#666;margin-top:6px;">
+      ارفع ملف النسخة القديم (JSON). سنعرض ملخّصًا وتختار ماذا تستعيد.
+    </p>
+    <div id="smart-modal-body" style="max-height:50vh; overflow:auto; margin-top:10px;"></div>
+    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:14px;">
+      <button id="smart-dryrun" class="button btn-clear"><i class="fas fa-eye"></i> معاينة (بدون حفظ)</button>
+      <button id="smart-restore" class="button btn-backup"><i class="fas fa-check-circle"></i> استعادة المحدد</button>
+    </div>
+  </div>
+</div>
+
+    <!-- Scripts -->
+        <!-- ✅ [مهم] Scripts should be at the end of the body -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="backup.js"></script> 
+    <script src="/original/extract-snapshot.js"></script>
+    <script src="settings_main.js"></script> <!-- هذا الملف سيحتوي على كل شيء الآن -->
+
+
+    <script>
+        // Helper function to show selected file name
+        function updateFileName(input ) {
+            const fileNameDisplay = document.getElementById('file-name-display');
+            if (input.files && input.files.length > 0) {
+                fileNameDisplay.textContent = input.files[0].name;
+            } else {
+                fileNameDisplay.textContent = 'لم يتم اختيار أي ملف.';
+            }
+        }
+        // Function to open the main modal
+        function openBackupRestoreModal() {
+            document.getElementById('backup-restore-modal').style.display = 'flex';
+        }
+        // Function to close any modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+// ✅ [مهم] عرض السجل عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    // نتأكد أولاً من وجود الدالة (لأنها معرفة في backup.js)
+    if (typeof renderBackupLog === 'function') {
+        renderBackupLog();
+    }
+        
+});
+
+    </script>
+<script>
+// =================================================
+// ✅ SMART IMPORT SCRIPT (V.ULTIMATE - UNIVERSAL READ + SMART UI)
+// =================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    // --- 1. تعريف الدوال المساعدة ---
+    const $ = (s) => document.querySelector(s);
+
+    function updateAndActivateUI() {
+        // ... (هذه الدالة تبقى كما هي بدون تغيير)
+        try {
+            const contractData = JSON.parse(localStorage.getItem('contractData'));
+            if (contractData) {
+                $('#hospital-name').value = contractData.hospitalName || '';
+                $('#contract-details').value = contractData.contractDetails || '';
+                $('#company-name').value = contractData.companyName || '';
+                $('#contract-start-date').value = contractData.startDate || '';
+                $('#contract-end-date').value = contractData.endDate || '';
+                $('#contract-value').value = contractData.contractValue || '';
+                $('#contract-status').value = contractData.contractStatus || 'نشط';
+                $('#contract-notes').value = contractData.notes || '';
+                $('#contract-type').value = contractData.contractType || 'عقد أساسي';
+            }
+const extractData = JSON.parse(localStorage.getItem('persistentExtractData'));
+            if (extractData) {
+                $('#extract-calendar').value = extractData.extractCalendar || 'ميلادي';
+                $('#extract-month').value = extractData.extractMonth || '';
+                $('#extract-year').value = extractData.extractYear || '';
+                $('#extract-final').checked = extractData.extractFinal || false;
+                $('#extract-start').value = extractData.extractStart || '';
+                $('#extract-end').value = extractData.extractEnd || '';
+            }
+            const changeEvent = new Event('change', { bubbles: true });
+            $('#extract-start').dispatchEvent(changeEvent);
+            $('#extract-end').dispatchEvent(changeEvent);
+        } catch (error) {
+            console.error("خطأ أثناء تحديث الواجهة:", error);
+        }
+    }
+
+    // --- 2. إعدادات ومساعدات الاستيراد الذكي ---
+    let dataToRestore = null;
+
+    // --- ربط عناصر الصفحة ---
+    const importBtn = $('#smart-import-btn');
+    const fileInput = $('#smart-file');
+    const modal = $('#smart-import-modal');
+    const restoreBtn = $('#smart-restore');
+    const dryRunBtn = $('#smart-dryrun');
+    const modalBody = $('#smart-modal-body');
+
+    if (!importBtn) return;
+
+    // --- ربط الأحداث ---
+    importBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        
+        modal.style.display = 'flex';
+        modalBody.innerHTML = '<p>جاري فحص الملف...</p>';
+        
+        try {
+            const text = await file.text();
+            const json = JSON.parse(text);
+            
+            let sourceData;
+            if (json.data && json.data.data) { sourceData = json.data.data; } 
+            else if (json.data) { sourceData = json.data; } 
+            else { sourceData = json; }
+            
+            dataToRestore = {};
+            if (sourceData.contract || sourceData.contractData || sourceData.persistentContractData) dataToRestore.contractData = sourceData.contract || sourceData.contractData || sourceData.persistentContractData;
+            if (sourceData.extract || sourceData.extractData || sourceData.persistentExtractData) dataToRestore.extractData = sourceData.extract || sourceData.extractData || sourceData.persistentExtractData;
+            if (sourceData.users || sourceData.usersData || sourceData.persistentUsersData) dataToRestore.usersData = sourceData.users || sourceData.usersData || sourceData.persistentUsersData;
+            if (sourceData.attendance || sourceData.attendanceData) dataToRestore.attendanceData = sourceData.attendance || sourceData.attendanceData;
+            if (sourceData.achievement || sourceData.achievementData) dataToRestore.achievementData = sourceData.achievement || sourceData.achievementData;
+            
+            // ✅ --- بداية الإصلاح: عرض الملخص الذكي --- ✅
+            let summaryHTML = '';
+            
+            if (dataToRestore.contractData) {
+                const contract = dataToRestore.contractData;
+                summaryHTML += `<div class="card"><label><input type="checkbox" data-key="contractData" checked> <strong>بيانات العقد</strong></label><small>${contract.hospitalName || 'غير محدد'}</small></div>`;
+            }
+            if (dataToRestore.extractData) {
+                const extract = dataToRestore.extractData;
+                summaryHTML += `<div class="card"><label><input type="checkbox" data-key="extractData" checked> <strong>بيانات المستخلص</strong></label><small>شهر ${extract.extractMonth || '؟'}، سنة ${extract.extractYear || '؟'}</small></div>`;
+            }
+            if (dataToRestore.usersData) {
+                summaryHTML += `<div class="card"><label><input type="checkbox" data-key="usersData" checked> <strong>المستخدمون</strong></label><small>${(dataToRestore.usersData || []).length} مستخدم</small></div>`;
+            }
+            if (dataToRestore.attendanceData) {
+                const totalEmployees = Object.values(dataToRestore.attendanceData).reduce((acc, section) => acc + section.length, 0);
+                summaryHTML += `<div class="card"><label><input type="checkbox" data-key="attendanceData" checked> <strong>الحضور والانصراف</strong></label><small>${totalEmployees} موظف</small></div>`;
+            }
+            if (dataToRestore.achievementData) {
+                summaryHTML += `<div class="card"><label><input type="checkbox" data-key="achievementData" checked> <strong>شهادة الإنجاز</strong></label></div>`;
+            }
+
+            if (summaryHTML === '') {
+                modalBody.innerHTML = '<p style="color:orange;">لم يتم العثور على بيانات معروفة في هذا الملف.</p>';
+            } else {
+                modalBody.innerHTML = summaryHTML;
+            }
+            // ✅ --- نهاية الإصلاح --- ✅
+
+        } catch (err) {
+            modalBody.innerHTML = '<p style="color:red;">ملف غير صالح أو حدث خطأ.</p>';
+        } finally {
+            fileInput.value = '';
+        }
+    });
+
+    dryRunBtn.addEventListener('click', () => {
+        if (!dataToRestore) { alert('يرجى رفع ملف أولاً.'); return; }
+        
+        // ✅ --- بداية الإصلاح: المعاينة الذكية --- ✅
+        let previewText = "🔍 معاينة محتويات الملف:\n\n";
+        let foundData = false;
+
+        if (dataToRestore.contractData) {
+            const contract = dataToRestore.contractData;
+            previewText += "--- بيانات العقد ---\n";
+            previewText += `المستشفى: ${contract.hospitalName || 'غير محدد'}\n`;
+            previewText += `الشركة: ${contract.companyName || 'غير محدد'}\n\n`;
+            foundData = true;
+        }
+        if (dataToRestore.extractData) {
+            const extract = dataToRestore.extractData;
+            previewText += "--- بيانات المستخلص ---\n";
+            previewText += `الشهر: ${extract.extractMonth || 'غير محدد'}\n`;
+            previewText += `السنة: ${extract.extractYear || 'غير محدد'}\n\n`;
+            foundData = true;
+        }
+        if (dataToRestore.attendanceData) {
+            const sections = Object.keys(dataToRestore.attendanceData);
+            const totalEmployees = Object.values(dataToRestore.attendanceData).reduce((acc, section) => acc + section.length, 0);
+            previewText += "--- بيانات الحضور والانصراف ---\n";
+            previewText += `إجمالي الموظفين: ${totalEmployees}\n`;
+            previewText += `الأقسام (${sections.length}): ${sections.join('، ')}\n\n`;
+            foundData = true;
+        }
+
+        if (!foundData) {
+            previewText += "لم يتم العثور على بيانات قابلة للمعاينة في هذا الملف.";
+        }
+        alert(previewText);
+        // ✅ --- نهاية الإصلاح --- ✅
+    });
+
+    restoreBtn.addEventListener('click', () => {
+        if (!dataToRestore) return;
+
+        const selectedKeys = [];
+        modal.querySelectorAll('input[type="checkbox"]:checked').forEach(chk => {
+            selectedKeys.push(chk.dataset.key);
+        });
+
+        if (selectedKeys.length === 0) { alert('يرجى تحديد جزء واحد على الأقل للاستعادة.'); return; }
+        if (!confirm('هل أنت متأكد أنك تريد استعادة الأجزاء المحددة؟')) return;
+
+        selectedKeys.forEach(key => {
+            if (dataToRestore[key]) {
+                localStorage.setItem(key, JSON.stringify(dataToRestore[key]));
+                if (key === 'contractData') localStorage.setItem('persistentContractData', JSON.stringify(dataToRestore[key]));
+                if (key === 'extractData') localStorage.setItem('persistentExtractData', JSON.stringify(dataToRestore[key]));
+            }
+        });
+
+        updateAndActivateUI();
+        
+        if (typeof addLogEntry === 'function') {
+            addLogEntry('استعادة ذكية', `الأجزاء: ${selectedKeys.join(', ')}`, 'نجاح');
+        }
+
+        alert('✅ تمت الاستعادة والتفعيل والربط بنجاح!');
+        modal.style.display = 'none';
+    });
+
+    // إغلاق النافذة
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.style.display = 'none';
+    });
+    modal.querySelector('.close').addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+
+    // تحديث الواجهة وتفعيلها فور تحميل الصفحة
+    updateAndActivateUI();
+});
+</script>
+
+
+<script src="/original/track.js"></script>
+<script src="/original/shared-nav.js"></script>
+
+<script>
+// ── توست فتح مستخلص جديد تلقائياً ──────────────────────────────
+(function() {
+  try {
+    var flag = localStorage.getItem('najran_new_extract_opened');
+    if (!flag) return;
+    localStorage.removeItem('najran_new_extract_opened');
+    var info = JSON.parse(flag);
+    var msg  = 'تم فتح مستخلص دفعة ' + (info.paymentNumber || '') + ' — شهر ' + (info.month || '') + ' ' + (info.year || '');
+    var toast = document.createElement('div');
+    toast.style.cssText = [
+      'position:fixed','top:28px','left:50%','transform:translateX(-50%)',
+      'background:linear-gradient(135deg,#15803d,#16a34a)','color:#fff',
+      'padding:16px 32px','border-radius:16px',
+      'font-family:Tajawal,sans-serif','font-size:15px','font-weight:700',
+      'z-index:99999','box-shadow:0 6px 24px rgba(0,0,0,.25)',
+      'text-align:center','direction:rtl','max-width:90vw',
+      'white-space:nowrap','letter-spacing:.3px'
+    ].join(';');
+    toast.textContent = '✅ ' + msg;
+    document.body.appendChild(toast);
+    setTimeout(function() {
+      toast.style.transition = 'opacity .6s';
+      toast.style.opacity = '0';
+      setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 700);
+    }, 6000);
+  } catch(e) {}
+})();
+// ────────────────────────────────────────────────────────────────
+</script>
+</body>
+</html>
+
+
+  
