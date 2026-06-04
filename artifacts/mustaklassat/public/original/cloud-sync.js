@@ -400,10 +400,12 @@ const timer = setTimeout(() => controller.abort(), 20_000);
   async function pullFromCloud() {
     const hospitalName = getHospitalName();
 
-    const [userResult, hospitalResult] = await Promise.all([
-      apiFetch('/storage'),
-      hospitalName ? apiFetch('/hospital-storage') : Promise.resolve(null),
-    ]);
+const storageScope = isSettingsMainPage() ? '?scope=settings' : '';
+
+const [userResult, hospitalResult] = await Promise.all([
+  apiFetch('/storage' + storageScope),
+  hospitalName ? apiFetch('/hospital-storage' + storageScope) : Promise.resolve(null),
+]);
 
     const userData     = userResult?.data     || {};
     const hospitalData = hospitalResult?.data  || {};
