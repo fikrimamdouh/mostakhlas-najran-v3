@@ -69,12 +69,19 @@
     // Check if this is a revision of an existing extract
     const revisionId = localStorage.getItem(REVISION_KEY);
     const isRevision = !!revisionId;
+let token = null;
+try {
+  if (window.najranGetFreshToken) {
+    token = await window.najranGetFreshToken();
+  }
+} catch (_) {}
 
-    // استخدم التوكن إذا كان طازجاً، وإلا اعتمد على session cookies
-    const tokenAge = Date.now() - (session.timestamp || 0);
-    const token = (session.clerkToken && tokenAge < 55_000) ? session.clerkToken : null;
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+if (!token && session.clerkToken) {
+  token = session.clerkToken;
+}
+
+const headers = { 'Content-Type': 'application/json' };
+if (token) headers['Authorization'] = `Bearer ${token}`;
 
     let res = await fetch(
       isRevision ? `/api/submitted-extracts/${revisionId}` : '/api/submitted-extracts',
