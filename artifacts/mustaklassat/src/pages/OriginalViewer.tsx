@@ -162,18 +162,17 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
     return <Wrapper><UnauthorizedPage /></Wrapper>;
   }
 
- return (
-  <div className="flex h-screen overflow-hidden" style={{ background: "#f0f4ff" }}>
-    <Sidebar />
-    <main className="flex-1 overflow-hidden">
-      <iframe
-        ref={iframeRef}
-        src={`/original/${page}`}
-        className="w-full h-full border-0 block"
-        title={page}
-      />
-    </main>
-  </div>
-);
+return (
+    <div className="flex h-screen overflow-hidden" style={{ background: "#f0f4ff" }}>
+      <Sidebar />
+      <main className="flex-1 overflow-hidden">
+        <iframe
+          ref={iframeRef}
+          src={`/original/${page}`}
+          className="w-full h-full border-0 block"
+          title={page}
+        />
+      </main>
+    </div>
   );
 }
