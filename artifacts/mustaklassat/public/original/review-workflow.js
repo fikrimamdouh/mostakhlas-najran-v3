@@ -8,6 +8,13 @@
 
   if (!/\/original\/approval\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
 
+  if (!document.querySelector('script[src="/original/review-contract-details.js"]')) {
+    const contractDetailsScript = document.createElement('script');
+    contractDetailsScript.src = '/original/review-contract-details.js';
+    contractDetailsScript.defer = true;
+    document.head.appendChild(contractDetailsScript);
+  }
+
   const SECTIONS = [
     ['attendance', 'الحضور والانصراف'],
     ['performance', 'تقييم الأداء'],
