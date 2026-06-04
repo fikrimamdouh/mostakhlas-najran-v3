@@ -33,7 +33,7 @@
       .rw-general{background:#fff;border-top:1px solid #dbe5ef;padding:14px 18px}
       .rw-footer{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-start;background:#f8fafc;border-top:1px solid #dbe5ef;padding:14px 18px}
       .rw-action{border:none;border-radius:14px;padding:11px 18px;font-family:inherit;font-weight:900;cursor:pointer}
-      .rw-revision{background:#ea580c;color:#fff}.rw-review{background:#123b6d;color:#fff}.rw-approve{background:#15803d;color:#fff}.rw-close{background:#e2e8f0;color:#334155}
+      .rw-revision{background:#ea580c;color:#fff}.rw-review{background:#123b6d;color:#fff}.rw-approve{background:#15803d;color:#fff}.rw-close{background:#e2e8f0;color:#334155}.rw-book{background:#7c3aed;color:#fff}
     `;
     document.head.appendChild(s);
   }
@@ -72,6 +72,7 @@
       const f = document.createElement('div');
       f.className = 'rw-footer';
       f.innerHTML = `
+        <button class="rw-action rw-book" onclick="window.openFullExtractBook()">تحميل المستخلص الكامل</button>
         <button class="rw-action rw-revision" onclick="window.reviewWorkflowSubmit('needs_revision')">إرجاع المستخلص بالملاحظات</button>
         <button class="rw-action rw-review" onclick="window.reviewWorkflowSubmit('under_review')">حفظ كمراجعة جارية</button>
         <button class="rw-action rw-approve" onclick="window.reviewWorkflowSubmit('approved')">اعتماد المستخلص</button>
@@ -102,6 +103,12 @@
     }
     return { text: lines.join('\n').trim(), hasIssue };
   }
+
+  window.openFullExtractBook = function () {
+    const id = currentReviewId;
+    if (!id) return alert('تعذر تحديد رقم المستخلص. أغلق النافذة وافتحها مرة أخرى.');
+    window.open('/original/final-extract-book.html?id=' + encodeURIComponent(id), '_blank');
+  };
 
   window.reviewWorkflowSubmit = function (status) {
     const id = currentReviewId;
