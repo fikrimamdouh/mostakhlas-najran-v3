@@ -11,10 +11,3 @@ function initializeContractDisplay(config = {}) {
     const container = document.querySelector(containerSelector);
 
     if (container) {
-        createContractDisplayElements(container, fields);
-    }
-
-    updateContractDisplayData(fields);
-}
-function createContractDisplayElements(container, fields) {
-    if (container.query
