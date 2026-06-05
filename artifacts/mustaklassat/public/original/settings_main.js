@@ -420,16 +420,22 @@ if (defaultCompanyForHospital && newData.companyName && newData.companyName !== 
     }
 }
 
+/var _updateContractDisplayRunning = false;
+
 // تحديث عرض بيانات العقد
 function updateContractDisplayData() {
-    const data = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-    const session = (typeof _getSession === 'function') ? _getSession() : null;
-const manualCompanyName = _getManualCompanyName(
-    data.hospitalName ||
-    localStorage.getItem('hospitalName') ||
-    (session && session.hospital) ||
-    ''
-);
+    if (_updateContractDisplayRunning) return;
+    _updateContractDisplayRunning = true;
+
+    try {
+        const data = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+        const session = (typeof _getSession === 'function') ? _getSession() : null;
+        const manualCompanyName = _getManualCompanyName(
+            data.hospitalName ||
+            localStorage.getItem('hospitalName') ||
+            (session && session.hospital) ||
+            ''
+        );
 
 if (manualCompanyName) {
     data.companyName = manualCompanyName;
@@ -529,7 +535,11 @@ if (manualCompanyName) {
     } else if (stampImage) {
         stampImage.style.display = 'none';
     }
-  }
+
+    } finally {
+        _updateContractDisplayRunning = false;
+    }
+}
 
 // جمع بيانات كل الأقسام
 // إنشاء نسخة احتياطية
