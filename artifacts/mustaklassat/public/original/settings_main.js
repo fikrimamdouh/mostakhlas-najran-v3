@@ -420,7 +420,7 @@ if (defaultCompanyForHospital && newData.companyName && newData.companyName !== 
     }
 }
 
-/var _updateContractDisplayRunning = false;
+var _updateContractDisplayRunning = false;
 
 // تحديث عرض بيانات العقد
 function updateContractDisplayData() {
