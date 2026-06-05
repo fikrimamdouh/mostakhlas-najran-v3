@@ -1,9 +1,9 @@
-function saveToLocalStorage(k,d){}
-function loadFromLocalStorage(k){return null}
-function manualCompanyKey(h){return ''}
-function getManualCompanyName(h){return ''}
-function initializeContractDisplay(){}
-function updateContractDisplayData(){}
-function syncExtractBanner(){}
-function forceContractDirectDisplay(){}
-function updateSignaturesFromLocalStorage(){}
+/**
+ * contract_data_connector.js
+ * ملف جافاسكريبت موحد لربط بيانات العقد بين صفحة الإعدادات وباقي الصفحات
+ */
+function initializeContractDisplay(config = {}) {
+    const { containerSelector = '.side-data', fields = [
+        'hospitalName', 'contractDetails', 'companyName', 'contractType', 
+        'directPurchaseRatio', 'extractPeriod'
+    ] }
