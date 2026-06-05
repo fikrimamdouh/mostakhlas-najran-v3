@@ -1,9 +1,3 @@
-/**
- * contract_data_connector.js
- * ملف جافاسكريبت موحد لربط بيانات العقد بين صفحة الإعدادات وباقي الصفحات
- */
-function initializeContractDisplay(config = {}) {
-    const { containerSelector = '.side-data', fields = [
-        'hospitalName', 'contractDetails', 'companyName', 'contractType', 
-        'directPurchaseRatio', 'extractPeriod'
-    ] } = config
+function loadFromLocalStorage(key){try{var data=localStorage.getItem(key);return data?JSON.parse(data):null}catch(e){return null}}
+function saveToLocalStorage(key,data){try{localStorage.setItem(key,JSON.stringify(data))}catch(e){}}
+function initializeContractDisplay(config){config=config||{};var fields=config.fields||['hospitalName','contractDetails','companyName','contractType','directPurchaseRatio
