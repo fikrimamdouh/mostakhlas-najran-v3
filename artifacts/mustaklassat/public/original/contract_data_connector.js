@@ -11,4 +11,12 @@ function initializeContractDisplay(config = {}) {
     const container = document.querySelector(containerSelector);
 
     if (container) {
-        createContractDisplayElements(container, fields
+        createContractDisplayElements(container, fields);
+    }
+
+    updateContractDisplayData(fields);
+}
+function createContractDisplayElements(container, fields) {
+    if (container.querySelector('.contract-data')) return;
+    const contractData = document.createElement('div');
+    contractData.className = 'contract-data';
