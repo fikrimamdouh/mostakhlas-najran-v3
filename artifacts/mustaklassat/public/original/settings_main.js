@@ -1447,10 +1447,16 @@ _applyFixedContractData(freshData, hospitalName, true);
 };
 
 // ── إعادة تعبئة الصفحة بعد انتهاء cloud-sync من السحب ──────────────────────
+var _settingsCloudRefreshTimer = null;
+
 window.addEventListener('najranCloudPulled', function() {
-    updateContractDisplayData();
-    autoFillFromSession();
-    renderHospitalPicker();
+    clearTimeout(_settingsCloudRefreshTimer);
+
+    _settingsCloudRefreshTimer = setTimeout(function() {
+        updateContractDisplayData();
+        autoFillFromSession();
+        renderHospitalPicker();
+    }, 250);
 });
 
 // ── تغيير الموقع من الشريط الجانبي (sidebar) ───────────────────────────────
