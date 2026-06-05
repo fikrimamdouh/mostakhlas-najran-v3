@@ -2,16 +2,10 @@
  * contract_data_connector.js
  * ملف جافاسكريبت موحد لربط بيانات العقد بين صفحة الإعدادات وباقي الصفحات
  */
-function _normalizeContractDisplayId() {
+function normalizeContractDisplayId() {
     try {
         const sideDisplay = document.querySelector('.side-data > .contract-data');
         if (sideDisplay && sideDisplay.id === 'contract-data') {
             sideDisplay.id = 'contract-info-display';
         }
-    } catch (e) {}
-}
-
-function _runContractRefreshSafe(options = {}) {
-    const { display = true, banner = true, direct = true } = options;
-    _normalizeContractDisplayId();
-    if (display && typeof
+    } catch (e
