@@ -6,4 +6,4 @@ function initializeContractDisplay(config = {}) {
     const { containerSelector = '.side-data', fields = [
         'hospitalName', 'contractDetails', 'companyName', 'contractType', 
         'directPurchaseRatio', 'extractPeriod'
-    ] }
+    ] } = config
