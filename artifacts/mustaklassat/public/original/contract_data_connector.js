@@ -1,3 +1,14 @@
-function loadFromLocalStorage(key){try{var data=localStorage.getItem(key);return data?JSON.parse(data):null}catch(e){return null}}
-function saveToLocalStorage(key,data){try{localStorage.setItem(key,JSON.stringify(data))}catch(e){}}
-function initializeContractDisplay(config){config=config||{};var fields=config.fields||['hospitalName','contractDetails','companyName','contractType','directPurchaseRatio
+function initializeContractDisplay(config = {}) {
+    const { containerSelector = '.side-data', fields = [
+        'hospitalName', 'contractDetails', 'companyName', 'contractType',
+        'directPurchaseRatio', 'extractPeriod'
+    ] } = config;
+    const container = document.querySelector(containerSelector);
+    if (!container) return;
+    createContractDisplayElements(container, fields);
+    updateContractDisplayData(fields);
+}
+
+function createContractDisplayElements(container, fields) {
+    if (container.querySelector('.contract-data')) return;
+    const contractData =
