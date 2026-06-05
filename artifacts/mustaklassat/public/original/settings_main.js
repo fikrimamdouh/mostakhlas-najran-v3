@@ -1501,11 +1501,8 @@ document.addEventListener('DOMContentLoaded', () => {
         loadPersistentData();
         autoFillFromSession();
         renderMonthsArchive();
-        // ضمان إضافي: تشغيل autoFillFromSession مرتين بعد أي كود قد يمسح الحقول
-      setTimeout(autoFillFromSession, 200);
-setTimeout(autoFillFromSession, 600);
-setTimeout(autoFillFromSession, 1200);
-
+        // ضمان إضافي واحد فقط بعد استقرار الصفحة
+setTimeout(autoFillFromSession, 300);
         // ── فحص إشارة اعتماد المستخلص — تقديم الفترة تلقائياً ──────────
         var advanceFlag = localStorage.getItem('najran_advance_period');
         if (advanceFlag) {
