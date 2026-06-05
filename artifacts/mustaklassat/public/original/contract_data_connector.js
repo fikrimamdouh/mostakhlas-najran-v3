@@ -4,8 +4,10 @@
  */
 function initializeContractDisplay(config = {}) {
     const { containerSelector = '.side-data', fields = [
-        'hospitalName', 'contractDetails', 'companyName', 'contractType', 
+        'hospitalName', 'contractDetails', 'companyName', 'contractType',
         'directPurchaseRatio', 'extractPeriod'
     ] } = config;
 
-    const container
+    const container = document.querySelector(containerSelector);
+    if (container) {
+        create
