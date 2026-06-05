@@ -1,12 +1,4 @@
-/**
- * contract_data_connector.js
- * ملف موحد لعرض وربط بيانات العقد والمستخلص بين الصفحات.
- * يحافظ على نفس مفاتيح التخزين ونفس أسماء الدوال المستخدمة في الصفحات.
- */
-
-function loadFromLocalStorage(key) {
-    try {
-        const data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : null;
-    } catch (error) {
-        console.error(`Error loading from local
+function saveToLocalStorage(k,d){try{localStorage.setItem(k,JSON.stringify(d))}catch(e){console.error('save localStorage',k,e)}}
+function loadFromLocalStorage(k){try{var d=localStorage.getItem(k);return d?JSON.parse(d):null}catch(e){console.error('load localStorage',k,e);return null}}
+function manualCompanyKey(h){return 'manualCompanyName__h__'+encodeURIComponent(h||'')}
+function get
