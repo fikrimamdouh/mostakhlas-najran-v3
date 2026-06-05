@@ -1,13 +1,12 @@
 /**
  * contract_data_connector.js
- * ملف جافاسكريبت موحد لربط بيانات العقد بين صفحة الإعدادات وباقي الصفحات
+ * ملف موحد لعرض وربط بيانات العقد والمستخلص بين الصفحات.
+ * يحافظ على نفس مفاتيح التخزين ونفس أسماء الدوال المستخدمة في الصفحات.
  */
-function initializeContractDisplay(config = {}) {
-    const { containerSelector = '.side-data', fields = [
-        'hospitalName', 'contractDetails', 'companyName', 'contractType',
-        'directPurchaseRatio', 'extractPeriod'
-    ] } = config;
 
-    const container = document.querySelector(containerSelector);
-    if (container) {
-        create
+function loadFromLocalStorage(key) {
+    try {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : null;
+    } catch (error) {
+        console.error(`Error loading from local
