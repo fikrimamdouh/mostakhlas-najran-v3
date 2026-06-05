@@ -8,6 +8,4 @@ function initializeContractDisplay(config = {}) {
         'directPurchaseRatio', 'extractPeriod'
     ] } = config;
 
-    const container = document.querySelector(containerSelector);
-
-    if (container) {
+    const container
