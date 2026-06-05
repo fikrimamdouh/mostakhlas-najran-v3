@@ -6,4 +6,4 @@ function initializeContractDisplay(){}
 function updateContractDisplayData(){}
 function syncExtractBanner(){}
 function forceContractDirectDisplay(){}
-function updateSignaturesFromLocalStorage()
+function updateSignaturesFromLocalStorage(){}
