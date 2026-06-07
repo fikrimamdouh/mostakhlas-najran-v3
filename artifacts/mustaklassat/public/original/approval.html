@@ -302,7 +302,7 @@
     .preview-overlay.open { display: flex; }
     .preview-modal {
       background: #fff; border-radius: 24px;
-      width: 100%; max-width: 680px; max-height: 90vh;
+      width: 100%; max-width: 1180px; max-height: 94vh;
       overflow-y: auto; box-shadow: 0 24px 64px rgba(0,0,0,.25);
       animation: slideUp .25s ease;
     }
@@ -346,6 +346,7 @@
       display: grid; grid-template-columns: 1fr 1fr;
       gap: 10px; margin-bottom: 20px;
     }
+    @media(min-width: 900px) { .preview-grid { grid-template-columns: repeat(4, 1fr); } }
     .preview-cell {
       background: #f8fafc; border-radius: 12px; padding: 12px 14px;
     }
@@ -492,6 +493,9 @@
         <div class="preview-cell"><div class="lbl">📄 رقم العقد</div><div class="val" id="prev-contract">—</div></div>
         <div class="preview-cell"><div class="lbl">🏥 المستشفى</div><div class="val" id="prev-hospital">—</div></div>
         <div class="preview-cell"><div class="lbl">📅 الفترة</div><div class="val" id="prev-period">—</div></div>
+        <div class="preview-cell"><div class="lbl">🔢 رقم الدفعة</div><div class="val" id="prev-payment">—</div></div>
+        <div class="preview-cell"><div class="lbl">📆 من تاريخ</div><div class="val" id="prev-start">—</div></div>
+        <div class="preview-cell"><div class="lbl">📆 إلى تاريخ</div><div class="val" id="prev-end">—</div></div>
       </div>
 
       <p class="preview-section-title">مكونات المستخلص</p>
@@ -687,6 +691,7 @@ function renderList() {
 function cardHTML(e) {
   const cfg = STATUS_CFG[e.status] || STATUS_CFG.submitted;
   const parts = TYPE_PARTS[e.extractType] || [];
+  const metaCard = getExtractMeta(e);
   const isExpanded = expandedId === e.id;
   const session = getSession();
   const admin = isAdmin();
@@ -733,10 +738,14 @@ function cardHTML(e) {
     }
 
     // Info grid
+    const meta = getExtractMeta(e);
     const infoGrid = `<div class="info-grid">
       <div class="info-cell"><div class="lbl">🏢 الشركة</div><div class="val">${e.companyName || '—'}</div></div>
       <div class="info-cell"><div class="lbl">📄 رقم العقد</div><div class="val">${e.contractNumber || '—'}</div></div>
-      <div class="info-cell"><div class="lbl">📅 الفترة</div><div class="val">${e.periodMonth || '—'}</div></div>
+      <div class="info-cell"><div class="lbl">📅 الفترة</div><div class="val">${meta.period || '—'}</div></div>
+      <div class="info-cell"><div class="lbl">🔢 رقم الدفعة</div><div class="val">${meta.paymentNumber || '—'}</div></div>
+      <div class="info-cell"><div class="lbl">📆 من تاريخ</div><div class="val">${meta.extractStart || '—'}</div></div>
+      <div class="info-cell"><div class="lbl">📆 إلى تاريخ</div><div class="val">${meta.extractEnd || '—'}</div></div>
       <div class="info-cell"><div class="lbl">💰 القيمة</div><div class="val">${e.totalAmount ? Number(e.totalAmount).toLocaleString('en-US') + ' ر.س' : '—'}</div></div>
     </div>`;
 
@@ -794,7 +803,7 @@ function cardHTML(e) {
       <div class="card-icon ${e.status === 'needs_revision' ? 'orange' : ''}">📄</div>
       <div class="card-meta">
         <h3>${TYPE_LABELS[e.extractType] || e.extractType}</h3>
-        <p>${e.companyName || '—'}${e.periodMonth ? ' · ' + e.periodMonth : ''}</p>
+        <p>${e.companyName || '—'}${metaCard.period && metaCard.period !== '—' ? ' · ' + metaCard.period : ''}${metaCard.paymentNumber && metaCard.paymentNumber !== '—' ? ' · دفعة ' + metaCard.paymentNumber : ''}</p>
         ${admin && e.submittedByName ? `<span class="submitted-by">رُفع بواسطة: ${e.submittedByName}</span>` : ''}
       </div>
       <div class="card-right">
@@ -850,7 +859,7 @@ async function updateStatus(id, status) {
 
     const msgs = {
       under_review: 'تم تحديث الحالة إلى: قيد المراجعة',
-      approved: updated.monthAdvanced ? 'تم اعتماد المستخلص ✓  —  تم فتح الشهر التالي تلقائياً' : 'تم اعتماد المستخلص ✓',
+      approved: 'تم اعتماد المستخلص ✓',
       rejected: 'تم رفض المستخلص',
       needs_revision: 'تم إرسال طلب التعديل للمستخدم',
     };
@@ -867,12 +876,73 @@ function startRevision(id, type) {
 }
 
 // ── Preview ───────────────────────────────────────────────────────────────
+function parseExtractData(e) {
+  try {
+    if (!e || !e.extractData) return {};
+    return typeof e.extractData === 'string'
+      ? JSON.parse(e.extractData || '{}')
+      : (e.extractData || {});
+  } catch (_) {
+    return {};
+  }
+}
+
+function getExtractMeta(e) {
+  const data = parseExtractData(e);
+  const persistent = data.persistentExtractData || {};
+
+  const paymentNumber =
+    e.paymentNumber ||
+    persistent.paymentNumber ||
+    data.paymentNumber ||
+    '—';
+
+  const extractMonth =
+    e.extractMonth ||
+    persistent.extractMonth ||
+    data.extractMonth ||
+    '';
+
+  const extractYear =
+    e.extractYear ||
+    persistent.extractYear ||
+    data.extractYear ||
+    '';
+
+  const extractStart =
+    e.extractStart ||
+    persistent.extractStart ||
+    data.extractStart ||
+    '—';
+
+  const extractEnd =
+    e.extractEnd ||
+    persistent.extractEnd ||
+    data.extractEnd ||
+    '—';
+
+  const period =
+    e.periodMonth ||
+    [extractMonth, extractYear].filter(Boolean).join(' ') ||
+    '—';
+
+  return {
+    paymentNumber,
+    extractStart,
+    extractEnd,
+    period
+  };
+}
+
 function openPreview(id) {
   const e = allExtracts.find(x => x.id === id);
   if (!e) return;
 
+  const meta = getExtractMeta(e);
+
   document.getElementById('prev-type').textContent = TYPE_LABELS[e.extractType] || e.extractType;
-  document.getElementById('prev-subtitle').textContent = 'رقم المستخلص #' + e.id + (e.periodMonth ? ' — ' + e.periodMonth : '');
+  document.getElementById('prev-subtitle').textContent =
+    'رقم الدفعة ' + meta.paymentNumber + (meta.period ? ' — ' + meta.period : '');
 
   const approvedInfo = (e.approvedAt ? 'اعتمد في ' + fmt(e.approvedAt) : '') +
     (e.approvedBy ? ' · بواسطة: ' + e.approvedBy : '');
@@ -884,7 +954,10 @@ function openPreview(id) {
   document.getElementById('prev-company').textContent = e.companyName || '—';
   document.getElementById('prev-contract').textContent = e.contractNumber || '—';
   document.getElementById('prev-hospital').textContent = e.hospitalName || e.submittedByHospital || '—';
-  document.getElementById('prev-period').textContent = e.periodMonth || '—';
+  document.getElementById('prev-period').textContent = meta.period || '—';
+  document.getElementById('prev-payment').textContent = meta.paymentNumber || '—';
+  document.getElementById('prev-start').textContent = meta.extractStart || '—';
+  document.getElementById('prev-end').textContent = meta.extractEnd || '—';
 
   const parts = TYPE_PARTS[e.extractType] || [];
   document.getElementById('prev-parts').innerHTML = parts.map(p =>
