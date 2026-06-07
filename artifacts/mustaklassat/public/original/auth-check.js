@@ -26,12 +26,16 @@
     return;
   }
 
-  // تحميل طبقة المراجعة المهنية في صفحة الاعتماد فقط
   if (/\/original\/approval\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) {
     var reviewScript = document.createElement('script');
     reviewScript.src = '/original/review-workflow.js';
     reviewScript.defer = true;
     document.head.appendChild(reviewScript);
+
+    var reviewPrintScript = document.createElement('script');
+    reviewPrintScript.src = '/original/review-print-override.js';
+    reviewPrintScript.defer = true;
+    document.head.appendChild(reviewPrintScript);
   }
 
   var NOTIF_SEEN_KEY  = 'najran_notif_seen_ids';
@@ -190,10 +194,10 @@
       '</div>' +
       '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
         '<span id="najran-sync-status" style="font-size:11px;opacity:0.7;white-space:nowrap">☁ مزامنة</span>' +
-        '<button id="najran-bell-btn" title="الإشعارات" onclick="window.location.href=\'/original/approval.html\'" style="position:relative;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);color:#fff;width:32px;height:28px;border-radius:7px;cursor:pointer;font-size:15px;display:inline-flex;align-items:center;justify-content:center;transition:background 0.2s;transform-origin:top center;flex-shrink:0">🔔<span id="najran-bell-badge" style="display:none;position:absolute;top:-5px;left:-5px;background:#ef4444;color:#fff;font-size:9px;font-weight:bold;border-radius:9px;min-width:16px;height:16px;align-items:center;justify-content:center;padding:0 3px;font-family:Arial,sans-serif;line-height:1;border:1.5px solid #0f2050">0</span></button>' +
+        '<button id="najran-bell-btn" title="الإشعارات" style="position:relative;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);color:#fff;width:32px;height:28px;border-radius:7px;cursor:pointer;font-size:15px;display:inline-flex;align-items:center;justify-content:center;transition:background 0.2s;transform-origin:top center;flex-shrink:0">🔔<span id="najran-bell-badge" style="display:none;position:absolute;top:-5px;left:-5px;background:#ef4444;color:#fff;font-size:9px;font-weight:bold;border-radius:9px;min-width:16px;height:16px;align-items:center;justify-content:center;padding:0 3px;font-family:Arial,sans-serif;line-height:1;border:1.5px solid #0f2050">0</span></button>' +
         '<a href="/original/approval.html" style="color:#d4af37;text-decoration:none;font-weight:bold;font-size:12px;white-space:nowrap">📋 المستخلصات</a>' +
         '<a href="/dashboard" style="color:rgba(255,255,255,0.8);text-decoration:none;font-size:12px;white-space:nowrap">🏠 الرئيسية</a>' +
-        '<button onclick="najranSignOut()" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;padding:3px 12px;border-radius:6px;cursor:pointer;font-family:Tajawal,Arial,sans-serif;font-size:12px;white-space:nowrap">خروج</button>' +
+        '<button id="najran-signout-btn" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;padding:3px 12px;border-radius:6px;cursor:pointer;font-family:Tajawal,Arial,sans-serif;font-size:12px;white-space:nowrap">خروج</button>' +
       '</div>';
 
     if (window.self === window.top) {
@@ -203,7 +207,11 @@
         fetchNotifCount(function (count, allIds) {
           markAllSeen(allIds);
           updateBell(0);
+          window.location.href = '/original/approval.html';
         });
+      });
+      document.getElementById('najran-signout-btn').addEventListener('click', function () {
+        window.najranSignOut();
       });
     }
 
