@@ -352,10 +352,35 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       if (!token) return;
       let existingHospital: string | null = null;
       try { const raw = Storage.prototype.getItem.call(localStorage, "najran_session"); if (raw) { const oldSession = JSON.parse(raw); if (oldSession?.userId === dbUser.id) existingHospital = oldSession.hospital || null; } } catch {}
-      const companyLabelMap: Record<string, string> = { "بيت_العرب": "شركة مجموعة بيت العرب الحديثة المحدودة", "سراكو": "شركة سراكو", "تجمع_نجران": "تجمع نجران الصحي — وحدة الصيانة العامة" };
-      const activeHospital = existingHospital || dbUser.hospital || null;
-      const companyCode = (dbUser as any).company || null;
-      const companyName = companyCode ? companyLabelMap[companyCode] || companyCode : null;
+   const companyLabelMap: Record<string, string> = {
+  "بيت_العرب": "شركة مجموعة بيت العرب الحديثة المحدودة",
+  "سراكو": "شركة سراكو",
+  "تجمع_نجران": "تجمع نجران الصحي — وحدة الصيانة العامة"
+};
+
+let parsedSessionHospitals: string[] = [];
+try {
+  parsedSessionHospitals = JSON.parse((dbUser as any).hospitals || "[]");
+} catch {
+  parsedSessionHospitals = [];
+}
+
+const isAdminLike = dbUser.role === "admin" || dbUser.role === "supervisor";
+
+const fallbackHospital =
+  parsedSessionHospitals[0] ||
+  (isAdminLike ? "المقر الرئيسي — تجمع نجران الصحي" : null);
+
+const activeHospital =
+  existingHospital ||
+  dbUser.hospital ||
+  fallbackHospital;
+
+const companyCode =
+  (dbUser as any).company ||
+  (isAdminLike && activeHospital === "المقر الرئيسي — تجمع نجران الصحي" ? "تجمع_نجران" : null);
+
+const companyName = companyCode ? companyLabelMap[companyCode] || companyCode : null;
       localStorage.setItem("najran_session", JSON.stringify({ userId: dbUser.id, name: dbUser.name, email: dbUser.email, role: dbUser.role, hospital: activeHospital, hospitals: (dbUser as any).hospitals || null, company: companyCode, companyName, phone: (dbUser as any).phone || null, jobTitle: (dbUser as any).jobTitle || null, contractNumber: (dbUser as any).contractNumber || null, allowedModules: (dbUser as any).allowedModules || null, clerkToken: token, timestamp: Date.now() }));
       if (activeHospital) localStorage.setItem("hospitalName", activeHospital);
       if (companyName) localStorage.setItem("companyName", companyName);
