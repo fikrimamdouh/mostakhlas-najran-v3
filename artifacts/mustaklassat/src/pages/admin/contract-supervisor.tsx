@@ -121,15 +121,7 @@ export default function ContractSupervisorPage() {
         const updated = extractsData?.extracts.find((e: any) => e.id === selectedExtract.id);
         if (updated) setSelectedExtract({ ...updated, status });
       }
-      // عند الاعتماد — ضع إشارة في localStorage حتى تقدّم صفحة الإعدادات للفترة التالية
-      if (status === "approved") {
-        try {
-          localStorage.setItem('najran_advance_period', JSON.stringify({
-            approvedAt: new Date().toISOString(),
-            extractId: id,
-          }));
-        } catch (_) {}
-      }
+    
     },
     onError: () => toast({ title: "خطأ", description: "فشل تحديث الحالة", variant: "destructive" }),
   });
@@ -368,7 +360,47 @@ function ExtractDetailModal({ extract, getToken, onClose, onUpdateStatus, isPend
     if (!extract.extractData) return null;
     try { return JSON.parse(extract.extractData); } catch { return null; }
   })();
+const extractInfo = extractData?.persistentExtractData ?? {};
+const contractInfo = extractData?.persistentContractData ?? {};
 
+const paymentNumber =
+  extract.paymentNumber ||
+  extractInfo.paymentNumber ||
+  extract.extractNumber ||
+  "—";
+
+const periodLabel =
+  extract.periodMonth ||
+  [extractInfo.extractMonth, extractInfo.extractYear].filter(Boolean).join(" ") ||
+  "—";
+
+const startDate =
+  extract.extractStart ||
+  extractInfo.extractStart ||
+  "—";
+
+const endDate =
+  extract.extractEnd ||
+  extractInfo.extractEnd ||
+  "—";
+
+const companyName =
+  extract.companyName ||
+  contractInfo.companyName ||
+  extractData?.companyName ||
+  "—";
+
+const hospitalName =
+  extract.submittedByHospital ||
+  extract.hospitalName ||
+  contractInfo.hospitalName ||
+  extractData?.hospitalName ||
+  "—";
+
+const contractNumber =
+  extract.contractNumber ||
+  contractInfo.contractNumber ||
+  "—";
   // Revision history
   const { data: revisionsData } = useQuery({
     queryKey: ["/api/submitted-extracts", extract.id, "revisions"],
@@ -385,18 +417,20 @@ function ExtractDetailModal({ extract, getToken, onClose, onUpdateStatus, isPend
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)", direction: "rtl" }}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[94vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="p-5 flex items-center justify-between flex-shrink-0" style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)", color: "#fff" }}>
           <div>
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <FileText className="h-5 w-5" style={{ color: "#d4af37" }} />
-              {EXTRACT_TYPE_LABELS[extract.extractType] ?? extract.extractType}
-            </h3>
-            <p className="text-sm mt-0.5 text-white/70">{extract.submittedByName} · {extract.submittedByHospital ?? extract.hospitalName}</p>
+         <h3 className="text-xl font-extrabold flex items-center gap-2">
+  <FileText className="h-5 w-5" style={{ color: "#d4af37" }} />
+  مراجعة تفصيلية لـ {EXTRACT_TYPE_LABELS[extract.extractType] ?? extract.extractType}
+</h3>
+<p className="text-sm mt-1 text-white/75">
+  {hospitalName} · {periodLabel} · رقم الدفعة {paymentNumber}
+</p>
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant="outline" className={cn("gap-1 border-white/30 text-white bg-white/10", )}>
+            <Badge variant="outline" className={cn("gap-1 border-white/30 text-white bg-white/10")}>
               <StatusIcon className="h-3 w-3" />
               {sc.label}
             </Badge>
@@ -408,8 +442,7 @@ function ExtractDetailModal({ extract, getToken, onClose, onUpdateStatus, isPend
         <div className="flex border-b flex-shrink-0" style={{ borderColor: "#e8edf7" }}>
           {([
             { key: "summary" as const, label: "الملخص", badge: null as string | null },
-            { key: "data" as const, label: "البيانات الكاملة", badge: extractData ? "✓" : null as string | null },
-            { key: "history" as const, label: "سجل التعديلات", badge: revisions.length > 0 ? String(revisions.length) : null as string | null },
+{ key: "data" as const, label: "معاينة المستخلص", badge: extractData ? "✓" : null as string | null },            { key: "history" as const, label: "سجل التعديلات", badge: revisions.length > 0 ? String(revisions.length) : null as string | null },
           ]).map(t => (
             <button
               key={t.key}
@@ -436,18 +469,23 @@ function ExtractDetailModal({ extract, getToken, onClose, onUpdateStatus, isPend
         <div className="flex-1 overflow-y-auto p-5">
           {activeTab === "summary" && (
             <div className="space-y-4">
-              {/* Info grid */}
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "مقدّم المستخلص", value: extract.submittedByName },
-                  { label: "الموقع", value: extract.submittedByHospital ?? extract.hospitalName },
-                  { label: "نوع المستخلص", value: EXTRACT_TYPE_LABELS[extract.extractType] ?? extract.extractType },
-                  { label: "الفترة", value: extract.periodMonth },
-                  { label: "المبلغ الإجمالي", value: formatAmount(extract.totalAmount) },
-                  { label: "رقم العقد", value: extract.contractNumber },
-                  { label: "تاريخ التقديم", value: formatDate(extract.createdAt) },
-                  { label: "عدد التعديلات", value: extract.revisionCount > 0 ? `${extract.revisionCount} تعديل` : "لا توجد تعديلات" },
-                ].map(({ label, value }) => (
+            {/* Info grid */}
+<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+  {[
+    { label: "مقدّم المستخلص", value: extract.submittedByName },
+    { label: "الموقع", value: hospitalName },
+    { label: "الشركة", value: companyName },
+    { label: "نوع المستخلص", value: EXTRACT_TYPE_LABELS[extract.extractType] ?? extract.extractType },
+    { label: "الفترة", value: periodLabel },
+    { label: "رقم الدفعة", value: paymentNumber },
+    { label: "من تاريخ", value: startDate },
+    { label: "إلى تاريخ", value: endDate },
+    { label: "المبلغ الإجمالي", value: formatAmount(extract.totalAmount) },
+    { label: "رقم العقد", value: contractNumber },
+    { label: "الحالة", value: sc.label },
+    { label: "تاريخ التقديم", value: formatDate(extract.createdAt) },
+    { label: "عدد التعديلات", value: extract.revisionCount > 0 ? `${extract.revisionCount} تعديل` : "لا توجد تعديلات" },
+  ].map(({ label, value }) => (
                   <div key={label} className="rounded-xl p-3" style={{ background: "#f8f9fe", border: "1px solid #e8edf7" }}>
                     <p className="text-xs text-gray-400 mb-1">{label}</p>
                     <p className="font-semibold text-sm text-gray-800">{value ?? "—"}</p>
