@@ -1478,64 +1478,47 @@ window.addEventListener('najranHospitalChanged', function(e) {
     }
 });
 
-// ✅✅✅ الحل النهائي: استبدل كتلة DOMContentLoaded بالكامل بهذا الكود ✅✅✅
+// استبدل كتلة document.addEventListener('DOMContentLoaded', ...) بهذا الكود المنظم:
 document.addEventListener('DOMContentLoaded', () => {
     console.log("الصفحة جاهزة. بدء التهيئة...");
 
-    // 1. قم بكل الإعدادات الأولية
+    // 1. إعدادات الواجهة الأساسية
     showSection('contract');
-    updateMainHospitalName();
     updateDateTime();
     setInterval(updateDateTime, 60000);
     setupExtractDateListeners();
     toggleFields('contract', false);
     toggleFields('extract', false);
 
-    // 2. الخطوة الحاسمة: قم بتحميل البيانات بعد تأخير بسيط جداً (10 مللي ثانية)
-    // هذا يضمن أنها ستكون آخر عملية تحدث، وتتجاوز أي كود آخر قد يفرّغ الحقول.
+    // 2. تحميل البيانات مرة واحدة وبشكل منظم
     setTimeout(() => {
-        console.log(">> الآن يتم فرض تحميل البيانات من localStorage...");
-
-        // إذا كان session.hospital فارغاً لكن session.hospitals لها قيم → اختر الأول تلقائياً
-        (function autoSelectFirstHospital() {
-            try {
-                var _s = _getSession();
-                if (!_s) return;
-                if (_s.hospital) return; // يوجد بالفعل مستشفى محدد
+        try {
+            var _s = _getSession();
+            if (_s && !_s.hospital) {
+                // اختيار المستشفى فقط إذا لم يكن مختاراً
                 var _hs = [];
                 try { _hs = JSON.parse(_s.hospitals || '[]'); } catch(e) {}
-                if (!_hs.length) return;
-                var _cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-                // اختر المستشفى المحفوظ سابقاً أو الأول في القائمة
-                var _target = (_cd.hospitalName && _hs.indexOf(_cd.hospitalName) !== -1)
-                    ? _cd.hospitalName : _hs[0];
-                console.log('[autoSelect] تحديد المستشفى تلقائياً:', _target);
-                switchHospital(_target);
-            } catch(e) {}
-        })();
-
-        loadPersistentData();
-        autoFillFromSession();
-        renderMonthsArchive();
-        // ضمان إضافي واحد فقط بعد استقرار الصفحة
-setTimeout(autoFillFromSession, 300);
-        // ── فحص إشارة اعتماد المستخلص — تقديم الفترة تلقائياً ──────────
-        var advanceFlag = localStorage.getItem('najran_advance_period');
-        if (advanceFlag) {
-            try {
-                localStorage.removeItem('najran_advance_period');
-                if (typeof window.autoIncrementExtractPeriod === 'function') {
-                    var result = window.autoIncrementExtractPeriod();
-                    if (result) {
-                        loadPersistentData();
-                        renderMonthsArchive();
-                        if (typeof showSuccessMessage === 'function') {
-                            showSuccessMessage('✅ تم اعتماد المستخلص — الفترة والدفعة جُهّزت تلقائياً: دفعة ' + result.paymentNumber + ' / ' + result.extractMonth + ' ' + result.extractYear);
-                        }
-                    }
+                if (_hs.length > 0) {
+                    var _cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+                    var _target = (_cd.hospitalName && _hs.indexOf(_cd.hospitalName) !== -1) ? _cd.hospitalName : _hs[0];
+                    switchHospital(_target); 
+                    // ملاحظة: switchHospital تستدعي داخلياً loadPersistentData و autoFillFromSession
                 }
-            } catch(e) { localStorage.removeItem('najran_advance_period'); }
+            } else {
+                // إذا كان المستشفى مختاراً بالفعل، نكتفي بالتحميل العادي
+                loadPersistentData();
+                autoFillFromSession();
+            }
+            
+            renderMonthsArchive();
+            updateMainHospitalName();
+            
+        } catch(e) {
+            console.error("خطأ أثناء التهيئة:", e);
         }
+    }, 50); // تأخير بسيط لضمان استقرار الـ DOM
+});
+
         // ─────────────────────────────────────────────────────────────────
 
         console.log(">> اكتمل فرض تحميل البيانات.");
