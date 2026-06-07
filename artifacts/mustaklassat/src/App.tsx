@@ -350,9 +350,33 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (!dbUser || dbUser.status !== "approved") return;
     const saveSession = (token: string | null) => {
       if (!token) return;
-      let existingHospital: string | null = null;
-      try { const raw = Storage.prototype.getItem.call(localStorage, "najran_session"); if (raw) { const oldSession = JSON.parse(raw); if (oldSession?.userId === dbUser.id) existingHospital = oldSession.hospital || null; } } catch {}
-   const companyLabelMap: Record<string, string> = {
+     let existingHospital: string | null = null;
+let existingStoredHospital: string | null = null;
+let existingStoredCompanyName: string | null = null;
+
+try {
+  const raw = Storage.prototype.getItem.call(localStorage, "najran_session");
+  if (raw) {
+    const oldSession = JSON.parse(raw);
+    if (oldSession?.userId === dbUser.id) {
+      existingHospital = oldSession.hospital || null;
+    }
+  }
+} catch {}
+
+try {
+  existingStoredHospital =
+    Storage.prototype.getItem.call(localStorage, "hospitalName") ||
+    localStorage.getItem("hospitalName") ||
+    null;
+
+  existingStoredCompanyName =
+    Storage.prototype.getItem.call(localStorage, "companyName") ||
+    localStorage.getItem("companyName") ||
+    null;
+} catch {}
+
+const companyLabelMap: Record<string, string> = {
   "بيت_العرب": "شركة مجموعة بيت العرب الحديثة المحدودة",
   "سراكو": "شركة سراكو",
   "تجمع_نجران": "تجمع نجران الصحي — وحدة الصيانة العامة"
@@ -365,10 +389,18 @@ try {
   parsedSessionHospitals = [];
 }
 
-const isAdminLike = dbUser.role === "admin" || dbUser.role === "supervisor";
+const roleText = String(dbUser.role || "").toLowerCase();
+const isAdminLike =
+  roleText === "admin" ||
+  roleText === "supervisor" ||
+  roleText.includes("admin") ||
+  roleText.includes("supervisor") ||
+  roleText.includes("مدير") ||
+  roleText.includes("مشرف");
 
 const fallbackHospital =
   parsedSessionHospitals[0] ||
+  existingStoredHospital ||
   (isAdminLike ? "المقر الرئيسي — تجمع نجران الصحي" : null);
 
 const activeHospital =
@@ -376,9 +408,21 @@ const activeHospital =
   dbUser.hospital ||
   fallbackHospital;
 
-const companyCode =
+let companyCode =
   (dbUser as any).company ||
-  (isAdminLike && activeHospital === "المقر الرئيسي — تجمع نجران الصحي" ? "تجمع_نجران" : null);
+  null;
+
+if (!companyCode && existingStoredCompanyName) {
+  if (existingStoredCompanyName === "تجمع نجران الصحي — وحدة الصيانة العامة") companyCode = "تجمع_نجران";
+  else if (existingStoredCompanyName === "شركة سراكو") companyCode = "سراكو";
+  else if (existingStoredCompanyName === "شركة مجموعة بيت العرب الحديثة المحدودة") companyCode = "بيت_العرب";
+}
+
+if (!companyCode && activeHospital === "المقر الرئيسي — تجمع نجران الصحي") {
+  companyCode = "تجمع_نجران";
+}
+
+const companyName = companyCode ? companyLabelMap[companyCode] || companyCode : null;
 
 const companyName = companyCode ? companyLabelMap[companyCode] || companyCode : null;
       localStorage.setItem("najran_session", JSON.stringify({ userId: dbUser.id, name: dbUser.name, email: dbUser.email, role: dbUser.role, hospital: activeHospital, hospitals: (dbUser as any).hospitals || null, company: companyCode, companyName, phone: (dbUser as any).phone || null, jobTitle: (dbUser as any).jobTitle || null, contractNumber: (dbUser as any).contractNumber || null, allowedModules: (dbUser as any).allowedModules || null, clerkToken: token, timestamp: Date.now() }));
