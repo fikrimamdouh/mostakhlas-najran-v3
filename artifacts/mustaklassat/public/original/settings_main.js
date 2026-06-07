@@ -422,7 +422,6 @@ if (defaultCompanyForHospital && newData.companyName && newData.companyName !== 
 
 var _updateContractDisplayRunning = false;
 
-let _updateContractDisplayRunning = false;
 
 // تحديث عرض بيانات العقد
 function updateContractDisplayData() {
