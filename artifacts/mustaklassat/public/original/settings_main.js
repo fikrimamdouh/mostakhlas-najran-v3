@@ -1002,8 +1002,56 @@ function _resolveCompanyName(session, hospitalName) {
 function _getSession() {
     try {
         var raw = Storage.prototype.getItem.call(localStorage, 'najran_session');
-        return raw ? JSON.parse(raw) : null;
-    } catch (e) { return null; }
+        var session = raw ? JSON.parse(raw) : null;
+
+        if (!session) session = {};
+
+        var fixed = false;
+
+        if (!session.hospital) {
+            var hn = localStorage.getItem('hospitalName') || '';
+            if (hn) {
+                session.hospital = hn;
+                fixed = true;
+            }
+        }
+
+        if (!session.company) {
+            var cn = localStorage.getItem('companyName') || '';
+
+            if (cn === 'تجمع نجران الصحي — وحدة الصيانة العامة') {
+                session.company = 'تجمع_نجران';
+                session.companyName = cn;
+                fixed = true;
+            } else if (cn === 'شركة سراكو') {
+                session.company = 'سراكو';
+                session.companyName = cn;
+                fixed = true;
+            } else if (cn === 'شركة مجموعة بيت العرب الحديثة المحدودة') {
+                session.company = 'بيت_العرب';
+                session.companyName = cn;
+                fixed = true;
+            }
+        }
+
+        if (!session.companyName && session.company && COMPANY_LABELS_MAP[session.company]) {
+            session.companyName = COMPANY_LABELS_MAP[session.company];
+            fixed = true;
+        }
+
+        if (!session.hospitals && session.hospital) {
+            session.hospitals = JSON.stringify([session.hospital]);
+            fixed = true;
+        }
+
+        if (fixed && session.userId) {
+            Storage.prototype.setItem.call(localStorage, 'najran_session', JSON.stringify(session));
+        }
+
+        return session;
+    } catch (e) {
+        return null;
+    }
 }
 
 // ── مفتاح localStorage لبيانات عقد مستشفى معين ────────────────────────────
