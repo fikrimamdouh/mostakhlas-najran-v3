@@ -1390,7 +1390,10 @@ renderHospitalPicker();
             window.__settingsHospitalPickerRendered = true;
             renderHospitalPicker();
         }
-
+    } catch (e) {
+        console.warn('[autoFillFromSession] تم تجاهل خطأ أثناء الملء التلقائي:', e);
+    }
+}
 // ── اختيار مستشفى من الـ overlay مباشرة (لا يحتاج session) ─────────────────
 window._selectHospitalFromOverlay = function(hospitalName) {
     // 1. حدّث الجلسة أولاً (حتى يعرف pullFromCloud أي مستشفى يجلب بياناته)
