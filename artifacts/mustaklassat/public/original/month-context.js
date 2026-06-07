@@ -92,14 +92,22 @@
   window.MONTH_DATA_KEYS_LIST = MONTH_DATA_KEYS;
 
   document.addEventListener('DOMContentLoaded', function () {
-    const currentKey = getCurrentMonthKey();
-    if (!currentKey) return;
-    const hasLocalData = !!localStorage.getItem('attendanceData');
-    const hasSnapshot = !!localStorage.getItem('monthSnapshot_' + currentKey);
-    if (!hasLocalData && hasSnapshot) {
-      window.loadMonthSnapshot(currentKey);
-      console.log('[MonthCtx] auto-restored snapshot for', currentKey);
-    }
-  });
+  // صفحة الإعدادات هي مصدر فترة المستخلص.
+  // ممنوع تحميل snapshot قديم فوق بيانات المستخلص أثناء ضبط الفترة.
+  if (/settings_main\.html(?:$|[?#])/.test(window.location.href)) {
+    return;
+  }
+
+  const currentKey = getCurrentMonthKey();
+  if (!currentKey) return;
+
+  const hasLocalData = !!localStorage.getItem('attendanceData');
+  const hasSnapshot = !!localStorage.getItem('monthSnapshot_' + currentKey);
+
+  if (!hasLocalData && hasSnapshot) {
+    window.loadMonthSnapshot(currentKey);
+    console.log('[MonthCtx] auto-restored snapshot for', currentKey);
+  }
+});
 
 })();
