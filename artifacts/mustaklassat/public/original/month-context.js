@@ -130,6 +130,133 @@
 
     // احذف أي إشارة قديمة قبل أن تقرأها صفحة الإعدادات.
     try { localStorage.removeItem('najran_advance_period'); } catch (e) {}
+    (function installExtractPeriodLinking() {
+  if (window.__extractPeriodLinkingInstalled) return;
+  window.__extractPeriodLinkingInstalled = true;
+
+  const monthNames = [
+    'يناير',
+    'فبراير',
+    'مارس',
+    'أبريل',
+    'مايو',
+    'يونيو',
+    'يوليو',
+    'أغسطس',
+    'سبتمبر',
+    'أكتوبر',
+    'نوفمبر',
+    'ديسمبر'
+  ];
+
+  function pad2(n) {
+    return String(n).padStart(2, '0');
+  }
+
+  function toInputDate(date) {
+    return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate());
+  }
+
+  function readEls() {
+    return {
+      month: document.getElementById('extract-month'),
+      year: document.getElementById('extract-year'),
+      start: document.getElementById('extract-start'),
+      end: document.getElementById('extract-end')
+    };
+  }
+
+  function saveLinkedExtractPeriod() {
+    try {
+      const els = readEls();
+      const current = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+
+      if (els.month && els.month.value) current.extractMonth = els.month.value;
+      if (els.year && els.year.value) current.extractYear = els.year.value;
+      if (els.start && els.start.value) current.extractStart = els.start.value;
+      if (els.end && els.end.value) current.extractEnd = els.end.value;
+
+      const pay = document.getElementById('payment-number');
+      if (pay && pay.value) current.paymentNumber = pay.value;
+
+      localStorage.setItem('persistentExtractData', JSON.stringify(current));
+
+      if (current.extractMonth) localStorage.setItem('extractMonth', current.extractMonth);
+      if (current.extractYear) localStorage.setItem('extractYear', current.extractYear);
+      if (current.extractStart) localStorage.setItem('extractStart', current.extractStart);
+      if (current.extractEnd) localStorage.setItem('extractEnd', current.extractEnd);
+      if (current.paymentNumber) localStorage.setItem('paymentNumber', current.paymentNumber);
+
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'persistentExtractData',
+        newValue: JSON.stringify(current)
+      }));
+    } catch (e) {
+      console.warn('[extract-period-link] save failed:', e);
+    }
+  }
+
+  function syncMonthYearFromStartDate() {
+    const els = readEls();
+    if (!els.start || !els.start.value) return;
+
+    const d = new Date(els.start.value);
+    if (isNaN(d.getTime())) return;
+
+    if (els.month) els.month.value = monthNames[d.getMonth()];
+    if (els.year) els.year.value = String(d.getFullYear());
+  }
+
+  function syncDatesFromMonthYear() {
+    const els = readEls();
+    if (!els.month || !els.year || !els.month.value || !els.year.value) return;
+
+    const monthIndex = monthNames.indexOf(els.month.value);
+    const year = parseInt(els.year.value, 10);
+
+    if (monthIndex < 0 || !Number.isFinite(year)) return;
+
+    const firstDay = new Date(year, monthIndex, 1);
+    const lastDay = new Date(year, monthIndex + 1, 0);
+
+    if (els.start) els.start.value = toInputDate(firstDay);
+    if (els.end) els.end.value = toInputDate(lastDay);
+  }
+
+  function refreshDuration() {
+    if (typeof calculateExtractDurationDays === 'function') {
+      calculateExtractDurationDays();
+    }
+  }
+
+  function onStartDateChanged() {
+    syncMonthYearFromStartDate();
+    refreshDuration();
+    saveLinkedExtractPeriod();
+  }
+
+  function onEndDateChanged() {
+    refreshDuration();
+    saveLinkedExtractPeriod();
+  }
+
+  function onMonthYearChanged() {
+    syncDatesFromMonthYear();
+    refreshDuration();
+    saveLinkedExtractPeriod();
+  }
+
+  setTimeout(function bindExtractPeriodFields() {
+    const els = readEls();
+
+    if (els.start) els.start.addEventListener('change', onStartDateChanged);
+    if (els.end) els.end.addEventListener('change', onEndDateChanged);
+    if (els.month) els.month.addEventListener('change', onMonthYearChanged);
+    if (els.year) els.year.addEventListener('change', onMonthYearChanged);
+
+    console.log('[MonthCtx] extract period linking installed');
+  }, 50);
+})();
 
     setTimeout(function installStableExtractSaveOverride() {
       if (window.__stableExtractSaveOverrideInstalled) return;
