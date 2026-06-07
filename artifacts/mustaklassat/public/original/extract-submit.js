@@ -273,7 +273,6 @@ try {
 
 // بعد رفع المستهلكات نرجع لتتبع المستخلصات فقط.
 // المستخدم هو من يفتح الفترة الجديدة من الإعدادات.
-window.location.href = '/extracts/track';
           window.location.href = '/original/settings_main.html';
         } catch (e) {
           alert('حدث خطأ: ' + e.message);
