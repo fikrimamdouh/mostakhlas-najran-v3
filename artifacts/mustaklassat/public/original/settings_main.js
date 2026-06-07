@@ -1494,35 +1494,49 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         try {
             var _s = _getSession();
+
             if (_s && !_s.hospital) {
                 // اختيار المستشفى فقط إذا لم يكن مختاراً
                 var _hs = [];
-                try { _hs = JSON.parse(_s.hospitals || '[]'); } catch(e) {}
+
+                try {
+                    _hs = JSON.parse(_s.hospitals || '[]');
+                } catch(e) {
+                    _hs = [];
+                }
+
                 if (_hs.length > 0) {
                     var _cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-                    var _target = (_cd.hospitalName && _hs.indexOf(_cd.hospitalName) !== -1) ? _cd.hospitalName : _hs[0];
-                    switchHospital(_target); 
-                    // ملاحظة: switchHospital تستدعي داخلياً loadPersistentData و autoFillFromSession
+
+                    var _target = (_cd.hospitalName && _hs.indexOf(_cd.hospitalName) !== -1)
+                        ? _cd.hospitalName
+                        : _hs[0];
+
+                    switchHospital(_target);
+
+                    // ضمان بعد تغيير المستشفى
+                    loadPersistentData();
+                    autoFillFromSession();
+                } else {
+                    loadPersistentData();
+                    autoFillFromSession();
                 }
+
             } else {
                 // إذا كان المستشفى مختاراً بالفعل، نكتفي بالتحميل العادي
                 loadPersistentData();
                 autoFillFromSession();
             }
-            
+
             renderMonthsArchive();
             updateMainHospitalName();
-            
+
+            console.log(">> اكتمل فرض تحميل البيانات.");
+
         } catch(e) {
             console.error("خطأ أثناء التهيئة:", e);
         }
-    }, 50); // تأخير بسيط لضمان استقرار الـ DOM
-});
-
-        // ─────────────────────────────────────────────────────────────────
-
-        console.log(">> اكتمل فرض تحميل البيانات.");
-    }, 10);
+    }, 50);
 });
 
 function openBackupOptionsMenu() {
