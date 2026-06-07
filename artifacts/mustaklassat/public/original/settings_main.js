@@ -334,29 +334,7 @@ function saveContractData() {
             followUpManagerPhone: document.getElementById('follow-up-manager-phone')?.value || '',
             followUpManagerEmail: document.getElementById('follow-up-manager-email')?.value || ''
         };
-        // إذا المستخدم حفظ تفاصيل عقد مختلفة عن الافتراضي، احترم تعديله لاحقاً
-        const fixedForHospital = HOSPITAL_CONTRACT_MAP[newData.hospitalName];
-        if (fixedForHospital && newData.contractDetails && newData.contractDetails !== fixedForHospital.contractDetails) {
-            newData._manualContractDetails = true;
-        } else if (fixedForHospital && newData.contractDetails === fixedForHospital.contractDetails) {
-            newData._manualContractDetails = false;
-        }
-const defaultCompanyForHospital =
-    (fixedForHospital && fixedForHospital.companyName) ||
-    HOSPITAL_COMPANY_MAP[newData.hospitalName] ||
-    '';
 
-if (defaultCompanyForHospital && newData.companyName && newData.companyName !== defaultCompanyForHospital) {
-    newData._manualCompanyName = true;
-} else if (defaultCompanyForHospital && newData.companyName === defaultCompanyForHospital) {
-    newData._manualCompanyName = false;
-}
-    if (newData.hospitalName && newData._manualCompanyName) {
-    localStorage.setItem(_manualCompanyKey(newData.hospitalName), newData.companyName || '');
-} else if (newData.hospitalName && newData._manualCompanyName === false) {
-    localStorage.removeItem(_manualCompanyKey(newData.hospitalName));
-}
-        newData._autoHospitalName = newData.hospitalName || '';
         // التحقق من صحة البيانات
         const validationError = validateContractData(newData);
         if (validationError) {
@@ -365,41 +343,26 @@ if (defaultCompanyForHospital && newData.companyName && newData.companyName !== 
         }
 
         // دالة الحفظ النهائية (سنستدعيها في كل الحالات)
-       const finalizeSave = async (finalData) => {
-    try {
-        // 1. الحفظ المحلي الأساسي
-        localStorage.setItem('persistentContractData', JSON.stringify(finalData));
+        const finalizeSave = (finalData) => {
+            // 1. الحفظ في localStorage
+            localStorage.setItem('persistentContractData', JSON.stringify(finalData));
+            
+            // 2. رفع فوري إلى السيرفر (بدون انتظار المزامنة الدورية)
+            if (typeof window.najranSyncNow === 'function') {
+                window.najranSyncNow().catch(() => {});
+            }
 
-        // 2. حفظ مفاتيح مختصرة تقرأها باقي الصفحات كـ fallback
-        localStorage.setItem('hospitalName', finalData.hospitalName || '');
-        localStorage.setItem('companyName', finalData.companyName || '');
-        localStorage.setItem('contractNumber', finalData.contractNumber || '');
-        localStorage.setItem('contractDetails', finalData.contractDetails || '');
+            // 3. إرسال إشعار لباقي الصفحات
+            window.dispatchEvent(new StorageEvent('storage', { key: 'persistentContractData' }));
 
-        // 3. إرسال إشعار لباقي الصفحات
-        window.dispatchEvent(new StorageEvent('storage', {
-            key: 'persistentContractData',
-            newValue: JSON.stringify(finalData)
-        }));
+            // 4. إظهار رسالة النجاح وإغلاق وضع التعديل
+            saveSectionData('contract', 'contract-save-success');
+            
+            // 5. تحديث الواجهة
+            updateMainHospitalName();
+            alert('تم حفظ البيانات بنجاح!');
+        };
 
-        // 4. تحديث الواجهة محليًا
-        updateContractDisplayData();
-        updateMainHospitalName();
-
-        // 5. رفع فوري للسحابة وانتظار النتيجة قبل رسالة النجاح
-        if (typeof window.najranSyncNow === 'function') {
-            await window.najranSyncNow();
-        }
-
-        // 6. إغلاق وضع التعديل بعد نجاح الحفظ
-        saveSectionData('contract', finalData, 'contract-save-success');
-
-        alert('تم حفظ البيانات ورفعها بنجاح.');
-    } catch (error) {
-        console.error('فشل حفظ/رفع بيانات العقد:', error);
-        alert('تم الحفظ محليًا، لكن فشل الرفع السحابي. لا تغادر الصفحة قبل إعادة المحاولة.');
-    }
-};
         // التعامل مع ملف الختم
         const fileInput = document.getElementById('hospital-stamp');
         if (fileInput && fileInput.files[0]) {
@@ -420,142 +383,87 @@ if (defaultCompanyForHospital && newData.companyName && newData.companyName !== 
     }
 }
 
-var _updateContractDisplayRunning = false;
-
-
 // تحديث عرض بيانات العقد
 function updateContractDisplayData() {
-    if (_updateContractDisplayRunning) return;
-    _updateContractDisplayRunning = true;
+    const data = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
 
-    try {
-        const data = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-        const session = (typeof _getSession === 'function') ? _getSession() : null;
+    // ── fallback: اقرأ المفاتيح المنفصلة التي يحفظها cloud-sync ──────────────
+    if (!data.hospitalName)    data.hospitalName    = localStorage.getItem('hospitalName')    || '';
+    if (!data.companyName)     data.companyName     = localStorage.getItem('companyName')     || '';
+    if (!data.contractNumber)  data.contractNumber  = localStorage.getItem('contractNumber')  || '';
+    if (!data.contractDetails) data.contractDetails = localStorage.getItem('contractDetails') || '';
 
-        const manualCompanyName = _getManualCompanyName(
-            data.hospitalName ||
-            localStorage.getItem('hospitalName') ||
-            (session && session.hospital) ||
-            ''
-        );
-
-        if (manualCompanyName) {
-            data.companyName = manualCompanyName;
-            data._manualCompanyName = true;
+    // طبّق البيانات الثابتة (رقم العقد، التواريخ، الشركة) على الحقول الفارغة
+    if (data.hospitalName) {
+        var before = JSON.stringify(data);
+        _applyFixedContractData(data, data.hospitalName);
+        if (JSON.stringify(data) !== before) {
             localStorage.setItem('persistentContractData', JSON.stringify(data));
-            localStorage.setItem('companyName', data.companyName || '');
         }
-
-        if (!data.hospitalName) {
-            data.hospitalName = localStorage.getItem('hospitalName') || (session && session.hospital) || '';
-        }
-
-        if (!data.companyName) {
-            data.companyName =
-                localStorage.getItem('companyName') ||
-                (session && session.companyName) ||
-                _resolveCompanyName(session, data.hospitalName) ||
-                '';
-        }
-
-        if (!data.contractNumber) {
-            data.contractNumber = localStorage.getItem('contractNumber') || (session && session.contractNumber) || '';
-        }
-
-        if (!data.contractDetails) {
-            data.contractDetails = localStorage.getItem('contractDetails') || '';
-        }
-
-        if (data.hospitalName && HOSPITAL_CONTRACT_MAP[data.hospitalName]) {
-            var before = JSON.stringify(data);
-
-            _applyFixedContractData(data, data.hospitalName, false);
-
-            if (JSON.stringify(data) !== before) {
-                localStorage.setItem('persistentContractData', JSON.stringify(data));
-                localStorage.setItem('hospitalName', data.hospitalName);
-                localStorage.setItem('companyName', data.companyName || '');
-                localStorage.setItem('contractNumber', data.contractNumber || '');
-                localStorage.setItem('contractDetails', data.contractDetails || '');
-            }
-        }
-
-        const setValue = function(id, value) {
-            const el = document.getElementById(id);
-            if (el) el.value = value || '';
-        };
-
-        setValue('hospital-name', data.hospitalName);
-        setValue('contract-details', data.contractDetails);
-        setValue('company-name', data.companyName);
-        setValue('contract-type', data.contractType || 'عقد أساسي');
-        setValue('direct-purchase-ratio', data.directPurchaseRatio || '0');
-        setValue('contract-start-date', data.startDate);
-        setValue('contract-end-date', data.endDate);
-        setValue('contract-value', data.contractValue);
-        setValue('contract-status', data.contractStatus || 'نشط');
-        setValue('contract-notes', data.notes);
-
-        setValue('project-manager-name', data.projectManager);
-        setValue('maintenance-head-name', data.maintenanceHead);
-        setValue('operations-assistant-name', data.operationsAssistant);
-        setValue('engineering-manager-name', data.engineeringManager);
-        setValue('financial-manager-name', data.financialManager);
-        setValue('hospital-manager-name', data.hospitalManager);
-        setValue('contractor-representative-name', data.contractorRepresentative);
-        setValue('hospital-accountant-name', data.hospitalAccountant);
-        setValue('assistant-manager-name', data.assistantManager);
-        setValue('site-representative-name', data.siteRepresentative);
-        setValue('engineering-affairs-manager-name', data.engineeringAffairsManager);
-        setValue('general-services-manager-name', data.generalServicesManager);
-        setValue('follow-up-manager-name', data.followUpManager);
-
-        setValue('project-manager-phone', data.projectManagerPhone);
-        setValue('project-manager-email', data.projectManagerEmail);
-        setValue('maintenance-head-phone', data.maintenanceHeadPhone);
-        setValue('maintenance-head-email', data.maintenanceHeadEmail);
-        setValue('operations-assistant-phone', data.operationsAssistantPhone);
-        setValue('operations-assistant-email', data.operationsAssistantEmail);
-        setValue('engineering-manager-phone', data.engineeringManagerPhone);
-        setValue('engineering-manager-email', data.engineeringManagerEmail);
-        setValue('financial-manager-phone', data.financialManagerPhone);
-        setValue('financial-manager-email', data.financialManagerEmail);
-        setValue('hospital-manager-phone', data.hospitalManagerPhone);
-        setValue('hospital-manager-email', data.hospitalManagerEmail);
-        setValue('contractor-representative-phone', data.contractorRepresentativePhone);
-        setValue('contractor-representative-email', data.contractorRepresentativeEmail);
-        setValue('hospital-accountant-phone', data.hospitalAccountantPhone);
-        setValue('hospital-accountant-email', data.hospitalAccountantEmail);
-        setValue('assistant-manager-phone', data.assistantManagerPhone);
-        setValue('assistant-manager-email', data.assistantManagerEmail);
-        setValue('site-representative-phone', data.siteRepresentativePhone);
-        setValue('site-representative-email', data.siteRepresentativeEmail);
-        setValue('engineering-affairs-manager-phone', data.engineeringAffairsManagerPhone);
-        setValue('engineering-affairs-manager-email', data.engineeringAffairsManagerEmail);
-        setValue('general-services-manager-phone', data.generalServicesManagerPhone);
-        setValue('general-services-manager-email', data.generalServicesManagerEmail);
-        setValue('follow-up-manager-phone', data.followUpManagerPhone);
-        setValue('follow-up-manager-email', data.followUpManagerEmail);
-
-        const fileStatus = document.querySelector('.file-status');
-        if (fileStatus) {
-            fileStatus.textContent = data.hospitalStamp ? 'تم اختيار ملف' : 'لم يتم اختيار أي ملف';
-        }
-
-        const stampImage = document.getElementById('hospital-stamp-preview');
-        if (stampImage && data.hospitalStamp) {
-            stampImage.src = data.hospitalStamp;
-            stampImage.style.display = 'block';
-        } else if (stampImage) {
-            stampImage.style.display = 'none';
-        }
-
-    } catch(e) {
-        console.error('[updateContractDisplayData] خطأ أثناء تحديث عرض بيانات العقد:', e);
-    } finally {
-        _updateContractDisplayRunning = false;
+    }
+    document.getElementById('hospital-name').value = data.hospitalName || '';
+    document.getElementById('contract-details').value = data.contractDetails || '';
+    document.getElementById('company-name').value = data.companyName || '';
+    document.getElementById('contract-type').value = data.contractType || 'عقد أساسي';
+    document.getElementById('direct-purchase-ratio').value = data.directPurchaseRatio || '0';
+    document.getElementById('contract-start-date').value = data.startDate || '';
+    document.getElementById('contract-end-date').value = data.endDate || '';
+    document.getElementById('contract-value').value = data.contractValue || '';
+    document.getElementById('contract-status').value = data.contractStatus || 'نشط';
+    document.getElementById('contract-notes').value = data.notes || '';
+    document.getElementById('project-manager-name').value = data.projectManager || '';
+    document.getElementById('maintenance-head-name').value = data.maintenanceHead || '';
+    document.getElementById('operations-assistant-name').value = data.operationsAssistant || '';
+    document.getElementById('engineering-manager-name').value = data.engineeringManager || '';
+    document.getElementById('financial-manager-name').value = data.financialManager || '';
+    document.getElementById('hospital-manager-name').value = data.hospitalManager || '';
+    document.getElementById('contractor-representative-name').value = data.contractorRepresentative || '';
+    document.getElementById('hospital-accountant-name').value = data.hospitalAccountant || '';
+    document.getElementById('assistant-manager-name').value = data.assistantManager || '';
+    document.getElementById('site-representative-name').value = data.siteRepresentative || '';
+    document.getElementById('engineering-affairs-manager-name').value = data.engineeringAffairsManager || '';
+    document.getElementById('general-services-manager-name').value = data.generalServicesManager || '';
+    document.getElementById('follow-up-manager-name').value = data.followUpManager || '';
+    document.getElementById('project-manager-phone').value = data.projectManagerPhone || '';
+    document.getElementById('project-manager-email').value = data.projectManagerEmail || '';
+    document.getElementById('maintenance-head-phone').value = data.maintenanceHeadPhone || '';
+    document.getElementById('maintenance-head-email').value = data.maintenanceHeadEmail || '';
+    document.getElementById('operations-assistant-phone').value = data.operationsAssistantPhone || '';
+    document.getElementById('operations-assistant-email').value = data.operationsAssistantEmail || '';
+    document.getElementById('engineering-manager-phone').value = data.engineeringManagerPhone || '';
+    document.getElementById('engineering-manager-email').value = data.engineeringManagerEmail || '';
+    document.getElementById('financial-manager-phone').value = data.financialManagerPhone || '';
+    document.getElementById('financial-manager-email').value = data.financialManagerEmail || '';
+    document.getElementById('hospital-manager-phone').value = data.hospitalManagerPhone || '';
+    document.getElementById('hospital-manager-email').value = data.hospitalManagerEmail || '';
+    document.getElementById('contractor-representative-phone').value = data.contractorRepresentativePhone || '';
+    document.getElementById('contractor-representative-email').value = data.contractorRepresentativeEmail || '';
+    document.getElementById('hospital-accountant-phone').value = data.hospitalAccountantPhone || '';
+    document.getElementById('hospital-accountant-email').value = data.hospitalAccountantEmail || '';
+    document.getElementById('assistant-manager-phone').value = data.assistantManagerPhone || '';
+    document.getElementById('assistant-manager-email').value = data.assistantManagerEmail || '';
+    document.getElementById('site-representative-phone').value = data.siteRepresentativePhone || '';
+    document.getElementById('site-representative-email').value = data.siteRepresentativeEmail || '';
+    document.getElementById('engineering-affairs-manager-phone').value = data.engineeringAffairsManagerPhone || '';
+    document.getElementById('engineering-affairs-manager-email').value = data.engineeringAffairsManagerEmail || '';
+    document.getElementById('general-services-manager-phone').value = data.generalServicesManagerPhone || '';
+    document.getElementById('general-services-manager-email').value = data.generalServicesManagerEmail || '';
+    document.getElementById('follow-up-manager-phone').value = data.followUpManagerPhone || '';
+    document.getElementById('follow-up-manager-email').value = data.followUpManagerEmail || '';
+    const fileStatus = document.querySelector('.file-status');
+    if (fileStatus) {
+        fileStatus.textContent = data.hospitalStamp ? 'تم اختيار ملف' : 'لم يتم اختيار أي ملف';
+    }
+    // عرض صورة التوقيع إذا وجدت
+    const stampImage = document.getElementById('hospital-stamp-preview');
+    if (stampImage && data.hospitalStamp) {
+        stampImage.src = data.hospitalStamp;
+        stampImage.style.display = 'block';
+    } else if (stampImage) {
+        stampImage.style.display = 'none';
     }
 }
+
 // جمع بيانات كل الأقسام
 // إنشاء نسخة احتياطية
 
@@ -1010,7 +918,7 @@ var HOSPITAL_CONTRACT_MAP = {
         endDate:         '2031-01-01',
         contractType:    'عقد أساسي',
         contractValue:   '111691036.01',
-        contractDetails: 'عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع (م. يدمة العام - م. حبونا العام - م. بدر الجنوب العام)',
+        contractDetails: 'عقد الصيانة والنظافة والشغل غير الطبي لمواقع (م. يدمة العام – م. حبونا العام – م. بدر الجنوب العام)',
     },
     'مستشفى حبونا العام': {
         contractNumber:  '250811180425',
@@ -1019,7 +927,7 @@ var HOSPITAL_CONTRACT_MAP = {
         endDate:         '2031-01-01',
         contractType:    'عقد أساسي',
         contractValue:   '111691036.01',
-        contractDetails: 'عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع (م. يدمة العام - م. حبونا العام - م. بدر الجنوب العام)',
+        contractDetails: 'عقد الصيانة والنظافة والشغل غير الطبي لمواقع (م. يدمة العام – م. حبونا العام – م. بدر الجنوب العام)',
     },
     'مستشفى بدر الجنوب العام': {
         contractNumber:  '250811180425',
@@ -1028,7 +936,7 @@ var HOSPITAL_CONTRACT_MAP = {
         endDate:         '2031-01-01',
         contractType:    'عقد أساسي',
         contractValue:   '111691036.01',
-        contractDetails: 'عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع (م. يدمة العام - م. حبونا العام - م. بدر الجنوب العام)',
+        contractDetails: 'عقد الصيانة والنظافة والشغل غير الطبي لمواقع (م. يدمة العام – م. حبونا العام – م. بدر الجنوب العام)',
     },
     'مستشفى الولادة والأطفال': {
         contractNumber:  '250701156483',
@@ -1037,7 +945,7 @@ var HOSPITAL_CONTRACT_MAP = {
         endDate:         '2031-02-04',
         contractType:    'عقد أساسي',
         contractValue:   '272601114.35',
-        contractDetails: 'عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع (م. الولادة والأطفال – م. نجران العام القديم وسكن الممرضات الخارجي – المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة)',
+        contractDetails: 'عقد الصيانة والتشغيل غير الطبي لمواقع (مستشفى الولادة والأطفال – مستشفى نجران العام القديم وسكن الممرضات الخارجي – المكاتب الإدارية والمرافق الصحية – صيانة وإصلاح السيارات والعيادات المتنقلة)',
     },
     'مستشفى نجران العام القديم وسكن الممرضات الخارجي': {
         contractNumber:  '250701156483',
@@ -1046,7 +954,7 @@ var HOSPITAL_CONTRACT_MAP = {
         endDate:         '2031-02-03',
         contractType:    'عقد أساسي',
         contractValue:   '272601114.35',
-        contractDetails: 'عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع (م. الولادة والأطفال – م. نجران العام القديم وسكن الممرضات الخارجي – المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة)',
+        contractDetails: 'عقد الصيانة والتشغيل غير الطبي لمواقع (مستشفى الولادة والأطفال – مستشفى نجران العام القديم وسكن الممرضات الخارجي – المكاتب الإدارية والمرافق الصحية – صيانة وإصلاح السيارات والعيادات المتنقلة)',
     },
     'المكاتب الإدارية والمرافق الصحية': {
         contractNumber:  '250701156483',
@@ -1055,7 +963,7 @@ var HOSPITAL_CONTRACT_MAP = {
         endDate:         '2031-02-04',
         contractType:    'عقد أساسي',
         contractValue:   '272601114.35',
-        contractDetails: 'عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع (م. الولادة والأطفال – م. نجران العام القديم وسكن الممرضات الخارجي – المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة)',
+        contractDetails: 'عقد الصيانة والتشغيل غير الطبي لمواقع (مستشفى الولادة والأطفال – مستشفى نجران العام القديم وسكن الممرضات الخارجي – المكاتب الإدارية والمرافق الصحية – صيانة وإصلاح السيارات والعيادات المتنقلة)',
     },
     'صيانة وإصلاح السيارات والعيادات المتنقلة': {
         contractNumber:  '250701156483',
@@ -1064,104 +972,45 @@ var HOSPITAL_CONTRACT_MAP = {
         endDate:         '2031-02-04',
         contractType:    'عقد أساسي',
         contractValue:   '272601114.35',
-        contractDetails: 'عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع (م. الولادة والأطفال – م. نجران العام القديم وسكن الممرضات الخارجي – المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة)',
+        contractDetails: 'عقد الصيانة والتشغيل غير الطبي لمواقع (مستشفى الولادة والأطفال – مستشفى نجران العام القديم وسكن الممرضات الخارجي – المكاتب الإدارية والمرافق الصحية – صيانة وإصلاح السيارات والعيادات المتنقلة)',
     },
 };
 
-function _applyFixedContractData(data, hospitalName, force) {
+// دمج البيانات الثابتة في بيانات المستشفى (لا تُكتب فوق قيم مدخلة يدوياً)
+function _applyFixedContractData(data, hospitalName) {
     var fixed = HOSPITAL_CONTRACT_MAP[hospitalName];
     if (!fixed) return data;
-
-    var hospitalChanged = data._autoHospitalName !== hospitalName;
-
-    data.hospitalName = hospitalName || data.hospitalName || '';
-
-    // بيانات أساسية ثابتة: تتعبأ تلقائياً عند أول اختيار أو عند تغيير المستشفى
-    if (force || hospitalChanged || !data.contractNumber) data.contractNumber = fixed.contractNumber;
-if (!data._manualCompanyName && (force || hospitalChanged || !data.companyName)) {
-    data.companyName = fixed.companyName;
-}    if (force || hospitalChanged || !data.startDate)      data.startDate      = fixed.startDate;
-    if (force || hospitalChanged || !data.endDate)        data.endDate        = fixed.endDate;
-    if (force || hospitalChanged || !data.contractType)   data.contractType   = fixed.contractType;
-    if (force || hospitalChanged || !data.contractValue)  data.contractValue  = fixed.contractValue;
-
-    // تفاصيل العقد: تتعبأ تلقائياً، لكن لا تُمسح إذا المستخدم عدّلها وحفظها
-    if (!data._manualContractDetails && (force || hospitalChanged || !data.contractDetails)) {
-        data.contractDetails = fixed.contractDetails;
-    }
-
-    data._autoHospitalName = hospitalName;
-
+    if (!data.contractNumber) data.contractNumber = fixed.contractNumber;
+    if (!data.companyName)    data.companyName    = fixed.companyName;
+    if (!data.startDate)      data.startDate      = fixed.startDate;
+    if (!data.endDate)        data.endDate        = fixed.endDate;
+    if (!data.contractType)   data.contractType   = fixed.contractType;
+    if (!data.contractValue)  data.contractValue  = fixed.contractValue;
+    if (!data.contractDetails) data.contractDetails = fixed.contractDetails;
     return data;
 }
 
 // إرجاع اسم الشركة الكامل من الجلسة أو من اسم المستشفى
 function _resolveCompanyName(session, hospitalName) {
-    if (session && session.companyName) {
-        return session.companyName;
-    }
     if (session && session.company && COMPANY_LABELS_MAP[session.company]) {
         return COMPANY_LABELS_MAP[session.company];
     }
     return HOSPITAL_COMPANY_MAP[hospitalName] || '';
 }
 
+// ── قراءة بيانات الجلسة الحالية ──────────────────────────────────────────────
 function _getSession() {
     try {
-        var raw = localStorage.getItem('najran_session');
-        var session = raw ? JSON.parse(raw) : {};
-
-        var pcd = {};
-        try {
-            pcd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-        } catch (e) {}
-
-        if (!session.hospital) {
-            session.hospital =
-                localStorage.getItem('hospitalName') ||
-                pcd.hospitalName ||
-                '';
-        }
-
-        if (!session.companyName) {
-            session.companyName =
-                localStorage.getItem('companyName') ||
-                pcd.companyName ||
-                '';
-        }
-
-        if (!session.company && session.companyName) {
-            session.company = session.companyName;
-        }
-
-        if (!session.contractNumber) {
-            session.contractNumber =
-                localStorage.getItem('contractNumber') ||
-                pcd.contractNumber ||
-                '';
-        }
-
-        return session;
-    } catch (e) {
-        return null;
-    }
+        var raw = Storage.prototype.getItem.call(localStorage, 'najran_session');
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
 }
 
 // ── مفتاح localStorage لبيانات عقد مستشفى معين ────────────────────────────
 function _hospitalContractKey(hospitalName) {
     return 'contractData__h__' + encodeURIComponent(hospitalName || '');
 }
-function _manualCompanyKey(hospitalName) {
-    return 'manualCompanyName__h__' + encodeURIComponent(hospitalName || '');
-}
 
-function _getManualCompanyName(hospitalName) {
-    try {
-        return localStorage.getItem(_manualCompanyKey(hospitalName || '')) || '';
-    } catch (e) {
-        return '';
-    }
-}
 // ── تبديل المستشفى النشط وتحميل بياناته ─────────────────────────────────────
 function switchHospital(hospitalName) {
     var session = _getSession();
@@ -1210,7 +1059,7 @@ function switchHospital(hospitalName) {
             directPurchaseRatio:    oldData.directPurchaseRatio    || '0',
         };
         // طبّق البيانات الثابتة (رقم العقد، التواريخ، الشركة)
-_applyFixedContractData(freshData, hospitalName, true);
+        _applyFixedContractData(freshData, hospitalName);
         localStorage.setItem('persistentContractData', JSON.stringify(freshData));
     }
 
@@ -1224,8 +1073,9 @@ _applyFixedContractData(freshData, hospitalName, true);
     var newData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
     if (_cd) _cd.value = newData.contractDetails || '';
 
- var _cn = document.getElementById('company-name');
-if (_cn) _cn.value = newData.companyName || _resolveCompanyName(session, hospitalName);
+    var fullCompanyFinal = _resolveCompanyName(session, hospitalName);
+    var _cn = document.getElementById('company-name');
+    if (_cn) _cn.value = fullCompanyFinal;
 
     updateMainHospitalName();
     renderHospitalPicker();
@@ -1294,12 +1144,7 @@ function autoFillFromSession() {
 
         var contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
         var changed = false;
-var manualCompanyName = _getManualCompanyName(contractData.hospitalName || session.hospital || '');
-if (manualCompanyName) {
-    contractData.companyName = manualCompanyName;
-    contractData._manualCompanyName = true;
-    changed = true;
-}
+
         // fallback: اقرأ hospitalName من المفتاح المنفصل إن لم يكن في persistentContractData
         if (!contractData.hospitalName) {
             var _fallbackHN = localStorage.getItem('hospitalName') || (session.hospital || '');
@@ -1313,26 +1158,19 @@ if (manualCompanyName) {
         }
 
         // اسم الشركة — من الجلسة أو من اسم المستشفى (من الجلسة أو من localStorage)
-     var _hospitalForCompany = session.hospital || contractData.hospitalName || '';
-var fullCompany = _resolveCompanyName(session, _hospitalForCompany);
-
-if (!contractData._manualCompanyName && fullCompany && contractData.companyName !== fullCompany) {
-    contractData.companyName = fullCompany;
-    changed = true;
-}
+        var _hospitalForCompany = session.hospital || contractData.hospitalName || '';
+        var fullCompany = _resolveCompanyName(session, _hospitalForCompany);
+        if (fullCompany && contractData.companyName !== fullCompany) {
+            contractData.companyName = fullCompany;
+            changed = true;
+        }
 
         // رقم العقد — يُملأ فقط لو فارغ
         if (!contractData.contractNumber && session.contractNumber) {
             contractData.contractNumber = session.contractNumber;
             changed = true;
         }
-        if (contractData.hospitalName && HOSPITAL_CONTRACT_MAP[contractData.hospitalName]) {
-            var beforeFixed = JSON.stringify(contractData);
-            _applyFixedContractData(contractData, contractData.hospitalName, false);
-            if (JSON.stringify(contractData) !== beforeFixed) {
-                changed = true;
-            }
-        }
+
         if (changed) {
             localStorage.setItem('persistentContractData', JSON.stringify(contractData));
             updateContractDisplayData();
@@ -1344,14 +1182,15 @@ if (!contractData._manualCompanyName && fullCompany && contractData.companyName 
             var _hn = document.getElementById('hospital-name');
             if (_hn) _hn.value = session.hospital;
         }
-   var _displayCompany = contractData.companyName || _resolveCompanyName(session, session.hospital || contractData.hospitalName || '');
-if (_displayCompany) {
-    var _cn = document.getElementById('company-name');
-    if (_cn) _cn.value = _displayCompany;
-}
+        var _fullCo = _resolveCompanyName(session, session.hospital || contractData.hospitalName || '');
+        if (_fullCo) {
+            var _cn = document.getElementById('company-name');
+            if (_cn) _cn.value = _fullCo;
+        }
 
         // ── إذا كان المستشفى أو الشركة غائبَّين في الجلسة — اجلب من API ──
-if ((!session.hospital) && session.clerkToken) {            fetch('/api/users/me', {
+        if ((!session.hospital || !session.company) && session.clerkToken) {
+            fetch('/api/users/me', {
                 headers: { 'Authorization': 'Bearer ' + session.clerkToken }
             }).then(function(r) { return r.ok ? r.json() : null; })
               .then(function(user) {
@@ -1369,43 +1208,33 @@ if ((!session.hospital) && session.clerkToken) {            fetch('/api/users/me
                         JSON.stringify(updated));
                 } catch(e2) {}
                 // تطبيق على DOM مباشرة
-if (user.hospital) {
-    var hn2 = document.getElementById('hospital-name');
-    if (hn2) hn2.value = user.hospital;
-}
-
-// حفظ في persistentContractData مع احترام التعديل اليدوي لاسم الشركة
-try {
-    var cd2 = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-    var ch2 = false;
-
-    if (user.hospital && cd2.hospitalName !== user.hospital) {
-        cd2.hospitalName = user.hospital;
-        ch2 = true;
-    }
-
-    if (user.company && !cd2._manualCompanyName) {
-        var fc2 = COMPANY_LABELS_MAP[user.company] ||
-                  user.company.replace(/_/g, ' ');
-
-        if (cd2.companyName !== fc2) {
-            cd2.companyName = fc2;
-            ch2 = true;
-        }
-    }
-
-    if (ch2) {
-        localStorage.setItem('persistentContractData', JSON.stringify(cd2));
-        updateMainHospitalName();
-    }
-
-    var cn2 = document.getElementById('company-name');
-    if (cn2) {
-        cn2.value = cd2.companyName || '';
-    }
-} catch(e3) {}
-
-renderHospitalPicker();
+                if (user.hospital) {
+                    var hn2 = document.getElementById('hospital-name');
+                    if (hn2) hn2.value = user.hospital;
+                }
+                if (user.company) {
+                    var co2 = COMPANY_LABELS_MAP[user.company] ||
+                              user.company.replace(/_/g, ' ');
+                    var cn2 = document.getElementById('company-name');
+                    if (cn2) cn2.value = co2;
+                }
+                // حفظ في persistentContractData
+                try {
+                    var cd2 = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+                    var ch2 = false;
+                    if (user.hospital && cd2.hospitalName !== user.hospital) {
+                        cd2.hospitalName = user.hospital; ch2 = true;
+                    }
+                    if (user.company) {
+                        var fc2 = COMPANY_LABELS_MAP[user.company] ||
+                                  user.company.replace(/_/g, ' ');
+                        if (cd2.companyName !== fc2) { cd2.companyName = fc2; ch2 = true; }
+                    }
+                    if (ch2) {
+                        localStorage.setItem('persistentContractData', JSON.stringify(cd2));
+                        updateMainHospitalName();
+                    }
+                } catch(e3) {}
                 renderHospitalPicker();
               }).catch(function() {});
         }
@@ -1444,7 +1273,7 @@ window._selectHospitalFromOverlay = function(hospitalName) {
     // دالة تطبيق الافتراضي (إن لم يوجد تعديل محفوظ على السيرفر)
     function _applyDefaults() {
         var freshData = { hospitalName: hospitalName };
-_applyFixedContractData(freshData, hospitalName, true);
+        _applyFixedContractData(freshData, hospitalName);
         // اكتب عبر الـ proxy حتى تقرأ باقي الصفحات البيانات من المكان الصحيح
         localStorage.setItem('persistentContractData', JSON.stringify(freshData));
     }
@@ -1472,16 +1301,10 @@ _applyFixedContractData(freshData, hospitalName, true);
 };
 
 // ── إعادة تعبئة الصفحة بعد انتهاء cloud-sync من السحب ──────────────────────
-var _settingsCloudRefreshTimer = null;
-
 window.addEventListener('najranCloudPulled', function() {
-    clearTimeout(_settingsCloudRefreshTimer);
-
-    _settingsCloudRefreshTimer = setTimeout(function() {
-        updateContractDisplayData();
-        autoFillFromSession();
-        renderHospitalPicker();
-    }, 250);
+    updateContractDisplayData();
+    autoFillFromSession();
+    renderHospitalPicker();
 });
 
 // ── تغيير الموقع من الشريط الجانبي (sidebar) ───────────────────────────────
@@ -1492,93 +1315,81 @@ window.addEventListener('najranHospitalChanged', function(e) {
         window._selectHospitalFromOverlay(h);
     }
 });
-function initSettingsPageFast() {
-    console.time('[settings] initSettingsPageFast TOTAL');
 
-    try {
-        console.time('[settings] step 1 - get session');
-        var session = (typeof _getSession === 'function') ? _getSession() : null;
-        console.timeEnd('[settings] step 1 - get session');
+// ✅✅✅ الحل النهائي: استبدل كتلة DOMContentLoaded بالكامل بهذا الكود ✅✅✅
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("الصفحة جاهزة. بدء التهيئة...");
 
-        console.time('[settings] step 2 - auto hospital select');
-        if (session && !session.hospital) {
-            var hospitals = [];
+    // 1. قم بكل الإعدادات الأولية
+    showSection('contract');
+    updateMainHospitalName();
+    updateDateTime();
+    setInterval(updateDateTime, 60000);
+    setupExtractDateListeners();
+    toggleFields('contract', false);
+    toggleFields('extract', false);
 
+    // 2. الخطوة الحاسمة: قم بتحميل البيانات بعد تأخير بسيط جداً (10 مللي ثانية)
+    // هذا يضمن أنها ستكون آخر عملية تحدث، وتتجاوز أي كود آخر قد يفرّغ الحقول.
+    setTimeout(() => {
+        console.log(">> الآن يتم فرض تحميل البيانات من localStorage...");
+
+        // إذا كان session.hospital فارغاً لكن session.hospitals لها قيم → اختر الأول تلقائياً
+        (function autoSelectFirstHospital() {
             try {
-                hospitals = JSON.parse(session.hospitals || '[]');
-            } catch(e) {
-                hospitals = [];
-            }
+                var _s = _getSession();
+                if (!_s) return;
+                if (_s.hospital) return; // يوجد بالفعل مستشفى محدد
+                var _hs = [];
+                try { _hs = JSON.parse(_s.hospitals || '[]'); } catch(e) {}
+                if (!_hs.length) return;
+                var _cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+                // اختر المستشفى المحفوظ سابقاً أو الأول في القائمة
+                var _target = (_cd.hospitalName && _hs.indexOf(_cd.hospitalName) !== -1)
+                    ? _cd.hospitalName : _hs[0];
+                console.log('[autoSelect] تحديد المستشفى تلقائياً:', _target);
+                switchHospital(_target);
+            } catch(e) {}
+        })();
 
-            if (hospitals.length > 0) {
-                var cd = {};
+        loadPersistentData();
+        autoFillFromSession();
+        renderMonthsArchive();
+        // ضمان إضافي: تشغيل autoFillFromSession مرتين بعد أي كود قد يمسح الحقول
+        setTimeout(autoFillFromSession, 200);
+        setTimeout(autoFillFromSession, 600);
 
-                try {
-                    cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-                } catch(e) {
-                    cd = {};
-                }
-
-                var target = (cd.hospitalName && hospitals.indexOf(cd.hospitalName) !== -1)
-                    ? cd.hospitalName
-                    : hospitals[0];
-
-                try {
-                    session.hospital = target;
-                    localStorage.setItem('najran_session', JSON.stringify(session));
-                    localStorage.setItem('hospitalName', target);
-
-                    if (!cd.hospitalName) {
-                        cd.hospitalName = target;
-
-                        if (typeof _applyFixedContractData === 'function') {
-                            _applyFixedContractData(cd, target, true);
+        // ── فحص إشارة اعتماد المستخلص — تقديم الفترة تلقائياً ──────────
+        var advanceFlag = localStorage.getItem('najran_advance_period');
+        if (advanceFlag) {
+            try {
+                localStorage.removeItem('najran_advance_period');
+                if (typeof window.autoIncrementExtractPeriod === 'function') {
+                    var result = window.autoIncrementExtractPeriod();
+                    if (result) {
+                        loadPersistentData();
+                        renderMonthsArchive();
+                        if (typeof showSuccessMessage === 'function') {
+                            showSuccessMessage('✅ تم اعتماد المستخلص — الفترة والدفعة جُهّزت تلقائياً: دفعة ' + result.paymentNumber + ' / ' + result.extractMonth + ' ' + result.extractYear);
                         }
-
-                        localStorage.setItem('persistentContractData', JSON.stringify(cd));
                     }
-                } catch(e) {
-                    console.warn('[settings] فشل تحديد المستشفى تلقائياً:', e);
                 }
-            }
+            } catch(e) { localStorage.removeItem('najran_advance_period'); }
         }
-        console.timeEnd('[settings] step 2 - auto hospital select');
+        // ─────────────────────────────────────────────────────────────────
 
-        console.time('[settings] step 3 - updateContractDisplayData');
-        if (typeof updateContractDisplayData === 'function') {
-            updateContractDisplayData();
-        }
-        console.timeEnd('[settings] step 3 - updateContractDisplayData');
+        console.log(">> اكتمل فرض تحميل البيانات.");
+    }, 10);
+});
 
-        console.time('[settings] step 4 - updateExtractDisplayData');
-        if (typeof updateExtractDisplayData === 'function') {
-            updateExtractDisplayData();
-        }
-        console.timeEnd('[settings] step 4 - updateExtractDisplayData');
-
-        console.time('[settings] step 5 - renderMonthsArchive');
-        if (typeof renderMonthsArchive === 'function') {
-            renderMonthsArchive();
-        }
-        console.timeEnd('[settings] step 5 - renderMonthsArchive');
-
-        console.time('[settings] step 6 - updateMainHospitalName');
-        if (typeof updateMainHospitalName === 'function') {
-            updateMainHospitalName();
-        }
-        console.timeEnd('[settings] step 6 - updateMainHospitalName');
-
-        console.time('[settings] step 7 - renderHospitalPicker');
-        if (typeof renderHospitalPicker === 'function') {
-            renderHospitalPicker();
-        }
-        console.timeEnd('[settings] step 7 - renderHospitalPicker');
-
-    } catch(e) {
-        console.error('[settings] initSettingsPageFast error:', e);
+function openBackupOptionsMenu() {
+    const modal = document.getElementById('backup-options-modal');
+    if (modal) {
+        modal.style.display = 'block'; // أو 'flex' إذا كنت تستخدم flexbox لإظهار النافذة
+    } else {
+        console.error("خطأ: لم يتم العثور على نافذة خيارات النسخ الاحتياطي (backup-options-modal).");
+        alert("خطأ في تحميل واجهة النسخ الاحتياطي.");
     }
-
-    console.timeEnd('[settings] initSettingsPageFast TOTAL');
 }
 
 /**
@@ -1625,72 +1436,4 @@ function updateMainHospitalName() {
     if (titleElement && hospitalName) {
         titleElement.textContent = hospitalName;
     }
-}
-
-// =====================================================
-// ربط دوال صفحة الإعدادات بالـ window
-// حتى تعمل أزرار HTML والقائمة الجانبية بعد تقسيم الملفات
-// =====================================================
-
-try {
-    if (typeof showSection === 'function') {
-        window.showSection = showSection;
-    }
-
-    if (typeof saveContractData === 'function') {
-        window.saveContractData = saveContractData;
-    }
-
-    if (typeof saveExtractData === 'function') {
-        window.saveExtractData = saveExtractData;
-    }
-
-    if (typeof clearSectionData === 'function') {
-        window.clearSectionData = clearSectionData;
-    }
-
-    if (typeof cancelSection === 'function') {
-        window.cancelSection = cancelSection;
-    }
-
-    if (typeof showPasswordPrompt === 'function') {
-        window.showPasswordPrompt = showPasswordPrompt;
-    }
-
-    if (typeof updateContractDisplayData === 'function') {
-        window.updateContractDisplayData = updateContractDisplayData;
-    }
-
-    if (typeof updateExtractDisplayData === 'function') {
-        window.updateExtractDisplayData = updateExtractDisplayData;
-    }
-
-    if (typeof loadPersistentData === 'function') {
-        window.loadPersistentData = loadPersistentData;
-    }
-
-    if (typeof autoFillFromSession === 'function') {
-        window.autoFillFromSession = autoFillFromSession;
-    }
-
-    if (typeof switchHospital === 'function') {
-        window.switchHospital = switchHospital;
-    }
-
-    if (typeof renderMonthsArchive === 'function') {
-        window.renderMonthsArchive = renderMonthsArchive;
-    }
-
-    if (typeof updateMainHospitalName === 'function') {
-        window.updateMainHospitalName = updateMainHospitalName;
-    }
-
-    if (typeof renderHospitalPicker === 'function') {
-        window.renderHospitalPicker = renderHospitalPicker;
-    }
-
-    console.log('[settings_main] تم ربط دوال الإعدادات بالـ window بنجاح');
-
-} catch (e) {
-    console.error('[settings_main] فشل ربط دوال الإعدادات بالـ window:', e);
 }
