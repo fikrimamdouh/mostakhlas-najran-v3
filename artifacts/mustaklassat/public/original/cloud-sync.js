@@ -411,32 +411,82 @@ const [userResult, hospitalResult] = await Promise.all([
     const userData     = userResult?.data     || {};
     const hospitalData = hospitalResult?.data  || {};
 
-    const cloudExtractData = hospitalData['persistentExtractData'] || userData['persistentExtractData'] || null;
-    const oldMonthKey = getMonthKeyFromExtractData(localStorage.getItem('persistentExtractData'));
-    const newMonthKey = getMonthKeyFromExtractData(cloudExtractData);
-    const monthChanged = oldMonthKey && newMonthKey && oldMonthKey !== newMonthKey;
+const cloudExtractData = hospitalData['persistentExtractData'] || userData['persistentExtractData'] || null;
+const localExtractData = localStorage.getItem('persistentExtractData');
 
-    if (monthChanged) {
-      if (typeof window.saveMonthSnapshot === 'function') {
-        window.saveMonthSnapshot(oldMonthKey);
-      } else {
-        try {
-          const snap = {};
-          MONTH_SPECIFIC_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) snap[k] = v; });
-          for (let i = 0; i < localStorage.length; i++) {
-            const k = localStorage.key(i);
-            if (k && (k.startsWith('deptCalculatedCost_') || k.startsWith('dept_'))) snap[k] = localStorage.getItem(k);
-          }
-          localStorage.setItem('monthSnapshot_' + oldMonthKey, JSON.stringify(snap));
-        } catch (_) {}
+const oldMonthKey = getMonthKeyFromExtractData(localExtractData);
+const newMonthKey = getMonthKeyFromExtractData(cloudExtractData);
+
+// بعد المنطق الجديد: الإعدادات هي مصدر الفترة الحالي.
+// لا نسمح للسحابة بفتح شهر مختلف تلقائيًا فوق الشهر الذي حفظه المستخدم محليًا.
+const localHasConfirmedExtract = (() => {
+  try {
+    const d = JSON.parse(localExtractData || '{}');
+    return !!(d.extractMonth && d.extractYear && d.extractStart && d.extractEnd && d.paymentNumber);
+  } catch (_) {
+    return false;
+  }
+})();
+
+const monthChanged =
+  oldMonthKey &&
+  newMonthKey &&
+  oldMonthKey !== newMonthKey &&
+  !localHasConfirmedExtract;
+const EXTRACT_META_KEYS = new Set([
+  'persistentExtractData',
+  'extractMonth',
+  'extractYear',
+  'extractStart',
+  'extractEnd',
+  'extractFromDate',
+  'extractToDate',
+  'paymentNumber',
+  'extractNumber'
+]);
+
+const keepLocalExtractMeta =
+  oldMonthKey &&
+  newMonthKey &&
+  oldMonthKey !== newMonthKey &&
+  localHasConfirmedExtract;
+if (monthChanged) {
+  if (typeof window.saveMonthSnapshot === 'function') {
+    window.saveMonthSnapshot(oldMonthKey);
+  } else {
+    try {
+      const snap = {};
+      MONTH_SPECIFIC_KEYS.forEach(k => {
+        const v = localStorage.getItem(k);
+        if (v !== null) snap[k] = v;
+      });
+
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('deptCalculatedCost_') || k.startsWith('dept_'))) {
+          snap[k] = localStorage.getItem(k);
+        }
       }
-      console.log(`[MzamanaCloud] تغيّر الشهر: ${oldMonthKey} → ${newMonthKey}`);
-    }
+
+      localStorage.setItem('monthSnapshot_' + oldMonthKey, JSON.stringify(snap));
+    } catch (_) {}
+  }
+
+  console.log(`[MzamanaCloud] تغيّر الشهر: ${oldMonthKey} → ${newMonthKey}`);
+} else if (oldMonthKey && newMonthKey && oldMonthKey !== newMonthKey && localHasConfirmedExtract) {
+  console.log(`[MzamanaCloud] تم تجاهل شهر السحابة (${newMonthKey}) لأن المستخلص المحلي المؤكد هو (${oldMonthKey})`);
+}
 
     let merged = 0;
     let skippedByPage = 0;
     for (const [key, value] of Object.entries(userData)) {
       try {
+                const normalizedKey = String(key || '').replace(/^_u\d+_/, '');
+
+        if (keepLocalExtractMeta && EXTRACT_META_KEYS.has(normalizedKey)) {
+          skippedByPage++;
+          continue;
+        }
         if (!shouldMergePulledKeyForCurrentPage(key)) { skippedByPage++; continue; }
         if (COMPUTED_KEYS.has(key)) {
           const local = localStorage.getItem(key);
@@ -453,6 +503,12 @@ const [userResult, hospitalResult] = await Promise.all([
     for (const [key, value] of Object.entries(hospitalData)) {
       if (!PERSONAL_KEYS.has(key)) {
         try {
+                    const normalizedKey = String(key || '').replace(/^_u\d+_/, '');
+
+          if (keepLocalExtractMeta && EXTRACT_META_KEYS.has(normalizedKey)) {
+            skippedByPage++;
+            continue;
+          }
           if (!shouldMergePulledKeyForCurrentPage(key)) { skippedByPage++; continue; }
           if (COMPUTED_KEYS.has(key)) {
             const local = localStorage.getItem(key);
