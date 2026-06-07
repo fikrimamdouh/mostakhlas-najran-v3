@@ -1493,102 +1493,93 @@ window.addEventListener('najranHospitalChanged', function(e) {
     }
 });
 function initSettingsPageFast() {
-    console.time('[settings] initSettingsPageFast');
-
-    var session = (typeof _getSession === 'function') ? _getSession() : null;
-
-    // اختيار أول مستشفى مرة واحدة فقط، بدون تحميل زائد
-    if (session && !session.hospital) {
-        var hospitals = [];
-
-        try {
-            hospitals = JSON.parse(session.hospitals || '[]');
-        } catch(e) {
-            hospitals = [];
-        }
-
-        if (hospitals.length > 0) {
-            var cd = {};
-
-            try {
-                cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-            } catch(e) {
-                cd = {};
-            }
-
-            var target = (cd.hospitalName && hospitals.indexOf(cd.hospitalName) !== -1)
-                ? cd.hospitalName
-                : hospitals[0];
-
-            // لا تستخدم switchHospital هنا لأنها تعمل loadPersistentData + autoFill + render
-            try {
-                session.hospital = target;
-                Storage.prototype.setItem.call(localStorage, 'najran_session', JSON.stringify(session));
-                localStorage.setItem('hospitalName', target);
-
-                if (!cd.hospitalName) {
-                    cd.hospitalName = target;
-                    if (typeof _applyFixedContractData === 'function') {
-                        _applyFixedContractData(cd, target, true);
-                    }
-                    localStorage.setItem('persistentContractData', JSON.stringify(cd));
-                }
-            } catch(e) {
-                console.warn('[settings] فشل تحديد المستشفى تلقائياً:', e);
-            }
-        }
-    }
-
-    // تحميل واحد فقط
-    updateContractDisplayData();
-    updateExtractDisplayData();
-
-    if (typeof renderMonthsArchive === 'function') {
-        renderMonthsArchive();
-    }
-
-    if (typeof updateMainHospitalName === 'function') {
-        updateMainHospitalName();
-    }
-
-    if (typeof renderHospitalPicker === 'function') {
-        renderHospitalPicker();
-    }
-
-    console.timeEnd('[settings] initSettingsPageFast');
-}
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("الصفحة جاهزة. بدء التهيئة السريعة...");
+    console.time('[settings] initSettingsPageFast TOTAL');
 
     try {
-        // منع أي تهيئة مكررة لنفس الصفحة
-        if (window.__settingsPageInitialized) {
-            console.warn('[settings] تم منع تهيئة مكررة');
-            return;
-        }
-        window.__settingsPageInitialized = true;
+        console.time('[settings] step 1 - get session');
+        var session = (typeof _getSession === 'function') ? _getSession() : null;
+        console.timeEnd('[settings] step 1 - get session');
 
-        // إعدادات واجهة خفيفة فقط
-        showSection('contract');
-        updateDateTime();
-        setInterval(updateDateTime, 60000);
-        setupExtractDateListeners();
-        toggleFields('contract', false);
-        toggleFields('extract', false);
+        console.time('[settings] step 2 - auto hospital select');
+        if (session && !session.hospital) {
+            var hospitals = [];
 
-        // تحميل سريع مرة واحدة بعد استقرار DOM
-        setTimeout(() => {
             try {
-                initSettingsPageFast();
+                hospitals = JSON.parse(session.hospitals || '[]');
             } catch(e) {
-                console.error('[settings] فشل initSettingsPageFast:', e);
+                hospitals = [];
             }
-        }, 80);
+
+            if (hospitals.length > 0) {
+                var cd = {};
+
+                try {
+                    cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+                } catch(e) {
+                    cd = {};
+                }
+
+                var target = (cd.hospitalName && hospitals.indexOf(cd.hospitalName) !== -1)
+                    ? cd.hospitalName
+                    : hospitals[0];
+
+                try {
+                    session.hospital = target;
+                    localStorage.setItem('najran_session', JSON.stringify(session));
+                    localStorage.setItem('hospitalName', target);
+
+                    if (!cd.hospitalName) {
+                        cd.hospitalName = target;
+
+                        if (typeof _applyFixedContractData === 'function') {
+                            _applyFixedContractData(cd, target, true);
+                        }
+
+                        localStorage.setItem('persistentContractData', JSON.stringify(cd));
+                    }
+                } catch(e) {
+                    console.warn('[settings] فشل تحديد المستشفى تلقائياً:', e);
+                }
+            }
+        }
+        console.timeEnd('[settings] step 2 - auto hospital select');
+
+        console.time('[settings] step 3 - updateContractDisplayData');
+        if (typeof updateContractDisplayData === 'function') {
+            updateContractDisplayData();
+        }
+        console.timeEnd('[settings] step 3 - updateContractDisplayData');
+
+        console.time('[settings] step 4 - updateExtractDisplayData');
+        if (typeof updateExtractDisplayData === 'function') {
+            updateExtractDisplayData();
+        }
+        console.timeEnd('[settings] step 4 - updateExtractDisplayData');
+
+        console.time('[settings] step 5 - renderMonthsArchive');
+        if (typeof renderMonthsArchive === 'function') {
+            renderMonthsArchive();
+        }
+        console.timeEnd('[settings] step 5 - renderMonthsArchive');
+
+        console.time('[settings] step 6 - updateMainHospitalName');
+        if (typeof updateMainHospitalName === 'function') {
+            updateMainHospitalName();
+        }
+        console.timeEnd('[settings] step 6 - updateMainHospitalName');
+
+        console.time('[settings] step 7 - renderHospitalPicker');
+        if (typeof renderHospitalPicker === 'function') {
+            renderHospitalPicker();
+        }
+        console.timeEnd('[settings] step 7 - renderHospitalPicker');
 
     } catch(e) {
-        console.error("خطأ أثناء تهيئة صفحة الإعدادات:", e);
+        console.error('[settings] initSettingsPageFast error:', e);
     }
-});
+
+    console.timeEnd('[settings] initSettingsPageFast TOTAL');
+}
 
 /**
  * دالة عامة لإغلاق أي نافذة منبثقة.
