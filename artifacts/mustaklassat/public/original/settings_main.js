@@ -1308,11 +1308,28 @@ if (!contractData._manualCompanyName && fullCompany && contractData.companyName 
                 changed = true;
             }
         }
-        if (changed) {
-            localStorage.setItem('persistentContractData', JSON.stringify(contractData));
-            updateContractDisplayData();
-            updateMainHospitalName();
-        }
+       if (changed) {
+    localStorage.setItem('persistentContractData', JSON.stringify(contractData));
+
+    if (contractData.hospitalName) {
+        localStorage.setItem('hospitalName', contractData.hospitalName);
+    }
+
+    if (contractData.companyName) {
+        localStorage.setItem('companyName', contractData.companyName);
+    }
+
+    if (contractData.contractNumber) {
+        localStorage.setItem('contractNumber', contractData.contractNumber);
+    }
+
+    if (contractData.contractDetails) {
+        localStorage.setItem('contractDetails', contractData.contractDetails);
+    }
+
+    updateContractDisplayData();
+    updateMainHospitalName();
+}
 
         // ── تحديث DOM مباشرة — بضمان مستقل عن localStorage وعن changed ──
         if (session.hospital) {
@@ -1320,9 +1337,12 @@ if (!contractData._manualCompanyName && fullCompany && contractData.companyName 
             if (_hn) _hn.value = session.hospital;
         }
    var _displayCompany = contractData.companyName || _resolveCompanyName(session, session.hospital || contractData.hospitalName || '');
+
 if (_displayCompany) {
     var _cn = document.getElementById('company-name');
     if (_cn) _cn.value = _displayCompany;
+
+    localStorage.setItem('companyName', _displayCompany);
 }
 
         // ── إذا كان المستشفى أو الشركة غائبَّين في الجلسة — اجلب من API ──
@@ -1408,7 +1428,10 @@ window._selectHospitalFromOverlay = function(hospitalName) {
 
     // 2. احفظ مفتاح hospitalName المنفصل (عبر الـ proxy حتى تقرأه باقي الصفحات)
     localStorage.setItem('hospitalName', hospitalName);
-
+var overlayCompanyName = _resolveCompanyName(_getSession(), hospitalName);
+if (overlayCompanyName) {
+    localStorage.setItem('companyName', overlayCompanyName);
+}
     // 3. أزل الـ overlay
     var ov = document.getElementById('_najran_ctx_overlay');
     if (ov) { ov.style.opacity = '0'; setTimeout(function(){ if(ov && ov.parentNode) ov.parentNode.removeChild(ov); }, 300); }
