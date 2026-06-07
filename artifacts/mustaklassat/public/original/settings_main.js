@@ -1590,3 +1590,28 @@ function updateMainHospitalName() {
         titleElement.textContent = hospitalName;
     }
 }
+// =====================================================
+// ربط دوال صفحة الإعدادات بالـ window
+// حتى تعمل الاختبارات وأزرار HTML بعد الرجوع للنسخة المستقرة
+// =====================================================
+try {
+    if (typeof showSection === 'function') window.showSection = showSection;
+    if (typeof saveContractData === 'function') window.saveContractData = saveContractData;
+    if (typeof saveExtractData === 'function') window.saveExtractData = saveExtractData;
+    if (typeof clearSectionData === 'function') window.clearSectionData = clearSectionData;
+    if (typeof cancelSection === 'function') window.cancelSection = cancelSection;
+    if (typeof showPasswordPrompt === 'function') window.showPasswordPrompt = showPasswordPrompt;
+
+    if (typeof updateContractDisplayData === 'function') window.updateContractDisplayData = updateContractDisplayData;
+    if (typeof updateExtractDisplayData === 'function') window.updateExtractDisplayData = updateExtractDisplayData;
+    if (typeof loadPersistentData === 'function') window.loadPersistentData = loadPersistentData;
+    if (typeof autoFillFromSession === 'function') window.autoFillFromSession = autoFillFromSession;
+    if (typeof switchHospital === 'function') window.switchHospital = switchHospital;
+    if (typeof renderMonthsArchive === 'function') window.renderMonthsArchive = renderMonthsArchive;
+    if (typeof updateMainHospitalName === 'function') window.updateMainHospitalName = updateMainHospitalName;
+    if (typeof renderHospitalPicker === 'function') window.renderHospitalPicker = renderHospitalPicker;
+
+    console.log('[settings_main] تم ربط دوال الإعدادات بالـ window بنجاح');
+} catch (e) {
+    console.error('[settings_main] فشل ربط دوال الإعدادات بالـ window:', e);
+}
