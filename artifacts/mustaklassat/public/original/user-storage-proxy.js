@@ -28,20 +28,40 @@
   const _remove = Storage.prototype.removeItem.bind(localStorage);
   const _key    = Storage.prototype.key.bind(localStorage);
 
-  function prefixed(key) {
-    return EXCLUDED_KEYS.includes(key) ? key : PREFIX + key;
+function cleanKey(key) {
+  return String(key || '').replace(/^(?:_u\d+_)+/, '');
+}
+
+function prefixed(key) {
+  const clean = cleanKey(key);
+  return EXCLUDED_KEYS.includes(clean) ? clean : PREFIX + clean;
+}
+
+function visibleKeys(target) {
+  const keys = [];
+  const seen = new Set();
+
+  for (let i = 0; i < target.length; i++) {
+    const raw = _key(i);
+    if (!raw) continue;
+
+    const clean = cleanKey(raw);
+
+    if (EXCLUDED_KEYS.includes(clean)) {
+      if (!seen.has(clean)) {
+        seen.add(clean);
+        keys.push(clean);
+      }
+    } else if (raw.startsWith(PREFIX)) {
+      if (!seen.has(clean)) {
+        seen.add(clean);
+        keys.push(clean);
+      }
+    }
   }
 
-  function visibleKeys(target) {
-    const keys = [];
-    for (let i = 0; i < target.length; i++) {
-      const raw = _key(i);
-      if (!raw) continue;
-      if (EXCLUDED_KEYS.includes(raw)) keys.push(raw);
-      else if (raw.startsWith(PREFIX)) keys.push(raw.slice(PREFIX.length));
-    }
-    return keys;
-  }
+  return keys;
+}
 
   const proxyHandler = {
     get(target, prop) {
@@ -114,8 +134,9 @@
   ];
 
   function esc(v) { return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-  function normalizeKey(k) { return String(k || '').replace(/^_u\d+_/, ''); }
-  function parseExtractData(raw) { if (!raw) return {}; if (typeof raw === 'object') return raw; try { return JSON.parse(raw); } catch (_) { return {}; } }
+function normalizeKey(k) {
+  return String(k || '').replace(/^(?:_u\d+_)+/, '');
+}  function parseExtractData(raw) { if (!raw) return {}; if (typeof raw === 'object') return raw; try { return JSON.parse(raw); } catch (_) { return {}; } }
   function getGlobalExtractById(id) { try { if (typeof allExtracts !== 'undefined' && Array.isArray(allExtracts)) return allExtracts.find(e => String(e.id) === String(id)) || null; } catch (_) {} return null; }
   function money(n) { const v = Number(n || 0); return v ? v.toLocaleString('ar-SA', { minimumFractionDigits:2, maximumFractionDigits:2 }) : '—'; }
 
