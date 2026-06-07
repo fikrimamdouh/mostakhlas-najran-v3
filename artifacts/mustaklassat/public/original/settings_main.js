@@ -1382,14 +1382,14 @@ try {
 } catch(e3) {}
 
 renderHospitalPicker();
-                renderHospitalPicker();
               }).catch(function() {});
         }
 
-        // اعرض منتقي المستشفى دائماً
-        renderHospitalPicker();
-    } catch (e) { /* تجاهل أي خطأ */ }
-}
+        // اعرض منتقي المستشفى مرة واحدة فقط
+        if (!window.__settingsHospitalPickerRendered) {
+            window.__settingsHospitalPickerRendered = true;
+            renderHospitalPicker();
+        }
 
 // ── اختيار مستشفى من الـ overlay مباشرة (لا يحتاج session) ─────────────────
 window._selectHospitalFromOverlay = function(hospitalName) {
@@ -1466,7 +1466,7 @@ window.addEventListener('najranHospitalChanged', function(e) {
 // ✅✅✅ الحل النهائي: استبدل كتلة DOMContentLoaded بالكامل بهذا الكود ✅✅✅
 document.addEventListener('DOMContentLoaded', () => {
     console.log("الصفحة جاهزة. بدء التهيئة...");
-
+window.__settingsHospitalPickerRendered = false;
     // 1. قم بكل الإعدادات الأولية
     showSection('contract');
     updateMainHospitalName();
@@ -1499,13 +1499,15 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch(e) {}
         })();
 
-        loadPersistentData();
-        autoFillFromSession();
+       loadPersistentData();
+autoFillFromSession();
+
+// لا ترسم أرشيف الشهور فوراً مع فتح الصفحة حتى لا تعلق عند الرجوع
+setTimeout(function () {
+    if (typeof renderMonthsArchive === 'function') {
         renderMonthsArchive();
-        // ضمان إضافي: تشغيل autoFillFromSession مرتين بعد أي كود قد يمسح الحقول
-      setTimeout(autoFillFromSession, 200);
-setTimeout(autoFillFromSession, 600);
-setTimeout(autoFillFromSession, 1200);
+    }
+}, 300);
 
         // ── فحص إشارة اعتماد المستخلص — تقديم الفترة تلقائياً ──────────
         var advanceFlag = localStorage.getItem('najran_advance_period');
