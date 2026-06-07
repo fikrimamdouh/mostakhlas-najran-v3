@@ -1,6 +1,7 @@
 /**
  * ExtractDataViewer — معاينة احترافية للمستخلص
  * يعرض لقطة localStorage المحفوظة كصفحة مراجعة Read-Only بدل JSON خام.
+ * القاعدة: كل نوع مستخلص يعرض بياناته فقط.
  */
 
 interface Props {
@@ -18,6 +19,74 @@ function asText(v: any) {
   if (v === null || v === undefined || v === "") return "—";
   if (typeof v === "object") return "بيانات محفوظة";
   return String(v);
+}
+
+function normalizeKey(k: string) {
+  return String(k || "").replace(/^_u\d+_/, "").toLowerCase();
+}
+
+function isMetaKey(k: string) {
+  const nk = normalizeKey(k);
+  return (
+    nk === "persistentcontractdata" ||
+    nk === "persistentextractdata" ||
+    nk === "hospitalname" ||
+    nk === "companyname" ||
+    nk === "contractnumber" ||
+    nk === "contractdetails" ||
+    nk === "extractmonth" ||
+    nk === "extractyear" ||
+    nk === "extractstart" ||
+    nk === "extractend" ||
+    nk === "paymentnumber"
+  );
+}
+
+function isLaborKey(k: string) {
+  const nk = normalizeKey(k);
+  return (
+    nk.includes("attendance") ||
+    nk.includes("performance") ||
+    nk.includes("achievement") ||
+    nk.includes("labor") ||
+    nk.includes("centername") ||
+    nk.includes("department") ||
+    nk.includes("distribution") ||
+    nk.includes("finallaborcost") ||
+    nk.includes("performancetotaldeduction") ||
+    nk.includes("grand-net-total") ||
+    nk.includes("najran_labor_") ||
+    nk.includes("ng_") ||
+    nk.includes("nd_")
+  );
+}
+
+function isConsumablesKey(k: string) {
+  const nk = normalizeKey(k);
+  return (
+    nk.includes("consumables") ||
+    nk.includes("subcontractors") ||
+    nk.includes("water") ||
+    nk.includes("sewage") ||
+    nk.includes("finalconsumablescost") ||
+    nk.includes("admin_offices_consumables") ||
+    nk.includes("healthcentersconsumables") ||
+    nk.includes("mainhospitalconsumables")
+  );
+}
+
+function isSpareKey(k: string) {
+  const nk = normalizeKey(k);
+  return nk.includes("spare") || nk.includes("parts");
+}
+
+function keysForType(data: Record<string, any>, extractType: string) {
+  const keys = Object.keys(data || {});
+  if (extractType === "labor") return keys.filter(k => isLaborKey(k) && !isConsumablesKey(k) && !isSpareKey(k));
+  if (extractType === "consumables") return keys.filter(k => isConsumablesKey(k) && !isLaborKey(k));
+  if (extractType === "spare_parts") return keys.filter(k => isSpareKey(k));
+  if (extractType === "health_centers" || extractType === "admin_offices") return keys.filter(k => isLaborKey(k) || isConsumablesKey(k));
+  return keys.filter(k => !isMetaKey(k));
 }
 
 function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
@@ -106,62 +175,63 @@ function ContractHeader({ data, extractType }: { data: Record<string, any>; extr
   );
 }
 
-function QualityChecks({ data }: { data: Record<string, any> }) {
+function QualityChecks({ data, extractType }: { data: Record<string, any>; extractType: string }) {
   const info = getExtractInfo(data);
   const contract = data["persistentContractData"] || {};
-  const hasAttendance = Object.keys(data).some(k => k.toLowerCase().includes("attendance"));
-  const hasPerformance = Object.keys(data).some(k => k.toLowerCase().includes("performance"));
-  const hasTotal = Boolean(data["finalLaborCost"] || data["finalConsumablesCost"] || data["grand-net-total"] || data["sparePartsTotalAmount"]);
+  const scopedKeys = keysForType(data, extractType);
+  const hasTotal = Boolean(
+    (extractType === "labor" && (data["finalLaborCost"] || data["grand-net-total"])) ||
+    (extractType === "consumables" && (data["finalConsumablesCost"] || data["grand-net-total"])) ||
+    (extractType === "spare_parts" && data["sparePartsTotalAmount"]) ||
+    scopedKeys.length > 0
+  );
 
   return (
     <>
-      <SectionTitle title="فحص المطابقة قبل الاعتماد" subtitle="قراءة سريعة لأهم بيانات المستخلص المحفوظة" />
+      <SectionTitle title="فحص المطابقة قبل الاعتماد" subtitle="قراءة سريعة لأهم بيانات هذا النوع من المستخلص فقط" />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         <StatusLine ok={!!info.paymentNumber} label="رقم الدفعة" />
         <StatusLine ok={!!(info.start && info.end)} label="تاريخ البداية والنهاية" />
         <StatusLine ok={!!(contract.hospitalName || data.hospitalName)} label="الموقع / المستشفى" />
         <StatusLine ok={!!(contract.companyName || data.companyName)} label="الشركة" />
-        <StatusLine ok={hasAttendance} label="بيانات الحضور والانصراف" />
-        <StatusLine ok={hasPerformance} label="بيانات الأداء" />
-        <StatusLine ok={hasTotal} label="إجمالي المستخلص" />
+        <StatusLine ok={scopedKeys.length > 0} label="بيانات المستخلص الخاصة بهذا النوع" />
+        <StatusLine ok={hasTotal} label="إجمالي / بيانات مالية" />
       </div>
     </>
   );
 }
 
-function DataSummary({ data }: { data: Record<string, any> }) {
-  const keys = Object.keys(data);
-  const operational = keys.filter(k =>
-    k.includes("attendance") ||
-    k.includes("performance") ||
-    k.includes("consumables") ||
-    k.includes("spare") ||
-    k.includes("achievement") ||
-    k.includes("final") ||
-    k.includes("grand-net")
-  );
+function DataSummary({ data, extractType }: { data: Record<string, any>; extractType: string }) {
+  const scopedKeys = keysForType(data, extractType).filter(k => !isMetaKey(k));
+  const titleMap: Record<string, string> = {
+    labor: "محتويات مستخلص العمالة",
+    consumables: "محتويات مستخلص المستهلكات",
+    spare_parts: "محتويات مستخلص قطع الغيار",
+    health_centers: "محتويات مستخلص المراكز الصحية",
+    admin_offices: "محتويات مستخلص المكاتب الإدارية",
+  };
 
   return (
     <>
-      <SectionTitle title="محتويات لقطة المستخلص" subtitle="بيانات محفوظة للرجوع إليها أثناء المراجعة" />
+      <SectionTitle title={titleMap[extractType] || "محتويات المستخلص"} subtitle="تم إخفاء بيانات الأنواع الأخرى من هذه المعاينة لتجنب الخلط" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <InfoCard label="إجمالي المفاتيح المحفوظة" value={keys.length} strong />
-        <InfoCard label="مفاتيح تشغيلية" value={operational.length} strong />
-        <InfoCard label="إجمالي العمالة" value={data["finalLaborCost"] ? `${fmt(data["finalLaborCost"])} ر.س` : "—"} />
-        <InfoCard label="إجمالي المستهلكات" value={data["finalConsumablesCost"] ? `${fmt(data["finalConsumablesCost"])} ر.س` : "—"} />
+        <InfoCard label="مفاتيح هذا المستخلص" value={scopedKeys.length} strong />
+        <InfoCard label="إجمالي العمالة" value={extractType === "labor" && data["finalLaborCost"] ? `${fmt(data["finalLaborCost"])} ر.س` : "—"} />
+        <InfoCard label="إجمالي المستهلكات" value={extractType === "consumables" && data["finalConsumablesCost"] ? `${fmt(data["finalConsumablesCost"])} ر.س` : "—"} />
+        <InfoCard label="الحالة" value="Read Only" />
       </div>
 
-      {operational.length > 0 && (
+      {scopedKeys.length > 0 && (
         <div className="mt-3 rounded-xl p-3" style={{ background: "#f8f9fe", border: "1px solid #e8edf7" }}>
-          <p className="text-xs text-gray-400 mb-2">أهم البيانات المرفقة</p>
+          <p className="text-xs text-gray-400 mb-2">أهم البيانات المرفقة لهذا النوع</p>
           <div className="flex flex-wrap gap-2">
-            {operational.slice(0, 28).map(k => (
+            {scopedKeys.slice(0, 32).map(k => (
               <span key={k} className="text-xs px-2 py-1 rounded-full" style={{ background: "#fff", border: "1px solid #dbe5f5", color: "#1e3c72" }}>
                 {k}
               </span>
             ))}
-            {operational.length > 28 && (
-              <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-500">+{operational.length - 28}</span>
+            {scopedKeys.length > 32 && (
+              <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-500">+{scopedKeys.length - 32}</span>
             )}
           </div>
         </div>
@@ -174,9 +244,7 @@ function SparePartsView({ data }: { data: Record<string, any> }) {
   const raw = data["najran_spare_parts_v1"];
   const rows = raw?.rows && Array.isArray(raw.rows) ? raw.rows.filter((r: any) => r.name || r.desc) : [];
 
-  if (rows.length === 0) {
-    return <DataSummary data={data} />;
-  }
+  if (rows.length === 0) return <DataSummary data={data} extractType="spare_parts" />;
 
   return (
     <>
@@ -215,17 +283,17 @@ function SparePartsView({ data }: { data: Record<string, any> }) {
 
 function ConsumablesView({ data }: { data: Record<string, any> }) {
   const total = data["finalConsumablesCost"] || data["grand-net-total"];
-  const keys = Object.keys(data).filter(k => k.toLowerCase().includes("consumables") || k.toLowerCase().includes("subcontractors") || k.toLowerCase().includes("water") || k.toLowerCase().includes("sewage"));
+  const keys = keysForType(data, "consumables");
 
   return (
     <div className="space-y-4">
-      <DataSummary data={data} />
       {total && (
         <div className="rounded-xl p-4 text-center" style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)" }}>
           <p className="text-white/70 text-xs mb-1">إجمالي مستخلص المستهلكات</p>
           <p className="text-3xl font-extrabold text-white">{fmt(total)} ر.س</p>
         </div>
       )}
+      <DataSummary data={data} extractType="consumables" />
       {keys.length > 0 && (
         <>
           <SectionTitle title="بنود المستهلكات المحفوظة" />
@@ -245,8 +313,8 @@ function ConsumablesView({ data }: { data: Record<string, any> }) {
 function LaborView({ data }: { data: Record<string, any> }) {
   const total = data["finalLaborCost"] || data["grand-net-total"];
   const centers = data["centerNames_v3"] || data["centerNames"] || {};
-  const attendanceKeys = Object.keys(data).filter(k => k.toLowerCase().includes("attendance"));
-  const performanceKeys = Object.keys(data).filter(k => k.toLowerCase().includes("performance"));
+  const attendanceKeys = Object.keys(data).filter(k => isLaborKey(k) && normalizeKey(k).includes("attendance"));
+  const performanceKeys = Object.keys(data).filter(k => isLaborKey(k) && normalizeKey(k).includes("performance"));
 
   return (
     <div className="space-y-4">
@@ -272,16 +340,17 @@ function LaborView({ data }: { data: Record<string, any> }) {
         <InfoCard label="حالة المعاينة" value="Read Only" />
       </div>
 
-      <DataSummary data={data} />
+      <DataSummary data={data} extractType="labor" />
     </div>
   );
 }
 
-function HealthCentersView({ data }: { data: Record<string, any> }) {
+function HealthCentersView({ data, extractType }: { data: Record<string, any>; extractType: string }) {
   return (
     <div className="space-y-4">
       <LaborView data={data} />
       <ConsumablesView data={data} />
+      <DataSummary data={data} extractType={extractType} />
     </div>
   );
 }
@@ -299,13 +368,13 @@ export default function ExtractDataViewer({ extractType, extractData }: Props) {
   return (
     <div className="mt-2 space-y-5" style={{ direction: "rtl" }}>
       <ContractHeader data={extractData} extractType={extractType} />
-      <QualityChecks data={extractData} />
+      <QualityChecks data={extractData} extractType={extractType} />
 
       {extractType === "spare_parts" && <SparePartsView data={extractData} />}
       {extractType === "consumables" && <ConsumablesView data={extractData} />}
       {extractType === "labor" && <LaborView data={extractData} />}
-      {extractType === "health_centers" && <HealthCentersView data={extractData} />}
-      {!["spare_parts", "consumables", "labor", "health_centers"].includes(extractType) && <DataSummary data={extractData} />}
+      {(extractType === "health_centers" || extractType === "admin_offices") && <HealthCentersView data={extractData} extractType={extractType} />}
+      {!['spare_parts', 'consumables', 'labor', 'health_centers', 'admin_offices'].includes(extractType) && <DataSummary data={extractData} extractType={extractType} />}
     </div>
   );
 }
