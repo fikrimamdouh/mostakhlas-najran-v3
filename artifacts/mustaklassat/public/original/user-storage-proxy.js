@@ -1,7 +1,7 @@
 /**
  * user-storage-proxy.js
- * يعزل بيانات localStorage لكل مستخدم بشكل تلقائي وشفاف
- * يجب تحميله قبل أي script آخر يستخدم localStorage
+ * يعزل بيانات localStorage لكل مستخدم بشكل تلقائي وشفاف.
+ * يجب تحميله قبل أي script آخر يستخدم localStorage.
  */
 (function () {
   const EXCLUDED_KEYS = ['najran_session'];
@@ -23,45 +23,44 @@
   const PREFIX = getPrefix();
   if (!PREFIX) return;
 
-  const _get    = Storage.prototype.getItem.bind(localStorage);
-  const _set    = Storage.prototype.setItem.bind(localStorage);
+  const _get = Storage.prototype.getItem.bind(localStorage);
+  const _set = Storage.prototype.setItem.bind(localStorage);
   const _remove = Storage.prototype.removeItem.bind(localStorage);
-  const _key    = Storage.prototype.key.bind(localStorage);
+  const _key = Storage.prototype.key.bind(localStorage);
 
-function cleanKey(key) {
-  return String(key || '').replace(/^(?:_u\d+_)+/, '');
-}
-
-function prefixed(key) {
-  const clean = cleanKey(key);
-  return EXCLUDED_KEYS.includes(clean) ? clean : PREFIX + clean;
-}
-
-function visibleKeys(target) {
-  const keys = [];
-  const seen = new Set();
-
-  for (let i = 0; i < target.length; i++) {
-    const raw = _key(i);
-    if (!raw) continue;
-
-    const clean = cleanKey(raw);
-
-    if (EXCLUDED_KEYS.includes(clean)) {
-      if (!seen.has(clean)) {
-        seen.add(clean);
-        keys.push(clean);
-      }
-    } else if (raw.startsWith(PREFIX)) {
-      if (!seen.has(clean)) {
-        seen.add(clean);
-        keys.push(clean);
-      }
-    }
+  function cleanKey(key) {
+    return String(key || '').replace(/^(?:_u\d+_)+/, '');
   }
 
-  return keys;
-}
+  function prefixed(key) {
+    const clean = cleanKey(key);
+    return EXCLUDED_KEYS.includes(clean) ? clean : PREFIX + clean;
+  }
+
+  function visibleKeys(target) {
+    const keys = [];
+    const seen = new Set();
+
+    for (let i = 0; i < target.length; i++) {
+      const raw = _key(i);
+      if (!raw) continue;
+      const clean = cleanKey(raw);
+
+      if (EXCLUDED_KEYS.includes(clean)) {
+        if (!seen.has(clean)) {
+          seen.add(clean);
+          keys.push(clean);
+        }
+      } else if (raw.startsWith(PREFIX)) {
+        if (!seen.has(clean)) {
+          seen.add(clean);
+          keys.push(clean);
+        }
+      }
+    }
+
+    return keys;
+  }
 
   const proxyHandler = {
     get(target, prop) {
@@ -92,29 +91,46 @@ function visibleKeys(target) {
 })();
 
 /**
- * عارض المراجعة التفصيلية للمستخلص داخل صفحة الاعتماد فقط.
- * عرض فقط: لا يغير الحفظ، ولا المعادلات، ولا الطباعة، ولا الاعتماد.
+ * عارض ملف المراجعة التفصيلية داخل صفحة اعتماد المستخلص.
+ * وظيفة عرض فقط: لا يغير الحفظ، ولا المعادلات، ولا حالات الاعتماد.
  */
 (function () {
   'use strict';
 
-  if (!/\/original\/approval\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) return;
+  const pageSignature = window.location.pathname + window.location.search;
+  if (!(/\/original\/approval\.html(?:$|[?#])/.test(pageSignature) || /[?&]page=approval\.html(?:$|&)/.test(pageSignature))) return;
+
+  const TYPE_LABELS = {
+    labor: 'مستخلص العمالة',
+    consumables: 'مستخلص المستهلكات',
+    spare_parts: 'مستخلص قطع الغيار',
+    health_centers: 'مستخلص المراكز الصحية'
+  };
+
+  const STATUS_TEXT = {
+    submitted: 'بانتظار المراجعة',
+    under_review: 'قيد المراجعة',
+    needs_revision: 'يحتاج تعديل',
+    approved: 'معتمد',
+    rejected: 'مرفوض'
+  };
 
   const DEPT_NAMES = {
     cleaning: 'النظافة', electricity: 'الكهرباء', agriculture: 'الزراعة',
-    civil_works: 'الأعمال المدنية', 'civil-works': 'الأعمال المدنية', mechanical: 'الميكانيكا',
-    security: 'الأمن', laundry: 'المغسلة', patient_services: 'خدمات المرضى', 'patient-services': 'خدمات المرضى',
+    civil_works: 'الأعمال المدنية', 'civil-works': 'الأعمال المدنية', civil: 'الأعمال المدنية',
+    mechanical: 'الميكانيكا', mechanics: 'الميكانيكا', security: 'الأمن', laundry: 'المغسلة',
+    patient_services: 'خدمات المرضى', 'patient-services': 'خدمات المرضى',
     admin_saudi: 'الإداريون السعوديون', 'admin-saudi': 'الإداريون السعوديون'
   };
 
-  const STATUS_LABELS = { 'ح': 'حاضر', 'غ': 'غائب', 'ج': 'إجازة', 'ش': 'شاغرة', 'ت': 'تحت الإجراء', 'ب': 'بداية العقد', 'ن': 'نهاية العقد' };
+  const DAY_LABELS = { 'ح': 'حاضر', 'غ': 'غائب', 'ج': 'إجازة', 'ش': 'شاغرة', 'ت': 'تحت الإجراء', 'ب': 'بداية العقد', 'ن': 'نهاية العقد' };
 
   const FIELD_LABELS = {
     name:'الاسم', employeeName:'اسم الموظف', jobTitle:'الوظيفة', category:'الفئة', nationality:'الجنسية', iqamaId:'رقم الإقامة',
     attendanceDays:'أيام الحضور', absenceDays:'أيام الغياب', deduction:'الحسم', absencePenalty:'غرامة الغياب', totalFine:'إجمالي الغرامة', netSalary:'صافي الاستحقاق', salary:'الراتب',
-    total:'الإجمالي', amount:'المبلغ', item:'الصنف', itemName:'الصنف', materialName:'الصنف', quantity:'الكمية', qty:'الكمية', price:'السعر', unitPrice:'سعر الوحدة', totalPrice:'الإجمالي',
+    total:'الإجمالي', amount:'المبلغ', item:'الصنف', itemName:'الصنف', materialName:'الصنف', quantity:'الكمية', qty:'الكمية', unit:'الوحدة', price:'السعر', unitPrice:'سعر الوحدة', totalPrice:'الإجمالي',
     notes:'ملاحظات', note:'ملاحظة', percentage:'النسبة', percent:'النسبة', deductionAmount:'قيمة الخصم', score:'التقييم', grade:'الدرجة', maxScore:'الدرجة القصوى', actual:'الفعلي', target:'المستهدف',
-    title:'البيان', description:'الوصف', department:'القسم', departmentName:'القسم', location:'الموقع', unit:'الوحدة', date:'التاريخ', status:'الحالة', value:'القيمة'
+    title:'البيان', description:'الوصف', department:'القسم', departmentName:'القسم', location:'الموقع', date:'التاريخ', status:'الحالة', value:'القيمة', paymentNumber:'رقم الدفعة'
   };
 
   const DATA_LABELS = {
@@ -126,19 +142,69 @@ function visibleKeys(target) {
   };
 
   const SECTION_DEFS = [
-    { id:'attendance',   title:'الحضور والانصراف', icon:'📋', keys:['attendanceData','ng_attendanceData','nd_attendanceData','centersAttendanceData_v2','healthCentersAttendanceData','adminOfficesAttendanceData_v1'], prefixes:['deptCalculatedCost_'] },
-    { id:'performance',  title:'تقييم الأداء',     icon:'📊', keys:['performanceData','performanceTotalDeduction','ng_performanceTotalDeduction','nd_performanceTotalDeduction','performance_data_consumables_v27'], prefixes:['dept_','performance_'] },
-    { id:'achievement',  title:'شهادة الإنجاز',    icon:'🏆', keys:['achievementData','achievementTitles_v1','achievementItemNames','nd_dentalAchievementTotals'], prefixes:['achievement_','nd_dentalAchievement'] },
-    { id:'consumables',  title:'المستهلكات والمواد', icon:'🧪', keys:['consumablesTableData','healthCentersConsumables','mainHospitalConsumables','admin_offices_consumables_v1.0','finalConsumablesCost','water_supply_data_consumables_v27','sewage_disposal_data_consumables_v27','subcontractors_data_consumables_v27'], prefixes:['consumables_','water_','sewage_','subcontractors_'] },
-    { id:'spare',        title:'قطع الغيار',       icon:'🔩', keys:['spare_partsData','sparePartsTotalAmount'], prefixes:['spare_'] }
+    { id:'summary', title:'ملخص المراجعة', icon:'🧾', types:['labor','consumables','spare_parts','health_centers'], special:true },
+    { id:'attendance', title:'الحضور والانصراف', icon:'📋', types:['labor','health_centers'], keys:['attendanceData','ng_attendanceData','nd_attendanceData','centersAttendanceData_v2','healthCentersAttendanceData','adminOfficesAttendanceData_v1'], prefixes:['deptCalculatedCost_'] },
+    { id:'performance', title:'تقييم الأداء', icon:'📊', types:['labor','consumables'], keys:['performanceData','performanceTotalDeduction','ng_performanceTotalDeduction','nd_performanceTotalDeduction','performance_data_consumables_v27'], prefixes:['dept_','performance_'] },
+    { id:'achievement', title:'شهادة الإنجاز', icon:'🏆', types:['labor'], keys:['achievementData','achievementTitles_v1','achievementItemNames','nd_dentalAchievementTotals'], prefixes:['achievement_','nd_dentalAchievement'] },
+    { id:'consumables', title:'المستهلكات والمواد', icon:'🧪', types:['consumables','health_centers'], keys:['consumablesTableData','healthCentersConsumables','mainHospitalConsumables','admin_offices_consumables_v1.0','finalConsumablesCost','water_supply_data_consumables_v27','sewage_disposal_data_consumables_v27','subcontractors_data_consumables_v27'], prefixes:['consumables_','water_','sewage_','subcontractors_'] },
+    { id:'spare', title:'قطع الغيار', icon:'🔩', types:['spare_parts'], keys:['spare_partsData','sparePartsTotalAmount'], prefixes:['spare_'] }
   ];
 
-  function esc(v) { return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function normalizeKey(k) {
-  return String(k || '').replace(/^(?:_u\d+_)+/, '');
-}  function parseExtractData(raw) { if (!raw) return {}; if (typeof raw === 'object') return raw; try { return JSON.parse(raw); } catch (_) { return {}; } }
-  function getGlobalExtractById(id) { try { if (typeof allExtracts !== 'undefined' && Array.isArray(allExtracts)) return allExtracts.find(e => String(e.id) === String(id)) || null; } catch (_) {} return null; }
-  function money(n) { const v = Number(n || 0); return v ? v.toLocaleString('ar-SA', { minimumFractionDigits:2, maximumFractionDigits:2 }) : '—'; }
+  function esc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function normalizeKey(k) { return String(k || '').replace(/^(?:_u\d+_)+/, ''); }
+
+  function parseJSON(raw) {
+    if (!raw) return {};
+    if (typeof raw === 'object') return raw;
+    try { return JSON.parse(raw); } catch (_) { return {}; }
+  }
+
+  function snapshotOf(e) {
+    const data = parseJSON(e && e.extractData);
+    return data.localStorageSnapshot || data.storageSnapshot || data.snapshot || data.submittedData || data;
+  }
+
+  function persistentOf(e) {
+    const data = parseJSON(e && e.extractData);
+    return data.persistentExtractData || data.persistentContractData || data.extractMeta || {};
+  }
+
+  function getGlobalExtractById(id) {
+    try {
+      if (typeof allExtracts !== 'undefined' && Array.isArray(allExtracts)) {
+        return allExtracts.find(e => String(e.id) === String(id)) || null;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function money(n) {
+    const v = Number(n || 0);
+    return v ? v.toLocaleString('ar-SA', { minimumFractionDigits:2, maximumFractionDigits:2 }) : '—';
+  }
+
+  function fmtDate(d) {
+    if (!d) return '—';
+    try { return new Date(d).toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' }); } catch (_) { return '—'; }
+  }
+
+  function metaOf(e) {
+    const p = persistentOf(e);
+    const data = parseJSON(e && e.extractData);
+    const extractMonth = e.extractMonth || p.extractMonth || data.extractMonth || '';
+    const extractYear = e.extractYear || p.extractYear || data.extractYear || '';
+    return {
+      paymentNumber: e.paymentNumber || p.paymentNumber || data.paymentNumber || '—',
+      period: e.periodMonth || [extractMonth, extractYear].filter(Boolean).join(' ') || '—',
+      start: e.extractStart || p.extractStart || data.extractStart || '—',
+      end: e.extractEnd || p.extractEnd || data.extractEnd || '—'
+    };
+  }
 
   function arabicKey(key) {
     const nk = normalizeKey(key);
@@ -166,10 +232,11 @@ function normalizeKey(k) {
   }
 
   function sectionEntries(snapshot, def) {
+    if (!snapshot || def.special) return [];
     const exact = new Set(def.keys || []);
     const prefixes = def.prefixes || [];
     const out = [];
-    Object.keys(snapshot || {}).forEach(rawKey => {
+    Object.keys(snapshot).forEach(rawKey => {
       const nk = normalizeKey(rawKey);
       if (exact.has(nk) || prefixes.some(p => nk.startsWith(p))) out.push({ key:nk, value:snapshot[rawKey] });
     });
@@ -187,25 +254,29 @@ function normalizeKey(k) {
   }
 
   function renderTable(arr) {
-    const rows = arr.slice(0, 250);
+    const rows = arr.slice(0, 300);
     const preferred = ['name','employeeName','jobTitle','category','nationality','iqamaId','attendanceDays','absenceDays','deduction','absencePenalty','totalFine','netSalary','salary','item','itemName','materialName','quantity','qty','unit','price','unitPrice','total','amount','percentage','percent','deductionAmount','score','notes'];
     const colsSet = new Set();
     preferred.forEach(c => rows.some(r => r && r[c] !== undefined) && colsSet.add(c));
-    rows.forEach(r => Object.keys(r || {}).slice(0, 28).forEach(k => { if (k !== 'days') colsSet.add(k); }));
-    const cols = Array.from(colsSet).slice(0, 14);
-    if (!cols.length) return '<div class="nr-empty"><b>لا توجد أعمدة قابلة للعرض</b><span>البيانات محفوظة لكن شكلها غير جدولي.</span></div>';
+    rows.forEach(r => Object.keys(r || {}).slice(0, 30).forEach(k => { if (k !== 'days') colsSet.add(k); }));
+    const cols = Array.from(colsSet).slice(0, 16);
+    if (!cols.length) return emptyBox('لا توجد أعمدة قابلة للعرض');
     return '<div class="nr-table-card"><div class="nr-table-wrap"><table class="nr-table"><thead><tr>' + cols.map((c,i) => '<th>' + esc(fieldLabel(c,i)) + '</th>').join('') + '</tr></thead><tbody>' + rows.map(r => '<tr>' + cols.map(c => '<td>' + cell(r ? r[c] : '') + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>' + (arr.length > rows.length ? '<div class="nr-note">تم عرض أول ' + rows.length + ' سجل فقط من أصل ' + arr.length + '</div>' : '') + '</div>';
   }
 
   function countDays(days) {
     const c = { present:0, absent:0, leave:0, vacant:0, pending:0, start:0, end:0, other:0 };
-    (Array.isArray(days) ? days : []).forEach(d => { if (d === 'ح') c.present++; else if (d === 'غ') c.absent++; else if (d === 'ج') c.leave++; else if (d === 'ش') c.vacant++; else if (d === 'ت') c.pending++; else if (d === 'ب') c.start++; else if (d === 'ن') c.end++; else c.other++; });
+    (Array.isArray(days) ? days : []).forEach(d => {
+      if (d === 'ح') c.present++; else if (d === 'غ') c.absent++; else if (d === 'ج') c.leave++;
+      else if (d === 'ش') c.vacant++; else if (d === 'ت') c.pending++; else if (d === 'ب') c.start++;
+      else if (d === 'ن') c.end++; else c.other++;
+    });
     return c;
   }
 
   function dayStrip(days) {
     if (!Array.isArray(days) || !days.length) return '<span class="nr-muted">—</span>';
-    return '<div class="nr-days-strip">' + days.map((d, i) => '<span class="nr-day nr-day-' + esc(d) + '" title="يوم ' + (i + 1) + ' — ' + esc(STATUS_LABELS[d] || d || 'غير محدد') + '">' + esc(d || '—') + '</span>').join('') + '</div>';
+    return '<div class="nr-days-strip">' + days.map((d, i) => '<span class="nr-day nr-day-' + esc(d) + '" title="يوم ' + (i + 1) + ' — ' + esc(DAY_LABELS[d] || d || 'غير محدد') + '">' + esc(d || '—') + '</span>').join('') + '</div>';
   }
 
   function renderAttendance(data) {
@@ -228,13 +299,11 @@ function normalizeKey(k) {
         deptNet += Number(emp.netSalary || 0);
         netTotal += Number(emp.netSalary || 0);
       });
-
       const body = rows.map((emp, idx) => {
         const c = countDays(emp.days);
         return '<tr><td>' + (idx + 1) + '</td><td class="nr-strong">' + esc(emp.name || emp.employeeName || '—') + '</td><td>' + esc(emp.jobTitle || '—') + '</td><td>' + esc(emp.category || '—') + '</td><td>' + esc(emp.nationality || '—') + '</td><td>' + esc(emp.iqamaId || '—') + '</td><td>' + (emp.attendanceDays ?? c.present) + '</td><td>' + (emp.absenceDays ?? c.absent) + '</td><td>' + c.leave + '</td><td>' + c.vacant + '</td><td>' + c.pending + '</td><td>' + money(emp.deduction) + '</td><td>' + money(emp.totalFine || emp.absencePenalty) + '</td><td>' + money(emp.netSalary) + '</td><td>' + dayStrip(emp.days) + '</td></tr>';
       }).join('');
-
-      return '<article class="nr-panel"><div class="nr-panel-head"><h4>' + esc(DEPT_NAMES[dept] || 'قسم غير محدد') + '</h4><div><span>' + rows.length + ' موظف</span><span>غياب: ' + deptAbsent + '</span><span>الصافي: ' + money(deptNet) + '</span></div></div><div class="nr-table-wrap"><table class="nr-table nr-att-table"><thead><tr><th>#</th><th>الموظف</th><th>الوظيفة</th><th>الفئة</th><th>الجنسية</th><th>الإقامة</th><th>حضور</th><th>غياب</th><th>إجازة</th><th>شاغرة</th><th>تحت الإجراء</th><th>الحسم</th><th>الغرامة</th><th>الصافي</th><th>أيام الشهر</th></tr></thead><tbody>' + body + '</tbody></table></div></article>';
+      return '<article class="nr-panel"><div class="nr-panel-head"><h4>' + esc(DEPT_NAMES[dept] || dept || 'قسم غير محدد') + '</h4><div><span>' + rows.length + ' موظف</span><span>غياب: ' + deptAbsent + '</span><span>الصافي: ' + money(deptNet) + '</span></div></div><div class="nr-table-wrap"><table class="nr-table nr-att-table"><thead><tr><th>#</th><th>الموظف</th><th>الوظيفة</th><th>الفئة</th><th>الجنسية</th><th>الإقامة</th><th>حضور</th><th>غياب</th><th>إجازة</th><th>شاغرة</th><th>تحت الإجراء</th><th>الحسم</th><th>الغرامة</th><th>الصافي</th><th>أيام الشهر</th></tr></thead><tbody>' + body + '</tbody></table></div></article>';
     }).join('');
 
     return summaryCards([
@@ -248,46 +317,92 @@ function normalizeKey(k) {
 
   function renderValue(value) {
     if (isObjectArray(value)) return renderTable(value);
-    if (Array.isArray(value)) return value.length ? '<div class="nr-list">' + value.slice(0,120).map(x => '<div class="nr-list-item">' + cell(x) + '</div>').join('') + '</div>' : emptyBox('لا توجد بيانات مسجلة');
+    if (Array.isArray(value)) return value.length ? '<div class="nr-list">' + value.slice(0,150).map(x => '<div class="nr-list-item">' + cell(x) + '</div>').join('') + '</div>' : emptyBox('لا توجد بيانات مسجلة');
     if (value && typeof value === 'object') {
       const keys = Object.keys(value);
       if (!keys.length) return emptyBox('لا توجد بيانات مسجلة');
       const arrayKey = keys.find(k => isObjectArray(value[k]));
       if (arrayKey) return '<div class="nr-subtitle">' + esc(fieldLabel(arrayKey,0)) + '</div>' + renderTable(value[arrayKey]);
-      return '<div class="nr-kv-grid">' + keys.slice(0,100).map((k,i) => '<div class="nr-kv"><span>' + esc(fieldLabel(k,i)) + '</span><b>' + cell(value[k]) + '</b></div>').join('') + '</div>';
+      return '<div class="nr-kv-grid">' + keys.slice(0,120).map((k,i) => '<div class="nr-kv"><span>' + esc(fieldLabel(k,i)) + '</span><b>' + cell(value[k]) + '</b></div>').join('') + '</div>';
     }
     return summaryCards([['القيمة', value == null || value === '' ? '—' : value]]);
   }
 
-  function emptyBox(text) { return '<div class="nr-empty"><b>' + esc(text) + '</b><span>هذا الجزء غير موجود داخل نسخة الرفع الحالية.</span></div>'; }
-
-  function renderSection(snapshot, def) {
-    const entries = sectionEntries(snapshot, def);
-    const completeness = entries.length ? 'بيانات متاحة للمراجعة' : 'غير مرفوع داخل هذه النسخة';
-    if (!entries.length) return '<section class="nr-section" id="nr-sec-' + esc(def.id) + '"><div class="nr-section-title"><h3>' + def.icon + ' ' + esc(def.title) + '</h3><span class="nr-state nr-state-warn">' + completeness + '</span></div>' + emptyBox('لا توجد بيانات محفوظة لهذا الجزء') + '</section>';
-    return '<section class="nr-section" id="nr-sec-' + esc(def.id) + '"><div class="nr-section-title"><h3>' + def.icon + ' ' + esc(def.title) + '</h3><span class="nr-state">' + completeness + '</span></div>' + entries.map(entry => '<article class="nr-data-block"><header>' + esc(arabicKey(entry.key)) + '</header>' + (def.id === 'attendance' && /attendanceData/i.test(entry.key) ? renderAttendance(entry.value) : renderValue(entry.value)) + '</article>').join('') + '</section>';
+  function emptyBox(text) {
+    return '<div class="nr-empty"><b>' + esc(text) + '</b><span>هذا الجزء غير موجود داخل نسخة الرفع الحالية.</span></div>';
   }
 
-  function sectionStatus(snapshot, def) { return sectionEntries(snapshot, def).length ? 'مكتمل' : 'ناقص'; }
+  function renderSummary(e, snapshot, defs) {
+    const meta = metaOf(e);
+    const checklist = defs.filter(d => !d.special).map(def => {
+      const ok = sectionEntries(snapshot, def).length > 0;
+      return '<div class="nr-check ' + (ok ? 'ok' : 'bad') + '"><b>' + def.icon + ' ' + esc(def.title) + '</b><span>' + (ok ? 'موجود داخل نسخة الرفع' : 'غير موجود داخل نسخة الرفع') + '</span></div>';
+    }).join('');
+
+    return '<section class="nr-section active" id="nr-sec-summary"><div class="nr-section-title"><h3>🧾 ملخص المراجعة</h3><span class="nr-state">قراءة فقط</span></div>' +
+      summaryCards([
+        ['نوع المستخلص', TYPE_LABELS[e.extractType] || e.extractType || '—'],
+        ['رقم الدفعة', meta.paymentNumber],
+        ['الفترة', meta.period],
+        ['من تاريخ', meta.start],
+        ['إلى تاريخ', meta.end],
+        ['قيمة المستخلص', money(e.totalAmount)]
+      ]) +
+      '<article class="nr-data-block"><header>بيانات الرفع والاعتماد</header><div class="nr-kv-grid">' +
+      '<div class="nr-kv"><span>المستشفى</span><b>' + esc(e.hospitalName || e.submittedByHospital || '—') + '</b></div>' +
+      '<div class="nr-kv"><span>الشركة</span><b>' + esc(e.companyName || '—') + '</b></div>' +
+      '<div class="nr-kv"><span>رقم العقد</span><b>' + esc(e.contractNumber || '—') + '</b></div>' +
+      '<div class="nr-kv"><span>الحالة</span><b>' + esc(STATUS_TEXT[e.status] || e.status || '—') + '</b></div>' +
+      '<div class="nr-kv"><span>رفع بواسطة</span><b>' + esc(e.submittedByName || '—') + '</b></div>' +
+      '<div class="nr-kv"><span>تاريخ الرفع</span><b>' + esc(fmtDate(e.createdAt)) + '</b></div>' +
+      '<div class="nr-kv"><span>اعتمد بواسطة</span><b>' + esc(e.approvedBy || '—') + '</b></div>' +
+      '<div class="nr-kv"><span>تاريخ الاعتماد</span><b>' + esc(fmtDate(e.approvedAt)) + '</b></div>' +
+      '</div></article>' +
+      '<article class="nr-data-block"><header>قائمة أجزاء المراجعة</header><div class="nr-check-grid">' + checklist + '</div></article>' +
+      (e.adminNotes ? '<article class="nr-data-block"><header>ملاحظات المراجع</header><div class="nr-note-box">' + esc(e.adminNotes) + '</div></article>' : '') +
+      '</section>';
+  }
+
+  function renderSection(snapshot, def, active) {
+    const entries = sectionEntries(snapshot, def);
+    const state = entries.length ? 'بيانات متاحة للمراجعة' : 'غير مرفوع داخل هذه النسخة';
+    if (!entries.length) {
+      return '<section class="nr-section' + (active ? ' active' : '') + '" id="nr-sec-' + esc(def.id) + '"><div class="nr-section-title"><h3>' + def.icon + ' ' + esc(def.title) + '</h3><span class="nr-state nr-state-warn">' + state + '</span></div>' + emptyBox('لا توجد بيانات محفوظة لهذا الجزء') + '</section>';
+    }
+    return '<section class="nr-section' + (active ? ' active' : '') + '" id="nr-sec-' + esc(def.id) + '"><div class="nr-section-title"><h3>' + def.icon + ' ' + esc(def.title) + '</h3><span class="nr-state">' + state + '</span></div>' + entries.map(entry => '<article class="nr-data-block"><header>' + esc(arabicKey(entry.key)) + '</header>' + (def.id === 'attendance' && /attendance/i.test(entry.key) ? renderAttendance(entry.value) : renderValue(entry.value)) + '</article>').join('') + '</section>';
+  }
+
+  function sectionStatus(snapshot, def) {
+    if (def.special) return 'ملخص';
+    return sectionEntries(snapshot, def).length ? 'مكتمل' : 'ناقص';
+  }
+
+  function defsForType(type) {
+    const out = SECTION_DEFS.filter(d => !d.types || d.types.includes(type));
+    return out.length ? out : SECTION_DEFS;
+  }
 
   function injectReviewStyles() {
     if (document.getElementById('najran-review-details-style')) return;
     const style = document.createElement('style');
     style.id = 'najran-review-details-style';
     style.textContent = `
-      .nr-detail-btn{background:linear-gradient(135deg,#123b6d,#1e6aa8)!important;color:#fff!important;border-color:transparent!important;box-shadow:0 8px 18px rgba(30,60,114,.18)!important}
+      .nr-detail-btn{background:linear-gradient(135deg,#123b6d,#1e6aa8)!important;color:#fff!important;border-color:transparent!important;box-shadow:0 8px 18px rgba(30,60,114,.18)!important;font-weight:900!important}
+      .nr-detail-btn::before{content:'📂'}
       .nr-overlay{position:fixed;inset:0;background:rgba(15,23,42,.66);z-index:999999;display:none;align-items:stretch;justify-content:center;padding:18px;direction:rtl}.nr-overlay.open{display:flex}
-      .nr-modal{background:#eef3f8;width:min(1360px,100%);border-radius:24px;box-shadow:0 28px 90px rgba(0,0,0,.38);display:grid;grid-template-rows:auto auto 1fr;overflow:hidden;border:1px solid rgba(255,255,255,.5)}
+      .nr-modal{background:#eef3f8;width:min(1380px,100%);border-radius:24px;box-shadow:0 28px 90px rgba(0,0,0,.38);display:grid;grid-template-rows:auto auto auto 1fr;overflow:hidden;border:1px solid rgba(255,255,255,.5)}
       .nr-head{background:linear-gradient(135deg,#0f2f55,#1e5d92);color:#fff;padding:22px 26px;display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.nr-head h2{font-size:22px;font-weight:900;margin:0}.nr-head p{font-size:13px;opacity:.82;margin-top:6px}.nr-close{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.28);border-radius:12px;padding:9px 15px;cursor:pointer;font-family:inherit;font-weight:900}.nr-close:hover{background:rgba(255,255,255,.22)}
+      .nr-alert{background:#fff7ed;color:#7c2d12;border-bottom:1px solid #fed7aa;padding:10px 18px;font-size:12px;font-weight:800}.nr-alert b{color:#c2410c}
       .nr-topline{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;padding:14px 18px;background:#fff;border-bottom:1px solid #dbe5ef}.nr-top-card{border:1px solid #e2e8f0;border-radius:14px;padding:12px;background:linear-gradient(180deg,#fff,#f8fafc)}.nr-top-card b{display:block;color:#123b6d;font-size:15px}.nr-top-card span{font-size:11px;color:#64748b;font-weight:800}
       .nr-tabs{display:flex;gap:9px;overflow-x:auto;padding:14px 18px;background:#f8fafc;border-bottom:1px solid #dbe5ef}.nr-tab{white-space:nowrap;border:1px solid #dbe5ef;background:#fff;color:#334155;border-radius:999px;padding:9px 15px;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer;display:flex;align-items:center;gap:7px}.nr-tab small{font-size:10px;border-radius:999px;padding:2px 7px;background:#eef2f7;color:#64748b}.nr-tab.active{background:#123b6d;color:#fff;border-color:#123b6d}.nr-tab.active small{background:rgba(255,255,255,.18);color:#fff}.nr-tab.warn small{background:#fff7ed;color:#c2410c}
-      .nr-body{padding:18px;overflow:auto;max-height:calc(100vh - 260px)}.nr-section{display:none}.nr-section.active{display:block}.nr-section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.nr-section-title h3{font-size:20px;color:#123b6d;margin:0;font-weight:900}.nr-state{background:#ecfdf5;color:#15803d;border:1px solid #bbf7d0;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:900}.nr-state-warn{background:#fff7ed;color:#c2410c;border-color:#fed7aa}
+      .nr-body{padding:18px;overflow:auto;max-height:calc(100vh - 300px)}.nr-section{display:none}.nr-section.active{display:block}.nr-section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.nr-section-title h3{font-size:20px;color:#123b6d;margin:0;font-weight:900}.nr-state{background:#ecfdf5;color:#15803d;border:1px solid #bbf7d0;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:900}.nr-state-warn{background:#fff7ed;color:#c2410c;border-color:#fed7aa}
       .nr-data-block{background:#fff;border:1px solid #dbe5ef;border-radius:20px;margin-bottom:16px;overflow:hidden;box-shadow:0 6px 18px rgba(15,47,85,.05)}.nr-data-block>header{background:#f8fafc;color:#123b6d;font-size:14px;font-weight:900;padding:13px 16px;border-bottom:1px solid #e2e8f0}
       .nr-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;padding:14px}.nr-summary-card{background:linear-gradient(180deg,#f0f9ff,#fff);border:1px solid #bae6fd;border-radius:15px;padding:13px;text-align:center}.nr-summary-card b{display:block;color:#0c4a6e;font-size:18px}.nr-summary-card span{font-size:11px;color:#0369a1;font-weight:900}
+      .nr-check-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;padding:14px}.nr-check{border-radius:14px;padding:13px;border:1px solid}.nr-check b{display:block;font-size:14px;margin-bottom:4px}.nr-check span{font-size:12px;font-weight:800}.nr-check.ok{background:#f0fdf4;border-color:#bbf7d0;color:#166534}.nr-check.bad{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
       .nr-panel{margin:14px;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden}.nr-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#f8fafc;padding:12px 14px;border-bottom:1px solid #e2e8f0}.nr-panel-head h4{margin:0;color:#123b6d;font-size:15px}.nr-panel-head div{display:flex;gap:8px;flex-wrap:wrap}.nr-panel-head span{font-size:11px;background:#fff;border:1px solid #dbe5ef;border-radius:999px;padding:4px 9px;color:#475569;font-weight:900}
-      .nr-table-card{padding:14px}.nr-table-wrap{overflow:auto}.nr-table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;background:#fff}.nr-table th{background:#123b6d;color:#fff;padding:10px;white-space:nowrap;position:sticky;top:0;z-index:1}.nr-table td{border-bottom:1px solid #edf2f7;padding:9px;vertical-align:top;max-width:340px}.nr-table tr:nth-child(even) td{background:#f8fafc}.nr-table th:first-child{border-radius:10px 0 0 0}.nr-table th:last-child{border-radius:0 10px 0 0}.nr-att-table td{white-space:nowrap}.nr-strong{font-weight:900;color:#123b6d}
-      .nr-kv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;padding:14px}.nr-kv{background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:12px}.nr-kv span{display:block;font-size:11px;color:#64748b;font-weight:900;margin-bottom:5px}.nr-kv b{display:block;font-size:14px;color:#1e293b;word-break:break-word}.nr-muted{color:#94a3b8}.nr-empty{margin:14px;padding:28px;text-align:center;color:#64748b;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:16px}.nr-empty b{display:block;color:#334155;margin-bottom:5px}.nr-empty span{font-size:12px}.nr-list{padding:14px;display:grid;gap:8px}.nr-list-item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px;font-size:12px}.nr-subtitle{font-size:12px;font-weight:900;color:#123b6d;margin:12px 14px 0}
-      .nr-days-strip{display:flex;gap:2px;min-width:240px}.nr-day{display:inline-flex;width:20px;height:20px;border-radius:6px;align-items:center;justify-content:center;font-size:11px;font-weight:900;border:1px solid #e2e8f0}.nr-day-ح{background:#e8f0fe;color:#1d4ed8}.nr-day-غ{background:#fee2e2;color:#b91c1c}.nr-day-ج{background:#fef3c7;color:#b45309}.nr-day-ش{background:#d1ecf1;color:#0369a1}.nr-day-ت{background:#e2e8f0;color:#475569}.nr-day-ب,.nr-day-ن{background:#f3e8ff;color:#7e22ce}@media print{.nr-overlay{display:none!important}}
+      .nr-table-card{padding:14px}.nr-table-wrap{overflow:auto}.nr-table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;background:#fff}.nr-table th{background:#123b6d;color:#fff;padding:10px;white-space:nowrap;position:sticky;top:0;z-index:1}.nr-table td{border-bottom:1px solid #edf2f7;padding:9px;vertical-align:top;max-width:340px}.nr-table tr:nth-child(even) td{background:#f8fafc}.nr-att-table td{white-space:nowrap}.nr-strong{font-weight:900;color:#123b6d}
+      .nr-kv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;padding:14px}.nr-kv{background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:12px}.nr-kv span{display:block;font-size:11px;color:#64748b;font-weight:900;margin-bottom:5px}.nr-kv b{display:block;font-size:14px;color:#1e293b;word-break:break-word}.nr-muted{color:#94a3b8}.nr-empty{margin:14px;padding:28px;text-align:center;color:#64748b;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:16px}.nr-empty b{display:block;color:#334155;margin-bottom:5px}.nr-empty span{font-size:12px}.nr-list{padding:14px;display:grid;gap:8px}.nr-list-item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px;font-size:12px}.nr-subtitle{font-size:12px;font-weight:900;color:#123b6d;margin:12px 14px 0}.nr-note,.nr-note-box{margin:14px;padding:12px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:12px;font-weight:800;line-height:1.7}
+      .nr-days-strip{display:flex;gap:2px;min-width:240px}.nr-day{display:inline-flex;width:20px;height:20px;border-radius:6px;align-items:center;justify-content:center;font-size:11px;font-weight:900;border:1px solid #e2e8f0}.nr-day-ح{background:#e8f0fe;color:#1d4ed8}.nr-day-غ{background:#fee2e2;color:#b91c1c}.nr-day-ج{background:#fef3c7;color:#b45309}.nr-day-ش{background:#d1ecf1;color:#0369a1}.nr-day-ت{background:#e2e8f0;color:#475569}.nr-day-ب,.nr-day-ن{background:#f3e8ff;color:#7e22ce}@media(max-width:700px){.nr-overlay{padding:6px}.nr-head{padding:16px}.nr-body{max-height:calc(100vh - 330px)}}@media print{.nr-overlay{display:none!important}}
     `;
     document.head.appendChild(style);
   }
@@ -299,7 +414,7 @@ function normalizeKey(k) {
     overlay = document.createElement('div');
     overlay.id = 'najran-review-details-overlay';
     overlay.className = 'nr-overlay';
-    overlay.innerHTML = '<div class="nr-modal"><div class="nr-head"><div><h2 id="nr-title">مراجعة تفصيلية للمستخلص</h2><p id="nr-subtitle">نسخة ثابتة من البيانات وقت الرفع</p></div><button class="nr-close" onclick="window.closeNajranReviewDetails()">إغلاق ✕</button></div><div class="nr-topline" id="nr-topline"></div><div class="nr-tabs" id="nr-tabs"></div><div class="nr-body" id="nr-body"></div></div>';
+    overlay.innerHTML = '<div class="nr-modal"><div class="nr-head"><div><h2 id="nr-title">ملف المراجعة التفصيلية</h2><p id="nr-subtitle">نسخة قراءة فقط من بيانات المستخلص وقت الرفع</p></div><button class="nr-close" onclick="window.closeNajranReviewDetails()">إغلاق ✕</button></div><div class="nr-alert"><b>تنبيه:</b> هذه الشاشة للقراءة والمراجعة فقط. الاعتماد أو الرفض يتم من أزرار إجراءات المراجع أسفل البطاقة.</div><div class="nr-topline" id="nr-topline"></div><div class="nr-tabs" id="nr-tabs"></div><div class="nr-body" id="nr-body"></div></div>';
     overlay.addEventListener('click', e => { if (e.target === overlay) window.closeNajranReviewDetails(); });
     document.body.appendChild(overlay);
     return overlay;
@@ -319,18 +434,30 @@ function normalizeKey(k) {
   window.openNajranReviewDetails = function (id) {
     const e = getGlobalExtractById(id);
     if (!e) return alert('تعذر العثور على بيانات المستخلص في الصفحة');
-    const snapshot = parseExtractData(e.extractData);
+    const snapshot = snapshotOf(e);
+    const meta = metaOf(e);
+    const defs = defsForType(e.extractType);
     const overlay = ensureModal();
 
-    document.getElementById('nr-title').textContent = 'مراجعة تفصيلية للمستخلص';
-    document.getElementById('nr-subtitle').textContent = (e.hospitalName || e.submittedByHospital || '—') + ' · ' + (e.periodMonth || '—') + ' · رقم المستخلص ' + e.id;
-    document.getElementById('nr-topline').innerHTML = '<div class="nr-top-card"><span>المستشفى</span><b>' + esc(e.hospitalName || e.submittedByHospital || '—') + '</b></div><div class="nr-top-card"><span>الشركة</span><b>' + esc(e.companyName || '—') + '</b></div><div class="nr-top-card"><span>الفترة</span><b>' + esc(e.periodMonth || '—') + '</b></div><div class="nr-top-card"><span>المبلغ</span><b>' + money(e.totalAmount) + '</b></div><div class="nr-top-card"><span>الحالة</span><b>' + esc(e.status || '—') + '</b></div>';
+    document.getElementById('nr-title').textContent = 'ملف المراجعة التفصيلية — ' + (TYPE_LABELS[e.extractType] || e.extractType || 'مستخلص');
+    document.getElementById('nr-subtitle').textContent = (e.hospitalName || e.submittedByHospital || '—') + ' · ' + meta.period + ' · دفعة ' + meta.paymentNumber;
+    document.getElementById('nr-topline').innerHTML =
+      '<div class="nr-top-card"><span>نوع المستخلص</span><b>' + esc(TYPE_LABELS[e.extractType] || e.extractType || '—') + '</b></div>' +
+      '<div class="nr-top-card"><span>رقم الدفعة</span><b>' + esc(meta.paymentNumber) + '</b></div>' +
+      '<div class="nr-top-card"><span>الفترة</span><b>' + esc(meta.period) + '</b></div>' +
+      '<div class="nr-top-card"><span>من / إلى</span><b>' + esc(meta.start) + ' — ' + esc(meta.end) + '</b></div>' +
+      '<div class="nr-top-card"><span>المبلغ</span><b>' + money(e.totalAmount) + '</b></div>' +
+      '<div class="nr-top-card"><span>الحالة</span><b>' + esc(STATUS_TEXT[e.status] || e.status || '—') + '</b></div>';
 
-    document.getElementById('nr-tabs').innerHTML = SECTION_DEFS.map((def, idx) => {
+    document.getElementById('nr-tabs').innerHTML = defs.map((def, idx) => {
       const st = sectionStatus(snapshot, def);
       return '<button class="nr-tab ' + (idx === 0 ? 'active ' : '') + (st === 'ناقص' ? 'warn' : '') + '" data-id="' + esc(def.id) + '" onclick="window.activateNajranReviewSection(\'' + esc(def.id) + '\')"><span>' + def.icon + ' ' + esc(def.title) + '</span><small>' + st + '</small></button>';
     }).join('');
-    document.getElementById('nr-body').innerHTML = SECTION_DEFS.map((def, idx) => renderSection(snapshot, def).replace('nr-section"', 'nr-section' + (idx === 0 ? ' active' : '') + '"')).join('');
+
+    document.getElementById('nr-body').innerHTML = defs.map((def, idx) => {
+      if (def.special) return renderSummary(e, snapshot, defs);
+      return renderSection(snapshot, def, idx === 0);
+    }).join('');
 
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -346,8 +473,9 @@ function normalizeKey(k) {
       const card = document.getElementById('card-' + e.id);
       if (!card) return;
       const body = card.querySelector('.card-body.open');
-      if (!body || body.querySelector('.nr-detail-btn')) return;
+      if (!body || body.querySelector('.nr-detail-wrap')) return;
       const btnWrap = document.createElement('div');
+      btnWrap.className = 'nr-detail-wrap';
       btnWrap.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;border-bottom:1px solid #f1f5f9;padding-bottom:12px';
       btnWrap.innerHTML = '<button type="button" class="admin-btn nr-detail-btn" onclick="window.openNajranReviewDetails(' + Number(e.id) + ')">فتح ملف المراجعة التفصيلية</button>';
       body.insertBefore(btnWrap, body.firstChild);
