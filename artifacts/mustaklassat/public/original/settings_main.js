@@ -422,6 +422,8 @@ if (defaultCompanyForHospital && newData.companyName && newData.companyName !== 
 
 var _updateContractDisplayRunning = false;
 
+let _updateContractDisplayRunning = false;
+
 // تحديث عرض بيانات العقد
 function updateContractDisplayData() {
     if (_updateContractDisplayRunning) return;
@@ -430,6 +432,7 @@ function updateContractDisplayData() {
     try {
         const data = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
         const session = (typeof _getSession === 'function') ? _getSession() : null;
+
         const manualCompanyName = _getManualCompanyName(
             data.hospitalName ||
             localStorage.getItem('hospitalName') ||
@@ -437,110 +440,123 @@ function updateContractDisplayData() {
             ''
         );
 
-if (manualCompanyName) {
-    data.companyName = manualCompanyName;
-    data._manualCompanyName = true;
-    localStorage.setItem('persistentContractData', JSON.stringify(data));
-    localStorage.setItem('companyName', data.companyName || '');
-}
-    if (!data.hospitalName) {
-        data.hospitalName = localStorage.getItem('hospitalName') || (session && session.hospital) || '';
-    }
-
-    if (!data.companyName) {
-        data.companyName =
-            localStorage.getItem('companyName') ||
-            (session && session.companyName) ||
-            _resolveCompanyName(session, data.hospitalName) ||
-            '';
-    }
-
-    if (!data.contractNumber) {
-        data.contractNumber = localStorage.getItem('contractNumber') || (session && session.contractNumber) || '';
-    }
-
-    if (!data.contractDetails) {
-        data.contractDetails = localStorage.getItem('contractDetails') || '';
-    }
-
-    if (data.hospitalName && HOSPITAL_CONTRACT_MAP[data.hospitalName]) {
-        var before = JSON.stringify(data);
-        _applyFixedContractData(data, data.hospitalName, false);
-        if (JSON.stringify(data) !== before) {
+        if (manualCompanyName) {
+            data.companyName = manualCompanyName;
+            data._manualCompanyName = true;
             localStorage.setItem('persistentContractData', JSON.stringify(data));
-            localStorage.setItem('hospitalName', data.hospitalName);
             localStorage.setItem('companyName', data.companyName || '');
-            localStorage.setItem('contractNumber', data.contractNumber || '');
-            localStorage.setItem('contractDetails', data.contractDetails || '');
         }
-    }
-    document.getElementById('hospital-name').value = data.hospitalName || '';
-    document.getElementById('contract-details').value = data.contractDetails || '';
-    document.getElementById('company-name').value = data.companyName || '';
-    document.getElementById('contract-type').value = data.contractType || 'عقد أساسي';
-    document.getElementById('direct-purchase-ratio').value = data.directPurchaseRatio || '0';
-    document.getElementById('contract-start-date').value = data.startDate || '';
-    document.getElementById('contract-end-date').value = data.endDate || '';
-    document.getElementById('contract-value').value = data.contractValue || '';
-    document.getElementById('contract-status').value = data.contractStatus || 'نشط';
-    document.getElementById('contract-notes').value = data.notes || '';
-    document.getElementById('project-manager-name').value = data.projectManager || '';
-    document.getElementById('maintenance-head-name').value = data.maintenanceHead || '';
-    document.getElementById('operations-assistant-name').value = data.operationsAssistant || '';
-    document.getElementById('engineering-manager-name').value = data.engineeringManager || '';
-    document.getElementById('financial-manager-name').value = data.financialManager || '';
-    document.getElementById('hospital-manager-name').value = data.hospitalManager || '';
-    document.getElementById('contractor-representative-name').value = data.contractorRepresentative || '';
-    document.getElementById('hospital-accountant-name').value = data.hospitalAccountant || '';
-    document.getElementById('assistant-manager-name').value = data.assistantManager || '';
-    document.getElementById('site-representative-name').value = data.siteRepresentative || '';
-    document.getElementById('engineering-affairs-manager-name').value = data.engineeringAffairsManager || '';
-    document.getElementById('general-services-manager-name').value = data.generalServicesManager || '';
-    document.getElementById('follow-up-manager-name').value = data.followUpManager || '';
-    document.getElementById('project-manager-phone').value = data.projectManagerPhone || '';
-    document.getElementById('project-manager-email').value = data.projectManagerEmail || '';
-    document.getElementById('maintenance-head-phone').value = data.maintenanceHeadPhone || '';
-    document.getElementById('maintenance-head-email').value = data.maintenanceHeadEmail || '';
-    document.getElementById('operations-assistant-phone').value = data.operationsAssistantPhone || '';
-    document.getElementById('operations-assistant-email').value = data.operationsAssistantEmail || '';
-    document.getElementById('engineering-manager-phone').value = data.engineeringManagerPhone || '';
-    document.getElementById('engineering-manager-email').value = data.engineeringManagerEmail || '';
-    document.getElementById('financial-manager-phone').value = data.financialManagerPhone || '';
-    document.getElementById('financial-manager-email').value = data.financialManagerEmail || '';
-    document.getElementById('hospital-manager-phone').value = data.hospitalManagerPhone || '';
-    document.getElementById('hospital-manager-email').value = data.hospitalManagerEmail || '';
-    document.getElementById('contractor-representative-phone').value = data.contractorRepresentativePhone || '';
-    document.getElementById('contractor-representative-email').value = data.contractorRepresentativeEmail || '';
-    document.getElementById('hospital-accountant-phone').value = data.hospitalAccountantPhone || '';
-    document.getElementById('hospital-accountant-email').value = data.hospitalAccountantEmail || '';
-    document.getElementById('assistant-manager-phone').value = data.assistantManagerPhone || '';
-    document.getElementById('assistant-manager-email').value = data.assistantManagerEmail || '';
-    document.getElementById('site-representative-phone').value = data.siteRepresentativePhone || '';
-    document.getElementById('site-representative-email').value = data.siteRepresentativeEmail || '';
-    document.getElementById('engineering-affairs-manager-phone').value = data.engineeringAffairsManagerPhone || '';
-    document.getElementById('engineering-affairs-manager-email').value = data.engineeringAffairsManagerEmail || '';
-    document.getElementById('general-services-manager-phone').value = data.generalServicesManagerPhone || '';
-    document.getElementById('general-services-manager-email').value = data.generalServicesManagerEmail || '';
-    document.getElementById('follow-up-manager-phone').value = data.followUpManagerPhone || '';
-    document.getElementById('follow-up-manager-email').value = data.followUpManagerEmail || '';
-    const fileStatus = document.querySelector('.file-status');
-    if (fileStatus) {
-        fileStatus.textContent = data.hospitalStamp ? 'تم اختيار ملف' : 'لم يتم اختيار أي ملف';
-    }
-    // عرض صورة التوقيع إذا وجدت
-    const stampImage = document.getElementById('hospital-stamp-preview');
-    if (stampImage && data.hospitalStamp) {
-        stampImage.src = data.hospitalStamp;
-        stampImage.style.display = 'block';
-    } else if (stampImage) {
-        stampImage.style.display = 'none';
-    }
 
+        if (!data.hospitalName) {
+            data.hospitalName = localStorage.getItem('hospitalName') || (session && session.hospital) || '';
+        }
+
+        if (!data.companyName) {
+            data.companyName =
+                localStorage.getItem('companyName') ||
+                (session && session.companyName) ||
+                _resolveCompanyName(session, data.hospitalName) ||
+                '';
+        }
+
+        if (!data.contractNumber) {
+            data.contractNumber = localStorage.getItem('contractNumber') || (session && session.contractNumber) || '';
+        }
+
+        if (!data.contractDetails) {
+            data.contractDetails = localStorage.getItem('contractDetails') || '';
+        }
+
+        if (data.hospitalName && HOSPITAL_CONTRACT_MAP[data.hospitalName]) {
+            var before = JSON.stringify(data);
+
+            _applyFixedContractData(data, data.hospitalName, false);
+
+            if (JSON.stringify(data) !== before) {
+                localStorage.setItem('persistentContractData', JSON.stringify(data));
+                localStorage.setItem('hospitalName', data.hospitalName);
+                localStorage.setItem('companyName', data.companyName || '');
+                localStorage.setItem('contractNumber', data.contractNumber || '');
+                localStorage.setItem('contractDetails', data.contractDetails || '');
+            }
+        }
+
+        const setValue = function(id, value) {
+            const el = document.getElementById(id);
+            if (el) el.value = value || '';
+        };
+
+        setValue('hospital-name', data.hospitalName);
+        setValue('contract-details', data.contractDetails);
+        setValue('company-name', data.companyName);
+        setValue('contract-type', data.contractType || 'عقد أساسي');
+        setValue('direct-purchase-ratio', data.directPurchaseRatio || '0');
+        setValue('contract-start-date', data.startDate);
+        setValue('contract-end-date', data.endDate);
+        setValue('contract-value', data.contractValue);
+        setValue('contract-status', data.contractStatus || 'نشط');
+        setValue('contract-notes', data.notes);
+
+        setValue('project-manager-name', data.projectManager);
+        setValue('maintenance-head-name', data.maintenanceHead);
+        setValue('operations-assistant-name', data.operationsAssistant);
+        setValue('engineering-manager-name', data.engineeringManager);
+        setValue('financial-manager-name', data.financialManager);
+        setValue('hospital-manager-name', data.hospitalManager);
+        setValue('contractor-representative-name', data.contractorRepresentative);
+        setValue('hospital-accountant-name', data.hospitalAccountant);
+        setValue('assistant-manager-name', data.assistantManager);
+        setValue('site-representative-name', data.siteRepresentative);
+        setValue('engineering-affairs-manager-name', data.engineeringAffairsManager);
+        setValue('general-services-manager-name', data.generalServicesManager);
+        setValue('follow-up-manager-name', data.followUpManager);
+
+        setValue('project-manager-phone', data.projectManagerPhone);
+        setValue('project-manager-email', data.projectManagerEmail);
+        setValue('maintenance-head-phone', data.maintenanceHeadPhone);
+        setValue('maintenance-head-email', data.maintenanceHeadEmail);
+        setValue('operations-assistant-phone', data.operationsAssistantPhone);
+        setValue('operations-assistant-email', data.operationsAssistantEmail);
+        setValue('engineering-manager-phone', data.engineeringManagerPhone);
+        setValue('engineering-manager-email', data.engineeringManagerEmail);
+        setValue('financial-manager-phone', data.financialManagerPhone);
+        setValue('financial-manager-email', data.financialManagerEmail);
+        setValue('hospital-manager-phone', data.hospitalManagerPhone);
+        setValue('hospital-manager-email', data.hospitalManagerEmail);
+        setValue('contractor-representative-phone', data.contractorRepresentativePhone);
+        setValue('contractor-representative-email', data.contractorRepresentativeEmail);
+        setValue('hospital-accountant-phone', data.hospitalAccountantPhone);
+        setValue('hospital-accountant-email', data.hospitalAccountantEmail);
+        setValue('assistant-manager-phone', data.assistantManagerPhone);
+        setValue('assistant-manager-email', data.assistantManagerEmail);
+        setValue('site-representative-phone', data.siteRepresentativePhone);
+        setValue('site-representative-email', data.siteRepresentativeEmail);
+        setValue('engineering-affairs-manager-phone', data.engineeringAffairsManagerPhone);
+        setValue('engineering-affairs-manager-email', data.engineeringAffairsManagerEmail);
+        setValue('general-services-manager-phone', data.generalServicesManagerPhone);
+        setValue('general-services-manager-email', data.generalServicesManagerEmail);
+        setValue('follow-up-manager-phone', data.followUpManagerPhone);
+        setValue('follow-up-manager-email', data.followUpManagerEmail);
+
+        const fileStatus = document.querySelector('.file-status');
+        if (fileStatus) {
+            fileStatus.textContent = data.hospitalStamp ? 'تم اختيار ملف' : 'لم يتم اختيار أي ملف';
+        }
+
+        const stampImage = document.getElementById('hospital-stamp-preview');
+        if (stampImage && data.hospitalStamp) {
+            stampImage.src = data.hospitalStamp;
+            stampImage.style.display = 'block';
+        } else if (stampImage) {
+            stampImage.style.display = 'none';
+        }
+
+    } catch(e) {
+        console.error('[updateContractDisplayData] خطأ أثناء تحديث عرض بيانات العقد:', e);
     } finally {
         _updateContractDisplayRunning = false;
     }
 }
-
 // جمع بيانات كل الأقسام
 // إنشاء نسخة احتياطية
 
@@ -1477,77 +1493,103 @@ window.addEventListener('najranHospitalChanged', function(e) {
         window._selectHospitalFromOverlay(h);
     }
 });
+function initSettingsPageFast() {
+    console.time('[settings] initSettingsPageFast');
 
-// استبدل كتلة document.addEventListener('DOMContentLoaded', ...) بهذا الكود المنظم:
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("الصفحة جاهزة. بدء التهيئة...");
+    var session = (typeof _getSession === 'function') ? _getSession() : null;
 
-    // 1. إعدادات الواجهة الأساسية
-    showSection('contract');
-    updateDateTime();
-    setInterval(updateDateTime, 60000);
-    setupExtractDateListeners();
-    toggleFields('contract', false);
-    toggleFields('extract', false);
+    // اختيار أول مستشفى مرة واحدة فقط، بدون تحميل زائد
+    if (session && !session.hospital) {
+        var hospitals = [];
 
-    // 2. تحميل البيانات مرة واحدة وبشكل منظم
-    setTimeout(() => {
         try {
-            var _s = _getSession();
+            hospitals = JSON.parse(session.hospitals || '[]');
+        } catch(e) {
+            hospitals = [];
+        }
 
-            if (_s && !_s.hospital) {
-                // اختيار المستشفى فقط إذا لم يكن مختاراً
-                var _hs = [];
+        if (hospitals.length > 0) {
+            var cd = {};
 
-                try {
-                    _hs = JSON.parse(_s.hospitals || '[]');
-                } catch(e) {
-                    _hs = [];
-                }
-
-                if (_hs.length > 0) {
-                    var _cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-
-                    var _target = (_cd.hospitalName && _hs.indexOf(_cd.hospitalName) !== -1)
-                        ? _cd.hospitalName
-                        : _hs[0];
-
-                    switchHospital(_target);
-
-                    // ضمان بعد تغيير المستشفى
-                    loadPersistentData();
-                    autoFillFromSession();
-                } else {
-                    loadPersistentData();
-                    autoFillFromSession();
-                }
-
-            } else {
-                // إذا كان المستشفى مختاراً بالفعل، نكتفي بالتحميل العادي
-                loadPersistentData();
-                autoFillFromSession();
+            try {
+                cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+            } catch(e) {
+                cd = {};
             }
 
-            renderMonthsArchive();
-            updateMainHospitalName();
+            var target = (cd.hospitalName && hospitals.indexOf(cd.hospitalName) !== -1)
+                ? cd.hospitalName
+                : hospitals[0];
 
-            console.log(">> اكتمل فرض تحميل البيانات.");
+            // لا تستخدم switchHospital هنا لأنها تعمل loadPersistentData + autoFill + render
+            try {
+                session.hospital = target;
+                Storage.prototype.setItem.call(localStorage, 'najran_session', JSON.stringify(session));
+                localStorage.setItem('hospitalName', target);
 
-        } catch(e) {
-            console.error("خطأ أثناء التهيئة:", e);
+                if (!cd.hospitalName) {
+                    cd.hospitalName = target;
+                    if (typeof _applyFixedContractData === 'function') {
+                        _applyFixedContractData(cd, target, true);
+                    }
+                    localStorage.setItem('persistentContractData', JSON.stringify(cd));
+                }
+            } catch(e) {
+                console.warn('[settings] فشل تحديد المستشفى تلقائياً:', e);
+            }
         }
-    }, 50);
-});
-
-function openBackupOptionsMenu() {
-    const modal = document.getElementById('backup-options-modal');
-    if (modal) {
-        modal.style.display = 'block'; // أو 'flex' إذا كنت تستخدم flexbox لإظهار النافذة
-    } else {
-        console.error("خطأ: لم يتم العثور على نافذة خيارات النسخ الاحتياطي (backup-options-modal).");
-        alert("خطأ في تحميل واجهة النسخ الاحتياطي.");
     }
+
+    // تحميل واحد فقط
+    updateContractDisplayData();
+    updateExtractDisplayData();
+
+    if (typeof renderMonthsArchive === 'function') {
+        renderMonthsArchive();
+    }
+
+    if (typeof updateMainHospitalName === 'function') {
+        updateMainHospitalName();
+    }
+
+    if (typeof renderHospitalPicker === 'function') {
+        renderHospitalPicker();
+    }
+
+    console.timeEnd('[settings] initSettingsPageFast');
 }
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("الصفحة جاهزة. بدء التهيئة السريعة...");
+
+    try {
+        // منع أي تهيئة مكررة لنفس الصفحة
+        if (window.__settingsPageInitialized) {
+            console.warn('[settings] تم منع تهيئة مكررة');
+            return;
+        }
+        window.__settingsPageInitialized = true;
+
+        // إعدادات واجهة خفيفة فقط
+        showSection('contract');
+        updateDateTime();
+        setInterval(updateDateTime, 60000);
+        setupExtractDateListeners();
+        toggleFields('contract', false);
+        toggleFields('extract', false);
+
+        // تحميل سريع مرة واحدة بعد استقرار DOM
+        setTimeout(() => {
+            try {
+                initSettingsPageFast();
+            } catch(e) {
+                console.error('[settings] فشل initSettingsPageFast:', e);
+            }
+        }, 80);
+
+    } catch(e) {
+        console.error("خطأ أثناء تهيئة صفحة الإعدادات:", e);
+    }
+});
 
 /**
  * دالة عامة لإغلاق أي نافذة منبثقة.
