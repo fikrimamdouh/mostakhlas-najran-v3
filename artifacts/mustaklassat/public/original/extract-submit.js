@@ -20,13 +20,31 @@
     try {
       const c = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
       const e = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+
+      const extractMonth = e.extractMonth || localStorage.getItem('extractMonth') || '';
+      const extractYear = e.extractYear || localStorage.getItem('extractYear') || new Date().getFullYear();
+      const paymentNumber = e.paymentNumber || localStorage.getItem('paymentNumber') || '';
+      const extractStart = e.extractStart || localStorage.getItem('extractStart') || '';
+      const extractEnd = e.extractEnd || localStorage.getItem('extractEnd') || '';
+
       return {
         companyName: localStorage.getItem('companyName') || c.companyName || c.company || '',
         contractNumber: c.contractNumber || localStorage.getItem('contractDetails') || '',
         hospitalName: c.hospitalName || localStorage.getItem('hospitalName') || '',
-        periodMonth: (localStorage.getItem('extractMonth') || c.extractMonth || '') +
-          ' ' + (localStorage.getItem('extractYear') || c.extractYear || new Date().getFullYear()),
-        totalAmount: parseFloat(localStorage.getItem('finalConsumablesCost') || localStorage.getItem('finalLaborCost') || e.totalCost || '0') || 0,
+
+        extractMonth,
+        extractYear: String(extractYear || ''),
+        paymentNumber,
+        extractStart,
+        extractEnd,
+
+        periodMonth: `${extractMonth || ''} ${extractYear || ''}`.trim(),
+        totalAmount: parseFloat(
+          localStorage.getItem('finalConsumablesCost') ||
+          localStorage.getItem('finalLaborCost') ||
+          e.totalCost ||
+          '0'
+        ) || 0,
       };
     } catch { return {}; }
   }
