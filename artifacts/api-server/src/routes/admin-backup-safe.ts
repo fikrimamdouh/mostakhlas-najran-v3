@@ -11,8 +11,9 @@ import {
   systemSettingsTable,
   projectsTable,
   extractsTable,
+  scheduledBackupsTable,
 } from "@workspace/db";
-import { and, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
@@ -45,7 +46,7 @@ function userBelongsToHospital(user: any, hospitalName: string) {
   return false;
 }
 
-function makeBackup(metaBy: string, data: any) {
+function makeBackup(metaBy: string, data: any, triggeredBy = "manual") {
   const counts = {
     users: data.users.length,
     extracts: data.extracts.length,
@@ -63,6 +64,7 @@ function makeBackup(metaBy: string, data: any) {
       version: "3.0",
       exportedAt: new Date().toISOString(),
       exportedBy: metaBy,
+      triggeredBy,
       counts,
       includes: [
         "users",
@@ -100,7 +102,7 @@ async function collectAllBackupData() {
 router.get("/full", requireAuth, requireAdmin, async (req: any, res: any) => {
   try {
     const data = await collectAllBackupData();
-    const backup = makeBackup(req.currentUser.email, data);
+    const backup = makeBackup(req.currentUser.email, data, "download");
     req.log.info({ adminId: req.currentUser.id, counts: backup.meta.counts }, "Complete system backup exported");
     return res.json(backup);
   } catch (err) {
@@ -200,15 +202,10 @@ async function restoreUserStorage(rows: any[], report: Report) {
   for (const row of rows || []) {
     try {
       if (!row.userId || !row.storageKey) { r.skipped++; continue; }
-      await db.insert(userStorageTable).values({
-        userId: row.userId,
-        storageKey: row.storageKey,
-        storageValue: row.storageValue ?? row.value ?? "",
-        updatedAt: row.updatedAt ? new Date(row.updatedAt) : new Date(),
-      }).onConflictDoUpdate({
-        target: [userStorageTable.userId, userStorageTable.storageKey],
-        set: { storageValue: row.storageValue ?? row.value ?? "", updatedAt: row.updatedAt ? new Date(row.updatedAt) : new Date() },
-      });
+      const value = row.storageValue ?? row.value ?? "";
+      const updatedAt = row.updatedAt ? new Date(row.updatedAt) : new Date();
+      await db.insert(userStorageTable).values({ userId: row.userId, storageKey: row.storageKey, storageValue: value, updatedAt })
+        .onConflictDoUpdate({ target: [userStorageTable.userId, userStorageTable.storageKey], set: { storageValue: value, updatedAt } });
       r.restored++;
     } catch (e: any) { r.errors.push(`storage#${row.userId}/${row.storageKey}: ${e.message}`); }
   }
@@ -219,20 +216,10 @@ async function restoreHospitalStorage(rows: any[], report: Report, key = "hospit
   for (const row of rows || []) {
     try {
       if (!row.hospitalName || !row.storageKey) { r.skipped++; continue; }
-      await db.insert(hospitalStorageTable).values({
-        hospitalName: row.hospitalName,
-        storageKey: row.storageKey,
-        storageValue: row.storageValue ?? row.value ?? "",
-        updatedAt: row.updatedAt ? new Date(row.updatedAt) : new Date(),
-        updatedByUserId: row.updatedByUserId || null,
-      }).onConflictDoUpdate({
-        target: [hospitalStorageTable.hospitalName, hospitalStorageTable.storageKey],
-        set: {
-          storageValue: row.storageValue ?? row.value ?? "",
-          updatedAt: row.updatedAt ? new Date(row.updatedAt) : new Date(),
-          updatedByUserId: row.updatedByUserId || null,
-        },
-      });
+      const value = row.storageValue ?? row.value ?? "";
+      const updatedAt = row.updatedAt ? new Date(row.updatedAt) : new Date();
+      await db.insert(hospitalStorageTable).values({ hospitalName: row.hospitalName, storageKey: row.storageKey, storageValue: value, updatedAt, updatedByUserId: row.updatedByUserId || null })
+        .onConflictDoUpdate({ target: [hospitalStorageTable.hospitalName, hospitalStorageTable.storageKey], set: { storageValue: value, updatedAt, updatedByUserId: row.updatedByUserId || null } });
       r.restored++;
     } catch (e: any) { r.errors.push(`hospitalStorage#${row.hospitalName}/${row.storageKey}: ${e.message}`); }
   }
@@ -263,6 +250,19 @@ async function restoreVisits(rows: any[], report: Report, key = "visitRequests")
   }
 }
 
+async function saveScheduledBackup(triggeredBy: "manual" | "scheduler", exportedBy: string) {
+  const data = await collectAllBackupData();
+  const backup = makeBackup(exportedBy, data, triggeredBy);
+  const [saved] = await db.insert(scheduledBackupsTable).values({ triggeredBy, counts: backup.meta.counts, backupJson: JSON.stringify(backup), emailSent: false }).returning({ id: scheduledBackupsTable.id });
+  const all = await db.select({ id: scheduledBackupsTable.id }).from(scheduledBackupsTable).orderBy(desc(scheduledBackupsTable.createdAt));
+  if (all.length > 7) {
+    const { inArray } = await import("drizzle-orm");
+    const oldIds = all.slice(7).map(b => b.id);
+    await db.delete(scheduledBackupsTable).where(inArray(scheduledBackupsTable.id, oldIds) as any);
+  }
+  return { backup, backupId: saved.id };
+}
+
 router.post("/restore", requireAuth, requireAdmin, async (req: any, res: any) => {
   try {
     const { confirmation, backup } = req.body;
@@ -272,7 +272,6 @@ router.post("/restore", requireAuth, requireAdmin, async (req: any, res: any) =>
     const requiredTables = ["users", "extracts", "storage"];
     const missing = requiredTables.filter((t) => !tables[t]);
     if (missing.length) return res.status(400).json({ error: `النسخة الاحتياطية ناقصة — تفتقد الجداول: ${missing.join(", ")}` });
-
     const report: Report = {};
     await restoreUsers(tables, report, req.clerkUserId);
     await restoreSubmittedExtracts(tables.extracts || [], report);
@@ -280,7 +279,6 @@ router.post("/restore", requireAuth, requireAdmin, async (req: any, res: any) =>
     await restoreHospitalStorage(tables.hospitalStorage || [], report);
     await restoreVisits(tables.visitRequests || [], report);
     await restoreSystemSettings(tables.systemSettings || [], report);
-
     return res.json({ success: true, backupInfo: { version: backup.meta.version, exportedAt: backup.meta.exportedAt, exportedBy: backup.meta.exportedBy }, report });
   } catch (err) {
     req.log.error({ err }, "Complete restore failed");
@@ -305,6 +303,44 @@ router.post("/restore/hospital", requireAuth, requireAdmin, async (req: any, res
   } catch (err) {
     req.log.error({ err }, "Hospital restore failed");
     return res.status(500).json({ error: "فشل في استعادة بيانات المستشفى" });
+  }
+});
+
+router.post("/scheduled/trigger", requireAuth, requireAdmin, async (req: any, res: any) => {
+  try {
+    const saved = await saveScheduledBackup("manual", req.currentUser.email);
+    return res.json({ ok: true, backupId: saved.backupId, counts: saved.backup.meta.counts, emailSent: false });
+  } catch (err) {
+    req.log.error({ err }, "Manual complete backup failed");
+    return res.status(500).json({ error: "فشل في إنشاء النسخة الاحتياطية الكاملة" });
+  }
+});
+
+router.get("/scheduled/download", requireAuth, requireAdmin, async (_req: any, res: any) => {
+  try {
+    const [latest] = await db.select().from(scheduledBackupsTable).orderBy(desc(scheduledBackupsTable.createdAt)).limit(1);
+    if (!latest) return res.status(404).json({ error: "لا توجد نسخة احتياطية بعد" });
+    return res.json(JSON.parse(latest.backupJson));
+  } catch {
+    return res.status(500).json({ error: "فشل في تحميل النسخة الاحتياطية" });
+  }
+});
+
+router.get("/scheduled/latest", requireAuth, requireAdmin, async (_req: any, res: any) => {
+  try {
+    const [latest] = await db.select({ id: scheduledBackupsTable.id, createdAt: scheduledBackupsTable.createdAt, triggeredBy: scheduledBackupsTable.triggeredBy, counts: scheduledBackupsTable.counts, emailSent: scheduledBackupsTable.emailSent }).from(scheduledBackupsTable).orderBy(desc(scheduledBackupsTable.createdAt)).limit(1);
+    return res.json({ backup: latest || null });
+  } catch {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/scheduled/list", requireAuth, requireAdmin, async (_req: any, res: any) => {
+  try {
+    const backups = await db.select({ id: scheduledBackupsTable.id, createdAt: scheduledBackupsTable.createdAt, triggeredBy: scheduledBackupsTable.triggeredBy, counts: scheduledBackupsTable.counts, emailSent: scheduledBackupsTable.emailSent }).from(scheduledBackupsTable).orderBy(desc(scheduledBackupsTable.createdAt)).limit(7);
+    return res.json({ backups });
+  } catch {
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
