@@ -1,5 +1,5 @@
 /* consumables-submit-snapshot-guard.js
- * يحفظ مفتاح ملخص مستخلص المستهلكات قبل الرفع فقط.
+ * يضمن دخول مفتاح ملخص مستخلص المستهلكات داخل Snapshot المرسل للاعتماد.
  * لا يعيد حساب الجداول ولا يغير القيم الظاهرة.
  */
 (function () {
@@ -114,13 +114,32 @@
     ];
   }
 
-  function ensureSummarySnapshot() {
+  function buildSummaryRows() {
     var old = existingRows();
-    if (old.length > 0) return;
+    if (old.length > 0) return old;
     var rows = rowsFromSummaryTable();
     if (!rows.length) rows = rowsFromFoundation();
     if (!rows.length) rows = defaultRows();
-    localStorage.setItem(KEY, JSON.stringify(rows));
+    return rows;
+  }
+
+  function ensureSummarySnapshot() {
+    var rows = buildSummaryRows();
+    if (rows.length > 0) localStorage.setItem(KEY, JSON.stringify(rows));
+    return rows;
+  }
+
+  function injectIntoPayloadBody(body) {
+    try {
+      if (!body || typeof body !== 'string') return body;
+      var payload = JSON.parse(body);
+      var rows = ensureSummarySnapshot();
+      payload.extractData = payload.extractData && typeof payload.extractData === 'object' ? payload.extractData : {};
+      payload.extractData[KEY] = rows;
+      return JSON.stringify(payload);
+    } catch (_) {
+      return body;
+    }
   }
 
   document.addEventListener('pointerdown', function (ev) {
@@ -141,7 +160,10 @@
         var url = String(arguments[0] && arguments[0].url ? arguments[0].url : arguments[0] || '');
         var opts = arguments[1] || {};
         var method = String(opts.method || 'GET').toUpperCase();
-        if (url.indexOf('/api/submitted-extracts') > -1 && (method === 'POST' || method === 'PUT')) ensureSummarySnapshot();
+        if (url.indexOf('/api/submitted-extracts') > -1 && (method === 'POST' || method === 'PUT')) {
+          ensureSummarySnapshot();
+          if (opts && typeof opts.body === 'string') opts.body = injectIntoPayloadBody(opts.body);
+        }
       } catch (_) {}
       return nativeFetch.apply(this, arguments);
     };
