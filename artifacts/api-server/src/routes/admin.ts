@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable, submittedExtractsTable, userStorageTable, auditLogTable, extractsTable, projectsTable, hospitalStorageTable, visitRequestsTable } from "@workspace/db";
-import { eq, ne, and, isNotNull } from "drizzle-orm";
+import { eq, ne, and, isNotNull, inArray } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 import { runInactivityCheck } from "../lib/inactivity";
 import { sendAdminNewUserEmail } from "../lib/email";
@@ -79,21 +79,27 @@ router.post("/purge-deleted-users", requireAuth, requireAdmin, async (req: any, 
     const ids = deletedUsers.map(u => Number(u.id)).filter(Boolean);
     if (ids.length === 0) return res.json({ ok: true, deletedUsers: 0, deletedUserStorage: 0, deletedExtracts: 0 });
 
-    const idList = ids.join(",");
-    const [storageCountRow]: any = await db.execute(`SELECT COUNT(*)::int AS count FROM user_storage WHERE user_id IN (${idList})`);
-    const [extractCountRow]: any = await db.execute(`SELECT COUNT(*)::int AS count FROM submitted_extracts WHERE user_id IN (${idList})`);
+    const storageRows = await db.select({ id: userStorageTable.id })
+      .from(userStorageTable)
+      .where(inArray(userStorageTable.userId, ids));
+    const extractRows = await db.select({ id: submittedExtractsTable.id })
+      .from(submittedExtractsTable)
+      .where(inArray(submittedExtractsTable.userId, ids));
+    const extractIds = extractRows.map(r => Number(r.id)).filter(Boolean);
 
-    await db.execute(`DELETE FROM extract_revisions WHERE extract_id IN (SELECT id FROM submitted_extracts WHERE user_id IN (${idList}))`);
-    await db.execute(`DELETE FROM submitted_extracts WHERE user_id IN (${idList})`);
-    await db.execute(`DELETE FROM user_storage WHERE user_id IN (${idList})`);
-    await db.execute(`DELETE FROM users WHERE id IN (${idList})`);
+    if (extractIds.length) {
+      await db.delete(extractRevisionsTable as any).where(inArray((extractRevisionsTable as any).extractId, extractIds));
+    }
+    await db.delete(submittedExtractsTable).where(inArray(submittedExtractsTable.userId, ids));
+    await db.delete(userStorageTable).where(inArray(userStorageTable.userId, ids));
+    await db.delete(usersTable).where(inArray(usersTable.id, ids));
 
     req.log.info({ adminId: req.currentUser.id, deletedUsers: ids.length }, "Deleted users purged permanently");
     return res.json({
       ok: true,
       deletedUsers: ids.length,
-      deletedUserStorage: Number(storageCountRow?.count || 0),
-      deletedExtracts: Number(extractCountRow?.count || 0),
+      deletedUserStorage: storageRows.length,
+      deletedExtracts: extractRows.length,
       users: deletedUsers,
     });
   } catch (err) {
