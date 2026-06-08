@@ -39,7 +39,6 @@ router.use("/submitted-extracts", submittedExtractsRouter);
 router.use("/admin", adminRouter);
 router.use("/admin/backup", adminBackupSafeRouter);
 router.use("/admin/backup", adminBackupRouter);
-router.use("/admin/backup", adminBackupRouter);
 router.use("/admin/settings", adminSettingsRouter);
 router.use("/export", exportRouter);
 router.use("/remind", remindRouter);
