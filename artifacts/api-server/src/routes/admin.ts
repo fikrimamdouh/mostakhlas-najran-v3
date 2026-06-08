@@ -64,7 +64,7 @@ router.patch("/users/:id/supervised-hospital", requireAuth, requireAdmin, async 
 /**
  * POST /api/admin/purge-deleted-users
  * Permanently removes users already marked deleted + their personal storage and submitted extract rows.
- * Keeps active users and hospital shared storage untouched.
+ * Keeps active users and hospital shared storage values untouched.
  */
 router.post("/purge-deleted-users", requireAuth, requireAdmin, async (req: any, res: any) => {
   const { confirmation } = req.body ?? {};
@@ -77,7 +77,7 @@ router.post("/purge-deleted-users", requireAuth, requireAdmin, async (req: any, 
       .from(usersTable)
       .where(eq(usersTable.status, "deleted" as any));
     const ids = deletedUsers.map(u => Number(u.id)).filter(Boolean);
-    if (ids.length === 0) return res.json({ ok: true, deletedUsers: 0, deletedUserStorage: 0, deletedExtracts: 0 });
+    if (ids.length === 0) return res.json({ ok: true, deletedUsers: 0, deletedUserStorage: 0, deletedExtracts: 0, deletedVisits: 0 });
 
     const storageRows = await db.select({ id: userStorageTable.id })
       .from(userStorageTable)
@@ -85,6 +85,9 @@ router.post("/purge-deleted-users", requireAuth, requireAdmin, async (req: any, 
     const extractRows = await db.select({ id: submittedExtractsTable.id })
       .from(submittedExtractsTable)
       .where(inArray(submittedExtractsTable.userId, ids));
+    const visitRows = await db.select({ id: visitRequestsTable.id })
+      .from(visitRequestsTable)
+      .where(inArray(visitRequestsTable.userId, ids));
     const extractIds = extractRows.map(r => Number(r.id)).filter(Boolean);
 
     if (extractIds.length) {
@@ -92,6 +95,15 @@ router.post("/purge-deleted-users", requireAuth, requireAdmin, async (req: any, 
     }
     await db.delete(submittedExtractsTable).where(inArray(submittedExtractsTable.userId, ids));
     await db.delete(userStorageTable).where(inArray(userStorageTable.userId, ids));
+    await db.delete(visitRequestsTable).where(inArray(visitRequestsTable.userId, ids));
+
+    await db.update(hospitalStorageTable)
+      .set({ updatedByUserId: null })
+      .where(inArray(hospitalStorageTable.updatedByUserId, ids));
+    await db.update(auditLogTable)
+      .set({ userId: null })
+      .where(inArray(auditLogTable.userId, ids));
+
     await db.delete(usersTable).where(inArray(usersTable.id, ids));
 
     req.log.info({ adminId: req.currentUser.id, deletedUsers: ids.length }, "Deleted users purged permanently");
@@ -100,11 +112,12 @@ router.post("/purge-deleted-users", requireAuth, requireAdmin, async (req: any, 
       deletedUsers: ids.length,
       deletedUserStorage: storageRows.length,
       deletedExtracts: extractRows.length,
+      deletedVisits: visitRows.length,
       users: deletedUsers,
     });
-  } catch (err) {
+  } catch (err: any) {
     req.log.error({ err }, "Failed to purge deleted users");
-    return res.status(500).json({ error: "فشل حذف المستخدمين المحذوفين نهائياً" });
+    return res.status(500).json({ error: err?.message || "فشل حذف المستخدمين المحذوفين نهائياً" });
   }
 });
 
