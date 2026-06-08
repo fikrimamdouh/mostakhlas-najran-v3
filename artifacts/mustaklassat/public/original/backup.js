@@ -1,9 +1,9 @@
 /**
  * backup.js
  * النسخ المحلي من صفحة الإعدادات فقط.
- * هذه نسخة متصفح للمستخدم الحالي، وليست النسخة المركزية الكاملة للنظام.
+ * نسخة متصفح للمستخدم الحالي، وليست النسخة المركزية الكاملة للنظام.
  * النسخة الشاملة المحلية تحفظ كل مفاتيح التشغيل الخاصة بالمستخدم/المستشفى من المتصفح:
- * العمالة، الحضور، الأداء، الإنجاز، المستهلكات، قطع الغيار، الإعدادات، والتواقيع.
+ * العمالة، الحضور، الأداء، الإنجاز، المستهلكات، قطع الغيار، الإعدادات، التأسيسي، التواقيع، وأرشيف الشهور.
  */
 
 function _buSession() {
@@ -25,7 +25,7 @@ function _buOwner() {
 
 function _buSameOwner(owner) {
     const s = _buSession();
-    if (!owner || typeof owner !== 'object') return false;
+    if (!owner || typeof owner !== 'object') return true;
     if (owner.userId != null && s.userId != null && String(owner.userId) !== String(s.userId)) return false;
     if (owner.email && s.email && String(owner.email).toLowerCase() !== String(s.email).toLowerCase()) return false;
     return true;
@@ -40,14 +40,11 @@ function _buProtectedKey(k) {
         k === 'loglevel';
 }
 
-function _buKeepBeforeRestore() {
+function _buKeepAuthOnly() {
     const keep = {};
     for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (!k) continue;
-        if (_buProtectedKey(k) || k.startsWith('contract_foundation_v2_') || k === 'contract_foundation_data') {
-            keep[k] = Storage.prototype.getItem.call(localStorage, k);
-        }
+        if (k && _buProtectedKey(k)) keep[k] = Storage.prototype.getItem.call(localStorage, k);
     }
     return keep;
 }
@@ -74,9 +71,41 @@ function _buBuildManifest(data) {
         includesLaborAttendance: has(/attendance|Attendance|عمالة|labor|dept|department|admin_staff|centersAttendance/i),
         includesPerformance: has(/performance|Performance|deduction|Deduction|tableData_|deptCalculatedCost_/i),
         includesAchievement: has(/achievement|Achievement|إنجاز|انجاز/i),
-        includesConsumables: has(/consumables|Consumables|subcontractors|water_supply|sewage|summary_data|laundry_supply/i),
+        includesConsumables: has(/consumables|Consumables|mainHospitalConsumables|healthCentersConsumables|subcontractors|water_supply|sewage|summary_data|laundry_supply/i),
         includesSpareParts: has(/spare|Spare|parts|Parts|spare_parts|spareParts/i),
-        includesSettings: has(/persistentContractData|persistentExtractData|hospitalName|companyName|contract|settings|signature|Signatures/i)
+        includesSettings: has(/persistentContractData|persistentExtractData|hospitalName|companyName|contract|settings|signature|Signatures/i),
+        includesFoundation: has(/contract_foundation|foundation/i),
+        includesMonthArchive: has(/monthSnapshot_|monthly|archive/i)
+    };
+}
+
+function _buNormalizeIncomingBackup(raw) {
+    if (!raw || typeof raw !== 'object') throw new Error('صيغة ملف النسخة غير صالحة.');
+    if (raw.tables) throw new Error('هذا ملف نسخة مركزية من الإدارة، لا يستعاد من صفحة إعدادات المستخدم. استخدم /admin/backup.');
+
+    if (raw.data && typeof raw.data === 'object') {
+        return {
+            type: raw.type || 'local_wrapped',
+            scope: raw.scope || 'local-user-browser-section',
+            owner: raw.owner || null,
+            entityName: raw.entityName || null,
+            timestamp: raw.timestamp || new Date().toISOString(),
+            manifest: raw.manifest || _buBuildManifest(raw.data),
+            data: raw.data,
+            replaceMode: raw.scope === 'local-user-browser-complete' || raw.type === 'user_hospital_complete' || raw.type === 'full_system'
+        };
+    }
+
+    // دعم النسخ القديمة المسطحة التي تبدأ مباشرة بمفاتيح localStorage مثل persistentContractData / attendanceData.
+    return {
+        type: 'legacy_flat_local',
+        scope: 'legacy-flat-merge',
+        owner: null,
+        entityName: raw.persistentContractData?.hospitalName || raw.hospitalName || null,
+        timestamp: new Date().toISOString(),
+        manifest: _buBuildManifest(raw),
+        data: raw,
+        replaceMode: false
     };
 }
 
@@ -165,87 +194,29 @@ function collectDataForBackup(backupType) {
     if (backupType === 'full_system' || backupType === 'user_hospital_complete') {
         Object.keys(localStorage).forEach(key => _buPutLocalValue(allData, key));
         const filename = `نسخة_محلية_شاملة_للمستخدم_${hospitalName.replace(/\s/g, '_')}_${timestamp}.json`;
-        return {
-            filename,
-            data: {
-                type: 'user_hospital_complete',
-                scope: 'local-user-browser-complete',
-                owner: _buOwner(),
-                entityName: hospitalName,
-                timestamp: new Date().toISOString(),
-                manifest: _buBuildManifest(allData),
-                data: allData
-            }
-        };
+        return { filename, data: { type: 'user_hospital_complete', scope: 'local-user-browser-complete', owner: _buOwner(), entityName: hospitalName, timestamp: new Date().toISOString(), manifest: _buBuildManifest(allData), data: allData } };
     }
 
     const SHARED_KEYS = ['persistentContractData', 'persistentExtractData', 'appTitles_v1', 'hospitalName', 'companyName', 'contractNumber'];
     const keyPatterns = {
-        settings: [
-            ...SHARED_KEYS,
-            'distributionSettings', 'performanceTableNames', 'performanceSignatures_v2', 'contractData', 'contractDetails', 'contractType',
-            'contractStartDate', 'contractEndDate', 'contractSignatureData', 'extractMonth', 'extractYear', 'extractNumber',
-            'extractStart', 'extractEnd', 'extractFromDate', 'extractToDate', 'directPurchaseRatio', 'centerNames_v3', 'departmentNames',
-            'admin_staff', 'adminOfficeNames_v1', 'settings_main', 'settings_advanced', 'dynamicSignatures', 'contractorSignature',
-            /^contract_foundation/, /^sb_sigs_/, /^signatures?/i
-        ],
-        main_hospital_attendance: [
-            ...SHARED_KEYS, 'attendanceData', 'ng_attendanceData', 'nd_attendanceData', 'performanceTotalDeduction', 'finalLaborCost',
-            'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin', 'performanceData', 'performanceSignatures',
-            'performanceTableNames', 'achievementData', 'achievementTitles_v1', 'najran_labor_attendance_done', 'najran_labor_performance_done',
-            /^tableData_/, /^deptCalculatedCost_/, /^dept_/, /^ng_/, /^nd_/, /attendance/i, /labor/i, /employee/i, /staff/i
-        ],
-        main_hospital_consumables: [
-            ...SHARED_KEYS, /^main_hospital_consumables_/, /^sparePartsData_/, 'spare_partsData', 'sparePartsTotalAmount',
-            'subcontractors_data_consumables_v27', 'performance_data_consumables_v27', 'water_supply_data_consumables_v27',
-            'sewage_disposal_data_consumables_v27', 'summary_data_consumables_v27', /^summary_data_consumables/, /^signatures_data_consumables/,
-            /consumables/i, /subcontractors/i, /water_supply/i, /sewage/i, /laundry_supply/i
-        ],
-        spare_parts: [
-            ...SHARED_KEYS, 'spare_partsData', 'sparePartsTotalAmount', /^sparePartsData_/, /^spare_parts/, /spare/i, /parts/i
-        ],
-        health_centers_attendance: [
-            ...SHARED_KEYS, 'centerNames_v3', 'centersAttendanceData_v2', 'healthCentersAttendanceData', 'performanceData_v4',
-            'performanceDeductions', 'grand-net-total', 'admin_staff', 'najran_health_attendance_done', /^table-/, /healthCenters/i
-        ],
-        health_centers_consumables: [
-            ...SHARED_KEYS, 'consumables_final_v1.0', /^subcontractors_data_consumables_final_/, /^performance_data_consumables_final_/,
-            /^water_supply_data_consumables_final_/, /^laundry_supply_data_consumables_final_/, /^sewage_disposal_data_consumables_final_/,
-            /^summary_data_consumables_final_/, /^signatures_data_consumables_final_/, /^print_titles_data_consumables_final_/, /^notes_data_consumables_final_/
-        ],
-        admin_offices_attendance: [
-            ...SHARED_KEYS, 'adminOfficeNames_v1', 'adminOfficesAttendanceData_v1', 'performanceData_v4', 'performanceDeductions',
-            'grand-net-total', 'admin_staff', 'najran_admin_offices_attendance_done', /^table-/, /adminOffices/i
-        ],
-        admin_offices_consumables: [
-            ...SHARED_KEYS, 'admin_offices_consumables_v1.0', /^subcontractors_data_admin_offices_consumables_/,
-            /^performance_data_admin_offices_consumables_/, /^water_supply_data_admin_offices_consumables_/,
-            /^laundry_supply_data_admin_offices_consumables_/, /^sewage_disposal_data_admin_offices_consumables_/,
-            /^summary_data_admin_offices_consumables_/, /^signatures_data_admin_offices_consumables_/, /^print_titles_data_admin_offices_consumables_/, /^notes_data_admin_offices_consumables_/
-        ]
+        settings: [...SHARED_KEYS, 'distributionSettings', 'performanceTableNames', 'performanceSignatures_v2', 'contractData', 'contractDetails', 'contractType', 'contractStartDate', 'contractEndDate', 'contractSignatureData', 'extractMonth', 'extractYear', 'extractNumber', 'extractStart', 'extractEnd', 'extractFromDate', 'extractToDate', 'directPurchaseRatio', 'centerNames_v3', 'departmentNames', 'admin_staff', 'adminOfficeNames_v1', 'settings_main', 'settings_advanced', 'dynamicSignatures', 'contractorSignature', /^contract_foundation/, /^sb_sigs_/, /^signatures?/i],
+        main_hospital_attendance: [...SHARED_KEYS, 'attendanceData', 'ng_attendanceData', 'nd_attendanceData', 'performanceTotalDeduction', 'finalLaborCost', 'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin', 'performanceData', 'performanceSignatures', 'performanceTableNames', 'achievementData', 'achievementTitles_v1', 'najran_labor_attendance_done', 'najran_labor_performance_done', /^tableData_/, /^deptCalculatedCost_/, /^dept_/, /^ng_/, /^nd_/, /attendance/i, /labor/i, /employee/i, /staff/i],
+        main_hospital_consumables: [...SHARED_KEYS, /^main_hospital_consumables_/, /^sparePartsData_/, 'mainHospitalConsumables', 'spare_partsData', 'sparePartsTotalAmount', 'subcontractors_data_consumables_v27', 'performance_data_consumables_v27', 'water_supply_data_consumables_v27', 'sewage_disposal_data_consumables_v27', 'summary_data_consumables_v27', /^summary_data_consumables/, /^signatures_data_consumables/, /consumables/i, /subcontractors/i, /water_supply/i, /sewage/i, /laundry_supply/i],
+        spare_parts: [...SHARED_KEYS, 'spare_partsData', 'sparePartsTotalAmount', /^sparePartsData_/, /^spare_parts/, /spare/i, /parts/i],
+        health_centers_attendance: [...SHARED_KEYS, 'centerNames_v3', 'centersAttendanceData_v2', 'healthCentersAttendanceData', 'performanceData_v4', 'performanceDeductions', 'grand-net-total', 'admin_staff', 'najran_health_attendance_done', /^table-/, /healthCenters/i],
+        health_centers_consumables: [...SHARED_KEYS, 'healthCentersConsumables', 'consumables_final_v1.0', /^subcontractors_data_consumables_final_/, /^performance_data_consumables_final_/, /^water_supply_data_consumables_final_/, /^laundry_supply_data_consumables_final_/, /^sewage_disposal_data_consumables_final_/, /^summary_data_consumables_final_/, /^signatures_data_consumables_final_/, /^print_titles_data_consumables_final_/, /^notes_data_consumables_final_/],
+        admin_offices_attendance: [...SHARED_KEYS, 'adminOfficeNames_v1', 'adminOfficesAttendanceData_v1', 'performanceData_v4', 'performanceDeductions', 'grand-net-total', 'admin_staff', 'najran_admin_offices_attendance_done', /^table-/, /adminOffices/i],
+        admin_offices_consumables: [...SHARED_KEYS, 'admin_offices_consumables_v1.0', /^subcontractors_data_admin_offices_consumables_/, /^performance_data_admin_offices_consumables_/, /^water_supply_data_admin_offices_consumables_/, /^laundry_supply_data_admin_offices_consumables_/, /^sewage_disposal_data_admin_offices_consumables_/, /^summary_data_admin_offices_consumables_/, /^signatures_data_admin_offices_consumables_/, /^print_titles_data_admin_offices_consumables_/, /^notes_data_admin_offices_consumables_/]
     };
 
     const keysToCollect = keyPatterns[backupType] || [];
     keysToCollect.forEach(pattern => {
         const regex = typeof pattern === 'string' ? new RegExp(`^${pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&')}$`) : pattern;
-        Object.keys(localStorage).forEach(key => {
-            if (regex.test(key)) _buPutLocalValue(allData, key);
-        });
+        Object.keys(localStorage).forEach(key => { if (regex.test(key)) _buPutLocalValue(allData, key); });
     });
 
     const filename = `نسخة_محلية_${getSectionName(backupType)}_${hospitalName.replace(/\s/g, '_')}_${timestamp}.json`;
-    return {
-        filename,
-        data: {
-            type: backupType,
-            scope: 'local-user-browser-section',
-            owner: _buOwner(),
-            entityName: hospitalName,
-            timestamp: new Date().toISOString(),
-            manifest: _buBuildManifest(allData),
-            data: allData
-        }
-    };
+    return { filename, data: { type: backupType, scope: 'local-user-browser-section', owner: _buOwner(), entityName: hospitalName, timestamp: new Date().toISOString(), manifest: _buBuildManifest(allData), data: allData } };
 }
 
 function confirmRestore() {
@@ -258,28 +229,36 @@ function confirmRestore() {
     const reader = new FileReader();
     reader.onload = function(event) {
         try {
-            const backupWrapper = JSON.parse(event.target.result);
-            if (!backupWrapper.data || !backupWrapper.timestamp) throw new Error('صيغة ملف النسخة الاحتياطية غير صحيحة أو قديمة.');
-            if (backupWrapper.owner && !_buSameOwner(backupWrapper.owner)) {
+            const raw = JSON.parse(event.target.result);
+            const normalized = _buNormalizeIncomingBackup(raw);
+            if (normalized.owner && !_buSameOwner(normalized.owner)) {
                 alert('تم إيقاف الاستعادة: هذه النسخة تخص مستخدمًا آخر.');
                 return;
             }
-            if (!backupWrapper.owner && !confirm('هذا ملف نسخة قديم لا يحتوي على هوية المستخدم. هل تريد المتابعة؟')) return;
-            const mf = backupWrapper.manifest || _buBuildManifest(backupWrapper.data || {});
+            if (!normalized.owner && !confirm('هذا ملف نسخة قديم/مسطح لا يحتوي على هوية المستخدم. سيتم دمجه بدون مسح البيانات الأخرى. هل تريد المتابعة؟')) return;
+
+            const mf = normalized.manifest || _buBuildManifest(normalized.data || {});
+            const modeText = normalized.replaceMode ? 'استبدال كامل للبيانات المحلية غير المحمية' : 'دمج آمن بدون مسح بيانات غير موجودة في الملف';
             const msg = [
-                `سيتم استعادة بيانات محلية للمستخدم الحالي فقط من الملف "${file.name}".`,
-                `عدد المفاتيح داخل الملف: ${mf.totalKeys || Object.keys(backupWrapper.data || {}).length}`,
+                `سيتم استعادة بيانات محلية للمستخدم الحالي من الملف "${file.name}".`,
+                `طريقة الاستعادة: ${modeText}`,
+                `عدد المفاتيح داخل الملف: ${mf.totalKeys || Object.keys(normalized.data || {}).length}`,
                 `العمالة/الحضور: ${mf.includesLaborAttendance ? 'نعم' : 'لا'}`,
+                `الأداء: ${mf.includesPerformance ? 'نعم' : 'لا'}`,
+                `الإنجاز: ${mf.includesAchievement ? 'نعم' : 'لا'}`,
                 `المستهلكات: ${mf.includesConsumables ? 'نعم' : 'لا'}`,
                 `قطع الغيار: ${mf.includesSpareParts ? 'نعم' : 'لا'}`,
+                `الإعدادات/التواقيع: ${mf.includesSettings ? 'نعم' : 'لا'}`,
                 'سيتم الحفاظ على جلسة الدخول الحالية. هل تريد المتابعة؟'
             ].join('\n');
             if (!confirm(msg)) return;
 
-            const keep = _buKeepBeforeRestore();
-            const backupData = backupWrapper.data;
-            localStorage.clear();
-            _buRestoreKeep(keep);
+            const keep = _buKeepAuthOnly();
+            const backupData = normalized.data || {};
+            if (normalized.replaceMode) {
+                localStorage.clear();
+                _buRestoreKeep(keep);
+            }
             Object.keys(backupData).forEach(key => {
                 if (key === 'owner' || key === 'scope' || key === 'manifest') return;
                 if (_buProtectedKey(key)) return;
