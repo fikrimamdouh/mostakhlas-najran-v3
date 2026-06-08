@@ -25,7 +25,10 @@
     window.location.href = BASE + '/sign-in';
     return;
   }
-
+var hospitalContextGuardScript = document.createElement('script');
+hospitalContextGuardScript.src = '/original/hospital-context-guard.js?v=20260608a';
+hospitalContextGuardScript.defer = false;
+document.head.appendChild(hospitalContextGuardScript);
   if (/\/original\/approval\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) {
     var reviewPrintScript = document.createElement('script');
     reviewPrintScript.src = '/original/review-print-override.js';
