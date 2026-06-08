@@ -31,6 +31,151 @@
 
   const PERSONAL_KEYS = new Set(['backupLog','backupLogs']);
   const COMPUTED_KEYS = new Set(['finalLaborCost','grand-net-total','grand-net-total-centers','grand-net-total-admin','performanceTotalDeduction']);
+    // مفاتيح ممنوع رفع نسخة فاضية فوق نسخة موجودة لها محتوى
+  const EMPTY_OVERWRITE_PROTECTED_KEYS = new Set([
+    'attendanceData',
+    'ng_attendanceData',
+    'nd_attendanceData',
+    'centersAttendanceData_v2',
+    'healthCentersAttendanceData',
+    'adminOfficesAttendanceData_v1',
+    'performanceData',
+    'performanceData_v4',
+    'performanceDeductions',
+    'achievementData',
+    'consumablesTableData',
+    'healthCentersConsumables',
+    'mainHospitalConsumables',
+    'admin_offices_consumables_v1.0',
+    'spare_partsData'
+  ]);
+
+  function shouldProtectFromEmptyOverwrite(key) {
+    const nk = normalizeKey(key);
+    return EMPTY_OVERWRITE_PROTECTED_KEYS.has(nk) ||
+      nk.startsWith('dept_') ||
+      nk.startsWith('deptCalculatedCost_') ||
+      nk.startsWith('tableData_') ||
+      nk.startsWith('achievement_') ||
+      nk.startsWith('consumables_') ||
+      nk.startsWith('spare_') ||
+      nk.startsWith('water_') ||
+      nk.startsWith('sewage_') ||
+      nk.startsWith('subcontractors_');
+  }
+
+  function parseMaybeJSON(value) {
+    if (value == null) return null;
+    if (typeof value === 'object') return value;
+    try { return JSON.parse(String(value)); } catch (_) { return value; }
+  }
+
+  function countGenericContent(value) {
+    const v = parseMaybeJSON(value);
+    if (v == null) return 0;
+    if (typeof v === 'string') return v.trim() ? 1 : 0;
+    if (typeof v === 'number') return Number.isFinite(v) && v !== 0 ? 1 : 0;
+    if (Array.isArray(v)) {
+      return v.reduce((s, x) => s + countGenericContent(x), v.length ? 1 : 0);
+    }
+    if (typeof v === 'object') {
+      const keys = Object.keys(v);
+      if (!keys.length) return 0;
+      return keys.reduce((s, k) => s + countGenericContent(v[k]), keys.length ? 1 : 0);
+    }
+    return 0;
+  }
+
+  function countNamedEmployees(value) {
+    const v = parseMaybeJSON(value);
+    let count = 0;
+
+    function walk(x) {
+      if (!x) return;
+      if (Array.isArray(x)) {
+        x.forEach(walk);
+        return;
+      }
+      if (typeof x === 'object') {
+        const name = String(
+          x.name ||
+          x.employeeName ||
+          x.workerName ||
+          x.empName ||
+          x.staffName ||
+          ''
+        ).trim();
+
+        if (name) count++;
+
+        Object.values(x).forEach(walk);
+      }
+    }
+
+    walk(v);
+    return count;
+  }
+
+  function contentScoreForKey(key, value) {
+    const nk = normalizeKey(key);
+
+    if (
+      nk === 'attendanceData' ||
+      nk === 'ng_attendanceData' ||
+      nk === 'nd_attendanceData' ||
+      nk === 'centersAttendanceData_v2' ||
+      nk === 'healthCentersAttendanceData' ||
+      nk === 'adminOfficesAttendanceData_v1'
+    ) {
+      const named = countNamedEmployees(value);
+      if (named > 0) return named;
+    }
+
+    return countGenericContent(value);
+  }
+
+  function isUnsafeEmptyOverwrite(key, newValue, oldValue) {
+    if (!shouldProtectFromEmptyOverwrite(key)) return false;
+    if (oldValue == null) return false;
+
+    const oldScore = contentScoreForKey(key, oldValue);
+    const newScore = contentScoreForKey(key, newValue);
+
+    return oldScore > 0 && newScore === 0;
+  }
+
+  async function filterUnsafeHospitalWrites(hospitalData) {
+    const keys = Object.keys(hospitalData || {});
+    if (!keys.length) return hospitalData;
+
+    const remote = await apiFetch('/hospital-storage');
+    const remoteData = (remote && remote.data) || {};
+    const safe = {};
+    let skipped = 0;
+
+    keys.forEach(key => {
+      const newValue = hospitalData[key];
+      const oldValue = remoteData[key];
+
+      if (isUnsafeEmptyOverwrite(key, newValue, oldValue)) {
+        skipped++;
+        console.warn(
+          '[MzamanaCloud] SKIP EMPTY OVERWRITE:',
+          key,
+          'تم منع رفع قيمة فاضية فوق بيانات موجودة على السيرفر'
+        );
+        return;
+      }
+
+      safe[key] = newValue;
+    });
+
+    if (skipped) {
+      console.warn('[MzamanaCloud] SKIP EMPTY OVERWRITE — تم تجاهل ' + skipped + ' مفتاح لحماية بيانات السيرفر');
+    }
+
+    return safe;
+  }
   const SETTINGS_PAGE_KEYS = new Set([
     'persistentContractData','persistentExtractData','contractData','contractDetails','contractNumber','contractType','contractStartDate','contractEndDate','contractSignatureData',
     'extractMonth','extractYear','extractNumber','extractStart','extractEnd','extractFromDate','extractToDate','paymentNumber','hospitalName','companyName','directPurchaseRatio',
@@ -179,8 +324,8 @@
     const hosp = hospitalName ? ' + ' + Object.keys(hospitalData).length + ' مفتاح مستشفى مشترك' : '';
     const skippedUser = skippedUserOperational ? ' · تم تجاهل ' + skippedUserOperational + ' مفتاح شخصي تشغيلي لمنع خلط المستشفيات' : '';
     const skipped = skippedByPage ? ' · تم تجاهل ' + skippedByPage + ' مفتاح غير مطلوب لهذه الصفحة' : '';
-    console.log('[MzamanaCloud] ✓ ' + mergedUser + ' مفتاح شخصي + ' + mergedHospital + ' مفتاح مشترك مدمج' + hosp + skippedUser + skipped);
-    try { window.dispatchEvent(new CustomEvent('najranCloudPulled', { detail: { monthChanged:false } })); } catch (_) {}
+    console.log('[MzamanaCloud] SERVER-FIRST PULL → ' + (hospitalName || 'بدون مستشفى'));
+    console.log('[MzamanaCloud] ✓ ' + mergedUser + ' مفتاح شخصي + ' + mergedHospital + ' مفتاح مشترك مدمج' + hosp + skippedUser + skipped);    try { window.dispatchEvent(new CustomEvent('najranCloudPulled', { detail: { monthChanged:false } })); } catch (_) {}
     try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
     try { if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint(); } catch (_) {}
   }
@@ -216,12 +361,27 @@
       if (PERSONAL_KEYS.has(nk) || !hospitalName) userData[nk] = val;
       else hospitalData[nk] = val;
     });
+        const safeHospitalData = hospitalName
+      ? await filterUnsafeHospitalWrites(hospitalData)
+      : {};
+
     const mustSaveUser = Object.keys(userData).length > 0;
-    const mustSaveHospital = !!hospitalName && Object.keys(hospitalData).length > 0;
-    if (!mustSaveUser && !mustSaveHospital) return { ok:true, saved:0, reason:'NO_DATA' };
+    const mustSaveHospital = !!hospitalName && Object.keys(safeHospitalData).length > 0;
+
+    if (!mustSaveUser && !mustSaveHospital) {
+      return { ok:true, saved:0, reason:'NO_DATA_OR_EMPTY_OVERWRITE_SKIPPED' };
+    }
+
+    console.log(
+      '[MzamanaCloud] SERVER-FIRST SAVE →',
+      hospitalName || 'user_storage',
+      'userKeys=' + Object.keys(userData).length,
+      'hospitalKeys=' + Object.keys(safeHospitalData).length
+    );
+
     const results = await Promise.all([
       mustSaveUser ? putStorageInBatches('/storage', userData, 300) : Promise.resolve({ saved:0 }),
-      mustSaveHospital ? putStorageInBatches('/hospital-storage', hospitalData, 300) : Promise.resolve({ saved:0 })
+      mustSaveHospital ? putStorageInBatches('/hospital-storage', safeHospitalData, 300) : Promise.resolve({ saved:0 })
     ]);
     if (mustSaveUser && !results[0]) throw new Error('USER_STORAGE_SAVE_FAILED');
     if (mustSaveHospital && !results[1]) throw new Error('HOSPITAL_STORAGE_SAVE_FAILED');
@@ -302,10 +462,14 @@
     const origSetItem = localStorage.setItem.bind(localStorage);
     localStorage.setItem = function(key, value) {
       origSetItem(key, value);
+
       if (!pulling && shouldSyncKey(key)) {
         DIRTY_KEYS.add(normalizeKey(key));
+
         clearTimeout(localStorage._syncTimeout);
-        localStorage._syncTimeout = setTimeout(function(){ syncNow().catch(function(){}); }, 30000);
+        localStorage._syncTimeout = setTimeout(function(){
+          syncNow().catch(function(){});
+        }, 800);
       }
     };
     console.log('[MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)');
