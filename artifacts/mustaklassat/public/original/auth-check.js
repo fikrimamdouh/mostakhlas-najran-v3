@@ -74,8 +74,11 @@
     if (!s) return;
     var age = Date.now() - (s.timestamp || 0);
     var token = (s.clerkToken && age < 55000) ? s.clerkToken : null;
-    var headers = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = 'Bearer ' + token;
+    if (!token) {
+      callback(0, []);
+      return;
+    }
+    var headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token };
     fetch('/api/submitted-extracts', { headers: headers, credentials: 'include' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
