@@ -14,10 +14,6 @@ import "../public/audit-light-guard.js";
 // لا يغير التسجيل أو الربط أو الصلاحيات.
 import "../public/admin-users-hospital-column.js";
 
-// شاشة النسخ الاحتياطي فقط: يضيف استرجاع مستشفى محدد من ملف النسخة.
-// لا يلمس صفحات المستخلصات أو الحضور أو الأداء أو المستهلكات.
-import "../public/admin-backup-hospital-restore.js";
-
 console.log("PRODUCTION_BUILD_MARKER_2026_05_07_V4_LIVE_KEY");
 
 createRoot(document.getElementById("root")!).render(<App />);
