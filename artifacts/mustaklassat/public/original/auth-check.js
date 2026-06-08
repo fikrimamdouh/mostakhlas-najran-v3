@@ -43,6 +43,13 @@
     document.head.appendChild(reviewGenericScript);
   }
 
+  if (/\/original\/consumables\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) {
+    var consumablesGuardScript = document.createElement('script');
+    consumablesGuardScript.src = '/original/consumables-submit-snapshot-guard.js';
+    consumablesGuardScript.defer = true;
+    document.head.appendChild(consumablesGuardScript);
+  }
+
   var NOTIF_SEEN_KEY  = 'najran_notif_seen_ids';
   var NOTIF_CHECK_KEY = 'najran_notif_last_check';
 
