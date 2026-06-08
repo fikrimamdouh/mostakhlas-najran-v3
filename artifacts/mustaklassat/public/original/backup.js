@@ -2,6 +2,8 @@
  * backup.js
  * النسخ المحلي من صفحة الإعدادات فقط.
  * هذه نسخة متصفح للمستخدم الحالي، وليست النسخة المركزية الكاملة للنظام.
+ * النسخة الشاملة المحلية تحفظ كل مفاتيح التشغيل الخاصة بالمستخدم/المستشفى من المتصفح:
+ * العمالة، الحضور، الأداء، الإنجاز، المستهلكات، قطع الغيار، الإعدادات، والتواقيع.
  */
 
 function _buSession() {
@@ -15,6 +17,8 @@ function _buOwner() {
         email: s.email || null,
         name: s.name || null,
         hospital: s.hospital || localStorage.getItem('hospitalName') || null,
+        hospitals: s.hospitals || null,
+        company: s.company || s.companyName || localStorage.getItem('companyName') || null,
         createdAt: new Date().toISOString()
     };
 }
@@ -28,7 +32,12 @@ function _buSameOwner(owner) {
 }
 
 function _buProtectedKey(k) {
-    return k === 'najran_session' || k.indexOf('__clerk') === 0 || k.indexOf('clerk_') === 0 || k.indexOf('amplitude') === 0 || k === 'loglevel';
+    return k === 'najran_session' ||
+        k === '__clerk_db_jwt' ||
+        k.indexOf('__clerk') === 0 ||
+        k.indexOf('clerk_') === 0 ||
+        k.indexOf('amplitude') === 0 ||
+        k === 'loglevel';
 }
 
 function _buKeepBeforeRestore() {
@@ -45,6 +54,30 @@ function _buKeepBeforeRestore() {
 
 function _buRestoreKeep(keep) {
     Object.entries(keep || {}).forEach(([k, v]) => { if (v !== null && v !== undefined) Storage.prototype.setItem.call(localStorage, k, v); });
+}
+
+function _buReadLocalValue(key) {
+    try { return JSON.parse(localStorage.getItem(key)); }
+    catch { return localStorage.getItem(key); }
+}
+
+function _buPutLocalValue(target, key) {
+    if (!key || _buProtectedKey(key)) return;
+    target[key] = _buReadLocalValue(key);
+}
+
+function _buBuildManifest(data) {
+    const keys = Object.keys(data || {});
+    const has = (re) => keys.some(k => re.test(k));
+    return {
+        totalKeys: keys.length,
+        includesLaborAttendance: has(/attendance|Attendance|عمالة|labor|dept|department|admin_staff|centersAttendance/i),
+        includesPerformance: has(/performance|Performance|deduction|Deduction|tableData_|deptCalculatedCost_/i),
+        includesAchievement: has(/achievement|Achievement|إنجاز|انجاز/i),
+        includesConsumables: has(/consumables|Consumables|subcontractors|water_supply|sewage|summary_data|laundry_supply/i),
+        includesSpareParts: has(/spare|Spare|parts|Parts|spare_parts|spareParts/i),
+        includesSettings: has(/persistentContractData|persistentExtractData|hospitalName|companyName|contract|settings|signature|Signatures/i)
+    };
 }
 
 function openBackupRestoreModal() {
@@ -113,8 +146,9 @@ function createSpecificBackup(backupType) {
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
+        const mf = backupObject.data.manifest || {};
         addLogEntry('إنشاء نسخة محلية', getSectionName(backupType), 'نجاح');
-        alert(`تم إنشاء النسخة المحلية بنجاح.\nالملف: "${backupObject.filename}"`);
+        alert(`تم إنشاء النسخة المحلية بنجاح.\nالملف: "${backupObject.filename}"\nعدد المفاتيح: ${mf.totalKeys || Object.keys(backupObject.data.data).length}`);
     } catch (error) {
         console.error(`خطأ في إنشاء النسخة (${backupType}):`, error);
         alert('حدث خطأ أثناء إنشاء النسخة الاحتياطية المحلية.');
@@ -125,49 +159,93 @@ function createSpecificBackup(backupType) {
 function collectDataForBackup(backupType) {
     const allData = {};
     const timestamp = new Date().toISOString().slice(0, 10);
-    const hospitalName = JSON.parse(localStorage.getItem('persistentContractData') || '{}').hospitalName || localStorage.getItem('hospitalName') || 'النظام';
+    const contract = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+    const hospitalName = contract.hospitalName || localStorage.getItem('hospitalName') || (_buOwner().hospital || 'النظام');
 
-    if (backupType === 'full_system') {
-        Object.keys(localStorage).forEach(key => {
-            if (_buProtectedKey(key)) return;
-            try { allData[key] = JSON.parse(localStorage.getItem(key)); }
-            catch { allData[key] = localStorage.getItem(key); }
-        });
-        const filename = `نسخة_محلية_للمستخدم_${hospitalName.replace(/\s/g, '_')}_${timestamp}.json`;
-        return { filename, data: { type: 'full_system', scope: 'local-user-browser', owner: _buOwner(), entityName: hospitalName, timestamp: new Date().toISOString(), data: allData } };
+    if (backupType === 'full_system' || backupType === 'user_hospital_complete') {
+        Object.keys(localStorage).forEach(key => _buPutLocalValue(allData, key));
+        const filename = `نسخة_محلية_شاملة_للمستخدم_${hospitalName.replace(/\s/g, '_')}_${timestamp}.json`;
+        return {
+            filename,
+            data: {
+                type: 'user_hospital_complete',
+                scope: 'local-user-browser-complete',
+                owner: _buOwner(),
+                entityName: hospitalName,
+                timestamp: new Date().toISOString(),
+                manifest: _buBuildManifest(allData),
+                data: allData
+            }
+        };
     }
 
-    const SHARED_KEYS = ['persistentContractData', 'persistentExtractData', 'appTitles_v1'];
+    const SHARED_KEYS = ['persistentContractData', 'persistentExtractData', 'appTitles_v1', 'hospitalName', 'companyName', 'contractNumber'];
     const keyPatterns = {
         settings: [
-            'persistentContractData', 'persistentExtractData', 'distributionSettings', 'performanceTableNames', 'performanceSignatures_v2',
-            'contractData', 'contractDetails', 'contractNumber', 'contractType', 'contractStartDate', 'contractEndDate', 'contractSignatureData',
-            'extractMonth', 'extractYear', 'extractNumber', 'extractStart', 'extractEnd', 'extractFromDate', 'extractToDate',
-            'hospitalName', 'companyName', 'directPurchaseRatio', 'centerNames_v3', 'departmentNames', 'admin_staff',
-            'adminOfficeNames_v1', 'appTitles_v1', 'settings_main', 'settings_advanced', 'dynamicSignatures', 'contractorSignature'
+            ...SHARED_KEYS,
+            'distributionSettings', 'performanceTableNames', 'performanceSignatures_v2', 'contractData', 'contractDetails', 'contractType',
+            'contractStartDate', 'contractEndDate', 'contractSignatureData', 'extractMonth', 'extractYear', 'extractNumber',
+            'extractStart', 'extractEnd', 'extractFromDate', 'extractToDate', 'directPurchaseRatio', 'centerNames_v3', 'departmentNames',
+            'admin_staff', 'adminOfficeNames_v1', 'settings_main', 'settings_advanced', 'dynamicSignatures', 'contractorSignature',
+            /^contract_foundation/, /^sb_sigs_/, /^signatures?/i
         ],
-        main_hospital_attendance: [...SHARED_KEYS, 'attendanceData', 'performanceTotalDeduction', 'finalLaborCost', 'grand-net-total', 'performanceData', 'performanceSignatures', 'performanceTableNames', 'achievementData', 'achievementTitles_v1', 'najran_labor_attendance_done', 'najran_labor_performance_done', /^tableData_/, /^deptCalculatedCost_/, /^dept_/],
-        main_hospital_consumables: [...SHARED_KEYS, /^main_hospital_consumables_/, /^sparePartsData_/, 'spare_partsData', 'subcontractors_data_consumables_v27', 'performance_data_consumables_v27', 'water_supply_data_consumables_v27', 'sewage_disposal_data_consumables_v27', 'summary_data_consumables_v27'],
-        health_centers_attendance: [...SHARED_KEYS, 'centerNames_v3', 'centersAttendanceData_v2', 'healthCentersAttendanceData', 'performanceData_v4', 'performanceDeductions', 'grand-net-total', 'admin_staff', 'najran_health_attendance_done', /^table-/],
-        health_centers_consumables: [...SHARED_KEYS, 'consumables_final_v1.0', /^subcontractors_data_consumables_final_/, /^performance_data_consumables_final_/, /^water_supply_data_consumables_final_/, /^laundry_supply_data_consumables_final_/, /^sewage_disposal_data_consumables_final_/, /^summary_data_consumables_final_/, /^signatures_data_consumables_final_/, /^print_titles_data_consumables_final_/, /^notes_data_consumables_final_/],
-        admin_offices_attendance: [...SHARED_KEYS, 'adminOfficeNames_v1', 'adminOfficesAttendanceData_v1', 'performanceData_v4', 'performanceDeductions', 'grand-net-total', 'admin_staff', 'najran_admin_offices_attendance_done', /^table-/],
-        admin_offices_consumables: [...SHARED_KEYS, 'admin_offices_consumables_v1.0', /^subcontractors_data_admin_offices_consumables_/, /^performance_data_admin_offices_consumables_/, /^water_supply_data_admin_offices_consumables_/, /^laundry_supply_data_admin_offices_consumables_/, /^sewage_disposal_data_admin_offices_consumables_/, /^summary_data_admin_offices_consumables_/, /^signatures_data_admin_offices_consumables_/, /^print_titles_data_admin_offices_consumables_/, /^notes_data_admin_offices_consumables_/]
+        main_hospital_attendance: [
+            ...SHARED_KEYS, 'attendanceData', 'ng_attendanceData', 'nd_attendanceData', 'performanceTotalDeduction', 'finalLaborCost',
+            'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin', 'performanceData', 'performanceSignatures',
+            'performanceTableNames', 'achievementData', 'achievementTitles_v1', 'najran_labor_attendance_done', 'najran_labor_performance_done',
+            /^tableData_/, /^deptCalculatedCost_/, /^dept_/, /^ng_/, /^nd_/, /attendance/i, /labor/i, /employee/i, /staff/i
+        ],
+        main_hospital_consumables: [
+            ...SHARED_KEYS, /^main_hospital_consumables_/, /^sparePartsData_/, 'spare_partsData', 'sparePartsTotalAmount',
+            'subcontractors_data_consumables_v27', 'performance_data_consumables_v27', 'water_supply_data_consumables_v27',
+            'sewage_disposal_data_consumables_v27', 'summary_data_consumables_v27', /^summary_data_consumables/, /^signatures_data_consumables/,
+            /consumables/i, /subcontractors/i, /water_supply/i, /sewage/i, /laundry_supply/i
+        ],
+        spare_parts: [
+            ...SHARED_KEYS, 'spare_partsData', 'sparePartsTotalAmount', /^sparePartsData_/, /^spare_parts/, /spare/i, /parts/i
+        ],
+        health_centers_attendance: [
+            ...SHARED_KEYS, 'centerNames_v3', 'centersAttendanceData_v2', 'healthCentersAttendanceData', 'performanceData_v4',
+            'performanceDeductions', 'grand-net-total', 'admin_staff', 'najran_health_attendance_done', /^table-/, /healthCenters/i
+        ],
+        health_centers_consumables: [
+            ...SHARED_KEYS, 'consumables_final_v1.0', /^subcontractors_data_consumables_final_/, /^performance_data_consumables_final_/,
+            /^water_supply_data_consumables_final_/, /^laundry_supply_data_consumables_final_/, /^sewage_disposal_data_consumables_final_/,
+            /^summary_data_consumables_final_/, /^signatures_data_consumables_final_/, /^print_titles_data_consumables_final_/, /^notes_data_consumables_final_/
+        ],
+        admin_offices_attendance: [
+            ...SHARED_KEYS, 'adminOfficeNames_v1', 'adminOfficesAttendanceData_v1', 'performanceData_v4', 'performanceDeductions',
+            'grand-net-total', 'admin_staff', 'najran_admin_offices_attendance_done', /^table-/, /adminOffices/i
+        ],
+        admin_offices_consumables: [
+            ...SHARED_KEYS, 'admin_offices_consumables_v1.0', /^subcontractors_data_admin_offices_consumables_/,
+            /^performance_data_admin_offices_consumables_/, /^water_supply_data_admin_offices_consumables_/,
+            /^laundry_supply_data_admin_offices_consumables_/, /^sewage_disposal_data_admin_offices_consumables_/,
+            /^summary_data_admin_offices_consumables_/, /^signatures_data_admin_offices_consumables_/, /^print_titles_data_admin_offices_consumables_/, /^notes_data_admin_offices_consumables_/
+        ]
     };
 
     const keysToCollect = keyPatterns[backupType] || [];
     keysToCollect.forEach(pattern => {
         const regex = typeof pattern === 'string' ? new RegExp(`^${pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&')}$`) : pattern;
         Object.keys(localStorage).forEach(key => {
-            if (_buProtectedKey(key)) return;
-            if (regex.test(key)) {
-                try { allData[key] = JSON.parse(localStorage.getItem(key)); }
-                catch { allData[key] = localStorage.getItem(key); }
-            }
+            if (regex.test(key)) _buPutLocalValue(allData, key);
         });
     });
 
     const filename = `نسخة_محلية_${getSectionName(backupType)}_${hospitalName.replace(/\s/g, '_')}_${timestamp}.json`;
-    return { filename, data: { type: backupType, scope: 'local-user-browser', owner: _buOwner(), entityName: hospitalName, timestamp: new Date().toISOString(), data: allData } };
+    return {
+        filename,
+        data: {
+            type: backupType,
+            scope: 'local-user-browser-section',
+            owner: _buOwner(),
+            entityName: hospitalName,
+            timestamp: new Date().toISOString(),
+            manifest: _buBuildManifest(allData),
+            data: allData
+        }
+    };
 }
 
 function confirmRestore() {
@@ -187,14 +265,23 @@ function confirmRestore() {
                 return;
             }
             if (!backupWrapper.owner && !confirm('هذا ملف نسخة قديم لا يحتوي على هوية المستخدم. هل تريد المتابعة؟')) return;
-            if (!confirm(`سيتم استعادة بيانات محلية للمستخدم الحالي فقط من الملف "${file.name}" مع الحفاظ على جلسة الدخول الحالية. هل تريد المتابعة؟`)) return;
+            const mf = backupWrapper.manifest || _buBuildManifest(backupWrapper.data || {});
+            const msg = [
+                `سيتم استعادة بيانات محلية للمستخدم الحالي فقط من الملف "${file.name}".`,
+                `عدد المفاتيح داخل الملف: ${mf.totalKeys || Object.keys(backupWrapper.data || {}).length}`,
+                `العمالة/الحضور: ${mf.includesLaborAttendance ? 'نعم' : 'لا'}`,
+                `المستهلكات: ${mf.includesConsumables ? 'نعم' : 'لا'}`,
+                `قطع الغيار: ${mf.includesSpareParts ? 'نعم' : 'لا'}`,
+                'سيتم الحفاظ على جلسة الدخول الحالية. هل تريد المتابعة؟'
+            ].join('\n');
+            if (!confirm(msg)) return;
 
             const keep = _buKeepBeforeRestore();
             const backupData = backupWrapper.data;
             localStorage.clear();
             _buRestoreKeep(keep);
             Object.keys(backupData).forEach(key => {
-                if (key === 'owner' || key === 'scope') return;
+                if (key === 'owner' || key === 'scope' || key === 'manifest') return;
                 if (_buProtectedKey(key)) return;
                 const value = backupData[key];
                 if (value !== null && value !== undefined) localStorage.setItem(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
@@ -217,11 +304,13 @@ function getSectionName(type) {
         settings: 'الإعدادات',
         main_hospital_attendance: 'عمالة_المستشفى',
         main_hospital_consumables: 'مستهلكات_المستشفى',
+        spare_parts: 'قطع_الغيار',
         health_centers_attendance: 'عمالة_المراكز_الصحية',
         health_centers_consumables: 'مستهلكات_المراكز_الصحية',
         admin_offices_attendance: 'عمالة_المكاتب_الإدارية',
         admin_offices_consumables: 'مستهلكات_المكاتب_الإدارية',
-        full_system: 'محلية_شاملة_للمستخدم'
+        full_system: 'محلية_شاملة_للمستخدم',
+        user_hospital_complete: 'محلية_شاملة_للمستخدم'
     };
     return names[type] || type;
 }
