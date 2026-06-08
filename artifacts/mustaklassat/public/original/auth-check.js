@@ -27,15 +27,17 @@
   }
 
   if (/\/original\/approval\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) {
-    var reviewScript = document.createElement('script');
-    reviewScript.src = '/original/review-workflow.js';
-    reviewScript.defer = true;
-    document.head.appendChild(reviewScript);
-
+    // لازم طبقة التصحيح والطباعة تتحمل قبل review-workflow حتى تعترض جلب المستخلصات
+    // وتطبع/تعرض أيام الحضور بنفس فترة المستخلص قبل بناء شاشة المراجعة.
     var reviewPrintScript = document.createElement('script');
     reviewPrintScript.src = '/original/review-print-override.js';
     reviewPrintScript.defer = true;
     document.head.appendChild(reviewPrintScript);
+
+    var reviewScript = document.createElement('script');
+    reviewScript.src = '/original/review-workflow.js';
+    reviewScript.defer = true;
+    document.head.appendChild(reviewScript);
   }
 
   var NOTIF_SEEN_KEY  = 'najran_notif_seen_ids';
@@ -217,36 +219,5 @@
 
     setTimeout(checkNotifications, 1500);
     setInterval(checkNotifications, 2 * 60 * 1000);
-
-    window.najranSignOut = function () {
-      logActualSignOut(function () {
-        try {
-          localStorage.removeItem('najran_session');
-          sessionStorage.removeItem('najran_prereg');
-          localStorage.removeItem('hospitalName');
-          localStorage.removeItem('companyName');
-          localStorage.removeItem('contractNumber');
-          localStorage.removeItem('contractDetails');
-        } catch(e) {}
-        window.location.href = BASE + '/sign-in';
-      });
-    };
-
-    window.najranSession = session;
-
-    window.najranSetSyncStatus = function (status) {
-      var el = document.getElementById('najran-sync-status');
-      if (!el) return;
-      if (status === 'syncing') {
-        el.textContent = '⟳ جاري الحفظ...'; el.style.color = '#fde68a';
-      } else if (status === 'done') {
-        el.textContent = '✓ محفوظ'; el.style.color = '#86efac';
-        setTimeout(function () { if (el) { el.textContent = '☁ مزامنة'; el.style.color = ''; } }, 2500);
-      } else if (status === 'error') {
-        el.textContent = '⚠ خطأ في الحفظ'; el.style.color = '#fca5a5';
-      } else {
-        el.textContent = '☁ مزامنة'; el.style.color = '';
-      }
-    };
   });
 })();
