@@ -59,6 +59,11 @@ const requireAdmin = async (req: any, res: any, next: any) => {
   next();
 };
 
+const requireStrictAdmin = async (req: any, res: any, next: any) => {
+  if (req.currentUser?.role !== "admin") return res.status(403).json({ error: "Admin only" });
+  next();
+};
+
 // Map contractCompany key → Arabic label (same as frontend COMPANY_SITES)
 const COMPANY_SITES: Record<string, { sites: string[] }> = {
   "بيت_العرب": {
@@ -141,6 +146,29 @@ router.get("/", requireAuth, requireApproved, async (req: any, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to list submitted extracts");
     return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// DELETE /api/submitted-extracts/:id — admin deletes one test/submitted extract only
+router.delete("/:id", requireAuth, requireApproved, requireStrictAdmin, async (req: any, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: "Invalid ID" });
+
+    const [existing] = await db.select({ id: submittedExtractsTable.id, hospitalName: submittedExtractsTable.hospitalName, extractType: submittedExtractsTable.extractType, periodMonth: submittedExtractsTable.periodMonth })
+      .from(submittedExtractsTable)
+      .where(eq(submittedExtractsTable.id, id))
+      .limit(1);
+    if (!existing) return res.status(404).json({ error: "Not found" });
+
+    await db.delete(extractRevisionsTable).where(eq(extractRevisionsTable.extractId, id)).catch(() => {});
+    await db.delete(submittedExtractsTable).where(eq(submittedExtractsTable.id, id));
+
+    req.log.info({ adminId: req.currentUser.id, extractId: id }, "Submitted extract deleted by admin");
+    return res.json({ ok: true, deleted: existing });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete submitted extract");
+    return res.status(500).json({ error: "فشل حذف المستخلص" });
   }
 });
 
@@ -367,7 +395,7 @@ router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (r
 });
 
 // GET /api/submitted-extracts/:id/revisions — get revision history
-router.get("/:id/revisions", requireAuth, requireApproved, async (req: any, res) => {
+router.get(":id/revisions", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const extractId = Number(req.params.id);
     const [extract] = await db.select({ userId: submittedExtractsTable.userId })
@@ -378,11 +406,13 @@ router.get("/:id/revisions", requireAuth, requireApproved, async (req: any, res)
     const isAdminOrSup = ["admin", "supervisor", "contract_supervisor"].includes(req.currentUser.role);
     if (!isOwner && !isAdminOrSup) return res.status(403).json({ error: "Forbidden" });
 
-    const revisions = await db.select().from(extractRevisionsTable)
+    const rows = await db
+      .select()
+      .from(extractRevisionsTable)
       .where(eq(extractRevisionsTable.extractId, extractId))
       .orderBy(desc(extractRevisionsTable.createdAt));
 
-    return res.json({ revisions });
+    return res.json({ revisions: rows });
   } catch (err) {
     req.log.error({ err }, "Failed to get revisions");
     return res.status(500).json({ error: "Internal server error" });
