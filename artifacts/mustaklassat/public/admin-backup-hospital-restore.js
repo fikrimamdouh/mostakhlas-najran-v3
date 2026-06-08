@@ -69,15 +69,18 @@
     btn.onclick=function(){if(!cleaned)return;var d=new Date().toISOString().slice(0,10);downloadJson(cleaned,'نسخة_احتياطية_شاملة_نجران_منظفة_'+d+'.json');};
   }
   function mount(){
-    if(removeIfNotPage())return;injectStyle();
-    var root=document.querySelector('main')||document.body;
+    if(removeIfNotPage())return;
     var headings=Array.from(document.querySelectorAll('h2'));
-    var restoreHeading=headings.find(function(x){return(x.textContent||'').indexOf('استعادة من نسخة')>-1;});
+    var pageReady=headings.some(function(x){return (x.textContent||'').indexOf('النسخ الاحتياطي الشامل')>-1;});
+    var restoreHeading=headings.find(function(x){return (x.textContent||'').indexOf('استعادة من نسخة')>-1;});
     var restoreCard=restoreHeading&&restoreHeading.closest('div[style]');
-    var parent=(restoreCard&&restoreCard.parentElement)||root;
-    mountRestore(parent, restoreCard);
-    mountCleaner(parent, document.getElementById('naj-hospital-restore-box')||restoreCard);
+    if(!pageReady || !restoreCard || !restoreCard.parentElement) return;
+    var wrong=document.getElementById('naj-hospital-restore-box');
+    if(wrong && !restoreCard.parentElement.contains(wrong)){wrong.remove();document.getElementById('naj-clean-backup-box')?.remove();}
+    injectStyle();
+    mountRestore(restoreCard.parentElement, restoreCard);
+    mountCleaner(restoreCard.parentElement, document.getElementById('naj-hospital-restore-box')||restoreCard);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
-  setInterval(mount,1200);
+  setInterval(mount,800);
 })();
