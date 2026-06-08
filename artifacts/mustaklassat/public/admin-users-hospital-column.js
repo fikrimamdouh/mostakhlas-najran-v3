@@ -1,12 +1,15 @@
 /* admin-users-hospital-column.js
- * عرض فقط: يضيف عمود المستشفى/المواقع في شاشة إدارة المستخدمين.
- * لا يغير المستخدمين، لا يرسل PATCH/POST، ولا يلمس الربط أو الصلاحيات.
+ * إضافات عرض آمنة لشاشة إدارة المستخدمين:
+ * - عمود المستشفى/المواقع.
+ * - زر تعديل الاسم للمدير عند ظهور اسم "مستخدم جديد" أو أي اسم يحتاج تصحيح.
+ * لا يغير الربط أو الصلاحيات أو الوحدات.
  */
 (function () {
   'use strict';
 
   var userHospitalByEmail = new Map();
   var userHospitalById = new Map();
+  var userByEmail = new Map();
 
   function isAdminUsersPage() {
     return /\/admin\/users(?:$|[?#])/.test(location.pathname + location.search);
@@ -39,7 +42,11 @@
     var users = payload && Array.isArray(payload.users) ? payload.users : Array.isArray(payload) ? payload : [];
     users.forEach(function (u) {
       var label = normalizeHospitals(u);
-      if (u.email) userHospitalByEmail.set(String(u.email).trim().toLowerCase(), label);
+      var email = String(u.email || '').trim().toLowerCase();
+      if (email) {
+        userHospitalByEmail.set(email, label);
+        userByEmail.set(email, u);
+      }
       if (u.id != null) userHospitalById.set(String(u.id), label);
     });
   }
@@ -59,6 +66,15 @@
         return res;
       });
     };
+  }
+
+  function getToken() {
+    try {
+      var s = JSON.parse(localStorage.getItem('najran_session') || '{}');
+      return s.clerkToken || '';
+    } catch (_) {
+      return '';
+    }
   }
 
   function findUsersTable() {
@@ -109,6 +125,75 @@
     return td;
   }
 
+  function enhanceNameCell(nameCell, email) {
+    if (!nameCell || nameCell.querySelector('[data-najran-edit-name="1"]')) return;
+    var emailKey = String(email || '').trim().toLowerCase();
+    var user = userByEmail.get(emailKey);
+    if (!user || user.id == null) return;
+
+    var currentName = String(user.name || nameCell.textContent || '').trim();
+    nameCell.style.minWidth = '150px';
+
+    var wrap = document.createElement('div');
+    wrap.style.display = 'flex';
+    wrap.style.alignItems = 'center';
+    wrap.style.gap = '6px';
+    wrap.style.flexWrap = 'wrap';
+
+    var nameSpan = document.createElement('span');
+    nameSpan.textContent = currentName || 'مستخدم جديد';
+    nameSpan.style.fontWeight = '700';
+    nameSpan.style.color = '#1f2937';
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.dataset.najranEditName = '1';
+    btn.textContent = 'تعديل';
+    btn.title = 'تعديل اسم المستخدم فقط';
+    btn.style.border = '1px solid #bfdbfe';
+    btn.style.background = '#eff6ff';
+    btn.style.color = '#1d4ed8';
+    btn.style.borderRadius = '999px';
+    btn.style.fontSize = '11px';
+    btn.style.fontWeight = '700';
+    btn.style.padding = '2px 8px';
+    btn.style.cursor = 'pointer';
+
+    btn.addEventListener('click', async function () {
+      var next = prompt('اكتب اسم المستخدم الصحيح:', currentName || '');
+      if (next == null) return;
+      next = String(next).trim();
+      if (!next) return alert('الاسم لا يجوز أن يكون فارغًا');
+      if (next === currentName) return;
+      try {
+        btn.disabled = true;
+        btn.textContent = 'حفظ...';
+        var token = getToken();
+        var res = await fetch('/api/users/' + encodeURIComponent(String(user.id)) + '/profile', {
+          method: 'PATCH',
+          headers: Object.assign({ 'Content-Type': 'application/json' }, token ? { Authorization: 'Bearer ' + token } : {}),
+          credentials: 'include',
+          body: JSON.stringify({ name: next })
+        });
+        if (!res.ok) throw new Error('فشل تعديل الاسم');
+        nameSpan.textContent = next;
+        user.name = next;
+        userByEmail.set(emailKey, user);
+        btn.textContent = 'تم';
+        setTimeout(function () { btn.textContent = 'تعديل'; btn.disabled = false; }, 900);
+      } catch (e) {
+        alert(e.message || 'فشل تعديل الاسم');
+        btn.textContent = 'تعديل';
+        btn.disabled = false;
+      }
+    });
+
+    nameCell.textContent = '';
+    wrap.appendChild(nameSpan);
+    wrap.appendChild(btn);
+    nameCell.appendChild(wrap);
+  }
+
   function patchTable() {
     if (!isAdminUsersPage()) return;
     var table = findUsersTable();
@@ -122,16 +207,17 @@
     }
 
     Array.prototype.slice.call(table.querySelectorAll('tbody tr')).forEach(function (tr) {
-      if (tr.querySelector('[data-najran-hospital-col="1"]')) return;
       var cells = Array.prototype.slice.call(tr.children);
       if (cells.length === 1 && cells[0].colSpan) {
         cells[0].colSpan = Math.max(Number(cells[0].colSpan || 8), 9);
         return;
       }
+      var nameCell = cells[0];
       var emailCell = cells[1];
       var email = emailCell ? (emailCell.textContent || '').trim() : '';
       if (!email) return;
-      insertAfter(tr, makeBodyCell(email), emailCell);
+      enhanceNameCell(nameCell, email);
+      if (!tr.querySelector('[data-najran-hospital-col="1"]')) insertAfter(tr, makeBodyCell(email), emailCell);
     });
   }
 
