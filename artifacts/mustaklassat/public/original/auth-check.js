@@ -27,8 +27,6 @@
   }
 
   if (/\/original\/approval\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) {
-    // لازم طبقة التصحيح والطباعة تتحمل قبل review-workflow حتى تعترض جلب المستخلصات
-    // وتطبع/تعرض أيام الحضور بنفس فترة المستخلص قبل بناء شاشة المراجعة.
     var reviewPrintScript = document.createElement('script');
     reviewPrintScript.src = '/original/review-print-override.js';
     reviewPrintScript.defer = true;
@@ -38,6 +36,11 @@
     reviewScript.src = '/original/review-workflow.js';
     reviewScript.defer = true;
     document.head.appendChild(reviewScript);
+
+    var reviewGenericScript = document.createElement('script');
+    reviewGenericScript.src = '/original/review-generic-tables.js';
+    reviewGenericScript.defer = true;
+    document.head.appendChild(reviewGenericScript);
   }
 
   var NOTIF_SEEN_KEY  = 'najran_notif_seen_ids';
