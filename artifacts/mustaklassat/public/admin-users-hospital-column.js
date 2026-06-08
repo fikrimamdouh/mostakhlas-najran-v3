@@ -2,6 +2,7 @@
  * إضافات عرض آمنة لشاشة إدارة المستخدمين:
  * - عمود المستشفى/المواقع.
  * - زر تعديل الاسم للمدير عند ظهور اسم "مستخدم جديد" أو أي اسم يحتاج تصحيح.
+ * - توسيع شاشة إدارة المستخدمين فقط لتقليل/إلغاء السكرول الأفقي.
  * لا يغير الربط أو الصلاحيات أو الوحدات.
  */
 (function () {
@@ -13,6 +14,30 @@
 
   function isAdminUsersPage() {
     return /\/admin\/users(?:$|[?#])/.test(location.pathname + location.search);
+  }
+
+  function ensureWideStyle() {
+    if (document.getElementById('najran-admin-users-wide-style')) return;
+    var st = document.createElement('style');
+    st.id = 'najran-admin-users-wide-style';
+    st.textContent = [
+      'body:has(table) main > div.p-8{padding:18px!important}',
+      'body:has(table) main > div.p-8 > .mx-auto.max-w-6xl{max-width:none!important;width:100%!important;margin:0!important}',
+      '@media (min-width:1200px){body:has(table) main{overflow-x:hidden!important}}',
+      '.najran-admin-users-wide table{width:100%!important;table-layout:auto!important}',
+      '.najran-admin-users-wide th,.najran-admin-users-wide td{padding:10px 8px!important;vertical-align:middle!important}',
+      '.najran-admin-users-wide th{white-space:nowrap!important;font-size:13px!important}',
+      '.najran-admin-users-wide td{font-size:12.5px!important}',
+      '.najran-admin-users-wide td:nth-child(1){min-width:150px!important}',
+      '.najran-admin-users-wide td:nth-child(2){max-width:235px!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}',
+      '.najran-admin-users-wide td:nth-child(3){min-width:145px!important}',
+      '.najran-admin-users-wide td:nth-child(4){min-width:190px!important}',
+      '.najran-admin-users-wide td:nth-child(5){min-width:95px!important}',
+      '.najran-admin-users-wide td:nth-child(6),.najran-admin-users-wide td:nth-child(7){white-space:nowrap!important}',
+      '.najran-admin-users-wide td:nth-child(8),.najran-admin-users-wide td:nth-child(9){white-space:nowrap!important}',
+      '@media (max-width:1400px){.najran-admin-users-wide th,.najran-admin-users-wide td{padding:8px 5px!important;font-size:11.5px!important}.najran-admin-users-wide button,.najran-admin-users-wide select{font-size:10.5px!important}}'
+    ].join('\n');
+    document.head.appendChild(st);
   }
 
   function normalizeHospitals(user) {
@@ -109,15 +134,15 @@
     var td = document.createElement('td');
     td.dataset.najranHospitalCol = '1';
     td.className = 'text-xs text-slate-600';
-    td.style.minWidth = '150px';
-    td.style.maxWidth = '220px';
+    td.style.minWidth = '140px';
+    td.style.maxWidth = '210px';
 
     var label = userHospitalByEmail.get(String(email || '').trim().toLowerCase()) || 'غير محدد';
     var badge = document.createElement('span');
     badge.textContent = label;
     badge.title = label;
     badge.style.display = 'inline-block';
-    badge.style.maxWidth = '210px';
+    badge.style.maxWidth = '200px';
     badge.style.overflow = 'hidden';
     badge.style.textOverflow = 'ellipsis';
     badge.style.whiteSpace = 'nowrap';
@@ -125,7 +150,7 @@
     badge.style.background = label === 'غير محدد' ? '#fff7ed' : '#eff6ff';
     badge.style.color = label === 'غير محدد' ? '#9a3412' : '#1e3a8a';
     badge.style.borderRadius = '999px';
-    badge.style.padding = '3px 9px';
+    badge.style.padding = '3px 8px';
     badge.style.fontWeight = '700';
     td.appendChild(badge);
     return td;
@@ -156,12 +181,12 @@
     if (!user || user.id == null) return;
 
     var currentName = String(user.name || nameCell.textContent || '').trim();
-    nameCell.style.minWidth = '150px';
+    nameCell.style.minWidth = '140px';
 
     var wrap = document.createElement('div');
     wrap.style.display = 'flex';
     wrap.style.alignItems = 'center';
-    wrap.style.gap = '6px';
+    wrap.style.gap = '5px';
     wrap.style.flexWrap = 'wrap';
 
     var nameSpan = document.createElement('span');
@@ -178,9 +203,9 @@
     btn.style.background = '#eff6ff';
     btn.style.color = '#1d4ed8';
     btn.style.borderRadius = '999px';
-    btn.style.fontSize = '11px';
+    btn.style.fontSize = '10.5px';
     btn.style.fontWeight = '700';
-    btn.style.padding = '2px 8px';
+    btn.style.padding = '2px 7px';
     btn.style.cursor = 'pointer';
 
     btn.addEventListener('click', async function () {
@@ -211,8 +236,16 @@
 
   function patchTable() {
     if (!isAdminUsersPage()) return;
+    ensureWideStyle();
     var table = findUsersTable();
     if (!table) return;
+    var wrapper = table.closest('.rounded-xl.border') || table.parentElement;
+    if (wrapper) {
+      wrapper.classList.add('najran-admin-users-wide');
+      wrapper.style.overflowX = 'visible';
+      wrapper.style.overflowY = 'visible';
+      wrapper.style.width = '100%';
+    }
 
     var headerRow = table.querySelector('thead tr');
     if (headerRow && !headerRow.querySelector('[data-najran-hospital-col="1"]')) {
