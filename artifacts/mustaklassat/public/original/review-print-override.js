@@ -64,9 +64,16 @@
     var endDay = period.endDay;
     var startDay = period.startDay;
     var duration = period.duration;
+
+    // الحضور الأصلي أحيانًا يحفظ أيام الفترة ناقصة خانة واحدة رغم أن الفترة 12 يوم.
+    // طالما لا توجد غياب/إجازة محفوظة لليوم الناقص، يتم إكماله كحضور فقط داخل المراجعة.
+    if (startDay > 1 && days.length < duration) {
+      while (days.length < duration) days.push('ح');
+    }
+
     if (startDay > 1 && days.length <= duration + 1 && days.length < endDay) {
       var expanded = Array(endDay).fill('');
-      for (var i = 0; i < duration && i < days.length; i++) expanded[startDay - 1 + i] = days[i] || '';
+      for (var i = 0; i < duration; i++) expanded[startDay - 1 + i] = days[i] || 'ح';
       emp.days = expanded;
     }
   }
