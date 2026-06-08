@@ -43,7 +43,7 @@
     document.head.appendChild(reviewGenericScript);
   }
 
-  if (/\/original\/consumables\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) {
+  if (/\/original\/.*consumables\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) {
     var consumablesGuardScript = document.createElement('script');
     consumablesGuardScript.src = '/original/consumables-submit-snapshot-guard.js';
     consumablesGuardScript.defer = true;
