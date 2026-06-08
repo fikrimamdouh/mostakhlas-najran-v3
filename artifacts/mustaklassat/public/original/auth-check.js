@@ -50,6 +50,13 @@
     document.head.appendChild(consumablesGuardScript);
   }
 
+  if (/\/original\/settings_main\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) {
+    var settingsBackupCompleteScript = document.createElement('script');
+    settingsBackupCompleteScript.src = '/original/settings-backup-complete-guard.js?v=20260608b';
+    settingsBackupCompleteScript.defer = true;
+    document.head.appendChild(settingsBackupCompleteScript);
+  }
+
   var NOTIF_SEEN_KEY  = 'najran_notif_seen_ids';
   var NOTIF_CHECK_KEY = 'najran_notif_last_check';
 
