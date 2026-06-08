@@ -71,13 +71,56 @@
     return rows;
   }
 
+  function rowsFromFoundation() {
+    try {
+      var cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+      var hn = (cd.hospitalName || localStorage.getItem('hospitalName') || '').trim();
+      var db = window.ContractFoundationDB && window.ContractFoundationDB.load && hn ? window.ContractFoundationDB.load(hn) : null;
+      var cons = db && Array.isArray(db.consumables) ? db.consumables : [];
+      if (!cons.length) return [];
+      var rows = cons.map(function (c, i) {
+        return {
+          id: c.id || ('item_f_' + (i + 1)),
+          name: c.name || c.item || c.description || ('بند مستهلكات ' + (i + 1)),
+          value: parseNumber(c.monthlyCost || c.value || c.amount || 0),
+          isEditable: true,
+          isCustom: false
+        };
+      });
+      rows.push({ id: 'sm_total_1', name: 'اجمالى تكاليف بند المستهلكات', value: 0, isSubTotal: true, type: 'consumablesTotal' });
+      rows.push({ id: 'sm_total_2', name: 'تكاليف مقاولي الباطن', value: 0, isSubTotal: true, type: 'subcontractorsTotal' });
+      rows.push({ id: 'sm_total_3', name: 'تكاليف تامين بند المياه', value: 0, isSubTotal: true, type: 'waterTotal' });
+      rows.push({ id: 'sm_total_4', name: 'تكاليف التخلص من مياه الصرف الصحي', value: 0, isSubTotal: true, type: 'sewageTotal' });
+      rows.push({ id: 'sm_total_5', name: 'غرامة الكهرباء + الماء للسكن', value: 0, isEditable: true, isCustom: true });
+      return rows;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function defaultRows() {
+    return [
+      { id: 'item_1', name: 'الوقود والزيوت والمحروقات (ماعدا وقود السيارات)', value: 4000, isEditable: true, isCustom: false },
+      { id: 'item_2', name: 'المستهلكات الكيميائية والفلاتر', value: 4000, isEditable: true, isCustom: false },
+      { id: 'item_3', name: 'مستهلكات الأعمال المدنية', value: 5500, isEditable: true, isCustom: false },
+      { id: 'item_4', name: 'مواد ومطهرات النظافة', value: 15500, isEditable: true, isCustom: false },
+      { id: 'item_5', name: 'مستهلكات الزراعة والري', value: 2100, isEditable: true, isCustom: false },
+      { id: 'item_6', name: 'مستهلكات مكافحة الحشرات', value: 1000, isEditable: true, isCustom: false },
+      { id: 'sm_total_1', name: 'اجمالى تكاليف بند المستهلكات', value: 0, isSubTotal: true, type: 'consumablesTotal' },
+      { id: 'sm_total_2', name: 'تكاليف مقاولي الباطن', value: 0, isSubTotal: true, type: 'subcontractorsTotal' },
+      { id: 'sm_total_3', name: 'تكاليف تامين بند المياه', value: 0, isSubTotal: true, type: 'waterTotal' },
+      { id: 'sm_total_4', name: 'تكاليف التخلص من مياه الصرف الصحي', value: 0, isSubTotal: true, type: 'sewageTotal' },
+      { id: 'sm_total_5', name: 'غرامة الكهرباء + الماء للسكن', value: 0, isEditable: true, isCustom: true }
+    ];
+  }
+
   function ensureSummarySnapshot() {
     var old = existingRows();
     if (old.length > 0) return;
     var rows = rowsFromSummaryTable();
-    if (rows.length > 0) {
-      localStorage.setItem(KEY, JSON.stringify(rows));
-    }
+    if (!rows.length) rows = rowsFromFoundation();
+    if (!rows.length) rows = defaultRows();
+    localStorage.setItem(KEY, JSON.stringify(rows));
   }
 
   document.addEventListener('pointerdown', function (ev) {
@@ -98,9 +141,7 @@
         var url = String(arguments[0] && arguments[0].url ? arguments[0].url : arguments[0] || '');
         var opts = arguments[1] || {};
         var method = String(opts.method || 'GET').toUpperCase();
-        if (url.indexOf('/api/submitted-extracts') > -1 && (method === 'POST' || method === 'PUT')) {
-          ensureSummarySnapshot();
-        }
+        if (url.indexOf('/api/submitted-extracts') > -1 && (method === 'POST' || method === 'PUT')) ensureSummarySnapshot();
       } catch (_) {}
       return nativeFetch.apply(this, arguments);
     };
