@@ -1,7 +1,6 @@
 (function () {
   'use strict';
 
-  var page = location.pathname.split('/').pop() || '';
   var sig = location.pathname + location.search;
   var isAttendancePage = /attendance\.html(?:$|[?#])/.test(sig) || /[?&]page=.*attendance\.html(?:$|&)/.test(sig);
   if (!isAttendancePage) return;
@@ -14,6 +13,8 @@
     'healthCentersAttendanceData',
     'adminOfficesAttendanceData_v1'
   ];
+
+  console.log('[AttendanceCloudGuard] جاهز لفحص الحضور');
 
   function getSession() {
     try { return JSON.parse(localStorage.getItem('najran_session') || '{}') || {}; }
@@ -57,45 +58,61 @@
     return 0;
   }
 
-  function localHasMeaningfulAttendance() {
-    return ATTENDANCE_KEYS.some(function (k) { return countRows(localStorage.getItem(k)) > 0; });
+  function localAttendanceRows() {
+    var total = 0;
+    ATTENDANCE_KEYS.forEach(function (k) { total += countRows(localStorage.getItem(k)); });
+    return total;
   }
 
-  function renderAgain() {
+  function renderAgain(reason) {
     try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
     try { if (typeof window.rebuildTableHeaders === 'function') window.rebuildTableHeaders(); } catch (_) {}
     try { if (typeof window.renderTables === 'function') window.renderTables(); } catch (_) {}
-    try { window.dispatchEvent(new CustomEvent('najranAttendanceCloudRestored')); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('najranAttendanceCloudRestored', { detail: { reason: reason || '' } })); } catch (_) {}
   }
 
   async function refreshFromHospitalStorage() {
-    if (localHasMeaningfulAttendance()) return;
+    var localRows = localAttendanceRows();
+    if (localRows > 0) {
+      console.log('[AttendanceCloudGuard] بيانات الحضور موجودة محلياً: ' + localRows + ' صف — إعادة رسم فقط');
+      setTimeout(function () { renderAgain('local-existing'); }, 50);
+      setTimeout(function () { renderAgain('local-existing'); }, 500);
+      return;
+    }
 
     var token = await getToken();
-    if (!token) return;
+    if (!token) {
+      console.warn('[AttendanceCloudGuard] لا يوجد توكن صالح لفحص hospital_storage');
+      return;
+    }
 
     try {
       var res = await fetch('/api/hospital-storage', {
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
         credentials: 'include'
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        console.warn('[AttendanceCloudGuard] فشل طلب hospital_storage: ' + res.status);
+        return;
+      }
       var json = await res.json();
       var data = json && json.data ? json.data : {};
       var restored = 0;
+      var restoredRows = 0;
 
       ATTENDANCE_KEYS.forEach(function (k) {
         var val = data[k];
-        if (val == null) return;
-        if (countRows(val) <= 0) return;
+        var rows = countRows(val);
+        if (val == null || rows <= 0) return;
         localStorage.setItem(k, typeof val === 'string' ? val : JSON.stringify(val));
         restored++;
+        restoredRows += rows;
       });
 
       if (restored > 0) {
-        console.log('[AttendanceCloudGuard] تم استرجاع بيانات الحضور من hospital_storage: ' + restored + ' مفتاح');
-        setTimeout(renderAgain, 50);
-        setTimeout(renderAgain, 500);
+        console.log('[AttendanceCloudGuard] تم استرجاع بيانات الحضور من hospital_storage: ' + restored + ' مفتاح / ' + restoredRows + ' صف');
+        setTimeout(function () { renderAgain('cloud-restored'); }, 50);
+        setTimeout(function () { renderAgain('cloud-restored'); }, 500);
       } else {
         console.warn('[AttendanceCloudGuard] لم يتم العثور على attendanceData ذات محتوى في hospital_storage لهذه المستشفى');
       }
@@ -106,6 +123,7 @@
 
   window.addEventListener('najranCloudPulled', function () {
     setTimeout(refreshFromHospitalStorage, 200);
+    setTimeout(refreshFromHospitalStorage, 1200);
   });
 
   document.addEventListener('DOMContentLoaded', function () {
