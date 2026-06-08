@@ -10,6 +10,10 @@ import "../public/prereg-guard.js";
 // لا يمنع تسجيل التعديلات الفعلية أو الحضور أو الاعتماد أو الصلاحيات.
 import "../public/audit-light-guard.js";
 
+// عرض فقط: يضيف عمود المستشفى/المواقع في شاشة إدارة المستخدمين من بيانات المستخدمين المحمّلة.
+// لا يغير التسجيل أو الربط أو الصلاحيات.
+import "../public/admin-users-hospital-column.js";
+
 console.log("PRODUCTION_BUILD_MARKER_2026_05_07_V4_LIVE_KEY");
 
 createRoot(document.getElementById("root")!).render(<App />);
