@@ -62,6 +62,47 @@ router.patch("/users/:id/supervised-hospital", requireAuth, requireAdmin, async 
 });
 
 /**
+ * POST /api/admin/purge-deleted-users
+ * Permanently removes users already marked deleted + their personal storage and submitted extract rows.
+ * Keeps active users and hospital shared storage untouched.
+ */
+router.post("/purge-deleted-users", requireAuth, requireAdmin, async (req: any, res: any) => {
+  const { confirmation } = req.body ?? {};
+  if (confirmation !== "حذف المستخدمين المحذوفين") {
+    return res.status(400).json({ error: "جملة التأكيد غير صحيحة" });
+  }
+
+  try {
+    const deletedUsers = await db.select({ id: usersTable.id, email: usersTable.email, name: usersTable.name })
+      .from(usersTable)
+      .where(eq(usersTable.status, "deleted" as any));
+    const ids = deletedUsers.map(u => Number(u.id)).filter(Boolean);
+    if (ids.length === 0) return res.json({ ok: true, deletedUsers: 0, deletedUserStorage: 0, deletedExtracts: 0 });
+
+    const idList = ids.join(",");
+    const [storageCountRow]: any = await db.execute(`SELECT COUNT(*)::int AS count FROM user_storage WHERE user_id IN (${idList})`);
+    const [extractCountRow]: any = await db.execute(`SELECT COUNT(*)::int AS count FROM submitted_extracts WHERE user_id IN (${idList})`);
+
+    await db.execute(`DELETE FROM extract_revisions WHERE extract_id IN (SELECT id FROM submitted_extracts WHERE user_id IN (${idList}))`);
+    await db.execute(`DELETE FROM submitted_extracts WHERE user_id IN (${idList})`);
+    await db.execute(`DELETE FROM user_storage WHERE user_id IN (${idList})`);
+    await db.execute(`DELETE FROM users WHERE id IN (${idList})`);
+
+    req.log.info({ adminId: req.currentUser.id, deletedUsers: ids.length }, "Deleted users purged permanently");
+    return res.json({
+      ok: true,
+      deletedUsers: ids.length,
+      deletedUserStorage: Number(storageCountRow?.count || 0),
+      deletedExtracts: Number(extractCountRow?.count || 0),
+      users: deletedUsers,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to purge deleted users");
+    return res.status(500).json({ error: "فشل حذف المستخدمين المحذوفين نهائياً" });
+  }
+});
+
+/**
  * POST /api/admin/reset-extracts
  * Deletes extracts + projects only — keeps users, storage, templates.
  */
