@@ -1,10 +1,10 @@
 /* consumables-submit-snapshot-guard.js
- * يحفظ مفاتيح مستخلص المستهلكات الحالية قبل الرفع فقط.
+ * يحفظ مفتاح ملخص مستخلص المستهلكات قبل الرفع فقط.
  * لا يعيد حساب الجداول ولا يغير القيم الظاهرة.
  */
 (function () {
   'use strict';
-  if (!/\/original\/consumables\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
+  if (!/\/original\/.*consumables\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
 
   var KEY = 'summary_data_consumables_v27';
 
@@ -28,8 +28,18 @@
     }
   }
 
+  function findSummaryTable() {
+    var t = document.getElementById('summary-table');
+    if (t) return t;
+    var tables = Array.prototype.slice.call(document.querySelectorAll('table'));
+    return tables.find(function (table) {
+      var h = table.textContent || '';
+      return h.indexOf('القيمة الشهرية') > -1 && h.indexOf('القيمة بالمستخلص') > -1 && h.indexOf('الصافي') > -1;
+    }) || null;
+  }
+
   function rowsFromSummaryTable() {
-    var table = document.getElementById('summary-table');
+    var table = findSummaryTable();
     if (!table) return [];
     var rows = [];
     Array.prototype.slice.call(table.querySelectorAll('tbody tr')).forEach(function (tr, i) {
@@ -37,7 +47,9 @@
       if (!cells.length) return;
       var name = text(cells[0]);
       if (!name) return;
-      var isTotal = /اجمالي|إجمالي|تكاليف|الصافي|فقط وقدره|غرامة الكهرباء/.test(name);
+      var isTafqeet = /فقط وقدره/.test(name) || /فقط وقدره/.test(text(tr));
+      if (isTafqeet) return;
+      var isTotal = /اجمالي|إجمالي|تكاليف|الصافي|غرامة الكهرباء/.test(name);
       if (isTotal) {
         rows.push({
           id: /غرامة الكهرباء/.test(name) ? 'sm_total_5' : ('summary_total_' + i),
@@ -49,7 +61,7 @@
         return;
       }
       rows.push({
-        id: 'item_' + (rows.length + 1),
+        id: 'item_' + (rows.filter(function (r) { return !r.isSubTotal && !r.isCustom; }).length + 1),
         name: name,
         value: parseNumber(text(cells[1])),
         isEditable: true,
@@ -68,11 +80,31 @@
     }
   }
 
-  document.addEventListener('click', function (ev) {
-    var btn = ev.target && ev.target.closest && ev.target.closest('#_najran_approve_btn_inner');
-    if (!btn) return;
-    ensureSummarySnapshot();
+  document.addEventListener('pointerdown', function (ev) {
+    var btn = ev.target && ev.target.closest && ev.target.closest('#_najran_approve_btn_inner, #_najran_approve_btn');
+    if (btn) ensureSummarySnapshot();
   }, true);
+
+  document.addEventListener('click', function (ev) {
+    var btn = ev.target && ev.target.closest && ev.target.closest('#_najran_approve_btn_inner, #_najran_approve_btn');
+    if (btn) ensureSummarySnapshot();
+  }, true);
+
+  if (!window.__najranConsumablesFetchGuard) {
+    window.__najranConsumablesFetchGuard = true;
+    var nativeFetch = window.fetch;
+    window.fetch = function () {
+      try {
+        var url = String(arguments[0] && arguments[0].url ? arguments[0].url : arguments[0] || '');
+        var opts = arguments[1] || {};
+        var method = String(opts.method || 'GET').toUpperCase();
+        if (url.indexOf('/api/submitted-extracts') > -1 && (method === 'POST' || method === 'PUT')) {
+          ensureSummarySnapshot();
+        }
+      } catch (_) {}
+      return nativeFetch.apply(this, arguments);
+    };
+  }
 
   window.najranEnsureConsumablesSummarySnapshot = ensureSummarySnapshot;
 })();
