@@ -25,10 +25,19 @@
     window.location.href = BASE + '/sign-in';
     return;
   }
-var hospitalContextGuardScript = document.createElement('script');
-hospitalContextGuardScript.src = '/original/hospital-context-guard.js?v=20260608a';
-hospitalContextGuardScript.defer = false;
-document.head.appendChild(hospitalContextGuardScript);
+
+  var hospitalContextGuardScript = document.createElement('script');
+  hospitalContextGuardScript.src = '/original/hospital-context-guard.js?v=20260608a';
+  hospitalContextGuardScript.defer = false;
+  document.head.appendChild(hospitalContextGuardScript);
+
+  if (/attendance\.html(?:$|[?#])/.test(window.location.pathname + window.location.search) || /[?&]page=.*attendance\.html(?:$|&)/.test(window.location.pathname + window.location.search)) {
+    var attendanceCloudRefreshGuardScript = document.createElement('script');
+    attendanceCloudRefreshGuardScript.src = '/original/attendance-cloud-refresh-guard.js?v=20260608a';
+    attendanceCloudRefreshGuardScript.defer = true;
+    document.head.appendChild(attendanceCloudRefreshGuardScript);
+  }
+
   if (/\/original\/approval\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) {
     var reviewPrintScript = document.createElement('script');
     reviewPrintScript.src = '/original/review-print-override.js';
