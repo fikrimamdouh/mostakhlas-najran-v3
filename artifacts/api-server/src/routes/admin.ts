@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, submittedExtractsTable, userStorageTable, auditLogTable, extractsTable, projectsTable, hospitalStorageTable, visitRequestsTable } from "@workspace/db";
+import { db, usersTable, submittedExtractsTable, userStorageTable, extractRevisionsTable, auditLogTable, extractsTable, projectsTable, hospitalStorageTable, visitRequestsTable } from "@workspace/db";
 import { eq, ne, and, isNotNull, inArray } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 import { runInactivityCheck } from "../lib/inactivity";
@@ -88,7 +88,7 @@ router.post("/purge-deleted-users", requireAuth, requireAdmin, async (req: any, 
     const extractIds = extractRows.map(r => Number(r.id)).filter(Boolean);
 
     if (extractIds.length) {
-      await db.delete(extractRevisionsTable as any).where(inArray((extractRevisionsTable as any).extractId, extractIds));
+      await db.delete(extractRevisionsTable).where(inArray(extractRevisionsTable.extractId, extractIds));
     }
     await db.delete(submittedExtractsTable).where(inArray(submittedExtractsTable.userId, ids));
     await db.delete(userStorageTable).where(inArray(userStorageTable.userId, ids));
