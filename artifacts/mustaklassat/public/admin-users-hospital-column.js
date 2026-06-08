@@ -68,7 +68,13 @@
     };
   }
 
-  function getToken() {
+  async function getFreshToken() {
+    try {
+      if (window.Clerk && window.Clerk.session && typeof window.Clerk.session.getToken === 'function') {
+        var fresh = await window.Clerk.session.getToken();
+        if (fresh) return fresh;
+      }
+    } catch (_) {}
     try {
       var s = JSON.parse(localStorage.getItem('najran_session') || '{}');
       return s.clerkToken || '';
@@ -125,6 +131,24 @@
     return td;
   }
 
+  async function patchName(user, emailKey, next, nameSpan, btn) {
+    var token = await getFreshToken();
+    var headers = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = 'Bearer ' + token;
+    var res = await fetch('/api/users/' + encodeURIComponent(String(user.id)) + '/profile', {
+      method: 'PATCH',
+      headers: headers,
+      credentials: 'include',
+      body: JSON.stringify({ name: next })
+    });
+    if (res.status === 401) throw new Error('انتهت صلاحية الجلسة. اعمل تحديث للصفحة ثم جرّب مرة أخرى.');
+    if (!res.ok) throw new Error('فشل تعديل الاسم');
+    var updated = await res.json().catch(function () { return null; });
+    nameSpan.textContent = (updated && updated.name) || next;
+    user.name = (updated && updated.name) || next;
+    userByEmail.set(emailKey, user);
+  }
+
   function enhanceNameCell(nameCell, email) {
     if (!nameCell || nameCell.querySelector('[data-najran-edit-name="1"]')) return;
     var emailKey = String(email || '').trim().toLowerCase();
@@ -168,17 +192,8 @@
       try {
         btn.disabled = true;
         btn.textContent = 'حفظ...';
-        var token = getToken();
-        var res = await fetch('/api/users/' + encodeURIComponent(String(user.id)) + '/profile', {
-          method: 'PATCH',
-          headers: Object.assign({ 'Content-Type': 'application/json' }, token ? { Authorization: 'Bearer ' + token } : {}),
-          credentials: 'include',
-          body: JSON.stringify({ name: next })
-        });
-        if (!res.ok) throw new Error('فشل تعديل الاسم');
-        nameSpan.textContent = next;
-        user.name = next;
-        userByEmail.set(emailKey, user);
+        await patchName(user, emailKey, next, nameSpan, btn);
+        currentName = next;
         btn.textContent = 'تم';
         setTimeout(function () { btn.textContent = 'تعديل'; btn.disabled = false; }, 900);
       } catch (e) {
