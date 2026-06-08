@@ -139,36 +139,36 @@
     '.rv-table .nm,.rv-table .it{min-width:190px!important}',
     '.rv-print-meta{display:none}',
     '@media print{',
-      '@page{size:A3 landscape;margin:6mm}',
+      '@page{size:A3 landscape;margin:7mm}',
       '*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}',
-      'html,body{background:#fff!important;width:100%!important;height:auto!important;overflow:visible!important}',
-      '.rv-print-root{width:100%!important;margin:0!important;padding:0!important;background:#fff!important}',
-      '.rv-print-root .rv-doc{width:100%!important;max-width:none!important;box-shadow:none!important;border-radius:0!important;overflow:visible!important}',
-      '.rv-print-root .rv-doc-head{position:static!important;padding:5mm 5mm 3mm!important;border-bottom:2px solid #123b6d!important}',
-      '.rv-print-root .rv-doc-head h2{font-size:20pt!important}',
-      '.rv-print-root .rv-doc-head p{font-size:11pt!important;line-height:1.55!important}',
+      'html,body{background:#fff!important;width:100%!important;height:auto!important;overflow:visible!important;margin:0!important;padding:0!important}',
+      '.rv-print-root{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;background:#fff!important}',
+      '.rv-print-root .rv-doc{width:100%!important;max-width:none!important;box-shadow:none!important;border-radius:0!important;overflow:visible!important;margin:0!important}',
+      '.rv-print-root .rv-doc-head{position:static!important;padding:4mm 5mm 3mm!important;border-bottom:2px solid #123b6d!important;break-inside:avoid!important}',
+      '.rv-print-root .rv-doc-head h2{font-size:19pt!important}',
+      '.rv-print-root .rv-doc-head p{font-size:10pt!important;line-height:1.45!important}',
       '.rv-print-root section{padding:4mm 5mm!important;border-bottom:0!important}',
-      '.rv-print-root section h3{font-size:17pt!important;margin:0 0 4mm!important}',
-      '.rv-print-root .rv-main-stats,.rv-print-root .rv-att-mini,.rv-print-root .rv-substats{grid-template-columns:repeat(4,1fr)!important;gap:3mm!important;margin:2mm 0 4mm!important}',
-      '.rv-print-root .rv-stat{padding:2.6mm 3mm!important;min-height:0!important;border-radius:6px!important}',
-      '.rv-print-root .rv-stat span{font-size:9pt!important}',
-      '.rv-print-root .rv-stat b{font-size:12pt!important;margin-top:1mm!important}',
-      '.rv-print-root .rv-info-grid{grid-template-columns:repeat(5,1fr)!important;gap:2mm!important}',
-      '.rv-print-root .rv-info-grid div{padding:2.5mm!important;border-radius:5px!important}',
+      '.rv-print-root section h3{font-size:16pt!important;margin:0 0 4mm!important}',
+      '.rv-print-root .rv-main-stats,.rv-print-root .rv-att-mini,.rv-print-root .rv-substats{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:3mm!important;margin:2mm 0 4mm!important}',
+      '.rv-print-root .rv-stat{padding:2.4mm 3mm!important;min-height:0!important;border-radius:6px!important;break-inside:avoid!important}',
+      '.rv-print-root .rv-stat span{font-size:8.6pt!important}',
+      '.rv-print-root .rv-stat b{font-size:11.5pt!important;margin-top:1mm!important}',
+      '.rv-print-root .rv-info-grid{display:grid!important;grid-template-columns:repeat(5,1fr)!important;gap:2mm!important}',
+      '.rv-print-root .rv-info-grid div{padding:2.3mm!important;border-radius:5px!important}',
       '.rv-print-root .rv-period-note{font-size:10pt!important;padding:2.5mm!important;margin:0 0 3mm!important}',
       '.rv-print-root .rv-block{margin:0 0 4mm!important;border-radius:0!important;break-inside:auto!important;page-break-inside:auto!important}',
-      '.rv-print-root .rv-block-title{padding:2.4mm 3mm!important}',
-      '.rv-print-root .rv-block-title h4{font-size:13pt!important}',
-      '.rv-print-root .rv-block-title span{font-size:10pt!important}',
-      '.rv-print-root .rv-scroll{overflow:visible!important;max-width:none!important}',
-      '.rv-print-root .rv-table{width:100%!important;table-layout:auto!important;font-size:8.2pt!important;border-collapse:collapse!important}',
-      '.rv-print-root .rv-table th,.rv-print-root .rv-table td{padding:1.35mm .8mm!important;white-space:nowrap!important}',
-      '.rv-print-root .rv-table .nm,.rv-print-root .rv-table .it{white-space:normal!important;min-width:35mm!important;max-width:65mm!important;text-align:right!important}',
-      '.rv-print-root .rv-day{min-width:5mm!important}',
+      '.rv-print-root .rv-block-title{padding:2.4mm 3mm!important;break-inside:avoid!important}',
+      '.rv-print-root .rv-block-title h4{font-size:12.5pt!important}',
+      '.rv-print-root .rv-block-title span{font-size:9.5pt!important}',
+      '.rv-print-root .rv-scroll{overflow:visible!important;max-width:none!important;width:100%!important}',
+      '.rv-print-root .rv-table{width:100%!important;table-layout:auto!important;font-size:7.7pt!important;border-collapse:collapse!important}',
+      '.rv-print-root .rv-table th,.rv-print-root .rv-table td{padding:1.15mm .65mm!important;white-space:nowrap!important}',
+      '.rv-print-root .rv-table .nm,.rv-print-root .rv-table .it{white-space:normal!important;min-width:31mm!important;max-width:58mm!important;text-align:right!important}',
+      '.rv-print-root .rv-day{min-width:4.3mm!important}',
       '.rv-print-root .rv-section-break{break-before:page!important;page-break-before:always!important}',
       '.rv-print-root #rv-summary{break-before:auto!important;page-break-before:auto!important}',
       '.rv-print-root .rv-tabs,.rv-print-root .rv-no-print{display:none!important}',
-      '.rv-print-meta{display:block!important;position:fixed;bottom:2mm;left:6mm;right:6mm;font-size:8pt;color:#475569;border-top:1px solid #cbd5e1;padding-top:1.5mm}',
+      '.rv-print-meta{display:block!important;position:fixed;bottom:2mm;left:6mm;right:6mm;font-size:8pt;color:#475569;border-top:1px solid #cbd5e1;padding-top:1.5mm;text-align:center}',
     '}'
   ].join('');
 
@@ -184,6 +184,8 @@
     var doc = document.querySelector('#rv-body .rv-doc');
     var title = doc && doc.querySelector('.rv-doc-head h2') ? doc.querySelector('.rv-doc-head h2').textContent.trim() : 'مستخلص';
     var subtitle = doc && doc.querySelector('.rv-doc-head p') ? doc.querySelector('.rv-doc-head p').textContent.trim() : '';
+    var parts = subtitle.split('—').map(function (x) { return x.trim(); }).filter(Boolean);
+    var hospital = parts.length ? parts[0] : '';
     var pay = '---';
     var period = '';
     var info = doc ? Array.prototype.slice.call(doc.querySelectorAll('#rv-summary .rv-info-grid div, #rv-summary .rv-stat')) : [];
@@ -193,11 +195,17 @@
       if (t.indexOf('من تاريخ') > -1) period += ' من ' + t.replace('من تاريخ', '').trim();
       if (t.indexOf('إلى تاريخ') > -1) period += ' إلى ' + t.replace('إلى تاريخ', '').trim();
     });
-    return { title: title, subtitle: subtitle, pay: pay, period: period };
+    return { title: title, subtitle: subtitle, hospital: hospital, pay: pay, period: period };
   }
 
   function safeFileName(s) {
     return String(s || '').replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
+  }
+
+  function currentBaseStyle() {
+    var a = document.getElementById('rv-style');
+    var b = document.getElementById('rv-extra-style');
+    return (a ? a.textContent : '') + '\n' + (b ? b.textContent : '') + '\n' + EXTRA_STYLE;
   }
 
   function printReviewDocument() {
@@ -207,12 +215,12 @@
     var info = extractPrintInfo();
     var today = new Date();
     var dateStr = today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate());
-    var filename = safeFileName(info.title + ' - دفعة ' + info.pay + ' - ' + dateStr);
-    var meta = '<div class="rv-print-meta">' + info.title + ' — دفعة ' + info.pay + ' — تاريخ الطباعة: ' + dateStr + (info.period ? ' — الفترة:' + info.period : '') + '</div>';
+    var filename = safeFileName(info.title + ' - ' + (info.hospital || 'بدون مستشفى') + ' - دفعة ' + info.pay + ' - ' + dateStr);
+    var meta = '<div class="rv-print-meta">' + info.title + (info.hospital ? ' — ' + info.hospital : '') + ' — دفعة ' + info.pay + ' — تاريخ الطباعة: ' + dateStr + (info.period ? ' — الفترة:' + info.period : '') + '</div>';
     var w = window.open('', '_blank', 'width=1800,height=1100');
     if (!w) { alert('المتصفح منع فتح نافذة الطباعة. اسمح بالنافذة المنبثقة ثم حاول مرة أخرى.'); return; }
     w.document.open();
-    w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>' + filename + '</title><style>' + ((window.RV_STYLE || '') + EXTRA_STYLE) + '</style></head><body><div class="rv-print-root">' + docHtml + meta + '</div><script>window.onload=function(){document.title=' + JSON.stringify(filename) + ';setTimeout(function(){window.focus();window.print();},650)};<\/script></body></html>');
+    w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>' + filename + '</title><style>' + currentBaseStyle().replace(/<\/style/gi, '') + '</style></head><body><div class="rv-print-root">' + docHtml + meta + '</div><script>window.onload=function(){document.title=' + JSON.stringify(filename) + ';setTimeout(function(){window.focus();window.print();},650)};<\/script></body></html>');
     w.document.close();
   }
 
@@ -224,7 +232,7 @@
     var btn = document.getElementById('rv-download');
     if (btn) {
       btn.textContent = 'طباعة / حفظ PDF';
-      btn.title = 'يطبع مستندًا مستقلًا واضحًا باسم رقم الدفعة وتاريخ الطباعة';
+      btn.title = 'يطبع مستندًا مستقلًا واضحًا باسم المستشفى ورقم الدفعة وتاريخ الطباعة';
       btn.onclick = function (ev) { if (ev && ev.preventDefault) ev.preventDefault(); printReviewDocument(); };
     }
     var quick = document.getElementById('rv-print');
