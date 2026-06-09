@@ -115,27 +115,36 @@ export function Sidebar() {
   const [notifAnim, setNotifAnim] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const bellBtnRef = useRef<HTMLButtonElement>(null);
+  const hospitalBtnRef = useRef<HTMLButtonElement>(null);
+  const hospitalMenuRef = useRef<HTMLDivElement>(null);
   const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
-
+  const [hospitalDropdownStyle, setHospitalDropdownStyle] = useState<CSSProperties>({});
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(t);
   }, []);
 
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (
-        notifRef.current && !notifRef.current.contains(e.target as Node) &&
-        bellBtnRef.current && !bellBtnRef.current.contains(e.target as Node)
-      ) {
-        setNotifAnim(false);
-        setTimeout(() => setNotifOpen(false), 180);
-        setShowHospitalMenu(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+   function handleClick(e: MouseEvent) {
+  const target = e.target as Node;
+
+  const clickedNotif =
+    (notifRef.current && notifRef.current.contains(target)) ||
+    (bellBtnRef.current && bellBtnRef.current.contains(target));
+
+  const clickedHospital =
+    (hospitalMenuRef.current && hospitalMenuRef.current.contains(target)) ||
+    (hospitalBtnRef.current && hospitalBtnRef.current.contains(target));
+
+  if (!clickedNotif) {
+    setNotifAnim(false);
+    setTimeout(() => setNotifOpen(false), 180);
+  }
+
+  if (!clickedHospital) {
+    setShowHospitalMenu(false);
+  }
+}
 
   function openNotif() {
     setShowHospitalMenu(false);
@@ -160,7 +169,41 @@ export function Sidebar() {
     setNotifOpen(true);
     setTimeout(() => setNotifAnim(true), 10);
   }
+  function openHospitalMenu() {
+    setNotifAnim(false);
+    setNotifOpen(false);
 
+    if (showHospitalMenu) {
+      setShowHospitalMenu(false);
+      return;
+    }
+
+    if (hospitalBtnRef.current) {
+      const rect = hospitalBtnRef.current.getBoundingClientRect();
+      const dropW = collapsed ? 220 : Math.max(rect.width, 220);
+      const viewW = window.innerWidth;
+      const viewH = window.innerHeight;
+
+      let left = rect.left;
+      if (left + dropW > viewW - 8) left = viewW - dropW - 8;
+      if (left < 8) left = 8;
+
+      let top = rect.bottom + 6;
+      const maxH = 300;
+      if (top + maxH > viewH - 8) top = rect.top - maxH - 6;
+
+      setHospitalDropdownStyle({
+        position: "fixed",
+        top,
+        left,
+        width: dropW,
+        zIndex: 99999,
+        direction: "rtl"
+      });
+    }
+
+    setShowHospitalMenu(true);
+  }
   const toggleCollapse = useCallback(() => {
     setCollapsed(prev => {
       const next = !prev;
@@ -460,12 +503,10 @@ export function Sidebar() {
         <div className="px-2 py-1.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
           <div className="relative">
             {!collapsed && <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5 px-1" style={{ color: "rgba(212,175,55,0.6)" }}>الموقع الحالي</p>}
-            <button
-onClick={() => {
-  setNotifAnim(false);
-  setNotifOpen(false);
-  setShowHospitalMenu(v => !v);
-}}              disabled={!!switchingHospital}
+           <button
+  ref={hospitalBtnRef}
+  onClick={openHospitalMenu}
+  disabled={!!switchingHospital}
               title={collapsed ? dbUser.hospital : undefined}
               className={cn("w-full flex items-center gap-2 rounded-lg px-2.5 py-2 transition-all hover:bg-white/10", collapsed ? "justify-center px-2" : "")}
               style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
@@ -475,8 +516,15 @@ onClick={() => {
               {!collapsed && <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "rgba(255,255,255,0.4)", transform: showHospitalMenu ? "rotate(270deg)" : "rotate(90deg)", transition: "transform 0.2s" }} />}
             </button>
             {showHospitalMenu && (
-              <div className="absolute top-full right-0 mt-1 rounded-xl overflow-hidden shadow-2xl z-40" style={{ background: "#0f2050", border: "1px solid rgba(255,255,255,0.15)", minWidth: collapsed ? 200 : "100%" }}>
-                <p className="text-[9px] px-3 py-2 font-bold uppercase tracking-widest" style={{ color: "rgba(212,175,55,0.7)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>اختر الموقع</p>
+<div
+  ref={hospitalMenuRef}
+  className="rounded-xl overflow-hidden shadow-2xl"
+  style={{
+    ...hospitalDropdownStyle,
+    background: "#0f2050",
+    border: "1px solid rgba(255,255,255,0.15)"
+  }}
+>                <p className="text-[9px] px-3 py-2 font-bold uppercase tracking-widest" style={{ color: "rgba(212,175,55,0.7)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>اختر الموقع</p>
                 {parsedHospitals.map((h) => (
                   <button key={h} onClick={() => handleSwitchHospital(h)} className="w-full text-right px-3 py-2.5 text-xs transition-all flex items-center gap-2 hover:bg-white/10" style={{ color: h === dbUser.hospital ? "#d4af37" : "rgba(255,255,255,0.8)", background: h === dbUser.hospital ? "rgba(212,175,55,0.12)" : "transparent", fontWeight: h === dbUser.hospital ? 700 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                     <span>{h === dbUser.hospital ? "✓" : "○"}</span>
