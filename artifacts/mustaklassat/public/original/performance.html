@@ -7,9 +7,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>جداول الأداء - تجمع نجران الصحي</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="performance_styles.css">
@@ -461,6 +461,9 @@ tr.total-row th, tr.total-row td {
     <button class="ab ab-restore" onclick="restoreBackup()"><i class="fas fa-upload"></i> استعادة نسخة</button>
     <button class="ab ab-sig" onclick="SignatureBlock.open('performance')"><i class="fas fa-signature"></i> تعديل التواقيع</button>
     <button class="ab ab-titles" onclick="openEditTableNamesDialog()"><i class="fas fa-heading"></i> تعديل أسماء الجداول</button>
+    <button class="ab ab-print" onclick="printAllPerformanceTables()">
+    <i class="fas fa-print"></i> طباعة الكل
+</button>
 </div>
 
 <!-- التنسيق الموحد للأزرار -->
@@ -2006,7 +2009,198 @@ setTimeout(() => {
 }, 600);
 
 }
+function printAllPerformanceTables() {
+    const sections = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'laundry', 'security', 'certificate'];
 
+    const logoRight = document.querySelector('.logo-right')?.src || '';
+    const logoLeft = document.querySelector('.logo-left')?.src || '';
+    const pageTitle = document.title || 'جداول الأداء';
+
+    const hospitalName = document.querySelector('.hospitalName')?.textContent || '';
+    const contractDetails = document.querySelector('.contractDetails')?.textContent || '';
+    const companyName = document.querySelector('.companyName')?.textContent || '';
+    const contractType = document.querySelector('.contractType')?.textContent || '';
+    const extractStart = document.getElementById('extract-start-date')?.textContent || '';
+    const extractEnd = document.getElementById('extract-end-date')?.textContent || '';
+
+    let allSectionsHTML = '';
+
+    sections.forEach(function(sectionId, index) {
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+
+        const sectionClone = section.cloneNode(true);
+
+        sectionClone.querySelectorAll(
+            '.std-action-bar, .action-buttons, .export-buttons, .table-buttons, .no-print, button'
+        ).forEach(function(el) {
+            el.remove();
+        });
+
+    sectionClone.querySelectorAll('input.editable, input[type="number"]').forEach(function(input) {
+    const value = input.value || '0';
+
+    if (input.parentElement && input.parentElement.tagName === 'TD') {
+        input.parentElement.textContent = value;
+    } else {
+        const span = document.createElement('span');
+        span.textContent = value;
+        input.replaceWith(span);
+    }
+});
+
+        const tableTitle = section.querySelector('.table-title')?.textContent || sectionId;
+
+        allSectionsHTML += `
+            <section class="print-section ${index > 0 ? 'page-break' : ''}">
+                <h2 class="section-title">${tableTitle}</h2>
+                ${sectionClone.innerHTML}
+            </section>
+        `;
+    });
+
+    const printWindow = window.open('', '', 'height=900,width=1200');
+
+    printWindow.document.write(`
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>طباعة كل جداول الأداء</title>
+    <style>
+        body {
+            font-family: Arial, Tahoma, sans-serif;
+            direction: rtl;
+            margin: 0;
+            padding: 12mm;
+            background: #fff;
+            color: #000;
+        }
+
+        .header-print {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .logo-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .logo-row img {
+            width: 65px;
+            height: 65px;
+            object-fit: contain;
+        }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .contract-info-row {
+            border: 1px solid #000;
+            padding: 8px;
+            font-size: 12px;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            margin: 0 auto 10px auto !important;
+            font-size: 11px !important;
+            box-shadow: none !important;
+        }
+
+        th, td {
+            border: 1px solid #000 !important;
+            padding: 5px !important;
+            text-align: center !important;
+            color: #000 !important;
+            background: #fff !important;
+        }
+
+        th {
+            font-weight: bold !important;
+            background: #f2f2f2 !important;
+        }
+
+        .total-row th,
+        .total-row td {
+            font-weight: bold !important;
+            background: #e8e8e8 !important;
+        }
+
+        .summary-text,
+        .footer-text {
+            font-size: 12px;
+            margin: 8px 0;
+        }
+
+        .signatures {
+            margin-top: 18px;
+            page-break-inside: avoid;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        .no-print,
+        button,
+        .std-action-bar,
+        .table-buttons,
+        .action-buttons,
+        .export-buttons {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-print">
+        <div class="logo-row">
+            <img src="${logoRight}" alt="">
+            <img src="${logoLeft}" alt="">
+        </div>
+        <div class="page-title">${pageTitle}</div>
+        <div class="contract-info-row">
+            <div><strong>اسم المستشفى:</strong> ${hospitalName}</div>
+            <div><strong>اسم الشركة:</strong> ${companyName}</div>
+            <div><strong>تفاصيل العقد:</strong> ${contractDetails}</div>
+            <div><strong>نوع العقد:</strong> ${contractType}</div>
+            <div><strong>مدة المستخلص:</strong> من ${extractStart} إلى ${extractEnd}</div>
+        </div>
+    </div>
+
+    ${allSectionsHTML}
+</body>
+</html>
+    `);
+
+    printWindow.document.close();
+
+    setTimeout(function() {
+        printWindow.focus();
+        printWindow.print();
+    }, 700);
+}
 function exportSectionToExcel() {
     // رسالة للمستخدم بأن العملية قد تستغرق بضع ثوانٍ
     showSuccessMessage('جاري تجهيز ملف الإكسل الشامل... يرجى الانتظار.');
