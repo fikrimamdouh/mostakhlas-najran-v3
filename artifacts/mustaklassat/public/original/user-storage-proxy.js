@@ -17,6 +17,20 @@
 
     // آخر نشاط داخل المستشفى لازم يكون مشتركًا بين مستخدمي نفس المستشفى
     'hospitalActivityStatus'
+    'sb_sigs_attendance',
+'sb_sigs_performance',
+'sb_sigs_achievement',
+'sb_sigs_consumables',
+'sb_sigs_spare_parts',
+'sb_prefs_attendance',
+'sb_prefs_performance',
+'sb_prefs_achievement',
+'sb_prefs_consumables',
+'sb_prefs_spare_parts',
+'dynamicSignatures',
+'contractorSignature',
+'performanceSignatures',
+'performanceSignatures_v2'
   ];
 
   function getPrefix() {
