@@ -10,7 +10,7 @@
 
   const API_BASE = '/api';
   const SESSION_KEY = 'najran_session';
-const SYNC_INTERVAL_MS = 15000;
+  const SYNC_INTERVAL_MS = 15000;
   const DIRTY_KEYS = new Set();
 
   const SYNC_KEYS = [
@@ -31,7 +31,17 @@ const SYNC_INTERVAL_MS = 15000;
 
   const PERSONAL_KEYS = new Set(['backupLog','backupLogs']);
   const COMPUTED_KEYS = new Set(['finalLaborCost','grand-net-total','grand-net-total-centers','grand-net-total-admin','performanceTotalDeduction']);
-    // مفاتيح ممنوع رفع نسخة فاضية فوق نسخة موجودة لها محتوى
+
+  const ATTENDANCE_PAGE_KEYS = new Set([
+    'attendanceData',
+    'ng_attendanceData',
+    'nd_attendanceData',
+    'centersAttendanceData_v2',
+    'healthCentersAttendanceData',
+    'adminOfficesAttendanceData_v1'
+  ]);
+
+  // مفاتيح ممنوع رفع نسخة فاضية فوق نسخة موجودة لها محتوى
   const EMPTY_OVERWRITE_PROTECTED_KEYS = new Set([
     'attendanceData',
     'ng_attendanceData',
@@ -75,9 +85,7 @@ const SYNC_INTERVAL_MS = 15000;
     if (v == null) return 0;
     if (typeof v === 'string') return v.trim() ? 1 : 0;
     if (typeof v === 'number') return Number.isFinite(v) && v !== 0 ? 1 : 0;
-    if (Array.isArray(v)) {
-      return v.reduce((s, x) => s + countGenericContent(x), v.length ? 1 : 0);
-    }
+    if (Array.isArray(v)) return v.reduce((s, x) => s + countGenericContent(x), v.length ? 1 : 0);
     if (typeof v === 'object') {
       const keys = Object.keys(v);
       if (!keys.length) return 0;
@@ -89,101 +97,59 @@ const SYNC_INTERVAL_MS = 15000;
   function countNamedEmployees(value) {
     const v = parseMaybeJSON(value);
     let count = 0;
-
     function walk(x) {
       if (!x) return;
-      if (Array.isArray(x)) {
-        x.forEach(walk);
-        return;
-      }
+      if (Array.isArray(x)) { x.forEach(walk); return; }
       if (typeof x === 'object') {
-        const name = String(
-          x.name ||
-          x.employeeName ||
-          x.workerName ||
-          x.empName ||
-          x.staffName ||
-          ''
-        ).trim();
-
+        const name = String(x.name || x.employeeName || x.workerName || x.empName || x.staffName || '').trim();
         if (name) count++;
-
         Object.values(x).forEach(walk);
       }
     }
-
     walk(v);
     return count;
   }
 
   function contentScoreForKey(key, value) {
     const nk = normalizeKey(key);
-
-    if (
-      nk === 'attendanceData' ||
-      nk === 'ng_attendanceData' ||
-      nk === 'nd_attendanceData' ||
-      nk === 'centersAttendanceData_v2' ||
-      nk === 'healthCentersAttendanceData' ||
-      nk === 'adminOfficesAttendanceData_v1'
-    ) {
+    if (ATTENDANCE_PAGE_KEYS.has(nk)) {
       const named = countNamedEmployees(value);
       if (named > 0) return named;
     }
-
     return countGenericContent(value);
   }
 
   function isUnsafeEmptyOverwrite(key, newValue, oldValue) {
     if (!shouldProtectFromEmptyOverwrite(key)) return false;
     if (oldValue == null) return false;
-
     const oldScore = contentScoreForKey(key, oldValue);
     const newScore = contentScoreForKey(key, newValue);
-
     return oldScore > 0 && newScore === 0;
   }
 
-async function filterUnsafeHospitalWrites(hospitalData) {
-  const keys = Object.keys(hospitalData || {});
-  if (!keys.length) return hospitalData;
-
-  const protectedKeys = keys.filter(function(key){
-    return shouldProtectFromEmptyOverwrite(key);
-  });
-
-  // لو مفيش مفاتيح خطرة، لا تسحب بيانات السيرفر
-  if (!protectedKeys.length) return hospitalData;
-
-  const remote = await apiFetch('/hospital-storage');
-  const remoteData = (remote && remote.data) || {};
-  const safe = {};
-  let skipped = 0;
-
-  keys.forEach(key => {
-    const newValue = hospitalData[key];
-    const oldValue = remoteData[key];
-
-    if (isUnsafeEmptyOverwrite(key, newValue, oldValue)) {
-      skipped++;
-      console.warn(
-        '[MzamanaCloud] SKIP EMPTY OVERWRITE:',
-        key,
-        'تم منع رفع قيمة فاضية فوق بيانات موجودة على السيرفر'
-      );
-      return;
-    }
-
-    safe[key] = newValue;
-  });
-
-  if (skipped) {
-    console.warn('[MzamanaCloud] SKIP EMPTY OVERWRITE — تم تجاهل ' + skipped + ' مفتاح لحماية بيانات السيرفر');
+  async function filterUnsafeHospitalWrites(hospitalData) {
+    const keys = Object.keys(hospitalData || {});
+    if (!keys.length) return hospitalData;
+    const protectedKeys = keys.filter(function(key){ return shouldProtectFromEmptyOverwrite(key); });
+    if (!protectedKeys.length) return hospitalData;
+    const remote = await apiFetch('/hospital-storage');
+    const remoteData = (remote && remote.data) || {};
+    const safe = {};
+    let skipped = 0;
+    keys.forEach(key => {
+      const newValue = hospitalData[key];
+      const oldValue = remoteData[key];
+      if (isUnsafeEmptyOverwrite(key, newValue, oldValue)) {
+        skipped++;
+        console.warn('[MzamanaCloud] SKIP EMPTY OVERWRITE:', key, 'تم منع رفع قيمة فاضية فوق بيانات موجودة على السيرفر');
+        return;
+      }
+      safe[key] = newValue;
+    });
+    if (skipped) console.warn('[MzamanaCloud] SKIP EMPTY OVERWRITE — تم تجاهل ' + skipped + ' مفتاح لحماية بيانات السيرفر');
+    return safe;
   }
 
-  return safe;
-}
-  
   const SETTINGS_PAGE_KEYS = new Set([
     'persistentContractData','persistentExtractData','contractData','contractDetails','contractNumber','contractType','contractStartDate','contractEndDate','contractSignatureData',
     'extractMonth','extractYear','extractNumber','extractStart','extractEnd','extractFromDate','extractToDate','paymentNumber','hospitalName','companyName','directPurchaseRatio',
@@ -193,14 +159,22 @@ async function filterUnsafeHospitalWrites(hospitalData) {
   function normalizeKey(key) { return String(key || '').replace(/^_u\d+_/, ''); }
   function getCurrentPageFile() { return window.location.pathname.split('/').pop() || ''; }
   function isSettingsMainPage() { return getCurrentPageFile() === 'settings_main.html'; }
+  function isAttendancePage() {
+    const f = getCurrentPageFile();
+    return f === 'attendance.html' || f === 'health_centers_attendance.html' || f === 'admin_offices_attendance.html';
+  }
   function shouldMergePulledKeyForCurrentPage(key) {
+    const nk = normalizeKey(key);
+    if (isAttendancePage() && ATTENDANCE_PAGE_KEYS.has(nk)) {
+      return false;
+    }
     if (!isSettingsMainPage()) return true;
-    return SETTINGS_PAGE_KEYS.has(normalizeKey(key));
+    return SETTINGS_PAGE_KEYS.has(nk);
   }
   function shouldSyncKey(key) {
     const nk = normalizeKey(key);
     return SYNC_KEYS.includes(nk) ||
-nk.startsWith('deptCalculatedCost_') || nk.startsWith('dept_') || nk.startsWith('sb_sigs_') || nk.startsWith('sb_prefs_') || nk.startsWith('tableData_') ||
+      nk.startsWith('deptCalculatedCost_') || nk.startsWith('dept_') || nk.startsWith('sb_sigs_') || nk.startsWith('sb_prefs_') || nk.startsWith('tableData_') ||
       nk.startsWith('achievement_') || nk.startsWith('consumables_') || nk.startsWith('spare_') || nk.startsWith('water_') ||
       nk.startsWith('sewage_') || nk.startsWith('subcontractors_') || nk.startsWith('najran_labor_') || nk.startsWith('najran_health_') ||
       nk.startsWith('najran_admin_') || nk.includes('finalLaborCost') || nk.includes('grand-net-total');
@@ -333,7 +307,8 @@ nk.startsWith('deptCalculatedCost_') || nk.startsWith('dept_') || nk.startsWith(
     const skippedUser = skippedUserOperational ? ' · تم تجاهل ' + skippedUserOperational + ' مفتاح شخصي تشغيلي لمنع خلط المستشفيات' : '';
     const skipped = skippedByPage ? ' · تم تجاهل ' + skippedByPage + ' مفتاح غير مطلوب لهذه الصفحة' : '';
     console.log('[MzamanaCloud] SERVER-FIRST PULL → ' + (hospitalName || 'بدون مستشفى'));
-    console.log('[MzamanaCloud] ✓ ' + mergedUser + ' مفتاح شخصي + ' + mergedHospital + ' مفتاح مشترك مدمج' + hosp + skippedUser + skipped);    try { window.dispatchEvent(new CustomEvent('najranCloudPulled', { detail: { monthChanged:false } })); } catch (_) {}
+    console.log('[MzamanaCloud] ✓ ' + mergedUser + ' مفتاح شخصي + ' + mergedHospital + ' مفتاح مشترك مدمج' + hosp + skippedUser + skipped);
+    try { window.dispatchEvent(new CustomEvent('najranCloudPulled', { detail: { monthChanged:false } })); } catch (_) {}
     try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
     try { if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint(); } catch (_) {}
   }
@@ -369,9 +344,7 @@ nk.startsWith('deptCalculatedCost_') || nk.startsWith('dept_') || nk.startsWith(
       if (PERSONAL_KEYS.has(nk) || !hospitalName) userData[nk] = val;
       else hospitalData[nk] = val;
     });
-        const safeHospitalData = hospitalName
-      ? await filterUnsafeHospitalWrites(hospitalData)
-      : {};
+    const safeHospitalData = hospitalName ? await filterUnsafeHospitalWrites(hospitalData) : {};
 
     const mustSaveUser = Object.keys(userData).length > 0;
     const mustSaveHospital = !!hospitalName && Object.keys(safeHospitalData).length > 0;
@@ -380,12 +353,7 @@ nk.startsWith('deptCalculatedCost_') || nk.startsWith('dept_') || nk.startsWith(
       return { ok:true, saved:0, reason:'NO_DATA_OR_EMPTY_OVERWRITE_SKIPPED' };
     }
 
-    console.log(
-      '[MzamanaCloud] SERVER-FIRST SAVE →',
-      hospitalName || 'user_storage',
-      'userKeys=' + Object.keys(userData).length,
-      'hospitalKeys=' + Object.keys(safeHospitalData).length
-    );
+    console.log('[MzamanaCloud] SERVER-FIRST SAVE →', hospitalName || 'user_storage', 'userKeys=' + Object.keys(userData).length, 'hospitalKeys=' + Object.keys(safeHospitalData).length);
 
     const results = await Promise.all([
       mustSaveUser ? putStorageInBatches('/storage', userData, 300) : Promise.resolve({ saved:0 }),
@@ -401,10 +369,10 @@ nk.startsWith('deptCalculatedCost_') || nk.startsWith('dept_') || nk.startsWith(
     return { ok:true, userSaved, hospitalSaved, hospitalName:hospitalName || null };
   }
 
- let syncIndicator = null;
-let syncInProgress = false;
+  let syncIndicator = null;
+  let syncInProgress = false;
 
-function showSyncStatus(status) {
+  function showSyncStatus(status) {
     if (typeof window.najranSetSyncStatus === 'function') { window.najranSetSyncStatus(status); return; }
     const bar = document.getElementById('najran-auth-bar');
     if (!bar) return;
@@ -417,25 +385,21 @@ function showSyncStatus(status) {
     if (status === 'done') setTimeout(function(){ if (syncIndicator) syncIndicator.textContent = '☁ مزامنة'; }, 2000);
   }
   async function syncNow() {
-  if (syncInProgress) {
-    return { ok:true, skipped:true, reason:'SYNC_ALREADY_RUNNING' };
+    if (syncInProgress) return { ok:true, skipped:true, reason:'SYNC_ALREADY_RUNNING' };
+    syncInProgress = true;
+    showSyncStatus('syncing');
+    try {
+      const result = await pushToCloud();
+      showSyncStatus('done');
+      return result || { ok:true };
+    } catch (err) {
+      console.error('[MzamanaCloud] فشل الرفع:', err);
+      showSyncStatus('error');
+      throw err;
+    } finally {
+      syncInProgress = false;
+    }
   }
-
-  syncInProgress = true;
-  showSyncStatus('syncing');
-
-  try {
-    const result = await pushToCloud();
-    showSyncStatus('done');
-    return result || { ok:true };
-  } catch (err) {
-    console.error('[MzamanaCloud] فشل الرفع:', err);
-    showSyncStatus('error');
-    throw err;
-  } finally {
-    syncInProgress = false;
-  }
-}
 
   window.najranSyncNow = syncNow;
   window.najranPullFromCloud = pullFromCloud;
@@ -472,26 +436,22 @@ function showSyncStatus(status) {
     function scheduleSync() {
       clearTimeout(debounce);
       updateHospitalActivityStatus();
-debounce = setTimeout(function(){ syncNow().catch(function(){}); }, 2000);    }
+      debounce = setTimeout(function(){ syncNow().catch(function(){}); }, 2000);
+    }
     document.addEventListener('input', scheduleSync);
     document.addEventListener('change', scheduleSync);
 
     const origSetItem = localStorage.setItem.bind(localStorage);
-  localStorage.setItem = function(key, value) {
-  origSetItem(key, value);
+    localStorage.setItem = function(key, value) {
+      origSetItem(key, value);
+      if (!pulling && shouldSyncKey(key)) {
+        DIRTY_KEYS.add(normalizeKey(key));
+        clearTimeout(localStorage._syncTimeout);
+        localStorage._syncTimeout = setTimeout(function(){ syncNow().catch(function(){}); }, 2000);
+      }
+    };
 
-  if (!pulling && shouldSyncKey(key)) {
-    DIRTY_KEYS.add(normalizeKey(key));
-
-    clearTimeout(localStorage._syncTimeout);
-
-    localStorage._syncTimeout = setTimeout(function(){
-      syncNow().catch(function(){});
-    }, 2000);
-  }
-};
-
-console.log('[MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)');
+    console.log('[MzamanaCloud] تم تهيئة المزامنة السحابية (V2 — مشاركة بيانات المستشفى)');
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
