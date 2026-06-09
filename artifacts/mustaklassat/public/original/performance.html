@@ -461,7 +461,9 @@ tr.total-row th, tr.total-row td {
     <button class="ab ab-restore" onclick="restoreBackup()"><i class="fas fa-upload"></i> استعادة نسخة</button>
     <button class="ab ab-sig" onclick="SignatureBlock.open('performance')"><i class="fas fa-signature"></i> تعديل التواقيع</button>
     <button class="ab ab-titles" onclick="openEditTableNamesDialog()"><i class="fas fa-heading"></i> تعديل أسماء الجداول</button>
-   
+   <button class="ab ab-print" onclick="printAllPerformanceCertificatesSafe()">
+    <i class="fas fa-print"></i> طباعة الكل
+</button>
 </div>
 
 <!-- التنسيق الموحد للأزرار -->
@@ -2882,7 +2884,465 @@ function printSingleTable(tableId) {
         printWindow.close();
     }, 800);
 }
+function printAllPerformanceCertificatesSafe() {
+    try {
+        // حفظ آخر البيانات قبل الطباعة بدون تغيير أي معادلات
+        const perfAllDepartments = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'laundry', 'security'];
 
+        perfAllDepartments.forEach(function(dept) {
+            try {
+                if (typeof updateTotal === 'function') updateTotal(dept);
+                if (typeof saveTableData === 'function') saveTableData(dept);
+            } catch (_) {}
+        });
+
+        if (typeof updateCertificateFromPerformance === 'function') {
+            updateCertificateFromPerformance();
+        }
+
+        const perfAllSections = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'laundry', 'security', 'certificate'];
+
+        const perfAllLogoRight = document.querySelector('.logo-right')?.src || '';
+        const perfAllLogoLeft = document.querySelector('.logo-left')?.src || '';
+        const perfAllPageTitle = document.title || 'جداول الأداء';
+
+        const perfAllHospitalName = document.querySelector('.hospitalName')?.textContent || 'غير محدد';
+        const perfAllContractDetails = document.querySelector('.contractDetails')?.textContent || 'غير محدد';
+        const perfAllCompanyName = document.querySelector('.companyName')?.textContent || 'غير محدد';
+        const perfAllContractType = document.querySelector('.contractType')?.textContent || 'غير محدد';
+        const perfAllExtractStart = document.getElementById('extract-start-date')?.textContent || 'غير محدد';
+        const perfAllExtractEnd = document.getElementById('extract-end-date')?.textContent || 'غير محدد';
+        const perfAllPaymentNo = document.getElementById('extract-payment-number')?.textContent || '—';
+        const perfAllMonth = document.querySelector('.extract-month-display')?.textContent || '—';
+        const perfAllYear = document.querySelector('.extract-year-display')?.textContent || '—';
+
+        const perfAllSigs = (typeof SignatureBlock !== 'undefined')
+            ? SignatureBlock.getSigs('performance')
+            : JSON.parse(localStorage.getItem('sb_sigs_performance') || '[]');
+
+        const perfAllPrefs = (typeof SignatureBlock !== 'undefined')
+            ? SignatureBlock.getPrefs('performance')
+            : { includeSigs: true, includeStamp: true };
+
+        const perfAllSignaturesHTML = (perfAllPrefs.includeSigs && perfAllSigs.length > 0) ? `
+            <div class="perf-all-signatures-section">
+                <div class="perf-all-signatures-title">التواقيع</div>
+                <div class="perf-all-signatures-grid">
+                    ${perfAllSigs.map(function(sig) {
+                        return `
+                            <div class="perf-all-signature-item">
+                                <div class="perf-all-signature-title">${sig.title || ''}</div>
+                                <div class="perf-all-signature-line"></div>
+                                <div class="perf-all-signature-name">${sig.name || ''}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                    ${perfAllPrefs.includeStamp ? `
+                        <div class="perf-all-signature-item perf-all-stamp-item">
+                            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:58px;height:58px;color:#1e3c72;">
+                                <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="5,3"/>
+                                <circle cx="50" cy="50" r="33" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                <text x="50" y="56" text-anchor="middle" font-family="Arial,Tahoma,sans-serif" font-size="17" fill="currentColor" font-weight="bold">ختم</text>
+                            </svg>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        ` : '';
+
+        function perfAllConvertInputs(sectionClone) {
+            sectionClone.querySelectorAll('input.editable, input[type="number"]').forEach(function(input) {
+                const value = input.value || '0';
+
+                if (input.parentElement && input.parentElement.tagName === 'TD') {
+                    input.parentElement.textContent = value;
+                } else {
+                    const span = document.createElement('span');
+                    span.textContent = value;
+                    input.replaceWith(span);
+                }
+            });
+        }
+
+        function perfAllRemoveControls(sectionClone) {
+            sectionClone.querySelectorAll(
+                '.std-action-bar, .action-buttons, .export-buttons, .table-buttons, .no-print, button, .overlay, .edit-dialog'
+            ).forEach(function(el) {
+                el.remove();
+            });
+        }
+
+        function perfAllBuildSummaryRows() {
+            const rows = [];
+            perfAllDepartments.forEach(function(dept) {
+                const title = document.querySelector(`#${dept} .table-title`)?.textContent || dept;
+                const amount = document.getElementById(`${dept}-amount`)?.value || '0';
+                const score = document.getElementById(`${dept}-score`)?.textContent || '';
+                const percentage = document.getElementById(`${dept}-percentage-score`)?.textContent || '';
+                const deduction = document.getElementById(`${dept}-deduction`)?.textContent || '';
+                const deductedAmount = document.getElementById(`${dept}-deducted-amount`)?.textContent || '0';
+                const dueCell = document.getElementById(`${dept}-due`)?.textContent || '0';
+
+                rows.push(`
+                    <tr>
+                        <td>${title}</td>
+                        <td>${amount}</td>
+                        <td>${score}</td>
+                        <td>${percentage}</td>
+                        <td>${deduction}</td>
+                        <td>${deductedAmount}</td>
+                        <td>${dueCell}</td>
+                    </tr>
+                `);
+            });
+            return rows.join('');
+        }
+
+        const perfAllTotalAllocated = document.getElementById('total-allocated')?.textContent || '0';
+        const perfAllTotalDue = document.getElementById('total-due')?.textContent || '0';
+        const perfAllTotalDeducted = document.getElementById('total-deducted-amount')?.textContent || '0';
+        const perfAllTotalDueArabic = document.getElementById('total-due-text-arabic')?.textContent || '';
+
+        let perfAllSectionsHTML = '';
+
+        perfAllSections.forEach(function(sectionId, index) {
+            const section = document.getElementById(sectionId);
+            if (!section) return;
+
+            const sectionClone = section.cloneNode(true);
+
+            sectionClone.style.display = 'block';
+            perfAllRemoveControls(sectionClone);
+            perfAllConvertInputs(sectionClone);
+
+            const tableTitle = section.querySelector('.table-title')?.textContent || sectionId;
+
+            perfAllSectionsHTML += `
+                <section class="perf-all-print-section page-break">
+                    <h2 class="perf-all-section-title">${tableTitle}</h2>
+                    ${sectionClone.innerHTML}
+                    ${perfAllSignaturesHTML}
+                </section>
+            `;
+        });
+
+        const perfAllSummaryHTML = `
+            <section class="perf-all-summary-section">
+                <h2 class="perf-all-section-title">ملخص إجمالي شهادة الأداء</h2>
+
+                <table class="perf-all-summary-table">
+                    <thead>
+                        <tr>
+                            <th>القسم</th>
+                            <th>المبلغ المخصص</th>
+                            <th>التقدير</th>
+                            <th>النسبة</th>
+                            <th>نسبة الحسم</th>
+                            <th>غرامة الأداء</th>
+                            <th>المبلغ المستحق</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${perfAllBuildSummaryRows()}
+                        <tr class="total-row">
+                            <th>الإجمالي</th>
+                            <th>${perfAllTotalAllocated}</th>
+                            <th>-</th>
+                            <th>-</th>
+                            <th>-</th>
+                            <th>${perfAllTotalDeducted}</th>
+                            <th>${perfAllTotalDue}</th>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="perf-all-total-text">
+                    <p><strong>إجمالي المبلغ المستحق:</strong> ${perfAllTotalDue} ريال سعودي</p>
+                    <p><strong>المبلغ كتابة:</strong> ${perfAllTotalDueArabic}</p>
+                    <p><strong>إجمالي غرامة الأداء:</strong> ${perfAllTotalDeducted} ريال سعودي</p>
+                </div>
+
+                ${perfAllSignaturesHTML}
+            </section>
+        `;
+
+        const printWindow = window.open('', '', 'height=900,width=1200');
+        if (!printWindow) {
+            alert('المتصفح منع فتح نافذة الطباعة. اسمح بالنوافذ المنبثقة للموقع.');
+            return;
+        }
+
+        printWindow.document.write(`
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>طباعة كل شهادات الأداء</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 8mm;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, Tahoma, sans-serif;
+            direction: rtl;
+            margin: 0;
+            padding: 10mm;
+            background: #fff;
+            color: #000;
+            font-size: 11px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .perf-all-header {
+            text-align: center;
+            margin-bottom: 12px;
+            page-break-inside: avoid;
+        }
+
+        .perf-all-logo-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .perf-all-logo-row img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+        }
+
+        .perf-all-page-title {
+            font-size: 19px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .perf-all-contract-info {
+            border: 1px solid #000;
+            padding: 7px;
+            font-size: 11px;
+            line-height: 1.7;
+            margin-bottom: 10px;
+            text-align: right;
+        }
+
+        .perf-all-section-title {
+            text-align: center;
+            font-size: 15px;
+            margin: 8px 0 10px;
+            padding: 5px;
+            border: 1px solid #000;
+            background: #f2f2f2;
+        }
+
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            margin: 0 auto 8px auto !important;
+            font-size: 10px !important;
+            box-shadow: none !important;
+        }
+
+        th, td {
+            border: 1px solid #000 !important;
+            padding: 4px !important;
+            text-align: center !important;
+            color: #000 !important;
+            background: #fff !important;
+            vertical-align: middle !important;
+        }
+
+        th {
+            font-weight: bold !important;
+            background: #f2f2f2 !important;
+        }
+
+        td:first-child,
+        th:first-child {
+            text-align: right !important;
+        }
+
+        .total-row th,
+        .total-row td {
+            font-weight: bold !important;
+            background: #e8e8e8 !important;
+        }
+
+        .total-amount {
+            text-align: center;
+            font-size: 11px;
+            font-weight: bold;
+            margin: 6px 0;
+        }
+
+        .summary-text,
+        .footer-text {
+            font-size: 10px;
+            margin: 6px 0;
+            line-height: 1.5;
+        }
+
+        .footer-text {
+            text-align: justify;
+        }
+
+        .perf-all-summary-section {
+            page-break-after: always;
+            page-break-inside: avoid;
+        }
+
+        .perf-all-summary-table {
+            font-size: 10px !important;
+        }
+
+        .perf-all-total-text {
+            margin-top: 10px;
+            font-size: 12px;
+            line-height: 1.7;
+            border: 1px solid #000;
+            padding: 8px;
+        }
+
+        .perf-all-print-section {
+            page-break-inside: avoid;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        .no-print,
+        button,
+        .std-action-bar,
+        .table-buttons,
+        .action-buttons,
+        .export-buttons,
+        .overlay,
+        .edit-dialog,
+        nav,
+        .nav-bar {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        .perf-all-signatures-section {
+            margin-top: 14px;
+            padding-top: 8px;
+            border-top: 1px solid #000;
+            page-break-inside: avoid;
+        }
+
+        .perf-all-signatures-title {
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .perf-all-signatures-grid {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .perf-all-signature-item {
+            flex: 1;
+            text-align: center;
+            font-size: 9px;
+            border: 1px solid #ccc;
+            padding: 6px 4px;
+            min-height: 58px;
+        }
+
+        .perf-all-signature-title {
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .perf-all-signature-line {
+            border-bottom: 1px solid #000;
+            height: 16px;
+            margin: 5px 0;
+        }
+
+        .perf-all-signature-name {
+            font-size: 9px;
+            margin-top: 3px;
+        }
+
+        .perf-all-stamp-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+
+            tr {
+                page-break-inside: avoid;
+            }
+
+            .perf-all-header,
+            .perf-all-contract-info,
+            .summary-text,
+            .footer-text,
+            .perf-all-signatures-section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="perf-all-header">
+        <div class="perf-all-logo-row">
+            <img src="${perfAllLogoRight}" alt="">
+            <img src="${perfAllLogoLeft}" alt="">
+        </div>
+
+        <div class="perf-all-page-title">${perfAllPageTitle}</div>
+
+        <div class="perf-all-contract-info">
+            <div><strong>اسم المستشفى:</strong> ${perfAllHospitalName}</div>
+            <div><strong>اسم الشركة:</strong> ${perfAllCompanyName}</div>
+            <div><strong>تفاصيل العقد:</strong> ${perfAllContractDetails}</div>
+            <div><strong>نوع العقد:</strong> ${perfAllContractType}</div>
+            <div><strong>رقم الدفعة:</strong> ${perfAllPaymentNo} | <strong>الشهر:</strong> ${perfAllMonth} ${perfAllYear}</div>
+            <div><strong>مدة المستخلص:</strong> من ${perfAllExtractStart} إلى ${perfAllExtractEnd}</div>
+        </div>
+    </div>
+
+    ${perfAllSummaryHTML}
+    ${perfAllSectionsHTML}
+</body>
+</html>
+        `);
+
+        printWindow.document.close();
+
+        setTimeout(function() {
+            printWindow.focus();
+            printWindow.print();
+        }, 800);
+
+    } catch (error) {
+        console.error('فشل طباعة كل شهادات الأداء:', error);
+        alert('حدث خطأ أثناء تجهيز طباعة الكل. راجع Console.');
+    }
+}
 // ===== دوال تعديل التواقيع =====
 
 // كائن يحدد التواقيع التي يمكن تعديلها ومفاتيحها في localStorage
