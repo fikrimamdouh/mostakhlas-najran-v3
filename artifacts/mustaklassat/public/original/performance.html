@@ -2921,31 +2921,44 @@ function printAllPerformanceCertificatesSafe() {
             : JSON.parse(localStorage.getItem('sb_sigs_performance') || '[]');
 
    const perfAllPrefs = (typeof SignatureBlock !== 'undefined')
+    ? SignatureBlock.getPrefs('performance')
+    : { includeSigs: true, includeStamp: true };
 
-            <div class="perf-all-signatures-section">
-                <div class="perf-all-signatures-title">التواقيع</div>
-<div class="perf-all-signatures-grid ${perfAllSignatureGridClass}">
-       ${perfAllSigs.map(function(sig) {
-                        return `
-                            <div class="perf-all-signature-item">
-                                <div class="perf-all-signature-title">${sig.title || ''}</div>
-                                <div class="perf-all-signature-line"></div>
-                                <div class="perf-all-signature-name">${sig.name || ''}</div>
-                            </div>
-                        `;
-                    }).join('')}
-                    ${perfAllPrefs.includeStamp ? `
-                        <div class="perf-all-signature-item perf-all-stamp-item">
-                            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:58px;height:58px;color:#1e3c72;">
-                                <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="5,3"/>
-                                <circle cx="50" cy="50" r="33" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                                <text x="50" y="56" text-anchor="middle" font-family="Arial,Tahoma,sans-serif" font-size="17" fill="currentColor" font-weight="bold">ختم</text>
-                            </svg>
-                        </div>
-                    ` : ''}
+const perfAllSignatureCardCount =
+    (perfAllPrefs.includeSigs ? perfAllSigs.length : 0) +
+    (perfAllPrefs.includeStamp ? 1 : 0);
+
+const perfAllSignatureGridClass =
+    perfAllSignatureCardCount <= 1 ? 'sig-count-1' :
+    perfAllSignatureCardCount === 2 ? 'sig-count-2' :
+    perfAllSignatureCardCount === 3 ? 'sig-count-3' :
+    'sig-count-many';
+
+const perfAllSignaturesHTML = (perfAllPrefs.includeSigs && perfAllSigs.length > 0) ? `
+    <div class="perf-all-signatures-section">
+        <div class="perf-all-signatures-title">التواقيع</div>
+        <div class="perf-all-signatures-grid ${perfAllSignatureGridClass}">
+            ${perfAllSigs.map(function(sig) {
+                return `
+                    <div class="perf-all-signature-item">
+                        <div class="perf-all-signature-title">${sig.title || ''}</div>
+                        <div class="perf-all-signature-line"></div>
+                        <div class="perf-all-signature-name">${sig.name || ''}</div>
+                    </div>
+                `;
+            }).join('')}
+            ${perfAllPrefs.includeStamp ? `
+                <div class="perf-all-signature-item perf-all-stamp-item">
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:58px;height:58px;color:#1e3c72;">
+                        <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="5,3"/>
+                        <circle cx="50" cy="50" r="33" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                        <text x="50" y="56" text-anchor="middle" font-family="Arial,Tahoma,sans-serif" font-size="17" fill="currentColor" font-weight="bold">ختم</text>
+                    </svg>
                 </div>
-            </div>
-        ` : '';
+            ` : ''}
+        </div>
+    </div>
+` : '';
 
         function perfAllConvertInputs(sectionClone) {
             sectionClone.querySelectorAll('input.editable, input[type="number"]').forEach(function(input) {
