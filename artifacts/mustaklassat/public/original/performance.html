@@ -2920,15 +2920,12 @@ function printAllPerformanceCertificatesSafe() {
             ? SignatureBlock.getSigs('performance')
             : JSON.parse(localStorage.getItem('sb_sigs_performance') || '[]');
 
-        const perfAllPrefs = (typeof SignatureBlock !== 'undefined')
-            ? SignatureBlock.getPrefs('performance')
-            : { includeSigs: true, includeStamp: true };
+   const perfAllPrefs = (typeof SignatureBlock !== 'undefined')
 
-        const perfAllSignaturesHTML = (perfAllPrefs.includeSigs && perfAllSigs.length > 0) ? `
             <div class="perf-all-signatures-section">
                 <div class="perf-all-signatures-title">التواقيع</div>
-                <div class="perf-all-signatures-grid">
-                    ${perfAllSigs.map(function(sig) {
+<div class="perf-all-signatures-grid ${perfAllSignatureGridClass}">
+       ${perfAllSigs.map(function(sig) {
                         return `
                             <div class="perf-all-signature-item">
                                 <div class="perf-all-signature-title">${sig.title || ''}</div>
@@ -3233,58 +3230,92 @@ function printAllPerformanceCertificatesSafe() {
             visibility: hidden !important;
         }
 
-        .perf-all-signatures-section {
-            margin-top: 14px;
-            padding-top: 8px;
-            border-top: 1px solid #000;
-            page-break-inside: avoid;
-        }
+      .perf-all-signatures-section {
+    margin-top: 16px;
+    padding-top: 10px;
+    border-top: 1.4px solid #000;
+    page-break-inside: avoid;
+}
 
-        .perf-all-signatures-title {
-            text-align: center;
-            font-size: 12px;
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
+.perf-all-signatures-title {
+    text-align: center;
+    font-size: 12.5px;
+    font-weight: 900;
+    margin-bottom: 10px;
+    color: #000 !important;
+    letter-spacing: .2px;
+}
 
-        .perf-all-signatures-grid {
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-            gap: 6px;
-            margin-top: 6px;
-        }
+.perf-all-signatures-grid {
+    display: grid;
+    gap: 10px;
+    align-items: stretch;
+    justify-content: center;
+    margin: 0 auto;
+    width: 100%;
+}
 
-        .perf-all-signature-item {
-            flex: 1;
-            text-align: center;
-            font-size: 9px;
-            border: 1px solid #ccc;
-            padding: 6px 4px;
-            min-height: 58px;
-        }
+.perf-all-signatures-grid.sig-count-1 {
+    grid-template-columns: minmax(190px, 42%);
+}
 
-        .perf-all-signature-title {
-            font-weight: bold;
-            margin-bottom: 6px;
-        }
+.perf-all-signatures-grid.sig-count-2 {
+    grid-template-columns: repeat(2, minmax(185px, 32%));
+}
 
-        .perf-all-signature-line {
-            border-bottom: 1px solid #000;
-            height: 16px;
-            margin: 5px 0;
-        }
+.perf-all-signatures-grid.sig-count-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
 
-        .perf-all-signature-name {
-            font-size: 9px;
-            margin-top: 3px;
-        }
+.perf-all-signatures-grid.sig-count-many {
+    grid-template-columns: repeat(4, 1fr);
+}
 
-        .perf-all-stamp-item {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+.perf-all-signature-item {
+    text-align: center;
+    border: 1.2px solid #888;
+    border-radius: 6px;
+    padding: 8px 6px 7px;
+    min-height: 66px;
+    background: #fff !important;
+    page-break-inside: avoid;
+}
+
+.perf-all-signature-title {
+    font-size: 11.5px;
+    font-weight: 900;
+    line-height: 1.35;
+    margin-bottom: 7px;
+    color: #000 !important;
+}
+
+.perf-all-signature-line {
+    border-bottom: 1.5px solid #000;
+    height: 20px;
+    margin: 4px auto 5px;
+    width: 82%;
+}
+
+.perf-all-signature-name {
+    font-size: 9.5px;
+    font-weight: 500;
+    line-height: 1.35;
+    margin-top: 3px;
+    color: #000 !important;
+    min-height: 13px;
+}
+
+.perf-all-stamp-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 66px;
+}
+
+.perf-all-stamp-item svg {
+    width: 54px !important;
+    height: 54px !important;
+}
 
         @media print {
             body {
