@@ -138,6 +138,7 @@ export function Sidebar() {
   }, []);
 
   function openNotif() {
+    setShowHospitalMenu(false);
     if (notifOpen) {
       setNotifAnim(false);
       setTimeout(() => setNotifOpen(false), 180);
