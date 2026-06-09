@@ -145,7 +145,9 @@ export function Sidebar() {
     setShowHospitalMenu(false);
   }
 }
-
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
   function openNotif() {
     setShowHospitalMenu(false);
     if (notifOpen) {
