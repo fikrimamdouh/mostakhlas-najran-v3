@@ -200,7 +200,7 @@ async function filterUnsafeHospitalWrites(hospitalData) {
   function shouldSyncKey(key) {
     const nk = normalizeKey(key);
     return SYNC_KEYS.includes(nk) ||
-      nk.startsWith('deptCalculatedCost_') || nk.startsWith('dept_') || nk.startsWith('sb_sigs_') || nk.startsWith('tableData_') ||
+nk.startsWith('deptCalculatedCost_') || nk.startsWith('dept_') || nk.startsWith('sb_sigs_') || nk.startsWith('sb_prefs_') || nk.startsWith('tableData_') ||
       nk.startsWith('achievement_') || nk.startsWith('consumables_') || nk.startsWith('spare_') || nk.startsWith('water_') ||
       nk.startsWith('sewage_') || nk.startsWith('subcontractors_') || nk.startsWith('najran_labor_') || nk.startsWith('najran_health_') ||
       nk.startsWith('najran_admin_') || nk.includes('finalLaborCost') || nk.includes('grand-net-total');
