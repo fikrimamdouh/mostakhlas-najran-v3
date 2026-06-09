@@ -1891,36 +1891,7 @@ function printTable(tableId) {
     const contractType = document.querySelector('.contractType')?.textContent || '';
     const extractStart = document.getElementById('extract-start-date')?.textContent || '';
     const extractEnd = document.getElementById('extract-end-date')?.textContent || '';
-    const signatures = (typeof SignatureBlock !== 'undefined')
-    ? SignatureBlock.getSigs('performance')
-    : JSON.parse(localStorage.getItem('sb_sigs_performance') || '[]');
-
-const _sbPrefsAll = (typeof SignatureBlock !== 'undefined')
-    ? SignatureBlock.getPrefs('performance')
-    : { includeSigs: true, includeStamp: true };
-
-const signaturesHTML = (_sbPrefsAll.includeSigs && signatures.length > 0) ? `
-    <div class="signatures-section">
-        <div class="signatures-title">التواقيع</div>
-        <div class="signatures-grid">
-            ${signatures.map(sig => `
-                <div class="signature-item">
-                    <div class="signature-title">${sig.title || ''}</div>
-                    <div class="signature-line"></div>
-                    <div class="signature-name">${sig.name || ''}</div>
-                </div>
-            `).join('')}
-            ${_sbPrefsAll.includeStamp ? `
-            <div class="signature-item stamp-item">
-                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:60px;height:60px;color:#1e3c72;">
-                    <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="5,3"/>
-                    <circle cx="50" cy="50" r="33" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                    <text x="50" y="56" text-anchor="middle" font-family="Tajawal,Arial,sans-serif" font-size="17" fill="currentColor" font-weight="bold">ختم</text>
-                </svg>
-            </div>` : ''}
-        </div>
-    </div>
-` : '';
+   
     let contractRow = `
         <span><strong>اسم المستشفى:</strong> ${hospitalName}</span> &nbsp; | &nbsp; 
         <span><strong>تفاصيل العقد:</strong> ${contractDetails}</span> &nbsp; | &nbsp; 
