@@ -628,7 +628,18 @@
   .ab-titles   { background: #ea580c !important; }
   .ab-clear    { background: #dc2626 !important; }
   .ab-update   { background: #0369a1 !important; }
-
+@media print {
+    .std-action-bar,
+    .std-action-bar *,
+    .no-print,
+    .print-toggles,
+    .nav-bar,
+    button,
+    .ab {
+        display: none !important;
+        visibility: hidden !important;
+    }
+}
   </style>
 <link rel="stylesheet" href="/original/shared-styles.css">
 </head>
