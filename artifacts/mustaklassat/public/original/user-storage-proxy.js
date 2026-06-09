@@ -89,7 +89,82 @@ const EXCLUDED_KEYS = [
     Object.defineProperty(window, 'localStorage', { value: proxy, configurable: true, writable: false });
   } catch (_) {}
 })();
+(function () {
+  'use strict';
 
+  function hasContent(raw) {
+    if (!raw) return false;
+
+    try {
+      const data = JSON.parse(raw);
+
+      if (Array.isArray(data)) return data.length > 0;
+
+      if (data && typeof data === 'object') {
+        return Object.keys(data).some(function (dept) {
+          return Array.isArray(data[dept]) && data[dept].length > 0;
+        });
+      }
+
+      return false;
+    } catch (_) {
+      return String(raw).trim().length > 0;
+    }
+  }
+
+  function getSessionRaw() {
+    try {
+      const raw = Storage.prototype.getItem.call(localStorage, 'najran_session');
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function migratePersonalAttendanceToShared() {
+    try {
+      const session = getSessionRaw();
+      if (!session || !session.userId) return;
+
+      const personalKey = '_u' + session.userId + '_attendanceData';
+      const sharedKey = 'attendanceData';
+
+      const personalRaw = Storage.prototype.getItem.call(localStorage, personalKey);
+      const sharedRaw = Storage.prototype.getItem.call(localStorage, sharedKey);
+
+      if (!hasContent(personalRaw)) return;
+      if (hasContent(sharedRaw)) return;
+
+      Storage.prototype.setItem.call(localStorage, sharedKey, personalRaw);
+
+      console.warn(
+        '[AttendanceMigration] تم نقل بيانات الحضور من المفتاح الشخصي إلى المفتاح المشترك:',
+        personalKey,
+        '→',
+        sharedKey
+      );
+
+      setTimeout(function () {
+        try {
+          if (typeof window.najranSyncNow === 'function') {
+            window.najranSyncNow();
+          }
+        } catch (_) {}
+      }, 2500);
+
+    } catch (e) {
+      console.warn('[AttendanceMigration] فشل ترحيل بيانات الحضور الشخصية للمشتركة', e);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(migratePersonalAttendanceToShared, 3000);
+    });
+  } else {
+    setTimeout(migratePersonalAttendanceToShared, 3000);
+  }
+})();
 /**
  * ملف المراجعة التفصيلية داخل صفحة اعتماد المستخلص.
  * يعرض بيانات نوع المستخلص المرفوع فقط، ويضع قرار المراجع في نفس النافذة.
