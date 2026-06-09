@@ -202,8 +202,9 @@ function forceAttendanceRecoveryFromActiveUser() {
     'settings_main','settings_advanced','dynamicSignatures','contractorSignature','appTitles_v1','admin_staff','contract_foundation_data'
   ]);
 
-  function normalizeKey(key) { return String(key || '').replace(/^_u\d+_/, ''); }
-  function getCurrentPageFile() { return window.location.pathname.split('/').pop() || ''; }
+function normalizeKey(key) {
+  return String(key || '').replace(/^(_u\d+_)+/, '');
+}  function getCurrentPageFile() { return window.location.pathname.split('/').pop() || ''; }
   function isSettingsMainPage() { return getCurrentPageFile() === 'settings_main.html'; }
   function isAttendancePage() {
     const f = getCurrentPageFile();
