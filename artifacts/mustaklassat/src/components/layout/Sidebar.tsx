@@ -155,7 +155,7 @@ export function Sidebar() {
       let top = rect.bottom + 6;
       const maxH = 420;
       if (top + maxH > viewH - 8) top = rect.top - maxH - 6;
-      setDropdownStyle({ position: "fixed", top, left, width: dropW, zIndex: 9999, direction: "rtl" });
+      setDropdownStyle({ position: "fixed", top, left, width: dropW, zIndex: 100000, direction: "rtl" });
     }
     setNotifOpen(true);
     setTimeout(() => setNotifAnim(true), 10);
@@ -461,8 +461,11 @@ export function Sidebar() {
           <div className="relative">
             {!collapsed && <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5 px-1" style={{ color: "rgba(212,175,55,0.6)" }}>الموقع الحالي</p>}
             <button
-              onClick={() => setShowHospitalMenu(v => !v)}
-              disabled={!!switchingHospital}
+onClick={() => {
+  setNotifAnim(false);
+  setNotifOpen(false);
+  setShowHospitalMenu(v => !v);
+}}              disabled={!!switchingHospital}
               title={collapsed ? dbUser.hospital : undefined}
               className={cn("w-full flex items-center gap-2 rounded-lg px-2.5 py-2 transition-all hover:bg-white/10", collapsed ? "justify-center px-2" : "")}
               style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
@@ -472,7 +475,7 @@ export function Sidebar() {
               {!collapsed && <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "rgba(255,255,255,0.4)", transform: showHospitalMenu ? "rotate(270deg)" : "rotate(90deg)", transition: "transform 0.2s" }} />}
             </button>
             {showHospitalMenu && (
-              <div className="absolute top-full right-0 mt-1 rounded-xl overflow-hidden shadow-2xl z-50" style={{ background: "#0f2050", border: "1px solid rgba(255,255,255,0.15)", minWidth: collapsed ? 200 : "100%" }}>
+              <div className="absolute top-full right-0 mt-1 rounded-xl overflow-hidden shadow-2xl z-40" style={{ background: "#0f2050", border: "1px solid rgba(255,255,255,0.15)", minWidth: collapsed ? 200 : "100%" }}>
                 <p className="text-[9px] px-3 py-2 font-bold uppercase tracking-widest" style={{ color: "rgba(212,175,55,0.7)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>اختر الموقع</p>
                 {parsedHospitals.map((h) => (
                   <button key={h} onClick={() => handleSwitchHospital(h)} className="w-full text-right px-3 py-2.5 text-xs transition-all flex items-center gap-2 hover:bg-white/10" style={{ color: h === dbUser.hospital ? "#d4af37" : "rgba(255,255,255,0.8)", background: h === dbUser.hospital ? "rgba(212,175,55,0.12)" : "transparent", fontWeight: h === dbUser.hospital ? 700 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
