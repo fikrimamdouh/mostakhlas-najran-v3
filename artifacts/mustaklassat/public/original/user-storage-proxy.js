@@ -4,18 +4,21 @@
  * يجب تحميله قبل أي script آخر يستخدم localStorage.
  */
 (function () {
-const EXCLUDED_KEYS = [
-  'najran_session',
+  const EXCLUDED_KEYS = [
+    'najran_session',
 
-  // مفاتيح تشغيلية مشتركة بين مستخدمي نفس المستشفى — ممنوع تتحول إلى _uX_
-  'attendanceData',
-  'ng_attendanceData',
-  'nd_attendanceData',
-  'centersAttendanceData_v2',
-  'healthCentersAttendanceData',
-  'adminOfficesAttendanceData_v1'
-  'hospitalActivityStatus'
-];
+    // مفاتيح تشغيلية مشتركة بين مستخدمي نفس المستشفى — ممنوع تتحول إلى _uX_
+    'attendanceData',
+    'ng_attendanceData',
+    'nd_attendanceData',
+    'centersAttendanceData_v2',
+    'healthCentersAttendanceData',
+    'adminOfficesAttendanceData_v1',
+
+    // آخر نشاط داخل المستشفى لازم يكون مشتركًا بين مستخدمي نفس المستشفى
+    'hospitalActivityStatus'
+  ];
+
   function getPrefix() {
     try {
       const raw = Storage.prototype.getItem.call(localStorage, 'najran_session');
