@@ -40,7 +40,53 @@
     'healthCentersAttendanceData',
     'adminOfficesAttendanceData_v1'
   ]);
+const ATTENDANCE_RECOVERY_USERS = new Set([
+  'cov6978@gmail.com'
+]);
 
+function isAttendanceRecoveryUser() {
+  const s = getSession();
+  const email = String((s && s.email) || '').trim().toLowerCase();
+  return ATTENDANCE_RECOVERY_USERS.has(email);
+}
+
+function forceAttendanceRecoveryFromActiveUser() {
+  if (!isAttendancePage()) return;
+  if (!isAttendanceRecoveryUser()) return;
+
+  let pushed = 0;
+
+  ATTENDANCE_PAGE_KEYS.forEach(function (key) {
+    const val = localStorage.getItem(key);
+    if (!val) return;
+
+    const score = contentScoreForKey(key, val);
+    if (score <= 0) return;
+
+    DIRTY_KEYS.add(key);
+    pushed++;
+  });
+
+  if (pushed > 0) {
+    try {
+      const s = getSession();
+      localStorage.setItem('hospitalActivityStatus', JSON.stringify({
+        userId: s && s.userId ? s.userId : '',
+        userName: s && (s.name || s.email) ? (s.name || s.email) : 'cov6978@gmail.com',
+        email: s && s.email ? s.email : 'cov6978@gmail.com',
+        hospital: s && s.hospital ? s.hospital : '',
+        page: 'الحضور والانصراف',
+        pageFile: 'attendance.html',
+        recoveryMode: true,
+        recoverySource: 'active-user-local-attendance',
+        updatedAt: new Date().toISOString()
+      }));
+      DIRTY_KEYS.add('hospitalActivityStatus');
+    } catch (_) {}
+
+    console.warn('[MzamanaCloud] RECOVERY: سيتم رفع نسخة الحضور المحلية من المستخدم cov6978@gmail.com إلى hospital_storage — keys=' + pushed);
+  }
+}
   // مفاتيح ممنوع رفع نسخة فاضية فوق نسخة موجودة لها محتوى
   const EMPTY_OVERWRITE_PROTECTED_KEYS = new Set([
     'attendanceData',
@@ -443,9 +489,10 @@
     window.najranPullFromCloud = pullSafe;
 
     await pullSafe();
-    showHospitalActivityNotice();
-    updateHospitalActivityStatus();
-    syncNow().catch(function(){});
+showHospitalActivityNotice();
+updateHospitalActivityStatus();
+forceAttendanceRecoveryFromActiveUser();
+syncNow().catch(function(){});
     setInterval(function(){ syncNow().catch(function(){}); }, SYNC_INTERVAL_MS);
     window.addEventListener('beforeunload', function(){ updateHospitalActivityStatus(); pushToCloud().catch(function(){}); });
 
