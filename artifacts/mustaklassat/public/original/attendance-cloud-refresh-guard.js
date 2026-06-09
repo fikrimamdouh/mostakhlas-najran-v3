@@ -14,6 +14,19 @@
     'adminOfficesAttendanceData_v1'
   ];
 
+  function getActiveAttendanceKeys() {
+    var q = location.search || '';
+    var path = location.pathname || '';
+    var full = path + q;
+
+    if (/admin_offices_attendance\.html/.test(full)) return ['adminOfficesAttendanceData_v1'];
+    if (/health_centers_attendance\.html/.test(full)) return ['healthCentersAttendanceData'];
+    if (/najran_general/.test(full)) return ['ng_attendanceData'];
+    if (/dental/.test(full)) return ['nd_attendanceData'];
+
+    return ['attendanceData'];
+  }
+
   console.log('[AttendanceCloudGuard] جاهز لفحص الحضور');
 
   function getSession() {
@@ -58,15 +71,15 @@
     return 0;
   }
 
-  function localAttendanceRows() {
+  function localAttendanceRows(keys) {
     var total = 0;
-    ATTENDANCE_KEYS.forEach(function (k) { total += countRows(localStorage.getItem(k)); });
+    (keys || getActiveAttendanceKeys()).forEach(function (k) { total += countRows(localStorage.getItem(k)); });
     return total;
   }
 
-  function remoteAttendanceRows(data) {
+  function remoteAttendanceRows(data, keys) {
     var total = 0;
-    ATTENDANCE_KEYS.forEach(function (k) {
+    (keys || getActiveAttendanceKeys()).forEach(function (k) {
       total += countRows(data && data[k]);
     });
     return total;
@@ -86,9 +99,9 @@
     }
   }
 
-  function sameAttendanceSnapshot(data) {
+  function sameAttendanceSnapshot(data, keys) {
     try {
-      return ATTENDANCE_KEYS.every(function (k) {
+      return (keys || getActiveAttendanceKeys()).every(function (k) {
         var localVal = localStorage.getItem(k) || '';
         var remoteVal = data && data[k] != null ? (typeof data[k] === 'string' ? data[k] : JSON.stringify(data[k])) : '';
         return localVal === remoteVal;
@@ -107,9 +120,10 @@
     }
   }
 
-  function shouldReplaceLocalAttendance(localRows, remoteRows, meta) {
+  function shouldReplaceLocalAttendance(localRows, remoteRows, meta, keys) {
     var msg =
       'يوجد اختلاف بين بيانات الحضور المحلية والنسخة السحابية لهذه المستشفى.\n\n' +
+      'المفاتيح التي تتم مقارنتها: ' + (keys || []).join(', ') + '\n' +
       'البيانات المحلية عندك: ' + localRows + ' صف\n' +
       'النسخة السحابية: ' + remoteRows + ' صف\n' +
       'آخر تعديل بواسطة: ' + (meta.userName || 'مستخدم آخر') + '\n' +
@@ -130,7 +144,8 @@
   }
 
   async function refreshFromHospitalStorage() {
-    var localRows = localAttendanceRows();
+    var activeKeys = getActiveAttendanceKeys();
+    var localRows = localAttendanceRows(activeKeys);
 
     var token = await getToken();
     if (!token) {
@@ -149,22 +164,22 @@
       }
       var json = await res.json();
       var data = json && json.data ? json.data : {};
-      var remoteRows = remoteAttendanceRows(data);
+      var remoteRows = remoteAttendanceRows(data, activeKeys);
       var meta = getRemoteMeta(data);
 
       if (remoteRows <= 0) {
         if (localRows > 0) {
-          console.log('[AttendanceCloudGuard] لا توجد نسخة سحابية للحضور، تم الاحتفاظ بالنسخة المحلية: ' + localRows + ' صف');
+          console.log('[AttendanceCloudGuard] لا توجد نسخة سحابية للحضور، تم الاحتفاظ بالنسخة المحلية: ' + localRows + ' صف — keys=' + activeKeys.join(','));
           setTimeout(function () { renderAgain('local-existing-no-cloud'); }, 50);
           setTimeout(function () { renderAgain('local-existing-no-cloud'); }, 500);
         } else {
-          console.warn('[AttendanceCloudGuard] لم يتم العثور على attendanceData ذات محتوى في hospital_storage لهذه المستشفى');
+          console.warn('[AttendanceCloudGuard] لم يتم العثور على attendanceData ذات محتوى في hospital_storage لهذه الصفحة — keys=' + activeKeys.join(','));
         }
         return;
       }
 
-      if (localRows > 0 && !sameAttendanceSnapshot(data)) {
-        var replace = shouldReplaceLocalAttendance(localRows, remoteRows, meta);
+      if (localRows > 0 && !sameAttendanceSnapshot(data, activeKeys)) {
+        var replace = shouldReplaceLocalAttendance(localRows, remoteRows, meta, activeKeys);
         if (!replace) {
           console.log('[AttendanceCloudGuard] احتفظ المستخدم بالنسخة المحلية ولم يستبدلها بالسحابية');
           setTimeout(function () { renderAgain('keep-local'); }, 50);
@@ -176,7 +191,7 @@
       var restored = 0;
       var restoredRows = 0;
 
-      ATTENDANCE_KEYS.forEach(function (k) {
+      activeKeys.forEach(function (k) {
         var val = data[k];
         var rows = countRows(val);
         if (val == null || rows <= 0) return;
@@ -186,7 +201,7 @@
       });
 
       if (restored > 0) {
-        console.log('[AttendanceCloudGuard] تم استرجاع/استبدال بيانات الحضور من hospital_storage: ' + restored + ' مفتاح / ' + restoredRows + ' صف');
+        console.log('[AttendanceCloudGuard] تم استرجاع/استبدال بيانات الحضور من hospital_storage: ' + restored + ' مفتاح / ' + restoredRows + ' صف — keys=' + activeKeys.join(','));
         setTimeout(function () { renderAgain(localRows > 0 ? 'cloud-replaced-local' : 'cloud-restored'); }, 50);
         setTimeout(function () { renderAgain(localRows > 0 ? 'cloud-replaced-local' : 'cloud-restored'); }, 500);
       }
