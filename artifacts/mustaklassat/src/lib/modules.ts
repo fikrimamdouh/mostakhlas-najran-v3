@@ -36,6 +36,9 @@ export const ALL_MODULES: ModuleDef[] = [
   { key: "health_centers_consumables", file: "health_centers_consumables.html", label: "المراكز — المستهلكات",      emoji: "🧪",  icon: Package, color: "#0077b6", types: ["health_centers"] },
   { key: "admin_offices_attendance",   file: "admin_offices_attendance.html",   label: "المكاتب — العمالة",         emoji: "👷",  icon: ClipboardList, color: "#2a5298", types: ["admin_offices"] },
   { key: "admin_offices_consumables",  file: "admin_offices_consumables.html",  label: "المكاتب — المستهلكات",      emoji: "🧪",  icon: Package, color: "#0077b6", types: ["admin_offices"] },
+  { key: "review_extract", file: "review_extract.html", label: "مراجعة المستخلص", emoji: "🔍", icon: Eye, color: "#1e3c72", types: ["hospital", "health_centers", "admin_offices", "najran_general"] },
+{ key: "monthly_overview", file: "monthly-overview.html", label: "النظرة الشاملة", emoji: "📊", icon: Eye, color: "#2a5298", types: ["hospital", "health_centers", "admin_offices", "najran_general"] },
+{ key: "extract_archive", file: "extract-archive.html", label: "أرشيف المستخلص", emoji: "🗂️", icon: Archive, color: "#1e3c72", types: ["hospital", "health_centers", "admin_offices", "najran_general"] },
 ];
 
 export function getModuleKey(filename: string): string {
