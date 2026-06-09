@@ -163,6 +163,11 @@
     const f = getCurrentPageFile();
     return f === 'attendance.html' || f === 'health_centers_attendance.html' || f === 'admin_offices_attendance.html';
   }
+  function isAdminSession() {
+    const s = getSession();
+    const role = String((s && s.role) || '').toLowerCase();
+    return role === 'admin' || role === 'super_admin' || role === 'administrator';
+  }
   function shouldMergePulledKeyForCurrentPage(key) {
     const nk = normalizeKey(key);
     if (isAttendancePage() && ATTENDANCE_PAGE_KEYS.has(nk)) {
@@ -335,15 +340,27 @@
     const hospitalName = getHospitalName();
     const userData = {};
     const hospitalData = {};
+    const adminSession = isAdminSession();
+    let skippedAdminAttendance = 0;
     const keysToSync = Array.from(DIRTY_KEYS).filter(k => k && shouldSyncKey(k));
     if (!keysToSync.length) return { ok:true, saved:0, reason:'NO_LOCAL_CHANGES' };
     keysToSync.forEach(function(key){
       const nk = normalizeKey(key);
+      if (adminSession && ATTENDANCE_PAGE_KEYS.has(nk)) {
+        skippedAdminAttendance++;
+        return;
+      }
       const val = localStorage.getItem(nk);
       if (val === null) return;
       if (PERSONAL_KEYS.has(nk) || !hospitalName) userData[nk] = val;
       else hospitalData[nk] = val;
     });
+    if (skippedAdminAttendance) {
+      console.warn('[MzamanaCloud] ADMIN READ-ONLY: تم منع رفع ' + skippedAdminAttendance + ' مفتاح حضور من حساب الأدمن إلى hospital_storage');
+      keysToSync.forEach(function(k){
+        if (ATTENDANCE_PAGE_KEYS.has(normalizeKey(k))) DIRTY_KEYS.delete(k);
+      });
+    }
     const safeHospitalData = hospitalName ? await filterUnsafeHospitalWrites(hospitalData) : {};
 
     const mustSaveUser = Object.keys(userData).length > 0;
