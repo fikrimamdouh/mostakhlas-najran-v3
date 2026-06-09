@@ -14,6 +14,7 @@ const EXCLUDED_KEYS = [
   'centersAttendanceData_v2',
   'healthCentersAttendanceData',
   'adminOfficesAttendanceData_v1'
+  'hospitalActivityStatus'
 ];
   function getPrefix() {
     try {
