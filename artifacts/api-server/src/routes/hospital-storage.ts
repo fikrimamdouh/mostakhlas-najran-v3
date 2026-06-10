@@ -54,7 +54,30 @@ function countContent(value: unknown): number {
   return 0;
 }
 
+function getStoredHospitalFromRows(rows: any[]): string {
+  const direct = rows.find(r => normalizeKey((r as any).storageKey) === "hospitalName");
+  if (direct?.storageValue) {
+    return String(direct.storageValue).trim();
+  }
 
+  const persistent = rows.find(r => normalizeKey((r as any).storageKey) === "persistentContractData");
+  if (persistent?.storageValue) {
+    try {
+      const parsed = JSON.parse(String(persistent.storageValue));
+      if (parsed?.hospitalName) return String(parsed.hospitalName).trim();
+    } catch {}
+  }
+
+  const contract = rows.find(r => normalizeKey((r as any).storageKey) === "contractData");
+  if (contract?.storageValue) {
+    try {
+      const parsed = JSON.parse(String(contract.storageValue));
+      if (parsed?.hospitalName) return String(parsed.hospitalName).trim();
+    } catch {}
+  }
+
+  return "";
+}
 
 async function backfillLegacyAttendanceFromUserStorage(hospitalName: string, result: Record<string, string>) {
   const missingKeys = LEGACY_ATTENDANCE_KEYS.filter(key => countContent(result[key]) <= 0);
@@ -79,9 +102,25 @@ const eligibleUsers = users.filter(user => {
     .from(userStorageTable)
     .where(inArray(userStorageTable.userId, userIds));
 
-  const bestByKey: Record<string, { value: string; score: number; userId: number }> = {};
+ const rowsByUser = new Map<number, any[]>();
 
-  for (const row of rows) {
+for (const row of rows) {
+  const userId = Number((row as any).userId);
+  if (!Number.isFinite(userId)) continue;
+  if (!rowsByUser.has(userId)) rowsByUser.set(userId, []);
+  rowsByUser.get(userId)!.push(row);
+}
+
+const bestByKey: Record<string, { value: string; score: number; userId: number }> = {};
+
+for (const [userId, userRows] of rowsByUser.entries()) {
+  const storedHospital = getStoredHospitalFromRows(userRows);
+
+  if (storedHospital && storedHospital !== hospitalName) {
+    continue;
+  }
+
+  for (const row of userRows) {
     const normalized = normalizeKey((row as any).storageKey);
     if (!missingKeys.includes(normalized)) continue;
 
@@ -89,16 +128,11 @@ const eligibleUsers = users.filter(user => {
     const score = countContent(value);
     if (score <= 0) continue;
 
-    const userId = Number((row as any).userId);
-    const user = eligibleUsers.find(u => Number((u as any).id) === userId);
-    const primaryHospital = String((user as any)?.hospital || "").trim();
-
-    const rankedScore = score + (primaryHospital === hospitalName ? 1000000 : 0);
-
-    if (!bestByKey[normalized] || rankedScore > bestByKey[normalized].score) {
-      bestByKey[normalized] = { value, score: rankedScore, userId };
+    if (!bestByKey[normalized] || score > bestByKey[normalized].score) {
+      bestByKey[normalized] = { value, score, userId };
     }
   }
+}
 
   let migrated = 0;
 
