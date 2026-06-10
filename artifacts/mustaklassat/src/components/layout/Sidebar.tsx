@@ -66,7 +66,38 @@ const roleBg = (role: string) => {
 
 const COLLAPSE_KEY = "sidebar_collapsed";
 const READ_NOTIFS_KEY = "najran_read_notifications";
+function normalizeHospitalList(input: any): string[] {
+  let arr: any[] = [];
 
+  if (Array.isArray(input)) {
+    arr = input;
+  } else if (typeof input === "string" && input.trim()) {
+    try {
+      const parsed = JSON.parse(input);
+      if (Array.isArray(parsed)) arr = parsed;
+      else arr = input.split(/[،,|\n]/g);
+    } catch {
+      arr = input.split(/[،,|\n]/g);
+    }
+  }
+
+  return Array.from(
+    new Set(
+      arr
+        .map(h => String(h || "").trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function readActiveHospitalFromStorage(): string {
+  try {
+    const sess = JSON.parse(localStorage.getItem("najran_session") || "{}");
+    return String(sess.hospital || localStorage.getItem("hospitalName") || "").trim();
+  } catch {
+    return "";
+  }
+}
 function useNotifications(isAdmin: boolean, pendingUsersCount: number) {
   const [readIds, setReadIds] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem(READ_NOTIFS_KEY) || "[]")); } catch { return new Set(); }
@@ -217,15 +248,72 @@ export function Sidebar() {
   const { getToken } = useAuth();
   const queryClient = useQueryClient();
   const [switchingHospital, setSwitchingHospital] = useState<string | null>(null);
-  const [showHospitalMenu, setShowHospitalMenu] = useState(false);
+const [showHospitalMenu, setShowHospitalMenu] = useState(false);
+const [reviewHospitals, setReviewHospitals] = useState<string[]>([]);
+const [activeHospital, setActiveHospital] = useState<string>(() => readActiveHospitalFromStorage());
 
   const parsedHospitals: string[] = (() => {
-    try { return JSON.parse((dbUser as any)?.hospitals || "[]"); } catch { return []; }
-  })();
-  const multiHospital = parsedHospitals.length > 1;
+  try { return JSON.parse((dbUser as any)?.hospitals || "[]"); } catch { return []; }
+})();
 
+const editHospitals = normalizeHospitalList([
+  ...(dbUser?.hospital ? [dbUser.hospital] : []),
+  ...parsedHospitals,
+]);
+
+const reviewOnlyHospitals = normalizeHospitalList(reviewHospitals)
+  .filter(h => !editHospitals.includes(h));
+
+const currentHospital = activeHospital || dbUser?.hospital || "";
+const currentIsReviewOnly = !!currentHospital && reviewOnlyHospitals.includes(currentHospital);
+const currentHospitalLabel = currentHospital
+  ? `${currentHospital}${currentIsReviewOnly ? " — مراجعة فقط" : ""}`
+  : "—";
+
+const multiHospital = editHospitals.length > 1 || reviewOnlyHospitals.length > 0;
+useEffect(() => {
+  const storedHospital = readActiveHospitalFromStorage();
+  if (storedHospital) {
+    setActiveHospital(storedHospital);
+  } else if (dbUser?.hospital) {
+    setActiveHospital(dbUser.hospital);
+  }
+}, [dbUser?.hospital]);
+
+useEffect(() => {
+  let cancelled = false;
+
+  async function loadReviewerPermissions() {
+    if (!dbUser) return;
+
+    try {
+      const token = await getToken();
+      const res = await fetch("/api/reviewer-permissions/me", {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+      if (!cancelled) {
+        setReviewHospitals(normalizeHospitalList(data.reviewHospitals || []));
+      }
+    } catch {
+      // صامت حتى لا يكسر السايدبار لو التوكن لم يجهز
+    }
+  }
+
+  loadReviewerPermissions();
+
+  return () => {
+    cancelled = true;
+  };
+}, [dbUser?.id, getToken]);
   const handleSwitchHospital = async (h: string) => {
-    if (h === dbUser?.hospital || switchingHospital) return;
+if ((h === currentHospital && !currentIsReviewOnly) || switchingHospital) return;
     setSwitchingHospital(h);
     setShowHospitalMenu(false);
 
@@ -246,12 +334,16 @@ export function Sidebar() {
         const raw = localStorage.getItem("najran_session");
         if (raw) {
           const sess = JSON.parse(raw);
-          sess.hospital = h;
-          localStorage.setItem("najran_session", JSON.stringify(sess));
+      sess.hospital = h;
+sess.reviewOnly = false;
+sess.canReviewCurrentHospital = false;
+sess.canEditCurrentHospital = true;
+localStorage.setItem("najran_session", JSON.stringify(sess));
         }
         localStorage.setItem("hospitalName", h);
+        setActiveHospital(h);
       } catch {}
-      try { window.dispatchEvent(new CustomEvent("najranHospitalChanged", { detail: { hospital: h } })); } catch {}
+try { window.dispatchEvent(new CustomEvent("najranHospitalChanged", { detail: { hospital: h, reviewOnly: false } })); } catch {}
       queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
     } catch {
       queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
@@ -259,14 +351,49 @@ export function Sidebar() {
       setSwitchingHospital(null);
     }
   };
+const handleSwitchReviewHospital = (h: string) => {
+  if (switchingHospital) return;
 
+  setSwitchingHospital(h);
+  setShowHospitalMenu(false);
+
+  try {
+    const raw = localStorage.getItem("najran_session");
+    const sess = raw ? JSON.parse(raw) : {};
+
+    sess.hospital = h;
+    sess.reviewActiveHospital = h;
+    sess.reviewOnly = true;
+    sess.canReviewCurrentHospital = true;
+    sess.canEditCurrentHospital = false;
+    sess.permissions = Array.isArray(sess.permissions)
+      ? Array.from(new Set([...sess.permissions, "review_extract"]))
+      : ["review_extract"];
+    sess.reviewHospitals = normalizeHospitalList([
+      ...(Array.isArray(sess.reviewHospitals) ? sess.reviewHospitals : []),
+      h,
+    ]);
+
+    localStorage.setItem("najran_session", JSON.stringify(sess));
+    localStorage.setItem("hospitalName", h);
+    setActiveHospital(h);
+  } catch {}
+
+  try {
+    window.dispatchEvent(new CustomEvent("najranHospitalChanged", {
+      detail: { hospital: h, reviewOnly: true },
+    }));
+  } catch {}
+
+  setTimeout(() => window.location.reload(), 120);
+};
   const isAdmin = dbUser?.role === "admin";
   const isSupervisor = dbUser?.role === "supervisor";
   const isContractSup = dbUser?.role === "contract_supervisor";
   const isViewer = dbUser?.role === "viewer";
   const role = dbUser?.role ?? "user";
 
-  const siteType = getSiteType(dbUser?.hospital);
+const siteType = getSiteType(currentHospital || dbUser?.hospital);
   const allowedModuleKeys = parseAllowedModules((dbUser as any)?.allowedModules);
   const userCompany = (dbUser as any)?.company as string | undefined;
   const allVisibleModules = filterModules(siteType, allowedModuleKeys, role, userCompany);
@@ -509,12 +636,12 @@ export function Sidebar() {
   ref={hospitalBtnRef}
   onClick={openHospitalMenu}
   disabled={!!switchingHospital}
-              title={collapsed ? dbUser.hospital : undefined}
-              className={cn("w-full flex items-center gap-2 rounded-lg px-2.5 py-2 transition-all hover:bg-white/10", collapsed ? "justify-center px-2" : "")}
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
+title={collapsed ? currentHospitalLabel : undefined}
+             className={cn("w-full flex items-center gap-2 rounded-lg px-2.5 py-2 transition-all hover:bg-white/10", collapsed ? "justify-center px-2" : "")}
+              style={{   background: currentIsReviewOnly ? "rgba(251,146,60,0.12)" : "rgba(255,255,255,0.06)",   border: currentIsReviewOnly ? "1px solid rgba(253,186,116,0.35)" : "1px solid rgba(255,255,255,0.12)", }}
             >
               <span style={{ fontSize: 15 }}>🏥</span>
-              {!collapsed && <span className="flex-1 text-right text-xs font-semibold text-white truncate">{switchingHospital ? `⏳ ${switchingHospital}` : dbUser.hospital}</span>}
+              {!collapsed && <span className="flex-1 text-right text-xs font-semibold text-white truncate">{switchingHospital ? `⏳ ${switchingHospital}` : currentHospitalLabel}</span>}
               {!collapsed && <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "rgba(255,255,255,0.4)", transform: showHospitalMenu ? "rotate(270deg)" : "rotate(90deg)", transition: "transform 0.2s" }} />}
             </button>
             {showHospitalMenu && (
@@ -526,13 +653,96 @@ export function Sidebar() {
     background: "#0f2050",
     border: "1px solid rgba(255,255,255,0.15)"
   }}
->                <p className="text-[9px] px-3 py-2 font-bold uppercase tracking-widest" style={{ color: "rgba(212,175,55,0.7)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>اختر الموقع</p>
-                {parsedHospitals.map((h) => (
-                  <button key={h} onClick={() => handleSwitchHospital(h)} className="w-full text-right px-3 py-2.5 text-xs transition-all flex items-center gap-2 hover:bg-white/10" style={{ color: h === dbUser.hospital ? "#d4af37" : "rgba(255,255,255,0.8)", background: h === dbUser.hospital ? "rgba(212,175,55,0.12)" : "transparent", fontWeight: h === dbUser.hospital ? 700 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                    <span>{h === dbUser.hospital ? "✓" : "○"}</span>
-                    <span className="flex-1 truncate">{h}</span>
-                  </button>
-                ))}
+>               <p
+  className="text-[9px] px-3 py-2 font-bold uppercase tracking-widest"
+  style={{
+    color: "rgba(212,175,55,0.7)",
+    borderBottom: "1px solid rgba(255,255,255,0.08)",
+  }}
+>
+  اختر الموقع
+</p>
+
+{editHospitals.length > 0 && (
+  <div
+    className="text-[9px] px-3 py-1.5 font-bold"
+    style={{
+      color: "rgba(255,255,255,0.42)",
+      background: "rgba(255,255,255,0.03)",
+    }}
+  >
+    مواقع التشغيل
+  </div>
+)}
+
+{editHospitals.map((h) => {
+  const active = h === currentHospital && !currentIsReviewOnly;
+  return (
+    <button
+      key={h}
+      onClick={() => handleSwitchHospital(h)}
+      className="w-full text-right px-3 py-2.5 text-xs transition-all flex items-center gap-2 hover:bg-white/10"
+      style={{
+        color: active ? "#d4af37" : "rgba(255,255,255,0.8)",
+        background: active ? "rgba(212,175,55,0.12)" : "transparent",
+        fontWeight: active ? 700 : 400,
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
+      }}
+    >
+      <span>{active ? "✓" : "○"}</span>
+      <span className="flex-1 truncate">{h}</span>
+    </button>
+  );
+})}
+
+{reviewOnlyHospitals.length > 0 && (
+  <div
+    className="text-[9px] px-3 py-1.5 font-bold"
+    style={{
+      color: "#fed7aa",
+      background: "rgba(154,52,18,0.18)",
+      borderTop: "1px solid rgba(253,186,116,0.18)",
+    }}
+  >
+    مواقع المراجعة فقط
+  </div>
+)}
+
+{reviewOnlyHospitals.map((h) => {
+  const active = h === currentHospital && currentIsReviewOnly;
+  return (
+    <button
+      key={`review-${h}`}
+      onClick={() => handleSwitchReviewHospital(h)}
+      className="w-full text-right px-3 py-2.5 text-xs transition-all flex items-center gap-2 hover:bg-white/10"
+      style={{
+        color: active ? "#fdba74" : "rgba(255,255,255,0.8)",
+        background: active ? "rgba(251,146,60,0.14)" : "transparent",
+        fontWeight: active ? 800 : 500,
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
+      }}
+    >
+      <span>{active ? "✓" : "○"}</span>
+      <span className="flex-1 truncate">{h}</span>
+      {!collapsed && (
+        <span
+          style={{
+            fontSize: 9,
+            fontWeight: 900,
+            color: "#fed7aa",
+            background: "rgba(154,52,18,.55)",
+            border: "1px solid rgba(253,186,116,.45)",
+            padding: "1px 6px",
+            borderRadius: 999,
+            whiteSpace: "nowrap",
+          }}
+        >
+          مراجعة فقط
+        </span>
+      )}
+    </button>
+  );
+})}
               </div>
             )}
           </div>
