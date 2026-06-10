@@ -68,7 +68,32 @@ function getHospitalStorageUrl() {
     if (typeof v === 'object') return v;
     try { return JSON.parse(v); } catch (_) { return null; }
   }
+function normalizeKey(key) {
+  return String(key || '').replace(/^(_u\d+_)+/, '');
+}
 
+function normalizeRemoteDataKeys(data) {
+  var out = {};
+  data = data || {};
+
+  Object.keys(data).forEach(function (key) {
+    var nk = normalizeKey(key);
+    if (!nk) return;
+
+    // لو المفتاح الطبيعي غير موجود، خده
+    if (out[nk] == null) {
+      out[nk] = data[key];
+      return;
+    }
+
+    // لو موجود بالفعل، اختار النسخة ذات محتوى أكبر
+    if (countRows(data[key]) > countRows(out[nk])) {
+      out[nk] = data[key];
+    }
+  });
+
+  return out;
+}
   function countRows(obj) {
     var v = parse(obj);
     if (!v) return 0;
@@ -177,8 +202,16 @@ var res = await fetch(getHospitalStorageUrl(), {
         return;
       }
       var json = await res.json();
-      var data = json && json.data ? json.data : {};
-      var remoteRows = remoteAttendanceRows(data, activeKeys);
+var rawData = json && json.data ? json.data : {};
+var data = normalizeRemoteDataKeys(rawData);
+var remoteRows = remoteAttendanceRows(data, activeKeys);
+
+console.log(
+  '[AttendanceCloudGuard] مفاتيح حضور موجودة بعد التطبيع:',
+  Object.keys(data).filter(function(k) {
+    return k.toLowerCase().indexOf('attendance') >= 0;
+  })
+);
       var meta = getRemoteMeta(data);
 
   if (remoteRows <= 0) {
