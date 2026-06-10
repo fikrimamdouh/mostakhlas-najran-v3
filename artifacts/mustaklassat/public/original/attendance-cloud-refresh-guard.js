@@ -48,7 +48,21 @@
     var s = getSession();
     return s.clerkToken || '';
   }
+function isReviewOnlySession() {
+  var s = getSession();
+  return !!(s && s.reviewOnly === true);
+}
 
+function getHospitalStorageUrl() {
+  var s = getSession();
+  var url = '/api/hospital-storage';
+
+  if (s && s.reviewOnly === true && s.hospital) {
+    url += '?hospital=' + encodeURIComponent(String(s.hospital).trim());
+  }
+
+  return url;
+}
   function parse(v) {
     if (!v) return null;
     if (typeof v === 'object') return v;
@@ -154,8 +168,8 @@
     }
 
     try {
-      var res = await fetch('/api/hospital-storage', {
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+var res = await fetch(getHospitalStorageUrl(), {
+  headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
         credentials: 'include'
       });
       if (!res.ok) {
@@ -167,16 +181,31 @@
       var remoteRows = remoteAttendanceRows(data, activeKeys);
       var meta = getRemoteMeta(data);
 
-      if (remoteRows <= 0) {
-        if (localRows > 0) {
-          console.log('[AttendanceCloudGuard] لا توجد نسخة سحابية للحضور، تم الاحتفاظ بالنسخة المحلية: ' + localRows + ' صف — keys=' + activeKeys.join(','));
-          setTimeout(function () { renderAgain('local-existing-no-cloud'); }, 50);
-          setTimeout(function () { renderAgain('local-existing-no-cloud'); }, 500);
-        } else {
-          console.warn('[AttendanceCloudGuard] لم يتم العثور على attendanceData ذات محتوى في hospital_storage لهذه الصفحة — keys=' + activeKeys.join(','));
-        }
-        return;
-      }
+  if (remoteRows <= 0) {
+  if (isReviewOnlySession()) {
+    activeKeys.forEach(function (k) {
+      localStorage.removeItem(k);
+    });
+
+    console.warn(
+      '[AttendanceCloudGuard] REVIEW ONLY: لا توجد نسخة حضور سحابية لهذه المستشفى — تم تفريغ الحضور المحلي لمنع عرض بيانات مستشفى أخرى — keys=' +
+      activeKeys.join(',')
+    );
+
+    setTimeout(function () { renderAgain('review-empty-cloud'); }, 50);
+    setTimeout(function () { renderAgain('review-empty-cloud'); }, 500);
+    return;
+  }
+
+  if (localRows > 0) {
+    console.log('[AttendanceCloudGuard] لا توجد نسخة سحابية للحضور، تم الاحتفاظ بالنسخة المحلية: ' + localRows + ' صف — keys=' + activeKeys.join(','));
+    setTimeout(function () { renderAgain('local-existing-no-cloud'); }, 50);
+    setTimeout(function () { renderAgain('local-existing-no-cloud'); }, 500);
+  } else {
+    console.warn('[AttendanceCloudGuard] لم يتم العثور على attendanceData ذات محتوى في hospital_storage لهذه الصفحة — keys=' + activeKeys.join(','));
+  }
+  return;
+}
 
       if (localRows > 0 && !sameAttendanceSnapshot(data, activeKeys)) {
         var replace = shouldReplaceLocalAttendance(localRows, remoteRows, meta, activeKeys);
