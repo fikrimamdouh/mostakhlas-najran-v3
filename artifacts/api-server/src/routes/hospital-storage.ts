@@ -312,5 +312,39 @@ router.get("/info", requireAuth, async (req: any, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+// TEMP ADMIN CLEANUP — remove wrong attendance keys for a hospital
+router.delete("/cleanup-attendance", requireAuth, async (req: any, res) => {
+  try {
+    const dbUser = await getDbUser(req.clerkUserId);
+    if (!dbUser || dbUser.status !== "approved") {
+      return res.status(403).json({ error: "Forbidden" });
+    }
 
+    const role = String(dbUser.role || "").toLowerCase();
+    if (!["admin", "super_admin", "administrator"].includes(role)) {
+      return res.status(403).json({ error: "Admin only" });
+    }
+
+    const hospital = String(req.query?.hospital || "").trim();
+    if (!hospital) {
+      return res.status(400).json({ error: "Missing hospital" });
+    }
+
+    await db.delete(hospitalStorageTable).where(
+      and(
+        eq(hospitalStorageTable.hospitalName, hospital),
+        inArray(hospitalStorageTable.storageKey, LEGACY_ATTENDANCE_KEYS)
+      )
+    );
+
+    return res.json({
+      ok: true,
+      hospital,
+      deletedKeys: LEGACY_ATTENDANCE_KEYS,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to cleanup attendance keys");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 export default router;
