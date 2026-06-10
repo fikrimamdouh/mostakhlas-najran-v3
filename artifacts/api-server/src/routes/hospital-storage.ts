@@ -54,27 +54,17 @@ function countContent(value: unknown): number {
   return 0;
 }
 
-function parseUserHospitals(user: any): string[] {
-  const base = user?.hospital ? [String(user.hospital).trim()] : [];
-  try {
-    const parsed = user?.hospitals ? JSON.parse(user.hospitals) : [];
-    return safeArray([...base, ...(Array.isArray(parsed) ? parsed : [])]);
-  } catch {
-    return safeArray(base);
-  }
-}
+
 
 async function backfillLegacyAttendanceFromUserStorage(hospitalName: string, result: Record<string, string>) {
   const missingKeys = LEGACY_ATTENDANCE_KEYS.filter(key => countContent(result[key]) <= 0);
   if (!missingKeys.length) return 0;
 
   const users = await db.select().from(usersTable).where(eq(usersTable.status, "approved"));
-
-  const eligibleUsers = users.filter(user => {
-    const primaryHospital = String((user as any).hospital || "").trim();
-    if (primaryHospital === hospitalName) return true;
-    return parseUserHospitals(user).includes(hospitalName);
-  });
+const eligibleUsers = users.filter(user => {
+  const primaryHospital = String((user as any).hospital || "").trim();
+  return primaryHospital === hospitalName;
+});
 
   if (!eligibleUsers.length) return 0;
 
