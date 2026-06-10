@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, hospitalStorageTable, systemSettingsTable } from "@workspace/db";
+import { db, usersTable, hospitalStorageTable, systemSettingsTable, userStorageTable } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 
@@ -21,7 +21,123 @@ const getDbUser = async (clerkId: string) => {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkId)).limit(1);
   return user;
 };
+const LEGACY_ATTENDANCE_KEYS = [
+  "attendanceData",
+  "ng_attendanceData",
+  "nd_attendanceData",
+  "centersAttendanceData_v2",
+  "healthCentersAttendanceData",
+  "adminOfficesAttendanceData_v1"
+];
 
+function normalizeKey(key: unknown): string {
+  return String(key || "").replace(/^(_u\d+_)+/, "");
+}
+
+function parseMaybeJSON(value: unknown): any {
+  if (value == null) return null;
+  if (typeof value === "object") return value;
+  try { return JSON.parse(String(value)); } catch { return value; }
+}
+
+function countContent(value: unknown): number {
+  const v = parseMaybeJSON(value);
+  if (v == null) return 0;
+  if (typeof v === "string") return v.trim() ? 1 : 0;
+  if (typeof v === "number") return Number.isFinite(v) && v !== 0 ? 1 : 0;
+  if (Array.isArray(v)) return v.reduce((sum, item) => sum + countContent(item), v.length ? 1 : 0);
+  if (typeof v === "object") {
+    const keys = Object.keys(v);
+    if (!keys.length) return 0;
+    return keys.reduce((sum, key) => sum + countContent((v as any)[key]), keys.length ? 1 : 0);
+  }
+  return 0;
+}
+
+function parseUserHospitals(user: any): string[] {
+  const base = user?.hospital ? [String(user.hospital).trim()] : [];
+  try {
+    const parsed = user?.hospitals ? JSON.parse(user.hospitals) : [];
+    return safeArray([...base, ...(Array.isArray(parsed) ? parsed : [])]);
+  } catch {
+    return safeArray(base);
+  }
+}
+
+async function backfillLegacyAttendanceFromUserStorage(hospitalName: string, result: Record<string, string>) {
+  const missingKeys = LEGACY_ATTENDANCE_KEYS.filter(key => countContent(result[key]) <= 0);
+  if (!missingKeys.length) return 0;
+
+  const users = await db.select().from(usersTable).where(eq(usersTable.status, "approved"));
+
+  const eligibleUsers = users.filter(user => {
+    const primaryHospital = String((user as any).hospital || "").trim();
+    if (primaryHospital === hospitalName) return true;
+    return parseUserHospitals(user).includes(hospitalName);
+  });
+
+  if (!eligibleUsers.length) return 0;
+
+  const userIds = eligibleUsers
+    .map(user => (user as any).id)
+    .filter(id => Number.isFinite(Number(id)));
+
+  if (!userIds.length) return 0;
+
+  const rows = await db
+    .select()
+    .from(userStorageTable)
+    .where(inArray(userStorageTable.userId, userIds));
+
+  const bestByKey: Record<string, { value: string; score: number; userId: number }> = {};
+
+  for (const row of rows) {
+    const normalized = normalizeKey((row as any).storageKey);
+    if (!missingKeys.includes(normalized)) continue;
+
+    const value = String((row as any).storageValue ?? "");
+    const score = countContent(value);
+    if (score <= 0) continue;
+
+    const userId = Number((row as any).userId);
+    const user = eligibleUsers.find(u => Number((u as any).id) === userId);
+    const primaryHospital = String((user as any)?.hospital || "").trim();
+
+    const rankedScore = score + (primaryHospital === hospitalName ? 1000000 : 0);
+
+    if (!bestByKey[normalized] || rankedScore > bestByKey[normalized].score) {
+      bestByKey[normalized] = { value, score: rankedScore, userId };
+    }
+  }
+
+  let migrated = 0;
+
+  for (const [key, candidate] of Object.entries(bestByKey)) {
+    if (countContent(result[key]) > 0) continue;
+
+    await db.insert(hospitalStorageTable)
+      .values({
+        hospitalName,
+        storageKey: key,
+        storageValue: candidate.value,
+        updatedAt: new Date(),
+        updatedByUserId: candidate.userId,
+      })
+      .onConflictDoUpdate({
+        target: [hospitalStorageTable.hospitalName, hospitalStorageTable.storageKey],
+        set: {
+          storageValue: candidate.value,
+          updatedAt: new Date(),
+          updatedByUserId: candidate.userId,
+        },
+      });
+
+    result[key] = candidate.value;
+    migrated++;
+  }
+
+  return migrated;
+}
 function requestedKeys(req: any): string[] | null {
   const scope = String(req.query?.scope || "").trim();
   if (scope === "settings") return SETTINGS_STORAGE_KEYS;
@@ -105,17 +221,23 @@ router.get("/", requireAuth, async (req: any, res) => {
     const rows = await db.select().from(hospitalStorageTable).where(whereClause);
 
     const result: Record<string, string> = {};
-    for (const row of rows) {
-      result[row.storageKey] = row.storageValue;
-    }
+for (const row of rows) {
+  result[row.storageKey] = row.storageValue;
+}
 
-    return res.json({
-      data: result,
-      count: rows.length,
-      hospital: resolved.hospital,
-      reviewOnly: resolved.reviewOnly,
-      scope: keys ? "settings" : "all",
-    });
+const migratedLegacyAttendance = keys
+  ? 0
+  : await backfillLegacyAttendanceFromUserStorage(resolved.hospital, result);
+
+return res.json({
+  data: result,
+  count: Object.keys(result).length,
+  originalCount: rows.length,
+  migratedLegacyAttendance,
+  hospital: resolved.hospital,
+  reviewOnly: resolved.reviewOnly,
+  scope: keys ? "settings" : "all",
+});
   } catch (err) {
     req.log.error({ err }, "Failed to get hospital storage");
     return res.status(500).json({ error: "Internal server error" });
