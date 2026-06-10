@@ -374,6 +374,128 @@ const handleSwitchReviewHospital = (h: string) => {
       h,
     ]);
 
+    const keepKeys = new Set([
+      "najran_session",
+      "hospitalName",
+      "companyName",
+      "contractNumber",
+      "sidebar_collapsed",
+      "najran_read_notifications",
+    ]);
+
+    const clearPrefixes = [
+      "deptCalculatedCost_",
+      "dept_",
+      "sb_sigs_",
+      "sb_prefs_",
+      "tableData_",
+      "achievement_",
+      "consumables_",
+      "spare_",
+      "water_",
+      "sewage_",
+      "subcontractors_",
+      "najran_labor_",
+      "najran_health_",
+      "najran_admin_",
+      "monthSnapshot_",
+      "_u",
+    ];
+
+    const clearKeys = [
+      "persistentContractData",
+      "persistentExtractData",
+      "contractData",
+      "contractDetails",
+      "contractType",
+      "contractStartDate",
+      "contractEndDate",
+      "contractSignatureData",
+      "extractMonth",
+      "extractYear",
+      "extractNumber",
+      "extractStart",
+      "extractEnd",
+      "extractFromDate",
+      "extractToDate",
+      "paymentNumber",
+      "attendanceData",
+      "centersAttendanceData_v2",
+      "healthCentersAttendanceData",
+      "adminOfficesAttendanceData_v1",
+      "ng_attendanceData",
+      "ng_departmentNames",
+      "ng_distributionSettings",
+      "ng_finalLaborCost",
+      "ng_performanceTotalDeduction",
+      "nd_attendanceData",
+      "nd_departmentNames",
+      "nd_distributionSettings",
+      "nd_finalLaborCost",
+      "nd_performanceTotalDeduction",
+      "nd_dentalAchievementTotals",
+      "consumablesTableData",
+      "healthCentersConsumables",
+      "mainHospitalConsumables",
+      "admin_offices_consumables_v1.0",
+      "consumablesTitle",
+      "consumablesPeriodFrom",
+      "consumablesPeriodTo",
+      "finalConsumablesCost",
+      "subcontractors_data_consumables_v27",
+      "performance_data_consumables_v27",
+      "water_supply_data_consumables_v27",
+      "sewage_disposal_data_consumables_v27",
+      "summary_data_consumables_v27",
+      "spare_partsData",
+      "sparePartsTotalAmount",
+      "approvalData",
+      "displayApprovalData",
+      "performanceData",
+      "performanceData_v4",
+      "performanceDeductions",
+      "achievementData",
+      "achievementTitles_v1",
+      "achievementItemNames",
+      "centerNames_v3",
+      "departmentNames",
+      "distributionSettings",
+      "hospitalActivityStatus",
+      "hospitalActivityStatus_v2",
+      "admin_staff",
+      "dynamicSignatures",
+      "contractorSignature",
+      "appTitles_v1",
+      "healthCentersData",
+      "reviewExtractData",
+      "requestVisitData",
+      "settings_main",
+      "settings_advanced",
+      "finalLaborCost",
+      "performanceTotalDeduction",
+      "grand-net-total",
+      "grand-net-total-centers",
+      "grand-net-total-admin",
+      "performanceSignatures",
+      "performanceSignatures_v2",
+      "performanceTableNames",
+      "adminOfficeNames_v1",
+      "adminOfficeAffiliations_v1",
+      "contract_foundation_data",
+    ];
+
+    clearKeys.forEach(key => {
+      if (!keepKeys.has(key)) localStorage.removeItem(key);
+    });
+
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (!key || keepKeys.has(key)) continue;
+      if (clearPrefixes.some(prefix => key.startsWith(prefix))) {
+        localStorage.removeItem(key);
+      }
+    }
+
     localStorage.setItem("najran_session", JSON.stringify(sess));
     localStorage.setItem("hospitalName", h);
     setActiveHospital(h);
