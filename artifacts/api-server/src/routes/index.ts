@@ -22,6 +22,7 @@ import visitsRouter from "./visits";
 import adminFoundationRouter from "./admin-foundation";
 import adminNotifyRouter from "./admin-notify";
 import adminJobPositionsRouter from "./admin-job-positions";
+import reviewerPermissionsRouter from "./reviewer-permissions";
 
 const router: IRouter = Router();
 
@@ -44,6 +45,7 @@ router.use("/export", exportRouter);
 router.use("/remind", remindRouter);
 router.use("/analytics", analyticsRouter);
 router.use("/hospital-storage", hospitalStorageRouter);
+router.use("/reviewer-permissions", reviewerPermissionsRouter);
 router.use("/visits", visitsRouter);
 router.use("/admin/foundation", adminFoundationRouter);
 router.use("/admin/notify", adminNotifyRouter);
