@@ -177,14 +177,11 @@ function getCurrentPageFile() {
     const role = String((s && s.role) || '').toLowerCase();
     return role === 'admin' || role === 'super_admin' || role === 'administrator';
   }
-  function shouldMergePulledKeyForCurrentPage(key) {
-    const nk = normalizeKey(key);
-    if (isAttendancePage() && ATTENDANCE_PAGE_KEYS.has(nk)) {
-      return false;
-    }
-    if (!isSettingsMainPage()) return true;
-    return SETTINGS_PAGE_KEYS.has(nk);
-  }
+function shouldMergePulledKeyForCurrentPage(key) {
+  const nk = normalizeKey(key);
+  if (!isSettingsMainPage()) return true;
+  return SETTINGS_PAGE_KEYS.has(nk);
+}
   function shouldSyncKey(key) {
     const nk = normalizeKey(key);
     return SYNC_KEYS.includes(nk) ||
@@ -207,6 +204,154 @@ function getCurrentPageFile() {
     const s = getSession();
     return s && s.hospital ? String(s.hospital).trim() : null;
   }
+  function clearOperationalKeysForHospitalSwitch() {
+  const keepKeys = new Set([
+    SESSION_KEY,
+    'hospitalName',
+    'companyName',
+    'contractNumber',
+    'sidebar_collapsed',
+    'najran_read_notifications'
+  ]);
+
+  const clearPrefixes = [
+    'deptCalculatedCost_',
+    'dept_',
+    'sb_sigs_',
+    'sb_prefs_',
+    'tableData_',
+    'achievement_',
+    'consumables_',
+    'spare_',
+    'water_',
+    'sewage_',
+    'subcontractors_',
+    'najran_labor_',
+    'najran_health_',
+    'najran_admin_',
+    'monthSnapshot_',
+    '_u'
+  ];
+
+  const clearKeys = [
+    'persistentContractData',
+    'persistentExtractData',
+    'contractData',
+    'contractDetails',
+    'contractType',
+    'contractStartDate',
+    'contractEndDate',
+    'contractSignatureData',
+    'extractMonth',
+    'extractYear',
+    'extractNumber',
+    'extractStart',
+    'extractEnd',
+    'extractFromDate',
+    'extractToDate',
+    'paymentNumber',
+    'attendanceData',
+    'centersAttendanceData_v2',
+    'healthCentersAttendanceData',
+    'adminOfficesAttendanceData_v1',
+    'ng_attendanceData',
+    'ng_departmentNames',
+    'ng_distributionSettings',
+    'ng_finalLaborCost',
+    'ng_performanceTotalDeduction',
+    'nd_attendanceData',
+    'nd_departmentNames',
+    'nd_distributionSettings',
+    'nd_finalLaborCost',
+    'nd_performanceTotalDeduction',
+    'nd_dentalAchievementTotals',
+    'consumablesTableData',
+    'healthCentersConsumables',
+    'mainHospitalConsumables',
+    'admin_offices_consumables_v1.0',
+    'consumablesTitle',
+    'consumablesPeriodFrom',
+    'consumablesPeriodTo',
+    'finalConsumablesCost',
+    'subcontractors_data_consumables_v27',
+    'performance_data_consumables_v27',
+    'water_supply_data_consumables_v27',
+    'sewage_disposal_data_consumables_v27',
+    'summary_data_consumables_v27',
+    'spare_partsData',
+    'sparePartsTotalAmount',
+    'approvalData',
+    'displayApprovalData',
+    'performanceData',
+    'performanceData_v4',
+    'performanceDeductions',
+    'achievementData',
+    'achievementTitles_v1',
+    'achievementItemNames',
+    'centerNames_v3',
+    'departmentNames',
+    'distributionSettings',
+    'hospitalActivityStatus',
+    'hospitalActivityStatus_v2',
+    'admin_staff',
+    'dynamicSignatures',
+    'contractorSignature',
+    'appTitles_v1',
+    'healthCentersData',
+    'reviewExtractData',
+    'requestVisitData',
+    'settings_main',
+    'settings_advanced',
+    'finalLaborCost',
+    'performanceTotalDeduction',
+    'grand-net-total',
+    'grand-net-total-centers',
+    'grand-net-total-admin',
+    'performanceSignatures',
+    'performanceSignatures_v2',
+    'performanceTableNames',
+    'adminOfficeNames_v1',
+    'adminOfficeAffiliations_v1',
+    'contract_foundation_data'
+  ];
+
+  clearKeys.forEach(function(key) {
+    if (!keepKeys.has(key)) localStorage.removeItem(key);
+  });
+
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const key = localStorage.key(i);
+    if (!key || keepKeys.has(key)) continue;
+    if (clearPrefixes.some(function(prefix) { return key.indexOf(prefix) === 0; })) {
+      localStorage.removeItem(key);
+    }
+  }
+}
+
+function isReviewOnlySession() {
+  const s = getSession();
+  return !!(s && s.reviewOnly === true);
+}
+
+function ensureHospitalContextClean() {
+  const hospitalName = getHospitalName();
+  if (!hospitalName) return;
+
+  const ctxKey = 'najran_active_hospital_context';
+  const prev = localStorage.getItem(ctxKey);
+  const reviewOnly = isReviewOnlySession();
+
+  const mustClean =
+    reviewOnly ||
+    (prev && prev !== hospitalName);
+
+  if (mustClean) {
+    console.warn('[MzamanaCloud] تنظيف بيانات المتصفح قبل سحب بيانات المستشفى: «' + hospitalName + '»');
+    clearOperationalKeysForHospitalSwitch();
+  }
+
+  localStorage.setItem(ctxKey, hospitalName);
+}
   async function getFreshToken() {
     try {
       if (typeof window.najranGetFreshToken === 'function') {
@@ -346,6 +491,11 @@ function getCurrentPageFile() {
   }
   async function pushToCloud() {
     if (!getSession()) throw new Error('NO_SESSION');
+    if (isReviewOnlySession()) {
+  console.warn('[MzamanaCloud] REVIEW ONLY: تم منع الرفع في وضع المراجعة');
+  DIRTY_KEYS.clear();
+  return { ok:true, saved:0, readonly:true, reason:'REVIEW_ONLY_NO_UPLOAD' };
+}
     const hospitalName = getHospitalName();
     const userData = {};
     const hospitalData = {};
@@ -439,10 +589,11 @@ function getCurrentPageFile() {
   async function init() {
     const session = getSession();
     if (!session) return;
-    const hospitalName = getHospitalName();
-    if (hospitalName) console.log('[MzamanaCloud] وضع المشاركة: مستشفى «' + hospitalName + '»');
-    else console.log('[MzamanaCloud] وضع شخصي (لا يوجد مستشفى مرتبط)');
+ const hospitalName = getHospitalName();
+ensureHospitalContextClean();
 
+if (hospitalName) console.log('[MzamanaCloud] وضع المشاركة: مستشفى «' + hospitalName + '»');
+else console.log('[MzamanaCloud] وضع شخصي (لا يوجد مستشفى مرتبط)');
     let pulling = false;
     async function pullSafe() {
       if (pulling) return;
