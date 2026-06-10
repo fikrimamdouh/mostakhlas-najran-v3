@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, hospitalStorageTable } from "@workspace/db";
+import { db, usersTable, hospitalStorageTable, systemSettingsTable } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 
@@ -28,20 +28,79 @@ function requestedKeys(req: any): string[] | null {
   return null;
 }
 
-// GET /api/hospital-storage — get shared keys for this user's hospital
+function safeArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return Array.from(new Set(value.map(v => String(v || "").trim()).filter(Boolean)));
+}
+
+function reviewKeyForUser(userId: number) {
+  return `review_permissions_user_${userId}`;
+}
+
+async function getReviewHospitals(userId: number): Promise<string[]> {
+  const [row] = await db
+    .select()
+    .from(systemSettingsTable)
+    .where(eq(systemSettingsTable.key, reviewKeyForUser(userId)))
+    .limit(1);
+
+  if (!row?.value) return [];
+
+  try {
+    const parsed = JSON.parse(row.value);
+    return safeArray(parsed?.reviewHospitals);
+  } catch {
+    return [];
+  }
+}
+
+function requestedHospital(req: any): string {
+  return String(req.query?.hospital || "").trim();
+}
+
+async function resolveReadHospital(req: any, dbUser: any): Promise<{ hospital: string | null; reviewOnly: boolean; error?: string }> {
+  const requested = requestedHospital(req);
+  const ownHospital = String(dbUser.hospital || "").trim();
+
+  if (!requested) {
+    return { hospital: ownHospital || null, reviewOnly: false };
+  }
+
+  if (requested === ownHospital) {
+    return { hospital: ownHospital || null, reviewOnly: false };
+  }
+
+  const reviewHospitals = await getReviewHospitals(dbUser.id);
+
+  if (reviewHospitals.includes(requested)) {
+    return { hospital: requested, reviewOnly: true };
+  }
+
+  return { hospital: null, reviewOnly: false, error: "Hospital not allowed" };
+}
+
+// GET /api/hospital-storage
+// عادي: يرجع dbUser.hospital
+// مراجعة: /api/hospital-storage?hospital=اسم_المستشفى ويرجعها فقط لو ضمن reviewHospitals
 router.get("/", requireAuth, async (req: any, res) => {
   try {
     const dbUser = await getDbUser(req.clerkUserId);
     if (!dbUser || dbUser.status !== "approved") return res.status(403).json({ error: "Forbidden" });
 
-    if (!dbUser.hospital?.trim()) {
-      return res.json({ data: {}, count: 0, hospital: null });
+    const resolved = await resolveReadHospital(req, dbUser);
+
+    if (resolved.error) {
+      return res.status(403).json({ error: resolved.error });
+    }
+
+    if (!resolved.hospital) {
+      return res.json({ data: {}, count: 0, hospital: null, reviewOnly: false });
     }
 
     const keys = requestedKeys(req);
     const whereClause = keys
-      ? and(eq(hospitalStorageTable.hospitalName, dbUser.hospital), inArray(hospitalStorageTable.storageKey, keys))
-      : eq(hospitalStorageTable.hospitalName, dbUser.hospital);
+      ? and(eq(hospitalStorageTable.hospitalName, resolved.hospital), inArray(hospitalStorageTable.storageKey, keys))
+      : eq(hospitalStorageTable.hospitalName, resolved.hospital);
 
     const rows = await db.select().from(hospitalStorageTable).where(whereClause);
 
@@ -50,18 +109,29 @@ router.get("/", requireAuth, async (req: any, res) => {
       result[row.storageKey] = row.storageValue;
     }
 
-    return res.json({ data: result, count: rows.length, hospital: dbUser.hospital, scope: keys ? "settings" : "all" });
+    return res.json({
+      data: result,
+      count: rows.length,
+      hospital: resolved.hospital,
+      reviewOnly: resolved.reviewOnly,
+      scope: keys ? "settings" : "all",
+    });
   } catch (err) {
     req.log.error({ err }, "Failed to get hospital storage");
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// PUT /api/hospital-storage — batch upsert shared keys for this user's hospital
+// PUT /api/hospital-storage
+// الرفع لا يسمح بالـ hospital query. يرفع فقط على dbUser.hospital.
 router.put("/", requireAuth, async (req: any, res) => {
   try {
     const dbUser = await getDbUser(req.clerkUserId);
     if (!dbUser || dbUser.status !== "approved") return res.status(403).json({ error: "Forbidden" });
+
+    if (requestedHospital(req)) {
+      return res.status(403).json({ error: "Cannot write to requested review hospital" });
+    }
 
     if (!dbUser.hospital?.trim()) {
       return res.json({ saved: 0, hospital: null });
@@ -99,15 +169,32 @@ router.put("/", requireAuth, async (req: any, res) => {
   }
 });
 
-// GET /api/hospital-storage/info — quick info about hospital storage count (for admin/debug)
+// GET /api/hospital-storage/info
 router.get("/info", requireAuth, async (req: any, res) => {
   try {
     const dbUser = await getDbUser(req.clerkUserId);
     if (!dbUser || dbUser.status !== "approved") return res.status(403).json({ error: "Forbidden" });
-    if (!dbUser.hospital?.trim()) return res.json({ hospital: null, count: 0 });
 
-    const rows = await db.select({ id: hospitalStorageTable.id }).from(hospitalStorageTable).where(eq(hospitalStorageTable.hospitalName, dbUser.hospital));
-    return res.json({ hospital: dbUser.hospital, count: rows.length });
+    const resolved = await resolveReadHospital(req, dbUser);
+
+    if (resolved.error) {
+      return res.status(403).json({ error: resolved.error });
+    }
+
+    if (!resolved.hospital) {
+      return res.json({ hospital: null, count: 0, reviewOnly: false });
+    }
+
+    const rows = await db
+      .select({ id: hospitalStorageTable.id })
+      .from(hospitalStorageTable)
+      .where(eq(hospitalStorageTable.hospitalName, resolved.hospital));
+
+    return res.json({
+      hospital: resolved.hospital,
+      count: rows.length,
+      reviewOnly: resolved.reviewOnly,
+    });
   } catch (err) {
     req.log.error({ err }, "Failed to get hospital storage info");
     return res.status(500).json({ error: "Internal server error" });
