@@ -1,6 +1,7 @@
 /* reviewer-permissions-guard.js
  * صلاحية مراجعة آمنة بدون تعديل قاعدة البيانات:
- * - تضيف زر "مراجعة" في شاشة إدارة المستخدمين.
+ * - تضيف زر "مراجعة" بجوار صلاحية المستخدم في شاشة إدارة المستخدمين.
+ * - تعرض نافذة اختيار مستشفيات المراجعة بقائمة متعددة بدل prompt يدوي.
  * - تخزن review_extract + reviewHospitals في /api/reviewer-permissions.
  * - تمنع أي رفع إلى hospital_storage لمستخدم في وضع مراجعة فقط.
  * - تقفل حقول الإدخال داخل صفحات المستخلصات عند المراجع فقط.
@@ -13,10 +14,60 @@
 
   var currentPerms = null;
   var usersByEmail = new Map();
-  var usersById = new Map();
+  var reviewerPermsByUserId = new Map();
+
+  var DEFAULT_REVIEW_HOSPITALS = [
+    'مستشفى بدر الجنوب العام',
+    'مستشفى حبونا العام',
+    'مستشفى يدمة العام',
+    'مستشفى الولادة والأطفال',
+    'مستشفى نجران العام القديم وسكن الممرضات الخارجي',
+    'المكاتب الإدارية والمرافق الصحية',
+    'صيانة وإصلاح السيارات والعيادات المتنقلة',
+    'مستشفى نجران العام الجديد ومركز طب الأسنان التخصصي',
+    'مجمع الأمل للصحة النفسية',
+    'مستشفى ثار العام',
+    'مستشفى خباش العام',
+    'المراكز الصحية',
+    'مستشفى الملك خالد',
+    'مركز الأمير سلطان',
+    'مستشفى شروره العام',
+    'المقر الرئيسي — تجمع نجران الصحي'
+  ];
 
   function isAdminUsersPage() {
     return /\/admin\/users(?:$|[?#])/.test(location.pathname + location.search);
+  }
+
+  function unique(arr) {
+    return Array.from(new Set((arr || []).map(function (x) { return String(x || '').trim(); }).filter(Boolean)));
+  }
+
+  function parseHospitals(value) {
+    if (Array.isArray(value)) return unique(value);
+    if (!value) return [];
+    try {
+      var parsed = JSON.parse(String(value));
+      if (Array.isArray(parsed)) return unique(parsed);
+    } catch (_) {}
+    return unique(String(value).split(/[،,|\n]/g));
+  }
+
+  function normalizeHospitalsFromUser(user) {
+    if (!user || typeof user !== 'object') return [];
+    return unique([].concat(
+      user.hospital ? [user.hospital] : [],
+      parseHospitals(user.hospitals),
+      user.hospitalName ? [user.hospitalName] : []
+    ));
+  }
+
+  function getAllHospitalOptions() {
+    var fromUsers = [];
+    usersByEmail.forEach(function (u) {
+      fromUsers = fromUsers.concat(normalizeHospitalsFromUser(u));
+    });
+    return unique(DEFAULT_REVIEW_HOSPITALS.concat(fromUsers));
   }
 
   async function getFreshToken() {
@@ -45,7 +96,6 @@
     var users = payload && Array.isArray(payload.users) ? payload.users : Array.isArray(payload) ? payload : [];
     users.forEach(function (u) {
       if (!u || u.id == null) return;
-      usersById.set(String(u.id), u);
       var email = String(u.email || '').trim().toLowerCase();
       if (email) usersByEmail.set(email, u);
     });
@@ -177,20 +227,130 @@
     return '';
   }
 
+  function ensureModalStyles() {
+    if (document.getElementById('najran-review-modal-style')) return;
+    var st = document.createElement('style');
+    st.id = 'najran-review-modal-style';
+    st.textContent = [
+      '.najran-review-modal-backdrop{position:fixed;inset:0;z-index:999999;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:18px;direction:rtl}',
+      '.najran-review-modal{width:min(720px,96vw);max-height:88vh;background:#fff;border-radius:20px;box-shadow:0 25px 70px rgba(0,0,0,.3);overflow:hidden;font-family:Tajawal,Arial,sans-serif;display:flex;flex-direction:column}',
+      '.najran-review-modal-header{padding:18px 22px;background:linear-gradient(135deg,#7c2d12,#9a3412);color:#fff;display:flex;justify-content:space-between;gap:16px;align-items:flex-start}',
+      '.najran-review-modal-title{font-size:18px;font-weight:900;margin:0}',
+      '.najran-review-modal-sub{font-size:12px;opacity:.82;margin-top:4px;line-height:1.7}',
+      '.najran-review-modal-close{border:0;background:transparent;color:#fff;font-size:26px;cursor:pointer;line-height:1}',
+      '.najran-review-modal-tools{padding:12px 18px;border-bottom:1px solid #f1f5f9;background:#fff7ed;display:flex;gap:8px;flex-wrap:wrap;align-items:center}',
+      '.najran-review-modal-tools button{border:1px solid #fdba74;background:#fff;color:#9a3412;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer}',
+      '.najran-review-modal-body{padding:16px 18px;overflow:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}',
+      '.najran-review-hospital{display:flex;align-items:center;gap:9px;padding:10px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;cursor:pointer;font-size:13px;font-weight:700;color:#334155}',
+      '.najran-review-hospital input{width:16px;height:16px;accent-color:#9a3412}',
+      '.najran-review-hospital.checked{background:#fff7ed;border-color:#fdba74;color:#7c2d12}',
+      '.najran-review-modal-footer{padding:14px 18px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;gap:10px;background:#fff}',
+      '.najran-review-modal-footer button{border:0;border-radius:12px;padding:10px 18px;font-weight:900;cursor:pointer}',
+      '.najran-review-save{background:#166534;color:#fff}',
+      '.najran-review-cancel{background:#f1f5f9;color:#334155}',
+      '.najran-review-clear{background:#fee2e2;color:#991b1b}',
+      '@media(max-width:760px){.najran-review-modal-body{grid-template-columns:1fr}}',
+      '.najran-review-row-btn{height:24px;padding:0 8px;border-radius:999px;border:1px solid #fdba74;background:#fff7ed;color:#9a3412;font-size:11px;font-weight:900;cursor:pointer;margin-inline-start:4px;white-space:nowrap}',
+      '.najran-review-row-btn.active{background:#9a3412;color:#fff;border-color:#9a3412}'
+    ].join('\n');
+    document.head.appendChild(st);
+  }
+
+  async function fetchReviewerPermsForUser(userId) {
+    var cached = reviewerPermsByUserId.get(String(userId));
+    if (cached) return cached;
+    var data = await api('/api/reviewer-permissions/' + encodeURIComponent(String(userId))).catch(function () { return { permissions: [], reviewHospitals: [] }; });
+    reviewerPermsByUserId.set(String(userId), data);
+    return data;
+  }
+
   async function editReviewerPermissions(user) {
     if (!user || user.id == null) return alert('تعذر تحديد المستخدم');
-    var current = await api('/api/reviewer-permissions/' + encodeURIComponent(String(user.id))).catch(function () { return { permissions: [], reviewHospitals: [] }; });
-    var oldHospitals = (current.reviewHospitals || []).join('، ');
-    var input = prompt('اكتب مستشفيات المراجعة مفصولة بفاصلة. اتركها فارغة لإلغاء صلاحية المراجع:', oldHospitals);
-    if (input == null) return;
-    var hospitals = String(input).split(/[،,|\n]/g).map(function (x) { return x.trim(); }).filter(Boolean);
+    ensureModalStyles();
+    var current = await fetchReviewerPermsForUser(user.id);
+    var selected = new Set(current.reviewHospitals || []);
+    var allHospitals = getAllHospitalOptions();
+
+    var backdrop = document.createElement('div');
+    backdrop.className = 'najran-review-modal-backdrop';
+    backdrop.innerHTML = '<div class="najran-review-modal">' +
+      '<div class="najran-review-modal-header"><div><h3 class="najran-review-modal-title">صلاحية مراجعة المستخلصات</h3><div class="najran-review-modal-sub">' +
+      'المستخدم: <b>' + (user.name || user.email || '') + '</b><br>اختر المستشفيات التي يراها للمراجعة فقط. هذه الصلاحية لا تسمح برفع أو تعديل بيانات المستخلص.' +
+      '</div></div><button class="najran-review-modal-close" type="button">×</button></div>' +
+      '<div class="najran-review-modal-tools"><button type="button" data-action="all">اختيار الكل</button><button type="button" data-action="none">إلغاء الكل</button><span style="font-size:12px;color:#7c2d12;font-weight:800" data-count></span></div>' +
+      '<div class="najran-review-modal-body"></div>' +
+      '<div class="najran-review-modal-footer"><button type="button" class="najran-review-clear">إلغاء صلاحية المراجع</button><div style="display:flex;gap:8px"><button type="button" class="najran-review-cancel">إغلاق</button><button type="button" class="najran-review-save">حفظ</button></div></div>' +
+      '</div>';
+
+    var body = backdrop.querySelector('.najran-review-modal-body');
+    var count = backdrop.querySelector('[data-count]');
+
+    function redraw() {
+      if (count) count.textContent = 'مختار: ' + selected.size + ' مستشفى';
+      Array.prototype.slice.call(body.querySelectorAll('.najran-review-hospital')).forEach(function (label) {
+        var cb = label.querySelector('input');
+        label.classList.toggle('checked', !!(cb && cb.checked));
+      });
+    }
+
+    allHospitals.forEach(function (h) {
+      var label = document.createElement('label');
+      label.className = 'najran-review-hospital';
+      var checked = selected.has(h) ? 'checked' : '';
+      label.innerHTML = '<input type="checkbox" value="' + h.replace(/"/g, '&quot;') + '" ' + checked + '> <span>' + h + '</span>';
+      var cb = label.querySelector('input');
+      cb.addEventListener('change', function () {
+        if (cb.checked) selected.add(h);
+        else selected.delete(h);
+        redraw();
+      });
+      body.appendChild(label);
+    });
+
+    backdrop.querySelector('.najran-review-modal-close').onclick = function () { backdrop.remove(); };
+    backdrop.querySelector('.najran-review-cancel').onclick = function () { backdrop.remove(); };
+    backdrop.addEventListener('click', function (e) { if (e.target === backdrop) backdrop.remove(); });
+    backdrop.querySelector('[data-action="all"]').onclick = function () {
+      allHospitals.forEach(function (h) { selected.add(h); });
+      Array.prototype.slice.call(body.querySelectorAll('input')).forEach(function (cb) { cb.checked = true; });
+      redraw();
+    };
+    backdrop.querySelector('[data-action="none"]').onclick = function () {
+      selected.clear();
+      Array.prototype.slice.call(body.querySelectorAll('input')).forEach(function (cb) { cb.checked = false; });
+      redraw();
+    };
+    backdrop.querySelector('.najran-review-clear').onclick = async function () {
+      await saveReviewerPerms(user, []);
+      backdrop.remove();
+    };
+    backdrop.querySelector('.najran-review-save').onclick = async function () {
+      await saveReviewerPerms(user, Array.from(selected));
+      backdrop.remove();
+    };
+
+    document.body.appendChild(backdrop);
+    redraw();
+  }
+
+  async function saveReviewerPerms(user, hospitals) {
     var permissions = hospitals.length ? ['review_extract'] : [];
-    await api('/api/reviewer-permissions/' + encodeURIComponent(String(user.id)), {
+    var data = await api('/api/reviewer-permissions/' + encodeURIComponent(String(user.id)), {
       method: 'PATCH',
       body: JSON.stringify({ permissions: permissions, reviewHospitals: hospitals })
     });
-    alert(hospitals.length ? 'تم حفظ صلاحية المراجعة' : 'تم إلغاء صلاحية المراجعة');
-    setTimeout(patchAdminTable, 150);
+    reviewerPermsByUserId.set(String(user.id), data);
+    patchAdminTable();
+  }
+
+  async function refreshButtonState(btn, user) {
+    try {
+      var data = await fetchReviewerPermsForUser(user.id);
+      var count = (data.reviewHospitals || []).length;
+      btn.classList.toggle('active', count > 0);
+      btn.textContent = count > 0 ? 'مراجعة ' + count : 'مراجعة';
+      btn.title = count > 0 ? ('مستشفيات المراجعة: ' + data.reviewHospitals.join(' / ')) : 'تحديد مستشفيات المراجعة فقط — لا يسمح بالرفع';
+    } catch (_) {}
   }
 
   function patchAdminTable() {
@@ -198,24 +358,26 @@
     var table = findUsersTable();
     if (!table) return;
     Array.prototype.slice.call(table.querySelectorAll('tbody tr')).forEach(function (tr) {
-      if (tr.querySelector('[data-review-permissions-btn="1"]')) return;
       var email = getEmailFromRow(tr);
       var user = usersByEmail.get(email);
       if (!user) return;
-      var lastCell = tr.children[tr.children.length - 1];
-      if (!lastCell) return;
+      var cells = Array.prototype.slice.call(tr.children || []);
+      var roleCell = cells.find(function (td) { return (td.textContent || '').indexOf('مستخدم') > -1 || (td.textContent || '').indexOf('مدير') > -1 || (td.textContent || '').indexOf('مشرف') > -1 || (td.textContent || '').indexOf('مراقب') > -1; }) || cells[2];
+      if (!roleCell || roleCell.querySelector('[data-review-permissions-btn="1"]')) return;
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.dataset.reviewPermissionsBtn = '1';
+      btn.className = 'najran-review-row-btn';
       btn.textContent = 'مراجعة';
       btn.title = 'تحديد مستشفيات المراجعة فقط — لا يسمح بالرفع';
-      btn.style.cssText = 'height:28px;padding:0 9px;border-radius:8px;border:1px solid #fed7aa;background:#fff7ed;color:#9a3412;font-size:11px;font-weight:800;cursor:pointer;margin:2px';
       btn.onclick = function () { editReviewerPermissions(user).catch(function (e) { alert(e.message || 'فشل حفظ صلاحية المراجعة'); }); };
-      lastCell.appendChild(btn);
+      roleCell.appendChild(btn);
+      refreshButtonState(btn, user);
     });
   }
 
   patchFetch();
+  ensureModalStyles();
   loadCurrentPermissions();
   setInterval(function () { loadCurrentPermissions(); patchAdminTable(); watchFramesAndPage(); }, 5000);
   document.addEventListener('DOMContentLoaded', function () {
