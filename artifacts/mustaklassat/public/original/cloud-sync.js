@@ -433,13 +433,22 @@ function ensureHospitalContextClean() {
     } catch (_) {}
   }
 
-  async function pullFromCloud() {
-    const hospitalName = getHospitalName();
-    const storageScope = isSettingsMainPage() ? '?scope=settings' : '';
-    const results = await Promise.all([
-      apiFetch('/storage' + storageScope),
-      hospitalName ? apiFetch('/hospital-storage' + storageScope) : Promise.resolve(null)
-    ]);
+ async function pullFromCloud() {
+  const hospitalName = getHospitalName();
+  const storageScope = isSettingsMainPage() ? 'scope=settings' : '';
+  const reviewOnly = isReviewOnlySession();
+
+  const hospitalQueryParts = [];
+  if (storageScope) hospitalQueryParts.push(storageScope);
+  if (reviewOnly && hospitalName) hospitalQueryParts.push('hospital=' + encodeURIComponent(hospitalName));
+
+  const hospitalQuery = hospitalQueryParts.length ? '?' + hospitalQueryParts.join('&') : '';
+
+  const results = await Promise.all([
+    apiFetch('/storage' + (storageScope ? '?' + storageScope : '')),
+    hospitalName ? apiFetch('/hospital-storage' + hospitalQuery) : Promise.resolve(null)
+  ]);
+
     const userData = (results[0] && results[0].data) || {};
     const hospitalData = (results[1] && results[1].data) || {};
     let mergedUser = 0;
