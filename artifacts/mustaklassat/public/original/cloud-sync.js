@@ -432,8 +432,18 @@
     if (!keysToSync.length) return { ok:true, saved:0, reason:'NO_LOCAL_CHANGES' };
     keysToSync.forEach(function(key){
       const nk = normalizeKey(key);
-      if (adminSession && ATTENDANCE_PAGE_KEYS.has(nk)) { skippedAdminAttendance++; return; }
-      const val = localStorage.getItem(nk);
+const s = getSession();
+const canAdminEditAttendance =
+  s && (
+    s.canEditAttendance === true ||
+    s.attendanceEditor === true ||
+    s.role === 'attendance_editor'
+  );
+
+if (adminSession && ATTENDANCE_PAGE_KEYS.has(nk) && !canAdminEditAttendance) {
+  skippedAdminAttendance++;
+  return;
+}      const val = localStorage.getItem(nk);
       if (val === null) return;
       if (PERSONAL_KEYS.has(nk) || !hospitalName) userData[nk] = val;
       else hospitalData[nk] = val;
