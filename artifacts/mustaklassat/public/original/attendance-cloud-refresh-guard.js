@@ -207,6 +207,23 @@
     return JSON.stringify(parsed);
   }
 
+  function normalizeLocalAttendanceForCurrentPeriod(keys) {
+    var changed = 0;
+    (keys || getActiveAttendanceKeys()).forEach(function (k) {
+      var val = localStorage.getItem(k);
+      if (!val) return;
+      var normalized = normalizeAttendanceValueForCurrentPeriod(val);
+      if (normalized && normalized !== val) {
+        localStorage.setItem(k, normalized);
+        changed++;
+      }
+    });
+    if (changed > 0) {
+      console.log('[AttendanceCloudGuard] تم ضبط النسخة المحلية على مدة المستخلص الحالية — keys=' + (keys || []).join(','));
+    }
+    return changed;
+  }
+
   function localAttendanceRows(keys) {
     var total = 0;
     (keys || getActiveAttendanceKeys()).forEach(function (k) { total += countRows(localStorage.getItem(k)); });
@@ -268,7 +285,7 @@
       (meta.updatedAt ? ('وقت التعديل: ' + formatDateTime(meta.updatedAt) + '\n') : '') +
       '\nهل تريد استبدال النسخة المحلية بالنسخة السحابية؟\n\n' +
       'موافق = استبدال المحلي بالسحابي\n' +
-      'إلغاء = الاحتفاظ بالنسخة المحلية';
+      'إلغاء = الاحتفاظ بالنسخة المحلية مع ضبطها على مدة المستخلص الحالية';
 
     return confirm(msg);
   }
@@ -330,9 +347,10 @@
   }
 
   if (localRows > 0) {
-    console.log('[AttendanceCloudGuard] لا توجد نسخة سحابية للحضور، تم الاحتفاظ بالنسخة المحلية: ' + localRows + ' صف — keys=' + activeKeys.join(','));
-    setTimeout(function () { renderAgain('local-existing-no-cloud'); }, 50);
-    setTimeout(function () { renderAgain('local-existing-no-cloud'); }, 500);
+    normalizeLocalAttendanceForCurrentPeriod(activeKeys);
+    console.log('[AttendanceCloudGuard] لا توجد نسخة سحابية للحضور، تم الاحتفاظ بالنسخة المحلية وضبطها: ' + localRows + ' صف — keys=' + activeKeys.join(','));
+    setTimeout(function () { renderAgain('local-existing-no-cloud-period-normalized'); }, 50);
+    setTimeout(function () { renderAgain('local-existing-no-cloud-period-normalized'); }, 500);
   } else {
     console.warn('[AttendanceCloudGuard] لم يتم العثور على attendanceData ذات محتوى في hospital_storage لهذه الصفحة — keys=' + activeKeys.join(','));
   }
@@ -342,9 +360,12 @@
       if (localRows > 0 && !sameAttendanceSnapshot(data, activeKeys)) {
         var replace = shouldReplaceLocalAttendance(localRows, remoteRows, meta, activeKeys);
         if (!replace) {
-          console.log('[AttendanceCloudGuard] احتفظ المستخدم بالنسخة المحلية ولم يستبدلها بالسحابية');
-          setTimeout(function () { renderAgain('keep-local'); }, 50);
-          setTimeout(function () { renderAgain('keep-local'); }, 500);
+          applyExtractSettingsFromCloud(data);
+          normalizeLocalAttendanceForCurrentPeriod(activeKeys);
+          console.log('[AttendanceCloudGuard] احتفظ المستخدم بالنسخة المحلية وتم ضبطها على مدة المستخلص الحالية');
+          setTimeout(function () { applyExtractSettingsFromCloud(data); normalizeLocalAttendanceForCurrentPeriod(activeKeys); renderAgain('keep-local-period-normalized'); }, 50);
+          setTimeout(function () { applyExtractSettingsFromCloud(data); normalizeLocalAttendanceForCurrentPeriod(activeKeys); renderAgain('keep-local-period-normalized'); }, 500);
+          setTimeout(function () { applyExtractSettingsFromCloud(data); normalizeLocalAttendanceForCurrentPeriod(activeKeys); renderAgain('keep-local-period-normalized'); }, 1500);
           return;
         }
       }
