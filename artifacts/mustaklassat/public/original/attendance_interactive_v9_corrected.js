@@ -2394,25 +2394,45 @@ const departments = [
         `;
     });
 
-    printDialog.innerHTML = `
-        <div class="dialog-content">
-            <span class="close" onclick="closeDialog('print-dialog')">×</span>
-            <h3>طباعة الجداول</h3>
-            <div class="form-group">
-                <label style="display: flex; align-items: center; cursor: pointer; font-weight: bold;">
-                    <input type="checkbox" id="select-all-print" checked onchange="toggleAllDepartmentsPrint(this.checked)" style="width: 20px; height: 20px; margin-left: 10px;">
-                    تحديد جميع الأقسام
-                </label>
-            </div>
-            <div style="border-top: 1px solid #eee; margin-top: 15px; padding-top: 15px; max-height: 250px; overflow-y: auto;">
-                ${departmentCheckboxes}
-            </div>
-            <div class="buttons" style="margin-top: 20px;">
-                <button onclick="printSelectedDepartments()" class="btn btn-success"><i class="fas fa-print"></i> طباعة</button>
-                <button onclick="closeDialog('print-dialog')" class="btn btn-secondary"><i class="fas fa-times-circle"></i> إلغاء</button>
-            </div>
+  printDialog.innerHTML = `
+    <div class="dialog-content">
+        <span class="close" onclick="closeDialog('print-dialog')">×</span>
+        <h3>طباعة الجداول</h3>
+
+        <div class="form-group">
+            <label style="display: flex; align-items: center; cursor: pointer; font-weight: bold;">
+                <input type="checkbox"
+                       id="select-all-print"
+                       checked
+                       onchange="toggleAllDepartmentsPrint(this.checked)"
+                       style="width: 20px; height: 20px; margin-left: 10px;">
+                تحديد جميع الأقسام
+            </label>
         </div>
-    `;
+
+        <div class="form-group" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
+            <label style="display: flex; align-items: center; cursor: pointer; font-weight: bold; color: #1e3c72;">
+                <input type="checkbox"
+                       id="print-grand-total-signatures"
+                       style="width: 20px; height: 20px; margin-left: 10px;">
+                إضافة توقيع بعد الإجمالي العام
+            </label>
+        </div>
+
+        <div style="border-top: 1px solid #eee; margin-top: 15px; padding-top: 15px; max-height: 250px; overflow-y: auto;">
+            ${departmentCheckboxes}
+        </div>
+
+        <div class="buttons" style="margin-top: 20px;">
+            <button onclick="printSelectedDepartments()" class="btn btn-success">
+                <i class="fas fa-print"></i> طباعة
+            </button>
+            <button onclick="closeDialog('print-dialog')" class="btn btn-secondary">
+                <i class="fas fa-times-circle"></i> إلغاء
+            </button>
+        </div>
+    </div>
+`;
 
     document.body.appendChild(overlay);
     document.body.appendChild(printDialog);
@@ -2496,7 +2516,11 @@ function closePrintDialog() {
 
 function printSelectedDepartments() {
   const selectedDepartments = [];
-  const checkboxes = document.querySelectorAll('#print-dialog input[type="checkbox"]:not(#select-all-print)');
+
+  // مهم: نستبعد checkbox تحديد الكل + checkbox توقيع الإجمالي العام
+  const checkboxes = document.querySelectorAll(
+    '#print-dialog input[type="checkbox"]:not(#select-all-print):not(#print-grand-total-signatures)'
+  );
 
   checkboxes.forEach(checkbox => {
     if (checkbox.checked) {
@@ -2509,10 +2533,13 @@ function printSelectedDepartments() {
     return;
   }
 
-  preparePrint(selectedDepartments);
+  // اختيار طباعة توقيع بعد الإجمالي العام
+  const includeGrandTotalSignatures =
+    document.getElementById('print-grand-total-signatures')?.checked === true;
+
+  preparePrint(selectedDepartments, includeGrandTotalSignatures);
   closePrintDialog();
 }
-
 function preparePrint(selectedDepartments = null) {
   // حفظ snapshot تلقائي عند كل طباعة
   if (typeof window.saveExtractSnapshot === 'function') {
