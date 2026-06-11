@@ -16,7 +16,7 @@
   }
 
   const MONTH_DATA_KEYS = [
-    'persistentExtractData', 'extractStart', 'extractEnd', 'extractMonth', 'extractYear', 'paymentNumber',
+    'persistentExtractData', 'extractStart', 'extractEnd', 'extractMonth', 'extractYear', 'paymentNumber', 'extractNumber',
     'attendanceData',
     'performanceData', 'performanceSignatures', 'performanceTableNames', 'performanceTotalDeduction',
     'achievementItemNames', 'dentalLaborCheckboxState', 'dentalLaborData',
@@ -185,7 +185,10 @@
       if (current.extractYear) localStorage.setItem('extractYear', current.extractYear);
       if (current.extractStart) localStorage.setItem('extractStart', current.extractStart);
       if (current.extractEnd) localStorage.setItem('extractEnd', current.extractEnd);
-      if (current.paymentNumber) localStorage.setItem('paymentNumber', current.paymentNumber);
+      if (current.paymentNumber) {
+        localStorage.setItem('paymentNumber', current.paymentNumber);
+        localStorage.setItem('extractNumber', current.paymentNumber);
+      }
 
       window.dispatchEvent(new StorageEvent('storage', {
         key: 'persistentExtractData',
@@ -258,11 +261,92 @@
   }, 50);
 })();
 
+    function getClerkTokenForExtractUpload() {
+      try {
+        if (typeof window.najranGetFreshToken === 'function') return window.najranGetFreshToken();
+        if (window.Clerk && window.Clerk.session) return window.Clerk.session.getToken();
+      } catch (e) {}
+      return Promise.resolve(null);
+    }
+
+    async function pushExtractSettingsDirect(data) {
+      const token = await getClerkTokenForExtractUpload();
+      if (!token) {
+        console.warn('[MonthCtx] لا يوجد token صالح لرفع إعدادات المستخلص مباشرة');
+        return { ok:false, reason:'NO_TOKEN' };
+      }
+
+      const payload = {
+        persistentExtractData: JSON.stringify(data),
+        extractMonth: data.extractMonth || '',
+        extractYear: String(data.extractYear || ''),
+        extractStart: data.extractStart || '',
+        extractEnd: data.extractEnd || '',
+        paymentNumber: data.paymentNumber || '',
+        extractNumber: data.paymentNumber || ''
+      };
+
+      Object.entries(payload).forEach(function(entry) {
+        localStorage.setItem(entry[0], entry[1]);
+      });
+
+      const resp = await fetch('/api/hospital-storage', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + token
+        },
+        credentials: 'include',
+        body: JSON.stringify({ data: payload })
+      });
+
+      if (!resp.ok) throw new Error('EXTRACT_SETTINGS_UPLOAD_FAILED_' + resp.status);
+      const result = await resp.json();
+      console.log('[MonthCtx] extract settings direct upload:', result);
+      return result;
+    }
+
+    function showExtractSaveCountdown(seconds) {
+      let remaining = Number(seconds || 10);
+      const old = document.getElementById('extract-save-countdown-modal');
+      if (old) old.remove();
+
+      const modal = document.createElement('div');
+      modal.id = 'extract-save-countdown-modal';
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:999999;display:flex;align-items:center;justify-content:center;direction:rtl;font-family:Tajawal,Arial,sans-serif;';
+      modal.innerHTML = '<div style="width:min(480px,92vw);background:#fff;border-radius:18px;padding:24px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.25);border-top:6px solid #1e3c72;">' +
+        '<h2 style="margin:0 0 12px;color:#1e3c72;font-size:22px;">تم حفظ مدة المستخلص بنجاح</h2>' +
+        '<p style="margin:0 0 12px;color:#334155;font-size:15px;line-height:1.9;">يرجى الانتظار حتى يتم رفع التعديل ومزامنته مع السيرفر.<br>لا تفتح صفحة الحضور والانصراف قبل انتهاء العداد حتى لا تظهر المدة القديمة.</p>' +
+        '<div id="extract-save-countdown-number" style="width:86px;height:86px;margin:18px auto;border-radius:50%;background:#eef4ff;color:#1e3c72;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;border:3px solid #bfdbfe;">' + remaining + '</div>' +
+        '<button id="go-attendance-after-sync" disabled style="background:#94a3b8;color:#fff;border:none;border-radius:10px;padding:11px 22px;font-size:15px;font-weight:700;cursor:not-allowed;font-family:Tajawal,Arial,sans-serif;">جاري المزامنة...</button>' +
+        '</div>';
+
+      document.body.appendChild(modal);
+      const numberEl = document.getElementById('extract-save-countdown-number');
+      const btn = document.getElementById('go-attendance-after-sync');
+
+      const timer = setInterval(function () {
+        remaining -= 1;
+        if (numberEl) numberEl.textContent = String(remaining);
+        if (remaining <= 0) {
+          clearInterval(timer);
+          if (numberEl) numberEl.textContent = 'تم';
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'الدخول إلى الحضور والانصراف';
+            btn.style.background = '#1e3c72';
+            btn.style.cursor = 'pointer';
+            btn.onclick = function () { window.location.href = 'attendance.html'; };
+          }
+        }
+      }, 1000);
+    }
+
     setTimeout(function installStableExtractSaveOverride() {
       if (window.__stableExtractSaveOverrideInstalled) return;
       window.__stableExtractSaveOverrideInstalled = true;
 
-      window.saveExtractData = function saveExtractDataStable() {
+      window.saveExtractData = async function saveExtractDataStable() {
         try {
           console.log('بدء تشغيل دالة saveExtractData — stable no-auto-advance override');
 
@@ -370,13 +454,16 @@
           }
 
           localStorage.setItem('persistentExtractData', JSON.stringify(data));
-          if (data.extractStart) localStorage.setItem('extractStart', data.extractStart);
-          if (data.extractEnd) localStorage.setItem('extractEnd', data.extractEnd);
-          if (data.extractMonth) localStorage.setItem('extractMonth', data.extractMonth);
-          if (data.extractYear) localStorage.setItem('extractYear', data.extractYear);
-          if (data.paymentNumber) localStorage.setItem('paymentNumber', data.paymentNumber);
+          localStorage.setItem('extractStart', data.extractStart || '');
+          localStorage.setItem('extractEnd', data.extractEnd || '');
+          localStorage.setItem('extractMonth', data.extractMonth || '');
+          localStorage.setItem('extractYear', String(data.extractYear || ''));
+          localStorage.setItem('paymentNumber', data.paymentNumber || '');
+          localStorage.setItem('extractNumber', data.paymentNumber || '');
 
-          // احفظ المستخلص الحالي في الأرشيف بعد الحفظ.
+          await pushExtractSettingsDirect(data);
+
+          // احفظ المستخلص الحالي في الأرشيف بعد الحفظ وبعد تثبيت المفاتيح المختصرة.
           const savedKey = data.extractMonth && data.extractYear ? `${data.extractYear}_${data.extractMonth}` : null;
           if (savedKey && typeof window.saveMonthSnapshot === 'function') {
             window.saveMonthSnapshot(savedKey);
@@ -408,14 +495,15 @@
             window.najranSyncNow().catch(() => {});
           }
 
-          console.log('تم حفظ البيانات بنجاح!');
+          showExtractSaveCountdown(10);
+          console.log('تم حفظ البيانات ورفعها بنجاح!');
         } catch (error) {
           console.error('خطأ في حفظ بيانات المستخلص:', error);
-          alert('حدث خطأ أثناء حفظ بيانات المستخلص! تحقق من وحدة التحكم لمزيد من التفاصيل.');
+          alert('حدث خطأ أثناء حفظ بيانات المستخلص أو رفعها! تحقق من وحدة التحكم لمزيد من التفاصيل.');
         }
       };
 
-      console.log('[MonthCtx] stable saveExtractData override installed — no auto advance');
+      console.log('[MonthCtx] stable saveExtractData override installed — no auto advance + direct upload countdown');
     }, 0);
   });
 })();
