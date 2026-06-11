@@ -2500,16 +2500,20 @@ if (grandTotalSection) {
     }, 1000);
 }
 
-function toggleAllDepartmentsPrint(selectAllCheckbox) {
-  const checkboxes = document.querySelectorAll('#print-dialog input[type="checkbox"]:not(#select-all-print)');
+function toggleAllDepartmentsPrint(isChecked) {
+  const checkboxes = document.querySelectorAll(
+    '#print-dialog input[type="checkbox"]:not(#select-all-print):not(#print-grand-total-signatures)'
+  );
+
   checkboxes.forEach(checkbox => {
-    checkbox.checked = selectAllCheckbox.checked;
+    checkbox.checked = isChecked;
   });
 }
 
 function closePrintDialog() {
   const dialog = document.getElementById('print-dialog');
-  const overlay = document.getElementById('print-overlay');
+  const overlay = document.getElementById('print-dialog-overlay');
+
   if (dialog) dialog.remove();
   if (overlay) overlay.remove();
 }
