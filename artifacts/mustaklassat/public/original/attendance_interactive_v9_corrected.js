@@ -2638,7 +2638,50 @@ const currentMonthYear = extractStartDate.toLocaleDateString('ar-EG', { month: '
 };
 
   let selectedCount = 0;
+function buildAttendanceTableSignaturesHTML() {
+  const latestSignatures = (typeof SignatureBlock !== 'undefined')
+    ? SignatureBlock.getSigs('attendance')
+    : (typeof getSignatures === 'function' ? getSignatures() : []);
 
+  const prefs = (typeof SignatureBlock !== 'undefined')
+    ? SignatureBlock.getPrefs('attendance')
+    : { includeSigs: true, includeStamp: true };
+
+  if (!prefs.includeSigs) return '';
+
+  let html = `
+    <div class="signatures-block" style="page-break-inside:avoid;margin:14px 0 20px;">
+      <div class="signatures-title">التواقيع</div>
+      <div class="signatures-grid">
+  `;
+
+  if (latestSignatures && latestSignatures.length > 0) {
+    latestSignatures.forEach(sig => {
+      html += `
+        <div class="signature-item">
+          <div class="signature-role">${sig.title || 'مسمى غير محدد'}</div>
+          <div class="signature-line"></div>
+          <div class="signature-name">${sig.name || ''}</div>
+        </div>
+      `;
+    });
+
+    if (prefs.includeStamp) {
+      html += `
+        <div class="signature-item">
+          <div class="signature-role">الختم</div>
+          <div class="signature-line"></div>
+          <div class="signature-name"></div>
+        </div>
+      `;
+    }
+  } else {
+    html += '<p style="text-align:center;color:#888;">لا توجد تواقيع معتمدة.</p>';
+  }
+
+  html += '</div></div>';
+  return html;
+}
   departmentTables.forEach((tableDiv) => {
     const title = tableDiv.querySelector('h3')?.textContent || '';
     let deptKey = null;
@@ -2698,8 +2741,8 @@ const currentMonthYear = extractStartDate.toLocaleDateString('ar-EG', { month: '
         tbodyHTML += '</tr>';
       });
       tbodyHTML += '</tbody>';
-      doc.write('<table>' + tableHTML + tbodyHTML + '</table>');
-    }
+doc.write('<table>' + tableHTML + tbodyHTML + '</table>');
+doc.write(buildAttendanceTableSignaturesHTML());    }
 
     selectedCount++;
   }); // نهاية forEach
@@ -2726,30 +2769,9 @@ const currentMonthYear = extractStartDate.toLocaleDateString('ar-EG', { month: '
     }
   }
 
-  // التواقيع — مرة واحدة فقط في النهاية — تُقرأ من SignatureBlock (النظام الجديد)
-  const latestSignatures = (typeof SignatureBlock !== 'undefined')
-    ? SignatureBlock.getSigs('attendance')
-    : getSignatures();
-  let signaturesHTML = `
-    <div class="signatures-block" style="page-break-inside:avoid;margin-top:30px;">
-      <div class="signatures-title">التواقيع</div>
-      <div class="signatures-grid">
-  `;
-  if (latestSignatures.length > 0) {
-    latestSignatures.forEach(sig => {
-      signaturesHTML += `
-        <div class="signature-item">
-          <div class="signature-role">${sig.title || 'مسمى غير محدد'}</div>
-          <div class="signature-line"></div>
-          <div class="signature-name">${sig.name || 'غير محدد'}</div>
-        </div>
-      `;
-    });
-  } else {
-    signaturesHTML += '<p style="text-align:center;color:#888;">لا توجد تواقيع معتمدة.</p>';
-  }
-  signaturesHTML += '</div></div>';
-  doc.write(signaturesHTML);
+// تم تعطيل التواقيع النهائية العامة
+// السبب: كانت تظهر مرة واحدة فقط في آخر صفحة الطباعة
+// المطلوب: التواقيع تكون تحت كل جدول داخل حلقة طباعة الجداول
 
   doc.close();
   printWindow.focus();
