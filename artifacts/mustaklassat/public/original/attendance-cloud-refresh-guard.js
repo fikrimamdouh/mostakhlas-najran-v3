@@ -48,52 +48,51 @@
     var s = getSession();
     return s.clerkToken || '';
   }
-function isReviewOnlySession() {
-  var s = getSession();
-  return !!(s && s.reviewOnly === true);
-}
+ function isReviewOnlySession() {
+   var s = getSession();
+   return !!(s && s.reviewOnly === true);
+ }
 
-function getHospitalStorageUrl() {
-  var s = getSession();
-  var url = '/api/hospital-storage';
+ function getHospitalStorageUrl() {
+   var s = getSession();
+   var url = '/api/hospital-storage';
 
-  if (s && s.reviewOnly === true && s.hospital) {
-    url += '?hospital=' + encodeURIComponent(String(s.hospital).trim());
-  }
+   if (s && s.reviewOnly === true && s.hospital) {
+     url += '?hospital=' + encodeURIComponent(String(s.hospital).trim());
+   }
 
-  return url;
-}
+   return url;
+ }
   function parse(v) {
     if (!v) return null;
     if (typeof v === 'object') return v;
     try { return JSON.parse(v); } catch (_) { return null; }
   }
-function normalizeKey(key) {
-  return String(key || '').replace(/^(_u\d+_)+/, '');
-}
+ function normalizeKey(key) {
+   return String(key || '').replace(/^(_u\d+_)+/, '');
+ }
 
-function normalizeRemoteDataKeys(data) {
-  var out = {};
-  data = data || {};
+ function normalizeRemoteDataKeys(data) {
+   var out = {};
+   data = data || {};
 
-  Object.keys(data).forEach(function (key) {
-    var nk = normalizeKey(key);
-    if (!nk) return;
+   Object.keys(data).forEach(function (key) {
+     var nk = normalizeKey(key);
+     if (!nk) return;
 
-    // لو المفتاح الطبيعي غير موجود، خده
-    if (out[nk] == null) {
-      out[nk] = data[key];
-      return;
-    }
+     if (out[nk] == null) {
+       out[nk] = data[key];
+       return;
+     }
 
-    // لو موجود بالفعل، اختار النسخة ذات محتوى أكبر
-    if (countRows(data[key]) > countRows(out[nk])) {
-      out[nk] = data[key];
-    }
-  });
+     if (countRows(data[key]) > countRows(out[nk])) {
+       out[nk] = data[key];
+     }
+   });
 
-  return out;
-}
+   return out;
+ }
+
   function countRows(obj) {
     var v = parse(obj);
     if (!v) return 0;
@@ -108,6 +107,104 @@ function normalizeRemoteDataKeys(data) {
       return total;
     }
     return 0;
+  }
+
+  function daysBetweenInclusive(start, end) {
+    if (!start || !end) return 0;
+    var s = new Date(start);
+    var e = new Date(end);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0;
+    return Math.max(1, Math.round((e.getTime() - s.getTime()) / 86400000) + 1);
+  }
+
+  function readCurrentExtractPeriodDays() {
+    try {
+      var d = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+      return daysBetweenInclusive(d.extractStart || localStorage.getItem('extractStart'), d.extractEnd || localStorage.getItem('extractEnd'));
+    } catch (_) {
+      return daysBetweenInclusive(localStorage.getItem('extractStart'), localStorage.getItem('extractEnd'));
+    }
+  }
+
+  function applyExtractSettingsFromCloud(data) {
+    try {
+      data = data || {};
+      var extract = parse(data.persistentExtractData) || {};
+
+      if (!extract.extractMonth && data.extractMonth) extract.extractMonth = data.extractMonth;
+      if (!extract.extractYear && data.extractYear) extract.extractYear = data.extractYear;
+      if (!extract.extractStart && data.extractStart) extract.extractStart = data.extractStart;
+      if (!extract.extractEnd && data.extractEnd) extract.extractEnd = data.extractEnd;
+      if (!extract.paymentNumber && (data.paymentNumber || data.extractNumber)) extract.paymentNumber = data.paymentNumber || data.extractNumber;
+      if (!extract.extractCalendar) extract.extractCalendar = 'ميلادي';
+      if (!extract.extractDuration) extract.extractDuration = 'شهر واحد';
+
+      if (!extract.extractStart || !extract.extractEnd || !extract.extractMonth || !extract.extractYear) return false;
+
+      localStorage.setItem('persistentExtractData', JSON.stringify(extract));
+      localStorage.setItem('extractMonth', extract.extractMonth || '');
+      localStorage.setItem('extractYear', String(extract.extractYear || ''));
+      localStorage.setItem('extractStart', extract.extractStart || '');
+      localStorage.setItem('extractEnd', extract.extractEnd || '');
+      localStorage.setItem('paymentNumber', extract.paymentNumber || '');
+      localStorage.setItem('extractNumber', extract.paymentNumber || '');
+
+      var monthKey = extract.extractYear && extract.extractMonth ? String(extract.extractYear) + '_' + String(extract.extractMonth) : '';
+      if (monthKey) {
+        var snapKey = 'monthSnapshot_' + monthKey;
+        var raw = localStorage.getItem(snapKey);
+        var snap = raw ? (parse(raw) || {}) : {};
+        snap.persistentExtractData = JSON.stringify(extract);
+        snap.extractMonth = extract.extractMonth || '';
+        snap.extractYear = String(extract.extractYear || '');
+        snap.extractStart = extract.extractStart || '';
+        snap.extractEnd = extract.extractEnd || '';
+        snap.paymentNumber = extract.paymentNumber || '';
+        snap.extractNumber = extract.paymentNumber || '';
+        localStorage.setItem(snapKey, JSON.stringify(snap));
+      }
+
+      console.log('[AttendanceCloudGuard] تم تثبيت إعدادات المستخلص من hospital_storage قبل استرجاع الحضور:', extract.extractStart, '→', extract.extractEnd);
+      return true;
+    } catch (e) {
+      console.warn('[AttendanceCloudGuard] فشل تثبيت إعدادات المستخلص من السحابة', e);
+      return false;
+    }
+  }
+
+  function normalizeEmployeeDays(x, daysInPeriod) {
+    if (!x || typeof x !== 'object') return;
+    if (Array.isArray(x.days) && daysInPeriod > 0) {
+      if (x.days.length < daysInPeriod) {
+        x.days = x.days.concat(Array(daysInPeriod - x.days.length).fill('ح'));
+      } else if (x.days.length > daysInPeriod) {
+        x.days = x.days.slice(0, daysInPeriod);
+      }
+    }
+  }
+
+  function normalizeAttendanceValueForCurrentPeriod(value) {
+    var parsed = parse(value);
+    var daysInPeriod = readCurrentExtractPeriodDays();
+    if (!parsed || !daysInPeriod) return value;
+
+    function walk(node) {
+      if (!node) return;
+      if (Array.isArray(node)) {
+        node.forEach(function (item) {
+          normalizeEmployeeDays(item, daysInPeriod);
+          if (item && typeof item === 'object') walk(item);
+        });
+        return;
+      }
+      if (typeof node === 'object') {
+        normalizeEmployeeDays(node, daysInPeriod);
+        Object.keys(node).forEach(function (k) { walk(node[k]); });
+      }
+    }
+
+    walk(parsed);
+    return JSON.stringify(parsed);
   }
 
   function localAttendanceRows(keys) {
@@ -143,6 +240,7 @@ function normalizeRemoteDataKeys(data) {
       return (keys || getActiveAttendanceKeys()).every(function (k) {
         var localVal = localStorage.getItem(k) || '';
         var remoteVal = data && data[k] != null ? (typeof data[k] === 'string' ? data[k] : JSON.stringify(data[k])) : '';
+        remoteVal = normalizeAttendanceValueForCurrentPeriod(remoteVal);
         return localVal === remoteVal;
       });
     } catch (_) {
@@ -193,8 +291,8 @@ function normalizeRemoteDataKeys(data) {
     }
 
     try {
-var res = await fetch(getHospitalStorageUrl(), {
-  headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+ var res = await fetch(getHospitalStorageUrl(), {
+   headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
         credentials: 'include'
       });
       if (!res.ok) {
@@ -202,16 +300,17 @@ var res = await fetch(getHospitalStorageUrl(), {
         return;
       }
       var json = await res.json();
-var rawData = json && json.data ? json.data : {};
-var data = normalizeRemoteDataKeys(rawData);
-var remoteRows = remoteAttendanceRows(data, activeKeys);
+ var rawData = json && json.data ? json.data : {};
+ var data = normalizeRemoteDataKeys(rawData);
+ applyExtractSettingsFromCloud(data);
+ var remoteRows = remoteAttendanceRows(data, activeKeys);
 
-console.log(
-  '[AttendanceCloudGuard] مفاتيح حضور موجودة بعد التطبيع:',
-  Object.keys(data).filter(function(k) {
-    return k.toLowerCase().indexOf('attendance') >= 0;
-  })
-);
+ console.log(
+   '[AttendanceCloudGuard] مفاتيح حضور موجودة بعد التطبيع:',
+   Object.keys(data).filter(function(k) {
+     return k.toLowerCase().indexOf('attendance') >= 0;
+   })
+ );
       var meta = getRemoteMeta(data);
 
   if (remoteRows <= 0) {
@@ -257,15 +356,16 @@ console.log(
         var val = data[k];
         var rows = countRows(val);
         if (val == null || rows <= 0) return;
-        localStorage.setItem(k, typeof val === 'string' ? val : JSON.stringify(val));
+        var normalizedVal = normalizeAttendanceValueForCurrentPeriod(val);
+        localStorage.setItem(k, normalizedVal);
         restored++;
         restoredRows += rows;
       });
 
       if (restored > 0) {
-        console.log('[AttendanceCloudGuard] تم استرجاع/استبدال بيانات الحضور من hospital_storage: ' + restored + ' مفتاح / ' + restoredRows + ' صف — keys=' + activeKeys.join(','));
-        setTimeout(function () { renderAgain(localRows > 0 ? 'cloud-replaced-local' : 'cloud-restored'); }, 50);
-        setTimeout(function () { renderAgain(localRows > 0 ? 'cloud-replaced-local' : 'cloud-restored'); }, 500);
+        console.log('[AttendanceCloudGuard] تم استرجاع/استبدال بيانات الحضور من hospital_storage مع ضبطها على مدة المستخلص الحالية: ' + restored + ' مفتاح / ' + restoredRows + ' صف — keys=' + activeKeys.join(','));
+        setTimeout(function () { renderAgain(localRows > 0 ? 'cloud-replaced-local-period-normalized' : 'cloud-restored-period-normalized'); }, 50);
+        setTimeout(function () { renderAgain(localRows > 0 ? 'cloud-replaced-local-period-normalized' : 'cloud-restored-period-normalized'); }, 500);
       }
     } catch (e) {
       console.warn('[AttendanceCloudGuard] فشل فحص بيانات الحضور السحابية', e);
