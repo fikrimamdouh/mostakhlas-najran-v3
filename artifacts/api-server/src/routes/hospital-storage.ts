@@ -116,7 +116,7 @@ const bestByKey: Record<string, { value: string; score: number; userId: number }
 for (const [userId, userRows] of rowsByUser.entries()) {
   const storedHospital = getStoredHospitalFromRows(userRows);
 
-  if (storedHospital && storedHospital !== hospitalName) {
+  if (storedHospital !== hospitalName) {
     continue;
   }
 
