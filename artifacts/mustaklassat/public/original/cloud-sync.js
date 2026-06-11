@@ -114,7 +114,6 @@
     if (!protectedKeys.length) return hospitalData;
     const remote = await apiFetch('/hospital-storage');
     if (!remote) {
-      // لو فشل جلب remote، امنع رفع المفاتيح المحمية تماماً
       const safe = {};
       keys.forEach(key => { if (!shouldProtectFromEmptyOverwrite(key)) safe[key] = hospitalData[key]; });
       console.warn('[MzamanaCloud] BLOCKED protected keys — remote unavailable');
@@ -173,6 +172,65 @@
     return !!(s && s.reviewOnly === true);
   }
 
+  function parseHospitalList(v) {
+    if (Array.isArray(v)) return v.map(String).map(function(x){ return x.trim(); }).filter(Boolean);
+    if (!v) return [];
+    try {
+      const p = JSON.parse(String(v));
+      if (Array.isArray(p)) return parseHospitalList(p);
+    } catch (_) {}
+    return String(v).split(/[،,|\n]/g).map(function(x){ return x.trim(); }).filter(Boolean);
+  }
+
+  function forceReviewOnlyBeforeInit() {
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (!raw) return false;
+      const s = JSON.parse(raw);
+      if (!s) return false;
+
+      const hospital = String(s.hospital || '').trim();
+      const reviewActive = String(s.reviewActiveHospital || '').trim();
+      const reviewHospitals = parseHospitalList(s.reviewHospitals);
+
+      const shouldForceReview = !!hospital && (
+        reviewActive === hospital ||
+        (s.canReviewCurrentHospital === true && s.canEditCurrentHospital === false) ||
+        (s.reviewOnly === true && reviewHospitals.indexOf(hospital) > -1)
+      );
+
+      if (!shouldForceReview) return false;
+
+      s.hospital = hospital;
+      s.reviewActiveHospital = hospital;
+      s.canReviewCurrentHospital = true;
+      s.canEditCurrentHospital = false;
+      s.reviewOnly = true;
+      s.timestamp = Date.now();
+
+      localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+      localStorage.removeItem('najran_active_hospital_context');
+
+      Object.keys(localStorage).forEach(function(k){
+        const lk = String(k || '').toLowerCase();
+        if (
+          lk.includes('attendance') ||
+          lk.includes('attendancedata') ||
+          lk.includes('monthsnapshot') ||
+          lk.includes('hospitalactivitystatus')
+        ) {
+          localStorage.removeItem(k);
+        }
+      });
+
+      sessionStorage.clear();
+      console.warn('[MzamanaCloud] REVIEW ONLY: تم فرض وضع المراجعة قبل التهيئة للمستشفى «' + hospital + '»');
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function clearOperationalKeysForHospitalSwitch() {
     const keepKeys = new Set([SESSION_KEY,'hospitalName','companyName','contractNumber','sidebar_collapsed','najran_read_notifications']);
     const clearPrefixes = ['deptCalculatedCost_','dept_','sb_sigs_','sb_prefs_','tableData_','achievement_','consumables_','spare_','water_','sewage_','subcontractors_','najran_labor_','najran_health_','najran_admin_','monthSnapshot_','_u'];
@@ -200,8 +258,6 @@
     DIRTY_KEYS.clear();
   }
 
-  // ─── FIX 1: ensureHospitalContextClean ───────────────────────────────────
-  // المراجع لا يحفظ ctxKey → تنظيف في كل فتح بدون استثناء
   function ensureHospitalContextClean() {
     const hospitalName = getHospitalName();
     if (!hospitalName) return;
@@ -213,11 +269,9 @@
       console.warn('[MzamanaCloud] تنظيف السياق: «' + hospitalName + '»' + (reviewOnly ? ' [مراجعة — يتنظف دايماً]' : ' [تبديل مستشفى]'));
       clearOperationalKeysForHospitalSwitch();
     }
-    // ─── FIX 1: المراجع لا يحفظ ctxKey ──────────────────────────────────
     if (!reviewOnly) {
       localStorage.setItem(ctxKey, hospitalName);
     }
-    // لو reviewOnly: ctxKey يبقى فاضي أو من مستشفى قديم → mustClean=true دايماً
   }
 
   async function getFreshToken() {
@@ -280,11 +334,13 @@
   }
   function showHospitalActivityNotice() {
     try {
+      if (isReviewOnlySession()) return;
       const raw = localStorage.getItem('hospitalActivityStatus');
       if (!raw) return;
       const activity = JSON.parse(raw);
       const s = getSession();
       if (!activity || !s || activity.userId === s.userId) return;
+      if (activity.hospital && s.hospital && String(activity.hospital).trim() !== String(s.hospital).trim()) return;
       if (activity.pageFile && activity.pageFile !== getCurrentPageFile()) return;
       const updatedAt = activity.updatedAt ? new Date(activity.updatedAt) : null;
       if (updatedAt && Date.now() - updatedAt.getTime() > 6 * 60 * 60 * 1000) return;
@@ -300,7 +356,6 @@
     } catch (_) {}
   }
 
-  // ─── FIX 3: pullFromCloud يستخدم _origSetItem لمنع dirty loop ────────────
   async function pullFromCloud() {
     const hospitalName = getHospitalName();
     const storageScope = isSettingsMainPage() ? 'scope=settings' : '';
@@ -318,8 +373,6 @@
     const userData = (results[0] && results[0].data) || {};
     const hospitalData = (results[1] && results[1].data) || {};
     let mergedUser = 0, mergedHospital = 0, skippedUserOperational = 0, skippedByPage = 0;
-
-    // استخدام _origSetItem لمنع إضافة المسحوب لـ DIRTY_KEYS
     const safeWrite = _origSetItem || localStorage.setItem.bind(localStorage);
 
     function mergeOne(key, value, fromHospital) {
@@ -440,15 +493,15 @@
   } catch (_) {}
 
   async function init() {
+    forceReviewOnlyBeforeInit();
+
     const session = getSession();
     if (!session) return;
     const hospitalName = getHospitalName();
     const reviewOnly = isReviewOnlySession();
 
-    // ① حفظ origSetItem قبل أي تعديل
     _origSetItem = localStorage.setItem.bind(localStorage);
 
-    // ② تنظيف السياق
     ensureHospitalContextClean();
 
     if (reviewOnly) console.log('[MzamanaCloud] وضع المراجعة [قراءة فقط]: «' + (hospitalName || '—') + '»');
@@ -491,12 +544,13 @@
       document.addEventListener('change', scheduleSync);
     }
 
-    // ─── FIX 2: localStorage.setItem override ────────────────────────────
-    // المراجع: يكتب محلياً للعرض بس لا dirty أبدًا
     localStorage.setItem = function(key, value) {
       _origSetItem(key, value);
-      if (isApplyingCloudPull) return;    // أثناء pull: لا dirty
-      if (reviewOnly) return;             // المراجع: لا dirty أبدًا
+      if (isApplyingCloudPull) return;
+      if (isReviewOnlySession()) {
+        DIRTY_KEYS.clear();
+        return;
+      }
       if (shouldSyncKey(key)) {
         DIRTY_KEYS.add(normalizeKey(key));
         clearTimeout(localStorage._syncTimeout);
