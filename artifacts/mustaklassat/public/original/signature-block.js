@@ -11,6 +11,7 @@
   const SESSION_KEY = 'najran_session';
   const instances = {};
   let activeKey = null;
+  let printHooksInstalled = false;
 
   const STAMP_SVG = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
     <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="5,3"/>
@@ -61,6 +62,7 @@
 .print-signatures.sb-attendance-table-signatures h4 { text-align:center; margin:0 0 10px; font-size:13px; font-weight:800; color:#000; }
 @media print {
   .sb-bar,.sb-btn,.sb-toggle-row { display:none !important; }
+  #sb-container-attendance { display:none !important; }
   .sb-wrap { margin-top:16px !important; }
   .sb-wrap.sb-no-print-sigs { display:none !important; }
   .sb-no-print-sigs-inner { display:none !important; }
@@ -269,6 +271,17 @@
     setTimeout(() => applyPrintClasses(pageKey), 0);
   }
 
+  function installPrintHooks() {
+    if (printHooksInstalled) return;
+    printHooksInstalled = true;
+    global.addEventListener('beforeprint', function () {
+      if (instances.attendance) {
+        renderAll('attendance');
+        setTimeout(function () { renderAll('attendance'); }, 0);
+      }
+    });
+  }
+
   async function pullCloud(pageKey) {
     const data = await apiFetch('/hospital-storage');
     if (!data?.data || !instances[pageKey]) return;
@@ -300,6 +313,7 @@
       const setup = () => {
         injectCSS();
         buildDialogDOM();
+        installPrintHooks();
         renderAll(pageKey);
         pullCloud(pageKey);
       };
