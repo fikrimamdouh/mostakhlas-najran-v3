@@ -77,6 +77,37 @@ router.get("/", requireAuth, requireAdminOrSupervisor, async (req: any, res) => 
   }
 });
 
+router.delete("/cleanup-user", requireAuth, requireAdmin, async (req: any, res) => {
+  try {
+    const userEmail = typeof req.body?.userEmail === "string" ? req.body.userEmail.trim() : "";
+    const userIdRaw = req.body?.userId;
+    const userId = userIdRaw !== undefined && userIdRaw !== null && userIdRaw !== "" ? Number(userIdRaw) : null;
+
+    if (!userEmail && (!userId || Number.isNaN(userId))) {
+      return res.status(400).json({ error: "userEmail or userId is required" });
+    }
+
+    const whereClause = userEmail ? eq(auditLogTable.userEmail, userEmail) : eq(auditLogTable.userId, userId as number);
+    const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(auditLogTable).where(whereClause);
+    await db.delete(auditLogTable).where(whereClause);
+
+    const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress || null;
+    await db.insert(auditLogTable).values({
+      userId: req.currentUser.id,
+      userEmail: req.currentUser.email,
+      userName: req.currentUser.name,
+      action: "حذف سجل مراقبة مستخدم",
+      details: JSON.stringify({ details: `تم حذف ${Number(count)} سجل مراقبة لمستخدم محدد`, targetUserEmail: userEmail || null, targetUserId: userId || null, deletedCount: Number(count) }),
+      ipAddress: ip,
+    });
+
+    return res.json({ deleted: Number(count), userEmail: userEmail || null, userId: userId || null });
+  } catch (err) {
+    req.log.error({ err }, "Failed to cleanup audit logs by user");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.delete("/cleanup", requireAuth, requireAdmin, async (req: any, res) => {
   try {
     const { before } = req.body as { before?: string };
