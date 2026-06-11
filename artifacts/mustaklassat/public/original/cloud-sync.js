@@ -375,31 +375,60 @@
     let mergedUser = 0, mergedHospital = 0, skippedUserOperational = 0, skippedByPage = 0;
     const safeWrite = _origSetItem || localStorage.setItem.bind(localStorage);
 
-    function mergeOne(key, value, fromHospital) {
-      const nk = normalizeKey(key);
-      if (fromHospital && PERSONAL_KEYS.has(nk)) return;
-      if (!fromHospital && hospitalName && !PERSONAL_KEYS.has(nk)) { skippedUserOperational++; return; }
-      if (!shouldMergePulledKeyForCurrentPage(nk)) { skippedByPage++; return; }
-      if (COMPUTED_KEYS.has(nk)) {
-        const local = localStorage.getItem(nk);
-        if (local !== null && parseFloat(local) > parseFloat(value)) return;
-      }
-      try { safeWrite(nk, value); fromHospital ? mergedHospital++ : mergedUser++; } catch (_) {}
-    }
+  function mergeOne(key, value, fromHospital) {
+  const nk = normalizeKey(key);
 
-    Object.entries(userData).forEach(([k,v]) => mergeOne(k, v, false));
-    Object.entries(hospitalData).forEach(([k,v]) => mergeOne(k, v, true));
-
-    console.log('[MzamanaCloud] PULL ✓' + (reviewOnly ? ' [مراجعة]' : '') +
-      ' ' + mergedUser + ' شخصي + ' + mergedHospital + ' مشترك' +
-      (skippedUserOperational ? ' · ' + skippedUserOperational + ' تشغيلي شخصي' : '') +
-      (skippedByPage ? ' · ' + skippedByPage + ' خارج نطاق الصفحة' : '')
-    );
-    try { window.dispatchEvent(new CustomEvent('najranCloudPulled', { detail: { monthChanged:false } })); } catch (_) {}
-    try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
-    try { if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint(); } catch (_) {}
+  // مفاتيح الحضور لا يتم سحبها من cloud-sync مباشرة.
+  // استبدال الحضور يتم فقط من attendance-cloud-refresh-guard.js برسالة موافقة المستخدم.
+  if (ATTENDANCE_PAGE_KEYS.has(nk)) {
+    skippedByPage++;
+    return;
   }
 
+  if (fromHospital && PERSONAL_KEYS.has(nk)) return;
+
+  if (!fromHospital && hospitalName && !PERSONAL_KEYS.has(nk)) {
+    skippedUserOperational++;
+    return;
+  }
+
+  if (!shouldMergePulledKeyForCurrentPage(nk)) {
+    skippedByPage++;
+    return;
+  }
+
+  if (COMPUTED_KEYS.has(nk)) {
+    const local = localStorage.getItem(nk);
+    if (local !== null && parseFloat(local) > parseFloat(value)) return;
+  }
+
+  try {
+    safeWrite(nk, value);
+    fromHospital ? mergedHospital++ : mergedUser++;
+  } catch (_) {}
+}
+
+Object.entries(userData).forEach(([k, v]) => mergeOne(k, v, false));
+Object.entries(hospitalData).forEach(([k, v]) => mergeOne(k, v, true));
+
+console.log('[MzamanaCloud] PULL ✓' + (reviewOnly ? ' [مراجعة]' : '') +
+  ' ' + mergedUser + ' شخصي + ' + mergedHospital + ' مشترك' +
+  (skippedUserOperational ? ' · ' + skippedUserOperational + ' تشغيلي شخصي' : '') +
+  (skippedByPage ? ' · ' + skippedByPage + ' خارج نطاق الصفحة' : '')
+);
+
+try {
+  window.dispatchEvent(new CustomEvent('najranCloudPulled', { detail: { monthChanged: false } }));
+} catch (_) {}
+
+try {
+  if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData();
+} catch (_) {}
+
+try {
+  if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint();
+} catch (_) {}
+}
   function splitObjectIntoChunks(obj, chunkSize) {
     const entries = Object.entries(obj || {});
     const chunks = [];
