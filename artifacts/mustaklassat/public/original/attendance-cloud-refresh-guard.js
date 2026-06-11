@@ -1,10 +1,11 @@
 /**
- * attendance-cloud-refresh-guard.js — V3 safe operational mode
+ * attendance-cloud-refresh-guard.js — V4 safe operational/local-wins mode
  *
- * القاعدة:
- * - المراجع: لا يعرض أي حضور محلي عند عدم وجود نسخة سحابية.
- * - المستخدم العادي: ينظف المحلي القديم مرة واحدة فقط عند بداية الصفحة إذا كان السيرفر فاضي.
- * - بعد أول تنظيف، لا يمسح تعديلات المستخدم أثناء الإدخال حتى لا ترجع بيانات الموظفين للخلف.
+ * القاعدة النهائية:
+ * - المراجع: قراءة فقط. لو لا توجد نسخة سحابية، يتم تفريغ المحلي دائماً لمنع خلط المستشفيات.
+ * - المستخدم العادي: لو السيرفر فاضي، ينظف المحلي القديم مرة واحدة فقط عند بداية الصفحة.
+ * - المستخدم العادي: لو توجد نسخة سحابية مختلفة ورفض استبدال المحلي، يصبح المحلي هو المصدر الفائز ويتم رفعه للسحابة.
+ * - بعد أول تعديل من المستخدم، لا يتم استبدال عمله تلقائياً بسحابة قديمة أثناء نفس الجلسة.
  */
 (function () {
   'use strict';
@@ -15,6 +16,7 @@
 
   var normalEmptyCloudHandled = false;
   var userTouchedAttendance = false;
+  var localWinsUntilSynced = false;
 
   function markAttendanceUserTouched() {
     if (!isReviewOnlySession()) userTouchedAttendance = true;
@@ -43,10 +45,6 @@
   function isReviewOnlySession() {
     var s = getSession();
     return !!(s && s.reviewOnly === true);
-  }
-  function getCurrentHospital() {
-    var s = getSession();
-    return s && s.hospital ? String(s.hospital).trim() : '';
   }
   async function getToken() {
     try {
@@ -128,9 +126,12 @@
         var snapKey = 'monthSnapshot_' + monthKey;
         var snap = parse(localStorage.getItem(snapKey)) || {};
         snap.persistentExtractData = JSON.stringify(extract);
-        snap.extractMonth = extract.extractMonth || ''; snap.extractYear = String(extract.extractYear || '');
-        snap.extractStart = extract.extractStart || ''; snap.extractEnd = extract.extractEnd || '';
-        snap.paymentNumber = extract.paymentNumber || ''; snap.extractNumber = extract.paymentNumber || '';
+        snap.extractMonth = extract.extractMonth || '';
+        snap.extractYear = String(extract.extractYear || '');
+        snap.extractStart = extract.extractStart || '';
+        snap.extractEnd = extract.extractEnd || '';
+        snap.paymentNumber = extract.paymentNumber || '';
+        snap.extractNumber = extract.paymentNumber || '';
         localStorage.setItem(snapKey, JSON.stringify(snap));
       }
       return true;
@@ -201,32 +202,43 @@
         if (localStorage.getItem(k) != null) removed.push(k);
         localStorage.removeItem(k);
       });
-
       Object.keys(localStorage).forEach(function(k) {
         var lk = String(k || '').toLowerCase();
-        if (
-          lk.indexOf('attendancedata') >= 0 ||
-          lk.indexOf('attendance') >= 0 ||
-          lk.indexOf('monthsnapshot') >= 0
-        ) {
+        if (lk.indexOf('attendancedata') >= 0 || lk.indexOf('attendance') >= 0 || lk.indexOf('monthsnapshot') >= 0) {
           removed.push(k);
           localStorage.removeItem(k);
         }
       });
     } catch (_) {}
-
     console.warn('[AttendanceCloudGuard] تم تفريغ الحضور المحلي: ' + (reason || '') + ' — removed=' + removed.length);
+  }
+
+  function forceLocalAttendanceDirtyAndSync(activeKeys, reason) {
+    if (isReviewOnlySession()) return;
+    try {
+      (activeKeys || getActiveAttendanceKeys()).forEach(function(k) {
+        var val = localStorage.getItem(k);
+        if (val != null) localStorage.setItem(k, val);
+      });
+      console.warn('[AttendanceCloudGuard] LOCAL WINS: سيتم رفع النسخة المحلية للسحابة — ' + (reason || ''));
+      if (typeof window.najranSyncNow === 'function') {
+        setTimeout(function(){ window.najranSyncNow().catch(function(){}); }, 250);
+        setTimeout(function(){ window.najranSyncNow().catch(function(){}); }, 2500);
+      }
+    } catch (e) {
+      console.warn('[AttendanceCloudGuard] تعذر تعليم المحلي كنسخة فائزة', e);
+    }
   }
 
   function shouldReplaceLocalAttendance(localRows, remoteRows, meta, keys) {
     var msg =
       'يوجد اختلاف بين بيانات الحضور المحلية والنسخة السحابية.\n\n' +
       'المفاتيح: ' + (keys || []).join(', ') + '\n' +
-      'المحلي: ' + localRows + ' صف\n' +
+      'المحلي عندك: ' + localRows + ' صف\n' +
       'السحابي: ' + remoteRows + ' صف\n' +
-      'آخر تعديل: ' + (meta.userName || 'مستخدم آخر') + '\n' +
+      'آخر تعديل على السحابة: ' + (meta.userName || 'مستخدم آخر') + '\n' +
       (meta.updatedAt ? ('الوقت: ' + formatDateTime(meta.updatedAt) + '\n') : '') +
-      '\nموافق = استبدال المحلي بالسحابي\nإلغاء = الاحتفاظ بالمحلي مع ضبطه على مدة المستخلص';
+      '\nموافق = تنزيل النسخة السحابية واستبدال المحلي\nإلغاء = الاحتفاظ بعملك المحلي ورفعه للسحابة';
     return confirm(msg);
   }
 
@@ -258,12 +270,7 @@
       if (remoteRows <= 0) {
         if (isReviewOnlySession()) {
           clearLocalAttendanceState('reviewOnly-no-cloud-attendance', activeKeys);
-
-          console.warn(
-            '[AttendanceCloudGuard] REVIEW ONLY: لا توجد نسخة حضور سحابية لهذه المستشفى — تم تفريغ الحضور المحلي لمنع خلط المستشفيات — keys=' +
-            activeKeys.join(',')
-          );
-
+          console.warn('[AttendanceCloudGuard] REVIEW ONLY: لا توجد نسخة حضور سحابية لهذه المستشفى — تم تفريغ الحضور المحلي لمنع خلط المستشفيات — keys=' + activeKeys.join(','));
           setTimeout(function(){ renderAgain('review-empty-cloud'); }, 50);
           setTimeout(function(){ renderAgain('review-empty-cloud'); }, 500);
           return;
@@ -272,12 +279,7 @@
         if (!normalEmptyCloudHandled) {
           clearLocalAttendanceState('normal-initial-no-cloud-attendance', activeKeys);
           normalEmptyCloudHandled = true;
-
-          console.warn(
-            '[AttendanceCloudGuard] لا توجد نسخة حضور سحابية — تم تنظيف المحلي مرة واحدة والصفحة جاهزة للإدخال — keys=' +
-            activeKeys.join(',')
-          );
-
+          console.warn('[AttendanceCloudGuard] لا توجد نسخة حضور سحابية — تم تنظيف المحلي مرة واحدة والصفحة جاهزة للإدخال — keys=' + activeKeys.join(','));
           setTimeout(function(){ renderAgain('normal-empty-ready-for-input'); }, 50);
           setTimeout(function(){ renderAgain('normal-empty-ready-for-input'); }, 500);
           return;
@@ -285,22 +287,33 @@
 
         console.warn('[AttendanceCloudGuard] السيرفر لا يحتوي حضور، وتم تجاهل التنظيف المتكرر لحماية تعديلات المستخدم — keys=' + activeKeys.join(','));
         setTimeout(function(){ renderAgain('normal-empty-preserve-user-edits'); }, 50);
+        forceLocalAttendanceDirtyAndSync(activeKeys, 'remote-empty-after-user-session');
+        return;
+      }
+
+      if (!isReviewOnlySession() && localWinsUntilSynced && localRows > 0 && !sameAttendanceSnapshot(data, activeKeys)) {
+        normalizeLocalAttendanceForCurrentPeriod(activeKeys);
+        forceLocalAttendanceDirtyAndSync(activeKeys, 'previous-user-rejected-cloud');
+        setTimeout(function(){ renderAgain('local-wins-uploading'); }, 50);
         return;
       }
 
       if (!isReviewOnlySession() && userTouchedAttendance) {
         console.warn('[AttendanceCloudGuard] تم تجاهل استبدال السحابة لأن المستخدم بدأ التعديل محلياً');
+        forceLocalAttendanceDirtyAndSync(activeKeys, 'user-touched-local');
         return;
       }
 
       if (localRows > 0 && !sameAttendanceSnapshot(data, activeKeys)) {
         var replace = shouldReplaceLocalAttendance(localRows, remoteRows, meta, activeKeys);
         if (!replace) {
-          applyExtractSettingsFromCloud(data);
+          localWinsUntilSynced = true;
+          userTouchedAttendance = true;
           normalizeLocalAttendanceForCurrentPeriod(activeKeys);
-          setTimeout(function(){ applyExtractSettingsFromCloud(data); normalizeLocalAttendanceForCurrentPeriod(activeKeys); renderAgain('keep-local'); }, 50);
-          setTimeout(function(){ applyExtractSettingsFromCloud(data); normalizeLocalAttendanceForCurrentPeriod(activeKeys); renderAgain('keep-local'); }, 500);
-          setTimeout(function(){ applyExtractSettingsFromCloud(data); normalizeLocalAttendanceForCurrentPeriod(activeKeys); renderAgain('keep-local'); }, 1500);
+          forceLocalAttendanceDirtyAndSync(activeKeys, 'user-clicked-cancel-keep-local');
+          setTimeout(function(){ renderAgain('keep-local-and-upload'); }, 50);
+          setTimeout(function(){ renderAgain('keep-local-and-upload'); }, 500);
+          setTimeout(function(){ renderAgain('keep-local-and-upload'); }, 1500);
           return;
         }
       }
@@ -317,6 +330,7 @@
       });
 
       if (restored > 0) {
+        localWinsUntilSynced = false;
         console.log('[AttendanceCloudGuard] استرجاع من السحابة: ' + restored + ' مفتاح / ' + restoredRows + ' صف');
         setTimeout(function(){ renderAgain(localRows > 0 ? 'cloud-replaced-local' : 'cloud-restored'); }, 50);
         setTimeout(function(){ renderAgain(localRows > 0 ? 'cloud-replaced-local' : 'cloud-restored'); }, 500);
