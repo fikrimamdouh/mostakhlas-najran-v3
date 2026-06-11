@@ -38,7 +38,45 @@
     if (/dental/.test(full)) return ['nd_attendanceData'];
     return ['attendanceData'];
   }
+function getLocalWinsKey(activeKeys) {
+  var s = getSession();
+  var hospital = String((s && s.hospital) || '').trim();
+  var keys = (activeKeys || getActiveAttendanceKeys()).join('|');
+  return 'najran_attendance_local_wins_' + hospital + '_' + keys;
+}
 
+function markLocalWinsPersistent(activeKeys, reason) {
+  try {
+    var s = getSession();
+    localStorage.setItem(getLocalWinsKey(activeKeys), JSON.stringify({
+      hospital: (s && s.hospital) || '',
+      keys: activeKeys || getActiveAttendanceKeys(),
+      reason: reason || '',
+      updatedAt: new Date().toISOString()
+    }));
+  } catch (_) {}
+}
+
+function hasLocalWinsPersistent(activeKeys) {
+  try {
+    var raw = localStorage.getItem(getLocalWinsKey(activeKeys));
+    if (!raw) return false;
+
+    var saved = parse(raw);
+    var s = getSession();
+    if (!saved || !s) return false;
+
+    return String(saved.hospital || '').trim() === String(s.hospital || '').trim();
+  } catch (_) {
+    return false;
+  }
+}
+
+function clearLocalWinsPersistent(activeKeys) {
+  try {
+    localStorage.removeItem(getLocalWinsKey(activeKeys));
+  } catch (_) {}
+}
   function getSession() {
     try { return JSON.parse(localStorage.getItem('najran_session') || '{}') || {}; } catch (_) { return {}; }
   }
@@ -251,8 +289,19 @@
 
   async function refreshFromHospitalStorage() {
     var activeKeys = getActiveAttendanceKeys();
+    normalizeLocalAttendanceForCurrentPeriod(activeKeys);
     var localRows = localAttendanceRows(activeKeys);
     var token = await getToken();
+    if (!isReviewOnlySession() && localRows > 0 && hasLocalWinsPersistent(activeKeys)) {
+  console.warn('[AttendanceCloudGuard] LOCAL WINS PERSISTENT: تم منع استبدال المحلي بالسحابة بعد الريفريش');
+
+  // المستخدم العادي يحاول يرفع المحلي، الأدمن لن يرفع بسبب cloud-sync.js
+  forceLocalAttendanceDirtyAndSync(activeKeys, 'persistent-local-wins-after-refresh');
+
+  setTimeout(function(){ renderAgain('persistent-local-wins-preserved'); }, 50);
+  setTimeout(function(){ renderAgain('persistent-local-wins-preserved'); }, 500);
+  return;
+}
     if (!token) { console.warn('[AttendanceCloudGuard] لا يوجد token'); return; }
 
     try {
@@ -306,18 +355,22 @@
 
       if (localRows > 0 && !sameAttendanceSnapshot(data, activeKeys)) {
         var replace = shouldReplaceLocalAttendance(localRows, remoteRows, meta, activeKeys);
+
         if (!replace) {
           localWinsUntilSynced = true;
           userTouchedAttendance = true;
+
+          markLocalWinsPersistent(activeKeys, 'user-clicked-cancel-keep-local');
+
           normalizeLocalAttendanceForCurrentPeriod(activeKeys);
           forceLocalAttendanceDirtyAndSync(activeKeys, 'user-clicked-cancel-keep-local');
+
           setTimeout(function(){ renderAgain('keep-local-and-upload'); }, 50);
           setTimeout(function(){ renderAgain('keep-local-and-upload'); }, 500);
           setTimeout(function(){ renderAgain('keep-local-and-upload'); }, 1500);
           return;
         }
       }
-
       var restored = 0, restoredRows = 0;
       activeKeys.forEach(function(k) {
         var val = data[k];
@@ -330,14 +383,30 @@
       });
 
       if (restored > 0) {
-        localWinsUntilSynced = false;
-        console.log('[AttendanceCloudGuard] استرجاع من السحابة: ' + restored + ' مفتاح / ' + restoredRows + ' صف');
+  localWinsUntilSynced = false;
+  clearLocalWinsPersistent(activeKeys);
+
+  console.log('[AttendanceCloudGuard] استرجاع من السحابة: ' + restored + ' مفتاح / ' + restoredRows + ' صف');
         setTimeout(function(){ renderAgain(localRows > 0 ? 'cloud-replaced-local' : 'cloud-restored'); }, 50);
         setTimeout(function(){ renderAgain(localRows > 0 ? 'cloud-replaced-local' : 'cloud-restored'); }, 500);
       }
     } catch (e) { console.warn('[AttendanceCloudGuard] خطأ', e); }
   }
+window.najranUseCloudAttendance = function () {
+  try {
+    var activeKeys = getActiveAttendanceKeys();
 
+    clearLocalWinsPersistent(activeKeys);
+    localWinsUntilSynced = false;
+    userTouchedAttendance = false;
+
+    console.warn('[AttendanceCloudGuard] تم إلغاء تفضيل النسخة المحلية — سيتم السماح بسحب السحابة');
+
+    setTimeout(refreshFromHospitalStorage, 100);
+  } catch (e) {
+    console.warn('[AttendanceCloudGuard] فشل إلغاء تفضيل المحلي', e);
+  }
+};
   window.addEventListener('najranCloudPulled', function(){ setTimeout(refreshFromHospitalStorage, 200); setTimeout(refreshFromHospitalStorage, 1200); });
   document.addEventListener('DOMContentLoaded', function(){ setTimeout(refreshFromHospitalStorage, 1200); setTimeout(refreshFromHospitalStorage, 3000); });
 })();
