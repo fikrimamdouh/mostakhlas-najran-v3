@@ -249,9 +249,7 @@ for (const row of rows) {
   result[row.storageKey] = row.storageValue;
 }
 
-const migratedLegacyAttendance = keys
-  ? 0
-  : await backfillLegacyAttendanceFromUserStorage(resolved.hospital, result);
+const migratedLegacyAttendance = 0;
 
 return res.json({
   data: result,
