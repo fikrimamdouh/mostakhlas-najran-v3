@@ -27,13 +27,13 @@
   }
 
   var hospitalContextGuardScript = document.createElement('script');
-  hospitalContextGuardScript.src = '/original/hospital-context-guard.js?v=20260608a';
+  hospitalContextGuardScript.src = '/original/hospital-context-guard.js?v=20260611d';
   hospitalContextGuardScript.defer = false;
   document.head.appendChild(hospitalContextGuardScript);
 
   if (/attendance\.html(?:$|[?#])/.test(window.location.pathname + window.location.search) || /[?&]page=.*attendance\.html(?:$|&)/.test(window.location.pathname + window.location.search)) {
     var attendanceCloudRefreshGuardScript = document.createElement('script');
-    attendanceCloudRefreshGuardScript.src = '/original/attendance-cloud-refresh-guard.js?v=20260608a';
+    attendanceCloudRefreshGuardScript.src = '/original/attendance-cloud-refresh-guard.js?v=20260611d';
     attendanceCloudRefreshGuardScript.defer = true;
     document.head.appendChild(attendanceCloudRefreshGuardScript);
   }
@@ -64,7 +64,7 @@
 
   if (/\/original\/settings_main\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) {
     var settingsBackupCompleteScript = document.createElement('script');
-    settingsBackupCompleteScript.src = '/original/settings-backup-complete-guard.js?v=20260608b';
+    settingsBackupCompleteScript.src = '/original/settings-backup-complete-guard.js?v=20260611d';
     settingsBackupCompleteScript.defer = true;
     document.head.appendChild(settingsBackupCompleteScript);
   }
