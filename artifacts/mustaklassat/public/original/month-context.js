@@ -328,17 +328,19 @@
     }
 
     function showExtractSaveCountdown(seconds) {
-      let remaining = Number(seconds || 10);
+      let remaining = Number(seconds || 15);
       const old = document.getElementById('extract-save-countdown-modal');
       if (old) old.remove();
 
       const modal = document.createElement('div');
       modal.id = 'extract-save-countdown-modal';
       modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:999999;display:flex;align-items:center;justify-content:center;direction:rtl;font-family:Tajawal,Arial,sans-serif;';
-      modal.innerHTML = '<div style="width:min(480px,92vw);background:#fff;border-radius:18px;padding:24px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.25);border-top:6px solid #1e3c72;">' +
+      modal.innerHTML = '<div style="width:min(500px,92vw);background:#fff;border-radius:18px;padding:24px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.25);border-top:6px solid #1e3c72;">' +
         '<h2 style="margin:0 0 12px;color:#1e3c72;font-size:22px;">تم حفظ مدة المستخلص بنجاح</h2>' +
-        '<p style="margin:0 0 12px;color:#334155;font-size:15px;line-height:1.9;">يرجى الانتظار حتى يتم رفع التعديل ومزامنته مع السيرفر.<br>لا تفتح صفحة الحضور والانصراف قبل انتهاء العداد حتى لا تظهر المدة القديمة.</p>' +
-        '<div id="extract-save-countdown-number" style="width:86px;height:86px;margin:18px auto;border-radius:50%;background:#eef4ff;color:#1e3c72;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;border:3px solid #bfdbfe;">' + remaining + '</div>' +
+        '<p style="margin:0 0 10px;color:#334155;font-size:15px;line-height:1.9;">جاري رفع التعديل ومزامنته مع السيرفر.<br>لا تفتح صفحة الحضور والانصراف قبل انتهاء العداد حتى لا تظهر المدة القديمة.</p>' +
+        '<div style="margin:12px auto 4px;color:#0f766e;background:#ecfdf5;border:1px solid #99f6e4;border-radius:12px;padding:10px 12px;font-size:18px;font-weight:800;line-height:1.8;">استغفر الله العظيم وأتوب إليه</div>' +
+        '<div style="color:#64748b;font-size:12px;margin-bottom:6px;">اذكر الله لحظات حتى تكتمل المزامنة</div>' +
+        '<div id="extract-save-countdown-number" style="width:88px;height:88px;margin:16px auto;border-radius:50%;background:#eef4ff;color:#1e3c72;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;border:3px solid #bfdbfe;">' + remaining + '</div>' +
         '<button id="go-attendance-after-sync" disabled style="background:#94a3b8;color:#fff;border:none;border-radius:10px;padding:11px 22px;font-size:15px;font-weight:700;cursor:not-allowed;font-family:Tajawal,Arial,sans-serif;">جاري المزامنة...</button>' +
         '</div>';
 
@@ -516,7 +518,7 @@
             window.najranSyncNow().catch(() => {});
           }
 
-          showExtractSaveCountdown(10);
+          showExtractSaveCountdown(15);
           console.log('تم حفظ البيانات ورفعها بنجاح!');
         } catch (error) {
           console.error('خطأ في حفظ بيانات المستخلص:', error);
