@@ -1,6 +1,10 @@
 /* reviewer-hospital-menu-guard.js
  * يضيف مستشفيات المراجعة إلى قائمة اختيار الموقع في السايدبار بوسم "مراجعة فقط".
  * لا يغير hospital الأساسي في قاعدة البيانات.
+ *
+ * قاعدة حاسمة:
+ * أي اختيار من قسم "مواقع المراجعة فقط" يثبت reviewOnly=true فوراً قبل إعادة تحميل الصفحة.
+ * المراجع لا يدخل أبداً كوضع مشاركة/تشغيل، حتى لو كان الأدمن له صلاحية تعديل على مستشفيات أخرى.
  */
 (function(){
   'use strict';
@@ -37,7 +41,7 @@
   function getEditHospitals(){
     var s = getSession();
     var list = parseArray(s.hospitals);
-    if(s.hospital) list.push(String(s.hospital).trim());
+    if(s.hospital && !s.reviewOnly) list.push(String(s.hospital).trim());
     return uniq(list);
   }
 
@@ -49,19 +53,53 @@
     return getEditHospitals().indexOf(String(h||'').trim()) > -1;
   }
 
+  function clearReviewSwitchLocalCache(){
+    try {
+      localStorage.removeItem('najran_active_hospital_context');
+
+      Object.keys(localStorage).forEach(function(k){
+        var lk = String(k || '').toLowerCase();
+        if(
+          lk.indexOf('attendance') >= 0 ||
+          lk.indexOf('attendancedata') >= 0 ||
+          lk.indexOf('monthsnapshot') >= 0 ||
+          lk.indexOf('hospitalactivitystatus') >= 0
+        ){
+          localStorage.removeItem(k);
+        }
+      });
+
+      sessionStorage.clear();
+    } catch(e) {}
+  }
+
   function setActiveReviewHospital(h){
     h = String(h || '').trim();
     if(!h) return;
+
     var s = getSession();
+
     s.hospital = h;
     s.reviewActiveHospital = h;
-    s.canReviewCurrentHospital = isReviewHospital(h);
+    s.canReviewCurrentHospital = true;
     s.canEditCurrentHospital = false;
-    s.reviewOnly = s.canReviewCurrentHospital && !isEditHospital(h);
+
+    // هذا الزر من قسم "مراجعة فقط"؛ إذن reviewOnly إجباري بدون حساب isEditHospital.
+    s.reviewOnly = true;
+    s.timestamp = Date.now();
+
     setSession(s);
+
     try { localStorage.setItem('hospitalName', h); } catch(e){}
-    try { window.dispatchEvent(new CustomEvent('najranHospitalChanged', { detail: { hospital: h, reviewOnly: !!s.reviewOnly } })); } catch(e){}
-    updateSidebarLabel(h, !!s.reviewOnly);
+    clearReviewSwitchLocalCache();
+
+    try {
+      window.dispatchEvent(new CustomEvent('najranHospitalChanged', {
+        detail: { hospital: h, reviewOnly: true }
+      }));
+    } catch(e){}
+
+    updateSidebarLabel(h, true);
   }
 
   function updateSidebarLabel(h, reviewOnly){
@@ -126,7 +164,7 @@
         e.stopPropagation();
         setActiveReviewHospital(h);
         try { menu.style.display = 'none'; } catch(x){}
-        setTimeout(function(){ location.reload(); }, 120);
+        setTimeout(function(){ location.reload(); }, 30);
       };
       menu.appendChild(b);
     });
@@ -136,12 +174,15 @@
     addReviewHospitalsToMenu();
     var s = getSession();
     var h = getCurrentHospital();
-    if(h && isReviewHospital(h) && !isEditHospital(h)) {
+
+    // لو الجلسة تحمل reviewActiveHospital، ثبت المراجعة حتى لو المستشفى موجودة ضمن صلاحيات تعديل الأدمن.
+    if(h && (isReviewHospital(h) || s.reviewActiveHospital === h)) {
       if(!s.reviewOnly || s.reviewActiveHospital !== h){
         s.reviewOnly = true;
         s.canReviewCurrentHospital = true;
         s.canEditCurrentHospital = false;
         s.reviewActiveHospital = h;
+        s.timestamp = Date.now();
         setSession(s);
       }
       updateSidebarLabel(h, true);
