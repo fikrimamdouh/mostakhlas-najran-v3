@@ -217,19 +217,20 @@
   }
 
   function ensureAttendanceSignatureContainers() {
-    if (document.body?.dataset?.attendanceSignatureContainersFixed === '1') return;
-    document.body.dataset.attendanceSignatureContainersFixed = '1';
-
-    // إزالة البلوكات القديمة/المكسورة في صفحة الحضور فقط؛ لأنها كانت تقفل grid بدري وتظهر مرة واحدة في آخر الصفحة.
-    document.querySelectorAll('.print-signatures').forEach(el => el.remove());
-
     const tables = Array.from(document.querySelectorAll('.department-table')).filter(section => section.querySelector('table[id$="-table"]'));
+
+    // امسح فقط بلوكات الحضور داخل كل جدول ثم أعد بناءها. لا تستخدم flag مرة واحدة؛ لأن renderTables قد يعيد بناء/تغيير الجداول بعد التهيئة.
+    tables.forEach(section => {
+      section.querySelectorAll('.print-signatures').forEach(el => el.remove());
+    });
+
     tables.forEach((section, index) => {
       const table = section.querySelector('table[id$="-table"]');
       if (!table) return;
       const block = document.createElement('div');
       block.className = 'print-signatures sb-attendance-table-signatures';
       block.setAttribute('data-attendance-signature-block', String(index + 1));
+      block.setAttribute('data-sb-table-owner', table.id || String(index + 1));
       block.innerHTML = `<h4>التواقيع</h4><div class="print-signatures-grid" data-sb-page="attendance" data-sb-table="${esc(table.id)}"></div>`;
       section.appendChild(block);
     });
