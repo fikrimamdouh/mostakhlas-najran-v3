@@ -261,19 +261,40 @@
   }, 50);
 })();
 
-    function getClerkTokenForExtractUpload() {
+    async function getClerkTokenForExtractUpload() {
       try {
-        if (typeof window.najranGetFreshToken === 'function') return window.najranGetFreshToken();
-        if (window.Clerk && window.Clerk.session) return window.Clerk.session.getToken();
+        if (typeof window.najranGetFreshToken === 'function') {
+          const t = await window.najranGetFreshToken();
+          if (t) return t;
+        }
+        if (window.parent && window.parent !== window && typeof window.parent.najranGetFreshToken === 'function') {
+          const pt = await window.parent.najranGetFreshToken();
+          if (pt) return pt;
+        }
+        if (window.Clerk && window.Clerk.session) {
+          const ct = await window.Clerk.session.getToken();
+          if (ct) return ct;
+        }
+        if (window.parent && window.parent !== window && window.parent.Clerk && window.parent.Clerk.session) {
+          const pct = await window.parent.Clerk.session.getToken();
+          if (pct) return pct;
+        }
       } catch (e) {}
-      return Promise.resolve(null);
+
+      try {
+        const raw = localStorage.getItem('najran_session');
+        const s = raw ? JSON.parse(raw) : null;
+        if (s && s.clerkToken) return s.clerkToken;
+      } catch (e) {}
+
+      return null;
     }
 
     async function pushExtractSettingsDirect(data) {
       const token = await getClerkTokenForExtractUpload();
       if (!token) {
-        console.warn('[MonthCtx] لا يوجد token صالح لرفع إعدادات المستخلص مباشرة');
-        return { ok:false, reason:'NO_TOKEN' };
+        console.error('[MonthCtx] لا يوجد token صالح لرفع إعدادات المستخلص مباشرة');
+        throw new Error('NO_TOKEN_FOR_EXTRACT_SETTINGS_UPLOAD');
       }
 
       const payload = {
