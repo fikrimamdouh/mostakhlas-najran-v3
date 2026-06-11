@@ -1,12 +1,10 @@
 /**
- * attendance-cloud-refresh-guard.js — V2
+ * attendance-cloud-refresh-guard.js — V3 safe operational mode
  *
- * FIX الأساسي:
- * لما remoteRows = 0 والجلسة مش reviewOnly:
- * - الكود القديم: يعرض localRows القديم (خطر تسريب بيانات)
- * - الكود الجديد: يتحقق هل الـ local من نفس المستشفى الحالية
- *   لو مختلف → يمسح المحلي
- *   لو نفس المستشفى → يحتفظ بيه (ده الوضع الطبيعي)
+ * القاعدة:
+ * - المراجع: لا يعرض أي حضور محلي عند عدم وجود نسخة سحابية.
+ * - المستخدم العادي: ينظف المحلي القديم مرة واحدة فقط عند بداية الصفحة إذا كان السيرفر فاضي.
+ * - بعد أول تنظيف، لا يمسح تعديلات المستخدم أثناء الإدخال حتى لا ترجع بيانات الموظفين للخلف.
  */
 (function () {
   'use strict';
@@ -14,6 +12,16 @@
   var sig = location.pathname + location.search;
   var isAttendancePage = /attendance\.html(?:$|[?#])/.test(sig) || /[?&]page=.*attendance\.html(?:$|&)/.test(sig);
   if (!isAttendancePage) return;
+
+  var normalEmptyCloudHandled = false;
+  var userTouchedAttendance = false;
+
+  function markAttendanceUserTouched() {
+    if (!isReviewOnlySession()) userTouchedAttendance = true;
+  }
+
+  document.addEventListener('input', markAttendanceUserTouched, true);
+  document.addEventListener('change', markAttendanceUserTouched, true);
 
   var ATTENDANCE_KEYS = [
     'attendanceData','ng_attendanceData','nd_attendanceData',
@@ -186,29 +194,28 @@
     try { return new Date(value).toLocaleString('ar-SA', { hour12: true }); } catch (_) { return String(value); }
   }
 
-  // ─── FIX: تحقق هل الـ local من نفس المستشفى الحالية ─────────────────────
-  function isLocalAttendanceFromCurrentHospital() {
-    var currentHospital = getCurrentHospital();
-    if (!currentHospital) return false;
-
-    // طريقة 1: تحقق من hospitalActivityStatus
+  function clearLocalAttendanceState(reason, activeKeys) {
+    var removed = [];
     try {
-      var activity = parse(localStorage.getItem('hospitalActivityStatus'));
-      if (activity && activity.hospital) {
-        return String(activity.hospital).trim() === currentHospital;
-      }
+      (activeKeys || getActiveAttendanceKeys()).forEach(function(k) {
+        if (localStorage.getItem(k) != null) removed.push(k);
+        localStorage.removeItem(k);
+      });
+
+      Object.keys(localStorage).forEach(function(k) {
+        var lk = String(k || '').toLowerCase();
+        if (
+          lk.indexOf('attendancedata') >= 0 ||
+          lk.indexOf('attendance') >= 0 ||
+          lk.indexOf('monthsnapshot') >= 0
+        ) {
+          removed.push(k);
+          localStorage.removeItem(k);
+        }
+      });
     } catch (_) {}
 
-    // طريقة 2: تحقق من hospitalName المحفوظ
-    try {
-      var storedHospital = localStorage.getItem('hospitalName');
-      if (storedHospital) {
-        return String(storedHospital).trim() === currentHospital;
-      }
-    } catch (_) {}
-
-    // مش متأكد → اعتبرها من مستشفى مختلفة (الأأمن)
-    return false;
+    console.warn('[AttendanceCloudGuard] تم تفريغ الحضور المحلي: ' + (reason || '') + ' — removed=' + removed.length);
   }
 
   function shouldReplaceLocalAttendance(localRows, remoteRows, meta, keys) {
@@ -248,49 +255,44 @@
       var remoteRows = remoteAttendanceRows(data, activeKeys);
       var meta = getRemoteMeta(data);
 
-      // ─── حالة: السيرفر فاضي لهذه المستشفى ───────────────────────────────
-    if (remoteRows <= 0) {
-  activeKeys.forEach(function(k) {
-    localStorage.removeItem(k);
-  });
+      if (remoteRows <= 0) {
+        if (isReviewOnlySession()) {
+          clearLocalAttendanceState('reviewOnly-no-cloud-attendance', activeKeys);
 
-  Object.keys(localStorage).forEach(function(k) {
-    var lk = k.toLowerCase();
+          console.warn(
+            '[AttendanceCloudGuard] REVIEW ONLY: لا توجد نسخة حضور سحابية لهذه المستشفى — تم تفريغ الحضور المحلي لمنع خلط المستشفيات — keys=' +
+            activeKeys.join(',')
+          );
 
-    if (
-      lk.indexOf('attendancedata') >= 0 ||
-      lk.indexOf('attendance') >= 0 ||
-      lk.indexOf('monthsnapshot') >= 0
-    ) {
-      localStorage.removeItem(k);
-    }
-  });
+          setTimeout(function(){ renderAgain('review-empty-cloud'); }, 50);
+          setTimeout(function(){ renderAgain('review-empty-cloud'); }, 500);
+          return;
+        }
 
-  console.warn(
-    '[AttendanceCloudGuard] لا توجد نسخة حضور سحابية لهذه المستشفى — تم تفريغ الحضور المحلي لمنع خلط المستشفيات — keys=' +
-    activeKeys.join(',')
-  );
+        if (!normalEmptyCloudHandled) {
+          clearLocalAttendanceState('normal-initial-no-cloud-attendance', activeKeys);
+          normalEmptyCloudHandled = true;
 
-  setTimeout(function() {
-    renderAgain(
-      isReviewOnlySession()
-        ? 'review-empty-cloud'
-        : 'normal-empty-ready-for-input'
-    );
-  }, 50);
+          console.warn(
+            '[AttendanceCloudGuard] لا توجد نسخة حضور سحابية — تم تنظيف المحلي مرة واحدة والصفحة جاهزة للإدخال — keys=' +
+            activeKeys.join(',')
+          );
 
-  setTimeout(function() {
-    renderAgain(
-      isReviewOnlySession()
-        ? 'review-empty-cloud'
-        : 'normal-empty-ready-for-input'
-    );
-  }, 500);
+          setTimeout(function(){ renderAgain('normal-empty-ready-for-input'); }, 50);
+          setTimeout(function(){ renderAgain('normal-empty-ready-for-input'); }, 500);
+          return;
+        }
 
-  return;
-}
+        console.warn('[AttendanceCloudGuard] السيرفر لا يحتوي حضور، وتم تجاهل التنظيف المتكرر لحماية تعديلات المستخدم — keys=' + activeKeys.join(','));
+        setTimeout(function(){ renderAgain('normal-empty-preserve-user-edits'); }, 50);
+        return;
+      }
 
-      // ─── حالة: السيرفر عنده بيانات ───────────────────────────────────────
+      if (!isReviewOnlySession() && userTouchedAttendance) {
+        console.warn('[AttendanceCloudGuard] تم تجاهل استبدال السحابة لأن المستخدم بدأ التعديل محلياً');
+        return;
+      }
+
       if (localRows > 0 && !sameAttendanceSnapshot(data, activeKeys)) {
         var replace = shouldReplaceLocalAttendance(localRows, remoteRows, meta, activeKeys);
         if (!replace) {
