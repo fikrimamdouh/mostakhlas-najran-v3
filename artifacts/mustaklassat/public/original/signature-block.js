@@ -58,8 +58,16 @@
 .sb-cancel-btn { padding:10px 30px; border:1.5px solid #e2e8f0; border-radius:12px; background:#fff; color:#64748b; font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; }
 .sb-status { font-size:12px; color:#16a34a; text-align:center; margin-top:10px; min-height:18px; }
 .sb-empty { text-align:center; color:#94a3b8; font-size:13px; padding:16px; }
-.print-signatures.sb-attendance-table-signatures { display:block; visibility:visible; opacity:1; margin:16px 0 0; padding-top:10px; border-top:1px solid #333; page-break-inside:avoid; break-inside:avoid; }
-.print-signatures.sb-attendance-table-signatures h4 { text-align:center; margin:0 0 10px; font-size:13px; font-weight:800; color:#000; }
+.print-signatures.sb-attendance-table-signatures {
+  display: none !important;
+  visibility: hidden;
+  opacity: 0;
+  margin: 16px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid #333;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}.print-signatures.sb-attendance-table-signatures h4 { text-align:center; margin:0 0 10px; font-size:13px; font-weight:800; color:#000; }
 @media print {
   .sb-bar,.sb-btn,.sb-toggle-row { display:none !important; }
   #sb-container-attendance { display:none !important; }
