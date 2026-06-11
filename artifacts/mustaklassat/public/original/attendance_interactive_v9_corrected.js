@@ -2540,8 +2540,7 @@ function printSelectedDepartments() {
   preparePrint(selectedDepartments, includeGrandTotalSignatures);
   closePrintDialog();
 }
-function preparePrint(selectedDepartments = null) {
-  // حفظ snapshot تلقائي عند كل طباعة
+function preparePrint(selectedDepartments = null, includeGrandTotalSignatures = false) {  // حفظ snapshot تلقائي عند كل طباعة
   if (typeof window.saveExtractSnapshot === 'function') {
     window.saveExtractSnapshot('print');
   }
@@ -2769,7 +2768,8 @@ function buildAttendanceTableSignaturesHTML() {
       });
       tbodyHTML += '</tbody>';
 doc.write('<table>' + tableHTML + tbodyHTML + '</table>');
-doc.write(buildAttendanceTableSignaturesHTML());    }
+doc.write(buildAttendanceTableSignaturesHTML());
+    }
 
     selectedCount++;
   }); // نهاية forEach
@@ -2796,17 +2796,21 @@ doc.write(buildAttendanceTableSignaturesHTML());    }
     }
   }
 
+if (includeGrandTotalSignatures) {
+  doc.write(buildAttendanceTableSignaturesHTML());
+}
+
 // تم تعطيل التواقيع النهائية العامة
 // السبب: كانت تظهر مرة واحدة فقط في آخر صفحة الطباعة
 // المطلوب: التواقيع تكون تحت كل جدول داخل حلقة طباعة الجداول
 
-  doc.close();
-  printWindow.focus();
-  printWindow.print();
+doc.close();
+printWindow.focus();
+printWindow.print();
 
-  setTimeout(() => {
-    elementsToHide.forEach(el => el.style.display = '');
-  }, 500);
+setTimeout(() => {
+  elementsToHide.forEach(el => el.style.display = '');
+}, 500);
 }
 function openUpdateSignaturesDialog() {
   const existing = document.getElementById('update-signatures-dialog');
