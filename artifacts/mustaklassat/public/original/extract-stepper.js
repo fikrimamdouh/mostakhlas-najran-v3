@@ -123,3 +123,211 @@
     setTimeout(buildStepper, 0);
   }
 })();
+
+/**
+ * Achievement monthly-value safety fix.
+ * Keeps existing attendance/performance saving untouched.
+ * Active only on /original/achievement.html and original-viewer?page=achievement.html.
+ */
+(function () {
+  'use strict';
+
+  const pageSig = window.location.pathname + window.location.search;
+  const isAchievementPage = /\/achievement\.html(?:$|[?#])/.test(pageSig) || /[?&]page=achievement\.html(?:$|&)/.test(pageSig);
+  if (!isAchievementPage) return;
+
+  function toNumber(value) {
+    if (typeof value === 'number') return isFinite(value) ? value : 0;
+    if (value == null) return 0;
+    const normalized = String(value)
+      .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+      .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+      .replace(/[,،\sر\.سSAR]/g, '')
+      .replace(/[^0-9.-]/g, '');
+    const n = parseFloat(normalized);
+    return isFinite(n) ? n : 0;
+  }
+
+  function parseJSON(raw) {
+    if (!raw) return {};
+    try { return JSON.parse(raw); } catch (_) { return {}; }
+  }
+
+  function getExtractPeriodSafe() {
+    const keys = ['persistentExtractData', 'extractData', 'monthlyData'];
+
+    for (const key of keys) {
+      const data = parseJSON(localStorage.getItem(key));
+      const startRaw = data.extractStart || data.startDate;
+      const endRaw = data.extractEnd || data.endDate;
+      if (!startRaw || !endRaw) continue;
+
+      const start = new Date(startRaw);
+      const end = new Date(endRaw);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) continue;
+
+      const daysInMonth = Math.ceil((end.getTime() - start.getTime()) / 86400000) + 1;
+      const totalDaysInMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
+
+      if (daysInMonth > 0 && totalDaysInMonth > 0) {
+        return { daysInMonth, totalDaysInMonth, source: key };
+      }
+    }
+
+    const today = new Date();
+    const totalDays = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    return { daysInMonth: totalDays, totalDaysInMonth: totalDays, source: 'fallback-current-month' };
+  }
+
+  function getContractAdjustment() {
+    const persistent = parseJSON(localStorage.getItem('persistentContractData'));
+    const contractType = persistent.contractType || localStorage.getItem('contractType') || '';
+    const directPurchaseRatio = toNumber(persistent.directPurchaseRatio || localStorage.getItem('directPurchaseRatio') || 0);
+    return { contractType, directPurchaseRatio };
+  }
+
+  function adjustedSalary(emp) {
+    let salary = toNumber(emp && (emp.salary ?? emp.monthlySalary ?? emp.cost ?? emp.amount));
+    const { contractType, directPurchaseRatio } = getContractAdjustment();
+    if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) {
+      salary += salary * directPurchaseRatio / 100;
+    }
+    return salary;
+  }
+
+  function getDeptMonthlyValue(deptKey, attendanceData) {
+    const rows = Array.isArray(attendanceData && attendanceData[deptKey]) ? attendanceData[deptKey] : [];
+    if (!rows.length) return 0;
+
+    const period = getExtractPeriodSafe();
+    const ratio = period.totalDaysInMonth > 0 ? period.daysInMonth / period.totalDaysInMonth : 1;
+
+    return rows.reduce(function (sum, emp) {
+      return sum + adjustedSalary(emp) * ratio;
+    }, 0);
+  }
+
+  function getItemTitle(id, fallback) {
+    try {
+      if (typeof getItemName === 'function') return getItemName(id) || fallback;
+    } catch (_) {}
+    return fallback;
+  }
+
+  function zeroDentalData() {
+    return { monthlyValue: 0, absenceDeduction: 0, absencePenalty: 0, performancePenalty: 0, nationalityPenalty: 0, netMonthly: 0 };
+  }
+
+  function installAchievementCalculationFix(attempt) {
+    attempt = attempt || 0;
+
+    if (typeof window.loadAndProcessAchievementData !== 'function' || typeof window.renderAchievementTable !== 'function') {
+      if (attempt < 40) setTimeout(function () { installAchievementCalculationFix(attempt + 1); }, 150);
+      return;
+    }
+
+    const originalLoad = window.loadAndProcessAchievementData;
+
+    window.loadAndProcessAchievementData = function fixedAchievementLoader() {
+      try {
+        const attendanceData = parseJSON(localStorage.getItem('attendanceData'));
+        const totalPerformancePenalty = toNumber(localStorage.getItem('performanceTotalDeduction'));
+
+        if (!attendanceData || Object.keys(attendanceData).length === 0) {
+          return originalLoad.apply(this, arguments);
+        }
+
+        const mainDepts = ['cleaning', 'electricity', 'agriculture', 'civil_works', 'mechanical', 'laundry', 'patient_services'];
+
+        let workforceMonthlyValue = 0;
+        let workforceAbsenceDeduction = 0;
+        let workforceAbsencePenalty = 0;
+        let workforceNationalityPenalty = 0;
+
+        mainDepts.forEach(function (deptKey) {
+          workforceMonthlyValue += getDeptMonthlyValue(deptKey, attendanceData);
+          const rows = Array.isArray(attendanceData[deptKey]) ? attendanceData[deptKey] : [];
+          rows.forEach(function (emp) {
+            workforceAbsenceDeduction += toNumber(emp.deduction);
+            workforceAbsencePenalty += toNumber(emp.absencePenalty);
+            workforceNationalityPenalty += toNumber(emp.nationalityFine);
+          });
+        });
+
+        let saudiMonthlyValue = getDeptMonthlyValue('admin_saudi', attendanceData);
+        let saudiAbsenceDeduction = 0;
+        let saudiAbsencePenalty = 0;
+        let saudiNationalityPenalty = 0;
+
+        const saudiRows = Array.isArray(attendanceData.admin_saudi) ? attendanceData.admin_saudi : [];
+        saudiRows.forEach(function (emp) {
+          saudiAbsenceDeduction += toNumber(emp.deduction);
+          saudiAbsencePenalty += toNumber(emp.absencePenalty);
+          saudiNationalityPenalty += toNumber(emp.nationalityFine);
+        });
+
+        const workforceNetMonthly = workforceMonthlyValue - (workforceAbsenceDeduction + workforceAbsencePenalty + totalPerformancePenalty + workforceNationalityPenalty);
+        const saudiNetMonthly = saudiMonthlyValue - (saudiAbsenceDeduction + saudiAbsencePenalty + saudiNationalityPenalty);
+
+        departmentDataForAchievement = [
+          {
+            id: 'workforce',
+            name: getItemTitle('workforce', 'العمالة'),
+            monthlyValue: workforceMonthlyValue,
+            absenceDeduction: workforceAbsenceDeduction,
+            absencePenalty: workforceAbsencePenalty,
+            performancePenalty: totalPerformancePenalty,
+            nationalityPenalty: workforceNationalityPenalty,
+            netMonthly: workforceNetMonthly
+          },
+          {
+            id: 'saudi_admin',
+            name: getItemTitle('saudi_admin', 'الوظائف الإدارية السعوديين'),
+            monthlyValue: saudiMonthlyValue,
+            absenceDeduction: saudiAbsenceDeduction,
+            absencePenalty: saudiAbsencePenalty,
+            performancePenalty: 0,
+            nationalityPenalty: saudiNationalityPenalty,
+            netMonthly: saudiNetMonthly
+          }
+        ];
+
+        const dentalData = (typeof getDentalData === 'function') ? getDentalData() : zeroDentalData();
+
+        const grandTotalMonthlyValue = workforceMonthlyValue + saudiMonthlyValue + toNumber(dentalData.monthlyValue);
+        const grandTotalAbsenceDeduction = workforceAbsenceDeduction + saudiAbsenceDeduction + toNumber(dentalData.absenceDeduction);
+        const grandTotalAbsencePenalty = workforceAbsencePenalty + saudiAbsencePenalty + toNumber(dentalData.absencePenalty);
+        const grandTotalPerformancePenalty = totalPerformancePenalty + toNumber(dentalData.performancePenalty);
+        const grandTotalNationalityPenalty = workforceNationalityPenalty + saudiNationalityPenalty + toNumber(dentalData.nationalityPenalty);
+        const grandTotalNetMonthly = workforceNetMonthly + saudiNetMonthly + toNumber(dentalData.netMonthly);
+
+        renderAchievementTable(
+          grandTotalMonthlyValue,
+          grandTotalAbsenceDeduction,
+          grandTotalAbsencePenalty,
+          grandTotalPerformancePenalty,
+          grandTotalNationalityPenalty,
+          grandTotalNetMonthly
+        );
+
+        try { localStorage.setItem('finalLaborCost', grandTotalNetMonthly.toFixed(2)); } catch (_) {}
+        console.info('[AchievementFix] تم احتساب القيمة الشهرية من الحضور والمدة الحالية مباشرة:', getExtractPeriodSafe());
+      } catch (error) {
+        console.error('[AchievementFix] فشل الإصلاح الآمن، سيتم الرجوع للحساب الأصلي:', error);
+        return originalLoad.apply(this, arguments);
+      }
+    };
+
+    setTimeout(function () {
+      try { window.loadAndProcessAchievementData(); } catch (_) {}
+    }, 250);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(installAchievementCalculationFix, 0);
+    });
+  } else {
+    setTimeout(installAchievementCalculationFix, 0);
+  }
+})();
