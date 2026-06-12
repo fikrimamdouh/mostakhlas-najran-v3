@@ -142,7 +142,10 @@
     const normalized = String(value)
       .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
       .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
-      .replace(/[,،\sر\.سSAR]/g, '')
+      .replace(/ر\.?\s?س\.?/g, '')
+      .replace(/ريال(?:\s+سعودي)?/g, '')
+      .replace(/SAR/gi, '')
+      .replace(/[,،\s]/g, '')
       .replace(/[^0-9.-]/g, '');
     const n = parseFloat(normalized);
     return isFinite(n) ? n : 0;
