@@ -203,7 +203,7 @@
     function walk(node) {
       if (!node) return;
       if (Array.isArray(node)) { node.forEach(function(item){ normalizeEmployeeDays(item, daysInPeriod); if (item && typeof item === 'object') walk(item); }); return; }
-      if (typeof node === 'object') { normalizeEmployeeDays(node); Object.keys(node).forEach(function(k){ walk(node[k]); }); }
+      if (typeof node === 'object') { normalizeEmployeeDays(node, daysInPeriod); Object.keys(node).forEach(function(k){ walk(node[k]); }); }
     }
     walk(parsed);
     return JSON.stringify(parsed);
