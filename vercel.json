@@ -19,6 +19,15 @@
       ]
     },
     {
+      "source": "/original/:path*.html",
+      "headers": [
+        {
+          "key": "Link",
+          "value": "<https://cdnjs.cloudflare.com>; rel=preconnect, <https://fonts.googleapis.com>; rel=preconnect, <https://fonts.gstatic.com>; rel=preconnect; crossorigin"
+        }
+      ]
+    },
+    {
       "source": "/original/:path*.js",
       "headers": [
         {
