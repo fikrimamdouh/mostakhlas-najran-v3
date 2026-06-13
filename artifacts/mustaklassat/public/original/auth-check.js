@@ -250,6 +250,6 @@
     }
 
     setTimeout(checkNotifications, 1500);
-    setInterval(checkNotifications, 2 * 60 * 1000);
+    setInterval(checkNotifications, 10 * 60 * 1000);
   });
 })();
