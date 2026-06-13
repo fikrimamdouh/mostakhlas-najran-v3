@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable, hospitalStorageTable, systemSettingsTable, userStorageTable } from "@workspace/db";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, or, like } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
@@ -84,10 +84,10 @@ async function backfillLegacyAttendanceFromUserStorage(hospitalName: string, res
   if (!missingKeys.length) return 0;
 
   const users = await db.select().from(usersTable).where(eq(usersTable.status, "approved"));
-const eligibleUsers = users.filter(user => {
-  const primaryHospital = String((user as any).hospital || "").trim();
-  return primaryHospital === hospitalName;
-});
+ const eligibleUsers = users.filter(user => {
+   const primaryHospital = String((user as any).hospital || "").trim();
+   return primaryHospital === hospitalName;
+ });
 
   if (!eligibleUsers.length) return 0;
 
@@ -162,10 +162,35 @@ for (const [userId, userRows] of rowsByUser.entries()) {
 
   return migrated;
 }
-function requestedKeys(req: any): string[] | null {
+function parseCsvParam(value: unknown, maxItems: number): string[] {
+  const raw = String(value || "").trim();
+  if (!raw) return [];
+  return Array.from(new Set(
+    raw
+      .split(",")
+      .map(v => String(v || "").trim())
+      .filter(Boolean)
+  )).slice(0, maxItems);
+}
+
+function requestedFilters(req: any): { keys: string[]; prefixes: string[]; scope: string } | null {
+  const keys = parseCsvParam(req.query?.keys, 250);
+  const prefixes = parseCsvParam(req.query?.prefixes, 80);
+  if (keys.length || prefixes.length) return { keys, prefixes, scope: "filtered" };
+
   const scope = String(req.query?.scope || "").trim();
-  if (scope === "settings") return SETTINGS_STORAGE_KEYS;
+  if (scope === "settings") return { keys: SETTINGS_STORAGE_KEYS, prefixes: [], scope: "settings" };
+
   return null;
+}
+
+function buildStorageKeyPredicate(column: any, filters: { keys: string[]; prefixes: string[] } | null) {
+  if (!filters) return null;
+  const clauses: any[] = [];
+  if (filters.keys.length) clauses.push(inArray(column, filters.keys));
+  for (const prefix of filters.prefixes) clauses.push(like(column, `${prefix}%`));
+  if (!clauses.length) return null;
+  return clauses.length === 1 ? clauses[0] : or(...clauses);
 }
 
 function safeArray(value: unknown): string[] {
@@ -237,9 +262,10 @@ router.get("/", requireAuth, async (req: any, res) => {
       return res.json({ data: {}, count: 0, hospital: null, reviewOnly: false });
     }
 
-    const keys = requestedKeys(req);
-    const whereClause = keys
-      ? and(eq(hospitalStorageTable.hospitalName, resolved.hospital), inArray(hospitalStorageTable.storageKey, keys))
+    const filters = requestedFilters(req);
+    const keyPredicate = buildStorageKeyPredicate(hospitalStorageTable.storageKey, filters);
+    const whereClause = keyPredicate
+      ? and(eq(hospitalStorageTable.hospitalName, resolved.hospital), keyPredicate)
       : eq(hospitalStorageTable.hospitalName, resolved.hospital);
 
     const rows = await db.select().from(hospitalStorageTable).where(whereClause);
@@ -258,7 +284,7 @@ return res.json({
   migratedLegacyAttendance,
   hospital: resolved.hospital,
   reviewOnly: resolved.reviewOnly,
-  scope: keys ? "settings" : "all",
+  scope: filters ? filters.scope : "all",
 });
   } catch (err) {
     req.log.error({ err }, "Failed to get hospital storage");
