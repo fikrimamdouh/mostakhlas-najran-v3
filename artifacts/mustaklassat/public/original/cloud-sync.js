@@ -10,7 +10,7 @@
 
   const API_BASE = '/api';
   const SESSION_KEY = 'najran_session';
-  const SYNC_INTERVAL_MS = 15000;
+  const SYNC_INTERVAL_MS = 180000;
   const DIRTY_KEYS = new Set();
 
   // ─── FIX: module-level origSetItem + isApplyingCloudPull ─────────────────
@@ -576,7 +576,7 @@ if (adminSession && ATTENDANCE_PAGE_KEYS.has(nk) && !canAdminEditAttendance) {
       if (isReviewOnlySession()) { DIRTY_KEYS.clear(); return; }
       clearTimeout(debounce);
       updateHospitalActivityStatus();
-      debounce = setTimeout(function(){ syncNow().catch(function(){}); }, 2000);
+      debounce = setTimeout(function(){ syncNow().catch(function(){}); }, 30000);
     }
     if (!reviewOnly) {
       document.addEventListener('input', scheduleSync);
@@ -584,7 +584,9 @@ if (adminSession && ATTENDANCE_PAGE_KEYS.has(nk) && !canAdminEditAttendance) {
     }
 
     localStorage.setItem = function(key, value) {
+      const oldValue = localStorage.getItem(key);
       _origSetItem(key, value);
+      if (oldValue === value) return;
       if (isApplyingCloudPull) return;
       if (isReviewOnlySession()) {
         DIRTY_KEYS.clear();
@@ -593,7 +595,7 @@ if (adminSession && ATTENDANCE_PAGE_KEYS.has(nk) && !canAdminEditAttendance) {
       if (shouldSyncKey(key)) {
         DIRTY_KEYS.add(normalizeKey(key));
         clearTimeout(localStorage._syncTimeout);
-        localStorage._syncTimeout = setTimeout(function(){ syncNow().catch(function(){}); }, 2000);
+        localStorage._syncTimeout = setTimeout(function(){ syncNow().catch(function(){}); }, 30000);
       }
     };
 
