@@ -17,6 +17,8 @@
   var normalEmptyCloudHandled = false;
   var userTouchedAttendance = false;
   var localWinsUntilSynced = false;
+  var cloudComparisonStarted = false;
+  var cloudComparisonRunning = false;
 
   function markAttendanceUserTouched() {
     if (!isReviewOnlySession()) userTouchedAttendance = true;
@@ -38,52 +40,56 @@
     if (/dental/.test(full)) return ['nd_attendanceData'];
     return ['attendanceData'];
   }
-function getLocalWinsKey(activeKeys) {
-  var s = getSession();
-  var hospital = String((s && s.hospital) || '').trim();
-  var keys = (activeKeys || getActiveAttendanceKeys()).join('|');
-  return 'najran_attendance_local_wins_' + hospital + '_' + keys;
-}
 
-function markLocalWinsPersistent(activeKeys, reason) {
-  try {
+  function getLocalWinsKey(activeKeys) {
     var s = getSession();
-    localStorage.setItem(getLocalWinsKey(activeKeys), JSON.stringify({
-      hospital: (s && s.hospital) || '',
-      keys: activeKeys || getActiveAttendanceKeys(),
-      reason: reason || '',
-      updatedAt: new Date().toISOString()
-    }));
-  } catch (_) {}
-}
-
-function hasLocalWinsPersistent(activeKeys) {
-  try {
-    var raw = localStorage.getItem(getLocalWinsKey(activeKeys));
-    if (!raw) return false;
-
-    var saved = parse(raw);
-    var s = getSession();
-    if (!saved || !s) return false;
-
-    return String(saved.hospital || '').trim() === String(s.hospital || '').trim();
-  } catch (_) {
-    return false;
+    var hospital = String((s && s.hospital) || '').trim();
+    var keys = (activeKeys || getActiveAttendanceKeys()).join('|');
+    return 'najran_attendance_local_wins_' + hospital + '_' + keys;
   }
-}
 
-function clearLocalWinsPersistent(activeKeys) {
-  try {
-    localStorage.removeItem(getLocalWinsKey(activeKeys));
-  } catch (_) {}
-}
+  function markLocalWinsPersistent(activeKeys, reason) {
+    try {
+      var s = getSession();
+      localStorage.setItem(getLocalWinsKey(activeKeys), JSON.stringify({
+        hospital: (s && s.hospital) || '',
+        keys: activeKeys || getActiveAttendanceKeys(),
+        reason: reason || '',
+        updatedAt: new Date().toISOString()
+      }));
+    } catch (_) {}
+  }
+
+  function hasLocalWinsPersistent(activeKeys) {
+    try {
+      var raw = localStorage.getItem(getLocalWinsKey(activeKeys));
+      if (!raw) return false;
+
+      var saved = parse(raw);
+      var s = getSession();
+      if (!saved || !s) return false;
+
+      return String(saved.hospital || '').trim() === String(s.hospital || '').trim();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function clearLocalWinsPersistent(activeKeys) {
+    try {
+      localStorage.removeItem(getLocalWinsKey(activeKeys));
+    } catch (_) {}
+  }
+
   function getSession() {
     try { return JSON.parse(localStorage.getItem('najran_session') || '{}') || {}; } catch (_) { return {}; }
   }
+
   function isReviewOnlySession() {
     var s = getSession();
     return !!(s && s.reviewOnly === true);
   }
+
   async function getToken() {
     try {
       if (typeof window.najranGetFreshToken === 'function') { var t = await window.najranGetFreshToken(); if (t) return t; }
@@ -91,18 +97,22 @@ function clearLocalWinsPersistent(activeKeys) {
     } catch (_) {}
     return getSession().clerkToken || '';
   }
+
   function getHospitalStorageUrl() {
     var s = getSession();
     var url = '/api/hospital-storage';
     if (s && s.reviewOnly === true && s.hospital) url += '?hospital=' + encodeURIComponent(String(s.hospital).trim());
     return url;
   }
+
   function parse(v) {
     if (!v) return null;
     if (typeof v === 'object') return v;
     try { return JSON.parse(v); } catch (_) { return null; }
   }
+
   function normalizeKey(key) { return String(key || '').replace(/^(_u\d+_)+/, ''); }
+
   function normalizeRemoteDataKeys(data) {
     var out = {};
     data = data || {};
@@ -113,6 +123,7 @@ function clearLocalWinsPersistent(activeKeys) {
     });
     return out;
   }
+
   function countRows(obj) {
     var v = parse(obj);
     if (!v) return 0;
@@ -128,18 +139,21 @@ function clearLocalWinsPersistent(activeKeys) {
     }
     return 0;
   }
+
   function daysBetweenInclusive(start, end) {
     if (!start || !end) return 0;
     var s = new Date(start), e = new Date(end);
     if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0;
     return Math.max(1, Math.round((e.getTime() - s.getTime()) / 86400000) + 1);
   }
+
   function readCurrentExtractPeriodDays() {
     try {
       var d = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
       return daysBetweenInclusive(d.extractStart || localStorage.getItem('extractStart'), d.extractEnd || localStorage.getItem('extractEnd'));
     } catch (_) { return daysBetweenInclusive(localStorage.getItem('extractStart'), localStorage.getItem('extractEnd')); }
   }
+
   function applyExtractSettingsFromCloud(data) {
     try {
       data = data || {};
@@ -175,11 +189,13 @@ function clearLocalWinsPersistent(activeKeys) {
       return true;
     } catch (e) { console.warn('[AttendanceCloudGuard] فشل تثبيت إعدادات المستخلص', e); return false; }
   }
+
   function normalizeEmployeeDays(x, daysInPeriod) {
     if (!x || typeof x !== 'object' || !Array.isArray(x.days) || daysInPeriod <= 0) return;
     if (x.days.length < daysInPeriod) x.days = x.days.concat(Array(daysInPeriod - x.days.length).fill('ح'));
     else if (x.days.length > daysInPeriod) x.days = x.days.slice(0, daysInPeriod);
   }
+
   function normalizeAttendanceValueForCurrentPeriod(value) {
     var parsed = parse(value);
     var daysInPeriod = readCurrentExtractPeriodDays();
@@ -187,11 +203,12 @@ function clearLocalWinsPersistent(activeKeys) {
     function walk(node) {
       if (!node) return;
       if (Array.isArray(node)) { node.forEach(function(item){ normalizeEmployeeDays(item, daysInPeriod); if (item && typeof item === 'object') walk(item); }); return; }
-      if (typeof node === 'object') { normalizeEmployeeDays(node, daysInPeriod); Object.keys(node).forEach(function(k){ walk(node[k]); }); }
+      if (typeof node === 'object') { normalizeEmployeeDays(node); Object.keys(node).forEach(function(k){ walk(node[k]); }); }
     }
     walk(parsed);
     return JSON.stringify(parsed);
   }
+
   function normalizeLocalAttendanceForCurrentPeriod(keys) {
     var changed = 0;
     (keys || getActiveAttendanceKeys()).forEach(function(k) {
@@ -202,22 +219,26 @@ function clearLocalWinsPersistent(activeKeys) {
     });
     return changed;
   }
+
   function localAttendanceRows(keys) {
     var total = 0;
     (keys || getActiveAttendanceKeys()).forEach(function(k){ total += countRows(localStorage.getItem(k)); });
     return total;
   }
+
   function remoteAttendanceRows(data, keys) {
     var total = 0;
     (keys || getActiveAttendanceKeys()).forEach(function(k){ total += countRows(data && data[k]); });
     return total;
   }
+
   function getRemoteMeta(data) {
     try {
       var activity = data && data.hospitalActivityStatus ? parse(data.hospitalActivityStatus) : null;
       return { userName: (activity && activity.userName) || 'مستخدم آخر', updatedAt: (activity && activity.updatedAt) || '', page: (activity && activity.page) || '', pageFile: (activity && activity.pageFile) || '' };
     } catch (_) { return { userName: 'مستخدم آخر', updatedAt: '', page: '', pageFile: '' }; }
   }
+
   function sameAttendanceSnapshot(data, keys) {
     try {
       return (keys || getActiveAttendanceKeys()).every(function(k) {
@@ -228,6 +249,7 @@ function clearLocalWinsPersistent(activeKeys) {
       });
     } catch (_) { return false; }
   }
+
   function formatDateTime(value) {
     if (!value) return '';
     try { return new Date(value).toLocaleString('ar-SA', { hour12: true }); } catch (_) { return String(value); }
@@ -260,8 +282,7 @@ function clearLocalWinsPersistent(activeKeys) {
       });
       console.warn('[AttendanceCloudGuard] LOCAL WINS: سيتم رفع النسخة المحلية للسحابة — ' + (reason || ''));
       if (typeof window.najranSyncNow === 'function') {
-        setTimeout(function(){ window.najranSyncNow().catch(function(){}); }, 250);
-        setTimeout(function(){ window.najranSyncNow().catch(function(){}); }, 2500);
+        setTimeout(function(){ window.najranSyncNow().catch(function(){}); }, 1000);
       }
     } catch (e) {
       console.warn('[AttendanceCloudGuard] تعذر تعليم المحلي كنسخة فائزة', e);
@@ -287,29 +308,42 @@ function clearLocalWinsPersistent(activeKeys) {
     try { window.dispatchEvent(new CustomEvent('najranAttendanceCloudRestored', { detail: { reason: reason || '' } })); } catch (_) {}
   }
 
-  async function refreshFromHospitalStorage() {
-    var activeKeys = getActiveAttendanceKeys();
-    normalizeLocalAttendanceForCurrentPeriod(activeKeys);
-    var localRows = localAttendanceRows(activeKeys);
-    var token = await getToken();
-    if (!isReviewOnlySession() && localRows > 0 && hasLocalWinsPersistent(activeKeys)) {
-  console.warn('[AttendanceCloudGuard] LOCAL WINS PERSISTENT: تم منع استبدال المحلي بالسحابة بعد الريفريش');
+  async function refreshFromHospitalStorage(options) {
+    options = options || {};
+    if (cloudComparisonRunning) {
+      console.warn('[AttendanceCloudGuard] تم تجاهل فحص مكرر أثناء تنفيذ الفحص الأول');
+      return;
+    }
+    if (cloudComparisonStarted && !options.force) {
+      console.warn('[AttendanceCloudGuard] تم تجاهل فحص مكرر — الفحص يعمل مرة واحدة عند فتح الصفحة فقط');
+      return;
+    }
 
-  // المستخدم العادي يحاول يرفع المحلي، الأدمن لن يرفع بسبب cloud-sync.js
-  forceLocalAttendanceDirtyAndSync(activeKeys, 'persistent-local-wins-after-refresh');
-
-  setTimeout(function(){ renderAgain('persistent-local-wins-preserved'); }, 50);
-  setTimeout(function(){ renderAgain('persistent-local-wins-preserved'); }, 500);
-  return;
-}
-    if (!token) { console.warn('[AttendanceCloudGuard] لا يوجد token'); return; }
+    cloudComparisonStarted = true;
+    cloudComparisonRunning = true;
 
     try {
+      var activeKeys = getActiveAttendanceKeys();
+      normalizeLocalAttendanceForCurrentPeriod(activeKeys);
+      var localRows = localAttendanceRows(activeKeys);
+      var token = await getToken();
+
+      if (!isReviewOnlySession() && localRows > 0 && hasLocalWinsPersistent(activeKeys)) {
+        console.warn('[AttendanceCloudGuard] LOCAL WINS PERSISTENT: تم منع استبدال المحلي بالسحابة بعد الريفريش');
+        forceLocalAttendanceDirtyAndSync(activeKeys, 'persistent-local-wins-after-refresh');
+        setTimeout(function(){ renderAgain('persistent-local-wins-preserved'); }, 50);
+        setTimeout(function(){ renderAgain('persistent-local-wins-preserved'); }, 500);
+        return;
+      }
+
+      if (!token) { console.warn('[AttendanceCloudGuard] لا يوجد token'); return; }
+
       var res = await fetch(getHospitalStorageUrl(), {
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
         credentials: 'include'
       });
       if (!res.ok) { console.warn('[AttendanceCloudGuard] فشل: ' + res.status); return; }
+
       var json = await res.json();
       var data = normalizeRemoteDataKeys(json && json.data ? json.data : {});
       applyExtractSettingsFromCloud(data);
@@ -359,18 +393,16 @@ function clearLocalWinsPersistent(activeKeys) {
         if (!replace) {
           localWinsUntilSynced = true;
           userTouchedAttendance = true;
-
           markLocalWinsPersistent(activeKeys, 'user-clicked-cancel-keep-local');
-
           normalizeLocalAttendanceForCurrentPeriod(activeKeys);
           forceLocalAttendanceDirtyAndSync(activeKeys, 'user-clicked-cancel-keep-local');
-
           setTimeout(function(){ renderAgain('keep-local-and-upload'); }, 50);
           setTimeout(function(){ renderAgain('keep-local-and-upload'); }, 500);
           setTimeout(function(){ renderAgain('keep-local-and-upload'); }, 1500);
           return;
         }
       }
+
       var restored = 0, restoredRows = 0;
       activeKeys.forEach(function(k) {
         var val = data[k];
@@ -383,30 +415,34 @@ function clearLocalWinsPersistent(activeKeys) {
       });
 
       if (restored > 0) {
-  localWinsUntilSynced = false;
-  clearLocalWinsPersistent(activeKeys);
-
-  console.log('[AttendanceCloudGuard] استرجاع من السحابة: ' + restored + ' مفتاح / ' + restoredRows + ' صف');
+        localWinsUntilSynced = false;
+        clearLocalWinsPersistent(activeKeys);
+        console.log('[AttendanceCloudGuard] استرجاع من السحابة: ' + restored + ' مفتاح / ' + restoredRows + ' صف');
         setTimeout(function(){ renderAgain(localRows > 0 ? 'cloud-replaced-local' : 'cloud-restored'); }, 50);
         setTimeout(function(){ renderAgain(localRows > 0 ? 'cloud-replaced-local' : 'cloud-restored'); }, 500);
       }
-    } catch (e) { console.warn('[AttendanceCloudGuard] خطأ', e); }
+    } catch (e) {
+      console.warn('[AttendanceCloudGuard] خطأ', e);
+    } finally {
+      cloudComparisonRunning = false;
+    }
   }
-window.najranUseCloudAttendance = function () {
-  try {
-    var activeKeys = getActiveAttendanceKeys();
 
-    clearLocalWinsPersistent(activeKeys);
-    localWinsUntilSynced = false;
-    userTouchedAttendance = false;
+  window.najranUseCloudAttendance = function () {
+    try {
+      var activeKeys = getActiveAttendanceKeys();
+      clearLocalWinsPersistent(activeKeys);
+      localWinsUntilSynced = false;
+      userTouchedAttendance = false;
+      cloudComparisonStarted = false;
+      console.warn('[AttendanceCloudGuard] تم إلغاء تفضيل النسخة المحلية — سيتم السماح بسحب السحابة');
+      setTimeout(function(){ refreshFromHospitalStorage({ force: true }); }, 100);
+    } catch (e) {
+      console.warn('[AttendanceCloudGuard] فشل إلغاء تفضيل المحلي', e);
+    }
+  };
 
-    console.warn('[AttendanceCloudGuard] تم إلغاء تفضيل النسخة المحلية — سيتم السماح بسحب السحابة');
-
-    setTimeout(refreshFromHospitalStorage, 100);
-  } catch (e) {
-    console.warn('[AttendanceCloudGuard] فشل إلغاء تفضيل المحلي', e);
-  }
-};
-  window.addEventListener('najranCloudPulled', function(){ setTimeout(refreshFromHospitalStorage, 200); setTimeout(refreshFromHospitalStorage, 1200); });
-  document.addEventListener('DOMContentLoaded', function(){ setTimeout(refreshFromHospitalStorage, 1200); setTimeout(refreshFromHospitalStorage, 3000); });
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){ refreshFromHospitalStorage({ reason: 'initial-page-open' }); }, 1200);
+  });
 })();
