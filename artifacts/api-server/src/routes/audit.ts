@@ -4,6 +4,7 @@ import { eq, desc, sql, lt, inArray, and } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
+const ADMIN_ROLES = ["admin", "super_admin", "administrator"];
 
 const requireAdminOrSupervisor = async (req: any, res: any, next: any) => {
   try {
@@ -139,6 +140,12 @@ router.post("/", requireAuth, async (req: any, res) => {
   try {
     const [dbUser] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
     if (!dbUser) return res.status(404).json({ error: "User not found" });
+
+    const role = String(dbUser.role || "").toLowerCase().trim();
+    if (ADMIN_ROLES.includes(role)) {
+      return res.json({ logged: false, skipped: "ADMIN_AUDIT_DISABLED" });
+    }
+
     const { action, details, entityType, entityId, before, after, page } = req.body;
     if (!action) return res.status(400).json({ error: "action is required" });
     const ip = req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress || null;
