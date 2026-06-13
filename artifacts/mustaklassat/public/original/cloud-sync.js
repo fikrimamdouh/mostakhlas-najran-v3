@@ -11,11 +11,13 @@
   const API_BASE = '/api';
   const SESSION_KEY = 'najran_session';
   const SYNC_INTERVAL_MS = 180000;
+  const ACTIVITY_STATUS_THROTTLE_MS = 300000;
   const DIRTY_KEYS = new Set();
 
   // ─── FIX: module-level origSetItem + isApplyingCloudPull ─────────────────
   let _origSetItem = null;
   let isApplyingCloudPull = false;
+  let lastActivityStatusAt = 0;
 
   const SYNC_KEYS = [
     'persistentContractData','persistentExtractData','contractData','contractDetails','contractNumber','contractType','contractStartDate','contractEndDate','contractSignatureData',
@@ -320,6 +322,10 @@
   }
   function updateHospitalActivityStatus() {
     try {
+      const now = Date.now();
+      if (now - lastActivityStatusAt < ACTIVITY_STATUS_THROTTLE_MS) return;
+      lastActivityStatusAt = now;
+
       const s = getSession();
       if (!s || !s.hospital || isReviewOnlySession()) return;
       const meta = readExtractMeta();
@@ -327,7 +333,7 @@
       safeWrite('hospitalActivityStatus', JSON.stringify({
         userId: s.userId || '', userName: s.name || s.email || 'مستخدم', hospital: s.hospital,
         page: getCurrentPageLabel(), pageFile: getCurrentPageFile(), month: meta.month, year: meta.year,
-        extractNumber: meta.extractNumber, updatedAt: new Date().toISOString()
+        extractNumber: meta.extractNumber, updatedAt: new Date(now).toISOString()
       }));
       DIRTY_KEYS.add('hospitalActivityStatus');
     } catch (_) {}
@@ -562,7 +568,6 @@ if (adminSession && ATTENDANCE_PAGE_KEYS.has(nk) && !canAdminEditAttendance) {
 
     if (!reviewOnly) {
       updateHospitalActivityStatus();
-      syncNow().catch(function(){});
       setInterval(function(){ syncNow().catch(function(){}); }, SYNC_INTERVAL_MS);
       window.addEventListener('beforeunload', function(){
         if (DIRTY_KEYS.size > 0) pushToCloud().catch(function(){});
