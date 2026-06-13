@@ -134,6 +134,11 @@
     fetchNotifCount(function (count) { updateBell(count); });
   }
 
+  function shouldAutoCheckNotifications() {
+    var current = window.location.pathname + window.location.search;
+    return /\/original\/approval\.html(?:$|[?#])/.test(current);
+  }
+
   function logActualSignOut(done) {
     var s = getSession() || session;
     if (!s || !s.clerkToken) { done(); return; }
@@ -249,7 +254,9 @@
       });
     }
 
-    setTimeout(checkNotifications, 1500);
-    setInterval(checkNotifications, 10 * 60 * 1000);
+    if (shouldAutoCheckNotifications()) {
+      setTimeout(checkNotifications, 1500);
+      setInterval(checkNotifications, 10 * 60 * 1000);
+    }
   });
 })();
