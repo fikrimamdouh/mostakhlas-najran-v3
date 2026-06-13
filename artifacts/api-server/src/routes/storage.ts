@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable, userStorageTable } from "@workspace/db";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, or, like } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
@@ -22,10 +22,35 @@ const getDbUser = async (clerkId: string) => {
   return user;
 };
 
-function requestedKeys(req: any): string[] | null {
+function parseCsvParam(value: unknown, maxItems: number): string[] {
+  const raw = String(value || "").trim();
+  if (!raw) return [];
+  return Array.from(new Set(
+    raw
+      .split(",")
+      .map(v => String(v || "").trim())
+      .filter(Boolean)
+  )).slice(0, maxItems);
+}
+
+function requestedFilters(req: any): { keys: string[]; prefixes: string[]; scope: string } | null {
+  const keys = parseCsvParam(req.query?.keys, 250);
+  const prefixes = parseCsvParam(req.query?.prefixes, 80);
+  if (keys.length || prefixes.length) return { keys, prefixes, scope: "filtered" };
+
   const scope = String(req.query?.scope || "").trim();
-  if (scope === "settings") return SETTINGS_STORAGE_KEYS;
+  if (scope === "settings") return { keys: SETTINGS_STORAGE_KEYS, prefixes: [], scope: "settings" };
+
   return null;
+}
+
+function buildStorageKeyPredicate(column: any, filters: { keys: string[]; prefixes: string[] } | null) {
+  if (!filters) return null;
+  const clauses: any[] = [];
+  if (filters.keys.length) clauses.push(inArray(column, filters.keys));
+  for (const prefix of filters.prefixes) clauses.push(like(column, `${prefix}%`));
+  if (!clauses.length) return null;
+  return clauses.length === 1 ? clauses[0] : or(...clauses);
 }
 
 // GET /api/storage — get key-value pairs for current user
@@ -34,9 +59,10 @@ router.get("/", requireAuth, async (req: any, res) => {
     const dbUser = await getDbUser(req.clerkUserId);
     if (!dbUser || dbUser.status !== "approved") return res.status(403).json({ error: "Forbidden" });
 
-    const keys = requestedKeys(req);
-    const whereClause = keys
-      ? and(eq(userStorageTable.userId, dbUser.id), inArray(userStorageTable.storageKey, keys))
+    const filters = requestedFilters(req);
+    const keyPredicate = buildStorageKeyPredicate(userStorageTable.storageKey, filters);
+    const whereClause = keyPredicate
+      ? and(eq(userStorageTable.userId, dbUser.id), keyPredicate)
       : eq(userStorageTable.userId, dbUser.id);
 
     const rows = await db.select().from(userStorageTable).where(whereClause);
@@ -44,7 +70,7 @@ router.get("/", requireAuth, async (req: any, res) => {
     for (const row of rows) {
       result[row.storageKey] = row.storageValue;
     }
-    return res.json({ data: result, count: rows.length, scope: keys ? "settings" : "all" });
+    return res.json({ data: result, count: rows.length, scope: filters ? filters.scope : "all" });
   } catch (err) {
     req.log.error({ err }, "Failed to get user storage");
     return res.status(500).json({ error: "Internal server error" });
