@@ -21,6 +21,10 @@
   const SESSION_KEY = 'najran_session';
 
   function getSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; } }
+  function isAdminRole(role) {
+    const r = String(role || '').toLowerCase().trim();
+    return r === 'admin' || r === 'super_admin' || r === 'administrator';
+  }
 
   async function getFreshTokenForOriginalPages() {
     try { if (typeof window.najranGetFreshToken === 'function') { const t = await window.najranGetFreshToken(); if (t) return t; } } catch (_) {}
@@ -47,8 +51,10 @@
 
   async function sendAudit(action, details, beforeValue, afterValue, key, options) {
     const session = getSession();
+    if (!session || isAdminRole(session.role)) return;
+
     const token = await getFreshTokenForOriginalPages();
-    if (!session || !token) return;
+    if (!token) return;
     try {
       await fetch('/api/audit', {
         method: 'POST',
@@ -117,7 +123,6 @@
     'achievementData','achievementTitles_v1','achievementItemNames','nd_dentalAchievementTotals',
     'dynamicSignatures','contractorSignature'
   ]);
-
   function isAuditableKey(key) {
     if (AUDIT_KEYS.has(key)) return true;
     if (/^dept_/.test(key)) return true;
