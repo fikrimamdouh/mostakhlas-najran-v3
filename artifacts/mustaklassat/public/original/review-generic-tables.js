@@ -1,4 +1,4 @@
-/* review-generic-tables.js - professional non-labor review tables + attendance source fallback + extra saved snapshot appendix. No source data/calculations are changed. */
+/* review-generic-tables.js - professional non-labor review tables + attendance source fallback. Extra saved snapshot appendix is hidden from display. No source data/calculations are changed. */
 (function () {
   'use strict';
   if (!/\/original\/approval\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) return;
@@ -329,76 +329,6 @@
     sec.innerHTML = '<h3>الحضور والانصراف</h3>' + html;
   }
 
-  var DISPLAYED_EXACT = {
-    persistentExtractData: 1, persistentContractData: 1,
-    attendanceData: 1, ng_attendanceData: 1, nd_attendanceData: 1, healthCentersAttendanceData: 1, centersAttendanceData_v2: 1, adminOfficesAttendanceData_v1: 1,
-    performanceData: 1, performanceData_v4: 1, performanceDeductions: 1, performanceDeductions_v4: 1, performanceItems: 1, performanceItems_general_v1: 1,
-    consumablesTableData: 1, sparePartsData: 1,
-    subcontractors_data_consumables_v27: 1, subcontractorsData: 1, subcontractors_data: 1,
-    performance_data_consumables_v27: 1, performance_data: 1,
-    water_supply_data_consumables_v27: 1, waterData: 1, water_supply_data: 1,
-    sewage_disposal_data_consumables_v27: 1, sewageData: 1, sewage_disposal_data: 1,
-    summary_data_consumables_v27: 1, summaryData: 1, summary_data: 1
-  };
-
-  function isTechnicalKey(k) {
-    var n = norm(k);
-    var low = n.toLowerCase();
-    if (DISPLAYED_EXACT[n]) return true;
-    if (/^performanceitems_/i.test(n)) return true;
-    if (/^_?u\d+_/i.test(k)) return false;
-    if (/^(najran_|hospitalactivitystatus|cloudsync|audit|last|cache|dirty|pending|sync|debug|__|theme|sidebar|toast)/i.test(low)) return true;
-    if (/(_locked_|_done$|last_check|seen_ids|timestamp|token|session|clerk)/i.test(low)) return true;
-    if (/^(companyname|hospitalname|contractdetails|contractnumber|extractmonth|extractyear|paymentnumber|extractstart|extractend)$/i.test(low)) return true;
-    return false;
-  }
-
-  function usefulExtra(v) {
-    v = parse(v) || v;
-    if (v == null || v === '') return false;
-    if (Array.isArray(v)) return v.length > 0;
-    if (typeof v === 'object') return Object.keys(v).length > 0;
-    return String(v).trim().length > 0;
-  }
-
-  function rawJson(v) { try { return JSON.stringify(v, null, 2); } catch (_) { return String(v); } }
-
-  function makeRowsForExtra(v) {
-    v = parse(v) || v;
-    if (Array.isArray(v)) return v.map(function (x, i) { return x && typeof x === 'object' ? x : { value: x, index: i + 1 }; });
-    if (v && typeof v === 'object') {
-      var keys = Object.keys(v);
-      var objectLike = keys.some(function (k) { return v[k] && typeof v[k] === 'object'; });
-      if (objectLike) return keys.map(function (k) { var x = v[k]; if (x && typeof x === 'object' && !Array.isArray(x)) { var r = { key: k }; Object.keys(x).forEach(function (kk) { r[kk] = x[kk]; }); return r; } return { key: k, value: x }; });
-      return keys.map(function (k) { return { key: k, value: v[k] }; });
-    }
-    return [{ value: v }];
-  }
-
-  function collectCols(rows) {
-    var cols = [];
-    rows.forEach(function (r) { if (!r || typeof r !== 'object') return; Object.keys(r).forEach(function (k) { if (cols.indexOf(k) === -1 && cols.length < 14) cols.push(k); }); });
-    return cols.length ? cols : ['value'];
-  }
-
-  function valForCell(v) { if (v == null || v === '') return '—'; if (typeof v === 'object') return rawJson(v); return v; }
-
-  function extraBlock(key, value) {
-    var rows = makeRowsForExtra(value);
-    var cols = collectCols(rows);
-    var head = cols.map(function (c) { return '<th>' + esc(c) + '</th>'; }).join('');
-    var body = rows.map(function (r, i) { return '<tr><td>' + (i + 1) + '</td>' + cols.map(function (c) { return '<td>' + esc(valForCell(r && typeof r === 'object' ? r[c] : r)) + '</td>'; }).join('') + '</tr>'; }).join('');
-    var raw = rawJson(parse(value) || value);
-    return '<div class="rv-block rv-print-block rv-extra-block"><div class="rv-block-title"><h4>' + esc(key) + '</h4><span>' + rows.length + ' سجل</span></div><div class="rv-scroll"><table class="rv-table generic"><thead><tr><th>م</th>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div><details class="rv-extra-raw"><summary>عرض البيانات الخام الكاملة لهذا المفتاح</summary><pre class="rv-pre">' + esc(raw) + '</pre></details></div>';
-  }
-
-  function buildExtraAppendix(snapshot) {
-    if (!snapshot || typeof snapshot !== 'object') return '';
-    var keys = Object.keys(snapshot).filter(function (k) { return !isTechnicalKey(k) && usefulExtra(snapshot[k]); });
-    if (!keys.length) return '';
-    return '<section id="rv-extra-saved-data" class="rv-section-break"><h3>بيانات إضافية محفوظة داخل المستخلص</h3><div class="rv-period-note">هذا الملحق يعرض أي بيانات محفوظة في لقطة المستخلص ولم تدخل في جداول العرض الأساسية، لضمان أن المراجع يرى نفس ما تم رفعه وقت الإرسال.</div>' + keys.map(function (k) { return extraBlock(k, snapshot[k]); }).join('') + '</section>';
-  }
-
   function enhancePre(pre) {
     if (!pre || pre.dataset.genericEnhanced === '1') return;
     pre.dataset.genericEnhanced = '1';
@@ -430,21 +360,14 @@
   async function appendExtraIfPossible() {
     var body = document.getElementById('rv-body');
     if (!body || !currentExtractId) return;
+
     var doc = body.querySelector('.rv-doc');
-    if (!doc || doc.dataset.extraSnapshotFor === String(currentExtractId)) return;
-    var e = await fetchExtract(currentExtractId);
-    if (!e) return;
-    var html = buildExtraAppendix(snapshotFromExtract(e));
-    doc.dataset.extraSnapshotFor = String(currentExtractId);
-    if (!html) return;
+    if (!doc) return;
+
     var old = doc.querySelector('#rv-extra-saved-data');
     if (old) old.remove();
-    var holder = document.createElement('div');
-    holder.innerHTML = html;
-    var sec = holder.firstElementChild;
-    var decision = doc.querySelector('#rv-decision');
-    if (decision && decision.parentNode) decision.parentNode.insertBefore(sec, decision);
-    else doc.appendChild(sec);
+
+    doc.dataset.extraSnapshotFor = String(currentExtractId);
   }
 
   function run() {
