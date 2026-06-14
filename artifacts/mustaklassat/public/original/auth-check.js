@@ -5,6 +5,7 @@
  */
 (function () {
   var BASE = window.location.origin;
+  var BUILD_V = '20260614b';
 
   function getSession() {
     try {
@@ -117,38 +118,43 @@
   hospitalContextGuardScript.defer = false;
   document.head.appendChild(hospitalContextGuardScript);
 
+  var hospitalStorageExtractContextGuardScript = document.createElement('script');
+  hospitalStorageExtractContextGuardScript.src = '/original/hospital-storage-extract-context-guard.js?v=' + BUILD_V;
+  hospitalStorageExtractContextGuardScript.defer = false;
+  document.head.appendChild(hospitalStorageExtractContextGuardScript);
+
   if (/attendance\.html(?:$|[?#])/.test(window.location.pathname + window.location.search) || /[?&]page=.*attendance\.html(?:$|&)/.test(window.location.pathname + window.location.search)) {
     var attendanceCloudRefreshGuardScript = document.createElement('script');
-    attendanceCloudRefreshGuardScript.src = '/original/attendance-cloud-refresh-guard.js?v=20260611d';
+    attendanceCloudRefreshGuardScript.src = '/original/attendance-cloud-refresh-guard.js?v=' + BUILD_V;
     attendanceCloudRefreshGuardScript.defer = true;
     document.head.appendChild(attendanceCloudRefreshGuardScript);
   }
 
   if (/\/original\/approval\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) {
     var reviewPrintScript = document.createElement('script');
-    reviewPrintScript.src = '/original/review-print-override.js';
+    reviewPrintScript.src = '/original/review-print-override.js?v=' + BUILD_V;
     reviewPrintScript.defer = true;
     document.head.appendChild(reviewPrintScript);
 
     var reviewScript = document.createElement('script');
-    reviewScript.src = '/original/review-workflow.js';
+    reviewScript.src = '/original/review-workflow.js?v=' + BUILD_V;
     reviewScript.defer = true;
     document.head.appendChild(reviewScript);
 
     var reviewGenericScript = document.createElement('script');
-    reviewGenericScript.src = '/original/review-generic-tables.js';
+    reviewGenericScript.src = '/original/review-generic-tables.js?v=' + BUILD_V;
     reviewGenericScript.defer = true;
     document.head.appendChild(reviewGenericScript);
 
     var reviewConsumablesSummaryScript = document.createElement('script');
-    reviewConsumablesSummaryScript.src = '/original/review-consumables-summary-exact.js';
+    reviewConsumablesSummaryScript.src = '/original/review-consumables-summary-exact.js?v=' + BUILD_V;
     reviewConsumablesSummaryScript.defer = true;
     document.head.appendChild(reviewConsumablesSummaryScript);
   }
 
   if (/\/original\/.*consumables\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) {
     var consumablesGuardScript = document.createElement('script');
-    consumablesGuardScript.src = '/original/consumables-submit-snapshot-guard.js';
+    consumablesGuardScript.src = '/original/consumables-submit-snapshot-guard.js?v=' + BUILD_V;
     consumablesGuardScript.defer = true;
     document.head.appendChild(consumablesGuardScript);
   }
