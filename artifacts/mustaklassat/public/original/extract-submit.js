@@ -222,11 +222,61 @@ if (token) headers['Authorization'] = `Bearer ${token}`;
   window.initPerformanceApproveBtn = function () {
     createApproveBtn({
       label: 'اعتماد جداول الأداء',
-      onClick: () => {
-        if (!confirm('هل تريد اعتماد جداول الأداء والانتقال لشهادة الإنجاز؟')) return;
-        localStorage.setItem(STEP_KEY.labor_performance, '1');
-        window.location.href = '/original/achievement.html';
-      },
+    onClick: () => {
+  if (!confirm('هل تريد اعتماد جداول الأداء والانتقال لشهادة الإنجاز؟')) return;
+
+  try {
+    const performanceTables = [
+      'cleaning',
+      'electricity',
+      'agriculture',
+      'civil',
+      'mechanics',
+      'laundry',
+      'security',
+      'new_section_8'
+    ];
+
+    performanceTables.forEach(tableId => {
+      if (document.getElementById(tableId + '-table')) {
+        if (typeof updateTotal === 'function') {
+          updateTotal(tableId);
+        }
+
+        if (typeof saveTableData === 'function') {
+          saveTableData(tableId, true);
+        }
+      }
+    });
+
+    if (typeof updateCertificateFromPerformance === 'function') {
+      updateCertificateFromPerformance();
+    }
+
+    const deductedEl = document.getElementById('total-deducted-amount');
+    if (deductedEl) {
+      localStorage.setItem(
+        'performanceTotalDeduction',
+        String(deductedEl.textContent || '0').replace(/[^0-9.\-]/g, '')
+      );
+    }
+
+    const totalDueEl = document.getElementById('total-due');
+    if (totalDueEl) {
+      localStorage.setItem(
+        'performanceTotalDue',
+        String(totalDueEl.textContent || '0').replace(/[^0-9.\-]/g, '')
+      );
+    }
+
+    localStorage.setItem('performanceSavedAtBeforeAchievement', new Date().toISOString());
+  } catch (e) {
+    console.warn('[PerformanceApprove] تعذر حفظ بعض بيانات الأداء قبل الانتقال', e);
+  }
+
+  localStorage.setItem(STEP_KEY.labor_performance, '1');
+  window.location.href = '/original/achievement.html';
+},
     });
   };
 
