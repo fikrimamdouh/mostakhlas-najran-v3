@@ -1,73 +1,129 @@
 /**
- * cloud-sync.js — V7 patch
- * إصلاح 3 مشاكل تسريب بيانات المراجع:
- * 1. ensureHospitalContextClean: لا يحفظ ctxKey للمراجع → تنظيف في كل مرة
- * 2. localStorage.setItem override: لا dirty للمراجع أبدًا
- * 3. pullFromCloud: يستخدم _origSetItem أثناء السحب لمنع dirty loop
+ * cloud-sync.js — V8 Local-first
+ * السحب من السحابة عند فتح الصفحة فقط.
+ * الرفع التلقائي مسموح للإعدادات الخفيفة فقط.
+ * بيانات التشغيل الثقيلة تبقى محلية وتترفع فقط عند الرفع الصريح عبر najranSyncNow().
  */
 (function () {
   'use strict';
 
   const API_BASE = '/api';
   const SESSION_KEY = 'najran_session';
-  const SYNC_INTERVAL_MS = 180000;
+  const SETTINGS_AUTO_SYNC_MS = 300000;
   const ACTIVITY_STATUS_THROTTLE_MS = 300000;
   const DIRTY_KEYS = new Set();
 
-  // ─── FIX: module-level origSetItem + isApplyingCloudPull ─────────────────
   let _origSetItem = null;
   let isApplyingCloudPull = false;
   let lastActivityStatusAt = 0;
+  let syncInProgress = false;
+  let syncIndicator = null;
 
-  const SYNC_KEYS = [
-    'persistentContractData','persistentExtractData','contractData','contractDetails','contractNumber','contractType','contractStartDate','contractEndDate','contractSignatureData',
-    'extractMonth','extractYear','extractNumber','extractStart','extractEnd','extractFromDate','extractToDate','paymentNumber',
-    'attendanceData','centersAttendanceData_v2','healthCentersAttendanceData','adminOfficesAttendanceData_v1',
-    'ng_attendanceData','ng_departmentNames','ng_distributionSettings','ng_finalLaborCost','ng_performanceTotalDeduction',
-    'nd_attendanceData','nd_departmentNames','nd_distributionSettings','nd_finalLaborCost','nd_performanceTotalDeduction','nd_dentalAchievementTotals',
-    'consumablesTableData','healthCentersConsumables','mainHospitalConsumables','admin_offices_consumables_v1.0','consumablesTitle','consumablesPeriodFrom','consumablesPeriodTo','finalConsumablesCost',
-    'subcontractors_data_consumables_v27','performance_data_consumables_v27','water_supply_data_consumables_v27','sewage_disposal_data_consumables_v27','summary_data_consumables_v27',
-    'spare_partsData','sparePartsTotalAmount','approvalData','displayApprovalData','performanceData','performanceData_v4','performanceDeductions','achievementData','achievementTitles_v1','achievementItemNames',
-    'centerNames_v3','departmentNames','distributionSettings','hospitalName','companyName','directPurchaseRatio','hospitalActivityStatus','hospitalActivityStatus_v2',
-    'admin_staff','dynamicSignatures','contractorSignature','appTitles_v1','healthCentersData','reviewExtractData','requestVisitData',
-    'settings_main','settings_advanced','finalLaborCost','performanceTotalDeduction','grand-net-total','grand-net-total-centers','grand-net-total-admin',
-    'performanceSignatures','performanceSignatures_v2','performanceTableNames','najran_labor_attendance_done','najran_labor_performance_done','najran_health_attendance_done','najran_admin_offices_attendance_done',
-    'adminOfficeNames_v1','adminOfficeAffiliations_v1','contract_foundation_data','backupLog','backupLogs'
+  const PERSONAL_KEYS = new Set(['backupLog', 'backupLogs']);
+
+  const ATTENDANCE_PAGE_KEYS = new Set([
+    'attendanceData', 'ng_attendanceData', 'nd_attendanceData',
+    'centersAttendanceData_v2', 'healthCentersAttendanceData', 'adminOfficesAttendanceData_v1'
+  ]);
+
+  const SETTINGS_PAGE_KEYS = new Set([
+    'persistentContractData', 'persistentExtractData', 'contractData', 'contractDetails', 'contractNumber', 'contractType',
+    'contractStartDate', 'contractEndDate', 'contractSignatureData',
+    'extractMonth', 'extractYear', 'extractNumber', 'extractStart', 'extractEnd', 'extractFromDate', 'extractToDate', 'paymentNumber',
+    'hospitalName', 'companyName', 'directPurchaseRatio',
+    'settings_main', 'settings_advanced', 'dynamicSignatures', 'contractorSignature', 'appTitles_v1',
+    'admin_staff', 'contract_foundation_data',
+    'hospitalActivityStatus', 'hospitalActivityStatus_v2'
+  ]);
+
+  const SYNC_KEYS = new Set([
+    ...SETTINGS_PAGE_KEYS,
+    'attendanceData', 'centersAttendanceData_v2', 'healthCentersAttendanceData', 'adminOfficesAttendanceData_v1',
+    'ng_attendanceData', 'ng_departmentNames', 'ng_distributionSettings', 'ng_finalLaborCost', 'ng_performanceTotalDeduction',
+    'nd_attendanceData', 'nd_departmentNames', 'nd_distributionSettings', 'nd_finalLaborCost', 'nd_performanceTotalDeduction', 'nd_dentalAchievementTotals',
+    'consumablesTableData', 'healthCentersConsumables', 'mainHospitalConsumables', 'admin_offices_consumables_v1.0', 'consumablesTitle', 'consumablesPeriodFrom', 'consumablesPeriodTo', 'finalConsumablesCost',
+    'subcontractors_data_consumables_v27', 'performance_data_consumables_v27', 'water_supply_data_consumables_v27', 'sewage_disposal_data_consumables_v27', 'summary_data_consumables_v27',
+    'spare_partsData', 'sparePartsTotalAmount', 'approvalData', 'displayApprovalData',
+    'performanceData', 'performanceData_v4', 'performanceDeductions', 'achievementData', 'achievementTitles_v1', 'achievementItemNames',
+    'centerNames_v3', 'departmentNames', 'distributionSettings',
+    'healthCentersData', 'reviewExtractData', 'requestVisitData',
+    'finalLaborCost', 'performanceTotalDeduction', 'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin',
+    'performanceSignatures', 'performanceSignatures_v2', 'performanceTableNames',
+    'najran_labor_attendance_done', 'najran_labor_performance_done', 'najran_health_attendance_done', 'najran_admin_offices_attendance_done',
+    'adminOfficeNames_v1', 'adminOfficeAffiliations_v1',
+    'backupLog', 'backupLogs'
+  ]);
+
+  const OPERATIONAL_EXACT_KEYS = new Set([
+    'attendanceData', 'centersAttendanceData_v2', 'healthCentersAttendanceData', 'adminOfficesAttendanceData_v1',
+    'ng_attendanceData', 'ng_departmentNames', 'ng_distributionSettings', 'ng_finalLaborCost', 'ng_performanceTotalDeduction',
+    'nd_attendanceData', 'nd_departmentNames', 'nd_distributionSettings', 'nd_finalLaborCost', 'nd_performanceTotalDeduction', 'nd_dentalAchievementTotals',
+    'consumablesTableData', 'healthCentersConsumables', 'mainHospitalConsumables', 'admin_offices_consumables_v1.0', 'finalConsumablesCost',
+    'subcontractors_data_consumables_v27', 'performance_data_consumables_v27', 'water_supply_data_consumables_v27', 'sewage_disposal_data_consumables_v27', 'summary_data_consumables_v27',
+    'spare_partsData', 'sparePartsTotalAmount', 'approvalData', 'displayApprovalData',
+    'performanceData', 'performanceData_v4', 'performanceDeductions', 'achievementData', 'achievementTitles_v1', 'achievementItemNames',
+    'finalLaborCost', 'performanceTotalDeduction', 'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin',
+    'najran_labor_attendance_done', 'najran_labor_performance_done', 'najran_health_attendance_done', 'najran_admin_offices_attendance_done'
+  ]);
+
+  const OPERATIONAL_PREFIXES = [
+    'deptCalculatedCost_', 'dept_', 'tableData_', 'achievement_', 'consumables_', 'spare_',
+    'water_', 'sewage_', 'subcontractors_', 'najran_labor_', 'najran_health_', 'najran_admin_',
+    'monthSnapshot_'
   ];
 
-  const PERSONAL_KEYS = new Set(['backupLog','backupLogs']);
-  const COMPUTED_KEYS = new Set(['finalLaborCost','grand-net-total','grand-net-total-centers','grand-net-total-admin','performanceTotalDeduction']);
-  const ATTENDANCE_PAGE_KEYS = new Set([
-    'attendanceData','ng_attendanceData','nd_attendanceData',
-    'centersAttendanceData_v2','healthCentersAttendanceData','adminOfficesAttendanceData_v1'
-  ]);
   const EMPTY_OVERWRITE_PROTECTED_KEYS = new Set([
-    'attendanceData','ng_attendanceData','nd_attendanceData',
-    'centersAttendanceData_v2','healthCentersAttendanceData','adminOfficesAttendanceData_v1',
-    'performanceData','performanceData_v4','performanceDeductions','achievementData',
-    'consumablesTableData','healthCentersConsumables','mainHospitalConsumables',
-    'admin_offices_consumables_v1.0','spare_partsData'
-  ]);
-  const SETTINGS_PAGE_KEYS = new Set([
-    'persistentContractData','persistentExtractData','contractData','contractDetails','contractNumber','contractType','contractStartDate','contractEndDate','contractSignatureData',
-    'extractMonth','extractYear','extractNumber','extractStart','extractEnd','extractFromDate','extractToDate','paymentNumber','hospitalName','companyName','directPurchaseRatio',
-    'settings_main','settings_advanced','dynamicSignatures','contractorSignature','appTitles_v1','admin_staff','contract_foundation_data'
+    ...ATTENDANCE_PAGE_KEYS,
+    'performanceData', 'performanceData_v4', 'performanceDeductions', 'achievementData',
+    'consumablesTableData', 'healthCentersConsumables', 'mainHospitalConsumables',
+    'admin_offices_consumables_v1.0', 'spare_partsData'
   ]);
 
-  function shouldProtectFromEmptyOverwrite(key) {
-    const nk = normalizeKey(key);
-    return EMPTY_OVERWRITE_PROTECTED_KEYS.has(nk) ||
-      nk.startsWith('dept_') || nk.startsWith('deptCalculatedCost_') ||
-      nk.startsWith('tableData_') || nk.startsWith('achievement_') ||
-      nk.startsWith('consumables_') || nk.startsWith('spare_') ||
-      nk.startsWith('water_') || nk.startsWith('sewage_') ||
-      nk.startsWith('subcontractors_');
+  function normalizeKey(key) {
+    return String(key || '').replace(/^(_u\d+_)+/, '');
   }
+
+  function getCurrentPageFile() {
+    return window.location.pathname.split('/').pop() || '';
+  }
+
+  function isSettingsMainPage() {
+    return getCurrentPageFile() === 'settings_main.html';
+  }
+
+  function isAdminSession() {
+    const s = getSession();
+    const role = String((s && s.role) || '').toLowerCase();
+    return role === 'admin' || role === 'super_admin' || role === 'administrator';
+  }
+
+  function isOperationalKey(key) {
+    const nk = normalizeKey(key);
+    return OPERATIONAL_EXACT_KEYS.has(nk) || OPERATIONAL_PREFIXES.some(p => nk.indexOf(p) === 0);
+  }
+
+  function shouldSyncKey(key) {
+    const nk = normalizeKey(key);
+    return SYNC_KEYS.has(nk) || isOperationalKey(nk) || nk.includes('finalLaborCost') || nk.includes('grand-net-total');
+  }
+
+  function shouldAutoSyncKey(key) {
+    const nk = normalizeKey(key);
+    return shouldSyncKey(nk) && !isOperationalKey(nk);
+  }
+
+  function shouldMergePulledKeyForCurrentPage(key) {
+    const nk = normalizeKey(key);
+    if (!isSettingsMainPage()) return true;
+    return SETTINGS_PAGE_KEYS.has(nk);
+  }
+
   function parseMaybeJSON(value) {
     if (value == null) return null;
     if (typeof value === 'object') return value;
     try { return JSON.parse(String(value)); } catch (_) { return value; }
   }
+
   function countGenericContent(value) {
     const v = parseMaybeJSON(value);
     if (v == null) return 0;
@@ -81,6 +137,7 @@
     }
     return 0;
   }
+
   function countNamedEmployees(value) {
     const v = parseMaybeJSON(value);
     let count = 0;
@@ -96,6 +153,7 @@
     walk(v);
     return count;
   }
+
   function contentScoreForKey(key, value) {
     const nk = normalizeKey(key);
     if (ATTENDANCE_PAGE_KEYS.has(nk)) {
@@ -104,57 +162,18 @@
     }
     return countGenericContent(value);
   }
+
+  function shouldProtectFromEmptyOverwrite(key) {
+    const nk = normalizeKey(key);
+    return EMPTY_OVERWRITE_PROTECTED_KEYS.has(nk) || isOperationalKey(nk);
+  }
+
   function isUnsafeEmptyOverwrite(key, newValue, oldValue) {
     if (!shouldProtectFromEmptyOverwrite(key)) return false;
     if (oldValue == null) return false;
     return contentScoreForKey(key, oldValue) > 0 && contentScoreForKey(key, newValue) === 0;
   }
-  async function filterUnsafeHospitalWrites(hospitalData) {
-    const keys = Object.keys(hospitalData || {});
-    if (!keys.length) return hospitalData;
-    const protectedKeys = keys.filter(shouldProtectFromEmptyOverwrite);
-    if (!protectedKeys.length) return hospitalData;
-    const remote = await apiFetch('/hospital-storage');
-    if (!remote) {
-      const safe = {};
-      keys.forEach(key => { if (!shouldProtectFromEmptyOverwrite(key)) safe[key] = hospitalData[key]; });
-      console.warn('[MzamanaCloud] BLOCKED protected keys — remote unavailable');
-      return safe;
-    }
-    const remoteData = remote.data || {};
-    const safe = {};
-    let skipped = 0;
-    keys.forEach(key => {
-      const newValue = hospitalData[key];
-      const oldValue = remoteData[key];
-      if (isUnsafeEmptyOverwrite(key, newValue, oldValue)) { skipped++; return; }
-      safe[key] = newValue;
-    });
-    if (skipped) console.warn('[MzamanaCloud] SKIP EMPTY OVERWRITE — ' + skipped + ' مفتاح');
-    return safe;
-  }
 
-  function normalizeKey(key) { return String(key || '').replace(/^(_u\d+_)+/, ''); }
-  function getCurrentPageFile() { return window.location.pathname.split('/').pop() || ''; }
-  function isSettingsMainPage() { return getCurrentPageFile() === 'settings_main.html'; }
-  function isAdminSession() {
-    const s = getSession();
-    const role = String((s && s.role) || '').toLowerCase();
-    return role === 'admin' || role === 'super_admin' || role === 'administrator';
-  }
-  function shouldMergePulledKeyForCurrentPage(key) {
-    const nk = normalizeKey(key);
-    if (!isSettingsMainPage()) return true;
-    return SETTINGS_PAGE_KEYS.has(nk);
-  }
-  function shouldSyncKey(key) {
-    const nk = normalizeKey(key);
-    return SYNC_KEYS.includes(nk) ||
-      nk.startsWith('deptCalculatedCost_') || nk.startsWith('dept_') || nk.startsWith('sb_sigs_') || nk.startsWith('sb_prefs_') || nk.startsWith('tableData_') ||
-      nk.startsWith('achievement_') || nk.startsWith('consumables_') || nk.startsWith('spare_') || nk.startsWith('water_') ||
-      nk.startsWith('sewage_') || nk.startsWith('subcontractors_') || nk.startsWith('najran_labor_') || nk.startsWith('najran_health_') ||
-      nk.startsWith('najran_admin_') || nk.includes('finalLaborCost') || nk.includes('grand-net-total');
-  }
   function getSession() {
     try {
       const raw = localStorage.getItem(SESSION_KEY);
@@ -165,23 +184,25 @@
       return s;
     } catch (_) { return null; }
   }
+
   function getHospitalName() {
     const s = getSession();
     return s && s.hospital ? String(s.hospital).trim() : null;
   }
+
   function isReviewOnlySession() {
     const s = getSession();
     return !!(s && s.reviewOnly === true);
   }
 
   function parseHospitalList(v) {
-    if (Array.isArray(v)) return v.map(String).map(function(x){ return x.trim(); }).filter(Boolean);
+    if (Array.isArray(v)) return v.map(String).map(x => x.trim()).filter(Boolean);
     if (!v) return [];
     try {
       const p = JSON.parse(String(v));
       if (Array.isArray(p)) return parseHospitalList(p);
     } catch (_) {}
-    return String(v).split(/[،,|\n]/g).map(function(x){ return x.trim(); }).filter(Boolean);
+    return String(v).split(/[،,|\n]/g).map(x => x.trim()).filter(Boolean);
   }
 
   function forceReviewOnlyBeforeInit() {
@@ -190,52 +211,36 @@
       if (!raw) return false;
       const s = JSON.parse(raw);
       if (!s) return false;
-
       const hospital = String(s.hospital || '').trim();
       const reviewActive = String(s.reviewActiveHospital || '').trim();
       const reviewHospitals = parseHospitalList(s.reviewHospitals);
-
       const shouldForceReview = !!hospital && (
         reviewActive === hospital ||
         (s.canReviewCurrentHospital === true && s.canEditCurrentHospital === false) ||
         (s.reviewOnly === true && reviewHospitals.indexOf(hospital) > -1)
       );
-
       if (!shouldForceReview) return false;
-
       s.hospital = hospital;
       s.reviewActiveHospital = hospital;
       s.canReviewCurrentHospital = true;
       s.canEditCurrentHospital = false;
       s.reviewOnly = true;
       s.timestamp = Date.now();
-
       localStorage.setItem(SESSION_KEY, JSON.stringify(s));
       localStorage.removeItem('najran_active_hospital_context');
-
       Object.keys(localStorage).forEach(function(k){
         const lk = String(k || '').toLowerCase();
-        if (
-          lk.includes('attendance') ||
-          lk.includes('attendancedata') ||
-          lk.includes('monthsnapshot') ||
-          lk.includes('hospitalactivitystatus')
-        ) {
-          localStorage.removeItem(k);
-        }
+        if (lk.includes('attendance') || lk.includes('hospitalactivitystatus')) localStorage.removeItem(k);
       });
-
       sessionStorage.clear();
       console.warn('[MzamanaCloud] REVIEW ONLY: تم فرض وضع المراجعة قبل التهيئة للمستشفى «' + hospital + '»');
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   function clearOperationalKeysForHospitalSwitch() {
-    const keepKeys = new Set([SESSION_KEY,'hospitalName','companyName','contractNumber','sidebar_collapsed','najran_read_notifications']);
-    const clearPrefixes = ['deptCalculatedCost_','dept_','sb_sigs_','sb_prefs_','tableData_','achievement_','consumables_','spare_','water_','sewage_','subcontractors_','najran_labor_','najran_health_','najran_admin_','monthSnapshot_','_u'];
+    const keepKeys = new Set([SESSION_KEY, 'hospitalName', 'companyName', 'contractNumber', 'sidebar_collapsed', 'najran_read_notifications']);
+    const clearPrefixes = ['deptCalculatedCost_', 'dept_', 'sb_sigs_', 'sb_prefs_', 'tableData_', 'achievement_', 'consumables_', 'spare_', 'water_', 'sewage_', 'subcontractors_', 'najran_labor_', 'najran_health_', 'najran_admin_', 'monthSnapshot_', '_u'];
     const clearKeys = [
       'persistentContractData','persistentExtractData','contractData','contractDetails','contractType','contractStartDate','contractEndDate','contractSignatureData',
       'extractMonth','extractYear','extractNumber','extractStart','extractEnd','extractFromDate','extractToDate','paymentNumber',
@@ -271,9 +276,7 @@
       console.warn('[MzamanaCloud] تنظيف السياق: «' + hospitalName + '»' + (reviewOnly ? ' [مراجعة — يتنظف دايماً]' : ' [تبديل مستشفى]'));
       clearOperationalKeysForHospitalSwitch();
     }
-    if (!reviewOnly) {
-      localStorage.setItem(ctxKey, hospitalName);
-    }
+    if (!reviewOnly) localStorage.setItem(ctxKey, hospitalName);
   }
 
   async function getFreshToken() {
@@ -290,6 +293,7 @@
     const s = getSession();
     return s && s.clerkToken ? s.clerkToken : null;
   }
+
   async function apiFetch(path, options) {
     const session = getSession();
     if (!session) return null;
@@ -309,6 +313,7 @@
       return { month: d.extractMonth || '', year: d.extractYear || '', extractNumber: d.extractNumber || d.paymentNumber || '' };
     } catch (_) { return { month:'', year:'', extractNumber:'' }; }
   }
+
   function getCurrentPageLabel() {
     const file = getCurrentPageFile();
     const map = {
@@ -320,12 +325,12 @@
     };
     return map[file] || document.title || file || 'صفحة غير محددة';
   }
+
   function updateHospitalActivityStatus() {
     try {
       const now = Date.now();
       if (now - lastActivityStatusAt < ACTIVITY_STATUS_THROTTLE_MS) return;
       lastActivityStatusAt = now;
-
       const s = getSession();
       if (!s || !s.hospital || isReviewOnlySession()) return;
       const meta = readExtractMeta();
@@ -338,6 +343,7 @@
       DIRTY_KEYS.add('hospitalActivityStatus');
     } catch (_) {}
   }
+
   function showHospitalActivityNotice() {
     try {
       if (isReviewOnlySession()) return;
@@ -381,66 +387,36 @@
     let mergedUser = 0, mergedHospital = 0, skippedUserOperational = 0, skippedByPage = 0;
     const safeWrite = _origSetItem || localStorage.setItem.bind(localStorage);
 
-  function mergeOne(key, value, fromHospital) {
-  const nk = normalizeKey(key);
+    function mergeOne(key, value, fromHospital) {
+      const nk = normalizeKey(key);
+      if (ATTENDANCE_PAGE_KEYS.has(nk)) { skippedByPage++; return; }
+      if (fromHospital && PERSONAL_KEYS.has(nk)) return;
+      if (!fromHospital && hospitalName && !PERSONAL_KEYS.has(nk)) { skippedUserOperational++; return; }
+      if (!shouldMergePulledKeyForCurrentPage(nk)) { skippedByPage++; return; }
+      try { safeWrite(nk, value); fromHospital ? mergedHospital++ : mergedUser++; } catch (_) {}
+    }
 
-  // مفاتيح الحضور لا يتم سحبها من cloud-sync مباشرة.
-  // استبدال الحضور يتم فقط من attendance-cloud-refresh-guard.js برسالة موافقة المستخدم.
-  if (ATTENDANCE_PAGE_KEYS.has(nk)) {
-    skippedByPage++;
-    return;
+    Object.entries(userData).forEach(([k, v]) => mergeOne(k, v, false));
+    Object.entries(hospitalData).forEach(([k, v]) => mergeOne(k, v, true));
+
+    console.log('[MzamanaCloud] PULL ✓' + (reviewOnly ? ' [مراجعة]' : '') +
+      ' ' + mergedUser + ' شخصي + ' + mergedHospital + ' مشترك' +
+      (skippedUserOperational ? ' · ' + skippedUserOperational + ' تشغيلي شخصي' : '') +
+      (skippedByPage ? ' · ' + skippedByPage + ' خارج نطاق الصفحة' : '')
+    );
+
+    try { window.dispatchEvent(new CustomEvent('najranCloudPulled', { detail: { monthChanged: false } })); } catch (_) {}
+    try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
+    try { if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint(); } catch (_) {}
   }
 
-  if (fromHospital && PERSONAL_KEYS.has(nk)) return;
-
-  if (!fromHospital && hospitalName && !PERSONAL_KEYS.has(nk)) {
-    skippedUserOperational++;
-    return;
-  }
-
-  if (!shouldMergePulledKeyForCurrentPage(nk)) {
-    skippedByPage++;
-    return;
-  }
-
-  if (COMPUTED_KEYS.has(nk)) {
-    const local = localStorage.getItem(nk);
-    if (local !== null && parseFloat(local) > parseFloat(value)) return;
-  }
-
-  try {
-    safeWrite(nk, value);
-    fromHospital ? mergedHospital++ : mergedUser++;
-  } catch (_) {}
-}
-
-Object.entries(userData).forEach(([k, v]) => mergeOne(k, v, false));
-Object.entries(hospitalData).forEach(([k, v]) => mergeOne(k, v, true));
-
-console.log('[MzamanaCloud] PULL ✓' + (reviewOnly ? ' [مراجعة]' : '') +
-  ' ' + mergedUser + ' شخصي + ' + mergedHospital + ' مشترك' +
-  (skippedUserOperational ? ' · ' + skippedUserOperational + ' تشغيلي شخصي' : '') +
-  (skippedByPage ? ' · ' + skippedByPage + ' خارج نطاق الصفحة' : '')
-);
-
-try {
-  window.dispatchEvent(new CustomEvent('najranCloudPulled', { detail: { monthChanged: false } }));
-} catch (_) {}
-
-try {
-  if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData();
-} catch (_) {}
-
-try {
-  if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint();
-} catch (_) {}
-}
   function splitObjectIntoChunks(obj, chunkSize) {
     const entries = Object.entries(obj || {});
     const chunks = [];
     for (let i = 0; i < entries.length; i += chunkSize) chunks.push(Object.fromEntries(entries.slice(i, i + chunkSize)));
     return chunks;
   }
+
   async function putStorageInBatches(path, data, batchSize) {
     const chunks = splitObjectIntoChunks(data, batchSize);
     let saved = 0;
@@ -452,105 +428,150 @@ try {
     }
     return { saved };
   }
-  async function pushToCloud() {
+
+  async function filterUnsafeHospitalWrites(hospitalData) {
+    const keys = Object.keys(hospitalData || {});
+    if (!keys.length) return hospitalData;
+    const protectedKeys = keys.filter(shouldProtectFromEmptyOverwrite);
+    if (!protectedKeys.length) return hospitalData;
+    const remote = await apiFetch('/hospital-storage');
+    if (!remote) {
+      const safe = {};
+      keys.forEach(key => { if (!shouldProtectFromEmptyOverwrite(key)) safe[key] = hospitalData[key]; });
+      console.warn('[MzamanaCloud] BLOCKED protected keys — remote unavailable');
+      return safe;
+    }
+    const remoteData = remote.data || {};
+    const safe = {};
+    let skipped = 0;
+    keys.forEach(key => {
+      const newValue = hospitalData[key];
+      const oldValue = remoteData[key];
+      if (isUnsafeEmptyOverwrite(key, newValue, oldValue)) { skipped++; return; }
+      safe[key] = newValue;
+    });
+    if (skipped) console.warn('[MzamanaCloud] SKIP EMPTY OVERWRITE — ' + skipped + ' مفتاح');
+    return safe;
+  }
+
+  async function pushToCloud(options) {
+    options = options || {};
+    const includeOperational = options.includeOperational === true;
     if (!getSession()) throw new Error('NO_SESSION');
     if (isReviewOnlySession()) {
       console.warn('[MzamanaCloud] REVIEW ONLY: ممنوع الرفع');
       DIRTY_KEYS.clear();
       return { ok:true, saved:0, readonly:true, reason:'REVIEW_ONLY_NO_UPLOAD' };
     }
+
     const hospitalName = getHospitalName();
     const userData = {}, hospitalData = {};
     const adminSession = isAdminSession();
     let skippedAdminAttendance = 0;
-    const keysToSync = Array.from(DIRTY_KEYS).filter(k => k && shouldSyncKey(k));
-    if (!keysToSync.length) return { ok:true, saved:0, reason:'NO_LOCAL_CHANGES' };
+    let skippedOperationalAuto = 0;
+
+    const keysToSync = Array.from(DIRTY_KEYS).filter(function(k){
+      if (!k || !shouldSyncKey(k)) return false;
+      if (!includeOperational && isOperationalKey(k)) { skippedOperationalAuto++; return false; }
+      return true;
+    });
+
+    if (!keysToSync.length) {
+      if (skippedOperationalAuto) console.log('[MzamanaCloud] AUTO SKIP operational dirty keys: ' + skippedOperationalAuto);
+      return { ok:true, saved:0, reason: skippedOperationalAuto ? 'AUTO_SKIPPED_OPERATIONAL' : 'NO_LOCAL_CHANGES' };
+    }
+
     keysToSync.forEach(function(key){
       const nk = normalizeKey(key);
-const s = getSession();
-const canAdminEditAttendance =
-  s && (
-    s.canEditAttendance === true ||
-    s.attendanceEditor === true ||
-    s.role === 'attendance_editor'
-  );
-
-if (adminSession && ATTENDANCE_PAGE_KEYS.has(nk) && !canAdminEditAttendance) {
-  skippedAdminAttendance++;
-  return;
-}      const val = localStorage.getItem(nk);
+      const s = getSession();
+      const canAdminEditAttendance = s && (s.canEditAttendance === true || s.attendanceEditor === true || s.role === 'attendance_editor');
+      if (adminSession && ATTENDANCE_PAGE_KEYS.has(nk) && !canAdminEditAttendance) { skippedAdminAttendance++; return; }
+      const val = localStorage.getItem(nk);
       if (val === null) return;
       if (PERSONAL_KEYS.has(nk) || !hospitalName) userData[nk] = val;
       else hospitalData[nk] = val;
     });
+
     if (skippedAdminAttendance) {
       keysToSync.forEach(k => { if (ATTENDANCE_PAGE_KEYS.has(normalizeKey(k))) DIRTY_KEYS.delete(k); });
     }
+
     const safeHospitalData = hospitalName ? await filterUnsafeHospitalWrites(hospitalData) : {};
     const mustSaveUser = Object.keys(userData).length > 0;
     const mustSaveHospital = !!hospitalName && Object.keys(safeHospitalData).length > 0;
     if (!mustSaveUser && !mustSaveHospital) return { ok:true, saved:0, reason:'NOTHING_TO_SAVE' };
-    console.log('[MzamanaCloud] PUSH →', hospitalName || 'user_storage', 'user=' + Object.keys(userData).length, 'hospital=' + Object.keys(safeHospitalData).length);
+
+    console.log('[MzamanaCloud] PUSH →', includeOperational ? '[صريح]' : '[خفيف تلقائي]', hospitalName || 'user_storage', 'user=' + Object.keys(userData).length, 'hospital=' + Object.keys(safeHospitalData).length);
     const results = await Promise.all([
       mustSaveUser ? putStorageInBatches('/storage', userData, 300) : Promise.resolve({ saved:0 }),
       mustSaveHospital ? putStorageInBatches('/hospital-storage', safeHospitalData, 300) : Promise.resolve({ saved:0 })
     ]);
     if (mustSaveUser && !results[0]) throw new Error('USER_STORAGE_SAVE_FAILED');
     if (mustSaveHospital && !results[1]) throw new Error('HOSPITAL_STORAGE_SAVE_FAILED');
+
     const userSaved = (results[0] && results[0].saved) || 0;
     const hospitalSaved = (results[1] && results[1].saved) || 0;
     keysToSync.forEach(k => DIRTY_KEYS.delete(k));
     console.log('[MzamanaCloud] PUSH ✓ ' + userSaved + ' شخصي' + (hospitalSaved ? ' + ' + hospitalSaved + ' مشترك' : ''));
-    return { ok:true, userSaved, hospitalSaved, hospitalName: hospitalName || null };
+    return { ok:true, userSaved, hospitalSaved, hospitalName: hospitalName || null, explicit: includeOperational };
   }
 
-  let syncIndicator = null, syncInProgress = false;
   function showSyncStatus(status) {
     if (typeof window.najranSetSyncStatus === 'function') { window.najranSetSyncStatus(status); return; }
     const bar = document.getElementById('najran-auth-bar');
     if (!bar) return;
-    if (!syncIndicator) { syncIndicator = document.createElement('span'); syncIndicator.style.cssText = 'margin-right:12px;font-size:11px;opacity:.8;'; bar.appendChild(syncIndicator); }
+    if (!syncIndicator) {
+      syncIndicator = document.createElement('span');
+      syncIndicator.style.cssText = 'margin-right:12px;font-size:11px;opacity:.8;';
+      bar.appendChild(syncIndicator);
+    }
     syncIndicator.textContent = status === 'syncing' ? '⟳ جاري الحفظ...' : status === 'done' ? '✓ محفوظ' : status === 'error' ? '⚠ فشل الحفظ' : '☁ مزامنة';
     if (status === 'done') setTimeout(function(){ if (syncIndicator) syncIndicator.textContent = '☁ مزامنة'; }, 2000);
   }
-  async function syncNow() {
+
+  async function syncNow(options) {
+    options = options || {};
     if (syncInProgress) return { ok:true, skipped:true, reason:'SYNC_ALREADY_RUNNING' };
     syncInProgress = true;
     showSyncStatus('syncing');
     try {
-      const result = await pushToCloud();
+      const result = await pushToCloud({ includeOperational: options.includeOperational === true });
       showSyncStatus('done');
       return result || { ok:true };
     } catch (err) {
       console.error('[MzamanaCloud] فشل الرفع:', err);
       showSyncStatus('error');
       throw err;
-    } finally { syncInProgress = false; }
+    } finally {
+      syncInProgress = false;
+    }
   }
 
-  window.najranSyncNow = syncNow;
+  window.najranSyncNow = function(){ return syncNow({ includeOperational:true }); };
+  window.najranSyncSettingsNow = function(){ return syncNow({ includeOperational:false }); };
   window.najranPullFromCloud = pullFromCloud;
+  window.najranGetDirtyKeys = function(){ return Array.from(DIRTY_KEYS); };
+
   try {
     if (window.parent && window.parent !== window) {
-      window.parent.najranSyncNow = syncNow;
+      window.parent.najranSyncNow = window.najranSyncNow;
+      window.parent.najranSyncSettingsNow = window.najranSyncSettingsNow;
       window.parent.najranPullFromCloud = pullFromCloud;
     }
   } catch (_) {}
 
   async function init() {
     forceReviewOnlyBeforeInit();
-
     const session = getSession();
     if (!session) return;
     const hospitalName = getHospitalName();
     const reviewOnly = isReviewOnlySession();
-
     _origSetItem = localStorage.setItem.bind(localStorage);
 
     ensureHospitalContextClean();
 
     if (reviewOnly) console.log('[MzamanaCloud] وضع المراجعة [قراءة فقط]: «' + (hospitalName || '—') + '»');
-    else if (hospitalName) console.log('[MzamanaCloud] وضع المشاركة: «' + hospitalName + '»');
+    else if (hospitalName) console.log('[MzamanaCloud] وضع المشاركة المحلي أولاً: «' + hospitalName + '»');
     else console.log('[MzamanaCloud] وضع شخصي');
 
     let pulling = false;
@@ -568,24 +589,26 @@ if (adminSession && ATTENDANCE_PAGE_KEYS.has(nk) && !canAdminEditAttendance) {
 
     if (!reviewOnly) {
       updateHospitalActivityStatus();
-      setInterval(function(){ syncNow().catch(function(){}); }, SYNC_INTERVAL_MS);
+      setInterval(function(){
+        if (DIRTY_KEYS.size > 0) syncNow({ includeOperational:false }).catch(function(){});
+      }, SETTINGS_AUTO_SYNC_MS);
       window.addEventListener('beforeunload', function(){
-        if (DIRTY_KEYS.size > 0) pushToCloud().catch(function(){});
+        if (DIRTY_KEYS.size > 0) pushToCloud({ includeOperational:false }).catch(function(){});
       });
     } else {
       console.warn('[MzamanaCloud] REVIEW ONLY: الرفع والتحديث الدوري معطّلان');
     }
 
     let debounce = null;
-    function scheduleSync() {
+    function scheduleLightSync() {
       if (isReviewOnlySession()) { DIRTY_KEYS.clear(); return; }
       clearTimeout(debounce);
       updateHospitalActivityStatus();
-      debounce = setTimeout(function(){ syncNow().catch(function(){}); }, 30000);
+      debounce = setTimeout(function(){ syncNow({ includeOperational:false }).catch(function(){}); }, 45000);
     }
     if (!reviewOnly) {
-      document.addEventListener('input', scheduleSync);
-      document.addEventListener('change', scheduleSync);
+      document.addEventListener('input', scheduleLightSync);
+      document.addEventListener('change', scheduleLightSync);
     }
 
     localStorage.setItem = function(key, value) {
@@ -593,18 +616,19 @@ if (adminSession && ATTENDANCE_PAGE_KEYS.has(nk) && !canAdminEditAttendance) {
       _origSetItem(key, value);
       if (oldValue === value) return;
       if (isApplyingCloudPull) return;
-      if (isReviewOnlySession()) {
-        DIRTY_KEYS.clear();
-        return;
-      }
-      if (shouldSyncKey(key)) {
-        DIRTY_KEYS.add(normalizeKey(key));
+      if (isReviewOnlySession()) { DIRTY_KEYS.clear(); return; }
+      const nk = normalizeKey(key);
+      if (!shouldSyncKey(nk)) return;
+      DIRTY_KEYS.add(nk);
+      if (shouldAutoSyncKey(nk)) {
         clearTimeout(localStorage._syncTimeout);
-        localStorage._syncTimeout = setTimeout(function(){ syncNow().catch(function(){}); }, 30000);
+        localStorage._syncTimeout = setTimeout(function(){ syncNow({ includeOperational:false }).catch(function(){}); }, 45000);
+      } else {
+        console.log('[MzamanaCloud] LOCAL-FIRST: تم تعليم مفتاح تشغيلي بدون رفع تلقائي — ' + nk);
       }
     };
 
-    console.log('[MzamanaCloud] ✓ V7' + (reviewOnly ? ' [مراجعة]' : '') + ' — جاهز');
+    console.log('[MzamanaCloud] ✓ V8 Local-first' + (reviewOnly ? ' [مراجعة]' : '') + ' — جاهز');
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
