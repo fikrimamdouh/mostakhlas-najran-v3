@@ -83,7 +83,6 @@
     var explicitOnly = { 'request-visit': true, 'visit_review': true };
     var allowed = parseAllowedModules(session.allowedModules);
 
-    // نفس منطق React الحالي: عدم وجود allowedModules يعني السماح الافتراضي بكل شيء عدا الوحدات الصريحة.
     if (allowed === null) return !explicitOnly[moduleKey];
 
     return allowed.indexOf(moduleKey) > -1;
@@ -140,6 +139,11 @@
     reviewGenericScript.src = '/original/review-generic-tables.js';
     reviewGenericScript.defer = true;
     document.head.appendChild(reviewGenericScript);
+
+    var reviewConsumablesSummaryScript = document.createElement('script');
+    reviewConsumablesSummaryScript.src = '/original/review-consumables-summary-exact.js';
+    reviewConsumablesSummaryScript.defer = true;
+    document.head.appendChild(reviewConsumablesSummaryScript);
   }
 
   if (/\/original\/.*consumables\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) {
@@ -218,132 +222,21 @@
   }
 
   function checkNotifications() {
-    fetchNotifCount(function (count) { updateBell(count); });
-  }
-
-  function shouldAutoCheckNotifications() {
-    var current = window.location.pathname + window.location.search;
-    return /\/original\/approval\.html(?:$|[?#])/.test(current);
-  }
-
-  function logActualSignOut(done) {
-    var s = getSession() || session;
-    if (!s || !s.clerkToken) { done(); return; }
-
-    var payload = JSON.stringify({
-      action: 'تسجيل خروج فعلي',
-      details: JSON.stringify({
-        details: 'قام المستخدم بتسجيل الخروج من البرنامج',
-        page: location.pathname,
-        url: location.pathname + location.search,
-        title: document.title || null,
-        hospital: s.hospital || localStorage.getItem('hospitalName') || null,
-        company: s.companyName || localStorage.getItem('companyName') || null,
-        userName: s.name || null,
-        userEmail: s.email || null,
-        at: new Date().toISOString()
-      }),
-      entityType: 'auth',
-      entityId: String(s.userId || s.id || ''),
-      before: null,
-      after: null,
-      page: location.pathname
+    fetchNotifCount(function (count, allIds) {
+      updateBell(count);
+      var btn = document.getElementById('najran-bell-btn');
+      if (btn) {
+        btn.onclick = function () {
+          markAllSeen(allIds || []);
+          updateBell(0);
+          window.location.href = '/original/approval.html';
+        };
+      }
     });
-
-    var finished = false;
-    function finish() {
-      if (finished) return;
-      finished = true;
-      done();
-    }
-
-    try {
-      fetch('/api/audit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.clerkToken },
-        credentials: 'include',
-        keepalive: true,
-        body: payload
-      }).then(finish).catch(finish);
-      setTimeout(finish, 450);
-    } catch (_) {
-      finish();
-    }
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    var styleEl = document.createElement('style');
-    styleEl.textContent = [
-      '@keyframes naj-bell-ring{',
-        '0%,100%{transform:rotate(0)}',
-        '20%{transform:rotate(-18deg)}',
-        '40%{transform:rotate(18deg)}',
-        '60%{transform:rotate(-12deg)}',
-        '80%{transform:rotate(12deg)}',
-      '}'
-    ].join('');
-    document.head.appendChild(styleEl);
-
-    var bar = document.createElement('div');
-    bar.id = 'najran-auth-bar';
-    bar.className = 'no-print';
-    bar.style.cssText = [
-      'position:fixed','bottom:0','left:0','right:0','z-index:99999',
-      'background:linear-gradient(90deg,#0f2050,#1e3c72,#2a5298)',
-      'color:#fff','display:flex','align-items:center',
-      'justify-content:space-between','padding:5px 14px',
-      'font-family:Tajawal,Arial,sans-serif','font-size:13px',
-      'border-top:2px solid #d4af37','direction:rtl',
-      'gap:8px','min-height:42px'
-    ].join(';');
-
-    var hospital = session.hospital || session.company || '';
-    var hospitalHtml = hospital
-      ? '<span style="color:rgba(255,255,255,0.55);margin:0 4px">|</span><span style="color:#93c5fd;font-size:12px">🏥 ' + hospital + '</span>'
-      : '';
-
-    var roleTag = '';
-    if (session.role === 'admin')
-      roleTag = '<span style="background:#d4af37;color:#1e3c72;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:bold;margin-right:4px">مدير</span>';
-    else if (session.role === 'supervisor')
-      roleTag = '<span style="background:#f59e0b;color:#fff;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:bold;margin-right:4px">مشرف</span>';
-    else if (session.role === 'contract_supervisor')
-      roleTag = '<span style="background:#7c3aed;color:#fff;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:bold;margin-right:4px">مشرف عقد</span>';
-
-    bar.innerHTML =
-      '<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;overflow:hidden">' +
-        '<img src="/logo.png" style="height:24px;vertical-align:middle;flex-shrink:0" onerror="this.style.display=\'none\'">' +
-        '<span style="color:#d4af37;font-weight:bold;white-space:nowrap">تجمع نجران الصحي</span>' +
-        '<span style="color:rgba(255,255,255,0.35)">|</span>' +
-        '<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (session.name || 'مستخدم') + '</span>' +
-        roleTag + hospitalHtml +
-      '</div>' +
-      '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
-        '<span id="najran-sync-status" style="font-size:11px;opacity:0.7;white-space:nowrap">☁ مزامنة</span>' +
-        '<button id="najran-bell-btn" title="الإشعارات" style="position:relative;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);color:#fff;width:32px;height:28px;border-radius:7px;cursor:pointer;font-size:15px;display:inline-flex;align-items:center;justify-content:center;transition:background 0.2s;transform-origin:top center;flex-shrink:0">🔔<span id="najran-bell-badge" style="display:none;position:absolute;top:-5px;left:-5px;background:#ef4444;color:#fff;font-size:9px;font-weight:bold;border-radius:9px;min-width:16px;height:16px;align-items:center;justify-content:center;padding:0 3px;font-family:Arial,sans-serif;line-height:1;border:1.5px solid #0f2050">0</span></button>' +
-        '<a href="/original/approval.html" style="color:#d4af37;text-decoration:none;font-weight:bold;font-size:12px;white-space:nowrap">📋 المستخلصات</a>' +
-        '<a href="/dashboard" style="color:rgba(255,255,255,0.8);text-decoration:none;font-size:12px;white-space:nowrap">🏠 الرئيسية</a>' +
-        '<button id="najran-signout-btn" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;padding:3px 12px;border-radius:6px;cursor:pointer;font-family:Tajawal,Arial,sans-serif;font-size:12px;white-space:nowrap">خروج</button>' +
-      '</div>';
-
-    if (window.self === window.top) {
-      document.body.style.paddingBottom = '44px';
-      document.body.appendChild(bar);
-      document.getElementById('najran-bell-btn').addEventListener('click', function () {
-        fetchNotifCount(function (count, allIds) {
-          markAllSeen(allIds);
-          updateBell(0);
-          window.location.href = '/original/approval.html';
-        });
-      });
-      document.getElementById('najran-signout-btn').addEventListener('click', function () {
-        window.najranSignOut();
-      });
-    }
-
-    if (shouldAutoCheckNotifications()) {
-      setTimeout(checkNotifications, 1500);
-      setInterval(checkNotifications, 10 * 60 * 1000);
-    }
+    checkNotifications();
+    setInterval(checkNotifications, 60000);
   });
 })();
