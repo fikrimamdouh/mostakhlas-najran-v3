@@ -84,10 +84,10 @@ export default function ExtractsStats() {
   const [view, setView] = useState<"hospitals" | "details">("hospitals");
 
   const { data: extracts = [], isLoading, refetch } = useQuery<Extract[]>({
-    queryKey: ["/api/submitted-extracts/all"],
+    queryKey: ["/api/submitted-extracts-lite/all"],
     queryFn: async () => {
       const token = await getToken();
-      const res = await fetch("/api/submitted-extracts", {
+       const res = await fetch("/api/submitted-extracts-lite", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: "include",
       });
