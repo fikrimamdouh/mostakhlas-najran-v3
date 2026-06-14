@@ -10,12 +10,47 @@ const SETTINGS_STORAGE_KEYS = [
   "contractData", "contractDetails", "contractNumber", "contractType",
   "contractStartDate", "contractEndDate", "contractSignatureData",
   "extractMonth", "extractYear", "extractNumber", "extractStart", "extractEnd",
-  "extractFromDate", "extractToDate",
+  "extractFromDate", "extractToDate", "paymentNumber",
   "hospitalName", "companyName", "directPurchaseRatio",
   "settings_main", "settings_advanced",
   "dynamicSignatures", "contractorSignature", "appTitles_v1",
   "admin_staff", "contract_foundation_data"
 ];
+
+const SETTINGS_STORAGE_SET = new Set(SETTINGS_STORAGE_KEYS);
+const EXTRACT_CTX_PREFIX = "__extractCtx::";
+
+function sanitizeExtractContextKey(value: unknown): string {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  return raw
+    .replace(/\s+/g, "_")
+    .replace(/[^\p{L}\p{N}_\-.]/gu, "_")
+    .slice(0, 140);
+}
+
+function requestedExtractContext(req: any): string {
+  return sanitizeExtractContextKey(req.query?.extractContextKey || req.query?.extractKey || req.body?.extractContextKey || req.body?.extractKey || "");
+}
+
+function isContextScopedKey(key: unknown): boolean {
+  return String(key || "").startsWith(EXTRACT_CTX_PREFIX);
+}
+
+function scopedStorageKey(contextKey: string, key: string): string {
+  const normalized = normalizeKey(key);
+  if (!contextKey || SETTINGS_STORAGE_SET.has(normalized)) return normalized;
+  if (isContextScopedKey(normalized)) return normalized;
+  return `${EXTRACT_CTX_PREFIX}${contextKey}::${normalized}`;
+}
+
+function unscopedFromContextKey(storageKey: string, contextKey: string): { key: string; matchesContext: boolean; isScoped: boolean } {
+  const key = String(storageKey || "");
+  if (!isContextScopedKey(key)) return { key, matchesContext: false, isScoped: false };
+  const prefix = `${EXTRACT_CTX_PREFIX}${contextKey}::`;
+  if (contextKey && key.startsWith(prefix)) return { key: key.slice(prefix.length), matchesContext: true, isScoped: true };
+  return { key, matchesContext: false, isScoped: true };
+}
 
 const getDbUser = async (clerkId: string) => {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkId)).limit(1);
@@ -263,7 +298,8 @@ router.get("/", requireAuth, async (req: any, res) => {
     }
 
     const filters = requestedFilters(req);
-    const keyPredicate = buildStorageKeyPredicate(hospitalStorageTable.storageKey, filters);
+    const contextKey = requestedExtractContext(req);
+    const keyPredicate = contextKey ? null : buildStorageKeyPredicate(hospitalStorageTable.storageKey, filters);
     const whereClause = keyPredicate
       ? and(eq(hospitalStorageTable.hospitalName, resolved.hospital), keyPredicate)
       : eq(hospitalStorageTable.hospitalName, resolved.hospital);
@@ -272,7 +308,17 @@ router.get("/", requireAuth, async (req: any, res) => {
 
     const result: Record<string, string> = {};
 for (const row of rows) {
-  result[row.storageKey] = row.storageValue;
+  const rawKey = String(row.storageKey || "");
+  const ctx = unscopedFromContextKey(rawKey, contextKey);
+  if (ctx.isScoped && !ctx.matchesContext) continue;
+  if (!ctx.isScoped) {
+    const normalized = normalizeKey(ctx.key);
+    if (contextKey && SETTINGS_STORAGE_SET.has(normalized)) result[normalized] = row.storageValue;
+    else if (!contextKey) result[normalized] = row.storageValue;
+    else if (result[normalized] == null) result[normalized] = row.storageValue;
+    continue;
+  }
+  result[normalizeKey(ctx.key)] = row.storageValue;
 }
 
 const migratedLegacyAttendance = 0;
@@ -284,6 +330,7 @@ return res.json({
   migratedLegacyAttendance,
   hospital: resolved.hospital,
   reviewOnly: resolved.reviewOnly,
+  extractContextKey: contextKey || null,
   scope: filters ? filters.scope : "all",
 });
   } catch (err) {
@@ -310,14 +357,16 @@ router.put("/", requireAuth, async (req: any, res) => {
     const { data } = req.body as { data: Record<string, string> };
     if (!data || typeof data !== "object") return res.status(400).json({ error: "Invalid data" });
 
+    const contextKey = requestedExtractContext(req);
     const entries = Object.entries(data);
-    if (entries.length === 0) return res.json({ saved: 0, hospital: dbUser.hospital });
+    if (entries.length === 0) return res.json({ saved: 0, hospital: dbUser.hospital, extractContextKey: contextKey || null });
 
     for (const [key, value] of entries) {
+      const storageKey = scopedStorageKey(contextKey, key);
       await db.insert(hospitalStorageTable)
         .values({
           hospitalName: dbUser.hospital,
-          storageKey: key,
+          storageKey,
           storageValue: String(value),
           updatedAt: new Date(),
           updatedByUserId: dbUser.id,
@@ -332,7 +381,7 @@ router.put("/", requireAuth, async (req: any, res) => {
         });
     }
 
-    return res.json({ saved: entries.length, hospital: dbUser.hospital });
+    return res.json({ saved: entries.length, hospital: dbUser.hospital, extractContextKey: contextKey || null });
   } catch (err) {
     req.log.error({ err }, "Failed to save hospital storage");
     return res.status(500).json({ error: "Internal server error" });
@@ -346,63 +395,24 @@ router.get("/info", requireAuth, async (req: any, res) => {
     if (!dbUser || dbUser.status !== "approved") return res.status(403).json({ error: "Forbidden" });
 
     const resolved = await resolveReadHospital(req, dbUser);
+    if (resolved.error) return res.status(403).json({ error: resolved.error });
+    if (!resolved.hospital) return res.json({ hospital: null, count: 0, reviewOnly: false });
 
-    if (resolved.error) {
-      return res.status(403).json({ error: resolved.error });
-    }
-
-    if (!resolved.hospital) {
-      return res.json({ hospital: null, count: 0, reviewOnly: false });
-    }
-
-    const rows = await db
-      .select({ id: hospitalStorageTable.id })
-      .from(hospitalStorageTable)
-      .where(eq(hospitalStorageTable.hospitalName, resolved.hospital));
+    const rows = await db.select().from(hospitalStorageTable).where(eq(hospitalStorageTable.hospitalName, resolved.hospital));
 
     return res.json({
       hospital: resolved.hospital,
       count: rows.length,
       reviewOnly: resolved.reviewOnly,
+      updatedAt: rows.reduce((latest, row: any) => {
+        const t = row.updatedAt ? new Date(row.updatedAt).getTime() : 0;
+        return t > latest ? t : latest;
+      }, 0)
     });
   } catch (err) {
     req.log.error({ err }, "Failed to get hospital storage info");
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-// TEMP ADMIN CLEANUP — remove wrong attendance keys for a hospital
-router.delete("/cleanup-attendance", requireAuth, async (req: any, res) => {
-  try {
-    const dbUser = await getDbUser(req.clerkUserId);
-    if (!dbUser || dbUser.status !== "approved") {
-      return res.status(403).json({ error: "Forbidden" });
-    }
 
-    const role = String(dbUser.role || "").toLowerCase();
-    if (!["admin", "super_admin", "administrator"].includes(role)) {
-      return res.status(403).json({ error: "Admin only" });
-    }
-
-    const hospital = String(req.query?.hospital || "").trim();
-    if (!hospital) {
-      return res.status(400).json({ error: "Missing hospital" });
-    }
-
-    await db.delete(hospitalStorageTable).where(
-      and(
-        eq(hospitalStorageTable.hospitalName, hospital),
-        inArray(hospitalStorageTable.storageKey, LEGACY_ATTENDANCE_KEYS)
-      )
-    );
-
-    return res.json({
-      ok: true,
-      hospital,
-      deletedKeys: LEGACY_ATTENDANCE_KEYS,
-    });
-  } catch (err) {
-    req.log.error({ err }, "Failed to cleanup attendance keys");
-    return res.status(500).json({ error: "Internal server error" });
-  }
-});
 export default router;
