@@ -6,6 +6,8 @@
 (function () {
   var BASE = window.location.origin;
   var BUILD_V = '20260614b';
+  var NOTIF_INTERVAL_MS = 300000;
+  var notifFetchInProgress = false;
 
   function getSession() {
     try {
@@ -181,14 +183,16 @@
   function fetchNotifCount(callback) {
     var s = getSession();
     if (!s) return;
+    if (notifFetchInProgress) return;
     var age = Date.now() - (s.timestamp || 0);
     var token = (s.clerkToken && age < 55000) ? s.clerkToken : null;
     if (!token) {
       callback(0, []);
       return;
     }
+    notifFetchInProgress = true;
     var headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token };
-    fetch('/api/submitted-extracts', { headers: headers, credentials: 'include' })
+    fetch('/api/submitted-extracts-lite', { headers: headers, credentials: 'include' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
         if (!data || !data.extracts) { callback(0, []); return; }
@@ -210,7 +214,8 @@
         }
         callback(unseen.length, data.extracts.map(function (e) { return e.id; }));
       })
-      .catch(function () { callback(0, []); });
+      .catch(function () { callback(0, []); })
+      .finally(function () { notifFetchInProgress = false; });
   }
 
   function updateBell(count) {
@@ -243,6 +248,6 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     checkNotifications();
-    setInterval(checkNotifications, 60000);
+    setInterval(checkNotifications, NOTIF_INTERVAL_MS);
   });
 })();
