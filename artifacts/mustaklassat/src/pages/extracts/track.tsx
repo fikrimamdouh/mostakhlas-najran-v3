@@ -63,16 +63,17 @@ const STATUS_CONFIG: Record<ExtractStatus, { label: string; color: string; bg: s
 function useSubmittedExtracts() {
   const { getToken } = useAuth();
   return useQuery<{ extracts: SubmittedExtract[]; total: number }>({
-    queryKey: ["/api/submitted-extracts"],
+    queryKey: ["/api/submitted-extracts-lite"],
     queryFn: async () => {
       const token = await getToken();
-      const res = await fetch("/api/submitted-extracts", {
+      const res = await fetch("/api/submitted-extracts-lite", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json();
     },
-    refetchInterval: 30000,
+    refetchInterval: 300000,
   });
 }
 
@@ -90,7 +91,7 @@ function useUpdateStatus() {
       if (!res.ok) throw new Error("Failed to update");
       return res.json();
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/submitted-extracts"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/submitted-extracts-lite"] }),
   });
 }
 
@@ -187,7 +188,6 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
   };
 
   const handleRevise = () => {
-    // Store revision ID in localStorage then navigate to HTML page
     localStorage.setItem("najran_revision_extract_id", String(extract.id));
     window.location.href = TYPE_PAGES[extract.extractType] || "/original/attendance.html";
   };
@@ -202,7 +202,6 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
   return (
     <div className="bg-white rounded-2xl shadow-sm border overflow-hidden transition-all"
       style={{ borderColor: extract.status === "needs_revision" ? "#fed7aa" : extract.status === "rejected" ? "#fecaca" : "#e5e7eb", direction: "rtl" }}>
-      {/* Header */}
       <div
         className="flex items-center justify-between p-5 cursor-pointer hover:bg-gray-50 transition-colors"
         onClick={() => setExpanded(!expanded)}
@@ -231,10 +230,8 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
         </div>
       </div>
 
-      {/* Expanded details */}
       {expanded && (
         <div className="border-t px-5 pb-5 pt-4 space-y-4" style={{ borderColor: "#f3f4f6" }}>
-          {/* Revision / Rejection banners for the owner */}
           {canRevise && extract.status === "needs_revision" && (
             <RevisionBanner extract={extract} onRevise={handleRevise} />
           )}
@@ -242,7 +239,6 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
             <RejectedBanner extract={extract} onRevise={handleRevise} />
           )}
 
-          {/* Info grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
               { icon: <Building2 className="h-4 w-4" />, label: "الشركة", value: extract.companyName },
@@ -257,7 +253,6 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
             ))}
           </div>
 
-          {/* Parts checklist */}
           <div>
             <p className="text-xs font-semibold text-gray-400 mb-2">مكونات المستخلص</p>
             <div className="flex flex-wrap gap-2">
@@ -271,7 +266,6 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
             </div>
           </div>
 
-          {/* Timeline */}
           <div className="text-xs space-y-1" style={{ color: "#9ca3af" }}>
             <p>تاريخ الرفع: {fmt(extract.createdAt)}</p>
             {extract.revisionCount > 0 && extract.revisedAt && (
@@ -282,7 +276,6 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
             {extract.approvedAt && <p>تاريخ الاعتماد: {fmt(extract.approvedAt)}{extract.approvedBy ? ` · بواسطة: ${extract.approvedBy}` : ""}</p>}
           </div>
 
-          {/* Admin notes display */}
           {extract.adminNotes && extract.status !== "needs_revision" && extract.status !== "rejected" && (
             <div className="rounded-xl p-3 text-sm" style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
               <p className="font-semibold text-amber-700 mb-1">ملاحظات المراجع:</p>
@@ -290,7 +283,6 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
             </div>
           )}
 
-          {/* Admin actions */}
           {isAdmin && extract.status !== "approved" && (
             <div className="space-y-3 pt-1 border-t" style={{ borderColor: "#f3f4f6" }}>
               <p className="text-xs font-semibold text-gray-400 pt-1">إجراءات المراجع</p>
@@ -372,7 +364,6 @@ export default function ExtractsTrack() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6" style={{ direction: "rtl" }}>
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-extrabold" style={{ color: "#1e3c72" }}>متابعة المستخلصات</h1>
@@ -396,7 +387,6 @@ export default function ExtractsTrack() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {([
           { key: "submitted", label: "بانتظار المراجعة", color: "#2a5298", bg: "#eff6ff" },
@@ -414,7 +404,6 @@ export default function ExtractsTrack() {
         ))}
       </div>
 
-      {/* Filter tabs */}
       <div className="flex gap-2 flex-wrap">
         {([
           { key: "all", label: `الكل (${counts.all})` },
@@ -431,7 +420,6 @@ export default function ExtractsTrack() {
         ))}
       </div>
 
-      {/* List */}
       {isLoading ? (
         <div className="text-center py-16 text-gray-400">
           <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-3 opacity-40" />
