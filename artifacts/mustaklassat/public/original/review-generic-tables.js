@@ -1,4 +1,4 @@
-/* review-generic-tables.js - professional non-labor review tables + attendance source fallback. Extra saved snapshot appendix is hidden from display. No source data/calculations are changed. */
+/* review-generic-tables.js - professional extract review tables: attendance, performance, consumables. No source data/calculations are changed. */
 (function () {
   'use strict';
   if (!/\/original\/approval\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) return;
@@ -329,6 +329,176 @@
     sec.innerHTML = '<h3>الحضور والانصراف</h3>' + html;
   }
 
+  var PERFORMANCE_DEPTS = [
+    { key: 'cleaning', label: 'قسم النظافة' },
+    { key: 'electricity', label: 'قسم الكهرباء' },
+    { key: 'agriculture', label: 'قسم الزراعة' },
+    { key: 'civil', label: 'قسم المدني' },
+    { key: 'mechanics', label: 'قسم الميكانيكا' },
+    { key: 'laundry', label: 'قسم الغسيل' },
+    { key: 'security', label: 'قسم الأمن' },
+    { key: 'new_section_8', label: 'جدول الأداء الثامن' }
+  ];
+
+  function deductionRateByPerformance(percentage) {
+    percentage = Math.floor(num(percentage));
+    if (percentage >= 86 && percentage <= 100) return 0;
+    if (percentage === 85) return 1;
+    if (percentage === 84) return 2;
+    if (percentage === 83) return 2.5;
+    if (percentage === 82) return 3;
+    if (percentage === 81) return 3.5;
+    if (percentage === 80) return 4;
+    if (percentage === 79) return 4.75;
+    if (percentage === 78) return 5.5;
+    if (percentage === 77) return 5.75;
+    if (percentage === 76) return 6;
+    if (percentage === 75) return 6.25;
+    if (percentage === 74) return 6.5;
+    if (percentage === 73) return 6.75;
+    if (percentage === 72) return 7;
+    if (percentage === 71) return 7.25;
+    if (percentage === 70) return 7.5;
+    if (percentage === 69) return 7.75;
+    if (percentage === 68) return 8;
+    if (percentage === 67) return 8.25;
+    if (percentage === 66) return 8.5;
+    if (percentage === 65) return 8.75;
+    if (percentage === 64) return 9;
+    if (percentage === 63) return 9.25;
+    if (percentage === 62) return 9.5;
+    if (percentage === 61) return 9.75;
+    if (percentage === 60) return 10;
+    if (percentage === 59) return 11;
+    if (percentage === 58) return 12;
+    if (percentage === 57) return 13;
+    if (percentage === 56) return 14;
+    if (percentage === 55) return 15;
+    if (percentage === 54) return 16;
+    if (percentage === 53) return 17;
+    if (percentage === 52) return 18;
+    if (percentage === 51) return 19;
+    if (percentage <= 50) return 20;
+    return 0;
+  }
+
+  function savedPerformanceTable(snapshot, dept) {
+    var direct = getAny(snapshot, ['tableData_' + dept.key]);
+    if (direct) return direct;
+    var keys = Object.keys(snapshot || {});
+    for (var i = 0; i < keys.length; i++) {
+      if (norm(keys[i]) === 'tableData_' + dept.key) return parse(snapshot[keys[i]]) || snapshot[keys[i]];
+    }
+    return null;
+  }
+
+  function buildPerformanceFromSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return '';
+
+    var blocks = '', certRows = '', shown = 0;
+    var totalAllocated = 0, totalDue = 0, totalDeducted = 0, totalScore = 0, totalMax = 0;
+
+    PERFORMANCE_DEPTS.forEach(function (dept) {
+      var saved = savedPerformanceTable(snapshot, dept);
+      if (!saved || typeof saved !== 'object') return;
+
+      var rows = Array.isArray(saved.rows) ? saved.rows : [];
+      if (!rows.length && saved.amount == null) return;
+
+      var amount = num(saved.amount);
+      var maxSum = 0, scoreSum = 0;
+      var body = rows.map(function (r, i) {
+        var activity = first(r, ['activity', 'name', 'item', 'title']) || '—';
+        var maxScore = num(first(r, ['maxScore', 'max', 'maximum']));
+        var score = num(first(r, ['score', 'value', 'degree']));
+        maxSum += maxScore;
+        scoreSum += score;
+        return '<tr><td>' + (i + 1) + '</td><td class="nm">' + esc(activity) + '</td><td>' + esc(maxScore) + '</td><td><b>' + esc(score) + '</b></td></tr>';
+      }).join('');
+
+      var pct = maxSum > 0 ? (scoreSum / maxSum) * 100 : 0;
+      var deductionRate = deductionRateByPerformance(pct);
+      var deducted = (deductionRate / 100) * amount;
+      var due = amount - deducted;
+
+      shown++;
+      totalAllocated += amount;
+      totalDue += due;
+      totalDeducted += deducted;
+      totalScore += scoreSum;
+      totalMax += maxSum;
+
+      if (!body) body = '<tr><td colspan="4" class="rv-empty">لا توجد بنود محفوظة لهذا الجدول</td></tr>';
+
+      blocks += '<div class="rv-block rv-print-block rv-performance-block">' +
+        '<div class="rv-block-title"><h4>' + esc(dept.label) + '</h4><span>' + rows.length + ' بند</span></div>' +
+        '<div class="rv-substats">' +
+          statCard('المبلغ المخصص', plain(amount), 'primary') +
+          statCard('التقييم', esc(scoreSum + '/' + maxSum), 'primary') +
+          statCard('النسبة', esc(maxSum > 0 ? pct.toFixed(2) + '%' : '—')) +
+          statCard('غرامة الأداء', plain(deducted), deducted > 0 ? 'warn' : 'ok') +
+          statCard('المستحق', plain(due), 'ok') +
+        '</div>' +
+        '<div class="rv-scroll"><table class="rv-table generic"><thead><tr><th>م</th><th>النشاط</th><th>الدرجة القصوى</th><th>تقدير المستخدم</th></tr></thead><tbody>' +
+          body +
+          '<tr class="total"><td colspan="2">المجموع</td><td><b>' + esc(maxSum) + '</b></td><td><b>' + esc(scoreSum) + '</b></td></tr>' +
+        '</tbody></table></div>' +
+      '</div>';
+
+      certRows += '<tr><td>' + (shown) + '</td><td class="nm">' + esc(dept.label) + '</td><td>' + plain(amount) + '</td><td>' + esc(scoreSum + '/' + maxSum) + '</td><td>' + esc(maxSum > 0 ? pct.toFixed(0) + '%' : '—') + '</td><td>' + plain(deducted) + '</td><td><b>' + plain(due) + '</b></td></tr>';
+    });
+
+    var storedDeduction = num(getAny(snapshot, ['performanceTotalDeduction']));
+    if (storedDeduction && Math.abs(storedDeduction - totalDeducted) > 0.5) totalDeducted = storedDeduction;
+
+    if (!blocks && totalDeducted <= 0) return '';
+    if (!certRows) certRows = '<tr><td colspan="7" class="rv-empty">لا توجد جداول أداء محفوظة، لكن توجد غرامة أداء محفوظة داخل المستخلص</td></tr>';
+
+    return '<section id="rv-performance-review" class="rv-section-break rv-print-block">' +
+      '<h3>جداول الأداء</h3>' +
+      '<div class="rv-period-note">تم عرض جداول الأداء من لقطة المستخلص المحفوظة وقت الرفع، بنفس القيم التي أدخلها المستخدم.</div>' +
+      '<div class="rv-main-stats">' +
+        statCard('عدد جداول الأداء', shown + ' جدول', 'primary') +
+        statCard('إجمالي الدرجات', totalScore + '/' + totalMax, 'primary') +
+        statCard('إجمالي غرامة الأداء', plain(totalDeducted), totalDeducted > 0 ? 'warn' : 'ok') +
+        statCard('إجمالي المستحق بعد الأداء', plain(totalDue), 'ok') +
+      '</div>' +
+      '<div class="rv-block rv-print-block"><div class="rv-block-title"><h4>شهادة الأداء الشهري</h4><span>' + shown + ' بند</span></div><div class="rv-scroll"><table class="rv-table generic"><thead><tr><th>م</th><th>القسم</th><th>المبلغ المخصص</th><th>التقدير</th><th>النسبة</th><th>الغرامة</th><th>المستحق</th></tr></thead><tbody>' +
+        certRows +
+        '<tr class="total"><td colspan="2">الإجمالي</td><td><b>' + plain(totalAllocated) + '</b></td><td><b>' + totalScore + '/' + totalMax + '</b></td><td>—</td><td><b>' + plain(totalDeducted) + '</b></td><td><b>' + plain(totalDue) + '</b></td></tr>' +
+      '</tbody></table></div></div>' +
+      blocks +
+    '</section>';
+  }
+
+  async function replacePerformanceIfPossible() {
+    var body = document.getElementById('rv-body');
+    if (!body || !currentExtractId) return;
+
+    var doc = body.querySelector('.rv-doc');
+    if (!doc || doc.dataset.performanceSnapshotFor === String(currentExtractId)) return;
+
+    var e = await fetchExtract(currentExtractId);
+    if (!e) return;
+
+    var html = buildPerformanceFromSnapshot(snapshotFromExtract(e));
+    doc.dataset.performanceSnapshotFor = String(currentExtractId);
+
+    var old = doc.querySelector('#rv-performance-review');
+    if (old) old.remove();
+    if (!html) return;
+
+    var holder = document.createElement('div');
+    holder.innerHTML = html;
+    var sec = holder.firstElementChild;
+    var attendance = doc.querySelector('#rv-attendance');
+    var decision = doc.querySelector('#rv-decision');
+
+    if (attendance && attendance.parentNode) attendance.parentNode.insertBefore(sec, attendance.nextSibling);
+    else if (decision && decision.parentNode) decision.parentNode.insertBefore(sec, decision);
+    else doc.appendChild(sec);
+  }
+
   function enhancePre(pre) {
     if (!pre || pre.dataset.genericEnhanced === '1') return;
     pre.dataset.genericEnhanced = '1';
@@ -373,6 +543,7 @@
   function run() {
     document.querySelectorAll('#rv-body pre.rv-pre').forEach(enhancePre);
     replaceAttendanceIfPossible();
+    replacePerformanceIfPossible();
     replaceEmptyIfPossible();
     appendExtraIfPossible();
   }
