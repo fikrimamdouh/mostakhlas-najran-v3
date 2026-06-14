@@ -43,7 +43,7 @@ const requireApproved = async (req: any, res: any, next: any) => {
 };
 
 // GET /api/submitted-extracts-lite
-// Lightweight list for notification badges only. It intentionally excludes extractData snapshots.
+// Lightweight list for badges, dashboards, and status tracking. It intentionally excludes extractData snapshots.
 router.get("/", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const role = req.currentUser.role;
@@ -64,11 +64,25 @@ router.get("/", requireAuth, requireApproved, async (req: any, res) => {
     const rows = await db
       .select({
         id: submittedExtractsTable.id,
+        extractType: submittedExtractsTable.extractType,
+        companyName: submittedExtractsTable.companyName,
+        contractNumber: submittedExtractsTable.contractNumber,
+        hospitalName: submittedExtractsTable.hospitalName,
+        periodMonth: submittedExtractsTable.periodMonth,
+        totalAmount: submittedExtractsTable.totalAmount,
         status: submittedExtractsTable.status,
+        revisionCount: submittedExtractsTable.revisionCount,
+        revisedAt: submittedExtractsTable.revisedAt,
+        notes: submittedExtractsTable.notes,
+        adminNotes: submittedExtractsTable.adminNotes,
+        approvedBy: submittedExtractsTable.approvedBy,
+        approvedAt: submittedExtractsTable.approvedAt,
         updatedAt: submittedExtractsTable.updatedAt,
         createdAt: submittedExtractsTable.createdAt,
         userId: submittedExtractsTable.userId,
-        hospitalName: submittedExtractsTable.hospitalName,
+        hospitalNameFromUser: usersTable.hospital,
+        submittedByName: usersTable.name,
+        submittedByEmail: usersTable.email,
         submittedByHospital: usersTable.hospital,
       })
       .from(submittedExtractsTable)
