@@ -91,15 +91,16 @@ export default function ViewerDashboard() {
   const [filterType, setFilterType] = useState("all");
 
   const { data: extracts = [], isLoading, refetch, isFetching } = useQuery<Extract[]>({
-    queryKey: ["/api/submitted-extracts/viewer"],
+    queryKey: ["/api/submitted-extracts-lite/viewer"],
     queryFn: async () => {
       const token = await getToken();
-      const res = await fetch("/api/submitted-extracts", {
+      const res = await fetch("/api/submitted-extracts-lite", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to load");
-      return res.json();
+      const data = await res.json();
+      return Array.isArray(data) ? data : (data.extracts ?? []);
     },
     enabled: !!me,
   });
