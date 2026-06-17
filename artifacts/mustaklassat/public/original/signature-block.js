@@ -2,6 +2,7 @@
  * signature-block.js — نظام التواقيع الموحد
  * يستخدم في صفحات المستخلصات.
  * تعديل مهم للحضور: يبني بلوك توقيع مستقل تحت كل جدول حضور، بدل ظهور التوقيع مرة واحدة في آخر صفحة.
+ * تعديل المكاتب الإدارية: التواقيع تُحفظ لكل مكتب/مرفق على حدة، وليست مفتاحًا عامًا لكل صفحة المكاتب.
  */
 (function (global) {
   'use strict';
@@ -58,16 +59,8 @@
 .sb-cancel-btn { padding:10px 30px; border:1.5px solid #e2e8f0; border-radius:12px; background:#fff; color:#64748b; font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; }
 .sb-status { font-size:12px; color:#16a34a; text-align:center; margin-top:10px; min-height:18px; }
 .sb-empty { text-align:center; color:#94a3b8; font-size:13px; padding:16px; }
-.print-signatures.sb-attendance-table-signatures {
-  display: none !important;
-  visibility: hidden;
-  opacity: 0;
-  margin: 16px 0 0;
-  padding-top: 10px;
-  border-top: 1px solid #333;
-  page-break-inside: avoid;
-  break-inside: avoid;
-}.print-signatures.sb-attendance-table-signatures h4 { text-align:center; margin:0 0 10px; font-size:13px; font-weight:800; color:#000; }
+.print-signatures.sb-attendance-table-signatures { display:none !important; visibility:hidden; opacity:0; margin:16px 0 0; padding-top:10px; border-top:1px solid #333; page-break-inside:avoid; break-inside:avoid; }
+.print-signatures.sb-attendance-table-signatures h4 { text-align:center; margin:0 0 10px; font-size:13px; font-weight:800; color:#000; }
 @media print {
   .sb-bar,.sb-btn,.sb-toggle-row { display:none !important; }
   #sb-container-attendance { display:none !important; }
@@ -87,42 +80,50 @@
 }
 `;
 
-  function esc(v) {
-    return String(v || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
+  function esc(v) { return String(v || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function getToken() { try { const s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}'); return s && s.clerkToken ? s.clerkToken : null; } catch { return null; } }
+  async function apiFetch(path, opts = {}) { const token = getToken(); const headers = { 'Content-Type':'application/json', ...(opts.headers || {}) }; if (token) headers.Authorization = 'Bearer ' + token; try { const r = await fetch('/api' + path, { ...opts, headers, credentials:'include' }); return r.ok ? r.json() : null; } catch { return null; } }
+  function loadPrefs(pageKey) { try { return JSON.parse(localStorage.getItem(PREFS_PFX + pageKey) || '{}'); } catch { return {}; } }
+  function savePrefs(pageKey, prefs) { localStorage.setItem(PREFS_PFX + pageKey, JSON.stringify(prefs || {})); if (instances[pageKey]) instances[pageKey].prefs = prefs || {}; }
+  function injectCSS() { if (document.getElementById('sb-styles')) return; const el = document.createElement('style'); el.id = 'sb-styles'; el.textContent = CSS; document.head.appendChild(el); }
 
-  function getToken() {
-    try {
-      const s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
-      return s && s.clerkToken ? s.clerkToken : null;
-    } catch { return null; }
+  function getAdminOfficeNames() { try { if (typeof global.getCenterNames === 'function') return global.getCenterNames(); } catch {} try { return JSON.parse(localStorage.getItem('adminOfficeNames_v1') || '{}'); } catch { return {}; } }
+  function detectAdminOfficeCenterKey() {
+    try { if (global.activeCenterKeyForManagement) return global.activeCenterKeyForManagement; } catch {}
+    const visible = Array.from(document.querySelectorAll('[id^="table-div-"]')).find(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; });
+    if (visible?.id) return visible.id.replace('table-div-', '');
+    const title = document.getElementById('center-main-title')?.textContent || '';
+    const names = getAdminOfficeNames();
+    const found = Object.entries(names).find(([, name]) => title && String(name || '').trim() && title.includes(name));
+    if (found) return found[0];
+    const selected = document.getElementById('admin-office-load-center')?.value || document.getElementById('center-select-import')?.value;
+    if (selected) return selected;
+    return null;
   }
-
-  async function apiFetch(path, opts = {}) {
-    const token = getToken();
-    const headers = { 'Content-Type':'application/json', ...(opts.headers || {}) };
-    if (token) headers.Authorization = 'Bearer ' + token;
-    try {
-      const r = await fetch('/api' + path, { ...opts, headers, credentials:'include' });
-      return r.ok ? r.json() : null;
-    } catch { return null; }
+  function isAdminOfficesPage() { return /admin_offices_(attendance|consumables)\.html/.test(location.href) || !!document.getElementById('sb-container-admin_offices'); }
+  function resolveKey(pageKey) {
+    if (pageKey !== 'admin_offices' || !isAdminOfficesPage()) return pageKey;
+    const centerKey = detectAdminOfficeCenterKey();
+    return centerKey ? 'admin_offices_' + centerKey : pageKey;
   }
-
-  function loadPrefs(pageKey) {
-    try { return JSON.parse(localStorage.getItem(PREFS_PFX + pageKey) || '{}'); } catch { return {}; }
+  function labelForKey(pageKey) {
+    if (!pageKey || !pageKey.startsWith('admin_offices_')) return '';
+    const centerKey = pageKey.replace('admin_offices_', '');
+    return getAdminOfficeNames()[centerKey] || centerKey;
   }
-
-  function savePrefs(pageKey, prefs) {
-    localStorage.setItem(PREFS_PFX + pageKey, JSON.stringify(prefs || {}));
-    if (instances[pageKey]) instances[pageKey].prefs = prefs || {};
-  }
-
-  function injectCSS() {
-    if (document.getElementById('sb-styles')) return;
-    const el = document.createElement('style');
-    el.id = 'sb-styles';
-    el.textContent = CSS;
-    document.head.appendChild(el);
+  function ensureInstance(pageKey, options = {}) {
+    const key = resolveKey(pageKey);
+    if (instances[key]) return key;
+    let sigs = [];
+    try { sigs = JSON.parse(localStorage.getItem(PREFIX + key) || '[]'); } catch {}
+    const prefs = loadPrefs(key);
+    instances[key] = { sigs: Array.isArray(sigs) ? sigs : [], options: options || {}, prefs };
+    injectCSS();
+    buildDialogDOM();
+    installPrintHooks();
+    renderAll(key);
+    pullCloud(key);
+    return key;
   }
 
   function buildDialogDOM() {
@@ -130,20 +131,7 @@
     const ov = document.createElement('div');
     ov.id = 'sb-overlay';
     ov.className = 'sb-overlay';
-    ov.innerHTML = `
-      <div class="sb-dialog" id="sb-dialog">
-        <h3>تعديل التواقيع</h3>
-        <p class="sb-dialog-sub">أضف أو عدّل أو احذف التواقيع — تتزامن لجميع مستخدمي نفس المستشفى</p>
-        <div id="sb-fields"></div>
-        <button class="sb-add-btn" id="sb-add-btn">＋ إضافة توقيع جديد</button>
-        <div class="sb-print-opts">
-          <div class="sb-print-opts-title">🖨️ خيارات الطباعة</div>
-          <div class="sb-print-opt-item"><input type="checkbox" id="sb-opt-sigs" checked><label for="sb-opt-sigs">تضمين التواقيع في الطباعة<small>عند الإيقاف لن يظهر قسم التواقيع في نسخة الطباعة</small></label></div>
-          <div class="sb-print-opt-item"><input type="checkbox" id="sb-opt-stamp" checked><label for="sb-opt-stamp">تضمين الختم في الطباعة<small>عند الإيقاف لن يظهر الختم الدائري</small></label></div>
-        </div>
-        <div class="sb-dialog-footer"><button class="sb-save-btn" id="sb-save-btn">💾 حفظ</button><button class="sb-cancel-btn" id="sb-cancel-btn">إلغاء</button></div>
-        <div class="sb-status" id="sb-status"></div>
-      </div>`;
+    ov.innerHTML = `<div class="sb-dialog" id="sb-dialog"><h3 id="sb-dialog-title">تعديل التواقيع</h3><p class="sb-dialog-sub" id="sb-dialog-sub">أضف أو عدّل أو احذف التواقيع — تتزامن لجميع مستخدمي نفس المستشفى</p><div id="sb-fields"></div><button class="sb-add-btn" id="sb-add-btn">＋ إضافة توقيع جديد</button><div class="sb-print-opts"><div class="sb-print-opts-title">🖨️ خيارات الطباعة</div><div class="sb-print-opt-item"><input type="checkbox" id="sb-opt-sigs" checked><label for="sb-opt-sigs">تضمين التواقيع في الطباعة<small>عند الإيقاف لن يظهر قسم التواقيع في نسخة الطباعة</small></label></div><div class="sb-print-opt-item"><input type="checkbox" id="sb-opt-stamp" checked><label for="sb-opt-stamp">تضمين الختم في الطباعة<small>عند الإيقاف لن يظهر الختم الدائري</small></label></div></div><div class="sb-dialog-footer"><button class="sb-save-btn" id="sb-save-btn">💾 حفظ</button><button class="sb-cancel-btn" id="sb-cancel-btn">إلغاء</button></div><div class="sb-status" id="sb-status"></div></div>`;
     document.body.appendChild(ov);
     ov.addEventListener('click', e => { if (e.target === ov) closeDialog(); });
     document.getElementById('sb-add-btn').addEventListener('click', () => addRow());
@@ -151,207 +139,95 @@
     document.getElementById('sb-cancel-btn').addEventListener('click', closeDialog);
   }
 
-  function addRow(title, name) {
-    const fields = document.getElementById('sb-fields');
-    if (!fields) return;
-    const row = document.createElement('div');
-    row.className = 'sb-field-row';
-    row.innerHTML = `<input type="text" class="sb-f-title" placeholder="المسمى الوظيفي" value="${esc(title || '')}"><input type="text" class="sb-f-name" placeholder="الاسم" value="${esc(name || '')}"><button class="sb-del-btn" title="حذف">✕</button>`;
-    row.querySelector('.sb-del-btn').addEventListener('click', () => row.remove());
-    fields.appendChild(row);
-  }
+  function addRow(title, name) { const fields = document.getElementById('sb-fields'); if (!fields) return; const row = document.createElement('div'); row.className = 'sb-field-row'; row.innerHTML = `<input type="text" class="sb-f-title" placeholder="المسمى الوظيفي" value="${esc(title || '')}"><input type="text" class="sb-f-name" placeholder="الاسم" value="${esc(name || '')}"><button class="sb-del-btn" title="حذف">✕</button>`; row.querySelector('.sb-del-btn').addEventListener('click', () => row.remove()); fields.appendChild(row); }
 
   function openDialog(pageKey) {
-    if (!pageKey || !instances[pageKey]) {
-      console.warn('SignatureBlock.open: pageKey غير مُهيَّأ —', pageKey);
-      return;
-    }
+    if (!pageKey || !instances[pageKey]) { console.warn('SignatureBlock.open: pageKey غير مُهيَّأ —', pageKey); return; }
     activeKey = pageKey;
+    const label = labelForKey(pageKey);
+    const titleEl = document.getElementById('sb-dialog-title');
+    const subEl = document.getElementById('sb-dialog-sub');
+    if (titleEl) titleEl.textContent = label ? 'تعديل تواقيع: ' + label : 'تعديل التواقيع';
+    if (subEl) subEl.textContent = label ? 'هذه التواقيع خاصة بهذا المكتب/المرفق فقط ولا ترتبط بباقي المكاتب.' : 'أضف أو عدّل أو احذف التواقيع — تتزامن لجميع مستخدمي نفس المستشفى';
     const sigs = Array.isArray(instances[pageKey].sigs) ? instances[pageKey].sigs : [];
     const prefs = instances[pageKey].prefs || {};
     const fields = document.getElementById('sb-fields');
     if (!fields) return;
     fields.innerHTML = '';
-    if (!sigs.length) addRow();
-    else sigs.forEach(s => addRow(s.title, s.name));
-    const st = document.getElementById('sb-status');
-    if (st) st.textContent = '';
-    const optSigs = document.getElementById('sb-opt-sigs');
-    const optStamp = document.getElementById('sb-opt-stamp');
+    if (!sigs.length) addRow(); else sigs.forEach(s => addRow(s.title, s.name));
+    const st = document.getElementById('sb-status'); if (st) st.textContent = '';
+    const optSigs = document.getElementById('sb-opt-sigs'); const optStamp = document.getElementById('sb-opt-stamp');
     if (optSigs) optSigs.checked = prefs.includeSigs !== false;
     if (optStamp) optStamp.checked = prefs.includeStamp !== false;
     document.getElementById('sb-overlay').classList.add('open');
     document.body.style.overflow = 'hidden';
   }
 
-  function closeDialog() {
-    const ov = document.getElementById('sb-overlay');
-    if (ov) ov.classList.remove('open');
-    document.body.style.overflow = '';
-    activeKey = null;
-  }
+  function closeDialog() { const ov = document.getElementById('sb-overlay'); if (ov) ov.classList.remove('open'); document.body.style.overflow = ''; activeKey = null; }
 
   async function saveDialog() {
-    const key = activeKey;
-    if (!key || !instances[key]) return;
+    const key = activeKey; if (!key || !instances[key]) return;
     const rows = document.querySelectorAll('#sb-fields .sb-field-row');
     const sigs = [];
-    rows.forEach(row => {
-      const title = row.querySelector('.sb-f-title')?.value.trim() || '';
-      const name = row.querySelector('.sb-f-name')?.value.trim() || '';
-      if (title) sigs.push({ title, name });
-    });
-    const prefs = {
-      includeSigs: document.getElementById('sb-opt-sigs')?.checked !== false,
-      includeStamp: document.getElementById('sb-opt-stamp')?.checked !== false,
-    };
-    instances[key].sigs = sigs;
-    instances[key].prefs = prefs;
-    localStorage.setItem(PREFIX + key, JSON.stringify(sigs));
-    savePrefs(key, prefs);
-    renderAll(key);
-    closeDialog();
-    const result = await apiFetch('/hospital-storage', {
-      method:'PUT',
-      body: JSON.stringify({ data: { [PREFIX + key]: JSON.stringify(sigs), [PREFS_PFX + key]: JSON.stringify(prefs) } })
-    });
-    const st = document.getElementById('sb-status');
-    if (st) st.textContent = result ? '✅ تم الحفظ والتزامن' : '💾 تم الحفظ محلياً';
+    rows.forEach(row => { const title = row.querySelector('.sb-f-title')?.value.trim() || ''; const name = row.querySelector('.sb-f-name')?.value.trim() || ''; if (title) sigs.push({ title, name }); });
+    const prefs = { includeSigs: document.getElementById('sb-opt-sigs')?.checked !== false, includeStamp: document.getElementById('sb-opt-stamp')?.checked !== false };
+    instances[key].sigs = sigs; instances[key].prefs = prefs;
+    localStorage.setItem(PREFIX + key, JSON.stringify(sigs)); savePrefs(key, prefs); renderAll(key); closeDialog();
+    const result = await apiFetch('/hospital-storage', { method:'PUT', body: JSON.stringify({ data: { [PREFIX + key]: JSON.stringify(sigs), [PREFS_PFX + key]: JSON.stringify(prefs) } }) });
+    const st = document.getElementById('sb-status'); if (st) st.textContent = result ? '✅ تم الحفظ والتزامن' : '💾 تم الحفظ محلياً';
   }
 
-  function buildHTML(sigs, showStamp) {
-    if (!Array.isArray(sigs) || sigs.length === 0) return `<div class="sb-empty">لا توجد توقيعات — اضغط "تعديل التواقيع" للإضافة</div>`;
-    const items = sigs.map(s => `<div class="sb-item"><div class="sb-item-title">${esc(s.title)}:</div><div class="sb-item-line"></div><div class="sb-item-name">${esc(s.name || '')}</div></div>`).join('');
-    const stamp = showStamp !== false ? `<div class="sb-item sb-stamp">${STAMP_SVG}</div>` : '';
-    return `<div class="sb-grid">${items}${stamp}</div>`;
-  }
+  function buildHTML(sigs, showStamp) { if (!Array.isArray(sigs) || sigs.length === 0) return `<div class="sb-empty">لا توجد توقيعات — اضغط "تعديل التواقيع" للإضافة</div>`; const items = sigs.map(s => `<div class="sb-item"><div class="sb-item-title">${esc(s.title)}:</div><div class="sb-item-line"></div><div class="sb-item-name">${esc(s.name || '')}</div></div>`).join(''); const stamp = showStamp !== false ? `<div class="sb-item sb-stamp">${STAMP_SVG}</div>` : ''; return `<div class="sb-grid">${items}${stamp}</div>`; }
 
   function ensureAttendanceSignatureContainers() {
     const tables = Array.from(document.querySelectorAll('.department-table')).filter(section => section.querySelector('table[id$="-table"]'));
-
-    // امسح فقط بلوكات الحضور داخل كل جدول ثم أعد بناءها. لا تستخدم flag مرة واحدة؛ لأن renderTables قد يعيد بناء/تغيير الجداول بعد التهيئة.
-    tables.forEach(section => {
-      section.querySelectorAll('.print-signatures').forEach(el => el.remove());
-    });
-
-    tables.forEach((section, index) => {
-      const table = section.querySelector('table[id$="-table"]');
-      if (!table) return;
-      const block = document.createElement('div');
-      block.className = 'print-signatures sb-attendance-table-signatures';
-      block.setAttribute('data-attendance-signature-block', String(index + 1));
-      block.setAttribute('data-sb-table-owner', table.id || String(index + 1));
-      block.innerHTML = `<h4>التواقيع</h4><div class="print-signatures-grid" data-sb-page="attendance" data-sb-table="${esc(table.id)}"></div>`;
-      section.appendChild(block);
-    });
-
+    tables.forEach(section => { section.querySelectorAll('.print-signatures').forEach(el => el.remove()); });
+    tables.forEach((section, index) => { const table = section.querySelector('table[id$="-table"]'); if (!table) return; const block = document.createElement('div'); block.className = 'print-signatures sb-attendance-table-signatures'; block.setAttribute('data-attendance-signature-block', String(index + 1)); block.setAttribute('data-sb-table-owner', table.id || String(index + 1)); block.innerHTML = `<h4>التواقيع</h4><div class="print-signatures-grid" data-sb-page="attendance" data-sb-table="${esc(table.id)}"></div>`; section.appendChild(block); });
     console.log('[SignatureBlock] تم تجهيز التواقيع تحت كل جدول حضور:', tables.length);
   }
 
   function applyPrintClasses(pageKey) {
-    const inst = instances[pageKey];
-    const prefs = inst?.prefs || {};
-    const includeSigs = prefs.includeSigs !== false;
-    const includeStamp = prefs.includeStamp !== false;
-    const wrap = document.getElementById('sb-container-' + pageKey)?.closest('.sb-wrap');
+    const inst = instances[pageKey]; const prefs = inst?.prefs || {}; const includeSigs = prefs.includeSigs !== false; const includeStamp = prefs.includeStamp !== false;
+    const wrap = document.getElementById('sb-container-' + pageKey)?.closest('.sb-wrap') || (pageKey.startsWith('admin_offices_') ? document.getElementById('sb-container-admin_offices')?.closest('.sb-wrap') : null);
     if (wrap) wrap.classList.toggle('sb-no-print-sigs', !includeSigs);
-    document.querySelectorAll('[data-sb-page="' + pageKey + '"]').forEach(el => {
-      el.classList.toggle('sb-no-print-sigs-inner', !includeSigs);
-      if (el.parentElement) el.parentElement.classList.toggle('sb-no-print-sigs-inner', !includeSigs);
-    });
+    document.querySelectorAll('[data-sb-page="' + pageKey + '"]').forEach(el => { el.classList.toggle('sb-no-print-sigs-inner', !includeSigs); if (el.parentElement) el.parentElement.classList.toggle('sb-no-print-sigs-inner', !includeSigs); });
     document.querySelectorAll('[data-sb-page="' + pageKey + '"] .sb-stamp, #sb-container-' + pageKey + ' .sb-stamp').forEach(el => el.classList.toggle('sb-no-print-stamp', !includeStamp));
-    const badge = document.getElementById('sb-badge-' + pageKey);
-    if (badge) {
-      badge.textContent = (includeSigs ? 'التواقيع ✓' : 'التواقيع ✗') + ' | ' + (includeStamp ? 'الختم ✓' : 'الختم ✗');
-      badge.style.color = (includeSigs || includeStamp) ? '#16a34a' : '#94a3b8';
-    }
+    const badge = document.getElementById('sb-badge-' + pageKey); if (badge) { badge.textContent = (includeSigs ? 'التواقيع ✓' : 'التواقيع ✗') + ' | ' + (includeStamp ? 'الختم ✓' : 'الختم ✗'); badge.style.color = (includeSigs || includeStamp) ? '#16a34a' : '#94a3b8'; }
   }
 
   function renderAll(pageKey) {
-    const inst = instances[pageKey];
-    if (!inst) return;
+    const inst = instances[pageKey]; if (!inst) return;
     if (pageKey === 'attendance') ensureAttendanceSignatureContainers();
-    const prefs = inst.prefs || {};
-    const html = prefs.includeSigs === false ? '' : buildHTML(inst.sigs, inst.options.showStamp !== false && prefs.includeStamp !== false);
-    const main = document.getElementById('sb-container-' + pageKey);
+    const prefs = inst.prefs || {}; const html = prefs.includeSigs === false ? '' : buildHTML(inst.sigs, inst.options.showStamp !== false && prefs.includeStamp !== false);
+    const main = document.getElementById('sb-container-' + pageKey) || (pageKey.startsWith('admin_offices_') ? document.getElementById('sb-container-admin_offices') : null);
     if (main) main.innerHTML = html;
     document.querySelectorAll('[data-sb-page="' + pageKey + '"]').forEach(el => { el.innerHTML = html; });
     setTimeout(() => applyPrintClasses(pageKey), 0);
   }
 
-  function installPrintHooks() {
-    if (printHooksInstalled) return;
-    printHooksInstalled = true;
-    global.addEventListener('beforeprint', function () {
-      if (instances.attendance) {
-        renderAll('attendance');
-        setTimeout(function () { renderAll('attendance'); }, 0);
-      }
-    });
-  }
+  function installPrintHooks() { if (printHooksInstalled) return; printHooksInstalled = true; global.addEventListener('beforeprint', function () { if (instances.attendance) { renderAll('attendance'); setTimeout(function () { renderAll('attendance'); }, 0); } }); }
 
   async function pullCloud(pageKey) {
-    const data = await apiFetch('/hospital-storage');
-    if (!data?.data || !instances[pageKey]) return;
-    const raw = data.data[PREFIX + pageKey];
-    if (raw) {
-      try {
-        const sigs = JSON.parse(raw);
-        instances[pageKey].sigs = Array.isArray(sigs) ? sigs : [];
-        localStorage.setItem(PREFIX + pageKey, JSON.stringify(instances[pageKey].sigs));
-      } catch {}
-    }
-    const rawPrefs = data.data[PREFS_PFX + pageKey];
-    if (rawPrefs) {
-      try {
-        const prefs = JSON.parse(rawPrefs);
-        instances[pageKey].prefs = prefs || {};
-        localStorage.setItem(PREFS_PFX + pageKey, JSON.stringify(instances[pageKey].prefs));
-      } catch {}
-    }
+    const data = await apiFetch('/hospital-storage'); if (!data?.data || !instances[pageKey]) return;
+    const raw = data.data[PREFIX + pageKey]; if (raw) { try { const sigs = JSON.parse(raw); instances[pageKey].sigs = Array.isArray(sigs) ? sigs : []; localStorage.setItem(PREFIX + pageKey, JSON.stringify(instances[pageKey].sigs)); } catch {} }
+    const rawPrefs = data.data[PREFS_PFX + pageKey]; if (rawPrefs) { try { const prefs = JSON.parse(rawPrefs); instances[pageKey].prefs = prefs || {}; localStorage.setItem(PREFS_PFX + pageKey, JSON.stringify(instances[pageKey].prefs)); } catch {} }
     renderAll(pageKey);
   }
 
   const SB = {
     init(pageKey, options = {}) {
-      let sigs = [];
-      try { sigs = JSON.parse(localStorage.getItem(PREFIX + pageKey) || '[]'); } catch {}
+      let sigs = []; try { sigs = JSON.parse(localStorage.getItem(PREFIX + pageKey) || '[]'); } catch {}
       const prefs = loadPrefs(pageKey);
       instances[pageKey] = { sigs: Array.isArray(sigs) ? sigs : [], options, prefs };
-      const setup = () => {
-        injectCSS();
-        buildDialogDOM();
-        installPrintHooks();
-        renderAll(pageKey);
-        pullCloud(pageKey);
-      };
-      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup);
-      else setup();
+      const setup = () => { injectCSS(); buildDialogDOM(); installPrintHooks(); renderAll(pageKey); pullCloud(pageKey); };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup); else setup();
     },
-    open(pageKey) { openDialog(pageKey); },
-    getSigs(pageKey) {
-      if (!pageKey || !instances[pageKey]) return [];
-      const sigs = instances[pageKey].sigs;
-      return Array.isArray(sigs) ? sigs.slice() : [];
-    },
-    getSig(pageKey, index) {
-      const sigs = this.getSigs(pageKey);
-      if (index < 0 || index >= sigs.length) return null;
-      return sigs[index];
-    },
-    getPrefs(pageKey) {
-      if (!pageKey || !instances[pageKey]) return { includeSigs:true, includeStamp:true };
-      const prefs = instances[pageKey].prefs || {};
-      return { includeSigs:prefs.includeSigs !== false, includeStamp:prefs.includeStamp !== false };
-    },
-    buildPrintHTML(pageKey) {
-      if (!pageKey || !instances[pageKey]) return '';
-      const inst = instances[pageKey];
-      const prefs = inst.prefs || {};
-      if (prefs.includeSigs === false) return '';
-      return buildHTML(inst.sigs, inst.options.showStamp !== false && prefs.includeStamp !== false);
-    },
-    rerender(pageKey) { renderAll(pageKey); }
+    open(pageKey) { const key = ensureInstance(pageKey, instances[pageKey]?.options || { showStamp:true }); openDialog(key); },
+    getSigs(pageKey) { const key = ensureInstance(pageKey, instances[pageKey]?.options || { showStamp:true }); const sigs = instances[key]?.sigs || []; return Array.isArray(sigs) ? sigs.slice() : []; },
+    getSig(pageKey, index) { const sigs = this.getSigs(pageKey); if (index < 0 || index >= sigs.length) return null; return sigs[index]; },
+    getPrefs(pageKey) { const key = ensureInstance(pageKey, instances[pageKey]?.options || { showStamp:true }); const prefs = instances[key]?.prefs || {}; return { includeSigs:prefs.includeSigs !== false, includeStamp:prefs.includeStamp !== false }; },
+    buildPrintHTML(pageKey) { const key = ensureInstance(pageKey, instances[pageKey]?.options || { showStamp:true }); const inst = instances[key]; const prefs = inst?.prefs || {}; if (prefs.includeSigs === false) return ''; return buildHTML(inst.sigs, inst.options.showStamp !== false && prefs.includeStamp !== false); },
+    rerender(pageKey) { const key = ensureInstance(pageKey, instances[pageKey]?.options || { showStamp:true }); renderAll(key); }
   };
 
   global.SignatureBlock = SB;
