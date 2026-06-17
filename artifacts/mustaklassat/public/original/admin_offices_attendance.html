@@ -24,7 +24,6 @@
     <div id="particles-js-bg"></div>
 
     <div class="container">
-        
         <header class="header-info">
             <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-right">
             <img src="najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي" class="logo-left">
@@ -84,13 +83,11 @@
             <div id="main-grid-view">
                 <div id="centers-grid-container">
                     <h2><i class="fas fa-building"></i> المكاتب الإدارية والمرافق الصحية</h2>
-                    <div id="centers-grid">
-                    </div>
+                    <div id="centers-grid"></div>
                 </div>
                 <div id="special-categories-container">
                     <h2><i class="fas fa-star"></i> الفئات الخاصة</h2>
-                    <div id="special-categories-grid">
-                    </div>
+                    <div id="special-categories-grid"></div>
                 </div>
             </div>
 
@@ -99,19 +96,11 @@
                     <button class="back-button" onclick="backToGrid()"><i class="fas fa-arrow-right"></i> العودة للقائمة</button>
                     <div id="center-main-title" class="dynamic-title"></div>
                 </div>
-                
                 <div class="tabs-container">
-                    <button class="tab-link active" onclick="openTab(event, 'attendance-tab')">
-                        <i class="fas fa-calendar-check"></i> الحضور والانصراف
-                    </button>
-                    <button class="tab-link" onclick="openTab(event, 'performance-tab')">
-                        <i class="fas fa-chart-line"></i> تقييم الأداء
-                    </button>
-                    <button class="tab-link" onclick="openTab(event, 'achievement-tab')">
-                        <i class="fas fa-file-invoice-dollar"></i> شهادة الإنجاز
-                    </button>
+                    <button class="tab-link active" onclick="openTab(event, 'attendance-tab')"><i class="fas fa-calendar-check"></i> الحضور والانصراف</button>
+                    <button class="tab-link" onclick="openTab(event, 'performance-tab')"><i class="fas fa-chart-line"></i> تقييم الأداء</button>
+                    <button class="tab-link" onclick="openTab(event, 'achievement-tab')"><i class="fas fa-file-invoice-dollar"></i> شهادة الإنجاز</button>
                 </div>
-
                 <div id="tab-content-container">
                     <div id="attendance-tab" class="tab-content" style="display: block;"></div>
                     <div id="performance-tab" class="tab-content"></div>
@@ -141,80 +130,47 @@
             </div>
             <div id="sb-container-admin_offices" class="sb-wrap"></div>
         </section>
-
     </div>
 
 <div id="dialog-overlay" class="overlay" style="display: none;"></div>
 <div id="management-dialog" class="dialog" style="display: none;"></div>
 <div id="form-dialog" class="dialog" style="display: none;"></div>
 <div id="signature-dialog" class="dialog wide-dialog" style="display: none;"></div>
+<footer><p>© 2025 فرع وزارة الصحة بمنطقة نجران - المكاتب الإدارية والمرافق الصحية</p></footer>
 
-    <footer>
-        <p>© 2025 فرع وزارة الصحة بمنطقة نجران - المكاتب الإدارية والمرافق الصحية</p>
-    </footer>
-
-    <script src="admin_offices_attendance.js"></script>
-    <script src="performance_logic.js"></script>
-    <script src="achievement_logic.js"></script>
-    <script src="/original/admin_offices_attendance_patch.js?v=20260617d"></script>
+<script src="admin_offices_attendance.js"></script>
+<script src="performance_logic.js"></script>
+<script src="achievement_logic.js"></script>
+<script src="/original/admin_offices_attendance_patch.js?v=20260617d"></script>
 <script>
 (function(){
+  const WORKSHOP_NAME='الورش (صيانة وإصلاح السيارات)';
+  const WORKSHOP_ROWS=[
+    ['مشرف موقع','5','محمد صالح مبخوت اليامي','سعودي','1113625121'],['فني ميكانيكا بنزين','4','صالح جمعان حسين آل مسعد','سعودي','1081223651'],['فني ميكانيكا بنزين','4','محمد على صالح ال خريم','سعودي','1089521528'],['فني ميكانيكا بنزين','4','ماثنراج موهان','هندي','2525748907'],['فني ميكانيكا بنزين','4','جالحسدين رياض الدين','بنجلاديشي','2148128735'],['فني ميكانيكا بنزين','4','جويل ماهى نافارو','فلبيني','2473327340'],['فني ميكانيكا بنزين','4','ساتيش سيلاكانو','هندي','2474993686'],['فني ميكانيكا بنزين','4','شاغر','',''],['فني ميكانيكا ديزل','4','سعيد سلمان مسفر اليامي','سعودي','1093670774'],['فني ميكانيكا ديزل','4','فاروق منجور على','بنجلاديشي','2236624660'],['فني تبريد وتكييف سيارات','4','علي محمد علي اليامي','سعودي','1106767963'],['فني تبريد وتكييف سيارات','4','محمد شفيع الله مد ستير مياه','بنجلاديشي','2451841239'],['فني كهربائي سيارات','4','صالح احمد صغير آل يعلا','سعودي','1077105763'],['فني كهربائي سيارات','4','مد فريد حسين','بنجلاديشي','2479004273'],['فني كهربائي سيارات','4','بلال مياه','بنجلاديشي','2505929246'],['فني كهربائي سيارات','4','شاغر','',''],['فني سمكرة سيارات','4','حمد صالح ناصر المحامض','سعودي','1077102596'],['فني سمكرة سيارات','4','شاغر','',''],['دهان سيارات','5','جبران محمد علي آل مسرح','سعودي','1044583027'],['دهان سيارات','5','مد رقيب مد سلام','بنجلاديشي','2491206658'],['فني ميزان سيارات','4','حمد مطر حسين ال عاقلة','سعودي','1072616251'],['فني ميزان سيارات','4','شاغر','',''],['عامل زيت وبنشر','6','بيبلوب ميا مد بابول ميا','بنجلاديشي','2473382881'],['عامل زيت وبنشر','6','شاغر','',''],['عامل زيت وبنشر','6','شاغر','',''],['عامل زيت وبنشر','6','شاغر','',''],['عامل غسيل وتشحيم','6','محمد منير حسان','بنجلاديشي','2473326557'],['عامل غسيل وتشحيم','6','صديق رحمان عمر علي','بنجلاديشي','2473326706'],['عامل غسيل وتشحيم','6','شاغر','','']
+  ].map(r=>({jobTitle:r[0],category:r[1],name:r[2],nationality:r[3],iqamaId:r[4],salary:0,dept:'workshops'}));
   const FINES={1:{saudi:500,non_saudi:500},2:{saudi:500,non_saudi:500},3:{saudi:250,non_saudi:100},4:{saudi:180,non_saudi:80},5:{saudi:150,non_saudi:80},6:{saudi:20,non_saudi:20},7:{saudi:10,non_saudi:10},default:{saudi:0,non_saudi:0}};
-  const ST={ح:{name:'حاضر',isAbsence:false,isSpecial:false},غ:{name:'غائب',isAbsence:true,isSpecial:false},ج:{name:'إجازة',isAbsence:false,isSpecial:true},ش:{name:'شاغرة',isAbsence:false,isSpecial:true},ت:{name:'تحت الإجراء',isAbsence:false,isSpecial:true},ب:{name:'بداية العقد',isAbsence:false,isSpecial:true},ن:{name:'نهاية العقد',isAbsence:false,isSpecial:true}};
+  const ST={ح:{name:'حاضر',isSpecial:false},غ:{name:'غائب',isSpecial:false},ج:{name:'إجازة',isSpecial:true},ش:{name:'شاغرة',isSpecial:true},ت:{name:'تحت الإجراء',isSpecial:true},ب:{name:'بداية العقد',isSpecial:true},ن:{name:'نهاية العقد',isSpecial:true}};
   function data(){try{return getAttendanceData()}catch(_){return JSON.parse(localStorage.getItem('adminOfficesAttendanceData_v1')||'{}')}}
   function save(d){try{return saveAttendanceData(d)}catch(_){localStorage.setItem('adminOfficesAttendanceData_v1',JSON.stringify(d))}}
-  function period(){try{return getExtractPeriodDetails()}catch(_){return{daysInExtract:30,totalDaysInMonth:30,startDate:new Date()}}}
-  function contract(){try{return JSON.parse(localStorage.getItem('persistentContractData')||'{}')}catch(_){return{}}}
-  function isSaudi(n){return String(n||'سعودي').trim()==='سعودي'}
-  function calc(emp,p=period(),c=contract()){
-    const daysInExtract=p.daysInExtract||p.daysInMonth||30,totalDaysInMonth=p.totalDaysInMonth||30;
-    const salary=parseFloat(emp.salary)||0,daily=totalDaysInMonth>0?salary/totalDaysInMonth:0;
-    let cost=daily*daysInExtract;
-    if((c.contractType||'')==='شراء مباشر' && parseFloat(c.directPurchaseRatio)>0)cost+=cost*(parseFloat(c.directPurchaseRatio)/100);
-    let days=Array.isArray(emp.days)?emp.days.slice(0,daysInExtract):[];while(days.length<daysInExtract)days.push('ح');
-    let attendanceDays=0,absenceDays=0,deductionOnlyDays=0,specialCounts={};
-    days.forEach(x=>{if(x==='ح'||x==='ت')attendanceDays++;else if(x==='غ')absenceDays++;else deductionOnlyDays++;if(ST[x]?.isSpecial)specialCounts[x]=(specialCounts[x]||0)+1;});
-    const fineCfg=FINES[String(emp.category||'1')]||FINES.default;
-    const deduction=(absenceDays+deductionOnlyDays)*daily;
-    const absenceFine=absenceDays*(isSaudi(emp.nationality)?fineCfg.saudi:fineCfg.non_saudi);
-    const nationalityFine=parseFloat(emp.nationalityFine)||0;
-    const totalFine=absenceFine+nationalityFine;
-    const netSalary=cost-deduction-totalFine;
-    Object.assign(emp,{attendanceDays,absenceDays,deduction,absencePenalty:absenceFine,totalFine,netSalary});
-    return{days,cost,attendanceDays,absenceDays,deductionOnlyDays,deduction,absenceFine,nationalityFine,totalFine,netSalary,specialCounts};
-  }
-  function money(n){return (Number(n)||0).toFixed(2)}
-  function catColor(cat){try{return getCategoryColor(cat)}catch(_){return'#54a0ff'}}
-  function catText(cat){try{return getCategoryTextColor(cat)}catch(_){return'#fff'}}
   function names(){try{return getCenterNames()}catch(_){return JSON.parse(localStorage.getItem('adminOfficeNames_v1')||'{}')}}
   function orderedKeys(){const n=names();return Object.keys(n).sort((a,b)=>{if(a.startsWith('center_')&&b.startsWith('center_'))return parseInt(a.split('_')[1])-parseInt(b.split('_')[1]);if(a.startsWith('center_'))return-1;if(b.startsWith('center_'))return 1;return a.localeCompare(b);});}
-  function attSel(v,c,i,d){if(typeof createAttendanceSelect==='function')return createAttendanceSelect(v,c,i,d);return `<select onchange="updateEmployeeAttendance('${c}',${i},${d},this.value)"><option ${v==='ح'?'selected':''}>ح</option><option ${v==='غ'?'selected':''}>غ</option><option ${v==='ج'?'selected':''}>ج</option><option ${v==='ش'?'selected':''}>ش</option><option ${v==='ت'?'selected':''}>ت</option><option ${v==='ب'?'selected':''}>ب</option><option ${v==='ن'?'selected':''}>ن</option></select>`}
-  function natSel(v,c,i){if(typeof createNationalitySelect==='function')return createNationalitySelect(v,c,i);return `<input value="${v||''}" onchange="updateEmployeeField('${c}',${i},'nationality',this.value)">`}
-  window.populateAttendanceTableBody=function(centerKey){
-    const tbody=document.getElementById(`tbody-${centerKey}`);if(!tbody)return;const all=data(),rows=all[centerKey]||[],p=period();tbody.innerHTML='';
-    if(!rows.length){tbody.innerHTML=`<tr><td colspan="${14+(p.daysInExtract||30)}">لا يوجد موظفون في هذا المركز.</td></tr>`;const cap=document.getElementById(`total-${centerKey}`);if(cap)cap.innerHTML='<div class="table-summary-v2"><div class="summary-item"><span class="label">لا يوجد موظفين</span></div></div>';return;}
-    let totalCost=0,totalNet=0,totalDeduction=0,totalFine=0,employeesWithAbsence=0,specialTotals={};
-    const frag=document.createDocumentFragment();
-    rows.forEach((emp,i)=>{const r=calc(emp,p);totalCost+=r.cost;totalNet+=r.netSalary;totalDeduction+=r.deduction;totalFine+=r.totalFine;if(r.absenceDays>0)employeesWithAbsence++;Object.entries(r.specialCounts).forEach(([k,v])=>specialTotals[k]=(specialTotals[k]||0)+v);const tr=document.createElement('tr');const dayCells=r.days.map((x,d)=>`<td class="day-col">${attSel(x,centerKey,i,d)}</td>`).join('');let specialCells='';['ج','ش','ت','ب','ن'].forEach(code=>{specialCells+=`<td class="status-header status-${code.toLowerCase()}-col" style="display:none">${r.days.filter(x=>x===code).length}</td>`});tr.innerHTML=`<td>${i+1}</td><td class="job-title">${emp.jobTitle||''}</td><td class="category-col"><select class="category-select" style="background-color:${catColor(emp.category)};color:${catText(emp.category)};width:100%" onchange="updateEmployeeField('${centerKey}',${i},'category',this.value)">${[1,2,3,4,5,6,7].map(n=>`<option value="${n}" ${String(n)===String(emp.category)?'selected':''}>${n}</option>`).join('')}</select></td><td class="employee-name">${emp.name||''}</td>${dayCells}<td>${money(r.cost)}</td><td>${r.attendanceDays}</td><td>${r.absenceDays}</td><td>${money(r.deduction)}</td><td>${money(r.absenceFine)}</td><td>${money(r.netSalary)}</td><td>${natSel(emp.nationality,centerKey,i)}</td><td><input type="number" class="fine-input" value="${money(r.nationalityFine)}" onchange="updateEmployeeField('${centerKey}',${i},'nationalityFine',this.value)"></td><td><input type="text" class="iqama-input" value="${emp.iqamaId||''}" onchange="updateEmployeeField('${centerKey}',${i},'iqamaId',this.value)"></td>${specialCells}`;frag.appendChild(tr);});tbody.appendChild(frag);save(all);
-    const table=document.getElementById(`table-${centerKey}`);if(table){table.querySelectorAll('thead .status-header,tbody .status-header').forEach(x=>x.style.display='none');Object.keys(specialTotals).forEach(code=>table.querySelectorAll(`.status-${code.toLowerCase()}-col`).forEach(x=>x.style.display='table-cell'));}
-    let summary=`<div class="summary-item"><span class="label">عدد الموظفين</span><span class="value">${rows.length}</span></div><div class="summary-item"><span class="label">التكلفة للفترة</span><span class="value">${money(totalCost)}</span></div><div class="summary-item"><span class="label">إجمالي الحسم</span><span class="value">${money(totalDeduction)}</span></div><div class="summary-item"><span class="label">إجمالي الغرامات</span><span class="value">${money(totalFine)}</span></div><div class="summary-item"><span class="label">صافي الاستحقاق</span><span class="value net-total">${money(totalNet)}</span></div><div class="summary-item-divider">|</div><div class="summary-item"><span class="label">حضور</span><span class="value">${rows.length-employeesWithAbsence}</span></div><div class="summary-item"><span class="label">غياب</span><span class="value">${employeesWithAbsence}</span></div>`;
-    ['ج','ش','ت','ب','ن'].forEach(code=>{if(specialTotals[code]>0)summary+=`<div class="summary-item-divider">|</div><div class="summary-item"><span class="label">${ST[code].name}</span><span class="value">${specialTotals[code]}</span></div>`});const cap=document.getElementById(`total-${centerKey}`);if(cap)cap.innerHTML=`<div class="table-summary-v2">${summary}</div>`;try{initializeAttendanceSelects(tbody)}catch(_){};try{calculateAndDisplayGrandTotal()}catch(_){};
-  };
-  window.updateEmployeeAttendance=function(centerKey,employeeIndex,dayIndex,newStatus){const all=data();const emp=all[centerKey]?.[employeeIndex];if(!emp)return;const p=period();if(!Array.isArray(emp.days)||emp.days.length<(p.daysInExtract||30))emp.days=Array(p.daysInExtract||30).fill('ح').map((v,i)=>Array.isArray(emp.days)?(emp.days[i]||v):v);emp.days[dayIndex]=newStatus;calc(emp,p);save(all);populateAttendanceTableBody(centerKey);};
-  window.updateEmployeeField=function(centerKey,index,field,value){const all=data();const emp=all[centerKey]?.[index];if(!emp)return;emp[field]=value;calc(emp);save(all);populateAttendanceTableBody(centerKey);};
-  window.calculateAndDisplayGrandTotal=function(){const all=data();let count=0,cost=0,ded=0,fine=0,net=0;Object.values(all).forEach(arr=>(arr||[]).forEach(emp=>{const r=calc(emp);count++;cost+=r.cost;ded+=r.deduction;fine+=r.totalFine;net+=r.netSalary;}));[['grand-total-count',count],['grand-total-cost',money(cost)],['grand-total-deduction',money(ded)],['grand-total-fines',money(fine)],['grand-net-total',money(net)]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v;});};
-  window.updateGrandTotal=window.calculateAndDisplayGrandTotal;
-  window.calculateAndDisplayAchievement=function(centerKey){const tbody=document.getElementById(`ach-tbody-${centerKey}`);if(!tbody)return;const rows=(data()[centerKey]||[]);if(!rows.length){tbody.innerHTML='<tr><td colspan="7">لا يوجد بيانات موظفين لهذا المركز.</td></tr>';return;}let monthly=0,ded=0,absFine=0,natFine=0;rows.forEach(emp=>{const r=calc(emp);monthly+=parseFloat(emp.salary)||0;ded+=r.deduction;absFine+=r.absenceFine;natFine+=r.nationalityFine;});const perf=(JSON.parse(localStorage.getItem('performanceDeductions')||'{}')[centerKey])||0;const net=monthly-ded-absFine-perf-natFine;const fmt=n=>(Number(n)||0).toLocaleString('ar-SA',{style:'currency',currency:'SAR'});tbody.innerHTML=`<tr><td>العمالة</td><td>${fmt(monthly)}</td><td>${fmt(ded)}</td><td>${fmt(absFine)}</td><td>${fmt(perf)}</td><td>${fmt(natFine)}</td><td><strong>${fmt(net)}</strong></td></tr><tr class="total-row"><td>إجمالي المستحق للمقاول</td><td>${fmt(monthly)}</td><td>${fmt(ded)}</td><td>${fmt(absFine)}</td><td>${fmt(perf)}</td><td>${fmt(natFine)}</td><td><strong>${fmt(net)}</strong></td></tr><tr><td colspan="7" class="tafqeet-cell">إجمالي المستحق للمقاول فقط وقدره: ${typeof tafqit==='function'?tafqit(net):''}</td></tr>`;};
-  window.openImportDialog=function(){
-    const n=names();const opts=orderedKeys().map(k=>`<option value="${k}">${n[k]}</option>`).join('');
-    const content=`<div class="dialog-header"><h3><i class="fas fa-folder-open"></i> استيراد بيانات من Excel</h3><span class="close" onclick="closeDialog('management-dialog')">×</span></div><div class="dialog-body"><div style="background:#eef6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;margin-bottom:16px;text-align:center"><h4 style="color:#003087;margin-bottom:10px"><i class="fas fa-clipboard-list"></i> تامبليت الوظائف - الطريقة الموصى بها</h4><p style="font-size:.9rem;line-height:1.8;color:#374151;margin-bottom:12px">١. اضغط تحميل المناصب أولًا من الصفحة الرئيسية للمكاتب.<br>٢. عدل الأسماء والهويات والتكلفة في Excel.<br>٣. ارفع الملف هنا ليتم إدخال الموظفين في المكتب المختار.</p><div class="form-group"><label>اختر المكتب/المرفق:</label><select id="center-select-import">${opts}</select></div><input type="file" id="excel-file-input" accept=".xlsx,.xls" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;margin-top:8px"><button class="btn btn-success" onclick="handleSingleFileImport()" style="margin-top:12px"><i class="fas fa-file-import"></i> استيراد التامبليت</button></div><div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:16px;text-align:center"><h4 style="color:#374151;margin-bottom:10px"><i class="fas fa-folder"></i> استيراد Excel عادي</h4><input type="file" id="excel-file-input-normal" accept=".xlsx,.xls" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff"><button class="btn btn-success" onclick="runAdminOfficeNormalImport()" style="margin-top:12px"><i class="fas fa-file-import"></i> استيراد</button></div><div id="import-status-area" style="margin-top:14px"></div></div>`;
-    if(typeof openDialog==='function')openDialog(content,'management-dialog',true);else alert('نظام النوافذ غير جاهز. أعد تحميل الصفحة.');
-  };
-  window.runAdminOfficeNormalImport=function(){const src=document.getElementById('excel-file-input-normal');const dst=document.getElementById('excel-file-input');if(!src||!src.files.length)return alert('اختر ملف Excel أولاً.');try{const dt=new DataTransfer();dt.items.add(src.files[0]);dst.files=dt.files;}catch(_){alert('المتصفح منع نسخ الملف. ارفع الملف في خانة التامبليت بالأعلى.');return;}handleSingleFileImport();};
+  function period(){try{return getExtractPeriodDetails()}catch(_){return{daysInExtract:30,totalDaysInMonth:30}}}
+  function contract(){try{return JSON.parse(localStorage.getItem('persistentContractData')||'{}')}catch(_){return{}}}
+  function isSaudi(n){return String(n||'').trim()==='سعودي'}
+  function money(n){return (Number(n)||0).toFixed(2)}
+  function calc(emp,p=period(),c=contract()){const len=p.daysInExtract||30,total=p.totalDaysInMonth||30,sal=+emp.salary||0,daily=total?sal/total:0;let cost=daily*len;if((c.contractType||'')==='شراء مباشر'&&+c.directPurchaseRatio>0)cost+=cost*(+c.directPurchaseRatio/100);let days=Array.isArray(emp.days)?emp.days.slice(0,len):[];while(days.length<len)days.push('ح');let att=0,abs=0,dedOnly=0,special={};days.forEach(x=>{if(x==='ح'||x==='ت')att++;else if(x==='غ')abs++;else dedOnly++;if(ST[x]?.isSpecial)special[x]=(special[x]||0)+1;});const f=FINES[String(emp.category||1)]||FINES.default,ded=(abs+dedOnly)*daily,absFine=abs*(isSaudi(emp.nationality)?f.saudi:f.non_saudi),natFine=+emp.nationalityFine||0,net=cost-ded-absFine-natFine;Object.assign(emp,{attendanceDays:att,absenceDays:abs,deduction:ded,absencePenalty:absFine,totalFine:absFine+natFine,netSalary:net});return{days,cost,attendanceDays:att,absenceDays:abs,deduction:ded,absenceFine:absFine,nationalityFine:natFine,totalFine:absFine+natFine,netSalary:net,specialCounts:special};}
+  function daysArr(){return Array(period().daysInExtract||30).fill('ح')}
+  function normalizeRow(r){return{jobTitle:r.jobTitle||r.title||'',category:String(r.category||'1'),salary:+r.salary||0,nationality:r.nationality||'',name:r.name||r.employeeName||r.workerName||'',iqamaId:r.iqamaId||r.idNumber||r.identity||r.nationalId||'',nationalityFine:+r.nationalityFine||0,days:Array.isArray(r.days)?r.days:daysArr()};}
+  function auth(){let t=null;try{t=JSON.parse(localStorage.getItem('najran_session')||'{}').clerkToken||null}catch(_){}const h={'Content-Type':'application/json'};if(t)h.Authorization='Bearer '+t;return h;}
+  async function loadSaved(hospital){try{const r=await fetch('/api/admin/job-positions?hospital='+encodeURIComponent(hospital),{headers:auth(),credentials:'include'});if(r.ok){const j=await r.json();if(j?.rows?.length)return j.rows;}}catch(_){}if(String(hospital).includes('الورش'))return WORKSHOP_ROWS;return[];}
+  function renderAll(centerKey){try{if(typeof showCenterDetails==='function'&&document.getElementById('center-details-view')?.style.display!=='none')showCenterDetails(centerKey)}catch(_){}try{if(typeof renderCenterIcons==='function')renderCenterIcons()}catch(_){}try{calculateAndDisplayGrandTotal()}catch(_){}}
+  window.confirmLoadAdminOfficePositions=async function(){const centerKey=document.getElementById('admin-office-load-center')?.value;if(!centerKey)return alert('اختر المكتب/المرفق أولاً.');const office=names()[centerKey]||centerKey;const rows=await loadSaved(office);if(!rows.length)return alert('لا توجد مناصب محفوظة لـ '+office);const all=data(),current=(all[centerKey]||[]).length;if(current&&!confirm('وُجدت '+rows.length+' صف محفوظ لـ "'+office+'".\n\nسيتم الاستبدال الكامل. هل توافق؟'))return;if(!current&&!confirm('وُجدت '+rows.length+' صف محفوظ لـ "'+office+'".\n\nهل تريد تحميلها؟'))return;all[centerKey]=rows.map(normalizeRow);save(all);if(typeof closeDialog==='function')closeDialog('management-dialog');renderAll(centerKey);alert('✅ تم تحميل '+rows.length+' صف بالاسم والهوية والجنسية كما هي.');};
+  window.downloadAdminOfficeTemplate=async function(){const centerKey=document.getElementById('center-select-import')?.value;if(!centerKey)return alert('اختر المكتب/المرفق أولاً.');const office=names()[centerKey]||centerKey;let rows=[];const current=data()[centerKey]||[];if(current.length)rows=current;else rows=(await loadSaved(office)).map(normalizeRow);if(!rows.length)return alert('لا توجد بيانات/مناصب محفوظة لهذا المكتب.');const aoa=[['اسم الموظف','رقم الهوية / الإقامة','مسمى الوظيفة','التكلفة الشهرية','الفئة','الجنسية'],...rows.map(r=>[r.name||'',r.iqamaId||'',r.jobTitle||'',+r.salary||0,r.category||'1',r.nationality||''])];const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:30},{wch:22},{wch:32},{wch:18},{wch:8},{wch:16}];XLSX.utils.book_append_sheet(wb,ws,office.substring(0,31));XLSX.writeFile(wb,'تامبلت-'+office.replace(/[\\/:*?"<>|]/g,'-')+'.xlsx');};
+  window.openImportDialog=function(){const n=names(),opts=orderedKeys().map(k=>`<option value="${k}">${n[k]}</option>`).join('');const content=`<div class="dialog-header"><h3><i class="fas fa-folder-open"></i> استيراد بيانات من Excel</h3><span class="close" onclick="closeDialog('management-dialog')">×</span></div><div class="dialog-body"><div style="background:#eef6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;margin-bottom:16px;text-align:center"><h4 style="color:#003087;margin-bottom:10px"><i class="fas fa-clipboard-list"></i> تامبليت الوظائف - الطريقة الموصى بها</h4><p style="font-size:.9rem;line-height:1.8;color:#374151;margin-bottom:12px">١. نزّل التامبلت ← يحتوي مسميات الوظائف والأسماء والهويات المحفوظة.<br>٢. افتحه في Excel وأدخل/عدّل التكلفة الشهرية أو أي بيانات.<br>٣. ارفع الملف هنا ليتم إدخال الموظفين في المكتب المختار.</p><div class="form-group"><label>اختر المكتب/المرفق:</label><select id="center-select-import">${opts}</select></div><button class="btn btn-secondary" onclick="downloadAdminOfficeTemplate()" style="margin:10px 0"><i class="fas fa-download"></i> تنزيل التامبلت</button><input type="file" id="excel-file-input" accept=".xlsx,.xls" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;margin-top:8px"><button class="btn btn-success" onclick="handleSingleFileImport()" style="margin-top:12px"><i class="fas fa-file-import"></i> استيراد التامبليت بعد التعبئة</button></div><div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:16px;text-align:center"><h4 style="color:#374151;margin-bottom:10px"><i class="fas fa-folder"></i> استيراد Excel عادي</h4><input type="file" id="excel-file-input-normal" accept=".xlsx,.xls" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff"><button class="btn btn-success" onclick="runAdminOfficeNormalImport()" style="margin-top:12px"><i class="fas fa-file-import"></i> استيراد</button></div><div id="import-status-area" style="margin-top:14px"></div></div>`;if(typeof openDialog==='function')openDialog(content,'management-dialog',true);};
+  window.runAdminOfficeNormalImport=function(){const src=document.getElementById('excel-file-input-normal'),dst=document.getElementById('excel-file-input');if(!src||!src.files.length)return alert('اختر ملف Excel أولاً.');try{const dt=new DataTransfer();dt.items.add(src.files[0]);dst.files=dt.files}catch(_){return alert('ارفع الملف في خانة التامبليت بالأعلى.')}handleSingleFileImport();};
   document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{try{calculateAndDisplayGrandTotal()}catch(_){}},300));
 })();
 </script>
-
 <script src="/original/extract-submit.js"></script>
 <script src="/original/track.js"></script>
 <script src="/original/shared-nav.js"></script>
