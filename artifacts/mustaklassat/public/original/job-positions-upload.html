@@ -12,36 +12,27 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh;direction:rtl}
-
-/* HEADER */
 .header{background:linear-gradient(135deg,#0f2050,#1e3c72 55%,#2a5298);padding:18px 28px;display:flex;align-items:center;gap:16px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
 .header img{height:54px;width:54px;object-fit:contain;border-radius:8px;background:#fff;padding:4px}
 .header-text h1{font-size:1.2rem;color:#fff;font-weight:800}
 .header-text p{font-size:.82rem;color:#d4af37;margin-top:2px}
 .back-btn{margin-right:auto;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);padding:8px 18px;border-radius:8px;cursor:pointer;font-size:.85rem;text-decoration:none;display:flex;align-items:center;gap:6px;transition:background .2s}
 .back-btn:hover{background:rgba(255,255,255,.22)}
-
 .wrap{max-width:960px;margin:28px auto;padding:0 16px;display:flex;flex-direction:column;gap:22px}
-
-/* CARD */
 .card{background:#fff;border-radius:14px;box-shadow:0 2px 16px rgba(30,60,114,.09);overflow:hidden}
 .card-head{padding:16px 22px;background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;display:flex;align-items:center;gap:10px;font-size:1rem;font-weight:700}
 .card-head i{color:#d4af37;font-size:1.1rem}
 .card-body{padding:22px}
-
-/* UPLOAD AREA */
 .drop-zone{border:2.5px dashed #c7d2e8;border-radius:12px;padding:38px 24px;text-align:center;cursor:pointer;transition:all .2s;background:#f8faff}
 .drop-zone:hover,.drop-zone.drag-over{border-color:#1e3c72;background:#eef2ff}
 .drop-zone i{font-size:2.8rem;color:#1e3c72;margin-bottom:10px;display:block}
 .drop-zone p{color:#555;font-size:.95rem;margin-bottom:6px}
 .drop-zone span{font-size:.8rem;color:#999}
 .drop-zone input[type=file]{display:none}
-
 .hospital-field{display:flex;flex-direction:column;gap:6px;margin-top:16px}
 .hospital-field label{font-size:.88rem;font-weight:600;color:#1e3c72}
 .hospital-field input{width:100%;padding:10px 14px;border:1.5px solid #d1d5db;border-radius:8px;font-size:.95rem;direction:rtl;outline:none;transition:border-color .2s}
 .hospital-field input:focus{border-color:#1e3c72}
-
 .btn{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:9px;border:none;cursor:pointer;font-size:.9rem;font-weight:600;transition:all .2s}
 .btn-primary{background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff}
 .btn-primary:hover{opacity:.9;transform:translateY(-1px)}
@@ -51,8 +42,6 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh
 .btn-warning{background:#fffbeb;color:#d97706;border:1px solid #fcd34d}
 .btn-warning:hover{background:#fef3c7}
 .btn-sm{padding:6px 14px;font-size:.82rem}
-
-/* PREVIEW TABLE */
 .preview-wrap{overflow-x:auto;max-height:380px;overflow-y:auto;border-radius:10px;border:1px solid #e5e7eb}
 table{width:100%;border-collapse:collapse;font-size:.88rem}
 thead th{background:#1e3c72;color:#fff;padding:10px 12px;text-align:right;position:sticky;top:0;z-index:1;white-space:nowrap}
@@ -61,36 +50,24 @@ tbody td{padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#374151}
 .badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:.76rem;font-weight:600}
 .badge-ok{background:#dcfce7;color:#166534}
 .badge-warn{background:#fef9c3;color:#92400e}
-
-/* STATS */
 .stats-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:18px}
 .stat-box{flex:1;min-width:130px;background:#f0f4ff;border-radius:10px;padding:14px 16px;text-align:center;border:1px solid #dbeafe}
 .stat-box .val{font-size:1.7rem;font-weight:800;color:#1e3c72}
 .stat-box .lbl{font-size:.78rem;color:#6b7280;margin-top:3px}
-
-/* SAVED LIST */
 .hospital-item{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #f1f5f9;gap:12px}
 .hospital-item:last-child{border-bottom:none}
 .hospital-item:hover{background:#f8faff}
 .h-name{font-weight:700;color:#1e3c72;font-size:.95rem}
 .h-meta{font-size:.8rem;color:#9ca3af;margin-top:3px}
 .h-actions{display:flex;gap:8px;flex-shrink:0}
-
-/* INSTRUCTIONS */
 .info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:16px 20px;font-size:.88rem;color:#1e40af;line-height:1.7}
 .info-box strong{display:block;margin-bottom:6px;font-size:.92rem}
 .info-box code{background:#dbeafe;padding:2px 7px;border-radius:5px;font-family:monospace;font-size:.83rem}
-
-/* ALERTS */
 .alert{padding:12px 18px;border-radius:9px;font-size:.9rem;margin-top:14px;display:none}
 .alert-success{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
 .alert-error{background:#fef2f2;color:#dc2626;border:1px solid #fca5a5}
-
-/* EMPTY */
 .empty-state{text-align:center;padding:40px 20px;color:#9ca3af}
 .empty-state i{font-size:2.5rem;margin-bottom:12px;display:block;color:#cbd5e1}
-
-/* UNKNOWN DEPTS MAPPER */
 .unknown-box{background:#fffbeb;border:1.5px solid #fcd34d;border-radius:11px;padding:16px 20px;margin-bottom:16px}
 .unknown-box-head{display:flex;align-items:center;gap:8px;font-weight:700;color:#92400e;margin-bottom:12px;font-size:.95rem}
 .unknown-box-head i{color:#d97706}
@@ -99,501 +76,41 @@ tbody td{padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#374151}
 .unknown-table td{border-bottom:1px solid #fde68a}
 .btn-apply{background:linear-gradient(135deg,#d97706,#b45309);color:#fff;border:none;border-radius:8px;padding:9px 22px;font-size:.9rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;margin-top:12px}
 .btn-apply:hover{opacity:.9}
-
 footer{text-align:center;padding:20px;color:#9ca3af;font-size:.8rem}
 </style>
 </head>
 <body>
-
-<!-- nav-bar hidden — يستخدمها shared-nav.js لبناء القائمة العلوية -->
-<div class="nav-bar" style="display:none">
-  <div class="dropdown">
-    <select id="navigation">
-      <option value="#">-- اختر صفحة --</option>
-      <option value="index.html">الصفحة الرئيسية</option>
-      <option value="attendance.html">الحضور والانصراف</option>
-      <option value="performance.html">شهادة الأداء</option>
-      <option value="achievement.html">شهادة الإنجاز</option>
-      <option value="consumables.html">مستخلص المستهلكات</option>
-      <option value="spare_parts.html">مستخلص قطع الغيار</option>
-      <option value="approval.html">✅ متابعة المستخلصات</option>
-      <option value="contract-foundation-upload.html">📋 تأسيس العقد</option>
-      <option value="admin-dashboard.html">🛡️ لوحة الأدمن</option>
-      <option value="extract-archive.html">🗂️ أرشيف المستخلصات</option>
-    </select>
-  </div>
-</div>
-
-<div class="header">
-  <img src="najran_health_cluster_logo.png" alt="شعار" onerror="this.style.display='none'">
-  <div class="header-text">
-    <h1>رفع مناصب الوظائف</h1>
-    <p>تحميل مسميات الوظائف والرواتب لكل مستشفى</p>
-  </div>
-  <a class="back-btn" href="javascript:history.back()"><i class="fas fa-arrow-right"></i> رجوع</a>
-</div>
-
+<div class="nav-bar" style="display:none"><div class="dropdown"><select id="navigation"><option value="#">-- اختر صفحة --</option><option value="index.html">الصفحة الرئيسية</option><option value="attendance.html">الحضور والانصراف</option><option value="performance.html">شهادة الأداء</option><option value="achievement.html">شهادة الإنجاز</option><option value="consumables.html">مستخلص المستهلكات</option><option value="spare_parts.html">مستخلص قطع الغيار</option><option value="approval.html">✅ متابعة المستخلصات</option><option value="contract-foundation-upload.html">📋 تأسيس العقد</option><option value="admin-dashboard.html">🛡️ لوحة الأدمن</option><option value="extract-archive.html">🗂️ أرشيف المستخلصات</option></select></div></div>
+<div class="header"><img src="najran_health_cluster_logo.png" alt="شعار" onerror="this.style.display='none'"><div class="header-text"><h1>رفع مناصب الوظائف</h1><p>تحميل مسميات الوظائف والرواتب لكل مستشفى</p></div><a class="back-btn" href="javascript:history.back()"><i class="fas fa-arrow-right"></i> رجوع</a></div>
 <div class="wrap">
-
-  <!-- تعليمات -->
-  <div class="card">
-    <div class="card-head"><i class="fas fa-info-circle"></i> تعليمات الرفع</div>
-    <div class="card-body">
-      <div class="info-box">
-        <strong>شكل ملف الإكسل المطلوب:</strong>
-        الصف الأول هو عناوين الأعمدة. الأعمدة المطلوبة بالترتيب:
-        <br><br>
-        <code>اسم المستشفى</code> &nbsp;|&nbsp;
-        <code>القسم</code> &nbsp;|&nbsp;
-        <code>مسمى الوظيفة</code> &nbsp;|&nbsp;
-        <code>التكلفة الشهرية</code> &nbsp;|&nbsp;
-        <code>الفئة</code> (اختياري) &nbsp;|&nbsp;
-        <code>الجنسية</code> (اختياري)
-        <br><br>
-        أسماء الأقسام المقبولة: <code>نظافة</code> / <code>كهرباء</code> / <code>زراعة</code> / <code>مدني</code> / <code>ميكانيكا</code> / <code>مغسلة</code> / <code>خدمات مرضى</code> / <code>إدارية</code>
-      </div>
-    </div>
-  </div>
-
-  <!-- رفع ملف -->
-  <div class="card">
-    <div class="card-head"><i class="fas fa-file-upload"></i> رفع ملف جديد</div>
-    <div class="card-body">
-
-      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-        <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(this.files[0])">
-        <i class="fas fa-file-excel"></i>
-        <p>اضغط هنا أو اسحب ملف الإكسل</p>
-        <span>يدعم .xlsx و .xls</span>
-      </div>
-
-      <div id="uploadAlert" class="alert"></div>
-
-      <!-- معاينة -->
-      <div id="previewSection" style="display:none;margin-top:20px">
-
-        <div class="stats-row" id="statsRow"></div>
-
-        <!-- تعيين الأقسام غير المعروفة -->
-        <div id="unknownDeptsSection" style="display:none">
-          <div class="unknown-box">
-            <div class="unknown-box-head">
-              <i class="fas fa-exclamation-triangle"></i>
-              أقسام غير معروفة — حدد القسم الصحيح لكل منها حتى تُحفظ
-            </div>
-            <table class="unknown-table">
-              <thead>
-                <tr>
-                  <th>اسم القسم في الملف</th>
-                  <th>عيّنه على</th>
-                  <th>عدد الصفوف</th>
-                </tr>
-              </thead>
-              <tbody id="unknownDeptsBody"></tbody>
-            </table>
-            <button class="btn-apply" onclick="applyDeptMappings()">
-              <i class="fas fa-check-circle"></i> تطبيق التعيين وتحديث المعاينة
-            </button>
-          </div>
-        </div>
-
-        <div class="preview-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>اسم المستشفى</th>
-                <th>القسم</th>
-                <th>مسمى الوظيفة</th>
-                <th>التكلفة الشهرية</th>
-                <th>الفئة</th>
-                <th>الجنسية</th>
-                <th>الحالة</th>
-              </tr>
-            </thead>
-            <tbody id="previewBody"></tbody>
-          </table>
-        </div>
-
-        <div style="margin-top:18px;display:flex;gap:12px;flex-wrap:wrap">
-          <button class="btn btn-primary" id="saveBtn" onclick="saveAll()">
-            <i class="fas fa-save"></i> حفظ المناصب
-          </button>
-          <button class="btn btn-warning" onclick="resetUpload()">
-            <i class="fas fa-times"></i> إلغاء
-          </button>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- المستشفيات المحفوظة -->
-  <div class="card">
-    <div class="card-head"><i class="fas fa-hospital"></i> المستشفيات المحفوظة</div>
-    <div class="card-body" style="padding:0" id="savedListBody">
-      <div class="empty-state"><i class="fas fa-folder-open"></i> جاري التحميل...</div>
-    </div>
-  </div>
-
+  <div class="card"><div class="card-head"><i class="fas fa-info-circle"></i> تعليمات الرفع</div><div class="card-body"><div class="info-box"><strong>شكل ملف الإكسل المطلوب:</strong>الصف الأول هو عناوين الأعمدة. الأعمدة المطلوبة بالترتيب:<br><br><code>اسم المستشفى</code> &nbsp;|&nbsp; <code>القسم</code> &nbsp;|&nbsp; <code>مسمى الوظيفة</code> &nbsp;|&nbsp; <code>التكلفة الشهرية</code> &nbsp;|&nbsp; <code>الفئة</code> (اختياري) &nbsp;|&nbsp; <code>الجنسية</code> (اختياري)<br><br>أسماء الأقسام المقبولة: <code>نظافة</code> / <code>كهرباء</code> / <code>زراعة</code> / <code>مدني</code> / <code>ميكانيكا</code> / <code>مغسلة</code> / <code>خدمات مرضى</code> / <code>إدارية</code></div></div></div>
+  <div class="card"><div class="card-head"><i class="fas fa-file-upload"></i> رفع ملف جديد</div><div class="card-body"><div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()"><input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(this.files[0])"><i class="fas fa-file-excel"></i><p>اضغط هنا أو اسحب ملف الإكسل</p><span>يدعم .xlsx و .xls</span></div><div id="uploadAlert" class="alert"></div><div id="previewSection" style="display:none;margin-top:20px"><div class="stats-row" id="statsRow"></div><div id="unknownDeptsSection" style="display:none"><div class="unknown-box"><div class="unknown-box-head"><i class="fas fa-exclamation-triangle"></i>أقسام غير معروفة — حدد القسم الصحيح لكل منها حتى تُحفظ</div><table class="unknown-table"><thead><tr><th>اسم القسم في الملف</th><th>عيّنه على</th><th>عدد الصفوف</th></tr></thead><tbody id="unknownDeptsBody"></tbody></table><button class="btn-apply" onclick="applyDeptMappings()"><i class="fas fa-check-circle"></i> تطبيق التعيين وتحديث المعاينة</button></div></div><div class="preview-wrap"><table><thead><tr><th>#</th><th>اسم المستشفى</th><th>القسم</th><th>مسمى الوظيفة</th><th>التكلفة الشهرية</th><th>الفئة</th><th>الجنسية</th><th>الحالة</th></tr></thead><tbody id="previewBody"></tbody></table></div><div style="margin-top:18px;display:flex;gap:12px;flex-wrap:wrap"><button class="btn btn-primary" id="saveBtn" onclick="saveAll()"><i class="fas fa-save"></i> حفظ المناصب</button><button class="btn btn-warning" onclick="resetUpload()"><i class="fas fa-times"></i> إلغاء</button></div></div></div></div>
+  <div class="card"><div class="card-head"><i class="fas fa-hospital"></i> المستشفيات المحفوظة</div><div class="card-body" style="padding:0" id="savedListBody"><div class="empty-state"><i class="fas fa-folder-open"></i> جاري التحميل...</div></div></div>
 </div>
 <footer>© 2025 تجمع نجران الصحي — وحدة الصيانة العامة</footer>
-
 <script src="/original/job-positions-helper.js"></script>
 <script>
-// ====== المتغيرات ======
-let parsedRows = [];   // الصفوف بعد القراءة
-
-function _getHospitalNameFromSession() {
-  try {
-    const s = JSON.parse(localStorage.getItem('najran_session') || '{}');
-    return (s.hospital || '').trim();
-  } catch (_) { return ''; }
-}
-function _patientServicesLabel() {
-  const h = _getHospitalNameFromSession();
-  if (h.includes('الأمل')) return 'خدمات المرضى';
-  return 'قسم السلامة والحراسات الأمنية';
-}
-const DEPT_LABELS = {
-  cleaning:        'النظافة',
-  electricity:     'الكهرباء',
-  agriculture:     'الزراعة',
-  civil_works:     'الأعمال المدنية',
-  mechanical:      'الميكانيكا',
-  laundry:         'المغسلة',
-  get patient_services() { return _patientServicesLabel(); },
-  admin_saudi:     'الوظائف الإدارية السعوديين',
-};
-
-// ====== Drag & Drop ======
-const dz = document.getElementById('dropZone');
-dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
-dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
-dz.addEventListener('drop', e => {
-  e.preventDefault(); dz.classList.remove('drag-over');
-  const f = e.dataTransfer.files[0];
-  if (f) handleFile(f);
-});
-
-// ====== قراءة الملف ======
-function handleFile(file) {
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const wb  = XLSX.read(e.target.result, { type: 'binary' });
-      const ws  = wb.Sheets[wb.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-
-      if (raw.length < 2) { showAlert('الملف فارغ أو لا يحتوي على بيانات', 'error'); return; }
-
-      // تحديد مؤشرات الأعمدة من الصف الأول (header detection)
-      const headers = raw[0].map(h => String(h).trim());
-      const idx = detectColumns(headers);
-
-      parsedRows = [];
-      for (let r = 1; r < raw.length; r++) {
-        const row = raw[r];
-        const hospitalName = idx.hospital >= 0 ? String(row[idx.hospital] || '').trim() : '';
-        const deptAr       = idx.dept    >= 0 ? String(row[idx.dept]    || '').trim() : '';
-        const jobTitle     = idx.job     >= 0 ? String(row[idx.job]     || '').trim() : '';
-        const salary       = idx.salary  >= 0 ? parseFloat(row[idx.salary]) || 0 : 0;
-        const category     = idx.cat     >= 0 ? String(row[idx.cat]     || '1').trim() : '1';
-        const nationality  = idx.nat     >= 0 ? String(row[idx.nat]     || 'غير سعودي').trim() : 'غير سعودي';
-
-        if (!deptAr && !jobTitle) continue; // تجاهل الصفوف الفارغة
-
-        const deptKey = JobPositionsDB.mapDept(deptAr);
-        parsedRows.push({ hospitalName, deptAr, deptKey, jobTitle, salary, category, nationality, valid: !!deptKey && !!jobTitle });
-      }
-
-      renderPreview();
-    } catch (err) {
-      showAlert('خطأ في قراءة الملف: ' + err.message, 'error');
-    }
-  };
-  reader.readAsBinaryString(file);
-}
-
-function detectColumns(headers) {
-  const find = (...keys) => {
-    const i = headers.findIndex(h => keys.some(k => h.includes(k)));
-    return i;
-  };
-  return {
-    hospital: find('مستشفى', 'اسم المستشفى', 'hospital'),
-    dept:     find('قسم', 'القسم', 'dept'),
-    job:      find('مسمى', 'وظيفة', 'الوظيفة', 'job'),
-    salary:   find('تكلفة', 'راتب', 'salary', 'التكلفة'),
-    cat:      find('فئة', 'الفئة', 'cat'),
-    nat:      find('جنسية', 'الجنسية', 'nat'),
-  };
-}
-
-const DEPT_OPTIONS = [
-  { key: 'cleaning',         label: 'النظافة' },
-  { key: 'electricity',      label: 'الكهرباء' },
-  { key: 'agriculture',      label: 'الزراعة' },
-  { key: 'civil_works',      label: 'الأعمال المدنية' },
-  { key: 'mechanical',       label: 'الميكانيكا' },
-  { key: 'laundry',          label: 'المغسلة' },
-  { key: 'patient_services', label: 'السلامة والحراسات' },
-  { key: 'admin_saudi',      label: 'الوظائف الإدارية' },
-];
-
-function renderPreview() {
-  if (!parsedRows.length) { showAlert('لم يُعثر على بيانات صالحة في الملف', 'error'); return; }
-
-  const hospitals = [...new Set(parsedRows.map(r => r.hospitalName).filter(Boolean))];
-  const valid     = parsedRows.filter(r => r.valid).length;
-  const invalid   = parsedRows.length - valid;
-  const totalCost = parsedRows.filter(r => r.valid).reduce((s, r) => s + r.salary, 0);
-
-  document.getElementById('statsRow').innerHTML = `
-    <div class="stat-box"><div class="val">${parsedRows.length}</div><div class="lbl">إجمالي الصفوف</div></div>
-    <div class="stat-box"><div class="val" style="color:#16a34a">${valid}</div><div class="lbl">صفوف صالحة</div></div>
-    <div class="stat-box"><div class="val" style="color:${invalid ? '#d97706' : '#16a34a'}">${invalid}</div><div class="lbl">أقسام غير معروفة</div></div>
-    <div class="stat-box"><div class="val">${hospitals.length}</div><div class="lbl">مستشفى</div></div>
-    <div class="stat-box"><div class="val" style="font-size:1.1rem">${totalCost.toLocaleString('ar-SA')} ﷼</div><div class="lbl">إجمالي الرواتب</div></div>
-  `;
-
-  const tbody = document.getElementById('previewBody');
-  tbody.innerHTML = parsedRows.map((r, i) => `
-    <tr style="${!r.valid ? 'background:#fffbeb' : ''}">
-      <td>${i + 1}</td>
-      <td>${r.hospitalName || '—'}</td>
-      <td>${r.deptKey ? DEPT_LABELS[r.deptKey] : `<span style="color:#d97706;font-weight:600">${r.deptAr || '—'}</span>`}</td>
-      <td>${r.jobTitle || '—'}</td>
-      <td>${r.salary ? r.salary.toLocaleString('ar-SA') + ' ﷼' : '—'}</td>
-      <td>${r.category}</td>
-      <td>${r.nationality}</td>
-      <td>${r.valid
-        ? '<span class="badge badge-ok">✓ صالح</span>'
-        : '<span class="badge badge-warn">⚠ قسم غير معروف</span>'}</td>
-    </tr>
-  `).join('');
-
-  document.getElementById('previewSection').style.display = 'block';
-  renderUnknownDepts();
-}
-
-function renderUnknownDepts() {
-  const unknownNames = [...new Set(
-    parsedRows.filter(r => !r.valid && r.deptAr).map(r => r.deptAr)
-  )];
-
-  const section = document.getElementById('unknownDeptsSection');
-  if (!unknownNames.length) { section.style.display = 'none'; return; }
-
-  section.style.display = 'block';
-  document.getElementById('unknownDeptsBody').innerHTML = unknownNames.map(name => `
-    <tr>
-      <td style="padding:9px 12px;font-weight:600;color:#374151">${name}</td>
-      <td style="padding:9px 12px">
-        <select data-dept-name="${name.replace(/"/g,'&quot;')}"
-          style="width:100%;padding:7px 10px;border:1.5px solid #d1d5db;border-radius:7px;font-size:.88rem;direction:rtl">
-          <option value="">-- تجاهل هذا القسم --</option>
-          ${DEPT_OPTIONS.map(d => `<option value="${d.key}">${d.label}</option>`).join('')}
-        </select>
-      </td>
-      <td style="padding:9px 12px;color:#6b7280;font-size:.82rem;white-space:nowrap">
-        ${parsedRows.filter(r => r.deptAr === name).length} صف
-      </td>
-    </tr>
-  `).join('');
-}
-
-function applyDeptMappings() {
-  const selects = document.querySelectorAll('[data-dept-name]');
-  let changed = 0;
-  selects.forEach(sel => {
-    const deptName = sel.getAttribute('data-dept-name');
-    const deptKey  = sel.value;
-    if (!deptKey) return;
-    parsedRows.forEach(r => {
-      if (r.deptAr === deptName) {
-        r.deptKey = deptKey;
-        r.valid   = !!r.jobTitle;
-        changed++;
-      }
-    });
-  });
-  if (changed) {
-    renderPreview();
-    showAlert(`✅ تم تعيين ${changed} صف — راجع الإحصائيات المحدثة`, 'success');
-  } else {
-    showAlert('لم يتم اختيار أي تعيين بعد', 'error');
-  }
-}
-
-// ====== حفظ (استبدال كامل لبيانات كل مستشفى) ======
-async function saveAll() {
-  const validRows = parsedRows.filter(r => r.valid);
-  if (!validRows.length) { showAlert('لا توجد صفوف صالحة للحفظ', 'error'); return; }
-
-  // تجميع حسب المستشفى — يحتفظ بكل الصفوف بما فيها المكررة في المسمى
-  const byHospital = {};
-  validRows.forEach(r => {
-    const key = r.hospitalName || 'غير محدد';
-    if (!byHospital[key]) byHospital[key] = [];
-    byHospital[key].push({ dept: r.deptKey, jobTitle: r.jobTitle, salary: r.salary, category: r.category, nationality: r.nationality });
-  });
-
-  const btn = document.getElementById('saveBtn');
-  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
-
-  try {
-    let totalSaved = 0;
-    for (const [hospital, newRows] of Object.entries(byHospital)) {
-      // استبدال كامل — لا دمج، لأن نفس المسمى الوظيفي يمكن تكراره (عدة موظفين بنفس المسمى)
-      await JobPositionsDB.save(hospital, newRows);
-      totalSaved += newRows.length;
-    }
-    const hospitals = Object.keys(byHospital);
-    showAlert(`✅ تم الحفظ لـ ${hospitals.length} مستشفى — ${totalSaved} منصب`, 'success');
-    resetUpload();
-    renderSavedList();
-  } catch (err) {
-    showAlert('خطأ في الحفظ: ' + err.message, 'error');
-  } finally {
-    btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> حفظ المناصب';
-  }
-}
-
-function resetUpload() {
-  parsedRows = [];
-  document.getElementById('fileInput').value = '';
-  document.getElementById('previewSection').style.display = 'none';
-  document.getElementById('previewBody').innerHTML = '';
-  document.getElementById('statsRow').innerHTML = '';
-}
-
-// ====== قائمة المحفوظة ======
-async function renderSavedList() {
-  const container = document.getElementById('savedListBody');
-  container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> جاري التحميل من السيرفر...</div>';
-  try {
-    const all = await JobPositionsDB.loadAll();
-    if (!all.length) {
-      container.innerHTML = '<div class="empty-state"><i class="fas fa-folder-open"></i><p>لا توجد مستشفيات محفوظة بعد</p></div>';
-      return;
-    }
-    container.innerHTML = all.map(rec => {
-      // من السيرفر: count + totalCost | من IndexedDB: rows[]
-      const count = rec.count != null ? rec.count : (rec.rows ? rec.rows.length : 0);
-      const cost  = rec.totalCost != null ? rec.totalCost : (rec.rows ? rec.rows.reduce((s, r) => s + (r.salary || 0), 0) : 0);
-      const date  = rec.savedAt ? new Date(rec.savedAt).toLocaleDateString('ar-SA') : '';
-      return `
-        <div class="hospital-item">
-          <div>
-            <div class="h-name"><i class="fas fa-hospital-alt" style="color:#1e3c72;margin-left:6px"></i>${rec.hospitalName}</div>
-            <div class="h-meta">${count} منصب | ${cost.toLocaleString('ar-SA')} ﷼</div>
-            <div class="h-meta" style="margin-top:2px"><i class="fas fa-cloud" style="color:#16a34a;margin-left:4px"></i>محفوظ على السيرفر &nbsp;|&nbsp; <i class="fas fa-clock" style="margin-left:4px"></i>آخر تحديث: ${date}</div>
-          </div>
-          <div class="h-actions">
-            <button class="btn btn-primary btn-sm" onclick="downloadHospitalTemplate('${rec.hospitalName.replace(/'/g,"\\'")}')">
-              <i class="fas fa-file-download"></i> تنزيل التامبلت
-            </button>
-            <button class="btn btn-warning btn-sm" onclick="viewHospital('${rec.hospitalName.replace(/'/g,"\\'")}')">
-              <i class="fas fa-eye"></i> عرض
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="deleteHospital('${rec.hospitalName.replace(/'/g,"\\'")}')">
-              <i class="fas fa-trash"></i> حذف
-            </button>
-          </div>
-        </div>`;
-    }).join('');
-  } catch (err) {
-    container.innerHTML = `<div class="empty-state" style="color:#dc2626"><i class="fas fa-exclamation-circle"></i><p>خطأ: ${err.message}</p></div>`;
-  }
-}
-
-async function viewHospital(name) {
-  const rec = await JobPositionsDB.load(name);
-  if (!rec) return;
-  const rows = rec.rows || [];
-  // عرض داخل الصفحة بدلاً من نافذة منبثقة (متوافق مع iframe)
-  const existing = document.getElementById('viewModal');
-  if (existing) existing.remove();
-  const modal = document.createElement('div');
-  modal.id = 'viewModal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  modal.innerHTML = `
-    <div style="background:#fff;border-radius:14px;max-width:860px;width:100%;max-height:85vh;overflow:auto;padding:28px;direction:rtl">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <h2 style="color:#1e3c72;font-size:1.1rem">مناصب وظائف: ${name} (${rows.length} منصب)</h2>
-        <button onclick="document.getElementById('viewModal').remove()" style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:6px 16px;cursor:pointer;font-size:.9rem">✕ إغلاق</button>
-      </div>
-      <table style="width:100%;border-collapse:collapse;font-size:.88rem">
-        <thead><tr style="background:#1e3c72;color:#fff">
-          <th style="padding:9px 12px;text-align:right">#</th>
-          <th style="padding:9px 12px;text-align:right">القسم</th>
-          <th style="padding:9px 12px;text-align:right">مسمى الوظيفة</th>
-          <th style="padding:9px 12px;text-align:right">التكلفة الشهرية</th>
-          <th style="padding:9px 12px;text-align:right">الفئة</th>
-          <th style="padding:9px 12px;text-align:right">الجنسية</th>
-        </tr></thead>
-        <tbody>${rows.map((r, i) => `<tr style="background:${i%2?'#f8faff':'#fff'}">
-          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${i+1}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${DEPT_LABELS[r.dept]||r.dept}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${r.jobTitle||'—'}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${(r.salary||0).toLocaleString('ar-SA')} ﷼</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${r.category||1}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${r.nationality||'—'}</td>
-        </tr>`).join('')}</tbody>
-      </table>
-    </div>`;
-  document.body.appendChild(modal);
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-}
-
-async function deleteHospital(name) {
-  if (!confirm(`هل تريد حذف مناصب "${name}"؟ لا يمكن التراجع.`)) return;
-  await JobPositionsDB.remove(name);
-  renderSavedList();
-}
-
-// ====== تنزيل التامبلت ======
-async function downloadHospitalTemplate(hospitalName) {
-  if (typeof XLSX === 'undefined') {
-    alert('مكتبة Excel غير محملة، يرجى تحديث الصفحة');
-    return;
-  }
-  const rec = await JobPositionsDB.load(hospitalName);
-  if (!rec || !rec.rows || !rec.rows.length) {
-    alert('لا توجد مناصب محفوظة لـ "' + hospitalName + '"');
-    return;
-  }
-  const headers = ['اسم الموظف', 'رقم الهوية / الإقامة', 'القسم', 'مسمى الوظيفة', 'التكلفة الشهرية', 'الفئة', 'الجنسية'];
-  const rows = rec.rows.map(r => [
-    '',
-    '',
-    DEPT_LABELS[r.dept] || r.dept,
-    r.jobTitle || '',
-    r.salary || 0,
-    r.category || '1',
-    r.nationality || 'غير سعودي',
-  ]);
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-  ws['!cols'] = [{wch:25},{wch:20},{wch:30},{wch:18},{wch:8},{wch:15}];
-  XLSX.utils.book_append_sheet(wb, ws, hospitalName.substring(0, 31));
-  XLSX.writeFile(wb, 'تامبلت-' + hospitalName + '.xlsx');
-}
-
-// ====== الإشعارات ======
-function showAlert(msg, type) {
-  const el = document.getElementById('uploadAlert');
-  el.textContent = msg;
-  el.className   = `alert alert-${type}`;
-  el.style.display = 'block';
-  if (type === 'success') setTimeout(() => { el.style.display = 'none'; }, 5000);
-}
-
-// ====== تحميل أولي ======
+let parsedRows=[];
+function _getHospitalNameFromSession(){try{const s=JSON.parse(localStorage.getItem('najran_session')||'{}');return(s.hospital||'').trim();}catch(_){return'';}}
+function _patientServicesLabel(){const h=_getHospitalNameFromSession();if(h.includes('الأمل'))return'خدمات المرضى';return'قسم السلامة والحراسات الأمنية';}
+const DEPT_LABELS={cleaning:'النظافة',electricity:'الكهرباء',agriculture:'الزراعة',civil_works:'الأعمال المدنية',mechanical:'الميكانيكا',laundry:'المغسلة',get patient_services(){return _patientServicesLabel();},admin_saudi:'الوظائف الإدارية السعوديين',workshops:'الورش'};
+const dz=document.getElementById('dropZone');dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)handleFile(f);});
+function handleFile(file){if(!file)return;const reader=new FileReader();reader.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'binary'});const ws=wb.Sheets[wb.SheetNames[0]];const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});if(raw.length<2){showAlert('الملف فارغ أو لا يحتوي على بيانات','error');return;}const headers=raw[0].map(h=>String(h).trim());const idx=detectColumns(headers);parsedRows=[];for(let r=1;r<raw.length;r++){const row=raw[r];const hospitalName=idx.hospital>=0?String(row[idx.hospital]||'').trim():'';const deptAr=idx.dept>=0?String(row[idx.dept]||'').trim():'';const jobTitle=idx.job>=0?String(row[idx.job]||'').trim():'';const salary=idx.salary>=0?parseFloat(row[idx.salary])||0:0;const category=idx.cat>=0?String(row[idx.cat]||'1').trim():'1';const nationality=idx.nat>=0?String(row[idx.nat]||'غير سعودي').trim():'غير سعودي';if(!deptAr&&!jobTitle)continue;const deptKey=JobPositionsDB.mapDept(deptAr);parsedRows.push({hospitalName,deptAr,deptKey,jobTitle,salary,category,nationality,valid:!!deptKey&&!!jobTitle});}renderPreview();}catch(err){showAlert('خطأ في قراءة الملف: '+err.message,'error');}};reader.readAsBinaryString(file);}
+function detectColumns(headers){const find=(...keys)=>headers.findIndex(h=>keys.some(k=>h.includes(k)));return{hospital:find('مستشفى','اسم المستشفى','hospital'),dept:find('قسم','القسم','dept'),job:find('مسمى','وظيفة','الوظيفة','job'),salary:find('تكلفة','راتب','salary','التكلفة'),cat:find('فئة','الفئة','cat'),nat:find('جنسية','الجنسية','nat')}}
+const DEPT_OPTIONS=[{key:'cleaning',label:'النظافة'},{key:'electricity',label:'الكهرباء'},{key:'agriculture',label:'الزراعة'},{key:'civil_works',label:'الأعمال المدنية'},{key:'mechanical',label:'الميكانيكا'},{key:'laundry',label:'المغسلة'},{key:'patient_services',label:'السلامة والحراسات'},{key:'admin_saudi',label:'الوظائف الإدارية'},{key:'workshops',label:'الورش'}];
+function renderPreview(){if(!parsedRows.length){showAlert('لم يُعثر على بيانات صالحة في الملف','error');return;}const hospitals=[...new Set(parsedRows.map(r=>r.hospitalName).filter(Boolean))];const valid=parsedRows.filter(r=>r.valid).length;const invalid=parsedRows.length-valid;const totalCost=parsedRows.filter(r=>r.valid).reduce((s,r)=>s+r.salary,0);document.getElementById('statsRow').innerHTML=`<div class="stat-box"><div class="val">${parsedRows.length}</div><div class="lbl">إجمالي الصفوف</div></div><div class="stat-box"><div class="val" style="color:#16a34a">${valid}</div><div class="lbl">صفوف صالحة</div></div><div class="stat-box"><div class="val" style="color:${invalid?'#d97706':'#16a34a'}">${invalid}</div><div class="lbl">أقسام غير معروفة</div></div><div class="stat-box"><div class="val">${hospitals.length}</div><div class="lbl">مستشفى</div></div><div class="stat-box"><div class="val" style="font-size:1.1rem">${totalCost.toLocaleString('ar-SA')} ﷼</div><div class="lbl">إجمالي الرواتب</div></div>`;const tbody=document.getElementById('previewBody');tbody.innerHTML=parsedRows.map((r,i)=>`<tr style="${!r.valid?'background:#fffbeb':''}"><td>${i+1}</td><td>${r.hospitalName||'—'}</td><td>${r.deptKey?DEPT_LABELS[r.deptKey]:(`<span style="color:#d97706;font-weight:600">${r.deptAr||'—'}</span>`)}</td><td>${r.jobTitle||'—'}</td><td>${r.salary?r.salary.toLocaleString('ar-SA')+' ﷼':'—'}</td><td>${r.category}</td><td>${r.nationality}</td><td>${r.valid?'<span class="badge badge-ok">✓ صالح</span>':'<span class="badge badge-warn">⚠ قسم غير معروف</span>'}</td></tr>`).join('');document.getElementById('previewSection').style.display='block';renderUnknownDepts();}
+function renderUnknownDepts(){const unknownNames=[...new Set(parsedRows.filter(r=>!r.valid&&r.deptAr).map(r=>r.deptAr))];const section=document.getElementById('unknownDeptsSection');if(!unknownNames.length){section.style.display='none';return;}section.style.display='block';document.getElementById('unknownDeptsBody').innerHTML=unknownNames.map(name=>`<tr><td style="padding:9px 12px;font-weight:600;color:#374151">${name}</td><td style="padding:9px 12px"><select data-dept-name="${name.replace(/"/g,'&quot;')}" style="width:100%;padding:7px 10px;border:1.5px solid #d1d5db;border-radius:7px;font-size:.88rem;direction:rtl"><option value="">-- تجاهل هذا القسم --</option>${DEPT_OPTIONS.map(d=>`<option value="${d.key}">${d.label}</option>`).join('')}</select></td><td style="padding:9px 12px;color:#6b7280;font-size:.82rem;white-space:nowrap">${parsedRows.filter(r=>r.deptAr===name).length} صف</td></tr>`).join('');}
+function applyDeptMappings(){const selects=document.querySelectorAll('[data-dept-name]');let changed=0;selects.forEach(sel=>{const deptName=sel.getAttribute('data-dept-name');const deptKey=sel.value;if(!deptKey)return;parsedRows.forEach(r=>{if(r.deptAr===deptName){r.deptKey=deptKey;r.valid=!!r.jobTitle;changed++;}});});if(changed){renderPreview();showAlert(`✅ تم تعيين ${changed} صف — راجع الإحصائيات المحدثة`,'success');}else showAlert('لم يتم اختيار أي تعيين بعد','error');}
+async function saveAll(){const validRows=parsedRows.filter(r=>r.valid);if(!validRows.length){showAlert('لا توجد صفوف صالحة للحفظ','error');return;}const byHospital={};validRows.forEach(r=>{const key=r.hospitalName||'غير محدد';if(!byHospital[key])byHospital[key]=[];byHospital[key].push({dept:r.deptKey,jobTitle:r.jobTitle,salary:r.salary,category:r.category,nationality:r.nationality});});const btn=document.getElementById('saveBtn');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';try{let totalSaved=0;for(const[hospital,newRows]of Object.entries(byHospital)){await JobPositionsDB.save(hospital,newRows);totalSaved+=newRows.length;}const hospitals=Object.keys(byHospital);showAlert(`✅ تم الحفظ لـ ${hospitals.length} مستشفى — ${totalSaved} منصب`,'success');resetUpload();renderSavedList();}catch(err){showAlert('خطأ في الحفظ: '+err.message,'error');}finally{btn.disabled=false;btn.innerHTML='<i class="fas fa-save"></i> حفظ المناصب';}}
+function resetUpload(){parsedRows=[];document.getElementById('fileInput').value='';document.getElementById('previewSection').style.display='none';document.getElementById('previewBody').innerHTML='';document.getElementById('statsRow').innerHTML='';}
+async function renderSavedList(){const container=document.getElementById('savedListBody');container.innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> جاري التحميل من السيرفر...</div>';try{const all=await JobPositionsDB.loadAll();if(!all.length){container.innerHTML='<div class="empty-state"><i class="fas fa-folder-open"></i><p>لا توجد مستشفيات محفوظة بعد</p></div>';return;}container.innerHTML=all.map(rec=>{const count=rec.count!=null?rec.count:(rec.rows?rec.rows.length:0);const cost=rec.totalCost!=null?rec.totalCost:(rec.rows?rec.rows.reduce((s,r)=>s+(r.salary||0),0):0);const date=rec.savedAt?new Date(rec.savedAt).toLocaleDateString('ar-SA'):'';return`<div class="hospital-item"><div><div class="h-name"><i class="fas fa-hospital-alt" style="color:#1e3c72;margin-left:6px"></i>${rec.hospitalName}</div><div class="h-meta">${count} منصب | ${cost.toLocaleString('ar-SA')} ﷼</div><div class="h-meta" style="margin-top:2px"><i class="fas fa-cloud" style="color:#16a34a;margin-left:4px"></i>محفوظ على السيرفر &nbsp;|&nbsp; <i class="fas fa-clock" style="margin-left:4px"></i>آخر تحديث: ${date}</div></div><div class="h-actions"><button class="btn btn-primary btn-sm" onclick="downloadHospitalTemplate('${rec.hospitalName.replace(/'/g,"\\'")}')"><i class="fas fa-file-download"></i> تنزيل التامبلت</button><button class="btn btn-warning btn-sm" onclick="viewHospital('${rec.hospitalName.replace(/'/g,"\\'")}')"><i class="fas fa-eye"></i> عرض</button><button class="btn btn-danger btn-sm" onclick="deleteHospital('${rec.hospitalName.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i> حذف</button></div></div>`;}).join('');}catch(err){container.innerHTML=`<div class="empty-state" style="color:#dc2626"><i class="fas fa-exclamation-circle"></i><p>خطأ: ${err.message}</p></div>`;}}
+async function viewHospital(name){const rec=await JobPositionsDB.load(name);if(!rec)return;const rows=rec.rows||[];const existing=document.getElementById('viewModal');if(existing)existing.remove();const modal=document.createElement('div');modal.id='viewModal';modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';modal.innerHTML=`<div style="background:#fff;border-radius:14px;max-width:860px;width:100%;max-height:85vh;overflow:auto;padding:28px;direction:rtl"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 style="color:#1e3c72;font-size:1.1rem">مناصب وظائف: ${name} (${rows.length} منصب)</h2><button onclick="document.getElementById('viewModal').remove()" style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:6px 16px;cursor:pointer;font-size:.9rem">✕ إغلاق</button></div><table style="width:100%;border-collapse:collapse;font-size:.88rem"><thead><tr style="background:#1e3c72;color:#fff"><th style="padding:9px 12px;text-align:right">#</th><th style="padding:9px 12px;text-align:right">القسم</th><th style="padding:9px 12px;text-align:right">مسمى الوظيفة</th><th style="padding:9px 12px;text-align:right">التكلفة الشهرية</th><th style="padding:9px 12px;text-align:right">الفئة</th><th style="padding:9px 12px;text-align:right">الجنسية</th></tr></thead><tbody>${rows.map((r,i)=>`<tr style="background:${i%2?'#f8faff':'#fff'}"><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${i+1}</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${DEPT_LABELS[r.dept]||r.dept}</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${r.jobTitle||'—'}</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${(r.salary||0).toLocaleString('ar-SA')} ﷼</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${r.category||1}</td><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">${r.nationality||'—'}</td></tr>`).join('')}</tbody></table></div>`;document.body.appendChild(modal);modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});}
+async function deleteHospital(name){if(!confirm(`هل تريد حذف مناصب "${name}"؟ لا يمكن التراجع.`))return;await JobPositionsDB.remove(name);renderSavedList();}
+async function downloadHospitalTemplate(hospitalName){if(typeof XLSX==='undefined'){alert('مكتبة Excel غير محملة، يرجى تحديث الصفحة');return;}const rec=await JobPositionsDB.load(hospitalName);if(!rec||!rec.rows||!rec.rows.length){alert('لا توجد مناصب محفوظة لـ "'+hospitalName+'"');return;}const headers=['اسم الموظف','رقم الهوية / الإقامة','القسم','مسمى الوظيفة','التكلفة الشهرية','الفئة','الجنسية'];const rows=rec.rows.map(r=>['','',DEPT_LABELS[r.dept]||r.dept,r.jobTitle||'',r.salary||0,r.category||'1',r.nationality||'غير سعودي']);const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);ws['!cols']=[{wch:25},{wch:20},{wch:30},{wch:18},{wch:8},{wch:15}];XLSX.utils.book_append_sheet(wb,ws,hospitalName.substring(0,31));XLSX.writeFile(wb,'تامبلت-'+hospitalName+'.xlsx');}
+function showAlert(msg,type){const el=document.getElementById('uploadAlert');el.textContent=msg;el.className=`alert alert-${type}`;el.style.display='block';if(type==='success')setTimeout(()=>{el.style.display='none';},5000);}
 renderSavedList();
 </script>
+<script src="/original/job_positions_workshops_patch.js?v=20260617a"></script>
 <script src="/original/shared-nav.js"></script>
 </body>
 </html>
