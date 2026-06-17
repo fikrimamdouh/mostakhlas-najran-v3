@@ -3,7 +3,7 @@
  * الشريط العلوي القديم معطل.
  * تصحيحات آمنة لصفحة المكاتب الإدارية فقط:
  * 1) عزل تواقيع كل مكتب/مرفق.
- * 2) إضافة أزرار جدول الحضور.
+ * 2) إكمال أزرار جدول الحضور بدون تكرار.
  * 3) فرض مقارنة Excel قبل الحفظ: استبدال / تحديث / إلغاء.
  */
 (function () {
@@ -29,7 +29,6 @@
     try { if (typeof calculateAndDisplayGrandTotal === 'function') calculateAndDisplayGrandTotal(); } catch (_) {}
   }
 
-  /* توقيعات منفصلة لكل مكتب */
   function forceSignatureIsolation() {
     window.getSignatureKeyForContext = function(type, contextKey) {
       if (contextKey === 'grand_certificate') return type + '_grand_certificate';
@@ -44,7 +43,6 @@
     window.__ADMIN_OFFICES_SIGNATURES_ISOLATED__ = true;
   }
 
-  /* أزرار الجدول */
   function injectCss() {
     if (document.getElementById('admin-office-final-fixes-css')) return;
     const st = document.createElement('style');
@@ -65,6 +63,7 @@
     `;
     document.head.appendChild(st);
   }
+
   function zoomKey(id) { return 'adminOfficeTableZoom_' + String(id || '').replace(/^table-/, ''); }
   window.adminOfficeZoomIn = function(id) { const t = document.getElementById(id); if (!t) return; let z = parseFloat(t.style.zoom || localStorage.getItem(zoomKey(id)) || '1'); z = Math.min(1.8, +(z + .1).toFixed(2)); t.style.zoom = z; localStorage.setItem(zoomKey(id), z); };
   window.adminOfficeZoomOut = function(id) { const t = document.getElementById(id); if (!t) return; let z = parseFloat(t.style.zoom || localStorage.getItem(zoomKey(id)) || '1'); z = Math.max(.6, +(z - .1).toFixed(2)); t.style.zoom = z; localStorage.setItem(zoomKey(id), z); };
@@ -77,21 +76,50 @@
     if (active) { const bg = document.createElement('div'); bg.id = 'admin-office-fullscreen-backdrop'; bg.className = 'admin-office-fullscreen-backdrop'; bg.onclick = () => window.adminOfficeToggleFullscreen(id, btn); document.body.appendChild(bg); sec.classList.add('admin-office-fullscreen'); document.body.style.overflow = 'hidden'; if (btn) btn.innerHTML = '<i class="fas fa-compress"></i> خروج'; }
     else { sec.classList.remove('admin-office-fullscreen'); document.body.style.overflow = ''; if (btn) btn.innerHTML = '<i class="fas fa-expand"></i> عرض كامل'; }
   };
+
+  function removeDuplicateControls(bar) {
+    if (!bar) return;
+    const seen = new Set();
+    Array.from(bar.querySelectorAll('button')).forEach(btn => {
+      const text = norm(btn.textContent);
+      let key = '';
+      if (text.includes('تكبير')) key = 'zoom-in';
+      else if (text.includes('تصغير')) key = 'zoom-out';
+      else if (text.includes('اعاده الحجم')) key = 'reset';
+      else if (text.includes('عرض كامل')) key = 'full';
+      else if (text.includes('تعديل التواقيع')) key = 'sig';
+      else if (text.includes('طباعه الجدول')) key = 'print';
+      if (!key) return;
+      if (seen.has(key)) btn.remove(); else seen.add(key);
+    });
+  }
+
+  function hasButton(bar, phrase) {
+    return Array.from(bar.querySelectorAll('button')).some(btn => norm(btn.textContent).includes(norm(phrase)));
+  }
+
   function enhanceOne(section) {
-    if (!section || section.dataset.adminOfficeEnhanced === '1') return;
+    if (!section) return;
     const table = section.querySelector('table[id^="table-"]'); if (!table?.id) return;
-    section.dataset.adminOfficeEnhanced = '1'; section.classList.add('admin-office-enhanced');
+    section.classList.add('admin-office-enhanced');
     const wrap = table.closest('.table-responsive-wrapper') || table.parentElement; if (wrap) wrap.classList.add('dept-table-scroll');
     const z = localStorage.getItem(zoomKey(table.id)); if (z) table.style.zoom = z;
     let bar = section.querySelector('.tab-action-buttons');
     if (!bar) { bar = document.createElement('div'); bar.className = 'tab-action-buttons no-print'; section.insertBefore(bar, section.firstChild); }
-    if (!bar.querySelector('[data-admin-office-control="zoom-in"]')) {
-      bar.insertAdjacentHTML('beforeend', `<button type="button" class="admin-office-table-btn" data-admin-office-control="zoom-in" onclick="adminOfficeZoomIn('${table.id}')"><i class="fas fa-search-plus"></i> تكبير</button><button type="button" class="admin-office-table-btn" onclick="adminOfficeZoomOut('${table.id}')"><i class="fas fa-search-minus"></i> تصغير</button><button type="button" class="admin-office-table-btn" onclick="adminOfficeZoomReset('${table.id}')"><i class="fas fa-compress-arrows-alt"></i> إعادة الحجم</button><button type="button" class="admin-office-table-btn" onclick="adminOfficeToggleFullscreen('${table.id}',this)"><i class="fas fa-expand"></i> عرض كامل</button>`);
+
+    removeDuplicateControls(bar);
+
+    if (!hasButton(bar, 'إعادة الحجم')) {
+      bar.insertAdjacentHTML('beforeend', `<button type="button" class="admin-office-table-btn" data-admin-office-control="zoom-reset" onclick="adminOfficeZoomReset('${table.id}')"><i class="fas fa-compress-arrows-alt"></i> إعادة الحجم</button>`);
     }
+    if (!hasButton(bar, 'عرض كامل')) {
+      bar.insertAdjacentHTML('beforeend', `<button type="button" class="admin-office-table-btn" data-admin-office-control="fullscreen" onclick="adminOfficeToggleFullscreen('${table.id}',this)"><i class="fas fa-expand"></i> عرض كامل</button>`);
+    }
+    removeDuplicateControls(bar);
   }
+
   function enhanceTables() { injectCss(); document.querySelectorAll('[id^="table-div-"]').forEach(enhanceOne); }
 
-  /* قراءة Excel ومقارنة إلزامية */
   function findHeaderRow(rows) {
     for (let i = 0; i < Math.min(15, rows.length); i++) {
       const r = rows[i].map(norm);
