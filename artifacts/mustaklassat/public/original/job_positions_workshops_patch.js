@@ -1,4 +1,5 @@
-// Workshops fixed positions loader for Admin Offices
+// Workshops fixed positions seed for Admin Offices
+// Hidden system seed. No visible button for normal users.
 (function () {
   'use strict';
 
@@ -6,6 +7,7 @@
   const WORKSHOP_DEPT_KEY = 'workshops';
   const WORKSHOP_DEPT_LABEL = 'الورش';
   const LOCAL_KEY = 'adminOfficeWorkshopJobPositions_v1';
+  const SEEDED_KEY = 'adminOfficeWorkshopJobPositions_seeded_v2';
 
   const WORKSHOP_POSITIONS = [
     { dept: WORKSHOP_DEPT_KEY, jobTitle: 'مشرف موقع', salary: 0, category: '5', nationality: 'سعودي' },
@@ -21,7 +23,7 @@
   ];
 
   function patchDeptMapping() {
-    if (!window.JobPositionsDB) return;
+    if (!window.JobPositionsDB) return false;
 
     if (JobPositionsDB.DEPT_LABELS) JobPositionsDB.DEPT_LABELS[WORKSHOP_DEPT_KEY] = WORKSHOP_DEPT_LABEL;
     if (JobPositionsDB.DEPT_MAP) {
@@ -31,37 +33,19 @@
       JobPositionsDB.DEPT_MAP['صيانة واصلاح السيارات'] = WORKSHOP_DEPT_KEY;
     }
 
-    const originalMapDept = JobPositionsDB.mapDept;
-    JobPositionsDB.mapDept = function mapDeptWithWorkshops(arabicName) {
-      const value = String(arabicName || '').trim();
-      if (value.includes('ورش') || value.includes('صيانة وإصلاح السيارات') || value.includes('صيانة واصلاح السيارات')) {
-        return WORKSHOP_DEPT_KEY;
-      }
-      return typeof originalMapDept === 'function' ? originalMapDept(arabicName) : null;
-    };
-  }
+    if (!JobPositionsDB.__workshopsMapPatched) {
+      const originalMapDept = JobPositionsDB.mapDept;
+      JobPositionsDB.mapDept = function mapDeptWithWorkshops(arabicName) {
+        const value = String(arabicName || '').trim();
+        if (value.includes('ورش') || value.includes('صيانة وإصلاح السيارات') || value.includes('صيانة واصلاح السيارات')) {
+          return WORKSHOP_DEPT_KEY;
+        }
+        return typeof originalMapDept === 'function' ? originalMapDept(arabicName) : null;
+      };
+      JobPositionsDB.__workshopsMapPatched = true;
+    }
 
-  function injectWorkshopsCard() {
-    const firstCardBody = document.querySelector('.wrap .card .card-body');
-    if (!firstCardBody || document.getElementById('workshopsPositionsLoader')) return;
-
-    const box = document.createElement('div');
-    box.id = 'workshopsPositionsLoader';
-    box.className = 'info-box';
-    box.style.cssText = 'margin-top:14px;background:#f0fdf4;border-color:#bbf7d0;color:#14532d';
-    box.innerHTML = `
-      <strong>تحميل مناصب الورش فقط</strong>
-      <div style="margin-bottom:10px;line-height:1.7">
-        يثبت مسميات وظائف <b>${WORKSHOP_SITE_NAME}</b> فقط، بدون التأثير على باقي المستشفيات أو المكاتب.
-      </div>
-      <button class="btn btn-primary" type="button" onclick="window.loadWorkshopFixedPositions()">
-        <i class="fas fa-tools"></i> تحميل مناصب الورش
-      </button>
-      <button class="btn btn-warning" type="button" onclick="window.previewWorkshopFixedPositions()" style="margin-right:8px">
-        <i class="fas fa-eye"></i> معاينة قبل الحفظ
-      </button>
-    `;
-    firstCardBody.appendChild(box);
+    return true;
   }
 
   function saveLocalCopy(rows) {
@@ -73,56 +57,52 @@
     }));
   }
 
-  window.previewWorkshopFixedPositions = function previewWorkshopFixedPositions() {
-    if (!Array.isArray(window.parsedRows)) window.parsedRows = [];
-    window.parsedRows = WORKSHOP_POSITIONS.map(row => ({
-      hospitalName: WORKSHOP_SITE_NAME,
-      deptAr: WORKSHOP_DEPT_LABEL,
-      deptKey: WORKSHOP_DEPT_KEY,
-      jobTitle: row.jobTitle,
-      salary: row.salary,
-      category: row.category,
-      nationality: row.nationality,
-      valid: true
-    }));
-    if (typeof renderPreview === 'function') renderPreview();
-    if (typeof showAlert === 'function') showAlert('تم تجهيز معاينة مناصب الورش. اضغط حفظ المناصب للحفظ.', 'success');
-  };
-
-  window.loadWorkshopFixedPositions = async function loadWorkshopFixedPositions() {
-    if (!window.JobPositionsDB || typeof JobPositionsDB.save !== 'function') {
-      alert('قاعدة مناصب الوظائف غير جاهزة. أعد تحميل الصفحة.');
-      return;
+  function canSeedServer() {
+    try {
+      const s = JSON.parse(localStorage.getItem('najran_session') || '{}');
+      const role = String(s.role || '').toLowerCase();
+      return ['admin', 'super_admin', 'contract_supervisor', 'company_admin'].some(r => role.includes(r));
+    } catch (_) {
+      return false;
     }
+  }
 
-    const btn = document.querySelector('#workshopsPositionsLoader .btn-primary');
-    const oldHtml = btn ? btn.innerHTML : '';
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري حفظ الورش...';
-    }
+  async function seedWorkshopsSilently() {
+    saveLocalCopy(WORKSHOP_POSITIONS);
+
+    if (!window.JobPositionsDB || typeof JobPositionsDB.save !== 'function') return false;
+    if (!canSeedServer()) return true;
+
+    const lastSeed = localStorage.getItem(SEEDED_KEY);
+    const today = new Date().toISOString().slice(0, 10);
+    if (lastSeed === today) return true;
 
     try {
       await JobPositionsDB.save(WORKSHOP_SITE_NAME, WORKSHOP_POSITIONS);
-      saveLocalCopy(WORKSHOP_POSITIONS);
+      localStorage.setItem(SEEDED_KEY, today);
       if (typeof renderSavedList === 'function') await renderSavedList();
-      if (typeof showAlert === 'function') showAlert(`✅ تم حفظ ${WORKSHOP_POSITIONS.length} منصب للورش فقط`, 'success');
+      return true;
     } catch (err) {
-      saveLocalCopy(WORKSHOP_POSITIONS);
-      if (typeof showAlert === 'function') showAlert('تم حفظ نسخة محلية للورش، لكن حفظ السيرفر فشل: ' + err.message, 'error');
-    } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = oldHtml;
-      }
+      console.warn('[workshops-positions] server seed failed; local copy saved only:', err.message);
+      return false;
     }
-  };
-
-  function boot() {
-    patchDeptMapping();
-    injectWorkshopsCard();
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
+  function removeVisibleLoaderIfAny() {
+    const old = document.getElementById('workshopsPositionsLoader');
+    if (old) old.remove();
+  }
+
+  function bootWithRetry(triesLeft) {
+    removeVisibleLoaderIfAny();
+    const mapped = patchDeptMapping();
+    seedWorkshopsSilently();
+
+    if (!mapped && triesLeft > 0) {
+      setTimeout(() => bootWithRetry(triesLeft - 1), 300);
+    }
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => bootWithRetry(10));
+  else bootWithRetry(10);
 })();
