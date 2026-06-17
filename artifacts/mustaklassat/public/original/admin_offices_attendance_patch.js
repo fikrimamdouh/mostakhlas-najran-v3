@@ -3,6 +3,7 @@
 // - Renames special category to workshops
 // - Fixes printed attendance title wording for admin offices
 // - Fixes individual attendance-tab print button header/logo
+// - Rebuilds grouped print as explicit multi-page output
 (function () {
     'use strict';
 
@@ -44,6 +45,11 @@
     function saveAdminOfficeAffiliationsSafe(affiliations) {
         if (typeof saveAffiliations === 'function') return saveAffiliations(affiliations);
         writeJson('adminOfficeAffiliations_v1', affiliations);
+    }
+
+    function getAttendanceDataSafe() {
+        if (typeof getAttendanceData === 'function') return getAttendanceData();
+        return readJson('adminOfficesAttendanceData_v1', {});
     }
 
     function normalizeWorkshopLabel() {
@@ -167,56 +173,232 @@
             .replace(/لمركز:/g, 'للمكتب/المرفق:');
 
         const contractInfo = document.querySelector('.page-contract-info-v2')?.cloneNode(true);
-
-        const printWindow = window.open('', '', 'height=800,width=1200');
-        const doc = printWindow.document;
-        doc.open();
-        doc.write(`
-            <!DOCTYPE html>
-            <html lang="ar" dir="rtl">
-            <head>
-                <title>طباعة حضور المكاتب الإدارية</title>
-                <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-                <style>
-                    @page { size: A4 landscape; margin: 0.5cm; }
-                    * { box-sizing: border-box; }
-                    body { font-family: 'Tajawal', Arial, sans-serif; direction: rtl; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                    .printable-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 6px; margin-bottom: 8px; border-bottom: 1px solid #ccc; }
-                    .printable-header .logo { width: 60px; height: auto; }
-                    .printable-header .header-text { text-align: center; flex: 1; }
-                    .printable-header h1, .printable-header h2, .printable-header h3 { margin: 2px 0; }
-                    .printable-header h1 { font-size: 13pt; }
-                    .printable-header h3 { font-size: 11pt; font-weight: 500; }
-                    .printable-header h2 { font-size: 12pt; }
-                    .page-contract-info-v2 { font-size: 8pt; text-align: center; margin-bottom: 8px; padding: 5px; border: 1px solid #ccc; border-radius: 8px; }
-                    .extract-details-v2 { font-size: 10pt; padding: 8px; background: #003087 !important; color: #fff !important; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; gap: 10px; }
-                    table { width: 100%; border-collapse: collapse; table-layout: auto; }
-                    th, td { border: 1px solid #777; padding: 2px 3px; text-align: center; font-size: 7pt; white-space: nowrap; }
-                    th { background: #003087 !important; color: #fff !important; }
-                    caption { caption-side: top; }
-                    .table-summary-v2 { font-size: 8pt; padding: 5px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; border: 1px solid #ccc; background: #f8f9fa; font-weight: bold; }
-                    .signatures-display-section, .signatures-grid { display: flex; justify-content: space-around; margin-top: 15px; padding-top: 10px; border-top: 1px solid #ccc; }
-                    .signature-item, .signature-item-display { text-align: center; font-size: 9pt; }
-                    .signature-item .line, .signature-item-display .line { border-bottom: 1px solid #000; min-height: 20px; margin-top: 20px; }
-                </style>
-            </head>
-            <body>
-                ${buildOfficialPrintHeader(centerKey)}
-                ${contractInfo ? contractInfo.outerHTML : ''}
-                ${contentClone.outerHTML}
-            </body>
-            </html>
-        `);
-        doc.close();
-
-        printWindow.onload = () => {
-            printWindow.focus();
-            printWindow.print();
-            printWindow.close();
-        };
+        openPrintWindow(`${buildOfficialPrintHeader(centerKey)}${contractInfo ? contractInfo.outerHTML : ''}${contentClone.outerHTML}`, 'طباعة حضور المكاتب الإدارية', 'landscape');
     }
 
     window.preparePrint = printCurrentAttendanceTable;
+
+    function formatDate(dateString) {
+        if (!dateString) return 'غير محدد';
+        try { return new Date(dateString).toLocaleDateString('en-CA'); } catch (_) { return 'غير محدد'; }
+    }
+
+    function periodDetailsSafe() {
+        if (typeof getExtractPeriodDetails === 'function') return getExtractPeriodDetails();
+        const extractData = readJson('persistentExtractData', {});
+        const startDate = new Date(extractData.extractStart || new Date());
+        const endDate = new Date(extractData.extractEnd || new Date());
+        const daysInExtract = Math.max(1, Math.ceil((endDate - startDate) / 86400000) + 1);
+        const totalDaysInMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate();
+        return { startDate, daysInExtract, totalDaysInMonth };
+    }
+
+    function statusMeta(code) {
+        if (window.STATUS_CODES && window.STATUS_CODES[code]) return window.STATUS_CODES[code];
+        return ({ 'غ': { isAbsence: true } })[code] || { isAbsence: false };
+    }
+
+    function fineConfigFor(category) {
+        if (window.ABSENCE_FINES_BY_CATEGORY && window.ABSENCE_FINES_BY_CATEGORY[category]) return window.ABSENCE_FINES_BY_CATEGORY[category];
+        return ({ 1: { saudi: 300, non_saudi: 300 }, 2: { saudi: 250, non_saudi: 250 }, 3: { saudi: 100, non_saudi: 100 }, 4: { saudi: 80, non_saudi: 50 }, 5: { saudi: 80, non_saudi: 50 }, 6: { saudi: 50, non_saudi: 20 }, 7: { saudi: 10, non_saudi: 10 } })[category] || { saudi: 0, non_saudi: 0 };
+    }
+
+    function money(value) {
+        const n = Number(value) || 0;
+        return n.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function getSignaturesSafe(type) {
+        if (typeof getSignatures === 'function') return getSignatures(type) || [];
+        return [];
+    }
+
+    function signatureHtml(type, cls = 'signatures-grid') {
+        const signatures = getSignaturesSafe(type);
+        if (!signatures.length) return '';
+        return `<div class="${cls}">${signatures.map(sig => `<div class="signature-item"><div class="title">${sig.title || ''}</div><div class="line"></div><div class="name">${sig.name || '................'}</div></div>`).join('')}</div>`;
+    }
+
+    function buildContractInfoHtml() {
+        const node = document.querySelector('.page-contract-info-v2');
+        return node ? node.outerHTML : '';
+    }
+
+    function buildAttendancePage(centerKey) {
+        const names = getAdminOfficeNamesSafe();
+        const allData = getAttendanceDataSafe();
+        const centerName = names[centerKey] || centerKey;
+        const centerData = allData[centerKey] || [];
+        const { startDate, daysInExtract, totalDaysInMonth } = periodDetailsSafe();
+        const contractData = readJson('persistentContractData', {});
+        const extractData = readJson('persistentExtractData', {});
+        const companyName = contractData.companyName || 'الشركة';
+        const directPurchaseRatio = parseFloat(contractData.directPurchaseRatio) || 0;
+        const contractType = contractData.contractType || 'عقد أساسي';
+
+        let totalCost = 0, totalDeduction = 0, totalFine = 0, totalNet = 0;
+        const dayHeaders = Array.from({ length: daysInExtract }, (_, i) => {
+            const d = new Date(startDate);
+            d.setDate(startDate.getDate() + i);
+            return `<th>${d.getDate()}</th>`;
+        }).join('');
+
+        const rows = centerData.length ? centerData.map((emp, index) => {
+            let days = Array.isArray(emp.days) ? emp.days.slice(0, daysInExtract) : [];
+            while (days.length < daysInExtract) days.push('ح');
+
+            const salary = parseFloat(emp.salary) || 0;
+            const dailyRate = totalDaysInMonth > 0 ? salary / totalDaysInMonth : 0;
+            let costForPeriod = dailyRate * daysInExtract;
+            if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) costForPeriod += costForPeriod * directPurchaseRatio / 100;
+
+            let attendanceDays = 0, absenceDays = 0;
+            days.forEach(day => statusMeta(day).isAbsence ? absenceDays++ : attendanceDays++);
+            const deduction = absenceDays * dailyRate;
+            const fineConfig = fineConfigFor(emp.category);
+            const isSaudi = String(emp.nationality || '').includes('سعودي');
+            const absenceFine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
+            const nationalityFine = parseFloat(emp.nationalityFine) || 0;
+            const net = costForPeriod - deduction - absenceFine - nationalityFine;
+
+            totalCost += costForPeriod;
+            totalDeduction += deduction;
+            totalFine += absenceFine + nationalityFine;
+            totalNet += net;
+
+            return `<tr><td>${index + 1}</td><td>${emp.jobTitle || ''}</td><td>${emp.category || ''}</td><td>${emp.name || ''}</td>${days.map(d => `<td>${d}</td>`).join('')}<td>${money(costForPeriod)}</td><td>${attendanceDays}</td><td>${absenceDays}</td><td>${money(deduction)}</td><td>${money(absenceFine)}</td><td>${money(net)}</td><td>${emp.nationality || ''}</td><td>${money(nationalityFine)}</td><td>${emp.iqamaId || ''}</td></tr>`;
+        }).join('') : `<tr><td colspan="${14 + daysInExtract}">لا يوجد موظفون في هذا المكتب/المرفق.</td></tr>`;
+
+        const summary = `<div class="table-summary-v2"><span>عدد الموظفين: <b>${centerData.length}</b></span><span>التكلفة للفترة: <b>${money(totalCost)}</b></span><span>إجمالي الحسم: <b>${money(totalDeduction)}</b></span><span>إجمالي الغرامات: <b>${money(totalFine)}</b></span><span>صافي الاستحقاق: <b>${money(totalNet)}</b></span></div>`;
+        const title = `<div class="extract-details-v2"><div>بيان بالحضور والغياب لمنسوبي شركة (${companyName}) بالمكتب/المرفق: ${centerName}</div><div>الفترة (${formatDate(extractData.extractStart)}م - ${formatDate(extractData.extractEnd)}م)</div><div>عدد أيام المستخلص: ${daysInExtract}</div></div>`;
+
+        return `<section class="print-page landscape-page">${buildOfficialPrintHeader(centerKey)}${buildContractInfoHtml()}${title}${summary}<table><thead><tr><th rowspan="2">م</th><th rowspan="2">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2">اسم شاغل الوظيفة</th><th colspan="${daysInExtract}">الأيام</th><th rowspan="2">التكلفة</th><th colspan="2">الأيام</th><th colspan="2">الحسم والغرامة</th><th rowspan="2">الصافي</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة جنسية</th><th rowspan="2">الإقامة</th></tr><tr>${dayHeaders}<th>حضور</th><th>غياب</th><th>الحسم</th><th>الغرامة</th></tr></thead><tbody>${rows}</tbody></table>${signatureHtml('attendance')}</section>`;
+    }
+
+    function buildPerformancePage(centerKey) {
+        if (centerKey === 'admin_staff') return '';
+        if (typeof getDynamicPerformanceItems !== 'function' || typeof getPerformanceData !== 'function') return '';
+        const names = getAdminOfficeNamesSafe();
+        const centerName = names[centerKey] || centerKey;
+        const items = getDynamicPerformanceItems();
+        const scores = getPerformanceData()[centerKey] || {};
+        let maxTotal = 0, scoreTotal = 0;
+        const rows = items.map((item, i) => {
+            const score = scores[i] !== undefined ? scores[i] : item.max;
+            maxTotal += Number(item.max) || 0;
+            scoreTotal += Number(score) || 0;
+            return `<tr><td>${i + 1}</td><td class="item-text">${item.text}</td><td>${item.max}</td><td>${score}</td></tr>`;
+        }).join('') + `<tr class="total-row"><td colspan="2">المجموع</td><td>${maxTotal}</td><td>${scoreTotal}</td></tr>`;
+        const percent = maxTotal > 0 ? scoreTotal / maxTotal * 100 : 100;
+        const centerCost = typeof calculateCenterTotalCost === 'function' ? calculateCenterTotalCost(centerKey) : 0;
+        return `<section class="print-page portrait-page">${buildOfficialPrintHeader(centerKey)}<h2 class="cert-title">جدول تقييم مستوى الأداء والإنجاز</h2><h3 class="sub-title">للمكتب/المرفق: ${centerName}</h3><div class="cost-bar">إجمالي المبلغ لأنشطة القسم: ${money(centerCost)} ريال</div><table><thead><tr><th>م</th><th>أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr></thead><tbody>${rows}</tbody></table><div class="summary">التقدير الذي حصل عليه المقاول: <b>${percent.toFixed(2)}%</b></div>${signatureHtml('performance', 'signatures')}</section>`;
+    }
+
+    function buildAchievementPage(centerKey) {
+        const names = getAdminOfficeNamesSafe();
+        const centerName = names[centerKey] || centerKey;
+        const allData = getAttendanceDataSafe();
+        const centerData = allData[centerKey] || [];
+        const { totalDaysInMonth } = periodDetailsSafe();
+        const contractData = readJson('persistentContractData', {});
+        const directPurchaseRatio = parseFloat(contractData.directPurchaseRatio) || 0;
+        const contractType = contractData.contractType || 'عقد أساسي';
+        const perfDeductions = readJson('performanceDeductions', {});
+        const titles = typeof getAchievementTitles === 'function' ? getAchievementTitles() : { mainTitle: 'شهادة الإنجاز', subTitle: 'مستخلص العمالة' };
+
+        let monthly = 0, absenceDeduct = 0, absencePenalty = 0, nationPenalty = 0;
+        centerData.forEach(emp => {
+            const salary = parseFloat(emp.salary) || 0;
+            let adjusted = salary;
+            if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) adjusted += adjusted * directPurchaseRatio / 100;
+            monthly += adjusted;
+            const daily = totalDaysInMonth > 0 ? adjusted / totalDaysInMonth : 0;
+            const absences = (emp.days || []).filter(d => statusMeta(d).isAbsence).length;
+            const fineConfig = fineConfigFor(emp.category);
+            const isSaudi = String(emp.nationality || '').includes('سعودي');
+            absenceDeduct += absences * daily;
+            absencePenalty += absences * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
+            nationPenalty += parseFloat(emp.nationalityFine) || 0;
+        });
+        const perfPenalty = centerKey !== 'admin_staff' ? (parseFloat(perfDeductions[centerKey]) || 0) : 0;
+        const net = monthly - absenceDeduct - absencePenalty - perfPenalty - nationPenalty;
+        const tafqitText = typeof tafqit === 'function' ? tafqit(net) : '';
+
+        return `<section class="print-page portrait-page">${buildOfficialPrintHeader(centerKey)}<div class="certificate-header"><h2>${titles.mainTitle}</h2><h3>${titles.subTitle}</h3><h3>للمكتب/المرفق: ${centerName}</h3></div><table><thead><tr><th>البند</th><th>القيمة الشهرية</th><th>حسم الغياب</th><th>غرامة الغياب</th><th>غرامة الأداء</th><th>غرامة الجنسية</th><th>الصافي الشهري</th></tr></thead><tbody><tr><td>العمالة</td><td>${money(monthly)}</td><td>${money(absenceDeduct)}</td><td>${money(absencePenalty)}</td><td>${money(perfPenalty)}</td><td>${money(nationPenalty)}</td><td><b>${money(net)}</b></td></tr><tr class="total-row"><td colspan="6">إجمالي المستحق للمقاول</td><td><b>${money(net)}</b></td></tr><tr><td colspan="7">فقط وقدره: ${tafqitText}</td></tr></tbody></table>${signatureHtml('achievement', 'signatures')}</section>`;
+    }
+
+    function openPrintWindow(pagesHtml, title, orientation = 'mixed') {
+        const printWindow = window.open('', '', 'width=1200,height=900');
+        const doc = printWindow.document;
+        doc.open();
+        doc.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><title>${title}</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet"><style>
+            @page { size: A4 portrait; margin: 0.7cm; }
+            @page landscape { size: A4 landscape; margin: 0.5cm; }
+            @page portrait { size: A4 portrait; margin: 0.7cm; }
+            * { box-sizing: border-box; }
+            body { font-family: 'Tajawal', Arial, sans-serif; direction: rtl; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .print-page { break-after: page; page-break-after: always; page-break-inside: avoid; display: block; width: 100%; }
+            .print-page:last-child { break-after: auto; page-break-after: auto; }
+            .landscape-page { page: landscape; }
+            .portrait-page { page: portrait; }
+            .printable-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 6px; margin-bottom: 8px; border-bottom: 1px solid #ccc; }
+            .printable-header .logo { width: 58px; height: auto; }
+            .printable-header .header-text { text-align: center; flex: 1; }
+            .printable-header h1, .printable-header h2, .printable-header h3 { margin: 2px 0; }
+            .printable-header h1 { font-size: 13pt; }
+            .printable-header h3 { font-size: 11pt; font-weight: 500; }
+            .printable-header h2 { font-size: 12pt; }
+            .page-contract-info-v2 { font-size: 8pt; text-align: center; margin-bottom: 8px; padding: 5px; border: 1px solid #ccc; border-radius: 8px; }
+            .extract-details-v2 { font-size: 10pt; padding: 8px; background: #003087 !important; color: #fff !important; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; gap: 10px; }
+            table { width: 100%; border-collapse: collapse; table-layout: auto; margin-top: 6px; }
+            th, td { border: 1px solid #555; padding: 3px; text-align: center; font-size: 7pt; vertical-align: middle; }
+            th { background: #003087 !important; color: #fff !important; }
+            .portrait-page th, .portrait-page td { font-size: 9pt; padding: 5px; }
+            .table-summary-v2 { font-size: 8pt; padding: 5px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; border: 1px solid #ccc; background: #f8f9fa; font-weight: bold; }
+            .signatures-grid, .signatures { display: flex; justify-content: space-around; margin-top: 15px; padding-top: 10px; border-top: 1px solid #ccc; }
+            .signature-item { text-align: center; font-size: 9pt; min-width: 140px; }
+            .signature-item .title { font-weight: bold; }
+            .signature-item .line { border-bottom: 1px solid #000; min-height: 22px; margin-top: 22px; }
+            .cert-title, .sub-title, .certificate-header { text-align: center; }
+            .cost-bar, .summary { text-align: center; margin: 8px 0; font-weight: bold; }
+            .item-text { text-align: right; }
+            .total-row { font-weight: bold; background: #f0f0f0 !important; }
+        </style></head><body>${pagesHtml}</body></html>`);
+        doc.close();
+        setTimeout(() => {
+            printWindow.focus();
+            printWindow.print();
+            printWindow.close();
+        }, 700);
+    }
+
+    window.printSelected = function printSelectedFullPatched() {
+        const selectedKeys = Array.from(document.querySelectorAll('#print-centers-checkboxes input:checked')).map(cb => cb.value).filter(Boolean);
+        const printOptions = {
+            attendance: !!document.getElementById('print-opt-attendance')?.checked,
+            performance: !!document.getElementById('print-opt-performance')?.checked,
+            achievement: !!document.getElementById('print-opt-achievement')?.checked,
+        };
+
+        if (selectedKeys.length === 0 || (!printOptions.attendance && !printOptions.performance && !printOptions.achievement)) {
+            alert('الرجاء اختيار مكتب/مرفق وتقرير واحد على الأقل للطباعة.');
+            return;
+        }
+
+        if (typeof closeDialog === 'function') closeDialog('management-dialog');
+
+        const pages = [];
+        selectedKeys.forEach(centerKey => {
+            if (printOptions.attendance) pages.push(buildAttendancePage(centerKey));
+            if (printOptions.performance) {
+                const page = buildPerformancePage(centerKey);
+                if (page) pages.push(page);
+            }
+            if (printOptions.achievement) pages.push(buildAchievementPage(centerKey));
+        });
+
+        openPrintWindow(pages.join(''), 'طباعة التقارير المجمعة للمكاتب الإدارية');
+    };
 
     const originalInitializeCenterNames = window.initializeCenterNames;
     window.initializeCenterNames = function initializeCenterNamesPatched() {
@@ -225,36 +407,6 @@
         }
         normalizeWorkshopLabel();
         normalizeOfficeAffiliations();
-    };
-
-    const originalPrintSelected = window.printSelected;
-    window.printSelected = function printSelectedPatched() {
-        if (typeof originalPrintSelected !== 'function') return;
-
-        const originalOpen = window.open;
-        window.open = function patchedOpen() {
-            const printWindow = originalOpen.apply(window, arguments);
-            if (!printWindow || !printWindow.document) return printWindow;
-
-            const originalWrite = printWindow.document.write.bind(printWindow.document);
-            printWindow.document.write = function patchedWrite(html) {
-                if (typeof html === 'string') {
-                    html = html
-                        .replace(/بمركز صحي /g, 'بالمكتب/المرفق: ')
-                        .replace(/لمركز:/g, 'للمكتب/المرفق:')
-                        .replace(/تقرير_حضور_المراكز/g, 'تقرير_حضور_المكاتب_الإدارية');
-                }
-                return originalWrite(html);
-            };
-
-            return printWindow;
-        };
-
-        try {
-            return originalPrintSelected.apply(this, arguments);
-        } finally {
-            window.open = originalOpen;
-        }
     };
 
     normalizeWorkshopLabel();
