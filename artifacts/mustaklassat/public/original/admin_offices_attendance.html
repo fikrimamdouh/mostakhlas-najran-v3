@@ -157,6 +157,55 @@
     <script src="performance_logic.js"></script>
     <script src="achievement_logic.js"></script>
     <script src="/original/admin_offices_attendance_patch.js?v=20260617d"></script>
+<script>
+(function(){
+  const FINES={1:{saudi:500,non_saudi:500},2:{saudi:500,non_saudi:500},3:{saudi:250,non_saudi:100},4:{saudi:180,non_saudi:80},5:{saudi:150,non_saudi:80},6:{saudi:20,non_saudi:20},7:{saudi:10,non_saudi:10},default:{saudi:0,non_saudi:0}};
+  const ST={ح:{name:'حاضر',isAbsence:false,isSpecial:false},غ:{name:'غائب',isAbsence:true,isSpecial:false},ج:{name:'إجازة',isAbsence:false,isSpecial:true},ش:{name:'شاغرة',isAbsence:false,isSpecial:true},ت:{name:'تحت الإجراء',isAbsence:false,isSpecial:true},ب:{name:'بداية العقد',isAbsence:false,isSpecial:true},ن:{name:'نهاية العقد',isAbsence:false,isSpecial:true}};
+  function data(){try{return getAttendanceData()}catch(_){return JSON.parse(localStorage.getItem('adminOfficesAttendanceData_v1')||'{}')}}
+  function save(d){try{return saveAttendanceData(d)}catch(_){localStorage.setItem('adminOfficesAttendanceData_v1',JSON.stringify(d))}}
+  function period(){try{return getExtractPeriodDetails()}catch(_){return{daysInExtract:30,totalDaysInMonth:30,startDate:new Date()}}}
+  function contract(){try{return JSON.parse(localStorage.getItem('persistentContractData')||'{}')}catch(_){return{}}}
+  function isSaudi(n){return String(n||'سعودي').trim()==='سعودي'}
+  function calc(emp,p=period(),c=contract()){
+    const daysInExtract=p.daysInExtract||p.daysInMonth||30,totalDaysInMonth=p.totalDaysInMonth||30;
+    const salary=parseFloat(emp.salary)||0,daily=totalDaysInMonth>0?salary/totalDaysInMonth:0;
+    let cost=daily*daysInExtract;
+    if((c.contractType||'')==='شراء مباشر' && parseFloat(c.directPurchaseRatio)>0)cost+=cost*(parseFloat(c.directPurchaseRatio)/100);
+    let days=Array.isArray(emp.days)?emp.days.slice(0,daysInExtract):[];while(days.length<daysInExtract)days.push('ح');
+    let attendanceDays=0,absenceDays=0,deductionOnlyDays=0,specialCounts={};
+    days.forEach(x=>{if(x==='ح'||x==='ت')attendanceDays++;else if(x==='غ')absenceDays++;else deductionOnlyDays++;if(ST[x]?.isSpecial)specialCounts[x]=(specialCounts[x]||0)+1;});
+    const fineCfg=FINES[String(emp.category||'1')]||FINES.default;
+    const deduction=(absenceDays+deductionOnlyDays)*daily;
+    const absenceFine=absenceDays*(isSaudi(emp.nationality)?fineCfg.saudi:fineCfg.non_saudi);
+    const nationalityFine=parseFloat(emp.nationalityFine)||0;
+    const totalFine=absenceFine+nationalityFine;
+    const netSalary=cost-deduction-totalFine;
+    Object.assign(emp,{attendanceDays,absenceDays,deduction,absencePenalty:absenceFine,totalFine,netSalary});
+    return{days,cost,attendanceDays,absenceDays,deductionOnlyDays,deduction,absenceFine,nationalityFine,totalFine,netSalary,specialCounts};
+  }
+  function money(n){return (Number(n)||0).toFixed(2)}
+  function catColor(cat){try{return getCategoryColor(cat)}catch(_){return'#54a0ff'}}
+  function catText(cat){try{return getCategoryTextColor(cat)}catch(_){return'#fff'}}
+  function attSel(v,c,i,d){if(typeof createAttendanceSelect==='function')return createAttendanceSelect(v,c,i,d);return `<select onchange="updateEmployeeAttendance('${c}',${i},${d},this.value)"><option ${v==='ح'?'selected':''}>ح</option><option ${v==='غ'?'selected':''}>غ</option><option ${v==='ج'?'selected':''}>ج</option><option ${v==='ش'?'selected':''}>ش</option><option ${v==='ت'?'selected':''}>ت</option><option ${v==='ب'?'selected':''}>ب</option><option ${v==='ن'?'selected':''}>ن</option></select>`}
+  function natSel(v,c,i){if(typeof createNationalitySelect==='function')return createNationalitySelect(v,c,i);return `<input value="${v||''}" onchange="updateEmployeeField('${c}',${i},'nationality',this.value)">`}
+  window.populateAttendanceTableBody=function(centerKey){
+    const tbody=document.getElementById(`tbody-${centerKey}`);if(!tbody)return;const all=data(),rows=all[centerKey]||[],p=period();tbody.innerHTML='';
+    if(!rows.length){tbody.innerHTML=`<tr><td colspan="${14+(p.daysInExtract||30)}">لا يوجد موظفون في هذا المركز.</td></tr>`;const cap=document.getElementById(`total-${centerKey}`);if(cap)cap.innerHTML='<div class="table-summary-v2"><div class="summary-item"><span class="label">لا يوجد موظفين</span></div></div>';return;}
+    let totalCost=0,totalNet=0,totalDeduction=0,totalFine=0,employeesWithAbsence=0,specialTotals={};
+    const frag=document.createDocumentFragment();
+    rows.forEach((emp,i)=>{const r=calc(emp,p);totalCost+=r.cost;totalNet+=r.netSalary;totalDeduction+=r.deduction;totalFine+=r.totalFine;if(r.absenceDays>0)employeesWithAbsence++;Object.entries(r.specialCounts).forEach(([k,v])=>specialTotals[k]=(specialTotals[k]||0)+v);const tr=document.createElement('tr');const dayCells=r.days.map((x,d)=>`<td class="day-col">${attSel(x,centerKey,i,d)}</td>`).join('');let specialCells='';['ج','ش','ت','ب','ن'].forEach(code=>{specialCells+=`<td class="status-header status-${code.toLowerCase()}-col" style="display:none">${r.days.filter(x=>x===code).length}</td>`});tr.innerHTML=`<td>${i+1}</td><td class="job-title">${emp.jobTitle||''}</td><td class="category-col"><select class="category-select" style="background-color:${catColor(emp.category)};color:${catText(emp.category)};width:100%" onchange="updateEmployeeField('${centerKey}',${i},'category',this.value)">${[1,2,3,4,5,6,7].map(n=>`<option value="${n}" ${String(n)===String(emp.category)?'selected':''}>${n}</option>`).join('')}</select></td><td class="employee-name">${emp.name||''}</td>${dayCells}<td>${money(r.cost)}</td><td>${r.attendanceDays}</td><td>${r.absenceDays}</td><td>${money(r.deduction)}</td><td>${money(r.absenceFine)}</td><td>${money(r.netSalary)}</td><td>${natSel(emp.nationality,centerKey,i)}</td><td><input type="number" class="fine-input" value="${money(r.nationalityFine)}" onchange="updateEmployeeField('${centerKey}',${i},'nationalityFine',this.value)"></td><td><input type="text" class="iqama-input" value="${emp.iqamaId||''}" onchange="updateEmployeeField('${centerKey}',${i},'iqamaId',this.value)"></td>${specialCells}`;frag.appendChild(tr);});tbody.appendChild(frag);save(all);
+    const table=document.getElementById(`table-${centerKey}`);if(table){table.querySelectorAll('thead .status-header,tbody .status-header').forEach(x=>x.style.display='none');Object.keys(specialTotals).forEach(code=>table.querySelectorAll(`.status-${code.toLowerCase()}-col`).forEach(x=>x.style.display='table-cell'));}
+    let summary=`<div class="summary-item"><span class="label">عدد الموظفين</span><span class="value">${rows.length}</span></div><div class="summary-item"><span class="label">التكلفة للفترة</span><span class="value">${money(totalCost)}</span></div><div class="summary-item"><span class="label">إجمالي الحسم</span><span class="value">${money(totalDeduction)}</span></div><div class="summary-item"><span class="label">إجمالي الغرامات</span><span class="value">${money(totalFine)}</span></div><div class="summary-item"><span class="label">صافي الاستحقاق</span><span class="value net-total">${money(totalNet)}</span></div><div class="summary-item-divider">|</div><div class="summary-item"><span class="label">حضور</span><span class="value">${rows.length-employeesWithAbsence}</span></div><div class="summary-item"><span class="label">غياب</span><span class="value">${employeesWithAbsence}</span></div>`;
+    ['ج','ش','ت','ب','ن'].forEach(code=>{if(specialTotals[code]>0)summary+=`<div class="summary-item-divider">|</div><div class="summary-item"><span class="label">${ST[code].name}</span><span class="value">${specialTotals[code]}</span></div>`});const cap=document.getElementById(`total-${centerKey}`);if(cap)cap.innerHTML=`<div class="table-summary-v2">${summary}</div>`;try{initializeAttendanceSelects(tbody)}catch(_){};try{calculateAndDisplayGrandTotal()}catch(_){};
+  };
+  window.updateEmployeeAttendance=function(centerKey,employeeIndex,dayIndex,newStatus){const all=data();const emp=all[centerKey]?.[employeeIndex];if(!emp)return;const p=period();if(!Array.isArray(emp.days)||emp.days.length<(p.daysInExtract||30))emp.days=Array(p.daysInExtract||30).fill('ح').map((v,i)=>Array.isArray(emp.days)?(emp.days[i]||v):v);emp.days[dayIndex]=newStatus;calc(emp,p);save(all);populateAttendanceTableBody(centerKey);};
+  window.updateEmployeeField=function(centerKey,index,field,value){const all=data();const emp=all[centerKey]?.[index];if(!emp)return;emp[field]=value;calc(emp);save(all);populateAttendanceTableBody(centerKey);};
+  window.calculateAndDisplayGrandTotal=function(){const all=data();let count=0,cost=0,ded=0,fine=0,net=0;Object.values(all).forEach(arr=>(arr||[]).forEach(emp=>{const r=calc(emp);count++;cost+=r.cost;ded+=r.deduction;fine+=r.totalFine;net+=r.netSalary;}));[['grand-total-count',count],['grand-total-cost',money(cost)],['grand-total-deduction',money(ded)],['grand-total-fines',money(fine)],['grand-net-total',money(net)]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v;});};
+  window.updateGrandTotal=window.calculateAndDisplayGrandTotal;
+  window.calculateAndDisplayAchievement=function(centerKey){const tbody=document.getElementById(`ach-tbody-${centerKey}`);if(!tbody)return;const rows=(data()[centerKey]||[]);if(!rows.length){tbody.innerHTML='<tr><td colspan="7">لا يوجد بيانات موظفين لهذا المركز.</td></tr>';return;}let monthly=0,ded=0,absFine=0,natFine=0;rows.forEach(emp=>{const r=calc(emp);monthly+=parseFloat(emp.salary)||0;ded+=r.deduction;absFine+=r.absenceFine;natFine+=r.nationalityFine;});const perf=(JSON.parse(localStorage.getItem('performanceDeductions')||'{}')[centerKey])||0;const net=monthly-ded-absFine-perf-natFine;const fmt=n=>(Number(n)||0).toLocaleString('ar-SA',{style:'currency',currency:'SAR'});tbody.innerHTML=`<tr><td>العمالة</td><td>${fmt(monthly)}</td><td>${fmt(ded)}</td><td>${fmt(absFine)}</td><td>${fmt(perf)}</td><td>${fmt(natFine)}</td><td><strong>${fmt(net)}</strong></td></tr><tr class="total-row"><td>إجمالي المستحق للمقاول</td><td>${fmt(monthly)}</td><td>${fmt(ded)}</td><td>${fmt(absFine)}</td><td>${fmt(perf)}</td><td>${fmt(natFine)}</td><td><strong>${fmt(net)}</strong></td></tr><tr><td colspan="7" class="tafqeet-cell">إجمالي المستحق للمقاول فقط وقدره: ${typeof tafqit==='function'?tafqit(net):''}</td></tr>`;};
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{try{calculateAndDisplayGrandTotal()}catch(_){}},300));
+})();
+</script>
 
 <script src="/original/extract-submit.js"></script>
 <script src="/original/track.js"></script>
