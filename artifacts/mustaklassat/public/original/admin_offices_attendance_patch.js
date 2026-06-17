@@ -5,7 +5,7 @@
 (function () {
     'use strict';
 
-    const WORKSHOP_LABEL = 'الورش (صيانة وإصلاح السيارات 9)';
+    const WORKSHOP_LABEL = 'الورش (صيانة وإصلاح السيارات)';
     const NAJRAN_OFFICE_KEYS = new Set(['center_9', 'center_10', 'center_11', 'center_12', 'center_13', 'center_14']);
 
     function isPlainObject(value) {
@@ -66,7 +66,6 @@
         saveAdminOfficeAffiliationsSafe(affiliations);
     }
 
-    // Override center header resolver so printing never falls back to one logo for all offices.
     window.getHeaderForCenter = function getHeaderForCenterPatched(centerKey) {
         const affiliations = getAdminOfficeAffiliationsSafe();
         let aff = affiliations[centerKey];
@@ -109,7 +108,6 @@
         normalizeOfficeAffiliations();
     };
 
-    // Patch print output wording without touching calculations.
     const originalPrintSelected = window.printSelected;
     window.printSelected = function printSelectedPatched() {
         if (typeof originalPrintSelected !== 'function') return;
