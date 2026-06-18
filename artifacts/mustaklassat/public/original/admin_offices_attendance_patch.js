@@ -201,8 +201,12 @@ body {
   max-width: 291mm !important;
   overflow: visible !important;
 }            .print-page:last-child { break-after: auto; page-break-after: auto; }
-            .landscape-page { page: landscape; }
-            .portrait-page { page: portrait; }
+.landscape-page {
+  page: landscape;
+  transform: scale(0.92);
+  transform-origin: top center;
+  width: 108.5% !important;
+}            .portrait-page { page: portrait; }
             @media print {
   html,
   body {
@@ -210,60 +214,162 @@ body {
     min-height: 210mm !important;
   }
 
-  .landscape-page {
-    page: landscape;
-    width: 297mm !important;
-    min-height: 210mm !important;
-  }
+ .landscape-page {
+  page: landscape;
+  transform: scale(0.92);
+  transform-origin: top center;
+  width: 108.5% !important;
+  min-height: auto !important;
 }
-            .printable-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 6px; margin-bottom: 8px; border-bottom: 1px solid #ccc; }
-            .printable-header .logo { width: 58px; height: auto; }
-            .printable-header .header-text { text-align: center; flex: 1; }
-            .printable-header h1, .printable-header h2, .printable-header h3 { margin: 2px 0; }
-            .printable-header h1 { font-size: 13pt; }
-            .printable-header h3 { font-size: 11pt; font-weight: 500; }
-            .printable-header h2 { font-size: 12pt; }
-            .page-contract-info-v2 { font-size: 8pt; text-align: center; margin-bottom: 8px; padding: 5px; border: 1px solid #ccc; border-radius: 8px; }
-            .extract-details-v2 { font-size: 10pt; padding: 8px; background: #003087 !important; color: #fff !important; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; gap: 10px; }
-           .table-responsive-wrapper {
-  overflow: visible !important;
-  width: 100% !important;
-  max-width: 100% !important;
-}
+                        .printable-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding-bottom: 2px;
+              margin-bottom: 3px;
+              border-bottom: 1px solid #ccc;
+            }
 
-table {
-  width: 100% !important;
-  max-width: 100% !important;
-  border-collapse: collapse;
-  table-layout: fixed;
-  margin-top: 4px;
-}
+            .printable-header .logo {
+              width: 40px;
+              height: auto;
+            }
 
-th, td {
-  border: 1px solid #555;
-  padding: 1px 2px;
-  text-align: center;
-  font-size: 6pt;
-  line-height: 1.1;
-  vertical-align: middle;
-  white-space: normal;
-  word-break: break-word;
-}
+            .printable-header .header-text {
+              text-align: center;
+              flex: 1;
+            }
 
-th {
-  font-size: 6.5pt;
-}
-            th { background: #003087 !important; color: #fff !important; }
-            .portrait-page th, .portrait-page td { font-size: 9pt; padding: 5px; }
-            .table-summary-v2 { font-size: 8pt; padding: 5px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; border: 1px solid #ccc; background: #f8f9fa; font-weight: bold; }
-            .signatures-grid, .signatures { display: flex; justify-content: space-around; margin-top: 15px; padding-top: 10px; border-top: 1px solid #ccc; }
-            .signature-item { text-align: center; font-size: 9pt; min-width: 140px; }
-            .signature-item .title { font-weight: bold; }
-            .signature-item .line { border-bottom: 1px solid #000; min-height: 22px; margin-top: 22px; }
-            .cert-title, .sub-title, .certificate-header { text-align: center; }
-            .cost-bar, .summary { text-align: center; margin: 8px 0; font-weight: bold; }
-            .item-text { text-align: right; }
-            .total-row { font-weight: bold; background: #f0f0f0 !important; }
+            .printable-header h1,
+            .printable-header h2,
+            .printable-header h3 {
+              margin: 1px 0;
+              line-height: 1.05;
+            }
+
+            .printable-header h1 { font-size: 9pt; }
+            .printable-header h3 { font-size: 8pt; font-weight: 500; }
+            .printable-header h2 { font-size: 9pt; }
+
+            .page-contract-info-v2 {
+              font-size: 6pt;
+              text-align: center;
+              margin-bottom: 3px;
+              padding: 2px 4px;
+              border: 1px solid #ccc;
+              border-radius: 5px;
+              line-height: 1.1;
+            }
+
+            .extract-details-v2 {
+              font-size: 7pt;
+              padding: 3px 5px;
+              background: #003087 !important;
+              color: #fff !important;
+              border-radius: 5px 5px 0 0;
+              display: flex;
+              justify-content: space-between;
+              gap: 5px;
+              line-height: 1.1;
+            }
+
+            .table-responsive-wrapper {
+              overflow: visible !important;
+              width: 100% !important;
+              max-width: 100% !important;
+            }
+
+            table {
+              width: 100% !important;
+              max-width: 100% !important;
+              border-collapse: collapse;
+              table-layout: fixed;
+              margin-top: 2px;
+            }
+
+            th,
+            td {
+              border: 1px solid #555;
+              padding: 0.5px 1px;
+              text-align: center;
+              font-size: 5.1pt;
+              line-height: 0.95;
+              vertical-align: middle;
+              white-space: nowrap;
+              word-break: normal;
+            }
+
+            th {
+              background: #003087 !important;
+              color: #fff !important;
+              font-size: 5.4pt;
+            }
+
+            .portrait-page th,
+            .portrait-page td {
+              font-size: 9pt;
+              padding: 5px;
+            }
+
+            .table-summary-v2 {
+              font-size: 6pt;
+              padding: 2px;
+              display: flex;
+              flex-wrap: wrap;
+              justify-content: center;
+              gap: 4px;
+              border: 1px solid #ccc;
+              background: #f8f9fa;
+              font-weight: bold;
+              line-height: 1.05;
+            }
+
+            .signatures-grid,
+            .signatures {
+              display: flex;
+              justify-content: space-around;
+              margin-top: 4px;
+              padding-top: 4px;
+              border-top: 1px solid #ccc;
+            }
+
+            .signature-item {
+              text-align: center;
+              font-size: 7pt;
+              min-width: 110px;
+            }
+
+            .signature-item .title {
+              font-weight: bold;
+            }
+
+            .signature-item .line {
+              border-bottom: 1px solid #000;
+              min-height: 10px;
+              margin-top: 8px;
+            }
+
+            .cert-title,
+            .sub-title,
+            .certificate-header {
+              text-align: center;
+            }
+
+            .cost-bar,
+            .summary {
+              text-align: center;
+              margin: 8px 0;
+              font-weight: bold;
+            }
+
+            .item-text {
+              text-align: right;
+            }
+
+            .total-row {
+              font-weight: bold;
+              background: #f0f0f0 !important;
+            }
         </style></head><body>${pagesHtml}</body></html>`);
         doc.close();
         setTimeout(() => {
