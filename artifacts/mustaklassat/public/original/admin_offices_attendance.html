@@ -18,7 +18,7 @@
     <script src="contract_data_connector.js"></script>
     <script src="/original/month-context.js"></script>
     <script src="/original/extract-stepper.js"></script>
-<link rel="stylesheet" href="/original/shared-styles.css">
+    <link rel="stylesheet" href="/original/shared-styles.css">
 </head>
 <body>
     <div id="particles-js-bg"></div>
@@ -33,40 +33,39 @@
             <p class="date" id="current-date-time"></p>
         </header>
 
-      <section class="page-contract-info-v2">
-    <p>
-        <span><strong>الجهة:</strong> <span class="hospitalName">غير محدد</span></span>
-        <span class="separator">|</span>
-        <span><strong>تفاصيل العقد:</strong> <span class="contractDetails">غير محدد</span></span>
-        <span class="separator">|</span>
-        <span><strong>اسم الشركة:</strong> <span class="companyName">غير محدد</span></span>
-        <span class="separator">|</span>
-        <span><strong>نوع العقد:</strong> <span class="contractType">غير محدد</span></span>
-        <span class="separator directPurchaseContainer" style="display: none;">|</span>
-        <span class="directPurchaseContainer" style="display: none;"><strong>نسبة الشراء المباشر:</strong> <span class="directPurchaseRatio">0</span>%</span>
-        <span class="separator">|</span>
-        <span><strong>مدة المستخلص:</strong> من <span id="extract-start-date">غير محدد</span> إلى <span id="extract-end-date">غير محدد</span></span>
-    </p>
-</section>
+        <section class="page-contract-info-v2">
+            <p>
+                <span><strong>الجهة:</strong> <span class="hospitalName">غير محدد</span></span>
+                <span class="separator">|</span>
+                <span><strong>تفاصيل العقد:</strong> <span class="contractDetails">غير محدد</span></span>
+                <span class="separator">|</span>
+                <span><strong>اسم الشركة:</strong> <span class="companyName">غير محدد</span></span>
+                <span class="separator">|</span>
+                <span><strong>نوع العقد:</strong> <span class="contractType">غير محدد</span></span>
+                <span class="separator directPurchaseContainer" style="display: none;">|</span>
+                <span class="directPurchaseContainer" style="display: none;"><strong>نسبة الشراء المباشر:</strong> <span class="directPurchaseRatio">0</span>%</span>
+                <span class="separator">|</span>
+                <span><strong>مدة المستخلص:</strong> من <span id="extract-start-date">غير محدد</span> إلى <span id="extract-end-date">غير محدد</span></span>
+            </p>
+        </section>
 
         <nav class="nav-bar">
-          <div class="dropdown">
-    <select id="navigation" onchange="window.navigateTo(this.value)">
-        <option value="#">-- اختر صفحة --</option>
-        <option value="index.html">الصفحة الرئيسية</option>
-        <option value="admin_offices_attendance.html" selected>مستخلص العمالة للمكاتب الإدارية والمرافق الصحية</option>
-        <option value="job-positions-upload.html">📥 تحميل المناصب</option>
-        <option value="admin_offices_consumables.html">📦 مستخلص المستهلكات للمكاتب الإدارية</option>
-        <option value="approval.html">✅ متابعة المستخلصات</option>
-        <option value="contract-foundation-upload.html">📋 تأسيس العقد</option>
-    </select>
-</div>
+            <div class="dropdown">
+                <select id="navigation" onchange="window.navigateTo(this.value)">
+                    <option value="#">-- اختر صفحة --</option>
+                    <option value="index.html">الصفحة الرئيسية</option>
+                    <option value="admin_offices_attendance.html" selected>مستخلص العمالة للمكاتب الإدارية والمرافق الصحية</option>
+                    <option value="job-positions-upload.html">📥 تحميل المناصب</option>
+                    <option value="admin_offices_consumables.html">📦 مستخلص المستهلكات للمكاتب الإدارية</option>
+                    <option value="approval.html">✅ متابعة المستخلصات</option>
+                    <option value="contract-foundation-upload.html">📋 تأسيس العقد</option>
+                </select>
+            </div>
         </nav>
 
         <section class="std-action-bar no-print" id="main-action-buttons">
             <button class="ab ab-manage" onclick="openEmployeeManagementDialog()"><i class="fas fa-users-cog"></i> إدارة الموظفين والمكاتب والمرافق</button>
-            <button class="ab ab-import" onclick="loadAdminOfficePositionsFromTemplate()"><i class="fas fa-briefcase"></i> تحميل المناصب</button>
-            <button class="ab ab-import" onclick="openImportDialog()"><i class="fas fa-file-import"></i> استيراد لمكتب/مرفق</button>
+            <button class="ab ab-import" onclick="openImportDialog()"><i class="fas fa-briefcase"></i> تحميل المناصب / التامبلت</button>
             <button class="ab ab-import" onclick="openSmartUploadDialog()"><i class="fas fa-magic"></i> الرفع الذكي</button>
             <button class="ab ab-excel" onclick="openExportDialog()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
             <button class="ab ab-print" onclick="openPrintDialog()"><i class="fas fa-print"></i> طباعة</button>
@@ -132,45 +131,387 @@
         </section>
     </div>
 
-<div id="dialog-overlay" class="overlay" style="display: none;"></div>
-<div id="management-dialog" class="dialog" style="display: none;"></div>
-<div id="form-dialog" class="dialog" style="display: none;"></div>
-<div id="signature-dialog" class="dialog wide-dialog" style="display: none;"></div>
-<footer><p>© 2025 فرع وزارة الصحة بمنطقة نجران - المكاتب الإدارية والمرافق الصحية</p></footer>
+    <div id="dialog-overlay" class="overlay" style="display: none;"></div>
+    <div id="management-dialog" class="dialog" style="display: none;"></div>
+    <div id="form-dialog" class="dialog" style="display: none;"></div>
+    <div id="signature-dialog" class="dialog wide-dialog" style="display: none;"></div>
+
+    <footer><p>© 2025 فرع وزارة الصحة بمنطقة نجران - المكاتب الإدارية والمرافق الصحية</p></footer>
 
 <script src="admin_offices_attendance.js"></script>
 <script src="performance_logic.js"></script>
 <script src="achievement_logic.js"></script>
 <script src="/original/admin_offices_attendance_patch.js?v=20260617d"></script>
+
 <script>
 (function(){
-  const WORKSHOP_NAME='الورش (صيانة وإصلاح السيارات)';
-  const WORKSHOP_ROWS=[
-    ['مشرف موقع','5','محمد صالح مبخوت اليامي','سعودي','1113625121'],['فني ميكانيكا بنزين','4','صالح جمعان حسين آل مسعد','سعودي','1081223651'],['فني ميكانيكا بنزين','4','محمد على صالح ال خريم','سعودي','1089521528'],['فني ميكانيكا بنزين','4','ماثنراج موهان','هندي','2525748907'],['فني ميكانيكا بنزين','4','جالحسدين رياض الدين','بنجلاديشي','2148128735'],['فني ميكانيكا بنزين','4','جويل ماهى نافارو','فلبيني','2473327340'],['فني ميكانيكا بنزين','4','ساتيش سيلاكانو','هندي','2474993686'],['فني ميكانيكا بنزين','4','شاغر','',''],['فني ميكانيكا ديزل','4','سعيد سلمان مسفر اليامي','سعودي','1093670774'],['فني ميكانيكا ديزل','4','فاروق منجور على','بنجلاديشي','2236624660'],['فني تبريد وتكييف سيارات','4','علي محمد علي اليامي','سعودي','1106767963'],['فني تبريد وتكييف سيارات','4','محمد شفيع الله مد ستير مياه','بنجلاديشي','2451841239'],['فني كهربائي سيارات','4','صالح احمد صغير آل يعلا','سعودي','1077105763'],['فني كهربائي سيارات','4','مد فريد حسين','بنجلاديشي','2479004273'],['فني كهربائي سيارات','4','بلال مياه','بنجلاديشي','2505929246'],['فني كهربائي سيارات','4','شاغر','',''],['فني سمكرة سيارات','4','حمد صالح ناصر المحامض','سعودي','1077102596'],['فني سمكرة سيارات','4','شاغر','',''],['دهان سيارات','5','جبران محمد علي آل مسرح','سعودي','1044583027'],['دهان سيارات','5','مد رقيب مد سلام','بنجلاديشي','2491206658'],['فني ميزان سيارات','4','حمد مطر حسين ال عاقلة','سعودي','1072616251'],['فني ميزان سيارات','4','شاغر','',''],['عامل زيت وبنشر','6','بيبلوب ميا مد بابول ميا','بنجلاديشي','2473382881'],['عامل زيت وبنشر','6','شاغر','',''],['عامل زيت وبنشر','6','شاغر','',''],['عامل زيت وبنشر','6','شاغر','',''],['عامل غسيل وتشحيم','6','محمد منير حسان','بنجلاديشي','2473326557'],['عامل غسيل وتشحيم','6','صديق رحمان عمر علي','بنجلاديشي','2473326706'],['عامل غسيل وتشحيم','6','شاغر','','']
-  ].map(r=>({jobTitle:r[0],category:r[1],name:r[2],nationality:r[3],iqamaId:r[4],salary:0,dept:'workshops'}));
-  const FINES={1:{saudi:500,non_saudi:500},2:{saudi:500,non_saudi:500},3:{saudi:250,non_saudi:100},4:{saudi:180,non_saudi:80},5:{saudi:150,non_saudi:80},6:{saudi:20,non_saudi:20},7:{saudi:10,non_saudi:10},default:{saudi:0,non_saudi:0}};
-  const ST={ح:{name:'حاضر',isSpecial:false},غ:{name:'غائب',isSpecial:false},ج:{name:'إجازة',isSpecial:true},ش:{name:'شاغرة',isSpecial:true},ت:{name:'تحت الإجراء',isSpecial:true},ب:{name:'بداية العقد',isSpecial:true},ن:{name:'نهاية العقد',isSpecial:true}};
-  function data(){try{return getAttendanceData()}catch(_){return JSON.parse(localStorage.getItem('adminOfficesAttendanceData_v1')||'{}')}}
-  function save(d){try{return saveAttendanceData(d)}catch(_){localStorage.setItem('adminOfficesAttendanceData_v1',JSON.stringify(d))}}
-  function names(){try{return getCenterNames()}catch(_){return JSON.parse(localStorage.getItem('adminOfficeNames_v1')||'{}')}}
-  function orderedKeys(){const n=names();return Object.keys(n).sort((a,b)=>{if(a.startsWith('center_')&&b.startsWith('center_'))return parseInt(a.split('_')[1])-parseInt(b.split('_')[1]);if(a.startsWith('center_'))return-1;if(b.startsWith('center_'))return 1;return a.localeCompare(b);});}
-  function period(){try{return getExtractPeriodDetails()}catch(_){return{daysInExtract:30,totalDaysInMonth:30}}}
-  function contract(){try{return JSON.parse(localStorage.getItem('persistentContractData')||'{}')}catch(_){return{}}}
-  function isSaudi(n){return String(n||'').trim()==='سعودي'}
-  function money(n){return (Number(n)||0).toFixed(2)}
-  function calc(emp,p=period(),c=contract()){const len=p.daysInExtract||30,total=p.totalDaysInMonth||30,sal=+emp.salary||0,daily=total?sal/total:0;let cost=daily*len;if((c.contractType||'')==='شراء مباشر'&&+c.directPurchaseRatio>0)cost+=cost*(+c.directPurchaseRatio/100);let days=Array.isArray(emp.days)?emp.days.slice(0,len):[];while(days.length<len)days.push('ح');let att=0,abs=0,dedOnly=0,special={};days.forEach(x=>{if(x==='ح'||x==='ت')att++;else if(x==='غ')abs++;else dedOnly++;if(ST[x]?.isSpecial)special[x]=(special[x]||0)+1;});const f=FINES[String(emp.category||1)]||FINES.default,ded=(abs+dedOnly)*daily,absFine=abs*(isSaudi(emp.nationality)?f.saudi:f.non_saudi),natFine=+emp.nationalityFine||0,net=cost-ded-absFine-natFine;Object.assign(emp,{attendanceDays:att,absenceDays:abs,deduction:ded,absencePenalty:absFine,totalFine:absFine+natFine,netSalary:net});return{days,cost,attendanceDays:att,absenceDays:abs,deduction:ded,absenceFine:absFine,nationalityFine:natFine,totalFine:absFine+natFine,netSalary:net,specialCounts:special};}
-  function daysArr(){return Array(period().daysInExtract||30).fill('ح')}
-  function normalizeRow(r){return{jobTitle:r.jobTitle||r.title||'',category:String(r.category||'1'),salary:+r.salary||0,nationality:r.nationality||'',name:r.name||r.employeeName||r.workerName||'',iqamaId:r.iqamaId||r.idNumber||r.identity||r.nationalId||'',nationalityFine:+r.nationalityFine||0,days:Array.isArray(r.days)?r.days:daysArr()};}
-  function auth(){let t=null;try{t=JSON.parse(localStorage.getItem('najran_session')||'{}').clerkToken||null}catch(_){}const h={'Content-Type':'application/json'};if(t)h.Authorization='Bearer '+t;return h;}
-  async function loadSaved(hospital){try{const r=await fetch('/api/admin/job-positions?hospital='+encodeURIComponent(hospital),{headers:auth(),credentials:'include'});if(r.ok){const j=await r.json();if(j?.rows?.length)return j.rows;}}catch(_){}if(String(hospital).includes('الورش'))return WORKSHOP_ROWS;return[];}
-  function renderAll(centerKey){try{if(typeof showCenterDetails==='function'&&document.getElementById('center-details-view')?.style.display!=='none')showCenterDetails(centerKey)}catch(_){}try{if(typeof renderCenterIcons==='function')renderCenterIcons()}catch(_){}try{calculateAndDisplayGrandTotal()}catch(_){}}
-  window.confirmLoadAdminOfficePositions=async function(){const centerKey=document.getElementById('admin-office-load-center')?.value;if(!centerKey)return alert('اختر المكتب/المرفق أولاً.');const office=names()[centerKey]||centerKey;const rows=await loadSaved(office);if(!rows.length)return alert('لا توجد مناصب محفوظة لـ '+office);const all=data(),current=(all[centerKey]||[]).length;if(current&&!confirm('وُجدت '+rows.length+' صف محفوظ لـ "'+office+'".\n\nسيتم الاستبدال الكامل. هل توافق؟'))return;if(!current&&!confirm('وُجدت '+rows.length+' صف محفوظ لـ "'+office+'".\n\nهل تريد تحميلها؟'))return;all[centerKey]=rows.map(normalizeRow);save(all);if(typeof closeDialog==='function')closeDialog('management-dialog');renderAll(centerKey);alert('✅ تم تحميل '+rows.length+' صف بالاسم والهوية والجنسية كما هي.');};
-  window.downloadAdminOfficeTemplate=async function(){const centerKey=document.getElementById('center-select-import')?.value;if(!centerKey)return alert('اختر المكتب/المرفق أولاً.');const office=names()[centerKey]||centerKey;let rows=[];const current=data()[centerKey]||[];if(current.length)rows=current;else rows=(await loadSaved(office)).map(normalizeRow);if(!rows.length)return alert('لا توجد بيانات/مناصب محفوظة لهذا المكتب.');const aoa=[['اسم الموظف','رقم الهوية / الإقامة','مسمى الوظيفة','التكلفة الشهرية','الفئة','الجنسية'],...rows.map(r=>[r.name||'',r.iqamaId||'',r.jobTitle||'',+r.salary||0,r.category||'1',r.nationality||''])];const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:30},{wch:22},{wch:32},{wch:18},{wch:8},{wch:16}];XLSX.utils.book_append_sheet(wb,ws,office.substring(0,31));XLSX.writeFile(wb,'تامبلت-'+office.replace(/[\\/:*?"<>|]/g,'-')+'.xlsx');};
-  window.openImportDialog=function(){const n=names(),opts=orderedKeys().map(k=>`<option value="${k}">${n[k]}</option>`).join('');const content=`<div class="dialog-header"><h3><i class="fas fa-folder-open"></i> استيراد بيانات من Excel</h3><span class="close" onclick="closeDialog('management-dialog')">×</span></div><div class="dialog-body"><div style="background:#eef6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;margin-bottom:16px;text-align:center"><h4 style="color:#003087;margin-bottom:10px"><i class="fas fa-clipboard-list"></i> تامبليت الوظائف - الطريقة الموصى بها</h4><p style="font-size:.9rem;line-height:1.8;color:#374151;margin-bottom:12px">١. نزّل التامبلت ← يحتوي مسميات الوظائف والأسماء والهويات المحفوظة.<br>٢. افتحه في Excel وأدخل/عدّل التكلفة الشهرية أو أي بيانات.<br>٣. ارفع الملف هنا ليتم إدخال الموظفين في المكتب المختار.</p><div class="form-group"><label>اختر المكتب/المرفق:</label><select id="center-select-import">${opts}</select></div><button class="btn btn-secondary" onclick="downloadAdminOfficeTemplate()" style="margin:10px 0"><i class="fas fa-download"></i> تنزيل التامبلت</button><input type="file" id="excel-file-input" accept=".xlsx,.xls" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;margin-top:8px"><button class="btn btn-success" onclick="handleSingleFileImport()" style="margin-top:12px"><i class="fas fa-file-import"></i> استيراد التامبليت بعد التعبئة</button></div><div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:16px;text-align:center"><h4 style="color:#374151;margin-bottom:10px"><i class="fas fa-folder"></i> استيراد Excel عادي</h4><input type="file" id="excel-file-input-normal" accept=".xlsx,.xls" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff"><button class="btn btn-success" onclick="runAdminOfficeNormalImport()" style="margin-top:12px"><i class="fas fa-file-import"></i> استيراد</button></div><div id="import-status-area" style="margin-top:14px"></div></div>`;if(typeof openDialog==='function')openDialog(content,'management-dialog',true);};
-  window.runAdminOfficeNormalImport=function(){const src=document.getElementById('excel-file-input-normal'),dst=document.getElementById('excel-file-input');if(!src||!src.files.length)return alert('اختر ملف Excel أولاً.');try{const dt=new DataTransfer();dt.items.add(src.files[0]);dst.files=dt.files}catch(_){return alert('ارفع الملف في خانة التامبليت بالأعلى.')}handleSingleFileImport();};
-  document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{try{calculateAndDisplayGrandTotal()}catch(_){}},300));
+  const WORKSHOP_NAME = 'الورش (صيانة وإصلاح السيارات)';
+
+  const WORKSHOP_ROWS = [
+    ['مشرف موقع','5','محمد صالح مبخوت اليامي','سعودي','1113625121'],
+    ['فني ميكانيكا بنزين','4','صالح جمعان حسين آل مسعد','سعودي','1081223651'],
+    ['فني ميكانيكا بنزين','4','محمد على صالح ال خريم','سعودي','1089521528'],
+    ['فني ميكانيكا بنزين','4','ماثنراج موهان','هندي','2525748907'],
+    ['فني ميكانيكا بنزين','4','جالحسدين رياض الدين','بنجلاديشي','2148128735'],
+    ['فني ميكانيكا بنزين','4','جويل ماهى نافارو','فلبيني','2473327340'],
+    ['فني ميكانيكا بنزين','4','ساتيش سيلاكانو','هندي','2474993686'],
+    ['فني ميكانيكا بنزين','4','شاغر','',''],
+    ['فني ميكانيكا ديزل','4','سعيد سلمان مسفر اليامي','سعودي','1093670774'],
+    ['فني ميكانيكا ديزل','4','فاروق منجور على','بنجلاديشي','2236624660'],
+    ['فني تبريد وتكييف سيارات','4','علي محمد علي اليامي','سعودي','1106767963'],
+    ['فني تبريد وتكييف سيارات','4','محمد شفيع الله مد ستير مياه','بنجلاديشي','2451841239'],
+    ['فني كهربائي سيارات','4','صالح احمد صغير آل يعلا','سعودي','1077105763'],
+    ['فني كهربائي سيارات','4','مد فريد حسين','بنجلاديشي','2479004273'],
+    ['فني كهربائي سيارات','4','بلال مياه','بنجلاديشي','2505929246'],
+    ['فني كهربائي سيارات','4','شاغر','',''],
+    ['فني سمكرة سيارات','4','حمد صالح ناصر المحامض','سعودي','1077102596'],
+    ['فني سمكرة سيارات','4','شاغر','',''],
+    ['دهان سيارات','5','جبران محمد علي آل مسرح','سعودي','1044583027'],
+    ['دهان سيارات','5','مد رقيب مد سلام','بنجلاديشي','2491206658'],
+    ['فني ميزان سيارات','4','حمد مطر حسين ال عاقلة','سعودي','1072616251'],
+    ['فني ميزان سيارات','4','شاغر','',''],
+    ['عامل زيت وبنشر','6','بيبلوب ميا مد بابول ميا','بنجلاديشي','2473382881'],
+    ['عامل زيت وبنشر','6','شاغر','',''],
+    ['عامل زيت وبنشر','6','شاغر','',''],
+    ['عامل زيت وبنشر','6','شاغر','',''],
+    ['عامل غسيل وتشحيم','6','محمد منير حسان','بنجلاديشي','2473326557'],
+    ['عامل غسيل وتشحيم','6','صديق رحمان عمر علي','بنجلاديشي','2473326706'],
+    ['عامل غسيل وتشحيم','6','شاغر','','']
+  ].map(r => ({
+    jobTitle: r[0],
+    category: r[1],
+    name: r[2],
+    nationality: r[3],
+    iqamaId: r[4],
+    salary: 0,
+    dept: 'workshops'
+  }));
+
+  const FINES = {
+    1:{saudi:500,non_saudi:500},
+    2:{saudi:500,non_saudi:500},
+    3:{saudi:250,non_saudi:100},
+    4:{saudi:180,non_saudi:80},
+    5:{saudi:150,non_saudi:80},
+    6:{saudi:20,non_saudi:20},
+    7:{saudi:10,non_saudi:10},
+    default:{saudi:0,non_saudi:0}
+  };
+
+  const ST = {
+    ح:{name:'حاضر',isSpecial:false},
+    غ:{name:'غائب',isSpecial:false},
+    ج:{name:'إجازة',isSpecial:true},
+    ش:{name:'شاغرة',isSpecial:true},
+    ت:{name:'تحت الإجراء',isSpecial:true},
+    ب:{name:'بداية العقد',isSpecial:true},
+    ن:{name:'نهاية العقد',isSpecial:true}
+  };
+
+  function data(){
+    try { return getAttendanceData(); }
+    catch(_) { return JSON.parse(localStorage.getItem('adminOfficesAttendanceData_v1') || '{}'); }
+  }
+
+  function save(d){
+    try { return saveAttendanceData(d); }
+    catch(_) { localStorage.setItem('adminOfficesAttendanceData_v1', JSON.stringify(d)); }
+  }
+
+  function names(){
+    try { return getCenterNames(); }
+    catch(_) { return JSON.parse(localStorage.getItem('adminOfficeNames_v1') || '{}'); }
+  }
+
+  function esc(v) {
+    return String(v || '')
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  function orderedKeys(){
+    const n = names();
+    return Object.keys(n).sort((a,b)=>{
+      if(a.startsWith('center_') && b.startsWith('center_')) return parseInt(a.split('_')[1]) - parseInt(b.split('_')[1]);
+      if(a.startsWith('center_')) return -1;
+      if(b.startsWith('center_')) return 1;
+      return a.localeCompare(b);
+    });
+  }
+
+  function period(){
+    try { return getExtractPeriodDetails(); }
+    catch(_) { return {daysInExtract:30,totalDaysInMonth:30}; }
+  }
+
+  function contract(){
+    try { return JSON.parse(localStorage.getItem('persistentContractData') || '{}'); }
+    catch(_) { return {}; }
+  }
+
+  function isSaudi(n){
+    return String(n || '').trim() === 'سعودي';
+  }
+
+  function money(n){
+    return (Number(n) || 0).toFixed(2);
+  }
+
+  function calc(emp, p = period(), c = contract()){
+    const len = p.daysInExtract || 30;
+    const total = p.totalDaysInMonth || 30;
+    const sal = +emp.salary || 0;
+    const daily = total ? sal / total : 0;
+
+    let cost = daily * len;
+    if ((c.contractType || '') === 'شراء مباشر' && +c.directPurchaseRatio > 0) {
+      cost += cost * (+c.directPurchaseRatio / 100);
+    }
+
+    let days = Array.isArray(emp.days) ? emp.days.slice(0, len) : [];
+    while(days.length < len) days.push('ح');
+
+    let att = 0, abs = 0, dedOnly = 0, special = {};
+    days.forEach(x => {
+      if (x === 'ح' || x === 'ت') att++;
+      else if (x === 'غ') abs++;
+      else dedOnly++;
+      if (ST[x]?.isSpecial) special[x] = (special[x] || 0) + 1;
+    });
+
+    const f = FINES[String(emp.category || 1)] || FINES.default;
+    const ded = (abs + dedOnly) * daily;
+    const absFine = abs * (isSaudi(emp.nationality) ? f.saudi : f.non_saudi);
+    const natFine = +emp.nationalityFine || 0;
+    const net = cost - ded - absFine - natFine;
+
+    Object.assign(emp, {
+      attendanceDays: att,
+      absenceDays: abs,
+      deduction: ded,
+      absencePenalty: absFine,
+      totalFine: absFine + natFine,
+      netSalary: net
+    });
+
+    return {
+      days,
+      cost,
+      attendanceDays: att,
+      absenceDays: abs,
+      deduction: ded,
+      absenceFine: absFine,
+      nationalityFine: natFine,
+      totalFine: absFine + natFine,
+      netSalary: net,
+      specialCounts: special
+    };
+  }
+
+  function daysArr(){
+    return Array(period().daysInExtract || 30).fill('ح');
+  }
+
+  function normalizeRow(r){
+    return {
+      jobTitle: r.jobTitle || r.title || '',
+      category: String(r.category || '1'),
+      salary: +r.salary || 0,
+      nationality: r.nationality || '',
+      name: r.name || r.employeeName || r.workerName || '',
+      iqamaId: r.iqamaId || r.idNumber || r.identity || r.nationalId || '',
+      nationalityFine: +r.nationalityFine || 0,
+      days: Array.isArray(r.days) ? r.days : daysArr()
+    };
+  }
+
+  function auth(){
+    let t = null;
+    try { t = JSON.parse(localStorage.getItem('najran_session') || '{}').clerkToken || null; } catch(_) {}
+    const h = {'Content-Type':'application/json'};
+    if(t) h.Authorization = 'Bearer ' + t;
+    return h;
+  }
+
+  async function loadSaved(hospital){
+    try {
+      const r = await fetch('/api/admin/job-positions?hospital=' + encodeURIComponent(hospital), {
+        headers: auth(),
+        credentials: 'include'
+      });
+      if(r.ok){
+        const j = await r.json();
+        if(j?.rows?.length) return j.rows;
+      }
+    } catch(_) {}
+
+    if(String(hospital).includes('الورش')) return WORKSHOP_ROWS;
+    return [];
+  }
+
+  function renderAll(centerKey){
+    try {
+      if(typeof showCenterDetails === 'function' && document.getElementById('center-details-view')?.style.display !== 'none') {
+        showCenterDetails(centerKey);
+      }
+    } catch(_) {}
+
+    try { if(typeof renderCenterIcons === 'function') renderCenterIcons(); } catch(_) {}
+    try { calculateAndDisplayGrandTotal(); } catch(_) {}
+  }
+
+  window.confirmLoadAdminOfficePositions = async function(){
+    const centerKey = document.getElementById('admin-office-load-center')?.value;
+    if(!centerKey) return alert('اختر المكتب/المرفق أولاً.');
+
+    const office = names()[centerKey] || centerKey;
+    const rows = await loadSaved(office);
+
+    if(!rows.length) return alert('لا توجد مناصب محفوظة لـ ' + office);
+
+    const all = data();
+    const current = (all[centerKey] || []).length;
+
+    if(current && !confirm('وُجدت ' + rows.length + ' صف محفوظ لـ "' + office + '".\n\nسيتم الاستبدال الكامل. هل توافق؟')) return;
+    if(!current && !confirm('وُجدت ' + rows.length + ' صف محفوظ لـ "' + office + '".\n\nهل تريد تحميلها؟')) return;
+
+    all[centerKey] = rows.map(normalizeRow);
+    save(all);
+
+    if(typeof closeDialog === 'function') closeDialog('management-dialog');
+    renderAll(centerKey);
+
+    alert('✅ تم تحميل ' + rows.length + ' صف بالاسم والهوية والجنسية كما هي.');
+  };
+
+  window.downloadAdminOfficeTemplate = async function(){
+    const centerKey = document.getElementById('center-select-import')?.value;
+    if(!centerKey) return alert('اختر المكتب/المرفق أولاً.');
+
+    const office = names()[centerKey] || centerKey;
+
+    let rows = [];
+    const current = data()[centerKey] || [];
+
+    if(current.length) {
+      rows = current;
+    } else {
+      rows = (await loadSaved(office)).map(normalizeRow);
+    }
+
+    if(!rows.length) return alert('لا توجد بيانات/مناصب محفوظة لهذا المكتب.');
+
+    const aoa = [
+      [
+        'اسم الموظف',
+        'رقم الهوية / الإقامة',
+        'مسمى الوظيفة',
+        'التكلفة الشهرية',
+        'الفئة',
+        'الجنسية',
+        'غرامة جنسية'
+      ],
+      ...rows.map(r => [
+        r.name || '',
+        r.iqamaId || r.idNumber || r.identity || r.nationalId || '',
+        r.jobTitle || r.title || '',
+        Number(r.salary || 0),
+        r.category || '1',
+        r.nationality || '',
+        Number(r.nationalityFine || 0)
+      ])
+    ];
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    ws['!cols'] = [
+      {wch:30},
+      {wch:22},
+      {wch:32},
+      {wch:18},
+      {wch:8},
+      {wch:16},
+      {wch:14}
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, office.substring(0,31));
+    XLSX.writeFile(wb, 'تامبلت-' + office.replace(/[\\/:*?"<>|]/g,'-') + '.xlsx');
+  };
+
+  window.openImportDialog = function(){
+    const n = names();
+    const opts = orderedKeys()
+      .map(k => `<option value="${k}">${esc(n[k])}</option>`)
+      .join('');
+
+    const content = `
+      <div class="dialog-header">
+        <h3><i class="fas fa-folder-open"></i> استيراد بيانات من Excel</h3>
+        <span class="close" onclick="closeDialog('management-dialog')">×</span>
+      </div>
+      <div class="dialog-body">
+        <div style="background:#eef6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;margin-bottom:16px;text-align:center">
+          <h4 style="color:#003087;margin-bottom:10px"><i class="fas fa-clipboard-list"></i> تامبليت الوظائف - الطريقة الموصى بها</h4>
+          <p style="font-size:.9rem;line-height:1.8;color:#374151;margin-bottom:12px">
+            ١. نزّل التامبلت ← يحتوي مسميات الوظائف والأسماء والهويات والجنسية والتكلفة.<br>
+            ٢. افتحه في Excel وأدخل/عدّل التكلفة الشهرية أو أي بيانات.<br>
+            ٣. ارفع الملف هنا لتظهر المقارنة قبل الحفظ.
+          </p>
+          <div class="form-group">
+            <label>اختر المكتب/المرفق:</label>
+            <select id="center-select-import">${opts}</select>
+          </div>
+          <button class="btn btn-secondary" onclick="downloadAdminOfficeTemplate()" style="margin:10px 0">
+            <i class="fas fa-download"></i> تنزيل التامبلت
+          </button>
+          <input type="file" id="excel-file-input" accept=".xlsx,.xls" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;margin-top:8px">
+          <button class="btn btn-success" onclick="handleSingleFileImport()" style="margin-top:12px">
+            <i class="fas fa-file-import"></i> استيراد التامبليت بعد التعبئة
+          </button>
+        </div>
+
+        <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:16px;text-align:center">
+          <h4 style="color:#374151;margin-bottom:10px"><i class="fas fa-folder"></i> استيراد Excel عادي</h4>
+          <input type="file" id="excel-file-input-normal" accept=".xlsx,.xls" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff">
+          <button class="btn btn-success" onclick="runAdminOfficeNormalImport()" style="margin-top:12px">
+            <i class="fas fa-file-import"></i> استيراد
+          </button>
+        </div>
+
+        <div id="import-status-area" style="margin-top:14px"></div>
+      </div>`;
+
+    if(typeof openDialog === 'function') openDialog(content, 'management-dialog', true);
+  };
+
+  window.runAdminOfficeNormalImport = function(){
+    const src = document.getElementById('excel-file-input-normal');
+    const dst = document.getElementById('excel-file-input');
+
+    if(!src || !src.files.length) return alert('اختر ملف Excel أولاً.');
+
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(src.files[0]);
+      dst.files = dt.files;
+    } catch(_) {
+      return alert('ارفع الملف في خانة التامبليت بالأعلى.');
+    }
+
+    handleSingleFileImport();
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      try { calculateAndDisplayGrandTotal(); } catch(_) {}
+    }, 300);
+  });
 })();
 </script>
+
 <script src="/original/extract-submit.js"></script>
 <script src="/original/track.js"></script>
 <script src="/original/shared-nav.js"></script>
