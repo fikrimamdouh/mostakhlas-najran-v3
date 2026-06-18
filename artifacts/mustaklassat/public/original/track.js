@@ -133,6 +133,48 @@
     var legacy = readJson('performanceDeductions', {}); legacy[centerKey] = deductionAmount; writeJson('performanceDeductions', legacy);
     if (typeof window.calculateAndDisplayGrandTotal === 'function') setTimeout(window.calculateAndDisplayGrandTotal, 0);
   };
+
+  window.openEditItemsDialog = function (centerKey) {
+    var names = namesSafe();
+    var items = window.getPerformanceItems(centerKey);
+    var rows = items.map(function (item, index) {
+      return '<div class="admin-perf-item-row dialog-item-row" data-row="1"><div class="admin-perf-item-number">' + (index + 1) + '</div><div class="admin-perf-item-fields"><label>نص البند</label><input type="text" class="edit-text-input" value="' + esc(item.text) + '"><label>الدرجة</label><input type="number" class="edit-max-input" value="' + esc(item.max) + '" min="1"></div><button class="admin-perf-delete" onclick="this.closest(\'.admin-perf-item-row\').remove()"><i class="fas fa-trash"></i></button></div>';
+    }).join('');
+    var content = '<style>.admin-perf-dialog{width:min(1180px,96vw)!important;max-width:96vw!important}.admin-perf-body{max-height:68vh;overflow:auto;padding:16px 18px!important;background:#f8fafc}.admin-perf-hint{background:#eef6ff;border:1px solid #bfdbfe;border-radius:12px;padding:10px 14px;margin-bottom:12px;color:#1e3a8a;font-weight:700}.admin-perf-item-row{display:grid;grid-template-columns:42px 1fr 46px;gap:10px;align-items:center;background:#fff;border:1px solid #dbeafe;border-radius:14px;padding:10px;margin-bottom:10px;box-shadow:0 4px 12px rgba(15,23,42,.05)}.admin-perf-item-number{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#003087;color:#fff;font-weight:800}.admin-perf-item-fields{display:grid;grid-template-columns:90px minmax(420px,1fr) 65px 90px;gap:8px;align-items:center}.admin-perf-item-fields label{font-weight:700;color:#334155}.admin-perf-item-fields input{width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px}.admin-perf-item-fields .edit-text-input{font-weight:600}.admin-perf-delete{height:38px;border:0;border-radius:10px;background:#dc2626;color:#fff;cursor:pointer}.admin-perf-footer{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 16px;background:#fff;border-top:1px solid #e5e7eb}.admin-perf-footer .left,.admin-perf-footer .right{display:flex;gap:10px;flex-wrap:wrap}</style><div class="dialog-header"><h3><i class="fas fa-tasks"></i> إدارة بنود تقييم الأداء لمركز: ' + esc(names[centerKey] || centerKey) + '</h3><span class="close" onclick="closeDialog(\'management-dialog\')">×</span></div><div class="dialog-body admin-perf-body" id="edit-items-container"><div class="admin-perf-hint">عدّل النص أو الدرجة، استخدم السكرول لعرض كل البنود، ثم احفظ.</div>' + rows + '</div><div class="dialog-footer admin-perf-footer"><div class="left"><button class="btn btn-primary" onclick="addNewPerformanceItemField()"><i class="fas fa-plus"></i> إضافة بند جديد</button></div><div class="right"><button class="btn btn-success" onclick="saveEditedPerformanceItems(\'' + centerKey + '\')"><i class="fas fa-save"></i> حفظ التغييرات</button><button class="btn btn-secondary" onclick="closeDialog(\'management-dialog\')">إغلاق</button></div></div>';
+    if (typeof openDialog === 'function') {
+      openDialog(content, 'management-dialog', true);
+      var dlg = document.getElementById('management-dialog');
+      if (dlg) dlg.classList.add('admin-perf-dialog', 'wide-dialog');
+    }
+  };
+  window.addNewPerformanceItemField = function () {
+    var container = document.getElementById('edit-items-container');
+    if (!container) return;
+    var count = container.querySelectorAll('.admin-perf-item-row').length + 1;
+    var div = document.createElement('div');
+    div.className = 'admin-perf-item-row dialog-item-row';
+    div.setAttribute('data-row', '1');
+    div.innerHTML = '<div class="admin-perf-item-number">' + count + '</div><div class="admin-perf-item-fields"><label>نص البند</label><input type="text" class="edit-text-input" placeholder="اكتب نص البند"><label>الدرجة</label><input type="number" class="edit-max-input" value="5" min="1"></div><button class="admin-perf-delete" onclick="this.closest(\'.admin-perf-item-row\').remove()"><i class="fas fa-trash"></i></button>';
+    container.appendChild(div);
+    div.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+  window.saveEditedPerformanceItems = function (centerKey) {
+    var rows = Array.from(document.querySelectorAll('#edit-items-container .admin-perf-item-row, #edit-items-container .dialog-item-row'));
+    var newItems = [];
+    rows.forEach(function (row) {
+      var textEl = row.querySelector('.edit-text-input');
+      var maxEl = row.querySelector('.edit-max-input');
+      var text = textEl ? textEl.value.trim() : '';
+      var max = maxEl ? parseInt(maxEl.value, 10) : 0;
+      if (text && max > 0) newItems.push({ text: text, max: max });
+    });
+    if (!newItems.length) return alert('لا يمكن حفظ قائمة بنود فارغة.');
+    window.savePerformanceItems(centerKey, newItems);
+    if (typeof closeDialog === 'function') closeDialog('management-dialog');
+    if (typeof renderPerformanceTable === 'function') renderPerformanceTable(centerKey);
+    if (typeof showSuccessMessage === 'function') showSuccessMessage('تم حفظ بنود تقييم الأداء.');
+  };
+
   window.resetPerformanceScores = function (centerKey) {
     if (!confirm('هل تريد إعادة درجات تقييم الأداء لهذا المكتب/المرفق إلى الدرجة الكاملة؟')) return;
     var data = window.getPerformanceData(); delete data[centerKey]; window.savePerformanceData(data);
@@ -150,12 +192,10 @@
     var days = p.daysInExtract || 30;
     var contract = readJson('persistentContractData', {});
     var ratio = parseFloat(contract.directPurchaseRatio) || 0;
-    var perfDeductions = readJson('adminOfficesPerformanceDeductions_v1', readJson('performanceDeductions', {}));
     var count = 0, costTotal = 0, deductionTotal = 0, finesTotal = 0, netTotal = 0;
     Object.keys(allData).forEach(function (centerKey) {
       var centerRows = allData[centerKey] || [];
       count += centerRows.length;
-      var centerCost = 0, centerAbsDed = 0, centerFines = 0;
       centerRows.forEach(function (emp) {
         var salary = parseFloat(emp.salary) || 0;
         var daily = totalDays > 0 ? salary / totalDays : 0;
@@ -167,12 +207,28 @@
         var absenceFine = absenceDays * (isSaudi ? cfg.saudi : cfg.non_saudi);
         var natFine = parseFloat(emp.nationalityFine) || 0;
         var absDed = absenceDays * daily;
-        centerCost += cost; centerAbsDed += absDed; centerFines += absenceFine + natFine;
+        costTotal += cost; deductionTotal += absDed; finesTotal += absenceFine + natFine; netTotal += cost - absDed - absenceFine - natFine;
       });
-      var perfDed = parseFloat(perfDeductions[centerKey]) || 0;
-      costTotal += centerCost; deductionTotal += centerAbsDed + perfDed; finesTotal += centerFines; netTotal += centerCost - centerAbsDed - perfDed - centerFines;
     });
     var el; if ((el = document.getElementById('grand-total-count'))) el.textContent = count; if ((el = document.getElementById('grand-total-cost'))) el.textContent = money(costTotal); if ((el = document.getElementById('grand-total-deduction'))) el.textContent = money(deductionTotal); if ((el = document.getElementById('grand-total-fines'))) el.textContent = money(finesTotal); if ((el = document.getElementById('grand-net-total'))) el.textContent = money(netTotal); localStorage.setItem('grand-net-total-admin', money(netTotal));
+  };
+
+  function refreshAdminTotalsNow(centerKey) {
+    try { if (typeof window.calculateAndDisplayGrandTotal === 'function') window.calculateAndDisplayGrandTotal(); } catch (e) {}
+    try { if (centerKey && typeof showCenterDetails === 'function' && document.getElementById('center-details-view')?.style.display !== 'none') showCenterDetails(centerKey); } catch (e) {}
+  }
+  var oldSaveAttendanceData = window.saveAttendanceData;
+  if (typeof oldSaveAttendanceData === 'function') {
+    window.saveAttendanceData = function (data) {
+      var r = oldSaveAttendanceData.apply(this, arguments);
+      setTimeout(function () { refreshAdminTotalsNow(); }, 0);
+      return r;
+    };
+  }
+  var oldSetItem = localStorage.setItem.bind(localStorage);
+  localStorage.setItem = function (key, value) {
+    oldSetItem(key, value);
+    if (key === 'adminOfficesAttendanceData_v1') setTimeout(function () { refreshAdminTotalsNow(); }, 0);
   };
 
   function buildAttendancePage(centerKey) {
@@ -210,53 +266,15 @@
       return '<tr><td>' + (idx + 1) + '</td><td class="job-title">' + esc(emp.jobTitle) + '</td><td class="category-cell">' + esc(emp.category) + '</td><td class="employee-name">' + esc(emp.name) + '</td>' + empDays.map(function (x) { return '<td class="day-cell ' + (x === 'غ' ? 'absent' : 'present') + '">' + esc(x) + '</td>'; }).join('') + '<td>' + money(cost) + '</td><td>' + attendance + '</td><td>' + absence + '</td><td>' + money(deduction) + '</td><td>' + money(absenceFine) + '</td><td>' + money(net) + '</td><td class="nationality-cell">' + esc(emp.nationality) + '</td><td>' + money(natFine) + '</td><td>' + esc(emp.iqamaId) + '</td></tr>';
     }).join('') : '<tr><td colspan="' + (14 + days) + '">لا يوجد موظفون في هذا المكتب/المرفق.</td></tr>';
     var ch = getHeaderForOffice(centerKey);
-    var sigHtml = '';
-    try {
-      var sigs = typeof getSignatures === 'function' ? (getSignatures('attendance_' + centerKey) || getSignatures('attendance') || []) : [];
-      sigHtml = sigs.length ? '<div class="signatures-block"><div class="signatures-title">التواقيع</div><div class="signatures-grid">' + sigs.map(function (s) { return '<div class="signature-item"><div class="signature-role">' + esc(s.title || '') + '</div><div class="signature-line"></div><div class="signature-name">' + esc(s.name || '') + '</div></div>'; }).join('') + '</div></div>' : '';
-    } catch (e) {}
-    return '<section class="print-page"><div class="header-info"><img src="' + ch.logoSrc + '" class="logo-right"><img src="' + ch.logoSrc + '" class="logo-left"><div class="header-lines"><h1>' + esc(ch.h1) + '</h1><h2>مستخلص العمالة للمكاتب الإدارية والمرافق الصحية</h2><h3>' + esc(ch.h3) + '</h3></div><div class="info-block"><span><b>المكتب/المرفق:</b> ' + esc(centerName) + '</span> | <span><b>اسم الشركة:</b> ' + esc(companyName) + '</span> | <span><b>مدة المستخلص:</b> من ' + esc(formatDate(extract.extractStart)) + ' إلى ' + esc(formatDate(extract.extractEnd)) + '</span></div><div class="extract-title">بيان بالحضور والغياب للمكتب/المرفق: ' + esc(centerName) + '</div></div><div class="department-title">' + esc(centerName) + '</div><div class="summary-block">عدد الموظفين: ' + rowsData.length + ' | التكلفة: ' + money(totalCost) + ' | الحسم: ' + money(totalDed) + ' | الغرامات: ' + money(totalFine) + ' | الصافي: ' + money(totalNet) + '</div><table><thead><tr><th rowspan="2">م</th><th rowspan="2">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2">اسم شاغل الوظيفة</th><th colspan="' + days + '">الأيام</th><th rowspan="2">التكلفة للفترة</th><th colspan="2">عدد الأيام</th><th colspan="2">حسم وغرامة الغياب</th><th rowspan="2">صافي الاستحقاق</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة جنسية</th><th rowspan="2">رقم الإقامة/الهوية</th></tr><tr>' + dayHeaders + '<th>حضور</th><th>غياب</th><th>الحسم</th><th>غرامة الغياب</th></tr></thead><tbody>' + body + '</tbody></table>' + sigHtml + '</section>';
+    return '<section class="print-page"><div class="header-info"><img src="' + ch.logoSrc + '" class="logo-right"><img src="' + ch.logoSrc + '" class="logo-left"><div class="header-lines"><h1>' + esc(ch.h1) + '</h1><h2>مستخلص العمالة للمكاتب الإدارية والمرافق الصحية</h2><h3>' + esc(ch.h3) + '</h3></div><div class="info-block"><span><b>المكتب/المرفق:</b> ' + esc(centerName) + '</span> | <span><b>اسم الشركة:</b> ' + esc(companyName) + '</span> | <span><b>مدة المستخلص:</b> من ' + esc(formatDate(extract.extractStart)) + ' إلى ' + esc(formatDate(extract.extractEnd)) + '</span></div><div class="extract-title">بيان بالحضور والغياب للمكتب/المرفق: ' + esc(centerName) + '</div></div><div class="department-title">' + esc(centerName) + '</div><div class="summary-block">عدد الموظفين: ' + rowsData.length + ' | التكلفة: ' + money(totalCost) + ' | الحسم: ' + money(totalDed) + ' | الغرامات: ' + money(totalFine) + ' | الصافي: ' + money(totalNet) + '</div><table><thead><tr><th rowspan="2">م</th><th rowspan="2">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2">اسم شاغل الوظيفة</th><th colspan="' + days + '">الأيام</th><th rowspan="2">التكلفة للفترة</th><th colspan="2">عدد الأيام</th><th colspan="2">حسم وغرامة الغياب</th><th rowspan="2">صافي الاستحقاق</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة جنسية</th><th rowspan="2">رقم الإقامة/الهوية</th></tr><tr>' + dayHeaders + '<th>حضور</th><th>غياب</th><th>الحسم</th><th>غرامة الغياب</th></tr></thead><tbody>' + body + '</tbody></table></section>';
   }
-
-  function buildPrintCss() {
-    return '<style>@page{size:A4 landscape;margin:6mm}body{font-family:Tajawal,Arial,sans-serif;direction:rtl;margin:0;color:#000;background:#fff}.print-page{page-break-after:always}.print-page:last-child{page-break-after:auto}.header-info{text-align:center;margin-bottom:20px;position:relative}.logo-right{position:absolute;right:10px;top:10px;width:65px}.logo-left{position:absolute;left:10px;top:10px;width:65px}.header-lines{display:inline-block;margin:0 auto}.header-lines h1{font-size:20px;color:#003087;margin-bottom:5px;font-weight:bold}.header-lines h2{font-size:16px;color:#222;margin:0;font-weight:bold}.header-lines h3{font-size:14px;color:#444;margin:0 0 10px 0;font-weight:bold}.info-block{font-size:14px;margin:10px auto;text-align:center;max-width:90%}.info-block span{display:inline-block;min-width:100px;margin:5px;font-weight:bold}.extract-title{font-size:18px;font-weight:bold;text-align:center;margin:10px auto;color:#0d47a1}table{width:100%;border-collapse:collapse;font-size:12px;direction:rtl;margin-bottom:20px;table-layout:auto}th,td{border:1px solid #333;padding:4px 6px;text-align:center;white-space:nowrap}th{background:#003087!important;color:#fff!important}.job-title,.employee-name{font-size:11px;max-width:105px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.category-cell{font-size:12px;width:36px}.nationality-cell{font-size:11px;max-width:60px}.day-cell{font-size:12px;min-width:18px;max-width:24px}.present{color:#0072ff;font-weight:bold}.absent{color:#ff1744;font-weight:bold}.department-title{text-align:right;font-size:22px;color:#002060;font-weight:bold;margin:20px 0 12px 0;letter-spacing:1px}.summary-block{font-size:18px;text-align:right;margin:10px 0 14px 8px;color:#1565c0;font-weight:bold;background:#e3f2fd;border-radius:5px;padding:6px 10px}.signatures-block{margin-top:20px;page-break-inside:avoid}.signatures-title{text-align:center;font-size:16px;font-weight:bold;color:#003087;margin-bottom:10px}.signatures-grid{display:flex;justify-content:space-around;gap:8px}.signature-item{min-width:160px;text-align:center;margin:8px}.signature-line{border-bottom:2px solid #222;height:38px;margin:8px 0 4px}.signature-role{font-size:13px;font-weight:bold;color:#222}.signature-name{font-size:11px;color:#888}@media print{body{zoom:50%}table,tr,td,th{page-break-inside:avoid!important}}</style>';
-  }
-
-  window.printSelected = function () {
-    var selected = Array.from(document.querySelectorAll('#print-centers-checkboxes input:checked')).map(function (x) { return x.value; });
-    var attendance = document.getElementById('print-opt-attendance')?.checked !== false;
-    if (!selected.length) return alert('الرجاء اختيار مكتب/مرفق واحد على الأقل للطباعة.');
-    var pages = [];
-    if (attendance) selected.forEach(function (key) { pages.push(buildAttendancePage(key)); });
-    if (!pages.length) return alert('اختر طباعة جدول الحضور.');
-    var win = window.open('', '', 'width=1200,height=900');
-    var doc = win.document;
-    doc.open();
-    doc.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>طباعة حضور المكاتب</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">' + buildPrintCss() + '</head><body>' + pages.join('') + '</body></html>');
-    doc.close();
-    setTimeout(function () { win.focus(); win.print(); }, 500);
-  };
-
+  function buildPrintCss() { return '<style>@page{size:A4 landscape;margin:6mm}body{font-family:Tajawal,Arial,sans-serif;direction:rtl;margin:0;color:#000;background:#fff}.print-page{page-break-after:always}.print-page:last-child{page-break-after:auto}.header-info{text-align:center;margin-bottom:20px;position:relative}.logo-right{position:absolute;right:10px;top:10px;width:65px}.logo-left{position:absolute;left:10px;top:10px;width:65px}.header-lines{display:inline-block;margin:0 auto}.header-lines h1{font-size:20px;color:#003087;margin-bottom:5px;font-weight:bold}.header-lines h2{font-size:16px;color:#222;margin:0;font-weight:bold}.header-lines h3{font-size:14px;color:#444;margin:0 0 10px 0;font-weight:bold}.info-block{font-size:14px;margin:10px auto;text-align:center;max-width:90%}.info-block span{display:inline-block;min-width:100px;margin:5px;font-weight:bold}.extract-title{font-size:18px;font-weight:bold;text-align:center;margin:10px auto;color:#0d47a1}table{width:100%;border-collapse:collapse;font-size:12px;direction:rtl;margin-bottom:20px;table-layout:auto}th,td{border:1px solid #333;padding:4px 6px;text-align:center;white-space:nowrap}th{background:#003087!important;color:#fff!important}.job-title,.employee-name{font-size:11px;max-width:105px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.category-cell{font-size:12px;width:36px}.nationality-cell{font-size:11px;max-width:60px}.day-cell{font-size:12px;min-width:18px;max-width:24px}.present{color:#0072ff;font-weight:bold}.absent{color:#ff1744;font-weight:bold}.department-title{text-align:right;font-size:22px;color:#002060;font-weight:bold;margin:20px 0 12px 0;letter-spacing:1px}.summary-block{font-size:18px;text-align:right;margin:10px 0 14px 8px;color:#1565c0;font-weight:bold;background:#e3f2fd;border-radius:5px;padding:6px 10px}@media print{body{zoom:50%}table,tr,td,th{page-break-inside:avoid!important}}</style>'; }
+  window.printSelected = function () { var selected = Array.from(document.querySelectorAll('#print-centers-checkboxes input:checked')).map(function (x) { return x.value; }); if (!selected.length) return alert('الرجاء اختيار مكتب/مرفق واحد على الأقل للطباعة.'); var pages = selected.map(function (key) { return buildAttendancePage(key); }); var win = window.open('', '', 'width=1200,height=900'); var doc = win.document; doc.open(); doc.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>طباعة حضور المكاتب</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">' + buildPrintCss() + '</head><body>' + pages.join('') + '</body></html>'); doc.close(); setTimeout(function () { win.focus(); win.print(); }, 500); };
   function closeAdminPrintDialog() { var d = document.getElementById('admin-office-print-dialog'); var o = document.getElementById('admin-office-print-overlay'); if (d) d.remove(); if (o) o.remove(); }
   window.closeAdminPrintDialog = closeAdminPrintDialog;
   window.toggleAllAdminOfficePrint = function (checked) { document.querySelectorAll('.admin-office-print-center').forEach(function (cb) { cb.checked = checked; }); };
-  window.openPrintDialog = function () {
-    closeAdminPrintDialog();
-    var n = namesSafe();
-    var opts = orderedKeys().map(function (key) { return '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer"><input type="checkbox" class="admin-office-print-center" value="' + esc(key) + '" checked><span>' + esc(n[key] || key) + '</span></label>'; }).join('');
-    var overlay = document.createElement('div'); overlay.id = 'admin-office-print-overlay'; overlay.className = 'overlay'; overlay.onclick = closeAdminPrintDialog;
-    var dlg = document.createElement('div'); dlg.id = 'admin-office-print-dialog'; dlg.className = 'dialog'; dlg.style.display = 'block';
-    dlg.innerHTML = '<div class="dialog-content"><span class="close" onclick="closeAdminPrintDialog()">×</span><h3><i class="fas fa-print"></i> طباعة المكاتب والمرافق</h3><label style="display:flex;gap:8px;font-weight:700"><input type="checkbox" checked onchange="toggleAllAdminOfficePrint(this.checked)"> تحديد جميع المكاتب والمرافق</label><div style="border:1px solid #e5e7eb;border-radius:10px;padding:10px;max-height:260px;overflow-y:auto;background:#f8fafc;margin-top:10px">' + opts + '</div><div style="margin-top:14px;border-top:1px solid #e5e7eb;padding-top:12px"><label style="display:flex;gap:8px"><input type="checkbox" id="admin-office-print-opt-attendance" checked> طباعة جدول الحضور</label></div><div class="buttons" style="margin-top:18px"><button class="btn btn-success" onclick="printSelectedAdminOfficeReports()"><i class="fas fa-print"></i> طباعة</button><button class="btn btn-secondary" onclick="closeAdminPrintDialog()">إلغاء</button></div></div>';
-    document.body.appendChild(overlay); document.body.appendChild(dlg); overlay.style.display = 'block';
-  };
-  window.printSelectedAdminOfficeReports = function () {
-    var selected = Array.from(document.querySelectorAll('.admin-office-print-center:checked')).map(function (cb) { return cb.value; });
-    if (!selected.length) return alert('الرجاء اختيار مكتب/مرفق واحد على الأقل.');
-    var host = document.createElement('div'); host.id = 'print-centers-checkboxes'; host.style.display = 'none'; host.innerHTML = selected.map(function (key) { return '<input type="checkbox" value="' + esc(key) + '" checked>'; }).join(''); document.body.appendChild(host);
-    var opt = document.createElement('input'); opt.type = 'checkbox'; opt.id = 'print-opt-attendance'; opt.checked = true; opt.style.display = 'none'; document.body.appendChild(opt);
-    closeAdminPrintDialog();
-    try { window.printSelected(); } finally { setTimeout(function () { host.remove(); opt.remove(); }, 1000); }
-  };
+  window.openPrintDialog = function () { closeAdminPrintDialog(); var n = namesSafe(); var opts = orderedKeys().map(function (key) { return '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer"><input type="checkbox" class="admin-office-print-center" value="' + esc(key) + '" checked><span>' + esc(n[key] || key) + '</span></label>'; }).join(''); var overlay = document.createElement('div'); overlay.id = 'admin-office-print-overlay'; overlay.className = 'overlay'; overlay.onclick = closeAdminPrintDialog; var dlg = document.createElement('div'); dlg.id = 'admin-office-print-dialog'; dlg.className = 'dialog'; dlg.style.display = 'block'; dlg.innerHTML = '<div class="dialog-content"><span class="close" onclick="closeAdminPrintDialog()">×</span><h3><i class="fas fa-print"></i> طباعة المكاتب والمرافق</h3><label style="display:flex;gap:8px;font-weight:700"><input type="checkbox" checked onchange="toggleAllAdminOfficePrint(this.checked)"> تحديد جميع المكاتب والمرافق</label><div style="border:1px solid #e5e7eb;border-radius:10px;padding:10px;max-height:260px;overflow-y:auto;background:#f8fafc;margin-top:10px">' + opts + '</div><div style="margin-top:14px;border-top:1px solid #e5e7eb;padding-top:12px"><label style="display:flex;gap:8px"><input type="checkbox" id="admin-office-print-opt-attendance" checked> طباعة جدول الحضور</label></div><div class="buttons" style="margin-top:18px"><button class="btn btn-success" onclick="printSelectedAdminOfficeReports()"><i class="fas fa-print"></i> طباعة</button><button class="btn btn-secondary" onclick="closeAdminPrintDialog()">إلغاء</button></div></div>'; document.body.appendChild(overlay); document.body.appendChild(dlg); overlay.style.display = 'block'; };
+  window.printSelectedAdminOfficeReports = function () { var selected = Array.from(document.querySelectorAll('.admin-office-print-center:checked')).map(function (cb) { return cb.value; }); if (!selected.length) return alert('الرجاء اختيار مكتب/مرفق واحد على الأقل.'); var host = document.createElement('div'); host.id = 'print-centers-checkboxes'; host.style.display = 'none'; host.innerHTML = selected.map(function (key) { return '<input type="checkbox" value="' + esc(key) + '" checked>'; }).join(''); document.body.appendChild(host); closeAdminPrintDialog(); try { window.printSelected(); } finally { setTimeout(function () { host.remove(); }, 1000); } };
 
   document.addEventListener('DOMContentLoaded', function () { setTimeout(function () { if (typeof window.calculateAndDisplayGrandTotal === 'function') window.calculateAndDisplayGrandTotal(); }, 500); });
 })();
