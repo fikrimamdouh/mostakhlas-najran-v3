@@ -262,17 +262,31 @@
         return n.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    function getSignaturesSafe(type) {
-        if (typeof getSignatures === 'function') return getSignatures(type) || [];
-        return [];
-    }
+    function getSignaturesSafe(type, centerKey) {
+    try {
+        if (
+            centerKey &&
+            typeof getSignatureKeyForContext === 'function' &&
+            typeof getSignatures === 'function'
+        ) {
+            const scopedKey = getSignatureKeyForContext(type, centerKey);
+            const scoped = getSignatures(scopedKey) || [];
+            if (scoped.length) return scoped;
+        }
 
-    function signatureHtml(type, cls = 'signatures-grid') {
-        const signatures = getSignaturesSafe(type);
-        if (!signatures.length) return '';
-        return `<div class="${cls}">${signatures.map(sig => `<div class="signature-item"><div class="title">${sig.title || ''}</div><div class="line"></div><div class="name">${sig.name || '................'}</div></div>`).join('')}</div>`;
-    }
+        if (typeof getSignatures === 'function') {
+            return getSignatures(type) || [];
+        }
+    } catch (_) {}
 
+    return [];
+}
+
+function signatureHtml(type, centerKey, cls = 'signatures-grid') {
+    const signatures = getSignaturesSafe(type, centerKey);
+    if (!signatures.length) return '';
+    return `<div class="${cls}">${signatures.map(sig => `<div class="signature-item"><div class="title">${sig.title || ''}</div><div class="line"></div><div class="name">${sig.name || '................'}</div></div>`).join('')}</div>`;
+}
     function buildContractInfoHtml() {
         const node = document.querySelector('.page-contract-info-v2');
         return node ? node.outerHTML : '';
@@ -318,7 +332,7 @@
 
         const summary = `<div class="table-summary-v2"><span>عدد الموظفين: <b>${centerData.length}</b></span><span>التكلفة للفترة: <b>${money(totalCost)}</b></span><span>إجمالي الحسم: <b>${money(totalDeduction)}</b></span><span>إجمالي الغرامات: <b>${money(totalFine)}</b></span><span>صافي الاستحقاق: <b>${money(totalNet)}</b></span></div>`;
         const title = `<div class="extract-details-v2"><div>بيان بالحضور والغياب لمنسوبي شركة (${companyName}) بالمكتب/المرفق: ${centerName}</div><div>الفترة (${formatDate(extractData.extractStart)}م - ${formatDate(extractData.extractEnd)}م)</div><div>عدد أيام المستخلص: ${daysInExtract}</div></div>`;
-        return `<section class="print-page landscape-page">${buildOfficialPrintHeader(centerKey)}${buildContractInfoHtml()}${title}${summary}<table><thead><tr><th rowspan="2">م</th><th rowspan="2">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2">اسم شاغل الوظيفة</th><th colspan="${daysInExtract}">الأيام</th><th rowspan="2">التكلفة</th><th colspan="2">الأيام</th><th colspan="2">الحسم والغرامة</th><th rowspan="2">الصافي</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة جنسية</th><th rowspan="2">الإقامة</th></tr><tr>${dayHeaders}<th>حضور</th><th>غياب</th><th>الحسم</th><th>الغرامة</th></tr></thead><tbody>${rows}</tbody></table>${signatureHtml('attendance')}</section>`;
+        return `<section class="print-page landscape-page">${buildOfficialPrintHeader(centerKey)}${buildContractInfoHtml()}${title}${summary}<table><thead><tr><th rowspan="2">م</th><th rowspan="2">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2">اسم شاغل الوظيفة</th><th colspan="${daysInExtract}">الأيام</th><th rowspan="2">التكلفة</th><th colspan="2">الأيام</th><th colspan="2">الحسم والغرامة</th><th rowspan="2">الصافي</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة جنسية</th><th rowspan="2">الإقامة</th></tr><tr>${dayHeaders}<th>حضور</th><th>غياب</th><th>الحسم</th><th>الغرامة</th></tr></thead><tbody>${rows}</tbody></table>${signatureHtml('attendance', centerKey)}</section>`;
     }
 
     function buildPerformancePage(centerKey) {
@@ -337,7 +351,7 @@
         }).join('') + `<tr class="total-row"><td colspan="2">المجموع</td><td>${maxTotal}</td><td>${scoreTotal}</td></tr>`;
         const percent = maxTotal > 0 ? scoreTotal / maxTotal * 100 : 100;
         const centerCost = typeof calculateCenterTotalCost === 'function' ? calculateCenterTotalCost(centerKey) : 0;
-        return `<section class="print-page portrait-page">${buildOfficialPrintHeader(centerKey)}<h2 class="cert-title">جدول تقييم مستوى الأداء والإنجاز</h2><h3 class="sub-title">للمكتب/المرفق: ${centerName}</h3><div class="cost-bar">إجمالي المبلغ لأنشطة القسم: ${money(centerCost)} ريال</div><table><thead><tr><th>م</th><th>أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr></thead><tbody>${rows}</tbody></table><div class="summary">التقدير الذي حصل عليه المقاول: <b>${percent.toFixed(2)}%</b></div>${signatureHtml('performance', 'signatures')}</section>`;
+        return `<section class="print-page portrait-page">${buildOfficialPrintHeader(centerKey)}<h2 class="cert-title">جدول تقييم مستوى الأداء والإنجاز</h2><h3 class="sub-title">للمكتب/المرفق: ${centerName}</h3><div class="cost-bar">إجمالي المبلغ لأنشطة القسم: ${money(centerCost)} ريال</div><table><thead><tr><th>م</th><th>أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr></thead><tbody>${rows}</tbody></table><div class="summary">التقدير الذي حصل عليه المقاول: <b>${percent.toFixed(2)}%</b></div>${signatureHtml('performance', centerKey, 'signatures')}</section>`;
     }
 
     function buildAchievementPage(centerKey) {
@@ -367,7 +381,7 @@
         const perfPenalty = centerKey !== 'admin_staff' ? (parseFloat(perfDeductions[centerKey]) || 0) : 0;
         const net = monthly - absenceDeduct - absencePenalty - perfPenalty - nationPenalty;
         const tafqitText = typeof tafqit === 'function' ? tafqit(net) : '';
-        return `<section class="print-page portrait-page">${buildOfficialPrintHeader(centerKey)}<div class="certificate-header"><h2>${titles.mainTitle}</h2><h3>${titles.subTitle}</h3><h3>للمكتب/المرفق: ${centerName}</h3></div><table><thead><tr><th>البند</th><th>القيمة الشهرية</th><th>حسم الغياب</th><th>غرامة الغياب</th><th>غرامة الأداء</th><th>غرامة الجنسية</th><th>الصافي الشهري</th></tr></thead><tbody><tr><td>العمالة</td><td>${money(monthly)}</td><td>${money(absenceDeduct)}</td><td>${money(absencePenalty)}</td><td>${money(perfPenalty)}</td><td>${money(nationPenalty)}</td><td><b>${money(net)}</b></td></tr><tr class="total-row"><td colspan="6">إجمالي المستحق للمقاول</td><td><b>${money(net)}</b></td></tr><tr><td colspan="7">فقط وقدره: ${tafqitText}</td></tr></tbody></table>${signatureHtml('achievement', 'signatures')}</section>`;
+        return `<section class="print-page portrait-page">${buildOfficialPrintHeader(centerKey)}<div class="certificate-header"><h2>${titles.mainTitle}</h2><h3>${titles.subTitle}</h3><h3>للمكتب/المرفق: ${centerName}</h3></div><table><thead><tr><th>البند</th><th>القيمة الشهرية</th><th>حسم الغياب</th><th>غرامة الغياب</th><th>غرامة الأداء</th><th>غرامة الجنسية</th><th>الصافي الشهري</th></tr></thead><tbody><tr><td>العمالة</td><td>${money(monthly)}</td><td>${money(absenceDeduct)}</td><td>${money(absencePenalty)}</td><td>${money(perfPenalty)}</td><td>${money(nationPenalty)}</td><td><b>${money(net)}</b></td></tr><tr class="total-row"><td colspan="6">إجمالي المستحق للمقاول</td><td><b>${money(net)}</b></td></tr><tr><td colspan="7">فقط وقدره: ${tafqitText}</td></tr></tbody></table>${signatureHtml('achievement', centerKey, 'signatures')}</section>`;
     }
 
     window.printSelected = function printSelectedFullPatched() {
