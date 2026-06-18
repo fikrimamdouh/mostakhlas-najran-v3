@@ -1227,6 +1227,96 @@
 })();
 </script>
 
+
+<script id="admin-offices-signature-isolation-patch">
+(function(){
+  'use strict';
+
+  function readJson(k, fb) {
+    try {
+      const r = localStorage.getItem(k);
+      return r ? JSON.parse(r) : fb;
+    } catch (_) {
+      return fb;
+    }
+  }
+
+  function getNamesSafe() {
+    try {
+      if (typeof getCenterNames === 'function') return getCenterNames() || {};
+    } catch (_) {}
+    return readJson('adminOfficeNames_v1', {});
+  }
+
+  function cleanOfficeKey(contextKey) {
+    if (!contextKey) return '';
+
+    return String(contextKey)
+      .replace(/^attendance-signatures-/, '')
+      .replace(/^perf-signatures-/, '')
+      .replace(/^performance-signatures-/, '')
+      .replace(/^ach-signatures-/, '')
+      .replace(/^achievement-signatures-/, '')
+      .replace(/^table-div-/, '')
+      .replace(/^table-/, '')
+      .trim();
+  }
+
+  function isOfficeKey(key) {
+    return /^center_\d+$/.test(key) || key === 'admin_staff';
+  }
+
+  window.getSignatureKeyForContext = function(type, contextKey) {
+    const key = cleanOfficeKey(contextKey);
+
+    if (key === 'grand_certificate') {
+      return type + '_grand_certificate';
+    }
+
+    if (isOfficeKey(key)) {
+      return type + '_' + key;
+    }
+
+    if (key) {
+      return type + '_' + key;
+    }
+
+    return type + '_general_admin_offices_only';
+  };
+
+  window.getSignatureDialogTitle = function(type, contextKey) {
+    const key = cleanOfficeKey(contextKey);
+    const names = getNamesSafe();
+
+    const typeName =
+      type === 'attendance' ? 'الحضور والانصراف' :
+      type === 'performance' ? 'تقييم الأداء' :
+      type === 'achievement' ? 'شهادة الإنجاز' :
+      type;
+
+    if (key === 'grand_certificate') {
+      return 'تواقيع الشهادة الإجمالية';
+    }
+
+    if (key) {
+      return 'تواقيع ' + typeName + ' - ' + (names[key] || key);
+    }
+
+    return 'تواقيع عامة للمكاتب';
+  };
+
+  const oldOpenSignatureDialog = window.openSignatureDialog;
+  if (typeof oldOpenSignatureDialog === 'function') {
+    window.openSignatureDialog = function(type, contextKey) {
+      return oldOpenSignatureDialog.call(this, type, cleanOfficeKey(contextKey));
+    };
+  }
+
+  window.__ADMIN_OFFICES_SIGNATURES_SEPARATED__ = true;
+  console.info('[Admin Offices] signatures separated per office');
+})();
+</script>
+
 <script src="/original/signature-block.js"></script>
 <script>SignatureBlock.init('admin_offices', { showStamp: true });</script>
 </body>
