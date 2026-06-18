@@ -1,13 +1,12 @@
-import { Component, useEffect, useRef, useState } from "react";
-import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser, useAuth } from "@clerk/react";
+import { useEffect, useState } from "react";
+import { ClerkProvider, SignIn, SignUp } from "@clerk/react";
 import { shadcn } from "@clerk/themes";
 import { arSA } from "@clerk/localizations";
-import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
-import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { Switch, Route, Router as WouterRouter } from "wouter";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { MainLayout } from "@/components/layout/MainLayout";
-import { useGetMe, setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
+import { setBaseUrl } from "@workspace/api-client-react";
 
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
@@ -45,10 +44,6 @@ const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const PRE_REG_KEY = "najran_prereg";
-
-function stripBase(path: string): string {
-  return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || "/" : path;
-}
 
 const clerkAppearance = {
   baseTheme: shadcn,
@@ -141,7 +136,7 @@ function SignInPage() {
         <span className="text-white font-bold text-xl">تجمع نجران الصحي</span>
         <span className="text-sm" style={{ color: "#d4af37" }}>وحدة الصيانة العامة</span>
       </div>
-      <SignIn routing="path" path={`${basePath}/sign-in`} />
+      <SignIn routing="hash" forceRedirectUrl="/dashboard" />
     </div>
   );
 }
@@ -240,14 +235,12 @@ function SignUpPage() {
   const [ready, setReady] = useState(false);
   return ready ? (
     <div className="flex min-h-[100dvh] flex-col items-center justify-center p-4" style={{ background: "linear-gradient(135deg,#1e3c72 0%,#2a5298 100%)" }}>
-      <SignUp routing="path" path={`${basePath}/sign-up`} />
+      <SignUp routing="hash" forceRedirectUrl="/dashboard" />
     </div>
   ) : <PreRegistrationForm onNext={() => setReady(true)} />;
 }
 
 function AppRoutes() {
-  const [loc] = useLocation();
-  const path = stripBase(loc);
   return (
     <Switch>
       <Route path="/sign-in" component={SignInPage} />
