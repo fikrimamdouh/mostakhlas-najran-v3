@@ -194,6 +194,19 @@ body {
             .print-page:last-child { break-after: auto; page-break-after: auto; }
             .landscape-page { page: landscape; }
             .portrait-page { page: portrait; }
+            @media print {
+  html,
+  body {
+    width: 297mm !important;
+    min-height: 210mm !important;
+  }
+
+  .landscape-page {
+    page: landscape;
+    width: 297mm !important;
+    min-height: 210mm !important;
+  }
+}
             .printable-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 6px; margin-bottom: 8px; border-bottom: 1px solid #ccc; }
             .printable-header .logo { width: 58px; height: auto; }
             .printable-header .header-text { text-align: center; flex: 1; }
