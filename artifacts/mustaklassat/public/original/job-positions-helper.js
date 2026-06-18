@@ -1,222 +1,203 @@
 /**
  * JobPositionsDB — حفظ وجلب مناصب الوظائف
- * يحفظ على السيرفر أولاً (دائم) + IndexedDB كـ cache محلي
- * البيانات تبقى حتى بعد تحديث البرنامج أو تغيير الجهاز
+ * يحفظ على السيرفر أولاً + IndexedDB كـ cache محلي.
+ * تعديل: قسم المكاتب/المكاتب الإدارية يُسجل مع الورش في قسم واحد: workshops.
  */
 const JobPositionsDB = (function () {
   const DB_NAME = 'najranJobPositions';
-  const DB_VER  = 1;
-  const STORE   = 'positions';
-
-  // ── IndexedDB helpers (cache محلي) ────────────────────────────────────────
+  const DB_VER = 1;
+  const STORE = 'positions';
 
   function openDB() {
-    return new Promise((res, rej) => {
+    return new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, DB_VER);
       req.onupgradeneeded = e => {
         const db = e.target.result;
-        if (!db.objectStoreNames.contains(STORE))
-          db.createObjectStore(STORE, { keyPath: 'hospitalName' });
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'hospitalName' });
       };
-      req.onsuccess = e => res(e.target.result);
-      req.onerror   = e => rej(e.target.error);
+      req.onsuccess = e => resolve(e.target.result);
+      req.onerror = e => reject(e.target.error);
     });
   }
 
-  async function _idbPut(rec) {
+  async function idbPut(rec) {
     try {
       const db = await openDB();
-      return new Promise((res, rej) => {
+      return new Promise((resolve, reject) => {
         const tx = db.transaction(STORE, 'readwrite');
         tx.objectStore(STORE).put(rec);
-        tx.oncomplete = res;
-        tx.onerror    = e => rej(e.target.error);
+        tx.oncomplete = resolve;
+        tx.onerror = e => reject(e.target.error);
       });
-    } catch {}
+    } catch (_) {}
   }
 
-  async function _idbGet(hospitalName) {
+  async function idbGet(hospitalName) {
     try {
       const db = await openDB();
-      return new Promise((res, rej) => {
+      return new Promise((resolve, reject) => {
         const req = db.transaction(STORE, 'readonly').objectStore(STORE).get(hospitalName);
-        req.onsuccess = e => res(e.target.result || null);
-        req.onerror   = e => rej(e.target.error);
+        req.onsuccess = e => resolve(e.target.result || null);
+        req.onerror = e => reject(e.target.error);
       });
-    } catch { return null; }
+    } catch (_) { return null; }
   }
 
-  async function _idbGetAll() {
+  async function idbGetAll() {
     try {
       const db = await openDB();
-      return new Promise((res, rej) => {
+      return new Promise((resolve, reject) => {
         const req = db.transaction(STORE, 'readonly').objectStore(STORE).getAll();
-        req.onsuccess = e => res(e.target.result || []);
-        req.onerror   = e => rej(e.target.error);
+        req.onsuccess = e => resolve(e.target.result || []);
+        req.onerror = e => reject(e.target.error);
       });
-    } catch { return []; }
+    } catch (_) { return []; }
   }
 
-  async function _idbDelete(hospitalName) {
+  async function idbDelete(hospitalName) {
     try {
       const db = await openDB();
-      return new Promise((res, rej) => {
+      return new Promise((resolve, reject) => {
         const tx = db.transaction(STORE, 'readwrite');
         tx.objectStore(STORE).delete(hospitalName);
-        tx.oncomplete = res;
-        tx.onerror    = e => rej(e.target.error);
+        tx.oncomplete = resolve;
+        tx.onerror = e => reject(e.target.error);
       });
-    } catch {}
+    } catch (_) {}
   }
 
-  // ── Auth token ────────────────────────────────────────────────────────────
-
-  function _getToken() {
-    try {
-      return JSON.parse(localStorage.getItem('najran_session') || '{}').clerkToken || null;
-    } catch { return null; }
+  function getToken() {
+    try { return JSON.parse(localStorage.getItem('najran_session') || '{}').clerkToken || null; }
+    catch (_) { return null; }
   }
 
-  function _authHeaders() {
-    const tok = _getToken();
-    const h = { 'Content-Type': 'application/json' };
-    if (tok) h['Authorization'] = 'Bearer ' + tok;
-    return h;
+  function authHeaders() {
+    const token = getToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = 'Bearer ' + token;
+    return headers;
   }
 
-  // ── Server API ────────────────────────────────────────────────────────────
-
-  /**
-   * save — يحفظ على السيرفر (دائم) + IndexedDB cache
-   */
   async function save(hospitalName, rows) {
     const rec = { hospitalName, rows, savedAt: new Date().toISOString() };
-
-    // 1. حفظ على السيرفر أولاً
     try {
       const resp = await fetch('/api/admin/job-positions', {
         method: 'POST',
-        headers: _authHeaders(),
+        headers: authHeaders(),
         credentials: 'include',
-        body: JSON.stringify({ hospitalName, rows }),
+        body: JSON.stringify({ hospitalName, rows })
       });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
         throw new Error(err.error || 'خطأ من السيرفر');
       }
     } catch (e) {
-      // إذا فشل السيرفر احفظ في IndexedDB فقط وأبلغ بالخطأ
-      await _idbPut(rec);
+      await idbPut(rec);
       throw e;
     }
-
-    // 2. حفظ cache محلي
-    await _idbPut(rec);
+    await idbPut(rec);
     return rec;
   }
 
-  /**
-   * load — يجلب بيانات مستشفى (السيرفر أولاً، ثم cache)
-   */
   async function load(hospitalName) {
     try {
-      const tok = _getToken();
-      const headers = tok ? { Authorization: 'Bearer ' + tok } : {};
-      const resp = await fetch('/api/admin/job-positions?hospital=' + encodeURIComponent(hospitalName), {
-        headers, credentials: 'include',
-      });
+      const token = getToken();
+      const headers = token ? { Authorization: 'Bearer ' + token } : {};
+      const resp = await fetch('/api/admin/job-positions?hospital=' + encodeURIComponent(hospitalName), { headers, credentials: 'include' });
       if (resp.ok) {
         const data = await resp.json();
-        if (data && data.rows?.length) {
-          await _idbPut({ hospitalName: data.hospitalName || hospitalName, rows: data.rows, savedAt: data.savedAt });
+        if (data && data.rows && data.rows.length) {
+          await idbPut({ hospitalName: data.hospitalName || hospitalName, rows: data.rows, savedAt: data.savedAt });
           return data;
         }
       }
-    } catch {}
-    // fallback: IndexedDB cache
-    return await _idbGet(hospitalName);
+    } catch (_) {}
+    return await idbGet(hospitalName);
   }
 
-  /**
-   * loadAll — يجلب قائمة جميع المستشفيات من السيرفر
-   */
   async function loadAll() {
     try {
-      const tok = _getToken();
-      const headers = tok ? { Authorization: 'Bearer ' + tok } : {};
+      const token = getToken();
+      const headers = token ? { Authorization: 'Bearer ' + token } : {};
       const resp = await fetch('/api/admin/job-positions/list', { headers, credentials: 'include' });
       if (resp.ok) {
         const data = await resp.json();
         if (data && Array.isArray(data.list) && data.list.length > 0) {
           return data.list.map(item => ({
             hospitalName: item.hospitalName,
-            rows: [], // الصفوف التفصيلية تُحمَّل عند الحاجة
+            rows: [],
             savedAt: item.savedAt,
             count: item.count,
-            totalCost: item.totalCost,
+            totalCost: item.totalCost
           }));
         }
       }
-    } catch {}
-    // fallback: IndexedDB cache
-    return await _idbGetAll();
+    } catch (_) {}
+    return await idbGetAll();
   }
 
-  /**
-   * remove — حذف من السيرفر + IndexedDB
-   */
   async function remove(hospitalName) {
     try {
-      const tok = _getToken();
-      const headers = tok ? { Authorization: 'Bearer ' + tok } : {};
-      await fetch('/api/admin/job-positions?hospital=' + encodeURIComponent(hospitalName), {
-        method: 'DELETE', headers, credentials: 'include',
-      });
-    } catch {}
-    await _idbDelete(hospitalName);
+      const token = getToken();
+      const headers = token ? { Authorization: 'Bearer ' + token } : {};
+      await fetch('/api/admin/job-positions?hospital=' + encodeURIComponent(hospitalName), { method: 'DELETE', headers, credentials: 'include' });
+    } catch (_) {}
+    await idbDelete(hospitalName);
   }
 
-  // ── خريطة الأقسام ──────────────────────────────────────────────────────────
-
   const DEPT_MAP = {
-    'نظافة':                         'cleaning',
-    'النظافة':                        'cleaning',
-    'تنظيف':                         'cleaning',
-    'كهرباء':                        'electricity',
-    'الكهرباء':                       'electricity',
-    'كهربا':                         'electricity',
-    'زراعة':                         'agriculture',
-    'الزراعة':                        'agriculture',
-    'مساحات خضراء':                   'agriculture',
-    'مدني':                          'civil_works',
-    'الأعمال المدنية':                 'civil_works',
-    'أعمال مدنية':                    'civil_works',
-    'أعمال مدنيه':                    'civil_works',
-    'ميكانيكا':                       'mechanical',
-    'الميكانيكا':                      'mechanical',
-    'ميكانيك':                        'mechanical',
-    'ميكانيكي':                       'mechanical',
-    'مغسلة':                         'laundry',
-    'المغسلة':                        'laundry',
-    'غسيل':                          'laundry',
-    'خدمات مرضى':                    'patient_services',
-    'خدمات المرضى':                   'patient_services',
-    'خدمة مرضى':                     'patient_services',
-    'السلامة والحراسات':               'patient_services',
-    'السلامة والحراسات الأمنية':        'patient_services',
-    'قسم السلامة والحراسات الأمنية':    'patient_services',
-    'سلامة وحراسة':                   'patient_services',
-    'الحراسات الأمنية':                'patient_services',
-    'حراسات':                         'patient_services',
-    'وظائف إدارية':                   'admin_saudi',
-    'الوظائف الإدارية السعوديين':       'admin_saudi',
-    'الوظائف الإدارية':                'admin_saudi',
-    'إداري':                          'admin_saudi',
-    'إدارية':                         'admin_saudi',
-    'وظيفة إدارية':                   'admin_saudi',
+    'نظافة': 'cleaning',
+    'النظافة': 'cleaning',
+    'تنظيف': 'cleaning',
+    'كهرباء': 'electricity',
+    'الكهرباء': 'electricity',
+    'كهربا': 'electricity',
+    'زراعة': 'agriculture',
+    'الزراعة': 'agriculture',
+    'مساحات خضراء': 'agriculture',
+    'مدني': 'civil_works',
+    'الأعمال المدنية': 'civil_works',
+    'أعمال مدنية': 'civil_works',
+    'أعمال مدنيه': 'civil_works',
+    'ميكانيكا': 'mechanical',
+    'الميكانيكا': 'mechanical',
+    'ميكانيك': 'mechanical',
+    'ميكانيكي': 'mechanical',
+    'مغسلة': 'laundry',
+    'المغسلة': 'laundry',
+    'غسيل': 'laundry',
+    'خدمات مرضى': 'patient_services',
+    'خدمات المرضى': 'patient_services',
+    'خدمة مرضى': 'patient_services',
+    'السلامة والحراسات': 'patient_services',
+    'السلامة والحراسات الأمنية': 'patient_services',
+    'قسم السلامة والحراسات الأمنية': 'patient_services',
+    'سلامة وحراسة': 'patient_services',
+    'الحراسات الأمنية': 'patient_services',
+    'حراسات': 'patient_services',
+    'وظائف إدارية': 'admin_saudi',
+    'الوظائف الإدارية السعوديين': 'admin_saudi',
+    'الوظائف الإدارية': 'admin_saudi',
+    'إداري': 'admin_saudi',
+    'إدارية': 'admin_saudi',
+    'وظيفة إدارية': 'admin_saudi',
+    'ورش': 'workshops',
+    'الورش': 'workshops',
+    'قسم الورش': 'workshops',
+    'صيانة وإصلاح السيارات': 'workshops',
+    'صيانة واصلاح السيارات': 'workshops',
+    'صيانة السيارات': 'workshops',
+    'المكاتب': 'workshops',
+    'مكاتب': 'workshops',
+    'قسم المكاتب': 'workshops',
+    'المكاتب الإدارية': 'workshops',
+    'المكاتب الادارية': 'workshops',
+    'مكتب': 'workshops',
+    'المكتب': 'workshops',
+    'قسم المكتب': 'workshops'
   };
 
-  function _getPatientServicesLabel() {
+  function getPatientServicesLabel() {
     try {
       const s = JSON.parse(localStorage.getItem('najran_session') || '{}');
       if ((s.hospital || '').includes('الأمل')) return 'خدمات المرضى';
@@ -225,19 +206,40 @@ const JobPositionsDB = (function () {
   }
 
   const DEPT_LABELS = {
-    cleaning:        'النظافة',
-    electricity:     'الكهرباء',
-    agriculture:     'الزراعة',
-    civil_works:     'الأعمال المدنية',
-    mechanical:      'الميكانيكا',
-    laundry:         'المغسلة',
-    get patient_services() { return _getPatientServicesLabel(); },
-    admin_saudi:     'الوظائف الإدارية السعوديين',
+    cleaning: 'النظافة',
+    electricity: 'الكهرباء',
+    agriculture: 'الزراعة',
+    civil_works: 'الأعمال المدنية',
+    mechanical: 'الميكانيكا',
+    laundry: 'المغسلة',
+    get patient_services() { return getPatientServicesLabel(); },
+    admin_saudi: 'الوظائف الإدارية السعوديين',
+    workshops: 'المكاتب والورش'
   };
+
+  function normalizeDept(value) {
+    return String(value || '')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .replace(/[أإآ]/g, 'ا')
+      .replace(/ة/g, 'ه');
+  }
+
+  function isOfficesOrWorkshops(value) {
+    const t = normalizeDept(value);
+    return t.includes('ورش') ||
+      t.includes('مكاتب') ||
+      t.includes('المكاتب') ||
+      t.includes('مكتب') ||
+      t.includes('المكتب') ||
+      t.includes('صيانة واصلاح السيارات') ||
+      t.includes('صيانه واصلاح السيارات');
+  }
 
   function mapDept(arabicName) {
     if (!arabicName) return null;
-    const t = arabicName.trim();
+    const t = String(arabicName).trim();
+    if (isOfficesOrWorkshops(t)) return 'workshops';
     if (DEPT_MAP[t]) return DEPT_MAP[t];
     for (const [k, v] of Object.entries(DEPT_MAP)) {
       if (t.includes(k) || k.includes(t)) return v;
