@@ -279,31 +279,151 @@ body {
               max-width: 100% !important;
             }
 
-            table {
-              width: 100% !important;
-              max-width: 100% !important;
-              border-collapse: collapse;
-              table-layout: fixed;
-              margin-top: 2px;
-            }
+       table {
+  width: 100% !important;
+  max-width: 100% !important;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin-top: 2px;
+}
 
-            th,
-            td {
-              border: 1px solid #555;
-              padding: 0.5px 1px;
-              text-align: center;
-              font-size: 5.1pt;
-              line-height: 0.95;
-              vertical-align: middle;
-              white-space: nowrap;
-              word-break: normal;
-            }
+th,
+td {
+  border: 1px solid #555;
+  padding: 1px 1px;
+  text-align: center;
+  font-size: 6.2pt;
+  line-height: 1.05;
+  vertical-align: middle;
+  word-break: break-word;
+  overflow: hidden;
+}
 
-            th {
-              background: #003087 !important;
-              color: #fff !important;
-              font-size: 5.4pt;
-            }
+th {
+  background: #003087 !important;
+  color: #fff !important;
+  font-size: 6.4pt;
+  font-weight: 700;
+}
+
+th.seq-col,
+td.seq-col,
+table th:first-child,
+table td:first-child {
+  width: 1.5% !important;
+}
+
+th.job-title,
+td.job-title {
+  width: 9% !important;
+  font-size: 6.4pt;
+  white-space: normal !important;
+}
+
+th.category-col,
+td.category-col {
+  width: 2.4% !important;
+  white-space: nowrap !important;
+}
+
+th.employee-name,
+td.employee-name {
+  width: 9.5% !important;
+  font-size: 6.4pt;
+  white-space: normal !important;
+}
+
+th.day-col,
+td.day-col {
+  width: 1.25% !important;
+  min-width: 1.25% !important;
+  max-width: 1.25% !important;
+  padding: 1px 0 !important;
+  font-size: 5.7pt !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  word-break: normal !important;
+}
+
+th.cost-col,
+td.cost-col,
+th.net-col,
+td.net-col {
+  width: 4.5% !important;
+  font-size: 5.8pt !important;
+  white-space: nowrap !important;
+}
+/* أعمدة جدول حضور المكاتب حسب ترتيب الأعمدة */
+table th:nth-child(1),
+table td:nth-child(1) {
+  width: 1.5% !important;
+}
+
+table th:nth-child(2),
+table td:nth-child(2) {
+  width: 9% !important;
+  white-space: normal !important;
+  font-size: 6.4pt !important;
+}
+
+table th:nth-child(3),
+table td:nth-child(3) {
+  width: 2.4% !important;
+  white-space: nowrap !important;
+}
+
+table th:nth-child(4),
+table td:nth-child(4) {
+  width: 9.5% !important;
+  white-space: normal !important;
+  font-size: 6.4pt !important;
+}
+
+table th:nth-child(n+5):nth-child(-n+35),
+table td:nth-child(n+5):nth-child(-n+35) {
+  width: 1.25% !important;
+  padding: 1px 0 !important;
+  font-size: 5.6pt !important;
+  white-space: nowrap !important;
+}
+
+table th:nth-last-child(-n+9),
+table td:nth-last-child(-n+9) {
+  font-size: 5.7pt !important;
+  white-space: nowrap !important;
+}
+th.days-count-col,
+td.days-count-col,
+th.deduction-col,
+td.deduction-col,
+th.fine-col,
+td.fine-col {
+  width: 3.2% !important;
+  font-size: 5.8pt !important;
+  white-space: nowrap !important;
+}
+
+th.nationality-col,
+td.nationality-col {
+  width: 3.8% !important;
+  font-size: 5.8pt !important;
+  white-space: normal !important;
+}
+
+th.iqama-col,
+td.iqama-col {
+  width: 5.8% !important;
+  font-size: 5.6pt !important;
+  white-space: nowrap !important;
+}
+
+select,
+input,
+span {
+  max-width: 100% !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
 
             .portrait-page th,
             .portrait-page td {
@@ -369,6 +489,7 @@ body {
             .total-row {
               font-weight: bold;
               background: #f0f0f0 !important;
+            }
             }
         </style></head><body>${pagesHtml}</body></html>`);
         doc.close();
@@ -797,25 +918,34 @@ function signatureHtml(type, centerKey, cls = 'signatures-grid') {
         dlg.id = dlgId;
         dlg.className = 'dialog';
         dlg.innerHTML = `
-            <div class="dialog-header"><h3><i class="fas fa-file-excel"></i> كيف تريد استيراد الملف؟</h3><span class="close" onclick="closeDialog('${dlgId}')">×</span></div>
-            <div class="dialog-body" style="padding:16px;">
+<div class="dialog-header"><h3><i class="fas fa-file-excel"></i> كيف تريد استيراد الملف؟</h3><span class="close" onclick="window.closeAdminOfficeImportModeDialog()">×</span></div>            <div class="dialog-body" style="padding:16px;">
                 <p style="font-size:.9rem;color:#374151;margin-bottom:12px;">المكتب/المرفق: <strong>${names[centerKey] || centerKey}</strong></p>
                 <table style="width:100%;border-collapse:collapse;font-size:.85rem;margin-bottom:16px;"><thead><tr style="background:#f1f5f9;"><th style="padding:6px;text-align:right;">حاليون</th><th style="padding:6px;text-align:right;">في الملف</th></tr></thead><tbody><tr><td style="padding:6px;">${currentCount}</td><td style="padding:6px;color:#16a34a;font-weight:700;">${totalFound}</td></tr></tbody></table>
                 <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
                     <button onclick="window.confirmAdminOfficeImportReplace()" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:11px 24px;font-size:.92rem;font-weight:700;cursor:pointer;"><i class="fas fa-trash-alt"></i> استبدال<br><small style="font-weight:400;font-size:.75rem;">يمسح الحاليين ويضع الجدد</small></button>
                     <button onclick="window.confirmAdminOfficeImportUpdate()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:11px 24px;font-size:.92rem;font-weight:700;cursor:pointer;"><i class="fas fa-sync-alt"></i> تحديث<br><small style="font-weight:400;font-size:.75rem;">يضيف الجدد ويتجاهل المكررين</small></button>
-                    <button onclick="closeDialog('${dlgId}')" style="background:#6b7280;color:#fff;border:none;border-radius:8px;padding:11px 20px;font-size:.92rem;cursor:pointer;"><i class="fas fa-times"></i> إلغاء</button>
-                </div>
+<button onclick="window.closeAdminOfficeImportModeDialog()" style="background:#6b7280;color:#fff;border:none;border-radius:8px;padding:11px 20px;font-size:.92rem;cursor:pointer;"><i class="fas fa-times"></i> إلغاء</button>                </div>
             </div>`;
-        const overlay = document.createElement('div');
-        overlay.id = dlgId + '-overlay';
-        overlay.className = 'overlay';
-        overlay.onclick = function(){ closeDialog(dlgId); };
-        document.body.appendChild(overlay);
-        document.body.appendChild(dlg);
-        if (typeof openDialog === 'function') openDialog(dlgId);
-        else dlg.style.display = 'block';
-    }
+     const overlay = document.createElement('div');
+overlay.id = dlgId + '-overlay';
+overlay.className = 'overlay';
+overlay.onclick = function(){ window.closeAdminOfficeImportModeDialog(); };
+document.body.appendChild(overlay);
+document.body.appendChild(dlg);
+overlay.style.display = 'block';
+dlg.style.display = 'block';
+}
+
+window.closeAdminOfficeImportModeDialog = function () {
+    const dlgId = 'admin-office-template-import-mode-dialog';
+    document.getElementById(dlgId)?.remove();
+    document.getElementById(dlgId + '-overlay')?.remove();
+};
+    window.closeAdminOfficeImportModeDialog = function () {
+        const dlgId = 'admin-office-template-import-mode-dialog';
+        document.getElementById(dlgId)?.remove();
+        document.getElementById(dlgId + '-overlay')?.remove();
+    };
 
     window.confirmAdminOfficeImportReplace = function confirmAdminOfficeImportReplace() {
         const { centerKey, employees, skipped } = pendingAdminOfficeImport;
@@ -823,8 +953,7 @@ function signatureHtml(type, centerKey, cls = 'signatures-grid') {
         const allData = getAttendanceDataSafe();
         allData[centerKey] = employees;
         saveAttendanceDataSafe(allData);
-        closeDialog('admin-office-template-import-mode-dialog');
-        closeDialog('management-dialog');
+window.closeAdminOfficeImportModeDialog();        closeDialog('management-dialog');
         rerenderAdminOffices(centerKey);
         alert('✅ تم الاستبدال بنجاح!\nتمت إضافة ' + employees.length + ' موظف' + (skipped ? '\nصفوف فارغة: ' + skipped : ''));
         pendingAdminOfficeImport = { centerKey: null, employees: [], skipped: 0 };
@@ -844,7 +973,7 @@ function signatureHtml(type, centerKey, cls = 'signatures-grid') {
             else { allData[centerKey].push(newEmp); added++; }
         });
         saveAttendanceDataSafe(allData);
-        closeDialog('admin-office-template-import-mode-dialog');
+        window.closeAdminOfficeImportModeDialog();
         closeDialog('management-dialog');
         rerenderAdminOffices(centerKey);
         alert('✅ تم التحديث!\nأُضيف: ' + added + ' موظف جديد' + (dup ? '\nتجاهل مكرر: ' + dup : '') + (skipped ? '\nصفوف فارغة: ' + skipped : ''));
