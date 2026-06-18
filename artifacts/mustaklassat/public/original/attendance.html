@@ -1,6 +1,41 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+    <script>
+(function () {
+  var SAFE_ATTENDANCE_GUARD_SRC = '/original/attendance-cloud-refresh-guard.js?v=20260618safe4';
+
+  function shouldRewriteAttendanceGuard(node) {
+    try {
+      if (!node || String(node.tagName || '').toLowerCase() !== 'script') return false;
+      var src = node.getAttribute('src') || node.src || '';
+      return src.indexOf('attendance-cloud-refresh-guard.js') !== -1;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function rewriteAttendanceGuard(node) {
+    try {
+      if (shouldRewriteAttendanceGuard(node)) {
+        node.setAttribute('src', SAFE_ATTENDANCE_GUARD_SRC);
+        console.warn('[AttendanceHotfix] تم تحويل تحميل attendance-cloud-refresh-guard إلى النسخة الآمنة');
+      }
+    } catch (_) {}
+    return node;
+  }
+
+  var originalAppendChild = Node.prototype.appendChild;
+  Node.prototype.appendChild = function (node) {
+    return originalAppendChild.call(this, rewriteAttendanceGuard(node));
+  };
+
+  var originalInsertBefore = Node.prototype.insertBefore;
+  Node.prototype.insertBefore = function (node, ref) {
+    return originalInsertBefore.call(this, rewriteAttendanceGuard(node), ref);
+  };
+})();
+</script>
 <script src="/original/user-storage-proxy.js"></script>
     <script src="/original/auth-check.js"></script>
     <script src="/original/cloud-sync.js"></script>
