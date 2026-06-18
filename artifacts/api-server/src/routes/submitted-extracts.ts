@@ -250,13 +250,17 @@ router.put("/:id", requireAuth, requireApproved, async (req: any, res) => {
     const [existing] = await db.select().from(submittedExtractsTable).where(eq(submittedExtractsTable.id, id)).limit(1);
     if (!existing) return res.status(404).json({ error: "Not found" });
     if (existing.userId !== req.currentUser.id) return res.status(403).json({ error: "Forbidden" });
-    if (existing.status !== "needs_revision" && existing.status !== "rejected") {
-      return res.status(400).json({ error: "Can only revise extracts that need revision or were rejected" });
+
+    const isPreReviewEdit = existing.status === "submitted";
+    const isReviewerRequestedRevision = existing.status === "needs_revision" || existing.status === "rejected";
+    if (!isPreReviewEdit && !isReviewerRequestedRevision) {
+      return res.status(400).json({ error: "لا يمكن تعديل المستخلص بعد بدء المراجعة أو بعد الاعتماد" });
     }
 
     const { periodMonth, totalAmount, notes, extractData } = req.body;
     const user = req.currentUser;
     const extractDataJson = extractData ? JSON.stringify(extractData) : existing.extractData;
+    const nextRevisionCount = isReviewerRequestedRevision ? (existing.revisionCount ?? 0) + 1 : (existing.revisionCount ?? 0);
 
     const [row] = await db.update(submittedExtractsTable).set({
       companyName: resolveCompanyName(user, existing.companyName),
@@ -267,9 +271,9 @@ router.put("/:id", requireAuth, requireApproved, async (req: any, res) => {
       extractData: extractDataJson,
       notes: notes ?? existing.notes,
       status: "submitted",
-      revisionCount: (existing.revisionCount ?? 0) + 1,
+      revisionCount: nextRevisionCount,
       revisedAt: new Date(),
-      adminNotes: null,
+      adminNotes: isReviewerRequestedRevision ? null : existing.adminNotes,
       updatedAt: new Date(),
     }).where(eq(submittedExtractsTable.id, id)).returning();
 
@@ -279,7 +283,7 @@ router.put("/:id", requireAuth, requireApproved, async (req: any, res) => {
       changedByRole: req.currentUser.role,
       previousStatus: existing.status,
       newStatus: "submitted",
-      notes: `تعديل رقم ${row.revisionCount}`,
+      notes: isReviewerRequestedRevision ? `تعديل رقم ${row.revisionCount}` : "تعديل قبل بدء المراجعة",
     });
 
     return res.json(row);
