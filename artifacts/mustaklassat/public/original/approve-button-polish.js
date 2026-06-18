@@ -1,4 +1,5 @@
 // Polished fixed approve/submit button used by extract-submit.js.
+// Also adds a safe print pagination fix for large first tables.
 (function () {
   'use strict';
 
@@ -100,6 +101,78 @@
 
       @media print {
         #_najran_approve_btn { display: none !important; }
+
+        html, body {
+          height: auto !important;
+          overflow: visible !important;
+          background: #fff !important;
+        }
+
+        .container,
+        .content,
+        .main-content,
+        .print-section-container,
+        .department-table,
+        .performance-table-section,
+        .table-section,
+        .card,
+        .table-card,
+        .printable-section {
+          break-inside: auto !important;
+          page-break-inside: auto !important;
+        }
+
+        .department-table:first-of-type,
+        .performance-table-section:first-of-type,
+        .table-section:first-of-type,
+        .print-section-container:first-of-type {
+          break-before: auto !important;
+          page-break-before: auto !important;
+          margin-top: 0 !important;
+        }
+
+        table {
+          break-inside: auto !important;
+          page-break-inside: auto !important;
+          page-break-before: auto !important;
+        }
+
+        thead { display: table-header-group !important; }
+        tfoot { display: table-footer-group !important; }
+        tbody {
+          break-inside: auto !important;
+          page-break-inside: auto !important;
+        }
+
+        tr, td, th {
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+        }
+
+        .page-contract-info,
+        .page-contract-info-v2,
+        .extract-details,
+        .extract-details-v2,
+        .header-info,
+        .page-header,
+        .company-header,
+        .print-header,
+        h1, h2, h3, h4,
+        .total,
+        .table-summary,
+        .table-summary-v2 {
+          break-after: avoid !important;
+          page-break-after: avoid !important;
+          margin-bottom: 6px !important;
+        }
+
+        .department-table,
+        .performance-table-section,
+        .table-section {
+          margin-top: 6px !important;
+          margin-bottom: 10px !important;
+          padding-top: 0 !important;
+        }
       }
     `;
     document.head.appendChild(style);
@@ -112,7 +185,6 @@
     btn.dataset.polishedApproveButton = '1';
     btn.setAttribute('aria-label', (btn.textContent || 'اعتماد المستخلص').trim());
 
-    // Remove the old arrow-only visual if present and keep the label clear.
     Array.from(btn.querySelectorAll('span')).forEach(function (span) {
       if ((span.textContent || '').trim() === '←') span.remove();
     });
