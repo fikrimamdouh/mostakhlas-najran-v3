@@ -228,7 +228,7 @@
         cleanInteractiveFields(contentClone);
         contentClone.innerHTML = contentClone.innerHTML.replace(/بمركز صحي /g, 'بالمكتب/المرفق: ').replace(/لمركز:/g, 'للمكتب/المرفق:');
         const contractInfo = document.querySelector('.page-contract-info-v2')?.cloneNode(true);
-        openPrintWindow(`${buildOfficialPrintHeader(centerKey)}${contractInfo ? contractInfo.outerHTML : ''}${contentClone.outerHTML}`, 'طباعة حضور المكاتب الإدارية');
+        openPrintWindow(     `<section class="print-page landscape-page">${buildOfficialPrintHeader(centerKey)}${contractInfo ? contractInfo.outerHTML : ''}${contentClone.outerHTML}</section>`,     'طباعة حضور المكاتب الإدارية' );
     }
     window.preparePrint = printCurrentAttendanceTable;
 
