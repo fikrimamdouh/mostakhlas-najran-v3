@@ -65,8 +65,17 @@
 
         <section class="std-action-bar no-print" id="main-action-buttons">
             <button class="ab ab-manage" onclick="openEmployeeManagementDialog()"><i class="fas fa-users-cog"></i> إدارة الموظفين والمكاتب والمرافق</button>
-            <button class="ab ab-import" onclick="openImportDialog()"><i class="fas fa-briefcase"></i> تحميل المناصب / التامبلت</button>
-            <button class="ab ab-import" onclick="openSmartUploadDialog()"><i class="fas fa-magic"></i> الرفع الذكي</button>
+<button class="ab ab-import" onclick="loadAdminOfficePositionsFromTemplate()">
+  <i class="fas fa-briefcase"></i> تحميل المناصب
+</button>
+
+<button class="ab ab-excel" onclick="openImportDialog()">
+  <i class="fas fa-file-excel"></i> Excel
+</button>
+
+<button class="ab ab-import" onclick="openSmartUploadDialog()">
+  <i class="fas fa-magic"></i> الرفع الذكي
+</button>     
             <button class="ab ab-excel" onclick="openExportDialog()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
             <button class="ab ab-print" onclick="openPrintDialog()"><i class="fas fa-print"></i> طباعة</button>
             <button class="ab ab-update" onclick="showGrandAchievementCertificate()"><i class="fas fa-file-invoice-dollar"></i> الشهادة الإجمالية</button>
@@ -657,43 +666,7 @@
     return { duplicates, newRows };
   }
 
-  window.openAdminOfficeTemplateDialog = function() {
-    const n = getNamesSafe();
-    const opts = orderedKeys().map(k => `<option value="${k}">${esc(n[k])}</option>`).join('');
-
-    const content = `
-      <div class="dialog-header">
-        <h3><i class="fas fa-file-excel"></i> تامبلت Excel للمكاتب الإدارية</h3>
-        <span class="close" onclick="closeDialog('management-dialog')">×</span>
-      </div>
-      <div class="dialog-body">
-        <div style="background:#eef6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;margin-bottom:16px;text-align:center">
-          <h4 style="color:#003087;margin-bottom:10px">التامبلت الجديد</h4>
-          <p style="font-size:.9rem;line-height:1.8;color:#374151">
-            نزّل التامبلت، عبّي التكلفة أو عدّل البيانات، ثم ارفعه لتظهر المقارنة قبل الحفظ.
-          </p>
-
-          <div class="form-group">
-            <label>اختر المكتب/المرفق:</label>
-            <select id="admin-template-center">${opts}</select>
-          </div>
-
-          <button class="btn btn-secondary" onclick="downloadAdminOfficeTemplateSafe()" style="margin:10px 0">
-            <i class="fas fa-download"></i> تنزيل التامبلت
-          </button>
-
-          <input type="file" id="admin-template-file" accept=".xlsx,.xls" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;margin-top:8px">
-
-          <button class="btn btn-success" onclick="importAdminOfficeTemplateSafe()" style="margin-top:12px">
-            <i class="fas fa-file-import"></i> رفع ومقارنة
-          </button>
-        </div>
-
-        <div id="admin-template-status" style="margin-top:14px"></div>
-      </div>`;
-
-    if (typeof openDialog === 'function') openDialog(content, 'management-dialog', true);
-  };
+ 
 
   window.downloadAdminOfficeTemplateSafe = function() {
     const centerKey = document.getElementById('admin-template-center')?.value;
@@ -833,35 +806,7 @@
     if (status) status.innerHTML = '<div style="background:#fff;border:1px solid #ddd;border-radius:12px;padding:14px">تم الإلغاء.</div>';
   };
 
-  window.fixAdminOfficeTableButtons = function() {
-    document.querySelectorAll('button').forEach(btn => {
-      const t = norm(btn.textContent);
-      if (t.includes('عرض كامل')) {
-        btn.innerHTML = '<i class="fas fa-external-link-alt"></i> فتح في نافذة';
-        btn.onclick = function() {
-          const section = btn.closest('.department-table, [id^="table-div-"]');
-          const table = section?.querySelector('table');
-          if (!table) return alert('لم يتم العثور على الجدول.');
-
-          const clone = section.cloneNode(true);
-          clone.querySelectorAll('.tab-action-buttons, .no-print').forEach(x => x.remove());
-
-          const w = window.open('', '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
-          if (!w) return alert('المتصفح منع فتح النافذة.');
-
-          w.document.open();
-          w.document.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>جدول الحضور</title><style>body{font-family:Arial;padding:12px;direction:rtl}table{width:100%;border-collapse:collapse}th,td{border:1px solid #555;padding:4px;text-align:center;font-size:12px}th{background:#003087;color:white}.no-print,.tab-action-buttons{display:none!important}</style></head><body>' + clone.outerHTML + '</body></html>');
-          w.document.close();
-          w.focus();
-        };
-      }
-    });
-  };
-
-  setTimeout(window.fixAdminOfficeTableButtons, 500);
-  setTimeout(window.fixAdminOfficeTableButtons, 1500);
-  setTimeout(window.fixAdminOfficeTableButtons, 3000);
-})();
+ 
 </script>
 
 
@@ -1228,7 +1173,7 @@
 </script>
 
 
-<script id="admin-offices-signature-isolation-patch">
+<script id="admin-offices-signature-isolation">
 (function(){
   'use strict';
 
@@ -1316,7 +1261,80 @@
   console.info('[Admin Offices] signatures separated per office');
 })();
 </script>
+<script>
+(function(){
+  'use strict';
 
+  function getSessionRole() {
+    try {
+      const s = JSON.parse(localStorage.getItem('najran_session') || '{}');
+      return String(s.role || s.userRole || '').toLowerCase();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function isReadOnlyRole() {
+    const role = getSessionRole();
+    return [
+      'reviewer',
+      'review_only',
+      'viewer',
+      'auditor',
+      'contract_supervisor_readonly'
+    ].includes(role);
+  }
+
+  function lockAdminOfficeWriteButtons() {
+    if (!isReadOnlyRole()) return;
+
+    const blockedTexts = [
+      'إدارة الموظفين',
+      'تحميل المناصب',
+      'Excel',
+      'الرفع الذكي',
+      'استعادة نسخة',
+      'تعديل العناوين',
+      'مسح البيانات'
+    ];
+
+    document.querySelectorAll('#main-action-buttons button').forEach(btn => {
+      const text = (btn.textContent || '').trim();
+      if (blockedTexts.some(x => text.includes(x))) {
+        btn.style.display = 'none';
+      }
+    });
+
+    document.querySelectorAll('input, select, textarea, button').forEach(el => {
+      const keepPrint = (el.textContent || '').includes('طباعة');
+      const keepExport = (el.textContent || '').includes('تصدير');
+      const keepNav = el.id === 'navigation';
+
+      if (keepPrint || keepExport || keepNav) return;
+
+      if (
+        el.closest('#main-action-buttons') ||
+        el.closest('#management-dialog') ||
+        el.closest('#form-dialog') ||
+        el.closest('#signature-dialog')
+      ) {
+        el.disabled = true;
+      }
+    });
+
+    console.info('[Admin Offices] readonly permissions applied');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', lockAdminOfficeWriteButtons);
+  } else {
+    lockAdminOfficeWriteButtons();
+  }
+
+  setTimeout(lockAdminOfficeWriteButtons, 700);
+  setTimeout(lockAdminOfficeWriteButtons, 1800);
+})();
+</script>
 <script src="/original/signature-block.js"></script>
 <script>SignatureBlock.init('admin_offices', { showStamp: true });</script>
 </body>
