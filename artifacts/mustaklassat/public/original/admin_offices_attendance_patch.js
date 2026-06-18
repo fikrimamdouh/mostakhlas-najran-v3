@@ -179,19 +179,28 @@
         const doc = printWindow.document;
         doc.open();
         doc.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><title>${title}</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet"><style>
-          @page { size: A4 landscape; margin: 0.5cm; }
-@page landscape { size: A4 landscape; margin: 0.5cm; }
-@page portrait { size: A4 portrait; margin: 0.7cm; }
+         @page { size: A4 landscape; margin: 3mm; }
+@page landscape { size: A4 landscape; margin: 3mm; }
+@page portrait { size: A4 portrait; margin: 7mm; }
 
 html,
 body {
-  width: 297mm;
-  min-height: 210mm;
+  width: auto !important;
+  min-height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
             * { box-sizing: border-box; }
             body { font-family: 'Tajawal', Arial, sans-serif; direction: rtl; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            .print-page { break-after: page; page-break-after: always; page-break-inside: avoid; display: block; width: 100%; }
-            .print-page:last-child { break-after: auto; page-break-after: auto; }
+.print-page {
+  break-after: page;
+  page-break-after: always;
+  page-break-inside: avoid;
+  display: block;
+  width: 100% !important;
+  max-width: 291mm !important;
+  overflow: visible !important;
+}            .print-page:last-child { break-after: auto; page-break-after: auto; }
             .landscape-page { page: landscape; }
             .portrait-page { page: portrait; }
             @media print {
@@ -216,8 +225,34 @@ body {
             .printable-header h2 { font-size: 12pt; }
             .page-contract-info-v2 { font-size: 8pt; text-align: center; margin-bottom: 8px; padding: 5px; border: 1px solid #ccc; border-radius: 8px; }
             .extract-details-v2 { font-size: 10pt; padding: 8px; background: #003087 !important; color: #fff !important; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; gap: 10px; }
-            table { width: 100%; border-collapse: collapse; table-layout: auto; margin-top: 6px; }
-            th, td { border: 1px solid #555; padding: 3px; text-align: center; font-size: 7pt; vertical-align: middle; }
+           .table-responsive-wrapper {
+  overflow: visible !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+table {
+  width: 100% !important;
+  max-width: 100% !important;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin-top: 4px;
+}
+
+th, td {
+  border: 1px solid #555;
+  padding: 1px 2px;
+  text-align: center;
+  font-size: 6pt;
+  line-height: 1.1;
+  vertical-align: middle;
+  white-space: normal;
+  word-break: break-word;
+}
+
+th {
+  font-size: 6.5pt;
+}
             th { background: #003087 !important; color: #fff !important; }
             .portrait-page th, .portrait-page td { font-size: 9pt; padding: 5px; }
             .table-summary-v2 { font-size: 8pt; padding: 5px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; border: 1px solid #ccc; background: #f8f9fa; font-weight: bold; }
