@@ -136,7 +136,7 @@ function SignInPage() {
         <span className="text-white font-bold text-xl">تجمع نجران الصحي</span>
         <span className="text-sm" style={{ color: "#d4af37" }}>وحدة الصيانة العامة</span>
       </div>
-      <SignIn routing="hash" forceRedirectUrl="/dashboard" />
+      <SignIn routing="path" path={`${basePath}/sign-in`} />
     </div>
   );
 }
@@ -235,7 +235,7 @@ function SignUpPage() {
   const [ready, setReady] = useState(false);
   return ready ? (
     <div className="flex min-h-[100dvh] flex-col items-center justify-center p-4" style={{ background: "linear-gradient(135deg,#1e3c72 0%,#2a5298 100%)" }}>
-      <SignUp routing="hash" forceRedirectUrl="/dashboard" />
+      <SignUp routing="path" path={`${basePath}/sign-up`} />
     </div>
   ) : <PreRegistrationForm onNext={() => setReady(true)} />;
 }
