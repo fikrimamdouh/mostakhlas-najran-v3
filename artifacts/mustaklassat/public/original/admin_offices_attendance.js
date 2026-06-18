@@ -819,13 +819,11 @@ function printTabContent(elementId) {
 
     // 3. استنساخ العناصر المطلوبة من الصفحة الرئيسية بدقة
     const headerClone = document.querySelector('.header-info').cloneNode(true);
-   const pageContractInfoClone = document.querySelector('.page-contract-info-v2')?.cloneNode(true);
-...
-if (pageContractInfoClone) printablePage.appendChild(pageContractInfoClone);
+const pageContractInfoClone = document.querySelector('.page-contract-info-v2')?.cloneNode(true);
+const tableClone = contentToPrint.cloneNode(true);
 
-    // 4. إزالة الأزرار غير المرغوب فيها من نسخة الجدول
-    tableClone.querySelectorAll('.tab-action-buttons').forEach(btn => btn.remove());
-
+// 4. إزالة الأزرار غير المرغوب فيها من نسخة الجدول
+tableClone.querySelectorAll('.tab-action-buttons').forEach(btn => btn.remove());
     // 4b. تحديد الشعار والعنوان بناءً على انتماء المركز
     const centerKey = elementId.replace('table-div-', '');
     const ch = getHeaderForCenter(centerKey);
@@ -844,9 +842,9 @@ if (pageContractInfoClone) printablePage.appendChild(pageContractInfoClone);
     `;
     
     // 6. تجميع كل الأجزاء بالترتيب الصحيح داخل صفحة الطباعة
-    printablePage.innerHTML = printableHeader;
-    printablePage.appendChild(pageContractInfoClone);
-    printablePage.appendChild(tableClone);
+printablePage.innerHTML = printableHeader;
+if (pageContractInfoClone) printablePage.appendChild(pageContractInfoClone);
+printablePage.appendChild(tableClone);
 
     // 7. إضافة الصفحة المكتملة إلى حاوية الطباعة الرئيسية
     printWrapper.appendChild(printablePage);
