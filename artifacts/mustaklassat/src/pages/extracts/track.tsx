@@ -179,6 +179,30 @@ function StatusBadge({ status, revisionCount }: { status: ExtractStatus; revisio
   );
 }
 
+function PreReviewEditBanner({ onEdit }: { extract: SubmittedExtract; onEdit: () => void | Promise<void> }) {
+  return (
+    <div className="rounded-xl p-4 border-2 flex flex-col gap-3" style={{ background: "#eff6ff", borderColor: "#bfdbfe" }}>
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#2563eb" }}>
+          <Pencil className="h-4 w-4 text-white" />
+        </div>
+        <div>
+          <p className="font-bold text-sm" style={{ color: "#1d4ed8" }}>يمكنك تعديل المستخلص قبل بدء المراجعة</p>
+          <p className="text-xs mt-1" style={{ color: "#1e40af" }}>التعديل سيحمل نفس البيانات المرفوعة، ثم يعيد رفع نفس المستخلص بدون إنشاء مستخلص جديد.</p>
+        </div>
+      </div>
+      <button
+        onClick={onEdit}
+        className="self-start flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90"
+        style={{ background: "linear-gradient(135deg,#2563eb,#1d4ed8)" }}
+      >
+        <Pencil className="h-4 w-4" />
+        تعديل المستخلص قبل المراجعة
+      </button>
+    </div>
+  );
+}
+
 function RevisionBanner({ extract, onRevise }: { extract: SubmittedExtract; onRevise: () => void | Promise<void> }) {
   return (
     <div className="rounded-xl p-4 border-2 flex flex-col gap-3" style={{ background: "#fff7ed", borderColor: "#fed7aa" }}>
@@ -305,6 +329,7 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
     : "—";
 
   const parts = TYPE_PARTS[extract.extractType] || [];
+  const canEditBeforeReview = isOwner && extract.status === "submitted";
   const canRevise = isOwner && (extract.status === "needs_revision" || extract.status === "rejected");
 
   return (
@@ -340,6 +365,9 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
 
       {expanded && (
         <div className="border-t px-5 pb-5 pt-4 space-y-4" style={{ borderColor: "#f3f4f6" }}>
+          {canEditBeforeReview && (
+            <PreReviewEditBanner extract={extract} onEdit={handleRevise} />
+          )}
           {canRevise && extract.status === "needs_revision" && (
             <RevisionBanner extract={extract} onRevise={handleRevise} />
           )}
