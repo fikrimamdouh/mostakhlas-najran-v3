@@ -591,19 +591,24 @@ function showPendingUploadDecisionModal(onLeave) {
         }
 
         if (!normalEmptyCloudHandled) {
-          clearLocalAttendanceState('normal-initial-no-cloud-attendance', activeKeys);
-          normalEmptyCloudHandled = true;
-          console.warn('[AttendanceCloudGuard] لا توجد نسخة حضور سحابية — تم تنظيف المحلي مرة واحدة والصفحة جاهزة للإدخال — keys=' + activeKeys.join(','));
-          setTimeout(function(){ renderAgain('normal-empty-ready-for-input'); }, 50);
-          setTimeout(function(){ renderAgain('normal-empty-ready-for-input'); }, 500);
-          return;
-        }
+  normalEmptyCloudHandled = true;
 
-        console.warn('[AttendanceCloudGuard] السيرفر لا يحتوي حضور، وتم تجاهل التنظيف المتكرر لحماية تعديلات المستخدم — بدون رفع تلقائي — keys=' + activeKeys.join(','));
+  if (localRows > 0) {
+    pendingLocalAttendanceUpload = true;
+    markLocalWinsPersistent(activeKeys, 'normal-first-entry-no-cloud-attendance');
+  }
+
+  console.warn('[AttendanceCloudGuard] لا توجد نسخة حضور سحابية — أول إدخال لهذا الموقع، تم الاحتفاظ بالبيانات المحلية وعدم حذفها — keys=' + activeKeys.join(','));
+  setTimeout(function(){ renderAgain('normal-empty-preserve-local-first-entry'); }, 50);
+  setTimeout(function(){ renderAgain('normal-empty-preserve-local-first-entry'); }, 500);
+  return;
+}
+
+console.warn('[AttendanceCloudGuard] السيرفر لا يحتوي حضور — تم الاحتفاظ بالبيانات المحلية وعدم الحذف — keys=' + activeKeys.join(','));
 pendingLocalAttendanceUpload = localRows > 0;
+if (localRows > 0) markLocalWinsPersistent(activeKeys, 'normal-empty-cloud-preserve-local');
 setTimeout(function(){ renderAgain('normal-empty-preserve-user-edits-no-upload'); }, 50);
 return;
-}
 
   if (!isReviewOnlySession() && localWinsUntilSynced && localRows > 0 && !sameAttendanceSnapshot(data, activeKeys)) {
   localWinsUntilSynced = false;
