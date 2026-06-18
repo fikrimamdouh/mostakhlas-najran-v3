@@ -936,11 +936,7 @@ overlay.style.display = 'block';
 dlg.style.display = 'block';
 }
 
-window.closeAdminOfficeImportModeDialog = function () {
-    const dlgId = 'admin-office-template-import-mode-dialog';
-    document.getElementById(dlgId)?.remove();
-    document.getElementById(dlgId + '-overlay')?.remove();
-};
+
     window.closeAdminOfficeImportModeDialog = function () {
         const dlgId = 'admin-office-template-import-mode-dialog';
         document.getElementById(dlgId)?.remove();
