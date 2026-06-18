@@ -1337,5 +1337,37 @@
 </script>
 <script src="/original/signature-block.js"></script>
 <script>SignatureBlock.init('admin_offices', { showStamp: true });</script>
+    <script id="admin-offices-remove-fullscreen-button">
+(function(){
+  'use strict';
+
+  function removeFullscreenButtons() {
+    document.querySelectorAll('.zoom-fullscreen-btn').forEach(btn => {
+      const text = (btn.textContent || '').trim();
+      if (text.includes('عرض كامل')) {
+        btn.remove();
+      }
+    });
+
+    document.querySelectorAll('button').forEach(btn => {
+      const text = (btn.textContent || '').trim();
+      if (text.includes('عرض كامل')) {
+        btn.remove();
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', removeFullscreenButtons);
+  } else {
+    removeFullscreenButtons();
+  }
+
+  setTimeout(removeFullscreenButtons, 300);
+  setTimeout(removeFullscreenButtons, 800);
+  setTimeout(removeFullscreenButtons, 1500);
+  setTimeout(removeFullscreenButtons, 3000);
+})();
+</script>
 </body>
 </html>
