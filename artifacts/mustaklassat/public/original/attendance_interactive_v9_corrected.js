@@ -2587,10 +2587,14 @@ function preparePrint(selectedDepartments = null, includeGrandTotalSignatures = 
       .signature-role { font-size: 13px; font-weight: bold; color: #222; }
       .signature-name { font-size: 11px; color: #888; }
       @media print {
-        body { zoom: 50%; }
-        table, tr, td, th { page-break-inside: avoid !important; }
-        .print-break { page-break-before: always; }
-      }
+  body { zoom: 50%; }
+  table { page-break-inside: auto !important; }
+  thead { display: table-header-group; }
+  tfoot { display: table-footer-group; }
+  tr { page-break-inside: avoid !important; }
+  td, th { page-break-inside: avoid !important; }
+  .print-break { page-break-before: always; }
+}
     </style>
   `);
 
