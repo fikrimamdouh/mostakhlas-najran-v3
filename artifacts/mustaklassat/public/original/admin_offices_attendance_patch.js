@@ -179,9 +179,15 @@
         const doc = printWindow.document;
         doc.open();
         doc.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><title>${title}</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet"><style>
-            @page { size: A4 portrait; margin: 0.7cm; }
-            @page landscape { size: A4 landscape; margin: 0.5cm; }
-            @page portrait { size: A4 portrait; margin: 0.7cm; }
+          @page { size: A4 landscape; margin: 0.5cm; }
+@page landscape { size: A4 landscape; margin: 0.5cm; }
+@page portrait { size: A4 portrait; margin: 0.7cm; }
+
+html,
+body {
+  width: 297mm;
+  min-height: 210mm;
+}
             * { box-sizing: border-box; }
             body { font-family: 'Tajawal', Arial, sans-serif; direction: rtl; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             .print-page { break-after: page; page-break-after: always; page-break-inside: avoid; display: block; width: 100%; }
