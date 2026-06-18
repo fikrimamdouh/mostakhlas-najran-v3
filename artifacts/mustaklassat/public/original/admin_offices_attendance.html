@@ -1343,8 +1343,10 @@
 
   function isFullscreenBtn(el) {
     if (!el || el.nodeType !== 1) return false;
-    const text = (el.textContent || '').trim();
-    return el.classList?.contains('zoom-fullscreen-btn') || text.includes('كامل');
+    if (el.classList?.contains('zoom-fullscreen-btn')) return true;
+    if (el.tagName !== 'BUTTON') return false;
+    const text = (el.textContent || '').replace(/\s+/g, ' ').trim();
+    return /^(ال)?عرض\s+(ال)?كامل$/.test(text);
   }
 
   function removeFullscreenButtons(root) {
@@ -1353,26 +1355,27 @@
     });
   }
 
-  // مسح أولي عند تحميل الصفحة
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => removeFullscreenButtons());
   } else {
     removeFullscreenButtons();
   }
 
-  // مراقبة مستمرة لأي زرار يضاف لاحقًا (جداول ديناميكية، تبديل تابات، إلخ)
   const observer = new MutationObserver(mutations => {
     mutations.forEach(m => {
       m.addedNodes.forEach(node => {
         if (node.nodeType !== 1) return;
-        if (isFullscreenBtn(node)) { node.remove(); return; }
+        // نبحث جوه العنصر عن الزراير فقط، مش بنفحص الكونتينر الكبير نفسه بنصه الكامل
         removeFullscreenButtons(node);
+        if (isFullscreenBtn(node)) node.remove();
       });
     });
   });
 
   observer.observe(document.documentElement, { childList: true, subtree: true });
 })();
- </script>
+</script>
+    </script>
+
 </body>
 </html>
