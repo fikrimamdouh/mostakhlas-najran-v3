@@ -5,7 +5,7 @@
  */
 (function () {
   var BASE = window.location.origin;
-  var BUILD_V = '20260618specialAbsence1';
+  var BUILD_V = '20260618approveBtn1';
   var NOTIF_INTERVAL_MS = 300000;
   var notifFetchInProgress = false;
 
@@ -127,6 +127,8 @@
   appendScript('/original/hospital-storage-extract-context-guard.js?v=' + BUILD_V, false);
 
   var pageSig = window.location.pathname + window.location.search;
+
+  appendScript('/original/approve-button-polish.js?v=' + BUILD_V, true);
 
   if (/attendance\.html(?:$|[?#])/.test(pageSig) || /[?&]page=.*attendance\.html(?:$|&)/.test(pageSig)) {
     appendScript('/original/attendance-cloud-refresh-guard.js?v=' + BUILD_V, true);
