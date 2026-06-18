@@ -790,7 +790,7 @@ function renderAttendanceTable(centerKey) {
     container.innerHTML = tableHTML;
     populateAttendanceTableBody(centerKey);
     if (typeof displaySignatures === 'function') {
-        displaySignatures('attendance', `attendance-signatures-${centerKey}`);
+        displaySignatures('attendance', centerKey);
     }
     const savedZoom = localStorage.getItem(`tableZoom_${centerKey}`);
     if (savedZoom) {
@@ -819,8 +819,9 @@ function printTabContent(elementId) {
 
     // 3. استنساخ العناصر المطلوبة من الصفحة الرئيسية بدقة
     const headerClone = document.querySelector('.header-info').cloneNode(true);
-    const pageContractInfoClone = document.querySelector('.page-contract-info').cloneNode(true);
-    const tableClone = contentToPrint.cloneNode(true);
+   const pageContractInfoClone = document.querySelector('.page-contract-info-v2')?.cloneNode(true);
+...
+if (pageContractInfoClone) printablePage.appendChild(pageContractInfoClone);
 
     // 4. إزالة الأزرار غير المرغوب فيها من نسخة الجدول
     tableClone.querySelectorAll('.tab-action-buttons').forEach(btn => btn.remove());
@@ -1787,21 +1788,29 @@ function displaySignatures(type, contextKey = null) {
  * @returns {string} - المفتاح النهائي للتواقيع.
  */
 function getSignatureKeyForContext(type, contextKey) {
-    // قائمة الأقسام التي لها تواقيع فريدة
-    const uniqueSignatureKeys = {
-        'grand_certificate': 'achievement_grand_certificate', // الشهادة الإجمالية
-        'center_72': `${type}_special_mobile_team`,         // مكتب إداري 73
-        'admin_staff': `${type}_special_admin_jobs`,        // فئات إدارية أخرى
-        'center_70': `${type}_special_nursing_home`         // سكن التمريض
-    };
-
-    // إذا كان السياق الحالي أحد الأقسام الخاصة، نرجع المفتاح الفريد الخاص به
-    if (contextKey && uniqueSignatureKeys[contextKey]) {
-        return uniqueSignatureKeys[contextKey];
+    if (!contextKey) {
+        return `${type}_general_admin_offices_only`;
     }
 
-    // إذا لم يكن كذلك، نرجع المفتاح العادي (العام)
-    return `${type}_general`;
+    contextKey = String(contextKey)
+        .replace(/^attendance-signatures-/, '')
+        .replace(/^perf-signatures-/, '')
+        .replace(/^performance-signatures-/, '')
+        .replace(/^ach-signatures-/, '')
+        .replace(/^achievement-signatures-/, '')
+        .replace(/^table-div-/, '')
+        .replace(/^table-/, '')
+        .trim();
+
+    if (contextKey === 'grand_certificate') {
+        return `${type}_grand_certificate`;
+    }
+
+    if (/^center_\d+$/.test(contextKey) || contextKey === 'admin_staff') {
+        return `${type}_${contextKey}`;
+    }
+
+    return `${type}_${contextKey}`;
 }
 
 /**
@@ -1809,18 +1818,32 @@ function getSignatureKeyForContext(type, contextKey) {
  */
 function getSignatureDialogTitle(type, contextKey) {
     const centerNames = getCenterNames();
-    const titles = {
-        'grand_certificate': 'تواقيع الشهادة الإجمالية',
-        'center_72': `تواقيع: ${centerNames['center_72'] || 'مكتب إداري 73'}`,
-        'admin_staff': `تواقيع: ${centerNames['admin_staff'] || 'فئات إدارية أخرى'}`,
-        'center_70': `تواقيع: ${centerNames['center_70'] || 'سكن التمريض'}`
-    };
 
-    if (contextKey && titles[contextKey]) {
-        return titles[contextKey];
+    contextKey = String(contextKey || '')
+        .replace(/^attendance-signatures-/, '')
+        .replace(/^perf-signatures-/, '')
+        .replace(/^performance-signatures-/, '')
+        .replace(/^ach-signatures-/, '')
+        .replace(/^achievement-signatures-/, '')
+        .replace(/^table-div-/, '')
+        .replace(/^table-/, '')
+        .trim();
+
+    const typeName =
+        type === 'attendance' ? 'الحضور والانصراف' :
+        type === 'performance' ? 'تقييم الأداء' :
+        type === 'achievement' ? 'شهادة الإنجاز' :
+        type;
+
+    if (contextKey === 'grand_certificate') {
+        return 'تواقيع الشهادة الإجمالية';
     }
-    
-    return `التواقيع العامة (لباقي المراكز)`;
+
+    if (contextKey) {
+        return `تواقيع ${typeName}: ${centerNames[contextKey] || contextKey}`;
+    }
+
+    return 'تواقيع عامة للمكاتب';
 }
 
 // --- 10. UTILITY & TOTALS ---
