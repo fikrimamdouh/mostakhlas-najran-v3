@@ -5,7 +5,7 @@
  */
 (function () {
   var BASE = window.location.origin;
-  var BUILD_V = '20260614b';
+  var BUILD_V = '20260618specialAbsence1';
   var NOTIF_INTERVAL_MS = 300000;
   var notifFetchInProgress = false;
 
@@ -115,57 +115,43 @@
     return;
   }
 
-  var hospitalContextGuardScript = document.createElement('script');
-  hospitalContextGuardScript.src = '/original/hospital-context-guard.js?v=20260611d';
-  hospitalContextGuardScript.defer = false;
-  document.head.appendChild(hospitalContextGuardScript);
-
-  var hospitalStorageExtractContextGuardScript = document.createElement('script');
-  hospitalStorageExtractContextGuardScript.src = '/original/hospital-storage-extract-context-guard.js?v=' + BUILD_V;
-  hospitalStorageExtractContextGuardScript.defer = false;
-  document.head.appendChild(hospitalStorageExtractContextGuardScript);
-
-  if (/attendance\.html(?:$|[?#])/.test(window.location.pathname + window.location.search) || /[?&]page=.*attendance\.html(?:$|&)/.test(window.location.pathname + window.location.search)) {
-    var attendanceCloudRefreshGuardScript = document.createElement('script');
-    attendanceCloudRefreshGuardScript.src = '/original/attendance-cloud-refresh-guard.js?v=' + BUILD_V;
-    attendanceCloudRefreshGuardScript.defer = true;
-    document.head.appendChild(attendanceCloudRefreshGuardScript);
+  function appendScript(src, defer) {
+    var script = document.createElement('script');
+    script.src = src;
+    script.defer = defer !== false;
+    document.head.appendChild(script);
+    return script;
   }
 
-  if (/\/original\/approval\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) {
-    var reviewPrintScript = document.createElement('script');
-    reviewPrintScript.src = '/original/review-print-override.js?v=' + BUILD_V;
-    reviewPrintScript.defer = true;
-    document.head.appendChild(reviewPrintScript);
+  appendScript('/original/hospital-context-guard.js?v=20260611d', false);
+  appendScript('/original/hospital-storage-extract-context-guard.js?v=' + BUILD_V, false);
 
-    var reviewScript = document.createElement('script');
-    reviewScript.src = '/original/review-workflow.js?v=' + BUILD_V;
-    reviewScript.defer = true;
-    document.head.appendChild(reviewScript);
+  var pageSig = window.location.pathname + window.location.search;
 
-    var reviewGenericScript = document.createElement('script');
-    reviewGenericScript.src = '/original/review-generic-tables.js?v=' + BUILD_V;
-    reviewGenericScript.defer = true;
-    document.head.appendChild(reviewGenericScript);
-
-    var reviewConsumablesSummaryScript = document.createElement('script');
-    reviewConsumablesSummaryScript.src = '/original/review-consumables-summary-exact.js?v=' + BUILD_V;
-    reviewConsumablesSummaryScript.defer = true;
-    document.head.appendChild(reviewConsumablesSummaryScript);
+  if (/attendance\.html(?:$|[?#])/.test(pageSig) || /[?&]page=.*attendance\.html(?:$|&)/.test(pageSig)) {
+    appendScript('/original/attendance-cloud-refresh-guard.js?v=' + BUILD_V, true);
   }
 
-  if (/\/original\/.*consumables\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) {
-    var consumablesGuardScript = document.createElement('script');
-    consumablesGuardScript.src = '/original/consumables-submit-snapshot-guard.js?v=' + BUILD_V;
-    consumablesGuardScript.defer = true;
-    document.head.appendChild(consumablesGuardScript);
+  if (
+    /\/original\/attendance\.html(?:$|[?#])/.test(pageSig) ||
+    /\/original\/admin_offices_attendance\.html(?:$|[?#])/.test(pageSig)
+  ) {
+    appendScript('/original/special-absence-no-deduction.js?v=' + BUILD_V, true);
   }
 
-  if (/\/original\/settings_main\.html(?:$|[?#])/.test(window.location.pathname + window.location.search)) {
-    var settingsBackupCompleteScript = document.createElement('script');
-    settingsBackupCompleteScript.src = '/original/settings-backup-complete-guard.js?v=20260611d';
-    settingsBackupCompleteScript.defer = true;
-    document.head.appendChild(settingsBackupCompleteScript);
+  if (/\/original\/approval\.html(?:$|[?#])/.test(pageSig)) {
+    appendScript('/original/review-print-override.js?v=' + BUILD_V, true);
+    appendScript('/original/review-workflow.js?v=' + BUILD_V, true);
+    appendScript('/original/review-generic-tables.js?v=' + BUILD_V, true);
+    appendScript('/original/review-consumables-summary-exact.js?v=' + BUILD_V, true);
+  }
+
+  if (/\/original\/.*consumables\.html(?:$|[?#])/.test(pageSig)) {
+    appendScript('/original/consumables-submit-snapshot-guard.js?v=' + BUILD_V, true);
+  }
+
+  if (/\/original\/settings_main\.html(?:$|[?#])/.test(pageSig)) {
+    appendScript('/original/settings-backup-complete-guard.js?v=20260611d', true);
   }
 
   var NOTIF_SEEN_KEY  = 'najran_notif_seen_ids';
