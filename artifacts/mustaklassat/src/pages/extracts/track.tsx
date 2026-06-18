@@ -7,7 +7,7 @@ import {
   Building2, CalendarDays, FileText, Banknote, RefreshCw, Pencil, RotateCcw,
 } from "lucide-react";
 
-type ExtractType = "labor" | "consumables" | "spare_parts" | "health_centers";
+type ExtractType = "labor" | "consumables" | "spare_parts" | "health_centers" | "admin_offices";
 type ExtractStatus = "submitted" | "under_review" | "approved" | "rejected" | "needs_revision";
 
 interface SubmittedExtract {
@@ -36,6 +36,7 @@ const TYPE_LABELS: Record<ExtractType, string> = {
   consumables: "مستخلص المستهلكات",
   spare_parts: "مستخلص قطع الغيار",
   health_centers: "مستخلص المراكز الصحية",
+  admin_offices: "مستخلص المكاتب الإدارية",
 };
 
 const TYPE_PARTS: Record<ExtractType, string[]> = {
@@ -43,6 +44,7 @@ const TYPE_PARTS: Record<ExtractType, string[]> = {
   consumables: ["المستهلكات والمواد الهندسية"],
   spare_parts: ["قطع الغيار"],
   health_centers: ["عمالة المراكز", "مستهلكات المراكز"],
+  admin_offices: ["عمالة المكاتب الإدارية", "مستهلكات المكاتب الإدارية"],
 };
 
 const TYPE_PAGES: Record<ExtractType, string> = {
@@ -50,6 +52,7 @@ const TYPE_PAGES: Record<ExtractType, string> = {
   consumables: "/original/consumables.html",
   health_centers: "/original/health_centers_attendance.html",
   spare_parts: "/original/spare_parts.html",
+  admin_offices: "/original/admin_offices_attendance.html",
 };
 
 const STATUS_CONFIG: Record<ExtractStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
@@ -95,6 +98,65 @@ function useUpdateStatus() {
   });
 }
 
+function parseExtractData(value: unknown): Record<string, unknown> {
+  if (!value) return {};
+  if (typeof value === "string") {
+    try { return JSON.parse(value || "{}"); }
+    catch { return {}; }
+  }
+  if (typeof value === "object") return value as Record<string, unknown>;
+  return {};
+}
+
+function writeLocalStorageValue(key: string, value: unknown) {
+  if (value == null) return;
+  localStorage.setItem(key, typeof value === "string" ? value : JSON.stringify(value));
+}
+
+function backupCurrentLocalStorageBeforeRevision(extractId: number) {
+  try {
+    const backup: Record<string, string> = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      const value = localStorage.getItem(key);
+      if (value != null) backup[key] = value;
+    }
+    localStorage.setItem("najran_revision_previous_local_backup", JSON.stringify({
+      extractId,
+      createdAt: new Date().toISOString(),
+      data: backup,
+    }));
+  } catch (_) {}
+}
+
+function clearOperationalKeysBeforeRevision() {
+  const exactKeys = [
+    "attendanceData", "ng_attendanceData", "nd_attendanceData",
+    "centersAttendanceData_v2", "healthCentersAttendanceData", "adminOfficesAttendanceData_v1",
+    "persistentExtractData", "extractMonth", "extractYear", "extractStart", "extractEnd",
+    "extractFromDate", "extractToDate", "paymentNumber", "extractNumber", "periodMonth",
+    "performanceData", "performanceData_v4", "performanceDeductions", "performanceTotalDeduction", "performanceTotalDue",
+    "achievementData", "achievementTitles_v1", "achievementItemNames",
+    "consumablesTableData", "healthCentersConsumables", "mainHospitalConsumables", "admin_offices_consumables_v1.0",
+    "spare_partsData", "sparePartsTotalAmount", "approvalData", "displayApprovalData",
+    "finalLaborCost", "finalConsumablesCost", "grand-net-total", "grand-net-total-centers", "grand-net-total-admin",
+    "najran_labor_attendance_done", "najran_labor_performance_done", "najran_health_attendance_done", "najran_admin_offices_attendance_done",
+  ];
+
+  const prefixes = [
+    "deptCalculatedCost_", "dept_", "tableData_", "achievement_", "consumables_", "spare_",
+    "water_", "sewage_", "subcontractors_", "najran_labor_", "najran_health_", "najran_admin_", "monthSnapshot_",
+  ];
+
+  exactKeys.forEach(key => localStorage.removeItem(key));
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const key = localStorage.key(i);
+    if (!key) continue;
+    if (prefixes.some(prefix => key.startsWith(prefix))) localStorage.removeItem(key);
+  }
+}
+
 function StatusBadge({ status, revisionCount }: { status: ExtractStatus; revisionCount?: number }) {
   const cfg = STATUS_CONFIG[status];
   return (
@@ -117,7 +179,7 @@ function StatusBadge({ status, revisionCount }: { status: ExtractStatus; revisio
   );
 }
 
-function RevisionBanner({ extract, onRevise }: { extract: SubmittedExtract; onRevise: () => void }) {
+function RevisionBanner({ extract, onRevise }: { extract: SubmittedExtract; onRevise: () => void | Promise<void> }) {
   return (
     <div className="rounded-xl p-4 border-2 flex flex-col gap-3" style={{ background: "#fff7ed", borderColor: "#fed7aa" }}>
       <div className="flex items-start gap-3">
@@ -144,7 +206,7 @@ function RevisionBanner({ extract, onRevise }: { extract: SubmittedExtract; onRe
   );
 }
 
-function RejectedBanner({ extract, onRevise }: { extract: SubmittedExtract; onRevise: () => void }) {
+function RejectedBanner({ extract, onRevise }: { extract: SubmittedExtract; onRevise: () => void | Promise<void> }) {
   return (
     <div className="rounded-xl p-4 border-2 flex flex-col gap-3" style={{ background: "#fef2f2", borderColor: "#fecaca" }}>
       <div className="flex items-start gap-3">
@@ -175,9 +237,11 @@ function RejectedBanner({ extract, onRevise }: { extract: SubmittedExtract; onRe
 function ExtractCard({ extract, isAdmin, currentUserId }: {
   extract: SubmittedExtract; isAdmin: boolean; currentUserId?: number
 }) {
+  const { getToken } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const [adminNotes, setAdminNotes] = useState(extract.adminNotes || "");
   const [showNotes, setShowNotes] = useState(false);
+  const [isPreparingRevision, setIsPreparingRevision] = useState(false);
   const updateStatus = useUpdateStatus();
 
   const isOwner = extract.userId === currentUserId;
@@ -187,9 +251,53 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
     setShowNotes(false);
   };
 
-  const handleRevise = () => {
-    localStorage.setItem("najran_revision_extract_id", String(extract.id));
-    window.location.href = TYPE_PAGES[extract.extractType] || "/original/attendance.html";
+  const handleRevise = async () => {
+    if (isPreparingRevision) return;
+    setIsPreparingRevision(true);
+
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/submitted-extracts/${extract.id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        alert("تعذر تحميل بيانات المستخلص للتعديل");
+        return;
+      }
+
+      const full = await res.json();
+      const data = parseExtractData(full.extractData);
+
+      if (!data || Object.keys(data).length === 0) {
+        alert("لا توجد بيانات محفوظة داخل هذا المستخلص للتعديل");
+        return;
+      }
+
+      backupCurrentLocalStorageBeforeRevision(extract.id);
+      clearOperationalKeysBeforeRevision();
+
+      Object.entries(data).forEach(([key, value]) => writeLocalStorageValue(key, value));
+
+      localStorage.setItem("najran_revision_extract_id", String(extract.id));
+      localStorage.setItem("najran_revision_mode", "true");
+      localStorage.setItem("najran_revision_extract_type", String(full.extractType || extract.extractType));
+      localStorage.setItem("najran_revision_started_at", new Date().toISOString());
+
+      if (full.companyName) localStorage.setItem("companyName", String(full.companyName));
+      if (full.contractNumber) localStorage.setItem("contractNumber", String(full.contractNumber));
+      if (full.hospitalName) localStorage.setItem("hospitalName", String(full.hospitalName));
+      if (full.periodMonth) localStorage.setItem("periodMonth", String(full.periodMonth));
+      if (full.totalAmount != null) localStorage.setItem("najran_revision_previous_total_amount", String(full.totalAmount));
+
+      window.location.href = TYPE_PAGES[extract.extractType] || "/original/attendance.html";
+    } catch (err) {
+      console.error("Failed to start extract revision", err);
+      alert("حدث خطأ أثناء تجهيز المستخلص للتعديل");
+    } finally {
+      setIsPreparingRevision(false);
+    }
   };
 
   const fmt = (d: string | null) => d
@@ -213,7 +321,7 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
           </div>
           <div>
             <p className="font-bold text-base" style={{ color: "#1e3c72" }}>
-              {TYPE_LABELS[extract.extractType]}
+              {TYPE_LABELS[extract.extractType] || "مستخلص"}
             </p>
             <p className="text-sm text-gray-500 mt-0.5">
               {extract.companyName || "—"} {extract.periodMonth ? `· ${extract.periodMonth}` : ""}
@@ -237,6 +345,11 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
           )}
           {canRevise && extract.status === "rejected" && (
             <RejectedBanner extract={extract} onRevise={handleRevise} />
+          )}
+          {isPreparingRevision && (
+            <div className="rounded-xl p-3 text-sm font-semibold" style={{ background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" }}>
+              جاري تحميل بيانات المستخلص القديمة للتعديل...
+            </div>
           )}
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
