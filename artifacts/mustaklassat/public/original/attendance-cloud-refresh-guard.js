@@ -609,7 +609,7 @@ pendingLocalAttendanceUpload = localRows > 0;
 if (localRows > 0) markLocalWinsPersistent(activeKeys, 'normal-empty-cloud-preserve-local');
 setTimeout(function(){ renderAgain('normal-empty-preserve-user-edits-no-upload'); }, 50);
 return;
-
+}
   if (!isReviewOnlySession() && localWinsUntilSynced && localRows > 0 && !sameAttendanceSnapshot(data, activeKeys)) {
   localWinsUntilSynced = false;
   pendingLocalAttendanceUpload = true;
