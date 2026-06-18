@@ -515,6 +515,356 @@
 <script src="/original/extract-submit.js"></script>
 <script src="/original/track.js"></script>
 <!-- shared-nav disabled on admin offices page -->
+
+<script>
+(function(){
+  'use strict';
+
+  function readJson(k, fb) {
+    try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : fb; } catch(_) { return fb; }
+  }
+
+  function getDataSafe() {
+    try { return getAttendanceData(); } catch(_) { return readJson('adminOfficesAttendanceData_v1', {}); }
+  }
+
+  function saveDataSafe(d) {
+    try { return saveAttendanceData(d); } catch(_) { localStorage.setItem('adminOfficesAttendanceData_v1', JSON.stringify(d)); }
+  }
+
+  function getNamesSafe() {
+    try { if (typeof getCenterNames === 'function') return getCenterNames() || {}; } catch(_) {}
+    return readJson('adminOfficeNames_v1', {});
+  }
+
+  function esc(v) {
+    return String(v || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function norm(v) {
+    return String(v || '').replace(/\u200f|\u200e/g,'').replace(/[إأآا]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,' ').trim().toLowerCase();
+  }
+
+  function orderedKeys() {
+    const n = getNamesSafe();
+    return Object.keys(n).sort((a,b)=>{
+      if(a.startsWith('center_') && b.startsWith('center_')) return parseInt(a.split('_')[1])-parseInt(b.split('_')[1]);
+      if(a.startsWith('center_')) return -1;
+      if(b.startsWith('center_')) return 1;
+      return a.localeCompare(b);
+    });
+  }
+
+  function periodDays() {
+    try {
+      const p = getExtractPeriodDetails();
+      return p.daysInExtract || p.daysInMonth || 30;
+    } catch(_) {
+      return 30;
+    }
+  }
+
+  function daysArr() {
+    return Array(periodDays()).fill('ح');
+  }
+
+  function num(v) {
+    if (typeof v === 'number') return v || 0;
+    return parseFloat(String(v || '').replace(/,/g,'').replace(/[ ريال﷼]/g,'').trim()) || 0;
+  }
+
+  function parseExcel(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = e => {
+        try {
+          const wb = XLSX.read(e.target.result, { type: 'binary' });
+          const employees = [];
+          let skipped = 0;
+
+          wb.SheetNames.forEach(sheet => {
+            const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheet], { header: 1, defval: '' });
+            if (rows.length < 2) return;
+
+            let hRow = -1;
+            for (let i = 0; i < Math.min(15, rows.length); i++) {
+              const r = rows[i].map(norm);
+              const hasName = r.some(x => x.includes('اسم الموظف') || x.includes('اسم شاغل الوظيفه'));
+              const hasJob = r.some(x => x.includes('مسمي الوظيفه') || x === 'الوظيفه' || x.includes('job'));
+              if (hasName && hasJob) { hRow = i; break; }
+            }
+            if (hRow < 0) return;
+
+            const h = rows[hRow].map(norm);
+            const find = tests => h.findIndex(x => tests.some(fn => fn(x)));
+
+            const iName = find([x => x.includes('اسم الموظف'), x => x.includes('اسم شاغل الوظيفه')]);
+            const iId = find([x => x.includes('الهويه'), x => x.includes('الاقامه'), x => x.includes('id'), x => x.includes('iqama')]);
+            const iJob = find([x => x.includes('مسمي الوظيفه'), x => x === 'الوظيفه', x => x.includes('job')]);
+            const iSalary = find([x => x.includes('التكلفه'), x => x.includes('راتب'), x => x.includes('salary')]);
+            const iCat = find([x => x.includes('الفئه'), x => x.includes('فئه'), x => x.includes('cat')]);
+            const iNat = find([x => x.includes('الجنسيه'), x => x.includes('جنسيه'), x => x.includes('nat')]);
+            const iFine = find([x => x.includes('غرامه جنسيه')]);
+
+            if (iName < 0 || iJob < 0) return;
+
+            for (let r = hRow + 1; r < rows.length; r++) {
+              const row = rows[r];
+              const name = String(row[iName] || '').trim();
+              const jobTitle = String(row[iJob] || '').trim();
+              const iqamaId = iId >= 0 ? String(row[iId] || '').trim() : '';
+              const salary = iSalary >= 0 ? num(row[iSalary]) : 0;
+
+              if (!name && !jobTitle && !iqamaId && !salary) { skipped++; continue; }
+              if (['اسم الموظف','اسم شاغل الوظيفة','مندوب المقاول','مدير المركز'].includes(name)) { skipped++; continue; }
+
+              employees.push({
+                name,
+                iqamaId,
+                jobTitle: jobTitle || 'غير محدد',
+                salary,
+                category: iCat >= 0 ? String(row[iCat] || '1').trim() : '1',
+                nationality: iNat >= 0 ? String(row[iNat] || '').trim() : '',
+                nationalityFine: iFine >= 0 ? num(row[iFine]) : 0,
+                days: daysArr()
+              });
+            }
+          });
+
+          employees._skipped = skipped;
+          resolve(employees);
+        } catch(err) {
+          reject(new Error('فشل تحليل ملف Excel. تأكد من أن الملف غير تالف.'));
+        }
+      };
+
+      reader.onerror = () => reject(new Error('فشلت قراءة الملف.'));
+      reader.readAsBinaryString(file);
+    });
+  }
+
+  function compareRows(current, incoming) {
+    let duplicates = 0, newRows = 0;
+    incoming.forEach(n => {
+      const id = (n.iqamaId || '').trim();
+      const name = norm(n.name);
+      const exists = current.some(c =>
+        (id && String(c.iqamaId || '').trim() === id) ||
+        (name && norm(c.name) === name)
+      );
+      if (exists) duplicates++; else newRows++;
+    });
+    return { duplicates, newRows };
+  }
+
+  window.openAdminOfficeTemplateDialog = function() {
+    const n = getNamesSafe();
+    const opts = orderedKeys().map(k => `<option value="${k}">${esc(n[k])}</option>`).join('');
+
+    const content = `
+      <div class="dialog-header">
+        <h3><i class="fas fa-file-excel"></i> تامبلت Excel للمكاتب الإدارية</h3>
+        <span class="close" onclick="closeDialog('management-dialog')">×</span>
+      </div>
+      <div class="dialog-body">
+        <div style="background:#eef6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;margin-bottom:16px;text-align:center">
+          <h4 style="color:#003087;margin-bottom:10px">التامبلت الجديد</h4>
+          <p style="font-size:.9rem;line-height:1.8;color:#374151">
+            نزّل التامبلت، عبّي التكلفة أو عدّل البيانات، ثم ارفعه لتظهر المقارنة قبل الحفظ.
+          </p>
+
+          <div class="form-group">
+            <label>اختر المكتب/المرفق:</label>
+            <select id="admin-template-center">${opts}</select>
+          </div>
+
+          <button class="btn btn-secondary" onclick="downloadAdminOfficeTemplateSafe()" style="margin:10px 0">
+            <i class="fas fa-download"></i> تنزيل التامبلت
+          </button>
+
+          <input type="file" id="admin-template-file" accept=".xlsx,.xls" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;margin-top:8px">
+
+          <button class="btn btn-success" onclick="importAdminOfficeTemplateSafe()" style="margin-top:12px">
+            <i class="fas fa-file-import"></i> رفع ومقارنة
+          </button>
+        </div>
+
+        <div id="admin-template-status" style="margin-top:14px"></div>
+      </div>`;
+
+    if (typeof openDialog === 'function') openDialog(content, 'management-dialog', true);
+  };
+
+  window.downloadAdminOfficeTemplateSafe = function() {
+    const centerKey = document.getElementById('admin-template-center')?.value;
+    if (!centerKey) return alert('اختر المكتب/المرفق أولاً.');
+
+    const n = getNamesSafe();
+    const office = n[centerKey] || centerKey;
+    const all = getDataSafe();
+    const rows = Array.isArray(all[centerKey]) ? all[centerKey] : [];
+
+    if (!rows.length) return alert('لا توجد بيانات حالية لهذا المكتب لتنزيلها في التامبلت.');
+
+    const aoa = [
+      ['اسم الموظف','رقم الهوية / الإقامة','مسمى الوظيفة','التكلفة الشهرية','الفئة','الجنسية','غرامة جنسية'],
+      ...rows.map(r => [
+        r.name || '',
+        r.iqamaId || r.idNumber || r.identity || r.nationalId || '',
+        r.jobTitle || r.title || '',
+        Number(r.salary || 0),
+        r.category || '1',
+        r.nationality || '',
+        Number(r.nationalityFine || 0)
+      ])
+    ];
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{wch:30},{wch:22},{wch:32},{wch:18},{wch:8},{wch:16},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, ws, office.substring(0,31));
+    XLSX.writeFile(wb, 'تامبلت-' + office.replace(/[\\/:*?"<>|]/g,'-') + '.xlsx');
+  };
+
+  window.importAdminOfficeTemplateSafe = async function() {
+    const centerKey = document.getElementById('admin-template-center')?.value;
+    const file = document.getElementById('admin-template-file')?.files?.[0];
+    const status = document.getElementById('admin-template-status');
+
+    if (!centerKey) return alert('اختر المكتب/المرفق أولاً.');
+    if (!file) return alert('اختر ملف Excel أولاً.');
+
+    status.innerHTML = '<div style="background:#fff;border:1px solid #dbeafe;border-radius:12px;padding:14px">جاري قراءة الملف...</div>';
+
+    try {
+      const incoming = await parseExcel(file);
+      if (!incoming.length) throw new Error('لم يتم العثور على موظفين صالحين داخل الملف.');
+
+      const all = getDataSafe();
+      const current = all[centerKey] || [];
+      const cmp = compareRows(current, incoming);
+
+      window.__adminOfficePendingTemplateImport = { centerKey, incoming };
+
+      status.innerHTML = `
+        <div style="background:#fff;border:1.5px solid #dbeafe;border-radius:12px;padding:14px;text-align:right">
+          <h4 style="margin:0 0 10px;color:#1e3c72">مقارنة قبل الحفظ</h4>
+          <table style="width:100%;border-collapse:collapse;margin:10px 0;font-size:13px">
+            <thead>
+              <tr>
+                <th style="border:1px solid #ddd;padding:8px">الموجود حاليًا</th>
+                <th style="border:1px solid #ddd;padding:8px">الموجود في الملف</th>
+                <th style="border:1px solid #ddd;padding:8px">جديد</th>
+                <th style="border:1px solid #ddd;padding:8px">مكرر</th>
+                <th style="border:1px solid #ddd;padding:8px">متجاهل</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="border:1px solid #ddd;padding:8px;text-align:center">${current.length}</td>
+                <td style="border:1px solid #ddd;padding:8px;text-align:center">${incoming.length}</td>
+                <td style="border:1px solid #ddd;padding:8px;text-align:center;color:#16a34a;font-weight:bold">${cmp.newRows}</td>
+                <td style="border:1px solid #ddd;padding:8px;text-align:center;color:#d97706;font-weight:bold">${cmp.duplicates}</td>
+                <td style="border:1px solid #ddd;padding:8px;text-align:center">${incoming._skipped || 0}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+            <button class="btn btn-danger" onclick="adminTemplateReplace()">امسح القديم وانزل الجديد</button>
+            <button class="btn btn-success" onclick="adminTemplateUpdate()">تحديث فقط</button>
+            <button class="btn btn-secondary" onclick="adminTemplateCancel()">إلغاء</button>
+          </div>
+        </div>`;
+    } catch(err) {
+      status.innerHTML = `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:12px;padding:14px;color:#dc2626">${esc(err.message)}</div>`;
+    }
+  };
+
+  window.adminTemplateReplace = function() {
+    const p = window.__adminOfficePendingTemplateImport;
+    if (!p) return alert('لا توجد عملية معلقة.');
+
+    const all = getDataSafe();
+    all[p.centerKey] = p.incoming;
+    saveDataSafe(all);
+    window.__adminOfficePendingTemplateImport = null;
+
+    if (typeof closeDialog === 'function') closeDialog('management-dialog');
+    try { if (typeof showCenterDetails === 'function') showCenterDetails(p.centerKey); } catch(_) {}
+    try { if (typeof calculateAndDisplayGrandTotal === 'function') calculateAndDisplayGrandTotal(); } catch(_) {}
+
+    alert('تم الاستبدال.');
+  };
+
+  window.adminTemplateUpdate = function() {
+    const p = window.__adminOfficePendingTemplateImport;
+    if (!p) return alert('لا توجد عملية معلقة.');
+
+    const all = getDataSafe();
+    if (!Array.isArray(all[p.centerKey])) all[p.centerKey] = [];
+
+    let added = 0, dup = 0;
+
+    p.incoming.forEach(n => {
+      const id = (n.iqamaId || '').trim();
+      const name = norm(n.name);
+      const exists = all[p.centerKey].some(c =>
+        (id && String(c.iqamaId || '').trim() === id) ||
+        (name && norm(c.name) === name)
+      );
+
+      if (exists) dup++;
+      else { all[p.centerKey].push(n); added++; }
+    });
+
+    saveDataSafe(all);
+    window.__adminOfficePendingTemplateImport = null;
+
+    if (typeof closeDialog === 'function') closeDialog('management-dialog');
+    try { if (typeof showCenterDetails === 'function') showCenterDetails(p.centerKey); } catch(_) {}
+    try { if (typeof calculateAndDisplayGrandTotal === 'function') calculateAndDisplayGrandTotal(); } catch(_) {}
+
+    alert('تم التحديث: أضيف ' + added + '، وتجاهل ' + dup + ' مكرر.');
+  };
+
+  window.adminTemplateCancel = function() {
+    window.__adminOfficePendingTemplateImport = null;
+    const status = document.getElementById('admin-template-status');
+    if (status) status.innerHTML = '<div style="background:#fff;border:1px solid #ddd;border-radius:12px;padding:14px">تم الإلغاء.</div>';
+  };
+
+  window.fixAdminOfficeTableButtons = function() {
+    document.querySelectorAll('button').forEach(btn => {
+      const t = norm(btn.textContent);
+      if (t.includes('عرض كامل')) {
+        btn.innerHTML = '<i class="fas fa-external-link-alt"></i> فتح في نافذة';
+        btn.onclick = function() {
+          const section = btn.closest('.department-table, [id^="table-div-"]');
+          const table = section?.querySelector('table');
+          if (!table) return alert('لم يتم العثور على الجدول.');
+
+          const clone = section.cloneNode(true);
+          clone.querySelectorAll('.tab-action-buttons, .no-print').forEach(x => x.remove());
+
+          const w = window.open('', '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+          if (!w) return alert('المتصفح منع فتح النافذة.');
+
+          w.document.open();
+          w.document.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>جدول الحضور</title><style>body{font-family:Arial;padding:12px;direction:rtl}table{width:100%;border-collapse:collapse}th,td{border:1px solid #555;padding:4px;text-align:center;font-size:12px}th{background:#003087;color:white}.no-print,.tab-action-buttons{display:none!important}</style></head><body>' + clone.outerHTML + '</body></html>');
+          w.document.close();
+          w.focus();
+        };
+      }
+    });
+  };
+
+  setTimeout(window.fixAdminOfficeTableButtons, 500);
+  setTimeout(window.fixAdminOfficeTableButtons, 1500);
+  setTimeout(window.fixAdminOfficeTableButtons, 3000);
+})();
+</script>
+
 <script src="/original/signature-block.js"></script>
 <script>SignatureBlock.init('admin_offices', { showStamp: true });</script>
 </body>
