@@ -1,7 +1,58 @@
 // Polished fixed approve/submit button used by extract-submit.js.
 // Also adds a safe print pagination fix for large first tables.
+// Also enforces local-only attendance work in normal entry mode.
 (function () {
   'use strict';
+
+  function isAttendanceWorkPage() {
+    var sig = location.pathname + location.search;
+    return /attendance\.html(?:$|[?#])/.test(sig) || /[?&]page=.*attendance\.html(?:$|&)/.test(sig);
+  }
+
+  function readSession() {
+    try { return JSON.parse(localStorage.getItem('najran_session') || '{}') || {}; } catch (_) { return {}; }
+  }
+
+  function isRevisionOrPreviewMode() {
+    var s = readSession();
+    var q = location.search || '';
+    return !!(
+      s.reviewOnly === true ||
+      localStorage.getItem('najran_revision_extract_id') ||
+      q.indexOf('extractId=') >= 0 ||
+      q.indexOf('previewExtract=') >= 0 ||
+      q.indexOf('revision=') >= 0 ||
+      q.indexOf('cloud=1') >= 0 ||
+      q.indexOf('restoreCloud=1') >= 0
+    );
+  }
+
+  function installAttendanceLocalOnlyGuard() {
+    if (!isAttendanceWorkPage()) return;
+    if (isRevisionOrPreviewMode()) return;
+    if (window.__NAJRAN_ATTENDANCE_LOCAL_ONLY_GUARD__) return;
+    window.__NAJRAN_ATTENDANCE_LOCAL_ONLY_GUARD__ = true;
+
+    var originalFetch = window.fetch ? window.fetch.bind(window) : null;
+    if (!originalFetch) return;
+
+    window.fetch = function(input, init) {
+      var url = '';
+      try { url = typeof input === 'string' ? input : (input && input.url) || ''; } catch (_) {}
+      var method = String((init && init.method) || 'GET').toUpperCase();
+      var isHospitalStorageGet = method === 'GET' && /\/api\/hospital-storage(?:\?|$)/.test(url);
+
+      if (isHospitalStorageGet && !isRevisionOrPreviewMode()) {
+        console.warn('[AttendanceLocalOnly] تم منع سحب الحضور/المستشفى من السحابة في التشغيل العادي. البيانات المحلية هي المصدر الوحيد.');
+        return Promise.resolve(new Response(JSON.stringify({ ok: true, data: {}, localOnly: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        }));
+      }
+
+      return originalFetch(input, init);
+    };
+  }
 
   function injectCss() {
     if (document.getElementById('approve-button-polish-css')) return;
@@ -191,10 +242,12 @@
   }
 
   function install() {
+    installAttendanceLocalOnlyGuard();
     injectCss();
     normalizeButton();
   }
 
+  installAttendanceLocalOnlyGuard();
   document.addEventListener('DOMContentLoaded', function () {
     install();
     setTimeout(install, 500);
