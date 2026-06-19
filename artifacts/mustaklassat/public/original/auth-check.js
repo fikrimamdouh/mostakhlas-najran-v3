@@ -5,7 +5,7 @@
  */
 (function () {
   var BASE = window.location.origin;
-  var BUILD_V = '20260618approveBtn1';
+  var BUILD_V = '20260618attendanceLocalFix2';
   var NOTIF_INTERVAL_MS = 300000;
   var notifFetchInProgress = false;
 
