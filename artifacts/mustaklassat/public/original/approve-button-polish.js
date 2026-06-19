@@ -1,6 +1,7 @@
 // Polished fixed approve/submit button used by extract-submit.js.
 // Also adds a safe print pagination fix for large first tables.
 // Also enforces local-only attendance work in normal entry mode.
+// Also hides leaked print-only signature markup in normal screen view.
 (function () {
   'use strict';
 
@@ -54,12 +55,46 @@
     };
   }
 
+  function fixLeakedPrintSignaturesOnScreen() {
+    if (!isAttendanceWorkPage()) return;
+    try {
+      document.querySelectorAll('.department-table > .print-signature-item').forEach(function (el) {
+        el.setAttribute('data-screen-hidden-print-signature', '1');
+      });
+      document.querySelectorAll('.print-signatures .print-signature-item').forEach(function (el) {
+        el.setAttribute('data-screen-hidden-print-signature', '1');
+      });
+    } catch (_) {}
+  }
+
   function injectCss() {
     if (document.getElementById('approve-button-polish-css')) return;
 
     var style = document.createElement('style');
     style.id = 'approve-button-polish-css';
     style.textContent = `
+      @media screen {
+        body:not(.printing) .print-signatures,
+        body:not(.printing) .print-signatures *,
+        body:not(.printing) .department-table > .print-signature-item,
+        body:not(.printing) [data-screen-hidden-print-signature="1"] {
+          display: none !important;
+          visibility: hidden !important;
+          height: 0 !important;
+          min-height: 0 !important;
+          max-height: 0 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          border: 0 !important;
+          overflow: hidden !important;
+        }
+
+        body:not(.printing) .department-table:has(#cleaning-table) {
+          margin-bottom: 16px !important;
+          padding-bottom: 0 !important;
+        }
+      }
+
       #_najran_approve_btn {
         position: fixed !important;
         bottom: 26px !important;
@@ -244,6 +279,7 @@
   function install() {
     installAttendanceLocalOnlyGuard();
     injectCss();
+    fixLeakedPrintSignaturesOnScreen();
     normalizeButton();
   }
 
@@ -252,6 +288,7 @@
     install();
     setTimeout(install, 500);
     setTimeout(install, 1500);
+    setTimeout(install, 3000);
   });
 
   var mo = new MutationObserver(install);
