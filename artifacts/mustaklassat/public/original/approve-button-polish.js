@@ -1,7 +1,7 @@
 // Polished fixed approve/submit button used by extract-submit.js.
 // Also adds a safe print pagination fix for large first tables.
 // Also enforces local-only attendance work in normal entry mode.
-// Also hides leaked print-only signature markup in normal screen view.
+// Also fixes empty-message spacing in attendance tables.
 (function () {
   'use strict';
 
@@ -55,7 +55,7 @@
     };
   }
 
-  function fixLeakedPrintSignaturesOnScreen() {
+  function fixScreenOnlySpacing() {
     if (!isAttendanceWorkPage()) return;
     try {
       document.querySelectorAll('.department-table > .print-signature-item').forEach(function (el) {
@@ -63,6 +63,9 @@
       });
       document.querySelectorAll('.print-signatures .print-signature-item').forEach(function (el) {
         el.setAttribute('data-screen-hidden-print-signature', '1');
+      });
+      document.querySelectorAll('.department-table .empty-message').forEach(function (el) {
+        el.setAttribute('data-attendance-empty-message', '1');
       });
     } catch (_) {}
   }
@@ -89,7 +92,21 @@
           overflow: hidden !important;
         }
 
-        body:not(.printing) .department-table:has(#cleaning-table) {
+        body:not(.printing) .department-table .empty-message,
+        body:not(.printing) [data-attendance-empty-message="1"] {
+          display: none !important;
+          visibility: hidden !important;
+          height: 0 !important;
+          min-height: 0 !important;
+          max-height: 0 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          border: 0 !important;
+          overflow: hidden !important;
+        }
+
+        body:not(.printing) .department-table {
+          margin-top: 16px !important;
           margin-bottom: 16px !important;
           padding-bottom: 0 !important;
         }
@@ -187,78 +204,16 @@
 
       @media print {
         #_najran_approve_btn { display: none !important; }
-
-        html, body {
-          height: auto !important;
-          overflow: visible !important;
-          background: #fff !important;
-        }
-
-        .container,
-        .content,
-        .main-content,
-        .print-section-container,
-        .department-table,
-        .performance-table-section,
-        .table-section,
-        .card,
-        .table-card,
-        .printable-section {
-          break-inside: auto !important;
-          page-break-inside: auto !important;
-        }
-
-        .department-table:first-of-type,
-        .performance-table-section:first-of-type,
-        .table-section:first-of-type,
-        .print-section-container:first-of-type {
-          break-before: auto !important;
-          page-break-before: auto !important;
-          margin-top: 0 !important;
-        }
-
-        table {
-          break-inside: auto !important;
-          page-break-inside: auto !important;
-          page-break-before: auto !important;
-        }
-
+        html, body { height: auto !important; overflow: visible !important; background: #fff !important; }
+        .container, .content, .main-content, .print-section-container, .department-table, .performance-table-section, .table-section, .card, .table-card, .printable-section { break-inside: auto !important; page-break-inside: auto !important; }
+        .department-table:first-of-type, .performance-table-section:first-of-type, .table-section:first-of-type, .print-section-container:first-of-type { break-before: auto !important; page-break-before: auto !important; margin-top: 0 !important; }
+        table { break-inside: auto !important; page-break-inside: auto !important; page-break-before: auto !important; }
         thead { display: table-header-group !important; }
         tfoot { display: table-footer-group !important; }
-        tbody {
-          break-inside: auto !important;
-          page-break-inside: auto !important;
-        }
-
-        tr, td, th {
-          break-inside: avoid !important;
-          page-break-inside: avoid !important;
-        }
-
-        .page-contract-info,
-        .page-contract-info-v2,
-        .extract-details,
-        .extract-details-v2,
-        .header-info,
-        .page-header,
-        .company-header,
-        .print-header,
-        h1, h2, h3, h4,
-        .total,
-        .table-summary,
-        .table-summary-v2 {
-          break-after: avoid !important;
-          page-break-after: avoid !important;
-          margin-bottom: 6px !important;
-        }
-
-        .department-table,
-        .performance-table-section,
-        .table-section {
-          margin-top: 6px !important;
-          margin-bottom: 10px !important;
-          padding-top: 0 !important;
-        }
+        tbody { break-inside: auto !important; page-break-inside: auto !important; }
+        tr, td, th { break-inside: avoid !important; page-break-inside: avoid !important; }
+        .page-contract-info, .page-contract-info-v2, .extract-details, .extract-details-v2, .header-info, .page-header, .company-header, .print-header, h1, h2, h3, h4, .total, .table-summary, .table-summary-v2 { break-after: avoid !important; page-break-after: avoid !important; margin-bottom: 6px !important; }
+        .department-table, .performance-table-section, .table-section { margin-top: 6px !important; margin-bottom: 10px !important; padding-top: 0 !important; }
       }
     `;
     document.head.appendChild(style);
@@ -267,10 +222,8 @@
   function normalizeButton() {
     var btn = document.getElementById('_najran_approve_btn_inner');
     if (!btn || btn.dataset.polishedApproveButton === '1') return;
-
     btn.dataset.polishedApproveButton = '1';
     btn.setAttribute('aria-label', (btn.textContent || 'اعتماد المستخلص').trim());
-
     Array.from(btn.querySelectorAll('span')).forEach(function (span) {
       if ((span.textContent || '').trim() === '←') span.remove();
     });
@@ -279,7 +232,7 @@
   function install() {
     installAttendanceLocalOnlyGuard();
     injectCss();
-    fixLeakedPrintSignaturesOnScreen();
+    fixScreenOnlySpacing();
     normalizeButton();
   }
 
