@@ -274,9 +274,101 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
     updateStatus.mutate({ id: extract.id, status, adminNotes: adminNotes || undefined });
     setShowNotes(false);
   };
+  function parseLocalValue(key: string): any {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch {
+      return localStorage.getItem(key);
+    }
+  }
 
+  function hasMeaningfulObject(value: any): boolean {
+    if (!value) return false;
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed !== "" && trimmed !== "{}" && trimmed !== "[]" && trimmed !== "0";
+    }
+
+    if (Array.isArray(value)) return value.length > 0;
+
+    if (typeof value === "object") {
+      return Object.keys(value).length > 0;
+    }
+
+    return !!value;
+  }
+
+  function hasActiveLocalWork(): boolean {
+    if (localStorage.getItem("najran_revision_extract_id")) return false;
+    if (localStorage.getItem("najran_revision_mode") === "true") return false;
+
+    const exactKeys = [
+      "attendanceData",
+      "ng_attendanceData",
+      "nd_attendanceData",
+      "healthCentersAttendanceData",
+      "centersAttendanceData_v2",
+      "adminOfficesAttendanceData_v1",
+      "achievementData",
+      "consumablesTableData",
+      "healthCentersConsumables",
+      "mainHospitalConsumables",
+      "admin_offices_consumables_v1.0",
+      "spare_partsData",
+      "sparePartsTotalAmount"
+    ];
+
+    for (const key of exactKeys) {
+      if (hasMeaningfulObject(parseLocalValue(key))) return true;
+    }
+
+    const performanceKeys = [
+      "tableData_cleaning",
+      "tableData_electricity",
+      "tableData_agriculture",
+      "tableData_civil",
+      "tableData_mechanics",
+      "tableData_laundry",
+      "tableData_security"
+    ];
+
+    for (const key of performanceKeys) {
+      const data = parseLocalValue(key);
+      if (data && Array.isArray(data.rows) && data.rows.length > 0) return true;
+    }
+
+    const stepKeys = [
+      "najran_labor_attendance_done",
+      "najran_labor_performance_done",
+      "najran_health_attendance_done",
+      "najran_admin_offices_attendance_done"
+    ];
+
+    for (const key of stepKeys) {
+      if (localStorage.getItem(key) === "1") return true;
+    }
+
+    return false;
+  }
+
+  function blockRevisionBecauseLocalWorkExists(): boolean {
+    if (!hasActiveLocalWork()) return false;
+
+    alert(
+      "يوجد شغل محلي حالي على هذا الجهاز لمستخلص آخر.\n\n" +
+      "قبل فتح مستخلص قديم للتعديل، يجب إنهاء المستخلص الحالي ورفعه بالطريقة المعتادة:\n\n" +
+      "الحضور والانصراف → جداول الأداء → شهادة الإنجاز → رفع المستخلص.\n\n" +
+      "بعد رفع المستخلص الحالي، ارجع إلى متابعة المستخلصات وافتح طلب التعديل مرة أخرى."
+    );
+
+    return true;
+  }
   const handleRevise = async () => {
     if (isPreparingRevision) return;
+      if (blockRevisionBecauseLocalWorkExists()) return;
     setIsPreparingRevision(true);
 
     try {
