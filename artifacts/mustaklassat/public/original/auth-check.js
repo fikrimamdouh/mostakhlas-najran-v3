@@ -129,7 +129,7 @@
   var pageSig = window.location.pathname + window.location.search;
 
   appendScript('/original/approve-button-polish.js?v=' + BUILD_V, true);
-
+  appendScript('/original/revision-local-draft-restore.js?v=' + BUILD_V, true);
   if (/attendance\.html(?:$|[?#])/.test(pageSig) || /[?&]page=.*attendance\.html(?:$|&)/.test(pageSig)) {
     appendScript('/original/attendance-cloud-refresh-guard.js?v=' + BUILD_V, true);
   }
