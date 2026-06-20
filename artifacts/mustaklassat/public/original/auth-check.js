@@ -5,7 +5,7 @@
  */
 (function () {
   var BASE = window.location.origin;
-  var BUILD_V = '20260618performanceTemplate1';
+  var BUILD_V = '20260618notifRevision1';
   var NOTIF_INTERVAL_MS = 300000;
   var notifFetchInProgress = false;
 
@@ -241,11 +241,55 @@
   var NOTIF_CHECK_KEY = 'najran_notif_last_check';
 
   function getSeenIds() {
-    try { return JSON.parse(localStorage.getItem(NOTIF_SEEN_KEY) || '[]'); } catch (_) { return []; }
+    try {
+      var parsed = JSON.parse(localStorage.getItem(NOTIF_SEEN_KEY) || '[]');
+      return Array.isArray(parsed) ? parsed.map(String) : [];
+    } catch (_) {
+      return [];
+    }
   }
 
-  function markAllSeen(ids) {
-    localStorage.setItem(NOTIF_SEEN_KEY, JSON.stringify(ids));
+  function getExtractChangedAt(e) {
+    return String(
+      (e && (e.updatedAt || e.revisedAt || e.approvedAt || e.createdAt)) || ''
+    );
+  }
+
+  function getNotifMarker(e) {
+    if (!e) return '';
+    return [
+      String(e.id || ''),
+      String(e.status || ''),
+      getExtractChangedAt(e)
+    ].join('|');
+  }
+
+  function isNotifSeen(seenIds, e) {
+    var marker = getNotifMarker(e);
+
+    if (marker && seenIds.indexOf(marker) > -1) {
+      return true;
+    }
+
+    /*
+      توافق مع النظام القديم:
+      لو الأدمن شاف submitted قبل كده بالـ id فقط،
+      لا نظهره له مرة ثانية كـ submitted.
+      لكن لا نمنع إشعار needs_revision / rejected / approved
+      بسبب id قديم.
+    */
+    if (e && e.status === 'submitted' && seenIds.indexOf(String(e.id)) > -1) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function markAllSeen(markers) {
+    localStorage.setItem(
+      NOTIF_SEEN_KEY,
+      JSON.stringify((markers || []).map(String))
+    );
     localStorage.setItem(NOTIF_CHECK_KEY, String(Date.now()));
   }
 
@@ -253,40 +297,73 @@
     var s = getSession();
     if (!s) return;
     if (notifFetchInProgress) return;
+
     var age = Date.now() - (s.timestamp || 0);
     var token = (s.clerkToken && age < 55000) ? s.clerkToken : null;
+
     if (!token) {
       callback(0, []);
       return;
     }
+
     notifFetchInProgress = true;
-    var headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token };
-    fetch('/api/submitted-extracts-lite', { headers: headers, credentials: 'include' })
-      .then(function (r) { return r.ok ? r.json() : null; })
+
+    var headers = {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    };
+
+    fetch('/api/submitted-extracts-lite', {
+      headers: headers,
+      credentials: 'include'
+    })
+      .then(function (r) {
+        return r.ok ? r.json() : null;
+      })
       .then(function (data) {
-        if (!data || !data.extracts) { callback(0, []); return; }
+        if (!data || !data.extracts) {
+          callback(0, []);
+          return;
+        }
+
         var role = s.role || 'user';
         var seenIds = getSeenIds();
         var unseen = [];
+
         if (role === 'admin' || role === 'supervisor') {
           unseen = data.extracts.filter(function (e) {
-            return e.status === 'submitted' && seenIds.indexOf(e.id) === -1;
+            return e.status === 'submitted' && !isNotifSeen(seenIds, e);
           });
         } else {
-          var lastCheck = parseInt(localStorage.getItem(NOTIF_CHECK_KEY) || '0') || (Date.now() - 7 * 24 * 3600 * 1000);
+          var lastCheck =
+            parseInt(localStorage.getItem(NOTIF_CHECK_KEY) || '0') ||
+            (Date.now() - 7 * 24 * 3600 * 1000);
+
           unseen = data.extracts.filter(function (e) {
-            var changed = new Date(e.updatedAt || e.createdAt).getTime();
+            var changed = new Date(
+              e.updatedAt || e.revisedAt || e.approvedAt || e.createdAt
+            ).getTime();
+
             return changed > lastCheck &&
-              (e.status === 'approved' || e.status === 'needs_revision' || e.status === 'rejected') &&
-              seenIds.indexOf(e.id) === -1;
+              (e.status === 'approved' ||
+               e.status === 'needs_revision' ||
+               e.status === 'rejected') &&
+              !isNotifSeen(seenIds, e);
           });
         }
-        callback(unseen.length, data.extracts.map(function (e) { return e.id; }));
-      })
-      .catch(function () { callback(0, []); })
-      .finally(function () { notifFetchInProgress = false; });
-  }
 
+        callback(
+          unseen.length,
+          data.extracts.map(getNotifMarker).filter(Boolean)
+        );
+      })
+      .catch(function () {
+        callback(0, []);
+      })
+      .finally(function () {
+        notifFetchInProgress = false;
+      });
+  }
   function updateBell(count) {
     var badge = document.getElementById('najran-bell-badge');
     var btn   = document.getElementById('najran-bell-btn');
