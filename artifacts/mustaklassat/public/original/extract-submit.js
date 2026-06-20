@@ -122,18 +122,38 @@ if (token) headers['Authorization'] = `Bearer ${token}`;
       );
     }
 
-    if (!res.ok) {
+     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'خطأ في الاتصال بالخادم');
     }
+
+    const result = await res.json();
+
+    try {
+      const submittedId =
+        result?.id ||
+        result?.extract?.id ||
+        result?.extractId ||
+        revisionId ||
+        '';
+
+      if (submittedId) {
+        localStorage.setItem('najran_last_submitted_extract_id', String(submittedId));
+        localStorage.setItem('najran_last_submitted_extract_type', String(type || ''));
+        localStorage.setItem('najran_last_submitted_period', String(contractData.periodMonth || ''));
+        localStorage.setItem('najran_last_submitted_payment', String(contractData.paymentNumber || ''));
+        localStorage.setItem('najran_last_submitted_at', new Date().toISOString());
+      }
+    } catch (_) {}
 
     if (isRevision) {
       localStorage.removeItem(REVISION_KEY);
       localStorage.removeItem('najran_revision_mode');
       localStorage.removeItem('najran_revision_extract_type');
       localStorage.removeItem('najran_revision_started_at');
-    }    return await res.json();
-  }
+    }
+
+    return result;
 
   // Called from track page when user clicks "تعديل وإعادة الرفع"
   window.startExtractRevision = function (extractId, extractType) {
