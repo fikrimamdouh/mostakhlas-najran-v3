@@ -339,27 +339,93 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
 
     return false;
   }
-function isSameLastSubmittedExtract(): boolean {
-  const lastId = localStorage.getItem("najran_last_submitted_extract_id");
-  const lastType = localStorage.getItem("najran_last_submitted_extract_type");
+  function isSameLastSubmittedExtract(): boolean {
+    const lastId = localStorage.getItem("najran_last_submitted_extract_id");
+    const lastType = localStorage.getItem("najran_last_submitted_extract_type");
 
-  if (!lastId) return false;
+    if (!lastId) return false;
 
-  return String(lastId) === String(extract.id) &&
-    (!lastType || String(lastType) === String(extract.extractType));
-}
+    return String(lastId) === String(extract.id) &&
+      (!lastType || String(lastType) === String(extract.extractType));
+  }
+
+  function hasLocalWorkKey(key: string): boolean {
+    return hasMeaningfulObject(parseLocalValue(key));
+  }
+
+  function getCurrentLocalWorkPage(): string {
+    if (localStorage.getItem("najran_labor_performance_done") === "1") {
+      return "/original/achievement.html";
+    }
+
+    if (localStorage.getItem("najran_labor_attendance_done") === "1") {
+      return "/original/performance.html";
+    }
+
+    if (localStorage.getItem("najran_health_attendance_done") === "1") {
+      return "/original/health_centers_consumables.html";
+    }
+
+    if (localStorage.getItem("najran_admin_offices_attendance_done") === "1") {
+      return "/original/admin_offices_consumables.html";
+    }
+
+    if (hasLocalWorkKey("healthCentersConsumables")) {
+      return "/original/health_centers_consumables.html";
+    }
+
+    if (hasLocalWorkKey("healthCentersAttendanceData") || hasLocalWorkKey("centersAttendanceData_v2")) {
+      return "/original/health_centers_attendance.html";
+    }
+
+    if (hasLocalWorkKey("admin_offices_consumables_v1.0")) {
+      return "/original/admin_offices_consumables.html";
+    }
+
+    if (hasLocalWorkKey("adminOfficesAttendanceData_v1")) {
+      return "/original/admin_offices_attendance.html";
+    }
+
+    if (hasLocalWorkKey("spare_partsData") || hasLocalWorkKey("sparePartsTotalAmount")) {
+      return "/original/spare_parts.html";
+    }
+
+    if (hasLocalWorkKey("consumablesTableData") || hasLocalWorkKey("mainHospitalConsumables")) {
+      return "/original/consumables.html";
+    }
+
+    if (hasLocalWorkKey("achievementData")) {
+      return "/original/achievement.html";
+    }
+
+    if (
+      hasLocalWorkKey("attendanceData") ||
+      hasLocalWorkKey("ng_attendanceData") ||
+      hasLocalWorkKey("nd_attendanceData")
+    ) {
+      return "/original/attendance.html";
+    }
+
+    return "/original/attendance.html";
+  }
+
   function blockRevisionBecauseLocalWorkExists(): boolean {
-  if (isSameLastSubmittedExtract()) return false;
-  if (!hasActiveLocalWork()) return false;
+    if (isSameLastSubmittedExtract()) return false;
+    if (!hasActiveLocalWork()) return false;
 
-  alert(
-    "يوجد شغل محلي حالي على هذا الجهاز لمستخلص آخر.\n\n" +
-    "قبل فتح مستخلص قديم للتعديل، يجب إنهاء المستخلص الحالي ورفعه بالطريقة المعتادة:\n\n" +
-    "الحضور والانصراف → جداول الأداء → شهادة الإنجاز → رفع المستخلص.\n\n" +
-    "بعد رفع المستخلص الحالي، ارجع إلى متابعة المستخلصات وافتح طلب التعديل مرة أخرى."
-  );
+    const targetPage = getCurrentLocalWorkPage();
+    const goToCurrent = confirm(
+      "يوجد مستخلص محلي غير مرفوع على هذا الجهاز.\n\n" +
+      "قبل فتح مستخلص آخر للتعديل يجب إكمال ورفع المستخلص الحالي أولًا حتى لا يتم استبدال بياناته المحلية.\n\n" +
+      "هل تريد الانتقال الآن لإكمال المستخلص الحالي؟"
+    );
 
-  return true;
+    if (goToCurrent) {
+      window.location.href = targetPage;
+    }
+
+    return true;
+  }
 }
   const handleRevise = async () => {
     if (isPreparingRevision) return;
