@@ -325,21 +325,7 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
       if (hasMeaningfulObject(parseLocalValue(key))) return true;
     }
 
-    const performanceKeys = [
-      "tableData_cleaning",
-      "tableData_electricity",
-      "tableData_agriculture",
-      "tableData_civil",
-      "tableData_mechanics",
-      "tableData_laundry",
-      "tableData_security"
-    ];
-
-    for (const key of performanceKeys) {
-      const data = parseLocalValue(key);
-      if (data && Array.isArray(data.rows) && data.rows.length > 0) return true;
-    }
-
+   
     const stepKeys = [
       "najran_labor_attendance_done",
       "najran_labor_performance_done",
@@ -368,7 +354,7 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
   }
   const handleRevise = async () => {
     if (isPreparingRevision) return;
-      if (blockRevisionBecauseLocalWorkExists()) return;
+   if (blockRevisionBecauseLocalWorkExists()) return;
     setIsPreparingRevision(true);
 
     try {
