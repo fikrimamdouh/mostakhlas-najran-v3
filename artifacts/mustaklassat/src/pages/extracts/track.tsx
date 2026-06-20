@@ -339,19 +339,28 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
 
     return false;
   }
+function isSameLastSubmittedExtract(): boolean {
+  const lastId = localStorage.getItem("najran_last_submitted_extract_id");
+  const lastType = localStorage.getItem("najran_last_submitted_extract_type");
 
+  if (!lastId) return false;
+
+  return String(lastId) === String(extract.id) &&
+    (!lastType || String(lastType) === String(extract.extractType));
+}
   function blockRevisionBecauseLocalWorkExists(): boolean {
-    if (!hasActiveLocalWork()) return false;
+  if (isSameLastSubmittedExtract()) return false;
+  if (!hasActiveLocalWork()) return false;
 
-    alert(
-      "يوجد شغل محلي حالي على هذا الجهاز لمستخلص آخر.\n\n" +
-      "قبل فتح مستخلص قديم للتعديل، يجب إنهاء المستخلص الحالي ورفعه بالطريقة المعتادة:\n\n" +
-      "الحضور والانصراف → جداول الأداء → شهادة الإنجاز → رفع المستخلص.\n\n" +
-      "بعد رفع المستخلص الحالي، ارجع إلى متابعة المستخلصات وافتح طلب التعديل مرة أخرى."
-    );
+  alert(
+    "يوجد شغل محلي حالي على هذا الجهاز لمستخلص آخر.\n\n" +
+    "قبل فتح مستخلص قديم للتعديل، يجب إنهاء المستخلص الحالي ورفعه بالطريقة المعتادة:\n\n" +
+    "الحضور والانصراف → جداول الأداء → شهادة الإنجاز → رفع المستخلص.\n\n" +
+    "بعد رفع المستخلص الحالي، ارجع إلى متابعة المستخلصات وافتح طلب التعديل مرة أخرى."
+  );
 
-    return true;
-  }
+  return true;
+}
   const handleRevise = async () => {
     if (isPreparingRevision) return;
    if (blockRevisionBecauseLocalWorkExists()) return;
@@ -407,8 +416,9 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
     : "—";
 
   const parts = TYPE_PARTS[extract.extractType] || [];
-  const canEditBeforeReview = isOwner && extract.status === "submitted";
-  const canRevise = isOwner && (extract.status === "needs_revision" || extract.status === "rejected");
+  const canUserEditUploaded = isOwner && extract.status === "submitted";
+const canReviseByReviewerRequest =
+  isOwner && (extract.status === "needs_revision" || extract.status === "rejected");
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border overflow-hidden transition-all"
@@ -443,15 +453,15 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
 
       {expanded && (
         <div className="border-t px-5 pb-5 pt-4 space-y-4" style={{ borderColor: "#f3f4f6" }}>
-          {canEditBeforeReview && (
-            <PreReviewEditBanner extract={extract} onEdit={handleRevise} />
-          )}
-          {canRevise && extract.status === "needs_revision" && (
-            <RevisionBanner extract={extract} onRevise={handleRevise} />
-          )}
-          {canRevise && extract.status === "rejected" && (
-            <RejectedBanner extract={extract} onRevise={handleRevise} />
-          )}
+         {canUserEditUploaded && (
+  <PreReviewEditBanner extract={extract} onEdit={handleRevise} />
+)}
+{canReviseByReviewerRequest && extract.status === "needs_revision" && (
+  <RevisionBanner extract={extract} onRevise={handleRevise} />
+)}
+{canReviseByReviewerRequest && extract.status === "rejected" && (
+  <RejectedBanner extract={extract} onRevise={handleRevise} />
+)}
           {isPreparingRevision && (
             <div className="rounded-xl p-3 text-sm font-semibold" style={{ background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" }}>
               جاري تحميل بيانات المستخلص القديمة للتعديل...
