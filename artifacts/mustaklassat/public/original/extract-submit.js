@@ -154,6 +154,7 @@ if (token) headers['Authorization'] = `Bearer ${token}`;
     }
 
     return result;
+  }
 
   // Called from track page when user clicks "تعديل وإعادة الرفع"
   window.startExtractRevision = function (extractId, extractType) {
