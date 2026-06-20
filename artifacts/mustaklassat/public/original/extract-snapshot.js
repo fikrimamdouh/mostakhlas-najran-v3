@@ -2,6 +2,7 @@
  * extract-snapshot.js
  * أداة أرشفة مستخلصات العمالة — تحفظ سجلاً لكل عملية حفظ أو طباعة
  * تحديث: حفظ لقطة محلية كاملة قابلة للاستكمال بدون رفع للخادم.
+ * تحديث: الاحتفاظ بآخر نسخة فقط لنفس المستخلص المحلي.
  */
 (function () {
   if (window.__NAJRAN_EXTRACT_SNAPSHOT_V2__) return;
@@ -67,6 +68,22 @@
     } catch (e) {
       try { localStorage.setItem(key, String(value)); } catch (_) {}
     }
+  }
+
+  function normalizeDraftPart(value) {
+    return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  function makeDraftKey(parts) {
+    return [
+      normalizeDraftPart(parts.extractType),
+      normalizeDraftPart(parts.hospitalName),
+      normalizeDraftPart(parts.companyName),
+      normalizeDraftPart(parts.contractDetails),
+      normalizeDraftPart(parts.paymentNumber),
+      normalizeDraftPart(parts.extractMonth),
+      normalizeDraftPart(parts.extractYear)
+    ].join('|');
   }
 
   function captureFullLocalSnapshot() {
@@ -156,6 +173,15 @@
       var extractType  = inferExtractType();
       var currentPage  = window.location.pathname || pageForType(extractType);
 
+      var paymentNumber = extractData.paymentNumber || localStorage.getItem('paymentNumber') || '';
+      var extractMonth  = extractData.extractMonth || localStorage.getItem('extractMonth') || '';
+      var extractYear   = String(extractData.extractYear || localStorage.getItem('extractYear') || '');
+      var extractStart  = extractData.extractStart || localStorage.getItem('extractStart') || '';
+      var extractEnd    = extractData.extractEnd || localStorage.getItem('extractEnd') || '';
+      var hospitalName  = contractData.hospitalName || localStorage.getItem('hospitalName') || '';
+      var companyName   = contractData.companyName || localStorage.getItem('companyName') || '';
+      var contractDetails = contractData.contractDetails || contractData.contractNumber || localStorage.getItem('contractDetails') || '';
+
       /* ملخص أقسام الحضور */
       var totalEmployees = 0;
       var totalNetAmount = 0;
@@ -176,22 +202,33 @@
         });
       } catch (e) {}
 
+      var draftKey = makeDraftKey({
+        extractType: extractType,
+        hospitalName: hospitalName,
+        companyName: companyName,
+        contractDetails: contractDetails,
+        paymentNumber: paymentNumber,
+        extractMonth: extractMonth,
+        extractYear: extractYear
+      });
+
       var snap = {
         id:             String(Date.now()),
+        draftKey:       draftKey,
         savedAt:        new Date().toISOString(),
         source:         source,
         canResume:      true,
         extractType:    extractType,
         currentPage:    currentPage,
         extractData:    fullSnapshot,
-        paymentNumber:  extractData.paymentNumber  || localStorage.getItem('paymentNumber') || '',
-        extractMonth:   extractData.extractMonth   || localStorage.getItem('extractMonth') || '',
-        extractYear:    String(extractData.extractYear || localStorage.getItem('extractYear') || ''),
-        extractStart:   extractData.extractStart   || localStorage.getItem('extractStart') || '',
-        extractEnd:     extractData.extractEnd     || localStorage.getItem('extractEnd') || '',
-        hospitalName:   contractData.hospitalName  || localStorage.getItem('hospitalName') || '',
-        companyName:    contractData.companyName   || localStorage.getItem('companyName') || '',
-        contractDetails: contractData.contractDetails || contractData.contractNumber || localStorage.getItem('contractDetails') || '',
+        paymentNumber:  paymentNumber,
+        extractMonth:   extractMonth,
+        extractYear:    extractYear,
+        extractStart:   extractStart,
+        extractEnd:     extractEnd,
+        hospitalName:   hospitalName,
+        companyName:    companyName,
+        contractDetails: contractDetails,
         engineeringManager:    contractData.engineeringManager    || '',
         generalServicesManager: contractData.generalServicesManager || '',
         hospitalManager:       contractData.hospitalManager        || '',
@@ -202,9 +239,31 @@
       };
 
       var archive = window.getExtractArchive();
+      var before = archive.length;
+      archive = archive.filter(function (oldSnap) {
+        if (!oldSnap) return false;
+        if (oldSnap.draftKey && oldSnap.draftKey === draftKey) return false;
+        if (!oldSnap.draftKey) {
+          var oldKey = makeDraftKey({
+            extractType: oldSnap.extractType || 'labor',
+            hospitalName: oldSnap.hospitalName,
+            companyName: oldSnap.companyName,
+            contractDetails: oldSnap.contractDetails,
+            paymentNumber: oldSnap.paymentNumber,
+            extractMonth: oldSnap.extractMonth,
+            extractYear: oldSnap.extractYear
+          });
+          if (oldKey === draftKey) return false;
+        }
+        return true;
+      });
       archive.unshift(snap);
       if (archive.length > MAX_SNAPSHOTS) archive.splice(MAX_SNAPSHOTS);
       localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archive));
+      try {
+        localStorage.setItem('najran_last_local_snapshot_key', draftKey);
+        localStorage.setItem('najran_last_local_snapshot_replaced', String(before - archive.length + 1));
+      } catch (_) {}
       return snap;
     } catch (e) {
       console.warn('extract-snapshot: save error', e);
@@ -394,7 +453,7 @@
       if (!save) return;
 
       var snap = window.saveExtractSnapshot('save');
-      if (snap) alert('تم حفظ المستخلص محليًا. يمكنك استكماله لاحقًا من أرشيف المستخلصات > لقطات العمل المحلية.');
+      if (snap) alert('تم حفظ آخر نسخة من هذا المستخلص محليًا. يمكنك استكمالها لاحقًا من أرشيف المستخلصات > لقطات العمل المحلية.');
       window.location.href = href || '/dashboard';
     }, true);
   }
