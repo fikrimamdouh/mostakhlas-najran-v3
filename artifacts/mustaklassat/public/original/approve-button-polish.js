@@ -273,3 +273,47 @@
   var mo = new MutationObserver(install);
   try { mo.observe(document.documentElement, { childList: true, subtree: true }); } catch (_) {}
 })();
+
+// Route notification bell correctly: reviewers to approval, normal users to extracts tracking.
+(function () {
+  'use strict';
+  if (window.__NAJRAN_NOTIF_BELL_ROUTE_FIX__) return;
+  window.__NAJRAN_NOTIF_BELL_ROUTE_FIX__ = true;
+
+  function readSessionRole() {
+    try {
+      var s = JSON.parse(localStorage.getItem('najran_session') || '{}') || {};
+      return String(s.role || 'user').toLowerCase();
+    } catch (_) {
+      return 'user';
+    }
+  }
+
+  function installNotificationBellRouteFix() {
+    var btn = document.getElementById('najran-bell-btn');
+    if (!btn) return;
+    if (btn.dataset.notifRouteFix === '1') return;
+    btn.dataset.notifRouteFix = '1';
+
+    btn.addEventListener('click', function () {
+      setTimeout(function () {
+        var role = readSessionRole();
+        if (role === 'admin' || role === 'supervisor') return;
+        if (/\/original\/approval\.html(?:$|[?#])/.test(location.pathname + location.search)) {
+          window.location.replace('/extracts/track');
+        }
+      }, 0);
+    }, true);
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    installNotificationBellRouteFix();
+    setTimeout(installNotificationBellRouteFix, 500);
+    setTimeout(installNotificationBellRouteFix, 1500);
+    setTimeout(installNotificationBellRouteFix, 3000);
+  });
+
+  try {
+    new MutationObserver(installNotificationBellRouteFix).observe(document.documentElement, { childList: true, subtree: true });
+  } catch (_) {}
+})();
