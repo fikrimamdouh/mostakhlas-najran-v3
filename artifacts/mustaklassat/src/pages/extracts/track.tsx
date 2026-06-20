@@ -426,7 +426,7 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
 
     return true;
   }
-}
+
   const handleRevise = async () => {
     if (isPreparingRevision) return;
    if (blockRevisionBecauseLocalWorkExists()) return;
