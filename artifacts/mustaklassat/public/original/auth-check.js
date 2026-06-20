@@ -5,7 +5,7 @@
  */
 (function () {
   var BASE = window.location.origin;
-  var BUILD_V = '20260618notifRevision1';
+  var BUILD_V = '20260620localDraftNotif1';
   var NOTIF_INTERVAL_MS = 300000;
   var notifFetchInProgress = false;
 
@@ -130,6 +130,13 @@
 
   appendScript('/original/approve-button-polish.js?v=' + BUILD_V, true);
   appendScript('/original/revision-local-draft-restore.js?v=' + BUILD_V, true);
+
+  if (
+    /\/original\/(attendance|performance|achievement|consumables|spare_parts|health_centers_attendance|health_centers_consumables|admin_offices_attendance|admin_offices_consumables|najran_general_attendance|najran_general_performance|najran_general_achievement|najran_dental_attendance|najran_dental_performance)\.html(?:$|[?#])/.test(pageSig)
+  ) {
+    appendScript('/original/extract-snapshot.js?v=' + BUILD_V, true);
+  }
+
   if (/attendance\.html(?:$|[?#])/.test(pageSig) || /[?&]page=.*attendance\.html(?:$|&)/.test(pageSig)) {
     appendScript('/original/attendance-cloud-refresh-guard.js?v=' + BUILD_V, true);
   }
@@ -271,13 +278,6 @@
       return true;
     }
 
-    /*
-      توافق مع النظام القديم:
-      لو الأدمن شاف submitted قبل كده بالـ id فقط،
-      لا نظهره له مرة ثانية كـ submitted.
-      لكن لا نمنع إشعار needs_revision / rejected / approved
-      بسبب id قديم.
-    */
     if (e && e.status === 'submitted' && seenIds.indexOf(String(e.id)) > -1) {
       return true;
     }
@@ -364,6 +364,7 @@
         notifFetchInProgress = false;
       });
   }
+
   function updateBell(count) {
     var badge = document.getElementById('najran-bell-badge');
     var btn   = document.getElementById('najran-bell-btn');
@@ -386,7 +387,12 @@
         btn.onclick = function () {
           markAllSeen(allIds || []);
           updateBell(0);
-          window.location.href = '/original/approval.html';
+          var role = String((getSession() || {}).role || 'user').toLowerCase();
+          if (role === 'admin' || role === 'supervisor') {
+            window.location.href = '/original/approval.html';
+          } else {
+            window.location.href = '/extracts/track';
+          }
         };
       }
     });
