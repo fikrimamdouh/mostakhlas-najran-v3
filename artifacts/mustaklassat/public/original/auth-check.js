@@ -5,7 +5,7 @@
  */
 (function () {
   var BASE = window.location.origin;
-  var BUILD_V = '20260618firstTwoGapFix1';
+  var BUILD_V = '20260618performanceTemplate1';
   var NOTIF_INTERVAL_MS = 300000;
   var notifFetchInProgress = false;
 
@@ -155,6 +155,87 @@
   if (/\/original\/settings_main\.html(?:$|[?#])/.test(pageSig)) {
     appendScript('/original/settings-backup-complete-guard.js?v=20260611d', true);
   }
+
+  function installPerformanceTemplateGuard() {
+    if (!/\/original\/performance\.html(?:$|[?#])/.test(pageSig)) return;
+    if (window.__NAJRAN_PERFORMANCE_TEMPLATE_GUARD__) return;
+    window.__NAJRAN_PERFORMANCE_TEMPLATE_GUARD__ = true;
+
+    var tableIds = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'laundry', 'security'];
+    var templatePrefix = 'lastPerformanceTemplate_';
+
+    function inRevisionMode() {
+      return !!(
+        localStorage.getItem('najran_revision_extract_id') ||
+        localStorage.getItem('najran_revision_mode') === 'true'
+      );
+    }
+
+    function safeSet(key, value) {
+      if (value == null || value === '') return;
+      try { localStorage.setItem(key, value); } catch (_) {}
+    }
+
+    function mirrorCurrentTableDataToTemplate(tableId) {
+      if (!tableId || tableIds.indexOf(tableId) === -1) return;
+      if (inRevisionMode()) return;
+      var sourceKey = 'tableData_' + tableId;
+      var value = localStorage.getItem(sourceKey);
+      if (!value) return;
+      safeSet(templatePrefix + tableId, value);
+      safeSet('lastPerformanceTemplateSavedAt', new Date().toISOString());
+    }
+
+    function mirrorAllExistingTableDataToTemplate() {
+      if (inRevisionMode()) return;
+      tableIds.forEach(mirrorCurrentTableDataToTemplate);
+    }
+
+    function seedMissingTableDataFromTemplate() {
+      if (inRevisionMode()) return;
+      tableIds.forEach(function (tableId) {
+        var sourceKey = 'tableData_' + tableId;
+        if (localStorage.getItem(sourceKey)) return;
+        var template = localStorage.getItem(templatePrefix + tableId);
+        if (!template) return;
+        safeSet(sourceKey, template);
+        console.info('[PerformanceTemplate] تمت استعادة آخر نموذج محفوظ لجدول الأداء:', tableId);
+      });
+    }
+
+    function wrapSaveTableData() {
+      if (typeof window.saveTableData !== 'function') return false;
+      if (window.saveTableData.__NAJRAN_TEMPLATE_WRAPPED__) return true;
+      var original = window.saveTableData;
+      window.saveTableData = function (tableId) {
+        var result = original.apply(this, arguments);
+        try { mirrorCurrentTableDataToTemplate(tableId); } catch (_) {}
+        return result;
+      };
+      window.saveTableData.__NAJRAN_TEMPLATE_WRAPPED__ = true;
+      return true;
+    }
+
+    function retryWrapSaveTableData(attempt) {
+      if (wrapSaveTableData()) return;
+      if (attempt >= 40) return;
+      setTimeout(function () { retryWrapSaveTableData(attempt + 1); }, 250);
+    }
+
+    seedMissingTableDataFromTemplate();
+    mirrorAllExistingTableDataToTemplate();
+    retryWrapSaveTableData(0);
+
+    document.addEventListener('DOMContentLoaded', function () {
+      seedMissingTableDataFromTemplate();
+      mirrorAllExistingTableDataToTemplate();
+      retryWrapSaveTableData(0);
+      setTimeout(seedMissingTableDataFromTemplate, 400);
+      setTimeout(mirrorAllExistingTableDataToTemplate, 1200);
+    });
+  }
+
+  installPerformanceTemplateGuard();
 
   var NOTIF_SEEN_KEY  = 'najran_notif_seen_ids';
   var NOTIF_CHECK_KEY = 'najran_notif_last_check';
