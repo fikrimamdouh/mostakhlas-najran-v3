@@ -112,21 +112,14 @@ if (token) headers['Authorization'] = `Bearer ${token}`;
       }
     );
 
-    // إذا كان مفتاح التعديل متبقياً من جلسة قديمة والمستخلص لم يعد قابلاً للتعديل،
-    // نمسح المفتاح ونرسل كمستخلص جديد تلقائياً
+    // أثناء تعديل مستخلص قديم، ممنوع التحويل التلقائي إلى POST.
+    // لو فشل PUT، نوقف العملية حتى لا يتم إنشاء مستخلص جديد بالخطأ.
     if (!res.ok && isRevision) {
       const errData = await res.json().catch(() => ({}));
-      if (errData.error && errData.error.includes('revise')) {
-        localStorage.removeItem(REVISION_KEY);
-        res = await fetch('/api/submitted-extracts', {
-          method: 'POST',
-          headers,
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-      } else {
-        throw new Error(errData.error || 'خطأ في الاتصال بالخادم');
-      }
+      throw new Error(
+        errData.error ||
+        'تعذر إعادة رفع المستخلص المعدل على نفس السجل. لم يتم إنشاء مستخلص جديد.'
+      );
     }
 
     if (!res.ok) {
@@ -134,8 +127,12 @@ if (token) headers['Authorization'] = `Bearer ${token}`;
       throw new Error(err.error || 'خطأ في الاتصال بالخادم');
     }
 
-    if (isRevision) localStorage.removeItem(REVISION_KEY);
-    return await res.json();
+    if (isRevision) {
+      localStorage.removeItem(REVISION_KEY);
+      localStorage.removeItem('najran_revision_mode');
+      localStorage.removeItem('najran_revision_extract_type');
+      localStorage.removeItem('najran_revision_started_at');
+    }    return await res.json();
   }
 
   // Called from track page when user clicks "تعديل وإعادة الرفع"
