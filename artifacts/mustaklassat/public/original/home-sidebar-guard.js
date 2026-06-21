@@ -108,6 +108,52 @@
     }, 30);
   }
 
+  function isLocalHomeExitPrimary(target) {
+    if (!target || target.id !== 'najran-local-protection-primary') return false;
+    var modal = document.getElementById('najran-local-protection-modal');
+    if (!modal) return false;
+    var modalText = textOf(modal);
+    var btnText = textOf(target);
+    return btnText.indexOf('حفظ محلي') > -1 && modalText.indexOf('الرجوع للرئيسية') > -1;
+  }
+
+  function directLocalSaveAndGoHome(e, target) {
+    try {
+      if (e && e.preventDefault) e.preventDefault();
+      if (e && e.stopPropagation) e.stopPropagation();
+      if (e && e.stopImmediatePropagation) e.stopImmediatePropagation();
+
+      if (window.__NAJRAN_LOCAL_HOME_EXIT_RUNNING__) return;
+      window.__NAJRAN_LOCAL_HOME_EXIT_RUNNING__ = true;
+
+      var snap = null;
+      try {
+        if (typeof window.saveExtractSnapshot === 'function') {
+          snap = window.saveExtractSnapshot('home-exit-save-direct');
+        }
+      } catch (err) {
+        console.warn('[HomeSidebarGuard] direct local save failed', err);
+      }
+
+      if (!snap) {
+        window.__NAJRAN_LOCAL_HOME_EXIT_RUNNING__ = false;
+        alert('تعذر حفظ المستخلص الحالي محليًا. لم يتم الخروج من الصفحة.');
+        return;
+      }
+
+      var modal = document.getElementById('najran-local-protection-modal');
+      if (modal && modal.parentNode) modal.parentNode.removeChild(modal);
+
+      cleanupDuplicateSidebars();
+      console.warn('[HomeSidebarGuard] local draft saved, redirecting directly to dashboard');
+      window.location.replace('/dashboard?localDraftSaved=1');
+    } catch (err2) {
+      window.__NAJRAN_LOCAL_HOME_EXIT_RUNNING__ = false;
+      console.warn('[HomeSidebarGuard] direct home exit failed', err2);
+      alert('تعذر تنفيذ الحفظ المحلي والخروج.');
+    }
+  }
+
   var originalAppendChild = Node.prototype.appendChild;
   Node.prototype.appendChild = function (child) {
     var wasSidebar = isSidebarLike(child);
@@ -130,6 +176,11 @@
       : null;
 
     if (!target) return;
+
+    if (isLocalHomeExitPrimary(target)) {
+      directLocalSaveAndGoHome(e, target);
+      return;
+    }
 
     var text = textOf(target);
 
