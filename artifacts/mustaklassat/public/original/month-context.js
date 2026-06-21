@@ -6,7 +6,15 @@
   'use strict';
 
   const IS_SETTINGS_PAGE = /settings_main\.html(?:$|[?#])/.test(window.location.href);
-
+function isRevisionMode() {
+  try {
+    return localStorage.getItem('najran_revision_mode') === 'true'
+      && !!localStorage.getItem('najran_revision_extract_id')
+      && localStorage.getItem('najran_revision_boot_lock') === 'true';
+  } catch (_) {
+    return false;
+  }
+}
   // صفحة الإعدادات هي مصدر فترة المستخلص. لا نسمح بإشارة فتح الفترة التالية تلقائياً هنا.
   if (IS_SETTINGS_PAGE) {
     try {
@@ -106,20 +114,25 @@
   window.getCurrentMonthKey = getCurrentMonthKey;
   window.MONTH_DATA_KEYS_LIST = MONTH_DATA_KEYS;
 
-  document.addEventListener('DOMContentLoaded', function () {
-    if (IS_SETTINGS_PAGE) return;
+ document.addEventListener('DOMContentLoaded', function () {
+  if (IS_SETTINGS_PAGE) return;
 
-    const currentKey = getCurrentMonthKey();
-    if (!currentKey) return;
+  if (isRevisionMode()) {
+    console.warn('[MonthCtx] REVISION MODE: منع تحميل monthSnapshot فوق بيانات المستخلص القديم');
+    return;
+  }
 
-    const hasLocalData = !!localStorage.getItem('attendanceData');
-    const hasSnapshot = !!localStorage.getItem('monthSnapshot_' + currentKey);
+  const currentKey = getCurrentMonthKey();
+  if (!currentKey) return;
 
-    if (!hasLocalData && hasSnapshot) {
-      window.loadMonthSnapshot(currentKey);
-      console.log('[MonthCtx] auto-restored snapshot for', currentKey);
-    }
-  });
+  const hasLocalData = !!localStorage.getItem('attendanceData');
+  const hasSnapshot = !!localStorage.getItem('monthSnapshot_' + currentKey);
+
+  if (!hasLocalData && hasSnapshot) {
+    window.loadMonthSnapshot(currentKey);
+    console.log('[MonthCtx] auto-restored snapshot for', currentKey);
+  }
+});
 
   /**
    * Override آمن لحفظ بيانات المستخلص داخل صفحة الإعدادات فقط.
