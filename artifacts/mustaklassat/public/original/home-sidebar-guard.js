@@ -6,6 +6,7 @@
 
   var cleanupTimer = null;
   var observerPaused = false;
+  var suppressAllSidebarsUntil = 0;
 
   function textOf(el) {
     return String((el && (el.textContent || el.innerText)) || '').trim();
@@ -72,23 +73,12 @@
     return score;
   }
 
-  function cleanupDuplicateSidebars() {
-    if (observerPaused) return;
-
-    var nodes = getSidebars();
-    if (nodes.length <= 1) return;
-
-    nodes.sort(function (a, b) {
-      return scoreSidebar(b) - scoreSidebar(a);
-    });
-
-    var keeper = nodes[0];
+  function removeNodes(nodes, reason) {
     var removed = 0;
-
     observerPaused = true;
     try {
-      nodes.slice(1).forEach(function (el) {
-        if (el && el !== keeper && el.parentNode) {
+      nodes.forEach(function (el) {
+        if (el && el.parentNode) {
           el.parentNode.removeChild(el);
           removed++;
         }
@@ -96,16 +86,48 @@
     } finally {
       observerPaused = false;
     }
-
-    if (removed) console.warn('[HomeSidebarGuard] removed duplicate sidebars:', removed);
+    if (removed) console.warn('[HomeSidebarGuard] removed sidebars:', removed, reason || '');
   }
+
+  function cleanupDuplicateSidebars() {
+    if (observerPaused) return;
+
+    var nodes = getSidebars();
+    if (!nodes.length) return;
+
+    if (Date.now() < suppressAllSidebarsUntil) {
+      removeNodes(nodes, 'suppressed');
+      return;
+    }
+
+    if (nodes.length <= 1) return;
+
+    nodes.sort(function (a, b) {
+      return scoreSidebar(b) - scoreSidebar(a);
+    });
+
+    removeNodes(nodes.slice(1), 'duplicate');
+  }
+
+  function suppressAllSidebars(ms) {
+    suppressAllSidebarsUntil = Math.max(suppressAllSidebarsUntil, Date.now() + (ms || 8000));
+    try {
+      sessionStorage.setItem('najran_suppress_sidebars_until', String(suppressAllSidebarsUntil));
+    } catch (_) {}
+    cleanupDuplicateSidebars();
+  }
+
+  try {
+    var storedSuppressUntil = parseInt(sessionStorage.getItem('najran_suppress_sidebars_until') || '0', 10);
+    if (storedSuppressUntil && storedSuppressUntil > Date.now()) suppressAllSidebarsUntil = storedSuppressUntil;
+  } catch (_) {}
 
   function scheduleCleanup() {
     if (cleanupTimer) clearTimeout(cleanupTimer);
     cleanupTimer = setTimeout(function () {
       cleanupTimer = null;
       cleanupDuplicateSidebars();
-    }, 30);
+    }, 20);
   }
 
   function isLocalHomeExitPrimary(target) {
@@ -125,6 +147,8 @@
 
       if (window.__NAJRAN_LOCAL_HOME_EXIT_RUNNING__) return;
       window.__NAJRAN_LOCAL_HOME_EXIT_RUNNING__ = true;
+
+      suppressAllSidebars(12000);
 
       var snap = null;
       try {
@@ -146,7 +170,9 @@
 
       cleanupDuplicateSidebars();
       console.warn('[HomeSidebarGuard] local draft saved, redirecting directly to dashboard');
-      window.location.replace('/dashboard?localDraftSaved=1');
+      setTimeout(function () {
+        window.location.replace('/dashboard?localDraftSaved=1&hideSidebar=1');
+      }, 30);
     } catch (err2) {
       window.__NAJRAN_LOCAL_HOME_EXIT_RUNNING__ = false;
       console.warn('[HomeSidebarGuard] direct home exit failed', err2);
@@ -158,7 +184,7 @@
   Node.prototype.appendChild = function (child) {
     var wasSidebar = isSidebarLike(child);
     var result = originalAppendChild.call(this, child);
-    if (wasSidebar) scheduleCleanup();
+    if (wasSidebar || Date.now() < suppressAllSidebarsUntil) scheduleCleanup();
     return result;
   };
 
@@ -166,7 +192,7 @@
   Node.prototype.insertBefore = function (child, ref) {
     var wasSidebar = isSidebarLike(child);
     var result = originalInsertBefore.call(this, child, ref);
-    if (wasSidebar) scheduleCleanup();
+    if (wasSidebar || Date.now() < suppressAllSidebarsUntil) scheduleCleanup();
     return result;
   };
 
@@ -191,6 +217,7 @@
       text.indexOf('الرجوع للرئيسية') > -1 ||
       text.indexOf('الخروج') > -1
     ) {
+      if (text.indexOf('حفظ محلي') > -1 || text.indexOf('الرجوع للرئيسية') > -1) suppressAllSidebars(8000);
       setTimeout(cleanupDuplicateSidebars, 0);
       setTimeout(cleanupDuplicateSidebars, 100);
       setTimeout(cleanupDuplicateSidebars, 400);
@@ -204,6 +231,10 @@
 
     var obs = new MutationObserver(function (mutations) {
       if (observerPaused) return;
+      if (Date.now() < suppressAllSidebarsUntil) {
+        scheduleCleanup();
+        return;
+      }
       for (var i = 0; i < mutations.length; i++) {
         var m = mutations[i];
         if (!m.addedNodes || !m.addedNodes.length) continue;
@@ -231,7 +262,7 @@
     installObserver();
   }
 
-  setInterval(cleanupDuplicateSidebars, 3000);
+  setInterval(cleanupDuplicateSidebars, 1000);
 
   console.warn('[HomeSidebarGuard] installed');
 })();
