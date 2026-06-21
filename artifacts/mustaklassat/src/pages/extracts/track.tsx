@@ -69,15 +69,36 @@ function setRevisionStorage(key: string, value: string) {
   } catch {}
 
   try {
-    Storage.prototype.setItem.call(window.localStorage, key, value);
-  } catch {}
-
-  try {
     const realStorage = (window as any)._najranRealStorage;
     if (realStorage && typeof realStorage.setItem === "function") {
       realStorage.setItem(key, value);
     }
   } catch {}
+
+  try {
+    window.sessionStorage.setItem(key, value);
+  } catch {}
+}
+
+function getRevisionStorage(key: string): string | null {
+  try {
+    const v = localStorage.getItem(key);
+    if (v != null) return v;
+  } catch {}
+
+  try {
+    const realStorage = (window as any)._najranRealStorage;
+    if (realStorage && typeof realStorage.getItem === "function") {
+      const v = realStorage.getItem(key);
+      if (v != null) return v;
+    }
+  } catch {}
+
+  try {
+    return window.sessionStorage.getItem(key);
+  } catch {}
+
+  return null;
 }
 
 function removeRevisionStorage(key: string) {
@@ -892,7 +913,21 @@ if (revisionPayment) {
   localStorage.setItem("paymentNumber", String(revisionPayment));
   localStorage.setItem("extractNumber", String(revisionPayment));
 }
+const revisionModeCheck = getRevisionStorage(REVISION_KEYS.mode);
+const revisionIdCheck = getRevisionStorage(REVISION_KEYS.extractId);
+const revisionSnapshotCheck = getRevisionStorage(REVISION_KEYS.snapshot);
 
+console.warn("[RevisionDebug] before redirect", {
+  mode: revisionModeCheck,
+  extractId: revisionIdCheck,
+  snapshotLen: revisionSnapshotCheck ? revisionSnapshotCheck.length : 0,
+  target: TYPE_PAGES[extract.extractType] || "/original/attendance.html",
+});
+
+if (revisionModeCheck !== "true" || !revisionIdCheck || !revisionSnapshotCheck) {
+  alert("فشل تجهيز وضع تعديل المستخلص قبل فتح صفحة الحضور. لم يتم تثبيت بيانات الريفيجن.");
+  return;
+}
       window.location.href = TYPE_PAGES[extract.extractType] || "/original/attendance.html";
     } catch (err) {
       console.error("Failed to start extract revision", err);
