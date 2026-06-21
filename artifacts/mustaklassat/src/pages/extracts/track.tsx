@@ -403,13 +403,13 @@ function showSaveCurrentBeforeRevisionModal(): Promise<boolean> {
           ">!</div>
 
           <div style="flex:1;">
-            <h2 style="margin:0;color:#92400e;font-size:22px;font-weight:900;">
-              يوجد مستخلص محلي غير محفوظ
-            </h2>
-            <p style="margin:8px 0 0;color:#475569;font-size:14px;line-height:1.9;">
-              يوجد شغل محلي حالي على هذا الجهاز ولم نجد له نسخة محفوظة.
-              فتح مستخلص قديم للتعديل سيستبدل البيانات الحالية، لذلك احفظ المحلي الحالي أولًا ثم افتح التعديل.
-            </p>
+          <h2 style="margin:0;color:#92400e;font-size:22px;font-weight:900;">
+  يوجد مستخلص مفتوح على هذا الجهاز
+</h2>
+<p style="margin:8px 0 0;color:#475569;font-size:14px;line-height:1.9;">
+  قبل فتح مستخلص آخر للتعديل، سيتم حفظ نسخة محلية من المستخلص الحالي على هذا الجهاز فقط.
+  لن يتم رفع أي بيانات للسحابة، وذلك لتقليل استهلاك البيانات وحماية العمل الحالي من الاستبدال.
+</p>
           </div>
         </div>
 
@@ -423,8 +423,7 @@ function showSaveCurrentBeforeRevisionModal(): Promise<boolean> {
           line-height:1.9;
           margin:14px 0;
         ">
-          سيتم حفظ نسخة محلية قابلة للاستكمال داخل أرشيف المستخلصات، ثم فتح المستخلص القديم للتعديل.
-        </div>
+سيتم حفظ النسخة الحالية في لقطات العمل المحلية، وبعدها يتم فتح المستخلص القديم للتعديل. يمكنك الرجوع للنسخة المحفوظة لاحقًا من أرشيف المستخلصات.        </div>
 
         <div style="display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;margin-top:16px;">
           <button id="najran-save-current-and-open-revision" style="
@@ -432,13 +431,13 @@ function showSaveCurrentBeforeRevisionModal(): Promise<boolean> {
             color:white;border:0;border-radius:12px;
             padding:12px 18px;font-weight:900;cursor:pointer;
             font-family:Tajawal,Arial,sans-serif;
-          ">حفظ المحلي الحالي وفتح التعديل</button>
+          ">حفظ محلي وفتح التعديل</button>
 
           <button id="najran-stay-current-work" style="
             background:#1e3a8a;color:white;border:0;border-radius:12px;
             padding:12px 18px;font-weight:900;cursor:pointer;
             font-family:Tajawal,Arial,sans-serif;
-          ">البقاء على المستخلص الحالي</button>
+          ">استكمال المستخلص الحالي</button>
 
           <button id="najran-cancel-revision-open" style="
             background:#475569;color:white;border:0;border-radius:12px;
