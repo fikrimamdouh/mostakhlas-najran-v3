@@ -109,8 +109,17 @@
       try { res = await nativeFetch(input, init); }
       catch (err) { if (action) log(action + ' — فشل اتصال', { method, url, error: err && err.message, durationMs: Date.now() - started }, { entityType: 'api' }); throw err; }
       if (action && method !== 'GET') log(action + (res.ok ? ' — نجاح' : ' — فشل'), { method, url, status: res.status, durationMs: Date.now() - started }, { entityType: 'api' });
-      if (res.status === 401 && /\/api\/submitted-extracts/.test(url)) { try { localStorage.removeItem('najran_revision_extract_id'); } catch (_) {} console.warn('[NajranAuth] فشل اعتماد المستخلص بسبب انتهاء التوكن. تم تنظيف مفتاح التعديل القديم.'); }
-      return res;
+if (
+  res.status === 401 &&
+  /\/api\/submitted-extracts\/\d+(?:\/status)?(?:$|[?#])/.test(url) &&
+  (method === 'PUT' || method === 'PATCH')
+) {
+  try {
+    localStorage.removeItem('najran_revision_extract_id');
+  } catch (_) {}
+
+  console.warn('[NajranAuth] فشل تعديل/اعتماد المستخلص بسبب انتهاء التوكن. تم تنظيف مفتاح التعديل القديم.');
+}      return res;
     };
   })();
 
