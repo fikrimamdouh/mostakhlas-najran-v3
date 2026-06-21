@@ -886,7 +886,27 @@ setRevisionStorage(REVISION_KEYS.startedAt, revisionStartedAt);
 setRevisionStorage(REVISION_KEYS.bootLock, "true");
 setRevisionStorage(REVISION_KEYS.source, "submitted_extract_snapshot");
 setRevisionStorage(REVISION_KEYS.snapshot, revisionSnapshot);
+try {
+  const rawSet = Storage.prototype.setItem;
+const storage = (window as any)._najranRealStorage || window.localStorage;
+  rawSet.call(storage, REVISION_KEYS.mode, "true");
+  rawSet.call(storage, REVISION_KEYS.extractId, String(extract.id));
+  rawSet.call(storage, REVISION_KEYS.extractType, revisionExtractType);
+  rawSet.call(storage, REVISION_KEYS.startedAt, revisionStartedAt);
+  rawSet.call(storage, REVISION_KEYS.bootLock, "true");
+  rawSet.call(storage, REVISION_KEYS.source, "submitted_extract_snapshot");
+  rawSet.call(storage, REVISION_KEYS.snapshot, revisionSnapshot);
 
+  window.sessionStorage.setItem(REVISION_KEYS.mode, "true");
+  window.sessionStorage.setItem(REVISION_KEYS.extractId, String(extract.id));
+  window.sessionStorage.setItem(REVISION_KEYS.extractType, revisionExtractType);
+  window.sessionStorage.setItem(REVISION_KEYS.startedAt, revisionStartedAt);
+  window.sessionStorage.setItem(REVISION_KEYS.bootLock, "true");
+  window.sessionStorage.setItem(REVISION_KEYS.source, "submitted_extract_snapshot");
+  window.sessionStorage.setItem(REVISION_KEYS.snapshot, revisionSnapshot);
+} catch (e) {
+  console.warn("[RevisionDebug] raw revision storage write failed", e);
+}
 Object.entries(data).forEach(([key, value]) => writeLocalStorageValue(key, value));
 
 if (full.companyName) localStorage.setItem("companyName", String(full.companyName));
