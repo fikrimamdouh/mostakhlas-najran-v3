@@ -396,11 +396,11 @@ var snap = {
 
     if (hasMeaningfulLocalWork() && !options.skipProtection) {
         showLocalProtectionModal({
-          title: 'يوجد مستخلص محلي مفتوح حاليًا',
-          message: 'استكمال لقطة محلية أخرى سيستبدل بيانات التشغيل الحالية. احفظ الحالي محليًا أولًا أو استكمل العمل الحالي.',
-          primaryText: 'حفظ الحالي محليًا ثم استكمال اللقطة',
-          secondaryText: 'استكمال المستخلص الحالي',
-          cancelText: 'إلغاء'
+        title: 'يوجد مستخلص مفتوح على هذا الجهاز',
+message: 'استكمال لقطة محلية أخرى سيستبدل البيانات الحالية. سيتم حفظ نسخة محلية أولًا على هذا الجهاز فقط، بدون رفع للسحابة.',
+primaryText: 'حفظ محلي ثم استكمال اللقطة',
+secondaryText: 'استكمال المستخلص الحالي',
+cancelText: 'إلغاء'
         }).then(function (action) {
           if (action === 'primary') {
             var saved = window.saveExtractSnapshot('before-resume-local-snapshot');
@@ -587,11 +587,11 @@ localStorage.setItem('najran_local_draft_resume_id', String(snap.id));
       e.stopPropagation();
 
           showLocalProtectionModal({
-        title: 'يوجد مستخلص محلي غير محفوظ على هذا الجهاز',
-        message: 'قبل الرجوع للرئيسية، احفظ المستخلص الحالي محليًا حتى لا تضيع بيانات التشغيل الحالية.',
-        primaryText: 'حفظ محليًا ثم الرجوع للرئيسية',
-        secondaryText: 'استكمال المستخلص الحالي',
-        cancelText: 'إلغاء'
+        title: 'يوجد مستخلص مفتوح على هذا الجهاز',
+message: 'قبل الرجوع للرئيسية، سيتم حفظ نسخة محلية من المستخلص الحالي على هذا الجهاز فقط. لن يتم رفع أي بيانات للسحابة.',
+primaryText: 'حفظ محلي ثم الرجوع للرئيسية',
+secondaryText: 'استكمال المستخلص الحالي',
+cancelText: 'إلغاء'
       }).then(function (action) {
         if (action === 'primary') {
           var snap = window.saveExtractSnapshot('home-exit-save');
