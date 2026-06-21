@@ -147,29 +147,26 @@ if (token) headers['Authorization'] = `Bearer ${token}`;
     } catch (_) {}
 
     if (isRevision) {
-      localStorage.removeItem(REVISION_KEY);
-      localStorage.removeItem('najran_revision_mode');
-      localStorage.removeItem('najran_revision_extract_type');
-      localStorage.removeItem('najran_revision_started_at');
-    }
+  localStorage.removeItem(REVISION_KEY);
+  localStorage.removeItem('najran_revision_mode');
+  localStorage.removeItem('najran_revision_extract_type');
+  localStorage.removeItem('najran_revision_started_at');
+  localStorage.removeItem('najran_revision_boot_lock');
+  localStorage.removeItem('najran_revision_source');
+  localStorage.removeItem('najran_revision_snapshot');
+  localStorage.removeItem('najran_revision_previous_total_amount');
+}
 
     return result;
   }
 
-  // Called from track page when user clicks "تعديل وإعادة الرفع"
-  window.startExtractRevision = function (extractId, extractType) {
-    localStorage.setItem(REVISION_KEY, String(extractId));
-    const pageMap = {
-      labor: '/original/attendance.html',
-      consumables: '/original/consumables.html',
-      health_centers: '/original/health_centers_attendance.html',
-      admin_offices: '/original/admin_offices_attendance.html',
-      spare_parts: '/original/spare_parts.html',
-    };
-    const page = pageMap[extractType] || '/original/attendance.html';
-    window.location.href = page;
-  };
-
+ // Legacy direct revision opener disabled.
+// Revision must start only from track.tsx because it loads old extractData,
+// sets boot lock, clears current operational data, then writes the old snapshot.
+window.startExtractRevision = function () {
+  alert('فتح تعديل المستخلص يجب أن يتم من صفحة متابعة المستخلصات حتى يتم تحميل بيانات المستخلص القديمة بشكل آمن.');
+  window.location.href = '/extracts/track';
+};
   // ── إخفاء الزر عند الطباعة ─────────────────────────────────────────────────
   (function injectPrintHideStyle() {
     const style = document.createElement('style');
