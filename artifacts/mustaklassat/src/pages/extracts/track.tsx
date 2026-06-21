@@ -840,6 +840,12 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
   }
 
   const handleRevise = async () => {
+    alert("دخلت مسار handleRevise المعدل");
+console.warn("[RevisionDebug] handleRevise clicked", {
+  extractId: extract.id,
+  extractType: extract.extractType,
+  status: extract.status,
+});
     if (isPreparingRevision) return;
     setIsPreparingRevision(true);
 
