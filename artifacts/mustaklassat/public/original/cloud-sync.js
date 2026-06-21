@@ -198,7 +198,7 @@ function isRevisionMode() {
   try {
     return localStorage.getItem('najran_revision_mode') === 'true'
       && !!localStorage.getItem('najran_revision_extract_id')
-      && localStorage.getItem('najran_revision_boot_lock') === 'true';
+      && !!localStorage.getItem('najran_revision_snapshot');
   } catch (_) {
     return false;
   }
