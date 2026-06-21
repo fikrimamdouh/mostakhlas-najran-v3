@@ -165,7 +165,91 @@ var SNAPSHOT_SKIP_KEYS = {
         .some(function (key) { return localStorage.getItem(key) === '1'; });
     } catch (_) { return false; }
   }
+function getCurrentLocalWorkLabel() {
+  try {
+    var extractData = readJson('persistentExtractData', {});
+    var contractData = readJson('persistentContractData', {});
 
+    var payment = extractData.paymentNumber || localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber') || '';
+    var month = extractData.extractMonth || localStorage.getItem('extractMonth') || '';
+    var year = extractData.extractYear || localStorage.getItem('extractYear') || '';
+    var hospital = contractData.hospitalName || localStorage.getItem('hospitalName') || '';
+    var company = contractData.companyName || localStorage.getItem('companyName') || '';
+
+    var parts = [];
+    if (payment) parts.push('رقم الدفعة: ' + payment);
+    if (month || year) parts.push('الفترة: ' + [month, year].filter(Boolean).join(' '));
+    if (hospital) parts.push('الموقع: ' + hospital);
+    if (company) parts.push('الشركة: ' + company);
+
+    return parts.join(' — ') || 'مستخلص محلي مفتوح حاليًا';
+  } catch (_) {
+    return 'مستخلص محلي مفتوح حاليًا';
+  }
+}
+
+function showLocalProtectionModal(options) {
+  options = options || {};
+
+  return new Promise(function (resolve) {
+    var old = document.getElementById('najran-local-protection-modal');
+    if (old) old.remove();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'najran-local-protection-modal';
+    overlay.className = 'no-print';
+    overlay.style.cssText =
+      'position:fixed;inset:0;z-index:10000000;background:rgba(15,23,42,.62);' +
+      'display:flex;align-items:center;justify-content:center;direction:rtl;' +
+      'font-family:Tajawal,Arial,sans-serif;';
+
+    overlay.innerHTML =
+      '<div style="width:min(620px,94vw);background:#fff;border-radius:22px;padding:24px;' +
+        'box-shadow:0 28px 80px rgba(0,0,0,.32);border-top:7px solid #b45309;text-align:right;">' +
+
+        '<div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:14px;">' +
+          '<div style="width:52px;height:52px;border-radius:17px;background:#fff7ed;color:#b45309;' +
+            'display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;">!</div>' +
+          '<div style="flex:1;">' +
+            '<h2 style="margin:0;color:#92400e;font-size:22px;font-weight:900;">' + (options.title || 'يوجد مستخلص محلي غير محفوظ') + '</h2>' +
+            '<p style="margin:8px 0 0;color:#475569;font-size:14px;line-height:1.9;">' +
+              (options.message || 'قبل الانتقال، احفظ المستخلص الحالي محليًا حتى لا يتم استبدال البيانات الموجودة على هذا الجهاز.') +
+            '</p>' +
+          '</div>' +
+        '</div>' +
+
+        '<div style="background:#fffbeb;border:1px solid #fde68a;color:#78350f;border-radius:14px;' +
+          'padding:12px 14px;font-size:13px;line-height:1.9;margin:14px 0;">' +
+          '<b>البيانات الحالية:</b><br>' + getCurrentLocalWorkLabel() +
+        '</div>' +
+
+        '<div style="display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;margin-top:16px;">' +
+          '<button id="najran-local-protection-primary" style="background:linear-gradient(135deg,#166534,#16a34a);' +
+            'color:white;border:0;border-radius:12px;padding:12px 18px;font-weight:900;cursor:pointer;' +
+            'font-family:Tajawal,Arial,sans-serif;">' + (options.primaryText || 'حفظ محليًا ثم المتابعة') + '</button>' +
+
+          '<button id="najran-local-protection-secondary" style="background:#1e3a8a;color:white;border:0;border-radius:12px;' +
+            'padding:12px 18px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">' +
+            (options.secondaryText || 'استكمال المستخلص الحالي') + '</button>' +
+
+          '<button id="najran-local-protection-cancel" style="background:#475569;color:white;border:0;border-radius:12px;' +
+            'padding:12px 18px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">' +
+            (options.cancelText || 'إلغاء') + '</button>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(overlay);
+
+    function close(result) {
+      overlay.remove();
+      resolve(result);
+    }
+
+    document.getElementById('najran-local-protection-primary').onclick = function () { close('primary'); };
+    document.getElementById('najran-local-protection-secondary').onclick = function () { close('secondary'); };
+    document.getElementById('najran-local-protection-cancel').onclick = function () { close('cancel'); };
+  });
+}
   /* ───── قراءة الأرشيف ───── */
   window.getExtractArchive = function () {
     try { return JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '[]'); }
@@ -301,7 +385,7 @@ var snap = {
   };
 
   /* ───── استكمال لقطة محلية ───── */
-  window.resumeExtractSnapshot = function (id) {
+  window.resumeExtractSnapshot = function (id, options) {     options = options || {};
     try {
       var snap = window.getExtractArchive().find(function (s) { return String(s.id) === String(id); });
       if (!snap) { alert('لم يتم العثور على اللقطة المحلية.'); return false; }
@@ -310,9 +394,32 @@ var snap = {
         return false;
       }
 
-      if (hasMeaningfulLocalWork()) {
-        var ok = confirm('يوجد شغل محلي حالي على هذا الجهاز.\n\nاستكمال هذه اللقطة سيستبدل بيانات التشغيل الحالية.\n\nهل تريد المتابعة؟');
-        if (!ok) return false;
+    if (hasMeaningfulLocalWork() && !options.skipProtection) {
+        showLocalProtectionModal({
+          title: 'يوجد مستخلص محلي مفتوح حاليًا',
+          message: 'استكمال لقطة محلية أخرى سيستبدل بيانات التشغيل الحالية. احفظ الحالي محليًا أولًا أو استكمل العمل الحالي.',
+          primaryText: 'حفظ الحالي محليًا ثم استكمال اللقطة',
+          secondaryText: 'استكمال المستخلص الحالي',
+          cancelText: 'إلغاء'
+        }).then(function (action) {
+          if (action === 'primary') {
+            var saved = window.saveExtractSnapshot('before-resume-local-snapshot');
+            if (!saved) {
+              alert('تعذر حفظ المستخلص الحالي محليًا. لم يتم استكمال اللقطة الأخرى.');
+              return;
+            }
+            window.resumeExtractSnapshot(id, { skipProtection: true });
+            return;
+          }
+
+          if (action === 'secondary') {
+            return;
+          }
+
+          return;
+        });
+
+        return false;
       }
 
       clearOperationalKeysBeforeLocalResume();
@@ -479,16 +586,30 @@ localStorage.setItem('najran_local_draft_resume_id', String(snap.id));
       e.preventDefault();
       e.stopPropagation();
 
-      var save = confirm(
-        'يوجد مستخلص غير محفوظ على هذا الجهاز.\n\n' +
-        'اضغط موافق لحفظه محليًا في تبويب "لقطات العمل المحلية" قبل الخروج.\n\n' +
-        'اضغط إلغاء للبقاء في الصفحة.'
-      );
-      if (!save) return;
+          showLocalProtectionModal({
+        title: 'يوجد مستخلص محلي غير محفوظ على هذا الجهاز',
+        message: 'قبل الرجوع للرئيسية، احفظ المستخلص الحالي محليًا حتى لا تضيع بيانات التشغيل الحالية.',
+        primaryText: 'حفظ محليًا ثم الرجوع للرئيسية',
+        secondaryText: 'استكمال المستخلص الحالي',
+        cancelText: 'إلغاء'
+      }).then(function (action) {
+        if (action === 'primary') {
+          var snap = window.saveExtractSnapshot('home-exit-save');
+          if (!snap) {
+            alert('تعذر حفظ المستخلص الحالي محليًا. لم يتم الخروج من الصفحة.');
+            return;
+          }
+          alert('تم حفظ آخر نسخة من هذا المستخلص محليًا. يمكنك استكمالها لاحقًا من أرشيف المستخلصات > لقطات العمل المحلية.');
+          window.location.href = href || '/dashboard';
+          return;
+        }
 
-      var snap = window.saveExtractSnapshot('save');
-      if (snap) alert('تم حفظ آخر نسخة من هذا المستخلص محليًا. يمكنك استكمالها لاحقًا من أرشيف المستخلصات > لقطات العمل المحلية.');
-      window.location.href = href || '/dashboard';
+        if (action === 'secondary') {
+          return;
+        }
+
+        return;
+      });
     }, true);
   }
 
