@@ -43,7 +43,7 @@
       'approvalData','displayApprovalData','finalLaborCost','finalConsumablesCost','grand-net-total','grand-net-total-centers','grand-net-total-admin',
       'najran_labor_attendance_done','najran_labor_performance_done','najran_health_attendance_done','najran_admin_offices_attendance_done'
     ];
-    var prefixes = ['deptCalculatedCost_','dept_','tableData_','achievement_','consumables_','spare_','water_','sewage_','subcontractors_','najran_labor_','najran_health_','najran_admin_','monthSnapshot_'];
+    var prefixes = ['deptCalculatedCost_','dept_','tableData_','achievement_','consumables_','spare_','water_','sewage_','subcontractors_','najran_labor_','najran_health_','najran_admin_'];
     exact.forEach(function (key) { localStorage.removeItem(key); });
     for (var i = localStorage.length - 1; i >= 0; i--) {
       var k = localStorage.key(i);
@@ -73,11 +73,15 @@
       } catch (_) {}
     });
     if (currentSession) localStorage.setItem('najran_session', currentSession);
-    localStorage.removeItem(REVISION_KEY);
-    localStorage.removeItem('najran_revision_mode');
-    localStorage.removeItem('najran_revision_extract_type');
-    localStorage.removeItem('najran_revision_started_at');
-    localStorage.removeItem(BACKUP_KEY);
+   localStorage.removeItem(REVISION_KEY);
+localStorage.removeItem('najran_revision_mode');
+localStorage.removeItem('najran_revision_extract_type');
+localStorage.removeItem('najran_revision_started_at');
+localStorage.removeItem('najran_revision_boot_lock');
+localStorage.removeItem('najran_revision_source');
+localStorage.removeItem('najran_revision_snapshot');
+localStorage.removeItem('najran_revision_previous_total_amount');
+localStorage.removeItem(BACKUP_KEY);
     window.location.href = target + '?restoredLocalDraft=1&v=' + Date.now();
   }
 
