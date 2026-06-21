@@ -89,7 +89,15 @@ var pendingLocalAttendanceUpload = false;
     var s = getSession();
     return !!(s && s.reviewOnly === true);
   }
-
+function isRevisionMode() {
+  try {
+    return localStorage.getItem('najran_revision_mode') === 'true'
+      && !!localStorage.getItem('najran_revision_extract_id')
+      && localStorage.getItem('najran_revision_boot_lock') === 'true';
+  } catch (_) {
+    return false;
+  }
+}
   async function getToken() {
     try {
       if (typeof window.najranGetFreshToken === 'function') { var t = await window.najranGetFreshToken(); if (t) return t; }
@@ -553,10 +561,18 @@ function showPendingUploadDecisionModal(onLeave) {
     cloudComparisonRunning = true;
 
     try {
-      var activeKeys = getActiveAttendanceKeys();
-      normalizeLocalAttendanceForCurrentPeriod(activeKeys);
-      var localRows = localAttendanceRows(activeKeys);
-      var token = await getToken();
+     var activeKeys = getActiveAttendanceKeys();
+normalizeLocalAttendanceForCurrentPeriod(activeKeys);
+
+if (isRevisionMode()) {
+  console.warn('[AttendanceCloudGuard] REVISION MODE: منع كامل لسحب مدة/حضور السحابة أثناء تعديل مستخلص قديم');
+  setTimeout(function(){ renderAgain('revision-mode-locked-snapshot'); }, 50);
+  setTimeout(function(){ renderAgain('revision-mode-locked-snapshot'); }, 500);
+  return;
+}
+
+var localRows = localAttendanceRows(activeKeys);
+var token = await getToken();
 
    if (!isReviewOnlySession() && localRows > 0 && hasLocalWinsPersistent(activeKeys)) {
   clearLocalWinsPersistent(activeKeys);
