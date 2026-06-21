@@ -52,6 +52,13 @@
         localStorage.removeItem('najran_revision_boot_lock');
 
         console.warn('[RevisionBootGuard] submitted extract snapshot applied and boot lock cleared');
+
+        var alreadyReloaded = sessionStorage.getItem('najran_revision_reloaded');
+        if (!alreadyReloaded) {
+          sessionStorage.setItem('najran_revision_reloaded', '1');
+          console.warn('[RevisionBootGuard] reloading page once after snapshot restore');
+          window.location.reload();
+        }
       }, 900);
 
       return true;
@@ -132,6 +139,7 @@
     localStorage.removeItem('najran_revision_source');
     localStorage.removeItem('najran_revision_snapshot');
     localStorage.removeItem('najran_revision_previous_total_amount');
+    sessionStorage.removeItem('najran_revision_reloaded');
     localStorage.removeItem(BACKUP_KEY);
     window.location.href = target + '?restoredLocalDraft=1&v=' + Date.now();
   }
