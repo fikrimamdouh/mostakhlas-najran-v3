@@ -155,6 +155,7 @@ if (token) headers['Authorization'] = `Bearer ${token}`;
   localStorage.removeItem('najran_revision_source');
   localStorage.removeItem('najran_revision_snapshot');
   localStorage.removeItem('najran_revision_previous_total_amount');
+      sessionStorage.removeItem('najran_revision_reloaded');
 }
 
     return result;
