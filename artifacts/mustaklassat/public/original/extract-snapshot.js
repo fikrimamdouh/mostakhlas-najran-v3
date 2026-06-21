@@ -34,25 +34,34 @@
     'consumablesTableData', 'healthCentersConsumables', 'mainHospitalConsumables', 'admin_offices_consumables_v1.0',
     'spare_partsData', 'sparePartsTotalAmount', 'approvalData', 'displayApprovalData',
     'finalLaborCost', 'finalConsumablesCost', 'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin',
-    'najran_labor_attendance_done', 'najran_labor_performance_done', 'najran_health_attendance_done', 'najran_admin_offices_attendance_done',
-    'najran_revision_extract_id', 'najran_revision_mode', 'najran_revision_extract_type', 'najran_revision_started_at'
+'najran_labor_attendance_done', 'najran_labor_performance_done', 'najran_health_attendance_done', 'najran_admin_offices_attendance_done',
+'najran_revision_extract_id', 'najran_revision_mode', 'najran_revision_extract_type', 'najran_revision_started_at',
+'najran_revision_boot_lock', 'najran_revision_source', 'najran_revision_snapshot', 'najran_revision_previous_total_amount'
   ];
 
   var OPERATIONAL_PREFIXES = [
     'deptCalculatedCost_', 'dept_', 'tableData_', 'achievement_', 'consumables_', 'spare_',
-    'water_', 'sewage_', 'subcontractors_', 'najran_labor_', 'najran_health_', 'najran_admin_', 'monthSnapshot_',
-    'adminOfficePerformanceItems_', 'adminOfficesPerformanceData_', 'adminOfficesPerformanceDeductions_'
+    'water_', 'sewage_', 'subcontractors_', 'najran_labor_', 'najran_health_', 'najran_admin_',
+'adminOfficePerformanceItems_', 'adminOfficesPerformanceData_', 'adminOfficesPerformanceDeductions_'
   ];
 
   var SNAPSHOT_SKIP_PREFIXES = [
     'najran_session', '__clerk', 'clerk_', 'loglevel', 'amplitude', 'chakra', 'persist:'
   ];
 
-  var SNAPSHOT_SKIP_KEYS = {
-    extractArchive: true,
-    najranSignedPdfs: true,
-    najran_revision_previous_local_backup: true
-  };
+var SNAPSHOT_SKIP_KEYS = {
+  extractArchive: true,
+  najranSignedPdfs: true,
+  najran_revision_previous_local_backup: true,
+  najran_revision_mode: true,
+  najran_revision_extract_id: true,
+  najran_revision_extract_type: true,
+  najran_revision_started_at: true,
+  najran_revision_boot_lock: true,
+  najran_revision_source: true,
+  najran_revision_snapshot: true,
+  najran_revision_previous_total_amount: true
+};
 
   function readJson(key, fallback) {
     try {
@@ -212,11 +221,32 @@
         extractYear: extractYear
       });
 
-      var snap = {
-        id:             String(Date.now()),
-        draftKey:       draftKey,
-        savedAt:        new Date().toISOString(),
-        source:         source,
+     var archive = window.getExtractArchive();
+var existingSnap = archive.find(function (oldSnap) {
+  if (!oldSnap) return false;
+  if (oldSnap.draftKey && oldSnap.draftKey === draftKey) return true;
+
+  if (!oldSnap.draftKey) {
+    var oldKey = makeDraftKey({
+      extractType: oldSnap.extractType || 'labor',
+      hospitalName: oldSnap.hospitalName,
+      companyName: oldSnap.companyName,
+      contractDetails: oldSnap.contractDetails,
+      paymentNumber: oldSnap.paymentNumber,
+      extractMonth: oldSnap.extractMonth,
+      extractYear: oldSnap.extractYear
+    });
+    return oldKey === draftKey;
+  }
+
+  return false;
+});
+
+var snap = {
+  id:             existingSnap && existingSnap.id ? String(existingSnap.id) : String(Date.now()),
+  draftKey:       draftKey,
+  savedAt:        new Date().toISOString(),
+  source:         source,
         canResume:      true,
         extractType:    extractType,
         currentPage:    currentPage,
@@ -238,7 +268,6 @@
         departments:     departments
       };
 
-      var archive = window.getExtractArchive();
       var before = archive.length;
       archive = archive.filter(function (oldSnap) {
         if (!oldSnap) return false;
@@ -291,10 +320,15 @@
         writeLocalStorageValue(key, snap.extractData[key]);
       });
       localStorage.removeItem('najran_revision_extract_id');
-      localStorage.removeItem('najran_revision_mode');
-      localStorage.removeItem('najran_revision_extract_type');
-      localStorage.removeItem('najran_revision_started_at');
-      localStorage.setItem('najran_local_draft_resume_id', String(snap.id));
+localStorage.removeItem('najran_revision_mode');
+localStorage.removeItem('najran_revision_extract_type');
+localStorage.removeItem('najran_revision_started_at');
+localStorage.removeItem('najran_revision_boot_lock');
+localStorage.removeItem('najran_revision_source');
+localStorage.removeItem('najran_revision_snapshot');
+localStorage.removeItem('najran_revision_previous_total_amount');
+
+localStorage.setItem('najran_local_draft_resume_id', String(snap.id));
       localStorage.setItem('najran_local_draft_resumed_at', new Date().toISOString());
 
       window.location.href = pageForType(snap.extractType || inferExtractType(), snap.currentPage);
