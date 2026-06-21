@@ -204,6 +204,167 @@ function hasCurrentLocalOperationalWork(): boolean {
     return false;
   }
 }
+function readLocalJsonValue(key: string, fallback: any = {}) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function makeLocalDraftPart(value: unknown): string {
+  return String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function saveCurrentLocalWorkBeforeRevision(): boolean {
+  try {
+    const extractData = readLocalJsonValue("persistentExtractData", {});
+    const contractData = readLocalJsonValue("persistentContractData", {});
+
+    const extractMonth = String(extractData.extractMonth || localStorage.getItem("extractMonth") || "").trim();
+    const extractYear = String(extractData.extractYear || localStorage.getItem("extractYear") || "").trim();
+    const paymentNumber = String(
+      extractData.paymentNumber ||
+      extractData.extractNumber ||
+      localStorage.getItem("paymentNumber") ||
+      localStorage.getItem("extractNumber") ||
+      ""
+    ).trim();
+
+    if (!extractMonth || !extractYear) {
+      alert("لا يمكن حفظ المستخلص المحلي الحالي لأن بيانات الفترة غير مكتملة.");
+      return false;
+    }
+
+    const fullSnapshot: Record<string, unknown> = {};
+    const skipPrefixes = ["najran_session", "__clerk", "clerk_", "loglevel", "amplitude", "chakra", "persist:"];
+    const skipKeys: Record<string, boolean> = {
+      extractArchive: true,
+      najranSignedPdfs: true,
+      najran_revision_previous_local_backup: true,
+      najran_revision_mode: true,
+      najran_revision_extract_id: true,
+      najran_revision_extract_type: true,
+      najran_revision_started_at: true,
+      najran_revision_boot_lock: true,
+      najran_revision_source: true,
+      najran_revision_snapshot: true,
+      najran_revision_previous_total_amount: true,
+    };
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (skipKeys[key]) continue;
+      if (skipPrefixes.some((p) => key.startsWith(p))) continue;
+
+      const val = localStorage.getItem(key);
+      if (val === null) continue;
+
+      try {
+        fullSnapshot[key] = JSON.parse(val);
+      } catch {
+        fullSnapshot[key] = val;
+      }
+    }
+
+    const monthKey = `${extractYear}_${extractMonth}`;
+    const monthSnapshot: Record<string, string> = {};
+
+    Object.keys(fullSnapshot).forEach((key) => {
+      const val = localStorage.getItem(key);
+      if (val !== null) monthSnapshot[key] = val;
+    });
+
+    localStorage.setItem("monthSnapshot_" + monthKey, JSON.stringify(monthSnapshot));
+
+    const extractType = (() => {
+      const path = (window.location.pathname || "").toLowerCase();
+      if (path.includes("health_centers")) return "health_centers";
+      if (path.includes("admin_offices")) return "admin_offices";
+      if (localStorage.getItem("spare_partsData") || localStorage.getItem("sparePartsTotalAmount")) return "spare_parts";
+      if (localStorage.getItem("consumablesTableData") || localStorage.getItem("mainHospitalConsumables")) return "consumables";
+      return "labor";
+    })();
+
+    const currentPage = (() => {
+      if (localStorage.getItem("najran_labor_performance_done") === "1") return "/original/achievement.html";
+      if (localStorage.getItem("najran_labor_attendance_done") === "1") return "/original/performance.html";
+      if (localStorage.getItem("najran_health_attendance_done") === "1") return "/original/health_centers_consumables.html";
+      if (localStorage.getItem("najran_admin_offices_attendance_done") === "1") return "/original/admin_offices_consumables.html";
+      return TYPE_PAGES[extractType as ExtractType] || "/original/attendance.html";
+    })();
+
+    const hospitalName = String(contractData.hospitalName || localStorage.getItem("hospitalName") || "");
+    const companyName = String(contractData.companyName || localStorage.getItem("companyName") || "");
+    const contractDetails = String(
+      contractData.contractDetails ||
+      contractData.contractNumber ||
+      localStorage.getItem("contractDetails") ||
+      localStorage.getItem("contractNumber") ||
+      ""
+    );
+
+    const draftKey = [
+      makeLocalDraftPart(extractType),
+      makeLocalDraftPart(hospitalName),
+      makeLocalDraftPart(companyName),
+      makeLocalDraftPart(contractDetails),
+      makeLocalDraftPart(paymentNumber),
+      makeLocalDraftPart(extractMonth),
+      makeLocalDraftPart(extractYear),
+    ].join("|");
+
+    let archive: any[] = [];
+    try {
+      const archiveRaw = localStorage.getItem("extractArchive");
+      archive = archiveRaw ? JSON.parse(archiveRaw) : [];
+      if (!Array.isArray(archive)) archive = [];
+    } catch {
+      archive = [];
+    }
+
+    const existingSnap = archive.find((oldSnap) => {
+      if (!oldSnap) return false;
+      if (oldSnap.draftKey && oldSnap.draftKey === draftKey) return true;
+      return false;
+    });
+
+    const snap = {
+      id: existingSnap?.id ? String(existingSnap.id) : String(Date.now()),
+      draftKey,
+      savedAt: new Date().toISOString(),
+      source: "before-revision-open",
+      canResume: true,
+      extractType,
+      currentPage,
+      extractData: fullSnapshot,
+      paymentNumber,
+      extractMonth,
+      extractYear,
+      extractStart: extractData.extractStart || localStorage.getItem("extractStart") || "",
+      extractEnd: extractData.extractEnd || localStorage.getItem("extractEnd") || "",
+      hospitalName,
+      companyName,
+      contractDetails,
+    };
+
+    archive = archive.filter((oldSnap) => oldSnap && oldSnap.draftKey !== draftKey);
+    archive.unshift(snap);
+    if (archive.length > 100) archive.splice(100);
+
+    localStorage.setItem("extractArchive", JSON.stringify(archive));
+    localStorage.setItem("najran_last_local_snapshot_key", draftKey);
+    localStorage.setItem("najran_last_local_snapshot_replaced", existingSnap ? "1" : "0");
+
+    return true;
+  } catch (err) {
+    console.error("[Revision] failed to save current local work before revision", err);
+    alert("تعذر حفظ المستخلص المحلي الحالي. لم يتم فتح التعديل.");
+    return false;
+  }
+}
 function showSaveCurrentBeforeRevisionModal(): Promise<boolean> {
   return new Promise((resolve) => {
     const old = document.getElementById("najran-save-current-before-revision-modal");
@@ -225,29 +386,29 @@ function showSaveCurrentBeforeRevisionModal(): Promise<boolean> {
 
     modal.innerHTML = `
       <div style="
-        width: min(560px, 94vw);
+        width: min(620px, 94vw);
         background: #ffffff;
         border-radius: 22px;
         padding: 24px;
         box-shadow: 0 28px 80px rgba(0,0,0,.32);
-        border-top: 7px solid #d97706;
+        border-top: 7px solid #b45309;
         text-align: right;
       ">
         <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:14px;">
           <div style="
-            width:48px;height:48px;border-radius:16px;
-            background:#fff7ed;color:#d97706;
+            width:52px;height:52px;border-radius:17px;
+            background:#fff7ed;color:#b45309;
             display:flex;align-items:center;justify-content:center;
-            font-size:26px;font-weight:900;
+            font-size:28px;font-weight:900;
           ">!</div>
 
-          <div>
+          <div style="flex:1;">
             <h2 style="margin:0;color:#92400e;font-size:22px;font-weight:900;">
-              احفظ المستخلص الحالي قبل التعديل
+              يوجد مستخلص محلي غير محفوظ
             </h2>
             <p style="margin:8px 0 0;color:#475569;font-size:14px;line-height:1.9;">
-              يوجد شغل محلي حالي على هذا الجهاز ولم نجد له نسخة محفوظة في الأرشيف المحلي.
-              فتح مستخلص قديم للتعديل سيمسح البيانات المحلية الحالية مؤقتًا حتى يتم تحميل بيانات المستخلص القديم.
+              يوجد شغل محلي حالي على هذا الجهاز ولم نجد له نسخة محفوظة.
+              فتح مستخلص قديم للتعديل سيستبدل البيانات الحالية، لذلك احفظ المحلي الحالي أولًا ثم افتح التعديل.
             </p>
           </div>
         </div>
@@ -262,35 +423,51 @@ function showSaveCurrentBeforeRevisionModal(): Promise<boolean> {
           line-height:1.9;
           margin:14px 0;
         ">
-          الإجراء الصحيح: ارجع واحفظ المستخلص الحالي أو اعمل Snapshot له من الإعدادات، ثم افتح التعديل مرة أخرى.
+          سيتم حفظ نسخة محلية قابلة للاستكمال داخل أرشيف المستخلصات، ثم فتح المستخلص القديم للتعديل.
         </div>
 
         <div style="display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;margin-top:16px;">
-          <button id="najran-go-save-current" style="
-            background:linear-gradient(135deg,#1e3c72,#2a5298);
+          <button id="najran-save-current-and-open-revision" style="
+            background:linear-gradient(135deg,#166534,#16a34a);
             color:white;border:0;border-radius:12px;
             padding:12px 18px;font-weight:900;cursor:pointer;
             font-family:Tajawal,Arial,sans-serif;
-          ">الذهاب لحفظ المستخلص الحالي</button>
+          ">حفظ المحلي الحالي وفتح التعديل</button>
+
+          <button id="najran-stay-current-work" style="
+            background:#1e3a8a;color:white;border:0;border-radius:12px;
+            padding:12px 18px;font-weight:900;cursor:pointer;
+            font-family:Tajawal,Arial,sans-serif;
+          ">البقاء على المستخلص الحالي</button>
 
           <button id="najran-cancel-revision-open" style="
             background:#475569;color:white;border:0;border-radius:12px;
             padding:12px 18px;font-weight:900;cursor:pointer;
             font-family:Tajawal,Arial,sans-serif;
-          ">إلغاء التعديل الآن</button>
+          ">إلغاء</button>
         </div>
       </div>
     `;
 
     document.body.appendChild(modal);
 
-    const goSave = document.getElementById("najran-go-save-current");
+    const saveAndOpen = document.getElementById("najran-save-current-and-open-revision");
+    const stay = document.getElementById("najran-stay-current-work");
     const cancel = document.getElementById("najran-cancel-revision-open");
 
-    if (goSave) {
-      goSave.onclick = () => {
+    if (saveAndOpen) {
+      saveAndOpen.onclick = () => {
+        const saved = saveCurrentLocalWorkBeforeRevision();
+        if (!saved) return;
+
         modal.remove();
-        window.location.href = "/original/settings_main.html";
+        resolve(true);
+      };
+    }
+
+    if (stay) {
+      stay.onclick = () => {
+        modal.remove();
         resolve(false);
       };
     }
@@ -311,8 +488,7 @@ async function canClearCurrentLocalBeforeRevision(): Promise<boolean> {
     return true;
   }
 
-  await showSaveCurrentBeforeRevisionModal();
-  return false;
+  return await showSaveCurrentBeforeRevisionModal();
 }
 function clearOperationalKeysBeforeRevision() {
   const exactKeys = [
