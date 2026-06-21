@@ -42,7 +42,14 @@ export const ALL_MODULES: ModuleDef[] = [
 ];
 
 export function getModuleKey(filename: string): string {
-  return filename.replace(".html", "");
+  const file = filename.split(/[?#]/)[0];
+  const map: Record<string, string> = {
+    "monthly-overview.html": "monthly_overview",
+    "extract-archive.html": "extract_archive",
+    "request-visit.html": "request-visit",
+    "visit-admin-review.html": "visit_review",
+  };
+  return map[file] || file.replace(".html", "");
 }
 
 export function parseAllowedModules(raw: string | null | undefined): string[] | null {
