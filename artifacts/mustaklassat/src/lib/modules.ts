@@ -65,8 +65,11 @@ export function getSiteType(hospital: string | null | undefined): SiteType {
     hospital === "مستشفى نجران العام الجديد ومركز طب الأسنان التخصصي"
   ) return "najran_general";
   if (hospital === "المراكز الصحية" || hospital === "المراكز الصحية (مجمع)") return "health_centers";
-  if (hospital === "المكاتب الإدارية" || hospital === "المكاتب الإدارية والمرافق الصحية") return "admin_offices";
-  return "hospital";
+if (
+  hospital === "المكاتب الإدارية" ||
+  hospital === "المكاتب الإدارية والمرافق الصحية" ||
+  hospital === "المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة"
+) return "admin_offices";  return "hospital";
 }
 
 const COMPANY_SITE_TYPES: Record<string, SiteType[]> = {
