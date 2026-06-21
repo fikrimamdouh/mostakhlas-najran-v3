@@ -194,7 +194,15 @@
     const s = getSession();
     return !!(s && s.reviewOnly === true);
   }
-
+function isRevisionMode() {
+  try {
+    return localStorage.getItem('najran_revision_mode') === 'true'
+      && !!localStorage.getItem('najran_revision_extract_id')
+      && localStorage.getItem('najran_revision_boot_lock') === 'true';
+  } catch (_) {
+    return false;
+  }
+}
   function parseHospitalList(v) {
     if (Array.isArray(v)) return v.map(String).map(x => x.trim()).filter(Boolean);
     if (!v) return [];
@@ -368,9 +376,14 @@
     } catch (_) {}
   }
 
-  async function pullFromCloud() {
-    const hospitalName = getHospitalName();
-    const storageScope = isSettingsMainPage() ? 'scope=settings' : '';
+ async function pullFromCloud() {
+  if (isRevisionMode() && !isSettingsMainPage()) {
+    console.warn('[MzamanaCloud] REVISION MODE: تم منع Pull السحابة للحفاظ على snapshot المستخلص القديم');
+    return;
+  }
+
+  const hospitalName = getHospitalName();
+  const storageScope = isSettingsMainPage() ? 'scope=settings' : '';
     const reviewOnly = isReviewOnlySession();
     const hospitalQueryParts = [];
     if (storageScope) hospitalQueryParts.push(storageScope);
@@ -455,8 +468,15 @@
   }
 
   async function pushToCloud(options) {
-    options = options || {};
-    const includeOperational = options.includeOperational === true;
+  options = options || {};
+
+  if (isRevisionMode() && options.includeOperational !== true) {
+    console.warn('[MzamanaCloud] REVISION MODE: تم منع Push تلقائي أثناء تعديل مستخلص قديم');
+    DIRTY_KEYS.clear();
+    return { ok: true, saved: 0, reason: 'REVISION_MODE_NO_AUTO_PUSH' };
+  }
+
+  const includeOperational = options.includeOperational === true;
     if (!getSession()) throw new Error('NO_SESSION');
     if (isReviewOnlySession()) {
       console.warn('[MzamanaCloud] REVIEW ONLY: ممنوع الرفع');
