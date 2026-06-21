@@ -33,10 +33,26 @@
     'sb_prefs_spare_parts',
 
     // توقيعات قديمة أو عامة مستخدمة في الصفحات
-    'dynamicSignatures',
+      'dynamicSignatures',
     'contractorSignature',
     'performanceSignatures',
-    'performanceSignatures_v2'
+    'performanceSignatures_v2',
+
+    // مفاتيح تعديل المستخلص القديم — يجب أن تبقى عامة بدون بادئة مستخدم
+    // لأن React track.tsx يكتبها قبل الانتقال، وصفحات /original تقرأها بعد الانتقال
+    'najran_revision_previous_local_backup',
+    'najran_revision_mode',
+    'najran_revision_extract_id',
+    'najran_revision_extract_type',
+    'najran_revision_started_at',
+    'najran_revision_boot_lock',
+    'najran_revision_source',
+    'najran_revision_snapshot',
+    'najran_revision_previous_total_amount',
+
+    // مفاتيح استكمال اللقطة المحلية بعد الرجوع من الريفيجن
+    'najran_local_draft_resume_id',
+    'najran_local_draft_resumed_at'
   ];
 
   function getPrefix() {
