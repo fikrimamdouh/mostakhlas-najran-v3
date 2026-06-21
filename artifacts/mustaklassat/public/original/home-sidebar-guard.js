@@ -15,41 +15,45 @@
   }
 
   function isSidebarLike(el) {
-    if (!el || el.nodeType !== 1) return false;
+  if (!el || el.nodeType !== 1) return false;
 
-    var id = String(el.id || '').toLowerCase();
-    var cls = String(el.className || '').toLowerCase();
-    var text = textOf(el);
+  var id = String(el.id || '').toLowerCase();
+  var cls = String(el.className || '').toLowerCase();
+  var text = textOf(el);
 
-    if (
-      id.indexOf('sidebar') > -1 ||
-      id.indexOf('side-menu') > -1 ||
-      id.indexOf('drawer') > -1 ||
-      cls.indexOf('sidebar') > -1 ||
-      cls.indexOf('side-menu') > -1 ||
-      cls.indexOf('drawer') > -1 ||
-      cls.indexOf('mobile-menu') > -1 ||
-      cls.indexOf('nav-menu') > -1
-    ) {
-      return true;
-    }
-
-    if (
-      isVisibleEnough(el) &&
-      text.indexOf('الرئيسية') > -1 &&
-      text.indexOf('الحضور') > -1 &&
-      (
-        text.indexOf('الإعدادات') > -1 ||
-        text.indexOf('المستخلصات') > -1 ||
-        text.indexOf('الأرشيف') > -1 ||
-        text.indexOf('شهادة') > -1
-      )
-    ) {
-      return true;
-    }
-
-    return false;
+  if (
+    id.indexOf('sidebar') > -1 ||
+    id.indexOf('side-menu') > -1 ||
+    id.indexOf('drawer') > -1 ||
+    cls.indexOf('sidebar') > -1 ||
+    cls.indexOf('side-menu') > -1 ||
+    cls.indexOf('drawer') > -1 ||
+    cls.indexOf('mobile-menu') > -1 ||
+    cls.indexOf('nav-menu') > -1
+  ) {
+    return true;
   }
+
+  if (!isVisibleEnough(el)) return false;
+
+  var tag = String(el.tagName || '').toLowerCase();
+  if (tag !== 'nav' && tag !== 'aside') return false;
+
+  if (
+    text.indexOf('الرئيسية') > -1 &&
+    text.indexOf('الحضور') > -1 &&
+    (
+      text.indexOf('الإعدادات') > -1 ||
+      text.indexOf('المستخلصات') > -1 ||
+      text.indexOf('الأرشيف') > -1 ||
+      text.indexOf('شهادة') > -1
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+}
 
   function getSidebars() {
     return Array.prototype.slice
