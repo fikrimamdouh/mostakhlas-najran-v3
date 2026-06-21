@@ -63,6 +63,39 @@ const REVISION_KEYS = {
   source: "najran_revision_source",
   snapshot: "najran_revision_snapshot",
 };
+function setRevisionStorage(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {}
+
+  try {
+    Storage.prototype.setItem.call(window.localStorage, key, value);
+  } catch {}
+
+  try {
+    const realStorage = (window as any)._najranRealStorage;
+    if (realStorage && typeof realStorage.setItem === "function") {
+      realStorage.setItem(key, value);
+    }
+  } catch {}
+}
+
+function removeRevisionStorage(key: string) {
+  try {
+    localStorage.removeItem(key);
+  } catch {}
+
+  try {
+    Storage.prototype.removeItem.call(window.localStorage, key);
+  } catch {}
+
+  try {
+    const realStorage = (window as any)._najranRealStorage;
+    if (realStorage && typeof realStorage.removeItem === "function") {
+      realStorage.removeItem(key);
+    }
+  } catch {}
+}
 const STATUS_CONFIG: Record<ExtractStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
   submitted: { label: "بانتظار المراجعة", color: "#2a5298", bg: "#eff6ff", icon: <Clock className="h-4 w-4" /> },
   under_review: { label: "قيد المراجعة", color: "#b45309", bg: "#fffbeb", icon: <Eye className="h-4 w-4" /> },
@@ -812,23 +845,27 @@ const canClear = await canClearCurrentLocalBeforeRevision();
 if (!canClear) return;
     backupCurrentLocalStorageBeforeRevision(extract.id);
 
-localStorage.setItem(REVISION_KEYS.mode, "true");
-localStorage.setItem(REVISION_KEYS.extractId, String(extract.id));
-localStorage.setItem(REVISION_KEYS.extractType, String(full.extractType || extract.extractType));
-localStorage.setItem(REVISION_KEYS.startedAt, new Date().toISOString());
-localStorage.setItem(REVISION_KEYS.bootLock, "true");
-localStorage.setItem(REVISION_KEYS.source, "submitted_extract_snapshot");
-localStorage.setItem(REVISION_KEYS.snapshot, JSON.stringify(data));
+const revisionStartedAt = new Date().toISOString();
+const revisionExtractType = String(full.extractType || extract.extractType);
+const revisionSnapshot = JSON.stringify(data);
+
+setRevisionStorage(REVISION_KEYS.mode, "true");
+setRevisionStorage(REVISION_KEYS.extractId, String(extract.id));
+setRevisionStorage(REVISION_KEYS.extractType, revisionExtractType);
+setRevisionStorage(REVISION_KEYS.startedAt, revisionStartedAt);
+setRevisionStorage(REVISION_KEYS.bootLock, "true");
+setRevisionStorage(REVISION_KEYS.source, "submitted_extract_snapshot");
+setRevisionStorage(REVISION_KEYS.snapshot, revisionSnapshot);
 
 clearOperationalKeysBeforeRevision();
 
-localStorage.setItem(REVISION_KEYS.mode, "true");
-localStorage.setItem(REVISION_KEYS.extractId, String(extract.id));
-localStorage.setItem(REVISION_KEYS.extractType, String(full.extractType || extract.extractType));
-localStorage.setItem(REVISION_KEYS.startedAt, new Date().toISOString());
-localStorage.setItem(REVISION_KEYS.bootLock, "true");
-localStorage.setItem(REVISION_KEYS.source, "submitted_extract_snapshot");
-localStorage.setItem(REVISION_KEYS.snapshot, JSON.stringify(data));
+setRevisionStorage(REVISION_KEYS.mode, "true");
+setRevisionStorage(REVISION_KEYS.extractId, String(extract.id));
+setRevisionStorage(REVISION_KEYS.extractType, revisionExtractType);
+setRevisionStorage(REVISION_KEYS.startedAt, revisionStartedAt);
+setRevisionStorage(REVISION_KEYS.bootLock, "true");
+setRevisionStorage(REVISION_KEYS.source, "submitted_extract_snapshot");
+setRevisionStorage(REVISION_KEYS.snapshot, revisionSnapshot);
 
 Object.entries(data).forEach(([key, value]) => writeLocalStorageValue(key, value));
 
@@ -837,7 +874,7 @@ if (full.contractNumber) localStorage.setItem("contractNumber", String(full.cont
 if (full.hospitalName) localStorage.setItem("hospitalName", String(full.hospitalName));
 if (full.periodMonth) localStorage.setItem("periodMonth", String(full.periodMonth));
 if (full.totalAmount != null) {
-  localStorage.setItem("najran_revision_previous_total_amount", String(full.totalAmount));
+  setRevisionStorage("najran_revision_previous_total_amount", String(full.totalAmount));
 }
 
 const persistent = (data as any).persistentExtractData;
