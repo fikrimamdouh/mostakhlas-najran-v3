@@ -292,11 +292,11 @@
       📡 المستخلصات المرفوعة للخادم
     </button>
     <button id="tab-local" onclick="switchTab('local')"
-      style="flex:1;min-width:150px;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #e2e8f0;background:#fff;color:#64748b">
+      style="flex:1;min-width:150px;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #475569;background:#475569;color:#fff;box-shadow:0 2px 8px rgba(71,85,105,.22)">
       💾 لقطات العمل المحلية
     </button>
     <button id="tab-pdf" onclick="switchTab('pdf')"
-      style="flex:1;min-width:150px;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #e2e8f0;background:#fff;color:#64748b">
+      style="flex:1;min-width:150px;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #e2e8f0;background:#475569;color:#fff;box-shadow:0 2px 8px rgba(71,85,105,.22)">
       📄 النسخ الموقّعة (PDF)
     </button>
   </div>
@@ -731,7 +731,7 @@
   /* ── Tab switching ── */
   var currentTab = 'server';
   var TAB_ON  = 'flex:1;min-width:150px;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #2a5298;background:linear-gradient(135deg,#1e3c72,#2a5298);color:#fff;box-shadow:0 2px 8px rgba(30,60,114,.2)';
-  var TAB_OFF = 'flex:1;min-width:150px;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #e2e8f0;background:#fff;color:#64748b';
+  var TAB_OFF = 'flex:1;min-width:150px;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #475569;background:#475569;color:#fff;box-shadow:0 2px 8px rgba(71,85,105,.22)';
   var TAB_PDF_ON = 'flex:1;min-width:150px;padding:11px 18px;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid #b91c1c;background:linear-gradient(135deg,#7f1d1d,#b91c1c);color:#fff;box-shadow:0 2px 8px rgba(185,28,28,.2)';
 
   function switchTab(tab) {
@@ -766,22 +766,49 @@
     return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;background:' + cfg.bg + ';color:' + cfg.color + ';border:1px solid ' + cfg.dot + '30">' +
       '<span style="width:7px;height:7px;border-radius:50%;background:' + cfg.dot + ';flex-shrink:0"></span>' + cfg.label + '</span>';
   }
-
-  async function loadServerData() {
-    var s = window.najranSession;
-    if (!s) return;
+async function loadServerData() {
     var headers = { 'Content-Type': 'application/json' };
-    if (s.clerkToken) headers['Authorization'] = 'Bearer ' + s.clerkToken;
+
+    var token = '';
+
     try {
-      var res = await fetch('/api/submitted-extracts', { headers: headers, credentials: 'include' });
-      if (!res.ok) throw new Error(res.status);
+      if (window.Clerk && window.Clerk.session && typeof window.Clerk.session.getToken === 'function') {
+        token = await window.Clerk.session.getToken();
+      }
+    } catch (_) {}
+
+    if (!token) {
+      try {
+        var s = window.najranSession || JSON.parse(localStorage.getItem('najran_session') || '{}');
+        token = s.clerkToken || '';
+      } catch (_) {}
+    }
+
+    if (!token) {
+      document.getElementById('server-container').innerHTML =
+        '<div class="empty-state"><i class="fas fa-lock" style="color:#f59e0b"></i><h3>تعذر التحميل</h3><p>جلسة الدخول لا تحتوي على توكن صالح. سجل خروج ودخول مرة أخرى.</p></div>';
+      return;
+    }
+
+    headers['Authorization'] = 'Bearer ' + token;
+
+    try {
+      var res = await fetch('/api/submitted-extracts-lite', {
+        headers: headers,
+        credentials: 'include'
+      });
+
+      if (!res.ok) throw new Error(String(res.status));
+
       var data = await res.json();
       serverExtracts = data.extracts || [];
+
       renderServer();
       renderStats(window.getExtractArchive(), serverExtracts.length);
     } catch (e) {
+      console.error('[ExtractArchive] failed to load server extracts', e);
       document.getElementById('server-container').innerHTML =
-        '<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:#f59e0b"></i><h3>تعذر التحميل</h3><p>تحقق من اتصالك أو تسجيل الدخول</p></div>';
+        '<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:#f59e0b"></i><h3>تعذر التحميل</h3><p>تحقق من الصلاحية أو تسجيل الدخول</p></div>';
     }
   }
 
