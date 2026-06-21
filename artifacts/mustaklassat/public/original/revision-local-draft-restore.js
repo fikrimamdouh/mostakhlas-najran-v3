@@ -22,7 +22,7 @@
       var isRevision =
         localStorage.getItem('najran_revision_mode') === 'true' &&
         localStorage.getItem('najran_revision_extract_id') &&
-        localStorage.getItem('najran_revision_boot_lock') === 'true';
+        localStorage.getItem('najran_revision_snapshot');
 
       if (!isRevision) return false;
 
@@ -124,15 +124,15 @@
       } catch (_) {}
     });
     if (currentSession) localStorage.setItem('najran_session', currentSession);
-   localStorage.removeItem(REVISION_KEY);
-localStorage.removeItem('najran_revision_mode');
-localStorage.removeItem('najran_revision_extract_type');
-localStorage.removeItem('najran_revision_started_at');
-localStorage.removeItem('najran_revision_boot_lock');
-localStorage.removeItem('najran_revision_source');
-localStorage.removeItem('najran_revision_snapshot');
-localStorage.removeItem('najran_revision_previous_total_amount');
-localStorage.removeItem(BACKUP_KEY);
+    localStorage.removeItem(REVISION_KEY);
+    localStorage.removeItem('najran_revision_mode');
+    localStorage.removeItem('najran_revision_extract_type');
+    localStorage.removeItem('najran_revision_started_at');
+    localStorage.removeItem('najran_revision_boot_lock');
+    localStorage.removeItem('najran_revision_source');
+    localStorage.removeItem('najran_revision_snapshot');
+    localStorage.removeItem('najran_revision_previous_total_amount');
+    localStorage.removeItem(BACKUP_KEY);
     window.location.href = target + '?restoredLocalDraft=1&v=' + Date.now();
   }
 
@@ -178,9 +178,5 @@ localStorage.removeItem(BACKUP_KEY);
 
   setTimeout(function () {
     if (!applyRevisionBootSnapshot()) show();
-  }, 800);
-
-  setTimeout(function () {
-    if (!applyRevisionBootSnapshot()) show();
-  }, 2500);
+  }, 1200);
 })();
