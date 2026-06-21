@@ -1,4 +1,4 @@
-// Restores a locally saved draft after editing/re-uploading an older submitted extract.
+t// Restores a locally saved draft after editing/re-uploading an older submitted extract.
 (function () {
   'use strict';
 
@@ -52,7 +52,9 @@
         localStorage.removeItem('najran_revision_boot_lock');
 
         console.warn('[RevisionBootGuard] submitted extract snapshot applied and boot lock cleared');
-
+try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
+try { if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint(); } catch (_) {}
+try { if (typeof window.renderTables === 'function') window.renderTables(); } catch (_) {}
         var alreadyReloaded = sessionStorage.getItem('najran_revision_reloaded');
         if (!alreadyReloaded) {
           sessionStorage.setItem('najran_revision_reloaded', '1');
