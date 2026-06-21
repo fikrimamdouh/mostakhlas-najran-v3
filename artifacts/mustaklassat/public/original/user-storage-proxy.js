@@ -128,7 +128,43 @@
     const proxy = new Proxy(localStorage, proxyHandler);
     Object.defineProperty(window, 'localStorage', { value: proxy, configurable: true, writable: false });
   } catch (_) {}
+
+  try {
+    const revisionKeys = [
+      'najran_revision_previous_local_backup',
+      'najran_revision_mode',
+      'najran_revision_extract_id',
+      'najran_revision_extract_type',
+      'najran_revision_started_at',
+      'najran_revision_boot_lock',
+      'najran_revision_source',
+      'najran_revision_snapshot',
+      'najran_revision_previous_total_amount'
+    ];
+
+    revisionKeys.forEach(function (key) {
+      const current = localStorage.getItem(key);
+      if (current != null) return;
+
+      const fallback = sessionStorage.getItem(key);
+      if (fallback != null) {
+        localStorage.setItem(key, fallback);
+        try { Storage.prototype.setItem.call(window._najranRealStorage || window.localStorage, key, fallback); } catch (_) {}
+      }
+    });
+
+    if (localStorage.getItem('najran_revision_mode') === 'true') {
+      console.warn('[RevisionBridge] revision keys restored for original page', {
+        mode: localStorage.getItem('najran_revision_mode'),
+        extractId: localStorage.getItem('najran_revision_extract_id'),
+        snapshotLen: (localStorage.getItem('najran_revision_snapshot') || '').length
+      });
+    }
+  } catch (e) {
+    console.warn('[RevisionBridge] failed', e);
+  }
 })();
+
 (function () {
   'use strict';
 
