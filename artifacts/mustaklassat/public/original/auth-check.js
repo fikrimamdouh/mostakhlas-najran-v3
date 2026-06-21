@@ -5,7 +5,7 @@
  */
 (function () {
   var BASE = window.location.origin;
-  var BUILD_V = '20260620localDraftNotif1';
+var BUILD_V = '20260621revisionBootSidebar1';
   var NOTIF_INTERVAL_MS = 300000;
   var notifFetchInProgress = false;
 
