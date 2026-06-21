@@ -128,7 +128,11 @@ appendScript('/original/hospital-storage-extract-context-guard.js?v=' + BUILD_V,
 
 var pageSig = window.location.pathname + window.location.search;
 
-if (!/\/original\/attendance\.html(?:$|[?#])/.test(pageSig)) {
+var isSidebarSensitivePage =
+  /\/original\/attendance\.html(?:$|[?#])/.test(pageSig) ||
+  /\/original\/admin_offices_attendance\.html(?:$|[?#])/.test(pageSig);
+
+if (!isSidebarSensitivePage) {
   appendScript('/original/home-sidebar-guard.js?v=20260621homeSidebarGuard1', false);
 }
 
