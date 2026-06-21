@@ -10,7 +10,7 @@ function isRevisionMode() {
   try {
     return localStorage.getItem('najran_revision_mode') === 'true'
       && !!localStorage.getItem('najran_revision_extract_id')
-      && localStorage.getItem('najran_revision_boot_lock') === 'true';
+      && !!localStorage.getItem('najran_revision_snapshot');
   } catch (_) {
     return false;
   }
@@ -304,6 +304,24 @@ function isRevisionMode() {
     }
 
     async function pushExtractSettingsDirect(data) {
+            if (isRevisionMode()) {
+        const payload = {
+          persistentExtractData: JSON.stringify(data),
+          extractMonth: data.extractMonth || '',
+          extractYear: String(data.extractYear || ''),
+          extractStart: data.extractStart || '',
+          extractEnd: data.extractEnd || '',
+          paymentNumber: data.paymentNumber || '',
+          extractNumber: data.paymentNumber || ''
+        };
+
+        Object.entries(payload).forEach(function(entry) {
+          localStorage.setItem(entry[0], entry[1]);
+        });
+
+        console.warn('[MonthCtx] REVISION MODE: حفظ إعدادات المستخلص محليًا فقط بدون رفع hospital-storage');
+        return { saved: Object.keys(payload).length, revisionOnly: true };
+      }
       const token = await getClerkTokenForExtractUpload();
       if (!token) {
         console.error('[MonthCtx] لا يوجد token صالح لرفع إعدادات المستخلص مباشرة');
@@ -391,7 +409,44 @@ function isRevisionMode() {
 
           const prevRaw = localStorage.getItem('persistentExtractData');
           const prevData = prevRaw ? JSON.parse(prevRaw) : {};
+          if (isRevisionMode()) {
+            const oldMonth = String(prevData.extractMonth || '').trim();
+            const oldYear = String(prevData.extractYear || '').trim();
+            const oldPayment = String(prevData.paymentNumber || prevData.extractNumber || '').trim();
 
+            const currentPayment = String(document.getElementById('payment-number')?.value || '').trim();
+
+            if (
+              oldMonth && oldYear &&
+              (
+                String(newMonth || '').trim() !== oldMonth ||
+                String(newYear || '').trim() !== oldYear ||
+                (oldPayment && currentPayment && currentPayment !== oldPayment)
+              )
+            ) {
+              alert(
+                'لا يمكن تغيير شهر أو سنة أو رقم دفعة مستخلص مرفوع أثناء التعديل.\n\n' +
+                'المستخلص الأصلي: ' + oldMonth + ' ' + oldYear + ' — دفعة ' + (oldPayment || '-') + '\n' +
+                'البيانات الحالية: ' + newMonth + ' ' + newYear + ' — دفعة ' + (currentPayment || '-') + '\n\n' +
+                'افتح بيانات المستخلص الأصلي أو ابدأ مستخلصًا جديدًا.'
+              );
+
+              const monthEl = document.getElementById('extract-month');
+              const yearEl = document.getElementById('extract-year');
+              const startEl = document.getElementById('extract-start');
+              const endEl = document.getElementById('extract-end');
+              const payEl = document.getElementById('payment-number');
+
+              if (monthEl) monthEl.value = oldMonth;
+              if (yearEl) yearEl.value = oldYear;
+              if (startEl && prevData.extractStart) startEl.value = prevData.extractStart;
+              if (endEl && prevData.extractEnd) endEl.value = prevData.extractEnd;
+              if (payEl && oldPayment) payEl.value = oldPayment;
+
+              if (typeof calculateExtractDurationDays === 'function') calculateExtractDurationDays();
+              return;
+            }
+          }
           const prevMonth = (prevData.extractMonth || '').trim();
           const prevYear  = String(prevData.extractYear || '').trim();
           const prevKey   = prevMonth && prevYear ? `${prevYear}_${prevMonth}` : null;
