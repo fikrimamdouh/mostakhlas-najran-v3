@@ -224,7 +224,7 @@ function showLocalProtectionModal(options) {
         '</div>' +
 
         '<div style="display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;margin-top:16px;">' +
-          '<button id="najran-local-protection-primary" style="background:linear-gradient(135deg,#166534,#16a34a);' +
+          '<button id="najran-local-protection-primary" style="background:linear-gradient(135deg,#15803d,#16a34a) !important;' +
             'color:white;border:0;border-radius:12px;padding:12px 18px;font-weight:900;cursor:pointer;' +
             'font-family:Tajawal,Arial,sans-serif;">' + (options.primaryText || 'حفظ محليًا ثم المتابعة') + '</button>' +
 
