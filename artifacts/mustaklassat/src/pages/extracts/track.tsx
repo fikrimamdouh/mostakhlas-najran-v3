@@ -535,12 +535,6 @@ function showSaveCurrentBeforeRevisionModal(): Promise<boolean> {
 }
 async function canClearCurrentLocalBeforeRevision(): Promise<boolean> {
   if (!hasCurrentLocalOperationalWork()) return true;
-
-  if (hasCurrentLocalSavedSnapshot()) {
-    console.warn("[Revision] current local work has saved snapshot — safe to clear operational local data");
-    return true;
-  }
-
   return await showSaveCurrentBeforeRevisionModal();
 }
 function clearOperationalKeysBeforeRevision() {
@@ -840,7 +834,6 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
   }
 
   const handleRevise = async () => {
-    alert("دخلت مسار handleRevise المعدل");
 console.warn("[RevisionDebug] handleRevise clicked", {
   extractId: extract.id,
   extractType: extract.extractType,
