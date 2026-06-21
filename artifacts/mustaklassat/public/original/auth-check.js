@@ -123,15 +123,17 @@
     return script;
   }
 
-  appendScript('/original/hospital-context-guard.js?v=20260611d', false);
-  appendScript('/original/hospital-storage-extract-context-guard.js?v=' + BUILD_V, false);
+ appendScript('/original/hospital-context-guard.js?v=20260611d', false);
+appendScript('/original/hospital-storage-extract-context-guard.js?v=' + BUILD_V, false);
+
+var pageSig = window.location.pathname + window.location.search;
+
+if (!/\/original\/attendance\.html(?:$|[?#])/.test(pageSig)) {
   appendScript('/original/home-sidebar-guard.js?v=20260621homeSidebarGuard1', false);
+}
 
-  var pageSig = window.location.pathname + window.location.search;
-
-  appendScript('/original/approve-button-polish.js?v=' + BUILD_V, true);
-  appendScript('/original/revision-local-draft-restore.js?v=' + BUILD_V, true);
-
+appendScript('/original/approve-button-polish.js?v=' + BUILD_V, true);
+appendScript('/original/revision-local-draft-restore.js?v=' + BUILD_V, true);
   if (
     /\/original\/(attendance|performance|achievement|consumables|spare_parts|health_centers_attendance|health_centers_consumables|admin_offices_attendance|admin_offices_consumables|najran_general_attendance|najran_general_performance|najran_general_achievement|najran_dental_attendance|najran_dental_performance)\.html(?:$|[?#])/.test(pageSig)
   ) {
