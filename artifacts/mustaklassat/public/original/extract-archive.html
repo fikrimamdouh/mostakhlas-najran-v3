@@ -175,7 +175,22 @@
       background: linear-gradient(135deg, #7f1d1d, #dc2626); color: #fff;
       flex: 0; min-width: 40px;
     }
+/* قاعدة خاصة بأرشيف المستخلصات: ممنوع زر أبيض داخل المحلي */
+#section-local button,
+#section-local .arc-btn,
+#section-local .btn-hdr {
+  background: linear-gradient(135deg, #1e3c72, #2a5298) !important;
+  color: #fff !important;
+  border: 1px solid #1e3c72 !important;
+  box-shadow: 0 2px 8px rgba(30,60,114,.22) !important;
+}
 
+#section-local .btn-danger,
+#section-local .arc-btn-del {
+  background: linear-gradient(135deg, #7f1d1d, #dc2626) !important;
+  color: #fff !important;
+  border-color: #7f1d1d !important;
+}
     .arc-date { font-size: 11px; color: #94a3b8; margin-top: 10px; text-align: center; }
 
     /* ── Print ── */
