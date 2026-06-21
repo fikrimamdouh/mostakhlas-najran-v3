@@ -8,7 +8,58 @@
   function parse(raw, fallback) {
     try { return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
   }
+  function writeValue(key, value) {
+    if (value == null) return;
+    try {
+      localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
+    } catch (_) {
+      try { localStorage.setItem(key, String(value)); } catch (__) {}
+    }
+  }
 
+  function applyRevisionBootSnapshot() {
+    try {
+      var isRevision =
+        localStorage.getItem('najran_revision_mode') === 'true' &&
+        localStorage.getItem('najran_revision_extract_id') &&
+        localStorage.getItem('najran_revision_boot_lock') === 'true';
+
+      if (!isRevision) return false;
+
+      var rawSnapshot = localStorage.getItem('najran_revision_snapshot');
+      if (!rawSnapshot) return false;
+
+      var snapshot = parse(rawSnapshot, null);
+      if (!snapshot || typeof snapshot !== 'object') return false;
+
+      console.warn('[RevisionBootGuard] applying submitted extract snapshot after page load');
+
+      clearOperational();
+
+      Object.keys(snapshot).forEach(function (key) {
+        writeValue(key, snapshot[key]);
+      });
+
+      localStorage.setItem('najran_revision_mode', 'true');
+      localStorage.setItem('najran_revision_boot_lock', 'true');
+
+      setTimeout(function () {
+        Object.keys(snapshot).forEach(function (key) {
+          writeValue(key, snapshot[key]);
+        });
+
+        localStorage.setItem('najran_revision_mode', 'true');
+        localStorage.removeItem('najran_revision_boot_lock');
+
+        console.warn('[RevisionBootGuard] submitted extract snapshot applied and boot lock cleared');
+      }, 900);
+
+      return true;
+    } catch (e) {
+      console.warn('[RevisionBootGuard] failed to apply revision snapshot', e);
+      return false;
+    }
+  }
   function getBackup() {
     if (localStorage.getItem(REVISION_KEY)) return null;
     var backup = parse(localStorage.getItem(BACKUP_KEY), null);
@@ -117,8 +168,19 @@ localStorage.removeItem(BACKUP_KEY);
     };
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show);
-  else show();
-  setTimeout(show, 800);
-  setTimeout(show, 2500);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      if (!applyRevisionBootSnapshot()) show();
+    });
+  } else {
+    if (!applyRevisionBootSnapshot()) show();
+  }
+
+  setTimeout(function () {
+    if (!applyRevisionBootSnapshot()) show();
+  }, 800);
+
+  setTimeout(function () {
+    if (!applyRevisionBootSnapshot()) show();
+  }, 2500);
 })();
