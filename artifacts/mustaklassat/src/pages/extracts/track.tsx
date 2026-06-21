@@ -54,7 +54,15 @@ const TYPE_PAGES: Record<ExtractType, string> = {
   spare_parts: "/original/spare_parts.html",
   admin_offices: "/original/admin_offices_attendance.html",
 };
-
+const REVISION_KEYS = {
+  mode: "najran_revision_mode",
+  extractId: "najran_revision_extract_id",
+  extractType: "najran_revision_extract_type",
+  startedAt: "najran_revision_started_at",
+  bootLock: "najran_revision_boot_lock",
+  source: "najran_revision_source",
+  snapshot: "najran_revision_snapshot",
+};
 const STATUS_CONFIG: Record<ExtractStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
   submitted: { label: "بانتظار المراجعة", color: "#2a5298", bg: "#eff6ff", icon: <Clock className="h-4 w-4" /> },
   under_review: { label: "قيد المراجعة", color: "#b45309", bg: "#fffbeb", icon: <Eye className="h-4 w-4" /> },
@@ -129,7 +137,183 @@ function backupCurrentLocalStorageBeforeRevision(extractId: number) {
     }));
   } catch (_) {}
 }
+function getCurrentLocalExtractKey(): string | null {
+  try {
+    const raw = localStorage.getItem("persistentExtractData");
+    const p = raw ? JSON.parse(raw) : {};
 
+    const month = String(p.extractMonth || localStorage.getItem("extractMonth") || "").trim();
+    const year = String(p.extractYear || localStorage.getItem("extractYear") || "").trim();
+
+    if (!month || !year) return null;
+    return `${year}_${month}`;
+  } catch {
+    return null;
+  }
+}
+
+function hasCurrentLocalSavedSnapshot(): boolean {
+  const key = getCurrentLocalExtractKey();
+  if (!key) return false;
+
+  try {
+    return !!localStorage.getItem("monthSnapshot_" + key);
+  } catch {
+    return false;
+  }
+}
+
+function hasCurrentLocalOperationalWork(): boolean {
+  try {
+    const keys = [
+      "attendanceData",
+      "ng_attendanceData",
+      "nd_attendanceData",
+      "healthCentersAttendanceData",
+      "centersAttendanceData_v2",
+      "adminOfficesAttendanceData_v1",
+      "performanceData",
+      "performanceData_v4",
+      "performanceDeductions",
+      "achievementData",
+      "achievementTitles_v1",
+      "achievementItemNames",
+      "consumablesTableData",
+      "healthCentersConsumables",
+      "mainHospitalConsumables",
+      "admin_offices_consumables_v1.0",
+      "spare_partsData",
+      "sparePartsTotalAmount",
+    ];
+
+    for (const key of keys) {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return true;
+        if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) return true;
+      } catch {
+        if (String(raw).trim()) return true;
+      }
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+function showSaveCurrentBeforeRevisionModal(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const old = document.getElementById("najran-save-current-before-revision-modal");
+    if (old) old.remove();
+
+    const modal = document.createElement("div");
+    modal.id = "najran-save-current-before-revision-modal";
+    modal.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 9999999;
+      background: rgba(15, 23, 42, 0.62);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      direction: rtl;
+      font-family: Tajawal, Arial, sans-serif;
+    `;
+
+    modal.innerHTML = `
+      <div style="
+        width: min(560px, 94vw);
+        background: #ffffff;
+        border-radius: 22px;
+        padding: 24px;
+        box-shadow: 0 28px 80px rgba(0,0,0,.32);
+        border-top: 7px solid #d97706;
+        text-align: right;
+      ">
+        <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:14px;">
+          <div style="
+            width:48px;height:48px;border-radius:16px;
+            background:#fff7ed;color:#d97706;
+            display:flex;align-items:center;justify-content:center;
+            font-size:26px;font-weight:900;
+          ">!</div>
+
+          <div>
+            <h2 style="margin:0;color:#92400e;font-size:22px;font-weight:900;">
+              احفظ المستخلص الحالي قبل التعديل
+            </h2>
+            <p style="margin:8px 0 0;color:#475569;font-size:14px;line-height:1.9;">
+              يوجد شغل محلي حالي على هذا الجهاز ولم نجد له نسخة محفوظة في الأرشيف المحلي.
+              فتح مستخلص قديم للتعديل سيمسح البيانات المحلية الحالية مؤقتًا حتى يتم تحميل بيانات المستخلص القديم.
+            </p>
+          </div>
+        </div>
+
+        <div style="
+          background:#fffbeb;
+          border:1px solid #fde68a;
+          color:#78350f;
+          border-radius:14px;
+          padding:12px 14px;
+          font-size:13px;
+          line-height:1.9;
+          margin:14px 0;
+        ">
+          الإجراء الصحيح: ارجع واحفظ المستخلص الحالي أو اعمل Snapshot له من الإعدادات، ثم افتح التعديل مرة أخرى.
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;margin-top:16px;">
+          <button id="najran-go-save-current" style="
+            background:linear-gradient(135deg,#1e3c72,#2a5298);
+            color:white;border:0;border-radius:12px;
+            padding:12px 18px;font-weight:900;cursor:pointer;
+            font-family:Tajawal,Arial,sans-serif;
+          ">الذهاب لحفظ المستخلص الحالي</button>
+
+          <button id="najran-cancel-revision-open" style="
+            background:#475569;color:white;border:0;border-radius:12px;
+            padding:12px 18px;font-weight:900;cursor:pointer;
+            font-family:Tajawal,Arial,sans-serif;
+          ">إلغاء التعديل الآن</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const goSave = document.getElementById("najran-go-save-current");
+    const cancel = document.getElementById("najran-cancel-revision-open");
+
+    if (goSave) {
+      goSave.onclick = () => {
+        modal.remove();
+        window.location.href = "/original/settings_main.html";
+        resolve(false);
+      };
+    }
+
+    if (cancel) {
+      cancel.onclick = () => {
+        modal.remove();
+        resolve(false);
+      };
+    }
+  });
+}
+async function canClearCurrentLocalBeforeRevision(): Promise<boolean> {
+  if (!hasCurrentLocalOperationalWork()) return true;
+
+  if (hasCurrentLocalSavedSnapshot()) {
+    console.warn("[Revision] current local work has saved snapshot — safe to clear operational local data");
+    return true;
+  }
+
+  await showSaveCurrentBeforeRevisionModal();
+  return false;
+}
 function clearOperationalKeysBeforeRevision() {
   const exactKeys = [
     "attendanceData", "ng_attendanceData", "nd_attendanceData",
@@ -145,10 +329,9 @@ function clearOperationalKeysBeforeRevision() {
   ];
 
   const prefixes = [
-    "deptCalculatedCost_", "dept_", "tableData_", "achievement_", "consumables_", "spare_",
-    "water_", "sewage_", "subcontractors_", "najran_labor_", "najran_health_", "najran_admin_", "monthSnapshot_",
-  ];
-
+  "deptCalculatedCost_", "dept_", "tableData_", "achievement_", "consumables_", "spare_",
+  "water_", "sewage_", "subcontractors_", "najran_labor_", "najran_health_", "najran_admin_",
+];
   exactKeys.forEach(key => localStorage.removeItem(key));
   for (let i = localStorage.length - 1; i >= 0; i--) {
     const key = localStorage.key(i);
@@ -429,7 +612,6 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
 
   const handleRevise = async () => {
     if (isPreparingRevision) return;
-   if (blockRevisionBecauseLocalWorkExists()) return;
     setIsPreparingRevision(true);
 
     try {
@@ -451,22 +633,53 @@ function ExtractCard({ extract, isAdmin, currentUserId }: {
         alert("لا توجد بيانات محفوظة داخل هذا المستخلص للتعديل");
         return;
       }
+const canClear = await canClearCurrentLocalBeforeRevision();
+if (!canClear) return;
+    backupCurrentLocalStorageBeforeRevision(extract.id);
 
-      backupCurrentLocalStorageBeforeRevision(extract.id);
-      clearOperationalKeysBeforeRevision();
+localStorage.setItem(REVISION_KEYS.mode, "true");
+localStorage.setItem(REVISION_KEYS.extractId, String(extract.id));
+localStorage.setItem(REVISION_KEYS.extractType, String(full.extractType || extract.extractType));
+localStorage.setItem(REVISION_KEYS.startedAt, new Date().toISOString());
+localStorage.setItem(REVISION_KEYS.bootLock, "true");
+localStorage.setItem(REVISION_KEYS.source, "submitted_extract_snapshot");
+localStorage.setItem(REVISION_KEYS.snapshot, JSON.stringify(data));
 
-      Object.entries(data).forEach(([key, value]) => writeLocalStorageValue(key, value));
+clearOperationalKeysBeforeRevision();
 
-      localStorage.setItem("najran_revision_extract_id", String(extract.id));
-      localStorage.setItem("najran_revision_mode", "true");
-      localStorage.setItem("najran_revision_extract_type", String(full.extractType || extract.extractType));
-      localStorage.setItem("najran_revision_started_at", new Date().toISOString());
+localStorage.setItem(REVISION_KEYS.mode, "true");
+localStorage.setItem(REVISION_KEYS.extractId, String(extract.id));
+localStorage.setItem(REVISION_KEYS.extractType, String(full.extractType || extract.extractType));
+localStorage.setItem(REVISION_KEYS.startedAt, new Date().toISOString());
+localStorage.setItem(REVISION_KEYS.bootLock, "true");
+localStorage.setItem(REVISION_KEYS.source, "submitted_extract_snapshot");
+localStorage.setItem(REVISION_KEYS.snapshot, JSON.stringify(data));
 
-      if (full.companyName) localStorage.setItem("companyName", String(full.companyName));
-      if (full.contractNumber) localStorage.setItem("contractNumber", String(full.contractNumber));
-      if (full.hospitalName) localStorage.setItem("hospitalName", String(full.hospitalName));
-      if (full.periodMonth) localStorage.setItem("periodMonth", String(full.periodMonth));
-      if (full.totalAmount != null) localStorage.setItem("najran_revision_previous_total_amount", String(full.totalAmount));
+Object.entries(data).forEach(([key, value]) => writeLocalStorageValue(key, value));
+
+if (full.companyName) localStorage.setItem("companyName", String(full.companyName));
+if (full.contractNumber) localStorage.setItem("contractNumber", String(full.contractNumber));
+if (full.hospitalName) localStorage.setItem("hospitalName", String(full.hospitalName));
+if (full.periodMonth) localStorage.setItem("periodMonth", String(full.periodMonth));
+if (full.totalAmount != null) {
+  localStorage.setItem("najran_revision_previous_total_amount", String(full.totalAmount));
+}
+
+const persistent = (data as any).persistentExtractData;
+const p = typeof persistent === "string"
+  ? (() => { try { return JSON.parse(persistent); } catch { return {}; } })()
+  : (persistent || {});
+
+if (p.extractMonth) localStorage.setItem("extractMonth", String(p.extractMonth));
+if (p.extractYear) localStorage.setItem("extractYear", String(p.extractYear));
+if (p.extractStart) localStorage.setItem("extractStart", String(p.extractStart));
+if (p.extractEnd) localStorage.setItem("extractEnd", String(p.extractEnd));
+
+const revisionPayment = p.paymentNumber || p.extractNumber;
+if (revisionPayment) {
+  localStorage.setItem("paymentNumber", String(revisionPayment));
+  localStorage.setItem("extractNumber", String(revisionPayment));
+}
 
       window.location.href = TYPE_PAGES[extract.extractType] || "/original/attendance.html";
     } catch (err) {
