@@ -169,7 +169,41 @@ function parseExtractData(value: unknown): Record<string, unknown> {
   if (typeof value === "object") return value as Record<string, unknown>;
   return {};
 }
+function normalizeSubmittedExtractSnapshot(raw: Record<string, unknown>): Record<string, unknown> {
+  if (!raw || typeof raw !== "object") return {};
 
+  const candidates = [
+    (raw as any).localStorageSnapshot,
+    (raw as any).storageSnapshot,
+    (raw as any).snapshot,
+    (raw as any).submittedData,
+    (raw as any).extractData,
+  ];
+
+  for (const candidate of candidates) {
+    const parsed = parseExtractData(candidate);
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      Object.keys(parsed).some((key) =>
+        key === "persistentExtractData" ||
+        key === "attendanceData" ||
+        key === "ng_attendanceData" ||
+        key === "nd_attendanceData" ||
+        key === "healthCentersAttendanceData" ||
+        key === "adminOfficesAttendanceData_v1" ||
+        key === "performanceData" ||
+        key === "achievementData" ||
+        key === "consumablesTableData" ||
+        key === "spare_partsData"
+      )
+    ) {
+      return parsed;
+    }
+  }
+
+  return raw;
+}
 function writeLocalStorageValue(key: string, value: unknown) {
   if (value == null) return;
   localStorage.setItem(key, typeof value === "string" ? value : JSON.stringify(value));
@@ -854,9 +888,9 @@ console.warn("[RevisionDebug] handleRevise clicked", {
         return;
       }
 
-      const full = await res.json();
-      const data = parseExtractData(full.extractData);
-
+const full = await res.json();
+const rawData = parseExtractData(full.extractData);
+const data = normalizeSubmittedExtractSnapshot(rawData);
       if (!data || Object.keys(data).length === 0) {
         alert("لا توجد بيانات محفوظة داخل هذا المستخلص للتعديل");
         return;
@@ -908,7 +942,29 @@ const storage = (window as any)._najranRealStorage || window.localStorage;
   console.warn("[RevisionDebug] raw revision storage write failed", e);
 }
 Object.entries(data).forEach(([key, value]) => writeLocalStorageValue(key, value));
+const restoredPersistent = localStorage.getItem("persistentExtractData");
+const restoredAttendance =
+  localStorage.getItem("attendanceData") ||
+  localStorage.getItem("ng_attendanceData") ||
+  localStorage.getItem("nd_attendanceData") ||
+  localStorage.getItem("healthCentersAttendanceData") ||
+  localStorage.getItem("adminOfficesAttendanceData_v1");
 
+if (!restoredPersistent) {
+  console.warn("[RevisionDebug] persistentExtractData missing after snapshot restore", {
+    extractId: extract.id,
+    dataKeys: Object.keys(data),
+    rawKeys: Object.keys(rawData),
+  });
+}
+
+if (!restoredAttendance && extract.extractType === "labor") {
+  console.warn("[RevisionDebug] attendanceData missing after snapshot restore", {
+    extractId: extract.id,
+    dataKeys: Object.keys(data),
+    rawKeys: Object.keys(rawData),
+  });
+}
 if (full.companyName) localStorage.setItem("companyName", String(full.companyName));
 if (full.contractNumber) localStorage.setItem("contractNumber", String(full.contractNumber));
 if (full.hospitalName) localStorage.setItem("hospitalName", String(full.hospitalName));
