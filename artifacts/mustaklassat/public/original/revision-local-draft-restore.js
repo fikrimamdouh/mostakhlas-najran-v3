@@ -437,6 +437,68 @@ function installRevisionWorkingAutosave() {
     console.warn('[RevisionWorking] failed to install autosave', e);
   }
 }
+  function applyRevisionBootSnapshot() {
+  try {
+    var isRevision =
+      localStorage.getItem('najran_revision_mode') === 'true' &&
+      localStorage.getItem('najran_revision_extract_id') &&
+      localStorage.getItem('najran_revision_snapshot');
+
+    if (!isRevision) return false;
+
+    var rawSnapshot = localStorage.getItem('najran_revision_snapshot');
+    if (!rawSnapshot) return false;
+
+    var snapshot = getRevisionBootSnapshot(rawSnapshot);
+    if (!snapshot || typeof snapshot !== 'object') return false;
+
+    snapshot = normalizeRevisionSnapshotSettings(snapshot);
+
+    console.warn('[RevisionBootGuard] applying revision snapshot after page load');
+
+    clearOperational();
+
+    Object.keys(snapshot).forEach(function (key) {
+      writeValue(key, snapshot[key]);
+    });
+
+    hydrateRevisionExtractSettings(snapshot);
+    refreshSettingsPageAfterRevisionHydrate();
+
+    localStorage.setItem('najran_revision_mode', 'true');
+    localStorage.setItem('najran_revision_boot_lock', 'true');
+
+    setTimeout(function () {
+      Object.keys(snapshot).forEach(function (key) {
+        writeValue(key, snapshot[key]);
+      });
+
+      hydrateRevisionExtractSettings(snapshot);
+      refreshSettingsPageAfterRevisionHydrate();
+
+      localStorage.setItem('najran_revision_mode', 'true');
+      localStorage.removeItem('najran_revision_boot_lock');
+
+      console.warn('[RevisionBootGuard] snapshot applied — rendering tables without reload');
+
+      try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
+      try { if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint(); } catch (_) {}
+      try { if (typeof window.renderTables === 'function') window.renderTables(); } catch (_) {}
+
+      setTimeout(function () {
+        try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
+        try { if (typeof window.renderTables === 'function') window.renderTables(); } catch (_) {}
+        console.warn('[RevisionBootGuard] second renderTables done');
+      }, 800);
+
+    }, 900);
+
+    return true;
+  } catch (e) {
+    console.warn('[RevisionBootGuard] failed to apply revision snapshot', e);
+    return false;
+  }
+}
   function refreshSettingsPageAfterRevisionHydrate() {
   try {
     var isSettingsPage =
