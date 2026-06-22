@@ -218,6 +218,7 @@ var extract =
 
 function collectRevisionOperationalData() {
   var data = {};
+
   var keys = [
     'attendanceData','ng_attendanceData','nd_attendanceData',
     'centersAttendanceData_v2','healthCentersAttendanceData','adminOfficesAttendanceData_v1',
@@ -247,12 +248,43 @@ function collectRevisionOperationalData() {
     'najran_admin_offices_attendance_done'
   ];
 
+  var prefixes = [
+    'deptCalculatedCost_',
+    'dept_',
+    'tableData_',
+    'achievement_',
+    'consumables_',
+    'spare_',
+    'water_',
+    'sewage_',
+    'subcontractors_',
+    'najran_labor_',
+    'najran_health_',
+    'najran_admin_'
+  ];
+
   keys.forEach(function (key) {
     try {
       var val = localStorage.getItem(key);
       if (val != null) data[key] = val;
     } catch (_) {}
   });
+
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (!k) continue;
+
+      var matched = prefixes.some(function (p) {
+        return k.indexOf(p) === 0;
+      });
+
+      if (!matched) continue;
+
+      var v = localStorage.getItem(k);
+      if (v != null) data[k] = v;
+    }
+  } catch (_) {}
 
   return data;
 }
@@ -372,7 +404,32 @@ function installRevisionWorkingAutosave() {
       najran_health_attendance_done: true,
       najran_admin_offices_attendance_done: true
     };
+var watchedPrefixes = [
+  'deptCalculatedCost_',
+  'dept_',
+  'tableData_',
+  'achievement_',
+  'consumables_',
+  'spare_',
+  'water_',
+  'sewage_',
+  'subcontractors_',
+  'najran_labor_',
+  'najran_health_',
+  'najran_admin_'
+];
 
+function isWatchedRevisionKey(key) {
+  if (watchedKeys[key]) return true;
+
+  for (var i = 0; i < watchedPrefixes.length; i++) {
+    if (String(key || '').indexOf(watchedPrefixes[i]) === 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
     function schedule(reason) {
       if (!isRevisionActiveNow()) return;
       clearTimeout(timer);
@@ -392,11 +449,11 @@ function installRevisionWorkingAutosave() {
         originalSetItem(key, value);
 
         try {
-          if (
+                   if (
             isRevisionActiveNow() &&
             key !== WORKING_KEY &&
             key !== 'najran_revision_snapshot' &&
-            watchedKeys[key]
+            isWatchedRevisionKey(key)
           ) {
             schedule('localStorage:' + key);
           }
