@@ -150,6 +150,21 @@
     if (!current.userId && !current.email) return;
     if (!current.hospital) return;
 
+    // أثناء تعديل مستخلص محفوظ: ممنوع مسح البيانات التشغيلية
+    // لأن Snapshot المستخلص القديم هو المصدر الصحيح في هذه اللحظة.
+    try {
+      const isRevision =
+        localStorage.getItem('najran_revision_mode') === 'true' &&
+        !!localStorage.getItem('najran_revision_extract_id') &&
+        !!localStorage.getItem('najran_revision_snapshot');
+
+      if (isRevision) {
+        console.warn('[HospitalContextGuard] REVISION MODE: تم منع مسح البيانات التشغيلية أثناء تعديل مستخلص محفوظ');
+        localStorage.setItem(CONTEXT_KEY, JSON.stringify(current));
+        return;
+      }
+    } catch (_) {}
+
     let previous = null;
     try {
       previous = JSON.parse(localStorage.getItem(CONTEXT_KEY) || 'null');
@@ -176,6 +191,4 @@
 
     localStorage.setItem(CONTEXT_KEY, JSON.stringify(current));
   }
-
-  runGuard();
 })();
