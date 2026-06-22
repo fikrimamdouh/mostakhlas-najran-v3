@@ -406,16 +406,308 @@ refreshSettingsPageAfterRevisionHydrate();
       if (confirm('سيتم حذف المسودة المحلية المحفوظة من هذا الجهاز. هل تريد المتابعة؟')) discard();
     };
   }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () {
-      if (!applyRevisionBootSnapshot()) show();
-    });
-  } else {
-    if (!applyRevisionBootSnapshot()) show();
+function isActiveRevisionMode() {
+  try {
+    return localStorage.getItem('najran_revision_mode') === 'true' &&
+      !!localStorage.getItem('najran_revision_extract_id') &&
+      !!localStorage.getItem('najran_revision_snapshot');
+  } catch (_) {
+    return false;
   }
+}
 
-  setTimeout(function () {
+function parseRevisionObj(v) {
+  if (!v) return {};
+  if (typeof v === 'object') return v;
+  try { return JSON.parse(v); } catch (_) { return {}; }
+}
+
+function getRevisionInfoLabel() {
+  try {
+    var snap = parseRevisionObj(localStorage.getItem('najran_revision_snapshot'));
+    var extract = parseRevisionObj(snap.persistentExtractData);
+    var contract = parseRevisionObj(localStorage.getItem('persistentContractData'));
+
+    var id = localStorage.getItem('najran_revision_extract_id') || '';
+    var payment =
+      extract.paymentNumber ||
+      extract.extractNumber ||
+      snap.paymentNumber ||
+      snap.extractNumber ||
+      localStorage.getItem('paymentNumber') ||
+      localStorage.getItem('extractNumber') ||
+      '';
+
+    var month =
+      extract.extractMonth ||
+      snap.extractMonth ||
+      snap.month ||
+      localStorage.getItem('extractMonth') ||
+      '';
+
+    var year =
+      extract.extractYear ||
+      snap.extractYear ||
+      snap.year ||
+      localStorage.getItem('extractYear') ||
+      '';
+
+    var start =
+      extract.extractStart ||
+      extract.extractFromDate ||
+      snap.extractStart ||
+      snap.extractFromDate ||
+      localStorage.getItem('extractStart') ||
+      '';
+
+    var end =
+      extract.extractEnd ||
+      extract.extractToDate ||
+      snap.extractEnd ||
+      snap.extractToDate ||
+      localStorage.getItem('extractEnd') ||
+      '';
+
+    var hospital =
+      contract.hospitalName ||
+      snap.hospitalName ||
+      snap.hospital ||
+      '';
+
+    var company =
+      contract.companyName ||
+      snap.companyName ||
+      snap.company ||
+      '';
+
+    return [
+      id ? 'رقم المستخلص: ' + id : '',
+      payment ? 'رقم الدفعة: ' + payment : '',
+      (month || year) ? 'الفترة: ' + [month, year].filter(Boolean).join(' ') : '',
+      (start || end) ? 'من ' + start + ' إلى ' + end : '',
+      hospital ? 'الموقع: ' + hospital : '',
+      company ? 'الشركة: ' + company : ''
+    ].filter(Boolean).join(' — ');
+  } catch (_) {
+    return '';
+  }
+}
+
+function clearRevisionOnly() {
+  [
+    'najran_revision_mode',
+    'najran_revision_extract_id',
+    'najran_revision_extract_type',
+    'najran_revision_started_at',
+    'najran_revision_boot_lock',
+    'najran_revision_source',
+    'najran_revision_snapshot',
+    'najran_revision_previous_total_amount'
+  ].forEach(function (key) {
+    try { localStorage.removeItem(key); } catch (_) {}
+  });
+
+  try { sessionStorage.removeItem('najran_revision_reloaded'); } catch (_) {}
+}
+
+function saveCurrentRevisionLocalDraftBeforeExit() {
+  try {
+    var data = {};
+    var keys = [
+      'attendanceData','ng_attendanceData','nd_attendanceData',
+      'centersAttendanceData_v2','healthCentersAttendanceData','adminOfficesAttendanceData_v1',
+
+      'persistentContractData','persistentExtractData',
+      'extractMonth','extractYear','extractNumber',
+      'extractStart','extractEnd','extractFromDate','extractToDate',
+      'paymentNumber','periodMonth',
+
+      'performanceData','performanceData_v4',
+      'performanceDeductions','performanceTotalDeduction','performanceTotalDue',
+
+      'achievementData','achievementTitles_v1','achievementItemNames',
+
+      'consumablesTableData','healthCentersConsumables',
+      'mainHospitalConsumables','admin_offices_consumables_v1.0',
+
+      'spare_partsData','sparePartsTotalAmount',
+
+      'approvalData','displayApprovalData',
+      'finalLaborCost','finalConsumablesCost',
+      'grand-net-total','grand-net-total-centers','grand-net-total-admin',
+
+      'najran_labor_attendance_done',
+      'najran_labor_performance_done',
+      'najran_health_attendance_done',
+      'najran_admin_offices_attendance_done'
+    ];
+
+    keys.forEach(function (key) {
+      try {
+        var val = localStorage.getItem(key);
+        if (val != null) data[key] = val;
+      } catch (_) {}
+    });
+
+    var backup = {
+      savedAt: new Date().toISOString(),
+      reason: 'revision-exit-local-draft',
+      revisionExtractId: localStorage.getItem('najran_revision_extract_id') || '',
+      label: getRevisionInfoLabel(),
+      data: data
+    };
+
+    localStorage.setItem('najran_revision_previous_local_backup', JSON.stringify(backup));
+
+    console.warn('[RevisionExit] local draft saved before leaving revision', backup.label);
+
+    return true;
+  } catch (e) {
+    console.warn('[RevisionExit] failed to save local draft before exit', e);
+    return false;
+  }
+}
+
+function showRevisionExitModal() {
+  try {
+    if (!isActiveRevisionMode()) return;
+
+    var old = document.getElementById('najran-revision-exit-modal');
+    if (old) old.remove();
+
+    var label = getRevisionInfoLabel() || 'مستخلص محفوظ قيد التعديل';
+
+    var modal = document.createElement('div');
+    modal.id = 'najran-revision-exit-modal';
+    modal.className = 'no-print';
+    modal.style.cssText =
+      'position:fixed;inset:0;background:rgba(15,23,42,.58);z-index:1000000;' +
+      'display:flex;align-items:center;justify-content:center;direction:rtl;' +
+      'font-family:Tajawal,Arial,sans-serif;';
+
+    modal.innerHTML =
+      '<div style="width:min(640px,94vw);background:#fff;border-radius:18px;padding:22px;' +
+        'box-shadow:0 24px 70px rgba(0,0,0,.32);border-top:6px solid #991b1b;text-align:right;">' +
+
+        '<h2 style="margin:0 0 12px;color:#991b1b;font-size:22px;font-weight:900;">أنت الآن تقوم بتعديل مستخلص محفوظ</h2>' +
+
+        '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;' +
+          'color:#334155;font-size:14px;line-height:1.9;margin-bottom:14px;">' +
+          label +
+        '</div>' +
+
+        '<p style="margin:0 0 14px;color:#475569;font-size:14px;line-height:1.9;">' +
+          'اختيار الخروج سينهي وضع التعديل الحالي ويرجعك إلى صفحة المستخلصات المحفوظة. لن يتم رفع أي شيء للسحابة من هذا الاختيار.' +
+        '</p>' +
+
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-start;">' +
+          '<button id="najran-revision-save-exit" style="background:#166534;color:#fff;border:0;border-radius:10px;padding:11px 15px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">حفظ نسخة محلية والخروج</button>' +
+          '<button id="najran-revision-exit-no-save" style="background:#991b1b;color:#fff;border:0;border-radius:10px;padding:11px 15px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">الخروج بدون حفظ</button>' +
+          '<button id="najran-revision-stay" style="background:#475569;color:#fff;border:0;border-radius:10px;padding:11px 15px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">البقاء داخل التعديل</button>' +
+        '</div>' +
+
+      '</div>';
+
+    document.body.appendChild(modal);
+
+    document.getElementById('najran-revision-save-exit').onclick = function () {
+      saveCurrentRevisionLocalDraftBeforeExit();
+      clearRevisionOnly();
+      window.top.location.href = '/extracts/track?revisionExited=1&savedLocalDraft=1&v=' + Date.now();
+    };
+
+    document.getElementById('najran-revision-exit-no-save').onclick = function () {
+      clearRevisionOnly();
+      window.top.location.href = '/extracts/track?revisionExited=1&noSave=1&v=' + Date.now();
+    };
+
+    document.getElementById('najran-revision-stay').onclick = function () {
+      modal.remove();
+    };
+
+  } catch (e) {
+    console.warn('[RevisionExit] failed to show modal', e);
+  }
+}
+
+function installHomeAsRevisionExit() {
+  try {
+    if (!isActiveRevisionMode()) return;
+    if (window.__NAJRAN_HOME_REVISION_EXIT_INSTALLED__) return;
+    window.__NAJRAN_HOME_REVISION_EXIT_INSTALLED__ = true;
+
+    function isHomeElement(el) {
+      if (!el) return false;
+
+      var raw = '';
+      try {
+        raw = [
+          el.getAttribute && el.getAttribute('href') || '',
+          el.getAttribute && el.getAttribute('onclick') || '',
+          el.textContent || '',
+          el.title || '',
+          el.getAttribute && el.getAttribute('aria-label') || ''
+        ].join(' ');
+      } catch (_) {}
+
+      raw = String(raw || '').trim();
+
+      return (
+        raw.indexOf('الرئيسية') >= 0 ||
+        raw.indexOf('home') >= 0 ||
+        raw.indexOf('index.html') >= 0 ||
+        raw.indexOf('dashboard') >= 0
+      );
+    }
+
+    document.addEventListener('click', function (e) {
+      if (!isActiveRevisionMode()) return;
+
+      var el = e.target && e.target.closest
+        ? e.target.closest('a,button,[onclick],[role="button"]')
+        : null;
+
+      if (!isHomeElement(el)) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      showRevisionExitModal();
+    }, true);
+
+    try {
+      document.querySelectorAll('a,button,[onclick],[role="button"]').forEach(function (el) {
+        if (!isHomeElement(el)) return;
+        if (el.dataset.najranRevisionHomeMarked === '1') return;
+
+        el.dataset.najranRevisionHomeMarked = '1';
+
+        var txt = String(el.textContent || '').trim();
+        if (txt && txt.indexOf('الخروج من التعديل') < 0) {
+          el.textContent = txt + ' / الخروج من التعديل';
+        }
+
+        el.title = 'الخروج من تعديل المستخلص والرجوع للمستخلصات المحفوظة';
+      });
+    } catch (_) {}
+
+    console.warn('[RevisionExit] home button acts as revision exit');
+  } catch (e) {
+    console.warn('[RevisionExit] failed to install home revision exit', e);
+  }
+}
+  if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function () {
     if (!applyRevisionBootSnapshot()) show();
-  }, 1200);
+    installHomeAsRevisionExit();
+  });
+} else {
+  if (!applyRevisionBootSnapshot()) show();
+  installHomeAsRevisionExit();
+}
+
+setTimeout(function () {
+  if (!applyRevisionBootSnapshot()) show();
+  installHomeAsRevisionExit();
+}, 1200);
 })();
