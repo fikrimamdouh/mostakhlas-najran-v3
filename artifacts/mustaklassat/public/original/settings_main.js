@@ -569,8 +569,66 @@ function closeModal(modalId) {
 // استعادة الإعدادات الافتراضية للنظام
 // تحديث بيانات المستخلص
 function updateExtractDisplayData() {
-    const data = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
-    const now = new Date();
+let data = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+
+try {
+    var isRevision =
+        localStorage.getItem('najran_revision_mode') === 'true' &&
+        localStorage.getItem('najran_revision_extract_id') &&
+        localStorage.getItem('najran_revision_snapshot');
+
+    if (isRevision) {
+        var snap = JSON.parse(localStorage.getItem('najran_revision_snapshot') || '{}');
+        var ext = {};
+
+        try {
+            ext = typeof snap.persistentExtractData === 'string'
+                ? JSON.parse(snap.persistentExtractData || '{}')
+                : (snap.persistentExtractData || {});
+        } catch (_) {
+            ext = {};
+        }
+
+        data = Object.assign({}, data, ext);
+
+        data.extractMonth =
+            data.extractMonth || snap.extractMonth || snap.month || '';
+
+        data.extractYear =
+            data.extractYear || snap.extractYear || snap.year || '';
+
+        data.extractStart =
+            data.extractStart || data.extractFromDate || snap.extractStart || snap.extractFromDate || snap.start || '';
+
+        data.extractEnd =
+            data.extractEnd || data.extractToDate || snap.extractEnd || snap.extractToDate || snap.end || '';
+
+        data.paymentNumber =
+            data.paymentNumber || data.extractNumber || snap.paymentNumber || snap.extractNumber || snap.payment || '';
+
+        data.extractNumber = data.paymentNumber || data.extractNumber || '';
+
+        localStorage.setItem('persistentExtractData', JSON.stringify(data));
+        localStorage.setItem('extractMonth', data.extractMonth || '');
+        localStorage.setItem('extractYear', String(data.extractYear || ''));
+        localStorage.setItem('extractStart', data.extractStart || '');
+        localStorage.setItem('extractEnd', data.extractEnd || '');
+        localStorage.setItem('extractFromDate', data.extractStart || '');
+        localStorage.setItem('extractToDate', data.extractEnd || '');
+        localStorage.setItem('paymentNumber', data.paymentNumber || '');
+        localStorage.setItem('extractNumber', data.extractNumber || data.paymentNumber || '');
+
+        console.warn('[SettingsRevisionBoot] updateExtractDisplayData forced revision extract values', {
+            month: data.extractMonth,
+            year: data.extractYear,
+            start: data.extractStart,
+            end: data.extractEnd,
+            payment: data.paymentNumber
+        });
+    }
+} catch (e) {
+    console.warn('[SettingsRevisionBoot] updateExtractDisplayData revision force failed', e);
+}    const now = new Date();
     const months = [
         'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
         'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
