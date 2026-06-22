@@ -472,8 +472,46 @@ function isWatchedRevisionKey(key) {
 
   return false;
 }
+     function isAttendanceRevisionPageNow() {
+      try {
+        var href = String(location.href || '');
+        var search = String(location.search || '');
+
+        return (
+          /attendance\.html/i.test(href) ||
+          /[?&]page=[^&]*attendance\.html/i.test(search)
+        );
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function markRevisionAttendanceChanged(reason) {
+      try {
+        if (!isRevisionActiveNow()) return;
+        if (!isAttendanceRevisionPageNow()) return;
+
+        window.__NAJRAN_REVISION_ORIGINAL_SETITEM__(
+          'najran_revision_attendance_changed',
+          '1'
+        );
+
+        console.warn('[RevisionWorking] attendance change marked', reason || '');
+      } catch (_) {}
+    }
+
     function schedule(reason) {
       if (!isRevisionActiveNow()) return;
+
+      if (
+        reason === 'input' ||
+        reason === 'change' ||
+        reason === 'click-action' ||
+        String(reason || '').indexOf('attendance') >= 0
+      ) {
+        markRevisionAttendanceChanged(reason);
+      }
+
       clearTimeout(timer);
       timer = setTimeout(function () {
         saveRevisionWorkingSnapshot(reason);
