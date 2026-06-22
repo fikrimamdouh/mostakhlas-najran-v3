@@ -316,8 +316,14 @@
   try {
     new MutationObserver(installNotificationBellRouteFix).observe(document.documentElement, { childList: true, subtree: true });
   } catch (_) {}
-  (function () {
+
+})();
+// NavigationGuard — يمنع الرجوع التلقائي للحضور بدون كسر window.location
+(function () {
   'use strict';
+
+  if (window.__NAJRAN_NAVIGATION_GUARD_SAFE__) return;
+  window.__NAJRAN_NAVIGATION_GUARD_SAFE__ = true;
 
   function isRevisionMode() {
     try {
@@ -329,14 +335,36 @@
     }
   }
 
-  function allowAttendanceNow(url) {
-    var u = String(url || '');
-    if (u.indexOf('attendance.html') < 0) return true;
+  function currentOriginalPage() {
+    try {
+      var q = new URLSearchParams(window.top.location.search || location.search);
+      return q.get('page') || '';
+    } catch (_) {
+      var m = String(location.search || '').match(/[?&]page=([^&]+)/);
+      return m ? decodeURIComponent(m[1]) : '';
+    }
+  }
 
-    return (
-      sessionStorage.getItem('najran_allow_attendance_navigation_once') === '1' ||
-      isRevisionMode()
-    );
+  function isAttendancePage() {
+    var sig = location.pathname + location.search;
+    return /attendance\.html(?:$|[?#])/.test(sig) || /[?&]page=.*attendance\.html(?:$|&)/.test(sig);
+  }
+
+  function saveLastOriginalPage() {
+    try {
+      var page = currentOriginalPage();
+
+      if (!page) {
+        var p = location.pathname || '';
+        var m = p.match(/\/original\/([^/?#]+\.html)/);
+        if (m) page = m[1];
+      }
+
+      if (!page || page === 'attendance.html') return;
+
+      sessionStorage.setItem('najran_last_original_page', page);
+      localStorage.setItem('najran_last_original_page', page);
+    } catch (_) {}
   }
 
   document.addEventListener('click', function (e) {
@@ -348,7 +376,11 @@
 
     var raw = '';
     try {
-      raw = (el.getAttribute('href') || '') + ' ' + (el.getAttribute('onclick') || '') + ' ' + (el.textContent || '');
+      raw = [
+        el.getAttribute('href') || '',
+        el.getAttribute('onclick') || '',
+        el.textContent || ''
+      ].join(' ');
     } catch (_) {}
 
     if (
@@ -361,35 +393,40 @@
     }
   }, true);
 
-  var oldAssign = window.location.assign.bind(window.location);
-  var oldReplace = window.location.replace.bind(window.location);
+  function correctWrongAttendanceLanding() {
+    try {
+      if (!isAttendancePage()) {
+        saveLastOriginalPage();
+        return;
+      }
 
-  window.location.assign = function (url) {
-    if (!allowAttendanceNow(url)) {
-      console.warn('[NavigationGuard] منع تحويل تلقائي للحضور:', url);
-      return;
+      if (isRevisionMode()) return;
+
+      var allowed = sessionStorage.getItem('najran_allow_attendance_navigation_once') === '1';
+      if (allowed) {
+        sessionStorage.removeItem('najran_allow_attendance_navigation_once');
+        return;
+      }
+
+      var lastPage =
+        sessionStorage.getItem('najran_last_original_page') ||
+        localStorage.getItem('najran_last_original_page') ||
+        '';
+
+      if (!lastPage || lastPage === 'attendance.html') return;
+
+      console.warn('[NavigationGuard] تم تصحيح رجوع تلقائي للحضور، العودة إلى:', lastPage);
+
+      window.top.location.href =
+        '/original-viewer?page=' + encodeURIComponent(lastPage) + '&navfix=1&v=' + Date.now();
+    } catch (e) {
+      console.warn('[NavigationGuard] فشل التصحيح', e);
     }
+  }
 
-    if (String(url || '').indexOf('attendance.html') >= 0) {
-      sessionStorage.removeItem('najran_allow_attendance_navigation_once');
-    }
+  saveLastOriginalPage();
+  setTimeout(correctWrongAttendanceLanding, 80);
+  setTimeout(correctWrongAttendanceLanding, 600);
 
-    return oldAssign(url);
-  };
-
-  window.location.replace = function (url) {
-    if (!allowAttendanceNow(url)) {
-      console.warn('[NavigationGuard] منع replace تلقائي للحضور:', url);
-      return;
-    }
-
-    if (String(url || '').indexOf('attendance.html') >= 0) {
-      sessionStorage.removeItem('najran_allow_attendance_navigation_once');
-    }
-
-    return oldReplace(url);
-  };
-
-  console.warn('[NavigationGuard] active');
-})();
+  console.warn('[NavigationGuard] active safe');
 })();
