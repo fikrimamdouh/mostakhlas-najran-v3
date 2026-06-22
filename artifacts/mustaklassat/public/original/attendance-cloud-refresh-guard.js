@@ -561,13 +561,35 @@ function showPendingUploadDecisionModal(onLeave) {
     cloudComparisonRunning = true;
 
     try {
-     var activeKeys = getActiveAttendanceKeys();
+    var activeKeys = getActiveAttendanceKeys();
 normalizeLocalAttendanceForCurrentPeriod(activeKeys);
 
 if (isRevisionMode()) {
   console.warn('[AttendanceCloudGuard] REVISION MODE: منع كامل لسحب مدة/حضور السحابة أثناء تعديل مستخلص قديم');
   setTimeout(function(){ renderAgain('revision-mode-locked-snapshot'); }, 50);
   setTimeout(function(){ renderAgain('revision-mode-locked-snapshot'); }, 500);
+  return;
+}
+
+if (
+  sessionStorage.getItem('najran_new_extract_clear_attendance_once') === '1' ||
+  localStorage.getItem('najran_new_extract_clear_attendance_once') === '1'
+) {
+  sessionStorage.removeItem('najran_new_extract_clear_attendance_once');
+  localStorage.removeItem('najran_new_extract_clear_attendance_once');
+
+  activeKeys.forEach(function(k) {
+    try { localStorage.removeItem(k); } catch (_) {}
+  });
+
+  localWinsUntilSynced = true;
+  pendingLocalAttendanceUpload = false;
+  userTouchedAttendance = false;
+  cloudComparisonStarted = true;
+
+  console.warn('[AttendanceCloudGuard] NEW EXTRACT: منع استرجاع الحضور القديم بعد مسح البيانات');
+  setTimeout(function(){ renderAgain('new-extract-clear-attendance-no-cloud-restore'); }, 50);
+  setTimeout(function(){ renderAgain('new-extract-clear-attendance-no-cloud-restore'); }, 500);
   return;
 }
 
