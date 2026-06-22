@@ -1,4 +1,4 @@
-t// Restores a locally saved draft after editing/re-uploading an older submitted extract.
+// Restores a locally saved draft after editing/re-uploading an older submitted extract.
 (function () {
   'use strict';
 
