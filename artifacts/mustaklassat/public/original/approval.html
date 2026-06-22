@@ -870,8 +870,177 @@ async function updateStatus(id, status) {
   }
 }
 
-function startRevision(id, type) {
-  window.location.href = '/extracts/track?source=approval&extractId=' + id + '&extractType=' + type;
+async function startRevision(id, type) {
+  const session = (() => {
+    try { return JSON.parse(localStorage.getItem('najran_session') || '{}') || {}; }
+    catch (_) { return {}; }
+  })();
+
+  const token = session.clerkToken;
+  if (!token) {
+    alert('الجلسة منتهية. سجل دخول مرة أخرى.');
+    return;
+  }
+
+  try {
+    console.warn('[ApprovalRevision] start', { id, type });
+
+    const res = await fetch('/api/submitted-extracts/' + id, {
+      headers: { Authorization: 'Bearer ' + token },
+      credentials: 'include'
+    });
+
+    if (!res.ok) {
+      alert('تعذر تحميل بيانات المستخلص للتعديل');
+      return;
+    }
+
+    const full = await res.json();
+
+    function parseValue(v) {
+      if (!v) return {};
+      if (typeof v === 'string') {
+        try { return JSON.parse(v); } catch (_) { return {}; }
+      }
+      if (typeof v === 'object') return v;
+      return {};
+    }
+
+    function normalizeSnapshot(raw) {
+      raw = parseValue(raw);
+
+      const candidates = [
+        raw.localStorageSnapshot,
+        raw.storageSnapshot,
+        raw.snapshot,
+        raw.submittedData,
+        raw.extractData,
+        raw
+      ];
+
+      const keys = [
+        'persistentExtractData',
+        'attendanceData',
+        'ng_attendanceData',
+        'nd_attendanceData',
+        'healthCentersAttendanceData',
+        'centersAttendanceData_v2',
+        'adminOfficesAttendanceData_v1',
+        'performanceData',
+        'achievementData',
+        'consumablesTableData',
+        'healthCentersConsumables',
+        'mainHospitalConsumables',
+        'admin_offices_consumables_v1.0',
+        'spare_partsData',
+        'sparePartsTotalAmount'
+      ];
+
+      for (const c of candidates) {
+        const p = parseValue(c);
+        if (p && typeof p === 'object' && Object.keys(p).some(k => keys.includes(k))) {
+          return p;
+        }
+      }
+
+      return {};
+    }
+
+    const snapshot = normalizeSnapshot(full.extractData);
+
+    if (!snapshot || Object.keys(snapshot).length === 0) {
+      alert('لا توجد بيانات محفوظة داخل هذا المستخلص للتعديل');
+      return;
+    }
+
+    const revisionSnapshot = JSON.stringify(snapshot);
+    const revisionType = String(full.extractType || type || 'labor');
+
+    const revisionKeys = {
+      najran_revision_mode: 'true',
+      najran_revision_extract_id: String(id),
+      najran_revision_extract_type: revisionType,
+      najran_revision_started_at: new Date().toISOString(),
+      najran_revision_boot_lock: 'true',
+      najran_revision_source: 'approval_submitted_extract_snapshot',
+      najran_revision_snapshot: revisionSnapshot
+    };
+
+    Object.keys(revisionKeys).forEach(function (k) {
+      const v = revisionKeys[k];
+      try { localStorage.setItem(k, v); } catch (_) {}
+      try { sessionStorage.setItem(k, v); } catch (_) {}
+      try {
+        const realStorage = window._najranRealStorage || window.localStorage;
+        Storage.prototype.setItem.call(realStorage, k, v);
+      } catch (_) {}
+    });
+
+    const clearKeys = [
+      'attendanceData','ng_attendanceData','nd_attendanceData',
+      'centersAttendanceData_v2','healthCentersAttendanceData','adminOfficesAttendanceData_v1',
+      'persistentExtractData','extractMonth','extractYear','extractStart','extractEnd',
+      'extractFromDate','extractToDate','paymentNumber','extractNumber','periodMonth',
+      'performanceData','performanceData_v4','performanceDeductions',
+      'performanceTotalDeduction','performanceTotalDue',
+      'achievementData','achievementTitles_v1','achievementItemNames',
+      'consumablesTableData','healthCentersConsumables','mainHospitalConsumables',
+      'admin_offices_consumables_v1.0',
+      'spare_partsData','sparePartsTotalAmount',
+      'approvalData','displayApprovalData',
+      'finalLaborCost','finalConsumablesCost',
+      'grand-net-total','grand-net-total-centers','grand-net-total-admin',
+      'najran_labor_attendance_done','najran_labor_performance_done',
+      'najran_health_attendance_done','najran_admin_offices_attendance_done'
+    ];
+
+    clearKeys.forEach(k => {
+      try { localStorage.removeItem(k); } catch (_) {}
+    });
+
+    Object.entries(snapshot).forEach(([k, v]) => {
+      if (v == null) return;
+      try {
+        localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+      } catch (_) {}
+    });
+
+    if (full.companyName) localStorage.setItem('companyName', String(full.companyName));
+    if (full.contractNumber) localStorage.setItem('contractNumber', String(full.contractNumber));
+    if (full.hospitalName) localStorage.setItem('hospitalName', String(full.hospitalName));
+    if (full.periodMonth) localStorage.setItem('periodMonth', String(full.periodMonth));
+    if (full.totalAmount != null) localStorage.setItem('najran_revision_previous_total_amount', String(full.totalAmount));
+
+    const modeCheck = localStorage.getItem('najran_revision_mode');
+    const idCheck = localStorage.getItem('najran_revision_extract_id');
+    const snapCheck = localStorage.getItem('najran_revision_snapshot');
+
+    console.warn('[ApprovalRevision] before redirect', {
+      mode: modeCheck,
+      id: idCheck,
+      snapshotLen: snapCheck ? snapCheck.length : 0,
+      type: revisionType
+    });
+
+    if (modeCheck !== 'true' || !idCheck || !snapCheck) {
+      alert('فشل تجهيز وضع تعديل المستخلص.');
+      return;
+    }
+
+    const TYPE_PAGES = {
+      labor: '/original/attendance.html',
+      consumables: '/original/consumables.html',
+      health_centers: '/original/health_centers_attendance.html',
+      spare_parts: '/original/spare_parts.html',
+      admin_offices: '/original/admin_offices_attendance.html'
+    };
+
+    window.location.href = TYPE_PAGES[revisionType] || '/original/attendance.html';
+
+  } catch (err) {
+    console.error('[ApprovalRevision] failed', err);
+    alert('حدث خطأ أثناء تجهيز المستخلص للتعديل');
+  }
 }
 
 // ── Preview ───────────────────────────────────────────────────────────────
