@@ -1488,7 +1488,116 @@ window.addEventListener('najranHospitalChanged', function(e) {
         window._selectHospitalFromOverlay(h);
     }
 });
+// ── تشغيل إعدادات مستخلص التعديل قبل تحميل واجهة الإعدادات ───────────────
+// يعمل فقط أثناء تعديل مستخلص محفوظ. المستخلص العادي لا يتأثر.
+(function bootRevisionSettingsBeforeSettingsPageLoad() {
+    try {
+        var isRevision =
+            localStorage.getItem('najran_revision_mode') === 'true' &&
+            localStorage.getItem('najran_revision_extract_id') &&
+            localStorage.getItem('najran_revision_snapshot');
 
+        if (!isRevision) return;
+
+        function parseObj(v) {
+            if (!v) return {};
+            if (typeof v === 'object') return v;
+            try { return JSON.parse(v); } catch (_) { return {}; }
+        }
+
+        var snapshot = parseObj(localStorage.getItem('najran_revision_snapshot'));
+        if (!snapshot || typeof snapshot !== 'object') return;
+
+        var extract = parseObj(snapshot.persistentExtractData);
+
+        var month =
+            extract.extractMonth ||
+            snapshot.extractMonth ||
+            extract.month ||
+            snapshot.month ||
+            '';
+
+        var year =
+            extract.extractYear ||
+            snapshot.extractYear ||
+            extract.year ||
+            snapshot.year ||
+            '';
+
+        var start =
+            extract.extractStart ||
+            extract.extractFromDate ||
+            snapshot.extractStart ||
+            snapshot.extractFromDate ||
+            extract.start ||
+            snapshot.start ||
+            '';
+
+        var end =
+            extract.extractEnd ||
+            extract.extractToDate ||
+            snapshot.extractEnd ||
+            snapshot.extractToDate ||
+            extract.end ||
+            snapshot.end ||
+            '';
+
+        var payment =
+            extract.paymentNumber ||
+            extract.extractNumber ||
+            snapshot.paymentNumber ||
+            snapshot.extractNumber ||
+            extract.payment ||
+            snapshot.payment ||
+            '';
+
+        if (month) {
+            extract.extractMonth = String(month);
+            localStorage.setItem('extractMonth', String(month));
+        }
+
+        if (year) {
+            extract.extractYear = String(year);
+            localStorage.setItem('extractYear', String(year));
+        }
+
+        if (start) {
+            extract.extractStart = String(start);
+            extract.extractFromDate = String(start);
+            localStorage.setItem('extractStart', String(start));
+            localStorage.setItem('extractFromDate', String(start));
+        }
+
+        if (end) {
+            extract.extractEnd = String(end);
+            extract.extractToDate = String(end);
+            localStorage.setItem('extractEnd', String(end));
+            localStorage.setItem('extractToDate', String(end));
+        }
+
+        if (payment) {
+            extract.paymentNumber = String(payment);
+            extract.extractNumber = String(payment);
+            localStorage.setItem('paymentNumber', String(payment));
+            localStorage.setItem('extractNumber', String(payment));
+        }
+
+        if (!extract.extractCalendar) extract.extractCalendar = snapshot.extractCalendar || 'ميلادي';
+        if (!extract.extractDuration) extract.extractDuration = snapshot.extractDuration || 'شهر واحد';
+
+        localStorage.setItem('persistentExtractData', JSON.stringify(extract));
+
+        console.warn('[SettingsRevisionBoot] settings loaded from saved extract snapshot before UI init', {
+            month: month,
+            year: year,
+            start: start,
+            end: end,
+            payment: payment
+        });
+    } catch (e) {
+        console.warn('[SettingsRevisionBoot] failed', e);
+    }
+})();
 // ✅✅✅ الحل النهائي: استبدل كتلة DOMContentLoaded بالكامل بهذا الكود ✅✅✅
 document.addEventListener('DOMContentLoaded', () => {
     console.log("الصفحة جاهزة. بدء التهيئة...");
