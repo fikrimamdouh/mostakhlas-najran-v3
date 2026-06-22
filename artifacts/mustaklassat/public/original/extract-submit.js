@@ -83,7 +83,52 @@
     const contractData = getContractData();
     const extractData = captureStorageSnapshot();
     const payload = { extractType: type, ...contractData, ...extraData, extractData };
+    
+const submitUniqueKey = [
+  'submitted_extract',
+  type || '',
+  contractData.companyName || '',
+  contractData.hospitalName || localStorage.getItem('hospitalName') || '',
+  contractData.extractYear || '',
+  contractData.extractMonth || '',
+  contractData.paymentNumber || contractData.extractNumber || ''
+].join('__');
 
+const submitLockKey = 'najran_submit_lock_' + submitUniqueKey;
+const submitDoneKey = 'najran_submit_done_' + submitUniqueKey;
+
+try {
+  const now = Date.now();
+
+  const activeLock = JSON.parse(sessionStorage.getItem(submitLockKey) || 'null');
+  if (activeLock && activeLock.startedAt && now - activeLock.startedAt < 120000) {
+    alert('جاري رفع نفس المستخلص بالفعل. لا تضغط الرفع مرة أخرى.');
+    return null;
+  }
+
+  const doneLock = JSON.parse(localStorage.getItem(submitDoneKey) || 'null');
+  if (
+    !localStorage.getItem('najran_revision_mode') &&
+    doneLock &&
+    doneLock.submittedAt &&
+    now - doneLock.submittedAt < 24 * 60 * 60 * 1000
+  ) {
+    alert(
+      'تم منع رفع مستخلص مكرر.\n\n' +
+      'نفس النوع/الشهر/السنة/رقم الدفعة تم رفعه بالفعل خلال آخر 24 ساعة.\n\n' +
+      'لو تريد رفع مستخلص جديد، غيّر رقم الدفعة أو الشهر من الإعدادات.'
+    );
+    return null;
+  }
+
+  sessionStorage.setItem(submitLockKey, JSON.stringify({
+    startedAt: now,
+    type: type || '',
+    month: contractData.extractMonth || '',
+    year: contractData.extractYear || '',
+    payment: contractData.paymentNumber || contractData.extractNumber || ''
+  }));
+} catch (_) {}
     // Check if this is a revision of an existing extract
    const revisionId = localStorage.getItem(REVISION_KEY);
 const isRevision =
@@ -186,6 +231,20 @@ if (token) headers['Authorization'] = `Bearer ${token}`;
     }
 
     const result = await res.json();
+    try {
+  localStorage.setItem(submitDoneKey, JSON.stringify({
+    submittedAt: Date.now(),
+    resultId: result?.id || result?.extract?.id || result?.extractId || '',
+    type: type || '',
+    month: contractData.extractMonth || '',
+    year: contractData.extractYear || '',
+    payment: contractData.paymentNumber || contractData.extractNumber || ''
+  }));
+
+  sessionStorage.removeItem(submitLockKey);
+
+  console.warn('[ExtractSubmit] تم تسجيل قفل منع تكرار رفع نفس المستخلص');
+} catch (_) {}
 try {
   sessionStorage.removeItem('najran_new_extract_clear_attendance_once');
   localStorage.removeItem('najran_new_extract_clear_attendance_once');
