@@ -856,7 +856,7 @@ function clearRevisionOnly() {
     'najran_revision_source',
     'najran_revision_snapshot',
     'najran_revision_previous_total_amount',
-    'najran_revision_working_snapshot'
+    'najran_revision_working_snapshot',
     'najran_revision_attendance_changed'
   ].forEach(function (key) {
     try { localStorage.removeItem(key); } catch (_) {}
@@ -864,7 +864,6 @@ function clearRevisionOnly() {
 
   try { sessionStorage.removeItem('najran_revision_reloaded'); } catch (_) {}
 }
-
 function saveCurrentRevisionLocalDraftBeforeExit() {
   try {
     var data = {};
