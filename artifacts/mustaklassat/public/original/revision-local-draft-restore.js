@@ -43,7 +43,7 @@ t// Restores a locally saved draft after editing/re-uploading an older submitted
       localStorage.setItem('najran_revision_mode', 'true');
       localStorage.setItem('najran_revision_boot_lock', 'true');
 
-      setTimeout(function () {
+  setTimeout(function () {
         Object.keys(snapshot).forEach(function (key) {
           writeValue(key, snapshot[key]);
         });
@@ -51,18 +51,19 @@ t// Restores a locally saved draft after editing/re-uploading an older submitted
         localStorage.setItem('najran_revision_mode', 'true');
         localStorage.removeItem('najran_revision_boot_lock');
 
-        console.warn('[RevisionBootGuard] submitted extract snapshot applied and boot lock cleared');
-try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
-try { if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint(); } catch (_) {}
-try { if (typeof window.renderTables === 'function') window.renderTables(); } catch (_) {}
-        var alreadyReloaded = sessionStorage.getItem('najran_revision_reloaded');
-        if (!alreadyReloaded) {
-          sessionStorage.setItem('najran_revision_reloaded', '1');
-          console.warn('[RevisionBootGuard] reloading page once after snapshot restore');
-          window.location.reload();
-        }
-      }, 900);
+        console.warn('[RevisionBootGuard] snapshot applied — rendering tables without reload');
 
+        try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
+        try { if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint(); } catch (_) {}
+        try { if (typeof window.renderTables === 'function') window.renderTables(); } catch (_) {}
+
+        setTimeout(function () {
+          try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
+          try { if (typeof window.renderTables === 'function') window.renderTables(); } catch (_) {}
+          console.warn('[RevisionBootGuard] second renderTables done');
+        }, 800);
+
+      }, 900);
       return true;
     } catch (e) {
       console.warn('[RevisionBootGuard] failed to apply revision snapshot', e);
