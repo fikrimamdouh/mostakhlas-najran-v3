@@ -140,6 +140,7 @@ function hydrateRevisionExtractSettings(snapshot) {
         writeValue(key, snapshot[key]);
       });
 hydrateRevisionExtractSettings(snapshot);
+refreshSettingsPageAfterRevisionHydrate();
       localStorage.setItem('najran_revision_mode', 'true');
       localStorage.setItem('najran_revision_boot_lock', 'true');
 
@@ -148,7 +149,8 @@ hydrateRevisionExtractSettings(snapshot);
           writeValue(key, snapshot[key]);
         });
 hydrateRevisionExtractSettings(snapshot);
-        localStorage.setItem('najran_revision_mode', 'true');
+refreshSettingsPageAfterRevisionHydrate();
+    localStorage.setItem('najran_revision_mode', 'true');
         localStorage.removeItem('najran_revision_boot_lock');
 
         console.warn('[RevisionBootGuard] snapshot applied — rendering tables without reload');
@@ -170,6 +172,43 @@ hydrateRevisionExtractSettings(snapshot);
       return false;
     }
   }
+  function refreshSettingsPageAfterRevisionHydrate() {
+  try {
+    var isSettingsPage =
+      /settings_main\.html(?:$|[?#])/.test(location.href) ||
+      /[?&]page=settings_main\.html(?:$|&)/.test(location.search || '');
+
+    if (!isSettingsPage) return;
+
+    console.warn('[RevisionBootGuard] settings page detected — refreshing settings UI from hydrated storage');
+
+    setTimeout(function () {
+      try { if (typeof window.loadFromLocalStorage === 'function') window.loadFromLocalStorage(); } catch (_) {}
+      try { if (typeof window.loadSavedData === 'function') window.loadSavedData(); } catch (_) {}
+      try { if (typeof window.loadData === 'function') window.loadData(); } catch (_) {}
+      try { if (typeof window.loadSettings === 'function') window.loadSettings(); } catch (_) {}
+      try { if (typeof window.forceLoadFromLocalStorage === 'function') window.forceLoadFromLocalStorage(); } catch (_) {}
+      try { if (typeof window.autoFillContractData === 'function') window.autoFillContractData(); } catch (_) {}
+      try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
+
+      try {
+        window.dispatchEvent(new CustomEvent('najranRevisionSettingsHydrated', {
+          detail: {
+            extractMonth: localStorage.getItem('extractMonth'),
+            extractYear: localStorage.getItem('extractYear'),
+            extractStart: localStorage.getItem('extractStart'),
+            extractEnd: localStorage.getItem('extractEnd'),
+            paymentNumber: localStorage.getItem('paymentNumber')
+          }
+        }));
+      } catch (_) {}
+
+      console.warn('[RevisionBootGuard] settings UI refresh attempted');
+    }, 150);
+  } catch (e) {
+    console.warn('[RevisionBootGuard] settings UI refresh failed', e);
+  }
+}
   function getBackup() {
     if (localStorage.getItem(REVISION_KEY)) return null;
     var backup = parse(localStorage.getItem(BACKUP_KEY), null);
