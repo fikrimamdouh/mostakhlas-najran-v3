@@ -97,6 +97,11 @@ const submitUniqueKey = [
 const submitLockKey = 'najran_submit_lock_' + submitUniqueKey;
 const submitDoneKey = 'najran_submit_done_' + submitUniqueKey;
 
+const editingSubmittedId = localStorage.getItem('najran_editing_submitted_extract_id');
+const isEditingSubmittedExtract =
+  localStorage.getItem('najran_editing_submitted_extract_mode') === 'true' &&
+  !!editingSubmittedId;
+
 try {
   const now = Date.now();
 
@@ -109,6 +114,7 @@ try {
   const doneLock = JSON.parse(localStorage.getItem(submitDoneKey) || 'null');
   if (
     !localStorage.getItem('najran_revision_mode') &&
+    !isEditingSubmittedExtract &&
     doneLock &&
     doneLock.submittedAt &&
     now - doneLock.submittedAt < 24 * 60 * 60 * 1000
@@ -130,13 +136,19 @@ try {
   }));
 } catch (_) {}
     // Check if this is a revision of an existing extract
-   const revisionId = localStorage.getItem(REVISION_KEY);
+   const revisionId = localStorage.getItem(REVISION_KEY)
+     || localStorage.getItem('najran_editing_submitted_extract_id');
 const isRevision =
-  localStorage.getItem('najran_revision_mode') === 'true' &&
-  !!revisionId &&
-  !!localStorage.getItem('najran_revision_snapshot');
+  (
+    localStorage.getItem('najran_revision_mode') === 'true' &&
+    !!localStorage.getItem(REVISION_KEY) &&
+    !!localStorage.getItem('najran_revision_snapshot')
+  ) || (
+    localStorage.getItem('najran_editing_submitted_extract_mode') === 'true' &&
+    !!localStorage.getItem('najran_editing_submitted_extract_id')
+  );
 
-if (revisionId && !isRevision) {
+if (localStorage.getItem(REVISION_KEY) && !isRevision) {
   localStorage.removeItem(REVISION_KEY);
   localStorage.removeItem('najran_revision_mode');
   localStorage.removeItem('najran_revision_extract_type');
@@ -277,6 +289,9 @@ try {
   localStorage.removeItem('najran_revision_source');
   localStorage.removeItem('najran_revision_snapshot');
   localStorage.removeItem('najran_revision_previous_total_amount');
+  localStorage.removeItem('najran_editing_submitted_extract_id');
+  localStorage.removeItem('najran_editing_submitted_extract_mode');
+  localStorage.removeItem('najran_editing_submitted_extract_started_at');
       sessionStorage.removeItem('najran_revision_reloaded');
 }
 
