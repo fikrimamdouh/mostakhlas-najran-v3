@@ -296,12 +296,54 @@ function saveRevisionWorkingSnapshot(reason) {
     var revisionId = localStorage.getItem('najran_revision_extract_id') || '';
     if (!revisionId) return false;
 
-    var working = {
-      savedAt: new Date().toISOString(),
-      reason: reason || 'revision-working-autosave',
-      revisionExtractId: revisionId,
-      data: collectRevisionOperationalData()
-    };
+ var collectedData = collectRevisionOperationalData();
+
+try {
+  var attendanceChanged =
+    localStorage.getItem('najran_revision_attendance_changed') === '1';
+
+  if (attendanceChanged) {
+    [
+      'performanceData',
+      'performanceData_v4',
+      'performanceDeductions',
+      'performanceTotalDeduction',
+      'performanceTotalDue',
+      'achievementData',
+      'achievementTitles_v1',
+      'achievementItemNames',
+      'approvalData',
+      'displayApprovalData',
+      'finalLaborCost',
+      'finalConsumablesCost',
+      'grand-net-total',
+      'grand-net-total-centers',
+      'grand-net-total-admin'
+    ].forEach(function (key) {
+      delete collectedData[key];
+    });
+
+    Object.keys(collectedData).forEach(function (key) {
+      if (
+        key.indexOf('deptCalculatedCost_') === 0 ||
+        key.indexOf('dept_') === 0 ||
+        key.indexOf('tableData_') === 0 ||
+        key.indexOf('achievement_') === 0
+      ) {
+        delete collectedData[key];
+      }
+    });
+
+    console.warn('[RevisionWorking] attendance changed — cleared derived performance/achievement data from working snapshot');
+  }
+} catch (_) {}
+
+var working = {
+  savedAt: new Date().toISOString(),
+  reason: reason || 'revision-working-autosave',
+  revisionExtractId: revisionId,
+  data: collectedData
+};
 
     localStorage.setItem(WORKING_KEY, JSON.stringify(working));
 
@@ -449,14 +491,30 @@ function isWatchedRevisionKey(key) {
         originalSetItem(key, value);
 
         try {
-                   if (
-            isRevisionActiveNow() &&
-            key !== WORKING_KEY &&
-            key !== 'najran_revision_snapshot' &&
-            isWatchedRevisionKey(key)
-          ) {
-            schedule('localStorage:' + key);
-          }
+                 if (
+  isRevisionActiveNow() &&
+  key !== WORKING_KEY &&
+  key !== 'najran_revision_snapshot' &&
+  isWatchedRevisionKey(key)
+) {
+  if (
+    key === 'attendanceData' ||
+    key === 'ng_attendanceData' ||
+    key === 'nd_attendanceData' ||
+    key === 'centersAttendanceData_v2' ||
+    key === 'healthCentersAttendanceData' ||
+    key === 'adminOfficesAttendanceData_v1'
+  ) {
+    try {
+      window.__NAJRAN_REVISION_ORIGINAL_SETITEM__(
+        'najran_revision_attendance_changed',
+        '1'
+      );
+    } catch (_) {}
+  }
+
+  schedule('localStorage:' + key);
+}
         } catch (_) {}
       };
     } catch (e) {
@@ -799,6 +857,7 @@ function clearRevisionOnly() {
     'najran_revision_snapshot',
     'najran_revision_previous_total_amount',
     'najran_revision_working_snapshot'
+    'najran_revision_attendance_changed'
   ].forEach(function (key) {
     try { localStorage.removeItem(key); } catch (_) {}
   });
