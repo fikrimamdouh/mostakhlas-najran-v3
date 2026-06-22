@@ -878,7 +878,7 @@ if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation
     if (!applyRevisionBootSnapshot()) show();
     installHomeAsRevisionExit();
     installRevisionWorkingAutosave();
- 
+  });
 } else {
   if (!applyRevisionBootSnapshot()) show();
   installHomeAsRevisionExit();
@@ -890,4 +890,5 @@ setTimeout(function () {
   installHomeAsRevisionExit();
   installRevisionWorkingAutosave();
 }, 1200);
+
 })();
