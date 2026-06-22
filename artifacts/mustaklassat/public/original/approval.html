@@ -883,7 +883,7 @@ async function startRevision(id, type) {
   }
 
   try {
-    console.warn('[ApprovalRevision] start', { id, type });
+    console.warn('[ApprovalRevision] start clone mode', { id, type });
 
     const res = await fetch('/api/submitted-extracts/' + id, {
       headers: { Authorization: 'Bearer ' + token },
@@ -899,50 +899,28 @@ async function startRevision(id, type) {
 
     function parseValue(v) {
       if (!v) return {};
-      if (typeof v === 'string') {
-        try { return JSON.parse(v); } catch (_) { return {}; }
-      }
+      if (typeof v === 'string') { try { return JSON.parse(v); } catch (_) { return {}; } }
       if (typeof v === 'object') return v;
       return {};
     }
 
     function normalizeSnapshot(raw) {
       raw = parseValue(raw);
-
       const candidates = [
-        raw.localStorageSnapshot,
-        raw.storageSnapshot,
-        raw.snapshot,
-        raw.submittedData,
-        raw.extractData,
-        raw
+        raw.localStorageSnapshot, raw.storageSnapshot,
+        raw.snapshot, raw.submittedData, raw.extractData, raw
       ];
-
-      const keys = [
-        'persistentExtractData',
-        'attendanceData',
-        'ng_attendanceData',
-        'nd_attendanceData',
-        'healthCentersAttendanceData',
-        'centersAttendanceData_v2',
-        'adminOfficesAttendanceData_v1',
-        'performanceData',
-        'achievementData',
-        'consumablesTableData',
-        'healthCentersConsumables',
-        'mainHospitalConsumables',
-        'admin_offices_consumables_v1.0',
-        'spare_partsData',
-        'sparePartsTotalAmount'
+      const knownKeys = [
+        'persistentExtractData','attendanceData','ng_attendanceData','nd_attendanceData',
+        'healthCentersAttendanceData','centersAttendanceData_v2','adminOfficesAttendanceData_v1',
+        'performanceData','achievementData','consumablesTableData',
+        'healthCentersConsumables','mainHospitalConsumables',
+        'admin_offices_consumables_v1.0','spare_partsData','sparePartsTotalAmount'
       ];
-
       for (const c of candidates) {
         const p = parseValue(c);
-        if (p && typeof p === 'object' && Object.keys(p).some(k => keys.includes(k))) {
-          return p;
-        }
+        if (p && typeof p === 'object' && Object.keys(p).some(k => knownKeys.includes(k))) return p;
       }
-
       return {};
     }
 
@@ -953,29 +931,29 @@ async function startRevision(id, type) {
       return;
     }
 
-    const revisionSnapshot = JSON.stringify(snapshot);
-    const revisionType = String(full.extractType || type || 'labor');
+    const extractType = String(full.extractType || type || 'labor');
 
-    const revisionKeys = {
-      najran_revision_mode: 'true',
-      najran_revision_extract_id: String(id),
-      najran_revision_extract_type: revisionType,
-      najran_revision_started_at: new Date().toISOString(),
-      najran_revision_boot_lock: 'true',
-      najran_revision_source: 'approval_submitted_extract_snapshot',
-      najran_revision_snapshot: revisionSnapshot
-    };
+    // ── 1. احفظ نسخة احتياطية من المستخلص المحلي الحالي إن وجد ──
+    try {
+      const currentPersistent = localStorage.getItem('persistentExtractData');
+      const currentAtt = localStorage.getItem('attendanceData') ||
+        localStorage.getItem('healthCentersAttendanceData') ||
+        localStorage.getItem('adminOfficesAttendanceData_v1');
+      if (currentPersistent || currentAtt) {
+        const backup = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k) continue;
+          const v = localStorage.getItem(k);
+          if (v != null) backup[k] = v;
+        }
+        localStorage.setItem('najran_revision_previous_local_backup', JSON.stringify({
+          extractId: id, createdAt: new Date().toISOString(), data: backup
+        }));
+      }
+    } catch (_) {}
 
-    Object.keys(revisionKeys).forEach(function (k) {
-      const v = revisionKeys[k];
-      try { localStorage.setItem(k, v); } catch (_) {}
-      try { sessionStorage.setItem(k, v); } catch (_) {}
-      try {
-        const realStorage = window._najranRealStorage || window.localStorage;
-        Storage.prototype.setItem.call(realStorage, k, v);
-      } catch (_) {}
-    });
-
+    // ── 2. امسح مفاتيح التشغيل الحالية ──
     const clearKeys = [
       'attendanceData','ng_attendanceData','nd_attendanceData',
       'centersAttendanceData_v2','healthCentersAttendanceData','adminOfficesAttendanceData_v1',
@@ -985,48 +963,52 @@ async function startRevision(id, type) {
       'performanceTotalDeduction','performanceTotalDue',
       'achievementData','achievementTitles_v1','achievementItemNames',
       'consumablesTableData','healthCentersConsumables','mainHospitalConsumables',
-      'admin_offices_consumables_v1.0',
-      'spare_partsData','sparePartsTotalAmount',
-      'approvalData','displayApprovalData',
-      'finalLaborCost','finalConsumablesCost',
+      'admin_offices_consumables_v1.0','spare_partsData','sparePartsTotalAmount',
+      'approvalData','displayApprovalData','finalLaborCost','finalConsumablesCost',
       'grand-net-total','grand-net-total-centers','grand-net-total-admin',
       'najran_labor_attendance_done','najran_labor_performance_done',
-      'najran_health_attendance_done','najran_admin_offices_attendance_done'
+      'najran_health_attendance_done','najran_admin_offices_attendance_done',
+      // امسح أي مفاتيح revision قديمة
+      'najran_revision_mode','najran_revision_extract_id','najran_revision_snapshot',
+      'najran_revision_boot_lock','najran_revision_extract_type',
+      'najran_revision_started_at','najran_revision_source','najran_revision_previous_total_amount'
     ];
+    clearKeys.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+    try { sessionStorage.removeItem('najran_revision_reloaded'); } catch (_) {}
 
-    clearKeys.forEach(k => {
-      try { localStorage.removeItem(k); } catch (_) {}
-    });
-
+    // ── 3. اكتب بيانات snapshot كمستخلص عادي ──
+    // ممنوع إعادة مفاتيح أنظمة التعديل القديمة أو الحالية من snapshot محفوظ
     Object.entries(snapshot).forEach(([k, v]) => {
       if (v == null) return;
-      try {
-        localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
-      } catch (_) {}
+      if (
+        k.indexOf('najran_revision_') === 0 ||
+        k.indexOf('najran_editing_submitted_extract_') === 0 ||
+        k.indexOf('najran_submit_lock_') === 0 ||
+        k.indexOf('najran_submit_done_') === 0
+      ) return;
+      try { localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); } catch (_) {}
     });
 
+    // بيانات إضافية من الـ API
     if (full.companyName) localStorage.setItem('companyName', String(full.companyName));
     if (full.contractNumber) localStorage.setItem('contractNumber', String(full.contractNumber));
     if (full.hospitalName) localStorage.setItem('hospitalName', String(full.hospitalName));
     if (full.periodMonth) localStorage.setItem('periodMonth', String(full.periodMonth));
-    if (full.totalAmount != null) localStorage.setItem('najran_revision_previous_total_amount', String(full.totalAmount));
 
-    const modeCheck = localStorage.getItem('najran_revision_mode');
-    const idCheck = localStorage.getItem('najran_revision_extract_id');
-    const snapCheck = localStorage.getItem('najran_revision_snapshot');
+    // ── 4. اكتب فقط 3 مفاتيح تعريف آمنة ──
+    localStorage.setItem('najran_editing_submitted_extract_id', String(id));
+    localStorage.setItem('najran_editing_submitted_extract_mode', 'true');
+    localStorage.setItem('najran_editing_submitted_extract_started_at', new Date().toISOString());
 
-    console.warn('[ApprovalRevision] before redirect', {
-      mode: modeCheck,
-      id: idCheck,
-      snapshotLen: snapCheck ? snapCheck.length : 0,
-      type: revisionType
+    console.warn('[ApprovalRevision] clone done', {
+      id,
+      extractType,
+      snapshotKeys: Object.keys(snapshot).length,
+      attendanceData: !!localStorage.getItem('attendanceData'),
+      persistentExtractData: !!localStorage.getItem('persistentExtractData')
     });
 
-    if (modeCheck !== 'true' || !idCheck || !snapCheck) {
-      alert('فشل تجهيز وضع تعديل المستخلص.');
-      return;
-    }
-
+    // ── 5. افتح الصفحة الطبيعية ──
     const TYPE_PAGES = {
       labor: '/original/attendance.html',
       consumables: '/original/consumables.html',
@@ -1035,7 +1017,7 @@ async function startRevision(id, type) {
       admin_offices: '/original/admin_offices_attendance.html'
     };
 
-    window.location.href = TYPE_PAGES[revisionType] || '/original/attendance.html';
+    window.location.href = TYPE_PAGES[extractType] || '/original/attendance.html';
 
   } catch (err) {
     console.error('[ApprovalRevision] failed', err);
