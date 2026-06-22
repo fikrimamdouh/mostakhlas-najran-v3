@@ -86,7 +86,10 @@
 
     // Check if this is a revision of an existing extract
     const revisionId = localStorage.getItem(REVISION_KEY);
-    const isRevision = !!revisionId;
+const isRevision =
+  localStorage.getItem('najran_revision_mode') === 'true' &&
+  !!revisionId &&
+  !!localStorage.getItem('najran_revision_snapshot');
 let token = session.clerkToken || null;
 
 try {
