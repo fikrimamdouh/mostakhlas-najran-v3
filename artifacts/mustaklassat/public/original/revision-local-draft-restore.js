@@ -324,16 +324,13 @@ try {
     });
 
     Object.keys(collectedData).forEach(function (key) {
-      if (
-        key.indexOf('deptCalculatedCost_') === 0 ||
-        key.indexOf('dept_') === 0 ||
-        key.indexOf('tableData_') === 0 ||
-        key.indexOf('achievement_') === 0
-      ) {
-        delete collectedData[key];
-      }
-    });
-
+  if (
+    key.indexOf('tableData_') === 0 ||
+    key.indexOf('achievement_') === 0
+  ) {
+    delete collectedData[key];
+  }
+});
     console.warn('[RevisionWorking] attendance changed — cleared derived performance/achievement data from working snapshot');
   }
 } catch (_) {}
