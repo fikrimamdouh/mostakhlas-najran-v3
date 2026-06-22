@@ -316,4 +316,80 @@
   try {
     new MutationObserver(installNotificationBellRouteFix).observe(document.documentElement, { childList: true, subtree: true });
   } catch (_) {}
+  (function () {
+  'use strict';
+
+  function isRevisionMode() {
+    try {
+      return localStorage.getItem('najran_revision_mode') === 'true' &&
+        !!localStorage.getItem('najran_revision_extract_id') &&
+        !!localStorage.getItem('najran_revision_snapshot');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function allowAttendanceNow(url) {
+    var u = String(url || '');
+    if (u.indexOf('attendance.html') < 0) return true;
+
+    return (
+      sessionStorage.getItem('najran_allow_attendance_navigation_once') === '1' ||
+      isRevisionMode()
+    );
+  }
+
+  document.addEventListener('click', function (e) {
+    var el = e.target && e.target.closest
+      ? e.target.closest('a[href], button, [onclick]')
+      : null;
+
+    if (!el) return;
+
+    var raw = '';
+    try {
+      raw = (el.getAttribute('href') || '') + ' ' + (el.getAttribute('onclick') || '') + ' ' + (el.textContent || '');
+    } catch (_) {}
+
+    if (
+      raw.indexOf('attendance.html') >= 0 ||
+      raw.indexOf('الحضور') >= 0 ||
+      raw.indexOf('الانصراف') >= 0
+    ) {
+      sessionStorage.setItem('najran_allow_attendance_navigation_once', '1');
+      console.warn('[NavigationGuard] سماح دخول الحضور مرة واحدة بضغط المستخدم');
+    }
+  }, true);
+
+  var oldAssign = window.location.assign.bind(window.location);
+  var oldReplace = window.location.replace.bind(window.location);
+
+  window.location.assign = function (url) {
+    if (!allowAttendanceNow(url)) {
+      console.warn('[NavigationGuard] منع تحويل تلقائي للحضور:', url);
+      return;
+    }
+
+    if (String(url || '').indexOf('attendance.html') >= 0) {
+      sessionStorage.removeItem('najran_allow_attendance_navigation_once');
+    }
+
+    return oldAssign(url);
+  };
+
+  window.location.replace = function (url) {
+    if (!allowAttendanceNow(url)) {
+      console.warn('[NavigationGuard] منع replace تلقائي للحضور:', url);
+      return;
+    }
+
+    if (String(url || '').indexOf('attendance.html') >= 0) {
+      sessionStorage.removeItem('najran_allow_attendance_navigation_once');
+    }
+
+    return oldReplace(url);
+  };
+
+  console.warn('[NavigationGuard] active');
+})();
 })();
