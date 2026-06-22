@@ -213,7 +213,7 @@ function initializeCenterNames() {
         'center_12': 'إدارة مركز التحكم والكوارث بالفيصلية',
         'center_13': 'التموين الطبي',
         'center_14': 'الخدمات العامة',
-        'admin_staff': 'فئات إدارية أخرى',
+        'admin_staff': 'الورش (صيانة وإصلاح السيارات)',
     };
     let names = getCenterNames();
     if (Object.keys(names).length === 0) {
@@ -336,13 +336,13 @@ function openImportDialog() {
     });
     const content = `
         <div class="dialog-header">
-            <h3><i class="fas fa-file-import"></i> استيراد بيانات من Excel لمركز محدد</h3>
+            <h3><i class="fas fa-file-import"></i> استيراد بيانات من Excel لموقع محدد</h3>
             <span class="close" onclick="closeDialog('management-dialog')">×</span>
         </div>
         <div class="dialog-body">
-            <p class="info-text">اختر المركز الذي تريد إضافة الموظفين إليه، ثم اختر ملف الإكسل.</p>
+            <p class="info-text">اختر الموقع الذي تريد إضافة الموظفين إليه، ثم اختر ملف الإكسل.</p>
             <div class="form-group">
-                <label for="center-select-import">اختر المركز الصحي:</label>
+                <label for="center-select-import">اختر الموقع:</label>
                 <select id="center-select-import">${options}</select>
             </div>
             <div class="form-group">
@@ -638,7 +638,7 @@ const monthName = new Date(extractData.extractStart || new Date()).toLocaleStrin
     // تحديث العنوان الرئيسي في واجهة التفاصيل بالتنسيق الجديد
     document.getElementById('center-main-title').innerHTML = `
         <h2>مستخلص العمالة للمكاتب الإدارية والمرافق الصحية</h2>
-        <h3>لمركز: ${centerName} - عن شهر ${monthName}</h3>
+        <h3>لموقع: ${centerName} - عن شهر ${monthName}</h3>
         <p>الفترة من: ${extractStart}م إلى: ${extractEnd}م</p>
     `;
     // --- نهاية التعديلات ---
@@ -690,16 +690,9 @@ function openTab(evt, tabName, centerKey) {
         displaySignatures('attendance', centerKey); 
     } 
     else if (tabName === 'performance-tab') {
-        if (centerKey === 'admin_staff') {
-            document.getElementById(tabName).innerHTML = `
-                <div class="info-message-box">
-                    <i class="fas fa-info-circle"></i>
-                    <h3>لا يوجد تقييم أداء لهذه الفئة</h3>
-                    <p>تقييم الأداء مخصص للمراكز الصحية فقط.</p>
-                </div>`;
-        } else if (typeof renderPerformanceTable === 'function') {
+        if (typeof renderPerformanceTable === 'function') {
             renderPerformanceTable(centerKey);
-            // ✅ [الإصلاح هنا] استدعاء دالة عرض التواقيع
+            // ✅ عرض التواقيع الخاصة بشهادة الأداء لنفس الموقع/الورشة
             displaySignatures('performance', centerKey);
         } else {
             document.getElementById(tabName).innerHTML = '<p style="color:red; text-align:center;">خطأ: ملف performance_logic.js غير محمل.</p>';
@@ -735,7 +728,7 @@ function renderAttendanceTable(centerKey) {
     // --- بناء كود HTML ---
     const tableTitleHTML = `
         <div class="extract-details-v2">
-            <div class="title-main">بيان بالحضور والغياب لمنسوبي شركة (${companyName}) بمركز صحي ${centerName}</div>
+            <div class="title-main">بيان بالحضور والغياب لمنسوبي شركة (${companyName}) بموقع ${centerName}</div>
             <div class="title-period">الفترة (${extractStart}م - ${extractEnd}م)</div>
             <div class="title-days">عدد أيام المستخلص: ${daysInExtract}</div>
         </div>`;
@@ -899,7 +892,7 @@ function populateAttendanceTableBody(centerKey) {
 
     if (centerData.length === 0) {
         const colspan = 14 + daysInExtract;
-        tbody.innerHTML = `<tr><td colspan="${colspan}">لا يوجد موظفون في هذا المركز.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${colspan}">لا يوجد موظفون في هذا الموقع.</td></tr>`;
         document.getElementById(`total-${centerKey}`).innerHTML = `<div class="table-summary-v2"><div class="summary-item"><span class="label">لا يوجد موظفين</span></div></div>`;
         return;
     }
@@ -1434,7 +1427,7 @@ function printSelected() {
             const daysHeader = Array.from({ length: daysInExtract }, (_, i) => `<th>${new Date(startDate.getTime() + i * 86400000).getDate()}</th>`).join('');
             const signatures = getSignatures('attendance').map(sig => `<div class="signature-item"><div class="title">${sig.title || ''}</div><div class="line"></div><div class="name">${sig.name || '................'}</div></div>`).join('');
             const summaryHTML = `<div class="table-summary-v2"><div class="summary-item"><span>عدد الموظفين:</span><span class="value">${centerData.length}</span></div><div class="summary-item"><span>التكلفة للفترة:</span><span class="value">${centerTotalCost.toFixed(2)}</span></div><div class="summary-item"><span>إجمالي الحسم:</span><span class="value">${totalDeduction.toFixed(2)}</span></div><div class="summary-item"><span>إجمالي الغرامات:</span><span class="value">${totalFine.toFixed(2)}</span></div><div class="summary-item net-total"><span>صافي الاستحقاق:</span><span class="value">${centerNetTotal.toFixed(2)}</span></div></div>`;
-            const titleHTML = `<div class="extract-details-v2"><div class="title-main">بيان بالحضور والغياب لمنسوبي شركة (...) بمركز صحي ${centerName}</div><div class="title-period">الفترة (${formatDate(extractData.extractStart)}م - ${formatDate(extractData.extractEnd)}م)</div></div>`;
+            const titleHTML = `<div class="extract-details-v2"><div class="title-main">بيان بالحضور والغياب لمنسوبي شركة (...) بموقع ${centerName}</div><div class="title-period">الفترة (${formatDate(extractData.extractStart)}م - ${formatDate(extractData.extractEnd)}م)</div></div>`;
 
             const attendanceHtmlContent = `<div class="attendance-report">${headerHTML}${contractInfoClone.outerHTML}${titleHTML}${summaryHTML}<table><thead><tr><th rowspan="2">م</th><th rowspan="2" class="job-title">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2" class="employee-name">اسم شاغل الوظيفة</th><th colspan="${daysInExtract}">الأيام</th><th rowspan="2">التكلفة</th><th colspan="2">الأيام</th><th colspan="2">الحسم والغرامة</th><th rowspan="2">الصافي</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة جنسية</th><th rowspan="2">الإقامة</th></tr><tr>${daysHeader}<th>حضور</th><th>غياب</th><th>الحسم</th><th>الغرامة</th></tr></thead><tbody>${tableRows}</tbody></table><div class="signatures-grid">${signatures}</div></div>`;
             doc.write(`<div class="page-container landscape-page">${attendanceHtmlContent}</div>`);
@@ -1444,7 +1437,7 @@ function printSelected() {
         //  الجزء الثاني: طباعة تقييم الأداء (الكود الكامل)
         // =======================================================================
         // ✅✅✅ [الحل هنا] إضافة شرط للتحقق من أن المركز ليس "فئات إدارية أخرى" ✅✅✅
-        if (printOptions.performance && centerKey !== 'admin_staff') {
+        if (printOptions.performance) {
             const signatures = getSignatures('performance').map(sig => `<div class="sign-box"><div class="title">${sig.title}</div><div class="line"></div><div>${sig.name || '................'}</div></div>`).join('');
             const items = getDynamicPerformanceItems();
             const scores = getPerformanceData()[centerKey] || {};
@@ -1463,7 +1456,7 @@ function printSelected() {
             const deductionAmount = (centerCost * deductionPercentage / 100);
             const summaryHTML = `<p>التقدير الذي حصل عليه المقاول: <b>${percentage.toFixed(2)}%</b>، نسبة الحسم: <b>${deductionPercentage}%</b>، ويساوي: <b>${deductionAmount.toFixed(2)} ريال</b></p>`;
             
-            const performanceHtmlContent = `<div class="performance-report">${headerTableHTML}<div class="cert-title">جدول تقييم مستوى الأداء والإنجاز</div><div class="sub-title">لمركز: ${centerName} - عن شهر ${monthName}</div><div class="cost-bar">إجمالي المبلغ لأنشطة القسم: ${centerCost.toFixed(2)} ريال</div><table><thead><tr><th>م</th><th style="width:65%">أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr></thead><tbody>${performanceTableRows}</tbody></table><div class="summary">${summaryHTML}</div><div class="signatures">${signatures}</div></div>`;
+            const performanceHtmlContent = `<div class="performance-report">${headerTableHTML}<div class="cert-title">جدول تقييم مستوى الأداء والإنجاز</div><div class="sub-title">لموقع: ${centerName} - عن شهر ${monthName}</div><div class="cost-bar">إجمالي المبلغ لأنشطة القسم: ${centerCost.toFixed(2)} ريال</div><table><thead><tr><th>م</th><th style="width:65%">أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr></thead><tbody>${performanceTableRows}</tbody></table><div class="summary">${summaryHTML}</div><div class="signatures">${signatures}</div></div>`;
             doc.write(`<div class="page-container portrait-page-perf">${performanceHtmlContent}</div>`);
         }
 
@@ -1491,12 +1484,12 @@ function printSelected() {
                 });
             }
             // ✅✅✅ [الحل هنا] التأكد من أن حسم الأداء لا يطبق على فئات إدارية أخرى ✅✅✅
-            const perfPenalty = (centerKey !== 'admin_staff') ? ((JSON.parse(localStorage.getItem('performanceDeductions') || '{}'))[centerKey] || 0) : 0;
+            const perfPenalty = ((JSON.parse(localStorage.getItem('performanceDeductions') || '{}'))[centerKey] || 0);
             const net = monthly - absenceDeduct - absencePenalty - perfPenalty - nationPenalty;
             const toSAR = (val) => val.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
             const achievementTableRows = `<tr><td>العمالة</td><td>${toSAR(monthly)}</td><td>${toSAR(absenceDeduct)}</td><td>${toSAR(absencePenalty)}</td><td>${toSAR(perfPenalty)}</td><td>${toSAR(nationPenalty)}</td><td><b>${toSAR(net)}</b></td></tr><tr class="total-row"><td colspan="6">إجمالي المستحق للمقاول</td><td><b>${toSAR(net)}</b></td></tr><tr class="tafqeet-cell"><td colspan="7">فقط وقدره: ${tafqit(net)}</td></tr>`;
 
-            const achievementHtmlContent = `<div class="achievement-report">${headerTableHTML}<div class="certificate-header"><h2>${titles.mainTitle}</h2><h3 style="font-weight: normal;">${titles.subTitle}</h3><h3>لمركز: ${centerName} - عن شهر ${monthName}</h3></div><table><thead><tr><th>البند</th><th>القيمة الشهرية</th><th>حسم الغياب</th><th>غرامة الغياب</th><th>غرامة الأداء</th><th>غرامة الجنسية</th><th>الصافي الشهري</th></tr></thead><tbody>${achievementTableRows}</tbody></table><div class="signatures">${signatures}</div></div>`;
+            const achievementHtmlContent = `<div class="achievement-report">${headerTableHTML}<div class="certificate-header"><h2>${titles.mainTitle}</h2><h3 style="font-weight: normal;">${titles.subTitle}</h3><h3>لموقع: ${centerName} - عن شهر ${monthName}</h3></div><table><thead><tr><th>البند</th><th>القيمة الشهرية</th><th>حسم الغياب</th><th>غرامة الغياب</th><th>غرامة الأداء</th><th>غرامة الجنسية</th><th>الصافي الشهري</th></tr></thead><tbody>${achievementTableRows}</tbody></table><div class="signatures">${signatures}</div></div>`;
             doc.write(`<div class="page-container portrait-page-ach">${achievementHtmlContent}</div>`);
         }
     });
@@ -2377,7 +2370,7 @@ function displayEmployeesForCenter(centerKey) {
 
     contentArea.innerHTML = '';
     if (centerEmployees.length === 0) {
-        contentArea.innerHTML = '<p class="info-text-v3"><i class="fas fa-exclamation-circle"></i> لا يوجد موظفون يطابقون البحث أو في هذا المركز.</p>';
+        contentArea.innerHTML = '<p class="info-text-v3"><i class="fas fa-exclamation-circle"></i> لا يوجد موظفون يطابقون البحث أو في هذا الموقع.</p>';
         return;
     }
 
