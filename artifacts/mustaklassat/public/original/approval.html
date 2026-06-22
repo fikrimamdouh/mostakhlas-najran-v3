@@ -871,8 +871,7 @@ async function updateStatus(id, status) {
 }
 
 function startRevision(id, type) {
-  localStorage.setItem(REVISION_KEY, String(id));
-  window.location.href = TYPE_PAGES[type] || '/original/attendance.html';
+  window.location.href = '/extracts/track?source=approval&extractId=' + id + '&extractType=' + type;
 }
 
 // ── Preview ───────────────────────────────────────────────────────────────
