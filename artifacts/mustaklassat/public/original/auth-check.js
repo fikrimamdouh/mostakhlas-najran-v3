@@ -1,11 +1,14 @@
 /**
  * auth-check.js
- * يتحقق من تسجيل الدخول قبل عرض أي صفحة من صفحات النظام الأصلي
- * + نظام الإشعارات الداخلي (جرس + badge)
+ * يتحقق من تسجيل الدخول قبل عرض صفحات النظام الأصلي
+ * + تحميل الحراس العامة
+ * + تحميل منطق أداء المكاتب المستقل عن المراكز الصحية
  */
 (function () {
+  'use strict';
+
   var BASE = window.location.origin;
-  var BUILD_V = '20260620revisionBoot1';
+  var BUILD_V = '20260622adminOfficesPerformanceSeparated1';
   var NOTIF_INTERVAL_MS = 300000;
   var notifFetchInProgress = false;
 
@@ -20,7 +23,9 @@
         return null;
       }
       return s;
-    } catch (e) { return null; }
+    } catch (e) {
+      return null;
+    }
   }
 
   var session = getSession();
@@ -33,8 +38,7 @@
     try {
       var pathFile = (window.location.pathname || '').split('/').pop() || '';
       if (pathFile) return pathFile;
-      var pageParam = new URLSearchParams(window.location.search || '').get('page');
-      return pageParam || '';
+      return new URLSearchParams(window.location.search || '').get('page') || '';
     } catch (_) {
       return (window.location.pathname || '').split('/').pop() || '';
     }
@@ -78,16 +82,11 @@
   function isOriginalPageAllowed() {
     var role = String(session.role || 'user').toLowerCase();
     if (role === 'admin' || role === 'supervisor') return true;
-
-    var pageFile = getOriginalPageFile();
-    var moduleKey = moduleKeyFromPage(pageFile);
+    var moduleKey = moduleKeyFromPage(getOriginalPageFile());
     if (!moduleKey) return true;
-
     var explicitOnly = { 'request-visit': true, 'visit_review': true };
     var allowed = parseAllowedModules(session.allowedModules);
-
     if (allowed === null) return !explicitOnly[moduleKey];
-
     return allowed.indexOf(moduleKey) > -1;
   }
 
@@ -123,37 +122,36 @@
     return script;
   }
 
- appendScript('/original/hospital-context-guard.js?v=20260611d', false);
-appendScript('/original/hospital-storage-extract-context-guard.js?v=' + BUILD_V, false);
+  var pageSig = window.location.pathname + window.location.search;
+  var isAttendancePage = /\/original\/attendance\.html(?:$|[?#])/.test(pageSig) || /[?&]page=.*attendance\.html(?:$|&)/.test(pageSig);
+  var isAdminOfficesPage = /\/original\/admin_offices_attendance\.html(?:$|[?#])/.test(pageSig);
+  var isSidebarSensitivePage = isAttendancePage || isAdminOfficesPage;
 
-var pageSig = window.location.pathname + window.location.search;
+  appendScript('/original/hospital-context-guard.js?v=20260611d', false);
+  appendScript('/original/hospital-storage-extract-context-guard.js?v=' + BUILD_V, false);
 
-var isSidebarSensitivePage =
-  /\/original\/attendance\.html(?:$|[?#])/.test(pageSig) ||
-  /\/original\/admin_offices_attendance\.html(?:$|[?#])/.test(pageSig);
+  if (!isSidebarSensitivePage) {
+    appendScript('/original/home-sidebar-guard.js?v=20260621homeSidebarGuard1', false);
+  }
 
-if (!isSidebarSensitivePage) {
-  appendScript('/original/home-sidebar-guard.js?v=20260621homeSidebarGuard1', false);
-}
-
-appendScript('/original/approve-button-polish.js?v=' + BUILD_V, true);
-appendScript('/original/revision-local-draft-restore.js?v=' + BUILD_V, true);
+  appendScript('/original/approve-button-polish.js?v=' + BUILD_V, true);
+  appendScript('/original/revision-local-draft-restore.js?v=' + BUILD_V, true);
   appendScript('/original/revision-session-guard.js?v=' + BUILD_V, true);
-  if (
-    /\/original\/(attendance|performance|achievement|consumables|spare_parts|health_centers_attendance|health_centers_consumables|admin_offices_attendance|admin_offices_consumables|najran_general_attendance|najran_general_performance|najran_general_achievement|najran_dental_attendance|najran_dental_performance)\.html(?:$|[?#])/.test(pageSig)
-  ) {
+
+  if (/\/original\/(attendance|performance|achievement|consumables|spare_parts|health_centers_attendance|health_centers_consumables|admin_offices_attendance|admin_offices_consumables|najran_general_attendance|najran_general_performance|najran_general_achievement|najran_dental_attendance|najran_dental_performance)\.html(?:$|[?#])/.test(pageSig)) {
     appendScript('/original/extract-snapshot.js?v=' + BUILD_V, true);
   }
 
-  if (/attendance\.html(?:$|[?#])/.test(pageSig) || /[?&]page=.*attendance\.html(?:$|&)/.test(pageSig)) {
+  if (isAttendancePage) {
     appendScript('/original/attendance-cloud-refresh-guard.js?v=' + BUILD_V, true);
   }
 
-  if (
-    /\/original\/attendance\.html(?:$|[?#])/.test(pageSig) ||
-    /\/original\/admin_offices_attendance\.html(?:$|[?#])/.test(pageSig)
-  ) {
+  if (isAttendancePage || isAdminOfficesPage) {
     appendScript('/original/special-absence-no-deduction.js?v=' + BUILD_V, true);
+  }
+
+  if (isAdminOfficesPage) {
+    appendScript('/original/admin_offices_performance_logic.js?v=' + BUILD_V, true);
   }
 
   if (/\/original\/approval\.html(?:$|[?#])/.test(pageSig)) {
@@ -180,32 +178,18 @@ appendScript('/original/revision-local-draft-restore.js?v=' + BUILD_V, true);
     var templatePrefix = 'lastPerformanceTemplate_';
 
     function inRevisionMode() {
-      return !!(
-        localStorage.getItem('najran_revision_extract_id') ||
-        localStorage.getItem('najran_revision_mode') === 'true'
-      );
+      return !!(localStorage.getItem('najran_revision_extract_id') || localStorage.getItem('najran_revision_mode') === 'true');
     }
-
-    function safeSet(key, value) {
-      if (value == null || value === '') return;
-      try { localStorage.setItem(key, value); } catch (_) {}
-    }
-
+    function safeSet(key, value) { if (value == null || value === '') return; try { localStorage.setItem(key, value); } catch (_) {} }
     function mirrorCurrentTableDataToTemplate(tableId) {
       if (!tableId || tableIds.indexOf(tableId) === -1) return;
       if (inRevisionMode()) return;
-      var sourceKey = 'tableData_' + tableId;
-      var value = localStorage.getItem(sourceKey);
+      var value = localStorage.getItem('tableData_' + tableId);
       if (!value) return;
       safeSet(templatePrefix + tableId, value);
       safeSet('lastPerformanceTemplateSavedAt', new Date().toISOString());
     }
-
-    function mirrorAllExistingTableDataToTemplate() {
-      if (inRevisionMode()) return;
-      tableIds.forEach(mirrorCurrentTableDataToTemplate);
-    }
-
+    function mirrorAllExistingTableDataToTemplate() { if (inRevisionMode()) return; tableIds.forEach(mirrorCurrentTableDataToTemplate); }
     function seedMissingTableDataFromTemplate() {
       if (inRevisionMode()) return;
       tableIds.forEach(function (tableId) {
@@ -217,7 +201,6 @@ appendScript('/original/revision-local-draft-restore.js?v=' + BUILD_V, true);
         console.info('[PerformanceTemplate] تمت استعادة آخر نموذج محفوظ لجدول الأداء:', tableId);
       });
     }
-
     function wrapSaveTableData() {
       if (typeof window.saveTableData !== 'function') return false;
       if (window.saveTableData.__NAJRAN_TEMPLATE_WRAPPED__) return true;
@@ -230,17 +213,11 @@ appendScript('/original/revision-local-draft-restore.js?v=' + BUILD_V, true);
       window.saveTableData.__NAJRAN_TEMPLATE_WRAPPED__ = true;
       return true;
     }
-
-    function retryWrapSaveTableData(attempt) {
-      if (wrapSaveTableData()) return;
-      if (attempt >= 40) return;
-      setTimeout(function () { retryWrapSaveTableData(attempt + 1); }, 250);
-    }
+    function retryWrapSaveTableData(attempt) { if (wrapSaveTableData()) return; if (attempt >= 40) return; setTimeout(function () { retryWrapSaveTableData(attempt + 1); }, 250); }
 
     seedMissingTableDataFromTemplate();
     mirrorAllExistingTableDataToTemplate();
     retryWrapSaveTableData(0);
-
     document.addEventListener('DOMContentLoaded', function () {
       seedMissingTableDataFromTemplate();
       mirrorAllExistingTableDataToTemplate();
@@ -249,144 +226,62 @@ appendScript('/original/revision-local-draft-restore.js?v=' + BUILD_V, true);
       setTimeout(mirrorAllExistingTableDataToTemplate, 1200);
     });
   }
-
   installPerformanceTemplateGuard();
 
-  var NOTIF_SEEN_KEY  = 'najran_notif_seen_ids';
+  var NOTIF_SEEN_KEY = 'najran_notif_seen_ids';
   var NOTIF_CHECK_KEY = 'najran_notif_last_check';
 
   function getSeenIds() {
-    try {
-      var parsed = JSON.parse(localStorage.getItem(NOTIF_SEEN_KEY) || '[]');
-      return Array.isArray(parsed) ? parsed.map(String) : [];
-    } catch (_) {
-      return [];
-    }
+    try { var parsed = JSON.parse(localStorage.getItem(NOTIF_SEEN_KEY) || '[]'); return Array.isArray(parsed) ? parsed.map(String) : []; }
+    catch (_) { return []; }
   }
-
-  function getExtractChangedAt(e) {
-    return String(
-      (e && (e.updatedAt || e.revisedAt || e.approvedAt || e.createdAt)) || ''
-    );
-  }
-
-  function getNotifMarker(e) {
-    if (!e) return '';
-    return [
-      String(e.id || ''),
-      String(e.status || ''),
-      getExtractChangedAt(e)
-    ].join('|');
-  }
-
+  function getExtractChangedAt(e) { return String((e && (e.updatedAt || e.revisedAt || e.approvedAt || e.createdAt)) || ''); }
+  function getNotifMarker(e) { if (!e) return ''; return [String(e.id || ''), String(e.status || ''), getExtractChangedAt(e)].join('|'); }
   function isNotifSeen(seenIds, e) {
     var marker = getNotifMarker(e);
-
-    if (marker && seenIds.indexOf(marker) > -1) {
-      return true;
-    }
-
-    if (e && e.status === 'submitted' && seenIds.indexOf(String(e.id)) > -1) {
-      return true;
-    }
-
+    if (marker && seenIds.indexOf(marker) > -1) return true;
+    if (e && e.status === 'submitted' && seenIds.indexOf(String(e.id)) > -1) return true;
     return false;
   }
-
   function markAllSeen(markers) {
-    localStorage.setItem(
-      NOTIF_SEEN_KEY,
-      JSON.stringify((markers || []).map(String))
-    );
+    localStorage.setItem(NOTIF_SEEN_KEY, JSON.stringify((markers || []).map(String)));
     localStorage.setItem(NOTIF_CHECK_KEY, String(Date.now()));
   }
-
   function fetchNotifCount(callback) {
     var s = getSession();
-    if (!s) return;
-    if (notifFetchInProgress) return;
-
+    if (!s || notifFetchInProgress) return;
     var age = Date.now() - (s.timestamp || 0);
     var token = (s.clerkToken && age < 55000) ? s.clerkToken : null;
-
-    if (!token) {
-      callback(0, []);
-      return;
-    }
-
+    if (!token) { callback(0, []); return; }
     notifFetchInProgress = true;
-
-    var headers = {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + token
-    };
-
-    fetch('/api/submitted-extracts-lite', {
-      headers: headers,
-      credentials: 'include'
-    })
-      .then(function (r) {
-        return r.ok ? r.json() : null;
-      })
+    fetch('/api/submitted-extracts-lite', { headers: { Authorization: 'Bearer ' + token }, credentials: 'include' })
+      .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
-        if (!data || !data.extracts) {
-          callback(0, []);
-          return;
-        }
-
+        if (!data || !data.extracts) { callback(0, []); return; }
         var role = s.role || 'user';
         var seenIds = getSeenIds();
         var unseen = [];
-
         if (role === 'admin' || role === 'supervisor') {
-          unseen = data.extracts.filter(function (e) {
-            return e.status === 'submitted' && !isNotifSeen(seenIds, e);
-          });
+          unseen = data.extracts.filter(function (e) { return e.status === 'submitted' && !isNotifSeen(seenIds, e); });
         } else {
-          var lastCheck =
-            parseInt(localStorage.getItem(NOTIF_CHECK_KEY) || '0') ||
-            (Date.now() - 7 * 24 * 3600 * 1000);
-
+          var lastCheck = parseInt(localStorage.getItem(NOTIF_CHECK_KEY) || '0') || (Date.now() - 7 * 24 * 3600 * 1000);
           unseen = data.extracts.filter(function (e) {
-            var changed = new Date(
-              e.updatedAt || e.revisedAt || e.approvedAt || e.createdAt
-            ).getTime();
-
-            return changed > lastCheck &&
-              (e.status === 'approved' ||
-               e.status === 'needs_revision' ||
-               e.status === 'rejected') &&
-              !isNotifSeen(seenIds, e);
+            var changed = new Date(e.updatedAt || e.revisedAt || e.approvedAt || e.createdAt).getTime();
+            return changed > lastCheck && (e.status === 'approved' || e.status === 'needs_revision' || e.status === 'rejected') && !isNotifSeen(seenIds, e);
           });
         }
-
-        callback(
-          unseen.length,
-          data.extracts.map(getNotifMarker).filter(Boolean)
-        );
+        callback(unseen.length, data.extracts.map(getNotifMarker).filter(Boolean));
       })
-      .catch(function () {
-        callback(0, []);
-      })
-      .finally(function () {
-        notifFetchInProgress = false;
-      });
+      .catch(function () { callback(0, []); })
+      .finally(function () { notifFetchInProgress = false; });
   }
-
   function updateBell(count) {
     var badge = document.getElementById('najran-bell-badge');
-    var btn   = document.getElementById('najran-bell-btn');
+    var btn = document.getElementById('najran-bell-btn');
     if (!badge || !btn) return;
-    if (count > 0) {
-      badge.textContent = count > 9 ? '9+' : String(count);
-      badge.style.display = 'inline-flex';
-      btn.style.animation = 'naj-bell-ring 0.6s ease 3';
-    } else {
-      badge.style.display = 'none';
-      btn.style.animation = '';
-    }
+    if (count > 0) { badge.textContent = count > 9 ? '9+' : String(count); badge.style.display = 'inline-flex'; btn.style.animation = 'naj-bell-ring 0.6s ease 3'; }
+    else { badge.style.display = 'none'; btn.style.animation = ''; }
   }
-
   function checkNotifications() {
     fetchNotifCount(function (count, allIds) {
       updateBell(count);
@@ -396,11 +291,7 @@ appendScript('/original/revision-local-draft-restore.js?v=' + BUILD_V, true);
           markAllSeen(allIds || []);
           updateBell(0);
           var role = String((getSession() || {}).role || 'user').toLowerCase();
-          if (role === 'admin' || role === 'supervisor') {
-            window.location.href = '/original/approval.html';
-          } else {
-            window.location.href = '/extracts/track';
-          }
+          window.location.href = (role === 'admin' || role === 'supervisor') ? '/original/approval.html' : '/extracts/track';
         };
       }
     });
