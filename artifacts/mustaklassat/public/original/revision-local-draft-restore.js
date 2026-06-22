@@ -117,6 +117,95 @@ function hydrateRevisionExtractSettings(snapshot) {
     console.warn('[RevisionBootGuard] failed to hydrate extract settings', e);
   }
 }
+  function normalizeRevisionSnapshotSettings(snapshot) {
+  snapshot = snapshot || {};
+
+var extract =
+  snapshot.persistentExtractData && typeof snapshot.persistentExtractData === 'object'
+    ? snapshot.persistentExtractData
+    : parse(snapshot.persistentExtractData, {});
+    if (!extract || typeof extract !== 'object') extract = {};
+
+  var month =
+    extract.extractMonth ||
+    snapshot.extractMonth ||
+    extract.month ||
+    snapshot.month ||
+    '';
+
+  var year =
+    extract.extractYear ||
+    snapshot.extractYear ||
+    extract.year ||
+    snapshot.year ||
+    '';
+
+  var start =
+    extract.extractStart ||
+    snapshot.extractStart ||
+    extract.start ||
+    snapshot.start ||
+    extract.extractFromDate ||
+    snapshot.extractFromDate ||
+    '';
+
+  var end =
+    extract.extractEnd ||
+    snapshot.extractEnd ||
+    extract.end ||
+    snapshot.end ||
+    extract.extractToDate ||
+    snapshot.extractToDate ||
+    '';
+
+  var payment =
+    extract.paymentNumber ||
+    snapshot.paymentNumber ||
+    extract.extractNumber ||
+    snapshot.extractNumber ||
+    extract.payment ||
+    snapshot.payment ||
+    '';
+
+  if (month) extract.extractMonth = month;
+  if (year) extract.extractYear = String(year);
+  if (start) extract.extractStart = start;
+  if (end) extract.extractEnd = end;
+  if (payment) {
+    extract.paymentNumber = String(payment);
+    extract.extractNumber = String(payment);
+  }
+
+  if (!extract.extractCalendar) extract.extractCalendar = snapshot.extractCalendar || 'ميلادي';
+  if (!extract.extractDuration) extract.extractDuration = snapshot.extractDuration || 'شهر واحد';
+
+  snapshot.persistentExtractData = JSON.stringify(extract);
+
+  if (month) snapshot.extractMonth = month;
+  if (year) snapshot.extractYear = String(year);
+  if (start) {
+    snapshot.extractStart = start;
+    snapshot.extractFromDate = start;
+  }
+  if (end) {
+    snapshot.extractEnd = end;
+    snapshot.extractToDate = end;
+  }
+  if (payment) {
+    snapshot.paymentNumber = String(payment);
+    snapshot.extractNumber = String(payment);
+  }
+
+  console.warn('[RevisionBootGuard] normalized saved extract settings without changing keys', {
+    month: month,
+    year: year,
+    start: start,
+    end: end,
+    payment: payment
+  });
+
+  return snapshot;
+}
   function applyRevisionBootSnapshot() {
     try {
       var isRevision =
@@ -131,7 +220,7 @@ function hydrateRevisionExtractSettings(snapshot) {
 
       var snapshot = parse(rawSnapshot, null);
       if (!snapshot || typeof snapshot !== 'object') return false;
-
+snapshot = normalizeRevisionSnapshotSettings(snapshot);
       console.warn('[RevisionBootGuard] applying submitted extract snapshot after page load');
 
       clearOperational();
