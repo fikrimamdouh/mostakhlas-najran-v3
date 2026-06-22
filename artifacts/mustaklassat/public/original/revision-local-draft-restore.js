@@ -662,15 +662,27 @@ try {
     try { if (typeof window.updateCertificateFromPerformance === 'function') window.updateCertificateFromPerformance(); } catch (_) {}
 
     setTimeout(function () {
-      perfDepartments.forEach(function (dept) {
-        try { if (typeof window.updateTotalAmount === 'function') window.updateTotalAmount(dept); } catch (_) {}
-        try { if (typeof window.updateTotal === 'function') window.updateTotal(dept); } catch (_) {}
-      });
+  perfDepartments.forEach(function (dept) {
+    try { if (typeof window.updateTotalAmount === 'function') window.updateTotalAmount(dept); } catch (_) {}
+    try { if (typeof window.updateTotal === 'function') window.updateTotal(dept); } catch (_) {}
+    try { if (typeof window.saveTableData === 'function') window.saveTableData(dept); } catch (_) {}
+  });
 
-      try { if (typeof window.updateCertificateFromPerformance === 'function') window.updateCertificateFromPerformance(); } catch (_) {}
+  try { if (typeof window.updateCertificateFromPerformance === 'function') window.updateCertificateFromPerformance(); } catch (_) {}
 
-      console.warn('[RevisionBootGuard] performance recalculation after revision snapshot done');
-    }, 500);
+  try {
+    localStorage.removeItem('najran_revision_attendance_changed');
+    console.warn('[RevisionBootGuard] attendance-change flag cleared after performance recalculation');
+  } catch (_) {}
+
+  try {
+    if (typeof saveRevisionWorkingSnapshot === 'function') {
+      saveRevisionWorkingSnapshot('performance-recalculated-after-attendance');
+    }
+  } catch (_) {}
+
+  console.warn('[RevisionBootGuard] performance recalculation after revision snapshot done');
+}, 500);
   }
 } catch (e) {
   console.warn('[RevisionBootGuard] performance recalculation failed', e);
