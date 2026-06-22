@@ -1172,6 +1172,20 @@ function getAttendanceData() {
 function saveAttendanceData(data) {
   try {
     localStorage.setItem('attendanceData', JSON.stringify(data));
+
+    try {
+      var totalRows = 0;
+      Object.keys(data || {}).forEach(function (k) {
+        if (Array.isArray(data[k])) totalRows += data[k].length;
+      });
+
+      if (totalRows > 0) {
+        sessionStorage.removeItem('najran_new_extract_clear_attendance_once');
+        localStorage.removeItem('najran_new_extract_clear_attendance_once');
+        console.warn('[AttendanceSave] تم إنهاء وضع مسح المستخلص الجديد بعد حفظ عمالة جديدة');
+      }
+    } catch (_) {}
+
   } catch (error) {
     console.error('خطأ في حفظ بيانات الحضور:', error);
     alert('حدث خطأ أثناء حفظ البيانات');
