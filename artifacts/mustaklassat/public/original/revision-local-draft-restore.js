@@ -4,7 +4,7 @@
 
   var BACKUP_KEY = 'najran_revision_previous_local_backup';
   var REVISION_KEY = 'najran_revision_extract_id';
-var WORKING_KEY = 'najran_revision_working_snapshot';
+
   function parse(raw, fallback) {
     try { return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
   }
@@ -206,501 +206,61 @@ var extract =
 
   return snapshot;
 }
-  function isRevisionActiveNow() {
-  try {
-    return localStorage.getItem('najran_revision_mode') === 'true' &&
-      !!localStorage.getItem('najran_revision_extract_id') &&
-      !!localStorage.getItem('najran_revision_snapshot');
-  } catch (_) {
-    return false;
-  }
-}
-
-function collectRevisionOperationalData() {
-  var data = {};
-
-  var keys = [
-    'attendanceData','ng_attendanceData','nd_attendanceData',
-    'centersAttendanceData_v2','healthCentersAttendanceData','adminOfficesAttendanceData_v1',
-
-    'persistentContractData','persistentExtractData',
-    'extractMonth','extractYear','extractNumber',
-    'extractStart','extractEnd','extractFromDate','extractToDate',
-    'paymentNumber','periodMonth',
-
-    'performanceData','performanceData_v4',
-    'performanceDeductions','performanceTotalDeduction','performanceTotalDue',
-
-    'achievementData','achievementTitles_v1','achievementItemNames',
-
-    'consumablesTableData','healthCentersConsumables',
-    'mainHospitalConsumables','admin_offices_consumables_v1.0',
-
-    'spare_partsData','sparePartsTotalAmount',
-
-    'approvalData','displayApprovalData',
-    'finalLaborCost','finalConsumablesCost',
-    'grand-net-total','grand-net-total-centers','grand-net-total-admin',
-
-    'najran_labor_attendance_done',
-    'najran_labor_performance_done',
-    'najran_health_attendance_done',
-    'najran_admin_offices_attendance_done'
-  ];
-
-  var prefixes = [
-    'deptCalculatedCost_',
-    'dept_',
-    'tableData_',
-    'achievement_',
-    'consumables_',
-    'spare_',
-    'water_',
-    'sewage_',
-    'subcontractors_',
-    'najran_labor_',
-    'najran_health_',
-    'najran_admin_'
-  ];
-
-  keys.forEach(function (key) {
-    try {
-      var val = localStorage.getItem(key);
-      if (val != null) data[key] = val;
-    } catch (_) {}
-  });
-
-  try {
-    for (var i = 0; i < localStorage.length; i++) {
-      var k = localStorage.key(i);
-      if (!k) continue;
-
-      var matched = prefixes.some(function (p) {
-        return k.indexOf(p) === 0;
-      });
-
-      if (!matched) continue;
-
-      var v = localStorage.getItem(k);
-      if (v != null) data[k] = v;
-    }
-  } catch (_) {}
-
-  return data;
-}
-
-function saveRevisionWorkingSnapshot(reason) {
-  try {
-    if (!isRevisionActiveNow()) return false;
-
-    var revisionId = localStorage.getItem('najran_revision_extract_id') || '';
-    if (!revisionId) return false;
-
- var collectedData = collectRevisionOperationalData();
-
-try {
-  var attendanceChanged =
-    localStorage.getItem('najran_revision_attendance_changed') === '1';
-
-  if (attendanceChanged) {
-    [
-      'performanceData',
-      'performanceData_v4',
-      'performanceDeductions',
-      'performanceTotalDeduction',
-      'performanceTotalDue',
-      'achievementData',
-      'achievementTitles_v1',
-      'achievementItemNames',
-      'approvalData',
-      'displayApprovalData',
-      'finalLaborCost',
-      'finalConsumablesCost',
-      'grand-net-total',
-      'grand-net-total-centers',
-      'grand-net-total-admin'
-    ].forEach(function (key) {
-      delete collectedData[key];
-    });
-
-    Object.keys(collectedData).forEach(function (key) {
-  if (
-    key.indexOf('tableData_') === 0 ||
-    key.indexOf('achievement_') === 0
-  ) {
-    delete collectedData[key];
-  }
-});
-    console.warn('[RevisionWorking] attendance changed — cleared derived performance/achievement data from working snapshot');
-  }
-} catch (_) {}
-
-var working = {
-  savedAt: new Date().toISOString(),
-  reason: reason || 'revision-working-autosave',
-  revisionExtractId: revisionId,
-  data: collectedData
-};
-
-    localStorage.setItem(WORKING_KEY, JSON.stringify(working));
-
-    console.warn('[RevisionWorking] saved working snapshot', {
-      revisionExtractId: revisionId,
-      reason: reason || '',
-      keys: Object.keys(working.data || {}).length
-    });
-
-    return true;
-  } catch (e) {
-    console.warn('[RevisionWorking] failed to save working snapshot', e);
-    return false;
-  }
-}
-
-function getRevisionBootSnapshot(rawSnapshot) {
-  var original = parse(rawSnapshot, null);
-  if (!original || typeof original !== 'object') return null;
-
-  try {
-    var revisionId = localStorage.getItem('najran_revision_extract_id') || '';
-    var working = parse(localStorage.getItem(WORKING_KEY), null);
-
-    if (
-      working &&
-      String(working.revisionExtractId || '') === String(revisionId || '') &&
-      working.data &&
-      typeof working.data === 'object'
-    ) {
-      console.warn('[RevisionWorking] applying working snapshot instead of original submitted snapshot', {
-        revisionExtractId: revisionId,
-        savedAt: working.savedAt,
-        reason: working.reason
-      });
-
-      return working.data;
-    }
-  } catch (_) {}
-
-  return original;
-}
-
-function installRevisionWorkingAutosave() {
-  try {
-    if (!isRevisionActiveNow()) return;
-    if (window.__NAJRAN_REVISION_WORKING_AUTOSAVE__) return;
-    window.__NAJRAN_REVISION_WORKING_AUTOSAVE__ = true;
-
-    var timer = null;
-
-    var watchedKeys = {
-      attendanceData: true,
-      ng_attendanceData: true,
-      nd_attendanceData: true,
-      centersAttendanceData_v2: true,
-      healthCentersAttendanceData: true,
-      adminOfficesAttendanceData_v1: true,
-
-      persistentContractData: true,
-      persistentExtractData: true,
-      extractMonth: true,
-      extractYear: true,
-      extractNumber: true,
-      extractStart: true,
-      extractEnd: true,
-      extractFromDate: true,
-      extractToDate: true,
-      paymentNumber: true,
-      periodMonth: true,
-
-      performanceData: true,
-      performanceData_v4: true,
-      performanceDeductions: true,
-      performanceTotalDeduction: true,
-      performanceTotalDue: true,
-
-      achievementData: true,
-      achievementTitles_v1: true,
-      achievementItemNames: true,
-
-      consumablesTableData: true,
-      healthCentersConsumables: true,
-      mainHospitalConsumables: true,
-      'admin_offices_consumables_v1.0': true,
-
-      spare_partsData: true,
-      sparePartsTotalAmount: true,
-
-      approvalData: true,
-      displayApprovalData: true,
-      finalLaborCost: true,
-      finalConsumablesCost: true,
-      'grand-net-total': true,
-      'grand-net-total-centers': true,
-      'grand-net-total-admin': true,
-
-      najran_labor_attendance_done: true,
-      najran_labor_performance_done: true,
-      najran_health_attendance_done: true,
-      najran_admin_offices_attendance_done: true
-    };
-var watchedPrefixes = [
-  'deptCalculatedCost_',
-  'dept_',
-  'tableData_',
-  'achievement_',
-  'consumables_',
-  'spare_',
-  'water_',
-  'sewage_',
-  'subcontractors_',
-  'najran_labor_',
-  'najran_health_',
-  'najran_admin_'
-];
-
-function isWatchedRevisionKey(key) {
-  if (watchedKeys[key]) return true;
-
-  for (var i = 0; i < watchedPrefixes.length; i++) {
-    if (String(key || '').indexOf(watchedPrefixes[i]) === 0) {
-      return true;
-    }
-  }
-
-  return false;
-}
-     function isAttendanceRevisionPageNow() {
-      try {
-        var href = String(location.href || '');
-        var search = String(location.search || '');
-
-        return (
-          /attendance\.html/i.test(href) ||
-          /[?&]page=[^&]*attendance\.html/i.test(search)
-        );
-      } catch (_) {
-        return false;
-      }
-    }
-
-    function markRevisionAttendanceChanged(reason) {
-      try {
-        if (!isRevisionActiveNow()) return;
-        if (!isAttendanceRevisionPageNow()) return;
-
-        window.__NAJRAN_REVISION_ORIGINAL_SETITEM__(
-          'najran_revision_attendance_changed',
-          '1'
-        );
-
-        console.warn('[RevisionWorking] attendance change marked', reason || '');
-      } catch (_) {}
-    }
-
-    function schedule(reason) {
-      if (!isRevisionActiveNow()) return;
-
-      if (
-        reason === 'input' ||
-        reason === 'change' ||
-        reason === 'click-action' ||
-        String(reason || '').indexOf('attendance') >= 0
-      ) {
-        markRevisionAttendanceChanged(reason);
-      }
-
-      clearTimeout(timer);
-      timer = setTimeout(function () {
-        saveRevisionWorkingSnapshot(reason);
-      }, 250);
-    }
-
-    try {
-      if (!window.__NAJRAN_REVISION_ORIGINAL_SETITEM__) {
-        window.__NAJRAN_REVISION_ORIGINAL_SETITEM__ = localStorage.setItem.bind(localStorage);
-      }
-
-      var originalSetItem = window.__NAJRAN_REVISION_ORIGINAL_SETITEM__;
-
-      localStorage.setItem = function (key, value) {
-        originalSetItem(key, value);
-
-        try {
-                 if (
-  isRevisionActiveNow() &&
-  key !== WORKING_KEY &&
-  key !== 'najran_revision_snapshot' &&
-  isWatchedRevisionKey(key)
-) {
-  if (
-    key === 'attendanceData' ||
-    key === 'ng_attendanceData' ||
-    key === 'nd_attendanceData' ||
-    key === 'centersAttendanceData_v2' ||
-    key === 'healthCentersAttendanceData' ||
-    key === 'adminOfficesAttendanceData_v1'
-  ) {
-    try {
-      window.__NAJRAN_REVISION_ORIGINAL_SETITEM__(
-        'najran_revision_attendance_changed',
-        '1'
-      );
-    } catch (_) {}
-  }
-
-  schedule('localStorage:' + key);
-}
-        } catch (_) {}
-      };
-    } catch (e) {
-      console.warn('[RevisionWorking] localStorage.setItem hook failed', e);
-    }
-
-    document.addEventListener('input', function () {
-      schedule('input');
-    }, true);
-
-    document.addEventListener('change', function () {
-      schedule('change');
-    }, true);
-
-    document.addEventListener('click', function () {
-      setTimeout(function () {
-        saveRevisionWorkingSnapshot('click-action');
-      }, 120);
-    }, true);
-
-    window.addEventListener('pagehide', function () {
-      saveRevisionWorkingSnapshot('pagehide');
-    });
-
-    window.addEventListener('beforeunload', function () {
-      saveRevisionWorkingSnapshot('beforeunload');
-    });
-
-    setTimeout(function () {
-      saveRevisionWorkingSnapshot('initial-seed');
-    }, 1400);
-
-    console.warn('[RevisionWorking] autosave installed with localStorage hook');
-  } catch (e) {
-    console.warn('[RevisionWorking] failed to install autosave', e);
-  }
-}
   function applyRevisionBootSnapshot() {
-  try {
-    var isRevision =
-      localStorage.getItem('najran_revision_mode') === 'true' &&
-      localStorage.getItem('najran_revision_extract_id') &&
-      localStorage.getItem('najran_revision_snapshot');
+    try {
+      var isRevision =
+        localStorage.getItem('najran_revision_mode') === 'true' &&
+        localStorage.getItem('najran_revision_extract_id') &&
+        localStorage.getItem('najran_revision_snapshot');
 
-    if (!isRevision) return false;
+      if (!isRevision) return false;
 
-    var rawSnapshot = localStorage.getItem('najran_revision_snapshot');
-    if (!rawSnapshot) return false;
+      var rawSnapshot = localStorage.getItem('najran_revision_snapshot');
+      if (!rawSnapshot) return false;
 
-    var snapshot = getRevisionBootSnapshot(rawSnapshot);
-    if (!snapshot || typeof snapshot !== 'object') return false;
+      var snapshot = parse(rawSnapshot, null);
+      if (!snapshot || typeof snapshot !== 'object') return false;
+snapshot = normalizeRevisionSnapshotSettings(snapshot);
+      console.warn('[RevisionBootGuard] applying submitted extract snapshot after page load');
 
-    snapshot = normalizeRevisionSnapshotSettings(snapshot);
+      clearOperational();
 
-    console.warn('[RevisionBootGuard] applying revision snapshot after page load');
-
-    clearOperational();
-
-    Object.keys(snapshot).forEach(function (key) {
-      writeValue(key, snapshot[key]);
-    });
-
-    hydrateRevisionExtractSettings(snapshot);
-    refreshSettingsPageAfterRevisionHydrate();
-
-    localStorage.setItem('najran_revision_mode', 'true');
-    localStorage.setItem('najran_revision_boot_lock', 'true');
-
-    setTimeout(function () {
       Object.keys(snapshot).forEach(function (key) {
         writeValue(key, snapshot[key]);
       });
-
-      hydrateRevisionExtractSettings(snapshot);
-      refreshSettingsPageAfterRevisionHydrate();
-
+hydrateRevisionExtractSettings(snapshot);
+refreshSettingsPageAfterRevisionHydrate();
       localStorage.setItem('najran_revision_mode', 'true');
-      localStorage.removeItem('najran_revision_boot_lock');
+      localStorage.setItem('najran_revision_boot_lock', 'true');
 
-      console.warn('[RevisionBootGuard] snapshot applied — rendering tables without reload');
+  setTimeout(function () {
+        Object.keys(snapshot).forEach(function (key) {
+          writeValue(key, snapshot[key]);
+        });
+hydrateRevisionExtractSettings(snapshot);
+refreshSettingsPageAfterRevisionHydrate();
+    localStorage.setItem('najran_revision_mode', 'true');
+        localStorage.removeItem('najran_revision_boot_lock');
 
-      try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
-      try { if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint(); } catch (_) {}
-      try { if (typeof window.renderTables === 'function') window.renderTables(); } catch (_) {}
-try {
-  var isPerformancePage =
-    /performance\.html/i.test(String(location.href || '')) ||
-    /[?&]page=[^&]*performance\.html/i.test(String(location.search || ''));
+        console.warn('[RevisionBootGuard] snapshot applied — rendering tables without reload');
 
-  if (isPerformancePage) {
-    console.warn('[RevisionBootGuard] performance page detected — recalculating after revision snapshot');
-
-    var perfDepartments = [
-      'cleaning',
-      'electricity',
-      'agriculture',
-      'civil',
-      'mechanics',
-      'laundry',
-      'security'
-    ];
-
-    perfDepartments.forEach(function (dept) {
-      try { if (typeof window.loadTableData === 'function') window.loadTableData(dept); } catch (_) {}
-      try { if (typeof window.updateTotalAmount === 'function') window.updateTotalAmount(dept); } catch (_) {}
-      try { if (typeof window.updateTotal === 'function') window.updateTotal(dept); } catch (_) {}
-      try { if (typeof window.saveTableData === 'function') window.saveTableData(dept); } catch (_) {}
-    });
-
-    try { if (typeof window.updateCertificateFromPerformance === 'function') window.updateCertificateFromPerformance(); } catch (_) {}
-
-    setTimeout(function () {
-  perfDepartments.forEach(function (dept) {
-    try { if (typeof window.updateTotalAmount === 'function') window.updateTotalAmount(dept); } catch (_) {}
-    try { if (typeof window.updateTotal === 'function') window.updateTotal(dept); } catch (_) {}
-    try { if (typeof window.saveTableData === 'function') window.saveTableData(dept); } catch (_) {}
-  });
-
-  try { if (typeof window.updateCertificateFromPerformance === 'function') window.updateCertificateFromPerformance(); } catch (_) {}
-
-  try {
-    localStorage.removeItem('najran_revision_attendance_changed');
-    console.warn('[RevisionBootGuard] attendance-change flag cleared after performance recalculation');
-  } catch (_) {}
-
-  try {
-    if (typeof saveRevisionWorkingSnapshot === 'function') {
-      saveRevisionWorkingSnapshot('performance-recalculated-after-attendance');
-    }
-  } catch (_) {}
-
-  console.warn('[RevisionBootGuard] performance recalculation after revision snapshot done');
-}, 500);
-  }
-} catch (e) {
-  console.warn('[RevisionBootGuard] performance recalculation failed', e);
-}
-      setTimeout(function () {
         try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
+        try { if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint(); } catch (_) {}
         try { if (typeof window.renderTables === 'function') window.renderTables(); } catch (_) {}
-        console.warn('[RevisionBootGuard] second renderTables done');
-      }, 800);
 
-    }, 900);
+        setTimeout(function () {
+          try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
+          try { if (typeof window.renderTables === 'function') window.renderTables(); } catch (_) {}
+          console.warn('[RevisionBootGuard] second renderTables done');
+        }, 800);
 
-    return true;
-  } catch (e) {
-    console.warn('[RevisionBootGuard] failed to apply revision snapshot', e);
-    return false;
+      }, 900);
+      return true;
+    } catch (e) {
+      console.warn('[RevisionBootGuard] failed to apply revision snapshot', e);
+      return false;
+    }
   }
-}
   function refreshSettingsPageAfterRevisionHydrate() {
   try {
     var isSettingsPage =
@@ -942,15 +502,14 @@ function clearRevisionOnly() {
     'najran_revision_boot_lock',
     'najran_revision_source',
     'najran_revision_snapshot',
-    'najran_revision_previous_total_amount',
-    'najran_revision_working_snapshot',
-    'najran_revision_attendance_changed'
+    'najran_revision_previous_total_amount'
   ].forEach(function (key) {
     try { localStorage.removeItem(key); } catch (_) {}
   });
 
   try { sessionStorage.removeItem('najran_revision_reloaded'); } catch (_) {}
 }
+
 function saveCurrentRevisionLocalDraftBeforeExit() {
   try {
     var data = {};
@@ -1112,7 +671,7 @@ function installHomeAsRevisionExit() {
 
       e.preventDefault();
       e.stopPropagation();
-if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+
       showRevisionExitModal();
     }, true);
 
@@ -1137,22 +696,18 @@ if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation
     console.warn('[RevisionExit] failed to install home revision exit', e);
   }
 }
- if (document.readyState === 'loading') {
+  if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', function () {
     if (!applyRevisionBootSnapshot()) show();
     installHomeAsRevisionExit();
-    installRevisionWorkingAutosave();
   });
 } else {
   if (!applyRevisionBootSnapshot()) show();
   installHomeAsRevisionExit();
-  installRevisionWorkingAutosave();
 }
 
 setTimeout(function () {
   if (!applyRevisionBootSnapshot()) show();
   installHomeAsRevisionExit();
-  installRevisionWorkingAutosave();
 }, 1200);
-
 })();
