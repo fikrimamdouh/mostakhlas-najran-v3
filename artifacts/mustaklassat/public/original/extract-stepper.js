@@ -48,13 +48,62 @@
   }
 
   function getMonthLabel() {
-    try {
-      const ed = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
-      const m = (ed.extractMonth || '').trim();
-      const y = ed.extractYear || '';
-      return m ? `📅 ${m} ${y}` : '';
-    } catch { return ''; }
+  function parseObj(v) {
+    if (!v) return {};
+    if (typeof v === 'object') return v;
+    try { return JSON.parse(v); } catch (_) { return {}; }
   }
+
+  try {
+    const ed = parseObj(localStorage.getItem('persistentExtractData'));
+
+    let m = String(
+      ed.extractMonth ||
+      localStorage.getItem('extractMonth') ||
+      ''
+    ).trim();
+
+    let y = String(
+      ed.extractYear ||
+      localStorage.getItem('extractYear') ||
+      ''
+    ).trim();
+
+    const isRevision =
+      localStorage.getItem('najran_revision_mode') === 'true' &&
+      localStorage.getItem('najran_revision_extract_id') &&
+      localStorage.getItem('najran_revision_snapshot');
+
+    if ((!m || !y) && isRevision) {
+      const snap = parseObj(localStorage.getItem('najran_revision_snapshot'));
+      const ext = parseObj(snap.persistentExtractData);
+
+      m = String(
+        m ||
+        ext.extractMonth ||
+        snap.extractMonth ||
+        ext.month ||
+        snap.month ||
+        ''
+      ).trim();
+
+      y = String(
+        y ||
+        ext.extractYear ||
+        snap.extractYear ||
+        ext.year ||
+        snap.year ||
+        ''
+      ).trim();
+    }
+
+    return m ? `📅 ${m} ${y}` : '';
+  } catch (_) {
+    const m = String(localStorage.getItem('extractMonth') || '').trim();
+    const y = String(localStorage.getItem('extractYear') || '').trim();
+    return m ? `📅 ${m} ${y}` : '';
+  }
+}
 
   function buildStepper() {
     const current = detectCurrentStep();
@@ -333,4 +382,34 @@
   } else {
     setTimeout(installAchievementCalculationFix, 0);
   }
+  function refreshStepperFromRevisionStorage() {
+  try {
+    var old = document.getElementById('njs-stepper');
+    if (old) old.remove();
+
+    buildStepper();
+
+    console.warn('[ExtractStepper] refreshed from revision/current extract storage');
+  } catch (e) {
+    console.warn('[ExtractStepper] failed to refresh from revision/current extract storage', e);
+  }
+}
+
+window.addEventListener('najranRevisionSettingsHydrated', function () {
+  refreshStepperFromRevisionStorage();
+});
+
+setTimeout(function () {
+  try {
+    if (
+      localStorage.getItem('najran_revision_mode') === 'true' &&
+      (
+        localStorage.getItem('extractMonth') ||
+        localStorage.getItem('najran_revision_snapshot')
+      )
+    ) {
+      refreshStepperFromRevisionStorage();
+    }
+  } catch (_) {}
+}, 1800);
 })();
