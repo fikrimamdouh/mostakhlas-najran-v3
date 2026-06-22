@@ -16,7 +16,107 @@
       try { localStorage.setItem(key, String(value)); } catch (__) {}
     }
   }
+function hydrateRevisionExtractSettings(snapshot) {
+  try {
+    snapshot = snapshot || {};
 
+    function parseObj(v) {
+      if (!v) return {};
+      if (typeof v === 'object') return v;
+      try { return JSON.parse(v); } catch (_) { return {}; }
+    }
+
+    var extract = parseObj(snapshot.persistentExtractData);
+    var currentExtract = parseObj(localStorage.getItem('persistentExtractData'));
+
+    var finalExtract = Object.assign({}, currentExtract, extract);
+
+    var month =
+      finalExtract.extractMonth ||
+      snapshot.extractMonth ||
+      localStorage.getItem('extractMonth') ||
+      '';
+
+    var year =
+      finalExtract.extractYear ||
+      snapshot.extractYear ||
+      localStorage.getItem('extractYear') ||
+      '';
+
+    var start =
+      finalExtract.extractStart ||
+      finalExtract.extractFromDate ||
+      snapshot.extractStart ||
+      snapshot.extractFromDate ||
+      localStorage.getItem('extractStart') ||
+      localStorage.getItem('extractFromDate') ||
+      '';
+
+    var end =
+      finalExtract.extractEnd ||
+      finalExtract.extractToDate ||
+      snapshot.extractEnd ||
+      snapshot.extractToDate ||
+      localStorage.getItem('extractEnd') ||
+      localStorage.getItem('extractToDate') ||
+      '';
+
+    var payment =
+      finalExtract.paymentNumber ||
+      finalExtract.extractNumber ||
+      snapshot.paymentNumber ||
+      snapshot.extractNumber ||
+      localStorage.getItem('paymentNumber') ||
+      localStorage.getItem('extractNumber') ||
+      '';
+
+    if (month) {
+      finalExtract.extractMonth = String(month);
+      localStorage.setItem('extractMonth', String(month));
+    }
+
+    if (year) {
+      finalExtract.extractYear = String(year);
+      localStorage.setItem('extractYear', String(year));
+    }
+
+    if (start) {
+      finalExtract.extractStart = String(start);
+      finalExtract.extractFromDate = String(start);
+      localStorage.setItem('extractStart', String(start));
+      localStorage.setItem('extractFromDate', String(start));
+    }
+
+    if (end) {
+      finalExtract.extractEnd = String(end);
+      finalExtract.extractToDate = String(end);
+      localStorage.setItem('extractEnd', String(end));
+      localStorage.setItem('extractToDate', String(end));
+    }
+
+    if (payment) {
+      finalExtract.paymentNumber = String(payment);
+      finalExtract.extractNumber = String(payment);
+      localStorage.setItem('paymentNumber', String(payment));
+      localStorage.setItem('extractNumber', String(payment));
+    }
+
+    if (!finalExtract.extractCalendar) finalExtract.extractCalendar = 'ميلادي';
+    if (!finalExtract.extractDuration) finalExtract.extractDuration = 'شهر واحد';
+
+    localStorage.setItem('persistentExtractData', JSON.stringify(finalExtract));
+
+    console.warn('[RevisionBootGuard] extract settings hydrated without key changes', {
+      month: month,
+      year: year,
+      start: start,
+      end: end,
+      payment: payment
+    });
+  } catch (e) {
+    console.warn('[RevisionBootGuard] failed to hydrate extract settings', e);
+  }
+}
   function applyRevisionBootSnapshot() {
     try {
       var isRevision =
@@ -39,7 +139,7 @@
       Object.keys(snapshot).forEach(function (key) {
         writeValue(key, snapshot[key]);
       });
-
+hydrateRevisionExtractSettings(snapshot);
       localStorage.setItem('najran_revision_mode', 'true');
       localStorage.setItem('najran_revision_boot_lock', 'true');
 
@@ -47,7 +147,7 @@
         Object.keys(snapshot).forEach(function (key) {
           writeValue(key, snapshot[key]);
         });
-
+hydrateRevisionExtractSettings(snapshot);
         localStorage.setItem('najran_revision_mode', 'true');
         localStorage.removeItem('najran_revision_boot_lock');
 
