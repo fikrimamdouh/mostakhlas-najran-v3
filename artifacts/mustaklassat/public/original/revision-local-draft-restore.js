@@ -659,7 +659,7 @@ function clearRevisionOnly() {
     'najran_revision_boot_lock',
     'najran_revision_source',
     'najran_revision_snapshot',
-    'najran_revision_previous_total_amount'
+    'najran_revision_previous_total_amount',
     'najran_revision_working_snapshot'
   ].forEach(function (key) {
     try { localStorage.removeItem(key); } catch (_) {}
