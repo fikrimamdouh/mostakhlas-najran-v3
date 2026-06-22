@@ -634,7 +634,47 @@ function isWatchedRevisionKey(key) {
       try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
       try { if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint(); } catch (_) {}
       try { if (typeof window.renderTables === 'function') window.renderTables(); } catch (_) {}
+try {
+  var isPerformancePage =
+    /performance\.html/i.test(String(location.href || '')) ||
+    /[?&]page=[^&]*performance\.html/i.test(String(location.search || ''));
 
+  if (isPerformancePage) {
+    console.warn('[RevisionBootGuard] performance page detected — recalculating after revision snapshot');
+
+    var perfDepartments = [
+      'cleaning',
+      'electricity',
+      'agriculture',
+      'civil',
+      'mechanics',
+      'laundry',
+      'security'
+    ];
+
+    perfDepartments.forEach(function (dept) {
+      try { if (typeof window.loadTableData === 'function') window.loadTableData(dept); } catch (_) {}
+      try { if (typeof window.updateTotalAmount === 'function') window.updateTotalAmount(dept); } catch (_) {}
+      try { if (typeof window.updateTotal === 'function') window.updateTotal(dept); } catch (_) {}
+      try { if (typeof window.saveTableData === 'function') window.saveTableData(dept); } catch (_) {}
+    });
+
+    try { if (typeof window.updateCertificateFromPerformance === 'function') window.updateCertificateFromPerformance(); } catch (_) {}
+
+    setTimeout(function () {
+      perfDepartments.forEach(function (dept) {
+        try { if (typeof window.updateTotalAmount === 'function') window.updateTotalAmount(dept); } catch (_) {}
+        try { if (typeof window.updateTotal === 'function') window.updateTotal(dept); } catch (_) {}
+      });
+
+      try { if (typeof window.updateCertificateFromPerformance === 'function') window.updateCertificateFromPerformance(); } catch (_) {}
+
+      console.warn('[RevisionBootGuard] performance recalculation after revision snapshot done');
+    }, 500);
+  }
+} catch (e) {
+  console.warn('[RevisionBootGuard] performance recalculation failed', e);
+}
       setTimeout(function () {
         try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
         try { if (typeof window.renderTables === 'function') window.renderTables(); } catch (_) {}
