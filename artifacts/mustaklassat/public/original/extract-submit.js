@@ -90,6 +90,20 @@ const isRevision =
   localStorage.getItem('najran_revision_mode') === 'true' &&
   !!revisionId &&
   !!localStorage.getItem('najran_revision_snapshot');
+    if (revisionId && !isRevision) {
+  localStorage.removeItem(REVISION_KEY);
+  localStorage.removeItem('najran_revision_mode');
+  localStorage.removeItem('najran_revision_extract_type');
+  localStorage.removeItem('najran_revision_started_at');
+  localStorage.removeItem('najran_revision_boot_lock');
+  localStorage.removeItem('najran_revision_source');
+  localStorage.removeItem('najran_revision_snapshot');
+  localStorage.removeItem('najran_revision_previous_total_amount');
+
+  try { sessionStorage.removeItem('najran_revision_reloaded'); } catch (_) {}
+
+  console.warn('[ExtractSubmit] تم تنظيف وضع تعديل ناقص: id بدون mode/snapshot');
+}
 let token = session.clerkToken || null;
 
 try {
