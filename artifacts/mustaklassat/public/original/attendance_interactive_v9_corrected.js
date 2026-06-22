@@ -817,8 +817,8 @@ Object.keys(statusCounts).forEach(statusKey => {
                 emp.absencePenalty = fine;
                 emp.totalFine = totalFine;
                 emp.netSalary = netSalary;
-// ممنوع الحفظ داخل renderTables
-// saveAttendanceData(attendanceData);
+                saveAttendanceData(attendanceData);
+
 // --- START: التعديل المطلوب لحساب التكلفة الصحيحة ---
 deptTotalCost += extractBaseSalary; // اجمع التكلفة المحسوبة حسب أيام المستخلص
 // --- END: التعديل المطلوب ---
