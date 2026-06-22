@@ -321,12 +321,89 @@ function installRevisionWorkingAutosave() {
 
     var timer = null;
 
+    var watchedKeys = {
+      attendanceData: true,
+      ng_attendanceData: true,
+      nd_attendanceData: true,
+      centersAttendanceData_v2: true,
+      healthCentersAttendanceData: true,
+      adminOfficesAttendanceData_v1: true,
+
+      persistentContractData: true,
+      persistentExtractData: true,
+      extractMonth: true,
+      extractYear: true,
+      extractNumber: true,
+      extractStart: true,
+      extractEnd: true,
+      extractFromDate: true,
+      extractToDate: true,
+      paymentNumber: true,
+      periodMonth: true,
+
+      performanceData: true,
+      performanceData_v4: true,
+      performanceDeductions: true,
+      performanceTotalDeduction: true,
+      performanceTotalDue: true,
+
+      achievementData: true,
+      achievementTitles_v1: true,
+      achievementItemNames: true,
+
+      consumablesTableData: true,
+      healthCentersConsumables: true,
+      mainHospitalConsumables: true,
+      'admin_offices_consumables_v1.0': true,
+
+      spare_partsData: true,
+      sparePartsTotalAmount: true,
+
+      approvalData: true,
+      displayApprovalData: true,
+      finalLaborCost: true,
+      finalConsumablesCost: true,
+      'grand-net-total': true,
+      'grand-net-total-centers': true,
+      'grand-net-total-admin': true,
+
+      najran_labor_attendance_done: true,
+      najran_labor_performance_done: true,
+      najran_health_attendance_done: true,
+      najran_admin_offices_attendance_done: true
+    };
+
     function schedule(reason) {
       if (!isRevisionActiveNow()) return;
       clearTimeout(timer);
       timer = setTimeout(function () {
         saveRevisionWorkingSnapshot(reason);
-      }, 450);
+      }, 250);
+    }
+
+    try {
+      if (!window.__NAJRAN_REVISION_ORIGINAL_SETITEM__) {
+        window.__NAJRAN_REVISION_ORIGINAL_SETITEM__ = localStorage.setItem.bind(localStorage);
+      }
+
+      var originalSetItem = window.__NAJRAN_REVISION_ORIGINAL_SETITEM__;
+
+      localStorage.setItem = function (key, value) {
+        originalSetItem(key, value);
+
+        try {
+          if (
+            isRevisionActiveNow() &&
+            key !== WORKING_KEY &&
+            key !== 'najran_revision_snapshot' &&
+            watchedKeys[key]
+          ) {
+            schedule('localStorage:' + key);
+          }
+        } catch (_) {}
+      };
+    } catch (e) {
+      console.warn('[RevisionWorking] localStorage.setItem hook failed', e);
     }
 
     document.addEventListener('input', function () {
@@ -337,16 +414,10 @@ function installRevisionWorkingAutosave() {
       schedule('change');
     }, true);
 
-    document.addEventListener('click', function (e) {
-      var el = e.target && e.target.closest
-        ? e.target.closest('button,a,[onclick],[role="button"]')
-        : null;
-
-      if (!el) return;
-
+    document.addEventListener('click', function () {
       setTimeout(function () {
-        saveRevisionWorkingSnapshot('click-navigation-or-action');
-      }, 250);
+        saveRevisionWorkingSnapshot('click-action');
+      }, 120);
     }, true);
 
     window.addEventListener('pagehide', function () {
@@ -357,67 +428,15 @@ function installRevisionWorkingAutosave() {
       saveRevisionWorkingSnapshot('beforeunload');
     });
 
-    console.warn('[RevisionWorking] autosave installed');
+    setTimeout(function () {
+      saveRevisionWorkingSnapshot('initial-seed');
+    }, 1400);
+
+    console.warn('[RevisionWorking] autosave installed with localStorage hook');
   } catch (e) {
     console.warn('[RevisionWorking] failed to install autosave', e);
   }
 }
-  function applyRevisionBootSnapshot() {
-    try {
-      var isRevision =
-        localStorage.getItem('najran_revision_mode') === 'true' &&
-        localStorage.getItem('najran_revision_extract_id') &&
-        localStorage.getItem('najran_revision_snapshot');
-
-      if (!isRevision) return false;
-
-      var rawSnapshot = localStorage.getItem('najran_revision_snapshot');
-      if (!rawSnapshot) return false;
-
-   var snapshot = getRevisionBootSnapshot(rawSnapshot);
-if (!snapshot || typeof snapshot !== 'object') return false;
-
-snapshot = normalizeRevisionSnapshotSettings(snapshot);
-      console.warn('[RevisionBootGuard] applying submitted extract snapshot after page load');
-
-      clearOperational();
-
-      Object.keys(snapshot).forEach(function (key) {
-        writeValue(key, snapshot[key]);
-      });
-hydrateRevisionExtractSettings(snapshot);
-refreshSettingsPageAfterRevisionHydrate();
-      localStorage.setItem('najran_revision_mode', 'true');
-      localStorage.setItem('najran_revision_boot_lock', 'true');
-
-  setTimeout(function () {
-        Object.keys(snapshot).forEach(function (key) {
-          writeValue(key, snapshot[key]);
-        });
-hydrateRevisionExtractSettings(snapshot);
-refreshSettingsPageAfterRevisionHydrate();
-    localStorage.setItem('najran_revision_mode', 'true');
-        localStorage.removeItem('najran_revision_boot_lock');
-
-        console.warn('[RevisionBootGuard] snapshot applied — rendering tables without reload');
-
-        try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
-        try { if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint(); } catch (_) {}
-        try { if (typeof window.renderTables === 'function') window.renderTables(); } catch (_) {}
-
-        setTimeout(function () {
-          try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
-          try { if (typeof window.renderTables === 'function') window.renderTables(); } catch (_) {}
-          console.warn('[RevisionBootGuard] second renderTables done');
-        }, 800);
-
-      }, 900);
-      return true;
-    } catch (e) {
-      console.warn('[RevisionBootGuard] failed to apply revision snapshot', e);
-      return false;
-    }
-  }
   function refreshSettingsPageAfterRevisionHydrate() {
   try {
     var isSettingsPage =
@@ -829,7 +848,7 @@ function installHomeAsRevisionExit() {
 
       e.preventDefault();
       e.stopPropagation();
-
+if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
       showRevisionExitModal();
     }, true);
 
