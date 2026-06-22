@@ -85,12 +85,13 @@
     const payload = { extractType: type, ...contractData, ...extraData, extractData };
 
     // Check if this is a revision of an existing extract
-    const revisionId = localStorage.getItem(REVISION_KEY);
+   const revisionId = localStorage.getItem(REVISION_KEY);
 const isRevision =
   localStorage.getItem('najran_revision_mode') === 'true' &&
   !!revisionId &&
   !!localStorage.getItem('najran_revision_snapshot');
-    if (revisionId && !isRevision) {
+
+if (revisionId && !isRevision) {
   localStorage.removeItem(REVISION_KEY);
   localStorage.removeItem('najran_revision_mode');
   localStorage.removeItem('najran_revision_extract_type');
@@ -103,6 +104,46 @@ const isRevision =
   try { sessionStorage.removeItem('najran_revision_reloaded'); } catch (_) {}
 
   console.warn('[ExtractSubmit] تم تنظيف وضع تعديل ناقص: id بدون mode/snapshot');
+}
+
+if (isRevision) {
+  try {
+    const snapshotRaw = localStorage.getItem('najran_revision_snapshot');
+    const snapshot = snapshotRaw ? JSON.parse(snapshotRaw) : {};
+    const oldExtractRaw = snapshot.persistentExtractData;
+    const oldExtract = typeof oldExtractRaw === 'string'
+      ? JSON.parse(oldExtractRaw || '{}')
+      : (oldExtractRaw || {});
+
+    const oldMonth = String(oldExtract.extractMonth || '').trim();
+    const oldYear = String(oldExtract.extractYear || '').trim();
+    const oldPayment = String(oldExtract.paymentNumber || oldExtract.extractNumber || '').trim();
+
+    const newMonth = String(contractData.extractMonth || '').trim();
+    const newYear = String(contractData.extractYear || '').trim();
+    const newPayment = String(contractData.paymentNumber || '').trim();
+
+    const changed =
+      (oldMonth && newMonth && oldMonth !== newMonth) ||
+      (oldYear && newYear && oldYear !== newYear) ||
+      (oldPayment && newPayment && oldPayment !== newPayment);
+
+    if (changed) {
+      alert(
+        'تم إيقاف الرفع لحماية المستخلص.\n\n' +
+        'أنت تعدّل مستخلصًا قديمًا:\n' +
+        oldMonth + ' ' + oldYear + ' — دفعة ' + (oldPayment || '-') + '\n\n' +
+        'لكن البيانات الحالية:\n' +
+        newMonth + ' ' + newYear + ' — دفعة ' + (newPayment || '-') + '\n\n' +
+        'لا يمكن حفظ شهر/دفعة مختلفة على نفس المستخلص.\n' +
+        'اخرج من وضع التعديل إذا كنت تريد إنشاء مستخلص جديد.'
+      );
+      return null;
+    }
+  } catch (e) {
+    alert('تعذر التحقق من بيانات المستخلص القديم. تم إيقاف الرفع للحماية.');
+    return null;
+  }
 }
 let token = session.clerkToken || null;
 
