@@ -502,9 +502,14 @@ function clearRevisionOnly() {
     'najran_revision_boot_lock',
     'najran_revision_source',
     'najran_revision_snapshot',
-    'najran_revision_previous_total_amount'
+    'najran_revision_previous_total_amount',
+
+    // تنظيف بقايا تجارب سابقة لو كانت موجودة على جهاز أي مستخدم
+    'najran_revision_working_snapshot',
+    'najran_revision_attendance_changed'
   ].forEach(function (key) {
     try { localStorage.removeItem(key); } catch (_) {}
+    try { sessionStorage.removeItem(key); } catch (_) {}
   });
 
   try { sessionStorage.removeItem('najran_revision_reloaded'); } catch (_) {}
@@ -616,10 +621,12 @@ function showRevisionExitModal() {
       window.top.location.href = '/extracts/track?revisionExited=1&savedLocalDraft=1&v=' + Date.now();
     };
 
-    document.getElementById('najran-revision-exit-no-save').onclick = function () {
-      clearRevisionOnly();
-      window.top.location.href = '/extracts/track?revisionExited=1&noSave=1&v=' + Date.now();
-    };
+  document.getElementById('najran-revision-exit-no-save').onclick = function () {
+  clearRevisionOnly();
+  try { localStorage.removeItem('najran_revision_previous_local_backup'); } catch (_) {}
+  try { sessionStorage.removeItem('najran_revision_previous_local_backup'); } catch (_) {}
+  window.top.location.href = '/extracts/track?revisionExited=1&noSave=1&v=' + Date.now();
+};
 
     document.getElementById('najran-revision-stay').onclick = function () {
       modal.remove();
