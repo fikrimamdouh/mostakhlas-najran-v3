@@ -2299,11 +2299,42 @@ function clearData() {
     }
     return;
   }
-  
-  if (confirm('هل أنت متأكد من رغبتك في مسح جميع البيانات؟ لا يمكن التراجع عن هذه العملية.')) {
+
+  if (confirm('هل أنت متأكد من رغبتك في مسح جميع بيانات الحضور والغياب؟ لا يمكن التراجع عن هذه العملية.')) {
     try {
-      localStorage.removeItem('attendanceData');
-      alert('تم مسح البيانات بنجاح. سيتم إعادة تحميل الصفحة.');
+      [
+        'attendanceData',
+        'ng_attendanceData',
+        'nd_attendanceData',
+        'centersAttendanceData_v2',
+        'healthCentersAttendanceData',
+        'adminOfficesAttendanceData_v1',
+        'najran_labor_attendance_done',
+        'najran_labor_performance_done'
+      ].forEach(function (key) {
+        try { localStorage.removeItem(key); } catch (_) {}
+      });
+
+      sessionStorage.setItem('najran_new_extract_clear_attendance_once', '1');
+      localStorage.setItem('najran_new_extract_clear_attendance_once', '1');
+
+      try {
+        if (typeof saveAttendanceData === 'function') {
+          saveAttendanceData({
+            cleaning: [],
+            electricity: [],
+            agriculture: [],
+            civil_works: [],
+            mechanical: [],
+            laundry: [],
+            patient_services: [],
+            admin_saudi: []
+          });
+        }
+      } catch (_) {}
+
+      console.warn('[AttendanceClear] NEW EXTRACT flag set before clearing attendance');
+      alert('تم مسح بيانات الحضور. سيتم إعادة تحميل الصفحة بدون استرجاع العمالة القديمة من السحابة.');
       window.location.reload();
     } catch (error) {
       console.error('خطأ في مسح البيانات:', error);
