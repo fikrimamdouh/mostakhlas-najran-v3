@@ -1,7 +1,7 @@
 // ===================================================================
 // Admin Offices Raise Letters Autofill
 // Scope: admin_offices_attendance.html only
-// يربط خطابات الرفع بالمستخلص المفتوح: رقم الدفعة + الفترة + بيانات العقد
+// يربط خطابات الرفع بالمستخلص المفتوح: رقم الدفعة + كل الفترات + بيانات العقد
 // ===================================================================
 (function () {
   'use strict';
@@ -114,20 +114,29 @@
       }
     }
 
-    // هذه الحقول مرتبطة بالمستخلص المفتوح ويجب أن تتحدث دائمًا.
+    // كل حقل مكتوب عليه «الفترة من / إلى» مربوط بالمستخلص المفتوح مباشرة.
+    set('period1Start', live.start, true);
+    set('period1End', live.end, true);
     set('period2Start', live.start, true);
     set('period2End', live.end, true);
     set('paymentNo', live.paymentNo, true);
 
-    // هذه الحقول تُملأ من المستخلص إذا كانت فارغة فقط حتى لا نكسر تعديل المستخدم.
+    // وصف فترة الشراء يملأ من العقد/المستخلص إذا كان موجودًا.
     set('purchasePeriodLabel', live.purchasePeriodLabel, false);
 
     if (changed) writeJson(SETTINGS_KEY, settings);
 
     const saud = readJson(SAUDIZATION_KEY, {});
+    saud.period1 = saud.period1 || { rows: [] };
     saud.period2 = saud.period2 || { rows: [] };
-    if (live.start) saud.period2.start = live.start;
-    if (live.end) saud.period2.end = live.end;
+    if (live.start) {
+      saud.period1.start = live.start;
+      saud.period2.start = live.start;
+    }
+    if (live.end) {
+      saud.period1.end = live.end;
+      saud.period2.end = live.end;
+    }
     writeJson(SAUDIZATION_KEY, saud);
 
     refreshOpenDialogFields(settings);
@@ -137,7 +146,7 @@
   function refreshOpenDialogFields(settings) {
     const overlay = document.getElementById('raise-letters-overlay');
     if (!overlay) return;
-    ['paymentNo', 'period2Start', 'period2End', 'purchasePeriodLabel'].forEach(key => {
+    ['paymentNo', 'period1Start', 'period1End', 'period2Start', 'period2End', 'purchasePeriodLabel'].forEach(key => {
       const el = overlay.querySelector(`[data-rl-setting="${key}"]`);
       if (el && settings[key]) el.value = settings[key];
     });
@@ -159,7 +168,7 @@
     api.syncFromActiveExtract = syncRaiseLettersFromActiveExtract;
     api.__activeExtractAutofillPatched = true;
     syncRaiseLettersFromActiveExtract();
-    console.info('[Admin Offices Raise Letters] active extract autofill patched');
+    console.info('[Admin Offices Raise Letters] all periods tied to active extract');
     return true;
   }
 
