@@ -25,6 +25,21 @@
 
   function getContract() { return readJson('persistentContractData', {}); }
   function getExtract() { return readJson('persistentExtractData', {}); }
+  function getActiveExtractMeta() {
+    const e = getExtract();
+    const paymentNo = e.paymentNumber || e.extractNumber || localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber') || '—';
+    const start = e.extractStart || localStorage.getItem('extractStart') || '';
+    const end = e.extractEnd || localStorage.getItem('extractEnd') || '';
+    return {
+      paymentNo: String(paymentNo).match(/^\d+$/) ? String(paymentNo).padStart(2, '0') : String(paymentNo),
+      start,
+      end
+    };
+  }
+  function extractPhrase() {
+    const m = getActiveExtractMeta();
+    return `دفعة رقم (${esc(m.paymentNo)}) عن الفترة من ${esc(fmtDate(m.start))} م إلى ${esc(fmtDate(m.end))} م`;
+  }
   function getSession() { return readJson('najran_session', {}); }
   function getCompanyName() {
     const c = getContract();
@@ -40,7 +55,7 @@
       entityTitle: 'المديرية العامة للشئون الصحية بمنطقة نجران',
       departmentTitle: 'إدارة الشئون الهندسية',
       scopeName: 'المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات بمنطقة نجران',
-      purchasePeriodLabel: 'الشراء المباشر الثاني',
+      purchasePeriodLabel: '',
       paymentNo: e.paymentNumber || e.extractNumber || localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber') || '01',
       vatRate: VAT_DEFAULT,
       phoneFaxAr: 'نجران – تليفون 0175225872    فاكس 017523312',
@@ -53,17 +68,17 @@
       consumablesPeriod2Net: 0
     };
   }
-  function getSettings() { return Object.assign(defaultSettings(), readJson(SETTINGS_KEY, {})); }
+  function getSettings() {
+    const settings = Object.assign(defaultSettings(), readJson(SETTINGS_KEY, {}));
+    const meta = getActiveExtractMeta();
+    settings.paymentNo = meta.paymentNo;
+    if (/شراء\s*مباشر/.test(String(settings.purchasePeriodLabel || ''))) settings.purchasePeriodLabel = '';
+    return settings;
+  }
   function saveSettingsPatch(patch) { writeJson(SETTINGS_KEY, Object.assign(getSettings(), patch || {})); }
   function syncFromActiveExtract() {
-    const e = getExtract();
-    const paymentNo = e.paymentNumber || e.extractNumber || localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber') || '';
-    const patch = {
-      period2Start: e.extractStart || localStorage.getItem('extractStart') || '',
-      period2End: e.extractEnd || localStorage.getItem('extractEnd') || ''
-    };
-    if (paymentNo) patch.paymentNo = String(paymentNo).match(/^\d+$/) ? String(paymentNo).padStart(2, '0') : String(paymentNo);
-    saveSettingsPatch(patch);
+    const meta = getActiveExtractMeta();
+    saveSettingsPatch({ paymentNo: meta.paymentNo, period2Start: meta.start, period2End: meta.end, purchasePeriodLabel: '' });
   }
 
   function getCurrentConsumablesNet() {
@@ -77,19 +92,15 @@
     const db = 'admin_offices_consumables_v1.0';
     const summary = readJson(`summary_data_${db}`, []);
     const performance = readJson(`performance_data_${db}`, []);
-    const contract = getContract();
     const extract = getExtract();
     const start = new Date(extract.extractStart || new Date());
     const end = new Date(extract.extractEnd || extract.extractStart || new Date());
     const days = Math.max(1, Math.ceil((end - start) / 86400000) + 1 || 30);
     const monthDays = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate() || 30;
-    const ratio = num(contract.directPurchaseRatio);
-    const isDP = contract.contractType === 'شراء مباشر';
     let total = 0;
     summary.filter(i => !i.isCustom && !i.isSubTotal).forEach(item => {
       const pf = performance.find(p => p.id === item.id) || { maxScore: 100, score: 100 };
-      let monthly = num(item.value);
-      if (isDP && ratio > 0) monthly += monthly * ratio / 100;
+      const monthly = num(item.value);
       const valueForPeriod = monthly / monthDays * days;
       const max = num(pf.maxScore);
       const score = num(pf.score);
@@ -124,14 +135,12 @@
   function generateConsumablesRaiseLetter() {
     syncFromActiveExtract();
     const s = getSettings();
-    const p1 = num(s.consumablesPeriod1Net);
-    const p2 = getCurrentConsumablesNet();
-    saveSettingsPatch({ consumablesPeriod2Net: p2 });
-    const net = p1 + p2;
+    const net = getCurrentConsumablesNet();
+    saveSettingsPatch({ consumablesPeriod2Net: net, purchasePeriodLabel: '' });
     const vat = net * num(s.vatRate) / 100;
     const grand = net + vat;
     const company = getCompanyName();
-    const body = `<div class="toolbar"><button onclick="window.print()">طباعة</button><button onclick="window.close()">إغلاق</button></div><section class="page">${headerHtml(s)}<div class="rl-to">${esc(s.recipient)} &nbsp;&nbsp; ${esc(s.recipientSuffix)}</div><div class="rl-body">السلام عليكم ورحمة الله وبركاته ...<br>مرفق طيه المستخلص الشهري لشركة ${esc(company)} والخاص ببند (المستهلكات ومقاولي الباطن) لفترة ${esc(s.purchasePeriodLabel)} لـ ${esc(s.scopeName)} دفعة رقم (${esc(s.paymentNo)}) للفترة من ${esc(fmtDate(s.period1Start))} م إلى ${esc(fmtDate(s.period1End))} م والفترة من ${esc(fmtDate(s.period2Start))} م إلى ${esc(fmtDate(s.period2End))} م.</div><table class="rl-table"><tbody><tr><td>المبلغ الصافي الشهري المستحق للمقاول عن الفترة من ${esc(fmtDate(s.period1Start))} إلى ${esc(fmtDate(s.period1End))} م</td><td>${moneyPlain(p1)}</td></tr><tr><td>المبلغ الصافي الشهري المستحق للمقاول عن الفترة من ${esc(fmtDate(s.period2Start))} إلى ${esc(fmtDate(s.period2End))} م</td><td>${moneyPlain(p2)}</td></tr><tr><td>ضريبة القيمة المضافة ${moneyPlain(s.vatRate)}%</td><td>${money(vat)}</td></tr><tr class="grand"><td>الإجمالي</td><td>${money(grand)}</td></tr></tbody></table><div class="rl-tafqeet">${esc(tafqeet(grand))}</div><div class="rl-body">لذا نأمل بعد الإطلاع إحالته إلى جهة الاختصاص لتدقيقه وصرف مستحقات المقاول / ${esc(company)}<br>وتقبلوا تحياتنا ,,</div>${signaturesHtml()}${footerHtml(s)}</section>`;
+    const body = `<div class="toolbar"><button onclick="window.print()">طباعة</button><button onclick="window.close()">إغلاق</button></div><section class="page">${headerHtml(s)}<div class="rl-to">${esc(s.recipient)} &nbsp;&nbsp; ${esc(s.recipientSuffix)}</div><div class="rl-body">السلام عليكم ورحمة الله وبركاته، وبعد:<br>نرفق لسعادتكم المستخلص الشهري لشركة ${esc(company)} والخاص ببند (المستهلكات ومقاولي الباطن) لمواقع ${esc(s.scopeName)}، ${extractPhrase()}.</div><table class="rl-table"><tbody><tr><td>صافي مستحقات المستهلكات ومقاولي الباطن عن فترة المستخلص</td><td>${moneyPlain(net)}</td></tr><tr><td>ضريبة القيمة المضافة ${moneyPlain(s.vatRate)}%</td><td>${money(vat)}</td></tr><tr class="grand"><td>الإجمالي</td><td>${money(grand)}</td></tr></tbody></table><div class="rl-tafqeet">${esc(tafqeet(grand))}</div><div class="rl-body">لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / ${esc(company)}<br>وتقبلوا تحياتنا ،،،</div>${signaturesHtml()}${footerHtml(s)}</section>`;
     const win = window.open('', '', 'width=1000,height=900');
     if (!win) return alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.');
     win.document.open();
