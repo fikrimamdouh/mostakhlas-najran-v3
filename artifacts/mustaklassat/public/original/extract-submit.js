@@ -186,7 +186,12 @@ if (token) headers['Authorization'] = `Bearer ${token}`;
     }
 
     const result = await res.json();
-
+try {
+  sessionStorage.removeItem('najran_new_extract_clear_attendance_once');
+  localStorage.removeItem('najran_new_extract_clear_attendance_once');
+  console.warn('[ExtractSubmit] تم تنظيف علامة مسح الحضور بعد رفع المستخلص');
+} catch (_) {}
+    
     try {
       const submittedId =
         result?.id ||
