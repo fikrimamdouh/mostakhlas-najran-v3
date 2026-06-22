@@ -4,7 +4,7 @@
 
   var BACKUP_KEY = 'najran_revision_previous_local_backup';
   var REVISION_KEY = 'najran_revision_extract_id';
-
+var WORKING_KEY = 'najran_revision_working_snapshot';
   function parse(raw, fallback) {
     try { return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
   }
@@ -206,6 +206,162 @@ var extract =
 
   return snapshot;
 }
+  function isRevisionActiveNow() {
+  try {
+    return localStorage.getItem('najran_revision_mode') === 'true' &&
+      !!localStorage.getItem('najran_revision_extract_id') &&
+      !!localStorage.getItem('najran_revision_snapshot');
+  } catch (_) {
+    return false;
+  }
+}
+
+function collectRevisionOperationalData() {
+  var data = {};
+  var keys = [
+    'attendanceData','ng_attendanceData','nd_attendanceData',
+    'centersAttendanceData_v2','healthCentersAttendanceData','adminOfficesAttendanceData_v1',
+
+    'persistentContractData','persistentExtractData',
+    'extractMonth','extractYear','extractNumber',
+    'extractStart','extractEnd','extractFromDate','extractToDate',
+    'paymentNumber','periodMonth',
+
+    'performanceData','performanceData_v4',
+    'performanceDeductions','performanceTotalDeduction','performanceTotalDue',
+
+    'achievementData','achievementTitles_v1','achievementItemNames',
+
+    'consumablesTableData','healthCentersConsumables',
+    'mainHospitalConsumables','admin_offices_consumables_v1.0',
+
+    'spare_partsData','sparePartsTotalAmount',
+
+    'approvalData','displayApprovalData',
+    'finalLaborCost','finalConsumablesCost',
+    'grand-net-total','grand-net-total-centers','grand-net-total-admin',
+
+    'najran_labor_attendance_done',
+    'najran_labor_performance_done',
+    'najran_health_attendance_done',
+    'najran_admin_offices_attendance_done'
+  ];
+
+  keys.forEach(function (key) {
+    try {
+      var val = localStorage.getItem(key);
+      if (val != null) data[key] = val;
+    } catch (_) {}
+  });
+
+  return data;
+}
+
+function saveRevisionWorkingSnapshot(reason) {
+  try {
+    if (!isRevisionActiveNow()) return false;
+
+    var revisionId = localStorage.getItem('najran_revision_extract_id') || '';
+    if (!revisionId) return false;
+
+    var working = {
+      savedAt: new Date().toISOString(),
+      reason: reason || 'revision-working-autosave',
+      revisionExtractId: revisionId,
+      data: collectRevisionOperationalData()
+    };
+
+    localStorage.setItem(WORKING_KEY, JSON.stringify(working));
+
+    console.warn('[RevisionWorking] saved working snapshot', {
+      revisionExtractId: revisionId,
+      reason: reason || '',
+      keys: Object.keys(working.data || {}).length
+    });
+
+    return true;
+  } catch (e) {
+    console.warn('[RevisionWorking] failed to save working snapshot', e);
+    return false;
+  }
+}
+
+function getRevisionBootSnapshot(rawSnapshot) {
+  var original = parse(rawSnapshot, null);
+  if (!original || typeof original !== 'object') return null;
+
+  try {
+    var revisionId = localStorage.getItem('najran_revision_extract_id') || '';
+    var working = parse(localStorage.getItem(WORKING_KEY), null);
+
+    if (
+      working &&
+      String(working.revisionExtractId || '') === String(revisionId || '') &&
+      working.data &&
+      typeof working.data === 'object'
+    ) {
+      console.warn('[RevisionWorking] applying working snapshot instead of original submitted snapshot', {
+        revisionExtractId: revisionId,
+        savedAt: working.savedAt,
+        reason: working.reason
+      });
+
+      return working.data;
+    }
+  } catch (_) {}
+
+  return original;
+}
+
+function installRevisionWorkingAutosave() {
+  try {
+    if (!isRevisionActiveNow()) return;
+    if (window.__NAJRAN_REVISION_WORKING_AUTOSAVE__) return;
+    window.__NAJRAN_REVISION_WORKING_AUTOSAVE__ = true;
+
+    var timer = null;
+
+    function schedule(reason) {
+      if (!isRevisionActiveNow()) return;
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        saveRevisionWorkingSnapshot(reason);
+      }, 450);
+    }
+
+    document.addEventListener('input', function () {
+      schedule('input');
+    }, true);
+
+    document.addEventListener('change', function () {
+      schedule('change');
+    }, true);
+
+    document.addEventListener('click', function (e) {
+      var el = e.target && e.target.closest
+        ? e.target.closest('button,a,[onclick],[role="button"]')
+        : null;
+
+      if (!el) return;
+
+      setTimeout(function () {
+        saveRevisionWorkingSnapshot('click-navigation-or-action');
+      }, 250);
+    }, true);
+
+    window.addEventListener('pagehide', function () {
+      saveRevisionWorkingSnapshot('pagehide');
+    });
+
+    window.addEventListener('beforeunload', function () {
+      saveRevisionWorkingSnapshot('beforeunload');
+    });
+
+    console.warn('[RevisionWorking] autosave installed');
+  } catch (e) {
+    console.warn('[RevisionWorking] failed to install autosave', e);
+  }
+}
   function applyRevisionBootSnapshot() {
     try {
       var isRevision =
@@ -218,8 +374,9 @@ var extract =
       var rawSnapshot = localStorage.getItem('najran_revision_snapshot');
       if (!rawSnapshot) return false;
 
-      var snapshot = parse(rawSnapshot, null);
-      if (!snapshot || typeof snapshot !== 'object') return false;
+   var snapshot = getRevisionBootSnapshot(rawSnapshot);
+if (!snapshot || typeof snapshot !== 'object') return false;
+
 snapshot = normalizeRevisionSnapshotSettings(snapshot);
       console.warn('[RevisionBootGuard] applying submitted extract snapshot after page load');
 
@@ -503,6 +660,7 @@ function clearRevisionOnly() {
     'najran_revision_source',
     'najran_revision_snapshot',
     'najran_revision_previous_total_amount'
+    'najran_revision_working_snapshot'
   ].forEach(function (key) {
     try { localStorage.removeItem(key); } catch (_) {}
   });
@@ -696,18 +854,21 @@ function installHomeAsRevisionExit() {
     console.warn('[RevisionExit] failed to install home revision exit', e);
   }
 }
-  if (document.readyState === 'loading') {
+ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', function () {
     if (!applyRevisionBootSnapshot()) show();
     installHomeAsRevisionExit();
+    installRevisionWorkingAutosave();
   });
 } else {
   if (!applyRevisionBootSnapshot()) show();
   installHomeAsRevisionExit();
+  installRevisionWorkingAutosave();
 }
 
 setTimeout(function () {
   if (!applyRevisionBootSnapshot()) show();
   installHomeAsRevisionExit();
+  installRevisionWorkingAutosave();
 }, 1200);
 })();
