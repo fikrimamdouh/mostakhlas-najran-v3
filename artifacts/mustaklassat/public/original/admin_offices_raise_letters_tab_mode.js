@@ -7,6 +7,7 @@
 // + يحمل تعديل جماعي شبكي لكل الحالات وإصلاح طباعة الحضور الأساسية
 // + يحمل طباعة الموقع الحالي بنفس دالة الطباعة الرئيسية وضبط أداء A4 صفحة واحدة
 // + يحمل حارس أرشفة الرفع للاعتماد حتى تُحفظ نسخة مراجعة كاملة للمكاتب
+// + يوضح تواقيع خطابات الرفع والإقرار داخل نافذة الخطابات
 // ===================================================================
 (function () {
   'use strict';
@@ -40,6 +41,10 @@
 
   function loadSubmittedArchiveBundleGuard() {
     loadScriptOnce('submitted-extract-archive-bundle-guard', '/original/submitted_extract_archive_bundle_guard.js?v=20260623_archive_bundle_v1');
+  }
+
+  function loadSignatureLabelsPatch() {
+    loadScriptOnce('admin-offices-raise-letter-signature-labels', '/original/admin_offices_raise_letters_signature_labels.js?v=20260623_sig_labels_v1');
   }
 
   function openStandaloneTab() {
@@ -174,6 +179,7 @@
 
   function boot(attempt) {
     loadSubmittedArchiveBundleGuard();
+    loadSignatureLabelsPatch();
     loadDynamicFinalSubjectPatch();
     loadBulkStatusGridPrintFix();
     loadSitePrintPerformanceFit();
@@ -187,6 +193,7 @@
     setTimeout(applyExcelImportDialogLayout, 80);
     setTimeout(applyExcelImportDialogLayout, 350);
     setTimeout(loadSubmittedArchiveBundleGuard, 120);
+    setTimeout(loadSignatureLabelsPatch, 120);
     setTimeout(loadDynamicFinalSubjectPatch, 120);
     setTimeout(loadBulkStatusGridPrintFix, 120);
     setTimeout(loadSitePrintPerformanceFit, 120);
@@ -195,5 +202,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0));
   else boot(0);
 
-  console.info('[Admin Offices Raise Letters] standalone tab mode installed + Excel import scroll fix + final subject + bulk/print + site/performance fit + archive bundle loader');
+  console.info('[Admin Offices Raise Letters] standalone tab mode installed + Excel import scroll fix + final subject + bulk/print + site/performance fit + archive bundle + signature labels loader');
 })();
