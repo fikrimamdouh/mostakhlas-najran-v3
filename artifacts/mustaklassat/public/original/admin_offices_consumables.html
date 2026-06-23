@@ -736,8 +736,19 @@ function getAutomaticLaborCost() {
         const penaltyValue = parseNumericValue(document.getElementById('expected-penalty').textContent);
         const { contractType, directPurchaseRatio } = getContractDetails();
         
-        const visitDateOptions = ['خلال هذا الشهر', 'تمت الزيارة من قبل', "يناير القادم", "فبراير القادم", "مارس القادم", "أبريل القادم", "مايو القادم", "يونيو القادم", "يوليو القادم", "أغسطس القادم", "سبتمبر القادم", "أكتوبر القادم", "نوفمبر القادم", "ديسمبر القادم"];
+const visitDateOptions = ['خلال هذا الشهر', 'تمت الزيارة من قبل', 'زيارة قادمة', 'زيارة مؤجلة'];
+const oldFutureMonths = ["يناير القادم","فبراير القادم","مارس القادم","أبريل القادم","مايو القادم","يونيو القادم","يوليو القادم","أغسطس القادم","سبتمبر القادم","أكتوبر القادم","نوفمبر القادم","ديسمبر القادم"];
 
+function normalizeVisitDate(value) {
+    return oldFutureMonths.includes(value) ? 'زيارة قادمة' : (value || 'خلال هذا الشهر');
+}
+
+function getVisitDateClass(value) {
+    if (value === 'خلال هذا الشهر') return 'visit-date-monthly';
+    if (value === 'تمت الزيارة من قبل') return 'visit-date-done';
+    if (value === 'زيارة مؤجلة') return 'visit-date-postponed';
+    return 'visit-date-future';
+}
         subcontractorsData.forEach((item, index) => {
             let visitValue = parseNumericValue(item.visitValue);
             if (contractType === 'شراء مباشر') {
