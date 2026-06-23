@@ -167,6 +167,10 @@
   }
 
   function patchNormalUpdateAttendance() {
+    if (/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) {
+        return;
+    }
+
     if (typeof window.updateEmployeeAttendance !== 'function') return;
     if (window.updateEmployeeAttendance.__specialAbsencePatched) return;
 
@@ -231,8 +235,9 @@
           });
         }
 
-        renderTables();
-      } catch (error) {
+if (typeof renderTables === 'function') {
+          renderTables();
+        }      } catch (error) {
         console.error('خطأ في تحديث الحضور:', error);
       }
     };
@@ -259,17 +264,28 @@
       console.warn('[SpecialAbsence] تعذر تعديل renderTables تلقائيًا', e);
     }
   }
-
-  function install() {
-    if (window[PATCH_FLAG] && window[PATCH_FLAG].installed) return;
+function install() {
     if (!isAllowedHere()) return;
 
     installStatusCode();
     injectCss();
-    patchNormalAttendanceSelect();
-    patchNormalUpdateAttendance();
-    patchNormalRenderTablesBySource();
-    patchAdminOfficeAttendanceSelect();
+
+    var isAdminOffices = /admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search);
+    var hasCreateAttendanceSelect = typeof window.createAttendanceSelect === 'function';
+    var hasUpdateEmployeeAttendance = typeof window.updateEmployeeAttendance === 'function';
+    var hasRenderTables = typeof window.renderTables === 'function';
+
+    if (!hasCreateAttendanceSelect && !hasUpdateEmployeeAttendance && !hasRenderTables) {
+      return;
+    }
+
+    if (isAdminOffices) {
+      patchAdminOfficeAttendanceSelect();
+    } else {
+      patchNormalAttendanceSelect();
+      patchNormalUpdateAttendance();
+      patchNormalRenderTablesBySource();
+    }
 
     window[PATCH_FLAG] = { installed: true, code: CODE, at: new Date().toISOString() };
     console.warn('[SpecialAbsence] حالة غياب بدون حسم مفعلة لهذا العقد — code=' + CODE);
@@ -282,11 +298,11 @@
       }
     } catch (_) {}
   }
-
   document.addEventListener('DOMContentLoaded', function () {
     setTimeout(install, 300);
     setTimeout(install, 1000);
     setTimeout(install, 2500);
   });
+
   setTimeout(install, 700);
 })();
