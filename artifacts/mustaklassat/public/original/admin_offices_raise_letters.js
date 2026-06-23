@@ -123,7 +123,39 @@ function getSettings() {
 
   return settings;
 }  function saveSettings(s) { writeJson(SETTINGS_KEY, Object.assign(getSettings(), s || {})); }
+function getActiveExtractMeta() {
+  const e = getExtract();
 
+  const paymentNo =
+    e.paymentNumber
+    || e.extractNumber
+    || localStorage.getItem('paymentNumber')
+    || localStorage.getItem('extractNumber')
+    || '—';
+
+  const start =
+    e.extractStart
+    || localStorage.getItem('extractStart')
+    || '';
+
+  const end =
+    e.extractEnd
+    || localStorage.getItem('extractEnd')
+    || '';
+
+  return {
+    paymentNo: String(paymentNo).match(/^\d+$/)
+      ? String(paymentNo).padStart(2, '0')
+      : String(paymentNo),
+    start,
+    end
+  };
+}
+
+function extractPhrase() {
+  const m = getActiveExtractMeta();
+  return `دفعة رقم (${esc(m.paymentNo)}) عن الفترة من ${esc(fmtDate(m.start))} م إلى ${esc(fmtDate(m.end))} م`;
+}
   function defaultSaudization() {
     const s = getSettings();
     return {
@@ -274,49 +306,178 @@ function getSettings() {
     const saud = saud1 + saud2;
     return { p1, p2, net, vat, saud1, saud2, saud, grand: net + vat + saud, currentGrand: g };
   }
-  function generateLaborRaiseLetter() {
-    const s = getSettings();
-    const v = laborValues();
-    const company = getCompanyName();
-    const body = `<section class="page">${headerHtml(s)}<div class="to">${esc(s.recipient)} &nbsp;&nbsp;&nbsp; ${esc(s.recipientSuffix)}</div><div class="body-text">السلام عليكم ورحمة الله وبركاته ...<br>مرفق طيه المستخلص الشهري لشركة ${esc(company)} والخاص ببند (العمالة) لفترة ${esc(s.purchasePeriodLabel)} لـ ${esc(s.scopeName)} دفعة رقم (${esc(s.paymentNo)}) للفترة من ${esc(fmtDate(s.period1Start))} م وحتى ${esc(fmtDate(s.period1End))} م والفترة من ${esc(fmtDate(s.period2Start))} إلى ${esc(fmtDate(s.period2End))} م.</div><table class="amount-table"><tbody><tr><td>المبلغ الصافي المستحق للمقاول عن الفترة من ${esc(fmtDate(s.period1Start))} إلى ${esc(fmtDate(s.period1End))} م</td><td>${moneyPlain(v.p1)}</td></tr><tr><td>المبلغ الصافي المستحق للمقاول عن الفترة من ${esc(fmtDate(s.period2Start))} إلى ${esc(fmtDate(s.period2End))} م</td><td>${moneyPlain(v.p2)}</td></tr><tr class="total"><td>إجمالي المبلغ المستحق للمقاول</td><td>${money(v.net)}</td></tr><tr><td>ضريبة القيمة المضافة ${moneyPlain(s.vatRate)}%</td><td>${money(v.vat)}</td></tr><tr><td>مبلغ التعويض عن توطين الوظائف خلال الفترة من ${esc(fmtDate(s.period1Start))} إلى ${esc(fmtDate(s.period1End))} م</td><td>${moneyPlain(v.saud1)}</td></tr><tr><td>مبلغ التعويض عن توطين الوظائف خلال الفترة من ${esc(fmtDate(s.period2Start))} إلى ${esc(fmtDate(s.period2End))} م</td><td>${moneyPlain(v.saud2)}</td></tr><tr class="total"><td>إجمالي مبلغ التوطين</td><td>${money(v.saud)}</td></tr><tr class="grand"><td>الإجمالي</td><td>${money(v.grand)}</td></tr></tbody></table><div class="tafqeet">${esc(tafqeetSAR(v.grand))}</div><div class="closing">لذا نأمل بعد الإطلاع إحالته إلى جهة الاختصاص لتدقيقه وصرف مستحقات المقاول / ${esc(company)}<br>وتقبلوا تحياتنا ,,</div>${signatureHtml(s, 'one')}${footerHtml(s)}</section>`;
-    openPrintDoc('خطاب رفع العمالة', body);
-  }
-  function generateConsumablesRaiseLetter() {
-    const s = getSettings();
-    const company = getCompanyName();
-    const p1 = num(s.consumablesPeriod1Net), p2 = num(s.consumablesPeriod2Net), net = p1 + p2, vat = net * num(s.vatRate) / 100, grand = net + vat;
-    const body = `<section class="page">${headerHtml(s)}<div class="to">${esc(s.recipient)} &nbsp;&nbsp;&nbsp; ${esc(s.recipientSuffix)}</div><div class="body-text">السلام عليكم ورحمة الله وبركاته ...<br>مرفق طيه المستخلص الشهري لشركة ${esc(company)} والخاص ببند (المستهلكات ومقاولي الباطن) لفترة ${esc(s.purchasePeriodLabel)} لـ ${esc(s.scopeName)} دفعة رقم (${esc(s.paymentNo)}) للفترة من ${esc(fmtDate(s.period1Start))} م إلى ${esc(fmtDate(s.period1End))} م والفترة من ${esc(fmtDate(s.period2Start))} م إلى ${esc(fmtDate(s.period2End))} م.</div><table class="amount-table"><tbody><tr><td>المبلغ الصافي الشهري المستحق للمقاول عن الفترة من ${esc(fmtDate(s.period1Start))} إلى ${esc(fmtDate(s.period1End))} م</td><td>${moneyPlain(p1)}</td></tr><tr><td>المبلغ الصافي الشهري المستحق للمقاول عن الفترة من ${esc(fmtDate(s.period2Start))} إلى ${esc(fmtDate(s.period2End))} م</td><td>${moneyPlain(p2)}</td></tr><tr><td>ضريبة القيمة المضافة ${moneyPlain(s.vatRate)}%</td><td>${money(vat)}</td></tr><tr class="grand"><td>الإجمالي</td><td>${money(grand)}</td></tr></tbody></table><div class="tafqeet">${esc(tafqeetSAR(grand))}</div><div class="closing">لذا نأمل بعد الإطلاع إحالته إلى جهة الاختصاص لتدقيقه وصرف مستحقات المقاول / ${esc(company)}<br>وتقبلوا تحياتنا ,,</div>${signatureHtml(s, 'one')}${footerHtml(s)}</section>`;
-    openPrintDoc('خطاب رفع المستهلكات', body);
-  }
-  function generateSiteRaiseLetter(centerKey) {
-    const s = getSettings();
-    const names = getNames();
-    const key = centerKey || s.siteLetterDefaultCenter || Object.keys(names)[0] || 'center_1';
-    const site = names[key] || key;
-    const amount = calcSite(key).finalNet;
-    const company = getCompanyName();
-    const body = `<section class="page">${headerHtml(s)}<div class="to">${esc(s.recipient)} &nbsp;&nbsp;&nbsp; ${esc(s.recipientSuffix)}</div><div class="body-text">السلام عليكم ورحمة الله وبركاته وبعد ...<br>إشارة إلى عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع المكاتب الإدارية والمرافق الصحية بصحة نجران مقاولة ${esc(company)}، عليه نرفق طيه المستخلص الشهري بموقع ${esc(site)} ببند العمالة لفترة ${esc(s.purchasePeriodLabel)} دفعة رقم (${esc(s.paymentNo)}) للفترة من ${esc(fmtDate(s.period2Start))} م إلى ${esc(fmtDate(s.period2End))} م بمبلغ وقدره (${moneyPlain(amount)} ريال) ${esc(tafqeetSAR(amount))}.</div><div class="closing">نأمل بعد الإطلاع إحالته إلى جهة الاختصاص لتدقيقه وصرف مستحقات المقاول ${esc(company)} حسب ما جاء أعلاه.<br>وتقبلوا خالص تحياتي ,,,</div>${signatureHtml(s, 'one')}${footerHtml(s)}</section>`;
-    openPrintDoc('خطاب رفع موقع', body);
-  }
-  function generateDeclaration() {
-    const s = getSettings();
-    const company = getCompanyName();
-    const v = laborValues();
-    const amount = s.declarationAmountMode === 'manual' ? num(s.declarationManualAmount) : v.grand;
-    const body = `<section class="page">${headerHtml(s)}<div style="text-align:left;font-size:14px;font-weight:800">التاريخ : ${esc(fmtDate(s.declarationDate))} م</div><div class="report-title">إقرار بعدم أسبقية الصرف</div><div class="body-text">تقر إدارة الصيانة بالشئون الهندسية بصحة نجران بأن مستخلص العمالة لشركة ${esc(company)} موقع (${esc(s.scopeName)}) لفترة ${esc(s.purchasePeriodLabel)} دفعة رقم (${esc(s.paymentNo)}) بمبلغ وقدره (${money(amount)}) ${esc(tafqeetSAR(amount))}.<br>لم يسبق صرفه من قبلنا.</div>${signatureHtml(s, 'two')}${footerHtml(s)}</section>`;
-    openPrintDoc('إقرار عدم أسبقية الصرف', body);
-  }
-  function generateSaudizationReport() {
-    const s = getSettings();
-    const company = getCompanyName();
-    const data = getSaudization();
-    const period = data.period2 || { rows: [] };
-    const rows = (period.rows || []).map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.jobTitle)}</td><td>${esc(r.name)}</td><td>${esc(r.idNo)}</td><td>${moneyPlain(r.salary)}</td><td>${moneyPlain(r.compensation)}</td></tr>`).join('');
-    const total = saudizationTotal('period2');
-    const body = `<section class="page">${headerHtml(s)}<div class="report-title">نموذج التقرير السنوي للعقود المعتمدة ضمن لجنة تعويضات فروق الراتب</div><table class="meta-table"><tbody><tr><td>اسم المشروع</td><td>${esc(s.projectName)}</td></tr><tr><td>قيمة المشروع</td><td>${esc(s.projectValue)}</td></tr><tr><td>الجهة الحكومية / القطاع الفرعي</td><td>${esc(s.governmentEntity)}</td></tr><tr><td>اسم المقاول</td><td>${esc(company)}</td></tr><tr><td>مدة المشروع (شهر)</td><td>${esc(s.projectDuration)}</td></tr><tr><td>تاريخ بداية المشروع</td><td>${esc(fmtDate(s.projectStart))}</td></tr><tr><td>تاريخ نهاية المشروع</td><td>${esc(fmtDate(s.projectEnd))}</td></tr><tr><td>عدد الفرص الإضافية المعتمدة بالتوطين (تعويض)</td><td>${esc(s.saudizationOpportunities)}</td></tr></tbody></table><div class="report-title" style="font-size:15px">تفاصيل مصروفات التعويض خلال الفترة (${esc(monthNameAr(period.start || s.period2Start))} من ${esc(fmtDate(period.start || s.period2Start))} م إلى ${esc(fmtDate(period.end || s.period2End))} م)</div><table class="data-table"><thead><tr><th>م</th><th>المسمى الوظيفي</th><th>اسم الموظف</th><th>رقم الهوية الوطنية</th><th>الراتب</th><th>مبلغ التعويض</th></tr></thead><tbody>${rows || '<tr><td colspan="6">لا توجد بيانات توطين.</td></tr>'}<tr><th colspan="5">الإجمالي</th><th>${moneyPlain(total)}</th></tr></tbody></table>${signatureHtml(s, 'two')}<div style="text-align:center;margin-top:18px;font-weight:900">الختم</div>${footerHtml(s)}</section>`;
-    openPrintDoc('تقرير التوطين', body);
-  }
+ function generateLaborRaiseLetter() {
+  const s = getSettings();
+  const v = laborValues();
+  const company = getCompanyName();
 
+  const body = `<section class="page">${headerHtml(s)}
+<div class="to">${esc(s.recipient)} &nbsp;&nbsp;&nbsp; ${esc(s.recipientSuffix)}</div>
+
+<div class="body-text">
+السلام عليكم ورحمة الله وبركاته، وبعد:<br>
+نرفق لسعادتكم المستخلص الشهري لشركة ${esc(company)} والخاص ببند العمالة لمواقع ${esc(s.scopeName)}، ${extractPhrase()}.
+</div>
+
+<table class="amount-table"><tbody>
+<tr><td>صافي مستحقات العمالة عن فترة المستخلص</td><td>${moneyPlain(v.net)}</td></tr>
+<tr><td>ضريبة القيمة المضافة ${moneyPlain(s.vatRate)}%</td><td>${money(v.vat)}</td></tr>
+<tr><td>تعويض توطين الوظائف عن فترة المستخلص</td><td>${moneyPlain(v.saud)}</td></tr>
+<tr class="grand"><td>الإجمالي</td><td>${money(v.grand)}</td></tr>
+</tbody></table>
+
+<div class="tafqeet">${esc(tafqeetSAR(v.grand))}</div>
+
+<div class="closing">
+لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / ${esc(company)}.
+<br>وتقبلوا تحياتنا ،،،
+</div>
+
+${signatureHtml(s, 'one')}${footerHtml(s)}</section>`;
+
+  openPrintDoc('خطاب رفع العمالة', body);
+}
+
+function generateConsumablesRaiseLetter() {
+  const s = getSettings();
+  const company = getCompanyName();
+
+  const net = num(s.consumablesPeriod2Net);
+  const vat = net * num(s.vatRate) / 100;
+  const grand = net + vat;
+
+  const body = `<section class="page">${headerHtml(s)}
+<div class="to">${esc(s.recipient)} &nbsp;&nbsp;&nbsp; ${esc(s.recipientSuffix)}</div>
+
+<div class="body-text">
+السلام عليكم ورحمة الله وبركاته، وبعد:<br>
+نرفق لسعادتكم المستخلص الشهري لشركة ${esc(company)} والخاص ببند المستهلكات ومقاولي الباطن لمواقع ${esc(s.scopeName)}، ${extractPhrase()}.
+</div>
+
+<table class="amount-table"><tbody>
+<tr><td>صافي مستحقات المستهلكات ومقاولي الباطن عن فترة المستخلص</td><td>${moneyPlain(net)}</td></tr>
+<tr><td>ضريبة القيمة المضافة ${moneyPlain(s.vatRate)}%</td><td>${money(vat)}</td></tr>
+<tr class="grand"><td>الإجمالي</td><td>${money(grand)}</td></tr>
+</tbody></table>
+
+<div class="tafqeet">${esc(tafqeetSAR(grand))}</div>
+
+<div class="closing">
+لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / ${esc(company)}.
+<br>وتقبلوا تحياتنا ،،،
+</div>
+
+${signatureHtml(s, 'one')}${footerHtml(s)}</section>`;
+
+  openPrintDoc('خطاب رفع المستهلكات', body);
+}
+
+function generateSiteRaiseLetter(centerKey) {
+  const s = getSettings();
+  const names = getNames();
+  const key = centerKey || s.siteLetterDefaultCenter || Object.keys(names)[0] || 'center_1';
+  const site = names[key] || key;
+  const amount = calcSite(key).finalNet;
+  const company = getCompanyName();
+
+  const body = `<section class="page">${headerHtml(s)}
+<div class="to">${esc(s.recipient)} &nbsp;&nbsp;&nbsp; ${esc(s.recipientSuffix)}</div>
+
+<div class="body-text">
+السلام عليكم ورحمة الله وبركاته، وبعد:<br>
+إشارة إلى عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع المكاتب الإدارية والمرافق الصحية بصحة نجران مقاولة ${esc(company)}، نرفق لسعادتكم المستخلص الشهري الخاص بموقع ${esc(site)} ببند العمالة، ${extractPhrase()}، بمبلغ وقدره (${moneyPlain(amount)} ريال) ${esc(tafqeetSAR(amount))}.
+</div>
+
+<div class="closing">
+نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول ${esc(company)} حسب ما جاء أعلاه.
+<br>وتقبلوا خالص تحياتنا ،،،
+</div>
+
+${signatureHtml(s, 'one')}${footerHtml(s)}</section>`;
+
+  openPrintDoc('خطاب رفع موقع', body);
+}
+
+function generateDeclaration() {
+  const s = getSettings();
+  const company = getCompanyName();
+  const v = laborValues();
+  const amount = s.declarationAmountMode === 'manual' ? num(s.declarationManualAmount) : v.grand;
+
+  const body = `<section class="page">${headerHtml(s)}
+<div style="text-align:left;font-size:14px;font-weight:800">التاريخ : ${esc(fmtDate(s.declarationDate))} م</div>
+
+<div class="report-title">إقرار بعدم أسبقية الصرف</div>
+
+<div class="body-text">
+تقر إدارة الصيانة بالشئون الهندسية بصحة نجران بأن مستخلص العمالة لشركة ${esc(company)}، لمواقع ${esc(s.scopeName)}، ${extractPhrase()}، بمبلغ وقدره (${money(amount)}) ${esc(tafqeetSAR(amount))}.
+<br>ولم يسبق صرفه من قبلنا.
+</div>
+
+${signatureHtml(s, 'two')}${footerHtml(s)}</section>`;
+
+  openPrintDoc('إقرار عدم أسبقية الصرف', body);
+}
+
+function generateSaudizationReport() {
+  const s = getSettings();
+  const company = getCompanyName();
+  const data = getSaudization();
+  const period = data.period2 || { rows: [] };
+
+  const rows = (period.rows || []).map((r, i) => `
+<tr>
+<td>${i + 1}</td>
+<td>${esc(r.jobTitle)}</td>
+<td>${esc(r.name)}</td>
+<td>${esc(r.idNo)}</td>
+<td>${moneyPlain(r.salary)}</td>
+<td>${moneyPlain(r.compensation)}</td>
+</tr>`).join('');
+
+  const total = saudizationTotal('period2');
+
+  const body = `<section class="page">${headerHtml(s)}
+<div class="report-title">نموذج التقرير السنوي للعقود المعتمدة ضمن لجنة تعويضات فروق الراتب</div>
+
+<table class="meta-table"><tbody>
+<tr><td>اسم المشروع</td><td>${esc(s.projectName)}</td></tr>
+<tr><td>قيمة المشروع</td><td>${esc(s.projectValue)}</td></tr>
+<tr><td>الجهة الحكومية / القطاع الفرعي</td><td>${esc(s.governmentEntity)}</td></tr>
+<tr><td>اسم المقاول</td><td>${esc(company)}</td></tr>
+<tr><td>مدة المشروع (شهر)</td><td>${esc(s.projectDuration)}</td></tr>
+<tr><td>تاريخ بداية المشروع</td><td>${esc(fmtDate(s.projectStart))}</td></tr>
+<tr><td>تاريخ نهاية المشروع</td><td>${esc(fmtDate(s.projectEnd))}</td></tr>
+<tr><td>عدد الفرص الإضافية المعتمدة بالتوطين (تعويض)</td><td>${esc(s.saudizationOpportunities)}</td></tr>
+</tbody></table>
+
+<div class="report-title" style="font-size:15px">
+تفاصيل مصروفات التعويض خلال ${extractPhrase()}
+</div>
+
+<table class="data-table">
+<thead>
+<tr>
+<th>م</th>
+<th>المسمى الوظيفي</th>
+<th>اسم الموظف</th>
+<th>رقم الهوية الوطنية</th>
+<th>الراتب</th>
+<th>مبلغ التعويض</th>
+</tr>
+</thead>
+<tbody>
+${rows || '<tr><td colspan="6">لا توجد بيانات توطين.</td></tr>'}
+<tr><th colspan="5">الإجمالي</th><th>${moneyPlain(total)}</th></tr>
+</tbody>
+</table>
+
+${signatureHtml(s, 'two')}
+<div style="text-align:center;margin-top:18px;font-weight:900">الختم</div>
+${footerHtml(s)}</section>`;
+
+  openPrintDoc('تقرير التوطين', body);
+}
   function settingsField(k, label, type) {
     const s = getSettings();
     return `<div class="field"><label>${esc(label)}</label><input type="${type || 'text'}" data-rl-setting="${esc(k)}" value="${esc(s[k])}"></div>`;
