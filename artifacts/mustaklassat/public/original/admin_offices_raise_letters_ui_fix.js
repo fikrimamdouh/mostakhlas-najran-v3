@@ -1,24 +1,17 @@
 // ===================================================================
-// Admin Offices Raise Letters UI Styling + inline tools
-// Scope: admin_offices_attendance.html only
-// - تنسيق شاشة خطابات الرفع
-// - مسافة المحترم
-// - زر حفظ إعدادات الخطابات
-// - نقل خطابات وبيانات إضافية للأعلى
-// - تعديل جماعي للحضور داخل نفس الملف بدون ملفات جديدة
+// Admin Offices Raise Letters UI Fix
+// Scope: admin_offices_attendance.html / original-viewer page
+// - يجعل كلمة المحترم في آخر السطر بدون نزول سطر جديد
+// - يحفظ أي تعديل داخل إعدادات الخطاب المحفوظة تلقائياً + زر حفظ
+// - ينقل خطابات وبيانات إضافية للأعلى
+// - يحافظ على التعديل الجماعي داخل نفس الملف بدون ملفات جديدة
 // ===================================================================
 (function () {
   'use strict';
-  if (!/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
+  if (!/admin_offices_attendance\.html|original-viewer\?page=admin_offices_attendance\.html/.test(location.pathname + location.search)) return;
 
-  function readJson(key, fallback) {
-    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
-  }
-
-  function writeJson(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value || {})); } catch (_) {}
-  }
-
+  function readJson(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; } }
+  function writeJson(key, value) { try { localStorage.setItem(key, JSON.stringify(value || {})); } catch (_) {} }
   function clean(v) { return String(v ?? '').replace(/\s+/g, ' ').trim(); }
   function esc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function firstValue() { for (const v of arguments) { const s = clean(v); if (s && !['غير محدد', 'undefined', 'null', '—'].includes(s)) return s; } return ''; }
@@ -27,6 +20,18 @@
     const e = readJson('persistentExtractData', {});
     const raw = firstValue(e.paymentNumber, e.extractNumber, e.paymentNo, e.extractNo, e.batchNumber, localStorage.getItem('paymentNumber'), localStorage.getItem('extractNumber'), localStorage.getItem('paymentNo'), localStorage.getItem('extractNo'), localStorage.getItem('batchNumber')) || '—';
     return /^\d+$/.test(raw) ? raw.padStart(2, '0') : raw;
+  }
+
+  function suffixEndCss() {
+    return `
+      .to{display:flex!important;justify-content:space-between!important;align-items:flex-start!important;width:100%!important;gap:18px!important;direction:rtl!important}
+      .to .recipient-name{display:block!important;max-width:78%!important;white-space:normal!important;text-align:right!important}
+      .to .recipient-suffix{display:block!important;margin:0!important;padding:0!important;min-width:72px!important;white-space:nowrap!important;text-align:left!important}
+      .final-to{display:flex!important;justify-content:space-between!important;align-items:flex-start!important;width:100%!important;gap:18px!important;direction:rtl!important}
+      .final-to span:first-child{display:block!important;max-width:78%!important;text-align:right!important}
+      .final-to span:last-child{display:block!important;min-width:72px!important;white-space:nowrap!important;text-align:left!important;margin:0!important;padding:0!important}
+      .recipient-suffix{white-space:nowrap!important}
+    `;
   }
 
   function installPaymentNumberDisplay() {
@@ -72,12 +77,12 @@
       #raise-letters-overlay .settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
       #raise-letters-overlay .field{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px}
       #raise-letters-overlay .field label{display:block;font-size:12px;font-weight:900;color:#334155;margin-bottom:6px}
-      #raise-letters-overlay .field input,#raise-letters-overlay .field select{width:100%;min-height:36px;padding:8px 9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-weight:700;background:#fff}
+      #raise-letters-overlay .field input,#raise-letters-overlay .field select,#raise-letters-overlay .field textarea{width:100%;min-height:36px;padding:8px 9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-weight:700;background:#fff}
       #raise-letters-overlay .readonly-box{min-height:38px;padding:9px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;font-weight:900;line-height:1.8}
       #raise-letters-overlay .site-checks{max-height:270px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin-top:10px}
       #raise-letters-overlay .site-check{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px;font-weight:800;line-height:1.4}
       #raise-letters-overlay .site-check input{width:auto!important;min-height:auto!important}
-      #raise-letters-overlay .recipient-suffix{margin-right:36px!important;padding-right:0!important;display:inline!important}
+      ${suffixEndCss()}
       #raise-letters-overlay .rl-section-save-row{display:flex;justify-content:center;margin:14px 0 2px}
       #raise-letters-overlay .rl-section-save-row .btn{min-width:190px}
       #admin-extra-docs-section{border:2px solid #d4af37!important;background:#fffbeb!important}
@@ -107,11 +112,11 @@
           if (!win || win.closed || !win.document) return;
           const title = String(win.document.title || '');
           const html = win.document.documentElement ? win.document.documentElement.innerHTML : '';
-          if (!/خطاب|إقرار|المستهلكات|العمالة|شهادة|بيان/.test(title + html)) return;
+          if (!/خطاب|إقرار|المستهلكات|العمالة|شهادة|بيان|مستخلص/.test(title + html)) return;
           if (win.document.getElementById('raise-letter-recipient-spacing-fix')) return;
           const style = win.document.createElement('style');
           style.id = 'raise-letter-recipient-spacing-fix';
-          style.textContent = '.recipient-suffix{margin-right:36px!important;padding-right:0!important;display:inline!important}.recipient-name{display:inline!important}';
+          style.textContent = suffixEndCss();
           win.document.head.appendChild(style);
         }, 80);
       } catch (_) {}
@@ -119,22 +124,43 @@
     };
   }
 
+  function callSaveDialogSilently() {
+    try {
+      if (window.AdminOfficesRaiseLetters && typeof window.AdminOfficesRaiseLetters.saveDialog === 'function') {
+        window.AdminOfficesRaiseLetters.saveDialog(true);
+      }
+    } catch (_) {}
+  }
+
+  let saveTimer = null;
+  function scheduleAutoSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(callSaveDialogSilently, 350);
+  }
+
   function installSavedSettingsSaveButton() {
     const overlay = document.getElementById('raise-letters-overlay');
     if (!overlay) return;
     const boxes = Array.from(overlay.querySelectorAll('.section-box'));
-    const target = boxes.find(box => ((box.querySelector('h3')?.textContent || '').includes('إعدادات الخطابات المحفوظة')));
-    if (!target || target.querySelector('#raise-letters-save-settings-section-btn')) return;
-    const row = document.createElement('div');
-    row.className = 'rl-section-save-row';
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.id = 'raise-letters-save-settings-section-btn';
-    btn.className = 'btn btn-primary';
-    btn.innerHTML = '<i class="fas fa-save"></i> حفظ إعدادات الخطابات';
-    btn.onclick = function () { if (window.AdminOfficesRaiseLetters && typeof window.AdminOfficesRaiseLetters.saveDialog === 'function') window.AdminOfficesRaiseLetters.saveDialog(); };
-    row.appendChild(btn);
-    target.appendChild(row);
+    const target = boxes.find(box => ((box.querySelector('h3')?.textContent || '').includes('إعدادات الخطاب') || (box.querySelector('h3')?.textContent || '').includes('إعدادات الخطابات المحفوظة')));
+    if (target && !target.querySelector('#raise-letters-save-settings-section-btn')) {
+      const row = document.createElement('div');
+      row.className = 'rl-section-save-row';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = 'raise-letters-save-settings-section-btn';
+      btn.className = 'btn btn-primary';
+      btn.innerHTML = '<i class="fas fa-save"></i> حفظ إعدادات الخطابات';
+      btn.onclick = callSaveDialogSilently;
+      row.appendChild(btn);
+      target.appendChild(row);
+    }
+    if (!overlay.__raiseLettersAutoSaveInstalled) {
+      overlay.__raiseLettersAutoSaveInstalled = true;
+      overlay.addEventListener('input', function (e) { if (e.target && e.target.matches('[data-rl-setting], .field input, .field select, .field textarea')) scheduleAutoSave(); }, true);
+      overlay.addEventListener('change', function (e) { if (e.target && e.target.matches('[data-rl-setting], .field input, .field select, .field textarea')) scheduleAutoSave(); }, true);
+      overlay.addEventListener('blur', function (e) { if (e.target && e.target.matches('[data-rl-setting], .field input, .field select, .field textarea')) scheduleAutoSave(); }, true);
+    }
   }
 
   function moveExtraDocsToTop() {
@@ -146,78 +172,21 @@
     if (firstDataBox && section.nextElementSibling !== firstDataBox) dialog.insertBefore(section, firstDataBox);
   }
 
-  function getNamesSafe() {
-    try { if (typeof window.getCenterNames === 'function') return window.getCenterNames() || {}; } catch (_) {}
-    return readJson('adminOfficeNames_v1', {});
-  }
-
-  function getDataSafe() {
-    const list = [];
-    try { if (typeof window.getAttendanceData === 'function') list.push(window.getAttendanceData() || {}); } catch (_) {}
-    list.push(readJson('adminOfficesAttendanceData_v1', {}));
-    list.push(readJson('adminOfficesAttendanceData_v1_localBackup', {}));
-    const count = obj => Object.values(obj || {}).reduce((s, rows) => s + (Array.isArray(rows) ? rows.length : 0), 0);
-    return list.reduce((best, item) => count(item) > count(best) ? item : best, {});
-  }
-
-  function saveDataSafe(data) {
-    try { if (typeof window.saveAttendanceData === 'function') window.saveAttendanceData(data || {}); } catch (_) {}
-    writeJson('adminOfficesAttendanceData_v1', data || {});
-    writeJson('adminOfficesAttendanceData_v1_localBackup', data || {});
-  }
-
-  function getPeriodSafe() {
-    try { if (typeof window.getExtractPeriodDetails === 'function') return window.getExtractPeriodDetails(); } catch (_) {}
-    const e = readJson('persistentExtractData', {});
-    const start = new Date(e.extractStart || localStorage.getItem('extractStart') || Date.now());
-    const end = new Date(e.extractEnd || localStorage.getItem('extractEnd') || e.extractStart || Date.now());
-    const safeStart = Number.isNaN(start.getTime()) ? new Date() : start;
-    const safeEnd = Number.isNaN(end.getTime()) ? safeStart : end;
-    return { startDate: safeStart, daysInExtract: Math.max(1, Math.ceil((safeEnd - safeStart) / 86400000) + 1 || 30) };
-  }
-
-  function orderedKeysForBulk() {
-    const names = getNamesSafe();
-    const data = getDataSafe();
-    return Array.from(new Set([...Object.keys(names || {}), ...Object.keys(data || {})]))
-      .filter(k => k === 'admin_staff' || /^center_\d+$/.test(k) || Array.isArray(data[k]))
-      .sort((a, b) => {
-        if (/^center_\d+$/.test(a) && /^center_\d+$/.test(b)) return parseInt(a.split('_')[1], 10) - parseInt(b.split('_')[1], 10);
-        if (/^center_\d+$/.test(a)) return -1;
-        if (/^center_\d+$/.test(b)) return 1;
-        return String(a).localeCompare(String(b), 'ar');
-      });
-  }
-
-  function activeCenterKey() {
-    try { if (typeof window.getActiveAdminOfficeCenterKey === 'function') return window.getActiveAdminOfficeCenterKey(); } catch (_) {}
-    return document.querySelector('.tab-link.active[data-center-key]')?.dataset?.centerKey || '';
-  }
-
-  function statusOptionsHtml() {
-    const src = window.STATUS_CODES || { 'ح': { name: 'حضور' }, 'غ': { name: 'غياب' }, 'ج': { name: 'إجازة' }, 'ش': { name: 'شاغر' }, 'ت': { name: 'تأخير' }, 'ب': { name: 'بديل' }, 'ن': { name: 'نقل' }, 'غ•': { name: 'غياب بدون حسم' } };
-    return Object.keys(src).filter(code => code !== 'default').map(code => `<option value="${esc(code)}">${esc(code)} — ${esc(src[code]?.name || code)}</option>`).join('');
-  }
-
-  function dayOptionsHtml() {
-    const p = getPeriodSafe();
-    return Array.from({ length: p.daysInExtract }, (_, i) => {
-      const d = new Date(p.startDate);
-      d.setDate(p.startDate.getDate() + i);
-      return `<option value="${i}">اليوم ${i + 1} — ${d.toLocaleDateString('en-CA')}</option>`;
-    }).join('');
-  }
+  function getNamesSafe() { try { if (typeof window.getCenterNames === 'function') return window.getCenterNames() || {}; } catch (_) {} return readJson('adminOfficeNames_v1', {}); }
+  function getDataSafe() { const list = []; try { if (typeof window.getAttendanceData === 'function') list.push(window.getAttendanceData() || {}); } catch (_) {} list.push(readJson('adminOfficesAttendanceData_v1', {}), readJson('adminOfficesAttendanceData_v1_localBackup', {}), readJson('adminOfficesAttendanceData', {})); const count = obj => Object.values(obj || {}).reduce((s, rows) => s + (Array.isArray(rows) ? rows.length : 0), 0); return list.reduce((best, item) => count(item) > count(best) ? item : best, {}); }
+  function saveDataSafe(data) { try { if (typeof window.saveAttendanceData === 'function') window.saveAttendanceData(data || {}); } catch (_) {} writeJson('adminOfficesAttendanceData_v1', data || {}); writeJson('adminOfficesAttendanceData_v1_localBackup', data || {}); }
+  function getPeriodSafe() { try { if (typeof window.getExtractPeriodDetails === 'function') return window.getExtractPeriodDetails(); } catch (_) {} const e = readJson('persistentExtractData', {}); const start = new Date(e.extractStart || localStorage.getItem('extractStart') || Date.now()); const end = new Date(e.extractEnd || localStorage.getItem('extractEnd') || e.extractStart || Date.now()); const safeStart = Number.isNaN(start.getTime()) ? new Date() : start; const safeEnd = Number.isNaN(end.getTime()) ? safeStart : end; return { startDate: safeStart, daysInExtract: Math.max(1, Math.ceil((safeEnd - safeStart) / 86400000) + 1 || 30) }; }
+  function orderedKeysForBulk() { const names = getNamesSafe(), data = getDataSafe(); return Array.from(new Set([...Object.keys(names || {}), ...Object.keys(data || {})])).filter(k => k === 'admin_staff' || /^center_\d+$/.test(k) || Array.isArray(data[k])).sort((a, b) => { if (/^center_\d+$/.test(a) && /^center_\d+$/.test(b)) return parseInt(a.split('_')[1], 10) - parseInt(b.split('_')[1], 10); if (/^center_\d+$/.test(a)) return -1; if (/^center_\d+$/.test(b)) return 1; return String(a).localeCompare(String(b), 'ar'); }); }
+  function activeCenterKey() { try { if (typeof window.getActiveAdminOfficeCenterKey === 'function') return window.getActiveAdminOfficeCenterKey(); } catch (_) {} return document.querySelector('.tab-link.active[data-center-key]')?.dataset?.centerKey || ''; }
+  function statusOptionsHtml() { const src = window.STATUS_CODES || { 'ح': { name: 'حضور' }, 'غ': { name: 'غياب' }, 'ج': { name: 'إجازة' }, 'ش': { name: 'شاغر' }, 'ت': { name: 'تأخير' }, 'ب': { name: 'بديل' }, 'ن': { name: 'نقل' }, 'غ•': { name: 'غياب بدون حسم' } }; return Object.keys(src).filter(code => code !== 'default').map(code => `<option value="${esc(code)}">${esc(code)} — ${esc(src[code]?.name || code)}</option>`).join(''); }
+  function dayOptionsHtml() { const p = getPeriodSafe(); return Array.from({ length: p.daysInExtract }, (_, i) => { const d = new Date(p.startDate); d.setDate(p.startDate.getDate() + i); return `<option value="${i}">اليوم ${i + 1} — ${d.toLocaleDateString('en-CA')}</option>`; }).join(''); }
 
   function renderBulkEmployees() {
     const box = document.getElementById('admin-bulk-employees-list');
     if (!box) return;
-    const names = getNamesSafe();
-    const data = getDataSafe();
+    const names = getNamesSafe(), data = getDataSafe();
     const selectedCenters = Array.from(document.querySelectorAll('.admin-office-bulk-center:checked')).map(cb => cb.value);
-    if (!selectedCenters.length) {
-      box.innerHTML = '<div class="admin-bulk-empty">اختر مكتبًا أو مرفقًا لعرض أسماء الموظفين.</div>';
-      return;
-    }
+    if (!selectedCenters.length) { box.innerHTML = '<div class="admin-bulk-empty">اختر مكتبًا أو مرفقًا لعرض أسماء الموظفين.</div>'; return; }
     box.innerHTML = selectedCenters.map(centerKey => {
       const rows = Array.isArray(data[centerKey]) ? data[centerKey] : [];
       const employees = rows.length ? rows.map((emp, idx) => `<label class="admin-bulk-emp-row"><input type="checkbox" class="admin-office-bulk-employee" value="${esc(centerKey)}::${idx}" data-center="${esc(centerKey)}" checked><span class="emp-name">${esc(emp.name || 'بدون اسم')}</span><small>${esc(emp.jobTitle || '')}${emp.iqamaId ? ' — ' + esc(emp.iqamaId) : ''}</small></label>`).join('') : '<div class="admin-bulk-empty">لا توجد أسماء موظفين في هذا الموقع.</div>';
@@ -226,10 +195,7 @@
   }
 
   function openBulkAttendanceDialogInline() {
-    const names = getNamesSafe();
-    const keys = orderedKeysForBulk();
-    const active = activeCenterKey();
-    const defaultKey = active || keys[0] || '';
+    const names = getNamesSafe(), keys = orderedKeysForBulk(), active = activeCenterKey(), defaultKey = active || keys[0] || '';
     const centerChecks = keys.map(key => `<label class="admin-bulk-center-row"><input type="checkbox" class="admin-office-bulk-center" value="${esc(key)}" ${key === defaultKey ? 'checked' : ''} onchange="AdminOfficesBulkInline.renderBulkEmployees()"><span>${esc(names[key] || key)}</span></label>`).join('');
     const content = `<div class="dialog-header"><h3><i class="fas fa-calendar-alt"></i> تعديل جماعي للحضور والانصراف</h3><span class="close" onclick="closeDialog('management-dialog')">×</span></div><div class="dialog-body"><p class="info-text">اختر المكاتب ثم اختر أسماء الموظفين المطلوب تعديلهم فقط.</p><div class="form-grid admin-bulk-top-grid"><div class="form-group"><label>من يوم:</label><select id="admin-bulk-start-day">${dayOptionsHtml()}</select></div><div class="form-group"><label>إلى يوم:</label><select id="admin-bulk-end-day">${dayOptionsHtml()}</select></div><div class="form-group"><label>الحالة الجديدة:</label><select id="admin-bulk-status">${statusOptionsHtml()}</select></div></div><fieldset><legend>1. اختيار المكاتب والمرافق</legend><div class="btn-row admin-bulk-row-actions"><button type="button" class="btn btn-light" onclick="AdminOfficesBulkInline.selectAllCenters(true)">تحديد كل المكاتب</button><button type="button" class="btn btn-light" onclick="AdminOfficesBulkInline.selectAllCenters(false)">إلغاء كل المكاتب</button></div><div class="admin-bulk-centers-grid">${centerChecks}</div></fieldset><fieldset><legend>2. اختيار الموظفين</legend><div class="btn-row admin-bulk-row-actions"><button type="button" class="btn btn-light" onclick="AdminOfficesBulkInline.selectAllEmployees(true)">تحديد كل الموظفين المعروضين</button><button type="button" class="btn btn-light" onclick="AdminOfficesBulkInline.selectAllEmployees(false)">إلغاء كل الموظفين المعروضين</button></div><div id="admin-bulk-employees-list" class="admin-bulk-employees-list"></div></fieldset></div><div class="dialog-footer"><button class="btn btn-secondary" onclick="closeDialog('management-dialog')"><i class="fas fa-times"></i> إلغاء</button><button class="btn btn-success" onclick="AdminOfficesBulkInline.applyBulkAttendance()"><i class="fas fa-check"></i> تطبيق التعديل</button></div>`;
     if (typeof window.openDialog === 'function') window.openDialog(content, 'management-dialog', true);
@@ -243,9 +209,7 @@
     const selectedEmployees = Array.from(document.querySelectorAll('.admin-office-bulk-employee:checked')).map(cb => cb.value);
     if (startIndex > endIndex) return alert('مدى الأيام غير صحيح. يوم البداية أكبر من يوم النهاية.');
     if (!selectedEmployees.length) return alert('اختر موظفًا واحدًا على الأقل.');
-    const data = getDataSafe();
-    const p = getPeriodSafe();
-    let affected = 0;
+    const data = getDataSafe(), p = getPeriodSafe(); let affected = 0;
     selectedEmployees.forEach(token => {
       const [centerKey, rawIdx] = token.split('::');
       const idx = parseInt(rawIdx, 10);
@@ -260,11 +224,7 @@
     saveDataSafe(data);
     try { if (typeof window.renderCenterIcons === 'function') window.renderCenterIcons(); } catch (_) {}
     try { if (typeof window.calculateAndDisplayGrandTotal === 'function') window.calculateAndDisplayGrandTotal(); } catch (_) {}
-    try {
-      const active = activeCenterKey();
-      if (active && typeof window.renderAttendanceTable === 'function') window.renderAttendanceTable(active);
-      else if (active && typeof window.populateAttendanceTableBody === 'function') window.populateAttendanceTableBody(active);
-    } catch (_) {}
+    try { const active = activeCenterKey(); if (active && typeof window.renderAttendanceTable === 'function') window.renderAttendanceTable(active); else if (active && typeof window.populateAttendanceTableBody === 'function') window.populateAttendanceTableBody(active); } catch (_) {}
     try { if (typeof window.closeDialog === 'function') window.closeDialog('management-dialog'); } catch (_) {}
     alert('تم تطبيق التعديل الجماعي بنجاح.\nعدد الموظفين المتأثرين: ' + affected);
   }
@@ -297,7 +257,7 @@
   }
 
   function loadModules() {
-    loadScriptOnce('admin-offices-extra-docs-script', '/original/admin_offices_raise_letters_extra_docs.js?v=20260623_extra_docs_v2', '[Admin Offices Extra Docs]');
+    loadScriptOnce('admin-offices-extra-docs-script', '/original/admin_offices_raise_letters_extra_docs.js?v=20260623_extra_docs_v8', '[Admin Offices Extra Docs]');
     setTimeout(moveExtraDocsToTop, 600);
   }
 
@@ -311,29 +271,22 @@
     window.updateContractDisplayData.__paymentNumberDisplaySafe = true;
   }
 
-  injectCss();
-  patchPrintWindowSpacing();
-  observeDialogs();
-  installSavedSettingsSaveButton();
-  installPaymentNumberDisplay();
-  installBulkInline();
-  moveExtraDocsToTop();
-  loadModules();
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      injectCss(); patchPrintWindowSpacing(); observeDialogs(); installSavedSettingsSaveButton(); installPaymentNumberDisplay(); installBulkInline(); moveExtraDocsToTop(); setTimeout(loadModules, 900);
-    });
+  function boot() {
+    injectCss();
+    patchPrintWindowSpacing();
+    observeDialogs();
+    installSavedSettingsSaveButton();
+    installPaymentNumberDisplay();
+    installBulkInline();
+    moveExtraDocsToTop();
+    loadModules();
   }
 
-  setTimeout(injectCss, 700);
-  setTimeout(installSavedSettingsSaveButton, 700);
-  setTimeout(installPaymentNumberDisplay, 700);
-  setTimeout(installBulkInline, 700);
-  setTimeout(moveExtraDocsToTop, 700);
-  setTimeout(loadModules, 1100);
-  setTimeout(moveExtraDocsToTop, 1800);
-  setTimeout(loadModules, 2600);
+  boot();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  setTimeout(boot, 700);
+  setTimeout(boot, 1800);
+  setTimeout(boot, 3200);
 
-  console.info('[Admin Offices Raise Letters UI Styling] installed with inline bulk edit; no new bulk files');
+  console.info('[Admin Offices Raise Letters UI Styling] installed v5 suffix-end + autosave settings');
 })();
