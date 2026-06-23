@@ -498,8 +498,12 @@ function openImportDialog() {
         </div>
         <div class="dialog-footer">
             <div></div>
-            <button class="btn btn-success" onclick="handleSingleFileImport()"><i class="fas fa-check"></i> بدء الاستيراد</button>
-        </div>
+<button class="btn btn-secondary" onclick="handleWorkbookSheetsImport()">
+    <i class="fas fa-layer-group"></i> استيراد كل الشيتات حسب أسماء المكاتب
+</button>
+<button class="btn btn-success" onclick="handleSingleFileImport()">
+    <i class="fas fa-check"></i> استيراد للموقع المحدد فقط
+</button>        </div>
     `;
     openDialog(content, 'management-dialog', true);
 }
@@ -742,7 +746,374 @@ function processSingleExcelFile(file) {
         reader.readAsArrayBuffer(file);
     });
 }
+let _pendingAdminOfficesWorkbookImport = null;
 
+function normalizeAdminOfficeSheetName(value) {
+    return String(value || '')
+        .replace(/\u200f|\u200e/g, '')
+        .replace(/[إأآا]/g, 'ا')
+        .replace(/ة/g, 'ه')
+        .replace(/ى/g, 'ي')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+}
+
+function findAdminOfficeKeyBySheetName(sheetName, names) {
+    const normalizedSheet = normalizeAdminOfficeSheetName(sheetName);
+
+    for (const key of Object.keys(names || {})) {
+        const fullName = String(names[key] || '');
+        const exportedName = fullName.substring(0, 30);
+
+        if (
+            normalizeAdminOfficeSheetName(fullName) === normalizedSheet ||
+            normalizeAdminOfficeSheetName(exportedName) === normalizedSheet ||
+            normalizeAdminOfficeSheetName(key) === normalizedSheet
+        ) {
+            return key;
+        }
+    }
+
+    return null;
+}
+
+function findAdminOfficeHeaderIndex(headers, tests) {
+    for (let i = 0; i < headers.length; i++) {
+        const h = normalizeAdminOfficeSheetName(headers[i]);
+        if (tests.some(fn => fn(h))) return i;
+    }
+    return -1;
+}
+
+function parseAdminOfficeNumber(value) {
+    if (typeof value === 'number') return value || 0;
+    return parseFloat(String(value || '').replace(/,/g, '').replace(/[ ريال﷼]/g, '').trim()) || 0;
+}
+
+function parseAdminOfficeWorksheetRows(jsonData) {
+    if (!Array.isArray(jsonData) || jsonData.length === 0) return [];
+
+    let headerRowIndex = -1;
+
+    for (let i = 0; i < Math.min(15, jsonData.length); i++) {
+        const row = (jsonData[i] || []).map(normalizeAdminOfficeSheetName);
+        const hasJob = row.some(h => h.includes('مسمي الوظيفه') || h.includes('مسمى الوظيفه'));
+        const hasName = row.some(h => h.includes('اسم شاغل الوظيفه') || h.includes('اسم الموظف'));
+        if (hasJob && hasName) {
+            headerRowIndex = i;
+            break;
+        }
+    }
+
+    if (headerRowIndex === -1) {
+        throw new Error('لم يتم العثور على صف العناوين داخل الشيت.');
+    }
+
+    const headers = (jsonData[headerRowIndex] || []).map(h => String(h || '').trim());
+
+    const jobTitleIndex = findAdminOfficeHeaderIndex(headers, [
+        h => h.includes('مسمي الوظيفه'),
+        h => h.includes('مسمى الوظيفه'),
+        h => h === 'الوظيفه'
+    ]);
+
+    const categoryIndex = findAdminOfficeHeaderIndex(headers, [
+        h => h.includes('الفئه'),
+        h => h.includes('فئه')
+    ]);
+
+    const nameIndex = findAdminOfficeHeaderIndex(headers, [
+        h => h.includes('اسم شاغل الوظيفه'),
+        h => h.includes('اسم الموظف'),
+        h => h === 'name'
+    ]);
+
+    const salaryIndex = findAdminOfficeHeaderIndex(headers, [
+        h => h.includes('التكلفه للفتره'),
+        h => h.includes('التكلفه الشهريه'),
+        h => h.includes('راتب'),
+        h => h.includes('salary')
+    ]);
+
+    const nationalityIndex = findAdminOfficeHeaderIndex(headers, [
+        h => h.includes('الجنسيه'),
+        h => h.includes('جنسيه')
+    ]);
+
+    const nationalityFineIndex = findAdminOfficeHeaderIndex(headers, [
+        h => h.includes('غرامه جنسيه')
+    ]);
+
+    const iqamaIdIndex = findAdminOfficeHeaderIndex(headers, [
+        h => h.includes('رقم الاقامه'),
+        h => h.includes('رقم الاقامة'),
+        h => h.includes('الهويه'),
+        h => h.includes('الهوية')
+    ]);
+
+    const { daysInExtract } = getExtractPeriodDetails();
+
+    const dayIndexes = headers
+        .map((h, i) => ({ h: String(h || '').trim(), i }))
+        .filter(x => /^\d+$/.test(x.h) && Number(x.h) >= 1 && Number(x.h) <= 31)
+        .slice(0, daysInExtract);
+
+    const employees = [];
+    const ignoredNames = ['اسم شاغل الوظيفة', 'اسم الموظف', 'مندوب المقاول', 'مدير المركز', 'غير محدد', ''];
+
+    for (let r = headerRowIndex + 1; r < jsonData.length; r++) {
+        const row = jsonData[r] || [];
+
+        const employeeName = String(nameIndex >= 0 ? row[nameIndex] : '').trim();
+        const jobTitle = String(jobTitleIndex >= 0 ? row[jobTitleIndex] : '').trim();
+
+        if (!employeeName && !jobTitle) continue;
+        if (ignoredNames.includes(employeeName)) continue;
+        if (jobTitle.includes('مسمى الوظيفة') || jobTitle.includes('مسمي الوظيفة')) continue;
+
+        const days = Array(daysInExtract).fill('ح');
+
+        dayIndexes.forEach((x, dayOffset) => {
+            const rawStatus = String(row[x.i] || '').trim();
+            if (rawStatus && STATUS_CODES[rawStatus]) {
+                days[dayOffset] = rawStatus;
+            }
+        });
+
+        employees.push({
+            jobTitle: jobTitle || 'غير محدد',
+            name: employeeName,
+            salary: salaryIndex >= 0 ? parseAdminOfficeNumber(row[salaryIndex]) : 0,
+            category: categoryIndex >= 0 ? String(row[categoryIndex] || '7').trim() : '7',
+            nationality: nationalityIndex >= 0 ? (String(row[nationalityIndex] || '').trim() || 'سعودي') : 'سعودي',
+            iqamaId: iqamaIdIndex >= 0 ? String(row[iqamaIdIndex] || '').trim() : '',
+            nationalityFine: nationalityFineIndex >= 0 ? parseAdminOfficeNumber(row[nationalityFineIndex]) : 0,
+            days
+        });
+    }
+
+    return employees;
+}
+
+function readAdminOfficesWorkbookBySheets(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = event => {
+            try {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                const names = getCenterNames();
+
+                const matched = {};
+                const skipped = [];
+                const errors = [];
+
+                workbook.SheetNames.forEach(sheetName => {
+                    const centerKey = findAdminOfficeKeyBySheetName(sheetName, names);
+
+                    if (!centerKey) {
+                        skipped.push(sheetName);
+                        return;
+                    }
+
+                    try {
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+                        const employees = parseAdminOfficeWorksheetRows(jsonData);
+
+                        if (employees.length > 0) {
+                            matched[centerKey] = {
+                                sheetName,
+                                centerName: names[centerKey] || centerKey,
+                                employees
+                            };
+                        } else {
+                            skipped.push(sheetName + ' — لا توجد بيانات موظفين');
+                        }
+                    } catch (e) {
+                        errors.push(sheetName + ': ' + e.message);
+                    }
+                });
+
+                resolve({ matched, skipped, errors });
+            } catch (err) {
+                reject(new Error('فشل قراءة ملف Excel متعدد الشيتات.'));
+            }
+        };
+
+        reader.onerror = () => reject(new Error('فشلت قراءة الملف.'));
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+async function handleWorkbookSheetsImport() {
+    const fileInput = document.getElementById('excel-file-input');
+    const statusArea = document.getElementById('import-status-area');
+
+    if (!fileInput || !fileInput.files.length) {
+        if (statusArea) statusArea.innerHTML = `<p class="status-error">الرجاء اختيار ملف Excel أولاً.</p>`;
+        return;
+    }
+
+    const file = fileInput.files[0];
+
+    if (statusArea) {
+        statusArea.innerHTML = `<h4><i class="fas fa-spinner fa-spin"></i> جاري قراءة كل الشيتات داخل الملف...</h4>`;
+    }
+
+    try {
+        const result = await readAdminOfficesWorkbookBySheets(file);
+        const keys = Object.keys(result.matched);
+
+        if (!keys.length) {
+            throw new Error('لم يتم ربط أي Sheet باسم مكتب/مرفق موجود.');
+        }
+
+        _pendingAdminOfficesWorkbookImport = result;
+        showAdminOfficesWorkbookImportModeDialog(result);
+
+    } catch (e) {
+        if (statusArea) statusArea.innerHTML = `<p class="status-error">✗ فشل الاستيراد: ${e.message}</p>`;
+        else alert('فشل الاستيراد: ' + e.message);
+    }
+}
+
+function showAdminOfficesWorkbookImportModeDialog(result) {
+    const rows = Object.keys(result.matched).map(key => {
+        const item = result.matched[key];
+        const currentCount = (getAttendanceData()[key] || []).length;
+
+        return `
+            <tr>
+                <td>${item.centerName}</td>
+                <td>${item.sheetName}</td>
+                <td>${currentCount}</td>
+                <td>${item.employees.length}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const skippedHtml = result.skipped.length
+        ? `<p class="status-skipped">شيتات تم تجاهلها: ${result.skipped.join('، ')}</p>`
+        : '';
+
+    const errorsHtml = result.errors.length
+        ? `<p class="status-error">أخطاء: ${result.errors.join(' | ')}</p>`
+        : '';
+
+    const content = `
+        <div class="dialog-header">
+            <h3><i class="fas fa-layer-group"></i> استيراد ملف متعدد الشيتات</h3>
+            <span class="close" onclick="closeDialog('management-dialog')">×</span>
+        </div>
+
+        <div class="dialog-body">
+            <p class="info-text">
+                تم ربط الشيتات التالية بأسماء المكاتب/المرافق. اختر طريقة التطبيق.
+            </p>
+
+            <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+                <thead>
+                    <tr>
+                        <th>المكتب/المرفق</th>
+                        <th>اسم الشيت</th>
+                        <th>الحالي</th>
+                        <th>في الملف</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+
+            ${skippedHtml}
+            ${errorsHtml}
+        </div>
+
+        <div class="dialog-footer">
+            <button class="btn btn-secondary" onclick="closeDialog('management-dialog')">
+                إلغاء
+            </button>
+            <button class="btn btn-warning" onclick="confirmAdminOfficesWorkbookImport('replace')">
+                استبدال
+            </button>
+            <button class="btn btn-success" onclick="confirmAdminOfficesWorkbookImport('update')">
+                تحديث
+            </button>
+        </div>
+    `;
+
+    openDialog(content, 'management-dialog', true);
+}
+
+function confirmAdminOfficesWorkbookImport(mode) {
+    if (!_pendingAdminOfficesWorkbookImport) return;
+
+    const data = getAttendanceData();
+    const result = _pendingAdminOfficesWorkbookImport;
+
+    let replacedCenters = 0;
+    let added = 0;
+    let duplicates = 0;
+
+    Object.keys(result.matched).forEach(centerKey => {
+        const incoming = result.matched[centerKey].employees || [];
+
+        if (mode === 'replace') {
+            data[centerKey] = incoming;
+            replacedCenters++;
+            added += incoming.length;
+            return;
+        }
+
+        if (!Array.isArray(data[centerKey])) data[centerKey] = [];
+
+        incoming.forEach(newEmp => {
+            const newIqama = String(newEmp.iqamaId || '').trim();
+            const newName = String(newEmp.name || '').trim().toLowerCase();
+
+            const exists = data[centerKey].some(emp => {
+                const oldIqama = String(emp.iqamaId || '').trim();
+                const oldName = String(emp.name || '').trim().toLowerCase();
+
+                return (
+                    (newIqama && oldIqama && newIqama === oldIqama) ||
+                    (!newIqama && newName && oldName && newName === oldName)
+                );
+            });
+
+            if (exists) {
+                duplicates++;
+            } else {
+                data[centerKey].push(newEmp);
+                added++;
+            }
+        });
+    });
+
+    saveAttendanceData(data);
+
+    try { renderCenterIcons(); } catch (_) {}
+    try { calculateAndDisplayGrandTotal(); } catch (_) {}
+
+    const activeKey = getActiveAdminOfficeCenterKey();
+    if (activeKey && result.matched[activeKey]) {
+        try { renderAttendanceTable(activeKey); } catch (_) {
+            try { populateAttendanceTableBody(activeKey); } catch (_) {}
+        }
+    }
+
+    _pendingAdminOfficesWorkbookImport = null;
+    closeDialog('management-dialog');
+
+    alert(
+        'تم استيراد ملف Excel متعدد الشيتات.\n\n' +
+        'الوضع: ' + (mode === 'replace' ? 'استبدال' : 'تحديث') + '\n' +
+        'عدد المكاتب/المرافق المرتبطة: ' + Object.keys(result.matched).length + '\n' +
+        'عدد الموظفين المضافين/المستبدلين: ' + added +
+        (duplicates ? '\nتم تجاهل مكررين: ' + duplicates : '')
+    );
+}
 function getExtractPeriodDetailsFormatted() {
     const data = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
     const formatDate = (dateString) => {
@@ -1263,6 +1634,194 @@ function updateEmployeeAttendance(centerKey, empIndex, dayIndex, newStatus) {
     
     populateAttendanceTableBody(centerKey); 
     calculateAndDisplayGrandTotal();
+}
+function getActiveAdminOfficeCenterKey() {
+    const activeTab = document.querySelector('.tab-link.active[data-center-key]');
+    if (activeTab && activeTab.dataset.centerKey) return activeTab.dataset.centerKey;
+
+    const visibleTable = Array.from(document.querySelectorAll('[id^="table-div-"]')).find(el => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+    });
+
+    if (visibleTable && visibleTable.id) {
+        return visibleTable.id.replace('table-div-', '');
+    }
+
+    return null;
+}
+
+function getOrderedAdminOfficeKeysForBulk() {
+    const names = getCenterNames();
+    return Object.keys(names).sort((a, b) => {
+        if (a.startsWith('center_') && b.startsWith('center_')) {
+            return parseInt(a.split('_')[1], 10) - parseInt(b.split('_')[1], 10);
+        }
+        if (a.startsWith('center_')) return -1;
+        if (b.startsWith('center_')) return 1;
+        return a.localeCompare(b, 'ar');
+    });
+}
+
+function openAdminOfficesBulkAttendanceDialog() {
+    const names = getCenterNames();
+    const keys = getOrderedAdminOfficeKeysForBulk();
+    const activeKey = getActiveAdminOfficeCenterKey();
+
+    const { startDate, daysInExtract } = getExtractPeriodDetails();
+
+    const dayOptions = Array.from({ length: daysInExtract }, (_, i) => {
+        const d = new Date(startDate);
+        d.setDate(startDate.getDate() + i);
+        return `<option value="${i}">اليوم ${i + 1} — ${d.getDate()}</option>`;
+    }).join('');
+
+    const statusOptions = Object.keys(STATUS_CODES)
+        .filter(code => code !== 'default')
+        .map(code => {
+            const name = STATUS_CODES[code]?.name || code;
+            return `<option value="${code}">${code} — ${name}</option>`;
+        })
+        .join('');
+
+    const centerChecks = keys.map(key => `
+        <div class="form-group-checkbox">
+            <input type="checkbox"
+                   class="admin-office-bulk-center"
+                   value="${key}"
+                   id="bulk-center-${key}"
+                   ${activeKey ? (key === activeKey ? 'checked' : '') : ''}>
+            <label for="bulk-center-${key}">${names[key] || key}</label>
+        </div>
+    `).join('');
+
+    const content = `
+        <div class="dialog-header">
+            <h3><i class="fas fa-calendar-alt"></i> تعديل جماعي للحضور والانصراف</h3>
+            <span class="close" onclick="closeDialog('management-dialog')">×</span>
+        </div>
+
+        <div class="dialog-body">
+            <p class="info-text">
+                هذا التعديل يغيّر حالة الحضور لعدة أيام وعدة مكاتب دفعة واحدة.
+                لا يغيّر الرواتب أو الفئات أو أسماء الموظفين.
+            </p>
+
+            <div class="form-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+                <div class="form-group">
+                    <label>من يوم:</label>
+                    <select id="admin-bulk-start-day">${dayOptions}</select>
+                </div>
+
+                <div class="form-group">
+                    <label>إلى يوم:</label>
+                    <select id="admin-bulk-end-day">${dayOptions}</select>
+                </div>
+
+                <div class="form-group">
+                    <label>الحالة الجديدة:</label>
+                    <select id="admin-bulk-status">${statusOptions}</select>
+                </div>
+            </div>
+
+            <hr style="margin:14px 0;">
+
+            <div class="form-group-checkbox all-selector">
+                <input type="checkbox" id="admin-bulk-select-all"
+                       onchange="document.querySelectorAll('.admin-office-bulk-center').forEach(cb => cb.checked = this.checked)">
+                <label for="admin-bulk-select-all"><strong>تحديد كل المكاتب / إلغاء الكل</strong></label>
+            </div>
+
+            <div class="checkbox-grid" style="max-height:260px;overflow:auto;">
+                ${centerChecks}
+            </div>
+        </div>
+
+        <div class="dialog-footer">
+            <button class="btn btn-secondary" onclick="closeDialog('management-dialog')">
+                <i class="fas fa-times"></i> إلغاء
+            </button>
+            <button class="btn btn-success" onclick="applyAdminOfficesBulkAttendance()">
+                <i class="fas fa-check"></i> تطبيق التعديل
+            </button>
+        </div>
+    `;
+
+    openDialog(content, 'management-dialog', true);
+}
+
+function applyAdminOfficesBulkAttendance() {
+    const startIndex = parseInt(document.getElementById('admin-bulk-start-day')?.value || '0', 10);
+    const endIndex = parseInt(document.getElementById('admin-bulk-end-day')?.value || '0', 10);
+    const newStatus = document.getElementById('admin-bulk-status')?.value || 'ح';
+
+    const selectedKeys = Array.from(document.querySelectorAll('.admin-office-bulk-center:checked'))
+        .map(cb => cb.value)
+        .filter(Boolean);
+
+    if (selectedKeys.length === 0) {
+        alert('اختر مكتبًا أو مرفقًا واحدًا على الأقل.');
+        return;
+    }
+
+    if (startIndex > endIndex) {
+        alert('مدى الأيام غير صحيح. يوم البداية أكبر من يوم النهاية.');
+        return;
+    }
+
+    if (!STATUS_CODES[newStatus]) {
+        alert('حالة الحضور المختارة غير صحيحة.');
+        return;
+    }
+
+    if (!confirm(
+        'سيتم تطبيق الحالة "' + newStatus + '" على ' + selectedKeys.length +
+        ' مكتب/مرفق خلال الفترة المحددة.\n\nهل تريد الاستمرار؟'
+    )) {
+        return;
+    }
+
+    const { daysInExtract } = getExtractPeriodDetails();
+    const data = getAttendanceData();
+
+    let affectedEmployees = 0;
+
+    selectedKeys.forEach(centerKey => {
+        const rows = Array.isArray(data[centerKey]) ? data[centerKey] : [];
+        rows.forEach(emp => {
+            const days = Array.isArray(emp.days) ? emp.days.slice(0, daysInExtract) : [];
+            while (days.length < daysInExtract) days.push('ح');
+
+            for (let i = startIndex; i <= endIndex && i < daysInExtract; i++) {
+                days[i] = newStatus;
+            }
+
+            emp.days = days;
+            affectedEmployees++;
+        });
+    });
+
+    saveAttendanceData(data);
+
+    try { renderCenterIcons(); } catch (_) {}
+    try { calculateAndDisplayGrandTotal(); } catch (_) {}
+
+    const activeKey = getActiveAdminOfficeCenterKey();
+    const detailsVisible = document.getElementById('center-details-view')?.style.display !== 'none';
+
+    if (activeKey && detailsVisible && selectedKeys.includes(activeKey)) {
+        try { renderAttendanceTable(activeKey); } catch (_) {
+            try { populateAttendanceTableBody(activeKey); } catch (_) {}
+        }
+    }
+
+    closeDialog('management-dialog');
+
+    alert(
+        'تم تطبيق التعديل الجماعي بنجاح.\n\n' +
+        'عدد المكاتب/المرافق: ' + selectedKeys.length + '\n' +
+        'عدد الموظفين المتأثرين: ' + affectedEmployees
+    );
 }
 /**
  * ✅ [جديد] دالة مساعدة لتحديد لون النص المناسب (أسود أو أبيض) بناءً على لون الخلفية.
