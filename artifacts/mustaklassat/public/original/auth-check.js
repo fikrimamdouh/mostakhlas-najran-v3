@@ -8,7 +8,7 @@
   'use strict';
 
   var BASE = window.location.origin;
-  var BUILD_V = '20260623adminOfficesPersistV1';
+  var BUILD_V = '20260623adminOfficesScopedLettersV1';
   var NOTIF_INTERVAL_MS = 300000;
   var notifFetchInProgress = false;
 
@@ -171,6 +171,7 @@
     // ممنوع تحميله هنا مرة ثانية.
     appendScript('/original/admin_offices_performance_logic.js?v=' + BUILD_V, true);
     appendScript('/original/admin_offices_attendance_persistence_fix.js?v=20260623_admin_persist_v1', true);
+    appendScript('/original/admin_offices_letter_scoped_settings.js?v=20260623_letter_scoped_v1', true);
   }
 
   if (isAttendancePage || isAdminOfficesPage) {
