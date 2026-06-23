@@ -2,6 +2,7 @@
 // Admin Offices Raise Letters UI Styling Only
 // Scope: admin_offices_attendance.html only
 // لا يغير وظائف الخطابات. يضيف تنسيق الشاشة ومسافة المحترم وزر حفظ إعدادات الخطابات.
+// ويحمل أدوات العمالة الإضافية بعد اكتمال سكربتات الطباعة.
 // ===================================================================
 (function () {
   'use strict';
@@ -245,6 +246,16 @@
     window.__raiseLettersSettingsSaveObserver.observe(document.body, { childList: true, subtree: true });
   }
 
+  function loadAttendanceToolsModule() {
+    if (document.getElementById('admin-offices-attendance-tools-script')) return;
+    const script = document.createElement('script');
+    script.id = 'admin-offices-attendance-tools-script';
+    script.src = '/original/admin_offices_attendance_tools.js?v=20260623_tools_v1';
+    script.onload = function () { console.info('[Admin Offices Tools] loaded from UI layer'); };
+    script.onerror = function () { console.warn('[Admin Offices Tools] failed to load'); };
+    document.body.appendChild(script);
+  }
+
   injectCss();
   patchPrintWindowSpacing();
   observeDialogs();
@@ -256,6 +267,7 @@
       patchPrintWindowSpacing();
       observeDialogs();
       installSavedSettingsSaveButton();
+      setTimeout(loadAttendanceToolsModule, 900);
     });
   }
 
@@ -263,6 +275,8 @@
   setTimeout(injectCss, 1800);
   setTimeout(installSavedSettingsSaveButton, 700);
   setTimeout(installSavedSettingsSaveButton, 1800);
+  setTimeout(loadAttendanceToolsModule, 1100);
+  setTimeout(loadAttendanceToolsModule, 2600);
 
-  console.info('[Admin Offices Raise Letters UI Styling] installed with saved settings save button');
+  console.info('[Admin Offices Raise Letters UI Styling] installed with saved settings save button + tools loader');
 })();
