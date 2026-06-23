@@ -1,11 +1,11 @@
 // ===================================================================
-// Admin Offices Raise Letters UI Styling + loaders
+// Admin Offices Raise Letters UI Styling + inline tools
 // Scope: admin_offices_attendance.html only
 // - تنسيق شاشة خطابات الرفع
 // - مسافة المحترم
 // - زر حفظ إعدادات الخطابات
 // - نقل خطابات وبيانات إضافية للأعلى
-// - تحميل أداة التعديل الجماعي النظيفة فقط
+// - تعديل جماعي للحضور داخل نفس الملف بدون ملفات جديدة
 // ===================================================================
 (function () {
   'use strict';
@@ -15,7 +15,12 @@
     try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
   }
 
+  function writeJson(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value || {})); } catch (_) {}
+  }
+
   function clean(v) { return String(v ?? '').replace(/\s+/g, ' ').trim(); }
+  function esc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function firstValue() { for (const v of arguments) { const s = clean(v); if (s && !['غير محدد', 'undefined', 'null', '—'].includes(s)) return s; } return ''; }
 
   function paymentNo() {
@@ -77,6 +82,15 @@
       #raise-letters-overlay .rl-section-save-row .btn{min-width:190px}
       #admin-extra-docs-section{border:2px solid #d4af37!important;background:#fffbeb!important}
       .payment-number-wrapper{white-space:nowrap}.paymentNumber{font-weight:900;color:#003087}
+      .admin-bulk-top-grid{display:grid!important;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px;margin-bottom:14px}
+      .admin-bulk-row-actions{justify-content:flex-start!important;margin:8px 0!important}
+      .admin-bulk-centers-grid{max-height:220px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}
+      .admin-bulk-center-row{display:flex;gap:8px;align-items:center;border:1px solid #e2e8f0;background:#fff;border-radius:10px;padding:8px;font-weight:800}
+      .admin-bulk-employees-list{max-height:360px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+      .admin-bulk-emp-group{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px}
+      .admin-bulk-emp-head{display:flex;gap:6px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px}
+      .admin-bulk-emp-row{display:grid;grid-template-columns:24px 1fr;gap:4px 8px;border:1px solid #e2e8f0;background:#fff;border-radius:10px;padding:8px;margin:6px 0}
+      .admin-bulk-emp-row input{grid-row:1 / span 2;margin-top:4px}.admin-bulk-emp-row .emp-name{font-weight:900}.admin-bulk-emp-row small{color:#64748b}.admin-bulk-empty{padding:10px;color:#64748b;background:#fff;border-radius:8px;border:1px dashed #cbd5e1}
       @media print{#raise-letters-overlay.settings-overlay{display:none!important}}
     `;
     document.head.appendChild(style);
@@ -132,6 +146,140 @@
     if (firstDataBox && section.nextElementSibling !== firstDataBox) dialog.insertBefore(section, firstDataBox);
   }
 
+  function getNamesSafe() {
+    try { if (typeof window.getCenterNames === 'function') return window.getCenterNames() || {}; } catch (_) {}
+    return readJson('adminOfficeNames_v1', {});
+  }
+
+  function getDataSafe() {
+    const list = [];
+    try { if (typeof window.getAttendanceData === 'function') list.push(window.getAttendanceData() || {}); } catch (_) {}
+    list.push(readJson('adminOfficesAttendanceData_v1', {}));
+    list.push(readJson('adminOfficesAttendanceData_v1_localBackup', {}));
+    const count = obj => Object.values(obj || {}).reduce((s, rows) => s + (Array.isArray(rows) ? rows.length : 0), 0);
+    return list.reduce((best, item) => count(item) > count(best) ? item : best, {});
+  }
+
+  function saveDataSafe(data) {
+    try { if (typeof window.saveAttendanceData === 'function') window.saveAttendanceData(data || {}); } catch (_) {}
+    writeJson('adminOfficesAttendanceData_v1', data || {});
+    writeJson('adminOfficesAttendanceData_v1_localBackup', data || {});
+  }
+
+  function getPeriodSafe() {
+    try { if (typeof window.getExtractPeriodDetails === 'function') return window.getExtractPeriodDetails(); } catch (_) {}
+    const e = readJson('persistentExtractData', {});
+    const start = new Date(e.extractStart || localStorage.getItem('extractStart') || Date.now());
+    const end = new Date(e.extractEnd || localStorage.getItem('extractEnd') || e.extractStart || Date.now());
+    const safeStart = Number.isNaN(start.getTime()) ? new Date() : start;
+    const safeEnd = Number.isNaN(end.getTime()) ? safeStart : end;
+    return { startDate: safeStart, daysInExtract: Math.max(1, Math.ceil((safeEnd - safeStart) / 86400000) + 1 || 30) };
+  }
+
+  function orderedKeysForBulk() {
+    const names = getNamesSafe();
+    const data = getDataSafe();
+    return Array.from(new Set([...Object.keys(names || {}), ...Object.keys(data || {})]))
+      .filter(k => k === 'admin_staff' || /^center_\d+$/.test(k) || Array.isArray(data[k]))
+      .sort((a, b) => {
+        if (/^center_\d+$/.test(a) && /^center_\d+$/.test(b)) return parseInt(a.split('_')[1], 10) - parseInt(b.split('_')[1], 10);
+        if (/^center_\d+$/.test(a)) return -1;
+        if (/^center_\d+$/.test(b)) return 1;
+        return String(a).localeCompare(String(b), 'ar');
+      });
+  }
+
+  function activeCenterKey() {
+    try { if (typeof window.getActiveAdminOfficeCenterKey === 'function') return window.getActiveAdminOfficeCenterKey(); } catch (_) {}
+    return document.querySelector('.tab-link.active[data-center-key]')?.dataset?.centerKey || '';
+  }
+
+  function statusOptionsHtml() {
+    const src = window.STATUS_CODES || { 'ح': { name: 'حضور' }, 'غ': { name: 'غياب' }, 'ج': { name: 'إجازة' }, 'ش': { name: 'شاغر' }, 'ت': { name: 'تأخير' }, 'ب': { name: 'بديل' }, 'ن': { name: 'نقل' }, 'غ•': { name: 'غياب بدون حسم' } };
+    return Object.keys(src).filter(code => code !== 'default').map(code => `<option value="${esc(code)}">${esc(code)} — ${esc(src[code]?.name || code)}</option>`).join('');
+  }
+
+  function dayOptionsHtml() {
+    const p = getPeriodSafe();
+    return Array.from({ length: p.daysInExtract }, (_, i) => {
+      const d = new Date(p.startDate);
+      d.setDate(p.startDate.getDate() + i);
+      return `<option value="${i}">اليوم ${i + 1} — ${d.toLocaleDateString('en-CA')}</option>`;
+    }).join('');
+  }
+
+  function renderBulkEmployees() {
+    const box = document.getElementById('admin-bulk-employees-list');
+    if (!box) return;
+    const names = getNamesSafe();
+    const data = getDataSafe();
+    const selectedCenters = Array.from(document.querySelectorAll('.admin-office-bulk-center:checked')).map(cb => cb.value);
+    if (!selectedCenters.length) {
+      box.innerHTML = '<div class="admin-bulk-empty">اختر مكتبًا أو مرفقًا لعرض أسماء الموظفين.</div>';
+      return;
+    }
+    box.innerHTML = selectedCenters.map(centerKey => {
+      const rows = Array.isArray(data[centerKey]) ? data[centerKey] : [];
+      const employees = rows.length ? rows.map((emp, idx) => `<label class="admin-bulk-emp-row"><input type="checkbox" class="admin-office-bulk-employee" value="${esc(centerKey)}::${idx}" data-center="${esc(centerKey)}" checked><span class="emp-name">${esc(emp.name || 'بدون اسم')}</span><small>${esc(emp.jobTitle || '')}${emp.iqamaId ? ' — ' + esc(emp.iqamaId) : ''}</small></label>`).join('') : '<div class="admin-bulk-empty">لا توجد أسماء موظفين في هذا الموقع.</div>';
+      return `<div class="admin-bulk-emp-group"><div class="admin-bulk-emp-head"><strong>${esc(names[centerKey] || centerKey)}</strong><button type="button" class="btn btn-light" onclick="AdminOfficesBulkInline.toggleCenterEmployees('${esc(centerKey)}', true)">تحديد موظفي الموقع</button><button type="button" class="btn btn-light" onclick="AdminOfficesBulkInline.toggleCenterEmployees('${esc(centerKey)}', false)">إلغاء موظفي الموقع</button></div>${employees}</div>`;
+    }).join('');
+  }
+
+  function openBulkAttendanceDialogInline() {
+    const names = getNamesSafe();
+    const keys = orderedKeysForBulk();
+    const active = activeCenterKey();
+    const defaultKey = active || keys[0] || '';
+    const centerChecks = keys.map(key => `<label class="admin-bulk-center-row"><input type="checkbox" class="admin-office-bulk-center" value="${esc(key)}" ${key === defaultKey ? 'checked' : ''} onchange="AdminOfficesBulkInline.renderBulkEmployees()"><span>${esc(names[key] || key)}</span></label>`).join('');
+    const content = `<div class="dialog-header"><h3><i class="fas fa-calendar-alt"></i> تعديل جماعي للحضور والانصراف</h3><span class="close" onclick="closeDialog('management-dialog')">×</span></div><div class="dialog-body"><p class="info-text">اختر المكاتب ثم اختر أسماء الموظفين المطلوب تعديلهم فقط.</p><div class="form-grid admin-bulk-top-grid"><div class="form-group"><label>من يوم:</label><select id="admin-bulk-start-day">${dayOptionsHtml()}</select></div><div class="form-group"><label>إلى يوم:</label><select id="admin-bulk-end-day">${dayOptionsHtml()}</select></div><div class="form-group"><label>الحالة الجديدة:</label><select id="admin-bulk-status">${statusOptionsHtml()}</select></div></div><fieldset><legend>1. اختيار المكاتب والمرافق</legend><div class="btn-row admin-bulk-row-actions"><button type="button" class="btn btn-light" onclick="AdminOfficesBulkInline.selectAllCenters(true)">تحديد كل المكاتب</button><button type="button" class="btn btn-light" onclick="AdminOfficesBulkInline.selectAllCenters(false)">إلغاء كل المكاتب</button></div><div class="admin-bulk-centers-grid">${centerChecks}</div></fieldset><fieldset><legend>2. اختيار الموظفين</legend><div class="btn-row admin-bulk-row-actions"><button type="button" class="btn btn-light" onclick="AdminOfficesBulkInline.selectAllEmployees(true)">تحديد كل الموظفين المعروضين</button><button type="button" class="btn btn-light" onclick="AdminOfficesBulkInline.selectAllEmployees(false)">إلغاء كل الموظفين المعروضين</button></div><div id="admin-bulk-employees-list" class="admin-bulk-employees-list"></div></fieldset></div><div class="dialog-footer"><button class="btn btn-secondary" onclick="closeDialog('management-dialog')"><i class="fas fa-times"></i> إلغاء</button><button class="btn btn-success" onclick="AdminOfficesBulkInline.applyBulkAttendance()"><i class="fas fa-check"></i> تطبيق التعديل</button></div>`;
+    if (typeof window.openDialog === 'function') window.openDialog(content, 'management-dialog', true);
+    setTimeout(renderBulkEmployees, 60);
+  }
+
+  function applyBulkAttendanceInline() {
+    const startIndex = parseInt(document.getElementById('admin-bulk-start-day')?.value || '0', 10);
+    const endIndex = parseInt(document.getElementById('admin-bulk-end-day')?.value || '0', 10);
+    const newStatus = document.getElementById('admin-bulk-status')?.value || 'ح';
+    const selectedEmployees = Array.from(document.querySelectorAll('.admin-office-bulk-employee:checked')).map(cb => cb.value);
+    if (startIndex > endIndex) return alert('مدى الأيام غير صحيح. يوم البداية أكبر من يوم النهاية.');
+    if (!selectedEmployees.length) return alert('اختر موظفًا واحدًا على الأقل.');
+    const data = getDataSafe();
+    const p = getPeriodSafe();
+    let affected = 0;
+    selectedEmployees.forEach(token => {
+      const [centerKey, rawIdx] = token.split('::');
+      const idx = parseInt(rawIdx, 10);
+      const emp = data[centerKey] && data[centerKey][idx];
+      if (!emp) return;
+      const days = Array.isArray(emp.days) ? emp.days.slice(0, p.daysInExtract) : [];
+      while (days.length < p.daysInExtract) days.push('ح');
+      for (let i = startIndex; i <= endIndex && i < p.daysInExtract; i++) days[i] = newStatus;
+      emp.days = days;
+      affected++;
+    });
+    saveDataSafe(data);
+    try { if (typeof window.renderCenterIcons === 'function') window.renderCenterIcons(); } catch (_) {}
+    try { if (typeof window.calculateAndDisplayGrandTotal === 'function') window.calculateAndDisplayGrandTotal(); } catch (_) {}
+    try {
+      const active = activeCenterKey();
+      if (active && typeof window.renderAttendanceTable === 'function') window.renderAttendanceTable(active);
+      else if (active && typeof window.populateAttendanceTableBody === 'function') window.populateAttendanceTableBody(active);
+    } catch (_) {}
+    try { if (typeof window.closeDialog === 'function') window.closeDialog('management-dialog'); } catch (_) {}
+    alert('تم تطبيق التعديل الجماعي بنجاح.\nعدد الموظفين المتأثرين: ' + affected);
+  }
+
+  function installBulkInline() {
+    window.AdminOfficesBulkInline = {
+      renderBulkEmployees,
+      toggleCenterEmployees: function (centerKey, checked) { document.querySelectorAll(`.admin-office-bulk-employee[data-center="${centerKey}"]`).forEach(cb => { cb.checked = !!checked; }); },
+      selectAllCenters: function (checked) { document.querySelectorAll('.admin-office-bulk-center').forEach(cb => { cb.checked = !!checked; }); renderBulkEmployees(); },
+      selectAllEmployees: function (checked) { document.querySelectorAll('.admin-office-bulk-employee').forEach(cb => { cb.checked = !!checked; }); },
+      applyBulkAttendance: applyBulkAttendanceInline
+    };
+    window.openAdminOfficesBulkAttendanceDialog = openBulkAttendanceDialogInline;
+  }
+
   function observeDialogs() {
     if (window.__raiseLettersSettingsSaveObserver) return;
     window.__raiseLettersSettingsSaveObserver = new MutationObserver(() => { installSavedSettingsSaveButton(); moveExtraDocsToTop(); installPaymentNumberDisplay(); });
@@ -149,7 +297,6 @@
   }
 
   function loadModules() {
-    loadScriptOnce('admin-offices-bulk-attendance-tools-script', '/original/admin_offices_bulk_attendance_tools.js?v=20260623_bulk_v1', '[Admin Offices Bulk Attendance Tools]');
     loadScriptOnce('admin-offices-extra-docs-script', '/original/admin_offices_raise_letters_extra_docs.js?v=20260623_extra_docs_v2', '[Admin Offices Extra Docs]');
     setTimeout(moveExtraDocsToTop, 600);
   }
@@ -169,22 +316,24 @@
   observeDialogs();
   installSavedSettingsSaveButton();
   installPaymentNumberDisplay();
+  installBulkInline();
   moveExtraDocsToTop();
   loadModules();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      injectCss(); patchPrintWindowSpacing(); observeDialogs(); installSavedSettingsSaveButton(); installPaymentNumberDisplay(); moveExtraDocsToTop(); setTimeout(loadModules, 900);
+      injectCss(); patchPrintWindowSpacing(); observeDialogs(); installSavedSettingsSaveButton(); installPaymentNumberDisplay(); installBulkInline(); moveExtraDocsToTop(); setTimeout(loadModules, 900);
     });
   }
 
   setTimeout(injectCss, 700);
   setTimeout(installSavedSettingsSaveButton, 700);
   setTimeout(installPaymentNumberDisplay, 700);
+  setTimeout(installBulkInline, 700);
   setTimeout(moveExtraDocsToTop, 700);
   setTimeout(loadModules, 1100);
   setTimeout(moveExtraDocsToTop, 1800);
   setTimeout(loadModules, 2600);
 
-  console.info('[Admin Offices Raise Letters UI Styling] installed with top extra docs + focused bulk edit');
+  console.info('[Admin Offices Raise Letters UI Styling] installed with inline bulk edit; no new bulk files');
 })();
