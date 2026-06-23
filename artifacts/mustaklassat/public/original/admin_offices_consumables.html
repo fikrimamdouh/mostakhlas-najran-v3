@@ -293,7 +293,11 @@
         select.visit-date-monthly { background-color: #d1ecf1 !important; color: #0c5460 !important; font-weight: bold; }
         select.visit-date-done { background-color: #e2e3e5 !important; color: #383d41 !important; }
         select.visit-date-future { background-color: #fff3cd !important; color: #856404 !important; }
-
+select.visit-date-postponed {
+    background-color: #fde2e1 !important;
+    color: #842029 !important;
+    font-weight: bold;
+}
         /* ✅ [جديد] تنسيق الصف الذي لم تتم فيه الزيارة */
         .data-table tbody tr.visit-not-done {
             background-color: #f8d7da !important; /* خلفية حمراء فاتحة */
@@ -757,7 +761,8 @@ function getVisitDateClass(value) {
             const annualVisits = parseInt(item.annualVisits) || 1;
             const damagePenalty = parseNumericValue(item.damagePenalty);
  
-const dueVisitCost = (item.visitDate || '').includes("خلال هذا الشهر") ? (visitValue / annualVisits) : 0;
+const normalizedVisitDate = normalizeVisitDate(item.visitDate);
+const dueVisitCost = normalizedVisitDate === 'خلال هذا الشهر' ? (visitValue / annualVisits) : 0;
             const latePenalty = (item.status === 'لا' && dueVisitCost > 0) ? penaltyValue : 0;
             const baseValue = (item.status === "نعم") ? dueVisitCost : 0;
             const netDue = baseValue - latePenalty - damagePenalty;
@@ -776,20 +781,17 @@ const dueVisitCost = (item.visitDate || '').includes("خلال هذا الشهر
                 row.classList.add('visit-not-done');
             }
             
-            let visitDateClass = 'visit-date-future';
-            if ((item.visitDate || '').includes("خلال هذا الشهر")) {
-                visitDateClass = 'visit-date-monthly';
-            } else if ((item.visitDate || '').includes("تمت الزيارة من قبل")) {
-                visitDateClass = 'visit-date-done';
-            }
+            const visitDateClass = getVisitDateClass(normalizedVisitDate);
+const visitDateSelect = visitDateOptions
+    .map(option => `<option value="${option}" ${normalizedVisitDate === option ? 'selected' : ''}>${option}</option>`)
+    .join('');
             
-            const visitDateSelect = visitDateOptions.map(option => `<option value="${option}" ${item.visitDate === option ? 'selected' : ''}>${option}</option>`).join('');
             
             row.innerHTML = `
                 <td><input type="text" value="${item.name}" data-field="name" class="editable-on-manage"><span class="cell-print-content">${item.name}</span></td>
                 <td><input type="text" value="${formatNumber(visitValue)}" data-field="visitValue" class="editable-on-manage"><span class="cell-print-content">${formatNumber(visitValue)}</span></td>
                 <td><input type="number" value="${annualVisits}" data-field="annualVisits" class="editable-on-manage"><span class="cell-print-content">${annualVisits}</span></td>
-                <td><select data-field="visitDate" class="editable-always ${visitDateClass}">${visitDateSelect}</select><span class="cell-print-content">${item.visitDate || ''}</span></td>
+                <td><select data-field="visitDate" class="editable-always ${visitDateClass}">${visitDateSelect}</select><span class="cell-print-content">${normalizedVisitDate}</span></td>
                 <td class="readonly-cell">${formatNumber(dueVisitCost)}</td>
                 <td><select data-field="status" class="editable-always status-${item.status === 'نعم' ? 'yes' : 'no'}"><option value="نعم" ${item.status === 'نعم' ? 'selected' : ''}>نعم</option><option value="لا" ${item.status === 'لا' ? 'selected' : ''}>لا</option></select><span class="cell-print-content">${item.status}</span></td>
                 <td><input type="number" value="${item.delayDays || 0}" data-field="delayDays" class="editable-always"><span class="cell-print-content">${item.delayDays || 0}</span></td>
