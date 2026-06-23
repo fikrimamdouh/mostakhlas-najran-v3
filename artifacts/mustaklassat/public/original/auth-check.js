@@ -8,7 +8,7 @@
   'use strict';
 
   var BASE = window.location.origin;
-  var BUILD_V = '20260622adminOfficesPerformanceSeparated1';
+  var BUILD_V = '20260623adminOfficesCoreLoadV1';
   var NOTIF_INTERVAL_MS = 300000;
   var notifFetchInProgress = false;
 
@@ -146,14 +146,14 @@
     appendScript('/original/attendance-cloud-refresh-guard.js?v=' + BUILD_V, true);
   }
 
-  if (isAttendancePage || isAdminOfficesPage) {
-    appendScript('/original/special-absence-no-deduction.js?v=' + BUILD_V, true);
-  }
-
 if (isAdminOfficesPage) {
-    appendScript('/original/admin_offices_attendance.js?v=20260623_admin_calc_screen_v7', false);
-    appendScript('/original/admin_offices_attendance_patch.js?v=20260623_positions_all_v4', true);
+    appendScript('/original/admin_offices_attendance.js?v=20260623_admin_calc_screen_v8', false);
+    appendScript('/original/admin_offices_attendance_patch.js?v=20260623_positions_all_v5', true);
     appendScript('/original/admin_offices_performance_logic.js?v=' + BUILD_V, true);
+}
+
+if (isAttendancePage || isAdminOfficesPage) {
+    appendScript('/original/special-absence-no-deduction.js?v=' + BUILD_V, true);
 }
 
   if (/\/original\/approval\.html(?:$|[?#])/.test(pageSig)) {
