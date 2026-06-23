@@ -1045,47 +1045,36 @@ function populateAttendanceTableBody(centerKey) {
     const fragment = document.createDocumentFragment();
 
     centerData.forEach((emp, index) => {
-        const fullMonthSalary = parseFloat(emp.salary) || 0;
-        
-        const dailyRate = totalDaysInMonth > 0 ? fullMonthSalary / totalDaysInMonth : 0;
-        let actualCostForPeriod = dailyRate * daysInExtract;
-        if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) {
-            actualCostForPeriod += actualCostForPeriod * (directPurchaseRatio / 100);
-        }
-        
-        const nationalityFine = parseFloat(emp.nationalityFine) || 0;
-        
-        let days = emp.days || Array(daysInExtract).fill('ح');
-        if (days.length !== daysInExtract) {
-            days = Array(daysInExtract).fill('ح');
-            emp.days = days;
-        }
+ const calc = calculateAdminOfficeEmployeeFinancials(emp, {
+    totalDaysInMonth,
+    daysInExtract,
+    contractType,
+    directPurchaseRatio
+});
 
-        let attendanceDays = 0, absenceDays = 0, deductionOnlyDays = 0, hasAbsence = false;
-        
-        days.forEach(day => {
-            const statusInfo = STATUS_CODES[day];
-            if (statusInfo) {
-                if (statusInfo.isAbsence) { absenceDays++; hasAbsence = true; }
-                else if (statusInfo.deductionOnly) { deductionOnlyDays++; }
-                else { attendanceDays++; }
-                if (statusInfo.isSpecial) {
-                    specialStatusCounts[day] = (specialStatusCounts[day] || 0) + 1;
-                }
-            }
-        });
-        if (hasAbsence) employeesWithAbsence++;
+let days = calc.days;
 
-        const deduction = (absenceDays + deductionOnlyDays) * dailyRate;
-        const fineConfig = ABSENCE_FINES_BY_CATEGORY[emp.category] || ABSENCE_FINES_BY_CATEGORY.default;
-        const isSaudi = (emp.nationality || '').includes('سعودي');
-        const absenceFine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
-        const netSalary = actualCostForPeriod - deduction - absenceFine - nationalityFine;
+const actualCostForPeriod = calc.costForPeriod;
+const attendanceDays = calc.attendanceDays;
+const absenceDays = calc.absenceDays;
+const deduction = calc.deduction;
+const absenceFine = calc.absenceFine;
+const nationalityFine = calc.nationalityFine;
+const netSalary = calc.netSalary;
 
-        centerTotalCost += actualCostForPeriod;
-        centerNetTotal += netSalary;
-        totalDeduction += deduction;
-        totalFine += absenceFine + nationalityFine;
+if (absenceDays > 0) employeesWithAbsence++;
+
+days.forEach(day => {
+    const statusInfo = STATUS_CODES[day];
+    if (statusInfo && statusInfo.isSpecial) {
+        specialStatusCounts[day] = (specialStatusCounts[day] || 0) + 1;
+    }
+});
+
+centerTotalCost += actualCostForPeriod;
+centerNetTotal += netSalary;
+totalDeduction += deduction;
+totalFine += calc.totalFine;
 
         const row = document.createElement('tr');
         let dayCells = days.map((day, dayIndex) => `<td class="day-col">${createAttendanceSelect(day, centerKey, index, dayIndex)}</td>`).join('');
