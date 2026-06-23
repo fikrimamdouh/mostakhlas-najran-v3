@@ -8,7 +8,7 @@
   'use strict';
 
   var BASE = window.location.origin;
-  var BUILD_V = '20260623adminOfficesViewerDetectV1';
+  var BUILD_V = '20260623settingsContractFixedV1';
   var NOTIF_INTERVAL_MS = 300000;
   var notifFetchInProgress = false;
 
@@ -189,6 +189,7 @@
 
   if (pageFile === 'settings_main.html') {
     appendScript('/original/settings-backup-complete-guard.js?v=20260611d', true);
+    appendScript('/original/settings_contract_fixed_patch.js?v=20260623_fixed_contract_v1', true);
   }
 
   function installPerformanceTemplateGuard() {
