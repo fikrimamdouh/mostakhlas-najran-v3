@@ -621,12 +621,22 @@ ${signatureHtml(s, 'one')}${footerHtml(s)}</section>`;
 
   openPrintDoc('خطاب رفع العمالة', body);
 }
+function getConsumablesNetForLetter() {
+  const s = getSettings();
 
+  return (
+    num(localStorage.getItem('admin_offices_consumables_current_net')) ||
+    num(localStorage.getItem('adminOfficesConsumablesNet')) ||
+    num(localStorage.getItem('finalConsumablesCost')) ||
+    num(s.consumablesNet) ||
+    0
+  );
+}
 function generateConsumablesRaiseLetter() {
   const s = getSettings();
   const company = getCompanyName();
 
-  const net = num(s.consumablesNet);
+  const net = getConsumablesNetForLetter();
   const vat = net * num(s.vatRate) / 100;
   const grand = net + vat;
 
@@ -754,8 +764,8 @@ function renderDialog() {
         ${settingsField('vatRate','نسبة الضريبة','number')}
         ${settingsField('phoneFaxAr','الهاتف والفاكس عربي')}
         ${settingsField('phoneFaxEn','الهاتف والفاكس إنجليزي')}
-        ${settingsField('consumablesNet','صافي المستهلكات لمدة المستخلص','number')}
-        ${settingsField('declarationDate','تاريخ الإقرار','date')}
+${settingsField('consumablesNet','صافي المستهلكات اليدوي عند عدم وجود مستخلص محفوظ','number')}
+${settingsField('declarationDate','تاريخ الإقرار','date')}
         ${settingsField('declarationManualAmount','مبلغ الإقرار اليدوي','number')}
 
         <div class="field">
