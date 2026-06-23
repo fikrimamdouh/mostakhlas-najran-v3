@@ -37,12 +37,8 @@
   function getContract() { return readJson('persistentContractData', {}); }
   function getExtract() { return readJson('persistentExtractData', {}); }
   function getSession() { return readJson('najran_session', {}); }
-  function getCompanyName() {
-    const c = getContract();
-    const s = getSession();
-    const dom = document.querySelector('.companyName')?.textContent;
-    return c.companyName || s.companyName || (dom && dom !== 'غير محدد' ? dom : '') || 'غير محدد';
-  }
+ function getCompanyName() {
+
   function getNames() { try { if (typeof getCenterNames === 'function') return getCenterNames() || {}; } catch (_) {} return readJson('adminOfficeNames_v1', {}); }
   function getAttendance() { try { if (typeof getAttendanceData === 'function') return getAttendanceData() || {}; } catch (_) {} return readJson('adminOfficesAttendanceData_v1', {}); }
   function getPeriod() {
@@ -84,13 +80,11 @@
     unitManagerTitle: '................................',
     unitManagerName: '................................',
 
-    consumablesNet: 0,
 
     declarationDate: today(),
     declarationAmountMode: 'laborGrandTotal',
     declarationManualAmount: 0,
 
-    siteLetterDefaultCenter: ''
   };
 }
 function getSettings() {
@@ -108,7 +102,22 @@ function getSettings() {
   }
 
   return settings;
-} function saveSettings(s) { writeJson(SETTINGS_KEY, Object.assign(getSettings(), s || {})); }
+} function savfunction saveSettings(patch) {
+  const current = readJson(SETTINGS_KEY, {});
+  const cleanPatch = Object.assign({}, patch || {});
+
+  [
+    'paymentNo',
+    'extractStart',
+    'extractEnd',
+    'purchasePeriodLabel',
+    'consumablesNet',
+    'siteLetterDefaultCenter'
+  ].forEach(k => delete cleanPatch[k]);
+
+  const saved = Object.assign(defaultSettings(), current, cleanPatch);
+  writeJson(SETTINGS_KEY, saved);
+}eSettings(s) { writeJson(SETTINGS_KEY, Object.assign(getSettings(), s || {})); }
 function getActiveExtractMeta() {
   const e = getExtract();
 
@@ -621,64 +630,20 @@ ${signatureHtml(s, 'one')}${footerHtml(s)}</section>`;
 
   openPrintDoc('خطاب رفع العمالة', body);
 }
-function getConsumablesNetForLetter() {
-  const s = getSettings();
 
-  return (
-    num(localStorage.getItem('admin_offices_consumables_current_net')) ||
-    num(localStorage.getItem('adminOfficesConsumablesNet')) ||
-    num(localStorage.getItem('finalConsumablesCost')) ||
-    num(s.consumablesNet) ||
-    0
-  );
-}
-function generateConsumablesRaiseLetter() {
+
+function generateSiteRaiseLetter() {
   const s = getSettings();
   const company = getCompanyName();
-
-  const net = getConsumablesNetForLetter();
-  const vat = net * num(s.vatRate) / 100;
-  const grand = net + vat;
+  const v = laborValues();
+  const amount = v.net;
 
   const body = `<section class="page">${headerHtml(s)}
 ${toHtml(s)}
 <div class="salam">السلام عليكم ورحمة الله وبركاته، وبعد:</div>
 
 <div class="body-text">
-نرفق لسعادتكم المستخلص الشهري لشركة ${esc(company)} والخاص ببند المستهلكات ومقاولي الباطن لمواقع ${esc(s.scopeName)}، ${extractPhrase()}.
-</div>
-
-<table class="amount-table"><tbody>
-<tr><td>صافي مستحقات المستهلكات ومقاولي الباطن عن مدة المستخلص</td><td>${moneyPlain(net)}</td></tr>
-<tr><td>ضريبة القيمة المضافة ${moneyPlain(s.vatRate)}%</td><td>${money(vat)}</td></tr>
-<tr class="grand"><td>الإجمالي</td><td>${money(grand)}</td></tr>
-</tbody></table>
-
-<div class="tafqeet">${esc(tafqeetSAR(grand))}</div>
-
-<div class="closing">
-لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / ${esc(company)}.
-<br>وتقبلوا تحياتنا ،،،
-</div>
-
-${signatureHtml(s, 'one')}${footerHtml(s)}</section>`;
-
-  openPrintDoc('خطاب رفع المستهلكات', body);
-}
-function generateSiteRaiseLetter(centerKey) {
-  const s = getSettings();
-  const names = getNames();
-  const key = centerKey || s.siteLetterDefaultCenter || Object.keys(names)[0] || 'center_1';
-  const site = names[key] || key;
-  const amount = calcSite(key).finalNet;
-  const company = getCompanyName();
-
-  const body = `<section class="page">${headerHtml(s)}
-${toHtml(s)}
-<div class="salam">السلام عليكم ورحمة الله وبركاته، وبعد:</div>
-
-<div class="body-text">
-إشارة إلى عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع ${esc(s.scopeName)}، مقاولة ${esc(company)}، نرفق لسعادتكم المستخلص الشهري الخاص بموقع ${esc(site)} ببند العمالة، ${extractPhrase()}، بمبلغ وقدره (${moneyPlain(amount)} ريال) ${esc(tafqeetSAR(amount))}.
+إشارة إلى عقد الصيانة والنظافة والتشغيل غير الطبي لمواقع ${esc(s.scopeName)}، مقاولة ${esc(company)}، نرفق لسعادتكم المستخلص الشهري الخاص بالمواقع كاملة ببند العمالة، ${extractPhrase()}، بمبلغ وقدره (${moneyPlain(amount)} ريال) ${esc(tafqeetSAR(amount))}.
 </div>
 
 <div class="closing">
@@ -688,7 +653,7 @@ ${toHtml(s)}
 
 ${signatureHtml(s, 'one')}${footerHtml(s)}</section>`;
 
-  openPrintDoc('خطاب رفع موقع', body);
+  openPrintDoc('خطاب رفع المواقع كاملة', body);
 }
 function generateDeclaration() {
   const s = getSettings();
@@ -719,11 +684,6 @@ ${signatureHtml(s, 'two')}${footerHtml(s)}</section>`;
 
 function renderDialog() {
   const s = getSettings();
-  const names = getNames();
-
-  const options = Object.entries(names)
-    .map(([k, v]) => `<option value="${esc(k)}" ${s.siteLetterDefaultCenter === k ? 'selected' : ''}>${esc(v)}</option>`)
-    .join('');
 
   const html = `
 <div class="settings-overlay" id="raise-letters-overlay">
@@ -733,9 +693,8 @@ function renderDialog() {
     <div class="btn-row">
       <button class="btn btn-primary" onclick="AdminOfficesRaiseLetters.saveDialog()">حفظ الإعدادات</button>
       <button class="btn btn-gold" onclick="AdminOfficesRaiseLetters.generateLaborRaiseLetter()">خطاب رفع العمالة</button>
-      <button class="btn btn-gold" onclick="AdminOfficesRaiseLetters.generateConsumablesRaiseLetter()">خطاب رفع المستهلكات</button>
       <button class="btn btn-gold" onclick="AdminOfficesRaiseLetters.generateDeclaration()">إقرار عدم أسبقية الصرف</button>
-      <button class="btn btn-gold" onclick="AdminOfficesRaiseLetters.generateSiteRaiseLetter()">خطاب رفع موقع</button>
+      <button class="btn btn-gold" onclick="AdminOfficesRaiseLetters.generateSiteRaiseLetter()">خطاب رفع المواقع كاملة</button>
       <button class="btn btn-light" onclick="AdminOfficesRaiseLetters.closeDialog()">إغلاق</button>
     </div>
 
@@ -747,7 +706,7 @@ function renderDialog() {
           <div class="readonly-box">${extractPhrase()}</div>
         </div>
         <div class="field">
-          <label>الشركة</label>
+          <label>اسم المقاول / الشركة</label>
           <div class="readonly-box">${esc(getCompanyName())}</div>
         </div>
       </div>
@@ -764,17 +723,8 @@ function renderDialog() {
         ${settingsField('vatRate','نسبة الضريبة','number')}
         ${settingsField('phoneFaxAr','الهاتف والفاكس عربي')}
         ${settingsField('phoneFaxEn','الهاتف والفاكس إنجليزي')}
-${settingsField('consumablesNet','صافي المستهلكات اليدوي عند عدم وجود مستخلص محفوظ','number')}
-${settingsField('declarationDate','تاريخ الإقرار','date')}
+        ${settingsField('declarationDate','تاريخ الإقرار','date')}
         ${settingsField('declarationManualAmount','مبلغ الإقرار اليدوي','number')}
-
-        <div class="field">
-          <label>موقع خطاب الرفع</label>
-          <select data-rl-setting="siteLetterDefaultCenter">
-            <option value="">اختر الموقع</option>
-            ${options}
-          </select>
-        </div>
       </div>
     </div>
 
@@ -833,16 +783,26 @@ function saveDialog() {
     else bar.appendChild(btn);
   }
 
-  window.AdminOfficesRaiseLetters = {
+ window.AdminOfficesRaiseLetters = {
   openDialog,
   closeDialog,
   saveDialog,
   generateLaborRaiseLetter,
-  generateConsumablesRaiseLetter,
   generateDeclaration,
   generateSiteRaiseLetter,
   tafqeetSAR,
   calcGrandLabor,
   laborValues
 };
+   if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', installButton);
+} else {
+  installButton();
+}
+
+setTimeout(installButton, 700);
+setTimeout(installButton, 1800);
+setTimeout(installButton, 3500);
+
+console.info('[Admin Offices Raise Letters] installed');
 })();
