@@ -215,18 +215,32 @@ window.calculateAdminOfficeEmployeeFinancials = calculateAdminOfficeEmployeeFina
 // --- 2. INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     // ✅✅✅ [السطر المضاف والمهم] استدعاء الدالة لربط البيانات ✅✅✅
-    if (typeof updateContractDisplayData === 'function') {
-        updateContractDisplayData();
+   function safeAdminOfficesInitStep(name, fn) {
+    try {
+        if (typeof fn === 'function') fn();
+    } catch (err) {
+        console.error('[Admin Offices Init Failed] ' + name, err);
     }
-    // --- بقية الكود يبقى كما هو ---
-    updateDateTime();
+}
+
+safeAdminOfficesInitStep('updateContractDisplayData', updateContractDisplayData);
+safeAdminOfficesInitStep('updateDateTime', updateDateTime);
+
+try {
     setInterval(updateDateTime, 60000);
-    initializeCenterNames();
-    renderCenterIcons();
-    calculateAndDisplayGrandTotal();
+} catch (err) {
+    console.error('[Admin Offices Init Failed] date interval', err);
+}
+
+safeAdminOfficesInitStep('initializeCenterNames', initializeCenterNames);
+safeAdminOfficesInitStep('renderCenterIcons', renderCenterIcons);
+safeAdminOfficesInitStep('calculateAndDisplayGrandTotal', calculateAndDisplayGrandTotal);
+
+safeAdminOfficesInitStep('displaySignatures', function () {
     if (typeof displaySignatures === 'function') {
         displaySignatures('attendance');
     }
+});
 });
 
 function updateDateTime() {
