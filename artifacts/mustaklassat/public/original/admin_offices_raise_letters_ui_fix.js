@@ -38,6 +38,7 @@
       #raise-letters-overlay .recipient-suffix{margin-right:36px!important;padding-right:0!important;display:inline!important}
       #raise-letters-overlay .rl-section-save-row{display:flex;justify-content:center;margin:14px 0 2px}
       #raise-letters-overlay .rl-section-save-row .btn{min-width:190px}
+      #admin-extra-docs-section{border:2px solid #d4af37!important;background:#fffbeb!important}
       @media print{#raise-letters-overlay.settings-overlay{display:none!important}}
     `;
     document.head.appendChild(style);
@@ -80,17 +81,24 @@
     btn.className = 'btn btn-primary';
     btn.innerHTML = '<i class="fas fa-save"></i> حفظ إعدادات الخطابات';
     btn.onclick = function () {
-      if (window.AdminOfficesRaiseLetters && typeof window.AdminOfficesRaiseLetters.saveDialog === 'function') {
-        window.AdminOfficesRaiseLetters.saveDialog();
-      }
+      if (window.AdminOfficesRaiseLetters && typeof window.AdminOfficesRaiseLetters.saveDialog === 'function') window.AdminOfficesRaiseLetters.saveDialog();
     };
     row.appendChild(btn);
     target.appendChild(row);
   }
 
+  function moveExtraDocsToTop() {
+    const overlay = document.getElementById('raise-letters-overlay');
+    const section = document.getElementById('admin-extra-docs-section');
+    const dialog = overlay && overlay.querySelector('.settings-dialog');
+    if (!dialog || !section) return;
+    const firstDataBox = Array.from(dialog.querySelectorAll('.section-box')).find(box => !box.id && (box.querySelector('h3')?.textContent || '').includes('بيانات المستخلص'));
+    if (firstDataBox && section.nextElementSibling !== firstDataBox) dialog.insertBefore(section, firstDataBox);
+  }
+
   function observeDialogs() {
     if (window.__raiseLettersSettingsSaveObserver) return;
-    window.__raiseLettersSettingsSaveObserver = new MutationObserver(() => installSavedSettingsSaveButton());
+    window.__raiseLettersSettingsSaveObserver = new MutationObserver(() => { installSavedSettingsSaveButton(); moveExtraDocsToTop(); });
     window.__raiseLettersSettingsSaveObserver.observe(document.body, { childList: true, subtree: true });
   }
 
@@ -105,32 +113,30 @@
   }
 
   function loadModules() {
-    loadScriptOnce('admin-offices-attendance-tools-script', '/original/admin_offices_attendance_tools.js?v=20260623_tools_v1', '[Admin Offices Tools]');
-    loadScriptOnce('admin-offices-extra-docs-script', '/original/admin_offices_raise_letters_extra_docs.js?v=20260623_extra_docs_v1', '[Admin Offices Extra Docs]');
+    loadScriptOnce('admin-offices-attendance-tools-script', '/original/admin_offices_attendance_tools.js?v=20260623_tools_v2', '[Admin Offices Tools]');
+    loadScriptOnce('admin-offices-extra-docs-script', '/original/admin_offices_raise_letters_extra_docs.js?v=20260623_extra_docs_v2', '[Admin Offices Extra Docs]');
+    setTimeout(moveExtraDocsToTop, 600);
   }
 
   injectCss();
   patchPrintWindowSpacing();
   observeDialogs();
   installSavedSettingsSaveButton();
+  moveExtraDocsToTop();
   loadModules();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      injectCss();
-      patchPrintWindowSpacing();
-      observeDialogs();
-      installSavedSettingsSaveButton();
-      setTimeout(loadModules, 900);
+      injectCss(); patchPrintWindowSpacing(); observeDialogs(); installSavedSettingsSaveButton(); moveExtraDocsToTop(); setTimeout(loadModules, 900);
     });
   }
 
   setTimeout(injectCss, 700);
-  setTimeout(injectCss, 1800);
   setTimeout(installSavedSettingsSaveButton, 700);
-  setTimeout(installSavedSettingsSaveButton, 1800);
+  setTimeout(moveExtraDocsToTop, 700);
   setTimeout(loadModules, 1100);
+  setTimeout(moveExtraDocsToTop, 1800);
   setTimeout(loadModules, 2600);
 
-  console.info('[Admin Offices Raise Letters UI Styling] installed with saved settings + tools + extra docs');
+  console.info('[Admin Offices Raise Letters UI Styling] installed with top extra docs + tools v2');
 })();
