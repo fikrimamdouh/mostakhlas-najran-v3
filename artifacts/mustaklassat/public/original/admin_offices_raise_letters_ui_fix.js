@@ -1,5 +1,5 @@
 // ===================================================================
-// Admin Offices Raise Letters UI Fix — SAFE V6
+// Admin Offices Raise Letters UI Fix — SAFE V7
 // Scope: admin_offices_attendance.html / original-viewer page
 // إصلاح آمن بدون مراقبة DOM عامة وبدون تحميل ثقيل أثناء فتح الصفحة.
 // ===================================================================
@@ -146,6 +146,33 @@
     if (firstDataBox && section.nextElementSibling !== firstDataBox) dialog.insertBefore(section, firstDataBox);
   }
 
+  function fixIndividualStatementButtons() {
+    const section = document.getElementById('admin-extra-docs-section');
+    if (!section || !window.AdminOfficesExtraDocs) return;
+    const bind = (label, type) => {
+      const btn = Array.from(section.querySelectorAll('button')).find(b => clean(b.textContent) === label);
+      if (!btn || btn.dataset.statementDirectPrint === '1') return;
+      btn.dataset.statementDirectPrint = '1';
+      btn.onclick = function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        try {
+          if (typeof window.AdminOfficesExtraDocs.printEditableStatement === 'function') {
+            window.AdminOfficesExtraDocs.printEditableStatement(type);
+          } else if (typeof window.AdminOfficesExtraDocs.openEditableStatement === 'function') {
+            window.AdminOfficesExtraDocs.openEditableStatement(type);
+          } else {
+            alert('لم يتم تحميل دالة البيان بعد. أغلق خطابات الرفع وافتحها مرة أخرى.');
+          }
+        } catch (err) {
+          console.error('[Admin Offices Extra Docs] statement button failed:', err);
+          alert('تعذر فتح البيان. راجع Console.');
+        }
+      };
+    };
+    bind('بيان الغيابات', 'absence');
+    bind('بيان الإجازات', 'vacation');
+  }
+
   function getNamesSafe() { try { if (typeof window.getCenterNames === 'function') return window.getCenterNames() || {}; } catch (_) {} return readJson('adminOfficeNames_v1', {}); }
   function getDataSafe() { const list = []; try { if (typeof window.getAttendanceData === 'function') list.push(window.getAttendanceData() || {}); } catch (_) {} list.push(readJson('adminOfficesAttendanceData_v1', {}), readJson('adminOfficesAttendanceData_v1_localBackup', {}), readJson('adminOfficesAttendanceData', {})); const count = obj => Object.values(obj || {}).reduce((s, rows) => s + (Array.isArray(rows) ? rows.length : 0), 0); return list.reduce((best, item) => count(item) > count(best) ? item : best, {}); }
   function saveDataSafe(data) { try { if (typeof window.saveAttendanceData === 'function') window.saveAttendanceData(data || {}); } catch (_) {} writeJson('adminOfficesAttendanceData_v1', data || {}); writeJson('adminOfficesAttendanceData_v1_localBackup', data || {}); }
@@ -219,20 +246,21 @@
     const script = document.createElement('script');
     script.id = id;
     script.src = src;
-    script.onload = function () { console.info(label + ' loaded'); setTimeout(ensureOverlayEnhancements, 120); };
+    script.onload = function () { console.info(label + ' loaded'); setTimeout(ensureOverlayEnhancements, 120); setTimeout(fixIndividualStatementButtons, 250); };
     script.onerror = function () { console.warn(label + ' failed to load'); };
     document.body.appendChild(script);
   }
 
   function loadExtraDocsOnlyWhenOverlayExists() {
     if (!document.getElementById('raise-letters-overlay')) return;
-    loadScriptOnce('admin-offices-extra-docs-script', '/original/admin_offices_raise_letters_extra_docs.js?v=20260623_extra_docs_safe_v9', '[Admin Offices Extra Docs]');
+    loadScriptOnce('admin-offices-extra-docs-script', '/original/admin_offices_raise_letters_extra_docs.js?v=20260623_extra_docs_safe_v10', '[Admin Offices Extra Docs]');
   }
 
   function ensureOverlayEnhancements() {
     installSavedSettingsSaveButton();
     moveExtraDocsToTop();
     loadExtraDocsOnlyWhenOverlayExists();
+    fixIndividualStatementButtons();
   }
 
   function boot() {
@@ -252,5 +280,5 @@
     setTimeout(ensureOverlayEnhancements, 650);
   }, true);
 
-  console.info('[Admin Offices Raise Letters UI Styling] installed v6 safe no boot observers');
+  console.info('[Admin Offices Raise Letters UI Styling] installed v7 statement buttons fixed');
 })();
