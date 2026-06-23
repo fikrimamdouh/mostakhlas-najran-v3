@@ -3,6 +3,7 @@
 // Scope: admin_offices_attendance.html only
 // يجعل زر خطابات الرفع يفتح في تبويب مستقل، ويحول شاشة الخطابات إلى صفحة كاملة
 // + يضبط شاشة استيراد Excel لتكون أصغر وبها Scroll داخلي
+// + يحمل إصلاح موضوع خطاب الرفع النهائي الديناميكي
 // ===================================================================
 (function () {
   'use strict';
@@ -10,6 +11,21 @@
 
   const PARAM = 'raiseLettersOnly';
   const isStandalone = new URLSearchParams(location.search).get(PARAM) === '1';
+
+  function loadScriptOnce(id, src) {
+    if (document.getElementById(id)) return;
+    const s = document.createElement('script');
+    s.id = id;
+    s.src = src;
+    s.defer = true;
+    s.onload = function () { console.info('[Admin Offices Raise Letters] loaded:', id); };
+    s.onerror = function () { console.warn('[Admin Offices Raise Letters] failed:', id); };
+    document.head.appendChild(s);
+  }
+
+  function loadDynamicFinalSubjectPatch() {
+    loadScriptOnce('admin-offices-final-raise-dynamic-subject', '/original/admin_offices_final_raise_letter_dynamic_subject.js?v=20260623_final_subject_v1');
+  }
 
   function openStandaloneTab() {
     const url = new URL(location.href);
@@ -160,6 +176,7 @@
   }
 
   function boot(attempt) {
+    loadDynamicFinalSubjectPatch();
     patchMainButton();
     applyExcelImportDialogLayout();
     if (isStandalone) openAsStandalonePage();
@@ -169,10 +186,11 @@
   document.addEventListener('click', function () {
     setTimeout(applyExcelImportDialogLayout, 80);
     setTimeout(applyExcelImportDialogLayout, 350);
+    setTimeout(loadDynamicFinalSubjectPatch, 120);
   }, true);
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0));
   else boot(0);
 
-  console.info('[Admin Offices Raise Letters] standalone tab mode installed + Excel import scroll fix');
+  console.info('[Admin Offices Raise Letters] standalone tab mode installed + Excel import scroll fix + final subject loader');
 })();
