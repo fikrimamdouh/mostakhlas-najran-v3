@@ -211,6 +211,7 @@ function calculateAdminOfficeEmployeeFinancials(emp, options = {}) {
         netSalary
     };
 }
+window.calculateAdminOfficeEmployeeFinancials = calculateAdminOfficeEmployeeFinancials;
 // --- 2. INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     // ✅✅✅ [السطر المضاف والمهم] استدعاء الدالة لربط البيانات ✅✅✅
