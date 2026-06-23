@@ -574,48 +574,96 @@ function signatureHtml(type, centerKey, cls = 'signatures-grid') {
     }
 
     function buildAttendancePage(centerKey) {
-        const names = getAdminOfficeNamesSafe();
-        const allData = getAttendanceDataSafe();
-        const centerName = names[centerKey] || centerKey;
-        const centerData = allData[centerKey] || [];
-        const { startDate, daysInExtract, totalDaysInMonth } = periodDetailsSafe();
-        const contractData = readJson('persistentContractData', {});
-        const extractData = readJson('persistentExtractData', {});
-        const companyName = contractData.companyName || 'الشركة';
-        const directPurchaseRatio = parseFloat(contractData.directPurchaseRatio) || 0;
-        const contractType = contractData.contractType || 'عقد أساسي';
+    const names = getAdminOfficeNamesSafe();
+    const allData = getAttendanceDataSafe();
+    const centerName = names[centerKey] || centerKey;
+    const centerData = allData[centerKey] || [];
+    const { startDate, daysInExtract, totalDaysInMonth } = periodDetailsSafe();
+    const contractData = readJson('persistentContractData', {});
+    const extractData = readJson('persistentExtractData', {});
+    const companyName = contractData.companyName || 'الشركة';
+    const directPurchaseRatio = parseFloat(contractData.directPurchaseRatio) || 0;
+    const contractType = contractData.contractType || 'عقد أساسي';
 
-        let totalCost = 0, totalDeduction = 0, totalFine = 0, totalNet = 0;
-        const dayHeaders = Array.from({ length: daysInExtract }, (_, i) => {
-            const d = new Date(startDate);
-            d.setDate(startDate.getDate() + i);
-            return `<th>${d.getDate()}</th>`;
-        }).join('');
+    let totalCost = 0, totalDeduction = 0, totalFine = 0, totalNet = 0;
 
-        const rows = centerData.length ? centerData.map((emp, index) => {
-            let days = Array.isArray(emp.days) ? emp.days.slice(0, daysInExtract) : [];
-            while (days.length < daysInExtract) days.push('ح');
+    const dayHeaders = Array.from({ length: daysInExtract }, (_, i) => {
+        const d = new Date(startDate);
+        d.setDate(startDate.getDate() + i);
+        return `<th>${d.getDate()}</th>`;
+    }).join('');
+
+    const rows = centerData.length ? centerData.map((emp, index) => {
+        let days = Array.isArray(emp.days) ? emp.days.slice(0, daysInExtract) : [];
+        while (days.length < daysInExtract) days.push('ح');
+
+        let costForPeriod = 0;
+        let attendanceDays = 0;
+        let absenceDays = 0;
+        let deduction = 0;
+        let absenceFine = 0;
+        let nationalityFine = 0;
+        let net = 0;
+
+        if (typeof calculateAdminOfficeEmployeeFinancials === 'function') {
+            const calc = calculateAdminOfficeEmployeeFinancials(emp, {
+                totalDaysInMonth,
+                daysInExtract,
+                contractType,
+                directPurchaseRatio
+            });
+
+            days = calc.days;
+            costForPeriod = calc.costForPeriod;
+            attendanceDays = calc.attendanceDays;
+            absenceDays = calc.absenceDays;
+            deduction = calc.deduction;
+            absenceFine = calc.absenceFine;
+            nationalityFine = calc.nationalityFine;
+            net = calc.netSalary;
+        } else {
             const salary = parseFloat(emp.salary) || 0;
             const dailyRate = totalDaysInMonth > 0 ? salary / totalDaysInMonth : 0;
-            let costForPeriod = dailyRate * daysInExtract;
-            if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) costForPeriod += costForPeriod * directPurchaseRatio / 100;
-            let attendanceDays = 0, absenceDays = 0;
-            days.forEach(day => statusMeta(day).isAbsence ? absenceDays++ : attendanceDays++);
-            const deduction = absenceDays * dailyRate;
+
+            costForPeriod = dailyRate * daysInExtract;
+            if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) {
+                costForPeriod += costForPeriod * directPurchaseRatio / 100;
+            }
+
+            days.forEach(day => {
+                if (day === 'غ•') return;
+
+                const meta = statusMeta(day);
+
+                if (day === 'ح' || day === 'ت') {
+                    attendanceDays++;
+                } else if (day === 'غ' || meta.isAbsence) {
+                    absenceDays++;
+                }
+            });
+
+            deduction = absenceDays * dailyRate;
+
             const fineConfig = fineConfigFor(emp.category);
             const isSaudi = String(emp.nationality || '').includes('سعودي');
-            const absenceFine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
-            const nationalityFine = parseFloat(emp.nationalityFine) || 0;
-            const net = costForPeriod - deduction - absenceFine - nationalityFine;
-            totalCost += costForPeriod; totalDeduction += deduction; totalFine += absenceFine + nationalityFine; totalNet += net;
-            return `<tr><td>${index + 1}</td><td>${emp.jobTitle || ''}</td><td>${emp.category || ''}</td><td>${emp.name || ''}</td>${days.map(d => `<td>${d}</td>`).join('')}<td>${money(costForPeriod)}</td><td>${attendanceDays}</td><td>${absenceDays}</td><td>${money(deduction)}</td><td>${money(absenceFine)}</td><td>${money(net)}</td><td>${emp.nationality || ''}</td><td>${money(nationalityFine)}</td><td>${emp.iqamaId || ''}</td></tr>`;
-        }).join('') : `<tr><td colspan="${14 + daysInExtract}">لا يوجد موظفون في هذا المكتب/المرفق.</td></tr>`;
+            absenceFine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
+            nationalityFine = parseFloat(emp.nationalityFine) || 0;
+            net = costForPeriod - deduction - absenceFine - nationalityFine;
+        }
 
-        const summary = `<div class="table-summary-v2"><span>عدد الموظفين: <b>${centerData.length}</b></span><span>التكلفة للفترة: <b>${money(totalCost)}</b></span><span>إجمالي الحسم: <b>${money(totalDeduction)}</b></span><span>إجمالي الغرامات: <b>${money(totalFine)}</b></span><span>صافي الاستحقاق: <b>${money(totalNet)}</b></span></div>`;
-        const title = `<div class="extract-details-v2"><div>بيان بالحضور والغياب لمنسوبي شركة (${companyName}) بالمكتب/المرفق: ${centerName}</div><div>الفترة (${formatDate(extractData.extractStart)}م - ${formatDate(extractData.extractEnd)}م)</div><div>عدد أيام المستخلص: ${daysInExtract}</div></div>`;
-        return `<section class="print-page landscape-page">${buildOfficialPrintHeader(centerKey)}${buildContractInfoHtml()}${title}${summary}<table><thead><tr><th rowspan="2">م</th><th rowspan="2">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2">اسم شاغل الوظيفة</th><th colspan="${daysInExtract}">الأيام</th><th rowspan="2">التكلفة</th><th colspan="2">الأيام</th><th colspan="2">الحسم والغرامة</th><th rowspan="2">الصافي</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة جنسية</th><th rowspan="2">الإقامة</th></tr><tr>${dayHeaders}<th>حضور</th><th>غياب</th><th>الحسم</th><th>الغرامة</th></tr></thead><tbody>${rows}</tbody></table>${signatureHtml('attendance', centerKey)}</section>`;
-    }
+        totalCost += costForPeriod;
+        totalDeduction += deduction;
+        totalFine += absenceFine + nationalityFine;
+        totalNet += net;
 
+        return `<tr><td>${index + 1}</td><td>${emp.jobTitle || ''}</td><td>${emp.category || ''}</td><td>${emp.name || ''}</td>${days.map(d => `<td>${d}</td>`).join('')}<td>${money(costForPeriod)}</td><td>${attendanceDays}</td><td>${absenceDays}</td><td>${money(deduction)}</td><td>${money(absenceFine)}</td><td>${money(net)}</td><td>${emp.nationality || ''}</td><td>${money(nationalityFine)}</td><td>${emp.iqamaId || ''}</td></tr>`;
+    }).join('') : `<tr><td colspan="${14 + daysInExtract}">لا يوجد موظفون في هذا المكتب/المرفق.</td></tr>`;
+
+    const summary = `<div class="table-summary-v2"><span>عدد الموظفين: <b>${centerData.length}</b></span><span>التكلفة للفترة: <b>${money(totalCost)}</b></span><span>إجمالي الحسم: <b>${money(totalDeduction)}</b></span><span>إجمالي الغرامات: <b>${money(totalFine)}</b></span><span>صافي الاستحقاق: <b>${money(totalNet)}</b></span></div>`;
+    const title = `<div class="extract-details-v2"><div>بيان بالحضور والغياب لمنسوبي شركة (${companyName}) بالمكتب/المرفق: ${centerName}</div><div>الفترة (${formatDate(extractData.extractStart)}م - ${formatDate(extractData.extractEnd)}م)</div><div>عدد أيام المستخلص: ${daysInExtract}</div></div>`;
+
+    return `<section class="print-page landscape-page">${buildOfficialPrintHeader(centerKey)}${buildContractInfoHtml()}${title}${summary}<table><thead><tr><th rowspan="2">م</th><th rowspan="2">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2">اسم شاغل الوظيفة</th><th colspan="${daysInExtract}">الأيام</th><th rowspan="2">التكلفة</th><th colspan="2">الأيام</th><th colspan="2">الحسم والغرامة</th><th rowspan="2">الصافي</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة جنسية</th><th rowspan="2">الإقامة</th></tr><tr>${dayHeaders}<th>حضور</th><th>غياب</th><th>الحسم</th><th>الغرامة</th></tr></thead><tbody>${rows}</tbody></table>${signatureHtml('attendance', centerKey)}</section>`;
+}
     function buildPerformancePage(centerKey) {
         if (centerKey === 'admin_staff') return '';
         if (typeof getDynamicPerformanceItems !== 'function' || typeof getPerformanceData !== 'function') return '';
