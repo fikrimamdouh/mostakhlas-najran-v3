@@ -147,7 +147,6 @@
   }
 
 if (isAdminOfficesPage) {
-    appendScript('/original/admin_offices_attendance.js?v=20260623_admin_calc_screen_v8', false);
     appendScript('/original/admin_offices_attendance_patch.js?v=20260623_positions_all_v5', true);
     appendScript('/original/admin_offices_performance_logic.js?v=' + BUILD_V, true);
 }
