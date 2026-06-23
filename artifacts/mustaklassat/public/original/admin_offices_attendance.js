@@ -1236,43 +1236,90 @@ function toggleAllCheckboxes(source, containerId) {
 }
 
 function exportSelectedToExcel() {
-    const selectedKeys = Array.from(document.querySelectorAll('#export-checkboxes input:checked')).map(cb => cb.value).filter(v => v);
+    const selectedKeys = Array.from(document.querySelectorAll('#export-checkboxes input:checked'))
+        .map(cb => cb.value)
+        .filter(v => v);
+
     if (selectedKeys.length === 0) {
-        alert("الرجاء اختيار مركز واحد على الأقل.");
+        alert("الرجاء اختيار مكتب/مرفق واحد على الأقل.");
         return;
     }
+
     const wb = XLSX.utils.book_new();
     const allData = getAttendanceData();
     const names = getCenterNames();
-    const { daysInMonth, totalDaysInMonth } = getExtractPeriodDetails();
+
+    const period = getExtractPeriodDetails();
+    const totalDaysInMonth = period.totalDaysInMonth || period.daysInMonth || 30;
+    const daysInExtract = period.daysInExtract || period.daysInMonth || 30;
+
+    const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+    const contractType = contractData.contractType || 'عقد أساسي';
+    const directPurchaseRatio = parseFloat(contractData.directPurchaseRatio) || 0;
+
     selectedKeys.forEach(key => {
         const centerData = allData[key] || [];
         const sheetData = [];
-        const headers = ['م', 'مسمى الوظيفة', 'الفئة', 'اسم شاغل الوظيفة', ...Array.from({length: daysInMonth}, (_, i) => i + 1), 'التكلفة الشهرية', 'حضور', 'غياب', 'الحسم', 'غرامة الغياب', 'صافي الاستحقاق', 'الجنسية', 'غرامة جنسية', 'رقم الإقامة/الهوية'];
+
+        const headers = [
+            'م',
+            'مسمى الوظيفة',
+            'الفئة',
+            'اسم شاغل الوظيفة',
+            ...Array.from({ length: daysInExtract }, (_, i) => i + 1),
+            'التكلفة للفترة',
+            'حضور',
+            'غياب',
+            'الحسم',
+            'غرامة الغياب',
+            'صافي الاستحقاق',
+            'الجنسية',
+            'غرامة جنسية',
+            'رقم الإقامة/الهوية'
+        ];
+
         sheetData.push(headers);
+
         centerData.forEach((emp, index) => {
-            const salary = parseFloat(emp.salary) || 0;
-            const dailySalary = totalDaysInMonth > 0 ? salary / totalDaysInMonth : 0;
-            const nationalityFine = parseFloat(emp.nationalityFine) || 0;
-            let days = emp.days || Array(daysInMonth).fill('ح');
-            let attendanceDays = 0, absenceDays = 0;
-            days.forEach(day => {
-                if (STATUS_CODES[day] && !STATUS_CODES[day].isAbsence) attendanceDays++;
-                if (STATUS_CODES[day] && STATUS_CODES[day].isAbsence) absenceDays++;
+            const calc = calculateAdminOfficeEmployeeFinancials(emp, {
+                totalDaysInMonth,
+                daysInExtract,
+                contractType,
+                directPurchaseRatio
             });
-            const deduction = absenceDays * dailySalary;
-            const fineConfig = ABSENCE_FINES_BY_CATEGORY[emp.category] || ABSENCE_FINES_BY_CATEGORY.default;
-            const isSaudi = (emp.nationality || '').includes('سعودي');
-            const absenceFine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
-            const netSalary = salary - deduction - absenceFine - nationalityFine;
-            const row = [index + 1, emp.jobTitle, emp.category, emp.name, ...days, salary, attendanceDays, absenceDays, deduction.toFixed(2), absenceFine.toFixed(2), netSalary.toFixed(2), emp.nationality, nationalityFine, emp.iqamaId];
+
+            const row = [
+                index + 1,
+                emp.jobTitle || '',
+                emp.category || '',
+                emp.name || '',
+                ...calc.days,
+                calc.costForPeriod.toFixed(2),
+                calc.attendanceDays,
+                calc.absenceDays,
+                calc.deduction.toFixed(2),
+                calc.absenceFine.toFixed(2),
+                calc.netSalary.toFixed(2),
+                emp.nationality || '',
+                calc.nationalityFine.toFixed(2),
+                emp.iqamaId || ''
+            ];
+
             sheetData.push(row);
         });
+
         const ws = XLSX.utils.aoa_to_sheet(sheetData);
-        XLSX.utils.book_append_sheet(wb, ws, names[key].substring(0, 30));
+        const safeSheetName = String(names[key] || key).substring(0, 30);
+        XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
     });
-    XLSX.writeFile(wb, 'تقرير_حضور_المراكز.xlsx');
-    closeDialog();
+
+    XLSX.writeFile(wb, 'تقرير_حضور_المكاتب_الإدارية.xlsx');
+
+    try {
+        closeDialog('management-dialog');
+    } catch (_) {
+        try { closeDialog(); } catch (_) {}
+    }
 }
 
 /**
