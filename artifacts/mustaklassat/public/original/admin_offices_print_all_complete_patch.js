@@ -54,35 +54,67 @@
   function isSaudi(v) { return String(v || '').replace(/\s+/g, '').includes('سعودي'); }
   function fineConfig(cat) { return ABSENCE_FINES[cat] || ABSENCE_FINES[String(cat)] || ABSENCE_FINES.default; }
   function performanceDeductions() { return Object.assign({}, readJson('performanceDeductions', {}), readJson('adminOfficePerformanceDeductions_v1', {})); }
-  function calcSite(centerKey) {
-    const rows = getData()[centerKey] || [];
-    const period = getPeriod();
-    const contract = getContract();
-    const ratio = num(contract.directPurchaseRatio);
-    const out = { count: rows.length, cost: 0, absenceDeduction: 0, absenceFine: 0, nationalityFine: 0, fines: 0, laborNet: 0 };
-    rows.forEach(emp => {
-      const salary = num(emp.salary);
-      const daily = period.totalDaysInMonth > 0 ? salary / period.totalDaysInMonth : 0;
-      const days = Array.isArray(emp.days) ? emp.days.slice(0, period.daysInExtract) : [];
-      while (days.length < period.daysInExtract) days.push('ح');
-      let cost = daily * period.daysInExtract;
-      if (contract.contractType === 'شراء مباشر' && ratio > 0) cost += cost * ratio / 100;
-      const absDays = days.filter(d => d === 'غ').length;
-      const absDed = absDays * daily;
-      const cfg = fineConfig(emp.category || 1);
-      const absFine = absDays * (isSaudi(emp.nationality) ? cfg.saudi : cfg.non_saudi);
-      const natFine = num(emp.nationalityFine);
-      const fines = absFine + natFine;
-      out.cost += cost;
-      out.absenceDeduction += absDed;
-      out.absenceFine += absFine;
-      out.nationalityFine += natFine;
-      out.fines += fines;
-      out.laborNet += cost - absDed - fines;
-    });
-    return out;
-  }
+function calcSite(centerKey) {
+  const rows = getData()[centerKey] || [];
+  const period = getPeriod();
+  const contract = getContract();
+  const ratio = num(contract.directPurchaseRatio);
 
+  const out = {
+    count: rows.length,
+    cost: 0,
+    absenceDeduction: 0,
+    absenceFine: 0,
+    nationalityFine: 0,
+    fines: 0,
+    laborNet: 0
+  };
+
+  rows.forEach(emp => {
+    if (typeof window.calculateAdminOfficeEmployeeFinancials === 'function') {
+      const calc = window.calculateAdminOfficeEmployeeFinancials(emp, {
+        totalDaysInMonth: period.totalDaysInMonth,
+        daysInExtract: period.daysInExtract,
+        contractType: contract.contractType || 'عقد أساسي',
+        directPurchaseRatio: ratio
+      });
+
+      out.cost += calc.costForPeriod;
+      out.absenceDeduction += calc.deduction;
+      out.absenceFine += calc.absenceFine;
+      out.nationalityFine += calc.nationalityFine;
+      out.fines += calc.totalFine;
+      out.laborNet += calc.netSalary;
+      return;
+    }
+
+    const salary = num(emp.salary);
+    const daily = period.totalDaysInMonth > 0 ? salary / period.totalDaysInMonth : 0;
+    const days = Array.isArray(emp.days) ? emp.days.slice(0, period.daysInExtract) : [];
+    while (days.length < period.daysInExtract) days.push('ح');
+
+    let cost = daily * period.daysInExtract;
+    if (contract.contractType === 'شراء مباشر' && ratio > 0) {
+      cost += cost * ratio / 100;
+    }
+
+    const absDays = days.filter(d => d === 'غ').length;
+    const absDed = absDays * daily;
+    const cfg = fineConfig(emp.category || 1);
+    const absFine = absDays * (isSaudi(emp.nationality) ? cfg.saudi : cfg.non_saudi);
+    const natFine = num(emp.nationalityFine);
+    const fines = absFine + natFine;
+
+    out.cost += cost;
+    out.absenceDeduction += absDed;
+    out.absenceFine += absFine;
+    out.nationalityFine += natFine;
+    out.fines += fines;
+    out.laborNet += cost - absDed - fines;
+  });
+
+  return out;
+}
   function grandCertificateCss() {
     return `<style id="admin-grand-cert-print-all-css">
       @page admin-grand-cert-page{size:A4 landscape;margin:8mm}
