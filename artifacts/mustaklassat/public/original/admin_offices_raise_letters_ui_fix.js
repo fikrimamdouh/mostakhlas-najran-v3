@@ -159,10 +159,9 @@ if (!topRow || sections.length < 2) return;
         <div class="rl-kpi-strip">${buildKpis()}</div>
         <div class="rl-action-grid">
           <div class="rl-action-card" data-act="labor"><div class="ico">👷</div><b>خطاب رفع العمالة</b><span>يقرأ صافي الشهادة الإجمالية والتوطين والضريبة.</span></div>
-          <div class="rl-action-card" data-act="cons"><div class="ico">📦</div><b>خطاب رفع المستهلكات</b><span>يستخدم صافي المستهلكات والضريبة والتفقيط.</span></div>
           <div class="rl-action-card" data-act="decl"><div class="ico">✅</div><b>إقرار عدم أسبقية الصرف</b><span>إقرار رسمي بالمبلغ والتفقيط.</span></div>
-          <div class="rl-action-card" data-act="site"><div class="ico">🏢</div><b>خطاب رفع موقع</b><span>خطاب خاص بمكتب أو موقع محدد.</span></div>
-        </div>
+<div class="rl-action-card" data-act="site"><div class="ico">🏢</div><b>خطاب رفع المواقع كاملة</b><span>خطاب واحد للمكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة.</span></div>
+</div>
         <div class="rl-tabs">
           <button type="button" class="rl-tab-btn active" data-tab="letters">بيانات الخطابات</button>
           <button type="button" class="rl-tab-btn" data-tab="money">المبالغ والفترات</button>
@@ -216,11 +215,7 @@ sigBtn.onclick = focusSignaturesTab;    heroActions.appendChild(sigBtn);
   }
 });
 
-    const extra = document.createElement('div');
-    extra.className = 'section-box';
-    extra.innerHTML = '<h3>التواقيع</h3><div class="settings-grid"><div class="field"><label>تواقيع الخطابات</label><button type="button" class="btn btn-primary" style="width:100%" id="raise-letter-signatures-inline-btn"><i class="fas fa-signature"></i> تعديل تواقيع الخطابات</button></div><div class="field"><label>تنبيه</label><div style="font-weight:900;color:#475569;line-height:1.8">أي اسم ثابت قديم لا يظهر في الطباعة. التوقيع يأتي من SignatureBlock فقط.</div></div></div>';
-    sigPanel.appendChild(extra);
-    extra.querySelector('#raise-letter-signatures-inline-btn').onclick = openLetterSignatures;
+    
 
     shell.querySelectorAll('.rl-tab-btn').forEach(btn => {
       btn.onclick = function () {
