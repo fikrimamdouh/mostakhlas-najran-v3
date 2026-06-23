@@ -4,6 +4,7 @@
 // يجعل زر خطابات الرفع يفتح في تبويب مستقل، ويحول شاشة الخطابات إلى صفحة كاملة
 // + يضبط شاشة استيراد Excel لتكون أصغر وبها Scroll داخلي
 // + يحمل إصلاح موضوع خطاب الرفع النهائي الديناميكي
+// + يحمل تعديل جماعي شبكي لكل الحالات وإصلاح طباعة الحضور الأساسية
 // ===================================================================
 (function () {
   'use strict';
@@ -25,6 +26,10 @@
 
   function loadDynamicFinalSubjectPatch() {
     loadScriptOnce('admin-offices-final-raise-dynamic-subject', '/original/admin_offices_final_raise_letter_dynamic_subject.js?v=20260623_final_subject_v1');
+  }
+
+  function loadBulkStatusGridPrintFix() {
+    loadScriptOnce('admin-offices-bulk-status-grid-print-fix', '/original/admin_offices_bulk_status_grid_print_fix.js?v=20260623_bulk_grid_print_v1');
   }
 
   function openStandaloneTab() {
@@ -177,6 +182,7 @@
 
   function boot(attempt) {
     loadDynamicFinalSubjectPatch();
+    loadBulkStatusGridPrintFix();
     patchMainButton();
     applyExcelImportDialogLayout();
     if (isStandalone) openAsStandalonePage();
@@ -187,10 +193,11 @@
     setTimeout(applyExcelImportDialogLayout, 80);
     setTimeout(applyExcelImportDialogLayout, 350);
     setTimeout(loadDynamicFinalSubjectPatch, 120);
+    setTimeout(loadBulkStatusGridPrintFix, 120);
   }, true);
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0));
   else boot(0);
 
-  console.info('[Admin Offices Raise Letters] standalone tab mode installed + Excel import scroll fix + final subject loader');
+  console.info('[Admin Offices Raise Letters] standalone tab mode installed + Excel import scroll fix + final subject + bulk/print loader');
 })();
