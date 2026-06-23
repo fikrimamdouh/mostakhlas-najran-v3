@@ -73,7 +73,7 @@
       entityTitle: 'المديرية العامة للشئون الصحية بمنطقة نجران',
       departmentTitle: 'إدارة الشئون الهندسية',
       scopeName: 'المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات بمنطقة نجران',
-      purchasePeriodLabel: 'الشراء المباشر الثاني',
+      purchasePeriodLabel: '',
       paymentNo: '01',
       vatRate: VAT_DEFAULT,
       phoneFaxAr: 'نجران – تليفون 0175225872    فاكس 017523312',
@@ -102,8 +102,27 @@
       saudizationOpportunities: ''
     };
   }
-  function getSettings() { return Object.assign(defaultSettings(), readJson(SETTINGS_KEY, {})); }
-  function saveSettings(s) { writeJson(SETTINGS_KEY, Object.assign(getSettings(), s || {})); }
+function getSettings() {
+  const settings = Object.assign(defaultSettings(), readJson(SETTINGS_KEY, {}));
+
+  const e = getExtract();
+  const paymentNo =
+    e.paymentNumber
+    || e.extractNumber
+    || localStorage.getItem('paymentNumber')
+    || localStorage.getItem('extractNumber')
+    || '—';
+
+  settings.paymentNo = String(paymentNo).match(/^\d+$/)
+    ? String(paymentNo).padStart(2, '0')
+    : String(paymentNo);
+
+  if (/شراء\s*مباشر/.test(String(settings.purchasePeriodLabel || ''))) {
+    settings.purchasePeriodLabel = '';
+  }
+
+  return settings;
+}  function saveSettings(s) { writeJson(SETTINGS_KEY, Object.assign(getSettings(), s || {})); }
 
   function defaultSaudization() {
     const s = getSettings();
