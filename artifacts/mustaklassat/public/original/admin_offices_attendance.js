@@ -124,8 +124,93 @@ const STATUS_CODES = {
   default: { name: 'غير معروف', color: '#ffffff', isAbsence: false }
 };
 
-const ABSENCE_FINES_BY_CATEGORY = { 1: { saudi: 300, non_saudi: 300 }, 2: { saudi: 250, non_saudi: 250 }, 3: { saudi: 100, non_saudi: 100 }, 4: { saudi: 80, non_saudi: 50 }, 5: { saudi: 80, non_saudi: 50 }, 6: { saudi: 50, non_saudi: 20 }, 7: { saudi: 10, non_saudi: 10 }, default: { saudi: 0, non_saudi: 0 } };
+const ABSENCE_FINES_BY_CATEGORY = {
+    1: { saudi: 500, non_saudi: 500 },
+    2: { saudi: 500, non_saudi: 500 },
+    3: { saudi: 250, non_saudi: 100 },
+    4: { saudi: 180, non_saudi: 80 },
+    5: { saudi: 150, non_saudi: 80 },
+    6: { saudi: 20, non_saudi: 20 },
+    7: { saudi: 10, non_saudi: 10 },
+    default: { saudi: 0, non_saudi: 0 }
+};
+function getAdminOfficeFineConfig(category) {
+    return ABSENCE_FINES_BY_CATEGORY[category]
+        || ABSENCE_FINES_BY_CATEGORY[String(category)]
+        || ABSENCE_FINES_BY_CATEGORY.default;
+}
 
+function isAdminOfficeSaudi(nationality) {
+    return String(nationality || '').replace(/\s+/g, '').includes('سعودي');
+}
+
+function normalizeAdminOfficeDays(days, daysInExtract) {
+    const result = Array.isArray(days) ? days.slice(0, daysInExtract) : [];
+    while (result.length < daysInExtract) result.push('ح');
+    return result;
+}
+
+function calculateAdminOfficeEmployeeFinancials(emp, options = {}) {
+    const totalDaysInMonth = Number(options.totalDaysInMonth) || 30;
+    const daysInExtract = Number(options.daysInExtract) || 30;
+    const contractType = options.contractType || 'عقد أساسي';
+    const directPurchaseRatio = Number(options.directPurchaseRatio) || 0;
+
+    const fullMonthSalary = parseFloat(emp.salary) || 0;
+    const dailyRate = totalDaysInMonth > 0 ? fullMonthSalary / totalDaysInMonth : 0;
+
+    let costForPeriod = dailyRate * daysInExtract;
+
+    if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) {
+        costForPeriod += costForPeriod * (directPurchaseRatio / 100);
+    }
+
+    const days = normalizeAdminOfficeDays(emp.days, daysInExtract);
+
+    let attendanceDays = 0;
+    let absenceDays = 0;
+    let deductionOnlyDays = 0;
+
+    days.forEach(day => {
+        const meta = (typeof STATUS_CODES !== 'undefined' && STATUS_CODES[day]) ? STATUS_CODES[day] : {};
+
+        if (day === 'غ•' || meta.noDeduction || meta.noFine) {
+            return;
+        }
+
+        if (day === 'ح' || day === 'ت') {
+            attendanceDays++;
+        } else if (day === 'غ' || meta.isAbsence) {
+            absenceDays++;
+        } else {
+            deductionOnlyDays++;
+        }
+    });
+
+    const deduction = (absenceDays + deductionOnlyDays) * dailyRate;
+    const fineConfig = getAdminOfficeFineConfig(emp.category || 1);
+    const absenceFine = absenceDays * (
+        isAdminOfficeSaudi(emp.nationality) ? fineConfig.saudi : fineConfig.non_saudi
+    );
+
+    const nationalityFine = parseFloat(emp.nationalityFine) || 0;
+    const totalFine = absenceFine + nationalityFine;
+    const netSalary = costForPeriod - deduction - totalFine;
+
+    return {
+        days,
+        dailyRate,
+        costForPeriod,
+        attendanceDays,
+        absenceDays,
+        deductionOnlyDays,
+        deduction,
+        absenceFine,
+        nationalityFine,
+        totalFine,
+        netSalary
+    };
+}
 // --- 2. INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     // ✅✅✅ [السطر المضاف والمهم] استدعاء الدالة لربط البيانات ✅✅✅
@@ -1888,42 +1973,23 @@ function calculateAndDisplayGrandTotal() {
     let grandTotalFines = 0;
     let grandNetTotal = 0;
 
-    // --- 3. المرور على كل المراكز والموظفين (بما في ذلك الإداريين) ---
+    // --- 3. المرور على كل المكاتب/المرافق والفئات الخاصة ---
     for (const centerKey in allData) {
-        // ✅ [تم التعديل هنا] تم حذف السطر الذي يستثني 'admin_staff'
-        // الآن سيتم تضمين جميع الفئات في الحساب.
-
         const centerData = allData[centerKey] || [];
         grandTotalCount += centerData.length;
 
         centerData.forEach(emp => {
-            // --- أ. حساب التكلفة الفعلية للموظف خلال فترة المستخلص ---
-            const fullMonthSalary = parseFloat(emp.salary) || 0;
-            const dailyRate = totalDaysInMonth > 0 ? fullMonthSalary / totalDaysInMonth : 0;
-            let actualCostForPeriod = dailyRate * daysInExtract;
+            const calc = calculateAdminOfficeEmployeeFinancials(emp, {
+                totalDaysInMonth,
+                daysInExtract,
+                contractType,
+                directPurchaseRatio
+            });
 
-            // إضافة نسبة الشراء المباشر إذا كان العقد من هذا النوع
-            if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) {
-                actualCostForPeriod += actualCostForPeriod * (directPurchaseRatio / 100);
-            }
-            
-            // --- ب. حساب الحسميات والغرامات ---
-            const nationalityFine = parseFloat(emp.nationalityFine) || 0;
-            const absenceDays = (emp.days || []).filter(day => STATUS_CODES[day]?.isAbsence).length;
-            
-            const deduction = absenceDays * dailyRate; 
-            
-            const fineConfig = ABSENCE_FINES_BY_CATEGORY[emp.category] || ABSENCE_FINES_BY_CATEGORY.default;
-            const isSaudi = (emp.nationality || '').includes('سعودي');
-            const absenceFine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
-            
-            // --- ج. حساب الصافي وتجميع الإجماليات ---
-            const netSalary = actualCostForPeriod - deduction - absenceFine - nationalityFine;
-
-            grandTotalCost += actualCostForPeriod;
-            grandTotalDeduction += deduction;
-            grandTotalFines += absenceFine + nationalityFine;
-            grandNetTotal += netSalary;
+            grandTotalCost += calc.costForPeriod;
+            grandTotalDeduction += calc.deduction;
+            grandTotalFines += calc.totalFine;
+            grandNetTotal += calc.netSalary;
         });
     }
 
@@ -1934,21 +2000,9 @@ function calculateAndDisplayGrandTotal() {
     document.getElementById('grand-total-fines').textContent = grandTotalFines.toFixed(2);
     document.getElementById('grand-net-total').textContent = grandNetTotal.toFixed(2);
 
-    // --- 5. [مهم للربط] حفظ صافي الاستحقاق الإجمالي (مفتاح خاص بالمكاتب الإدارية) ---
+    // --- 5. مفتاح ربط مستهلكات المكاتب وخطابات الرفع ---
     localStorage.setItem('grand-net-total-admin', grandNetTotal.toFixed(2));
 }
-
-
-// --- A. Editable Titles Logic (الآن في الملف الصحيح) ---
-
-const DEFAULT_TITLES = {
-    attendanceMainTitle: "بيان بالحضور والغياب لمنسوبي شركة ({companyName})",
-    performanceMainTitle: "جدول تقييم مستوى الأداء والإنجاز",
-    achievementMainTitle: "شهادة الاستحقاق الشهري للعمالة",
-    achievementSubTitle: "لأعمال النظافة والصيانة والتشغيل غير الطبي",
-    grandMainTitle: "الشهادة الإجمالية المجمعة للمراكز الصحية",
-    grandSubTitle: "لأعمال النظافة والصيانة والتشغيل غير الطبي"
-};
 
 function getAppTitles() {
     const storedTitles = localStorage.getItem('appTitles_v1');
