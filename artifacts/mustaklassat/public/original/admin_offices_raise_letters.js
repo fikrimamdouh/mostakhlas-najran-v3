@@ -800,8 +800,20 @@ function saveDialog() {
   });
 
   saveSettings(patch);
-  alert('تم حفظ إعدادات خطابات الرفع.');
-  closeDialog();
+
+  let note = document.getElementById('raise-letters-save-note');
+  if (!note) {
+    note = document.createElement('div');
+    note.id = 'raise-letters-save-note';
+    note.style.cssText = 'margin:10px 0;padding:10px 14px;border-radius:12px;background:#ecfdf5;color:#166534;font-weight:900;text-align:center;border:1px solid #bbf7d0;';
+    const dialog = document.querySelector('#raise-letters-overlay .settings-dialog');
+    if (dialog) dialog.prepend(note);
+  }
+
+  if (note) {
+    note.textContent = 'تم حفظ إعدادات خطابات الرفع بنجاح.';
+    setTimeout(() => { if (note) note.textContent = ''; }, 2500);
+  }
 }
   function openDialog() { if (!document.getElementById('raise-letters-overlay')) renderDialog(); }
   function closeDialog() { document.getElementById('raise-letters-overlay')?.remove(); }
