@@ -1,10 +1,10 @@
 // ===================================================================
-// Admin Offices Consumables Raise Letter + Subcontractor Visit Fix
+// Admin Offices Consumables Raise Letter — SAFE V8
 // Scope: admin_offices_consumables.html / original-viewer page
 // - شاشة منبثقة لإعدادات خطاب رفع المستهلكات
 // - حفظ تلقائي للإعدادات
-// - ضبط منطق زيارة مقاولي الباطن مثل المستهلكات الأساسي
-// - توسيع عمود البند وتحسين عرض وطباعة جدول مقاولي الباطن
+// - منطق آمن لزيارة مقاولي الباطن بدون MutationObserver وبدون حلقات إعادة حساب
+// - توسيع عمود البند وتحسين عرض الجدول
 // ===================================================================
 (function () {
   'use strict';
@@ -13,10 +13,7 @@
   const SETTINGS_KEY = 'adminOfficesRaiseLettersSettings_v1';
   const DB_VERSION = 'admin_offices_consumables_v1.0';
 
-  function readJson(key, fallback) {
-    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
-    catch (_) { return fallback; }
-  }
+  function readJson(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; } }
   function writeJson(key, value) { try { localStorage.setItem(key, JSON.stringify(value || {})); } catch (_) {} }
   function esc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function digits(v) { const ar = '٠١٢٣٤٥٦٧٨٩', fa = '۰۱۲۳۴۵۶۷۸۹'; return String(v ?? '').replace(/[٠-٩]/g, d => ar.indexOf(d)).replace(/[۰-۹]/g, d => fa.indexOf(d)); }
@@ -27,7 +24,6 @@
 
   function getContract() { return readJson('persistentContractData', {}); }
   function getExtract() { return readJson('persistentExtractData', {}); }
-  function contractInfo() { const c = getContract(); return { contractType: c.contractType || 'عقد أساسي', directPurchaseRatio: num(c.directPurchaseRatio) }; }
   function defaultSettings() {
     return {
       recipient: 'سعادة / مساعد المدير العام للدعم المساند',
@@ -43,18 +39,9 @@
     };
   }
   function getSettings() { return Object.assign(defaultSettings(), readJson(SETTINGS_KEY, {})); }
-  function saveSettings(patch) {
-    const current = readJson(SETTINGS_KEY, {});
-    const clean = Object.assign({}, patch || {});
-    ['paymentNo', 'extractStart', 'extractEnd'].forEach(k => delete clean[k]);
-    writeJson(SETTINGS_KEY, Object.assign(defaultSettings(), current, clean));
-  }
+  function saveSettings(patch) { const current = readJson(SETTINGS_KEY, {}); const clean = Object.assign({}, patch || {}); ['paymentNo', 'extractStart', 'extractEnd'].forEach(k => delete clean[k]); writeJson(SETTINGS_KEY, Object.assign(defaultSettings(), current, clean)); }
 
-  function getActiveExtractMeta() {
-    const e = getExtract();
-    const p = e.paymentNumber || e.extractNumber || localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber') || '—';
-    return { paymentNo: String(p).match(/^\d+$/) ? String(p).padStart(3, '0') : String(p), start: e.extractStart || localStorage.getItem('extractStart') || '', end: e.extractEnd || localStorage.getItem('extractEnd') || '' };
-  }
+  function getActiveExtractMeta() { const e = getExtract(); const p = e.paymentNumber || e.extractNumber || localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber') || '—'; return { paymentNo: String(p).match(/^\d+$/) ? String(p).padStart(3, '0') : String(p), start: e.extractStart || localStorage.getItem('extractStart') || '', end: e.extractEnd || localStorage.getItem('extractEnd') || '' }; }
   function extractPhrase() { const m = getActiveExtractMeta(); return `دفعة رقم (${esc(m.paymentNo)}) عن الفترة من ${esc(fmtDate(m.start))} م إلى ${esc(fmtDate(m.end))} م`; }
   function getCompanyName() { const c = getContract(); const dom = document.querySelector('.companyName')?.textContent; return c.contractorName || c.companyName || c.company || c.contractor || (dom && dom !== 'غير محدد' ? dom : '') || 'غير محدد'; }
 
@@ -80,6 +67,7 @@
     const safeEnd = Number.isNaN(end.getTime()) ? safeStart : end;
     return { daysInExtract: Math.max(1, Math.ceil((safeEnd - safeStart) / 86400000) + 1 || 30), totalDaysInMonth: new Date(safeStart.getFullYear(), safeStart.getMonth() + 1, 0).getDate() || 30 };
   }
+  function contractInfo() { const c = getContract(); return { contractType: c.contractType || 'عقد أساسي', directPurchaseRatio: num(c.directPurchaseRatio) }; }
   function calculatePerformanceNetFromStorage() {
     const summary = readJson(`summary_data_${DB_VERSION}`, []);
     const performance = readJson(`performance_data_${DB_VERSION}`, []);
@@ -114,12 +102,7 @@
     });
     return total;
   }
-  function persistConsumablesNet(value) {
-    const v = money(value);
-    localStorage.setItem('admin_offices_consumables_current_net', v);
-    localStorage.setItem('adminOfficesConsumablesNet', v);
-    localStorage.setItem('finalConsumablesCost', v);
-  }
+  function persistConsumablesNet(value) { const v = money(value); localStorage.setItem('admin_offices_consumables_current_net', v); localStorage.setItem('adminOfficesConsumablesNet', v); localStorage.setItem('finalConsumablesCost', v); }
   function readRenderedNumber(selector) { const el = document.querySelector(selector); return el ? num(el.textContent) : 0; }
   function getCurrentConsumablesNet() {
     const rendered = readRenderedNumber('#summary-table tfoot tr:first-child td:last-child');
@@ -139,9 +122,7 @@
   function intWords(n) { n = Math.floor(num(n)); if (n === 0) return 'صفر'; const scales = [{v:1000000,s:'مليون',d:'مليونان',p:'ملايين'},{v:1000,s:'ألف',d:'ألفان',p:'آلاف'}]; const parts = []; for (const sc of scales) { const x = Math.floor(n / sc.v); if (x) { parts.push(x === 1 ? sc.s : x === 2 ? sc.d : `${underThousand(x)} ${x >= 3 && x <= 10 ? sc.p : sc.s}`); n %= sc.v; } } if (n) parts.push(underThousand(n)); return parts.join(' و'); }
   function tafqeetSAR(amount) { const total = Math.round(num(amount) * 100) / 100; const abs = Math.abs(total); const r = Math.floor(abs), h = Math.round((abs - r) * 100); let txt = `فقط وقدره ${intWords(r)} ريال سعودي`; if (h > 0) txt += ` و${intWords(h)} هللة`; txt += ' لا غير'; return total < 0 ? 'سالب ' + txt : txt; }
 
-  function suffixEndCss() {
-    return `.to{display:flex!important;justify-content:space-between!important;align-items:flex-start!important;width:100%!important;gap:18px!important;direction:rtl!important}.to .recipient-name{display:block!important;max-width:78%!important;white-space:normal!important;text-align:right!important}.to .recipient-suffix{display:block!important;margin:0!important;padding:0!important;min-width:72px!important;white-space:nowrap!important;text-align:left!important}`;
-  }
+  function suffixEndCss() { return `.to{display:flex!important;justify-content:space-between!important;align-items:flex-start!important;width:100%!important;gap:18px!important;direction:rtl!important}.to .recipient-name{display:block!important;max-width:78%!important;white-space:normal!important;text-align:right!important}.to .recipient-suffix{display:block!important;margin:0!important;padding:0!important;min-width:72px!important;white-space:nowrap!important;text-align:left!important}`; }
   function printCss() { return `<style>@page{size:A4 portrait;margin:12mm}*{box-sizing:border-box}body{direction:rtl;margin:0;background:#e9eef5;color:#111827;font-family:Tajawal,Arial,sans-serif}.toolbar{position:sticky;top:0;display:flex;justify-content:center;gap:10px;background:#111827;padding:10px;z-index:5}.toolbar button{border:0;border-radius:10px;padding:10px 18px;font-weight:900;cursor:pointer;background:#d4af37;color:#111}.page{width:210mm;min-height:297mm;margin:12px auto;background:#fff;padding:14mm 15mm 18mm;box-shadow:0 10px 30px rgba(15,23,42,.16);position:relative}.head{display:grid;grid-template-columns:82px 1fr 82px;align-items:center;border-bottom:2px solid #003087;padding-bottom:12px;margin-bottom:30px}.head img{width:72px}.head .t{text-align:center}.head h1{font-size:17px;margin:0 0 5px;color:#003087;font-weight:900}.head h2{font-size:15px;margin:0;color:#111827;font-weight:800}.salam{text-align:center;font-size:15.5px;font-weight:900;margin:20px 0 14px}.body-text{font-size:15px;line-height:2.15;text-align:justify;margin-top:6px}.amount-table{width:100%;border-collapse:collapse;margin:18px 0 14px;font-size:14px;table-layout:fixed}.amount-table td,.amount-table th{border:1px solid #333;padding:8px;text-align:center;vertical-align:middle;white-space:normal;word-break:normal;overflow-wrap:anywhere}.amount-table td:first-child{text-align:right;font-weight:700;width:68%}.amount-table td:last-child{font-weight:900;direction:ltr;white-space:nowrap}.amount-table .grand td{background:#fff7d6;font-weight:900}.tafqeet{border:1px solid #94a3b8;background:#f8fafc;border-radius:8px;padding:8px 12px;margin-top:8px;font-weight:900;line-height:1.8}.closing{font-size:15px;line-height:2;margin-top:18px}.signatures.one{display:block;margin-top:48px}.signatures.one>div{width:78mm;margin-right:auto;margin-left:0;text-align:center}.sig-title{font-weight:900;margin-bottom:18px}.line{height:34px;border-bottom:1px solid #111;margin:0 18px 10px}.sig-name{font-weight:900;margin-top:8px}.footer{position:absolute;bottom:10mm;left:15mm;right:15mm;border-top:1px solid #cbd5e1;padding-top:5px;font-size:11px;display:flex;justify-content:space-between;direction:ltr}${suffixEndCss()}@media print{body{background:#fff}.toolbar{display:none}.page{margin:0;box-shadow:none;width:auto;min-height:calc(297mm - 24mm);padding:0}.footer{bottom:0}}</style>`; }
   function openPrintDoc(title, bodyHtml) { const win = window.open('', '', 'width=1000,height=900'); if (!win) return alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.'); win.document.open(); win.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${esc(title)}</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">${printCss()}</head><body><div class="toolbar"><button onclick="window.print()">طباعة</button><button onclick="window.close()">إغلاق</button></div>${bodyHtml}</body></html>`); win.document.close(); }
   function headerHtml(s) { return `<div class="head"><img src="moh_logo.png"><div class="t"><h1>${esc(s.entityTitle)}</h1><h2>${esc(s.departmentTitle)}</h2></div><img src="moh_logo.png"></div>`; }
@@ -190,29 +171,6 @@
   function openDialog() { if (!document.getElementById('consumables-raise-letter-overlay')) renderDialog(); }
   function closeDialog() { saveDialog(true); document.getElementById('consumables-raise-letter-overlay')?.remove(); document.body.classList.remove('consumables-letter-modal-open'); }
 
-  function subcontractorTableCss() {
-    return `
-      #subcontractors-table{table-layout:fixed!important;width:100%!important;min-width:1250px!important}
-      #subcontractors-table th,#subcontractors-table td{white-space:normal!important;word-break:normal!important;overflow-wrap:anywhere!important;line-height:1.45!important;vertical-align:middle!important}
-      #subcontractors-table th:nth-child(1),#subcontractors-table td:nth-child(1){width:28%!important;min-width:320px!important;text-align:right!important}
-      #subcontractors-table th:nth-child(2),#subcontractors-table td:nth-child(2){width:11%!important}
-      #subcontractors-table th:nth-child(3),#subcontractors-table td:nth-child(3){width:7%!important}
-      #subcontractors-table th:nth-child(4),#subcontractors-table td:nth-child(4){width:11%!important}
-      #subcontractors-table th:nth-child(5),#subcontractors-table td:nth-child(5),#subcontractors-table th:nth-child(8),#subcontractors-table td:nth-child(8),#subcontractors-table th:nth-child(9),#subcontractors-table td:nth-child(9),#subcontractors-table th:nth-child(10),#subcontractors-table td:nth-child(10){width:9%!important}
-      #subcontractors-table th:nth-child(6),#subcontractors-table td:nth-child(6){width:8%!important}
-      #subcontractors-table th:nth-child(7),#subcontractors-table td:nth-child(7){width:8%!important}
-      #subcontractors-table td:nth-child(1) input{text-align:right!important;min-height:44px!important;line-height:1.55!important;padding:9px 10px!important}
-      #subcontractors-table input,#subcontractors-table select{height:auto!important;min-height:38px!important;white-space:normal!important;line-height:1.4!important}
-      #subcontractors-table .cell-print-content{white-space:normal!important;line-height:1.45!important}
-      #subcontractors-section .table-container{overflow-x:auto!important;padding-bottom:8px!important}
-      @media print{
-        #subcontractors-table{table-layout:fixed!important;width:100%!important;min-width:0!important;font-size:8.5pt!important}
-        #subcontractors-table th,#subcontractors-table td{white-space:normal!important;word-break:normal!important;overflow-wrap:anywhere!important;padding:5px 4px!important;line-height:1.35!important;vertical-align:middle!important}
-        #subcontractors-table th:nth-child(1),#subcontractors-table td:nth-child(1){width:30%!important;min-width:0!important;text-align:right!important}
-      }
-    `;
-  }
-
   function injectPageFixes() {
     if (document.getElementById('admin-consumables-raise-letter-ui-fixes')) return;
     const style = document.createElement('style');
@@ -231,187 +189,57 @@
       #consumables-raise-letter-overlay .btn{border:0;border-radius:10px;padding:9px 14px;font-weight:900;cursor:pointer}
       #consumables-raise-letter-overlay .btn-primary{background:#003087;color:#fff}.btn-gold{background:#d4af37;color:#111}.btn-light{background:#f1f5f9;color:#111;border:1px solid #cbd5e1}
       #consumables-raise-letter-overlay .section-box{border:1px solid #e2e8f0;border-radius:14px;padding:12px;margin-top:12px;background:#f8fafc}
-      ${subcontractorTableCss()}
+      #subcontractors-table{table-layout:fixed!important;width:100%!important;min-width:1250px!important}
+      #subcontractors-table th,#subcontractors-table td{white-space:normal!important;word-break:normal!important;overflow-wrap:anywhere!important;line-height:1.45!important;vertical-align:middle!important}
+      #subcontractors-table th:nth-child(1),#subcontractors-table td:nth-child(1){width:30%!important;min-width:340px!important;text-align:right!important}
+      #subcontractors-table td:nth-child(1) input{text-align:right!important;min-height:44px!important;line-height:1.55!important;padding:9px 10px!important}
+      #subcontractors-table input,#subcontractors-table select{height:auto!important;min-height:38px!important;white-space:normal!important;line-height:1.4!important}
+      #subcontractors-section .table-container{overflow-x:auto!important;padding-bottom:8px!important}
+      @media print{#subcontractors-table{table-layout:fixed!important;width:100%!important;min-width:0!important;font-size:8.5pt!important}#subcontractors-table th,#subcontractors-table td{white-space:normal!important;word-break:normal!important;overflow-wrap:anywhere!important;padding:5px 4px!important;line-height:1.35!important;vertical-align:middle!important}#subcontractors-table th:nth-child(1),#subcontractors-table td:nth-child(1){width:30%!important;min-width:0!important;text-align:right!important}}
     `;
     document.head.appendChild(style);
   }
 
-  function updateStatusCell(row, status) {
-    const statusSelect = row.querySelector('select[data-field="status"]');
-    if (!statusSelect) return false;
-    const old = statusSelect.value;
-    statusSelect.value = status;
-    statusSelect.className = (statusSelect.className || '').replace(/status-(yes|no)/g, '').trim() + ' ' + statusClass(status);
-    const span = statusSelect.parentElement.querySelector('.cell-print-content');
-    if (span) span.textContent = status;
-    return old !== status;
-  }
-  function updateVisitCell(row) {
-    const visitSelect = row.querySelector('select[data-field="visitDate"]');
-    if (!visitSelect) return false;
+  function updateStatusForRow(row, dispatch) {
+    const visitSelect = row && row.querySelector('select[data-field="visitDate"]');
+    const statusSelect = row && row.querySelector('select[data-field="status"]');
+    if (!visitSelect || !statusSelect) return;
     const normalized = normalizeVisitDate(visitSelect.value);
+    const wanted = wantedStatusForVisit(normalized);
     if (visitSelect.value !== normalized) visitSelect.value = normalized;
     visitSelect.className = (visitSelect.className || '').replace(/visit-date-(monthly|done|postponed|future)/g, '').trim() + ' ' + visitClass(normalized);
-    const span = visitSelect.parentElement.querySelector('.cell-print-content');
-    if (span) span.textContent = normalized;
-    return updateStatusCell(row, wantedStatusForVisit(normalized));
-  }
-  function updateSubcontractorTotalsFromDom() {
-    const table = document.getElementById('subcontractors-table');
-    if (!table) return;
-    const rows = Array.from(table.querySelectorAll('tbody tr[data-table="subcontractors"]'));
-    if (!rows.length) return;
-
-    const labor = readRenderedNumber('#display-labor-cost');
-    const consumables = readRenderedNumber('#display-consumables-cost');
-    const currentSubDisplay = readRenderedNumber('#display-subcontractors-cost');
-    const currentExpected = readRenderedNumber('#expected-penalty');
-    let totalDueForPenalty = 0;
-
-    rows.forEach(row => {
-      const visitSelect = row.querySelector('select[data-field="visitDate"]');
-      const visit = normalizeVisitDate(visitSelect && visitSelect.value);
-      const visitValue = num(row.children[1]?.querySelector('input')?.value || row.children[1]?.textContent);
-      const annualVisits = parseInt(row.children[2]?.querySelector('input')?.value || row.children[2]?.textContent || '1', 10) || 1;
-      const due = visit === 'خلال هذا الشهر' ? visitValue / annualVisits : 0;
-      totalDueForPenalty += due;
-    });
-
-    const displaySub = document.getElementById('display-subcontractors-cost');
-    if (displaySub) displaySub.textContent = money(totalDueForPenalty);
-    const expectedPenalty = (labor + consumables + totalDueForPenalty) * 0.05;
-    const expectedEl = document.getElementById('expected-penalty');
-    if (expectedEl) expectedEl.textContent = money(expectedPenalty || currentExpected);
-
-    let totals = { visitValue: 0, dueVisitCost: 0, latePenalty: 0, damagePenalty: 0, netDue: 0 };
-    rows.forEach(row => {
-      const visitSelect = row.querySelector('select[data-field="visitDate"]');
-      const statusSelect = row.querySelector('select[data-field="status"]');
-      const visit = normalizeVisitDate(visitSelect && visitSelect.value);
-      const status = statusSelect ? statusSelect.value : wantedStatusForVisit(visit);
-      const visitValue = num(row.children[1]?.querySelector('input')?.value || row.children[1]?.textContent);
-      const annualVisits = parseInt(row.children[2]?.querySelector('input')?.value || row.children[2]?.textContent || '1', 10) || 1;
-      const damagePenalty = num(row.children[8]?.querySelector('input')?.value || row.children[8]?.textContent);
-      const due = visit === 'خلال هذا الشهر' ? visitValue / annualVisits : 0;
-      const late = status === 'لا' && due > 0 ? expectedPenalty : 0;
-      const base = status === 'نعم' ? due : 0;
-      const net = base - late - damagePenalty;
-      totals.visitValue += visitValue;
-      totals.dueVisitCost += due;
-      totals.latePenalty += late;
-      totals.damagePenalty += damagePenalty;
-      totals.netDue += net;
-      if (row.children[4]) row.children[4].textContent = money(due);
-      if (row.children[7]) row.children[7].textContent = money(late);
-      if (row.children[9]) row.children[9].textContent = money(net);
-    });
-
-    const totalRow = table.querySelector('tfoot tr:first-child');
-    if (totalRow) {
-      const cells = totalRow.children;
-      if (cells[1]) cells[1].textContent = money(totals.visitValue);
-      if (cells[4]) cells[4].textContent = money(totals.dueVisitCost);
-      if (cells[7]) cells[7].textContent = money(totals.latePenalty);
-      if (cells[8]) cells[8].textContent = money(totals.damagePenalty);
-      if (cells[9]) cells[9].textContent = money(totals.netDue);
+    statusSelect.className = (statusSelect.className || '').replace(/status-(yes|no)/g, '').trim() + ' ' + statusClass(wanted);
+    if (statusSelect.value !== wanted) {
+      statusSelect.value = wanted;
+      if (dispatch) statusSelect.dispatchEvent(new Event('input', { bubbles: true }));
     }
-    persistConsumablesNet(calculatePerformanceNetFromStorage() + totals.netDue);
-    if (Math.abs(currentSubDisplay - totalDueForPenalty) > 0.01) console.info('[Admin Offices Subcontractors] display cost corrected:', money(totalDueForPenalty));
+    const visitPrint = visitSelect.parentElement && visitSelect.parentElement.querySelector('.cell-print-content');
+    const statusPrint = statusSelect.parentElement && statusSelect.parentElement.querySelector('.cell-print-content');
+    if (visitPrint) visitPrint.textContent = normalized;
+    if (statusPrint) statusPrint.textContent = wanted;
   }
-  function syncSubcontractorVisitRows(forceDispatch) {
-    const table = document.getElementById('subcontractors-table');
-    if (!table) return;
-    let changed = false;
-    table.querySelectorAll('tbody tr[data-table="subcontractors"]').forEach(row => {
-      if (updateVisitCell(row)) {
-        changed = true;
-        const statusSelect = row.querySelector('select[data-field="status"]');
-        if (forceDispatch && statusSelect) statusSelect.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    });
-    updateSubcontractorTotalsFromDom();
-    if (changed) scheduleRecalc(false);
+  function syncSubcontractorVisitRows() {
+    document.querySelectorAll('#subcontractors-table tbody tr[data-table="subcontractors"]').forEach(row => updateStatusForRow(row, false));
   }
-
-  let recalcTimer = null;
-  let recalcLock = false;
-  function scheduleRecalc(clickButton) {
-    clearTimeout(recalcTimer);
-    recalcTimer = setTimeout(() => {
-      if (clickButton && !recalcLock) {
-        const btn = document.getElementById('recalculate-btn');
-        if (btn) {
-          recalcLock = true;
-          btn.click();
-          setTimeout(() => { recalcLock = false; syncSubcontractorVisitRows(false); }, 450);
-          return;
-        }
-      }
-      syncSubcontractorVisitRows(false);
-    }, 120);
-  }
-  function installSubcontractorLogic() {
-    if (window.__adminOfficeSubcontractorLogicInstalled) return;
-    window.__adminOfficeSubcontractorLogicInstalled = true;
-
-    document.addEventListener('input', function (e) {
-      const target = e.target;
-      if (!target || !target.matches('#subcontractors-table select[data-field="visitDate"]')) return;
-      const row = target.closest('tr');
-      if (!row) return;
-      const status = wantedStatusForVisit(target.value);
-      if (updateStatusCell(row, status)) {
-        const statusSelect = row.querySelector('select[data-field="status"]');
-        if (statusSelect) statusSelect.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      scheduleRecalc(true);
-    }, true);
-
+  function installSubcontractorVisitLogic() {
+    if (window.__adminOfficesSubcontractorSafeV8) return;
+    window.__adminOfficesSubcontractorSafeV8 = true;
     document.addEventListener('change', function (e) {
-      const target = e.target;
-      if (!target || !target.matches('#subcontractors-table select[data-field="visitDate"]')) return;
-      const row = target.closest('tr');
-      if (!row) return;
-      const status = wantedStatusForVisit(target.value);
-      if (updateStatusCell(row, status)) {
-        const statusSelect = row.querySelector('select[data-field="status"]');
-        if (statusSelect) statusSelect.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      scheduleRecalc(true);
+      if (!e.target || !e.target.matches('#subcontractors-table select[data-field="visitDate"]')) return;
+      updateStatusForRow(e.target.closest('tr'), true);
     }, true);
-
-    const obs = new MutationObserver(() => syncSubcontractorVisitRows(false));
-    obs.observe(document.body, { childList: true, subtree: true });
-    setTimeout(() => syncSubcontractorVisitRows(true), 500);
-    setTimeout(() => syncSubcontractorVisitRows(true), 1500);
-    setTimeout(() => syncSubcontractorVisitRows(true), 3000);
-  }
-  function patchPrintWindows() {
-    if (window.__adminConsumablesPrintCssPatched) return;
-    window.__adminConsumablesPrintCssPatched = true;
-    const originalOpen = window.open;
-    window.open = function patchedOpen() {
-      const w = originalOpen.apply(window, arguments);
-      try {
-        setTimeout(() => {
-          if (!w || w.closed || !w.document) return;
-          if (w.document.getElementById('admin-subcontractor-print-layout-fix')) return;
-          const text = (w.document.body && w.document.body.innerText) || '';
-          if (!/مقاولي الباطن|عقود الباطن|زيارة|الزيارة/.test(text)) return;
-          const st = w.document.createElement('style');
-          st.id = 'admin-subcontractor-print-layout-fix';
-          st.textContent = subcontractorTableCss().replace(/#subcontractors-table/g, '.data-table');
-          w.document.head.appendChild(st);
-        }, 120);
-      } catch (_) {}
-      return w;
-    };
+    document.addEventListener('input', function (e) {
+      if (!e.target || !e.target.matches('#subcontractors-table select[data-field="visitDate"]')) return;
+      updateStatusForRow(e.target.closest('tr'), true);
+    }, true);
+    setTimeout(syncSubcontractorVisitRows, 700);
+    setTimeout(syncSubcontractorVisitRows, 1800);
+    setTimeout(syncSubcontractorVisitRows, 3500);
   }
 
   function installButtons() {
     injectPageFixes();
-    installSubcontractorLogic();
-    patchPrintWindows();
+    installSubcontractorVisitLogic();
     const bar = document.querySelector('.std-action-bar') || document.querySelector('.main-action-buttons') || document.getElementById('main-action-buttons');
     if (!bar) return;
     if (!document.getElementById('consumables-raise-letter-settings-btn')) {
@@ -439,5 +267,5 @@
   setTimeout(installButtons, 700);
   setTimeout(installButtons, 1800);
   setTimeout(installButtons, 3500);
-  console.info('[Admin Offices Consumables Raise Letter] installed v7 subcontractor visit logic + wide item column');
+  console.info('[Admin Offices Consumables Raise Letter] installed v8 safe subcontractor visit logic');
 })();
