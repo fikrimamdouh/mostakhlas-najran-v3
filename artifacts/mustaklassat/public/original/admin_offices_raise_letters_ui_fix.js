@@ -1,7 +1,7 @@
 // ===================================================================
 // Admin Offices Raise Letters UI Styling Only
 // Scope: admin_offices_attendance.html only
-// لا يغير وظائف الخطابات. يضيف تنسيق الشاشة فقط.
+// لا يغير وظائف الخطابات. يضيف تنسيق الشاشة ومسافة المحترم فقط.
 // ===================================================================
 (function () {
   'use strict';
@@ -169,6 +169,7 @@
       }
 
       #raise-letters-overlay .site-check input{width:auto!important;min-height:auto!important}
+      #raise-letters-overlay .recipient-suffix{margin-right:36px!important;padding-right:0!important;display:inline!important}
 
       @media print{
         #raise-letters-overlay.settings-overlay{display:none!important}
@@ -178,10 +179,35 @@
     document.head.appendChild(style);
   }
 
+  function patchPrintWindowSpacing() {
+    if (window.__raiseLettersRecipientSpacingPatched) return;
+    window.__raiseLettersRecipientSpacingPatched = true;
+
+    const originalOpen = window.open;
+    window.open = function patchedRaiseLettersOpen() {
+      const win = originalOpen.apply(window, arguments);
+      try {
+        setTimeout(() => {
+          if (!win || win.closed || !win.document) return;
+          const title = String(win.document.title || '');
+          const html = win.document.documentElement ? win.document.documentElement.innerHTML : '';
+          if (!/خطاب|إقرار|المستهلكات|العمالة/.test(title + html)) return;
+          if (win.document.getElementById('raise-letter-recipient-spacing-fix')) return;
+          const style = win.document.createElement('style');
+          style.id = 'raise-letter-recipient-spacing-fix';
+          style.textContent = '.recipient-suffix{margin-right:36px!important;padding-right:0!important;display:inline!important}.recipient-name{display:inline!important}';
+          win.document.head.appendChild(style);
+        }, 80);
+      } catch (_) {}
+      return win;
+    };
+  }
+
   injectCss();
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', injectCss);
+  patchPrintWindowSpacing();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { injectCss(); patchPrintWindowSpacing(); });
   setTimeout(injectCss, 700);
   setTimeout(injectCss, 1800);
 
-  console.info('[Admin Offices Raise Letters UI Styling] installed');
+  console.info('[Admin Offices Raise Letters UI Styling] installed with recipient spacing fix');
 })();
