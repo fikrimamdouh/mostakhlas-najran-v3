@@ -25,6 +25,7 @@
     ];
 
     let pendingAdminOfficeImport = { centerKey: null, employees: [], skipped: 0 };
+    const ADMIN_OFFICES_POSITIONS_SETUP_KEY = 'adminOfficesPositionsSetup_v1';
 
     function isPlainObject(value) {
         return value && typeof value === 'object' && !Array.isArray(value);
@@ -72,7 +73,46 @@
         if (typeof saveAttendanceData === 'function') return saveAttendanceData(data);
         writeJson('adminOfficesAttendanceData_v1', data);
     }
+function getAdminOfficesPositionsSetupStatus() {
+    return readJson(ADMIN_OFFICES_POSITIONS_SETUP_KEY, {
+        done: false,
+        mode: '',
+        loadedAt: '',
+        loadedBy: '',
+        hospital: '',
+        officesCount: 0,
+        employeesCount: 0
+    });
+}
 
+function saveAdminOfficesPositionsSetupStatus(payload) {
+    const session = readJson('najran_session', {});
+    writeJson(ADMIN_OFFICES_POSITIONS_SETUP_KEY, Object.assign({
+        done: true,
+        mode: 'all',
+        loadedAt: new Date().toISOString(),
+        loadedBy: session.name || session.email || '',
+        hospital: session.hospital || '',
+        officesCount: 0,
+        employeesCount: 0
+    }, payload || {}));
+}
+
+function isAdminOfficesPositionsSetupDone() {
+    const status = getAdminOfficesPositionsSetupStatus();
+    return status && status.done === true;
+}
+
+function showAdminOfficesPositionsAlreadyLoadedMessage() {
+    const status = getAdminOfficesPositionsSetupStatus();
+    const loadedAt = status.loadedAt ? new Date(status.loadedAt).toLocaleString('ar-SA') : 'غير محدد';
+    alert(
+        'تم تحميل المناصب في مرحلة تجهيز العقد.' +
+        '\n\nتاريخ التحميل: ' + loadedAt +
+        (status.loadedBy ? '\nبواسطة: ' + status.loadedBy : '') +
+        '\n\nللتعديل على مكتب محدد استخدم تحميل المناصب للمكتب/المرفق فقط.'
+    );
+}
     function rerenderAdminOffices(centerKey) {
         try { if (typeof renderCenterIcons === 'function') renderCenterIcons(); } catch (_) {}
         try { if (typeof renderMainGrid === 'function') renderMainGrid(); } catch (_) {}
@@ -838,7 +878,85 @@ function signatureHtml(type, centerKey, cls = 'signatures-grid') {
         alert('✅ تم تحميل ' + rows.length + ' منصب بنجاح.\nأدخل أسماء الموظفين وأرقام الهويات في جدول المكتب.');
         if (typeof closeDialog === 'function') closeDialog('management-dialog');
     }
+async function loadPositionsIntoAllOffices() {
+    if (isAdminOfficesPositionsSetupDone()) {
+        showAdminOfficesPositionsAlreadyLoadedMessage();
+        return;
+    }
 
+    const names = getAdminOfficeNamesSafe();
+    const keys = orderedOfficeKeys();
+    const allData = getAttendanceDataSafe();
+
+    const currentEmployeesCount = Object.values(allData).reduce((sum, rows) => {
+        return sum + (Array.isArray(rows) ? rows.length : 0);
+    }, 0);
+
+    const confirmMessage =
+        'سيتم تحميل المناصب لكل المكاتب والمرافق دفعة واحدة.' +
+        '\n\nعدد المكاتب/المرافق: ' + keys.length +
+        (currentEmployeesCount > 0
+            ? '\n\nتحذير: توجد بيانات حالية بعدد ' + currentEmployeesCount + ' موظف. سيتم استبدال مناصب كل مكتب بما هو محفوظ في الإعداد.'
+            : '') +
+        '\n\nهل تريد المتابعة؟';
+
+    if (!confirm(confirmMessage)) return;
+
+    let loadedOffices = 0;
+    let loadedEmployees = 0;
+    let emptyOffices = 0;
+    const failed = [];
+
+    for (const centerKey of keys) {
+        const officeName = names[centerKey] || centerKey;
+
+        try {
+            const rec = await loadSavedJobPositions(officeName);
+            const rows = positionRowsForOffice(centerKey, officeName, rec);
+
+            if (!rows.length) {
+                emptyOffices++;
+                failed.push(officeName);
+                continue;
+            }
+
+            allData[centerKey] = rows.map(employeeFromPosition);
+            loadedOffices++;
+            loadedEmployees += rows.length;
+        } catch (err) {
+            failed.push(officeName);
+        }
+    }
+
+    if (loadedOffices === 0) {
+        alert('لم يتم تحميل أي مناصب. لا توجد مناصب محفوظة للمكاتب/المرافق.');
+        return;
+    }
+
+    saveAttendanceDataSafe(allData);
+
+    saveAdminOfficesPositionsSetupStatus({
+        mode: 'all',
+        officesCount: loadedOffices,
+        employeesCount: loadedEmployees,
+        emptyOffices,
+        failedOffices: failed
+    });
+
+    rerenderAdminOffices();
+
+    if (typeof closeDialog === 'function') {
+        try { closeDialog('management-dialog'); } catch (_) {}
+    }
+
+    alert(
+        '✅ تم تحميل المناصب لكل المكاتب.' +
+        '\n\nعدد المكاتب المحملة: ' + loadedOffices +
+        '\nعدد الوظائف المحملة: ' + loadedEmployees +
+        (emptyOffices ? '\nمكاتب بلا مناصب محفوظة: ' + emptyOffices : '') +
+        '\n\nتم حفظ الحالة في إعداد المستخدم، ولن يتم تكرار تحميل الكل مرة أخرى بالخطأ.'
+    );
+}
     function orderedOfficeKeys() {
         const names = getAdminOfficeNamesSafe();
         return Object.keys(names).sort((a, b) => {
@@ -849,22 +967,63 @@ function signatureHtml(type, centerKey, cls = 'signatures-grid') {
         });
     }
 
-    window.loadAdminOfficePositionsFromTemplate = function loadAdminOfficePositionsFromTemplate() {
-        const names = getAdminOfficeNamesSafe();
-        const current = detectCurrentCenterKey();
-        const keys = orderedOfficeKeys();
-        const content = `
-            <div class="dialog-header"><h3><i class="fas fa-clipboard-list"></i> تحميل المناصب</h3><span class="close" onclick="closeDialog('management-dialog')">×</span></div>
-            <div class="dialog-body">
-                <p class="info-text">اختر المكتب/المرفق لتحميل المناصب المحفوظة مباشرة داخل جدول العمالة. المكاتب لا تحتوي أقسام داخلية.</p>
-                <div class="form-group"><label for="admin-office-load-center">المكتب/المرفق:</label><select id="admin-office-load-center">${keys.map(k => `<option value="${k}" ${k === current ? 'selected' : ''}>${names[k]}</option>`).join('')}</select></div>
-            </div>
-            <div class="dialog-footer"><button class="btn btn-secondary" onclick="closeDialog('management-dialog')">إلغاء</button><button class="btn btn-success" onclick="window.confirmLoadAdminOfficePositions()"><i class="fas fa-check"></i> تحميل المناصب</button></div>
-        `;
-        if (typeof openDialog === 'function') openDialog(content, 'management-dialog', false);
-        else alert('نظام النوافذ غير جاهز. أعد تحميل الصفحة.');
-    };
+   window.loadAdminOfficePositionsFromTemplate = function loadAdminOfficePositionsFromTemplate() {
+    const names = getAdminOfficeNamesSafe();
+    const current = detectCurrentCenterKey();
+    const keys = orderedOfficeKeys();
+    const setupDone = isAdminOfficesPositionsSetupDone();
+    const setupStatus = getAdminOfficesPositionsSetupStatus();
 
+    const statusHtml = setupDone
+        ? `<div style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:10px;margin-bottom:12px;font-size:.85rem;font-weight:700;">
+              تم تحميل المناصب في مرحلة تجهيز العقد.
+              ${setupStatus.loadedAt ? `<br>تاريخ التحميل: ${new Date(setupStatus.loadedAt).toLocaleString('ar-SA')}` : ''}
+           </div>`
+        : `<div style="background:#ecfdf5;border:1px solid #bbf7d0;color:#166534;border-radius:10px;padding:10px;margin-bottom:12px;font-size:.85rem;font-weight:700;">
+              يمكنك تحميل المناصب لكل المكاتب دفعة واحدة أو تحميلها لمكتب/مرفق محدد.
+           </div>`;
+
+    const content = `
+        <div class="dialog-header">
+            <h3><i class="fas fa-clipboard-list"></i> تحميل المناصب</h3>
+            <span class="close" onclick="closeDialog('management-dialog')">×</span>
+        </div>
+        <div class="dialog-body">
+            ${statusHtml}
+
+            <p class="info-text">
+                تحميل الكل يستخدم في مرحلة تجهيز العقد فقط. أما تحميل مكتب/مرفق محدد فيستخدم للتعديل أو التصحيح.
+            </p>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+                <button class="btn btn-success" onclick="window.confirmLoadAllAdminOfficePositions()">
+                    <i class="fas fa-layer-group"></i> تحميل المناصب لكل المكاتب
+                </button>
+            </div>
+
+            <hr style="margin:14px 0;">
+
+            <div class="form-group">
+                <label for="admin-office-load-center">تحميل مكتب/مرفق محدد:</label>
+                <select id="admin-office-load-center">
+                    ${keys.map(k => `<option value="${k}" ${k === current ? 'selected' : ''}>${names[k]}</option>`).join('')}
+                </select>
+            </div>
+        </div>
+        <div class="dialog-footer">
+            <button class="btn btn-secondary" onclick="closeDialog('management-dialog')">إلغاء</button>
+            <button class="btn btn-success" onclick="window.confirmLoadAdminOfficePositions()">
+                <i class="fas fa-check"></i> تحميل للمكتب المحدد
+            </button>
+        </div>
+    `;
+
+    if (typeof openDialog === 'function') openDialog(content, 'management-dialog', false);
+    else alert('نظام النوافذ غير جاهز. أعد تحميل الصفحة.');
+};
+window.confirmLoadAllAdminOfficePositions = function confirmLoadAllAdminOfficePositions() {
+    loadPositionsIntoAllOffices();
+};
     window.confirmLoadAdminOfficePositions = function confirmLoadAdminOfficePositions() {
         const centerKey = document.getElementById('admin-office-load-center')?.value;
         if (!centerKey) return alert('اختر المكتب/المرفق أولاً.');
