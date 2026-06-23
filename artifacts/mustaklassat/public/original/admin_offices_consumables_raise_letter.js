@@ -1,11 +1,14 @@
 // ===================================================================
 // Admin Offices Consumables Raise Letter
-// Scope: admin_offices_consumables.html only
-// شاشة منبثقة لإعدادات خطاب رفع المستهلكات + إصلاح طباعة عقود الباطن
+// Scope: admin_offices_consumables.html / original-viewer page
+// - شاشة منبثقة لإعدادات خطاب رفع المستهلكات
+// - كلمة المحترم في آخر السطر بدون نزول
+// - حفظ تلقائي لأي تعديل في إعدادات الخطاب المحفوظة
+// - إصلاح طباعة جدول عقود الباطن
 // ===================================================================
 (function () {
   'use strict';
-  if (!/admin_offices_consumables\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
+  if (!/admin_offices_consumables\.html|original-viewer\?page=admin_offices_consumables\.html/.test(location.pathname + location.search)) return;
 
   const SETTINGS_KEY = 'adminOfficesRaiseLettersSettings_v1';
   const DB_VERSION = 'admin_offices_consumables_v1.0';
@@ -36,7 +39,12 @@
     };
   }
   function getSettings() { return Object.assign(defaultSettings(), readJson(SETTINGS_KEY, {})); }
-  function saveSettings(patch) { const current = readJson(SETTINGS_KEY, {}); const clean = Object.assign({}, patch || {}); ['paymentNo','extractStart','extractEnd'].forEach(k => delete clean[k]); writeJson(SETTINGS_KEY, Object.assign(defaultSettings(), current, clean)); }
+  function saveSettings(patch) {
+    const current = readJson(SETTINGS_KEY, {});
+    const clean = Object.assign({}, patch || {});
+    ['paymentNo', 'extractStart', 'extractEnd'].forEach(k => delete clean[k]);
+    writeJson(SETTINGS_KEY, Object.assign(defaultSettings(), current, clean));
+  }
   function getActiveExtractMeta() { const e = getExtract(); const p = e.paymentNumber || e.extractNumber || localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber') || '—'; return { paymentNo: String(p).match(/^\d+$/) ? String(p).padStart(3, '0') : String(p), start: e.extractStart || localStorage.getItem('extractStart') || '', end: e.extractEnd || localStorage.getItem('extractEnd') || '' }; }
   function extractPhrase() { const m = getActiveExtractMeta(); return `دفعة رقم (${esc(m.paymentNo)}) عن الفترة من ${esc(fmtDate(m.start))} م إلى ${esc(fmtDate(m.end))} م`; }
   function getCompanyName() { const c = getContract(); const dom = document.querySelector('.companyName')?.textContent; return c.contractorName || c.companyName || c.company || c.contractor || (dom && dom !== 'غير محدد' ? dom : '') || 'غير محدد'; }
@@ -108,8 +116,11 @@
   function intWords(n) { n = Math.floor(num(n)); if (n === 0) return 'صفر'; const scales = [{v:1000000,s:'مليون',d:'مليونان',p:'ملايين'},{v:1000,s:'ألف',d:'ألفان',p:'آلاف'}]; const parts = []; for (const sc of scales) { const x = Math.floor(n / sc.v); if (x) { parts.push(x === 1 ? sc.s : x === 2 ? sc.d : `${underThousand(x)} ${x >= 3 && x <= 10 ? sc.p : sc.s}`); n %= sc.v; } } if (n) parts.push(underThousand(n)); return parts.join(' و'); }
   function tafqeetSAR(amount) { const total = Math.round(num(amount) * 100) / 100; const abs = Math.abs(total); const r = Math.floor(abs), h = Math.round((abs - r) * 100); let txt = `فقط وقدره ${intWords(r)} ريال سعودي`; if (h > 0) txt += ` و${intWords(h)} هللة`; txt += ' لا غير'; return total < 0 ? 'سالب ' + txt : txt; }
 
+  function suffixEndCss() {
+    return `.to{display:flex!important;justify-content:space-between!important;align-items:flex-start!important;width:100%!important;gap:18px!important;direction:rtl!important}.to .recipient-name{display:block!important;max-width:78%!important;white-space:normal!important;text-align:right!important}.to .recipient-suffix{display:block!important;margin:0!important;padding:0!important;min-width:72px!important;white-space:nowrap!important;text-align:left!important}`;
+  }
   function printCss() { return `<style>
-    @page{size:A4 portrait;margin:12mm}*{box-sizing:border-box}body{direction:rtl;margin:0;background:#e9eef5;color:#111827;font-family:Tajawal,Arial,sans-serif}.toolbar{position:sticky;top:0;display:flex;justify-content:center;gap:10px;background:#111827;padding:10px;z-index:5}.toolbar button{border:0;border-radius:10px;padding:10px 18px;font-weight:900;cursor:pointer;background:#d4af37;color:#111}.page{width:210mm;min-height:297mm;margin:12px auto;background:#fff;padding:14mm 15mm 18mm;box-shadow:0 10px 30px rgba(15,23,42,.16);position:relative}.head{display:grid;grid-template-columns:82px 1fr 82px;align-items:center;border-bottom:2px solid #003087;padding-bottom:12px;margin-bottom:30px}.head img{width:72px}.head .t{text-align:center}.head h1{font-size:17px;margin:0 0 5px;color:#003087;font-weight:900}.head h2{font-size:15px;margin:0;color:#111827;font-weight:800}.to{font-size:15.5px;font-weight:900;margin:4px 0 24px;line-height:2}.recipient-name,.recipient-suffix{display:inline}.recipient-suffix{margin-right:28px}.salam{text-align:center;font-size:15.5px;font-weight:900;margin:20px 0 14px}.body-text{font-size:15px;line-height:2.15;text-align:justify;margin-top:6px}.amount-table{width:100%;border-collapse:collapse;margin:18px 0 14px;font-size:14px;table-layout:fixed}.amount-table td,.amount-table th{border:1px solid #333;padding:8px;text-align:center;vertical-align:middle;white-space:normal;word-break:normal;overflow-wrap:anywhere}.amount-table td:first-child{text-align:right;font-weight:700;width:68%}.amount-table td:last-child;font-weight:900;direction:ltr;white-space:nowrap}.amount-table .grand td{background:#fff7d6;font-weight:900}.tafqeet{border:1px solid #94a3b8;background:#f8fafc;border-radius:8px;padding:8px 12px;margin-top:8px;font-weight:900;line-height:1.8}.closing{font-size:15px;line-height:2;margin-top:18px}.signatures.one{display:block;margin-top:48px}.signatures.one>div{width:78mm;margin-right:auto;margin-left:0;text-align:center}.sig-title{font-weight:900;margin-bottom:18px}.line{height:34px;border-bottom:1px solid #111;margin:0 18px 10px}.sig-name{font-weight:900;margin-top:8px}.footer{position:absolute;bottom:10mm;left:15mm;right:15mm;border-top:1px solid #cbd5e1;padding-top:5px;font-size:11px;display:flex;justify-content:space-between;direction:ltr}@media print{body{background:#fff}.toolbar{display:none}.page{margin:0;box-shadow:none;width:auto;min-height:calc(297mm - 24mm);padding:0}.footer{bottom:0}}
+    @page{size:A4 portrait;margin:12mm}*{box-sizing:border-box}body{direction:rtl;margin:0;background:#e9eef5;color:#111827;font-family:Tajawal,Arial,sans-serif}.toolbar{position:sticky;top:0;display:flex;justify-content:center;gap:10px;background:#111827;padding:10px;z-index:5}.toolbar button{border:0;border-radius:10px;padding:10px 18px;font-weight:900;cursor:pointer;background:#d4af37;color:#111}.page{width:210mm;min-height:297mm;margin:12px auto;background:#fff;padding:14mm 15mm 18mm;box-shadow:0 10px 30px rgba(15,23,42,.16);position:relative}.head{display:grid;grid-template-columns:82px 1fr 82px;align-items:center;border-bottom:2px solid #003087;padding-bottom:12px;margin-bottom:30px}.head img{width:72px}.head .t{text-align:center}.head h1{font-size:17px;margin:0 0 5px;color:#003087;font-weight:900}.head h2{font-size:15px;margin:0;color:#111827;font-weight:800}.salam{text-align:center;font-size:15.5px;font-weight:900;margin:20px 0 14px}.body-text{font-size:15px;line-height:2.15;text-align:justify;margin-top:6px}.amount-table{width:100%;border-collapse:collapse;margin:18px 0 14px;font-size:14px;table-layout:fixed}.amount-table td,.amount-table th{border:1px solid #333;padding:8px;text-align:center;vertical-align:middle;white-space:normal;word-break:normal;overflow-wrap:anywhere}.amount-table td:first-child{text-align:right;font-weight:700;width:68%}.amount-table td:last-child{font-weight:900;direction:ltr;white-space:nowrap}.amount-table .grand td{background:#fff7d6;font-weight:900}.tafqeet{border:1px solid #94a3b8;background:#f8fafc;border-radius:8px;padding:8px 12px;margin-top:8px;font-weight:900;line-height:1.8}.closing{font-size:15px;line-height:2;margin-top:18px}.signatures.one{display:block;margin-top:48px}.signatures.one>div{width:78mm;margin-right:auto;margin-left:0;text-align:center}.sig-title{font-weight:900;margin-bottom:18px}.line{height:34px;border-bottom:1px solid #111;margin:0 18px 10px}.sig-name{font-weight:900;margin-top:8px}.footer{position:absolute;bottom:10mm;left:15mm;right:15mm;border-top:1px solid #cbd5e1;padding-top:5px;font-size:11px;display:flex;justify-content:space-between;direction:ltr}${suffixEndCss()}@media print{body{background:#fff}.toolbar{display:none}.page{margin:0;box-shadow:none;width:auto;min-height:calc(297mm - 24mm);padding:0}.footer{bottom:0}}
   </style>`; }
   function openPrintDoc(title, bodyHtml) { const win = window.open('', '', 'width=1000,height=900'); if (!win) return alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.'); win.document.open(); win.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${esc(title)}</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">${printCss()}</head><body><div class="toolbar"><button onclick="window.print()">طباعة</button><button onclick="window.close()">إغلاق</button></div>${bodyHtml}</body></html>`); win.document.close(); }
   function headerHtml(s) { return `<div class="head"><img src="moh_logo.png"><div class="t"><h1>${esc(s.entityTitle)}</h1><h2>${esc(s.departmentTitle)}</h2></div><img src="moh_logo.png"></div>`; }
@@ -133,10 +144,30 @@
     const html = `<div class="settings-overlay" id="consumables-raise-letter-overlay" onclick="if(event.target.id==='consumables-raise-letter-overlay') AdminOfficesConsumablesRaiseLetter.closeDialog()"><div class="settings-dialog"><h2>خطاب رفع المستهلكات — المكاتب الإدارية</h2><div class="btn-row"><button class="btn btn-primary" onclick="AdminOfficesConsumablesRaiseLetter.saveDialog()">حفظ الإعدادات</button><button class="btn btn-gold" onclick="AdminOfficesConsumablesRaiseLetter.generate()">طباعة خطاب المستهلكات</button><button class="btn btn-light" onclick="AdminOfficesConsumablesRaiseLetter.closeDialog()">إغلاق</button></div><div class="section-box"><h3>بيانات المستخلص الحالية — قراءة فقط</h3><div class="settings-grid"><div class="field"><label>رقم الدفعة ومدة المستخلص</label><div class="readonly-box">${extractPhrase()}</div></div><div class="field"><label>اسم المقاول / الشركة</label><div class="readonly-box">${esc(getCompanyName())}</div></div><div class="field"><label>صافي مستخلص المستهلكات الحالي</label><div class="readonly-box">${moneySAR(net)}</div></div></div></div><div class="section-box"><h3>إعدادات الخطاب المحفوظة</h3><div class="settings-grid">${field('recipient','اسم المخاطب')}${field('recipientSuffix','الصفة / المحترم')}${field('entityTitle','العنوان الرئيسي')}${field('departmentTitle','الإدارة')}${field('scopeName','المواقع')}${field('vatRate','نسبة الضريبة','number')}${field('phoneFaxAr','الهاتف والفاكس عربي')}${field('phoneFaxEn','الهاتف والفاكس إنجليزي')}</div></div><div class="section-box"><h3>التوقيع المحفوظ للخطاب</h3><div class="settings-grid">${field('managerTitle','صفة التوقيع')}${field('managerName','اسم صاحب التوقيع')}</div><div class="btn-row"><button type="button" class="btn btn-primary" onclick="AdminOfficesConsumablesRaiseLetter.saveDialog()">حفظ التوقيع</button></div></div></div></div>`;
     document.body.insertAdjacentHTML('beforeend', html);
     document.body.classList.add('consumables-letter-modal-open');
+    installAutoSaveForDialog();
   }
-  function saveDialog() { const patch = {}; document.querySelectorAll('[data-cons-letter-setting]').forEach(el => { patch[el.dataset.consLetterSetting] = el.value; }); saveSettings(patch); let note = document.getElementById('consumables-raise-letter-save-note'); if (!note) { note = document.createElement('div'); note.id = 'consumables-raise-letter-save-note'; note.style.cssText = 'margin:10px 0;padding:10px 14px;border-radius:12px;background:#ecfdf5;color:#166534;font-weight:900;text-align:center;border:1px solid #bbf7d0;'; document.querySelector('#consumables-raise-letter-overlay .settings-dialog')?.prepend(note); } note.textContent = 'تم حفظ إعدادات خطاب رفع المستهلكات والتوقيع بنجاح.'; setTimeout(() => { if (note) note.textContent = ''; }, 2500); }
+  function saveDialog(silent) {
+    const patch = {};
+    document.querySelectorAll('[data-cons-letter-setting]').forEach(el => { patch[el.dataset.consLetterSetting] = el.value; });
+    saveSettings(patch);
+    if (silent === true) return;
+    let note = document.getElementById('consumables-raise-letter-save-note');
+    if (!note) { note = document.createElement('div'); note.id = 'consumables-raise-letter-save-note'; note.style.cssText = 'margin:10px 0;padding:10px 14px;border-radius:12px;background:#ecfdf5;color:#166534;font-weight:900;text-align:center;border:1px solid #bbf7d0;'; document.querySelector('#consumables-raise-letter-overlay .settings-dialog')?.prepend(note); }
+    note.textContent = 'تم حفظ إعدادات خطاب رفع المستهلكات والتوقيع بنجاح.';
+    setTimeout(() => { if (note) note.textContent = ''; }, 2500);
+  }
+  let saveTimer = null;
+  function scheduleAutoSave() { clearTimeout(saveTimer); saveTimer = setTimeout(() => saveDialog(true), 250); }
+  function installAutoSaveForDialog() {
+    const overlay = document.getElementById('consumables-raise-letter-overlay');
+    if (!overlay || overlay.__consLetterAutoSaveInstalled) return;
+    overlay.__consLetterAutoSaveInstalled = true;
+    overlay.addEventListener('input', e => { if (e.target && e.target.matches('[data-cons-letter-setting]')) scheduleAutoSave(); }, true);
+    overlay.addEventListener('change', e => { if (e.target && e.target.matches('[data-cons-letter-setting]')) scheduleAutoSave(); }, true);
+    overlay.addEventListener('blur', e => { if (e.target && e.target.matches('[data-cons-letter-setting]')) scheduleAutoSave(); }, true);
+  }
   function openDialog() { if (!document.getElementById('consumables-raise-letter-overlay')) renderDialog(); }
-  function closeDialog() { document.getElementById('consumables-raise-letter-overlay')?.remove(); document.body.classList.remove('consumables-letter-modal-open'); }
+  function closeDialog() { saveDialog(true); document.getElementById('consumables-raise-letter-overlay')?.remove(); document.body.classList.remove('consumables-letter-modal-open'); }
 
   function injectPageFixes() {
     if (document.getElementById('admin-consumables-raise-letter-ui-fixes')) return;
@@ -160,12 +191,34 @@
     `;
     document.head.appendChild(style);
   }
-  function installButtons() { injectPageFixes(); const bar = document.querySelector('.std-action-bar') || document.querySelector('.main-action-buttons') || document.getElementById('main-action-buttons'); if (!bar) return; if (!document.getElementById('consumables-raise-letter-settings-btn')) { const settingsBtn = document.createElement('button'); settingsBtn.type = 'button'; settingsBtn.id = 'consumables-raise-letter-settings-btn'; settingsBtn.className = 'ab ab-sig no-print'; settingsBtn.innerHTML = '<i class="fas fa-envelope-open-text"></i> إعدادات خطاب الرفع'; settingsBtn.onclick = openDialog; bar.appendChild(settingsBtn); } if (!document.getElementById('consumables-raise-letter-btn')) { const btn = document.createElement('button'); btn.type = 'button'; btn.id = 'consumables-raise-letter-btn'; btn.className = 'ab ab-update no-print'; btn.innerHTML = '<i class="fas fa-print"></i> خطاب رفع المستهلكات'; btn.onclick = generateConsumablesRaiseLetter; bar.appendChild(btn); } }
+  function installButtons() {
+    injectPageFixes();
+    const bar = document.querySelector('.std-action-bar') || document.querySelector('.main-action-buttons') || document.getElementById('main-action-buttons');
+    if (!bar) return;
+    if (!document.getElementById('consumables-raise-letter-settings-btn')) {
+      const settingsBtn = document.createElement('button');
+      settingsBtn.type = 'button';
+      settingsBtn.id = 'consumables-raise-letter-settings-btn';
+      settingsBtn.className = 'ab ab-sig no-print';
+      settingsBtn.innerHTML = '<i class="fas fa-envelope-open-text"></i> إعدادات خطاب الرفع';
+      settingsBtn.onclick = openDialog;
+      bar.appendChild(settingsBtn);
+    }
+    if (!document.getElementById('consumables-raise-letter-btn')) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = 'consumables-raise-letter-btn';
+      btn.className = 'ab ab-update no-print';
+      btn.innerHTML = '<i class="fas fa-print"></i> خطاب رفع المستهلكات';
+      btn.onclick = generateConsumablesRaiseLetter;
+      bar.appendChild(btn);
+    }
+  }
 
   window.AdminOfficesConsumablesRaiseLetter = { openDialog, closeDialog, saveDialog, generate: generateConsumablesRaiseLetter, getCurrentConsumablesNet, tafqeetSAR };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installButtons); else installButtons();
   setTimeout(installButtons, 700);
   setTimeout(installButtons, 1800);
   setTimeout(installButtons, 3500);
-  console.info('[Admin Offices Consumables Raise Letter] installed v5 modal + subcontractor print fix');
+  console.info('[Admin Offices Consumables Raise Letter] installed v6 suffix-end + autosave settings');
 })();
