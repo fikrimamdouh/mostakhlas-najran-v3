@@ -8,7 +8,7 @@
   'use strict';
 
   var BASE = window.location.origin;
-  var BUILD_V = '20260623adminOfficesCoreLoadV1';
+  var BUILD_V = '20260623adminOfficesCoreLoadV2';
   var NOTIF_INTERVAL_MS = 300000;
   var notifFetchInProgress = false;
 
@@ -146,14 +146,15 @@
     appendScript('/original/attendance-cloud-refresh-guard.js?v=' + BUILD_V, true);
   }
 
-if (isAdminOfficesPage) {
-    appendScript('/original/admin_offices_attendance_patch.js?v=20260623_positions_all_v5', true);
+  if (isAdminOfficesPage) {
+    // admin_offices_attendance_patch.js موجود مباشرة في admin_offices_attendance.html بعد الملف الأساسي.
+    // تحميله هنا أيضاً كان يكرر نفس patch ويوقف تهيئة الصفحة في بعض الجلسات.
     appendScript('/original/admin_offices_performance_logic.js?v=' + BUILD_V, true);
-}
+  }
 
-if (isAttendancePage || isAdminOfficesPage) {
+  if (isAttendancePage || isAdminOfficesPage) {
     appendScript('/original/special-absence-no-deduction.js?v=' + BUILD_V, true);
-}
+  }
 
   if (/\/original\/approval\.html(?:$|[?#])/.test(pageSig)) {
     appendScript('/original/review-print-override.js?v=' + BUILD_V, true);
