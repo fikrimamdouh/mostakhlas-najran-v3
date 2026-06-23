@@ -562,38 +562,91 @@ try {
   // ════════════════════════════════════════════════════════════
   // مكاتب إدارية — الحضور والانصراف  →  الانتقال للمستهلكات
   // ════════════════════════════════════════════════════════════
-  window.initAdminOfficesAttendanceApproveBtn = function () {
-    createApproveBtn({
-      label: 'اعتماد عمالة المكاتب — التالي: المستهلكات',
-      onClick: () => {
-        if (!confirm('هل تريد اعتماد بيانات عمالة المكاتب الإدارية والانتقال لمستهلكاتها؟')) return;
-        localStorage.setItem('najran_admin_offices_attendance_done', '1');
-        window.location.href = '/original/admin_offices_consumables.html';
-      },
-    });
-  };
+ window.initAdminOfficesAttendanceApproveBtn = function () {
+  createApproveBtn({
+    label: 'رفع مستخلص عمالة المكاتب للاعتماد',
+    onClick: async () => {
+      if (!confirm(
+        'هل تريد رفع مستخلص عمالة المكاتب الإدارية للاعتماد؟\n\n' +
+        'سيشمل المستخلص:\n' +
+        '✓ الحضور والانصراف\n' +
+        '✓ جداول الأداء\n' +
+        '✓ شهادة الإنجاز\n' +
+        '✓ الشهادة الإجمالية\n' +
+        '✓ خطابات الرفع'
+      )) return;
+
+      setLoading('جاري رفع مستخلص عمالة المكاتب...');
+
+      try {
+        const laborTotal =
+          parseFloat(localStorage.getItem('grand-net-total-admin') || '0') ||
+          parseFloat(localStorage.getItem('finalLaborCost') || '0') ||
+          0;
+
+        await submitExtract('labor', {
+          totalAmount: laborTotal,
+          adminOfficeLabor: true,
+          sourceModule: 'admin_offices_attendance',
+          reviewScope: 'attendance_performance_achievement'
+        });
+
+        localStorage.removeItem('najran_admin_offices_attendance_done');
+
+        try {
+          const _ed = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+          const _mk = String(_ed.extractYear || '') + '_' + String(_ed.extractMonth || '').trim();
+          if (_mk !== '_') localStorage.setItem('najran_admin_offices_labor_locked_' + _mk, '1');
+        } catch (_) {}
+
+        window.location.href = '/extracts/track';
+      } catch (e) {
+        alert('حدث خطأ: ' + e.message);
+        resetBtn('رفع مستخلص عمالة المكاتب للاعتماد');
+      }
+    },
+  });
+};
 
   // ════════════════════════════════════════════════════════════
   // مكاتب إدارية — المستهلكات  →  رفع مستخلص المكاتب الإدارية
   // ════════════════════════════════════════════════════════════
-  window.initAdminOfficesConsumablesSubmitBtn = function () {
-    createApproveBtn({
-      label: 'رفع مستخلص المكاتب الإدارية للاعتماد',
-      onClick: async () => {
-        if (!confirm('هل تريد رفع مستخلص المكاتب الإدارية كاملاً للاعتماد؟\n\nسيشمل المستخلص:\n✓ عمالة المكاتب الإدارية\n✓ مستهلكات المكاتب الإدارية')) return;
-        setLoading('جاري الرفع...');
-        try {
-          await submitExtract('admin_offices');
-          localStorage.removeItem('najran_admin_offices_attendance_done');
-          window.location.href = '/extracts/track';
-        } catch (e) {
-          alert('حدث خطأ: ' + e.message);
-          resetBtn('رفع مستخلص المكاتب الإدارية للاعتماد');
-        }
-      },
-    });
-  };
+window.initAdminOfficesConsumablesSubmitBtn = function () {
+  createApproveBtn({
+    label: 'رفع مستخلص مستهلكات المكاتب للاعتماد',
+    onClick: async () => {
+      if (!confirm(
+        'هل تريد رفع مستخلص مستهلكات المكاتب الإدارية للاعتماد؟\n\n' +
+        'سيشمل المستخلص المستهلكات فقط، ولن يرتبط باعتماد العمالة.'
+      )) return;
 
+      setLoading('جاري رفع مستخلص مستهلكات المكاتب...');
+
+      try {
+        const consumablesTotal =
+          parseFloat(localStorage.getItem('finalConsumablesCost') || '0') ||
+          0;
+
+        await submitExtract('consumables', {
+          totalAmount: consumablesTotal,
+          adminOfficeConsumables: true,
+          sourceModule: 'admin_offices_consumables'
+        });
+
+        try {
+          const _ed = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+          const _mk = String(_ed.extractYear || '') + '_' + String(_ed.extractMonth || '').trim();
+          if (_mk !== '_') localStorage.setItem('najran_admin_offices_consumables_locked_' + _mk, '1');
+        } catch (_) {}
+
+        window.location.href = '/extracts/track';
+      } catch (e) {
+        alert('حدث خطأ: ' + e.message);
+        resetBtn('رفع مستخلص مستهلكات المكاتب للاعتماد');
+      }
+    },
+  });
+};
   // تشغيل تلقائي بحسب الصفحة الحالية
   document.addEventListener('DOMContentLoaded', function () {
     const path = window.location.pathname;
