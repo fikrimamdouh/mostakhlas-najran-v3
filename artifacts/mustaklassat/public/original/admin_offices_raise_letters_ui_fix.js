@@ -1,7 +1,7 @@
 // ===================================================================
 // Admin Offices Raise Letters UI Styling Only
 // Scope: admin_offices_attendance.html only
-// لا يغير وظائف الخطابات. يضيف تنسيق الشاشة ومسافة المحترم فقط.
+// لا يغير وظائف الخطابات. يضيف تنسيق الشاشة ومسافة المحترم وزر حفظ إعدادات الخطابات.
 // ===================================================================
 (function () {
   'use strict';
@@ -171,6 +171,16 @@
       #raise-letters-overlay .site-check input{width:auto!important;min-height:auto!important}
       #raise-letters-overlay .recipient-suffix{margin-right:36px!important;padding-right:0!important;display:inline!important}
 
+      #raise-letters-overlay .rl-section-save-row{
+        display:flex;
+        justify-content:center;
+        margin:14px 0 2px;
+      }
+
+      #raise-letters-overlay .rl-section-save-row .btn{
+        min-width:190px;
+      }
+
       @media print{
         #raise-letters-overlay.settings-overlay{display:none!important}
       }
@@ -203,11 +213,56 @@
     };
   }
 
+  function installSavedSettingsSaveButton() {
+    const overlay = document.getElementById('raise-letters-overlay');
+    if (!overlay) return;
+
+    const boxes = Array.from(overlay.querySelectorAll('.section-box'));
+    const target = boxes.find(box => ((box.querySelector('h3')?.textContent || '').includes('إعدادات الخطابات المحفوظة')));
+    if (!target || target.querySelector('#raise-letters-save-settings-section-btn')) return;
+
+    const row = document.createElement('div');
+    row.className = 'rl-section-save-row';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'raise-letters-save-settings-section-btn';
+    btn.className = 'btn btn-primary';
+    btn.innerHTML = '<i class="fas fa-save"></i> حفظ إعدادات الخطابات';
+    btn.onclick = function () {
+      if (window.AdminOfficesRaiseLetters && typeof window.AdminOfficesRaiseLetters.saveDialog === 'function') {
+        window.AdminOfficesRaiseLetters.saveDialog();
+      }
+    };
+
+    row.appendChild(btn);
+    target.appendChild(row);
+  }
+
+  function observeDialogs() {
+    if (window.__raiseLettersSettingsSaveObserver) return;
+    window.__raiseLettersSettingsSaveObserver = new MutationObserver(() => installSavedSettingsSaveButton());
+    window.__raiseLettersSettingsSaveObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
   injectCss();
   patchPrintWindowSpacing();
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { injectCss(); patchPrintWindowSpacing(); });
+  observeDialogs();
+  installSavedSettingsSaveButton();
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      injectCss();
+      patchPrintWindowSpacing();
+      observeDialogs();
+      installSavedSettingsSaveButton();
+    });
+  }
+
   setTimeout(injectCss, 700);
   setTimeout(injectCss, 1800);
+  setTimeout(installSavedSettingsSaveButton, 700);
+  setTimeout(installSavedSettingsSaveButton, 1800);
 
-  console.info('[Admin Offices Raise Letters UI Styling] installed with recipient spacing fix');
+  console.info('[Admin Offices Raise Letters UI Styling] installed with saved settings save button');
 })();
