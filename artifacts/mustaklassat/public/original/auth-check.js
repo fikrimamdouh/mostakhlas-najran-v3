@@ -8,7 +8,7 @@
   'use strict';
 
   var BASE = window.location.origin;
-  var BUILD_V = '20260623adminOfficesScopedLettersV1';
+  var BUILD_V = '20260623archiveBundleRouteV1';
   var NOTIF_INTERVAL_MS = 300000;
   var notifFetchInProgress = false;
 
@@ -160,6 +160,7 @@
   };
   if (snapshotPages[pageFile]) {
     appendScript('/original/extract-snapshot.js?v=' + BUILD_V, true);
+    appendScript('/original/submitted_extract_archive_bundle_guard.js?v=' + BUILD_V, true);
   }
 
   if (isAttendancePage) {
@@ -179,10 +180,15 @@
   }
 
   if (pageFile === 'approval.html') {
+    appendScript('/original/approval_revision_route_guard.js?v=' + BUILD_V, true);
     appendScript('/original/review-print-override.js?v=' + BUILD_V, true);
     appendScript('/original/review-workflow.js?v=' + BUILD_V, true);
     appendScript('/original/review-generic-tables.js?v=' + BUILD_V, true);
     appendScript('/original/review-consumables-summary-exact.js?v=' + BUILD_V, true);
+  }
+
+  if (pageFile === 'extract-archive.html') {
+    appendScript('/original/extract_archive_route_guard.js?v=' + BUILD_V, true);
   }
 
   if (/consumables\.html$/.test(pageFile)) {
