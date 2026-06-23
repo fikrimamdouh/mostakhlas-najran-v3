@@ -72,7 +72,7 @@
     if (window.AdminOfficesRaiseLetters && typeof window.AdminOfficesRaiseLetters.tafqeetSAR === 'function') return window.AdminOfficesRaiseLetters.tafqeetSAR(v);
     return `فقط ${money(v)} ريال لا غير`;
   }
-  function logoSrc() { return document.querySelector('.logo-right')?.getAttribute('src') || 'najran_health_cluster_logo.png'; }
+  function logoSrc() { return 'moh_logo.png'; }
   function headerHtml(s) { return `<div class="raise-head"><img src="${esc(logoSrc())}"><div><h1>${esc(s.entityTitle)}</h1><h2>${esc(s.departmentTitle)}</h2></div><img src="${esc(logoSrc())}"></div>`; }
   function footerHtml(s) { return `<div class="raise-footer"><span>${esc(s.phoneFaxEn)}</span><span dir="rtl">${esc(s.phoneFaxAr)}</span></div>`; }
   function signaturesHtml() {
@@ -87,7 +87,7 @@
   }
   function consumablesNet() {
     const settings = getSettings();
-    return num(settings.consumablesPeriod2Net || localStorage.getItem('admin_offices_consumables_current_net') || 0);
+    return num(settings.consumablesNet || localStorage.getItem('admin_offices_consumables_current_net') || 0);
   }
   function laborLetterPage() {
     const s = getSettings();
