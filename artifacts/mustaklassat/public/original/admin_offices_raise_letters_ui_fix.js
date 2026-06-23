@@ -56,7 +56,7 @@
       #raise-letters-overlay .section-box{border:1px solid var(--rl-line)!important;border-radius:22px!important;padding:16px!important;margin:0!important;background:linear-gradient(180deg,#fff,var(--rl-soft))!important;box-shadow:0 10px 28px rgba(15,23,42,.055)!important;position:relative!important;overflow:hidden!important}#raise-letters-overlay .section-box:before{content:'';position:absolute;right:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,var(--rl-blue),var(--rl-gold))}#raise-letters-overlay .section-box h3{margin:0 0 14px!important;color:var(--rl-blue)!important;font-size:18px!important;font-weight:900!important;padding-right:8px!important}
       #raise-letters-overlay .settings-grid{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(235px,1fr))!important;gap:12px!important;align-items:end!important}.field{background:#fff!important;border:1px solid #e2e8f0!important;border-radius:15px!important;padding:9px 10px!important;box-shadow:0 4px 12px rgba(15,23,42,.035)!important;min-height:74px!important}.field label{display:block!important;font-size:12px!important;font-weight:900!important;color:#334155!important;margin:0 0 6px!important}.field input,.field select{width:100%!important;padding:9px 10px!important;border:1px solid #cbd5e1!important;border-radius:10px!important;font-family:Tajawal,Arial,sans-serif!important;font-size:13px!important;background:#fff!important;color:#111827!important;outline:none!important}.field input:focus,.field select:focus{border-color:var(--rl-blue2)!important;box-shadow:0 0 0 3px rgba(0,86,179,.13)!important}
       .mini-table{width:100%!important;border-collapse:separate!important;border-spacing:0!important;font-size:12px!important;background:#fff!important;border:1px solid var(--rl-line)!important;border-radius:14px!important;overflow:hidden!important}.mini-table th,.mini-table td{border-bottom:1px solid #e2e8f0!important;border-left:1px solid #e2e8f0!important;padding:7px!important;text-align:center!important;vertical-align:middle!important}.mini-table tr:last-child td{border-bottom:0!important}.mini-table th{background:linear-gradient(135deg,#eff6ff,#dbeafe)!important;color:#0f2f66!important;font-weight:900!important}.mini-table input{width:100%!important;border:1px solid transparent!important;border-radius:8px!important;padding:8px!important;font-family:Tajawal,Arial,sans-serif!important;background:#f8fafc!important}.mini-table input:focus{background:#fff!important;border-color:var(--rl-blue2)!important;outline:none!important}.section-box .btn-row{display:flex!important;gap:10px!important;flex-wrap:wrap!important;margin:6px 0 12px!important;align-items:center!important}.section-box .btn-row b{margin-right:auto!important;background:#ecfdf5!important;color:#166534!important;border:1px solid #bbf7d0!important;padding:9px 12px!important;border-radius:999px!important;font-size:13px!important}
-      [data-rl-setting="managerName"],[data-rl-setting="unitManagerName"]{display:none!important}.field:has([data-rl-setting="managerName"]),.field:has([data-rl-setting="unitManagerName"]){display:none!important}.rl-note{padding:12px 14px;border-radius:16px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;font-weight:900;margin-top:12px}
+     .rl-note{padding:12px 14px;border-radius:16px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;font-weight:900;margin-top:12px}
       body.raise-letters-standalone-page #raise-letters-overlay.settings-overlay{background:#eef3f9!important;padding:18px!important;align-items:flex-start!important}body.raise-letters-standalone-page #raise-letters-overlay .settings-dialog{max-height:none!important;overflow:visible!important;box-shadow:0 20px 55px rgba(15,23,42,.14)!important}
       @media(max-width:760px){.rl-hero{grid-template-columns:1fr}.rl-hero-actions{justify-content:flex-start}.rl-action-grid{grid-template-columns:1fr}.rl-tab-btn{flex:1}.settings-grid{grid-template-columns:1fr!important}}
       @media print{#raise-letters-overlay{display:none!important}}
@@ -117,7 +117,18 @@
     <div class="rl-kpi"><span>مدة المستخلص</span><strong>${esc((s.extractStart || 'غير محدد') + ' → ' + (s.extractEnd || 'غير محدد'))}</strong></div>
   `;
 }
+function focusSignaturesTab() {
+  const shell = document.querySelector('#raise-letters-overlay .rl-shell');
+  if (!shell) return;
 
+  shell.querySelectorAll('.rl-tab-btn').forEach(b => b.classList.remove('active'));
+  shell.querySelectorAll('.rl-tab-panel').forEach(p => p.classList.remove('active'));
+
+  shell.querySelector('[data-tab="signatures"]')?.classList.add('active');
+  shell.querySelector('[data-panel="signatures"]')?.classList.add('active');
+
+  shell.querySelector('[data-panel="signatures"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
   function restructureDialog() {
     const overlay = document.getElementById('raise-letters-overlay');
     if (!overlay || overlay.__professionalRebuilt) return;
@@ -167,8 +178,10 @@ if (!topRow || sections.length < 2) return;
     const heroActions = shell.querySelector('.rl-hero-actions');
     if (saveBtn) heroActions.appendChild(saveBtn);
     const sigBtn = document.createElement('button');
-    sigBtn.type = 'button'; sigBtn.className = 'btn btn-primary'; sigBtn.innerHTML = '<i class="fas fa-signature"></i> تعديل تواقيع الخطابات'; sigBtn.onclick = openLetterSignatures;
-    heroActions.appendChild(sigBtn);
+sigBtn.type = 'button';
+sigBtn.className = 'btn btn-primary';
+sigBtn.innerHTML = '<i class="fas fa-signature"></i> تعديل تواقيع الخطابات';
+sigBtn.onclick = focusSignaturesTab;    heroActions.appendChild(sigBtn);
     if (closeBtn) heroActions.appendChild(closeBtn);
 
     const cards = shell.querySelectorAll('.rl-action-card');
