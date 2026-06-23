@@ -109,17 +109,14 @@
   }
 
   function buildKpis() {
-    const s = getSettings();
-    const saud = getSaudization();
-    const rows1 = (saud.period1 && saud.period1.rows) || [];
-    const rows2 = (saud.period2 && saud.period2.rows) || [];
-    const total = [...rows1, ...rows2].reduce((sum, r) => sum + num(r.compensation), 0);
-    return `
-      <div class="rl-kpi"><span>الشركة</span><strong>${esc(getCompanyName())}</strong></div>
-      <div class="rl-kpi"><span>رقم الدفعة</span><strong>${esc(s.paymentNo || 'غير محدد')}</strong></div>
-      <div class="rl-kpi"><span>فترة المستخلص</span><strong>${esc((s.period2Start || 'غير محدد') + ' → ' + (s.period2End || 'غير محدد'))}</strong></div>
-      <div class="rl-kpi"><span>إجمالي التوطين</span><strong>${money(total)}</strong></div>`;
-  }
+  const s = getSettings();
+
+  return `
+    <div class="rl-kpi"><span>الشركة</span><strong>${esc(getCompanyName())}</strong></div>
+    <div class="rl-kpi"><span>رقم الدفعة</span><strong>${esc(s.paymentNo || 'من المستخلص')}</strong></div>
+    <div class="rl-kpi"><span>مدة المستخلص</span><strong>${esc((s.extractStart || 'غير محدد') + ' → ' + (s.extractEnd || 'غير محدد'))}</strong></div>
+  `;
+}
 
   function restructureDialog() {
     const overlay = document.getElementById('raise-letters-overlay');
@@ -131,14 +128,12 @@
     const title = dialog.querySelector('h2') || document.createElement('h2');
     const topRow = dialog.querySelector('.btn-row');
     const sections = Array.from(dialog.querySelectorAll('.section-box'));
-    if (!topRow || sections.length < 4) return;
-
+if (!topRow || sections.length < 2) return;
     const actions = Array.from(topRow.querySelectorAll('button'));
     const saveBtn = actions.find(b => (b.textContent || '').includes('حفظ'));
     const closeBtn = actions.find(b => (b.textContent || '').includes('إغلاق'));
     const laborBtn = actions.find(b => (b.textContent || '').includes('العمالة'));
     const consBtn = actions.find(b => (b.textContent || '').includes('المستهلكات'));
-    const saudBtn = actions.find(b => (b.textContent || '').includes('التوطين'));
     const declBtn = actions.find(b => (b.textContent || '').includes('إقرار'));
     const siteBtn = actions.find(b => (b.textContent || '').includes('موقع'));
 
@@ -146,7 +141,7 @@
     shell.className = 'rl-shell';
     shell.innerHTML = `
       <section class="rl-hero">
-        <div><h2>خطابات الرفع — المكاتب الإدارية والمرافق الصحية</h2><p>لوحة مستقلة لإدارة بيانات الخطابات والتوطين والطباعة من المستخلص المفتوح.</p></div>
+        <div><h2>خطابات الرفع — المكاتب الإدارية والمرافق الصحية</h2><p>لوحة مستقلة لإدارة بيانات الخطابات والطباعة من المستخلص المفتوح.</p></div>
         <div class="rl-hero-actions"></div>
       </section>
       <section class="rl-content">
@@ -154,19 +149,16 @@
         <div class="rl-action-grid">
           <div class="rl-action-card" data-act="labor"><div class="ico">👷</div><b>خطاب رفع العمالة</b><span>يقرأ صافي الشهادة الإجمالية والتوطين والضريبة.</span></div>
           <div class="rl-action-card" data-act="cons"><div class="ico">📦</div><b>خطاب رفع المستهلكات</b><span>يستخدم صافي المستهلكات والضريبة والتفقيط.</span></div>
-          <div class="rl-action-card" data-act="saud"><div class="ico">🇸🇦</div><b>تقرير التوطين</b><span>تقرير مستقل من جدول موظفي التوطين.</span></div>
           <div class="rl-action-card" data-act="decl"><div class="ico">✅</div><b>إقرار عدم أسبقية الصرف</b><span>إقرار رسمي بالمبلغ والتفقيط.</span></div>
           <div class="rl-action-card" data-act="site"><div class="ico">🏢</div><b>خطاب رفع موقع</b><span>خطاب خاص بمكتب أو موقع محدد.</span></div>
         </div>
         <div class="rl-tabs">
           <button type="button" class="rl-tab-btn active" data-tab="letters">بيانات الخطابات</button>
           <button type="button" class="rl-tab-btn" data-tab="money">المبالغ والفترات</button>
-          <button type="button" class="rl-tab-btn" data-tab="saudization">التوطين</button>
           <button type="button" class="rl-tab-btn" data-tab="signatures">التواقيع والطباعة</button>
         </div>
         <div class="rl-tab-panel active" data-panel="letters"><div class="rl-panel-grid"></div></div>
         <div class="rl-tab-panel" data-panel="money"><div class="rl-panel-grid"></div></div>
-        <div class="rl-tab-panel" data-panel="saudization"><div class="rl-panel-grid"></div></div>
         <div class="rl-tab-panel" data-panel="signatures"><div class="rl-panel-grid"></div><div class="rl-note">التواقيع تُدخل من نظام التواقيع مثل باقي البرنامج، ولا تعتمد على أسماء ثابتة داخل القالب.</div></div>
       </section>`;
 
@@ -185,7 +177,6 @@
         const a = card.dataset.act;
         if (a === 'labor' && laborBtn) laborBtn.click();
         if (a === 'cons' && consBtn) consBtn.click();
-        if (a === 'saud' && saudBtn) saudBtn.click();
         if (a === 'decl' && declBtn) declBtn.click();
         if (a === 'site' && siteBtn) siteBtn.click();
       };
@@ -193,18 +184,24 @@
 
     const lettersPanel = shell.querySelector('[data-panel="letters"] .rl-panel-grid');
     const moneyPanel = shell.querySelector('[data-panel="money"] .rl-panel-grid');
-    const saudPanel = shell.querySelector('[data-panel="saudization"] .rl-panel-grid');
     const sigPanel = shell.querySelector('[data-panel="signatures"] .rl-panel-grid');
 
     sections.forEach((sec, idx) => {
-      const text = sec.textContent || '';
-      if (text.includes('توطين الفترة')) saudPanel.appendChild(sec);
-      else if (text.includes('بيانات مشروع التوطين')) sigPanel.appendChild(sec);
-      else if (idx === 0) {
-        const clone = sec;
-        moneyPanel.appendChild(clone);
-      } else lettersPanel.appendChild(sec);
-    });
+  const text = sec.textContent || '';
+
+  if (text.includes('توطين')) {
+    sec.remove();
+    return;
+  }
+
+  if (text.includes('بيانات المستخلص')) {
+    lettersPanel.appendChild(sec);
+  } else if (text.includes('التواقيع')) {
+    sigPanel.appendChild(sec);
+  } else {
+    moneyPanel.appendChild(sec);
+  }
+});
 
     const extra = document.createElement('div');
     extra.className = 'section-box';
