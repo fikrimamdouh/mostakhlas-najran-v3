@@ -90,7 +90,6 @@
   function getCompanyName() {
     const c = getContract();
     const dom = document.querySelector('.companyName')?.textContent;
-
     return (
       c.contractorName ||
       c.companyName ||
@@ -112,9 +111,7 @@
       phoneFaxAr: 'نجران – تليفون 0175225872    فاكس 017523312',
       phoneFaxEn: 'Najran – Tel.: 0175225872       Fax: 017523312',
       managerTitle: '................................',
-      managerName: '................................',
-      unitManagerTitle: '................................',
-      unitManagerName: '................................'
+      managerName: '................................'
     };
   }
 
@@ -130,7 +127,6 @@
   function saveSettings(patch) {
     const current = readJson(SETTINGS_KEY, {});
     const cleanPatch = Object.assign({}, patch || {});
-
     [
       'paymentNo',
       'extractStart',
@@ -146,7 +142,6 @@
       'purchasePeriodLabel',
       'siteLetterDefaultCenter'
     ].forEach(k => delete cleanPatch[k]);
-
     writeJson(SETTINGS_KEY, Object.assign(defaultSettings(), current, cleanPatch));
   }
 
@@ -156,7 +151,6 @@
     const end = new Date(e.extractEnd || localStorage.getItem('extractEnd') || e.extractStart || Date.now());
     const safeStart = Number.isNaN(start.getTime()) ? new Date() : start;
     const safeEnd = Number.isNaN(end.getTime()) ? safeStart : end;
-
     return {
       daysInExtract: Math.max(1, Math.ceil((safeEnd - safeStart) / 86400000) + 1 || 30),
       totalDaysInMonth: new Date(safeStart.getFullYear(), safeStart.getMonth() + 1, 0).getDate() || 30
@@ -190,16 +184,14 @@
     const performance = readJson(`performance_data_${db}`, []);
     const p = periodInfo();
     const c = contractInfo();
-
     let total = 0;
+
     (Array.isArray(summary) ? summary : [])
       .filter(item => !item.isCustom && !item.isSubTotal)
       .forEach(item => {
         const pf = (Array.isArray(performance) ? performance : []).find(row => row.id === item.id) || { maxScore: 100, score: 100 };
         let monthly = num(item.value);
-        if (c.contractType === 'شراء مباشر' && c.directPurchaseRatio > 0) {
-          monthly += monthly * c.directPurchaseRatio / 100;
-        }
+        if (c.contractType === 'شراء مباشر' && c.directPurchaseRatio > 0) monthly += monthly * c.directPurchaseRatio / 100;
         const valueForPeriod = monthly / p.totalDaysInMonth * p.daysInExtract;
         const max = num(pf.maxScore);
         const score = num(pf.score);
@@ -222,10 +214,7 @@
 
     (Array.isArray(rows) ? rows : []).forEach(item => {
       let visitValue = num(item.visitValue);
-      if (c.contractType === 'شراء مباشر' && c.directPurchaseRatio > 0) {
-        visitValue += visitValue * c.directPurchaseRatio / 100;
-      }
-
+      if (c.contractType === 'شراء مباشر' && c.directPurchaseRatio > 0) visitValue += visitValue * c.directPurchaseRatio / 100;
       const annualVisits = parseInt(item.annualVisits, 10) || 1;
       const visitDate = normalizeVisitDate(item.visitDate);
       const dueVisitCost = visitDate === 'خلال هذا الشهر' ? visitValue / annualVisits : 0;
@@ -241,6 +230,13 @@
   function captureAndRender() {
     try { if (typeof window.captureUIData === 'function') window.captureUIData(); } catch (_) {}
     try { if (typeof window.renderAllTables === 'function') window.renderAllTables(); } catch (_) {}
+  }
+
+  function persistConsumablesNet(net) {
+    const value = money(num(net));
+    localStorage.setItem('admin_offices_consumables_current_net', value);
+    localStorage.setItem('adminOfficesConsumablesNet', value);
+    localStorage.setItem('finalConsumablesCost', value);
   }
 
   function getCurrentConsumablesNet() {
@@ -266,13 +262,6 @@
     return calculated;
   }
 
-  function persistConsumablesNet(net) {
-    const value = money(num(net));
-    localStorage.setItem('admin_offices_consumables_current_net', value);
-    localStorage.setItem('adminOfficesConsumablesNet', value);
-    localStorage.setItem('finalConsumablesCost', value);
-  }
-
   function tafqeet(amount) {
     if (window.AdminOfficesRaiseLetters && typeof window.AdminOfficesRaiseLetters.tafqeetSAR === 'function') {
       return window.AdminOfficesRaiseLetters.tafqeetSAR(amount);
@@ -280,44 +269,15 @@
     return `فقط ${money(amount)} ريال لا غير`;
   }
 
-  function logoSrc() {
-    return 'moh_logo.png';
-  }
-
-  function headerHtml(settings) {
-    return `<div class="head"><img src="${esc(logoSrc())}"><div class="t"><h1>${esc(settings.entityTitle)}</h1><h2>${esc(settings.departmentTitle)}</h2></div><img src="${esc(logoSrc())}"></div>`;
-  }
-
-  function footerHtml(settings) {
-    return `<div class="footer"><span>${esc(settings.phoneFaxEn)}</span><span dir="rtl">${esc(settings.phoneFaxAr)}</span></div>`;
-  }
-
-  function toHtml(settings) {
-    return `<div class="to"><div class="recipient-name">${esc(settings.recipient)}</div><div class="recipient-suffix">${esc(settings.recipientSuffix)}</div></div>`;
-  }
-
-  function signatureHtml(settings) {
-    return `<div class="signatures one"><div><div class="sig-title">${esc(settings.managerTitle)}</div><div class="line"></div><div class="sig-name">${esc(settings.managerName)}</div></div></div>`;
-  }
+  function logoSrc() { return 'moh_logo.png'; }
+  function headerHtml(settings) { return `<div class="head"><img src="${esc(logoSrc())}"><div class="t"><h1>${esc(settings.entityTitle)}</h1><h2>${esc(settings.departmentTitle)}</h2></div><img src="${esc(logoSrc())}"></div>`; }
+  function footerHtml(settings) { return `<div class="footer"><span>${esc(settings.phoneFaxEn)}</span><span dir="rtl">${esc(settings.phoneFaxAr)}</span></div>`; }
+  function toHtml(settings) { return `<div class="to"><span class="recipient-name">${esc(settings.recipient)}</span><span class="recipient-suffix">${esc(settings.recipientSuffix)}</span></div>`; }
+  function signatureHtml(settings) { return `<div class="signatures one"><div><div class="sig-title">${esc(settings.managerTitle)}</div><div class="line"></div><div class="sig-name">${esc(settings.managerName)}</div></div></div>`; }
 
   function printCss() {
     return `<style>
-      @page{size:A4 portrait;margin:12mm}
-      *{box-sizing:border-box}
-      body{direction:rtl;margin:0;background:#e9eef5;color:#111827;font-family:Tajawal,Arial,sans-serif}
-      .toolbar{position:sticky;top:0;display:flex;justify-content:center;gap:10px;background:#111827;padding:10px;z-index:5}
-      .toolbar button{border:0;border-radius:10px;padding:10px 18px;font-weight:900;cursor:pointer;background:#d4af37;color:#111}
-      .page{width:210mm;min-height:297mm;margin:12px auto;background:#fff;padding:14mm 15mm 18mm;box-shadow:0 10px 30px rgba(15,23,42,.16);position:relative}
-      .head{display:grid;grid-template-columns:82px 1fr 82px;align-items:center;border-bottom:2px solid #003087;padding-bottom:12px;margin-bottom:30px}
-      .head img{width:72px;height:auto}.head .t{text-align:center}.head h1{font-size:17px;margin:0 0 5px;color:#003087;font-weight:900}.head h2{font-size:15px;margin:0;color:#111827;font-weight:800}
-      .to{font-size:15.5px;font-weight:900;margin:4px 0 20px;line-height:2}.recipient-name{display:block}.recipient-suffix{display:block;padding-right:42px;margin-top:2px}
-      .salam{text-align:center;font-size:15.5px;font-weight:900;margin:20px 0 14px}.body-text{font-size:15px;line-height:2.15;text-align:justify;margin-top:6px}
-      .amount-table{width:100%;border-collapse:collapse;margin:18px 0 14px;font-size:14px}.amount-table td,.amount-table th{border:1px solid #333;padding:8px}.amount-table td:first-child{text-align:right;font-weight:700;width:72%}.amount-table td:last-child{text-align:center;font-weight:900;direction:ltr}.amount-table .grand td{background:#fff7d6;font-weight:900}
-      .tafqeet{border:1px solid #94a3b8;background:#f8fafc;border-radius:8px;padding:8px 12px;margin-top:8px;font-weight:900;line-height:1.8}.closing{font-size:15px;line-height:2;margin-top:18px}
-      .signatures.one{display:block;margin-top:48px}.signatures.one>div{width:78mm;margin-right:auto;margin-left:0;text-align:center}.sig-title{font-weight:900;margin-bottom:18px}.line{height:34px;border-bottom:1px solid #111;margin:0 18px 10px}.sig-name{font-weight:900;margin-top:8px}
-      .footer{position:absolute;bottom:10mm;left:15mm;right:15mm;border-top:1px solid #cbd5e1;padding-top:5px;font-size:11px;display:flex;justify-content:space-between;direction:ltr}
-      .settings-overlay{position:fixed;inset:0;background:rgba(15,23,42,.72);z-index:999999;display:flex;align-items:center;justify-content:center;padding:18px;direction:rtl;font-family:Tajawal,Arial,sans-serif}.settings-dialog{width:min(1180px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:18px;padding:18px;box-shadow:0 25px 70px rgba(0,0,0,.3)}.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.field{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px}.field label{display:block;font-size:12px;font-weight:900;color:#334155;margin-bottom:6px}.field input,.field select{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit}.readonly-box{padding:9px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;font-weight:900;line-height:1.8}.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.btn{border:0;border-radius:10px;padding:9px 14px;font-weight:900;cursor:pointer}.btn-primary{background:#003087;color:#fff}.btn-gold{background:#d4af37;color:#111}.btn-light{background:#f1f5f9;color:#111}.section-box{border:1px solid #e2e8f0;border-radius:14px;padding:12px;margin-top:12px;background:#f8fafc}.section-box h3{margin:0 0 12px;color:#003087;font-weight:900}
-      @media print{body{background:#fff}.toolbar{display:none}.page{margin:0;box-shadow:none;width:auto;min-height:calc(297mm - 24mm);padding:0}.footer{bottom:0}}
+      @page{size:A4 portrait;margin:12mm}*{box-sizing:border-box}body{direction:rtl;margin:0;background:#e9eef5;color:#111827;font-family:Tajawal,Arial,sans-serif}.toolbar{position:sticky;top:0;display:flex;justify-content:center;gap:10px;background:#111827;padding:10px;z-index:5}.toolbar button{border:0;border-radius:10px;padding:10px 18px;font-weight:900;cursor:pointer;background:#d4af37;color:#111}.page{width:210mm;min-height:297mm;margin:12px auto;background:#fff;padding:14mm 15mm 18mm;box-shadow:0 10px 30px rgba(15,23,42,.16);position:relative}.head{display:grid;grid-template-columns:82px 1fr 82px;align-items:center;border-bottom:2px solid #003087;padding-bottom:12px;margin-bottom:30px}.head img{width:72px;height:auto}.head .t{text-align:center}.head h1{font-size:17px;margin:0 0 5px;color:#003087;font-weight:900}.head h2{font-size:15px;margin:0;color:#111827;font-weight:800}.to{font-size:15.5px;font-weight:900;margin:4px 0 24px;line-height:2}.recipient-name,.recipient-suffix{display:inline}.recipient-suffix{margin-right:8px;padding-right:0}.salam{text-align:center;font-size:15.5px;font-weight:900;margin:20px 0 14px}.body-text{font-size:15px;line-height:2.15;text-align:justify;margin-top:6px}.amount-table{width:100%;border-collapse:collapse;margin:18px 0 14px;font-size:14px}.amount-table td,.amount-table th{border:1px solid #333;padding:8px}.amount-table td:first-child{text-align:right;font-weight:700;width:72%}.amount-table td:last-child{text-align:center;font-weight:900;direction:ltr}.amount-table .grand td{background:#fff7d6;font-weight:900}.tafqeet{border:1px solid #94a3b8;background:#f8fafc;border-radius:8px;padding:8px 12px;margin-top:8px;font-weight:900;line-height:1.8}.closing{font-size:15px;line-height:2;margin-top:18px}.signatures.one{display:block;margin-top:48px}.signatures.one>div{width:78mm;margin-right:auto;margin-left:0;text-align:center}.sig-title{font-weight:900;margin-bottom:18px}.line{height:34px;border-bottom:1px solid #111;margin:0 18px 10px}.sig-name{font-weight:900;margin-top:8px}.footer{position:absolute;bottom:10mm;left:15mm;right:15mm;border-top:1px solid #cbd5e1;padding-top:5px;font-size:11px;display:flex;justify-content:space-between;direction:ltr}.settings-overlay{position:fixed;inset:0;background:rgba(15,23,42,.72);z-index:999999;display:flex;align-items:center;justify-content:center;padding:18px;direction:rtl;font-family:Tajawal,Arial,sans-serif}.settings-dialog{width:min(1180px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:18px;padding:18px;box-shadow:0 25px 70px rgba(0,0,0,.3)}.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.field{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px}.field label{display:block;font-size:12px;font-weight:900;color:#334155;margin-bottom:6px}.field input,.field select{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit}.readonly-box{padding:9px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;font-weight:900;line-height:1.8}.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.btn{border:0;border-radius:10px;padding:9px 14px;font-weight:900;cursor:pointer}.btn-primary{background:#003087;color:#fff}.btn-gold{background:#d4af37;color:#111}.btn-light{background:#f1f5f9;color:#111}.section-box{border:1px solid #e2e8f0;border-radius:14px;padding:12px;margin-top:12px;background:#f8fafc}.section-box h3{margin:0 0 12px;color:#003087;font-weight:900}@media print{body{background:#fff}.toolbar{display:none}.page{margin:0;box-shadow:none;width:auto;min-height:calc(297mm - 24mm);padding:0}.footer{bottom:0}}
     </style>`;
   }
 
@@ -332,39 +292,13 @@
   function generateConsumablesRaiseLetter() {
     const settings = getSettings();
     const net = getCurrentConsumablesNet();
-
-    if (net <= 0) {
-      alert('لم يتم العثور على صافي مستهلكات صالح داخل مستخلص المستهلكات الحالي. راجع الجداول ثم اضغط تحديث الحسابات.');
-      return;
-    }
+    if (net <= 0) return alert('لم يتم العثور على صافي مستهلكات صالح داخل مستخلص المستهلكات الحالي. راجع الجداول ثم اضغط تحديث الحسابات.');
 
     const vat = net * num(settings.vatRate) / 100;
     const grand = net + vat;
     const company = getCompanyName();
 
-    const body = `<section class="page">${headerHtml(settings)}
-${toHtml(settings)}
-<div class="salam">السلام عليكم ورحمة الله وبركاته، وبعد:</div>
-
-<div class="body-text">
-نرفق لسعادتكم المستخلص الشهري لشركة ${esc(company)} والخاص ببند المستهلكات ومقاولي الباطن لمواقع ${esc(settings.scopeName)}، ${extractPhrase()}.
-</div>
-
-<table class="amount-table"><tbody>
-<tr><td>صافي مستحقات المستهلكات ومقاولي الباطن عن مدة المستخلص</td><td>${moneyPlain(net)}</td></tr>
-<tr><td>ضريبة القيمة المضافة ${moneyPlain(settings.vatRate)}%</td><td>${money(vat)}</td></tr>
-<tr class="grand"><td>الإجمالي</td><td>${money(grand)}</td></tr>
-</tbody></table>
-
-<div class="tafqeet">${esc(tafqeet(grand))}</div>
-
-<div class="closing">
-لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / ${esc(company)}.
-<br>وتقبلوا تحياتنا ،،،
-</div>
-
-${signatureHtml(settings)}${footerHtml(settings)}</section>`;
-
+    const body = `<section class="page">${headerHtml(settings)}${toHtml(settings)}<div class="salam">السلام عليكم ورحمة الله وبركاته، وبعد:</div><div class="body-text">نرفق لسعادتكم المستخلص الشهري لشركة ${esc(company)} والخاص ببند المستهلكات ومقاولي الباطن لمواقع ${esc(settings.scopeName)}، ${extractPhrase()}.</div><table class="amount-table"><tbody><tr><td>صافي مستحقات المستهلكات ومقاولي الباطن عن مدة المستخلص</td><td>${moneyPlain(net)}</td></tr><tr><td>ضريبة القيمة المضافة ${moneyPlain(settings.vatRate)}%</td><td>${money(vat)}</td></tr><tr class="grand"><td>الإجمالي</td><td>${money(grand)}</td></tr></tbody></table><div class="tafqeet">${esc(tafqeet(grand))}</div><div class="closing">لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / ${esc(company)}.<br>وتقبلوا تحياتنا ،،،</div>${signatureHtml(settings)}${footerHtml(settings)}</section>`;
     openPrintDoc('خطاب رفع المستهلكات', body);
   }
 
@@ -375,37 +309,7 @@ ${signatureHtml(settings)}${footerHtml(settings)}</section>`;
 
   function renderDialog() {
     const net = getCurrentConsumablesNet();
-    const html = `<div class="settings-overlay" id="consumables-raise-letter-overlay"><div class="settings-dialog">
-      <h2>خطاب رفع المستهلكات — المكاتب الإدارية</h2>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="AdminOfficesConsumablesRaiseLetter.saveDialog()">حفظ الإعدادات</button>
-        <button class="btn btn-gold" onclick="AdminOfficesConsumablesRaiseLetter.generate()">طباعة خطاب المستهلكات</button>
-        <button class="btn btn-light" onclick="AdminOfficesConsumablesRaiseLetter.closeDialog()">إغلاق</button>
-      </div>
-
-      <div class="section-box"><h3>بيانات المستخلص الحالية — قراءة فقط</h3><div class="settings-grid">
-        <div class="field"><label>رقم الدفعة ومدة المستخلص</label><div class="readonly-box">${extractPhrase()}</div></div>
-        <div class="field"><label>اسم المقاول / الشركة</label><div class="readonly-box">${esc(getCompanyName())}</div></div>
-        <div class="field"><label>صافي مستخلص المستهلكات الحالي</label><div class="readonly-box">${money(net)}</div></div>
-      </div></div>
-
-      <div class="section-box"><h3>إعدادات الخطاب المحفوظة</h3><div class="settings-grid">
-        ${settingsField('recipient', 'اسم المخاطب')}
-        ${settingsField('recipientSuffix', 'الصفة / المحترم')}
-        ${settingsField('entityTitle', 'العنوان الرئيسي')}
-        ${settingsField('departmentTitle', 'الإدارة')}
-        ${settingsField('scopeName', 'المواقع')}
-        ${settingsField('vatRate', 'نسبة الضريبة', 'number')}
-        ${settingsField('phoneFaxAr', 'الهاتف والفاكس عربي')}
-        ${settingsField('phoneFaxEn', 'الهاتف والفاكس إنجليزي')}
-      </div></div>
-
-      <div class="section-box"><h3>التوقيع المحفوظ للخطاب</h3><div class="settings-grid">
-        ${settingsField('managerTitle', 'صفة التوقيع')}
-        ${settingsField('managerName', 'اسم صاحب التوقيع')}
-      </div></div>
-    </div></div>`;
-
+    const html = `<div class="settings-overlay" id="consumables-raise-letter-overlay"><div class="settings-dialog"><h2>خطاب رفع المستهلكات — المكاتب الإدارية</h2><div class="btn-row"><button class="btn btn-primary" onclick="AdminOfficesConsumablesRaiseLetter.saveDialog()">حفظ الإعدادات</button><button class="btn btn-gold" onclick="AdminOfficesConsumablesRaiseLetter.generate()">طباعة خطاب المستهلكات</button><button class="btn btn-light" onclick="AdminOfficesConsumablesRaiseLetter.closeDialog()">إغلاق</button></div><div class="section-box"><h3>بيانات المستخلص الحالية — قراءة فقط</h3><div class="settings-grid"><div class="field"><label>رقم الدفعة ومدة المستخلص</label><div class="readonly-box">${extractPhrase()}</div></div><div class="field"><label>اسم المقاول / الشركة</label><div class="readonly-box">${esc(getCompanyName())}</div></div><div class="field"><label>صافي مستخلص المستهلكات الحالي</label><div class="readonly-box">${money(net)}</div></div></div></div><div class="section-box"><h3>إعدادات الخطاب المحفوظة</h3><div class="settings-grid">${settingsField('recipient', 'اسم المخاطب')}${settingsField('recipientSuffix', 'الصفة / المحترم')}${settingsField('entityTitle', 'العنوان الرئيسي')}${settingsField('departmentTitle', 'الإدارة')}${settingsField('scopeName', 'المواقع')}${settingsField('vatRate', 'نسبة الضريبة', 'number')}${settingsField('phoneFaxAr', 'الهاتف والفاكس عربي')}${settingsField('phoneFaxEn', 'الهاتف والفاكس إنجليزي')}</div></div><div class="section-box"><h3>التوقيع المحفوظ للخطاب</h3><div class="settings-grid">${settingsField('managerTitle', 'صفة التوقيع')}${settingsField('managerName', 'اسم صاحب التوقيع')}</div></div></div></div>`;
     document.body.insertAdjacentHTML('beforeend', html);
   }
 
@@ -477,5 +381,5 @@ ${signatureHtml(settings)}${footerHtml(settings)}</section>`;
   setTimeout(installButtons, 1800);
   setTimeout(installButtons, 3500);
 
-  console.info('[Admin Offices Consumables Raise Letter] installed v2');
+  console.info('[Admin Offices Consumables Raise Letter] installed v3');
 })();
