@@ -1,15 +1,15 @@
 // ===================================================================
-// Settings Contract Fixed Patch — V2
+// Settings Contract Fixed Patch — V3
 // Scope: settings_main.html / original-viewer?page=settings_main.html
-// يثبت بيانات عقد الطلب الإضافي لمواقع بيت العرب.
-// قاعدة مهمة: المكاتب الإدارية والمرافق الصحية + صيانة وإصلاح السيارات = موقع واحد موحد.
+// يثبت بيانات العقد للمواقع المطلوبة بدون تغيير najran_session حتى لا يتم تنظيف المستخلص والحضور عند التنقل.
+// قاعدة: المكاتب الإدارية والمرافق الصحية + صيانة وإصلاح السيارات = موقع واحد موحد داخل بيانات العقد فقط.
 // ===================================================================
 (function () {
   'use strict';
 
   if (!/settings_main\.html|original-viewer\?page=settings_main\.html/.test(location.pathname + location.search)) return;
-  if (window.__SETTINGS_CONTRACT_FIXED_PATCH_V2__) return;
-  window.__SETTINGS_CONTRACT_FIXED_PATCH_V2__ = true;
+  if (window.__SETTINGS_CONTRACT_FIXED_PATCH_V3__) return;
+  window.__SETTINGS_CONTRACT_FIXED_PATCH_V3__ = true;
 
   var CANONICAL_OFFICES_SITE = 'المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة';
   var CONTRACT_DETAILS = 'الصيانة والتشغيل غير الطبي لمواقع (مستشفى الولادة والأطفال ومستشفى نجران العام القديم والمكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات)';
@@ -40,12 +40,7 @@
   ];
 
   function readJson(key, fallback) {
-    try {
-      var raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
-    } catch (_) {
-      return fallback;
-    }
+    try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
   }
   function writeJson(key, value) {
     try { localStorage.setItem(key, JSON.stringify(value || {})); } catch (_) {}
@@ -56,12 +51,7 @@
   function hospitalContractKey(hospitalName) {
     return 'contractData__h__' + encodeURIComponent(hospitalName || '');
   }
-  function currentSession() {
-    return readJson('najran_session', {});
-  }
-  function writeSession(session) {
-    try { Storage.prototype.setItem.call(localStorage, 'najran_session', JSON.stringify(session || {})); } catch (_) {}
-  }
+  function currentSession() { return readJson('najran_session', {}); }
   function currentHospital() {
     var s = currentSession();
     var p = readJson('persistentContractData', {});
@@ -93,15 +83,11 @@
   function patchMaps() {
     try {
       if (window.HOSPITAL_CONTRACT_MAP) {
-        TARGET_KEYS.forEach(function (key) {
-          window.HOSPITAL_CONTRACT_MAP[key] = Object.assign({}, window.HOSPITAL_CONTRACT_MAP[key] || {}, FIXED);
-        });
+        TARGET_KEYS.forEach(function (key) { window.HOSPITAL_CONTRACT_MAP[key] = Object.assign({}, window.HOSPITAL_CONTRACT_MAP[key] || {}, FIXED); });
         window.HOSPITAL_CONTRACT_MAP[CANONICAL_OFFICES_SITE] = Object.assign({}, FIXED);
       }
       if (window.HOSPITAL_COMPANY_MAP) {
-        TARGET_KEYS.forEach(function (key) {
-          window.HOSPITAL_COMPANY_MAP[key] = FIXED.companyName;
-        });
+        TARGET_KEYS.forEach(function (key) { window.HOSPITAL_COMPANY_MAP[key] = FIXED.companyName; });
         window.HOSPITAL_COMPANY_MAP[CANONICAL_OFFICES_SITE] = FIXED.companyName;
       }
     } catch (_) {}
@@ -149,36 +135,20 @@
     try { localStorage.setItem('contractNumber', FIXED.contractNumber); } catch (_) {}
 
     writeJson(hospitalContractKey(data.hospitalName), data);
-    if (originalHospitalName && originalHospitalName !== data.hospitalName) {
-      writeJson(hospitalContractKey(originalHospitalName), data);
-    }
-
-    var session = currentSession();
-    if (session && isOldOfficeSplitName(session.hospital || '')) {
-      session.hospital = CANONICAL_OFFICES_SITE;
-      if (Array.isArray(session.hospitals)) {
-        session.hospitals = session.hospitals.map(normalizeHospitalName).filter(function (v, i, arr) { return v && arr.indexOf(v) === i; });
-      } else if (typeof session.hospitals === 'string') {
-        try {
-          var hs = JSON.parse(session.hospitals || '[]');
-          if (Array.isArray(hs)) session.hospitals = JSON.stringify(hs.map(normalizeHospitalName).filter(function (v, i, arr) { return v && arr.indexOf(v) === i; }));
-        } catch (_) {}
-      }
-      writeSession(session);
-    }
+    if (originalHospitalName && originalHospitalName !== data.hospitalName) writeJson(hospitalContractKey(originalHospitalName), data);
 
     if (forceDom !== false) updateDom(data);
     return true;
   }
   function wrapFunction(name) {
     var fn = window[name];
-    if (typeof fn !== 'function' || fn.__fixedAdditionalContractWrappedV2) return;
+    if (typeof fn !== 'function' || fn.__fixedAdditionalContractWrappedV3) return;
     window[name] = function () {
       var result = fn.apply(this, arguments);
       setTimeout(function () { applyFixedContract(true); }, 30);
       return result;
     };
-    window[name].__fixedAdditionalContractWrappedV2 = true;
+    window[name].__fixedAdditionalContractWrappedV3 = true;
   }
   function install() {
     patchMaps();
@@ -196,5 +166,5 @@
   setTimeout(install, 1600);
   setTimeout(install, 3200);
 
-  console.info('[Settings Contract Fixed Patch] installed v2 — offices/car maintenance normalized as one site');
+  console.info('[Settings Contract Fixed Patch] installed v3 — fixed contract without session mutation');
 })();
