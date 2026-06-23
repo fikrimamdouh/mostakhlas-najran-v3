@@ -695,18 +695,38 @@ function signatureHtml(type, centerKey, cls = 'signatures-grid') {
         const titles = typeof getAchievementTitles === 'function' ? getAchievementTitles() : { mainTitle: 'شهادة الإنجاز', subTitle: 'مستخلص العمالة' };
         let monthly = 0, absenceDeduct = 0, absencePenalty = 0, nationPenalty = 0;
         centerData.forEach(emp => {
-            const salary = parseFloat(emp.salary) || 0;
-            let adjusted = salary;
-            if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) adjusted += adjusted * directPurchaseRatio / 100;
-            monthly += adjusted;
-            const daily = totalDaysInMonth > 0 ? adjusted / totalDaysInMonth : 0;
-            const absences = (emp.days || []).filter(d => statusMeta(d).isAbsence).length;
-            const fineConfig = fineConfigFor(emp.category);
-            const isSaudi = String(emp.nationality || '').includes('سعودي');
-            absenceDeduct += absences * daily;
-            absencePenalty += absences * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
-            nationPenalty += parseFloat(emp.nationalityFine) || 0;
+    if (typeof calculateAdminOfficeEmployeeFinancials === 'function') {
+        const calc = calculateAdminOfficeEmployeeFinancials(emp, {
+            totalDaysInMonth,
+            daysInExtract: totalDaysInMonth,
+            contractType,
+            directPurchaseRatio
         });
+
+        monthly += calc.costForPeriod;
+        absenceDeduct += calc.deduction;
+        absencePenalty += calc.absenceFine;
+        nationPenalty += calc.nationalityFine;
+    } else {
+        const salary = parseFloat(emp.salary) || 0;
+        let adjusted = salary;
+
+        if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) {
+            adjusted += adjusted * directPurchaseRatio / 100;
+        }
+
+        monthly += adjusted;
+
+        const daily = totalDaysInMonth > 0 ? adjusted / totalDaysInMonth : 0;
+        const absences = (emp.days || []).filter(d => d !== 'غ•' && statusMeta(d).isAbsence).length;
+        const fineConfig = fineConfigFor(emp.category);
+        const isSaudi = String(emp.nationality || '').includes('سعودي');
+
+        absenceDeduct += absences * daily;
+        absencePenalty += absences * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
+        nationPenalty += parseFloat(emp.nationalityFine) || 0;
+    }
+});
         const perfPenalty = centerKey !== 'admin_staff' ? (parseFloat(perfDeductions[centerKey]) || 0) : 0;
         const net = monthly - absenceDeduct - absencePenalty - perfPenalty - nationPenalty;
         const tafqitText = typeof tafqit === 'function' ? tafqit(net) : '';
