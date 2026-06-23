@@ -85,10 +85,17 @@
     const dom = document.getElementById('grand-net-total')?.textContent || document.getElementById('grand-net-total-admin')?.textContent;
     return num(localStorage.getItem('grand-net-total-admin') || dom || 0);
   }
-  function consumablesNet() {
-    const settings = getSettings();
-    return num(settings.consumablesNet || localStorage.getItem('admin_offices_consumables_current_net') || 0);
-  }
+ function consumablesNet() {
+  const settings = getSettings();
+
+  return (
+    num(localStorage.getItem('admin_offices_consumables_current_net')) ||
+    num(localStorage.getItem('adminOfficesConsumablesNet')) ||
+    num(localStorage.getItem('finalConsumablesCost')) ||
+    num(settings.consumablesNet) ||
+    0
+  );
+}
   function laborLetterPage() {
     const s = getSettings();
     const company = getCompanyName();
