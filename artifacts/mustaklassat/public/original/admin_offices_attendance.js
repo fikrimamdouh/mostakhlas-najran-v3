@@ -238,8 +238,67 @@ window.navigateTo = (url) => { if (url && url !== '#') window.location.href = ur
 // --- 3. DATA MANAGEMENT ---
 function getCenterNames() { return JSON.parse(localStorage.getItem('adminOfficeNames_v1')) || {}; }
 function saveCenterNames(names) { localStorage.setItem('adminOfficeNames_v1', JSON.stringify(names)); }
-function getAttendanceData() { return JSON.parse(localStorage.getItem('adminOfficesAttendanceData_v1')) || {}; }
-function saveAttendanceData(data) { localStorage.setItem('adminOfficesAttendanceData_v1', JSON.stringify(data)); }
+function getAttendanceData() {
+    const MAIN_KEY = 'adminOfficesAttendanceData_v1';
+    const BACKUP_KEY = 'adminOfficesAttendanceData_v1_localBackup';
+    const TS_KEY = 'adminOfficesAttendanceData_v1_localBackup_ts';
+
+    let main = {};
+    let backup = {};
+
+    try {
+        main = JSON.parse(localStorage.getItem(MAIN_KEY) || '{}') || {};
+    } catch (_) {
+        main = {};
+    }
+
+    try {
+        backup = JSON.parse(localStorage.getItem(BACKUP_KEY) || '{}') || {};
+    } catch (_) {
+        backup = {};
+    }
+
+    const mainCount = Object.values(main).reduce((sum, rows) => {
+        return sum + (Array.isArray(rows) ? rows.length : 0);
+    }, 0);
+
+    const backupCount = Object.values(backup).reduce((sum, rows) => {
+        return sum + (Array.isArray(rows) ? rows.length : 0);
+    }, 0);
+
+    const backupTs = Number(localStorage.getItem(TS_KEY) || 0);
+
+    if (backupCount > 0 && (mainCount === 0 || backupTs > 0)) {
+        if (mainCount === 0 || backupCount >= mainCount) {
+            localStorage.setItem(MAIN_KEY, JSON.stringify(backup));
+            return backup;
+        }
+    }
+
+    return main;
+}
+
+function saveAttendanceData(data) {
+    const MAIN_KEY = 'adminOfficesAttendanceData_v1';
+    const BACKUP_KEY = 'adminOfficesAttendanceData_v1_localBackup';
+    const TS_KEY = 'adminOfficesAttendanceData_v1_localBackup_ts';
+
+    const safeData = data || {};
+    const raw = JSON.stringify(safeData);
+
+    localStorage.setItem(MAIN_KEY, raw);
+    localStorage.setItem(BACKUP_KEY, raw);
+    localStorage.setItem(TS_KEY, String(Date.now()));
+
+    if (typeof window.najranSyncNow === 'function') {
+        clearTimeout(window.__adminOfficesAttendanceSyncTimer);
+        window.__adminOfficesAttendanceSyncTimer = setTimeout(() => {
+            window.najranSyncNow().catch(err => {
+                console.warn('[AdminOffices] تعذر رفع الحضور للسحابة الآن، محفوظ محليًا:', err);
+            });
+        }, 1200);
+    }
+}
 function getAffiliations() { return JSON.parse(localStorage.getItem('adminOfficeAffiliations_v1')) || {}; }
 function saveAffiliations(aff) { localStorage.setItem('adminOfficeAffiliations_v1', JSON.stringify(aff)); }
 
