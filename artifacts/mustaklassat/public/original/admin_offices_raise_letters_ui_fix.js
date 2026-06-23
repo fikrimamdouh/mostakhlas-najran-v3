@@ -4,11 +4,48 @@
 // - تنسيق شاشة خطابات الرفع
 // - مسافة المحترم
 // - زر حفظ إعدادات الخطابات
-// - تحميل أدوات العمالة والبيانات الإضافية داخل نفس صفحة خطابات الرفع
+// - نقل خطابات وبيانات إضافية للأعلى
+// - منع تحميل ملف الأدوات المكسور لحين تثبيته
 // ===================================================================
 (function () {
   'use strict';
   if (!/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
+
+  function readJson(key, fallback) {
+    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
+  }
+
+  function clean(v) { return String(v ?? '').replace(/\s+/g, ' ').trim(); }
+  function firstValue() { for (const v of arguments) { const s = clean(v); if (s && !['غير محدد', 'undefined', 'null', '—'].includes(s)) return s; } return ''; }
+
+  function paymentNo() {
+    const e = readJson('persistentExtractData', {});
+    const raw = firstValue(e.paymentNumber, e.extractNumber, e.paymentNo, e.extractNo, e.batchNumber, localStorage.getItem('paymentNumber'), localStorage.getItem('extractNumber'), localStorage.getItem('paymentNo'), localStorage.getItem('extractNo'), localStorage.getItem('batchNumber')) || '—';
+    return /^\d+$/.test(raw) ? raw.padStart(2, '0') : raw;
+  }
+
+  function installPaymentNumberDisplay() {
+    const box = document.querySelector('.page-contract-info-v2 p');
+    if (!box) return;
+    if (!box.querySelector('.paymentNumber')) {
+      const separator = document.createElement('span');
+      separator.className = 'separator payment-number-separator';
+      separator.textContent = '|';
+      const wrapper = document.createElement('span');
+      wrapper.className = 'payment-number-wrapper';
+      wrapper.innerHTML = '<strong>رقم الدفعة:</strong> <span class="paymentNumber">—</span>';
+      const startEl = box.querySelector('#extract-start-date');
+      const directChild = startEl ? Array.from(box.children).find(ch => ch.contains(startEl)) : null;
+      if (directChild && directChild.parentNode === box) {
+        box.insertBefore(separator, directChild);
+        box.insertBefore(wrapper, directChild);
+      } else {
+        box.appendChild(separator);
+        box.appendChild(wrapper);
+      }
+    }
+    document.querySelectorAll('.paymentNumber').forEach(el => { el.textContent = paymentNo(); });
+  }
 
   function injectCss() {
     if (document.getElementById('admin-offices-raise-letters-screen-css')) return;
@@ -39,6 +76,7 @@
       #raise-letters-overlay .rl-section-save-row{display:flex;justify-content:center;margin:14px 0 2px}
       #raise-letters-overlay .rl-section-save-row .btn{min-width:190px}
       #admin-extra-docs-section{border:2px solid #d4af37!important;background:#fffbeb!important}
+      .payment-number-wrapper{white-space:nowrap}.paymentNumber{font-weight:900;color:#003087}
       @media print{#raise-letters-overlay.settings-overlay{display:none!important}}
     `;
     document.head.appendChild(style);
@@ -80,9 +118,7 @@
     btn.id = 'raise-letters-save-settings-section-btn';
     btn.className = 'btn btn-primary';
     btn.innerHTML = '<i class="fas fa-save"></i> حفظ إعدادات الخطابات';
-    btn.onclick = function () {
-      if (window.AdminOfficesRaiseLetters && typeof window.AdminOfficesRaiseLetters.saveDialog === 'function') window.AdminOfficesRaiseLetters.saveDialog();
-    };
+    btn.onclick = function () { if (window.AdminOfficesRaiseLetters && typeof window.AdminOfficesRaiseLetters.saveDialog === 'function') window.AdminOfficesRaiseLetters.saveDialog(); };
     row.appendChild(btn);
     target.appendChild(row);
   }
@@ -98,7 +134,7 @@
 
   function observeDialogs() {
     if (window.__raiseLettersSettingsSaveObserver) return;
-    window.__raiseLettersSettingsSaveObserver = new MutationObserver(() => { installSavedSettingsSaveButton(); moveExtraDocsToTop(); });
+    window.__raiseLettersSettingsSaveObserver = new MutationObserver(() => { installSavedSettingsSaveButton(); moveExtraDocsToTop(); installPaymentNumberDisplay(); });
     window.__raiseLettersSettingsSaveObserver.observe(document.body, { childList: true, subtree: true });
   }
 
@@ -113,30 +149,41 @@
   }
 
   function loadModules() {
-    loadScriptOnce('admin-offices-attendance-tools-script', '/original/admin_offices_attendance_tools.js?v=20260623_tools_v2', '[Admin Offices Tools]');
     loadScriptOnce('admin-offices-extra-docs-script', '/original/admin_offices_raise_letters_extra_docs.js?v=20260623_extra_docs_v2', '[Admin Offices Extra Docs]');
     setTimeout(moveExtraDocsToTop, 600);
+  }
+
+  const oldUpdateContractDisplayData = window.updateContractDisplayData;
+  if (typeof oldUpdateContractDisplayData === 'function' && !oldUpdateContractDisplayData.__paymentNumberDisplaySafe) {
+    window.updateContractDisplayData = function safePaymentUpdateWrapper() {
+      const result = oldUpdateContractDisplayData.apply(this, arguments);
+      try { installPaymentNumberDisplay(); } catch (e) { console.warn('[Admin Offices] payment number display skipped', e); }
+      return result;
+    };
+    window.updateContractDisplayData.__paymentNumberDisplaySafe = true;
   }
 
   injectCss();
   patchPrintWindowSpacing();
   observeDialogs();
   installSavedSettingsSaveButton();
+  installPaymentNumberDisplay();
   moveExtraDocsToTop();
   loadModules();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      injectCss(); patchPrintWindowSpacing(); observeDialogs(); installSavedSettingsSaveButton(); moveExtraDocsToTop(); setTimeout(loadModules, 900);
+      injectCss(); patchPrintWindowSpacing(); observeDialogs(); installSavedSettingsSaveButton(); installPaymentNumberDisplay(); moveExtraDocsToTop(); setTimeout(loadModules, 900);
     });
   }
 
   setTimeout(injectCss, 700);
   setTimeout(installSavedSettingsSaveButton, 700);
+  setTimeout(installPaymentNumberDisplay, 700);
   setTimeout(moveExtraDocsToTop, 700);
   setTimeout(loadModules, 1100);
   setTimeout(moveExtraDocsToTop, 1800);
   setTimeout(loadModules, 2600);
 
-  console.info('[Admin Offices Raise Letters UI Styling] installed with top extra docs + tools v2');
+  console.info('[Admin Offices Raise Letters UI Styling] installed with top extra docs; broken tools loader disabled');
 })();
