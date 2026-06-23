@@ -173,8 +173,19 @@ const STEPS_ADMIN_OFFICES = [
     const current = detectCurrentStep();
     if (!current) return;
 
-    const steps = current.type === 'health' ? STEPS_HEALTH : buildLaborSteps();
-    const flowTitle = current.type === 'health' ? 'مستخلص المراكز الصحية' : 'مستخلص العمالة';
+const steps =
+  current.type === 'health'
+    ? STEPS_HEALTH
+    : current.type === 'admin_offices'
+      ? STEPS_ADMIN_OFFICES
+      : buildLaborSteps();
+
+const flowTitle =
+  current.type === 'health'
+    ? 'مستخلص المراكز الصحية'
+    : current.type === 'admin_offices'
+      ? 'مستخلص المكاتب الإدارية'
+      : 'مستخلص العمالة';
     const currentIdx = steps.findIndex(s => s.key === current.key);
     const monthLabel = getMonthLabel();
 
