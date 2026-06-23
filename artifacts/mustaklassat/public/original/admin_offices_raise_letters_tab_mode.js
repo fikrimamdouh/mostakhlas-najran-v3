@@ -5,6 +5,7 @@
 // + يضبط شاشة استيراد Excel لتكون أصغر وبها Scroll داخلي
 // + يحمل إصلاح موضوع خطاب الرفع النهائي الديناميكي
 // + يحمل تعديل جماعي شبكي لكل الحالات وإصلاح طباعة الحضور الأساسية
+// + يحمل طباعة الموقع الحالي بنفس دالة الطباعة الرئيسية وضبط أداء A4 صفحة واحدة
 // ===================================================================
 (function () {
   'use strict';
@@ -30,6 +31,10 @@
 
   function loadBulkStatusGridPrintFix() {
     loadScriptOnce('admin-offices-bulk-status-grid-print-fix', '/original/admin_offices_bulk_status_grid_print_fix.js?v=20260623_bulk_grid_print_v1');
+  }
+
+  function loadSitePrintPerformanceFit() {
+    loadScriptOnce('admin-offices-site-print-performance-fit', '/original/admin_offices_site_print_performance_fit.js?v=20260623_site_print_perf_v1');
   }
 
   function openStandaloneTab() {
@@ -93,29 +98,15 @@
     const style = document.createElement('style');
     style.id = 'admin-offices-excel-import-scroll-css';
     style.textContent = `
-      #management-dialog.admin-offices-excel-import-dialog{
-        align-items:center!important;justify-content:center!important;padding:10px!important;overflow:hidden!important;
-      }
+      #management-dialog.admin-offices-excel-import-dialog{align-items:center!important;justify-content:center!important;padding:10px!important;overflow:hidden!important;}
       #management-dialog.admin-offices-excel-import-dialog .dialog-content,
       #management-dialog.admin-offices-excel-import-dialog .dialog-box,
       #management-dialog.admin-offices-excel-import-dialog .dialog-panel,
-      #management-dialog.admin-offices-excel-import-dialog .dialog{
-        width:min(860px,96vw)!important;max-width:96vw!important;max-height:92vh!important;height:auto!important;
-        display:flex!important;flex-direction:column!important;overflow:hidden!important;border-radius:16px!important;
-      }
-      #management-dialog.admin-offices-excel-import-dialog .dialog-header{
-        flex:0 0 auto!important;padding:10px 16px!important;
-      }
-      #management-dialog.admin-offices-excel-import-dialog .dialog-header h3{
-        font-size:18px!important;margin:0!important;
-      }
-      #management-dialog.admin-offices-excel-import-dialog .dialog-body{
-        flex:1 1 auto!important;overflow-y:auto!important;max-height:calc(92vh - 120px)!important;
-        padding:12px 16px!important;overscroll-behavior:contain!important;
-      }
-      #management-dialog.admin-offices-excel-import-dialog .dialog-footer{
-        flex:0 0 auto!important;padding:10px 16px!important;
-      }
+      #management-dialog.admin-offices-excel-import-dialog .dialog{width:min(860px,96vw)!important;max-width:96vw!important;max-height:92vh!important;height:auto!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;border-radius:16px!important;}
+      #management-dialog.admin-offices-excel-import-dialog .dialog-header{flex:0 0 auto!important;padding:10px 16px!important;}
+      #management-dialog.admin-offices-excel-import-dialog .dialog-header h3{font-size:18px!important;margin:0!important;}
+      #management-dialog.admin-offices-excel-import-dialog .dialog-body{flex:1 1 auto!important;overflow-y:auto!important;max-height:calc(92vh - 120px)!important;padding:12px 16px!important;overscroll-behavior:contain!important;}
+      #management-dialog.admin-offices-excel-import-dialog .dialog-footer{flex:0 0 auto!important;padding:10px 16px!important;}
       #management-dialog.admin-offices-excel-import-dialog h4{font-size:15px!important;margin:0 0 8px!important;}
       #management-dialog.admin-offices-excel-import-dialog p{margin:0 0 8px!important;line-height:1.55!important;}
       #management-dialog.admin-offices-excel-import-dialog fieldset{margin:8px 0!important;padding:10px!important;}
@@ -166,12 +157,8 @@
     document.body.classList.add('raise-letters-standalone-page');
     addStandaloneCss();
     topbar();
-
     const api = window.AdminOfficesRaiseLetters;
-    if (api && typeof api.openDialog === 'function') {
-      try { api.openDialog(); } catch (_) {}
-    }
-
+    if (api && typeof api.openDialog === 'function') { try { api.openDialog(); } catch (_) {} }
     const closeBtn = document.querySelector('#raise-letters-overlay .btn-light');
     if (closeBtn && !closeBtn.__standaloneClosePatched) {
       closeBtn.textContent = 'إغلاق التبويب';
@@ -183,6 +170,7 @@
   function boot(attempt) {
     loadDynamicFinalSubjectPatch();
     loadBulkStatusGridPrintFix();
+    loadSitePrintPerformanceFit();
     patchMainButton();
     applyExcelImportDialogLayout();
     if (isStandalone) openAsStandalonePage();
@@ -194,10 +182,11 @@
     setTimeout(applyExcelImportDialogLayout, 350);
     setTimeout(loadDynamicFinalSubjectPatch, 120);
     setTimeout(loadBulkStatusGridPrintFix, 120);
+    setTimeout(loadSitePrintPerformanceFit, 120);
   }, true);
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0));
   else boot(0);
 
-  console.info('[Admin Offices Raise Letters] standalone tab mode installed + Excel import scroll fix + final subject + bulk/print loader');
+  console.info('[Admin Offices Raise Letters] standalone tab mode installed + Excel import scroll fix + final subject + bulk/print + site/performance fit loader');
 })();
