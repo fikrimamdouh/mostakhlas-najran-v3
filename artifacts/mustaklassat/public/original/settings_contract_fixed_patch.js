@@ -1,17 +1,19 @@
 // ===================================================================
-// Settings Contract Fixed Patch
+// Settings Contract Fixed Patch — V2
 // Scope: settings_main.html / original-viewer?page=settings_main.html
-// يثبت بيانات عقد الطلب الإضافي لمواقع بيت العرب: الولادة، نجران القديم، المكاتب/المرافق/السيارات
-// بدون مراقبة DOM عامة وبدون تدخل في باقي المواقع.
+// يثبت بيانات عقد الطلب الإضافي لمواقع بيت العرب.
+// قاعدة مهمة: المكاتب الإدارية والمرافق الصحية + صيانة وإصلاح السيارات = موقع واحد موحد.
 // ===================================================================
 (function () {
   'use strict';
 
   if (!/settings_main\.html|original-viewer\?page=settings_main\.html/.test(location.pathname + location.search)) return;
-  if (window.__SETTINGS_CONTRACT_FIXED_PATCH_V1__) return;
-  window.__SETTINGS_CONTRACT_FIXED_PATCH_V1__ = true;
+  if (window.__SETTINGS_CONTRACT_FIXED_PATCH_V2__) return;
+  window.__SETTINGS_CONTRACT_FIXED_PATCH_V2__ = true;
 
-  var CONTRACT_DETAILS = 'الصيانة والتشغيل غير الطبي لمواقع طلب إضافي (مستشفى الولادة والأطفال ومستشفى نجران العام القديم والمكاتب الإدارية والمرافق الصحية وإصلاح السيارات)';
+  var CANONICAL_OFFICES_SITE = 'المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة';
+  var CONTRACT_DETAILS = 'الصيانة والتشغيل غير الطبي لمواقع طلب إضافي (مستشفى الولادة والأطفال ومستشفى نجران العام القديم والمكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات)';
+
   var FIXED = {
     contractNumber:  '250701156483',
     companyName:     'شركة مجموعة بيت العرب الحديثة المحدودة',
@@ -27,13 +29,14 @@
     'مستشفى الولاده والاطفال',
     'مستشفى نجران العام القديم',
     'مستشفى نجران العام القديم وسكن الممرضات الخارجي',
+    CANONICAL_OFFICES_SITE,
+    'المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات',
+    'المكاتب الادارية والمرافق الصحية وصيانة واصلاح السيارات',
+    'المكاتب الادارية والمرافق الصحية وصيانة واصلاح السيارات والعيادات المتنقلة',
     'المكاتب الإدارية والمرافق الصحية',
     'المكاتب الادارية والمرافق الصحية',
     'صيانة وإصلاح السيارات والعيادات المتنقلة',
-    'صيانة واصلاح السيارات والعيادات المتنقلة',
-    'المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات',
-    'المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة',
-    'المكاتب الادارية والمرافق الصحية وصيانة واصلاح السيارات والعيادات المتنقلة'
+    'صيانة واصلاح السيارات والعيادات المتنقلة'
   ];
 
   function readJson(key, fallback) {
@@ -56,10 +59,28 @@
   function currentSession() {
     return readJson('najran_session', {});
   }
+  function writeSession(session) {
+    try { Storage.prototype.setItem.call(localStorage, 'najran_session', JSON.stringify(session || {})); } catch (_) {}
+  }
   function currentHospital() {
     var s = currentSession();
     var p = readJson('persistentContractData', {});
     return s.hospital || p.hospitalName || localStorage.getItem('hospitalName') || '';
+  }
+  function isOldOfficeSplitName(hospitalName) {
+    var h = clean(hospitalName);
+    return h === clean('المكاتب الإدارية والمرافق الصحية') ||
+      h === clean('المكاتب الادارية والمرافق الصحية') ||
+      h === clean('صيانة وإصلاح السيارات والعيادات المتنقلة') ||
+      h === clean('صيانة واصلاح السيارات والعيادات المتنقلة') ||
+      h === clean('المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات') ||
+      h === clean('المكاتب الادارية والمرافق الصحية وصيانة واصلاح السيارات') ||
+      h === clean(CANONICAL_OFFICES_SITE) ||
+      (h.indexOf('المكاتب الاداري') > -1) ||
+      (h.indexOf('اصلاح السيارات') > -1);
+  }
+  function normalizeHospitalName(hospitalName) {
+    return isOldOfficeSplitName(hospitalName) ? CANONICAL_OFFICES_SITE : hospitalName;
   }
   function isTargetHospital(hospitalName) {
     var h = clean(hospitalName);
@@ -67,8 +88,7 @@
     return TARGET_KEYS.some(function (k) { return clean(k) === h; }) ||
       (h.indexOf('الولاده') > -1 && h.indexOf('الاطفال') > -1) ||
       (h.indexOf('نجران العام القديم') > -1) ||
-      (h.indexOf('المكاتب الاداريه') > -1 || h.indexOf('المكاتب الاداري') > -1) ||
-      (h.indexOf('اصلاح السيارات') > -1);
+      isOldOfficeSplitName(hospitalName);
   }
   function patchMaps() {
     try {
@@ -76,11 +96,13 @@
         TARGET_KEYS.forEach(function (key) {
           window.HOSPITAL_CONTRACT_MAP[key] = Object.assign({}, window.HOSPITAL_CONTRACT_MAP[key] || {}, FIXED);
         });
+        window.HOSPITAL_CONTRACT_MAP[CANONICAL_OFFICES_SITE] = Object.assign({}, FIXED);
       }
       if (window.HOSPITAL_COMPANY_MAP) {
         TARGET_KEYS.forEach(function (key) {
           window.HOSPITAL_COMPANY_MAP[key] = FIXED.companyName;
         });
+        window.HOSPITAL_COMPANY_MAP[CANONICAL_OFFICES_SITE] = FIXED.companyName;
       }
     } catch (_) {}
   }
@@ -102,12 +124,14 @@
   }
   function applyFixedContract(forceDom) {
     patchMaps();
-    var hospitalName = currentHospital();
-    if (!isTargetHospital(hospitalName)) return false;
 
+    var originalHospitalName = currentHospital();
+    if (!isTargetHospital(originalHospitalName)) return false;
+
+    var canonicalHospitalName = normalizeHospitalName(originalHospitalName);
     var data = readJson('persistentContractData', {});
-    data.hospitalName = data.hospitalName || hospitalName;
-    if (!isTargetHospital(data.hospitalName)) data.hospitalName = hospitalName;
+    data.hospitalName = normalizeHospitalName(data.hospitalName || canonicalHospitalName);
+    if (!isTargetHospital(data.hospitalName)) data.hospitalName = canonicalHospitalName;
 
     data.contractNumber = FIXED.contractNumber;
     data.companyName = FIXED.companyName;
@@ -120,24 +144,41 @@
     data._fixedAdditionalRequestContract = true;
 
     writeJson('persistentContractData', data);
-    try { localStorage.setItem('hospitalName', data.hospitalName || hospitalName); } catch (_) {}
+    try { localStorage.setItem('hospitalName', data.hospitalName); } catch (_) {}
     try { localStorage.setItem('companyName', FIXED.companyName); } catch (_) {}
     try { localStorage.setItem('contractNumber', FIXED.contractNumber); } catch (_) {}
-    if (data.hospitalName) writeJson(hospitalContractKey(data.hospitalName), data);
-    if (hospitalName && hospitalName !== data.hospitalName) writeJson(hospitalContractKey(hospitalName), Object.assign({}, data, { hospitalName: hospitalName }));
+
+    writeJson(hospitalContractKey(data.hospitalName), data);
+    if (originalHospitalName && originalHospitalName !== data.hospitalName) {
+      writeJson(hospitalContractKey(originalHospitalName), data);
+    }
+
+    var session = currentSession();
+    if (session && isOldOfficeSplitName(session.hospital || '')) {
+      session.hospital = CANONICAL_OFFICES_SITE;
+      if (Array.isArray(session.hospitals)) {
+        session.hospitals = session.hospitals.map(normalizeHospitalName).filter(function (v, i, arr) { return v && arr.indexOf(v) === i; });
+      } else if (typeof session.hospitals === 'string') {
+        try {
+          var hs = JSON.parse(session.hospitals || '[]');
+          if (Array.isArray(hs)) session.hospitals = JSON.stringify(hs.map(normalizeHospitalName).filter(function (v, i, arr) { return v && arr.indexOf(v) === i; }));
+        } catch (_) {}
+      }
+      writeSession(session);
+    }
 
     if (forceDom !== false) updateDom(data);
     return true;
   }
   function wrapFunction(name) {
     var fn = window[name];
-    if (typeof fn !== 'function' || fn.__fixedAdditionalContractWrapped) return;
+    if (typeof fn !== 'function' || fn.__fixedAdditionalContractWrappedV2) return;
     window[name] = function () {
       var result = fn.apply(this, arguments);
       setTimeout(function () { applyFixedContract(true); }, 30);
       return result;
     };
-    window[name].__fixedAdditionalContractWrapped = true;
+    window[name].__fixedAdditionalContractWrappedV2 = true;
   }
   function install() {
     patchMaps();
@@ -155,5 +196,5 @@
   setTimeout(install, 1600);
   setTimeout(install, 3200);
 
-  console.info('[Settings Contract Fixed Patch] installed — additional request contract fixed');
+  console.info('[Settings Contract Fixed Patch] installed v2 — offices/car maintenance normalized as one site');
 })();
