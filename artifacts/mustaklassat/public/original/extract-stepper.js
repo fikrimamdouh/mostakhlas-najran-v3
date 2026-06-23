@@ -36,16 +36,26 @@
     { key: 'health_consumables', label: 'مستهلكات المراكز', page: '/original/health_centers_consumables.html', needsFlag: 'najran_health_attendance_done' },
     { key: 'health_submit',      label: 'رفع للاعتماد',      page: null, isLast: true },
   ];
+const STEPS_ADMIN_OFFICES = [
+  { key: 'admin_labor',       label: 'عمالة المكاتب',      page: '/original/admin_offices_attendance.html' },
+  { key: 'admin_consumables', label: 'مستهلكات المكاتب',  page: '/original/admin_offices_consumables.html' },
+  { key: 'admin_submit',      label: 'رفع للاعتماد',       page: null, isLast: true },
+];
+ function detectCurrentStep() {
+  const p = window.location.pathname;
 
-  function detectCurrentStep() {
-    const p = window.location.pathname;
-    if (p.includes('health_centers_consumables')) return { type: 'health', key: 'health_consumables' };
-    if (p.includes('health_centers_attendance'))  return { type: 'health', key: 'health_attendance' };
-    if (p.includes('performance'))  return { type: 'labor', key: 'labor_performance' };
-    if (p.includes('achievement'))  return { type: 'labor', key: 'labor_achievement' };
-    if (p.includes('attendance') && !p.includes('health')) return { type: 'labor', key: 'labor_attendance' };
-    return null;
-  }
+  if (p.includes('admin_offices_consumables')) return { type: 'admin_offices', key: 'admin_consumables' };
+  if (p.includes('admin_offices_attendance'))  return { type: 'admin_offices', key: 'admin_labor' };
+
+  if (p.includes('health_centers_consumables')) return { type: 'health', key: 'health_consumables' };
+  if (p.includes('health_centers_attendance'))  return { type: 'health', key: 'health_attendance' };
+
+  if (p.includes('performance'))  return { type: 'labor', key: 'labor_performance' };
+  if (p.includes('achievement'))  return { type: 'labor', key: 'labor_achievement' };
+  if (p.includes('attendance') && !p.includes('health')) return { type: 'labor', key: 'labor_attendance' };
+
+  return null;
+}
 
   function getMonthLabel() {
   function parseObj(v) {
@@ -54,20 +64,61 @@
     try { return JSON.parse(v); } catch (_) { return {}; }
   }
 
+  function monthFromDate(startRaw) {
+    if (!startRaw) return { m: '', y: '' };
+
+    const d = new Date(startRaw);
+    if (Number.isNaN(d.getTime())) return { m: '', y: '' };
+
+    const monthNames = [
+      'يناير',
+      'فبراير',
+      'مارس',
+      'أبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر'
+    ];
+
+    return {
+      m: monthNames[d.getMonth()],
+      y: String(d.getFullYear())
+    };
+  }
+
   try {
     const ed = parseObj(localStorage.getItem('persistentExtractData'));
 
     let m = String(
       ed.extractMonth ||
+      ed.month ||
       localStorage.getItem('extractMonth') ||
       ''
     ).trim();
 
     let y = String(
       ed.extractYear ||
+      ed.year ||
       localStorage.getItem('extractYear') ||
       ''
     ).trim();
+
+    if (!m) {
+      const derived = monthFromDate(
+        ed.extractStart ||
+        ed.startDate ||
+        localStorage.getItem('extractStart') ||
+        ''
+      );
+
+      m = derived.m;
+      if (!y) y = derived.y;
+    }
 
     const isRevision =
       localStorage.getItem('najran_revision_mode') === 'true' &&
@@ -95,6 +146,19 @@
         snap.year ||
         ''
       ).trim();
+
+      if (!m) {
+        const derived = monthFromDate(
+          ext.extractStart ||
+          snap.extractStart ||
+          ext.startDate ||
+          snap.startDate ||
+          ''
+        );
+
+        m = derived.m;
+        if (!y) y = derived.y;
+      }
     }
 
     return m ? `📅 ${m} ${y}` : '';
