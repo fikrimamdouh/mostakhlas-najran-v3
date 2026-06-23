@@ -150,9 +150,11 @@
     appendScript('/original/special-absence-no-deduction.js?v=' + BUILD_V, true);
   }
 
-  if (isAdminOfficesPage) {
+if (isAdminOfficesPage) {
+    appendScript('/original/admin_offices_attendance.js?v=20260623_admin_calc_screen_v7', false);
+    appendScript('/original/admin_offices_attendance_patch.js?v=20260623_positions_all_v4', true);
     appendScript('/original/admin_offices_performance_logic.js?v=' + BUILD_V, true);
-  }
+}
 
   if (/\/original\/approval\.html(?:$|[?#])/.test(pageSig)) {
     appendScript('/original/review-print-override.js?v=' + BUILD_V, true);
