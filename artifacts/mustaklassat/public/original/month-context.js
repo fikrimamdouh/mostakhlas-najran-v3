@@ -357,7 +357,70 @@ function isRevisionMode() {
       console.log('[MonthCtx] extract settings direct upload:', result);
       return result;
     }
+function getAttendancePageAfterExtractSave() {
+  let session = {};
+  let contractData = {};
 
+  try {
+    session = JSON.parse(localStorage.getItem('najran_session') || '{}') || {};
+  } catch (_) {
+    session = {};
+  }
+
+  try {
+    contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}') || {};
+  } catch (_) {
+    contractData = {};
+  }
+
+  let allowedModules = null;
+  try {
+    allowedModules = Array.isArray(session.allowedModules)
+      ? session.allowedModules
+      : JSON.parse(session.allowedModules || 'null');
+  } catch (_) {
+    allowedModules = null;
+  }
+
+  const hospital = String(
+    session.reviewActiveHospital ||
+    session.hospital ||
+    contractData.hospitalName ||
+    localStorage.getItem('hospitalName') ||
+    ''
+  );
+
+  if (Array.isArray(allowedModules)) {
+    if (allowedModules.includes('admin_offices_attendance')) return 'admin_offices_attendance.html';
+    if (allowedModules.includes('health_centers_attendance')) return 'health_centers_attendance.html';
+    if (allowedModules.includes('najran_general')) return 'najran_general.html';
+    if (allowedModules.includes('attendance')) return 'attendance.html';
+  }
+
+  if (
+    hospital.includes('المكاتب الإدارية') ||
+    hospital.includes('المرافق الصحية') ||
+    hospital.includes('صيانة وإصلاح السيارات')
+  ) {
+    return 'admin_offices_attendance.html';
+  }
+
+  if (
+    hospital.includes('المراكز الصحية') ||
+    hospital.includes('مجمع')
+  ) {
+    return 'health_centers_attendance.html';
+  }
+
+  if (
+    hospital.includes('نجران العام الجديد') ||
+    hospital.includes('طب الأسنان')
+  ) {
+    return 'najran_general.html';
+  }
+
+  return 'attendance.html';
+}
     function showExtractSaveCountdown(seconds) {
       let remaining = Number(seconds || 15);
       const old = document.getElementById('extract-save-countdown-modal');
@@ -390,7 +453,7 @@ function isRevisionMode() {
             btn.textContent = 'الدخول إلى الحضور والانصراف';
             btn.style.background = '#1e3c72';
             btn.style.cursor = 'pointer';
-            btn.onclick = function () { window.location.href = 'attendance.html'; };
+            btn.onclick = function () {   window.location.href = getAttendancePageAfterExtractSave(); };
           }
         }
       }, 1000);
