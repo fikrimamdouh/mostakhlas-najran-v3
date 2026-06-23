@@ -5,7 +5,7 @@
 // - مسافة المحترم
 // - زر حفظ إعدادات الخطابات
 // - نقل خطابات وبيانات إضافية للأعلى
-// - منع تحميل ملف الأدوات المكسور لحين تثبيته
+// - تحميل أداة التعديل الجماعي النظيفة فقط
 // ===================================================================
 (function () {
   'use strict';
@@ -149,6 +149,7 @@
   }
 
   function loadModules() {
+    loadScriptOnce('admin-offices-bulk-attendance-tools-script', '/original/admin_offices_bulk_attendance_tools.js?v=20260623_bulk_v1', '[Admin Offices Bulk Attendance Tools]');
     loadScriptOnce('admin-offices-extra-docs-script', '/original/admin_offices_raise_letters_extra_docs.js?v=20260623_extra_docs_v2', '[Admin Offices Extra Docs]');
     setTimeout(moveExtraDocsToTop, 600);
   }
@@ -185,5 +186,5 @@
   setTimeout(moveExtraDocsToTop, 1800);
   setTimeout(loadModules, 2600);
 
-  console.info('[Admin Offices Raise Letters UI Styling] installed with top extra docs; broken tools loader disabled');
+  console.info('[Admin Offices Raise Letters UI Styling] installed with top extra docs + focused bulk edit');
 })();
