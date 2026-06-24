@@ -1,14 +1,16 @@
 // ===================================================================
-// Admin Offices Bulk Status Grid + Main Print Fix — V1
+// Admin Offices Bulk Attendance + Print Compact Fix — V2
 // Scope: admin_offices_attendance.html
-// 1) تعديل جماعي يعرض كل الأيام وكل الحالات في خلايا قابلة للتعديل.
-// 2) ضغط طباعة الحضور الأساسية حتى يبدأ الجدول في الصفحة الأولى ولا يترك صفحة للشعار/الهيدر.
+// تعديل داخل الملف الموجود فقط، بدون حارس جديد:
+// 1) التعديل الجماعي أصبح بنفس فكرة المستشفيات: شاشة واسعة، اختيار موقع/كل المواقع، بحث موظفين، من/إلى يوم، حالة واحدة، حفظ مباشر.
+// 2) كل الحالات متاحة في القائمة.
+// 3) ضغط طباعة الحضور الأساسية حتى يبدأ الجدول في الصفحة الأولى ولا يترك صفحة للشعار/الهيدر.
 // ===================================================================
 (function () {
   'use strict';
   if (!/admin_offices_attendance\.html|original-viewer\?page=admin_offices_attendance\.html/.test(location.pathname + location.search)) return;
-  if (window.__ADMIN_OFFICES_BULK_STATUS_GRID_PRINT_FIX_V1__) return;
-  window.__ADMIN_OFFICES_BULK_STATUS_GRID_PRINT_FIX_V1__ = true;
+  if (window.__ADMIN_OFFICES_BULK_ATTENDANCE_STANDARD_V2__) return;
+  window.__ADMIN_OFFICES_BULK_ATTENDANCE_STANDARD_V2__ = true;
 
   const MAIN_KEY = 'adminOfficesAttendanceData_v1';
   const BACKUP_KEY = 'adminOfficesAttendanceData_v1_localBackup';
@@ -52,7 +54,7 @@
     const end = new Date(e.extractEnd || localStorage.getItem('extractEnd') || e.extractStart || Date.now());
     const safeStart = Number.isNaN(start.getTime()) ? new Date() : start;
     const safeEnd = Number.isNaN(end.getTime()) ? safeStart : end;
-    return { startDate: safeStart, daysInExtract: Math.max(1, Math.ceil((safeEnd - safeStart) / 86400000) + 1 || 30), totalDaysInMonth: new Date(safeStart.getFullYear(), safeStart.getMonth() + 1, 0).getDate() || 30 };
+    return { startDate: safeStart, endDate: safeEnd, daysInExtract: Math.max(1, Math.ceil((safeEnd - safeStart) / 86400000) + 1 || 30), totalDaysInMonth: new Date(safeStart.getFullYear(), safeStart.getMonth() + 1, 0).getDate() || 30 };
   }
   function orderedKeys() {
     const names = getNames(), data = getData();
@@ -67,156 +69,166 @@
         return String(a).localeCompare(String(b), 'ar');
       });
   }
-  function activeCenterKey() { try { if (typeof window.getActiveAdminOfficeCenterKey === 'function') return window.getActiveAdminOfficeCenterKey(); } catch (_) {} return document.querySelector('.tab-link.active[data-center-key]')?.dataset?.centerKey || ''; }
+  function activeCenterKey() {
+    try { if (typeof window.getActiveAdminOfficeCenterKey === 'function') return window.getActiveAdminOfficeCenterKey(); } catch (_) {}
+    return document.querySelector('.tab-link.active[data-center-key], .center-tab.active[data-center-key], [data-center-key].active')?.dataset?.centerKey || '';
+  }
   function statusEntries() {
     const fallback = { 'ح': { name: 'حضور' }, 'غ': { name: 'غياب' }, 'ج': { name: 'إجازة' }, 'ش': { name: 'شاغر' }, 'ت': { name: 'تأخير' }, 'ب': { name: 'بديل' }, 'ن': { name: 'نقل' }, 'غ•': { name: 'غياب بدون حسم' } };
     const src = window.STATUS_CODES || fallback;
     return Object.keys(src).filter(k => k !== 'default').map(code => ({ code, name: (src[code] && src[code].name) || code }));
   }
   function statusOptions(selected) { return statusEntries().map(s => `<option value="${esc(s.code)}" ${s.code === selected ? 'selected' : ''}>${esc(s.code)} — ${esc(s.name)}</option>`).join(''); }
-  function dayOptions() {
+  function dayOptions(selected) {
     const p = getPeriod();
-    return Array.from({ length: p.daysInExtract }, (_, i) => { const d = new Date(p.startDate); d.setDate(p.startDate.getDate() + i); return `<option value="${i}">اليوم ${i + 1} — ${d.toLocaleDateString('en-CA')}</option>`; }).join('');
+    return Array.from({ length: p.daysInExtract }, (_, i) => {
+      const d = new Date(p.startDate); d.setDate(p.startDate.getDate() + i);
+      return `<option value="${i}" ${i === selected ? 'selected' : ''}>اليوم ${i + 1} — ${d.toLocaleDateString('en-CA')}</option>`;
+    }).join('');
   }
-  function selectedCenters() { return Array.from(document.querySelectorAll('.admin-office-bulk-center:checked')).map(cb => cb.value); }
-  function selectedEmployees() { return Array.from(document.querySelectorAll('.admin-office-bulk-employee:checked')).map(cb => cb.value); }
 
   function injectCss() {
     if (document.getElementById('admin-offices-bulk-grid-print-fix-css')) return;
     const st = document.createElement('style');
     st.id = 'admin-offices-bulk-grid-print-fix-css';
     st.textContent = `
-      .admin-bulk-grid-dialog .dialog-content,.admin-bulk-grid-dialog .dialog-box,.admin-bulk-grid-dialog .dialog-panel,.admin-bulk-grid-dialog .dialog{width:min(1280px,98vw)!important;max-height:94vh!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}
-      .admin-bulk-grid-dialog .dialog-body{overflow:auto!important;max-height:calc(94vh - 118px)!important;padding:12px!important}
-      .admin-bulk-grid-dialog fieldset{border:1px solid #cbd5e1;border-radius:12px;margin:10px 0;padding:10px;background:#f8fafc}.admin-bulk-grid-dialog legend{font-weight:900;color:#003087;padding:0 8px}
-      .admin-bulk-controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;background:#eef6ff;border:1px solid #bfdbfe;border-radius:12px;padding:10px;margin-bottom:10px}.admin-bulk-controls label{display:block;font-size:12px;font-weight:900;margin-bottom:4px}.admin-bulk-controls select{width:100%;min-height:34px;border:1px solid #cbd5e1;border-radius:8px;padding:6px;font-family:inherit;font-weight:800;background:#fff}
-      .admin-bulk-centers-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:7px;max-height:175px;overflow:auto}.admin-bulk-center-row{display:flex;gap:7px;align-items:center;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:7px;font-weight:800}
-      .admin-bulk-employees-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:8px;max-height:220px;overflow:auto}.admin-bulk-emp-group{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:8px}.admin-bulk-emp-head{display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}.admin-bulk-emp-row{display:grid;grid-template-columns:22px 1fr;gap:2px 6px;border:1px solid #e2e8f0;border-radius:9px;padding:6px;margin:5px 0;background:#fff}.admin-bulk-emp-row input{grid-row:1 / span 2}.admin-bulk-emp-row span{font-weight:900}.admin-bulk-emp-row small{color:#64748b}.admin-bulk-empty{padding:10px;border:1px dashed #cbd5e1;border-radius:10px;background:#fff;color:#64748b}
-      .admin-bulk-status-wrap{max-height:430px;overflow:auto;border:1px solid #cbd5e1;border-radius:12px;background:#fff}.admin-bulk-status-table{width:max-content;min-width:100%;border-collapse:collapse;font-size:12px}.admin-bulk-status-table th{position:sticky;top:0;background:#003087;color:#fff;z-index:2}.admin-bulk-status-table th,.admin-bulk-status-table td{border:1px solid #cbd5e1;padding:4px;text-align:center;white-space:nowrap}.admin-bulk-status-table td.emp-cell{text-align:right;min-width:210px;font-weight:900}.admin-bulk-status-table td.site-cell{text-align:right;min-width:180px}.admin-bulk-status-table select{min-width:86px;border:1px solid #cbd5e1;border-radius:7px;padding:4px;font-family:inherit;font-weight:800;background:#fff}
-      .admin-print-compact-notice{font-size:12px;color:#475569;text-align:center;margin-top:6px}
+      .admin-bulk-standard-dialog{align-items:center!important;justify-content:center!important;padding:8px!important;overflow:hidden!important}
+      .admin-bulk-standard-dialog .dialog-content,.admin-bulk-standard-dialog .dialog-box,.admin-bulk-standard-dialog .dialog-panel,.admin-bulk-standard-dialog .dialog{width:min(1500px,99vw)!important;max-width:99vw!important;height:94vh!important;max-height:94vh!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;border-radius:18px!important;background:#fff!important}
+      .admin-bulk-standard-dialog .dialog-header{flex:0 0 auto!important;padding:12px 16px!important;border-bottom:1px solid #e2e8f0!important;background:#f8fafc!important}.admin-bulk-standard-dialog .dialog-header h3{margin:0!important;font-size:20px!important;color:#003087!important;font-weight:900!important}
+      .admin-bulk-standard-dialog .dialog-body{flex:1 1 auto!important;overflow:hidden!important;padding:12px!important;display:grid!important;grid-template-rows:auto 1fr!important;gap:10px!important;min-height:0!important}
+      .admin-bulk-standard-dialog .dialog-footer{flex:0 0 auto!important;padding:10px 16px!important;border-top:1px solid #e2e8f0!important;background:#f8fafc!important;display:flex!important;justify-content:space-between!important;gap:10px!important;align-items:center!important}
+      .admin-bulk-standard-top{display:grid;grid-template-columns:1.4fr 1fr .8fr .8fr .9fr auto;gap:8px;background:#eef6ff;border:1px solid #bfdbfe;border-radius:14px;padding:10px;align-items:end}.admin-bulk-standard-top label{display:block;font-size:12px;font-weight:900;color:#0f172a;margin-bottom:4px}.admin-bulk-standard-top select,.admin-bulk-standard-top input{width:100%;height:36px;border:1px solid #cbd5e1;border-radius:9px;padding:6px 8px;font-family:Tajawal,Arial,sans-serif;font-weight:800;background:#fff}
+      .admin-bulk-standard-layout{display:grid;grid-template-columns:320px 1fr;gap:10px;min-height:0}.admin-bulk-side{border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;padding:10px;overflow:auto}.admin-bulk-side h4{margin:0 0 8px;color:#003087;font-size:15px}.admin-bulk-center-option{display:flex;gap:8px;align-items:center;border:1px solid #e2e8f0;background:#fff;border-radius:10px;padding:7px;margin:6px 0;font-weight:800;cursor:pointer}.admin-bulk-center-option.active{border-color:#003087;background:#eaf2ff;color:#003087}.admin-bulk-center-option small{margin-inline-start:auto;color:#64748b}
+      .admin-bulk-main{min-height:0;display:flex;flex-direction:column;border:1px solid #e2e8f0;border-radius:14px;background:#fff;overflow:hidden}.admin-bulk-main-head{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px;border-bottom:1px solid #e2e8f0;background:#fff}.admin-bulk-main-head strong{color:#003087}.admin-bulk-actions{display:flex;gap:6px;flex-wrap:wrap}.admin-bulk-actions button,.admin-bulk-standard-top button,.admin-bulk-standard-dialog .dialog-footer button{border:0;border-radius:9px;padding:8px 12px;font-family:Tajawal,Arial,sans-serif;font-weight:900;cursor:pointer}.admin-bulk-actions .light,.admin-bulk-standard-top .light{background:#e2e8f0;color:#0f172a}.admin-bulk-standard-dialog .save{background:#0f766e;color:#fff}.admin-bulk-standard-dialog .cancel{background:#64748b;color:#fff}
+      .admin-bulk-table-wrap{flex:1 1 auto;overflow:auto;min-height:0}.admin-bulk-employee-table{width:100%;border-collapse:collapse;font-size:13px}.admin-bulk-employee-table th{position:sticky;top:0;background:#003087;color:#fff;z-index:2}.admin-bulk-employee-table th,.admin-bulk-employee-table td{border:1px solid #e2e8f0;padding:7px;text-align:center}.admin-bulk-employee-table td.name{text-align:right;font-weight:900}.admin-bulk-employee-table td.job{text-align:right;color:#475569}.admin-bulk-empty{padding:22px;text-align:center;color:#64748b;font-weight:900;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;margin:10px}.admin-bulk-note{font-size:12px;color:#475569;font-weight:800}.admin-print-compact-notice{font-size:12px;color:#475569;text-align:center;margin-top:6px}
+      @media(max-width:1000px){.admin-bulk-standard-top{grid-template-columns:1fr 1fr}.admin-bulk-standard-layout{grid-template-columns:1fr}.admin-bulk-side{max-height:190px}}
     `;
     document.head.appendChild(st);
   }
+  function applyDialogClass() { const dlg = document.getElementById('management-dialog'); if (dlg) { dlg.classList.remove('admin-bulk-grid-dialog'); dlg.classList.add('admin-bulk-standard-dialog'); } }
 
-  function applyDialogClass() { const dlg = document.getElementById('management-dialog'); if (dlg) dlg.classList.add('admin-bulk-grid-dialog'); }
-
-  function renderEmployees() {
-    const box = document.getElementById('admin-bulk-employees-list');
+  function selectedScope() { return document.getElementById('admin-bulk-center-select')?.value || activeCenterKey() || orderedKeys()[0] || ''; }
+  function scopeKeys() { const scope = selectedScope(); return scope === '__all__' ? orderedKeys() : [scope].filter(Boolean); }
+  function searchText() { return clean(document.getElementById('admin-bulk-search')?.value || '').toLowerCase(); }
+  function setScope(key) { const sel = document.getElementById('admin-bulk-center-select'); if (sel) sel.value = key; renderCenters(); renderEmployeeTable(); }
+  function renderCenters() {
+    const box = document.getElementById('admin-bulk-centers-list');
     if (!box) return;
-    const names = getNames(), data = getData(), centers = selectedCenters();
-    if (!centers.length) { box.innerHTML = '<div class="admin-bulk-empty">اختر مكتبًا أو مرفقًا لعرض الموظفين.</div>'; renderStatusGrid(); return; }
-    box.innerHTML = centers.map(centerKey => {
-      const rows = Array.isArray(data[centerKey]) ? data[centerKey] : [];
-      const empRows = rows.length ? rows.map((emp, idx) => `<label class="admin-bulk-emp-row"><input type="checkbox" class="admin-office-bulk-employee" value="${esc(centerKey)}::${idx}" data-center="${esc(centerKey)}" checked onchange="AdminOfficesBulkStatusGrid.renderStatusGrid()"><span>${esc(emp.name || 'بدون اسم')}</span><small>${esc(emp.jobTitle || '')}${emp.iqamaId ? ' — ' + esc(emp.iqamaId) : ''}</small></label>`).join('') : '<div class="admin-bulk-empty">لا توجد أسماء موظفين في هذا الموقع.</div>';
-      return `<div class="admin-bulk-emp-group"><div class="admin-bulk-emp-head"><strong>${esc(names[centerKey] || centerKey)}</strong><span><button type="button" class="btn btn-light" onclick="AdminOfficesBulkStatusGrid.toggleCenterEmployees('${esc(centerKey)}',true)">تحديد</button> <button type="button" class="btn btn-light" onclick="AdminOfficesBulkStatusGrid.toggleCenterEmployees('${esc(centerKey)}',false)">إلغاء</button></span></div>${empRows}</div>`;
-    }).join('');
-    renderStatusGrid();
+    const names = getNames(), data = getData(), current = selectedScope();
+    const allCount = orderedKeys().reduce((s, k) => s + ((data[k] || []).length), 0);
+    box.innerHTML = `<div class="admin-bulk-center-option ${current === '__all__' ? 'active' : ''}" onclick="AdminOfficesBulkAttendance.setScope('__all__')"><span>كل المكاتب والمرافق</span><small>${allCount}</small></div>` + orderedKeys().map(k => `<div class="admin-bulk-center-option ${current === k ? 'active' : ''}" onclick="AdminOfficesBulkAttendance.setScope('${esc(k)}')"><span>${esc(names[k] || k)}</span><small>${(data[k] || []).length}</small></div>`).join('');
   }
-
-  function renderStatusGrid() {
-    const box = document.getElementById('admin-bulk-status-grid');
+  function employeeTokens() {
+    const data = getData(), names = getNames(), q = searchText();
+    const out = [];
+    scopeKeys().forEach(centerKey => {
+      (data[centerKey] || []).forEach((emp, idx) => {
+        const hay = [names[centerKey], emp.name, emp.jobTitle, emp.iqamaId, emp.nationality, emp.category].map(clean).join(' ').toLowerCase();
+        if (!q || hay.includes(q)) out.push({ centerKey, idx, emp, centerName: names[centerKey] || centerKey });
+      });
+    });
+    return out;
+  }
+  function renderEmployeeTable() {
+    renderCenters();
+    const box = document.getElementById('admin-bulk-employee-table-wrap');
     if (!box) return;
-    const start = parseInt(document.getElementById('admin-bulk-start-day')?.value || '0', 10);
-    const end = parseInt(document.getElementById('admin-bulk-end-day')?.value || '0', 10);
-    if (start > end) { box.innerHTML = '<div class="admin-bulk-empty">مدى الأيام غير صحيح.</div>'; return; }
-    const data = getData(), names = getNames(), p = getPeriod();
-    const tokens = selectedEmployees();
-    if (!tokens.length) { box.innerHTML = '<div class="admin-bulk-empty">اختر الموظفين لعرض جدول الحالات.</div>'; return; }
-    const dayHeaders = [];
-    for (let d = start; d <= end && d < p.daysInExtract; d++) dayHeaders.push(d);
-    if (!dayHeaders.length) { box.innerHTML = '<div class="admin-bulk-empty">لا توجد أيام في هذا المدى.</div>'; return; }
-    const head = `<tr><th>الموقع</th><th>الموظف</th><th>الوظيفة</th>${dayHeaders.map(d => `<th>يوم ${d + 1}</th>`).join('')}</tr>`;
-    const body = tokens.map(token => {
-      const [centerKey, rawIdx] = token.split('::');
-      const idx = parseInt(rawIdx, 10);
-      const emp = data[centerKey] && data[centerKey][idx];
-      if (!emp) return '';
-      const days = Array.isArray(emp.days) ? emp.days.slice(0, p.daysInExtract) : [];
-      while (days.length < p.daysInExtract) days.push('ح');
-      return `<tr><td class="site-cell">${esc(names[centerKey] || centerKey)}</td><td class="emp-cell">${esc(emp.name || 'بدون اسم')}</td><td>${esc(emp.jobTitle || '')}</td>${dayHeaders.map(day => `<td><select class="admin-bulk-cell-status" data-center="${esc(centerKey)}" data-index="${idx}" data-day="${day}">${statusOptions(days[day] || 'ح')}</select></td>`).join('')}</tr>`;
-    }).join('');
-    box.innerHTML = `<div class="admin-bulk-status-wrap"><table class="admin-bulk-status-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+    const rows = employeeTokens();
+    const title = document.getElementById('admin-bulk-selected-title');
+    if (title) title.textContent = 'الموظفون المعروضون: ' + rows.length;
+    if (!rows.length) { box.innerHTML = '<div class="admin-bulk-empty">لا توجد أسماء موظفين مطابقة للاختيار الحالي.</div>'; return; }
+    box.innerHTML = `<table class="admin-bulk-employee-table"><thead><tr><th style="width:38px"><input type="checkbox" checked onchange="AdminOfficesBulkAttendance.selectVisible(this.checked)"></th><th>الموقع</th><th>الموظف</th><th>الوظيفة</th><th>الفئة</th><th>الجنسية</th><th>رقم الهوية/الإقامة</th></tr></thead><tbody>${rows.map(r => `<tr><td><input type="checkbox" class="admin-bulk-emp-check" data-center="${esc(r.centerKey)}" data-index="${r.idx}" checked></td><td>${esc(r.centerName)}</td><td class="name">${esc(r.emp.name || 'بدون اسم')}</td><td class="job">${esc(r.emp.jobTitle || '')}</td><td>${esc(r.emp.category || '')}</td><td>${esc(r.emp.nationality || '')}</td><td>${esc(r.emp.iqamaId || '')}</td></tr>`).join('')}</tbody></table>`;
   }
-
-  function fillAllCells() {
-    const value = document.getElementById('admin-bulk-fill-status')?.value || 'ح';
-    document.querySelectorAll('.admin-bulk-cell-status').forEach(sel => { sel.value = value; });
-  }
-  function toggleCenterEmployees(centerKey, checked) { document.querySelectorAll(`.admin-office-bulk-employee[data-center="${centerKey}"]`).forEach(cb => { cb.checked = !!checked; }); renderStatusGrid(); }
-  function selectAllEmployees(checked) { document.querySelectorAll('.admin-office-bulk-employee').forEach(cb => { cb.checked = !!checked; }); renderStatusGrid(); }
-  function selectAllCenters(checked) { document.querySelectorAll('.admin-office-bulk-center').forEach(cb => { cb.checked = !!checked; }); renderEmployees(); }
+  function selectVisible(checked) { document.querySelectorAll('.admin-bulk-emp-check').forEach(cb => cb.checked = !!checked); }
 
   function openBulkDialog() {
     injectCss();
     const names = getNames(), keys = orderedKeys(), active = activeCenterKey(), defaultKey = active || keys[0] || '';
-    const centers = keys.map(key => `<label class="admin-bulk-center-row"><input type="checkbox" class="admin-office-bulk-center" value="${esc(key)}" ${key === defaultKey ? 'checked' : ''} onchange="AdminOfficesBulkStatusGrid.renderEmployees()"><span>${esc(names[key] || key)}</span></label>`).join('');
-    const status = statusOptions('ح');
+    const centerOptions = `<option value="__all__">كل المكاتب والمرافق</option>` + keys.map(k => `<option value="${esc(k)}" ${k === defaultKey ? 'selected' : ''}>${esc(names[k] || k)}</option>`).join('');
+    const p = getPeriod();
     const content = `
-      <div class="dialog-header"><h3><i class="fas fa-calendar-alt"></i> تعديل جماعي للحضور والانصراف — كل الحالات</h3><span class="close" onclick="closeDialog('management-dialog')">×</span></div>
+      <div class="dialog-header"><h3><i class="fas fa-calendar-check"></i> تعديل جماعي للحضور والانصراف</h3><span class="close" onclick="closeDialog('management-dialog')">×</span></div>
       <div class="dialog-body">
-        <p class="info-text">اختر المكاتب والموظفين، ثم عدّل حالة كل يوم من الجدول. كل خلية فيها كل حالات الحضور المتاحة.</p>
-        <div class="admin-bulk-controls">
-          <div><label>من يوم</label><select id="admin-bulk-start-day" onchange="AdminOfficesBulkStatusGrid.renderStatusGrid()">${dayOptions()}</select></div>
-          <div><label>إلى يوم</label><select id="admin-bulk-end-day" onchange="AdminOfficesBulkStatusGrid.renderStatusGrid()">${dayOptions()}</select></div>
-          <div><label>تعبئة سريعة لكل الخلايا المعروضة</label><select id="admin-bulk-fill-status">${status}</select></div>
-          <div style="display:flex;align-items:end"><button type="button" class="btn btn-light" onclick="AdminOfficesBulkStatusGrid.fillAllCells()">تعبئة كل الخلايا</button></div>
+        <div class="admin-bulk-standard-top">
+          <div><label>المكتب / المرفق</label><select id="admin-bulk-center-select" onchange="AdminOfficesBulkAttendance.renderEmployeeTable()">${centerOptions}</select></div>
+          <div><label>بحث بالاسم / الوظيفة / الهوية</label><input id="admin-bulk-search" type="search" placeholder="بحث سريع" oninput="AdminOfficesBulkAttendance.renderEmployeeTable()"></div>
+          <div><label>من يوم</label><select id="admin-bulk-start-day">${dayOptions(0)}</select></div>
+          <div><label>إلى يوم</label><select id="admin-bulk-end-day">${dayOptions(Math.max(0, p.daysInExtract - 1))}</select></div>
+          <div><label>الحالة الجديدة</label><select id="admin-bulk-status">${statusOptions('ح')}</select></div>
+          <div><button type="button" class="light" onclick="AdminOfficesBulkAttendance.selectVisible(true)">تحديد الكل</button></div>
         </div>
-        <fieldset><legend>1. اختيار المكاتب والمرافق</legend><div class="btn-row" style="justify-content:flex-start"><button type="button" class="btn btn-light" onclick="AdminOfficesBulkStatusGrid.selectAllCenters(true)">تحديد كل المكاتب</button><button type="button" class="btn btn-light" onclick="AdminOfficesBulkStatusGrid.selectAllCenters(false)">إلغاء كل المكاتب</button></div><div class="admin-bulk-centers-grid">${centers}</div></fieldset>
-        <fieldset><legend>2. اختيار الموظفين</legend><div class="btn-row" style="justify-content:flex-start"><button type="button" class="btn btn-light" onclick="AdminOfficesBulkStatusGrid.selectAllEmployees(true)">تحديد كل الموظفين</button><button type="button" class="btn btn-light" onclick="AdminOfficesBulkStatusGrid.selectAllEmployees(false)">إلغاء كل الموظفين</button></div><div id="admin-bulk-employees-list" class="admin-bulk-employees-list"></div></fieldset>
-        <fieldset><legend>3. تعديل الحالات لكل يوم</legend><div id="admin-bulk-status-grid"></div></fieldset>
+        <div class="admin-bulk-standard-layout">
+          <aside class="admin-bulk-side"><h4>المكاتب والمرافق</h4><div id="admin-bulk-centers-list"></div></aside>
+          <main class="admin-bulk-main"><div class="admin-bulk-main-head"><strong id="admin-bulk-selected-title">الموظفون المعروضون</strong><div class="admin-bulk-actions"><button type="button" class="light" onclick="AdminOfficesBulkAttendance.selectVisible(true)">تحديد المعروض</button><button type="button" class="light" onclick="AdminOfficesBulkAttendance.selectVisible(false)">إلغاء المعروض</button></div></div><div id="admin-bulk-employee-table-wrap" class="admin-bulk-table-wrap"></div></main>
+        </div>
       </div>
-      <div class="dialog-footer"><button class="btn btn-secondary" onclick="closeDialog('management-dialog')"><i class="fas fa-times"></i> إلغاء</button><button class="btn btn-success" onclick="AdminOfficesBulkStatusGrid.apply()"><i class="fas fa-save"></i> حفظ الحالات المعروضة</button></div>`;
+      <div class="dialog-footer"><span class="admin-bulk-note">سيتم تطبيق الحالة المختارة على الأيام المحددة للموظفين المحددين فقط.</span><div><button class="cancel" onclick="closeDialog('management-dialog')"><i class="fas fa-times"></i> إلغاء</button><button class="save" onclick="AdminOfficesBulkAttendance.apply()"><i class="fas fa-save"></i> حفظ التعديل الجماعي</button></div></div>`;
     if (typeof window.openDialog === 'function') window.openDialog(content, 'management-dialog', true);
-    setTimeout(() => { applyDialogClass(); renderEmployees(); renderStatusGrid(); }, 80);
+    else {
+      let dlg = document.getElementById('management-dialog');
+      if (!dlg) { dlg = document.createElement('div'); dlg.id = 'management-dialog'; dlg.className = 'dialog'; document.body.appendChild(dlg); }
+      dlg.innerHTML = '<div class="dialog-content">' + content + '</div>'; dlg.style.display = 'flex';
+    }
+    setTimeout(() => { applyDialogClass(); renderCenters(); renderEmployeeTable(); }, 80);
   }
 
-  function applyBulkGrid() {
-    const cells = Array.from(document.querySelectorAll('.admin-bulk-cell-status'));
-    if (!cells.length) return alert('لا توجد خلايا حالات لحفظها.');
+  function applyBulk() {
+    const checks = Array.from(document.querySelectorAll('.admin-bulk-emp-check:checked'));
+    if (!checks.length) return alert('اختر موظفًا واحدًا على الأقل.');
+    const start = parseInt(document.getElementById('admin-bulk-start-day')?.value || '0', 10);
+    const end = parseInt(document.getElementById('admin-bulk-end-day')?.value || '0', 10);
+    if (start > end) return alert('مدى الأيام غير صحيح.');
+    const status = document.getElementById('admin-bulk-status')?.value || 'ح';
     const data = getData(), p = getPeriod();
-    let changed = 0;
-    cells.forEach(sel => {
-      const centerKey = sel.dataset.center;
-      const idx = parseInt(sel.dataset.index, 10);
-      const day = parseInt(sel.dataset.day, 10);
+    let changed = 0, employees = 0;
+    checks.forEach(cb => {
+      const centerKey = cb.dataset.center;
+      const idx = parseInt(cb.dataset.index, 10);
       const emp = data[centerKey] && data[centerKey][idx];
-      if (!emp || Number.isNaN(day)) return;
+      if (!emp) return;
+      employees++;
       const days = Array.isArray(emp.days) ? emp.days.slice(0, p.daysInExtract) : [];
       while (days.length < p.daysInExtract) days.push('ح');
-      if (days[day] !== sel.value) changed++;
-      days[day] = sel.value || 'ح';
+      for (let d = start; d <= end && d < p.daysInExtract; d++) {
+        if (days[d] !== status) changed++;
+        days[d] = status;
+      }
       emp.days = days;
     });
     saveData(data);
     try { if (typeof window.renderCenterIcons === 'function') window.renderCenterIcons(); } catch (_) {}
     try { if (typeof window.calculateAndDisplayGrandTotal === 'function') window.calculateAndDisplayGrandTotal(); } catch (_) {}
-    try { const active = activeCenterKey(); if (active && typeof window.renderAttendanceTable === 'function') window.renderAttendanceTable(active); else if (active && typeof window.populateAttendanceTableBody === 'function') window.populateAttendanceTableBody(active); } catch (_) {}
+    try {
+      const active = activeCenterKey();
+      if (active && typeof window.renderAttendanceTable === 'function') window.renderAttendanceTable(active);
+      else if (active && typeof window.populateAttendanceTableBody === 'function') window.populateAttendanceTableBody(active);
+    } catch (_) {}
     try { if (typeof window.closeDialog === 'function') window.closeDialog('management-dialog'); } catch (_) {}
-    alert('تم حفظ التعديل الجماعي.\nعدد الخلايا التي تغيرت: ' + changed);
+    alert('تم حفظ التعديل الجماعي.\nعدد الموظفين: ' + employees + '\nعدد الخلايا التي تغيرت: ' + changed);
   }
 
   function printFixCss() {
     return `
       <style id="admin-offices-main-print-compact-fix">
-        @page landscape-orientation{size:A4 landscape!important;margin:3.5mm!important}
-        @page portrait-orientation-perf{size:A4 portrait!important;margin:6mm!important}
+        @page landscape-orientation{size:A4 landscape!important;margin:2.8mm!important}
+        @page portrait-orientation-perf{size:A4 portrait!important;margin:4mm!important}
         @page portrait-orientation-ach{size:A4 portrait!important;margin:7mm!important}
         body{margin:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
         .page-container{page-break-after:always!important;break-after:page!important;margin:0!important;padding:0!important;overflow:visible!important;break-before:auto!important;page-break-before:auto!important}
         .page-container:first-of-type{break-before:auto!important;page-break-before:auto!important}
-        .landscape-page{page:landscape-orientation!important}
+        .landscape-page{page:landscape-orientation!important;break-before:auto!important;page-break-before:auto!important}
         .attendance-report{margin:0!important;padding:0!important;break-before:auto!important;page-break-before:auto!important;break-inside:auto!important;page-break-inside:auto!important;transform-origin:top right!important}
-        .attendance-report .printable-header{margin:0 0 2px!important;padding:0 0 2px!important;min-height:0!important;border-bottom:1px solid #bbb!important;align-items:center!important}
-        .attendance-report .printable-header .logo{width:32px!important;max-width:32px!important;max-height:32px!important;object-fit:contain!important}
-        .attendance-report .printable-header .header-text h1,.attendance-report .printable-header .header-text h2,.attendance-report .printable-header .header-text h3{font-size:7.2pt!important;line-height:1.05!important;margin:0!important}
-        .attendance-report .page-contract-info-v2{font-size:6.5pt!important;line-height:1.15!important;margin:0 0 2px!important;padding:2px 4px!important;border-radius:4px!important}
-        .attendance-report .extract-details-v2{font-size:6.8pt!important;line-height:1.15!important;margin:0!important;padding:3px 5px!important;border-radius:3px 3px 0 0!important;min-height:0!important}
-        .attendance-report .table-summary-v2{font-size:6.6pt!important;line-height:1.1!important;padding:2px 4px!important;margin:0!important;gap:6px!important}
-        .attendance-report table{width:100%!important;border-collapse:collapse!important;table-layout:auto!important;margin:0!important;break-before:auto!important;page-break-before:auto!important;break-inside:auto!important;page-break-inside:auto!important}
+        .attendance-report .printable-header{margin:0 0 1px!important;padding:0 0 1px!important;min-height:0!important;border-bottom:1px solid #bbb!important;align-items:center!important}
+        .attendance-report .printable-header .logo{width:24px!important;max-width:24px!important;max-height:24px!important;object-fit:contain!important}
+        .attendance-report .printable-header .header-text h1,.attendance-report .printable-header .header-text h2,.attendance-report .printable-header .header-text h3{font-size:6.4pt!important;line-height:1!important;margin:0!important}
+        .attendance-report .page-contract-info-v2{font-size:5.8pt!important;line-height:1.05!important;margin:0 0 1px!important;padding:1px 3px!important;border-radius:3px!important}
+        .attendance-report .extract-details-v2{font-size:6.1pt!important;line-height:1.05!important;margin:0!important;padding:2px 4px!important;border-radius:2px 2px 0 0!important;min-height:0!important}
+        .attendance-report .table-summary-v2{font-size:5.8pt!important;line-height:1.05!important;padding:1px 3px!important;margin:0!important;gap:5px!important}
+        .attendance-report table{width:100%!important;border-collapse:collapse!important;table-layout:fixed!important;margin:0!important;break-before:auto!important;page-break-before:auto!important;break-inside:auto!important;page-break-inside:auto!important}
         .attendance-report thead{display:table-header-group!important}.attendance-report tfoot{display:table-footer-group!important}.attendance-report tr{break-inside:avoid!important;page-break-inside:avoid!important}
-        .attendance-report th,.attendance-report td{font-size:5.7pt!important;line-height:1.05!important;padding:1px!important;white-space:nowrap!important;vertical-align:middle!important}
-        .attendance-report th.job-title,.attendance-report td.job-title,.attendance-report th.employee-name,.attendance-report td.employee-name{font-size:6.1pt!important;max-width:34mm!important;white-space:normal!important;overflow-wrap:anywhere!important}
-        .attendance-report .signatures-grid{margin-top:4px!important;padding-top:3px!important;gap:4px!important}.attendance-report .signature-item{font-size:6.5pt!important}.attendance-report .signature-item .line{min-height:10px!important;margin-top:8px!important}
+        .attendance-report th,.attendance-report td{font-size:4.9pt!important;line-height:1.02!important;padding:.6px!important;white-space:nowrap!important;vertical-align:middle!important}
+        .attendance-report th.job-title,.attendance-report td.job-title,.attendance-report th.employee-name,.attendance-report td.employee-name{font-size:5.2pt!important;max-width:30mm!important;white-space:normal!important;overflow-wrap:anywhere!important}
+        .attendance-report .signatures-grid{margin-top:2px!important;padding-top:2px!important;gap:4px!important}.attendance-report .signature-item{font-size:5.8pt!important}.attendance-report .signature-item .line{min-height:8px!important;margin-top:6px!important}
         @media print{.toolbar,.no-print{display:none!important}}
       </style>`;
   }
@@ -227,7 +239,7 @@
   }
   function patchPrintSelected() {
     if (typeof window.printSelected !== 'function') return false;
-    if (window.printSelected.__adminOfficesCompactPrintWrapped) return true;
+    if (window.printSelected.__adminOfficesCompactPrintWrappedV2) return true;
     const original = window.printSelected;
     window.printSelected = function () {
       let captured = null;
@@ -236,20 +248,21 @@
       try { return original.apply(this, arguments); }
       finally { window.open = oldOpen; if (captured) injectPrintFixInto(captured); }
     };
-    window.printSelected.__adminOfficesCompactPrintWrapped = true;
+    window.printSelected.__adminOfficesCompactPrintWrappedV2 = true;
     return true;
   }
 
-  window.AdminOfficesBulkStatusGrid = { open: openBulkDialog, renderEmployees, renderStatusGrid, toggleCenterEmployees, selectAllEmployees, selectAllCenters, fillAllCells, apply: applyBulkGrid };
+  window.AdminOfficesBulkAttendance = { open: openBulkDialog, renderCenters, renderEmployeeTable, setScope, selectVisible, apply: applyBulk };
+  window.AdminOfficesBulkStatusGrid = window.AdminOfficesBulkAttendance;
 
   function patchBulkDialog() {
     injectCss();
     window.openAdminOfficesBulkAttendanceDialog = openBulkDialog;
     if (window.AdminOfficesTools) {
       window.AdminOfficesTools.openAdminOfficesBulkAttendanceDialog = openBulkDialog;
-      window.AdminOfficesTools.applyBulkAttendance = applyBulkGrid;
-      window.AdminOfficesTools.renderBulkEmployeeList = renderEmployees;
-      window.AdminOfficesTools.selectAllBulkEmployees = selectAllEmployees;
+      window.AdminOfficesTools.applyBulkAttendance = applyBulk;
+      window.AdminOfficesTools.renderBulkEmployeeList = renderEmployeeTable;
+      window.AdminOfficesTools.selectAllBulkEmployees = selectVisible;
     }
   }
   function boot() { patchBulkDialog(); patchPrintSelected(); }
@@ -258,6 +271,5 @@
   let tries = 0;
   const timer = setInterval(function () { tries++; boot(); if (tries >= 40) clearInterval(timer); }, 250);
   document.addEventListener('click', function () { setTimeout(boot, 80); setTimeout(boot, 350); }, true);
-
-  console.info('[Admin Offices Bulk Status Grid + Print Fix] installed v1');
+  console.info('[Admin Offices Bulk Attendance + Print Fix] installed v2 standard editor');
 })();
