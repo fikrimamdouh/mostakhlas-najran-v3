@@ -1,15 +1,16 @@
 // ===================================================================
-// Admin Offices Single Site Print + Performance Fit — V1
+// Admin Offices Single Site Print + Performance Fit — V2
 // Scope: admin_offices_attendance.html
-// - يجعل طباعة الموقع الحالي تستخدم نفس دالة الطباعة الرئيسية printSelected مع تحديد موقع واحد فقط.
-// - يضغط طباعة الأداء لتكون صفحة A4 واحدة بالتوقيعات.
-// - يعيد طباعة شهادة الأداء كوثيقة A4 واحدة في منتصف الصفحة، بدون Toolbar أو أزرار.
+// تعديل داخل الملف الموجود فقط، بدون حارس جديد:
+// - زر طباعة الموقع يطبع 3 صفحات فقط: الحضور + تقييم الأداء + شهادة الإنجاز.
+// - ضبط تقييم الأداء A4 صفحة واحدة: العنوان + الجدول كامل + الملخص + التواقيع.
+// - شهادة الأداء الشهرية تظل صفحة واحدة بدون أزرار خارجية.
 // ===================================================================
 (function () {
   'use strict';
   if (!/admin_offices_attendance\.html|original-viewer\?page=admin_offices_attendance\.html/.test(location.pathname + location.search)) return;
-  if (window.__ADMIN_OFFICES_SITE_PRINT_PERFORMANCE_FIT_V1__) return;
-  window.__ADMIN_OFFICES_SITE_PRINT_PERFORMANCE_FIT_V1__ = true;
+  if (window.__ADMIN_OFFICES_SITE_PRINT_PERFORMANCE_FIT_V2__) return;
+  window.__ADMIN_OFFICES_SITE_PRINT_PERFORMANCE_FIT_V2__ = true;
 
   const DATA_KEYS = [
     'adminOfficesAttendanceData_v1',
@@ -66,15 +67,68 @@
     if (!win || !win.document) return;
     const css = `
       <style id="admin-offices-performance-one-page-fit">
-        @page portrait-orientation-perf{size:A4 portrait!important;margin:5mm!important}
+        @page portrait-orientation-perf{size:A4 portrait!important;margin:4mm!important}
         @page performance-cert-page{size:A4 portrait!important;margin:8mm!important}
-        .portrait-page-perf{page:portrait-orientation-perf!important;break-after:page!important;page-break-after:always!important;margin:0!important;padding:0!important;overflow:hidden!important;min-height:0!important;}
-        .portrait-page-perf .performance-report{height:287mm!important;max-height:287mm!important;display:flex!important;flex-direction:column!important;justify-content:flex-start!important;overflow:hidden!important;padding:0!important;margin:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}
-        .portrait-page-perf .header-table{margin:0 0 4px!important;border-bottom:1.5px solid #0056b3!important;flex:0 0 auto!important}.portrait-page-perf .header-table .logo{width:42px!important}.portrait-page-perf .header-table h1,.portrait-page-perf .header-table h2{font-size:9pt!important;line-height:1.1!important;margin:0!important}
-        .portrait-page-perf .cert-title{font-size:13pt!important;margin:4px 0 3px!important;line-height:1.2!important;flex:0 0 auto!important}.portrait-page-perf .sub-title{font-size:9pt!important;margin:2px 0 3px!important;line-height:1.25!important;flex:0 0 auto!important}.portrait-page-perf .cost-bar{font-size:8.5pt!important;padding:4px!important;margin:3px 0!important;line-height:1.2!important;flex:0 0 auto!important}
-        .portrait-page-perf table{width:100%!important;border-collapse:collapse!important;table-layout:fixed!important;font-size:7.2pt!important;margin:0!important;flex:0 1 auto!important}.portrait-page-perf th,.portrait-page-perf td{padding:2px 3px!important;line-height:1.18!important;border:1px solid #333!important;vertical-align:middle!important}.portrait-page-perf .item-text{text-align:right!important;white-space:normal!important;word-break:normal!important;overflow-wrap:anywhere!important}.portrait-page-perf th:nth-child(1),.portrait-page-perf td:nth-child(1){width:7%!important}.portrait-page-perf th:nth-child(2),.portrait-page-perf td:nth-child(2){width:65%!important}.portrait-page-perf th:nth-child(3),.portrait-page-perf td:nth-child(3),.portrait-page-perf th:nth-child(4),.portrait-page-perf td:nth-child(4){width:14%!important}
-        .portrait-page-perf .summary{font-size:8.5pt!important;line-height:1.35!important;margin:5px 0 3px!important;flex:0 0 auto!important}.portrait-page-perf .signatures{margin-top:auto!important;padding-top:5px!important;border-top:1px solid #333!important;display:flex!important;justify-content:space-around!important;gap:8px!important;flex:0 0 auto!important}.portrait-page-perf .sign-box{font-size:8.5pt!important;width:24%!important;text-align:center!important}.portrait-page-perf .sign-box .line{margin-top:14px!important;border-bottom:1px solid #000!important}
-        .admin-performance-cert-page{page:performance-cert-page!important;width:100%!important;min-height:281mm!important;height:281mm!important;margin:0!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;break-after:page!important;page-break-after:always!important;background:#fff!important}.admin-performance-cert-box{width:92%!important;min-height:210mm!important;border:1px solid #d1d5db!important;padding:16mm 13mm!important;display:flex!important;flex-direction:column!important;justify-content:center!important;text-align:center!important}.admin-performance-cert-box .head{margin-bottom:16mm!important}.admin-performance-cert-box .head img{width:62px!important}.admin-performance-cert-box h1{font-size:20pt!important;margin:0 0 8mm!important;color:#003087!important}.admin-performance-cert-box .meta{font-size:12pt!important;line-height:2!important;margin-bottom:10mm!important}.admin-performance-cert-box table{width:78%!important;margin:0 auto 18mm!important;border-collapse:collapse!important;font-size:12pt!important}.admin-performance-cert-box th,.admin-performance-cert-box td{border:1px solid #111!important;padding:8px!important}.admin-performance-cert-box th{background:#f1f5f9!important}.admin-performance-cert-box .signatures{margin-top:auto!important;display:flex!important;justify-content:space-around!important;gap:16mm!important}.admin-performance-cert-box .signature-item{width:42%!important;text-align:center!important;font-size:11pt!important}.admin-performance-cert-box .signature-item .line{height:18mm!important;border-bottom:1px solid #111!important;margin:5mm 8mm 3mm!important}
+
+        .portrait-page-perf{
+          page:portrait-orientation-perf!important;
+          break-after:page!important;page-break-after:always!important;
+          margin:0!important;padding:0!important;overflow:hidden!important;min-height:0!important;
+          box-sizing:border-box!important;
+        }
+        .portrait-page-perf .performance-report{
+          height:289mm!important;max-height:289mm!important;min-height:0!important;
+          display:flex!important;flex-direction:column!important;justify-content:flex-start!important;
+          overflow:hidden!important;padding:0!important;margin:0!important;
+          break-inside:avoid!important;page-break-inside:avoid!important;box-sizing:border-box!important;
+        }
+        .portrait-page-perf .header-table{
+          margin:0 0 2.5mm!important;border-bottom:1px solid #0056b3!important;flex:0 0 auto!important;width:100%!important;
+        }
+        .portrait-page-perf .header-table .logo{width:34px!important;max-height:34px!important;object-fit:contain!important}
+        .portrait-page-perf .header-table h1,.portrait-page-perf .header-table h2{
+          font-size:8.1pt!important;line-height:1.05!important;margin:0!important;font-weight:800!important;
+        }
+        .portrait-page-perf .cert-title{
+          font-size:12pt!important;margin:1.5mm 0 1mm!important;line-height:1.12!important;flex:0 0 auto!important;text-align:center!important;font-weight:900!important;
+        }
+        .portrait-page-perf .sub-title{
+          font-size:8.2pt!important;margin:0 0 1mm!important;line-height:1.16!important;flex:0 0 auto!important;text-align:center!important;font-weight:800!important;
+        }
+        .portrait-page-perf .cost-bar{
+          font-size:7.8pt!important;padding:2.2mm!important;margin:1mm 0!important;line-height:1.08!important;flex:0 0 auto!important;border-radius:3px!important;
+        }
+        .portrait-page-perf table{
+          width:100%!important;border-collapse:collapse!important;table-layout:fixed!important;
+          font-size:6.25pt!important;margin:0!important;flex:0 1 auto!important;
+        }
+        .portrait-page-perf thead{display:table-header-group!important}
+        .portrait-page-perf tr{break-inside:avoid!important;page-break-inside:avoid!important}
+        .portrait-page-perf th,.portrait-page-perf td{
+          padding:1.15px 2px!important;line-height:1.05!important;border:1px solid #333!important;vertical-align:middle!important;text-align:center!important;
+        }
+        .portrait-page-perf th{font-weight:900!important;background:#eef2f7!important}
+        .portrait-page-perf .item-text{text-align:right!important;white-space:normal!important;word-break:normal!important;overflow-wrap:anywhere!important}
+        .portrait-page-perf th:nth-child(1),.portrait-page-perf td:nth-child(1){width:6%!important}
+        .portrait-page-perf th:nth-child(2),.portrait-page-perf td:nth-child(2){width:68%!important}
+        .portrait-page-perf th:nth-child(3),.portrait-page-perf td:nth-child(3),.portrait-page-perf th:nth-child(4),.portrait-page-perf td:nth-child(4){width:13%!important}
+        .portrait-page-perf .summary{
+          font-size:7.4pt!important;line-height:1.18!important;margin:1.2mm 0 .5mm!important;flex:0 0 auto!important;text-align:center!important;
+        }
+        .portrait-page-perf .summary p{margin:0!important}
+        .portrait-page-perf .signatures{
+          margin-top:auto!important;padding-top:2.5mm!important;border-top:1px solid #333!important;
+          display:flex!important;justify-content:space-around!important;gap:5px!important;flex:0 0 auto!important;
+        }
+        .portrait-page-perf .sign-box{font-size:7.5pt!important;width:24%!important;text-align:center!important;line-height:1.15!important}
+        .portrait-page-perf .sign-box .line{margin-top:8mm!important;border-bottom:1px solid #000!important;height:1px!important}
+
+        .admin-performance-cert-page{page:performance-cert-page!important;width:100%!important;min-height:281mm!important;height:281mm!important;margin:0!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;break-after:page!important;page-break-after:always!important;background:#fff!important}
+        .admin-performance-cert-box{width:92%!important;min-height:210mm!important;border:1px solid #d1d5db!important;padding:16mm 13mm!important;display:flex!important;flex-direction:column!important;justify-content:center!important;text-align:center!important}
+        .admin-performance-cert-box .head{margin-bottom:16mm!important}.admin-performance-cert-box .head img{width:62px!important}
+        .admin-performance-cert-box h1{font-size:20pt!important;margin:0 0 8mm!important;color:#003087!important}.admin-performance-cert-box .meta{font-size:12pt!important;line-height:2!important;margin-bottom:10mm!important}
+        .admin-performance-cert-box table{width:78%!important;margin:0 auto 18mm!important;border-collapse:collapse!important;font-size:12pt!important}.admin-performance-cert-box th,.admin-performance-cert-box td{border:1px solid #111!important;padding:8px!important}.admin-performance-cert-box th{background:#f1f5f9!important}
+        .admin-performance-cert-box .signatures{margin-top:auto!important;display:flex!important;justify-content:space-around!important;gap:16mm!important}.admin-performance-cert-box .signature-item{width:42%!important;text-align:center!important;font-size:11pt!important}.admin-performance-cert-box .signature-item .line{height:18mm!important;border-bottom:1px solid #111!important;margin:5mm 8mm 3mm!important}
         .toolbar,.print-toolbar,.no-print,button{display:none!important}
       </style>`;
     const inject = () => { try { if (!win.document.getElementById('admin-offices-performance-one-page-fit')) win.document.head.insertAdjacentHTML('beforeend', css); } catch (_) {} };
@@ -83,7 +137,7 @@
 
   function patchPrintSelectedCss() {
     if (typeof window.printSelected !== 'function') return false;
-    if (window.printSelected.__adminPerformanceFitWrapped) return true;
+    if (window.printSelected.__adminPerformanceFitWrappedV2) return true;
     const old = window.printSelected;
     window.printSelected = function () {
       let opened = null;
@@ -92,7 +146,7 @@
       try { return old.apply(this, arguments); }
       finally { window.open = oldOpen; if (opened) injectPerformanceFitCss(opened); }
     };
-    window.printSelected.__adminPerformanceFitWrapped = true;
+    window.printSelected.__adminPerformanceFitWrappedV2 = true;
     return true;
   }
 
@@ -103,7 +157,7 @@
     const holder = document.createElement('div');
     holder.id = 'admin-single-site-main-print-holder';
     holder.style.cssText = 'position:fixed;left:-99999px;top:-99999px;width:1px;height:1px;overflow:hidden;';
-    const opt = Object.assign({ attendance: true, performance: false, achievement: false }, options || {});
+    const opt = Object.assign({ attendance: true, performance: true, achievement: true }, options || {});
     holder.innerHTML = `
       <div id="print-centers-checkboxes"><input type="checkbox" value="${esc(centerKey)}" checked></div>
       <input type="checkbox" id="print-opt-attendance" ${opt.attendance ? 'checked' : ''}>
@@ -121,23 +175,28 @@
     const view = document.getElementById('center-details-view');
     if (!view || view.style.display === 'none') return;
     const header = view.querySelector('.center-header-container');
-    if (!header || document.getElementById('admin-single-site-main-print-btn')) return;
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.id = 'admin-single-site-main-print-btn';
-    btn.className = 'back-button';
-    btn.style.cssText = 'background:#0f766e;margin-inline-start:8px;';
-    btn.innerHTML = '<i class="fas fa-print"></i> طباعة حضور الموقع';
-    btn.onclick = function () { printOneCenterLikeMain(currentCenterKey(), { attendance: true, performance: false, achievement: false }); };
-    header.appendChild(btn);
+    if (!header) return;
+    let btn = document.getElementById('admin-single-site-main-print-btn');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = 'admin-single-site-main-print-btn';
+      btn.className = 'back-button';
+      btn.style.cssText = 'background:#0f766e;margin-inline-start:8px;';
+      header.appendChild(btn);
+    }
+    btn.innerHTML = '<i class="fas fa-print"></i> طباعة الموقع: حضور + أداء + إنجاز';
+    btn.title = 'يطبع للموقع الحالي فقط: الحضور والانصراف، جدول تقييم الأداء، شهادة الإنجاز. لا يطبع الشهادة الإجمالية.';
+    btn.onclick = function () { printOneCenterLikeMain(currentCenterKey(), { attendance: true, performance: true, achievement: true }); };
   }
 
   function patchPerSitePrintNames() {
-    window.printCurrentAdminOfficeAttendanceLikeMain = function () { return printOneCenterLikeMain(currentCenterKey(), { attendance: true, performance: false, achievement: false }); };
-    window.preparePrint = window.printCurrentAdminOfficeAttendanceLikeMain;
-    window.printCurrentAttendanceTable = window.printCurrentAdminOfficeAttendanceLikeMain;
-    window.printCurrentAdminOfficeAttendance = window.printCurrentAdminOfficeAttendanceLikeMain;
-    window.printCurrentSiteAttendance = window.printCurrentAdminOfficeAttendanceLikeMain;
+    const fn = function () { return printOneCenterLikeMain(currentCenterKey(), { attendance: true, performance: true, achievement: true }); };
+    window.printCurrentAdminOfficeAttendanceLikeMain = fn;
+    window.preparePrint = fn;
+    window.printCurrentAttendanceTable = fn;
+    window.printCurrentAdminOfficeAttendance = fn;
+    window.printCurrentSiteAttendance = fn;
   }
 
   function signatureHtml(type, centerKey) {
@@ -185,9 +244,9 @@
   }
   function patchExtraDocsPerformanceCertificate() {
     const api = window.AdminOfficesExtraDocs;
-    if (!api || api.__performanceCertificatePlainPatched) return false;
+    if (!api || api.__performanceCertificatePlainPatchedV2) return false;
     api.generateMonthlyPerformanceCertificates = openPlainPerformanceCertificate;
-    api.__performanceCertificatePlainPatched = true;
+    api.__performanceCertificatePlainPatchedV2 = true;
     return true;
   }
 
@@ -203,6 +262,12 @@
   const timer = setInterval(function () { tries++; boot(); if (tries >= 60) clearInterval(timer); }, 250);
   document.addEventListener('click', function () { setTimeout(boot, 80); setTimeout(boot, 350); setTimeout(boot, 900); }, true);
 
-  window.AdminOfficesSitePrintPerformanceFit = { printCurrentAttendance: () => printOneCenterLikeMain(currentCenterKey(), { attendance: true }), printOneCenterLikeMain, printPerformanceCertificates: openPlainPerformanceCertificate, fitPrintCss: injectPerformanceFitCss };
-  console.info('[Admin Offices Site Print + Performance Fit] installed v1');
+  window.AdminOfficesSitePrintPerformanceFit = {
+    printCurrentSiteBundle: () => printOneCenterLikeMain(currentCenterKey(), { attendance: true, performance: true, achievement: true }),
+    printCurrentAttendance: () => printOneCenterLikeMain(currentCenterKey(), { attendance: true, performance: true, achievement: true }),
+    printOneCenterLikeMain,
+    printPerformanceCertificates: openPlainPerformanceCertificate,
+    fitPrintCss: injectPerformanceFitCss
+  };
+  console.info('[Admin Offices Site Print + Performance Fit] installed v2 — site prints attendance + performance + achievement only');
 })();
