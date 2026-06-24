@@ -8,6 +8,7 @@
 // + يحمل طباعة الموقع الحالي بنفس دالة الطباعة الرئيسية وضبط أداء A4 صفحة واحدة
 // + يحمل حارس أرشفة الرفع للاعتماد حتى تُحفظ نسخة مراجعة كاملة للمكاتب
 // + يوضح تواقيع خطابات الرفع والإقرار داخل نافذة الخطابات
+// + يقسم أزرار المستخلص والشهادات وخطابات المواقع بوضوح
 // ===================================================================
 (function () {
   'use strict';
@@ -45,6 +46,10 @@
 
   function loadSignatureLabelsPatch() {
     loadScriptOnce('admin-offices-raise-letter-signature-labels', '/original/admin_offices_raise_letters_signature_labels.js?v=20260623_sig_labels_v1');
+  }
+
+  function loadButtonGroupsPatch() {
+    loadScriptOnce('admin-offices-raise-letter-button-groups', '/original/admin_offices_raise_letters_button_groups.js?v=20260623_button_groups_v1');
   }
 
   function openStandaloneTab() {
@@ -180,6 +185,7 @@
   function boot(attempt) {
     loadSubmittedArchiveBundleGuard();
     loadSignatureLabelsPatch();
+    loadButtonGroupsPatch();
     loadDynamicFinalSubjectPatch();
     loadBulkStatusGridPrintFix();
     loadSitePrintPerformanceFit();
@@ -194,6 +200,7 @@
     setTimeout(applyExcelImportDialogLayout, 350);
     setTimeout(loadSubmittedArchiveBundleGuard, 120);
     setTimeout(loadSignatureLabelsPatch, 120);
+    setTimeout(loadButtonGroupsPatch, 120);
     setTimeout(loadDynamicFinalSubjectPatch, 120);
     setTimeout(loadBulkStatusGridPrintFix, 120);
     setTimeout(loadSitePrintPerformanceFit, 120);
@@ -202,5 +209,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0));
   else boot(0);
 
-  console.info('[Admin Offices Raise Letters] standalone tab mode installed + Excel import scroll fix + final subject + bulk/print + site/performance fit + archive bundle + signature labels loader');
+  console.info('[Admin Offices Raise Letters] standalone tab mode installed + Excel import scroll fix + final subject + bulk/print + site/performance fit + archive bundle + signature labels + button groups loader');
 })();
