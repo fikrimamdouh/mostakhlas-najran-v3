@@ -168,3 +168,165 @@ function calculatePerformanceTotalScore(centerKey){return getPerformanceItems(ce
 function printPerformanceCertificate(centerKey){const extractData=JSON.parse(localStorage.getItem('persistentExtractData')||'{}');const centerName=getCenterNames()[centerKey]||'الموقع';const extractStart=formatPerformanceDate(extractData.extractStart);const extractEnd=formatPerformanceDate(extractData.extractEnd);const win=window.open('','_blank','width=1200,height=800');const doc=win.document;const built=buildPrintRows(centerKey);const tableHead=isWorkshopCenter(centerKey)?'<tr><th colspan="2">أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr>':'<tr><th>م</th><th>أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr>';let signaturesHTML='';const sig=document.getElementById(`perf-signatures-${centerKey}`);if(sig){sig.querySelectorAll('.signature-item-display,.signature-block-display,.sb-item').forEach(item=>{const title=item.querySelector('.title,.sb-item-title')?.textContent||'غير محدد';const name=item.querySelector('.name,.sb-item-name')?.textContent||'..............................';signaturesHTML+=`<div class="sign-box"><div>${title}</div><div class="name-placeholder">${name}</div><div class="line"></div></div>`;});}doc.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>طباعة تقييم الأداء - ${centerName}</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet"><style>@page{size:A4 portrait;margin:.7cm}*{box-sizing:border-box;font-family:'Tajawal',Arial,sans-serif}body{margin:0;background:#fff;color:#000;-webkit-print-color-adjust:exact}.header-table{width:100%;border-bottom:2px solid #0056b3;margin-bottom:10px}.header-table td{text-align:center;padding:2px 4px}.logo{width:70px}.title-box h1{font-size:16pt;margin:2px;color:#003087}.title-box h2{font-size:12pt;margin:2px}.cert-title{font-size:15pt;font-weight:700;text-align:center;margin:8px 0}.sub-title{font-size:12pt;text-align:center;margin:4px 0}.cost-bar{background:#f2f2f2;padding:6px;text-align:center;font-size:11pt;font-weight:700;margin:8px 0}table.performance-print{width:100%;border-collapse:collapse;font-size:9pt;table-layout:fixed}table.performance-print th,table.performance-print td{border:1px solid #333;padding:4px;text-align:center}table.performance-print th{background:#d6ffd6}.item-text{text-align:center;font-weight:600}.workshop-group,.workshop-sub{font-weight:600}.summary{margin-top:10px;font-size:11pt;line-height:1.5}.summary span{font-weight:700}.signatures{margin-top:25px;display:flex;justify-content:space-around;border-top:1px solid #333;padding-top:10px}.sign-box{text-align:center;font-size:10pt;width:24%;font-weight:500}.sign-box .line{border-bottom:1px solid #000;margin-top:30px}</style></head><body><table class="header-table"><tr><td style="width:18%"><img class="logo" src="${document.querySelector('.logo-left')?.src}" alt="Logo"></td><td class="title-box"><h1>${document.querySelector('.header-info h1')?.textContent}</h1><h2>${document.querySelector('.header-info h3')?.textContent}</h2></td><td style="width:18%"><img class="logo" src="${document.querySelector('.logo-right')?.src}" alt="Logo"></td></tr></table><div class="cert-title">جدول ح غ 1</div><div class="sub-title">جدول الغرامات الخاصة بمستوى الأداء لموقع ${centerName}</div><div class="sub-title">عن الفترة من : ${extractStart}م إلى ${extractEnd}م</div><div class="cost-bar">إجمالي المبلغ لأنشطة القسم (تكلفة العمالة): ${calculateCenterTotalCost(centerKey).toFixed(2)} ريال</div><table class="performance-print"><thead>${tableHead}</thead><tbody>${built.rows}<tr style="font-weight:bold;background:#d6ffd6"><td colspan="2">المجمــــــــــــــــوع</td><td>${built.maxTotal}</td><td>${calculatePerformanceTotalScore(centerKey)}</td></tr></tbody></table><div class="summary">${document.getElementById(`perf-summary-${centerKey}`)?.innerHTML||''}</div><div class="signatures">${signaturesHTML}</div></body></html>`);doc.close();win.onload=function(){win.focus();win.print();win.close();};}
 function exportPerformanceToPDF(centerKey){const element=document.getElementById(`performance-certificate-${centerKey}`);if(typeof html2pdf!=='undefined'&&element)html2pdf().from(element).save(`performance_${centerKey}.pdf`);else printPerformanceCertificate(centerKey);}
 function exportPerformanceToExcel(centerKey){if(typeof XLSX==='undefined'){alert('مكتبة Excel غير محملة.');return;}const centerName=getCenterNames()[centerKey]||'الموقع';const items=getPerformanceItems(centerKey);let maxT=0,scoreT=0;const rows=isWorkshopCenter(centerKey)?[['القسم','البند','الدرجة القصوى','التقدير']]:[['م','أنشطة القسم','الدرجة القصوى','التقدير']];items.forEach((item,index)=>{const s=getPerformanceScore(centerKey,item,index);maxT+=parseInt(item.max,10)||0;scoreT+=s;if(isWorkshopCenter(centerKey))rows.push([item.section||'',item.sub||item.text,item.max,s]);else rows.push([index+1,item.text,item.max,s]);});rows.push(['','المجمــــــــــــــــوع',maxT,scoreT]);const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet(rows);XLSX.utils.book_append_sheet(wb,ws,'جدول ح غ 1');XLSX.writeFile(wb,`جدول_ح_غ_1_${centerName}.xlsx`);}
+window.buildAdminOfficePerformancePrintHtml = function(centerKey, options = {}) {
+  const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+  const extractData = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+  const centerNames = typeof getCenterNames === 'function'
+    ? getCenterNames()
+    : JSON.parse(localStorage.getItem('adminOfficeNames_v1') || '{}');
+
+  const centerName = centerNames[centerKey] || centerKey;
+  const items = typeof getPerformanceItems === 'function'
+    ? getPerformanceItems(centerKey)
+    : [];
+
+  const scores = items.map((item, index) => {
+    if (typeof getPerformanceScore === 'function') {
+      return getPerformanceScore(centerKey, item, index);
+    }
+    return item.score !== undefined ? item.score : item.max;
+  });
+
+  const esc = v => String(v ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
+  const money = v => (Number(v) || 0).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+
+  const fmtDate = v => {
+    if (!v) return 'غير محدد';
+    try { return new Date(v).toLocaleDateString('en-CA'); }
+    catch (_) { return 'غير محدد'; }
+  };
+
+  const getSignaturesForPrint = (type, key) => {
+    let sigKey = type;
+    try {
+      if (typeof getSignatureKeyForContext === 'function') {
+        sigKey = getSignatureKeyForContext(type, key);
+      }
+    } catch (_) {}
+
+    let sigs = [];
+    try {
+      if (typeof getSignatures === 'function') sigs = getSignatures(sigKey) || [];
+    } catch (_) {}
+
+    if (!sigs.length && sigKey !== type) {
+      try { sigs = getSignatures(type) || []; } catch (_) {}
+    }
+
+    if (!sigs.length) {
+      sigs = [
+        { title: 'مدير المشروع', name: '' },
+        { title: 'رئيس قسم الصيانة', name: '' },
+        { title: 'مندوب المقاول', name: '' }
+      ];
+    }
+
+    return sigs;
+  };
+
+  let maxTotal = 0;
+  let scoreTotal = 0;
+
+  const rows = items.map((item, index) => {
+    const max = Number(item.max) || 0;
+    const score = Number(scores[index]) || 0;
+    maxTotal += max;
+    scoreTotal += score;
+
+    return `
+      <tr>
+        <td class="activity-cell">${esc(item.sub || item.text || '')}</td>
+        <td>${max}</td>
+        <td>${score}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const percent = maxTotal > 0 ? (scoreTotal / maxTotal * 100) : 100;
+
+  let deductionPercent = 0;
+  if (percent < 60) deductionPercent = 15;
+  else if (percent < 65) deductionPercent = 10;
+  else if (percent < 70) deductionPercent = 8;
+  else if (percent < 75) deductionPercent = 6;
+  else if (percent < 80) deductionPercent = 4;
+  else if (percent < 85) deductionPercent = 2;
+
+  const sectionAmount =
+    typeof calculateCenterTotalCost === 'function'
+      ? calculateCenterTotalCost(centerKey)
+      : 0;
+
+  const performanceFine = sectionAmount * deductionPercent / 100;
+
+  const deductions = JSON.parse(localStorage.getItem('performanceDeductions') || '{}');
+  deductions[centerKey] = performanceFine;
+  localStorage.setItem('performanceDeductions', JSON.stringify(deductions));
+
+  const signatures = getSignaturesForPrint('performance', centerKey).map(sig => `
+    <div class="perf-sign-box">
+      <div class="sig-title">${esc(sig.title || '')}</div>
+      <div class="sig-line"></div>
+      <div class="sig-name">${esc(sig.name || '')}</div>
+    </div>
+  `).join('');
+
+  return `
+    <div class="page-container portrait-page-perf admin-performance-print-page">
+      <div class="perf-header">
+        <img src="najran_health_cluster_logo.png">
+        <div>
+          <h1>فرع وزارة الصحة بمنطقة نجران</h1>
+          <h2>المكاتب الإدارية والمرافق الصحية</h2>
+        </div>
+        <img src="najran_health_cluster_logo.png">
+      </div>
+
+      <div class="perf-contract-box">
+        <div><b>تفاصيل العقد:</b> ${esc(contractData.contractDetails || '—')} | <b>نوع العقد:</b> ${esc(contractData.contractType || 'عقد أساسي')}</div>
+        <div><b>مدة المستخلص:</b> من ${fmtDate(extractData.extractStart)} إلى ${fmtDate(extractData.extractEnd)}</div>
+      </div>
+
+      <div class="perf-blue-title">جدول ح غ 1 - تقييم قسم ${esc(centerName)}</div>
+
+      <div class="perf-amount-line">
+        <b>إجمالي المبلغ للقسم:</b> ${money(sectionAmount)} ريال
+      </div>
+
+      <table class="perf-print-table">
+        <thead>
+          <tr>
+            <th>أنشطة القسم</th>
+            <th>الدرجة القصوى</th>
+            <th>التقدير</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+          <tr class="perf-total-row">
+            <td>المجموع</td>
+            <td>${maxTotal}</td>
+            <td>${scoreTotal}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="perf-summary-lines">
+        <p>التقدير الذي حصل عليه المقاول: ${scoreTotal} من ${maxTotal} (%${percent.toFixed(2)})</p>
+        <p>نسبة الحسم للمقاول في هذا القسم: %${deductionPercent}</p>
+        <p>مبلغ غرامة الأداء علي المقاول لهذا الجدول: ${money(performanceFine)} ريال سعودي</p>
+        <p>بناءً على ما سبق تم تقييم القسم من خلال لجنة الإشراف والمتابعة حسب المعايير المعتمدة، وتم احتساب المبلغ المستحق بناءً على نسبة التقييم.</p>
+      </div>
+
+      <div class="perf-signatures">${signatures}</div>
+    </div>
+  `;
+};
