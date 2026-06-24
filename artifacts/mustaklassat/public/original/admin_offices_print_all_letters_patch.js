@@ -2,6 +2,7 @@
 // Admin Offices Print All + Raise Letters
 // Scope: admin_offices_attendance.html only
 // يضيف خطابات الرفع داخل طباعة الكل من نفس زر الطباعة الموجود
+// مع تفقيط واضح أسفل الإجمالي داخل جدول المبالغ.
 // ===================================================================
 (function () {
   'use strict';
@@ -12,9 +13,7 @@
   const RAISE_SIG_KEY = 'admin_offices_raise_letters_signatures';
   const VAT_DEFAULT = 15;
 
-  function readJson(key, fallback) {
-    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
-  }
+  function readJson(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; } }
   function esc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function num(v) { const n = Number(String(v ?? '').replace(/,/g, '').replace(/[()]/g, '')); return isNaN(n) ? 0 : n; }
   function money(v) { return num(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -29,11 +28,7 @@
     const paymentNo = e.paymentNumber || e.extractNumber || localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber') || '—';
     const start = e.extractStart || localStorage.getItem('extractStart') || '';
     const end = e.extractEnd || localStorage.getItem('extractEnd') || '';
-    return {
-      paymentNo: String(paymentNo).match(/^\d+$/) ? String(paymentNo).padStart(2, '0') : String(paymentNo),
-      start,
-      end
-    };
+    return { paymentNo: String(paymentNo).match(/^\d+$/) ? String(paymentNo).padStart(2, '0') : String(paymentNo), start, end };
   }
   function extractPhrase() {
     const m = getActiveExtractMeta();
@@ -70,7 +65,7 @@
   }
   function tafqeet(v) {
     if (window.AdminOfficesRaiseLetters && typeof window.AdminOfficesRaiseLetters.tafqeetSAR === 'function') return window.AdminOfficesRaiseLetters.tafqeetSAR(v);
-    return `فقط ${money(v)} ريال لا غير`;
+    return `فقط وقدره ${money(v)} ريال سعودي لا غير`;
   }
   function logoSrc() { return 'moh_logo.png'; }
   function headerHtml(s) { return `<div class="raise-head"><img src="${esc(logoSrc())}"><div><h1>${esc(s.entityTitle)}</h1><h2>${esc(s.departmentTitle)}</h2></div><img src="${esc(logoSrc())}"></div>`; }
@@ -80,29 +75,26 @@
     const rows = Array.isArray(sigs) && sigs.length ? sigs : [{ title: 'مدير إدارة الإمداد والصيانة', name: '' }];
     return `<div class="raise-signatures" style="grid-template-columns:repeat(${Math.min(Math.max(rows.length, 1), 3)},1fr)">${rows.map(sig => `<div><div class="sig-title">${esc(sig.title)}</div><div class="line"></div><div class="sig-name">${esc(sig.name || '')}</div></div>`).join('')}</div>`;
   }
-  function amountTable(rows) { return `<table class="raise-amount-table"><tbody>${rows.map(r => `<tr class="${r.cls || ''}"><td>${r.label}</td><td>${r.value}</td></tr>`).join('')}</tbody></table>`; }
+  function amountTable(rows, tafqeetAmount) {
+    const body = rows.map(r => `<tr class="${r.cls || ''}"><td>${r.label}</td><td>${r.value}</td></tr>`).join('');
+    const taf = tafqeetAmount === undefined ? '' : `<tr class="tafqeet-row"><td colspan="2">${esc(tafqeet(tafqeetAmount))}</td></tr>`;
+    return `<table class="raise-amount-table"><tbody>${body}${taf}</tbody></table>`;
+  }
   function laborNet() {
     const dom = document.getElementById('grand-net-total')?.textContent || document.getElementById('grand-net-total-admin')?.textContent;
     return num(localStorage.getItem('grand-net-total-admin') || dom || 0);
   }
- function consumablesNet() {
-  const settings = getSettings();
-
-  return (
-    num(localStorage.getItem('admin_offices_consumables_current_net')) ||
-    num(localStorage.getItem('adminOfficesConsumablesNet')) ||
-    num(localStorage.getItem('finalConsumablesCost')) ||
-    num(settings.consumablesNet) ||
-    0
-  );
-}
+  function consumablesNet() {
+    const settings = getSettings();
+    return num(localStorage.getItem('admin_offices_consumables_current_net')) || num(localStorage.getItem('adminOfficesConsumablesNet')) || num(localStorage.getItem('finalConsumablesCost')) || num(settings.consumablesNet) || 0;
+  }
   function laborLetterPage() {
     const s = getSettings();
     const company = getCompanyName();
     const net = laborNet();
     const vat = net * num(s.vatRate) / 100;
     const grand = net + vat;
-    return `<div class="page-container raise-letter-page">${headerHtml(s)}<div class="raise-to">${esc(s.recipient)} &nbsp;&nbsp; ${esc(s.recipientSuffix)}</div><div class="raise-body">السلام عليكم ورحمة الله وبركاته، وبعد:<br>نرفق لسعادتكم المستخلص الشهري لشركة ${esc(company)} والخاص ببند العمالة لمواقع ${esc(s.scopeName)}، ${extractPhrase()}.</div>${amountTable([{label:'صافي مستحقات العمالة عن فترة المستخلص',value:moneyPlain(net)},{label:`ضريبة القيمة المضافة ${moneyPlain(s.vatRate)}%`,value:money(vat)},{label:'الإجمالي',value:money(grand),cls:'grand'}])}<div class="raise-tafqeet">${esc(tafqeet(grand))}</div><div class="raise-body">لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / ${esc(company)}<br>وتقبلوا تحياتنا ،،،</div>${signaturesHtml()}${footerHtml(s)}</div>`;
+    return `<div class="page-container raise-letter-page">${headerHtml(s)}<div class="raise-to">${esc(s.recipient)} &nbsp;&nbsp; ${esc(s.recipientSuffix)}</div><div class="raise-body">السلام عليكم ورحمة الله وبركاته، وبعد:<br>نرفق لسعادتكم المستخلص الشهري لشركة ${esc(company)} والخاص ببند العمالة لمواقع ${esc(s.scopeName)}، ${extractPhrase()}.</div>${amountTable([{label:'صافي مستحقات العمالة عن فترة المستخلص',value:moneyPlain(net)},{label:`ضريبة القيمة المضافة ${moneyPlain(s.vatRate)}%`,value:money(vat)},{label:'الإجمالي',value:money(grand),cls:'grand'}], grand)}<div class="raise-body">لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / ${esc(company)}<br>وتقبلوا تحياتنا ،،،</div>${signaturesHtml()}${footerHtml(s)}</div>`;
   }
   function consumablesLetterPage() {
     const s = getSettings();
@@ -110,7 +102,7 @@
     const net = consumablesNet();
     const vat = net * num(s.vatRate) / 100;
     const grand = net + vat;
-    return `<div class="page-container raise-letter-page">${headerHtml(s)}<div class="raise-to">${esc(s.recipient)} &nbsp;&nbsp; ${esc(s.recipientSuffix)}</div><div class="raise-body">السلام عليكم ورحمة الله وبركاته، وبعد:<br>نرفق لسعادتكم المستخلص الشهري لشركة ${esc(company)} والخاص ببند المستهلكات ومقاولي الباطن لمواقع ${esc(s.scopeName)}، ${extractPhrase()}.</div>${amountTable([{label:'صافي مستحقات المستهلكات ومقاولي الباطن عن فترة المستخلص',value:moneyPlain(net)},{label:`ضريبة القيمة المضافة ${moneyPlain(s.vatRate)}%`,value:money(vat)},{label:'الإجمالي',value:money(grand),cls:'grand'}])}<div class="raise-tafqeet">${esc(tafqeet(grand))}</div><div class="raise-body">لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / ${esc(company)}<br>وتقبلوا تحياتنا ،،،</div>${signaturesHtml()}${footerHtml(s)}</div>`;
+    return `<div class="page-container raise-letter-page">${headerHtml(s)}<div class="raise-to">${esc(s.recipient)} &nbsp;&nbsp; ${esc(s.recipientSuffix)}</div><div class="raise-body">السلام عليكم ورحمة الله وبركاته، وبعد:<br>نرفق لسعادتكم المستخلص الشهري لشركة ${esc(company)} والخاص ببند المستهلكات ومقاولي الباطن لمواقع ${esc(s.scopeName)}، ${extractPhrase()}.</div>${amountTable([{label:'صافي مستحقات المستهلكات ومقاولي الباطن عن فترة المستخلص',value:moneyPlain(net)},{label:`ضريبة القيمة المضافة ${moneyPlain(s.vatRate)}%`,value:money(vat)},{label:'الإجمالي',value:money(grand),cls:'grand'}], grand)}<div class="raise-body">لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / ${esc(company)}<br>وتقبلوا تحياتنا ،،،</div>${signaturesHtml()}${footerHtml(s)}</div>`;
   }
   function declarationPage() {
     const s = getSettings();
@@ -119,7 +111,7 @@
     return `<div class="page-container raise-letter-page">${headerHtml(s)}<div style="text-align:left;font-size:14px;font-weight:800">التاريخ : ${esc(fmtDate(s.declarationDate))} م</div><div class="raise-title">إقرار بعدم أسبقية الصرف</div><div class="raise-body">تقر إدارة الصيانة بالشئون الهندسية بصحة نجران بأن مستخلص العمالة لشركة ${esc(company)}، لمواقع ${esc(s.scopeName)}، ${extractPhrase()}، بمبلغ وقدره (${money(amount)}) ${esc(tafqeet(amount))}.<br>ولم يسبق صرفه من قبلنا.</div>${signaturesHtml()}${footerHtml(s)}</div>`;
   }
   function lettersCss() {
-    return `<style id="raise-letters-print-all-css">@page raise-letter-page{size:A4 portrait;margin:12mm}.raise-letter-page{page:raise-letter-page!important;direction:rtl;font-family:Tajawal,Arial,sans-serif;color:#111827;background:#fff;min-height:270mm;padding:8mm 10mm;position:relative;page-break-after:always}.raise-head{display:grid;grid-template-columns:78px 1fr 78px;align-items:center;border-bottom:2px solid #003087;padding-bottom:8px;margin-bottom:18px}.raise-head img{width:68px}.raise-head div{text-align:center}.raise-head h1{font-size:17px;margin:0 0 4px;color:#003087}.raise-head h2{font-size:15px;margin:0}.raise-to{font-size:15px;font-weight:900;margin:18px 0 12px}.raise-body{font-size:15px;line-height:2.05;text-align:justify}.raise-title{text-align:center;font-size:19px;font-weight:900;color:#003087;margin:20px 0}.raise-amount-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}.raise-amount-table td{border:1px solid #333;padding:8px}.raise-amount-table td:first-child{text-align:right;font-weight:800;width:72%}.raise-amount-table td:last-child{text-align:center;font-weight:900;direction:ltr}.raise-amount-table .grand td{background:#fff7d6;font-weight:900}.raise-tafqeet{border:1px solid #94a3b8;background:#f8fafc;border-radius:8px;padding:8px 12px;margin-top:8px;font-weight:900;line-height:1.8}.raise-signatures{display:grid;gap:20px;margin-top:35px;text-align:center}.raise-signatures .sig-title{font-weight:900}.raise-signatures .sig-name{font-weight:800;margin-top:10px}.raise-signatures .line{height:42px;border-bottom:1px solid #111;margin:8px 30px}.raise-footer{position:absolute;bottom:4mm;left:10mm;right:10mm;border-top:1px solid #cbd5e1;padding-top:5px;font-size:11px;display:flex;justify-content:space-between;direction:ltr}</style>`;
+    return `<style id="raise-letters-print-all-css">@page raise-letter-page{size:A4 portrait;margin:12mm}.raise-letter-page{page:raise-letter-page!important;direction:rtl;font-family:Tajawal,Arial,sans-serif;color:#111827;background:#fff;min-height:270mm;padding:8mm 10mm;position:relative;page-break-after:always}.raise-head{display:grid;grid-template-columns:78px 1fr 78px;align-items:center;border-bottom:2px solid #003087;padding-bottom:8px;margin-bottom:18px}.raise-head img{width:68px}.raise-head div{text-align:center}.raise-head h1{font-size:17px;margin:0 0 4px;color:#003087}.raise-head h2{font-size:15px;margin:0}.raise-to{font-size:15px;font-weight:900;margin:18px 0 12px}.raise-body{font-size:15px;line-height:2.05;text-align:justify}.raise-title{text-align:center;font-size:19px;font-weight:900;color:#003087;margin:20px 0}.raise-amount-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}.raise-amount-table td{border:1px solid #333;padding:8px}.raise-amount-table td:first-child{text-align:right;font-weight:800;width:72%}.raise-amount-table td:last-child{text-align:center;font-weight:900;direction:ltr}.raise-amount-table .grand td{background:#fff7d6;font-weight:900}.raise-amount-table .tafqeet-row td{background:#f8fafc!important;text-align:center!important;direction:rtl!important;font-weight:900!important;line-height:1.8!important;font-size:14px!important}.raise-signatures{display:grid;gap:20px;margin-top:35px;text-align:center}.raise-signatures .sig-title{font-weight:900}.raise-signatures .sig-name{font-weight:800;margin-top:10px}.raise-signatures .line{height:42px;border-bottom:1px solid #111;margin:8px 30px}.raise-footer{position:absolute;bottom:4mm;left:10mm;right:10mm;border-top:1px solid #cbd5e1;padding-top:5px;font-size:11px;display:flex;justify-content:space-between;direction:ltr}</style>`;
   }
   function buildSelectedLetters() {
     const pages = [];
@@ -180,5 +172,5 @@
     if (attempt < 40 && (!window.openPrintDialog?.__raiseLettersPatched || !window.printSelected?.__raiseLettersPatched)) setTimeout(() => boot(attempt + 1), 250);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0)); else boot(0);
-  console.info('[Admin Offices Print All Letters] installed');
+  console.info('[Admin Offices Print All Letters] installed v2 tafqeet rows under totals');
 })();
