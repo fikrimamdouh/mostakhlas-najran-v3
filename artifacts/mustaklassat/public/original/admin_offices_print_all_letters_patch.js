@@ -142,10 +142,36 @@
     window.openPrintDialog.__raiseLettersPatched = true;
     return true;
   }
+  function patchAttendanceLettersAppend() {
+    if (typeof window.printSelected !== 'function' || !window.printSelected.__exactAdminOfficePrintPatch || window.printSelected.__lettersAfterAttendancePatch) return false;
+    const original = window.printSelected;
+    window.printSelected = function patchedLettersAfterAttendance() {
+      const includeLetters = checked('print-opt-attendance') && hasSelection();
+      const lettersHtml = includeLetters ? buildSelectedLetters() : '';
+      if (!lettersHtml) return original.apply(this, arguments);
+      let capturedWin = null;
+      const realOpen = window.open;
+      window.open = function () { capturedWin = realOpen.apply(window, arguments); return capturedWin; };
+      const result = original.apply(this, arguments);
+      window.open = realOpen;
+      if (capturedWin && capturedWin.document) {
+        setTimeout(() => {
+          try {
+            if (!capturedWin.document.getElementById('raise-letters-print-all-css')) capturedWin.document.head.insertAdjacentHTML('beforeend', lettersCss());
+            capturedWin.document.body.insertAdjacentHTML('beforeend', lettersHtml);
+          } catch (e) { console.error('[PrintAllLetters] append after attendance failed', e); }
+        }, 180);
+      }
+      return result;
+    };
+    window.printSelected.__lettersAfterAttendancePatch = true;
+    return true;
+  }
   function boot(attempt) {
     patchPrintDialog();
-    if (attempt < 40 && !window.openPrintDialog?.__raiseLettersPatched) setTimeout(() => boot(attempt + 1), 250);
+    patchAttendanceLettersAppend();
+    if (attempt < 40 && (!window.openPrintDialog?.__raiseLettersPatched || !window.printSelected?.__lettersAfterAttendancePatch)) setTimeout(() => boot(attempt + 1), 250);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0)); else boot(0);
-  console.info('[Admin Offices Print All Letters] builders only + optional UI');
+  console.info('[Admin Offices Print All Letters] builders + optional UI + attendance append');
 })();
