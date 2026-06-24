@@ -11,6 +11,7 @@
 // + يقسم أزرار المستخلص والشهادات وخطابات المواقع بوضوح
 // + يضمن في طباعة المستخلص الكامل وجود جدول أداء الموقع بعد الحضور وشهادة الإنجاز بعده
 // + يمنع ظهور استيراد ملف شامل لكل الأقسام إلا داخل شاشة Excel فقط
+// + يمنع تحميل المناصب الكامل لو العمالة موجودة، ويسمح به لو الحالة محفوظة لكن العمالة فاضية
 // ===================================================================
 (function () {
   'use strict';
@@ -18,6 +19,7 @@
 
   const PARAM = 'raiseLettersOnly';
   const isStandalone = new URLSearchParams(location.search).get(PARAM) === '1';
+  const POSITIONS_SETUP_KEY = 'adminOfficesPositionsSetup_v1';
 
   function loadScriptOnce(id, src) {
     if (document.getElementById(id)) return;
@@ -31,7 +33,7 @@
   }
 
   function loadDynamicFinalSubjectPatch() {
-    loadScriptOnce('admin-offices-final-raise-dynamic-subject', '/original/admin_offices_final_raise_letter_dynamic_subject.js?v=20260623_final_subject_v1');
+    loadScriptOnce('admin-offices-final-raise-dynamic-subject', '/original/admin_offices_final_raise_letter_dynamic_subject.js?v=20260624_final_subject_iban_v2');
   }
 
   function loadBulkStatusGridPrintFix() {
@@ -55,7 +57,7 @@
   }
 
   function loadSignatureLabelsPatch() {
-    loadScriptOnce('admin-offices-raise-letter-signature-labels', '/original/admin_offices_raise_letters_signature_labels.js?v=20260623_sig_labels_v1');
+    loadScriptOnce('admin-offices-raise-letter-signature-labels', '/original/admin_offices_raise_letters_signature_labels.js?v=20260624_sig_doc_settings_v3');
   }
 
   function loadButtonGroupsPatch() {
@@ -85,6 +87,66 @@
     }
   }
 
+  function readJson(key, fallback) {
+    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
+  }
+
+  function countAdminRows(data) {
+    return Object.values(data || {}).reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0);
+  }
+
+  function countAdminOfficeLaborRows() {
+    const keys = [
+      'adminOfficesAttendanceData_v1',
+      'adminOfficesAttendanceData_v1_localBackup',
+      'adminOfficesAttendanceData_v1_lastGood',
+      'adminOfficesLaborDataSafe_v2',
+      'adminOfficesAttendanceData'
+    ];
+    let max = 0;
+    keys.forEach(function (key) { max = Math.max(max, countAdminRows(readJson(key, {}))); });
+    try { if (typeof window.getAttendanceData === 'function') max = Math.max(max, countAdminRows(window.getAttendanceData() || {})); } catch (_) {}
+    return max;
+  }
+
+  function clearBadPositionsDoneFlagIfEmpty() {
+    const rows = countAdminOfficeLaborRows();
+    const status = readJson(POSITIONS_SETUP_KEY, {});
+    if (rows === 0 && status && status.done === true) {
+      localStorage.removeItem(POSITIONS_SETUP_KEY);
+      console.warn('[Admin Offices Positions] cleared stale loaded flag because labor is empty');
+      return true;
+    }
+    return false;
+  }
+
+  function patchFullPositionsLoadGate() {
+    clearBadPositionsDoneFlagIfEmpty();
+    if (typeof window.confirmLoadAllAdminOfficePositions !== 'function') return false;
+    if (window.confirmLoadAllAdminOfficePositions.__adminOfficesFullLoadGateV1) return true;
+    const original = window.confirmLoadAllAdminOfficePositions;
+    window.confirmLoadAllAdminOfficePositions = function () {
+      const rows = countAdminOfficeLaborRows();
+      if (rows > 0) {
+        try {
+          localStorage.setItem(POSITIONS_SETUP_KEY, JSON.stringify(Object.assign(readJson(POSITIONS_SETUP_KEY, {}), {
+            done: true,
+            mode: 'all-existing-data',
+            loadedAt: readJson(POSITIONS_SETUP_KEY, {}).loadedAt || new Date().toISOString(),
+            employeesCount: rows
+          })));
+        } catch (_) {}
+        alert('المناصب / العمالة موجودة بالفعل بعدد ' + rows + ' صف.\n\nلن يتم تحميل المناصب لكل الأقسام مرة ثانية حتى لا يتم استبدال البيانات.\nللتعديل استخدم تحميل مكتب/مرفق محدد أو استيراد Excel.');
+        return;
+      }
+      localStorage.removeItem(POSITIONS_SETUP_KEY);
+      return original.apply(this, arguments);
+    };
+    window.confirmLoadAllAdminOfficePositions.__adminOfficesFullLoadGateV1 = true;
+    console.info('[Admin Offices Positions] full-load gate patched');
+    return true;
+  }
+
   function addStandaloneCss() {
     if (document.getElementById('raise-letters-standalone-css')) return;
     const style = document.createElement('style');
@@ -100,19 +162,10 @@
         width:min(1280px,96vw)!important;max-height:none!important;overflow:visible!important;margin:0 auto!important;
         border-radius:22px!important;box-shadow:0 18px 55px rgba(15,23,42,.16)!important;
       }
-      body.raise-letters-standalone-page #raise-letters-overlay .settings-dialog h2::before{
-        content:'📄 ';font-family:Arial,sans-serif;
-      }
-      body.raise-letters-standalone-page #raise-letters-overlay .settings-dialog h2{
-        position:sticky;top:0;background:#fff;z-index:3;padding:10px 0 14px;border-bottom:1px solid #e2e8f0;
-      }
-      body.raise-letters-standalone-page .standalone-topbar{
-        display:flex!important;justify-content:space-between;align-items:center;gap:10px;margin:0 auto 12px;
-        width:min(1280px,96vw);background:#0f172a;color:#fff;border-radius:16px;padding:12px 16px;font-family:Tajawal,Arial,sans-serif;
-      }
-      body.raise-letters-standalone-page .standalone-topbar button{
-        border:0;border-radius:10px;padding:9px 14px;font-weight:900;cursor:pointer;background:#d4af37;color:#111827;font-family:Tajawal,Arial,sans-serif;
-      }
+      body.raise-letters-standalone-page #raise-letters-overlay .settings-dialog h2::before{content:'📄 ';font-family:Arial,sans-serif;}
+      body.raise-letters-standalone-page #raise-letters-overlay .settings-dialog h2{position:sticky;top:0;background:#fff;z-index:3;padding:10px 0 14px;border-bottom:1px solid #e2e8f0;}
+      body.raise-letters-standalone-page .standalone-topbar{display:flex!important;justify-content:space-between;align-items:center;gap:10px;margin:0 auto 12px;width:min(1280px,96vw);background:#0f172a;color:#fff;border-radius:16px;padding:12px 16px;font-family:Tajawal,Arial,sans-serif;}
+      body.raise-letters-standalone-page .standalone-topbar button{border:0;border-radius:10px;padding:9px 14px;font-weight:900;cursor:pointer;background:#d4af37;color:#111827;font-family:Tajawal,Arial,sans-serif;}
       @media print{body.raise-letters-standalone-page .standalone-topbar{display:none!important}}
     `;
     document.head.appendChild(style);
@@ -124,10 +177,7 @@
     style.id = 'admin-offices-excel-import-scroll-css';
     style.textContent = `
       #management-dialog.admin-offices-excel-import-dialog{align-items:center!important;justify-content:center!important;padding:10px!important;overflow:hidden!important;}
-      #management-dialog.admin-offices-excel-import-dialog .dialog-content,
-      #management-dialog.admin-offices-excel-import-dialog .dialog-box,
-      #management-dialog.admin-offices-excel-import-dialog .dialog-panel,
-      #management-dialog.admin-offices-excel-import-dialog .dialog{width:min(860px,96vw)!important;max-width:96vw!important;max-height:92vh!important;height:auto!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;border-radius:16px!important;}
+      #management-dialog.admin-offices-excel-import-dialog .dialog-content,#management-dialog.admin-offices-excel-import-dialog .dialog-box,#management-dialog.admin-offices-excel-import-dialog .dialog-panel,#management-dialog.admin-offices-excel-import-dialog .dialog{width:min(860px,96vw)!important;max-width:96vw!important;max-height:92vh!important;height:auto!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;border-radius:16px!important;}
       #management-dialog.admin-offices-excel-import-dialog .dialog-header{flex:0 0 auto!important;padding:10px 16px!important;}
       #management-dialog.admin-offices-excel-import-dialog .dialog-header h3{font-size:18px!important;margin:0!important;}
       #management-dialog.admin-offices-excel-import-dialog .dialog-body{flex:1 1 auto!important;overflow-y:auto!important;max-height:calc(92vh - 120px)!important;padding:12px 16px!important;overscroll-behavior:contain!important;}
@@ -137,18 +187,9 @@
       #management-dialog.admin-offices-excel-import-dialog fieldset{margin:8px 0!important;padding:10px!important;}
       #management-dialog.admin-offices-excel-import-dialog .form-group{margin-bottom:8px!important;}
       #management-dialog.admin-offices-excel-import-dialog input[type=file]{padding:7px!important;margin:6px 0!important;}
-      #management-dialog.admin-offices-excel-import-dialog .btn,
-      #management-dialog.admin-offices-excel-import-dialog button{padding:7px 11px!important;font-size:13px!important;line-height:1.35!important;}
+      #management-dialog.admin-offices-excel-import-dialog .btn,#management-dialog.admin-offices-excel-import-dialog button{padding:7px 11px!important;font-size:13px!important;line-height:1.35!important;}
       #admin-offices-full-excel-section{padding:10px!important;margin:0 0 10px!important;}
-      @media(max-height:720px){
-        #management-dialog.admin-offices-excel-import-dialog .dialog-content,
-        #management-dialog.admin-offices-excel-import-dialog .dialog-box,
-        #management-dialog.admin-offices-excel-import-dialog .dialog-panel,
-        #management-dialog.admin-offices-excel-import-dialog .dialog{max-height:96vh!important;}
-        #management-dialog.admin-offices-excel-import-dialog .dialog-body{max-height:calc(96vh - 96px)!important;padding:8px 12px!important;}
-        #management-dialog.admin-offices-excel-import-dialog .dialog-header,
-        #management-dialog.admin-offices-excel-import-dialog .dialog-footer{padding:8px 12px!important;}
-      }
+      @media(max-height:720px){#management-dialog.admin-offices-excel-import-dialog .dialog-content,#management-dialog.admin-offices-excel-import-dialog .dialog-box,#management-dialog.admin-offices-excel-import-dialog .dialog-panel,#management-dialog.admin-offices-excel-import-dialog .dialog{max-height:96vh!important;}#management-dialog.admin-offices-excel-import-dialog .dialog-body{max-height:calc(96vh - 96px)!important;padding:8px 12px!important;}#management-dialog.admin-offices-excel-import-dialog .dialog-header,#management-dialog.admin-offices-excel-import-dialog .dialog-footer{padding:8px 12px!important;}}
     `;
     document.head.appendChild(style);
   }
@@ -159,17 +200,10 @@
     if (!dlg) return;
     const text = (dlg.textContent || '').trim();
     const isExcelImport = text.includes('استيراد بيانات من Excel') || text.includes('تامبليت الوظائف') || text.includes('استيراد التامبليت بعد التعبئة');
-    if (!isExcelImport) {
-      dlg.classList.remove('admin-offices-excel-import-dialog');
-      return;
-    }
+    if (!isExcelImport) { dlg.classList.remove('admin-offices-excel-import-dialog'); return; }
     dlg.classList.add('admin-offices-excel-import-dialog');
     const body = dlg.querySelector('.dialog-body');
-    if (body) {
-      body.style.overflowY = 'auto';
-      body.style.maxHeight = 'calc(92vh - 120px)';
-      body.style.paddingInlineEnd = '14px';
-    }
+    if (body) { body.style.overflowY = 'auto'; body.style.maxHeight = 'calc(92vh - 120px)'; body.style.paddingInlineEnd = '14px'; }
   }
 
   function topbar() {
@@ -205,6 +239,7 @@
     loadFullExtractSitePerfAchievementGuard();
     loadFullExcelVisibilityGuard();
     patchMainButton();
+    patchFullPositionsLoadGate();
     applyExcelImportDialogLayout();
     if (isStandalone) openAsStandalonePage();
     if (attempt < 40) setTimeout(() => boot(attempt + 1), 250);
@@ -221,10 +256,11 @@
     setTimeout(loadSitePrintPerformanceFit, 120);
     setTimeout(loadFullExtractSitePerfAchievementGuard, 120);
     setTimeout(loadFullExcelVisibilityGuard, 120);
+    setTimeout(patchFullPositionsLoadGate, 120);
   }, true);
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0));
   else boot(0);
 
-  console.info('[Admin Offices Raise Letters] standalone tab mode installed + Excel import scroll fix + final subject + bulk/print + site/performance fit + archive bundle + signature labels + button groups + full extract perf/ach + full excel visibility loader');
+  console.info('[Admin Offices Raise Letters] standalone tab mode installed + Excel import scroll fix + final subject IBAN + button groups + full positions gate');
 })();
