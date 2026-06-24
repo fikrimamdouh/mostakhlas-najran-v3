@@ -2120,7 +2120,130 @@ function printSelected() {
             .performance-report .signatures { margin-top: 25px; display: flex; justify-content: space-around; border-top: 1px solid #333; padding-top: 10px; }
             .performance-report .sign-box { text-align: center; font-size: 10pt; width: 24%; }
             .performance-report .sign-box .line { border-bottom: 1px solid #000; margin-top: 30px; }
+.admin-performance-print-page {
+  direction: rtl;
+  font-family: Tajawal, Arial, sans-serif;
+  color: #111827;
+  background: #fff;
+}
 
+.admin-performance-print-page .perf-header {
+  display: grid;
+  grid-template-columns: 90px 1fr 90px;
+  align-items: center;
+  border-bottom: 3px solid #0b84f3;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+}
+
+.admin-performance-print-page .perf-header img {
+  width: 70px;
+}
+
+.admin-performance-print-page .perf-header div {
+  text-align: center;
+}
+
+.admin-performance-print-page .perf-header h1 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: #003087;
+}
+
+.admin-performance-print-page .perf-header h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.admin-performance-print-page .perf-contract-box {
+  background: #f8fafc;
+  border: 1px solid #d7dce2;
+  padding: 14px;
+  margin: 12px 0;
+  font-size: 14px;
+  line-height: 2;
+  text-align: right;
+}
+
+.admin-performance-print-page .perf-blue-title {
+  background: #0b84f3 !important;
+  color: #fff !important;
+  text-align: center;
+  font-weight: 900;
+  font-size: 17px;
+  padding: 9px;
+  border-radius: 8px;
+  margin: 12px 0;
+}
+
+.admin-performance-print-page .perf-amount-line {
+  text-align: right;
+  font-size: 14px;
+  margin: 10px 0 12px;
+}
+
+.admin-performance-print-page .perf-print-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+}
+
+.admin-performance-print-page .perf-print-table th {
+  background: #0b84f3 !important;
+  color: #fff !important;
+  border: 1px solid #d1d5db;
+  padding: 7px;
+  text-align: center;
+}
+
+.admin-performance-print-page .perf-print-table td {
+  border: 1px solid #d1d5db;
+  padding: 6px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.admin-performance-print-page .perf-print-table .activity-cell {
+  text-align: center;
+  width: 70%;
+}
+
+.admin-performance-print-page .perf-total-row td {
+  background: #ffe08a !important;
+  font-weight: 900;
+}
+
+.admin-performance-print-page .perf-summary-lines {
+  margin-top: 14px;
+  font-size: 14px;
+  line-height: 1.9;
+  text-align: right;
+  font-weight: 700;
+}
+
+.admin-performance-print-page .perf-summary-lines p {
+  margin: 4px 0;
+}
+
+.admin-performance-print-page .perf-signatures {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+  margin-top: 35px;
+  text-align: center;
+}
+
+.admin-performance-print-page .perf-sign-box {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-performance-print-page .sig-line {
+  height: 36px;
+  border-bottom: 1px solid #111;
+  margin: 8px 25px;
+}
             /* --- أنماط شهادة الإنجاز --- */
             .achievement-report .certificate-header { text-align: center; margin-bottom: 20px; }
             .achievement-report .certificate-header h2, .achievement-report .certificate-header h3, .achievement-report .certificate-header p { margin: 5px 0; }
@@ -2158,20 +2281,25 @@ function printSelected() {
             let centerTotalCost = 0, centerNetTotal = 0, totalDeduction = 0, totalFine = 0;
             
             centerData.forEach((emp, index) => {
-                let days = emp.days || Array(daysInExtract).fill('ح');
-                if (days.length !== daysInExtract) days = Array(daysInExtract).fill('ح');
-                const dayCells = days.map(day => `<td>${day}</td>`).join('');
-                const salary = parseFloat(emp.salary) || 0;
-                const dailyRate = totalDaysInMonth > 0 ? salary / totalDaysInMonth : 0;
-                const costForPeriod = dailyRate * daysInExtract;
-                let absenceDays = 0, attendanceDays = 0;
-                days.forEach(d => { if(STATUS_CODES[d]?.isAbsence) { absenceDays++; } else { attendanceDays++; } });
-                const deduction = absenceDays * dailyRate;
-                const fineConfig = ABSENCE_FINES_BY_CATEGORY[emp.category] || ABSENCE_FINES_BY_CATEGORY.default;
-                const isSaudi = (emp.nationality || '').includes('سعودي');
-                const absenceFine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
-                const nationalityFine = parseFloat(emp.nationalityFine) || 0;
-                const netSalary = costForPeriod - deduction - absenceFine - nationalityFine;
+              const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+
+const calc = calculateAdminOfficeEmployeeFinancials(emp, {
+    totalDaysInMonth,
+    daysInExtract,
+    contractType: contractData.contractType || 'عقد أساسي',
+    directPurchaseRatio: parseFloat(contractData.directPurchaseRatio) || 0
+});
+
+const days = calc.days;
+const dayCells = days.map(day => `<td>${day}</td>`).join('');
+
+const costForPeriod = calc.costForPeriod;
+const attendanceDays = calc.attendanceDays;
+const absenceDays = calc.absenceDays;
+const deduction = calc.deduction;
+const absenceFine = calc.absenceFine;
+const nationalityFine = calc.nationalityFine;
+const netSalary = calc.netSalary;
                 centerTotalCost += costForPeriod;
                 totalDeduction += deduction;
                 totalFine += absenceFine + nationalityFine;
@@ -2179,7 +2307,24 @@ function printSelected() {
                 tableRows += `<tr><td>${index + 1}</td><td class="job-title">${emp.jobTitle}</td><td>${emp.category}</td><td class="employee-name">${emp.name}</td>${dayCells}<td>${costForPeriod.toFixed(2)}</td><td>${attendanceDays}</td><td>${absenceDays}</td><td>${deduction.toFixed(2)}</td><td>${absenceFine.toFixed(2)}</td><td>${netSalary.toFixed(2)}</td><td>${emp.nationality}</td><td>${nationalityFine.toFixed(2)}</td><td>${emp.iqamaId || ''}</td></tr>`;
             });
             const daysHeader = Array.from({ length: daysInExtract }, (_, i) => `<th>${new Date(startDate.getTime() + i * 86400000).getDate()}</th>`).join('');
-            const signatures = getSignatures('attendance').map(sig => `<div class="signature-item"><div class="title">${sig.title || ''}</div><div class="line"></div><div class="name">${sig.name || '................'}</div></div>`).join('');
+const attendanceSignatureKey =
+    typeof getSignatureKeyForContext === 'function'
+        ? getSignatureKeyForContext('attendance', centerKey)
+        : 'attendance';
+
+let attendanceSignaturesData = getSignatures(attendanceSignatureKey);
+
+if (!attendanceSignaturesData.length && attendanceSignatureKey !== 'attendance') {
+    attendanceSignaturesData = getSignatures('attendance');
+}
+
+const signatures = attendanceSignaturesData.map(sig => `
+    <div class="signature-item">
+        <div class="title">${sig.title || ''}</div>
+        <div class="line"></div>
+        <div class="name">${sig.name || '................'}</div>
+    </div>
+`).join('');      
             const summaryHTML = `<div class="table-summary-v2"><div class="summary-item"><span>عدد الموظفين:</span><span class="value">${centerData.length}</span></div><div class="summary-item"><span>التكلفة للفترة:</span><span class="value">${centerTotalCost.toFixed(2)}</span></div><div class="summary-item"><span>إجمالي الحسم:</span><span class="value">${totalDeduction.toFixed(2)}</span></div><div class="summary-item"><span>إجمالي الغرامات:</span><span class="value">${totalFine.toFixed(2)}</span></div><div class="summary-item net-total"><span>صافي الاستحقاق:</span><span class="value">${centerNetTotal.toFixed(2)}</span></div></div>`;
             const titleHTML = `<div class="extract-details-v2"><div class="title-main">بيان بالحضور والغياب لمنسوبي شركة (...) بموقع ${centerName}</div><div class="title-period">الفترة (${formatDate(extractData.extractStart)}م - ${formatDate(extractData.extractEnd)}م)</div></div>`;
 
@@ -2191,51 +2336,61 @@ function printSelected() {
         //  الجزء الثاني: طباعة تقييم الأداء (الكود الكامل)
         // =======================================================================
         // ✅✅✅ [الحل هنا] إضافة شرط للتحقق من أن المركز ليس "فئات إدارية أخرى" ✅✅✅
-        if (printOptions.performance) {
-            const signatures = getSignatures('performance').map(sig => `<div class="sign-box"><div class="title">${sig.title}</div><div class="line"></div><div>${sig.name || '................'}</div></div>`).join('');
-            const items = getDynamicPerformanceItems();
-            const scores = getPerformanceData()[centerKey] || {};
-            let performanceTableRows = '', maxTotal = 0, scoreTotal = 0;
-            items.forEach((item, i) => {
-                const score = scores[i] !== undefined ? scores[i] : item.max;
-                performanceTableRows += `<tr><td>${i + 1}</td><td class="item-text">${item.text}</td><td>${item.max}</td><td>${score}</td></tr>`;
-                maxTotal += item.max;
-                scoreTotal += score;
-            });
-            performanceTableRows += `<tr style="font-weight:bold; background-color: #f0f0f0;"><td colspan="2">المجموع</td><td>${maxTotal}</td><td>${scoreTotal}</td></tr>`;
-            const percentage = maxTotal > 0 ? (scoreTotal / maxTotal * 100) : 100;
-            let deductionPercentage = 0;
-            if (percentage < 60) deductionPercentage = 15; else if (percentage < 65) deductionPercentage = 10; else if (percentage < 70) deductionPercentage = 8; else if (percentage < 75) deductionPercentage = 6; else if (percentage < 80) deductionPercentage = 4; else if (percentage < 85) deductionPercentage = 2;
-            const centerCost = calculateCenterTotalCost(centerKey);
-            const deductionAmount = (centerCost * deductionPercentage / 100);
-            const summaryHTML = `<p>التقدير الذي حصل عليه المقاول: <b>${percentage.toFixed(2)}%</b>، نسبة الحسم: <b>${deductionPercentage}%</b>، ويساوي: <b>${deductionAmount.toFixed(2)} ريال</b></p>`;
-            
-            const performanceHtmlContent = `<div class="performance-report">${headerTableHTML}<div class="cert-title">جدول تقييم مستوى الأداء والإنجاز</div><div class="sub-title">لموقع: ${centerName} - عن شهر ${monthName}</div><div class="cost-bar">إجمالي المبلغ لأنشطة القسم: ${centerCost.toFixed(2)} ريال</div><table><thead><tr><th>م</th><th style="width:65%">أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr></thead><tbody>${performanceTableRows}</tbody></table><div class="summary">${summaryHTML}</div><div class="signatures">${signatures}</div></div>`;
-            doc.write(`<div class="page-container portrait-page-perf">${performanceHtmlContent}</div>`);
-        }
+      if (printOptions.performance) {
+    if (typeof buildAdminOfficePerformancePrintHtml === 'function') {
+        doc.write(buildAdminOfficePerformancePrintHtml(centerKey));
+    } else {
+        doc.write(`
+            <div class="page-container portrait-page-perf">
+                <p style="color:red;text-align:center;font-weight:bold">
+                    خطأ: دالة طباعة الأداء غير محملة من performance_logic.js
+                </p>
+            </div>
+        `);
+    }
+}
 
         // =======================================================================
         //  الجزء الثالث: طباعة شهادة الإنجاز (الكود الكامل)
         // =======================================================================
         if (printOptions.achievement) {
             const titles = getAchievementTitles();
-            const signatures = getSignatures('achievement').map(sig => `<div class="sign-box"><div>${sig.title}</div><div class="line"></div><div>${sig.name || '................'}</div></div>`).join('');
+const achievementSignatureKey =
+    typeof getSignatureKeyForContext === 'function'
+        ? getSignatureKeyForContext('achievement', centerKey)
+        : 'achievement';
+
+let achievementSignaturesData = getSignatures(achievementSignatureKey);
+
+if (!achievementSignaturesData.length && achievementSignatureKey !== 'achievement') {
+    achievementSignaturesData = getSignatures('achievement');
+}
+
+const signatures = achievementSignaturesData.map(sig => `
+    <div class="sign-box">
+        <div>${sig.title || ''}</div>
+        <div class="line"></div>
+        <div>${sig.name || '................'}</div>
+    </div>
+`).join('');       
             const centerData = getAttendanceData()[centerKey] || [];
             let monthly = 0, absenceDeduct = 0, absencePenalty = 0, nationPenalty = 0;
             if (centerData.length > 0) {
-                const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-                const directPurchaseRatio = parseFloat(contractData.directPurchaseRatio) || 0;
-                centerData.forEach(emp => {
-                    const salary = parseFloat(emp.salary) || 0;
-                    let adjustedSalary = salary + (salary * (directPurchaseRatio / 100));
-                    monthly += adjustedSalary;
-                    const dailySalary = totalDaysInMonth > 0 ? adjustedSalary / totalDaysInMonth : 0;
-                    const absenceDays = (emp.days || []).filter(d => STATUS_CODES[d]?.isAbsence).length;
-                    const fineConfig = ABSENCE_FINES_BY_CATEGORY[emp.category] || ABSENCE_FINES_BY_CATEGORY.default;
-                    absenceDeduct += absenceDays * dailySalary;
-                    absencePenalty += absenceDays * ((emp.nationality || '').includes('سعودي') ? fineConfig.saudi : fineConfig.non_saudi);
-                    nationPenalty += parseFloat(emp.nationalityFine) || 0;
-                });
+             const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+
+centerData.forEach(emp => {
+    const calc = calculateAdminOfficeEmployeeFinancials(emp, {
+        totalDaysInMonth,
+        daysInExtract,
+        contractType: contractData.contractType || 'عقد أساسي',
+        directPurchaseRatio: parseFloat(contractData.directPurchaseRatio) || 0
+    });
+
+    monthly += calc.costForPeriod;
+    absenceDeduct += calc.deduction;
+    absencePenalty += calc.absenceFine;
+    nationPenalty += calc.nationalityFine;
+});
             }
             // ✅✅✅ [الحل هنا] التأكد من أن حسم الأداء لا يطبق على فئات إدارية أخرى ✅✅✅
             const perfPenalty = ((JSON.parse(localStorage.getItem('performanceDeductions') || '{}'))[centerKey] || 0);
