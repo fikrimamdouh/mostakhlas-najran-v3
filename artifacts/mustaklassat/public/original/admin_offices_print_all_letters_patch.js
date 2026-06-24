@@ -111,6 +111,7 @@
     return pages.join('');
   }
   function hasSelection() { return checked('print-opt-raise-labor') || checked('print-opt-raise-consumables') || checked('print-opt-raise-declaration'); }
+  function hasAnyPrintSelection() { return checked('print-opt-attendance') || checked('print-opt-performance') || checked('print-opt-achievement') || hasSelection(); }
   function openLettersOnly() {
     const html = buildSelectedLetters();
     if (!html) return false;
@@ -124,7 +125,7 @@
     return true;
   }
 
-  window.AdminOfficePrintLetters = { buildSelectedLetters, lettersCss, hasSelection, openLettersOnly };
+  window.AdminOfficePrintLetters = { buildSelectedLetters, lettersCss, hasSelection, hasAnyPrintSelection, openLettersOnly };
 
   function patchPrintDialog() {
     if (typeof window.openPrintDialog !== 'function' || window.openPrintDialog.__raiseLettersPatched) return false;
@@ -146,6 +147,10 @@
     if (typeof window.printSelected !== 'function' || !window.printSelected.__exactAdminOfficePrintPatch || window.printSelected.__lettersAfterAttendancePatch) return false;
     const original = window.printSelected;
     window.printSelected = function patchedLettersAfterAttendance() {
+      if (!hasAnyPrintSelection()) {
+        alert('الرجاء اختيار تقرير واحد على الأقل للطباعة.');
+        return;
+      }
       const includeLetters = checked('print-opt-attendance') && hasSelection();
       const lettersHtml = includeLetters ? buildSelectedLetters() : '';
       if (!lettersHtml) return original.apply(this, arguments);
@@ -173,5 +178,5 @@
     if (attempt < 40 && (!window.openPrintDialog?.__raiseLettersPatched || !window.printSelected?.__lettersAfterAttendancePatch)) setTimeout(() => boot(attempt + 1), 250);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0)); else boot(0);
-  console.info('[Admin Offices Print All Letters] builders + optional UI + attendance append');
+  console.info('[Admin Offices Print All Letters] builders + optional UI + empty guard + attendance append');
 })();
