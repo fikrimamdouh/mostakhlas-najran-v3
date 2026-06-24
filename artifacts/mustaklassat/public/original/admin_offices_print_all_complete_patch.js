@@ -10,6 +10,13 @@
   function isChecked(id){return !!document.getElementById(id)?.checked;}
   function setChecked(id,val){const el=document.getElementById(id);if(el)el.checked=val;}
   function performancePages(keys){if(typeof window.buildAdminOfficePerformancePrintHtml!=='function')return '';return keys.map(function(k){return window.buildAdminOfficePerformancePrintHtml(k);}).join('');}
+  function detectCenterKey(){
+    const visible=Array.from(document.querySelectorAll('[id^="table-div-"]')).find(function(el){const r=el.getBoundingClientRect();return r.width>0&&r.height>0;});
+    if(visible&&visible.id)return visible.id.replace('table-div-','');
+    const title=(document.getElementById('center-main-title')?.textContent||'').trim();
+    try{const names=typeof getCenterNames==='function'?getCenterNames():JSON.parse(localStorage.getItem('adminOfficeNames_v1')||'{}');const hit=Object.entries(names).find(function(x){return title.includes(x[1]);});if(hit)return hit[0];}catch(_){ }
+    return null;
+  }
   function openPerformanceOnly(keys){
     if(typeof closeDialog==='function') closeDialog('management-dialog');
     const w=window.open('','_blank','width=1200,height=900');
@@ -28,8 +35,20 @@
     if(printWin){setTimeout(function(){injectCss(printWin);if(typeof after==='function')after(printWin);},80);}
     return result;
   }
+  function routeAttendanceOnly(centerKey){
+    if(typeof window.openPrintDialog!=='function'||typeof window.printSelected!=='function')return false;
+    window.openPrintDialog();
+    setTimeout(function(){
+      document.querySelectorAll('#print-centers-checkboxes input').forEach(function(cb){cb.checked=(cb.value===centerKey);});
+      setChecked('print-opt-attendance',true);
+      setChecked('print-opt-performance',false);
+      setChecked('print-opt-achievement',false);
+      window.printSelected();
+    },160);
+    return true;
+  }
 
-  function install(){
+  function installPrintSelected(){
     if(typeof window.printSelected !== 'function' || window.printSelected.__exactHg1PerformancePatch) return false;
     const old = window.printSelected;
     window.printSelected = function(){
@@ -48,7 +67,18 @@
     window.printSelected.__exactHg1PerformancePatch=true;
     return true;
   }
-  function boot(n){install();if(n<40&&!window.printSelected?.__exactHg1PerformancePatch)setTimeout(function(){boot(n+1);},250);}
+  function installPreparePrint(){
+    if(typeof window.preparePrint!=='function'||window.preparePrint.__routesToGroupedAttendance)return false;
+    const fallback=window.preparePrint;
+    window.preparePrint=function(){
+      const key=detectCenterKey();
+      if(key&&routeAttendanceOnly(key))return;
+      return fallback.apply(this,arguments);
+    };
+    window.preparePrint.__routesToGroupedAttendance=true;
+    return true;
+  }
+  function boot(n){installPrintSelected();installPreparePrint();if(n<40&&(!window.printSelected?.__exactHg1PerformancePatch||!window.preparePrint?.__routesToGroupedAttendance))setTimeout(function(){boot(n+1);},250);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){boot(0);});else boot(0);
-  console.info('[Admin Offices Print All] choices respected + HG1 exact + attendance page-break safety');
+  console.info('[Admin Offices Print All] choices respected + exact HG1 + attendance routed');
 })();
