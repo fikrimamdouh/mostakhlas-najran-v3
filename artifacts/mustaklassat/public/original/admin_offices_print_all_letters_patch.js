@@ -15,6 +15,7 @@
   function moneyPlain(v) { const n = num(v); return Number.isInteger(n) ? String(n) : money(n); }
   function fmtDate(v) { if (!v) return 'غير محدد'; try { return new Date(v).toLocaleDateString('en-CA'); } catch (_) { return 'غير محدد'; } }
   function checked(id) { return !!document.getElementById(id)?.checked; }
+  function selectedCenterCount() { return document.querySelectorAll('#print-centers-checkboxes input:checked').length; }
 
   function getContract() { return readJson('persistentContractData', {}); }
   function getExtract() { return readJson('persistentExtractData', {}); }
@@ -151,6 +152,10 @@
         alert('الرجاء اختيار تقرير واحد على الأقل للطباعة.');
         return;
       }
+      if (checked('print-opt-attendance') && selectedCenterCount() === 0) {
+        alert('الرجاء اختيار مكتب/مرفق واحد على الأقل لطباعة الحضور.');
+        return;
+      }
       const includeLetters = checked('print-opt-attendance') && hasSelection();
       const lettersHtml = includeLetters ? buildSelectedLetters() : '';
       if (!lettersHtml) return original.apply(this, arguments);
@@ -178,5 +183,5 @@
     if (attempt < 40 && (!window.openPrintDialog?.__raiseLettersPatched || !window.printSelected?.__lettersAfterAttendancePatch)) setTimeout(() => boot(attempt + 1), 250);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0)); else boot(0);
-  console.info('[Admin Offices Print All Letters] builders + optional UI + empty guard + attendance append');
+  console.info('[Admin Offices Print All Letters] builders + optional UI + empty guard + center guard + attendance append');
 })();
