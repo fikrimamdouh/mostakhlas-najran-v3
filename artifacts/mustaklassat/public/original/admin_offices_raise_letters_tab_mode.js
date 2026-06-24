@@ -23,8 +23,8 @@
   }
 
   function loadDynamicFinalSubjectPatch() { loadScriptOnce('admin-offices-final-raise-dynamic-subject', '/original/admin_offices_final_raise_letter_dynamic_subject.js?v=20260624_final_subject_iban_v2'); }
-  function loadBulkStatusGridPrintFix() { loadScriptOnce('admin-offices-bulk-status-grid-print-fix', '/original/admin_offices_bulk_status_grid_print_fix.js?v=20260623_bulk_grid_print_v1'); }
-  function loadSitePrintPerformanceFit() { loadScriptOnce('admin-offices-site-print-performance-fit', '/original/admin_offices_site_print_performance_fit.js?v=20260623_site_print_perf_v1'); }
+  function loadBulkStatusGridPrintFix() { loadScriptOnce('admin-offices-bulk-status-grid-print-fix', '/original/admin_offices_bulk_status_grid_print_fix.js?v=20260624_bulk_standard_v2'); }
+  function loadSitePrintPerformanceFit() { loadScriptOnce('admin-offices-site-print-performance-fit', '/original/admin_offices_site_print_performance_fit.js?v=20260624_site_bundle_v3'); }
   function loadFullExtractSitePerfAchievementGuard() { loadScriptOnce('admin-offices-full-extract-site-perf-ach-guard', '/original/admin_offices_full_extract_site_perf_achievement_guard.js?v=20260623_full_extract_perf_ach_v1'); }
   function loadFullExcelVisibilityGuard() { loadScriptOnce('admin-offices-full-excel-visibility-guard', '/original/admin_offices_full_excel_visibility_guard.js?v=20260623_full_excel_visibility_v1'); }
   function loadSubmittedArchiveBundleGuard() { loadScriptOnce('submitted-extract-archive-bundle-guard', '/original/submitted_extract_archive_bundle_guard.js?v=20260623_archive_bundle_v1'); }
@@ -210,5 +210,5 @@
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0));
   else boot(0);
-  console.info('[Admin Offices Raise Letters] standalone tab mode installed v2 clean loader');
+  console.info('[Admin Offices Raise Letters] standalone tab mode installed v2 clean loader + print/bulk refreshed');
 })();
