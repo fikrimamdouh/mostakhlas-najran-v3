@@ -1,5 +1,5 @@
 // ===================================================================
-// Admin Offices Full Extract — Site Performance/Achievement Guard V1
+// Admin Offices Full Extract — Site Performance/Achievement Guard V2
 // Scope: admin_offices_attendance.html
 // يضمن في طباعة المستخلص الكامل أن يأتي بعد حضور كل موقع:
 // 1) جدول الأداء الخاص بالموقع في صفحة A4 واحدة.
@@ -9,8 +9,8 @@
 (function () {
   'use strict';
   if (!/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
-  if (window.__ADMIN_OFFICES_FULL_EXTRACT_SITE_PERF_ACH_GUARD_V1__) return;
-  window.__ADMIN_OFFICES_FULL_EXTRACT_SITE_PERF_ACH_GUARD_V1__ = true;
+  if (window.__ADMIN_OFFICES_FULL_EXTRACT_SITE_PERF_ACH_GUARD_V2__) return;
+  window.__ADMIN_OFFICES_FULL_EXTRACT_SITE_PERF_ACH_GUARD_V2__ = true;
 
   function readJson(key, fallback) {
     try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
@@ -65,7 +65,7 @@
     var sigs = [];
     try { if (typeof window.getSignatures === 'function') sigs = window.getSignatures(type) || []; } catch (_) {}
     if (!sigs.length) sigs = [{ title: '........................', name: '........................' }, { title: '........................', name: '........................' }];
-    return '<div class="signatures">' + sigs.map(function (sig) {
+    return '<div class="signatures performance-signature-zone">' + sigs.map(function (sig) {
       return '<div class="sign-box"><div class="title">' + esc(sig.title || '') + '</div><div class="line"></div><div>' + esc(sig.name || '................') + '</div></div>';
     }).join('') + '</div>';
   }
@@ -143,7 +143,9 @@
     if (pct < 60) deductionPct = 15; else if (pct < 65) deductionPct = 10; else if (pct < 70) deductionPct = 8; else if (pct < 75) deductionPct = 6; else if (pct < 80) deductionPct = 4; else if (pct < 85) deductionPct = 2;
     var cost = centerCost(centerKey);
     var deductionAmount = cost * deductionPct / 100;
-    return '<div class="page-container portrait-page-perf" data-center-key="' + esc(centerKey) + '" data-auto-site-performance="1"><div class="performance-report auto-site-performance-report">' + headerTable(centerKey) + '<div class="cert-title">جدول تقييم مستوى الأداء والإنجاز</div><div class="sub-title">لموقع: ' + esc(centerName) + ' - عن شهر ' + esc(monthName()) + '</div><div class="cost-bar">إجمالي المبلغ لأنشطة القسم: ' + money(cost) + ' ريال</div><table><thead><tr><th>م</th><th style="width:65%">أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr></thead><tbody>' + rows + '</tbody></table><div class="summary"><p>التقدير الذي حصل عليه المقاول: <b>' + pct.toFixed(2) + '%</b>، نسبة الحسم: <b>' + deductionPct + '%</b>، ويساوي: <b>' + money(deductionAmount) + ' ريال</b></p></div>' + signatureBlock('performance') + '</div></div>';
+    var table = '<table class="performance-compact-table"><thead><tr><th>م</th><th>أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    var summary = '<div class="performance-compact-summary">التقدير: <b>' + pct.toFixed(2) + '%</b> | نسبة الحسم: <b>' + deductionPct + '%</b> | مبلغ الحسم: <b>' + money(deductionAmount) + ' ريال</b></div>';
+    return '<div class="page-container portrait-page-perf performance-compact-page" data-center-key="' + esc(centerKey) + '" data-auto-site-performance="1"><div class="performance-report auto-site-performance-report performance-compact-report">' + headerTable(centerKey) + '<div class="cert-title">جدول تقييم مستوى الأداء والإنجاز</div><div class="sub-title">لموقع: ' + esc(centerName) + ' - عن شهر ' + esc(monthName()) + '</div><div class="cost-bar">إجمالي المبلغ لأنشطة القسم (تكلفة العمالة): ' + money(cost) + ' ريال</div>' + table + summary + signatureBlock('performance') + '</div></div>';
   }
 
   function achievementPage(centerKey) {
@@ -155,105 +157,60 @@
     return '<div class="page-container portrait-page-ach" data-center-key="' + esc(centerKey) + '" data-auto-site-achievement="1"><div class="achievement-report auto-site-achievement-report">' + headerTable(centerKey) + '<div class="certificate-header"><h2>' + esc(titles.mainTitle || 'شهادة الإنجاز') + '</h2><h3 style="font-weight:normal;">' + esc(titles.subTitle || '') + '</h3><h3>لموقع: ' + esc(centerName) + ' - عن شهر ' + esc(monthName()) + '</h3></div><table><thead><tr><th>البند</th><th>القيمة الشهرية</th><th>حسم الغياب</th><th>غرامة الغياب</th><th>غرامة الأداء</th><th>غرامة الجنسية</th><th>الصافي الشهري</th></tr></thead><tbody>' + row + '</tbody></table>' + signatureBlock('achievement') + '</div></div>';
   }
 
-  function printCss() {
-    return '<style id="admin-full-extract-site-performance-achievement-guard-css">' +
-      '@page portrait-orientation-perf{size:A4 portrait!important;margin:5mm!important}' +
-      '@page portrait-orientation-ach{size:A4 portrait!important;margin:7mm!important}' +
-      '.portrait-page-perf{page:portrait-orientation-perf!important;break-after:page!important;page-break-after:always!important;margin:0!important;padding:0!important;overflow:hidden!important}' +
-      '.portrait-page-perf .performance-report{height:287mm!important;max-height:287mm!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;margin:0!important;padding:0!important;break-inside:avoid!important;page-break-inside:avoid!important}' +
-      '.portrait-page-perf .header-table{margin:0 0 4px!important;border-bottom:1.5px solid #0056b3!important;flex:0 0 auto!important}.portrait-page-perf .header-table .logo{width:42px!important}.portrait-page-perf .header-table h1,.portrait-page-perf .header-table h2{font-size:9pt!important;line-height:1.1!important;margin:0!important}' +
-      '.portrait-page-perf .cert-title{font-size:13pt!important;margin:4px 0 3px!important;line-height:1.2!important;flex:0 0 auto!important}.portrait-page-perf .sub-title{font-size:9pt!important;margin:2px 0 3px!important;line-height:1.25!important;flex:0 0 auto!important}.portrait-page-perf .cost-bar{font-size:8.5pt!important;padding:4px!important;margin:3px 0!important;line-height:1.2!important;flex:0 0 auto!important}' +
-      '.portrait-page-perf table{width:100%!important;border-collapse:collapse!important;table-layout:fixed!important;font-size:7.1pt!important;margin:0!important;flex:0 1 auto!important}.portrait-page-perf th,.portrait-page-perf td{padding:2px 3px!important;line-height:1.15!important;border:1px solid #333!important;vertical-align:middle!important}.portrait-page-perf .item-text{text-align:right!important;white-space:normal!important;overflow-wrap:anywhere!important}.portrait-page-perf .perf-total td{background:#f0f0f0!important;font-weight:900!important}' +
-      '.portrait-page-perf .summary{font-size:8.4pt!important;line-height:1.28!important;margin:4px 0 2px!important;flex:0 0 auto!important}.portrait-page-perf .signatures{margin-top:auto!important;padding-top:5px!important;border-top:1px solid #333!important;display:flex!important;justify-content:space-around!important;gap:8px!important;flex:0 0 auto!important}.portrait-page-perf .sign-box{font-size:8.5pt!important;width:24%!important;text-align:center!important}.portrait-page-perf .sign-box .line{margin-top:13px!important;border-bottom:1px solid #000!important}' +
-      '.portrait-page-ach .achievement-report{break-inside:avoid!important;page-break-inside:avoid!important}.portrait-page-ach .header-table .logo{width:58px!important}.portrait-page-ach .certificate-header{margin-bottom:12px!important}.portrait-page-ach .certificate-header h2{font-size:17pt!important}.portrait-page-ach .certificate-header h3{font-size:11pt!important}.portrait-page-ach table{font-size:9.5pt!important}.portrait-page-ach th,.portrait-page-ach td{padding:6px!important}.portrait-page-ach .signatures{margin-top:28px!important}' +
-    '</style>';
+  function hasPage(doc, centerKey, attr) {
+    try { return !!doc.querySelector('[data-center-key="' + CSS.escape(centerKey) + '"][' + attr + ']'); } catch (_) { return false; }
   }
-
-  function selectedKeysAtPrintTime() {
-    return Array.from(document.querySelectorAll('#print-centers-checkboxes input:checked')).map(function (cb) { return cb.value; }).filter(Boolean);
-  }
-
-  function hasReport(doc, centerKey, className, centerName) {
-    var selectors = ['[data-center-key="' + CSS.escape(centerKey) + '"] .' + className, '.' + className];
-    var nodes = Array.from(doc.querySelectorAll(selectors.join(',')));
-    return nodes.some(function (node) {
-      var text = clean(node.textContent);
-      return text.indexOf(centerName) > -1 || (node.closest('[data-center-key]') && node.closest('[data-center-key]').getAttribute('data-center-key') === centerKey);
+  function selectedKeysFromPrintWindow(doc) {
+    var keys = [];
+    doc.querySelectorAll('[data-center-key]').forEach(function (el) {
+      var k = el.getAttribute('data-center-key');
+      if (k && keys.indexOf(k) === -1) keys.push(k);
     });
+    if (!keys.length) keys = Object.keys(getData() || {});
+    return keys;
   }
-
-  function findAttendancePage(doc, centerName) {
-    var pages = Array.from(doc.querySelectorAll('.page-container'));
-    return pages.find(function (page) {
-      var report = page.querySelector('.attendance-report');
-      if (!report) return false;
-      return clean(report.textContent).indexOf(centerName) > -1;
-    }) || null;
-  }
-
-  function ensureSitePerfAchievementPages(win, keys, opts) {
-    if (!win || !win.document || !win.document.body) return;
+  function injectPages(win) {
+    if (!win || !win.document || win.__adminOfficesFullExtractPerfAchDone) return;
+    win.__adminOfficesFullExtractPerfAchDone = true;
     var doc = win.document;
-    if (!doc.getElementById('admin-full-extract-site-performance-achievement-guard-css')) {
-      doc.head.insertAdjacentHTML('beforeend', printCss());
-    }
-    var n = getNames();
-    keys.forEach(function (centerKey) {
-      var centerName = n[centerKey] || centerKey;
-      var attendancePage = findAttendancePage(doc, centerName);
-      if (!attendancePage) return;
-      var cursor = attendancePage;
-      if (opts.performance && !hasReport(doc, centerKey, 'performance-report', centerName)) {
-        cursor.insertAdjacentHTML('afterend', performancePage(centerKey));
-        cursor = cursor.nextElementSibling || cursor;
-      } else {
-        var existingPerf = Array.from(doc.querySelectorAll('.performance-report')).find(function (node) { return clean(node.textContent).indexOf(centerName) > -1; });
-        if (existingPerf && existingPerf.closest('.page-container')) cursor = existingPerf.closest('.page-container');
-      }
-      if (opts.achievement && !hasReport(doc, centerKey, 'achievement-report', centerName)) {
-        cursor.insertAdjacentHTML('afterend', achievementPage(centerKey));
-      }
+    var keys = selectedKeysFromPrintWindow(doc);
+    var html = '';
+    keys.forEach(function (key) {
+      if (!hasPage(doc, key, 'data-auto-site-performance')) html += performancePage(key);
+      if (!hasPage(doc, key, 'data-auto-site-achievement')) html += achievementPage(key);
     });
+    if (!html) return;
+    doc.body.insertAdjacentHTML('beforeend', html);
   }
-
   function patchPrintSelected() {
-    if (typeof window.printSelected !== 'function' || window.printSelected.__sitePerfAchGuardWrapped) return false;
+    if (typeof window.printSelected !== 'function' || window.printSelected.__adminOfficesFullExtractPerfAchGuardV2) return false;
     var old = window.printSelected;
-    window.printSelected = function sitePerfAchGuardPrintSelected() {
-      var opts = {
-        attendance: !!document.getElementById('print-opt-attendance')?.checked,
-        performance: !!document.getElementById('print-opt-performance')?.checked,
-        achievement: !!document.getElementById('print-opt-achievement')?.checked
-      };
-      var keys = selectedKeysAtPrintTime();
+    window.printSelected = function patchedPrintSelected() {
       var captured = null;
       var realOpen = window.open;
       window.open = function () { captured = realOpen.apply(window, arguments); return captured; };
-      var result;
-      try { result = old.apply(this, arguments); }
-      finally { window.open = realOpen; }
-      if (captured && opts.attendance && (opts.performance || opts.achievement) && keys.length) {
-        var run = function () {
-          try { ensureSitePerfAchievementPages(captured, keys, opts); }
-          catch (e) { console.error('[FullExtractSitePerfAchGuard] failed:', e); }
-        };
-        run();
-        setTimeout(run, 0);
-        setTimeout(run, 60);
-        setTimeout(run, 180);
+      try {
+        var out = old.apply(this, arguments);
+        if (captured) {
+          setTimeout(function () { injectPages(captured); }, 250);
+          setTimeout(function () { injectPages(captured); }, 650);
+          setTimeout(function () { injectPages(captured); }, 1100);
+        }
+        return out;
+      } finally {
+        window.open = realOpen;
       }
-      return result;
     };
-    window.printSelected.__sitePerfAchGuardWrapped = true;
+    window.printSelected.__adminOfficesFullExtractPerfAchGuardV2 = true;
     return true;
   }
-
   function boot(attempt) {
     patchPrintSelected();
-    if (attempt < 60 && !window.printSelected?.__sitePerfAchGuardWrapped) setTimeout(function () { boot(attempt + 1); }, 250);
+    if (attempt < 40 && !window.printSelected?.__adminOfficesFullExtractPerfAchGuardV2) setTimeout(function () { boot(attempt + 1); }, 250);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { boot(0); }); else boot(0);
-  setTimeout(function () { boot(0); }, 1200);
-  setTimeout(function () { boot(0); }, 3000);
-  console.info('[Admin Offices Full Extract Site Perf/Ach Guard] installed v1');
+  setTimeout(function () { boot(0); }, 1000);
+  setTimeout(function () { boot(0); }, 2500);
+  document.addEventListener('click', function () { setTimeout(function () { boot(0); }, 80); setTimeout(function () { boot(0); }, 300); }, true);
+  console.info('[Admin Offices Full Extract Site Perf/Ach Guard] installed v2 compact performance structure');
 })();
