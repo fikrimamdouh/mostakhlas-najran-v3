@@ -1,5 +1,5 @@
 // Admin Offices Print All + Raise Letters
-// Safe mode: adds optional letter checkboxes only; never forces selections.
+// Safe mode: adds optional letter checkboxes and exposes reusable builders only.
 (function () {
   'use strict';
   if (!/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
@@ -96,8 +96,8 @@
     return letterPage('', body, [{ label: 'صافي مستحقات المستهلكات ومقاولي الباطن عن فترة المستخلص', value: moneyPlain(net) }, { label: `ضريبة القيمة المضافة ${moneyPlain(s.vatRate)}%`, value: money(vat) }, { label: 'الإجمالي', value: money(total), cls: 'grand' }], total, false);
   }
   function declarationPage() {
-    const s = getSettings(), company = getCompanyName(), amount = laborNet();
-    const body = `تقر إدارة الصيانة بالشئون الهندسية بصحة نجران بأن مستخلص العمالة لشركة ${esc(company)}، لمواقع ${esc(s.scopeName)}، ${extractPhrase()}، بمبلغ وقدره (${money(amount)}) ${esc(tafqeet(amount))}.<br>ولم يسبق صرفه من قبلنا.`;
+    const amount = laborNet();
+    const body = `تقر إدارة الصيانة بالشئون الهندسية بصحة نجران بأن مستخلص العمالة لشركة ${esc(getCompanyName())}، لمواقع ${esc(getSettings().scopeName)}، ${extractPhrase()}، بمبلغ وقدره (${money(amount)}) ${esc(tafqeet(amount))}.<br>ولم يسبق صرفه من قبلنا.`;
     return letterPage('إقرار بعدم أسبقية الصرف', body, [{ label: 'قيمة مستخلص العمالة', value: money(amount), cls: 'grand' }], amount, true);
   }
   function lettersCss() {
@@ -142,43 +142,10 @@
     window.openPrintDialog.__raiseLettersPatched = true;
     return true;
   }
-  function patchPrintSelected() {
-    if (typeof window.printSelected !== 'function' || window.printSelected.__raiseLettersPatched) return false;
-    const original = window.printSelected;
-    window.printSelected = function patchedPrintSelected() {
-      const lettersHtml = buildSelectedLetters();
-      const hasCore = checked('print-opt-attendance') || checked('print-opt-performance') || checked('print-opt-achievement');
-      if (lettersHtml && !hasCore) return openLettersOnly();
-      let capturedWin = null;
-      const realOpen = window.open;
-      window.open = function () { capturedWin = realOpen.apply(window, arguments); return capturedWin; };
-      const result = original.apply(this, arguments);
-      window.open = realOpen;
-      if (capturedWin && capturedWin.document && lettersHtml) {
-        setTimeout(() => {
-          try {
-            const originalOnload = capturedWin.onload;
-            capturedWin.onload = function () {
-              try {
-                if (!capturedWin.document.getElementById('raise-letters-print-all-css')) capturedWin.document.head.insertAdjacentHTML('beforeend', lettersCss());
-                capturedWin.document.body.insertAdjacentHTML('beforeend', lettersHtml);
-              } catch (e) { console.error('[PrintAllLetters] append failed', e); }
-              if (typeof originalOnload === 'function') return originalOnload.call(capturedWin);
-              capturedWin.focus(); capturedWin.print(); capturedWin.close();
-            };
-          } catch (e) { console.error('[PrintAllLetters] onload patch failed', e); }
-        }, 0);
-      }
-      return result;
-    };
-    window.printSelected.__raiseLettersPatched = true;
-    return true;
-  }
   function boot(attempt) {
     patchPrintDialog();
-    patchPrintSelected();
-    if (attempt < 40 && (!window.openPrintDialog?.__raiseLettersPatched || !window.printSelected?.__raiseLettersPatched)) setTimeout(() => boot(attempt + 1), 250);
+    if (attempt < 40 && !window.openPrintDialog?.__raiseLettersPatched) setTimeout(() => boot(attempt + 1), 250);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0)); else boot(0);
-  console.info('[Admin Offices Print All Letters] installed optional only');
+  console.info('[Admin Offices Print All Letters] builders only + optional UI');
 })();
