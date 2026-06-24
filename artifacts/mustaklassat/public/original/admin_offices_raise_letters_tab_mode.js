@@ -32,6 +32,7 @@
   function loadSubmittedArchiveBundleGuard() { loadScriptOnce('submitted-extract-archive-bundle-guard', '/original/submitted_extract_archive_bundle_guard.js?v=20260623_archive_bundle_v1'); }
   function loadSignatureLabelsPatch() { loadScriptOnce('admin-offices-raise-letter-signature-labels', '/original/admin_offices_raise_letters_signature_labels.js?v=20260624_sig_doc_settings_v3'); }
   function loadButtonGroupsPatch() { loadScriptOnce('admin-offices-raise-letter-button-groups', '/original/admin_offices_raise_letters_button_groups.js?v=20260624_button_groups_clean_v2'); }
+  function loadTafqeetRowsFix() { loadScriptOnce('admin-offices-raise-letters-tafqeet-rows', '/original/admin_offices_raise_letters_tafqeet_rows.js?v=20260624_tafqeet_rows_v1'); }
 
   function readJson(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; } }
   function countAdminRows(data) { return Object.values(data || {}).reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0); }
@@ -140,13 +141,13 @@
     if (api && typeof api.openDialog === 'function') { try { api.openDialog(); } catch (_) {} }
   }
   function boot(attempt) {
-    loadPeriodFix(); loadSubmittedArchiveBundleGuard(); loadSignatureLabelsPatch(); loadButtonGroupsPatch(); loadDynamicFinalSubjectPatch(); loadBulkStatusGridPrintFix(); loadSitePrintPerformanceFit(); loadThreePagesPrintPolish(); loadFullExtractSitePerfAchievementGuard(); loadFullExcelVisibilityGuard();
+    loadPeriodFix(); loadSubmittedArchiveBundleGuard(); loadSignatureLabelsPatch(); loadButtonGroupsPatch(); loadDynamicFinalSubjectPatch(); loadBulkStatusGridPrintFix(); loadSitePrintPerformanceFit(); loadThreePagesPrintPolish(); loadFullExtractSitePerfAchievementGuard(); loadFullExcelVisibilityGuard(); loadTafqeetRowsFix();
     patchMainButton(); patchFullPositionsLoadGate(); applyExcelImportDialogLayout();
     try { if (window.AdminOfficesRaiseLettersPeriodFix) window.AdminOfficesRaiseLettersPeriodFix.fixNow(); } catch (_) {}
     if (isStandalone) openAsStandalonePage();
     if (attempt < 40) setTimeout(() => boot(attempt + 1), 250);
   }
-  document.addEventListener('click', function () { setTimeout(applyExcelImportDialogLayout, 80); setTimeout(loadPeriodFix, 80); setTimeout(loadSubmittedArchiveBundleGuard, 120); setTimeout(loadSignatureLabelsPatch, 120); setTimeout(loadButtonGroupsPatch, 120); setTimeout(loadDynamicFinalSubjectPatch, 120); setTimeout(loadBulkStatusGridPrintFix, 120); setTimeout(loadSitePrintPerformanceFit, 120); setTimeout(loadThreePagesPrintPolish, 120); setTimeout(loadFullExtractSitePerfAchievementGuard, 120); setTimeout(loadFullExcelVisibilityGuard, 120); setTimeout(patchFullPositionsLoadGate, 120); setTimeout(function(){ try { if (window.AdminOfficesRaiseLettersPeriodFix) window.AdminOfficesRaiseLettersPeriodFix.fixNow(); } catch (_) {} }, 160); }, true);
+  document.addEventListener('click', function () { setTimeout(applyExcelImportDialogLayout, 80); setTimeout(loadPeriodFix, 80); setTimeout(loadSubmittedArchiveBundleGuard, 120); setTimeout(loadSignatureLabelsPatch, 120); setTimeout(loadButtonGroupsPatch, 120); setTimeout(loadDynamicFinalSubjectPatch, 120); setTimeout(loadBulkStatusGridPrintFix, 120); setTimeout(loadSitePrintPerformanceFit, 120); setTimeout(loadThreePagesPrintPolish, 120); setTimeout(loadFullExtractSitePerfAchievementGuard, 120); setTimeout(loadFullExcelVisibilityGuard, 120); setTimeout(loadTafqeetRowsFix, 140); setTimeout(patchFullPositionsLoadGate, 120); setTimeout(function(){ try { if (window.AdminOfficesRaiseLettersPeriodFix) window.AdminOfficesRaiseLettersPeriodFix.fixNow(); } catch (_) {} }, 160); }, true);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0)); else boot(0);
-  console.info('[Admin Offices Raise Letters] standalone tab mode installed v3 period fix + compact perf guard + bulk grid + site print refreshed + three pages polish');
+  console.info('[Admin Offices Raise Letters] standalone tab mode installed v3 period fix + tafqeet rows + compact perf guard + bulk grid + site print refreshed + three pages polish');
 })();
