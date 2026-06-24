@@ -10,6 +10,7 @@
 // + يوضح تواقيع خطابات الرفع والإقرار داخل نافذة الخطابات
 // + يقسم أزرار المستخلص والشهادات وخطابات المواقع بوضوح
 // + يضمن في طباعة المستخلص الكامل وجود جدول أداء الموقع بعد الحضور وشهادة الإنجاز بعده
+// + يمنع ظهور استيراد ملف شامل لكل الأقسام إلا داخل شاشة Excel فقط
 // ===================================================================
 (function () {
   'use strict';
@@ -43,6 +44,10 @@
 
   function loadFullExtractSitePerfAchievementGuard() {
     loadScriptOnce('admin-offices-full-extract-site-perf-ach-guard', '/original/admin_offices_full_extract_site_perf_achievement_guard.js?v=20260623_full_extract_perf_ach_v1');
+  }
+
+  function loadFullExcelVisibilityGuard() {
+    loadScriptOnce('admin-offices-full-excel-visibility-guard', '/original/admin_offices_full_excel_visibility_guard.js?v=20260623_full_excel_visibility_v1');
   }
 
   function loadSubmittedArchiveBundleGuard() {
@@ -153,8 +158,11 @@
     const dlg = document.getElementById('management-dialog');
     if (!dlg) return;
     const text = (dlg.textContent || '').trim();
-    const isExcelImport = text.includes('استيراد بيانات من Excel') || text.includes('تامبليت الوظائف') || text.includes('استيراد ملف شامل لكل الأقسام');
-    if (!isExcelImport) return;
+    const isExcelImport = text.includes('استيراد بيانات من Excel') || text.includes('تامبليت الوظائف') || text.includes('استيراد التامبليت بعد التعبئة');
+    if (!isExcelImport) {
+      dlg.classList.remove('admin-offices-excel-import-dialog');
+      return;
+    }
     dlg.classList.add('admin-offices-excel-import-dialog');
     const body = dlg.querySelector('.dialog-body');
     if (body) {
@@ -195,6 +203,7 @@
     loadBulkStatusGridPrintFix();
     loadSitePrintPerformanceFit();
     loadFullExtractSitePerfAchievementGuard();
+    loadFullExcelVisibilityGuard();
     patchMainButton();
     applyExcelImportDialogLayout();
     if (isStandalone) openAsStandalonePage();
@@ -211,10 +220,11 @@
     setTimeout(loadBulkStatusGridPrintFix, 120);
     setTimeout(loadSitePrintPerformanceFit, 120);
     setTimeout(loadFullExtractSitePerfAchievementGuard, 120);
+    setTimeout(loadFullExcelVisibilityGuard, 120);
   }, true);
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0));
   else boot(0);
 
-  console.info('[Admin Offices Raise Letters] standalone tab mode installed + Excel import scroll fix + final subject + bulk/print + site/performance fit + archive bundle + signature labels + button groups + full extract perf/ach loader');
+  console.info('[Admin Offices Raise Letters] standalone tab mode installed + Excel import scroll fix + final subject + bulk/print + site/performance fit + archive bundle + signature labels + button groups + full extract perf/ach + full excel visibility loader');
 })();
