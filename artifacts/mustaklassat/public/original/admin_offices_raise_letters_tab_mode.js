@@ -27,7 +27,7 @@
   function loadBulkStatusGridPrintFix() { loadScriptOnce('admin-offices-bulk-status-grid-print-fix', '/original/admin_offices_bulk_status_grid_print_fix.js?v=20260624_bulk_clean_v4'); }
   function loadSitePrintPerformanceFit() { loadScriptOnce('admin-offices-site-print-performance-fit', '/original/admin_offices_site_print_performance_fit.js?v=20260624_site_bundle_v5'); }
   function loadThreePagesPrintPolish() { loadScriptOnce('admin-offices-three-pages-print-polish', '/original/admin_offices_three_pages_print_polish.js?v=20260624_three_pages_v4_achievement_like'); }
-  function loadFullExtractSitePerfAchievementGuard() { loadScriptOnce('admin-offices-full-extract-site-perf-ach-guard', '/original/admin_offices_full_extract_site_perf_achievement_guard.js?v=20260623_full_extract_perf_ach_v1'); }
+  function loadFullExtractSitePerfAchievementGuard() { loadScriptOnce('admin-offices-full-extract-site-perf-ach-guard', '/original/admin_offices_full_extract_site_perf_achievement_guard.js?v=20260624_full_extract_perf_ach_v2_compact'); }
   function loadFullExcelVisibilityGuard() { loadScriptOnce('admin-offices-full-excel-visibility-guard', '/original/admin_offices_full_excel_visibility_guard.js?v=20260623_full_excel_visibility_v1'); }
   function loadSubmittedArchiveBundleGuard() { loadScriptOnce('submitted-extract-archive-bundle-guard', '/original/submitted_extract_archive_bundle_guard.js?v=20260623_archive_bundle_v1'); }
   function loadSignatureLabelsPatch() { loadScriptOnce('admin-offices-raise-letter-signature-labels', '/original/admin_offices_raise_letters_signature_labels.js?v=20260624_sig_doc_settings_v3'); }
@@ -148,5 +148,5 @@
   }
   document.addEventListener('click', function () { setTimeout(applyExcelImportDialogLayout, 80); setTimeout(loadPeriodFix, 80); setTimeout(loadSubmittedArchiveBundleGuard, 120); setTimeout(loadSignatureLabelsPatch, 120); setTimeout(loadButtonGroupsPatch, 120); setTimeout(loadDynamicFinalSubjectPatch, 120); setTimeout(loadBulkStatusGridPrintFix, 120); setTimeout(loadSitePrintPerformanceFit, 120); setTimeout(loadThreePagesPrintPolish, 120); setTimeout(loadFullExtractSitePerfAchievementGuard, 120); setTimeout(loadFullExcelVisibilityGuard, 120); setTimeout(patchFullPositionsLoadGate, 120); setTimeout(function(){ try { if (window.AdminOfficesRaiseLettersPeriodFix) window.AdminOfficesRaiseLettersPeriodFix.fixNow(); } catch (_) {} }, 160); }, true);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0)); else boot(0);
-  console.info('[Admin Offices Raise Letters] standalone tab mode installed v3 period fix + bulk grid + site print refreshed + three pages polish');
+  console.info('[Admin Offices Raise Letters] standalone tab mode installed v3 period fix + compact perf guard + bulk grid + site print refreshed + three pages polish');
 })();
