@@ -1,15 +1,12 @@
 // ===================================================================
-// Admin Offices Lightweight Consolidated Print Flow — V5
-// إصلاح تهنيج زر الطباعة:
-// - لا يحدد كل المكاتب افتراضيًا.
-// - لا يبني صفحات الطباعة إلا بعد الضغط على بدء الطباعة.
-// - يمنع الضغط المزدوج أثناء التجهيز.
+// Admin Offices Lightweight Consolidated Print Flow — V6
+// مصدر واحد للطباعة، بدون الاعتماد على openDialog القديم.
 // ===================================================================
 (function () {
   'use strict';
   if (!/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
-  if (window.__ADMIN_OFFICES_PRINT_ALL_LIGHT_V5__) return;
-  window.__ADMIN_OFFICES_PRINT_ALL_LIGHT_V5__ = true;
+  if (window.__ADMIN_OFFICES_PRINT_ALL_LIGHT_V6__) return;
+  window.__ADMIN_OFFICES_PRINT_ALL_LIGHT_V6__ = true;
 
   let isPrinting = false;
 
@@ -121,17 +118,25 @@
   }
 
   function printCss() { return `<style>@page{size:A4;margin:7mm}@page landscape{size:A4 landscape;margin:3mm}body{font-family:Tajawal,Arial,sans-serif;direction:rtl;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.page-container{page-break-after:always}.landscape-page{page:landscape;transform:scale(.92);transform-origin:top center;width:108.5%}.printable-header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ccc;margin-bottom:3px}.printable-header .logo{width:42px}.header-text{text-align:center;flex:1}.header-text h1,.header-text h2,.header-text h3{margin:1px 0;font-size:9pt}.header-table{width:100%;border-bottom:2px solid #0056b3;margin-bottom:10px}.header-table .logo{width:70px}.header-table td{text-align:center}.extract-details-v2{font-size:7pt;padding:3px 5px;background:#003087!important;color:white!important;display:flex;justify-content:space-between}.table-responsive-wrapper{overflow:visible!important}.attendance-report table{width:100%;border-collapse:collapse;table-layout:fixed}.attendance-report th,.attendance-report td{border:1px solid #555;padding:1px;font-size:6pt;text-align:center;line-height:1.05;overflow:hidden}.attendance-report th{background:#003087!important;color:#fff!important}.attendance-report .job-title,.attendance-report .employee-name{font-size:6.3pt;white-space:normal}.attendance-report .day-col{font-size:5.5pt!important;padding:1px 0!important}.signatures-grid,.signatures{display:flex;justify-content:space-around;margin-top:8px;padding-top:6px;border-top:1px solid #ccc}.signature-item,.sign-box{text-align:center;font-size:8pt;min-width:100px}.line{border-bottom:1px solid #000;min-height:14px;margin:8px 12px 0}.performance-report table,.achievement-report table,.raise-letter-page-simple table{width:100%;border-collapse:collapse;table-layout:fixed}.performance-report th,.performance-report td,.achievement-report th,.achievement-report td,.raise-letter-page-simple td{border:1px solid #333;padding:5px;text-align:center}.performance-report th,.achievement-report th{background:#e9ecef}.item-text{text-align:right!important}.cert-title,.sub-title,.summary,.certificate-header{text-align:center}.total-row{font-weight:bold;background:#f0f0f0}</style>`; }
+  function dialogCss() { return `<style id="admin-offices-print-dialog-css">#management-dialog.admin-print-dialog{position:fixed;inset:0;z-index:1000000;background:rgba(15,23,42,.58);display:flex;align-items:center;justify-content:center;direction:rtl;font-family:Tajawal,Arial,sans-serif}#management-dialog.admin-print-dialog .dialog-content{width:min(920px,94vw);max-height:88vh;background:#fff;border-radius:16px;box-shadow:0 25px 70px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden}#management-dialog.admin-print-dialog .dialog-header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #e2e8f0;background:#f8fafc}#management-dialog.admin-print-dialog .dialog-header h3{margin:0;color:#003087;font-weight:900}.admin-print-close{border:0;background:#ef4444;color:#fff;border-radius:8px;padding:5px 10px;font-weight:900;cursor:pointer}#management-dialog.admin-print-dialog .dialog-body{padding:14px 18px;overflow:auto}#management-dialog.admin-print-dialog fieldset{border:1px solid #cbd5e1;border-radius:12px;margin:0 0 12px;padding:12px}#management-dialog.admin-print-dialog legend{font-weight:900;color:#003087;padding:0 8px}.checkbox-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px}.form-group-checkbox{display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px;font-weight:800}.dialog-footer{padding:12px 18px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;background:#f8fafc}.dialog-footer .btn{border:0;border-radius:10px;padding:10px 18px;font-weight:900;cursor:pointer}.btn-success{background:#16a34a;color:white}</style>`; }
 
-  function cleanDialogs() { try { if (typeof closeDialog === 'function') closeDialog('management-dialog'); } catch (_) {} document.querySelectorAll('#management-dialog').forEach(el => el.remove()); }
+  function cleanDialogs() { document.querySelectorAll('#management-dialog').forEach(el => el.remove()); }
+  function closeAdminPrintDialog(){ cleanDialogs(); }
   function toggleAllPrintCenters(master) { document.querySelectorAll('#print-centers-checkboxes input[type="checkbox"]').forEach(cb => { cb.checked = master.checked; }); }
+  window.closeAdminPrintDialog = closeAdminPrintDialog;
   window.toggleAllPrintCenters = toggleAllPrintCenters;
 
+  function ensureDialogCss(){ if (!document.getElementById('admin-offices-print-dialog-css')) document.head.insertAdjacentHTML('beforeend', dialogCss()); }
   function openPrintDialog() {
     cleanDialogs();
+    ensureDialogCss();
     const ns = names(), cur = currentKey();
     const checks = Object.keys(ns).map(key => `<div class="form-group-checkbox"><input type="checkbox" value="${esc(key)}" id="print-${esc(key)}" ${key===cur?'checked':''}><label for="print-${esc(key)}">${esc(ns[key])}</label></div>`).join('');
-    const content = `<div class="dialog-header"><h3><i class="fas fa-print"></i> طباعة التقارير المجمعة</h3><span class="close" onclick="closeDialog('management-dialog')">×</span></div><div class="dialog-body"><fieldset><legend>1. اختر المكاتب والمرافق</legend><div class="form-group-checkbox all-selector"><input type="checkbox" id="print-all-centers" onchange="toggleAllPrintCenters(this)"><label for="print-all-centers"><strong>تحديد الكل / إلغاء تحديد الكل</strong></label></div><div id="print-centers-checkboxes" class="checkbox-grid">${checks}</div></fieldset><fieldset><legend>2. اختر التقارير للطباعة</legend><div class="checkbox-grid"><div class="form-group-checkbox"><input type="checkbox" id="print-opt-attendance" checked><label for="print-opt-attendance">تقرير الحضور والانصراف</label></div><div class="form-group-checkbox"><input type="checkbox" id="print-opt-performance"><label for="print-opt-performance">شهادة تقييم الأداء</label></div><div class="form-group-checkbox"><input type="checkbox" id="print-opt-achievement"><label for="print-opt-achievement">شهادة الإنجاز</label></div><div class="form-group-checkbox"><input type="checkbox" id="print-opt-site-raise-letter"><label for="print-opt-site-raise-letter">خطاب رفع الموقع</label></div></div></fieldset></div><div class="dialog-footer"><div></div><button id="admin-print-start-btn" class="btn btn-success" onclick="printSelected()"><i class="fas fa-print"></i> بدء الطباعة</button></div>`;
-    if (typeof openDialog === 'function') openDialog(content, 'management-dialog', true); else alert('openDialog غير موجودة');
+    const modal = document.createElement('div');
+    modal.id = 'management-dialog';
+    modal.className = 'admin-print-dialog';
+    modal.innerHTML = `<div class="dialog-content"><div class="dialog-header"><h3>طباعة التقارير المجمعة</h3><button type="button" class="admin-print-close" onclick="closeAdminPrintDialog()">×</button></div><div class="dialog-body"><fieldset><legend>1. اختر المكاتب والمرافق</legend><div class="form-group-checkbox all-selector"><input type="checkbox" id="print-all-centers" onchange="toggleAllPrintCenters(this)"><label for="print-all-centers"><strong>تحديد الكل / إلغاء تحديد الكل</strong></label></div><div id="print-centers-checkboxes" class="checkbox-grid">${checks}</div></fieldset><fieldset><legend>2. اختر التقارير للطباعة</legend><div class="checkbox-grid"><div class="form-group-checkbox"><input type="checkbox" id="print-opt-attendance" checked><label for="print-opt-attendance">تقرير الحضور والانصراف</label></div><div class="form-group-checkbox"><input type="checkbox" id="print-opt-performance"><label for="print-opt-performance">شهادة تقييم الأداء</label></div><div class="form-group-checkbox"><input type="checkbox" id="print-opt-achievement"><label for="print-opt-achievement">شهادة الإنجاز</label></div><div class="form-group-checkbox"><input type="checkbox" id="print-opt-site-raise-letter"><label for="print-opt-site-raise-letter">خطاب رفع الموقع</label></div></div></fieldset></div><div class="dialog-footer"><button id="admin-print-start-btn" class="btn btn-success" onclick="printSelected()">بدء الطباعة</button></div></div>`;
+    document.body.appendChild(modal);
   }
 
   function selectedKeys() { return Array.from(document.querySelectorAll('#print-centers-checkboxes input:checked')).map(cb => cb.value); }
@@ -172,5 +177,5 @@
   window.openPrintDialog = openPrintDialog;
   window.printSelected = printSelected;
   window.preparePrint = preparePrint;
-  console.info('[Admin Offices Print All] lightweight v5 no default all-print freeze');
+  console.info('[Admin Offices Print All] lightweight v6 self-rendered dialog no openDialog dependency');
 })();
