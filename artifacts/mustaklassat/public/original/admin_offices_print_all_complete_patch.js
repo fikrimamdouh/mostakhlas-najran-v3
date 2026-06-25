@@ -1,39 +1,206 @@
-(function(){
+// ===================================================================
+// Admin Offices Consolidated Print Flow
+// مصدر واحد للطباعة، بنفس فكرة دالة المراكز الصحية:
+// - الزر الرئيسي: اختيار المكاتب + اختيار التقارير + طباعة مجمعة.
+// - الأزرار الداخلية: طباعة الورقة الحالية فقط.
+// - لا لفّ متكرر ولا طبقات طباعة خارجية.
+// ===================================================================
+(function () {
   'use strict';
   if (!/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
 
-  function sharedCss(){return '<style id="admin-print-stability-css">.print-page{page-break-inside:auto!important;break-inside:auto!important;overflow:visible!important}.landscape-page{page-break-inside:auto!important;break-inside:auto!important}.table-responsive-wrapper{overflow:visible!important;width:100%!important;max-width:100%!important}table{page-break-inside:auto!important;break-inside:auto!important;margin-top:0!important}thead{display:table-header-group!important}tfoot{display:table-footer-group!important}tr{page-break-inside:avoid!important;break-inside:avoid!important}.printable-header{margin-bottom:2px!important;padding-bottom:2px!important}.page-contract-info-v2{margin:1px 0 2px!important;padding:2px 4px!important}.extract-details-v2{margin:0!important}.table-summary-v2{margin:0!important}.admin-achievement-fixed{direction:rtl;font-family:Tajawal,Arial,sans-serif}.admin-achievement-fixed table{width:100%;border-collapse:collapse;font-size:10pt;table-layout:fixed}.admin-achievement-fixed th,.admin-achievement-fixed td{border:1px solid #333;padding:8px;text-align:center;vertical-align:middle}.admin-achievement-fixed th{background:#e9ecef;font-weight:700}.admin-achievement-fixed .total-row td,.admin-achievement-fixed .tafqeet-cell{font-weight:bold;background:#f0f0f0}.admin-achievement-fixed .certificate-header{text-align:center;margin-bottom:20px}.admin-achievement-fixed .signatures{margin-top:40px;display:flex;justify-content:space-around;border-top:1px solid #333;padding-top:15px}.admin-achievement-fixed .sign-box{text-align:center;font-size:11pt;width:24%}.admin-achievement-fixed .sign-box .line{border-bottom:1px solid #000;margin-top:45px}.attendance-print-signatures{direction:rtl;font-family:Tajawal,Arial,sans-serif;margin-top:4px!important;padding-top:4px!important;border-top:1px solid #777!important;page-break-inside:avoid!important;break-inside:avoid!important}.attendance-print-signatures .signatures{display:flex!important;justify-content:space-around!important;gap:12px!important;margin-top:2px!important;padding-top:2px!important;border-top:0!important}.attendance-print-signatures .sign-box{text-align:center!important;font-size:7pt!important;min-width:95px!important}.attendance-print-signatures .sign-box .title{font-weight:bold!important}.attendance-print-signatures .sign-box .line{border-bottom:1px solid #000!important;min-height:10px!important;margin-top:7px!important}</style>';}
-  function hg1Css(){return '<style id="admin-hg1-exact-print-css">@page hg1{size:A4 portrait;margin:8mm}.portrait-page-perf,.exact-hg1-print{page:hg1}.exact-hg1-print{direction:rtl;font-family:Tajawal,Arial,sans-serif;color:#111827;background:#fff;padding:6mm 8mm;box-sizing:border-box;page-break-after:always}.exact-hg1-print .hg1-top-lines{text-align:right;font-size:12px;line-height:1.4;margin-bottom:8px}.exact-hg1-print .hg1-contract-box{background:#f8fafc;border:1px solid #d7dce2;padding:8px 10px;margin-bottom:10px;font-size:13px;line-height:1.8;text-align:right}.exact-hg1-print .hg1-title{background:#0b84f3!important;color:#fff!important;text-align:center;font-weight:900;font-size:16px;padding:8px;margin:8px 0;border-radius:7px}.exact-hg1-print .hg1-section-amount{text-align:right;font-size:13px;font-weight:700;margin:8px 0}.exact-hg1-print .hg1-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12.5px}.exact-hg1-print .hg1-table th{background:#0b84f3!important;color:#fff!important;border:1px solid #cfd6df;padding:6px 4px;text-align:center;font-weight:900}.exact-hg1-print .hg1-table td{border:1px solid #cfd6df;padding:5px 4px;text-align:center;vertical-align:middle;line-height:1.45;white-space:normal;word-break:normal;overflow-wrap:anywhere}.exact-hg1-print .hg1-table th:first-child,.exact-hg1-print .hg1-table td:first-child{width:74%}.exact-hg1-print .hg1-table th:nth-child(2),.exact-hg1-print .hg1-table td:nth-child(2),.exact-hg1-print .hg1-table th:nth-child(3),.exact-hg1-print .hg1-table td:nth-child(3){width:13%}.exact-hg1-print .hg1-total-row td{background:#ffe08a!important;font-weight:900}.exact-hg1-print .hg1-summary{margin-top:10px;font-size:13px;line-height:1.65;text-align:right;font-weight:700}.exact-hg1-print .hg1-summary p{margin:3px 0}</style>';}
-  function injectCss(w){try{if(!w||!w.document||!w.document.head)return;if(!w.document.getElementById('admin-print-stability-css'))w.document.head.insertAdjacentHTML('beforeend',sharedCss());if(!w.document.getElementById('admin-hg1-exact-print-css'))w.document.head.insertAdjacentHTML('beforeend',hg1Css());if(window.AdminOfficePrintLetters?.lettersCss&&!w.document.getElementById('raise-letters-print-all-css'))w.document.head.insertAdjacentHTML('beforeend',window.AdminOfficePrintLetters.lettersCss());}catch(e){console.error('[Admin Offices Print CSS] failed',e);}}
-  function readJson(k,fb){try{const r=localStorage.getItem(k);return r?JSON.parse(r):fb;}catch(_){return fb;}}
-  function money(v){return (Number(v)||0).toLocaleString('ar-SA',{minimumFractionDigits:2,maximumFractionDigits:2});}
-  function fmt(v){if(!v)return 'غير محدد';try{return new Date(v).toLocaleDateString('en-CA');}catch(_){return 'غير محدد';}}
-  function names(){try{return typeof getCenterNames==='function'?getCenterNames():readJson('adminOfficeNames_v1',{});}catch(_){return readJson('adminOfficeNames_v1',{});}}
-  function data(){try{return typeof getAttendanceData==='function'?getAttendanceData():readJson('adminOfficesAttendanceData_v1',{});}catch(_){return readJson('adminOfficesAttendanceData_v1',{});}}
-  function period(){try{return typeof getExtractPeriodDetails==='function'?getExtractPeriodDetails():{};}catch(_){return {};}}
-  function header(k){try{if(typeof getHeaderForCenter==='function')return getHeaderForCenter(k);}catch(_){}return{logoSrc:'najran_health_cluster_logo.png',h1:'فرع وزارة الصحة بمنطقة نجران',h3:'المكاتب الإدارية'};}
-  function fine(cat){return ({1:{saudi:500,non_saudi:500},2:{saudi:500,non_saudi:500},3:{saudi:250,non_saudi:100},4:{saudi:180,non_saudi:80},5:{saudi:150,non_saudi:80},6:{saudi:20,non_saudi:20},7:{saudi:10,non_saudi:10}})[cat]||{saudi:0,non_saudi:0};}
-  function selectedKeys(){return Array.from(document.querySelectorAll('#print-centers-checkboxes input:checked')).map(function(cb){return cb.value;}).filter(Boolean);}
-  function isChecked(id){return !!document.getElementById(id)?.checked;}
-  function setChecked(id,val){const el=document.getElementById(id);if(el)el.checked=val;}
-  function performancePages(keys){if(typeof window.buildAdminOfficePerformancePrintHtml!=='function')return '';return keys.map(function(k){return window.buildAdminOfficePerformancePrintHtml(k);}).join('');}
-  function lettersSelected(){return !!window.AdminOfficePrintLetters?.hasSelection?.();}
-  function lettersPages(){try{return window.AdminOfficePrintLetters?.buildSelectedLetters?.()||'';}catch(_){return '';}}
-  function signatures(type,k){try{let key=type;if(typeof getSignatureKeyForContext==='function')key=getSignatureKeyForContext(type,k);let sigs=typeof getSignatures==='function'?(getSignatures(key)||[]):[];if(!sigs.length&&key!==type&&typeof getSignatures==='function')sigs=getSignatures(type)||[];return sigs.length?'<div class="signatures">'+sigs.map(function(s){return '<div class="sign-box"><div class="title">'+(s.title||'')+'</div><div class="line"></div><div>'+(s.name||'................')+'</div></div>';}).join('')+'</div>':'';}catch(_){return '';}}
-  function attendanceSignatures(k){const html=signatures('attendance',k);return html?'<div class="attendance-print-signatures" data-attendance-signatures="'+k+'">'+html+'</div>':'';}
-  function appendAttendanceSignatures(w,keys){try{if(!w||!w.document||!w.document.body)return;keys=(keys&&keys.length?keys:[detectCenterKey()].filter(Boolean));const pages=Array.from(w.document.querySelectorAll('.landscape-page,.print-page.landscape-page,.admin-attendance-print-page'));keys.forEach(function(k,i){if(!k)return;const html=attendanceSignatures(k);if(!html)return;const target=pages[i]||pages[0]||w.document.body;if(target.querySelector('[data-attendance-signatures="'+k+'"]'))return;target.insertAdjacentHTML('beforeend',html);});}catch(e){console.error('[Admin Offices Attendance Signatures] append failed',e);}}
-  function printHeader(k){const h=header(k);return '<div class="printable-header"><img class="logo" src="'+h.logoSrc+'"><div class="header-text"><h1>'+h.h1+'</h1><h3>'+h.h3+'</h3><h2>مستخلص العمالة للمكاتب الإدارية والمرافق الصحية</h2></div><img class="logo" src="'+h.logoSrc+'"></div>';}
-  function calcEmp(emp,totalDaysInMonth,daysInExtract,contract){if(typeof calculateAdminOfficeEmployeeFinancials==='function')return calculateAdminOfficeEmployeeFinancials(emp,{totalDaysInMonth:totalDaysInMonth,daysInExtract:daysInExtract,contractType:contract.contractType||'عقد أساسي',directPurchaseRatio:parseFloat(contract.directPurchaseRatio)||0});const salary=parseFloat(emp.salary)||0,daily=totalDaysInMonth?salary/totalDaysInMonth:0,days=Array.isArray(emp.days)?emp.days.slice(0,daysInExtract):[];while(days.length<daysInExtract)days.push('ح');let cost=daily*daysInExtract;if(contract.contractType==='شراء مباشر'&&parseFloat(contract.directPurchaseRatio)>0)cost+=cost*parseFloat(contract.directPurchaseRatio)/100;let abs=0,dedOnly=0;days.forEach(function(d){if(d==='غ')abs++;else if(d!=='ح'&&d!=='ت')dedOnly++;});const cfg=fine(emp.category),isSaudi=String(emp.nationality||'').replace(/\s+/g,'').includes('سعودي'),absFine=abs*(isSaudi?cfg.saudi:cfg.non_saudi),nat=parseFloat(emp.nationalityFine)||0,ded=(abs+dedOnly)*daily;return{costForPeriod:cost,deduction:ded,absenceFine:absFine,nationalityFine:nat,netSalary:cost-ded-absFine-nat};}
-  function achievementPage(k){const n=names()[k]||k,rows=data()[k]||[],p=period(),contract=readJson('persistentContractData',{}),perf=readJson('performanceDeductions',{}),daysInExtract=Number(p.daysInExtract)||30,totalDaysInMonth=Number(p.totalDaysInMonth)||30;let cost=0,ded=0,absFine=0,natFine=0;rows.forEach(function(emp){const c=calcEmp(emp,totalDaysInMonth,daysInExtract,contract);cost+=c.costForPeriod;ded+=c.deduction;absFine+=c.absenceFine;natFine+=c.nationalityFine;});const perfFine=k!=='admin_staff'?(parseFloat(perf[k])||0):0,net=cost-ded-absFine-natFine-perfFine,taf=typeof tafqit==='function'?tafqit(net):'';return '<section class="print-page portrait-page admin-achievement-fixed">'+printHeader(k)+'<div class="certificate-header"><h2>شهادة الإنجاز</h2><h3>مستخلص العمالة</h3><h3>للمكتب/المرفق: '+n+'</h3><p>الفترة من '+fmt(readJson('persistentExtractData',{}).extractStart)+' إلى '+fmt(readJson('persistentExtractData',{}).extractEnd)+'</p></div><table><thead><tr><th>البند</th><th>التكلفة للفترة</th><th>حسم الغياب والحالات</th><th>غرامة الغياب</th><th>غرامة الأداء</th><th>غرامة الجنسية</th><th>الصافي</th></tr></thead><tbody><tr><td>العمالة</td><td>'+money(cost)+'</td><td>'+money(ded)+'</td><td>'+money(absFine)+'</td><td>'+money(perfFine)+'</td><td>'+money(natFine)+'</td><td><b>'+money(net)+'</b></td></tr><tr class="total-row"><td colspan="6">إجمالي المستحق للمقاول</td><td><b>'+money(net)+'</b></td></tr><tr><td class="tafqeet-cell" colspan="7">فقط وقدره: '+taf+'</td></tr></tbody></table>'+signatures('achievement',k)+'</section>';}
-  function achievementPages(keys){return keys.map(achievementPage).join('');}
-  function detectCenterKey(){const visible=Array.from(document.querySelectorAll('[id^="table-div-"]')).find(function(el){const r=el.getBoundingClientRect();return r.width>0&&r.height>0;});if(visible&&visible.id)return visible.id.replace('table-div-','');const title=(document.getElementById('center-main-title')?.textContent||'').trim();try{const ns=names();const hit=Object.entries(ns).find(function(x){return title.includes(x[1]);});if(hit)return hit[0];}catch(_){ }return null;}
-  function openCustom(keys,includePerf,includeAch,includeLetters,title){if(typeof closeDialog==='function')closeDialog('management-dialog');const w=window.open('','_blank','width=1200,height=900');if(!w)return alert('المتصفح منع فتح نافذة الطباعة.');w.document.open();w.document.write('<!doctype html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>'+title+'</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">'+sharedCss()+hg1Css()+(window.AdminOfficePrintLetters?.lettersCss?.()||'')+'</head><body>'+(includePerf?performancePages(keys):'')+(includeAch?achievementPages(keys):'')+(includeLetters?lettersPages():'')+'</body></html>');w.document.close();w.onload=function(){w.focus();w.print();w.close();};}
-  function callOldWithWindowCapture(old,args,after){let printWin=null;const realOpen=window.open;window.open=function(){printWin=realOpen.apply(window,arguments);return printWin;};const result=old.apply(this,args);window.open=realOpen;if(printWin){setTimeout(function(){injectCss(printWin);if(typeof after==='function')after(printWin);},80);setTimeout(function(){injectCss(printWin);if(typeof after==='function')after(printWin);},350);}return result;}
-  function routeAttendanceOnly(centerKey){if(typeof window.openPrintDialog!=='function'||typeof window.printSelected!=='function')return false;window.openPrintDialog();setTimeout(function(){document.querySelectorAll('#print-centers-checkboxes input').forEach(function(cb){cb.checked=(cb.value===centerKey);});setChecked('print-opt-attendance',true);setChecked('print-opt-performance',false);setChecked('print-opt-achievement',false);['print-opt-raise-labor','print-opt-raise-consumables','print-opt-raise-declaration','print-opt-grand-certificate'].forEach(function(id){setChecked(id,false);});window.printSelected();},180);return true;}
-  function installOpenDialogDefaults(){if(typeof window.openPrintDialog!=='function'||window.openPrintDialog.__adminPrintDefaultsClean)return false;const old=window.openPrintDialog;window.openPrintDialog=function(){const r=old.apply(this,arguments);setTimeout(function(){['print-opt-attendance','print-opt-performance','print-opt-achievement','print-opt-raise-labor','print-opt-raise-consumables','print-opt-raise-declaration','print-opt-grand-certificate'].forEach(function(id){setChecked(id,false);});},220);return r;};window.openPrintDialog.__adminPrintDefaultsClean=true;return true;}
-  function installPrintSelected(){if(typeof window.printSelected!=='function'||window.printSelected.__exactAdminOfficePrintPatch)return false;const old=window.printSelected;window.printSelected=function(){const keys=selectedKeys(),a=isChecked('print-opt-attendance'),p=isChecked('print-opt-performance'),h=isChecked('print-opt-achievement'),l=lettersSelected();if((p||h)&&!keys.length)return alert('الرجاء اختيار مكتب/مرفق واحد على الأقل للطباعة.');if(!a&&(p||h||l)){openCustom(keys,p,h,l,'طباعة التقارير');return;}const attendanceKeys=keys.length?keys:[detectCenterKey()].filter(Boolean);if(!p&&!h)return callOldWithWindowCapture.call(this,old,arguments,function(w){appendAttendanceSignatures(w,attendanceKeys);});setChecked('print-opt-performance',false);setChecked('print-opt-achievement',false);const result=callOldWithWindowCapture.call(this,old,arguments,function(w){appendAttendanceSignatures(w,attendanceKeys);try{w.document.body.insertAdjacentHTML('beforeend',(p?performancePages(keys):'')+(h?achievementPages(keys):''));}catch(e){console.error('[Admin Offices Append] failed',e);}});setChecked('print-opt-performance',p);setChecked('print-opt-achievement',h);return result;};window.printSelected.__exactAdminOfficePrintPatch=true;return true;}
-  function installPreparePrint(){if(typeof window.preparePrint!=='function'||window.preparePrint.__routesToGroupedAttendance)return false;const fallback=window.preparePrint;window.preparePrint=function(){const key=detectCenterKey();if(key&&routeAttendanceOnly(key))return;return fallback.apply(this,arguments);};window.preparePrint.__routesToGroupedAttendance=true;return true;}
-  function boot(n){installOpenDialogDefaults();installPrintSelected();installPreparePrint();if(n<40&&(!window.openPrintDialog?.__adminPrintDefaultsClean||!window.printSelected?.__exactAdminOfficePrintPatch||!window.preparePrint?.__routesToGroupedAttendance))setTimeout(function(){boot(n+1);},250);}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){boot(0);});else boot(0);
-  console.info('[Admin Offices Print All] main chooser comprehensive + internal attendance-only signatures');
+  function readJson(key, fallback) {
+    try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
+  }
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function num(v) {
+    var n = Number(String(v == null ? '' : v).replace(/,/g,'').replace(/[ ريال﷼]/g,''));
+    return Number.isFinite(n) ? n : 0;
+  }
+  function money(v) { return num(v).toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function fmtDate(v) { try { return v ? new Date(v).toLocaleDateString('en-CA') : 'غير محدد'; } catch (_) { return 'غير محدد'; } }
+
+  function officeNames() {
+    try { if (typeof window.getCenterNames === 'function') return window.getCenterNames() || {}; } catch (_) {}
+    return readJson('adminOfficeNames_v1', {});
+  }
+  function attendanceData() {
+    try { if (typeof window.getAttendanceData === 'function') return window.getAttendanceData() || {}; } catch (_) {}
+    return readJson('adminOfficesAttendanceData_v1', {});
+  }
+  function period() {
+    try { if (typeof window.getExtractPeriodDetails === 'function') return window.getExtractPeriodDetails() || {}; } catch (_) {}
+    var e = readJson('persistentExtractData', {});
+    var start = new Date(e.extractStart || Date.now());
+    var end = new Date(e.extractEnd || e.extractStart || Date.now());
+    var days = Math.max(1, Math.ceil((end - start) / 86400000) + 1 || 30);
+    return { startDate: start, daysInExtract: days, totalDaysInMonth: new Date(start.getFullYear(), start.getMonth()+1, 0).getDate() || 30 };
+  }
+  function contract() { return readJson('persistentContractData', {}); }
+  function extract() { return readJson('persistentExtractData', {}); }
+
+  function statusInfo(code) {
+    try { if (window.STATUS_CODES && window.STATUS_CODES[code]) return window.STATUS_CODES[code]; } catch (_) {}
+    return ({'ح':{isAbsence:false},'غ':{isAbsence:true},'ج':{isAbsence:false,isSpecial:true},'ش':{isAbsence:false,isSpecial:true},'ت':{isAbsence:false,isSpecial:true},'ب':{isAbsence:false,isSpecial:true},'ن':{isAbsence:false,isSpecial:true}})[code] || {isAbsence:false};
+  }
+  function fineConfig(cat) {
+    return ({1:{saudi:500,non_saudi:500},2:{saudi:500,non_saudi:500},3:{saudi:250,non_saudi:100},4:{saudi:180,non_saudi:80},5:{saudi:150,non_saudi:80},6:{saudi:20,non_saudi:20},7:{saudi:10,non_saudi:10},default:{saudi:0,non_saudi:0}})[cat] || {saudi:0,non_saudi:0};
+  }
+  function scopedSignatures(type, key) {
+    try {
+      var sigKey = type;
+      if (typeof window.getSignatureKeyForContext === 'function') sigKey = window.getSignatureKeyForContext(type, key);
+      var sigs = typeof window.getSignatures === 'function' ? (window.getSignatures(sigKey) || []) : [];
+      if (!sigs.length && sigKey !== type && typeof window.getSignatures === 'function') sigs = window.getSignatures(type) || [];
+      return Array.isArray(sigs) ? sigs : [];
+    } catch (_) { return []; }
+  }
+  function signaturesHtml(type, key, itemClass) {
+    var sigs = scopedSignatures(type, key);
+    if (!sigs.length) sigs = [{title:'مدير المشروع', name:''}, {title:'ممثل الجهة', name:''}, {title:'مندوب المقاول', name:''}];
+    if (itemClass === 'signature-item') {
+      return '<div class="signatures-grid">' + sigs.map(function(s){ return '<div class="signature-item"><div class="title">'+esc(s.title||'')+'</div><div class="line"></div><div class="name">'+esc(s.name||'................')+'</div></div>'; }).join('') + '</div>';
+    }
+    return '<div class="signatures">' + sigs.map(function(s){ return '<div class="sign-box"><div class="title">'+esc(s.title||'')+'</div><div class="line"></div><div>'+esc(s.name||'................')+'</div></div>'; }).join('') + '</div>';
+  }
+  function headerHtml(key, tableMode) {
+    var h = {logoSrc:'najran_health_cluster_logo.png', h1:'فرع وزارة الصحة بمنطقة نجران', h3:'المكاتب الإدارية والمرافق الصحية'};
+    try { if (typeof window.getHeaderForCenter === 'function') h = window.getHeaderForCenter(key) || h; } catch (_) {}
+    if (tableMode) return '<table class="header-table"><tr><td><img class="logo" src="'+esc(h.logoSrc)+'"></td><td class="title-box"><h1>'+esc(h.h1||'')+'</h1><h2>'+esc(h.h3||'')+'</h2></td><td><img class="logo" src="'+esc(h.logoSrc)+'"></td></tr></table>';
+    return '<div class="printable-header"><img src="'+esc(h.logoSrc)+'" class="logo"><div class="header-text"><h1>'+esc(h.h1||'')+'</h1><h3>'+esc(h.h3||'')+'</h3><h2>مستخلص العمالة للمكاتب الإدارية والمرافق الصحية</h2></div><img src="'+esc(h.logoSrc)+'" class="logo"></div>';
+  }
+  function monthName() {
+    var e = extract();
+    try { return new Date(e.extractStart || Date.now()).toLocaleString('ar-SA-u-nu-latn-ca-gregory', {month:'long', year:'numeric'}); } catch (_) { return ''; }
+  }
+
+  function employeeCalc(emp, p) {
+    var c = contract();
+    if (typeof window.calculateAdminOfficeEmployeeFinancials === 'function') {
+      return window.calculateAdminOfficeEmployeeFinancials(emp, {
+        totalDaysInMonth: Number(p.totalDaysInMonth)||30,
+        daysInExtract: Number(p.daysInExtract)||30,
+        contractType: c.contractType || 'عقد أساسي',
+        directPurchaseRatio: num(c.directPurchaseRatio)
+      });
+    }
+    var salary = num(emp.salary), daily = p.totalDaysInMonth ? salary / p.totalDaysInMonth : 0;
+    var cost = daily * p.daysInExtract;
+    if (c.contractType === 'شراء مباشر' && num(c.directPurchaseRatio)) cost += cost * num(c.directPurchaseRatio) / 100;
+    var days = Array.isArray(emp.days) ? emp.days.slice(0, p.daysInExtract) : Array(p.daysInExtract).fill('ح');
+    while (days.length < p.daysInExtract) days.push('ح');
+    var attendanceDays=0, absenceDays=0, deductionOnly=0;
+    days.forEach(function(d){ var s=statusInfo(d); if(s.isAbsence) absenceDays++; else attendanceDays++; if(s.deductionOnly) deductionOnly++; });
+    var deduction = (absenceDays + deductionOnly) * daily;
+    var cfg = fineConfig(emp.category);
+    var isSaudi = String(emp.nationality||'').includes('سعودي') && !String(emp.nationality||'').includes('غير');
+    var absenceFine = absenceDays * (isSaudi ? cfg.saudi : cfg.non_saudi);
+    var nationalityFine = num(emp.nationalityFine);
+    return {days:days, attendanceDays:attendanceDays, absenceDays:absenceDays, costForPeriod:cost, deduction:deduction, absenceFine:absenceFine, nationalityFine:nationalityFine, netSalary:cost-deduction-absenceFine-nationalityFine};
+  }
+
+  function attendancePage(key) {
+    var names = officeNames(), officeName = names[key] || key, rows = attendanceData()[key] || [];
+    var p = period(), e = extract(), company = contract().companyName || 'الشركة';
+    var daysHeader = Array.from({length:p.daysInExtract}, function(_,i){ var d = new Date(p.startDate); d.setDate(d.getDate()+i); return '<th>'+d.getDate()+'</th>'; }).join('');
+    var body='', totalCost=0,totalDed=0,totalFine=0,totalNet=0;
+    rows.forEach(function(emp, idx){
+      var r = employeeCalc(emp, p);
+      totalCost += num(r.costForPeriod); totalDed += num(r.deduction); totalFine += num(r.absenceFine)+num(r.nationalityFine); totalNet += num(r.netSalary);
+      var dayCells = (r.days || []).map(function(d){ return '<td>'+esc(d)+'</td>'; }).join('');
+      body += '<tr><td>'+(idx+1)+'</td><td class="job-title">'+esc(emp.jobTitle||emp.position||'')+'</td><td>'+esc(emp.category||'')+'</td><td class="employee-name">'+esc(emp.name||'')+'</td>'+dayCells+'<td>'+money(r.costForPeriod)+'</td><td>'+num(r.attendanceDays)+'</td><td>'+num(r.absenceDays)+'</td><td>'+money(r.deduction)+'</td><td>'+money(r.absenceFine)+'</td><td>'+money(r.netSalary)+'</td><td>'+esc(emp.nationality||'')+'</td><td>'+money(r.nationalityFine)+'</td><td>'+esc(emp.iqamaId||emp.idNumber||'')+'</td></tr>';
+    });
+    if (!body) body = '<tr><td colspan="'+(14+p.daysInExtract)+'">لا توجد بيانات لهذا المكتب/المرفق.</td></tr>';
+    var summary = '<div class="table-summary-v2"><div class="summary-item"><span>عدد الموظفين:</span><span class="value">'+rows.length+'</span></div><div class="summary-item"><span>التكلفة للفترة:</span><span class="value">'+money(totalCost)+'</span></div><div class="summary-item"><span>إجمالي الحسم:</span><span class="value">'+money(totalDed)+'</span></div><div class="summary-item"><span>إجمالي الغرامات:</span><span class="value">'+money(totalFine)+'</span></div><div class="summary-item net-total"><span>صافي الاستحقاق:</span><span class="value">'+money(totalNet)+'</span></div></div>';
+    var title = '<div class="extract-details-v2"><div class="title-main">بيان بالحضور والغياب لمنسوبي شركة ('+esc(company)+') بموقع '+esc(officeName)+'</div><div class="title-period">الفترة ('+fmtDate(e.extractStart)+'م - '+fmtDate(e.extractEnd)+'م)</div></div>';
+    var table = '<table><thead><tr><th rowspan="2">م</th><th rowspan="2" class="job-title">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2" class="employee-name">اسم شاغل الوظيفة</th><th colspan="'+p.daysInExtract+'">الأيام</th><th rowspan="2">التكلفة</th><th colspan="2">الأيام</th><th colspan="2">الحسم والغرامة</th><th rowspan="2">الصافي</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة جنسية</th><th rowspan="2">الإقامة</th></tr><tr>'+daysHeader+'<th>حضور</th><th>غياب</th><th>الحسم</th><th>غرامة الغياب</th></tr></thead><tbody>'+body+'</tbody></table>';
+    return '<div class="page-container landscape-page"><div class="attendance-report">'+headerHtml(key,false)+title+summary+table+signaturesHtml('attendance', key, 'signature-item')+'</div></div>';
+  }
+
+  function performanceItems() {
+    try { if (typeof window.getDynamicPerformanceItems === 'function') return window.getDynamicPerformanceItems() || []; } catch (_) {}
+    var saved = readJson('adminOfficePerformanceItems_v1', []);
+    return Array.isArray(saved) && saved.length ? saved : [{text:'الالتزام بتنفيذ الأعمال طبقاً للعقد', max:100}];
+  }
+  function performanceScores(key) {
+    try { if (typeof window.getPerformanceData === 'function') return (window.getPerformanceData() || {})[key] || {}; } catch (_) {}
+    return (readJson('performanceData_v4', {})[key] || readJson('performanceData', {})[key] || {});
+  }
+  function centerCost(key) {
+    try { if (typeof window.calculateCenterTotalCost === 'function') return num(window.calculateCenterTotalCost(key)); } catch (_) {}
+    var p = period(); return (attendanceData()[key]||[]).reduce(function(s,emp){ return s + employeeCalc(emp,p).costForPeriod; }, 0);
+  }
+  function performancePage(key) {
+    if (key === 'admin_staff') return '';
+    var officeName = officeNames()[key] || key, items = performanceItems(), scores = performanceScores(key);
+    var maxTotal=0, scoreTotal=0, rows='';
+    items.forEach(function(item,i){ var max=num(item.max||item.maxScore||item.degree||0), score = scores[i] !== undefined ? num(scores[i]) : max; maxTotal += max; scoreTotal += score; rows += '<tr><td>'+(i+1)+'</td><td class="item-text">'+esc(item.text||item.name||item.title||'')+'</td><td>'+max+'</td><td>'+score+'</td></tr>'; });
+    rows += '<tr style="font-weight:bold;background:#f0f0f0"><td colspan="2">المجموع</td><td>'+maxTotal+'</td><td>'+scoreTotal+'</td></tr>';
+    var pct = maxTotal ? (scoreTotal/maxTotal*100) : 100, dedPct=0;
+    if(pct<60)dedPct=15;else if(pct<65)dedPct=10;else if(pct<70)dedPct=8;else if(pct<75)dedPct=6;else if(pct<80)dedPct=4;else if(pct<85)dedPct=2;
+    var cost=centerCost(key), dedAmount=cost*dedPct/100;
+    var html = '<div class="performance-report">'+headerHtml(key,true)+'<div class="cert-title">جدول تقييم مستوى الأداء والإنجاز</div><div class="sub-title">لموقع: '+esc(officeName)+' - عن شهر '+esc(monthName())+'</div><div class="cost-bar">إجمالي المبلغ لأنشطة القسم: '+money(cost)+' ريال</div><table><thead><tr><th>م</th><th style="width:65%">أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr></thead><tbody>'+rows+'</tbody></table><div class="summary"><p>التقدير الذي حصل عليه المقاول: <b>'+pct.toFixed(2)+'%</b>، نسبة الحسم: <b>'+dedPct+'%</b>، ويساوي: <b>'+money(dedAmount)+' ريال</b></p></div>'+signaturesHtml('performance',key,'sign-box')+'</div>';
+    return '<div class="page-container portrait-page-perf">'+html+'</div>';
+  }
+  function achievementTitles(){ try{ if(typeof window.getAchievementTitles==='function') return window.getAchievementTitles() || {}; }catch(_){} return {mainTitle:'شهادة الإنجاز', subTitle:'مستخلص العمالة'}; }
+  function tafqitText(v){ try{ if(typeof window.tafqit==='function') return window.tafqit(v); }catch(_){} return money(v)+' ريال سعودي لا غير'; }
+  function achievementPage(key) {
+    var officeName=officeNames()[key]||key, rows=attendanceData()[key]||[], p=period(), totals={monthly:0,ded:0,absFine:0,natFine:0};
+    rows.forEach(function(emp){ var r=employeeCalc(emp,p); totals.monthly += num(r.costForPeriod); totals.ded += num(r.deduction); totals.absFine += num(r.absenceFine); totals.natFine += num(r.nationalityFine); });
+    var perf = key !== 'admin_staff' ? num((readJson('performanceDeductions', {})[key] || readJson('adminOfficePerformanceDeductions_v1', {})[key] || 0)) : 0;
+    var net = totals.monthly - totals.ded - totals.absFine - totals.natFine - perf, titles=achievementTitles();
+    var tableRows='<tr><td>العمالة</td><td>'+money(totals.monthly)+'</td><td>'+money(totals.ded)+'</td><td>'+money(totals.absFine)+'</td><td>'+money(perf)+'</td><td>'+money(totals.natFine)+'</td><td><b>'+money(net)+'</b></td></tr><tr class="total-row"><td colspan="6">إجمالي المستحق للمقاول</td><td><b>'+money(net)+'</b></td></tr><tr class="tafqeet-cell"><td colspan="7">فقط وقدره: '+esc(tafqitText(net))+'</td></tr>';
+    var html='<div class="achievement-report">'+headerHtml(key,true)+'<div class="certificate-header"><h2>'+esc(titles.mainTitle||'شهادة الإنجاز')+'</h2><h3 style="font-weight:normal">'+esc(titles.subTitle||'')+'</h3><h3>لموقع: '+esc(officeName)+' - عن شهر '+esc(monthName())+'</h3></div><table><thead><tr><th>البند</th><th>القيمة الشهرية</th><th>حسم الغياب</th><th>غرامة الغياب</th><th>غرامة الأداء</th><th>غرامة الجنسية</th><th>الصافي الشهري</th></tr></thead><tbody>'+tableRows+'</tbody></table>'+signaturesHtml('achievement',key,'sign-box')+'</div>';
+    return '<div class="page-container portrait-page-ach">'+html+'</div>';
+  }
+
+  function printCss() {
+    return '<style>body{font-family:Tajawal,Arial,sans-serif;direction:rtl;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.page-container{page-break-after:always}@page{size:A4}@page landscape-orientation{size:A4 landscape;margin:.5cm}@page portrait-orientation-perf{size:A4 portrait;margin:.7cm}@page portrait-orientation-ach{size:A4 portrait;margin:.8in}.landscape-page{page:landscape-orientation}.portrait-page-perf{page:portrait-orientation-perf}.portrait-page-ach{page:portrait-orientation-ach}.printable-header{display:flex;justify-content:space-between;align-items:center;padding-bottom:5px;margin-bottom:5px;border-bottom:1px solid #ccc}.printable-header .logo{width:55px}.printable-header .header-text{text-align:center;flex-grow:1}.printable-header h1,.printable-header h2,.printable-header h3{margin:1px 0;font-size:10pt}.header-table{width:100%;border-bottom:2px solid #0056b3;margin-bottom:15px}.header-table td{vertical-align:middle;text-align:center}.header-table .logo{width:75px}.header-table .title-box{text-align:center}.header-table .title-box h1,.header-table .title-box h2{margin:2px}.attendance-report .extract-details-v2{font-size:10pt;padding:8px;background:linear-gradient(145deg,#003087,#0056b3)!important;color:#fff!important;border-radius:8px 8px 0 0;margin-bottom:-1px;display:flex;justify-content:space-between;align-items:center}.attendance-report table{width:100%;border-collapse:collapse;table-layout:auto}.attendance-report th,.attendance-report td{border:1px solid #ccc;padding:2px;text-align:center;font-size:7pt;vertical-align:middle;white-space:nowrap}.attendance-report th.job-title,.attendance-report td.job-title,.attendance-report th.employee-name,.attendance-report td.employee-name{font-size:8pt;font-weight:500}.attendance-report thead th{background:#003087!important;color:#fff!important;font-size:8pt}.attendance-report .table-summary-v2{font-size:8pt;padding:5px;display:flex;flex-wrap:wrap;justify-content:center;gap:15px;border:1px solid #ccc;background:#f8f9fa;font-weight:bold}.attendance-report .signatures-grid{display:flex;justify-content:space-around;margin-top:15px;padding-top:10px;border-top:1px solid #ccc}.attendance-report .signature-item{text-align:center;font-size:9pt}.attendance-report .signature-item .title{font-weight:bold}.attendance-report .signature-item .line{border-bottom:1px solid #000;min-height:20px;margin-top:20px}.attendance-report .signature-item .name{font-size:8pt}.performance-report .cert-title{font-size:15pt;font-weight:bold;text-align:center;margin:8px 0}.performance-report .sub-title{font-size:12pt;text-align:center;margin:4px 0}.performance-report .cost-bar{background:#f2f2f2;padding:6px;border-radius:4px;text-align:center;font-size:11pt;font-weight:bold;margin:8px 0}.performance-report table{width:100%;border-collapse:collapse;font-size:9pt;table-layout:fixed}.performance-report th,.performance-report td{border:1px solid #333;padding:4px;text-align:center}.performance-report th{background:#e9ecef}.performance-report .item-text{text-align:right}.performance-report .summary{margin-top:10px;font-size:11pt;line-height:1.5}.performance-report .signatures{margin-top:25px;display:flex;justify-content:space-around;border-top:1px solid #333;padding-top:10px}.performance-report .sign-box{text-align:center;font-size:10pt;width:24%}.performance-report .sign-box .line{border-bottom:1px solid #000;margin-top:30px}.achievement-report .certificate-header{text-align:center;margin-bottom:20px}.achievement-report .certificate-header h2,.achievement-report .certificate-header h3,.achievement-report .certificate-header p{margin:5px 0}.achievement-report table{width:100%;border-collapse:collapse;font-size:10pt;table-layout:fixed}.achievement-report th,.achievement-report td{border:1px solid #333;padding:8px;text-align:center;vertical-align:middle}.achievement-report th{background:#e9ecef;font-weight:700}.achievement-report .total-row td,.achievement-report .tafqeet-cell{font-weight:bold;background:#f0f0f0}.achievement-report .signatures{margin-top:40px;display:flex;justify-content:space-around;border-top:1px solid #333;padding-top:15px}.achievement-report .sign-box{text-align:center;font-size:11pt;width:24%}.achievement-report .sign-box .line{border-bottom:1px solid #000;margin-top:45px}</style>';
+  }
+
+  function openPrintDialog() {
+    var names = officeNames(), html='';
+    Object.keys(names).forEach(function(key){ html += '<div class="form-group-checkbox"><input type="checkbox" class="center-checkbox" value="'+esc(key)+'" id="print-'+esc(key)+'" checked><label for="print-'+esc(key)+'">'+esc(names[key])+'</label></div>'; });
+    var content='<div class="dialog-header"><h3><i class="fas fa-print"></i> طباعة التقارير المجمعة</h3><span class="close" onclick="closeDialog(\'management-dialog\')">×</span></div><div class="dialog-body"><fieldset><legend>1. اختر المكاتب والمرافق</legend><div class="form-group-checkbox all-selector"><input type="checkbox" onchange="toggleAllCheckboxes(this, \'print-centers-checkboxes\')" id="print-all-centers" checked><label for="print-all-centers"><strong>تحديد الكل / إلغاء تحديد الكل</strong></label></div><div id="print-centers-checkboxes" class="checkbox-grid">'+html+'</div></fieldset><fieldset><legend>2. اختر التقارير للطباعة</legend><div class="checkbox-grid"><div class="form-group-checkbox"><input type="checkbox" id="print-opt-attendance" checked><label for="print-opt-attendance">تقرير الحضور والانصراف</label></div><div class="form-group-checkbox"><input type="checkbox" id="print-opt-performance" checked><label for="print-opt-performance">شهادة تقييم الأداء</label></div><div class="form-group-checkbox"><input type="checkbox" id="print-opt-achievement" checked><label for="print-opt-achievement">شهادة الإنجاز</label></div><div class="form-group-checkbox"><input type="checkbox" id="print-opt-raise-labor"><label for="print-opt-raise-labor">خطاب رفع العمالة</label></div><div class="form-group-checkbox"><input type="checkbox" id="print-opt-raise-consumables"><label for="print-opt-raise-consumables">خطاب رفع المستهلكات</label></div><div class="form-group-checkbox"><input type="checkbox" id="print-opt-raise-declaration"><label for="print-opt-raise-declaration">إقرار عدم أسبقية الصرف</label></div></div></fieldset></div><div class="dialog-footer"><div></div><button class="btn btn-success" onclick="printSelected()"><i class="fas fa-print"></i> بدء الطباعة</button></div>';
+    if (typeof window.openDialog === 'function') window.openDialog(content, 'management-dialog', true); else alert('openDialog غير موجودة');
+  }
+
+  function selectedKeys() { return Array.from(document.querySelectorAll('#print-centers-checkboxes input:checked')).map(function(cb){return cb.value;}); }
+  function checked(id) { return !!document.getElementById(id)?.checked; }
+  function printSelected() {
+    var keys = selectedKeys();
+    var opts = {attendance:checked('print-opt-attendance'), performance:checked('print-opt-performance'), achievement:checked('print-opt-achievement')};
+    var letters = checked('print-opt-raise-labor') || checked('print-opt-raise-consumables') || checked('print-opt-raise-declaration');
+    if (!keys.length || (!opts.attendance && !opts.performance && !opts.achievement && !letters)) { alert('الرجاء اختيار مكتب/مرفق وتقرير واحد على الأقل للطباعة.'); return; }
+    if (typeof window.closeDialog === 'function') window.closeDialog('management-dialog');
+    var w = window.open('', '_blank', 'width=1200,height=900'); if(!w) return alert('المتصفح منع فتح نافذة الطباعة.');
+    var doc = w.document; doc.open(); doc.write('<html><head><title>طباعة التقارير المجمعة</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">'+printCss());
+    if (window.AdminOfficePrintLetters && typeof window.AdminOfficePrintLetters.lettersCss === 'function') doc.write(window.AdminOfficePrintLetters.lettersCss());
+    doc.write('</head><body>');
+    keys.forEach(function(key){ if(opts.attendance) doc.write(attendancePage(key)); if(opts.performance) doc.write(performancePage(key)); if(opts.achievement) doc.write(achievementPage(key)); });
+    if (letters && window.AdminOfficePrintLetters && typeof window.AdminOfficePrintLetters.buildSelectedLetters === 'function') doc.write(window.AdminOfficePrintLetters.buildSelectedLetters());
+    doc.write('</body></html>'); doc.close();
+    w.onload=function(){ w.focus(); w.print(); w.close(); };
+  }
+
+  function detectCurrentKey() {
+    var visible = Array.from(document.querySelectorAll('[id^="table-div-"]')).find(function(el){ var r=el.getBoundingClientRect(); return r.width>0 && r.height>0; });
+    if (visible && visible.id) return visible.id.replace('table-div-','');
+    var title = (document.getElementById('center-main-title')?.textContent || '').trim(), names=officeNames();
+    var hit = Object.keys(names).find(function(k){ return names[k] && title.indexOf(names[k]) !== -1; });
+    return hit || null;
+  }
+  function preparePrint() {
+    var key = detectCurrentKey(); if(!key) return alert('لم يتم تحديد المكتب الحالي للطباعة.');
+    var w = window.open('', '_blank', 'width=1200,height=900'); if(!w) return alert('المتصفح منع فتح نافذة الطباعة.');
+    w.document.open(); w.document.write('<html><head><title>طباعة تقرير الحضور</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">'+printCss()+'</head><body>'+attendancePage(key)+'</body></html>'); w.document.close();
+    w.onload=function(){ w.focus(); w.print(); w.close(); };
+  }
+
+  window.openPrintDialog = openPrintDialog;
+  window.printSelected = printSelected;
+  window.preparePrint = preparePrint;
+  console.info('[Admin Offices Print All] consolidated health-centers style print flow installed v1');
 })();
