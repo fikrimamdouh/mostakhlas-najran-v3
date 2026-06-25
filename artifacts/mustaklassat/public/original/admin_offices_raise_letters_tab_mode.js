@@ -65,7 +65,63 @@
     if (document.getElementById('raise-letters-standalone-css')) return;
     const style = document.createElement('style');
     style.id = 'raise-letters-standalone-css';
-    style.textContent = 'body.raise-letters-standalone-page{background:#eef3f9!important;overflow:auto!important}body.raise-letters-standalone-page>#raise-letters-overlay{position:static!important;display:block!important;background:transparent!important;padding:22px!important;min-height:100vh!important}body.raise-letters-standalone-page #raise-letters-overlay .settings-dialog{width:min(1280px,96vw)!important;max-height:none!important;overflow:visible!important;margin:0 auto!important;border-radius:22px!important}body.raise-letters-standalone-page>#raise-letters-standalone-topbar{display:none!important}';
+    style.textContent = `
+      html, body.raise-letters-standalone-page {
+        margin:0!important;
+        min-height:100vh!important;
+        background:#eef3f9!important;
+        overflow:hidden!important;
+      }
+      body.raise-letters-standalone-page > *:not(#raise-letters-overlay):not(script):not(style):not(link):not(.modal):not(#unified-modal) {
+        display:none!important;
+      }
+      body.raise-letters-standalone-page #raise-letters-overlay,
+      body.raise-letters-standalone-page #raise-letters-overlay.settings-overlay {
+        position:fixed!important;
+        inset:0!important;
+        z-index:2147483000!important;
+        display:flex!important;
+        align-items:flex-start!important;
+        justify-content:center!important;
+        background:#eef3f9!important;
+        padding:18px!important;
+        min-height:100vh!important;
+        overflow:auto!important;
+        direction:rtl!important;
+      }
+      body.raise-letters-standalone-page #raise-letters-overlay .settings-dialog {
+        width:min(1280px,96vw)!important;
+        max-height:none!important;
+        overflow:visible!important;
+        margin:0 auto!important;
+        border-radius:22px!important;
+        background:#fff!important;
+        box-shadow:0 18px 55px rgba(15,23,42,.18)!important;
+      }
+      body.raise-letters-standalone-page #raise-letters-standalone-topbar {
+        display:none!important;
+      }
+      @media print {
+        body.raise-letters-standalone-page {
+          overflow:visible!important;
+          background:#fff!important;
+        }
+        body.raise-letters-standalone-page #raise-letters-overlay,
+        body.raise-letters-standalone-page #raise-letters-overlay.settings-overlay {
+          position:static!important;
+          display:block!important;
+          background:#fff!important;
+          padding:0!important;
+          overflow:visible!important;
+        }
+        body.raise-letters-standalone-page #raise-letters-overlay .settings-dialog {
+          width:100%!important;
+          max-height:none!important;
+          overflow:visible!important;
+          box-shadow:none!important;
+        }
+      }
+    `;
     document.head.appendChild(style);
   }
 
@@ -75,11 +131,45 @@
     overlays.slice(1).forEach(el => el.remove());
   }
 
+  function closeStandaloneTab() {
+    try { window.close(); } catch (_) {}
+    setTimeout(function(){
+      if (!window.closed) {
+        document.body.innerHTML = '<div style="direction:rtl;font-family:Tajawal,Arial,sans-serif;text-align:center;padding:40px;font-weight:900;color:#0f172a">تم إغلاق شاشة خطابات الرفع. يمكنك إغلاق هذا التبويب من المتصفح.</div>';
+      }
+    }, 120);
+  }
+
+  function patchStandaloneClose() {
+    if (!isStandalone) return;
+    const api = window.AdminOfficesRaiseLetters;
+    if (api && typeof api.closeDialog === 'function' && !api.__standaloneClosePatched) {
+      api.closeDialog = closeStandaloneTab;
+      api.__standaloneClosePatched = true;
+    }
+    const overlay = document.getElementById('raise-letters-overlay');
+    if (!overlay) return;
+    Array.from(overlay.querySelectorAll('button')).forEach(function(btn){
+      const txt = String(btn.textContent || '').replace(/\s+/g, ' ').trim();
+      if ((txt === 'إغلاق' || txt === 'إغلاق التبويب') && !btn.__standaloneClosePatched) {
+        btn.onclick = function(e){
+          if (e) { e.preventDefault(); e.stopPropagation(); }
+          closeStandaloneTab();
+          return false;
+        };
+        btn.__standaloneClosePatched = true;
+      }
+    });
+  }
+
   function openStandalone() {
     document.body.classList.add('raise-letters-standalone-page');
     standaloneCss();
     cleanDuplicateStandaloneShell();
-    if (opened && document.getElementById('raise-letters-overlay')) return;
+    if (opened && document.getElementById('raise-letters-overlay')) {
+      patchStandaloneClose();
+      return;
+    }
     const api = window.AdminOfficesRaiseLetters;
     if (api && typeof api.openDialog === 'function') {
       opened = true;
@@ -87,6 +177,9 @@
         api.openDialog();
         setTimeout(cleanDuplicateStandaloneShell, 80);
         setTimeout(cleanDuplicateStandaloneShell, 400);
+        setTimeout(patchStandaloneClose, 80);
+        setTimeout(patchStandaloneClose, 400);
+        setTimeout(patchStandaloneClose, 1200);
       } catch (_) {
         opened = false;
       }
@@ -97,7 +190,10 @@
     loadLettersHelpers();
     patchMainButton();
     try { if (window.AdminOfficesRaiseLettersPeriodFix) window.AdminOfficesRaiseLettersPeriodFix.fixNow(); } catch (_) {}
-    if (isStandalone) openStandalone();
+    if (isStandalone) {
+      openStandalone();
+      patchStandaloneClose();
+    }
     if (n < 40) setTimeout(function(){ boot(n + 1); }, 250);
   }
 
@@ -108,9 +204,12 @@
     setTimeout(function(){
       loadLettersHelpers();
       patchMainButton();
-      if (isStandalone) cleanDuplicateStandaloneShell();
+      if (isStandalone) {
+        cleanDuplicateStandaloneShell();
+        patchStandaloneClose();
+      }
     }, 120);
   }, true);
 
-  console.info('[Admin Offices Raise Letters] standalone tab mode installed v6 stable single tab');
+  console.info('[Admin Offices Raise Letters] standalone tab mode installed v7 overlay only single tab close fixed');
 })();
