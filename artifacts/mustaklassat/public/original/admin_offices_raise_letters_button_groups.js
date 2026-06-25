@@ -12,8 +12,8 @@
 (function () {
   'use strict';
   if (!/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
-  if (window.__ADMIN_OFFICES_RAISE_LETTER_BUTTON_GROUPS_V2__) return;
-  window.__ADMIN_OFFICES_RAISE_LETTER_BUTTON_GROUPS_V2__ = true;
+ if (window.__ADMIN_OFFICES_RAISE_LETTER_BUTTON_GROUPS_V3__) return;
+window.__ADMIN_OFFICES_RAISE_LETTER_BUTTON_GROUPS_V3__ = true;
 
   function clean(v) { return String(v || '').replace(/\s+/g, ' ').trim(); }
 
@@ -162,29 +162,46 @@
     return 999;
   }
 
-  function collectButtons(dialog) {
-    var buttons = [];
-    var seen = Object.create(null);
-    Array.prototype.slice.call(dialog.querySelectorAll('button')).forEach(function (btn) {
-      if (!btn.closest('#raise-letters-overlay')) return;
-      if (btn.id === 'rl-open-settings-btn' || btn.id === 'rl-close-settings-btn' || btn.id === 'rl-save-hide-settings-btn' || btn.id === 'rl-cancel-hide-settings-btn' || btn.id === 'rl-open-grand-signatures') return;
-      if (btn.closest('#rl-professional-settings-panel')) return;
-      if (clean(btn.textContent).indexOf('حفظ') > -1) return;
-      var group = classify(btn);
-      if (!group) return;
-      var text = canonicalButtonText(btn);
-      var signature = group + '::' + text;
-      if (seen[signature]) {
-        btn.classList.add('rl-legacy-extra-hidden');
-        btn.style.display = 'none';
-        return;
-      }
-      seen[signature] = true;
-      buttons.push({ btn: btn, group: group, p: priority(group, btn), text: text });
-    });
-    return buttons;
-  }
+ function collectButtons(dialog) {
+  var buttons = [];
+  var seen = Object.create(null);
 
+  Array.prototype.slice.call(dialog.querySelectorAll('button')).forEach(function (btn) {
+    if (!btn.closest('#raise-letters-overlay')) return;
+
+    // مهم: لا تعيد جمع الأزرار التي تم نقلها بالفعل داخل التولبار المنظم
+    // هذا يمنع تراكم "مستندات المستخلص" فوق بعض عند كل organize/click.
+    if (btn.closest('#rl-professional-toolbar')) return;
+
+    if (
+      btn.id === 'rl-open-settings-btn' ||
+      btn.id === 'rl-close-settings-btn' ||
+      btn.id === 'rl-save-hide-settings-btn' ||
+      btn.id === 'rl-cancel-hide-settings-btn' ||
+      btn.id === 'rl-open-grand-signatures'
+    ) return;
+
+    if (btn.closest('#rl-professional-settings-panel')) return;
+    if (clean(btn.textContent).indexOf('حفظ') > -1) return;
+
+    var group = classify(btn);
+    if (!group) return;
+
+    var text = canonicalButtonText(btn);
+    var signature = group + '::' + text;
+
+    if (seen[signature]) {
+      btn.classList.add('rl-legacy-extra-hidden');
+      btn.style.display = 'none';
+      return;
+    }
+
+    seen[signature] = true;
+    buttons.push({ btn: btn, group: group, p: priority(group, btn), text: text });
+  });
+
+  return buttons;
+}
   function resetClasses(btn) {
     btn.classList.remove('rl-extract-btn', 'rl-cert-btn', 'rl-site-btn', 'rl-system-btn', 'rl-group-main-action', 'rl-legacy-extra-hidden');
     btn.style.display = '';
@@ -309,5 +326,5 @@
     organize();
     if (tries >= 80) clearInterval(timer);
   }, 350);
-  console.info('[Admin Offices Raise Letters Button Groups] installed v2 clean screen');
+  console.info('[Admin Offices Raise Letters Button Groups] installed v3 no duplicate groups');
 })();
