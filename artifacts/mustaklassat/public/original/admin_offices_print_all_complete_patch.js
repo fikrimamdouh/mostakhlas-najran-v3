@@ -140,7 +140,67 @@
     const pct = maxTotal ? (scoreTotal/maxTotal*100) : 100, dedPct = performanceDeductionPercentage(pct), centerCost = totals(key).monthly, dedAmount = centerCost * dedPct / 100;
     return `<section class="page-container portrait-page-perf"><div class="performance-report">${headerHtml(key,true)}<div class="cert-title">جدول تقييم مستوى الأداء والإنجاز</div><div class="sub-title">لموقع: ${esc(site)} - عن شهر ${esc(monthName())}</div><div class="cost-bar">إجمالي المبلغ لأنشطة القسم: ${money(centerCost)} ريال</div><table><thead><tr><th>م</th><th style="width:65%">أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr></thead><tbody>${rows}<tr class="total-row"><td colspan="2">المجموع</td><td>${maxTotal}</td><td>${scoreTotal}</td></tr></tbody></table><div class="summary"><p>التقدير الذي حصل عليه المقاول: <b>${pct.toFixed(2)}%</b>، نسبة الحسم: <b>${dedPct}%</b>، ويساوي: <b>${money(dedAmount)} ريال</b></p></div>${signaturesHtml('performance',key,false)}</div></section>`;
   }
+function printCurrentPerformanceOnly() {
+  if (isPrinting) return;
 
+  const key = currentKey();
+  if (!key) return alert('لم يتم تحديد المكتب/المرفق الحالي.');
+
+  isPrinting = true;
+
+  try {
+    const w = window.open('', 'admin_offices_performance_print', 'width=1000,height=900');
+    if (!w) throw new Error('popup-blocked');
+
+    const doc = w.document;
+    doc.open();
+    doc.write(`
+      <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <title>جدول تقييم الأداء</title>
+          <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+          ${printCss()}
+          <style>
+            @page { size: A4 portrait; margin: .7cm; }
+            body { margin: 0; }
+            .page-container { page-break-after: auto !important; }
+            .portrait-page-perf { page: auto !important; }
+            .performance-report {
+              min-height: auto !important;
+              page-break-inside: avoid !important;
+            }
+            .performance-report table {
+              page-break-inside: avoid !important;
+            }
+            .performance-report tr {
+              page-break-inside: avoid !important;
+            }
+          </style>
+        </head>
+        <body>
+          ${performancePage(key)}
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    w.onload = function () {
+      w.focus();
+      w.print();
+      w.close();
+      isPrinting = false;
+    };
+
+    setTimeout(function () {
+      isPrinting = false;
+    }, 3000);
+  } catch (e) {
+    isPrinting = false;
+    alert('تعذر طباعة جدول تقييم الأداء. راجع Console.');
+    console.error('[Admin Offices Performance Print] failed', e);
+  }
+}
   function achievementPage(key) {
     const ns = names(), site = ns[key] || key, t = totals(key), perf = num(readJson('performanceDeductions', {})[key] || readJson('adminOfficePerformanceDeductions_v1', {})[key] || 0), net = t.monthly - t.ded - t.absFine - t.natFine - perf;
     return `<section class="page-container portrait-page-ach"><div class="achievement-report">${headerHtml(key,true)}<div class="certificate-header"><h2>شهادة الإنجاز</h2><h3>لموقع: ${esc(site)} - عن شهر ${esc(monthName())}</h3></div><table><thead><tr><th>البند</th><th>القيمة الشهرية</th><th>حسم الغياب</th><th>غرامة الغياب</th><th>غرامة الأداء</th><th>غرامة الجنسية</th><th>الصافي</th></tr></thead><tbody><tr><td>العمالة</td><td>${money(t.monthly)}</td><td>${money(t.ded)}</td><td>${money(t.absFine)}</td><td>${money(perf)}</td><td>${money(t.natFine)}</td><td>${money(net)}</td></tr></tbody></table>${signaturesHtml('achievement',key,false)}</div></section>`;
@@ -183,5 +243,6 @@
   window.openPrintDialog = openPrintDialog;
   window.printSelected = printSelected;
   window.preparePrint = preparePrint;
+  window.printCurrentPerformanceOnly = printCurrentPerformanceOnly;
   console.info('[Admin Offices Print All] lightweight v10 attendance aligned right + bigger signatures');
 })();
