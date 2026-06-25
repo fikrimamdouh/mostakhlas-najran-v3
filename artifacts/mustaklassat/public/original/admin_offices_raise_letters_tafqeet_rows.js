@@ -1,157 +1,280 @@
 // ===================================================================
-// Admin Offices Raise Letters Tafqeet Rows
+// Admin Offices Final Print Polish
 // Scope: admin_offices_attendance.html only
-// Forces tafqeet row directly under total rows in printed raise letters.
-// Prevents older print-all patch from appending duplicate raise letters.
+// Purpose:
+// 1) Add attendance signatures to grouped/combined attendance print.
+// 2) Polish HG1 performance print table.
+// 3) Do not append duplicate raise letters.
 // ===================================================================
 (function () {
   'use strict';
   if (!/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
-  if (window.__ADMIN_OFFICES_RAISE_LETTERS_TAFQEET_ROWS__) return;
-  window.__ADMIN_OFFICES_RAISE_LETTERS_TAFQEET_ROWS__ = true;
+  if (window.__ADMIN_OFFICES_FINAL_PRINT_POLISH__) return;
+  window.__ADMIN_OFFICES_FINAL_PRINT_POLISH__ = true;
 
-  const SETTINGS_KEY = 'adminOfficesRaiseLettersSettings_v1';
-  const SIG_PREFIX = 'sb_sigs_';
-  const RAISE_SIG_KEY = 'admin_offices_raise_letters_signatures';
+  function selectedCenterKeys() {
+    return Array.from(document.querySelectorAll('#print-centers-checkboxes input:checked'))
+      .map(cb => cb.value)
+      .filter(Boolean);
+  }
 
-  function readJson(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; } }
-  function esc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-  function num(v) { const n = Number(String(v ?? '').replace(/,/g, '').replace(/[ ريال﷼()]/g, '').trim()); return Number.isFinite(n) ? n : 0; }
-  function money(v) { return num(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-  function moneyPlain(v) { const n = num(v); return Number.isInteger(n) ? String(n) : money(n); }
-  function fmtDate(v) { if (!v) return 'غير محدد'; try { const d = new Date(v); return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleDateString('en-CA'); } catch (_) { return 'غير محدد'; } }
+  function isChecked(id) {
+    return !!document.getElementById(id)?.checked;
+  }
 
-  function getContract() { return readJson('persistentContractData', {}); }
-  function getExtract() { return readJson('persistentExtractData', {}); }
-  function getSession() { return readJson('najran_session', {}); }
+  function esc(v) {
+    return String(v ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
 
-  function getMeta() {
-    try { if (window.AdminOfficesRaiseLettersPeriodFix) return window.AdminOfficesRaiseLettersPeriodFix.getMeta(); } catch (_) {}
-    const e = getExtract();
-    const paymentNo = e.paymentNumber || e.extractNumber || localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber') || '—';
-    return {
-      paymentNo: /^\d+$/.test(String(paymentNo)) ? String(paymentNo).padStart(2, '0') : String(paymentNo),
-      start: e.extractStart || localStorage.getItem('extractStart') || '',
-      end: e.extractEnd || localStorage.getItem('extractEnd') || ''
-    };
+  function getCenterTitle(centerKey) {
+    try {
+      const names = typeof getCenterNames === 'function'
+        ? getCenterNames()
+        : JSON.parse(localStorage.getItem('adminOfficeNames_v1') || '{}');
+      return names?.[centerKey] || centerKey;
+    } catch (_) {
+      return centerKey;
+    }
   }
-  function extractPhrase() {
-    const m = getMeta();
-    return `دفعة رقم (${esc(m.paymentNo)}) عن الفترة من ${esc(fmtDate(m.start))} م إلى ${esc(fmtDate(m.end))} م`;
+
+  function getScopedSignatures(type, centerKey) {
+    try {
+      let key = type;
+      if (typeof getSignatureKeyForContext === 'function') key = getSignatureKeyForContext(type, centerKey);
+      let sigs = typeof getSignatures === 'function' ? (getSignatures(key) || []) : [];
+      if (!sigs.length && key !== type && typeof getSignatures === 'function') sigs = getSignatures(type) || [];
+      return Array.isArray(sigs) ? sigs : [];
+    } catch (_) {
+      return [];
+    }
   }
-  function settings() {
-    const e = getExtract();
-    return Object.assign({
-      recipient: 'سعادة / مساعد المدير العام للدعم المساند',
-      recipientSuffix: 'المحترم',
-      entityTitle: 'المديرية العامة للشئون الصحية بمنطقة نجران',
-      departmentTitle: 'إدارة الشئون الهندسية',
-      scopeName: 'المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات بمنطقة نجران',
-      paymentNo: e.paymentNumber || e.extractNumber || localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber') || '01',
-      vatRate: 15,
-      phoneFaxAr: 'نجران – تليفون 0175225872    فاكس 017523312',
-      phoneFaxEn: 'Najran – Tel.: 0175225872       Fax: 017523312',
-      declarationDate: new Date().toLocaleDateString('en-CA')
-    }, readJson(SETTINGS_KEY, {}));
+
+  function attendanceSignaturesHtml(centerKey) {
+    const sigs = getScopedSignatures('attendance', centerKey);
+    if (!sigs.length) return '';
+    const title = getCenterTitle(centerKey);
+    return `<section class="admin-attendance-signatures-fix" data-center="${esc(centerKey)}">
+      <div class="sig-fix-caption">تواقيع الحضور والانصراف — ${esc(title)}</div>
+      <div class="sig-fix-grid" style="grid-template-columns:repeat(${Math.min(Math.max(sigs.length, 1), 4)},1fr)">
+        ${sigs.map(sig => `<div class="sig-fix-box">
+          <div class="sig-fix-title">${esc(sig.title || '')}</div>
+          <div class="sig-fix-line"></div>
+          <div class="sig-fix-name">${esc(sig.name || '')}</div>
+        </div>`).join('')}
+      </div>
+    </section>`;
   }
-  function getCompanyName() {
-    const c = getContract();
-    const s = getSession();
-    const dom = document.querySelector('.companyName')?.textContent;
-    return c.companyName || c.contractorName || c.company || c.contractor || s.companyName || (dom && dom !== 'غير محدد' ? dom : '') || 'غير محدد';
+
+  function finalPrintCss() {
+    return `<style id="admin-offices-final-print-polish-css">
+      .admin-attendance-signatures-fix{
+        direction:rtl;
+        font-family:Tajawal,Arial,sans-serif;
+        margin-top:10mm!important;
+        padding-top:5mm!important;
+        border-top:1.5px solid #0f172a!important;
+        page-break-inside:avoid!important;
+        break-inside:avoid!important;
+      }
+      .admin-attendance-signatures-fix .sig-fix-caption{
+        text-align:center!important;
+        font-size:13px!important;
+        font-weight:900!important;
+        color:#0f172a!important;
+        margin-bottom:7mm!important;
+      }
+      .admin-attendance-signatures-fix .sig-fix-grid{
+        display:grid!important;
+        gap:12mm!important;
+        align-items:end!important;
+        text-align:center!important;
+      }
+      .admin-attendance-signatures-fix .sig-fix-title{
+        font-size:12px!important;
+        font-weight:900!important;
+        min-height:18px!important;
+      }
+      .admin-attendance-signatures-fix .sig-fix-line{
+        height:20mm!important;
+        border-bottom:1px solid #111!important;
+        margin:0 6mm 3mm!important;
+      }
+      .admin-attendance-signatures-fix .sig-fix-name{
+        font-size:12px!important;
+        font-weight:800!important;
+        min-height:16px!important;
+      }
+
+      /* HG1 performance print polish */
+      .exact-hg1-print{
+        direction:rtl!important;
+        font-family:Tajawal,Arial,sans-serif!important;
+        color:#0f172a!important;
+        background:#fff!important;
+        padding:7mm 9mm!important;
+        box-sizing:border-box!important;
+        page-break-after:always!important;
+      }
+      .exact-hg1-print .hg1-contract-box{
+        background:#f8fafc!important;
+        border:1px solid #cbd5e1!important;
+        border-radius:8px!important;
+        padding:7px 10px!important;
+        margin:6px 0 8px!important;
+        font-size:12.5px!important;
+        line-height:1.65!important;
+      }
+      .exact-hg1-print .hg1-title{
+        background:#123c69!important;
+        color:#fff!important;
+        text-align:center!important;
+        font-weight:900!important;
+        font-size:17px!important;
+        padding:9px 8px!important;
+        margin:8px 0 10px!important;
+        border-radius:8px!important;
+        letter-spacing:0!important;
+      }
+      .exact-hg1-print .hg1-section-amount{
+        background:#fff7ed!important;
+        border:1px solid #fed7aa!important;
+        color:#7c2d12!important;
+        border-radius:7px!important;
+        padding:6px 8px!important;
+        margin:8px 0!important;
+        font-size:13px!important;
+        font-weight:900!important;
+      }
+      .exact-hg1-print .hg1-table{
+        width:100%!important;
+        border-collapse:collapse!important;
+        table-layout:fixed!important;
+        font-size:13px!important;
+        margin-top:8px!important;
+        border:1.5px solid #1e293b!important;
+      }
+      .exact-hg1-print .hg1-table th{
+        background:#123c69!important;
+        color:#fff!important;
+        border:1px solid #1e293b!important;
+        padding:8px 6px!important;
+        text-align:center!important;
+        font-weight:900!important;
+        line-height:1.35!important;
+      }
+      .exact-hg1-print .hg1-table td{
+        border:1px solid #94a3b8!important;
+        padding:7px 6px!important;
+        text-align:center!important;
+        vertical-align:middle!important;
+        line-height:1.65!important;
+        white-space:normal!important;
+        word-break:normal!important;
+        overflow-wrap:anywhere!important;
+      }
+      .exact-hg1-print .hg1-table td:first-child,
+      .exact-hg1-print .hg1-table th:first-child{
+        width:68%!important;
+        text-align:right!important;
+        padding-right:10px!important;
+      }
+      .exact-hg1-print .hg1-table td:nth-child(2),
+      .exact-hg1-print .hg1-table th:nth-child(2){
+        width:16%!important;
+      }
+      .exact-hg1-print .hg1-table td:nth-child(3),
+      .exact-hg1-print .hg1-table th:nth-child(3){
+        width:16%!important;
+      }
+      .exact-hg1-print .hg1-table tbody tr:nth-child(even) td{
+        background:#f8fafc!important;
+      }
+      .exact-hg1-print .hg1-total-row td{
+        background:#fde68a!important;
+        color:#111827!important;
+        font-weight:900!important;
+        border-top:2px solid #92400e!important;
+      }
+      .exact-hg1-print .hg1-summary{
+        margin-top:10px!important;
+        background:#f1f5f9!important;
+        border:1px solid #cbd5e1!important;
+        border-radius:8px!important;
+        padding:8px 10px!important;
+        font-size:13px!important;
+        line-height:1.75!important;
+        text-align:right!important;
+        font-weight:800!important;
+      }
+      .exact-hg1-print .hg1-summary p{
+        margin:3px 0!important;
+      }
+    </style>`;
   }
-  function tafqeet(amount) {
-    if (window.AdminOfficesRaiseLetters && typeof window.AdminOfficesRaiseLetters.tafqeetSAR === 'function') return window.AdminOfficesRaiseLetters.tafqeetSAR(amount);
-    return `فقط وقدره ${money(amount)} ريال سعودي لا غير`;
+
+  function injectFinalCss(printWin) {
+    try {
+      if (!printWin?.document?.head) return;
+      if (!printWin.document.getElementById('admin-offices-final-print-polish-css')) {
+        printWin.document.head.insertAdjacentHTML('beforeend', finalPrintCss());
+      }
+    } catch (e) {
+      console.error('[Admin Offices Final Print Polish] CSS inject failed', e);
+    }
   }
-  function laborNet() {
-    const dom = document.getElementById('grand-net-total')?.textContent || document.getElementById('grand-net-total-admin')?.textContent;
-    return num(localStorage.getItem('grand-net-total-admin') || dom || 0);
+
+  function appendAttendanceSignatures(printWin, keys) {
+    try {
+      if (!printWin?.document?.body || !keys.length) return;
+      const pages = Array.from(printWin.document.querySelectorAll('.landscape-page, .print-page.landscape-page, .admin-attendance-print-page'));
+      keys.forEach((key, idx) => {
+        const html = attendanceSignaturesHtml(key);
+        if (!html) return;
+        const target = pages[idx] || printWin.document.body;
+        if (target.querySelector && target.querySelector(`.admin-attendance-signatures-fix[data-center="${CSS.escape(key)}"]`)) return;
+        target.insertAdjacentHTML('beforeend', html);
+      });
+    } catch (e) {
+      console.error('[Admin Offices Final Print Polish] attendance signatures append failed', e);
+    }
   }
-  function consumablesNet() {
-    const s = settings();
-    return num(localStorage.getItem('admin_offices_consumables_current_net')) || num(localStorage.getItem('adminOfficesConsumablesNet')) || num(localStorage.getItem('finalConsumablesCost')) || num(s.consumablesNet) || 0;
-  }
-  function headerHtml(s) { return `<div class="raise-head"><img src="moh_logo.png"><div><h1>${esc(s.entityTitle)}</h1><h2>${esc(s.departmentTitle)}</h2></div><img src="moh_logo.png"></div>`; }
-  function footerHtml(s) { return `<div class="raise-footer"><span>${esc(s.phoneFaxEn)}</span><span dir="rtl">${esc(s.phoneFaxAr)}</span></div>`; }
-  function signaturesHtml() {
-    const sigs = readJson(SIG_PREFIX + RAISE_SIG_KEY, [{ title: 'مدير إدارة الإمداد والصيانة', name: '' }]);
-    const rows = Array.isArray(sigs) && sigs.length ? sigs : [{ title: 'مدير إدارة الإمداد والصيانة', name: '' }];
-    return `<div class="raise-signatures" style="grid-template-columns:repeat(${Math.min(Math.max(rows.length, 1), 3)},1fr)">${rows.map(sig => `<div><div class="sig-title">${esc(sig.title || '')}</div><div class="line"></div><div class="sig-name">${esc(sig.name || '')}</div></div>`).join('')}</div>`;
-  }
-  function amountTable(rows, total) {
-    return `<table class="raise-amount-table"><tbody>${rows.map(r => `<tr class="${r.cls || ''}"><td>${r.label}</td><td>${r.value}</td></tr>`).join('')}<tr class="tafqeet-row"><td colspan="2">${esc(tafqeet(total))}</td></tr></tbody></table>`;
-  }
-  function laborLetterPage() {
-    const s = settings(), company = getCompanyName();
-    const net = laborNet(), vat = net * num(s.vatRate) / 100, grand = net + vat;
-    return `<div class="page-container raise-letter-page">${headerHtml(s)}<div class="raise-to">${esc(s.recipient)} &nbsp;&nbsp; ${esc(s.recipientSuffix)}</div><div class="raise-body">السلام عليكم ورحمة الله وبركاته، وبعد:<br>نرفق لسعادتكم المستخلص الشهري لشركة ${esc(company)} والخاص ببند العمالة لمواقع ${esc(s.scopeName)}، ${extractPhrase()}.</div>${amountTable([{label:'صافي مستحقات العمالة عن فترة المستخلص',value:moneyPlain(net)},{label:`ضريبة القيمة المضافة ${moneyPlain(s.vatRate)}%`,value:money(vat)},{label:'الإجمالي',value:money(grand),cls:'grand'}], grand)}<div class="raise-body">لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / ${esc(company)}<br>وتقبلوا تحياتنا ،،،</div>${signaturesHtml()}${footerHtml(s)}</div>`;
-  }
-  function consumablesLetterPage() {
-    const s = settings(), company = getCompanyName();
-    const net = consumablesNet(), vat = net * num(s.vatRate) / 100, grand = net + vat;
-    return `<div class="page-container raise-letter-page">${headerHtml(s)}<div class="raise-to">${esc(s.recipient)} &nbsp;&nbsp; ${esc(s.recipientSuffix)}</div><div class="raise-body">السلام عليكم ورحمة الله وبركاته، وبعد:<br>نرفق لسعادتكم المستخلص الشهري لشركة ${esc(company)} والخاص ببند المستهلكات ومقاولي الباطن لمواقع ${esc(s.scopeName)}، ${extractPhrase()}.</div>${amountTable([{label:'صافي مستحقات المستهلكات ومقاولي الباطن عن فترة المستخلص',value:moneyPlain(net)},{label:`ضريبة القيمة المضافة ${moneyPlain(s.vatRate)}%`,value:money(vat)},{label:'الإجمالي',value:money(grand),cls:'grand'}], grand)}<div class="raise-body">لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / ${esc(company)}<br>وتقبلوا تحياتنا ،،،</div>${signaturesHtml()}${footerHtml(s)}</div>`;
-  }
-  function declarationPage() {
-    const s = settings(), company = getCompanyName();
-    const amount = laborNet();
-    return `<div class="page-container raise-letter-page">${headerHtml(s)}<div style="text-align:left;font-size:14px;font-weight:800">التاريخ : ${esc(fmtDate(s.declarationDate))} م</div><div class="raise-title">إقرار بعدم أسبقية الصرف</div><div class="raise-body">تقر إدارة الصيانة بالشئون الهندسية بصحة نجران بأن مستخلص العمالة لشركة ${esc(company)}، لمواقع ${esc(s.scopeName)}، ${extractPhrase()}، بمبلغ وقدره (${money(amount)}) ${esc(tafqeet(amount))}.<br>ولم يسبق صرفه من قبلنا.</div>${signaturesHtml()}${footerHtml(s)}</div>`;
-  }
-  function lettersCss() {
-    return `<style id="raise-letters-tafqeet-rows-css">@page raise-letter-page{size:A4 portrait;margin:12mm}.raise-letter-page{page:raise-letter-page!important;direction:rtl;font-family:Tajawal,Arial,sans-serif;color:#111827;background:#fff;min-height:270mm;padding:8mm 10mm;position:relative;page-break-after:always}.raise-head{display:grid;grid-template-columns:78px 1fr 78px;align-items:center;border-bottom:2px solid #003087;padding-bottom:8px;margin-bottom:18px}.raise-head img{width:68px}.raise-head div{text-align:center}.raise-head h1{font-size:17px;margin:0 0 4px;color:#003087}.raise-head h2{font-size:15px;margin:0}.raise-to{font-size:15px;font-weight:900;margin:18px 0 12px}.raise-body{font-size:15px;line-height:2.05;text-align:justify}.raise-title{text-align:center;font-size:19px;font-weight:900;color:#003087;margin:20px 0}.raise-amount-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}.raise-amount-table td{border:1px solid #333;padding:8px}.raise-amount-table td:first-child{text-align:right;font-weight:800;width:72%}.raise-amount-table td:last-child{text-align:center;font-weight:900;direction:ltr}.raise-amount-table .grand td{background:#fff7d6;font-weight:900}.raise-amount-table .tafqeet-row td{background:#f8fafc!important;text-align:center!important;direction:rtl!important;font-weight:900!important;line-height:1.8!important;font-size:14px!important}.raise-signatures{display:grid;gap:20px;margin-top:35px;text-align:center}.raise-signatures .sig-title{font-weight:900}.raise-signatures .sig-name{font-weight:800;margin-top:10px}.raise-signatures .line{height:42px;border-bottom:1px solid #111;margin:8px 30px}.raise-footer{position:absolute;bottom:4mm;left:10mm;right:10mm;border-top:1px solid #cbd5e1;padding-top:5px;font-size:11px;display:flex;justify-content:space-between;direction:ltr}</style>`;
-  }
-  function selectedLetters() {
-    const pages = [];
-    if (document.getElementById('print-opt-raise-labor')?.checked) pages.push(laborLetterPage());
-    if (document.getElementById('print-opt-raise-consumables')?.checked) pages.push(consumablesLetterPage());
-    if (document.getElementById('print-opt-raise-declaration')?.checked) pages.push(declarationPage());
-    return pages.join('');
-  }
-  function suppressOldLettersWhile(fn) {
-    const ids = ['print-opt-raise-labor', 'print-opt-raise-consumables', 'print-opt-raise-declaration'];
-    const states = ids.map(id => ({ id, el: document.getElementById(id), checked: !!document.getElementById(id)?.checked }));
-    states.forEach(s => { if (s.el) s.el.checked = false; });
-    try { return fn(); } finally { states.forEach(s => { if (s.el) s.el.checked = s.checked; }); }
-  }
+
   function patchPrintSelected() {
-    if (typeof window.printSelected !== 'function' || window.printSelected.__adminOfficesTafqeetRowsV1) return false;
+    if (typeof window.printSelected !== 'function' || window.printSelected.__adminOfficesFinalPrintPolishV1) return false;
     const old = window.printSelected;
-    window.printSelected = function printSelectedWithTafqeetRows() {
-      const html = selectedLetters();
-      let win = null;
+    window.printSelected = function adminOfficesFinalPrintSelected() {
+      const keys = selectedCenterKeys();
+      const wantsAttendance = isChecked('print-opt-attendance');
+      let printWin = null;
       const realOpen = window.open;
-      window.open = function () { win = realOpen.apply(window, arguments); return win; };
+      window.open = function () { printWin = realOpen.apply(window, arguments); return printWin; };
       let result;
-      try { result = suppressOldLettersWhile(() => old.apply(this, arguments)); }
+      try { result = old.apply(this, arguments); }
       finally { window.open = realOpen; }
-      if (win && win.document && html) {
+      if (printWin && printWin.document) {
         setTimeout(() => {
-          try {
-            const oldOnload = win.onload;
-            win.onload = function () {
-              try {
-                if (!win.document.getElementById('raise-letters-tafqeet-rows-css')) win.document.head.insertAdjacentHTML('beforeend', lettersCss());
-                win.document.body.insertAdjacentHTML('beforeend', html);
-              } catch (e) { console.error('[RaiseLettersTafqeetRows] append failed', e); }
-              if (typeof oldOnload === 'function') return oldOnload.call(win);
-              win.focus(); win.print(); win.close();
-            };
-          } catch (e) { console.error('[RaiseLettersTafqeetRows] onload patch failed', e); }
-        }, 0);
+          injectFinalCss(printWin);
+          if (wantsAttendance) appendAttendanceSignatures(printWin, keys);
+        }, 450);
       }
       return result;
     };
-    window.printSelected.__adminOfficesTafqeetRowsV1 = true;
-    console.info('[Admin Offices Raise Letters Tafqeet Rows] printSelected patched');
+    window.printSelected.__adminOfficesFinalPrintPolishV1 = true;
+    console.info('[Admin Offices Final Print Polish] printSelected patched v1');
     return true;
   }
+
   function boot(attempt) {
     patchPrintSelected();
-    if (attempt < 60 && !window.printSelected?.__adminOfficesTafqeetRowsV1) setTimeout(() => boot(attempt + 1), 250);
+    if (attempt < 60 && !window.printSelected?.__adminOfficesFinalPrintPolishV1) setTimeout(() => boot(attempt + 1), 250);
   }
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0)); else boot(0);
   setTimeout(() => boot(0), 1200);
   setTimeout(() => boot(0), 3000);
-  document.addEventListener('click', () => { setTimeout(() => boot(0), 80); setTimeout(() => boot(0), 350); }, true);
-  console.info('[Admin Offices Raise Letters Tafqeet Rows] installed v1');
+  console.info('[Admin Offices Final Print Polish] installed v1 attendance signatures + HG1 table polish');
 })();
