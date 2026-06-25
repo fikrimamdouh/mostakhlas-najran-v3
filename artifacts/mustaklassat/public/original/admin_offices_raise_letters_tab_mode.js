@@ -20,10 +20,9 @@
 
   function loadLettersHelpers() {
     loadOnce('submitted-extract-archive-bundle-guard', '/original/submitted_extract_archive_bundle_guard.js?v=20260623_archive_bundle_v1');
-    loadOnce('admin-offices-raise-letters-period-fix', '/original/admin_offices_raise_letters_period_fix.js?v=20260625_period_no_pad_v1');
+    loadOnce('admin-offices-raise-letters-period-fix', '/original/admin_offices_raise_letters_period_fix.js?v=20260625_period_meta_v2');
     loadOnce('admin-offices-final-raise-dynamic-subject', '/original/admin_offices_final_raise_letter_dynamic_subject.js?v=20260624_final_subject_iban_v2');
 
-    // ترتيب التحميل مهم: ملف professional layout ينشئ #rl-professional-toolbar، ثم button_groups ينقل الأزرار داخله.
     loadOnce('admin-offices-raise-letter-signature-labels', '/original/admin_offices_raise_letters_signature_labels.js?v=20260624_sig_doc_settings_v3');
     loadOnce('admin-offices-raise-letter-button-groups', '/original/admin_offices_raise_letters_button_groups.js?v=20260624_button_groups_clean_v2');
 
@@ -109,6 +108,20 @@
     stepper.querySelectorAll('.njs-month-warning').forEach(el => el.remove());
   }
 
+  function ensureLoadingShell() {
+    if (!isStandalone) return;
+    if (document.getElementById('raise-letters-loading-shell')) return;
+    const div = document.createElement('div');
+    div.id = 'raise-letters-loading-shell';
+    div.innerHTML = '<div class="rl-load-card"><div class="rl-load-title">جاري تجهيز خطابات الرفع</div><div class="rl-load-sub">تحميل البيانات والفترة والمستندات...</div></div>';
+    document.body.appendChild(div);
+  }
+
+  function hideLoadingShell() {
+    const div = document.getElementById('raise-letters-loading-shell');
+    if (div) div.remove();
+  }
+
   function openStandaloneTab() {
     const now = Date.now();
     if (now - tabOpenLockAt < 1500) return;
@@ -122,10 +135,6 @@
 
   function patchMainButton() {
     if (isStandalone) return;
-
-    // لا تستبدل AdminOfficesRaiseLetters.openDialog هنا.
-    // السبب: ملفات autofill/period_fix تلف نفس الدالة، ولو حوّلناها إلى window.open
-    // أي استدعاء غير مباشر لها قد يفتح تبويبًا ثانيًا.
     const btn = document.getElementById('raise-letters-btn');
     if (btn && !btn.__raiseLettersTabPatched) {
       btn.onclick = function(e){
@@ -149,9 +158,31 @@
         background:#eef3f9!important;
         overflow:hidden!important;
       }
-      body.raise-letters-standalone-page > *:not(#raise-letters-overlay):not(script):not(style):not(link):not(.modal):not(#unified-modal) {
+      body.raise-letters-standalone-page > *:not(#raise-letters-overlay):not(#raise-letters-loading-shell):not(script):not(style):not(link):not(.modal):not(#unified-modal) {
         display:none!important;
       }
+      #raise-letters-loading-shell {
+        position:fixed!important;
+        inset:0!important;
+        z-index:2147482999!important;
+        display:flex!important;
+        align-items:center!important;
+        justify-content:center!important;
+        background:#eef3f9!important;
+        direction:rtl!important;
+        font-family:Tajawal,Arial,sans-serif!important;
+      }
+      #raise-letters-loading-shell .rl-load-card {
+        width:min(420px,86vw)!important;
+        background:#fff!important;
+        border:1px solid #dbe4f0!important;
+        border-radius:22px!important;
+        padding:28px 24px!important;
+        text-align:center!important;
+        box-shadow:0 18px 45px rgba(15,23,42,.15)!important;
+      }
+      #raise-letters-loading-shell .rl-load-title {font-size:18px!important;font-weight:900!important;color:#003087!important;margin-bottom:8px!important}
+      #raise-letters-loading-shell .rl-load-sub {font-size:13px!important;font-weight:800!important;color:#64748b!important}
       body.raise-letters-standalone-page #raise-letters-overlay,
       body.raise-letters-standalone-page #raise-letters-overlay.settings-overlay {
         position:fixed!important;
@@ -175,27 +206,16 @@
         background:#fff!important;
         box-shadow:0 18px 55px rgba(15,23,42,.18)!important;
       }
-      body.raise-letters-standalone-page #raise-letters-standalone-topbar {
-        display:none!important;
-      }
+      body.raise-letters-standalone-page #raise-letters-standalone-topbar {display:none!important}
       @media print {
-        body.raise-letters-standalone-page {
-          overflow:visible!important;
-          background:#fff!important;
-        }
+        body.raise-letters-standalone-page {overflow:visible!important;background:#fff!important}
+        #raise-letters-loading-shell{display:none!important}
         body.raise-letters-standalone-page #raise-letters-overlay,
         body.raise-letters-standalone-page #raise-letters-overlay.settings-overlay {
-          position:static!important;
-          display:block!important;
-          background:#fff!important;
-          padding:0!important;
-          overflow:visible!important;
+          position:static!important;display:block!important;background:#fff!important;padding:0!important;overflow:visible!important;
         }
         body.raise-letters-standalone-page #raise-letters-overlay .settings-dialog {
-          width:100%!important;
-          max-height:none!important;
-          overflow:visible!important;
-          box-shadow:none!important;
+          width:100%!important;max-height:none!important;overflow:visible!important;box-shadow:none!important;
         }
       }
     `;
@@ -206,6 +226,7 @@
     document.querySelectorAll('#raise-letters-standalone-topbar').forEach(el => el.remove());
     const overlays = Array.from(document.querySelectorAll('#raise-letters-overlay'));
     overlays.slice(1).forEach(el => el.remove());
+    if (document.getElementById('raise-letters-overlay')) hideLoadingShell();
   }
 
   function closeStandaloneTab() {
@@ -247,8 +268,10 @@
   function openStandalone() {
     document.body.classList.add('raise-letters-standalone-page');
     standaloneCss();
+    ensureLoadingShell();
     cleanDuplicateStandaloneShell();
     if (opened && document.getElementById('raise-letters-overlay')) {
+      hideLoadingShell();
       patchStandaloneClose();
       return;
     }
@@ -309,5 +332,5 @@
   window.addEventListener('storage', function(){ setTimeout(syncStepperMonthLabel, 50); });
   window.addEventListener('najranRevisionSettingsHydrated', function(){ setTimeout(syncStepperMonthLabel, 50); });
 
-  console.info('[Admin Offices Raise Letters] standalone tab mode installed v8 close + month label fixed');
+  console.info('[Admin Offices Raise Letters] standalone tab mode installed v9 loading + close + month label fixed');
 })();
