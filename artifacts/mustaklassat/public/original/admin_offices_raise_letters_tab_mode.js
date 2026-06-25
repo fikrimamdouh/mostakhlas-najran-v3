@@ -1,7 +1,7 @@
 // ===================================================================
-// Admin Offices Raise Letters Standalone Tab Mode — V3
+// Admin Offices Raise Letters Standalone Tab Mode — V4
 // Scope: admin_offices_attendance.html only
-// Loader نظيف للملفات الموجودة فقط.
+// Loader نظيف للملفات الموجودة فقط + منع تكرار نموذج الخطابات في التبويب المستقل.
 // ===================================================================
 (function () {
   'use strict';
@@ -10,6 +10,7 @@
   const PARAM = 'raiseLettersOnly';
   const isStandalone = new URLSearchParams(location.search).get(PARAM) === '1';
   const POSITIONS_SETUP_KEY = 'adminOfficesPositionsSetup_v1';
+  let standaloneOpenedOnce = false;
 
   function loadScriptOnce(id, src) {
     if (document.getElementById(id)) return;
@@ -86,7 +87,7 @@
     style.id = 'raise-letters-standalone-css';
     style.textContent = `
       body.raise-letters-standalone-page{background:#eef3f9!important;overflow:auto!important;}
-      body.raise-letters-standalone-page > *:not(#raise-letters-overlay):not(script):not(style):not(link):not(.modal):not(#unified-modal){display:none!important;}
+      body.raise-letters-standalone-page > *:not(#raise-letters-overlay):not(script):not(style):not(link):not(.modal):not(#unified-modal):not(#raise-letters-standalone-topbar){display:none!important;}
       body.raise-letters-standalone-page #raise-letters-overlay.settings-overlay{position:static!important;inset:auto!important;display:block!important;background:transparent!important;padding:22px!important;min-height:100vh!important;z-index:auto!important;}
       body.raise-letters-standalone-page #raise-letters-overlay .settings-dialog{width:min(1280px,96vw)!important;max-height:none!important;overflow:visible!important;margin:0 auto!important;border-radius:22px!important;box-shadow:0 18px 55px rgba(15,23,42,.16)!important;}
       body.raise-letters-standalone-page #raise-letters-overlay .settings-dialog h2{position:sticky;top:0;background:#fff;z-index:3;padding:10px 0 14px;border-bottom:1px solid #e2e8f0;}
@@ -136,9 +137,14 @@
   }
   function openAsStandalonePage() {
     document.body.classList.add('raise-letters-standalone-page');
-    addStandaloneCss(); topbar();
+    addStandaloneCss();
+    topbar();
+    if (standaloneOpenedOnce || document.getElementById('raise-letters-overlay')) return;
     const api = window.AdminOfficesRaiseLetters;
-    if (api && typeof api.openDialog === 'function') { try { api.openDialog(); } catch (_) {} }
+    if (api && typeof api.openDialog === 'function') {
+      standaloneOpenedOnce = true;
+      try { api.openDialog(); } catch (_) { standaloneOpenedOnce = false; }
+    }
   }
   function boot(attempt) {
     loadPeriodFix(); loadSubmittedArchiveBundleGuard(); loadSignatureLabelsPatch(); loadButtonGroupsPatch(); loadDynamicFinalSubjectPatch(); loadBulkStatusGridPrintFix(); loadSitePrintPerformanceFit(); loadThreePagesPrintPolish(); loadFullExtractSitePerfAchievementGuard(); loadFullExcelVisibilityGuard(); loadTafqeetRowsFix();
@@ -149,5 +155,5 @@
   }
   document.addEventListener('click', function () { setTimeout(applyExcelImportDialogLayout, 80); setTimeout(loadPeriodFix, 80); setTimeout(loadSubmittedArchiveBundleGuard, 120); setTimeout(loadSignatureLabelsPatch, 120); setTimeout(loadButtonGroupsPatch, 120); setTimeout(loadDynamicFinalSubjectPatch, 120); setTimeout(loadBulkStatusGridPrintFix, 120); setTimeout(loadSitePrintPerformanceFit, 120); setTimeout(loadThreePagesPrintPolish, 120); setTimeout(loadFullExtractSitePerfAchievementGuard, 120); setTimeout(loadFullExcelVisibilityGuard, 120); setTimeout(loadTafqeetRowsFix, 140); setTimeout(patchFullPositionsLoadGate, 120); setTimeout(function(){ try { if (window.AdminOfficesRaiseLettersPeriodFix) window.AdminOfficesRaiseLettersPeriodFix.fixNow(); } catch (_) {} }, 160); }, true);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0)); else boot(0);
-  console.info('[Admin Offices Raise Letters] standalone tab mode installed v3 period fix + tafqeet rows + compact perf guard + bulk grid + site print refreshed + three pages polish');
+  console.info('[Admin Offices Raise Letters] standalone tab mode installed v4 no duplicate overlay + period fix + tafqeet rows + compact perf guard');
 })();
