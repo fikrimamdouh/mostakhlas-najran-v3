@@ -1,8 +1,7 @@
 // ===================================================================
-// Admin Offices Raise Letters UI Fix — SAFE V8
+// Admin Offices Raise Letters UI Fix — SAFE V9
 // Scope: admin_offices_attendance.html / original-viewer page
-// تنظيف: لا يوجد تعديل جماعي قديم داخل هذا الملف.
-// يحمل النسخ الحالية من التعديل الجماعي وطباعة الموقع قبل أي Loader قديم.
+// تنظيف: لا يحمل أي طبقات طباعة للموقع. الطباعة الآن من admin_offices_print_all_complete_patch.js فقط.
 // ===================================================================
 (function () {
   'use strict';
@@ -102,7 +101,7 @@
 
   function loadCurrentCoreModules() {
     loadScriptOnce('admin-offices-bulk-status-grid-print-fix', '/original/admin_offices_bulk_status_grid_print_fix.js?v=20260624_bulk_grid_v3', '[Admin Offices Bulk Grid V3]');
-    loadScriptOnce('admin-offices-site-print-performance-fit', '/original/admin_offices_site_print_performance_fit.js?v=20260624_site_bundle_v5', '[Admin Offices Site Print V5]');
+    // ممنوع تحميل admin_offices_site_print_performance_fit.js هنا؛ الطباعة أصبحت موحدة من admin_offices_print_all_complete_patch.js.
   }
 
   function loadExtraDocsOnlyWhenOverlayExists() {
@@ -199,5 +198,5 @@
     setTimeout(ensureOverlayEnhancements, 650);
   }, true);
 
-  console.info('[Admin Offices Raise Letters UI Styling] installed v8 no legacy bulk + current modules');
+  console.info('[Admin Offices Raise Letters UI Styling] installed v9 no site print layer');
 })();
