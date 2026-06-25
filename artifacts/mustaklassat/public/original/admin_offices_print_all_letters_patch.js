@@ -15,7 +15,6 @@
   function moneyPlain(v) { const n = num(v); return Number.isInteger(n) ? String(n) : money(n); }
   function fmtDate(v) { if (!v) return 'غير محدد'; try { return new Date(v).toLocaleDateString('en-CA'); } catch (_) { return 'غير محدد'; } }
   function checked(id) { return !!document.getElementById(id)?.checked; }
-  function selectedCenterCount() { return document.querySelectorAll('#print-centers-checkboxes input:checked').length; }
 
   function getContract() { return readJson('persistentContractData', {}); }
   function getExtract() { return readJson('persistentExtractData', {}); }
@@ -112,7 +111,6 @@
     return pages.join('');
   }
   function hasSelection() { return checked('print-opt-raise-labor') || checked('print-opt-raise-consumables') || checked('print-opt-raise-declaration'); }
-  function hasAnyPrintSelection() { return checked('print-opt-attendance') || checked('print-opt-performance') || checked('print-opt-achievement') || hasSelection(); }
   function openLettersOnly() {
     const html = buildSelectedLetters();
     if (!html) return false;
@@ -126,7 +124,7 @@
     return true;
   }
 
-  window.AdminOfficePrintLetters = { buildSelectedLetters, lettersCss, hasSelection, hasAnyPrintSelection, openLettersOnly };
+  window.AdminOfficePrintLetters = { buildSelectedLetters, lettersCss, hasSelection, hasAnyPrintSelection: function(){ return true; }, openLettersOnly };
 
   function patchPrintDialog() {
     if (typeof window.openPrintDialog !== 'function' || window.openPrintDialog.__raiseLettersPatched) return false;
@@ -148,29 +146,26 @@
     if (typeof window.printSelected !== 'function' || !window.printSelected.__exactAdminOfficePrintPatch || window.printSelected.__lettersAfterAttendancePatch) return false;
     const original = window.printSelected;
     window.printSelected = function patchedLettersAfterAttendance() {
-      if (!hasAnyPrintSelection()) {
-        alert('الرجاء اختيار تقرير واحد على الأقل للطباعة.');
-        return;
-      }
-      if (checked('print-opt-attendance') && selectedCenterCount() === 0) {
-        alert('الرجاء اختيار مكتب/مرفق واحد على الأقل لطباعة الحضور.');
-        return;
-      }
       const includeLetters = checked('print-opt-attendance') && hasSelection();
       const lettersHtml = includeLetters ? buildSelectedLetters() : '';
       if (!lettersHtml) return original.apply(this, arguments);
       let capturedWin = null;
       const realOpen = window.open;
       window.open = function () { capturedWin = realOpen.apply(window, arguments); return capturedWin; };
-      const result = original.apply(this, arguments);
-      window.open = realOpen;
+      let result;
+      try { result = original.apply(this, arguments); }
+      finally { window.open = realOpen; }
       if (capturedWin && capturedWin.document) {
-        setTimeout(() => {
+        const addLetters = function(){
           try {
             if (!capturedWin.document.getElementById('raise-letters-print-all-css')) capturedWin.document.head.insertAdjacentHTML('beforeend', lettersCss());
-            capturedWin.document.body.insertAdjacentHTML('beforeend', lettersHtml);
+            if (!capturedWin.document.querySelector('[data-raise-letters-appended="1"]')) {
+              capturedWin.document.body.insertAdjacentHTML('beforeend', '<div data-raise-letters-appended="1">' + lettersHtml + '</div>');
+            }
           } catch (e) { console.error('[PrintAllLetters] append after attendance failed', e); }
-        }, 180);
+        };
+        setTimeout(addLetters, 80);
+        setTimeout(addLetters, 250);
       }
       return result;
     };
@@ -183,5 +178,5 @@
     if (attempt < 40 && (!window.openPrintDialog?.__raiseLettersPatched || !window.printSelected?.__lettersAfterAttendancePatch)) setTimeout(() => boot(attempt + 1), 250);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0)); else boot(0);
-  console.info('[Admin Offices Print All Letters] builders + optional UI + empty guard + center guard + attendance append');
+  console.info('[Admin Offices Print All Letters] builders + optional UI + no blocking guard + attendance append');
 })();
