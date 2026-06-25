@@ -273,8 +273,54 @@
     return (Number(n) || 0).toFixed(2);
   }
 
-  function calc(emp, p = period(), c = contract()){
-    const len = p.daysInExtract || 30;
+function calc(emp, p = period(), c = contract()){
+    if (typeof calculateAdminOfficeEmployeeFinancials === 'function') {
+      const totalDaysInMonth = Number(p.totalDaysInMonth || p.monthDays || 30);
+      const daysInExtract = Number(p.daysInExtract || p.days || 30);
+
+      const res = calculateAdminOfficeEmployeeFinancials(emp, {
+        totalDaysInMonth,
+        daysInExtract,
+        contractType: c.contractType || 'عقد أساسي',
+        directPurchaseRatio: Number(c.directPurchaseRatio) || 0
+      });
+
+      const absenceFine = Number(res.absenceFine || 0);
+      const nationalityFine = Number(res.nationalityFine || 0);
+      const totalFine = Number(res.totalFine ?? (absenceFine + nationalityFine));
+      const costForPeriod = Number(res.costForPeriod || 0);
+      const deduction = Number(res.deduction || 0);
+      const netSalary = Number(res.netSalary || 0);
+
+      Object.assign(emp, {
+        attendanceDays: Number(res.attendanceDays || 0),
+        absenceDays: Number(res.absenceDays || 0),
+        deduction,
+        absencePenalty: absenceFine,
+        absenceFine,
+        nationalityFine,
+        totalFine,
+        netSalary
+      });
+
+      return {
+        days: Array.isArray(emp.days) ? emp.days.slice(0, daysInExtract) : [],
+        cost: costForPeriod,
+        costForPeriod,
+        attendanceDays: Number(res.attendanceDays || 0),
+        absenceDays: Number(res.absenceDays || 0),
+        deduction,
+        absenceFine,
+        absencePenalty: absenceFine,
+        nationalityFine,
+        totalFine,
+        fines: totalFine,
+        netSalary,
+        specialCounts: res.specialCounts || {}
+      };
+    }
+
+    // باقي كود calc القديم كما هو    const len = p.daysInExtract || 30;
     const total = p.totalDaysInMonth || 30;
     const sal = +emp.salary || 0;
     const daily = total ? sal / total : 0;
@@ -1355,7 +1401,7 @@
 <script src="/original/admin_offices_raise_letters_autofill.js?v=20260622_raise_letters_autofill_v1"></script>
 <script src="/original/admin_offices_raise_letters_ui_fix.js?v=20260623_raise_letters_ui_fix_v4"></script>
 <script src="/original/admin_offices_raise_letters_tab_mode.js?v=20260622_raise_letters_tab_v1"></script>
-<script src="/original/admin_offices_print_all_letters_patch.js?v=20260623_print_letters_clean_v1"></script>
-<script src="/original/admin_offices_print_all_complete_patch.js?v=20260623_complete_print_v3"></script>
+<script src="/original/admin_offices_print_all_letters_patch.js?v=20260624_print_letters_safe_v3"></script>
+<script src="/original/admin_offices_print_all_complete_patch.js?v=20260624_complete_print_safe_v3"></script>
 </body>
 </html>
