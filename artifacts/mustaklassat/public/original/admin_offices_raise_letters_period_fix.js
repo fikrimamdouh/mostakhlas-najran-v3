@@ -2,6 +2,7 @@
 // Admin Offices Raise Letters Period Fix
 // Scope: admin_offices_attendance.html / admin_offices_consumables.html
 // Ensures raise letters always read extract period from/to correctly.
+// Payment number is displayed as 1, 2, 3 without leading zeros.
 // ===================================================================
 (function () {
   'use strict';
@@ -33,6 +34,13 @@
     var ar = '٠١٢٣٤٥٦٧٨٩';
     var fa = '۰۱۲۳۴۵۶۷۸۹';
     return clean(value).replace(/[٠-٩]/g, function (d) { return ar.indexOf(d); }).replace(/[۰-۹]/g, function (d) { return fa.indexOf(d); });
+  }
+
+  function normalizePaymentNo(value) {
+    var v = normalizeDigits(value);
+    if (!v || v === '—' || v === '-') return v || '—';
+    if (/^0*\d+$/.test(v)) return String(Number(v));
+    return v;
   }
 
   function toIsoDate(value) {
@@ -132,17 +140,18 @@
       s.paymentNo, s.paymentNumber, s.extractNumber,
       dom.payment
     ) || '—';
-    paymentNo = /^\d+$/.test(String(paymentNo)) ? String(paymentNo).padStart(2, '0') : String(paymentNo);
+    paymentNo = normalizePaymentNo(paymentNo);
 
     return { start: start, end: end, paymentNo: paymentNo };
   }
 
   function persistMeta(meta) {
     if (!meta) return meta;
+    var paymentNo = normalizePaymentNo(meta.paymentNo);
     var e = Object.assign({}, readJson('persistentExtractData', {}));
     if (meta.start) e.extractStart = meta.start;
     if (meta.end) e.extractEnd = meta.end;
-    if (meta.paymentNo && meta.paymentNo !== '—') e.paymentNumber = meta.paymentNo;
+    if (paymentNo && paymentNo !== '—') e.paymentNumber = paymentNo;
     writeJson('persistentExtractData', e);
 
     try {
@@ -156,17 +165,37 @@
         localStorage.setItem('periodEnd', meta.end);
         localStorage.setItem('endDate', meta.end);
       }
-      if (meta.paymentNo && meta.paymentNo !== '—') {
-        localStorage.setItem('paymentNumber', meta.paymentNo);
-        localStorage.setItem('extractNumber', meta.paymentNo);
-        localStorage.setItem('paymentNo', meta.paymentNo);
+      if (paymentNo && paymentNo !== '—') {
+        localStorage.setItem('paymentNumber', paymentNo);
+        localStorage.setItem('extractNumber', paymentNo);
+        localStorage.setItem('paymentNo', paymentNo);
       }
     } catch (_) {}
-    return meta;
+    return { start: meta.start, end: meta.end, paymentNo: paymentNo };
+  }
+
+  function refreshPaymentDisplays(meta) {
+    try {
+      var m = meta || resolveMeta();
+      var paymentNo = normalizePaymentNo(m && m.paymentNo);
+      if (!paymentNo) return;
+      document.querySelectorAll('.paymentNumber,#payment-number,[data-payment-no],.extract-number').forEach(function (el) {
+        if (el) el.textContent = paymentNo;
+      });
+      var overlay = document.getElementById('raise-letters-overlay');
+      if (!overlay) return;
+      overlay.querySelectorAll('[data-rl-setting="paymentNo"],[data-rl-setting="paymentNumber"],[data-rl-setting="extractNumber"]').forEach(function (el) {
+        if (el) el.value = paymentNo;
+      });
+      var box = overlay.querySelector('.readonly-box');
+      if (box && m.start && m.end) box.textContent = extractPhrase();
+    } catch (_) {}
   }
 
   function fixNow() {
-    return persistMeta(resolveMeta());
+    var meta = persistMeta(resolveMeta());
+    refreshPaymentDisplays(meta);
+    return meta;
   }
 
   function fmtDate(v) {
@@ -177,7 +206,7 @@
 
   function extractPhrase() {
     var m = fixNow();
-    return 'دفعة رقم (' + m.paymentNo + ') عن الفترة من ' + fmtDate(m.start) + ' م إلى ' + fmtDate(m.end) + ' م';
+    return 'دفعة رقم (' + normalizePaymentNo(m.paymentNo) + ') عن الفترة من ' + fmtDate(m.start) + ' م إلى ' + fmtDate(m.end) + ' م';
   }
 
   function patchOpeners() {
@@ -186,7 +215,10 @@
       if (typeof fn !== 'function' || fn.__adminOfficesPeriodFixed) return;
       window[name] = function () {
         fixNow();
-        return fn.apply(this, arguments);
+        var out = fn.apply(this, arguments);
+        setTimeout(fixNow, 0);
+        setTimeout(refreshPaymentDisplays, 80);
+        return out;
       };
       window[name].__adminOfficesPeriodFixed = true;
     });
@@ -195,23 +227,33 @@
       var old = window.AdminOfficesRaiseLetters.openDialog;
       window.AdminOfficesRaiseLetters.openDialog = function () {
         fixNow();
-        return old.apply(this, arguments);
+        var out = old.apply(this, arguments);
+        setTimeout(fixNow, 0);
+        setTimeout(refreshPaymentDisplays, 80);
+        setTimeout(refreshPaymentDisplays, 350);
+        return out;
       };
       window.AdminOfficesRaiseLetters.openDialog.__adminOfficesPeriodFixed = true;
     }
   }
 
-  window.AdminOfficesRaiseLettersPeriodFix = { fixNow: fixNow, getMeta: function () { return fixNow(); }, extractPhrase: extractPhrase };
+  window.AdminOfficesRaiseLettersPeriodFix = {
+    fixNow: fixNow,
+    getMeta: function () { return fixNow(); },
+    extractPhrase: extractPhrase,
+    normalizePaymentNo: normalizePaymentNo
+  };
 
   function boot(attempt) {
     fixNow();
     patchOpeners();
+    refreshPaymentDisplays();
     if (attempt < 40) setTimeout(function () { boot(attempt + 1); }, 250);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { boot(0); }); else boot(0);
-  document.addEventListener('click', function () { setTimeout(fixNow, 0); setTimeout(patchOpeners, 0); }, true);
+  document.addEventListener('click', function () { setTimeout(fixNow, 0); setTimeout(patchOpeners, 0); setTimeout(refreshPaymentDisplays, 80); }, true);
   window.addEventListener('beforeprint', fixNow);
 
-  console.info('[Admin Offices Raise Letters Period Fix] installed start/end/payment resolver');
+  console.info('[Admin Offices Raise Letters Period Fix] installed start/end/payment resolver no leading zeros');
 })();
