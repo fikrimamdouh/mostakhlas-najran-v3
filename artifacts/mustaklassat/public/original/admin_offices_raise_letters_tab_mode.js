@@ -32,6 +32,83 @@
     loadOnce('admin-offices-full-excel-visibility-guard', '/original/admin_offices_full_excel_visibility_guard.js?v=20260623_full_excel_visibility_v1');
   }
 
+  function parseObj(raw) {
+    if (!raw) return {};
+    if (typeof raw === 'object') return raw;
+    try { return JSON.parse(raw); } catch (_) { return {}; }
+  }
+
+  function clean(v) { return String(v == null ? '' : v).replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim(); }
+
+  function firstValue() {
+    for (let i = 0; i < arguments.length; i++) {
+      const v = clean(arguments[i]);
+      if (v && v !== 'غير محدد' && v !== 'undefined' && v !== 'null' && v !== '—' && v !== '-') return v;
+    }
+    return '';
+  }
+
+  function monthFromDate(raw) {
+    if (!raw) return { month: '', year: '' };
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return { month: '', year: '' };
+    const names = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    return { month: names[d.getMonth()], year: String(d.getFullYear()) };
+  }
+
+  function resolveStepperMonthLabel() {
+    const ed = parseObj(localStorage.getItem('persistentExtractData'));
+    const settings = parseObj(localStorage.getItem('adminOfficesRaiseLettersSettings_v1'));
+    const snap = parseObj(localStorage.getItem('najran_revision_snapshot'));
+    const rev = parseObj(snap.persistentExtractData) || snap.extractData || {};
+
+    let month = firstValue(
+      ed.extractMonth, ed.month,
+      rev.extractMonth, rev.month,
+      snap.extractMonth, snap.month,
+      localStorage.getItem('extractMonth')
+    );
+
+    let year = firstValue(
+      ed.extractYear, ed.year,
+      rev.extractYear, rev.year,
+      snap.extractYear, snap.year,
+      localStorage.getItem('extractYear')
+    );
+
+    if (!month) {
+      const derived = monthFromDate(firstValue(
+        ed.extractStart, ed.periodStart, ed.startDate, ed.start, ed.fromDate, ed.dateFrom,
+        rev.extractStart, rev.periodStart, rev.startDate, rev.start, rev.fromDate, rev.dateFrom,
+        snap.extractStart, snap.periodStart, snap.startDate, snap.start, snap.fromDate, snap.dateFrom,
+        settings.extractStart, settings.period2Start, settings.period1Start,
+        localStorage.getItem('extractStart'), localStorage.getItem('periodStart'), localStorage.getItem('startDate')
+      ));
+      month = derived.month;
+      if (!year) year = derived.year;
+    }
+
+    return month ? ('📅 ' + month + (year ? ' ' + year : '')) : '';
+  }
+
+  function syncStepperMonthLabel() {
+    const label = resolveStepperMonthLabel();
+    if (!label) return;
+    const stepper = document.getElementById('njs-stepper');
+    if (!stepper) return;
+    let monthEl = stepper.querySelector('.njs-month');
+    if (!monthEl) {
+      const header = stepper.querySelector('.njs-header');
+      if (!header) return;
+      monthEl = document.createElement('span');
+      monthEl.className = 'njs-month';
+      header.insertBefore(monthEl, header.querySelector('.njs-nav-home') || null);
+    }
+    monthEl.textContent = label;
+    monthEl.removeAttribute('style');
+    stepper.querySelectorAll('.njs-month-warning').forEach(el => el.remove());
+  }
+
   function openStandaloneTab() {
     const now = Date.now();
     if (now - tabOpenLockAt < 1500) return;
@@ -132,12 +209,18 @@
   }
 
   function closeStandaloneTab() {
+    try { window.open('', '_self'); } catch (_) {}
     try { window.close(); } catch (_) {}
     setTimeout(function(){
       if (!window.closed) {
         document.body.innerHTML = '<div style="direction:rtl;font-family:Tajawal,Arial,sans-serif;text-align:center;padding:40px;font-weight:900;color:#0f172a">تم إغلاق شاشة خطابات الرفع. يمكنك إغلاق هذا التبويب من المتصفح.</div>';
       }
     }, 120);
+  }
+
+  function isCloseButton(btn) {
+    const txt = String(btn && btn.textContent || '').replace(/\s+/g, ' ').trim();
+    return txt === 'إغلاق' || txt === 'إغلاق التبويب' || txt.includes('إغلاق التبويب');
   }
 
   function patchStandaloneClose() {
@@ -150,8 +233,7 @@
     const overlay = document.getElementById('raise-letters-overlay');
     if (!overlay) return;
     Array.from(overlay.querySelectorAll('button')).forEach(function(btn){
-      const txt = String(btn.textContent || '').replace(/\s+/g, ' ').trim();
-      if ((txt === 'إغلاق' || txt === 'إغلاق التبويب') && !btn.__standaloneClosePatched) {
+      if (isCloseButton(btn) && !btn.__standaloneClosePatched) {
         btn.onclick = function(e){
           if (e) { e.preventDefault(); e.stopPropagation(); }
           closeStandaloneTab();
@@ -189,6 +271,9 @@
   function boot(n) {
     loadLettersHelpers();
     patchMainButton();
+    syncStepperMonthLabel();
+    setTimeout(syncStepperMonthLabel, 300);
+    setTimeout(syncStepperMonthLabel, 1200);
     try { if (window.AdminOfficesRaiseLettersPeriodFix) window.AdminOfficesRaiseLettersPeriodFix.fixNow(); } catch (_) {}
     if (isStandalone) {
       openStandalone();
@@ -200,10 +285,20 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ boot(0); });
   else boot(0);
 
-  document.addEventListener('click', function(){
+  document.addEventListener('click', function(e){
+    if (isStandalone) {
+      const btn = e.target && e.target.closest && e.target.closest('button');
+      if (btn && isCloseButton(btn)) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeStandaloneTab();
+        return false;
+      }
+    }
     setTimeout(function(){
       loadLettersHelpers();
       patchMainButton();
+      syncStepperMonthLabel();
       if (isStandalone) {
         cleanDuplicateStandaloneShell();
         patchStandaloneClose();
@@ -211,5 +306,8 @@
     }, 120);
   }, true);
 
-  console.info('[Admin Offices Raise Letters] standalone tab mode installed v7 overlay only single tab close fixed');
+  window.addEventListener('storage', function(){ setTimeout(syncStepperMonthLabel, 50); });
+  window.addEventListener('najranRevisionSettingsHydrated', function(){ setTimeout(syncStepperMonthLabel, 50); });
+
+  console.info('[Admin Offices Raise Letters] standalone tab mode installed v8 close + month label fixed');
 })();
