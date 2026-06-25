@@ -3,6 +3,35 @@
  * يحفظ على السيرفر أولاً + IndexedDB كـ cache محلي.
  * تعديل: قسم المكاتب/المكاتب الإدارية يُسجل مع الورش في قسم واحد: workshops.
  */
+(function () {
+  if (window.__JOB_POSITIONS_ARABIC_HEADER_FIX__) return;
+  window.__JOB_POSITIONS_ARABIC_HEADER_FIX__ = true;
+
+  const nativeIncludes = String.prototype.includes;
+  function normalizeArabicHeader(value) {
+    return String(value || '')
+      .replace(/[أإآ]/g, 'ا')
+      .replace(/ى/g, 'ي')
+      .replace(/ة/g, 'ه')
+      .replace(/[ـ\u064B-\u065F\u0670]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  String.prototype.includes = function patchedIncludes(searchString, position) {
+    if (nativeIncludes.call(this, searchString, position)) return true;
+    try {
+      const left = String(this);
+      const right = String(searchString);
+      const joined = left + ' ' + right;
+      if (/اسم|مستشفى|مستشفي|المستشفى|المستشفي|موقع|الموقع|مكتب|المكتب|مرفق|المرفق|هوية|هويه|إقامة|اقامة|الوظائف|ادارية|إدارية/.test(joined)) {
+        return nativeIncludes.call(normalizeArabicHeader(left), normalizeArabicHeader(right), position || 0);
+      }
+    } catch (_) {}
+    return false;
+  };
+})();
+
 const JobPositionsDB = (function () {
   const DB_NAME = 'najranJobPositions';
   const DB_VER = 1;
@@ -177,9 +206,14 @@ const JobPositionsDB = (function () {
     'حراسات': 'patient_services',
     'وظائف إدارية': 'admin_saudi',
     'الوظائف الإدارية السعوديين': 'admin_saudi',
+    'الوظائف الإدارية للسعوديين': 'admin_saudi',
+    'الوظائف الادارية السعوديين': 'admin_saudi',
+    'الوظائف الادارية للسعوديين': 'admin_saudi',
     'الوظائف الإدارية': 'admin_saudi',
     'إداري': 'admin_saudi',
     'إدارية': 'admin_saudi',
+    'اداري': 'admin_saudi',
+    'ادارية': 'admin_saudi',
     'وظيفة إدارية': 'admin_saudi',
     'ورش': 'workshops',
     'الورش': 'workshops',
@@ -222,6 +256,7 @@ const JobPositionsDB = (function () {
       .trim()
       .replace(/\s+/g, ' ')
       .replace(/[أإآ]/g, 'ا')
+      .replace(/ى/g, 'ي')
       .replace(/ة/g, 'ه');
   }
 
@@ -239,10 +274,12 @@ const JobPositionsDB = (function () {
   function mapDept(arabicName) {
     if (!arabicName) return null;
     const t = String(arabicName).trim();
+    const nt = normalizeDept(t);
     if (isOfficesOrWorkshops(t)) return 'workshops';
     if (DEPT_MAP[t]) return DEPT_MAP[t];
     for (const [k, v] of Object.entries(DEPT_MAP)) {
-      if (t.includes(k) || k.includes(t)) return v;
+      const nk = normalizeDept(k);
+      if (t.includes(k) || k.includes(t) || nt.includes(nk) || nk.includes(nt)) return v;
     }
     return null;
   }
