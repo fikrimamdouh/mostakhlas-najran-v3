@@ -2,6 +2,7 @@
 // Admin Offices Excel Import Clean V1
 // Clean dialog only. Does not change import logic, storage keys, parser, or save functions.
 // It only replaces the Excel button action with a clean dialog that calls existing APIs.
+// Also loads clean button routes for other damaged buttons.
 // ===================================================================
 (function () {
   'use strict';
@@ -112,8 +113,18 @@
     return true;
   }
 
+  function loadCleanRoutes() {
+    if (document.getElementById('admin-offices-clean-button-routes-v1')) return;
+    var s = document.createElement('script');
+    s.id = 'admin-offices-clean-button-routes-v1';
+    s.src = '/original/admin_offices_clean_button_routes_v1.js?v=20260625_clean_routes_v1';
+    s.onerror = function () { console.error('[Admin Offices Clean Button Routes] failed to load'); };
+    document.head.appendChild(s);
+  }
+
   function boot() {
     patchExcelButton();
+    loadCleanRoutes();
   }
 
   window.openAdminOfficesExcelImportCleanDialog = renderDialog;
