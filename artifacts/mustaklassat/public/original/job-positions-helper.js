@@ -1,7 +1,7 @@
 /**
  * JobPositionsDB — حفظ وجلب مناصب الوظائف
  * يحفظ على السيرفر أولاً + IndexedDB كـ cache محلي.
- * تعديل: قسم المكاتب/المكاتب الإدارية يُسجل مع الورش في قسم واحد: workshops.
+ * تعديل: ملف المكاتب الإدارية يُقرأ كمكاتب داخلية وليس كمستشفيات مستقلة.
  */
 (function () {
   if (window.__JOB_POSITIONS_ARABIC_HEADER_FIX__) return;
@@ -37,6 +37,24 @@ const JobPositionsDB = (function () {
   const DB_VER = 1;
   const STORE = 'positions';
 
+  const OFFICIAL_ADMIN_OFFICE_NAMES = [
+    'مبنى فرع وزارة الصحة بنجران',
+    'المختبر الإقليمي',
+    'نواقل المرضى والأمراض المشتركة',
+    'مبنى الطب الشرعي وثلاجة الموتى بالشرفة',
+    'الأزمات والكوارث الصحية بفرع وزارة الصحة',
+    'مبنى مستودعات الشرفة',
+    'إدارة الشئون الهندسية والفريق الجوال',
+    'هيئة الصحة العامة وقاية',
+    'سكن الممرضات بالإثايبة',
+    'مبنى التجمع الصحي',
+    'التدريب والابتعاث',
+    'إدارة مركز التحكم والكوارث بالفيصلية',
+    'التموين الطبي',
+    'الخدمات العامة',
+    'الورش (صيانة وإصلاح السيارات)'
+  ];
+
   function normalizeSiteName(value) {
     return String(value || '')
       .replace(/[أإآ]/g, 'ا')
@@ -45,6 +63,40 @@ const JobPositionsDB = (function () {
       .replace(/[ـ\u064B-\u065F\u0670]/g, '')
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  function readJsonSafe(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function getInternalAdminOfficeNames() {
+    const names = readJsonSafe('adminOfficeNames_v1', {});
+    const result = OFFICIAL_ADMIN_OFFICE_NAMES.slice();
+    if (names && typeof names === 'object') {
+      Object.values(names).forEach(name => {
+        const clean = String(name || '').trim();
+        if (clean && !result.some(x => normalizeSiteName(x) === normalizeSiteName(clean))) result.push(clean);
+      });
+    }
+    return result;
+  }
+
+  function findInternalAdminOfficeName(siteName) {
+    const incoming = normalizeSiteName(siteName);
+    if (!incoming) return '';
+    const offices = getInternalAdminOfficeNames();
+    const exact = offices.find(name => normalizeSiteName(name) === incoming);
+    if (exact) return exact;
+    const contains = offices.find(name => {
+      const n = normalizeSiteName(name);
+      return n && (n.includes(incoming) || incoming.includes(n));
+    });
+    return contains || '';
   }
 
   function openDB() {
@@ -117,11 +169,35 @@ const JobPositionsDB = (function () {
     return headers;
   }
 
+  async function loadAll() {
+    try {
+      const token = getToken();
+      const headers = token ? { Authorization: 'Bearer ' + token } : {};
+      const resp = await fetch('/api/admin/job-positions/list', { headers, credentials: 'include' });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && Array.isArray(data.list) && data.list.length > 0) {
+          return data.list.map(item => ({
+            hospitalName: item.hospitalName,
+            rows: [],
+            savedAt: item.savedAt,
+            count: item.count,
+            totalCost: item.totalCost
+          }));
+        }
+      }
+    } catch (_) {}
+    return await idbGetAll();
+  }
+
   async function resolveExistingSiteName(hospitalName) {
     const incoming = String(hospitalName || '').trim();
     if (!incoming || incoming === 'غير محدد') return incoming;
-    const normalizedIncoming = normalizeSiteName(incoming);
 
+    const internalName = findInternalAdminOfficeName(incoming);
+    if (internalName) return internalName;
+
+    const normalizedIncoming = normalizeSiteName(incoming);
     try {
       const all = await loadAll();
       const match = (Array.isArray(all) ? all : []).find(item => {
@@ -166,60 +242,29 @@ const JobPositionsDB = (function () {
   }
 
   async function load(hospitalName) {
-    try {
-      const token = getToken();
-      const headers = token ? { Authorization: 'Bearer ' + token } : {};
-      const resp = await fetch('/api/admin/job-positions?hospital=' + encodeURIComponent(hospitalName), { headers, credentials: 'include' });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data && data.rows && data.rows.length) {
-          await idbPut({ hospitalName: data.hospitalName || hospitalName, rows: data.rows, savedAt: data.savedAt });
-          return data;
-        }
-      }
-    } catch (_) {}
+    const targetHospitalName = await resolveExistingSiteName(hospitalName);
+    const attempts = [hospitalName, targetHospitalName].filter((v, i, a) => v && a.indexOf(v) === i);
 
-    try {
-      const targetHospitalName = await resolveExistingSiteName(hospitalName);
-      if (targetHospitalName && targetHospitalName !== hospitalName) {
+    for (const name of attempts) {
+      try {
         const token = getToken();
         const headers = token ? { Authorization: 'Bearer ' + token } : {};
-        const resp = await fetch('/api/admin/job-positions?hospital=' + encodeURIComponent(targetHospitalName), { headers, credentials: 'include' });
+        const resp = await fetch('/api/admin/job-positions?hospital=' + encodeURIComponent(name), { headers, credentials: 'include' });
         if (resp.ok) {
           const data = await resp.json();
           if (data && data.rows && data.rows.length) {
-            await idbPut({ hospitalName: data.hospitalName || targetHospitalName, rows: data.rows, savedAt: data.savedAt });
+            await idbPut({ hospitalName: data.hospitalName || name, rows: data.rows, savedAt: data.savedAt });
             return data;
           }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
-    const exact = await idbGet(hospitalName);
-    if (exact) return exact;
-    const target = await resolveExistingSiteName(hospitalName);
-    return target && target !== hospitalName ? await idbGet(target) : null;
-  }
-
-  async function loadAll() {
-    try {
-      const token = getToken();
-      const headers = token ? { Authorization: 'Bearer ' + token } : {};
-      const resp = await fetch('/api/admin/job-positions/list', { headers, credentials: 'include' });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data && Array.isArray(data.list) && data.list.length > 0) {
-          return data.list.map(item => ({
-            hospitalName: item.hospitalName,
-            rows: [],
-            savedAt: item.savedAt,
-            count: item.count,
-            totalCost: item.totalCost
-          }));
-        }
-      }
-    } catch (_) {}
-    return await idbGetAll();
+    for (const name of attempts) {
+      const local = await idbGet(name);
+      if (local) return local;
+    }
+    return null;
   }
 
   async function remove(hospitalName) {
@@ -341,5 +386,16 @@ const JobPositionsDB = (function () {
     return null;
   }
 
-  return { save, load, loadAll, remove, mapDept, DEPT_MAP, DEPT_LABELS, normalizeSiteName, resolveExistingSiteName };
+  return {
+    save,
+    load,
+    loadAll,
+    remove,
+    mapDept,
+    DEPT_MAP,
+    DEPT_LABELS,
+    normalizeSiteName,
+    resolveExistingSiteName,
+    OFFICIAL_ADMIN_OFFICE_NAMES
+  };
 })();
