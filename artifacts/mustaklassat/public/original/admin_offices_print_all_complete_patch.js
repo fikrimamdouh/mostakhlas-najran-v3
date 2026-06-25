@@ -1,38 +1,40 @@
 // ===================================================================
-// Admin Offices Lightweight Consolidated Print Flow — V9
+// Admin Offices Lightweight Consolidated Print Flow — V10
 // - نافذة طباعة مستقلة لا تعتمد على openDialog.
-// - الحضور: جدول الصفحة الأصلي + تحويل select/input إلى نص + زوم أصغر للحضور فقط.
+// - الحضور: جدول الصفحة الأصلي + تحويل select/input إلى نص.
+// - إصلاح انزياح الحضور شمال: scale من اليمين بدون zoom مزدوج.
+// - تكبير تواقيع الحضور.
 // - التقييم: نفس تنسيق المراكز الصحية مع بنود المكتب الفعلية.
 // - خطاب الموقع: من قالب خطابات الرفع الأصلي عبر AdminOfficePrintLetters.
 // ===================================================================
 (function () {
   'use strict';
   if (!/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
-  if (window.__ADMIN_OFFICES_PRINT_ALL_LIGHT_V9__) return;
-  window.__ADMIN_OFFICES_PRINT_ALL_LIGHT_V9__ = true;
+  if (window.__ADMIN_OFFICES_PRINT_ALL_LIGHT_V10__) return;
+  window.__ADMIN_OFFICES_PRINT_ALL_LIGHT_V10__ = true;
 
   let isPrinting = false;
 
-  function readJson(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; } }
-  function esc(v) { return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  function num(v) { const n = Number(String(v ?? '').replace(/,/g,'').replace(/[ ريال﷼]/g,'')); return Number.isFinite(n) ? n : 0; }
-  function money(v) { return num(v).toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-  function fmtDate(v) { try { return v ? new Date(v).toLocaleDateString('en-CA') : 'غير محدد'; } catch (_) { return 'غير محدد'; } }
+  const readJson = (k, fb) => { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : fb; } catch (_) { return fb; } };
+  const esc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const num = v => { const n = Number(String(v ?? '').replace(/,/g,'').replace(/[ ريال﷼]/g,'')); return Number.isFinite(n) ? n : 0; };
+  const money = v => num(v).toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtDate = v => { try { return v ? new Date(v).toLocaleDateString('en-CA') : 'غير محدد'; } catch (_) { return 'غير محدد'; } };
 
   function names() { try { if (typeof getCenterNames === 'function') return getCenterNames() || {}; } catch (_) {} return readJson('adminOfficeNames_v1', {}); }
   function data() { try { if (typeof getAttendanceData === 'function') return getAttendanceData() || {}; } catch (_) {} return readJson('adminOfficesAttendanceData_v1', {}); }
-  function extract() { return readJson('persistentExtractData', {}); }
-  function contract() { return readJson('persistentContractData', {}); }
+  const extract = () => readJson('persistentExtractData', {});
+  const contract = () => readJson('persistentContractData', {});
   function period() {
     try { if (typeof getExtractPeriodDetails === 'function') return getExtractPeriodDetails() || {}; } catch (_) {}
     const e = extract(), s = new Date(e.extractStart || Date.now()), n = new Date(e.extractEnd || e.extractStart || Date.now());
-    return { startDate: s, daysInExtract: Math.max(1, Math.ceil((n - s) / 86400000) + 1 || 30), totalDaysInMonth: new Date(s.getFullYear(), s.getMonth()+1, 0).getDate() || 30 };
+    return { startDate:s, daysInExtract:Math.max(1, Math.ceil((n-s)/86400000)+1 || 30), totalDaysInMonth:new Date(s.getFullYear(), s.getMonth()+1, 0).getDate() || 30 };
   }
   function monthName() { try { return new Date(extract().extractStart || Date.now()).toLocaleString('ar-SA-u-nu-latn-ca-gregory', { month:'long', year:'numeric' }); } catch (_) { return ''; } }
 
   function currentKey() {
     const visible = Array.from(document.querySelectorAll('[id^="table-div-"]')).find(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; });
-    if (visible && visible.id) return visible.id.replace('table-div-', '');
+    if (visible?.id) return visible.id.replace('table-div-', '');
     const active = document.querySelector('.tab-link.active[data-center-key]');
     if (active?.dataset?.centerKey) return active.dataset.centerKey;
     const title = (document.getElementById('center-main-title')?.textContent || '').trim();
@@ -71,9 +73,7 @@
     const salary = num(emp.salary), daily = p.totalDaysInMonth ? salary / p.totalDaysInMonth : 0;
     const days = Array.isArray(emp.days) ? emp.days.slice(0, p.daysInExtract) : Array(p.daysInExtract).fill('ح');
     while (days.length < p.daysInExtract) days.push('ح');
-    const abs = days.filter(d => d === 'غ').length;
-    const cost = daily * p.daysInExtract;
-    const deduction = abs * daily;
+    const abs = days.filter(d => d === 'غ').length, cost = daily * p.daysInExtract, deduction = abs * daily;
     return { days, attendanceDays:p.daysInExtract-abs, absenceDays:abs, costForPeriod:cost, deduction, absenceFine:0, nationalityFine:num(emp.nationalityFine), netSalary:cost-deduction-num(emp.nationalityFine) };
   }
   function totals(key) {
@@ -88,10 +88,9 @@
 
   function freezeFormControls(root) {
     root.querySelectorAll('select').forEach(sel => {
-      const val = sel.options[sel.selectedIndex]?.text || sel.value || '';
       const span = document.createElement('span');
       span.className = 'print-cell-value';
-      span.textContent = val;
+      span.textContent = sel.options[sel.selectedIndex]?.text || sel.value || '';
       sel.replaceWith(span);
     });
     root.querySelectorAll('input').forEach(inp => {
@@ -138,10 +137,7 @@
   function performancePage(key) {
     const ns = names(), site = ns[key] || key, items = perfItems(key); let maxTotal=0, scoreTotal=0;
     const rows = items.map((it, i) => { const max=num(it.max), score=perfScore(key,it,i); maxTotal += max; scoreTotal += score; const text = it.section ? `${it.section} - ${it.sub || it.text || ''}` : (it.text || it.sub || it.name || ''); return `<tr><td>${i+1}</td><td class="item-text">${esc(text)}</td><td>${max}</td><td>${score}</td></tr>`; }).join('');
-    const pct = maxTotal ? (scoreTotal/maxTotal*100) : 100;
-    const dedPct = performanceDeductionPercentage(pct);
-    const centerCost = totals(key).monthly;
-    const dedAmount = centerCost * dedPct / 100;
+    const pct = maxTotal ? (scoreTotal/maxTotal*100) : 100, dedPct = performanceDeductionPercentage(pct), centerCost = totals(key).monthly, dedAmount = centerCost * dedPct / 100;
     return `<section class="page-container portrait-page-perf"><div class="performance-report">${headerHtml(key,true)}<div class="cert-title">جدول تقييم مستوى الأداء والإنجاز</div><div class="sub-title">لموقع: ${esc(site)} - عن شهر ${esc(monthName())}</div><div class="cost-bar">إجمالي المبلغ لأنشطة القسم: ${money(centerCost)} ريال</div><table><thead><tr><th>م</th><th style="width:65%">أنشطة القسم</th><th>الدرجة القصوى</th><th>التقدير</th></tr></thead><tbody>${rows}<tr class="total-row"><td colspan="2">المجموع</td><td>${maxTotal}</td><td>${scoreTotal}</td></tr></tbody></table><div class="summary"><p>التقدير الذي حصل عليه المقاول: <b>${pct.toFixed(2)}%</b>، نسبة الحسم: <b>${dedPct}%</b>، ويساوي: <b>${money(dedAmount)} ريال</b></p></div>${signaturesHtml('performance',key,false)}</div></section>`;
   }
 
@@ -151,14 +147,11 @@
   }
   function siteLetterPage(key) {
     const ns = names(), site = ns[key] || key, net = netAfterPerformance(key);
-    if (window.AdminOfficePrintLetters && typeof window.AdminOfficePrintLetters.buildSiteRaiseLetterForSite === 'function') {
-      return window.AdminOfficePrintLetters.buildSiteRaiseLetterForSite({ key, siteName: site, netAmount: net });
-    }
-    const e = extract(), c = contract();
-    return `<section class="page-container portrait-page-ach"><div class="raise-letter-page-simple">${headerHtml(key,true)}<h2>خطاب رفع مستخلص الموقع</h2><p>نرفق لسعادتكم مستخلص موقع <b>${esc(site)}</b> لشركة ${esc(c.companyName || '')} عن الفترة من ${fmtDate(e.extractStart)} إلى ${fmtDate(e.extractEnd)}.</p><table><tr><td>صافي مستحقات الموقع</td><td>${money(net)}</td></tr></table>${signaturesHtml('raise_letters',key,false)}</div></section>`;
+    if (window.AdminOfficePrintLetters && typeof window.AdminOfficePrintLetters.buildSiteRaiseLetterForSite === 'function') return window.AdminOfficePrintLetters.buildSiteRaiseLetterForSite({ key, siteName: site, netAmount: net });
+    return `<section class="page-container portrait-page-ach"><div class="raise-letter-page-simple">${headerHtml(key,true)}<h2>خطاب رفع مستخلص الموقع</h2><p>نرفق لسعادتكم مستخلص موقع <b>${esc(site)}</b>.</p><table><tr><td>صافي مستحقات الموقع</td><td>${money(net)}</td></tr></table>${signaturesHtml('raise_letters',key,false)}</div></section>`;
   }
 
-  function printCss() { return `<style>@page{size:A4}@page landscape-orientation{size:A4 landscape;margin:.35cm}@page portrait-orientation-perf{size:A4 portrait;margin:.7cm}@page portrait-orientation-ach{size:A4 portrait;margin:.8in}body{font-family:Tajawal,Arial,sans-serif;direction:rtl;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.page-container{page-break-after:always}.landscape-page{page:landscape-orientation;zoom:.78;transform:scale(.78);transform-origin:top center;width:128%!important}.portrait-page-perf{page:portrait-orientation-perf}.portrait-page-ach{page:portrait-orientation-ach}.printable-header{display:flex;justify-content:space-between;align-items:center;padding-bottom:3px;margin-bottom:3px;border-bottom:1px solid #ccc}.printable-header .logo{width:45px}.printable-header .header-text{text-align:center;flex-grow:1}.printable-header h1,.printable-header h2,.printable-header h3{margin:1px 0;font-size:9pt}.header-table{width:100%;border-bottom:2px solid #0056b3;margin-bottom:15px}.header-table td{vertical-align:middle;text-align:center}.header-table .logo{width:75px}.header-table .title-box{text-align:center}.header-table .title-box h1,.header-table .title-box h2{margin:2px}.attendance-report .extract-details-v2{font-size:9pt;padding:5px;background:linear-gradient(145deg,#003087,#0056b3)!important;color:#fff!important;border-radius:8px 8px 0 0;margin-bottom:-1px;display:flex;justify-content:space-between;align-items:center}.attendance-report table{width:100%;border-collapse:collapse;table-layout:auto}.attendance-report th,.attendance-report td{border:1px solid #ccc;padding:2px;text-align:center;font-size:7pt;vertical-align:middle;white-space:nowrap}.attendance-report th.job-title,.attendance-report td.job-title,.attendance-report th.employee-name,.attendance-report td.employee-name{font-size:8pt;font-weight:500}.attendance-report thead th{background:#003087!important;color:#fff!important;font-size:8pt}.attendance-report .table-summary-v2{font-size:8pt;padding:4px;display:flex;flex-wrap:wrap;justify-content:center;gap:10px;border:1px solid #ccc;background:#f8f9fa;font-weight:bold}.attendance-report .signatures-grid{display:flex;justify-content:space-around;margin-top:10px;padding-top:7px;border-top:1px solid #ccc}.attendance-report .signature-item{text-align:center;font-size:8pt}.attendance-report .signature-item .title{font-weight:bold}.attendance-report .signature-item .line{border-bottom:1px solid #000;min-height:16px;margin-top:14px}.attendance-report .signature-item .name{font-size:7pt}.print-cell-value{display:inline-block;min-width:10px}.performance-report .cert-title{font-size:15pt;font-weight:bold;text-align:center;margin:8px 0}.performance-report .sub-title{font-size:12pt;text-align:center;margin:4px 0}.performance-report .cost-bar{background:#f2f2f2;padding:6px;border-radius:4px;text-align:center;font-size:11pt;font-weight:bold;margin:8px 0}.performance-report table{width:100%;border-collapse:collapse;font-size:9pt;table-layout:fixed}.performance-report th,.performance-report td{border:1px solid #333;padding:4px;text-align:center}.performance-report th{background:#e9ecef}.performance-report .item-text{text-align:right}.performance-report .summary{margin-top:10px;font-size:11pt;line-height:1.5}.performance-report .signatures{margin-top:25px;display:flex;justify-content:space-around;border-top:1px solid #333;padding-top:10px}.performance-report .sign-box{text-align:center;font-size:10pt;width:24%}.performance-report .sign-box .line{border-bottom:1px solid #000;margin-top:30px}.achievement-report .certificate-header{text-align:center;margin-bottom:20px}.achievement-report table,.raise-letter-page-simple table{width:100%;border-collapse:collapse;font-size:10pt;table-layout:fixed}.achievement-report th,.achievement-report td,.raise-letter-page-simple td{border:1px solid #333;padding:8px;text-align:center;vertical-align:middle}.achievement-report th{background:#e9ecef;font-weight:700}.achievement-report .signatures,.raise-letter-page-simple .signatures{margin-top:40px;display:flex;justify-content:space-around;border-top:1px solid #333;padding-top:15px}.achievement-report .sign-box,.raise-letter-page-simple .sign-box{text-align:center;font-size:11pt;width:24%}.achievement-report .sign-box .line,.raise-letter-page-simple .sign-box .line{border-bottom:1px solid #000;margin-top:45px}</style>`; }
+  function printCss() { return `<style>@page{size:A4}@page landscape-orientation{size:A4 landscape;margin:.25cm}@page portrait-orientation-perf{size:A4 portrait;margin:.7cm}@page portrait-orientation-ach{size:A4 portrait;margin:.8in}body{font-family:Tajawal,Arial,sans-serif;direction:rtl;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;margin:0}.page-container{page-break-after:always}.landscape-page{page:landscape-orientation;width:138.5%!important;max-width:none!important;transform:scale(.72);transform-origin:top right;margin-right:0!important;margin-left:auto!important;direction:rtl}.portrait-page-perf{page:portrait-orientation-perf}.portrait-page-ach{page:portrait-orientation-ach}.printable-header{display:flex;justify-content:space-between;align-items:center;padding-bottom:3px;margin-bottom:3px;border-bottom:1px solid #ccc}.printable-header .logo{width:45px}.printable-header .header-text{text-align:center;flex-grow:1}.printable-header h1,.printable-header h2,.printable-header h3{margin:1px 0;font-size:9pt}.header-table{width:100%;border-bottom:2px solid #0056b3;margin-bottom:15px}.header-table td{vertical-align:middle;text-align:center}.header-table .logo{width:75px}.header-table .title-box{text-align:center}.header-table .title-box h1,.header-table .title-box h2{margin:2px}.attendance-report{width:100%!important}.attendance-report .extract-details-v2{font-size:9pt;padding:5px;background:linear-gradient(145deg,#003087,#0056b3)!important;color:#fff!important;border-radius:8px 8px 0 0;margin-bottom:-1px;display:flex;justify-content:space-between;align-items:center}.attendance-report .table-responsive-wrapper{overflow:visible!important;width:100%!important}.attendance-report table{width:100%!important;border-collapse:collapse;table-layout:auto}.attendance-report th,.attendance-report td{border:1px solid #ccc;padding:2px;text-align:center;font-size:7pt;vertical-align:middle;white-space:nowrap}.attendance-report th.job-title,.attendance-report td.job-title,.attendance-report th.employee-name,.attendance-report td.employee-name{font-size:8pt;font-weight:500}.attendance-report thead th{background:#003087!important;color:#fff!important;font-size:8pt}.attendance-report .table-summary-v2{font-size:8pt;padding:4px;display:flex;flex-wrap:wrap;justify-content:center;gap:10px;border:1px solid #ccc;background:#f8f9fa;font-weight:bold}.attendance-report .signatures-grid{display:flex!important;justify-content:space-around!important;align-items:flex-start!important;margin-top:18px!important;padding-top:12px!important;border-top:2px solid #333!important;gap:22px!important}.attendance-report .signature-item{text-align:center!important;font-size:12pt!important;font-weight:800!important;min-width:210px!important;width:30%!important}.attendance-report .signature-item .title{font-weight:900!important;margin-bottom:8px!important}.attendance-report .signature-item .line{border-bottom:2px solid #000!important;min-height:34px!important;margin:18px 18px 8px!important}.attendance-report .signature-item .name{font-size:11pt!important;font-weight:800!important}.print-cell-value{display:inline-block;min-width:10px}.performance-report .cert-title{font-size:15pt;font-weight:bold;text-align:center;margin:8px 0}.performance-report .sub-title{font-size:12pt;text-align:center;margin:4px 0}.performance-report .cost-bar{background:#f2f2f2;padding:6px;border-radius:4px;text-align:center;font-size:11pt;font-weight:bold;margin:8px 0}.performance-report table{width:100%;border-collapse:collapse;font-size:9pt;table-layout:fixed}.performance-report th,.performance-report td{border:1px solid #333;padding:4px;text-align:center}.performance-report th{background:#e9ecef}.performance-report .item-text{text-align:right}.performance-report .summary{margin-top:10px;font-size:11pt;line-height:1.5}.performance-report .signatures{margin-top:25px;display:flex;justify-content:space-around;border-top:1px solid #333;padding-top:10px}.performance-report .sign-box{text-align:center;font-size:10pt;width:24%}.performance-report .sign-box .line{border-bottom:1px solid #000;margin-top:30px}.achievement-report .certificate-header{text-align:center;margin-bottom:20px}.achievement-report table,.raise-letter-page-simple table{width:100%;border-collapse:collapse;font-size:10pt;table-layout:fixed}.achievement-report th,.achievement-report td,.raise-letter-page-simple td{border:1px solid #333;padding:8px;text-align:center;vertical-align:middle}.achievement-report th{background:#e9ecef;font-weight:700}.achievement-report .signatures,.raise-letter-page-simple .signatures{margin-top:40px;display:flex;justify-content:space-around;border-top:1px solid #333;padding-top:15px}.achievement-report .sign-box,.raise-letter-page-simple .sign-box{text-align:center;font-size:11pt;width:24%}.achievement-report .sign-box .line,.raise-letter-page-simple .sign-box .line{border-bottom:1px solid #000;margin-top:45px}</style>`; }
   function dialogCss() { return `<style id="admin-offices-print-dialog-css">#management-dialog.admin-print-dialog{position:fixed;inset:0;z-index:1000000;background:rgba(15,23,42,.58);display:flex;align-items:center;justify-content:center;direction:rtl;font-family:Tajawal,Arial,sans-serif}#management-dialog.admin-print-dialog .dialog-content{width:min(920px,94vw);max-height:88vh;background:#fff;border-radius:16px;box-shadow:0 25px 70px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden}#management-dialog.admin-print-dialog .dialog-header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #e2e8f0;background:#f8fafc}#management-dialog.admin-print-dialog .dialog-header h3{margin:0;color:#003087;font-weight:900}.admin-print-close{border:0;background:#ef4444;color:#fff;border-radius:8px;padding:5px 10px;font-weight:900;cursor:pointer}#management-dialog.admin-print-dialog .dialog-body{padding:14px 18px;overflow:auto}#management-dialog.admin-print-dialog fieldset{border:1px solid #cbd5e1;border-radius:12px;margin:0 0 12px;padding:12px}#management-dialog.admin-print-dialog legend{font-weight:900;color:#003087;padding:0 8px}.checkbox-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px}.form-group-checkbox{display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px;font-weight:800}.dialog-footer{padding:12px 18px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;background:#f8fafc}.dialog-footer .btn{border:0;border-radius:10px;padding:10px 18px;font-weight:900;cursor:pointer}.btn-success{background:#16a34a;color:white}</style>`; }
 
   function cleanDialogs() { document.querySelectorAll('#management-dialog').forEach(el => el.remove()); }
@@ -176,11 +169,11 @@
     modal.innerHTML = `<div class="dialog-content"><div class="dialog-header"><h3>طباعة التقارير المجمعة</h3><button type="button" class="admin-print-close" onclick="closeAdminPrintDialog()">×</button></div><div class="dialog-body"><fieldset><legend>1. اختر المكاتب والمرافق</legend><div class="form-group-checkbox all-selector"><input type="checkbox" id="print-all-centers" onchange="toggleAllPrintCenters(this)"><label for="print-all-centers"><strong>تحديد الكل / إلغاء تحديد الكل</strong></label></div><div id="print-centers-checkboxes" class="checkbox-grid">${checks}</div></fieldset><fieldset><legend>2. اختر التقارير للطباعة</legend><div class="checkbox-grid"><div class="form-group-checkbox"><input type="checkbox" id="print-opt-attendance" checked><label for="print-opt-attendance">تقرير الحضور والانصراف</label></div><div class="form-group-checkbox"><input type="checkbox" id="print-opt-performance"><label for="print-opt-performance">شهادة تقييم الأداء</label></div><div class="form-group-checkbox"><input type="checkbox" id="print-opt-achievement"><label for="print-opt-achievement">شهادة الإنجاز</label></div><div class="form-group-checkbox"><input type="checkbox" id="print-opt-site-raise-letter"><label for="print-opt-site-raise-letter">خطاب رفع الموقع</label></div></div></fieldset></div><div class="dialog-footer"><button id="admin-print-start-btn" class="btn btn-success" onclick="printSelected()">بدء الطباعة</button></div></div>`;
     document.body.appendChild(modal);
   }
-  function selectedKeys() { return Array.from(document.querySelectorAll('#print-centers-checkboxes input:checked')).map(cb => cb.value); }
-  function checked(id) { return !!document.getElementById(id)?.checked; }
+  const selectedKeys = () => Array.from(document.querySelectorAll('#print-centers-checkboxes input:checked')).map(cb => cb.value);
+  const checked = id => !!document.getElementById(id)?.checked;
   function printSelected() {
     if (isPrinting) return;
-    const keys = selectedKeys(); const opts = { a:checked('print-opt-attendance'), p:checked('print-opt-performance'), h:checked('print-opt-achievement'), l:checked('print-opt-site-raise-letter') };
+    const keys = selectedKeys(), opts = { a:checked('print-opt-attendance'), p:checked('print-opt-performance'), h:checked('print-opt-achievement'), l:checked('print-opt-site-raise-letter') };
     if (!keys.length || (!opts.a && !opts.p && !opts.h && !opts.l)) return alert('اختر مكتب/مرفق وتقرير واحد على الأقل.');
     isPrinting = true; const btn = document.getElementById('admin-print-start-btn'); if (btn) { btn.disabled = true; btn.textContent = 'جاري تجهيز الطباعة...'; }
     setTimeout(() => { try { cleanDialogs(); const w = window.open('', '_blank', 'width=1200,height=900'); if (!w) throw new Error('popup-blocked'); const doc = w.document; const letterCss = opts.l && window.AdminOfficePrintLetters && typeof window.AdminOfficePrintLetters.lettersCss === 'function' ? window.AdminOfficePrintLetters.lettersCss() : ''; doc.open(); doc.write(`<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>طباعة التقارير</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">${printCss()}${letterCss}</head><body>`); keys.forEach(key => { if (opts.a) doc.write(attendancePage(key)); if (opts.p) doc.write(performancePage(key)); if (opts.h) doc.write(achievementPage(key)); if (opts.l) doc.write(siteLetterPage(key)); }); doc.write('</body></html>'); doc.close(); w.onload = function(){ w.focus(); w.print(); w.close(); isPrinting = false; }; } catch (e) { isPrinting = false; alert('تعذر تجهيز الطباعة. راجع Console.'); console.error('[Admin Offices Print All] print failed', e); } }, 30);
@@ -190,5 +183,5 @@
   window.openPrintDialog = openPrintDialog;
   window.printSelected = printSelected;
   window.preparePrint = preparePrint;
-  console.info('[Admin Offices Print All] lightweight v9 site letter uses raise-letter model');
+  console.info('[Admin Offices Print All] lightweight v10 attendance aligned right + bigger signatures');
 })();
