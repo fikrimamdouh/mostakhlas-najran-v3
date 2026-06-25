@@ -37,6 +37,16 @@ const JobPositionsDB = (function () {
   const DB_VER = 1;
   const STORE = 'positions';
 
+  function normalizeSiteName(value) {
+    return String(value || '')
+      .replace(/[أإآ]/g, 'ا')
+      .replace(/ى/g, 'ي')
+      .replace(/ة/g, 'ه')
+      .replace(/[ـ\u064B-\u065F\u0670]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   function openDB() {
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, DB_VER);
@@ -107,14 +117,41 @@ const JobPositionsDB = (function () {
     return headers;
   }
 
+  async function resolveExistingSiteName(hospitalName) {
+    const incoming = String(hospitalName || '').trim();
+    if (!incoming || incoming === 'غير محدد') return incoming;
+    const normalizedIncoming = normalizeSiteName(incoming);
+
+    try {
+      const all = await loadAll();
+      const match = (Array.isArray(all) ? all : []).find(item => {
+        const saved = item && item.hospitalName ? String(item.hospitalName).trim() : '';
+        return saved && normalizeSiteName(saved) === normalizedIncoming;
+      });
+      if (match && match.hospitalName) return match.hospitalName;
+    } catch (_) {}
+
+    try {
+      const allLocal = await idbGetAll();
+      const matchLocal = (Array.isArray(allLocal) ? allLocal : []).find(item => {
+        const saved = item && item.hospitalName ? String(item.hospitalName).trim() : '';
+        return saved && normalizeSiteName(saved) === normalizedIncoming;
+      });
+      if (matchLocal && matchLocal.hospitalName) return matchLocal.hospitalName;
+    } catch (_) {}
+
+    return incoming;
+  }
+
   async function save(hospitalName, rows) {
-    const rec = { hospitalName, rows, savedAt: new Date().toISOString() };
+    const targetHospitalName = await resolveExistingSiteName(hospitalName);
+    const rec = { hospitalName: targetHospitalName, rows, savedAt: new Date().toISOString() };
     try {
       const resp = await fetch('/api/admin/job-positions', {
         method: 'POST',
         headers: authHeaders(),
         credentials: 'include',
-        body: JSON.stringify({ hospitalName, rows })
+        body: JSON.stringify({ hospitalName: targetHospitalName, rows })
       });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
@@ -141,7 +178,27 @@ const JobPositionsDB = (function () {
         }
       }
     } catch (_) {}
-    return await idbGet(hospitalName);
+
+    try {
+      const targetHospitalName = await resolveExistingSiteName(hospitalName);
+      if (targetHospitalName && targetHospitalName !== hospitalName) {
+        const token = getToken();
+        const headers = token ? { Authorization: 'Bearer ' + token } : {};
+        const resp = await fetch('/api/admin/job-positions?hospital=' + encodeURIComponent(targetHospitalName), { headers, credentials: 'include' });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data && data.rows && data.rows.length) {
+            await idbPut({ hospitalName: data.hospitalName || targetHospitalName, rows: data.rows, savedAt: data.savedAt });
+            return data;
+          }
+        }
+      }
+    } catch (_) {}
+
+    const exact = await idbGet(hospitalName);
+    if (exact) return exact;
+    const target = await resolveExistingSiteName(hospitalName);
+    return target && target !== hospitalName ? await idbGet(target) : null;
   }
 
   async function loadAll() {
@@ -284,5 +341,5 @@ const JobPositionsDB = (function () {
     return null;
   }
 
-  return { save, load, loadAll, remove, mapDept, DEPT_MAP, DEPT_LABELS };
+  return { save, load, loadAll, remove, mapDept, DEPT_MAP, DEPT_LABELS, normalizeSiteName, resolveExistingSiteName };
 })();
