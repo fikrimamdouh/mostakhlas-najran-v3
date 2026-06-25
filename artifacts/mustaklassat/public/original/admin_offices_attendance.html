@@ -320,8 +320,8 @@ function calc(emp, p = period(), c = contract()){
       };
     }
 
-    // باقي كود calc القديم كما هو    const len = p.daysInExtract || 30;
-    const total = p.totalDaysInMonth || 30;
+// باقي كود calc القديم كما هو
+const len = Number(p.daysInExtract || p.days || 30);    const total = p.totalDaysInMonth || 30;
     const sal = +emp.salary || 0;
     const daily = total ? sal / total : 0;
 
