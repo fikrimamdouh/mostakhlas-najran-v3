@@ -1,159 +1,27 @@
-// ===================================================================
-// Admin Offices Raise Letters Standalone Tab Mode — V4
-// Scope: admin_offices_attendance.html only
-// Loader نظيف للملفات الموجودة فقط + منع تكرار نموذج الخطابات في التبويب المستقل.
-// ===================================================================
-(function () {
+(function(){
   'use strict';
   if (!/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
-
-  const PARAM = 'raiseLettersOnly';
-  const isStandalone = new URLSearchParams(location.search).get(PARAM) === '1';
-  const POSITIONS_SETUP_KEY = 'adminOfficesPositionsSetup_v1';
-  let standaloneOpenedOnce = false;
-
-  function loadScriptOnce(id, src) {
-    if (document.getElementById(id)) return;
-    const s = document.createElement('script');
-    s.id = id;
-    s.src = src;
-    s.defer = true;
-    s.onload = function () { console.info('[Admin Offices Raise Letters] loaded:', id); };
-    s.onerror = function () { console.warn('[Admin Offices Raise Letters] failed:', id); };
-    document.head.appendChild(s);
+  const PARAM='raiseLettersOnly';
+  const isStandalone=new URLSearchParams(location.search).get(PARAM)==='1';
+  let opened=false;
+  function loadOnce(id,src){if(document.getElementById(id))return;const s=document.createElement('script');s.id=id;s.src=src;s.defer=true;s.onload=function(){console.info('[Admin Offices Raise Letters] loaded:',id)};s.onerror=function(){console.warn('[Admin Offices Raise Letters] failed:',id)};document.head.appendChild(s)}
+  function loadLettersHelpers(){
+    loadOnce('submitted-extract-archive-bundle-guard','/original/submitted_extract_archive_bundle_guard.js?v=20260623_archive_bundle_v1');
+    loadOnce('admin-offices-raise-letters-period-fix','/original/admin_offices_raise_letters_period_fix.js?v=20260624_period_fix_v1');
+    loadOnce('admin-offices-final-raise-dynamic-subject','/original/admin_offices_final_raise_letter_dynamic_subject.js?v=20260624_final_subject_iban_v2');
+    loadOnce('admin-offices-raise-letter-button-groups','/original/admin_offices_raise_letters_button_groups.js?v=20260624_button_groups_clean_v2');
+    loadOnce('admin-offices-raise-letter-signature-labels','/original/admin_offices_raise_letters_signature_labels.js?v=20260624_sig_doc_settings_v3');
+    loadOnce('admin-offices-raise-letters-tafqeet-rows','/original/admin_offices_raise_letters_tafqeet_rows.js?v=20260624_tafqeet_rows_v1');
+    loadOnce('admin-offices-bulk-status-grid-print-fix','/original/admin_offices_bulk_status_grid_print_fix.js?v=20260624_bulk_clean_v4');
+    loadOnce('admin-offices-full-excel-visibility-guard','/original/admin_offices_full_excel_visibility_guard.js?v=20260623_full_excel_visibility_v1');
   }
-
-  function loadPeriodFix() { loadScriptOnce('admin-offices-raise-letters-period-fix', '/original/admin_offices_raise_letters_period_fix.js?v=20260624_period_fix_v1'); }
-  function loadDynamicFinalSubjectPatch() { loadScriptOnce('admin-offices-final-raise-dynamic-subject', '/original/admin_offices_final_raise_letter_dynamic_subject.js?v=20260624_final_subject_iban_v2'); }
-  function loadBulkStatusGridPrintFix() { loadScriptOnce('admin-offices-bulk-status-grid-print-fix', '/original/admin_offices_bulk_status_grid_print_fix.js?v=20260624_bulk_clean_v4'); }
-  function loadSitePrintPerformanceFit() { loadScriptOnce('admin-offices-site-print-performance-fit', '/original/admin_offices_site_print_performance_fit.js?v=20260624_site_bundle_v5'); }
-  function loadThreePagesPrintPolish() { loadScriptOnce('admin-offices-three-pages-print-polish', '/original/admin_offices_three_pages_print_polish.js?v=20260624_three_pages_v4_achievement_like'); }
-  function loadFullExtractSitePerfAchievementGuard() { loadScriptOnce('admin-offices-full-extract-site-perf-ach-guard', '/original/admin_offices_full_extract_site_perf_achievement_guard.js?v=20260624_full_extract_perf_ach_v2_compact'); }
-  function loadFullExcelVisibilityGuard() { loadScriptOnce('admin-offices-full-excel-visibility-guard', '/original/admin_offices_full_excel_visibility_guard.js?v=20260623_full_excel_visibility_v1'); }
-  function loadSubmittedArchiveBundleGuard() { loadScriptOnce('submitted-extract-archive-bundle-guard', '/original/submitted_extract_archive_bundle_guard.js?v=20260623_archive_bundle_v1'); }
-  function loadSignatureLabelsPatch() { loadScriptOnce('admin-offices-raise-letter-signature-labels', '/original/admin_offices_raise_letters_signature_labels.js?v=20260624_sig_doc_settings_v3'); }
-  function loadButtonGroupsPatch() { loadScriptOnce('admin-offices-raise-letter-button-groups', '/original/admin_offices_raise_letters_button_groups.js?v=20260624_button_groups_clean_v2'); }
-  function loadTafqeetRowsFix() { loadScriptOnce('admin-offices-raise-letters-tafqeet-rows', '/original/admin_offices_raise_letters_tafqeet_rows.js?v=20260624_tafqeet_rows_v1'); }
-
-  function readJson(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; } }
-  function countAdminRows(data) { return Object.values(data || {}).reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0); }
-  function countAdminOfficeLaborRows() {
-    const keys = ['adminOfficesAttendanceData_v1','adminOfficesAttendanceData_v1_localBackup','adminOfficesAttendanceData_v1_lastGood','adminOfficesLaborDataSafe_v2','adminOfficesAttendanceData'];
-    let max = 0;
-    keys.forEach(function (key) { max = Math.max(max, countAdminRows(readJson(key, {}))); });
-    try { if (typeof window.getAttendanceData === 'function') max = Math.max(max, countAdminRows(window.getAttendanceData() || {})); } catch (_) {}
-    return max;
-  }
-  function clearBadPositionsDoneFlagIfEmpty() {
-    const rows = countAdminOfficeLaborRows();
-    const status = readJson(POSITIONS_SETUP_KEY, {});
-    if (rows === 0 && status && status.done === true) {
-      localStorage.removeItem(POSITIONS_SETUP_KEY);
-      console.warn('[Admin Offices Positions] cleared stale loaded flag because labor is empty');
-      return true;
-    }
-    return false;
-  }
-  function patchFullPositionsLoadGate() {
-    clearBadPositionsDoneFlagIfEmpty();
-    if (typeof window.confirmLoadAllAdminOfficePositions !== 'function') return false;
-    if (window.confirmLoadAllAdminOfficePositions.__adminOfficesFullLoadGateV1) return true;
-    const original = window.confirmLoadAllAdminOfficePositions;
-    window.confirmLoadAllAdminOfficePositions = function () {
-      const rows = countAdminOfficeLaborRows();
-      if (rows > 0) {
-        try {
-          localStorage.setItem(POSITIONS_SETUP_KEY, JSON.stringify(Object.assign(readJson(POSITIONS_SETUP_KEY, {}), {
-            done: true,
-            mode: 'all-existing-data',
-            loadedAt: readJson(POSITIONS_SETUP_KEY, {}).loadedAt || new Date().toISOString(),
-            employeesCount: rows
-          })));
-        } catch (_) {}
-        alert('المناصب / العمالة موجودة بالفعل بعدد ' + rows + ' صف.\n\nلن يتم تحميل المناصب لكل الأقسام مرة ثانية حتى لا يتم استبدال البيانات.\nللتعديل استخدم تحميل مكتب/مرفق محدد أو استيراد Excel.');
-        return;
-      }
-      localStorage.removeItem(POSITIONS_SETUP_KEY);
-      return original.apply(this, arguments);
-    };
-    window.confirmLoadAllAdminOfficePositions.__adminOfficesFullLoadGateV1 = true;
-    console.info('[Admin Offices Positions] full-load gate patched');
-    return true;
-  }
-
-  function addStandaloneCss() {
-    if (document.getElementById('raise-letters-standalone-css')) return;
-    const style = document.createElement('style');
-    style.id = 'raise-letters-standalone-css';
-    style.textContent = `
-      body.raise-letters-standalone-page{background:#eef3f9!important;overflow:auto!important;}
-      body.raise-letters-standalone-page > *:not(#raise-letters-overlay):not(script):not(style):not(link):not(.modal):not(#unified-modal):not(#raise-letters-standalone-topbar){display:none!important;}
-      body.raise-letters-standalone-page #raise-letters-overlay.settings-overlay{position:static!important;inset:auto!important;display:block!important;background:transparent!important;padding:22px!important;min-height:100vh!important;z-index:auto!important;}
-      body.raise-letters-standalone-page #raise-letters-overlay .settings-dialog{width:min(1280px,96vw)!important;max-height:none!important;overflow:visible!important;margin:0 auto!important;border-radius:22px!important;box-shadow:0 18px 55px rgba(15,23,42,.16)!important;}
-      body.raise-letters-standalone-page #raise-letters-overlay .settings-dialog h2{position:sticky;top:0;background:#fff;z-index:3;padding:10px 0 14px;border-bottom:1px solid #e2e8f0;}
-      body.raise-letters-standalone-page .standalone-topbar{display:flex!important;justify-content:space-between;align-items:center;gap:10px;margin:0 auto 12px;width:min(1280px,96vw);background:#0f172a;color:#fff;border-radius:16px;padding:12px 16px;font-family:Tajawal,Arial,sans-serif;}
-      body.raise-letters-standalone-page .standalone-topbar button{border:0;border-radius:10px;padding:9px 14px;font-weight:900;cursor:pointer;background:#d4af37;color:#111827;font-family:Tajawal,Arial,sans-serif;}
-      @media print{body.raise-letters-standalone-page .standalone-topbar{display:none!important}}
-    `;
-    document.head.appendChild(style);
-  }
-  function addExcelImportDialogCss() {
-    if (document.getElementById('admin-offices-excel-import-scroll-css')) return;
-    const style = document.createElement('style');
-    style.id = 'admin-offices-excel-import-scroll-css';
-    style.textContent = `#management-dialog.admin-offices-excel-import-dialog{align-items:center!important;justify-content:center!important;padding:10px!important;overflow:hidden!important;}#management-dialog.admin-offices-excel-import-dialog .dialog-content,#management-dialog.admin-offices-excel-import-dialog .dialog-box,#management-dialog.admin-offices-excel-import-dialog .dialog-panel,#management-dialog.admin-offices-excel-import-dialog .dialog{width:min(860px,96vw)!important;max-width:96vw!important;max-height:92vh!important;height:auto!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;border-radius:16px!important;}#management-dialog.admin-offices-excel-import-dialog .dialog-body{flex:1 1 auto!important;overflow-y:auto!important;max-height:calc(92vh - 120px)!important;padding:12px 16px!important;overscroll-behavior:contain!important;}#admin-offices-full-excel-section{padding:10px!important;margin:0 0 10px!important;}`;
-    document.head.appendChild(style);
-  }
-  function applyExcelImportDialogLayout() {
-    addExcelImportDialogCss();
-    const dlg = document.getElementById('management-dialog');
-    if (!dlg) return;
-    const text = (dlg.textContent || '').trim();
-    const isExcelImport = text.includes('استيراد بيانات من Excel') || text.includes('تامبليت الوظائف') || text.includes('استيراد التامبليت بعد التعبئة');
-    if (!isExcelImport) { dlg.classList.remove('admin-offices-excel-import-dialog'); return; }
-    dlg.classList.add('admin-offices-excel-import-dialog');
-  }
-
-  function openStandaloneTab() {
-    const url = new URL(location.href);
-    url.searchParams.set(PARAM, '1');
-    url.hash = 'raise-letters';
-    window.open(url.toString(), '_blank');
-  }
-  function patchMainButton() {
-    if (isStandalone) return;
-    const api = window.AdminOfficesRaiseLetters;
-    if (api && typeof api.openDialog === 'function' && !api.__raiseLettersTabPatched) { api.openDialog = openStandaloneTab; api.__raiseLettersTabPatched = true; }
-    const btn = document.getElementById('raise-letters-btn');
-    if (btn && !btn.__raiseLettersTabPatched) { btn.onclick = openStandaloneTab; btn.__raiseLettersTabPatched = true; btn.title = 'فتح خطابات الرفع في تبويب مستقل'; }
-  }
-  function topbar() {
-    if (document.getElementById('raise-letters-standalone-topbar')) return;
-    const bar = document.createElement('div');
-    bar.id = 'raise-letters-standalone-topbar';
-    bar.className = 'standalone-topbar';
-    bar.innerHTML = '<strong>خطابات الرفع — المكاتب الإدارية والمرافق الصحية</strong><div><button type="button" onclick="window.close()">إغلاق التبويب</button></div>';
-    document.body.insertBefore(bar, document.body.firstChild);
-  }
-  function openAsStandalonePage() {
-    document.body.classList.add('raise-letters-standalone-page');
-    addStandaloneCss();
-    topbar();
-    if (standaloneOpenedOnce || document.getElementById('raise-letters-overlay')) return;
-    const api = window.AdminOfficesRaiseLetters;
-    if (api && typeof api.openDialog === 'function') {
-      standaloneOpenedOnce = true;
-      try { api.openDialog(); } catch (_) { standaloneOpenedOnce = false; }
-    }
-  }
-  function boot(attempt) {
-    loadPeriodFix(); loadSubmittedArchiveBundleGuard(); loadSignatureLabelsPatch(); loadButtonGroupsPatch(); loadDynamicFinalSubjectPatch(); loadBulkStatusGridPrintFix(); loadSitePrintPerformanceFit(); loadThreePagesPrintPolish(); loadFullExtractSitePerfAchievementGuard(); loadFullExcelVisibilityGuard(); loadTafqeetRowsFix();
-    patchMainButton(); patchFullPositionsLoadGate(); applyExcelImportDialogLayout();
-    try { if (window.AdminOfficesRaiseLettersPeriodFix) window.AdminOfficesRaiseLettersPeriodFix.fixNow(); } catch (_) {}
-    if (isStandalone) openAsStandalonePage();
-    if (attempt < 40) setTimeout(() => boot(attempt + 1), 250);
-  }
-  document.addEventListener('click', function () { setTimeout(applyExcelImportDialogLayout, 80); setTimeout(loadPeriodFix, 80); setTimeout(loadSubmittedArchiveBundleGuard, 120); setTimeout(loadSignatureLabelsPatch, 120); setTimeout(loadButtonGroupsPatch, 120); setTimeout(loadDynamicFinalSubjectPatch, 120); setTimeout(loadBulkStatusGridPrintFix, 120); setTimeout(loadSitePrintPerformanceFit, 120); setTimeout(loadThreePagesPrintPolish, 120); setTimeout(loadFullExtractSitePerfAchievementGuard, 120); setTimeout(loadFullExcelVisibilityGuard, 120); setTimeout(loadTafqeetRowsFix, 140); setTimeout(patchFullPositionsLoadGate, 120); setTimeout(function(){ try { if (window.AdminOfficesRaiseLettersPeriodFix) window.AdminOfficesRaiseLettersPeriodFix.fixNow(); } catch (_) {} }, 160); }, true);
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0)); else boot(0);
-  console.info('[Admin Offices Raise Letters] standalone tab mode installed v4 no duplicate overlay + period fix + tafqeet rows + compact perf guard');
+  function openStandaloneTab(){const url=new URL(location.href);url.searchParams.set(PARAM,'1');url.hash='raise-letters';window.open(url.toString(),'_blank')}
+  function patchMainButton(){if(isStandalone)return;const api=window.AdminOfficesRaiseLetters;if(api&&typeof api.openDialog==='function'&&!api.__raiseLettersTabPatched){api.openDialog=openStandaloneTab;api.__raiseLettersTabPatched=true}const btn=document.getElementById('raise-letters-btn');if(btn&&!btn.__raiseLettersTabPatched){btn.onclick=openStandaloneTab;btn.__raiseLettersTabPatched=true;btn.title='فتح خطابات الرفع في تبويب مستقل'}}
+  function addStandaloneCss(){if(document.getElementById('raise-letters-standalone-css'))return;const style=document.createElement('style');style.id='raise-letters-standalone-css';style.textContent='body.raise-letters-standalone-page{background:#eef3f9!important;overflow:auto!important}body.raise-letters-standalone-page>#raise-letters-standalone-topbar{display:flex!important}body.raise-letters-standalone-page>#raise-letters-overlay{position:static!important;display:block!important;background:transparent!important;padding:22px!important;min-height:100vh!important}body.raise-letters-standalone-page #raise-letters-overlay .settings-dialog{width:min(1280px,96vw)!important;max-height:none!important;overflow:visible!important;margin:0 auto!important;border-radius:22px!important}.standalone-topbar{justify-content:space-between;align-items:center;gap:10px;margin:0 auto 12px;width:min(1280px,96vw);background:#0f172a;color:#fff;border-radius:16px;padding:12px 16px;font-family:Tajawal,Arial,sans-serif}.standalone-topbar button{border:0;border-radius:10px;padding:9px 14px;font-weight:900;background:#d4af37;color:#111827}';document.head.appendChild(style)}
+  function topbar(){if(document.getElementById('raise-letters-standalone-topbar'))return;const bar=document.createElement('div');bar.id='raise-letters-standalone-topbar';bar.className='standalone-topbar';bar.innerHTML='<strong>خطابات الرفع — المكاتب الإدارية والمرافق الصحية</strong><div><button type="button" onclick="window.close()">إغلاق التبويب</button></div>';document.body.insertBefore(bar,document.body.firstChild)}
+  function openStandalone(){document.body.classList.add('raise-letters-standalone-page');addStandaloneCss();topbar();if(opened||document.getElementById('raise-letters-overlay'))return;const api=window.AdminOfficesRaiseLetters;if(api&&typeof api.openDialog==='function'){opened=true;try{api.openDialog()}catch(_){opened=false}}}
+  function boot(n){loadLettersHelpers();patchMainButton();try{if(window.AdminOfficesRaiseLettersPeriodFix)window.AdminOfficesRaiseLettersPeriodFix.fixNow()}catch(_){}if(isStandalone)openStandalone();if(n<40)setTimeout(function(){boot(n+1)},250)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){boot(0)});else boot(0);
+  document.addEventListener('click',function(){setTimeout(function(){loadLettersHelpers();patchMainButton()},120)},true);
+  console.info('[Admin Offices Raise Letters] standalone tab mode installed v5 letters helper loader');
 })();
