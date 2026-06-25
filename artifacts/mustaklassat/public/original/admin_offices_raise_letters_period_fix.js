@@ -64,6 +64,11 @@
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
 
+  function dateObjFromIso(iso) {
+    var d = new Date(String(iso || '') + 'T00:00:00');
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
   function domText() {
     return {
       start: firstValue(
@@ -85,10 +90,11 @@
     };
   }
 
-  function periodFunctionData() {
+  function nativePeriodFunctionData() {
     try {
-      if (typeof window.getExtractPeriodDetails === 'function') {
-        var p = window.getExtractPeriodDetails() || {};
+      var fn = window.__ADMIN_OFFICES_NATIVE_GET_EXTRACT_PERIOD_DETAILS__ || window.getExtractPeriodDetails;
+      if (typeof fn === 'function' && fn !== fixedExtractPeriodDetails) {
+        var p = fn() || {};
         return {
           start: p.startDate || p.extractStart || p.periodStart || p.start || p.fromDate || '',
           end: p.endDate || p.extractEnd || p.periodEnd || p.end || p.toDate || '',
@@ -111,23 +117,23 @@
     var s = readJson('adminOfficesRaiseLettersSettings_v1', {});
     var rev = revisionData();
     var dom = domText();
-    var fn = periodFunctionData();
+    var fn = nativePeriodFunctionData();
 
     var start = toIsoDate(firstValue(
       e.extractStart, e.periodStart, e.startDate, e.start, e.fromDate, e.dateFrom,
-      fn.start,
       rev.extractStart, rev.periodStart, rev.startDate, rev.start, rev.fromDate, rev.dateFrom,
       localStorage.getItem('extractStart'), localStorage.getItem('periodStart'), localStorage.getItem('startDate'),
       s.extractStart, s.period2Start, s.period1Start,
+      fn.start,
       dom.start
     ));
 
     var end = toIsoDate(firstValue(
       e.extractEnd, e.periodEnd, e.endDate, e.end, e.toDate, e.dateTo,
-      fn.end,
       rev.extractEnd, rev.periodEnd, rev.endDate, rev.end, rev.toDate, rev.dateTo,
       localStorage.getItem('extractEnd'), localStorage.getItem('periodEnd'), localStorage.getItem('endDate'),
       s.extractEnd, s.period2End, s.period1End,
+      fn.end,
       dom.end
     ));
 
@@ -204,9 +210,37 @@
     return iso;
   }
 
+  function fixedExtractPeriodDetails() {
+    var meta = fixNow();
+    var startDate = dateObjFromIso(meta.start) || new Date();
+    var endDate = dateObjFromIso(meta.end) || startDate;
+    var daysInExtract = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000) + 1 || 1);
+    var totalDaysInMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate() || 30;
+    return {
+      startDate: startDate,
+      endDate: endDate,
+      extractStart: meta.start,
+      extractEnd: meta.end,
+      periodStart: meta.start,
+      periodEnd: meta.end,
+      daysInExtract: daysInExtract,
+      totalDaysInMonth: totalDaysInMonth,
+      paymentNo: normalizePaymentNo(meta.paymentNo),
+      paymentNumber: normalizePaymentNo(meta.paymentNo),
+      source: 'admin-offices-raise-letters-period-fix'
+    };
+  }
+
   function extractPhrase() {
     var m = fixNow();
     return 'دفعة رقم (' + normalizePaymentNo(m.paymentNo) + ') عن الفترة من ' + fmtDate(m.start) + ' م إلى ' + fmtDate(m.end) + ' م';
+  }
+
+  function patchGlobalPeriodFunction() {
+    if (!window.__ADMIN_OFFICES_NATIVE_GET_EXTRACT_PERIOD_DETAILS__ && typeof window.getExtractPeriodDetails === 'function' && window.getExtractPeriodDetails !== fixedExtractPeriodDetails) {
+      window.__ADMIN_OFFICES_NATIVE_GET_EXTRACT_PERIOD_DETAILS__ = window.getExtractPeriodDetails;
+    }
+    window.getExtractPeriodDetails = fixedExtractPeriodDetails;
   }
 
   function patchOpeners() {
@@ -241,10 +275,12 @@
     fixNow: fixNow,
     getMeta: function () { return fixNow(); },
     extractPhrase: extractPhrase,
-    normalizePaymentNo: normalizePaymentNo
+    normalizePaymentNo: normalizePaymentNo,
+    getExtractPeriodDetails: fixedExtractPeriodDetails
   };
 
   function boot(attempt) {
+    patchGlobalPeriodFunction();
     fixNow();
     patchOpeners();
     refreshPaymentDisplays();
@@ -252,8 +288,8 @@
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { boot(0); }); else boot(0);
-  document.addEventListener('click', function () { setTimeout(fixNow, 0); setTimeout(patchOpeners, 0); setTimeout(refreshPaymentDisplays, 80); }, true);
-  window.addEventListener('beforeprint', fixNow);
+  document.addEventListener('click', function () { setTimeout(patchGlobalPeriodFunction, 0); setTimeout(fixNow, 0); setTimeout(patchOpeners, 0); setTimeout(refreshPaymentDisplays, 80); }, true);
+  window.addEventListener('beforeprint', function () { patchGlobalPeriodFunction(); fixNow(); });
 
-  console.info('[Admin Offices Raise Letters Period Fix] installed start/end/payment resolver no leading zeros');
+  console.info('[Admin Offices Raise Letters Period Fix] installed fixed extract period function + no leading zeros');
 })();
