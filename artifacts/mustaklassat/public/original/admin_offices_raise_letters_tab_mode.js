@@ -5,6 +5,7 @@
   const PARAM = 'raiseLettersOnly';
   const isStandalone = new URLSearchParams(location.search).get(PARAM) === '1';
   let opened = false;
+  let tabOpenLockAt = 0;
 
   function loadOnce(id, src) {
     if (document.getElementById(id)) return;
@@ -32,6 +33,10 @@
   }
 
   function openStandaloneTab() {
+    const now = Date.now();
+    if (now - tabOpenLockAt < 1500) return;
+    tabOpenLockAt = now;
+
     const url = new URL(location.href);
     url.searchParams.set(PARAM, '1');
     url.hash = 'raise-letters';
@@ -40,16 +45,16 @@
 
   function patchMainButton() {
     if (isStandalone) return;
-    const api = window.AdminOfficesRaiseLetters;
-    if (api && typeof api.openDialog === 'function' && !api.__raiseLettersTabPatched) {
-      api.openDialog = openStandaloneTab;
-      api.__raiseLettersTabPatched = true;
-    }
+
+    // لا تستبدل AdminOfficesRaiseLetters.openDialog هنا.
+    // السبب: ملفات autofill/period_fix تلف نفس الدالة، ولو حوّلناها إلى window.open
+    // أي استدعاء غير مباشر لها قد يفتح تبويبًا ثانيًا.
     const btn = document.getElementById('raise-letters-btn');
     if (btn && !btn.__raiseLettersTabPatched) {
       btn.onclick = function(e){
         if (e) { e.preventDefault(); e.stopPropagation(); }
         openStandaloneTab();
+        return false;
       };
       btn.__raiseLettersTabPatched = true;
       btn.title = 'فتح خطابات الرفع في تبويب مستقل';
@@ -107,5 +112,5 @@
     }, 120);
   }, true);
 
-  console.info('[Admin Offices Raise Letters] standalone tab mode installed v6 stable no payment padding');
+  console.info('[Admin Offices Raise Letters] standalone tab mode installed v6 stable single tab');
 })();
