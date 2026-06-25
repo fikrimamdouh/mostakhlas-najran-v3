@@ -1,14 +1,15 @@
 // ===================================================================
-// Admin Offices Lightweight Consolidated Print Flow — V8
+// Admin Offices Lightweight Consolidated Print Flow — V9
 // - نافذة طباعة مستقلة لا تعتمد على openDialog.
 // - الحضور: جدول الصفحة الأصلي + تحويل select/input إلى نص + زوم أصغر للحضور فقط.
 // - التقييم: نفس تنسيق المراكز الصحية مع بنود المكتب الفعلية.
+// - خطاب الموقع: من قالب خطابات الرفع الأصلي عبر AdminOfficePrintLetters.
 // ===================================================================
 (function () {
   'use strict';
   if (!/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
-  if (window.__ADMIN_OFFICES_PRINT_ALL_LIGHT_V8__) return;
-  window.__ADMIN_OFFICES_PRINT_ALL_LIGHT_V8__ = true;
+  if (window.__ADMIN_OFFICES_PRINT_ALL_LIGHT_V9__) return;
+  window.__ADMIN_OFFICES_PRINT_ALL_LIGHT_V9__ = true;
 
   let isPrinting = false;
 
@@ -79,6 +80,11 @@
     const p = period();
     return (data()[key] || []).reduce((t, emp) => { const r = calcEmp(emp, p); t.monthly += num(r.costForPeriod); t.ded += num(r.deduction); t.absFine += num(r.absenceFine); t.natFine += num(r.nationalityFine); return t; }, { monthly:0, ded:0, absFine:0, natFine:0 });
   }
+  function netAfterPerformance(key) {
+    const t = totals(key);
+    const perf = num(readJson('performanceDeductions', {})[key] || readJson('adminOfficePerformanceDeductions_v1', {})[key] || 0);
+    return t.monthly - t.ded - t.absFine - t.natFine - perf;
+  }
 
   function freezeFormControls(root) {
     root.querySelectorAll('select').forEach(sel => {
@@ -144,7 +150,11 @@
     return `<section class="page-container portrait-page-ach"><div class="achievement-report">${headerHtml(key,true)}<div class="certificate-header"><h2>شهادة الإنجاز</h2><h3>لموقع: ${esc(site)} - عن شهر ${esc(monthName())}</h3></div><table><thead><tr><th>البند</th><th>القيمة الشهرية</th><th>حسم الغياب</th><th>غرامة الغياب</th><th>غرامة الأداء</th><th>غرامة الجنسية</th><th>الصافي</th></tr></thead><tbody><tr><td>العمالة</td><td>${money(t.monthly)}</td><td>${money(t.ded)}</td><td>${money(t.absFine)}</td><td>${money(perf)}</td><td>${money(t.natFine)}</td><td>${money(net)}</td></tr></tbody></table>${signaturesHtml('achievement',key,false)}</div></section>`;
   }
   function siteLetterPage(key) {
-    const ns = names(), site = ns[key] || key, e = extract(), c = contract(), t = totals(key), net = t.monthly - t.ded - t.absFine - t.natFine;
+    const ns = names(), site = ns[key] || key, net = netAfterPerformance(key);
+    if (window.AdminOfficePrintLetters && typeof window.AdminOfficePrintLetters.buildSiteRaiseLetterForSite === 'function') {
+      return window.AdminOfficePrintLetters.buildSiteRaiseLetterForSite({ key, siteName: site, netAmount: net });
+    }
+    const e = extract(), c = contract();
     return `<section class="page-container portrait-page-ach"><div class="raise-letter-page-simple">${headerHtml(key,true)}<h2>خطاب رفع مستخلص الموقع</h2><p>نرفق لسعادتكم مستخلص موقع <b>${esc(site)}</b> لشركة ${esc(c.companyName || '')} عن الفترة من ${fmtDate(e.extractStart)} إلى ${fmtDate(e.extractEnd)}.</p><table><tr><td>صافي مستحقات الموقع</td><td>${money(net)}</td></tr></table>${signaturesHtml('raise_letters',key,false)}</div></section>`;
   }
 
@@ -173,12 +183,12 @@
     const keys = selectedKeys(); const opts = { a:checked('print-opt-attendance'), p:checked('print-opt-performance'), h:checked('print-opt-achievement'), l:checked('print-opt-site-raise-letter') };
     if (!keys.length || (!opts.a && !opts.p && !opts.h && !opts.l)) return alert('اختر مكتب/مرفق وتقرير واحد على الأقل.');
     isPrinting = true; const btn = document.getElementById('admin-print-start-btn'); if (btn) { btn.disabled = true; btn.textContent = 'جاري تجهيز الطباعة...'; }
-    setTimeout(() => { try { cleanDialogs(); const w = window.open('', '_blank', 'width=1200,height=900'); if (!w) throw new Error('popup-blocked'); const doc = w.document; doc.open(); doc.write(`<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>طباعة التقارير</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">${printCss()}</head><body>`); keys.forEach(key => { if (opts.a) doc.write(attendancePage(key)); if (opts.p) doc.write(performancePage(key)); if (opts.h) doc.write(achievementPage(key)); if (opts.l) doc.write(siteLetterPage(key)); }); doc.write('</body></html>'); doc.close(); w.onload = function(){ w.focus(); w.print(); w.close(); isPrinting = false; }; } catch (e) { isPrinting = false; alert('تعذر تجهيز الطباعة. راجع Console.'); console.error('[Admin Offices Print All] print failed', e); } }, 30);
+    setTimeout(() => { try { cleanDialogs(); const w = window.open('', '_blank', 'width=1200,height=900'); if (!w) throw new Error('popup-blocked'); const doc = w.document; const letterCss = opts.l && window.AdminOfficePrintLetters && typeof window.AdminOfficePrintLetters.lettersCss === 'function' ? window.AdminOfficePrintLetters.lettersCss() : ''; doc.open(); doc.write(`<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>طباعة التقارير</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">${printCss()}${letterCss}</head><body>`); keys.forEach(key => { if (opts.a) doc.write(attendancePage(key)); if (opts.p) doc.write(performancePage(key)); if (opts.h) doc.write(achievementPage(key)); if (opts.l) doc.write(siteLetterPage(key)); }); doc.write('</body></html>'); doc.close(); w.onload = function(){ w.focus(); w.print(); w.close(); isPrinting = false; }; } catch (e) { isPrinting = false; alert('تعذر تجهيز الطباعة. راجع Console.'); console.error('[Admin Offices Print All] print failed', e); } }, 30);
   }
   function preparePrint() { const key = currentKey(); const w = window.open('', '_blank', 'width=1200,height=900'); if (!w) return alert('المتصفح منع فتح نافذة الطباعة.'); w.document.open(); w.document.write(`<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>طباعة الحضور</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">${printCss()}</head><body>${attendancePage(key)}</body></html>`); w.document.close(); w.onload = function(){ w.focus(); w.print(); w.close(); }; }
 
   window.openPrintDialog = openPrintDialog;
   window.printSelected = printSelected;
   window.preparePrint = preparePrint;
-  console.info('[Admin Offices Print All] lightweight v8 attendance zoom 78 only');
+  console.info('[Admin Offices Print All] lightweight v9 site letter uses raise-letter model');
 })();
