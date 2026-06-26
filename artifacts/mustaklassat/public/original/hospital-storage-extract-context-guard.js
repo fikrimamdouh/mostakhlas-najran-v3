@@ -21,6 +21,26 @@
       .slice(0, 140);
   }
 
+  function installHospitalLettersPreloadMask() {
+    if (document.getElementById('hospital-letters-clean-preload-style')) return;
+    var style = document.createElement('style');
+    style.id = 'hospital-letters-clean-preload-style';
+    style.textContent = 'body.hospital-letters-clean-loading > *:not(#hospital-letters-clean-preload):not(#hospital-letters-clean):not(script):not(style){display:none!important}#hospital-letters-clean-preload{position:fixed;inset:0;z-index:2147483500;background:#eef3f9;display:flex;align-items:center;justify-content:center;direction:rtl;font-family:Tajawal,Arial,sans-serif;color:#003087}#hospital-letters-clean-preload>div{background:#fff;border-radius:22px;padding:24px 34px;box-shadow:0 20px 60px rgba(15,23,42,.18);font-weight:950;text-align:center;border-top:5px solid #003087}';
+    document.head.appendChild(style);
+    document.body && document.body.classList.add('hospital-letters-clean-loading');
+    var make = function () {
+      if (!document.body || document.getElementById('hospital-letters-clean-preload')) return;
+      document.body.classList.add('hospital-letters-clean-loading');
+      var div = document.createElement('div');
+      div.id = 'hospital-letters-clean-preload';
+      div.innerHTML = '<div>جاري فتح مركز خطابات المستشفى<br><small style="color:#64748b">نسخة نظيفة مستقلة</small></div>';
+      document.body.appendChild(div);
+    };
+    make();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', make);
+    setTimeout(make, 50);
+  }
+
   function loadHospitalRaiseLettersCleanIfRequested() {
     try {
       var full = location.pathname + (location.search || '');
@@ -28,10 +48,11 @@
       var isAdminOffices = /admin_offices_attendance\.html(?:$|[?#])/.test(full) || /original-viewer\?page=admin_offices_attendance\.html/.test(full);
       if (!isAttendance || isAdminOffices) return;
       if (new URLSearchParams(location.search || '').get('hospitalLettersClean') !== '1') return;
+      installHospitalLettersPreloadMask();
       if (document.getElementById('hospital-raise-letters-clean-loader')) return;
       var s = document.createElement('script');
       s.id = 'hospital-raise-letters-clean-loader';
-      s.src = '/original/hospital_raise_letters_clean_v1.js?v=20260625_hospital_letters_clean_loaded_v1';
+      s.src = '/original/hospital_raise_letters_clean_v1.js?v=20260625_hospital_letters_standalone_v2';
       s.defer = true;
       s.onerror = function () { console.error('[Hospital Raise Letters Clean] failed to load'); };
       document.head.appendChild(s);
