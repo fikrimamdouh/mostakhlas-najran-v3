@@ -21,6 +21,26 @@
       .slice(0, 140);
   }
 
+  function loadHospitalRaiseLettersCleanIfRequested() {
+    try {
+      var full = location.pathname + (location.search || '');
+      var isAttendance = /attendance\.html(?:$|[?#])/.test(full) || /original-viewer\?page=attendance\.html/.test(full);
+      var isAdminOffices = /admin_offices_attendance\.html(?:$|[?#])/.test(full) || /original-viewer\?page=admin_offices_attendance\.html/.test(full);
+      if (!isAttendance || isAdminOffices) return;
+      if (new URLSearchParams(location.search || '').get('hospitalLettersClean') !== '1') return;
+      if (document.getElementById('hospital-raise-letters-clean-loader')) return;
+      var s = document.createElement('script');
+      s.id = 'hospital-raise-letters-clean-loader';
+      s.src = '/original/hospital_raise_letters_clean_v1.js?v=20260625_hospital_letters_clean_loaded_v1';
+      s.defer = true;
+      s.onerror = function () { console.error('[Hospital Raise Letters Clean] failed to load'); };
+      document.head.appendChild(s);
+      console.info('[Hospital Raise Letters Clean] requested by URL flag');
+    } catch (e) {
+      console.warn('[Hospital Raise Letters Clean] loader failed', e);
+    }
+  }
+
   function readExtractContextKey() {
     var p = parseJSON(localStorage.getItem('persistentExtractData')) || {};
     var month = p.extractMonth || localStorage.getItem('extractMonth') || '';
@@ -65,5 +85,6 @@
   };
 
   window.najranGetExtractContextKey = readExtractContextKey;
+  loadHospitalRaiseLettersCleanIfRequested();
   console.info('[HospitalStorageContextGuard] active');
 })();
