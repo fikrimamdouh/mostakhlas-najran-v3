@@ -3,7 +3,8 @@
 // Scope: attendance.html only, test URL only: ?hospitalLettersClean=1
 // No official button binding. No storage key changes. No attendance save changes.
 // Printing policy:
-// - Attendance uses the original attendance page tables/DOM with print zoom 85%.
+// - Attendance uses the original attendance page tables/DOM.
+// - Default print reduction follows the existing consolidated print function: scale(.72) = 72%.
 // - Performance and Achievement are captured from their original pages in same-origin iframes.
 // - Raise-letter attachments remain generated inside this clean screen.
 // ===================================================================
@@ -17,6 +18,7 @@
 
   var SETTINGS_KEY = 'hospitalRaiseLettersSettings_v1';
   var LINE_MM = 6;
+  var DEFAULT_PRINT_SCALE = 72;
   var UI = { settingsOpen: false, docOpen: false };
 
   var DOCS = [
@@ -31,7 +33,8 @@
     { key: 'vacations', label: 'بيان الإجازات', group: 'attach' },
     { key: 'vacancies', label: 'بيان الشواغر', group: 'attach' },
     { key: 'salary', label: 'شهادة تسليم الرواتب', group: 'attach' },
-    { key: 'entitlement', label: 'بيان استحقاق', group: 'attach' }
+    { key: 'entitlement', label: 'بيان استحقاق', group: 'attach' },
+    { key: 'customLetter', label: 'خطاب مخصص / صفحة فاضية', group: 'attach' }
   ];
 
   var TEXT_FIELDS = [
@@ -44,12 +47,14 @@
     ['subject', 'موضوع خطاب الرفع'],
     ['managerTitle', 'صفة التوقيع'],
     ['managerName', 'اسم المسؤول'],
-    ['iban', 'الآيبان']
+    ['iban', 'الآيبان'],
+    ['customLetterTitle', 'الخطاب المخصص — العنوان']
   ];
   var AREA_FIELDS = [
     ['finalOpening', 'افتتاح خطاب الرفع النهائي'],
     ['finalClosing', 'ختام خطاب الرفع النهائي'],
-    ['generalNotes', 'ملاحظات عامة اختيارية']
+    ['generalNotes', 'ملاحظات عامة اختيارية'],
+    ['customLetterBody', 'الخطاب المخصص — نص الخطاب']
   ];
   var NUM_FIELDS = [
     ['vatRate', 'نسبة الضريبة'],
@@ -92,6 +97,8 @@
       finalOpening: 'نرفق لسعادتكم مستخلص عمالة {hospitalName} عن الفترة الموضحة أدناه، آملين التكرم بالاطلاع واتخاذ اللازم حسب النظام.',
       finalClosing: 'شاكرين ومقدرين تعاونكم،،',
       generalNotes: '',
+      customLetterTitle: 'خطاب مخصص',
+      customLetterBody: '',
       letterheadEnabled: false,
       letterheadMode: 'external',
       letterheadDataUrl: '',
@@ -99,12 +106,12 @@
       contentTopMm: 0,
       blankLines: 0,
       lineHeightMm: LINE_MM,
-      printScale: 85,
+      printScale: DEFAULT_PRINT_SCALE,
       documentSettings: {},
       selectedDocKey: 'fullExtract'
     };
   }
-  function settings() { var stored = readJson(SETTINGS_KEY, {}); var out = Object.assign(defaults(), stored); out.documentSettings = Object.assign({}, stored.documentSettings || {}); if (!out.printScale) out.printScale = 85; return out; }
+  function settings() { var stored = readJson(SETTINGS_KEY, {}); var out = Object.assign(defaults(), stored); out.documentSettings = Object.assign({}, stored.documentSettings || {}); if (!out.printScale) out.printScale = DEFAULT_PRINT_SCALE; return out; }
   function saveSettings(s) { return writeJson(SETTINGS_KEY, Object.assign(defaults(), s || {})); }
   function docSettings(key) { var s = settings(); return Object.assign({ enabled: false, useGlobalLetterhead: true }, (s.documentSettings || {})[key] || {}); }
   function effective(key) {
@@ -112,7 +119,7 @@
     var out = Object.assign({}, s);
     Object.keys(d).forEach(function (k) { if (['enabled', 'useGlobalLetterhead'].includes(k)) return; if (d[k] !== '' && d[k] != null) out[k] = d[k]; });
     if (d.useGlobalLetterhead !== false) ['letterheadEnabled','letterheadMode','letterheadDataUrl','letterheadHeightMm','contentTopMm','blankLines','lineHeightMm','printScale'].forEach(function(k){ out[k]=s[k]; });
-    if (!out.printScale) out.printScale = 85;
+    if (!out.printScale) out.printScale = DEFAULT_PRINT_SCALE;
     return out;
   }
 
@@ -145,16 +152,18 @@
   function calcTotals() { var total = 0, absent = 0, vac = 0, vacant = 0; employees().forEach(function(e){ total += Number(e.salary || e.monthlySalary || e.cost || 0); (e.days || []).forEach(function(d){ if (d === 'غ' || d === 'غ•') absent++; if (d === 'ج') vac++; if (d === 'ش') vacant++; }); }); return { employees: employees().length, totalSalary: total, absent: absent, vacation: vac, vacant: vacant }; }
 
   function replaceVars(txt, eff) { var m = extractMeta(); return String(txt || '').replace(/\{hospitalName\}/g, eff.hospitalName || '').replace(/\{companyName\}/g, eff.companyName || '').replace(/\{start\}/g, m.start || '').replace(/\{end\}/g, m.end || '').replace(/\{paymentNo\}/g, m.paymentNo || ''); }
+  function htmlText(txt, eff) { return esc(replaceVars(txt || '', eff)).replace(/\r?\n/g, '<br>'); }
   function topOffset(eff) { return Number(eff.contentTopMm || 0) + Number(eff.blankLines || 0) * Number(eff.lineHeightMm || LINE_MM); }
   function letterheadCss(eff) {
-    var top = topOffset(eff), scale = Math.max(70, Math.min(130, Number(eff.printScale || 85))), img = eff.letterheadEnabled && eff.letterheadDataUrl ? String(eff.letterheadDataUrl) : '', mode = eff.letterheadMode || 'external', h = Number(eff.letterheadHeightMm || 45);
+    var top = topOffset(eff), scale = Math.max(60, Math.min(130, Number(eff.printScale || DEFAULT_PRINT_SCALE))), img = eff.letterheadEnabled && eff.letterheadDataUrl ? String(eff.letterheadDataUrl) : '', mode = eff.letterheadMode || 'external', h = Number(eff.letterheadHeightMm || 45);
     var before = '';
     if (img && mode === 'full') before = 'body:before{content:"";position:fixed;inset:0;background:url("' + img + '") top center/210mm 297mm no-repeat!important;z-index:-1;pointer-events:none}';
     if (img && mode === 'top') before = 'body:before{content:"";position:fixed;top:0;left:0;right:0;height:' + h + 'mm;background:url("' + img + '") top center/100% ' + h + 'mm no-repeat!important;z-index:999999;pointer-events:none}';
-    return '<style>@page{size:A4;margin:8mm}body{font-family:Tajawal,Arial,sans-serif;direction:rtl;color:#111827;padding-top:' + top + 'mm;zoom:' + scale + '%;-webkit-print-color-adjust:exact;print-color-adjust:exact}' + before + '.page{page-break-after:always;break-after:page;min-height:260mm}.no-print,.action-buttons,.zoom-buttons,.nav-bar,.dialog,.overlay,#particles-js-bg,.std-action-bar{display:none!important}.department-table,.table-container{display:block!important;visibility:visible!important;opacity:1!important}table{border-collapse:collapse!important}.head{text-align:center;border-bottom:2px solid #003087;padding-bottom:8px;margin-bottom:14px}.head h1{font-size:18px;margin:2px}.head h2{font-size:15px;margin:2px}.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}.meta div{border:1px solid #cbd5e1;padding:6px;border-radius:6px;background:#f8fafc}.letter{font-size:15px;line-height:2.1}.sign{margin-top:35px;text-align:left;font-weight:700}.tbl{width:100%;border-collapse:collapse;margin-top:8px}.tbl th,.tbl td{border:1px solid #9ca3af;padding:4px;font-size:10px;text-align:center}.tbl th{background:#e5edf7}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.summary div{background:#eef6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px;text-align:center;font-weight:700}</style>';
+    return '<style>@page{size:A4;margin:8mm}body{font-family:Tajawal,Arial,sans-serif;direction:rtl;color:#111827;padding-top:' + top + 'mm;zoom:' + scale + '%;-webkit-print-color-adjust:exact;print-color-adjust:exact}' + before + '.page{page-break-after:always;break-after:page;min-height:260mm}.no-print,.action-buttons,.zoom-buttons,.nav-bar,.dialog,.overlay,#particles-js-bg,.std-action-bar{display:none!important}.department-table,.table-container{display:block!important;visibility:visible!important;opacity:1!important}table{border-collapse:collapse!important}.head{text-align:center;border-bottom:2px solid #003087;padding-bottom:8px;margin-bottom:14px}.head h1{font-size:18px;margin:2px}.head h2{font-size:15px;margin:2px}.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}.meta div{border:1px solid #cbd5e1;padding:6px;border-radius:6px;background:#f8fafc}.letter{font-size:15px;line-height:2.1}.sign{margin-top:35px;text-align:left;font-weight:700}.tbl{width:100%;border-collapse:collapse;margin-top:8px}.tbl th,.tbl td{border:1px solid #9ca3af;padding:4px;font-size:10px;text-align:center}.tbl th{background:#e5edf7}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.summary div{background:#eef6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px;text-align:center;font-weight:700}.custom-letter-body{min-height:160mm;white-space:normal}</style>';
   }
   function pageHeader(title, eff) { var m = extractMeta(); return '<div class="head"><h1>' + esc(title) + '</h1><h2>' + esc(eff.hospitalName || '') + '</h2></div><div class="meta"><div>دفعة رقم: <b>' + esc(m.paymentNo) + '</b></div><div>من: <b>' + esc(m.start || 'غير محدد') + '</b></div><div>إلى: <b>' + esc(m.end || 'غير محدد') + '</b></div></div>'; }
-  function letterPage(title, body, eff) { return '<section class="page">' + pageHeader(title, eff) + '<div class="letter"><p>' + esc(eff.recipient || '') + ' ' + esc(eff.recipientSuffix || '') + '</p><p><b>الموضوع: ' + esc(eff.subject || title) + '</b></p><p>' + replaceVars(body, eff) + '</p><p>' + esc(eff.generalNotes || '') + '</p><div class="sign">' + esc(eff.managerTitle || '') + '<br><br>' + esc(eff.managerName || '') + '</div></div></section>'; }
+  function letterPage(title, body, eff) { return '<section class="page">' + pageHeader(title, eff) + '<div class="letter"><p>' + esc(eff.recipient || '') + ' ' + esc(eff.recipientSuffix || '') + '</p><p><b>الموضوع: ' + esc(eff.subject || title) + '</b></p><p>' + htmlText(body, eff) + '</p><p>' + esc(eff.generalNotes || '') + '</p><div class="sign">' + esc(eff.managerTitle || '') + '<br><br>' + esc(eff.managerName || '') + '</div></div></section>'; }
+  function customLetterPage(eff) { return '<section class="page">' + pageHeader(eff.customLetterTitle || 'خطاب مخصص', eff) + '<div class="letter custom-letter-body">' + (eff.customLetterBody ? htmlText(eff.customLetterBody, eff) : '&nbsp;') + '</div><div class="sign">' + esc(eff.managerTitle || '') + '<br><br>' + esc(eff.managerName || '') + '</div></section>'; }
   function simpleTable(title, rows, eff) { var body = rows.map(function(e,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(e.name||'')+'</td><td>'+esc(e.jobTitle||'')+'</td><td>'+esc((e.days||[]).join(' '))+'</td></tr>'; }).join('') || '<tr><td colspan="4">لا توجد بيانات</td></tr>'; return '<section class="page">' + pageHeader(title, eff) + '<table class="tbl"><thead><tr><th>م</th><th>الاسم</th><th>الوظيفة</th><th>الحالات</th></tr></thead><tbody>' + body + '</tbody></table></section>'; }
   function salaryPage(eff) { var rows = employees().map(function(e,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(e.name||'')+'</td><td>'+esc(e.jobTitle||'')+'</td><td>'+money(e.salary||e.monthlySalary||0)+'</td></tr>'; }).join(''); return '<section class="page">' + pageHeader('شهادة تسليم الرواتب', eff) + '<p>تشهد الشركة بأنه تم تسليم رواتب العمالة الموضحة أدناه حسب البيانات المتاحة للمستخلص.</p><table class="tbl"><tr><th>م</th><th>الاسم</th><th>الوظيفة</th><th>الراتب</th></tr>' + rows + '</table></section>'; }
   function entitlementPage(eff) { var t = calcTotals(); return '<section class="page">' + pageHeader('بيان استحقاق', eff) + '<div class="summary"><div>عدد العمالة<br>' + t.employees + '</div><div>إجمالي الرواتب<br>' + money(t.totalSalary) + '</div><div>أيام الغياب<br>' + t.absent + '</div><div>الشواغر<br>' + t.vacant + '</div></div></section>'; }
@@ -226,6 +235,7 @@
     if (key === 'vacancies') return simpleTable('بيان الشواغر', vacancyRows(), eff);
     if (key === 'salary') return salaryPage(eff);
     if (key === 'entitlement') return entitlementPage(eff);
+    if (key === 'customLetter') return customLetterPage(eff);
     if (key === 'fullExtract') {
       var order = ['finalRaise','laborRaise','noPrevious','attendance','performanceTable','achievement','vacations','vacancies','salary','entitlement'];
       var html = [];
@@ -263,7 +273,7 @@
   function docCards(group, cls) { return DOCS.filter(function(d){ return d.group === group; }).map(function(d){ return '<div class="hrl-doc-card"><div><b>' + esc(d.label) + '</b><div class="hrl-note">' + (docSettings(d.key).enabled ? 'إعداد مستقل مفعل' : 'يستخدم الإعداد العام') + '</div></div><div>' + btn(d.key, 'طباعة', cls, d.key) + btn('openDoc', 'إعدادات', '', d.key) + '</div></div>'; }).join(''); }
   function renderSettings() { var s = settings(); return '<section id="hrl-settings" class="hrl-panel ' + (UI.settingsOpen ? 'open' : '') + '"><h3>الإعدادات العامة والترويسة</h3><div class="hrl-grid">' + fieldHtml('global', s) + '</div><div class="hrl-row"><label><input type="checkbox" id="hrl-letterhead-enabled" ' + (s.letterheadEnabled ? 'checked' : '') + '> تفعيل الترويسة</label><input type="file" id="hrl-letterhead-file" accept="image/*">' + btn('saveGlobal','حفظ الإعدادات العامة','primary') + btn('export','تصدير','') + '<label class="hrl-btn">استيراد<input hidden type="file" id="hrl-import-file" accept=".json,application/json"></label>' + btn('reset','إعادة ضبط','danger') + '</div></section>'; }
   function renderDocPanel() { var s = settings(), key = s.selectedDocKey || 'fullExtract', d = docSettings(key); return '<section id="hrl-doc-panel" class="hrl-panel ' + (UI.docOpen ? 'open' : '') + '"><h3>إعداد مستقل لكل خطاب</h3><div class="hrl-row"><label class="hrl-field"><span>اختر الخطاب</span><select id="hrl-doc-select">' + DOCS.map(function(x){ return '<option value="' + x.key + '" ' + (x.key === key ? 'selected' : '') + '>' + esc(x.label) + '</option>'; }).join('') + '</select></label><label class="hrl-field"><input type="checkbox" id="hrl-doc-enabled" ' + (d.enabled ? 'checked' : '') + '> تفعيل إعداد مستقل</label><label class="hrl-field"><input type="checkbox" id="hrl-doc-use-global-letterhead" ' + (d.useGlobalLetterhead !== false ? 'checked' : '') + '> استخدام الترويسة العامة</label></div><div class="hrl-grid">' + fieldHtml('doc', d) + '</div><div class="hrl-row">' + btn('saveDoc','حفظ إعداد الخطاب','primary') + btn(key,'تجربة طباعة','cert',key) + '</div></section>'; }
-  function render() { document.getElementById('hospital-letters-clean')?.remove(); css(); var html = '<div id="hospital-letters-clean"><div class="hrl-box"><div class="hrl-head"><div><h2>خطابات رفع عمالة المستشفى</h2><div class="hrl-note">نسخة اختبار مستقلة. الحضور يطبع جداول الصفحة الأصلية بزوم 85، والأداء والإنجاز من صفحاتهما الأصلية.</div></div>' + btn('close','إغلاق','danger') + '</div><div id="hrl-flash"></div><div class="hrl-row">' + btn('toggleSettings','الإعدادات العامة والترويسة','primary') + btn('toggleDoc','إعداد مستقل لكل خطاب','') + '</div>' + renderSettings() + renderDocPanel() + '<section class="hrl-group"><h3>١. مستندات المستخلص</h3>' + docCards('extract','primary') + '</section><section class="hrl-group"><h3>٢. الجداول والشهادات التشغيلية</h3>' + docCards('ops','cert') + '</section><section class="hrl-group"><h3>٣. البيانات والمرفقات</h3>' + docCards('attach','') + '</section></div></div>'; document.body.insertAdjacentHTML('beforeend', html); }
+  function render() { document.getElementById('hospital-letters-clean')?.remove(); css(); var html = '<div id="hospital-letters-clean"><div class="hrl-box"><div class="hrl-head"><div><h2>خطابات رفع عمالة المستشفى</h2><div class="hrl-note">نسخة اختبار مستقلة. الحضور يطبع جداول الصفحة الأصلية، والأداء والإنجاز من صفحاتهما الأصلية. التصغير الافتراضي 72% مطابق لدالة الطباعة المجمعة.</div></div>' + btn('close','إغلاق','danger') + '</div><div id="hrl-flash"></div><div class="hrl-row">' + btn('toggleSettings','الإعدادات العامة والترويسة','primary') + btn('toggleDoc','إعداد مستقل لكل خطاب','') + '</div>' + renderSettings() + renderDocPanel() + '<section class="hrl-group"><h3>١. مستندات المستخلص</h3>' + docCards('extract','primary') + '</section><section class="hrl-group"><h3>٢. الجداول والشهادات التشغيلية</h3>' + docCards('ops','cert') + '</section><section class="hrl-group"><h3>٣. البيانات والمرفقات</h3>' + docCards('attach','') + '</section></div></div>'; document.body.insertAdjacentHTML('beforeend', html); }
 
   document.addEventListener('click', async function(e){ var b = e.target.closest && e.target.closest('#hospital-letters-clean [data-action]'); if (!b) return; e.preventDefault(); var a = b.dataset.action, k = b.dataset.docKey; if (k) { var s = settings(); s.selectedDocKey = k; saveSettings(s); } if (a === 'close') return document.getElementById('hospital-letters-clean')?.remove(); if (a === 'toggleSettings') { UI.settingsOpen = !UI.settingsOpen; return render(); } if (a === 'toggleDoc') { UI.docOpen = !UI.docOpen; return render(); } if (a === 'openDoc') { UI.docOpen = true; return render(); } if (a === 'saveGlobal') return saveGlobal(); if (a === 'saveDoc') return saveDoc(); if (a === 'export') return exportSettings(); if (a === 'reset') { if (confirm('حذف إعدادات خطابات المستشفى؟')) { localStorage.removeItem(SETTINGS_KEY); render(); } return; } if (DOCS.some(function(d){ return d.key === a; })) return printDoc(a); }, true);
   document.addEventListener('change', function(e){ if (e.target && e.target.id === 'hrl-letterhead-file') return uploadHead(e.target.files && e.target.files[0]); if (e.target && e.target.id === 'hrl-import-file') return importSettings(e.target.files && e.target.files[0]); if (e.target && e.target.id === 'hrl-doc-select') { var s = settings(); s.selectedDocKey = e.target.value; saveSettings(s); UI.docOpen = true; render(); } }, true);
@@ -271,5 +281,5 @@
   window.HospitalRaiseLettersCleanV1 = { render: render, settings: settings, printDoc: printDoc, employees: employees, originalAttendancePage: originalAttendancePage, captureOriginalPage: captureOriginalPage };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render); else render();
   setTimeout(render, 700);
-  console.info('[Hospital Raise Letters Clean V1] installed original-print aligned test screen');
+  console.info('[Hospital Raise Letters Clean V1] installed original-print aligned test screen + custom letter');
 })();
