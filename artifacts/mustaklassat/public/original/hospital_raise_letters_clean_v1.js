@@ -2,6 +2,10 @@
 // Hospital Raise Letters Clean V1
 // Scope: attendance.html only, test URL only: ?hospitalLettersClean=1
 // No official button binding. No storage key changes. No attendance save changes.
+// Printing policy:
+// - Attendance uses the original attendance page tables/DOM with print zoom 85%.
+// - Performance and Achievement are captured from their original pages in same-origin iframes.
+// - Raise-letter attachments remain generated inside this clean screen.
 // ===================================================================
 (function () {
   'use strict';
@@ -73,11 +77,10 @@
 
   function defaults() {
     var c = readJson('persistentContractData', {});
-    var e = readJson('persistentExtractData', {});
     return {
       hospitalName: first(localStorage.getItem('hospitalName'), c.hospitalName, c.siteName, 'المستشفى'),
       companyName: first(c.companyName, c.contractorName, localStorage.getItem('companyName'), 'الشركة'),
-      contractName: first(c.contractName, c.scopeName, 'عقد الصيانة والنظافة والتشغيل غير الطبي'),
+      contractName: first(c.contractDetails, c.contractName, c.scopeName, 'عقد الصيانة والنظافة والتشغيل غير الطبي'),
       contractNo: first(c.contractNumber, c.contractNo, ''),
       recipient: 'سعادة / مدير الإدارة المالية',
       recipientSuffix: 'المحترم',
@@ -96,12 +99,12 @@
       contentTopMm: 0,
       blankLines: 0,
       lineHeightMm: LINE_MM,
-      printScale: 100,
+      printScale: 85,
       documentSettings: {},
       selectedDocKey: 'fullExtract'
     };
   }
-  function settings() { var stored = readJson(SETTINGS_KEY, {}); var out = Object.assign(defaults(), stored); out.documentSettings = Object.assign({}, stored.documentSettings || {}); return out; }
+  function settings() { var stored = readJson(SETTINGS_KEY, {}); var out = Object.assign(defaults(), stored); out.documentSettings = Object.assign({}, stored.documentSettings || {}); if (!out.printScale) out.printScale = 85; return out; }
   function saveSettings(s) { return writeJson(SETTINGS_KEY, Object.assign(defaults(), s || {})); }
   function docSettings(key) { var s = settings(); return Object.assign({ enabled: false, useGlobalLetterhead: true }, (s.documentSettings || {})[key] || {}); }
   function effective(key) {
@@ -109,6 +112,7 @@
     var out = Object.assign({}, s);
     Object.keys(d).forEach(function (k) { if (['enabled', 'useGlobalLetterhead'].includes(k)) return; if (d[k] !== '' && d[k] != null) out[k] = d[k]; });
     if (d.useGlobalLetterhead !== false) ['letterheadEnabled','letterheadMode','letterheadDataUrl','letterheadHeightMm','contentTopMm','blankLines','lineHeightMm','printScale'].forEach(function(k){ out[k]=s[k]; });
+    if (!out.printScale) out.printScale = 85;
     return out;
   }
 
@@ -135,52 +139,113 @@
     else Object.keys(data || {}).forEach(function(k){ (Array.isArray(data[k]) ? data[k] : []).forEach(function(e){ out.push(e); }); });
     return out.filter(function(e){ return e && (clean(e.name) || clean(e.jobTitle)); });
   }
-  function daysCount() { var max = 0; employees().forEach(function(e){ if (Array.isArray(e.days)) max = Math.max(max, e.days.length); }); return max || 30; }
-  function statusName(code) { var src = window.STATUS_CODES || {}; return (src[code] && src[code].name) || code || 'ح'; }
-  function countByStatus(codes) { var set = new Set(codes); var n = 0; employees().forEach(function(e){ (e.days || []).forEach(function(d){ if (set.has(d)) n++; }); }); return n; }
   function vacancyRows() { return employees().filter(function(e){ return clean(e.name) === '' || clean(e.name) === 'شاغر' || clean(e.status) === 'شاغر' || (e.days || []).some(function(d){ return d === 'ش'; }); }); }
   function vacationRows() { return employees().filter(function(e){ return (e.days || []).some(function(d){ return d === 'ج'; }); }); }
-
   function money(n) { n = Number(n || 0); return n.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-  function calcTotals() {
-    var total = 0, present = 0, absent = 0, vac = 0, vacant = 0;
-    employees().forEach(function(e){ total += Number(e.salary || e.monthlySalary || e.cost || 0); (e.days || []).forEach(function(d){ if (d === 'ح') present++; if (d === 'غ' || d === 'غ•') absent++; if (d === 'ج') vac++; if (d === 'ش') vacant++; }); });
-    return { employees: employees().length, totalSalary: total, present: present, absent: absent, vacation: vac, vacant: vacant };
-  }
+  function calcTotals() { var total = 0, absent = 0, vac = 0, vacant = 0; employees().forEach(function(e){ total += Number(e.salary || e.monthlySalary || e.cost || 0); (e.days || []).forEach(function(d){ if (d === 'غ' || d === 'غ•') absent++; if (d === 'ج') vac++; if (d === 'ش') vacant++; }); }); return { employees: employees().length, totalSalary: total, absent: absent, vacation: vac, vacant: vacant }; }
 
   function replaceVars(txt, eff) { var m = extractMeta(); return String(txt || '').replace(/\{hospitalName\}/g, eff.hospitalName || '').replace(/\{companyName\}/g, eff.companyName || '').replace(/\{start\}/g, m.start || '').replace(/\{end\}/g, m.end || '').replace(/\{paymentNo\}/g, m.paymentNo || ''); }
   function topOffset(eff) { return Number(eff.contentTopMm || 0) + Number(eff.blankLines || 0) * Number(eff.lineHeightMm || LINE_MM); }
-  function printStyle(eff) {
-    var top = topOffset(eff), scale = Math.max(70, Math.min(130, Number(eff.printScale || 100))) / 100, img = eff.letterheadEnabled && eff.letterheadDataUrl ? String(eff.letterheadDataUrl) : '', mode = eff.letterheadMode || 'external', h = Number(eff.letterheadHeightMm || 45);
+  function letterheadCss(eff) {
+    var top = topOffset(eff), scale = Math.max(70, Math.min(130, Number(eff.printScale || 85))), img = eff.letterheadEnabled && eff.letterheadDataUrl ? String(eff.letterheadDataUrl) : '', mode = eff.letterheadMode || 'external', h = Number(eff.letterheadHeightMm || 45);
     var before = '';
     if (img && mode === 'full') before = 'body:before{content:"";position:fixed;inset:0;background:url("' + img + '") top center/210mm 297mm no-repeat!important;z-index:-1;pointer-events:none}';
     if (img && mode === 'top') before = 'body:before{content:"";position:fixed;top:0;left:0;right:0;height:' + h + 'mm;background:url("' + img + '") top center/100% ' + h + 'mm no-repeat!important;z-index:999999;pointer-events:none}';
-    return '<style>@page{size:A4;margin:12mm}body{font-family:Tajawal,Arial,sans-serif;direction:rtl;color:#111827;padding-top:' + top + 'mm;transform:scale(' + scale + ');transform-origin:top center;-webkit-print-color-adjust:exact;print-color-adjust:exact}' + before + '.page{page-break-after:always;min-height:260mm}.head{text-align:center;border-bottom:2px solid #003087;padding-bottom:8px;margin-bottom:14px}.head h1{font-size:18px;margin:2px}.head h2{font-size:15px;margin:2px}.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}.meta div{border:1px solid #cbd5e1;padding:6px;border-radius:6px;background:#f8fafc}.letter{font-size:15px;line-height:2.1}.sign{margin-top:35px;text-align:left;font-weight:700}.tbl{width:100%;border-collapse:collapse;margin-top:8px}.tbl th,.tbl td{border:1px solid #9ca3af;padding:4px;font-size:10px;text-align:center}.tbl th{background:#e5edf7}.days{font-size:8px;direction:ltr}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.summary div{background:#eef6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px;text-align:center;font-weight:700}.no-print{display:none!important}@media print{button,.no-print{display:none!important}}</style>';
+    return '<style>@page{size:A4;margin:8mm}body{font-family:Tajawal,Arial,sans-serif;direction:rtl;color:#111827;padding-top:' + top + 'mm;zoom:' + scale + '%;-webkit-print-color-adjust:exact;print-color-adjust:exact}' + before + '.page{page-break-after:always;break-after:page;min-height:260mm}.no-print,.action-buttons,.zoom-buttons,.nav-bar,.dialog,.overlay,#particles-js-bg,.std-action-bar{display:none!important}.department-table,.table-container{display:block!important;visibility:visible!important;opacity:1!important}table{border-collapse:collapse!important}.head{text-align:center;border-bottom:2px solid #003087;padding-bottom:8px;margin-bottom:14px}.head h1{font-size:18px;margin:2px}.head h2{font-size:15px;margin:2px}.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}.meta div{border:1px solid #cbd5e1;padding:6px;border-radius:6px;background:#f8fafc}.letter{font-size:15px;line-height:2.1}.sign{margin-top:35px;text-align:left;font-weight:700}.tbl{width:100%;border-collapse:collapse;margin-top:8px}.tbl th,.tbl td{border:1px solid #9ca3af;padding:4px;font-size:10px;text-align:center}.tbl th{background:#e5edf7}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.summary div{background:#eef6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px;text-align:center;font-weight:700}</style>';
   }
   function pageHeader(title, eff) { var m = extractMeta(); return '<div class="head"><h1>' + esc(title) + '</h1><h2>' + esc(eff.hospitalName || '') + '</h2></div><div class="meta"><div>دفعة رقم: <b>' + esc(m.paymentNo) + '</b></div><div>من: <b>' + esc(m.start || 'غير محدد') + '</b></div><div>إلى: <b>' + esc(m.end || 'غير محدد') + '</b></div></div>'; }
   function letterPage(title, body, eff) { return '<section class="page">' + pageHeader(title, eff) + '<div class="letter"><p>' + esc(eff.recipient || '') + ' ' + esc(eff.recipientSuffix || '') + '</p><p><b>الموضوع: ' + esc(eff.subject || title) + '</b></p><p>' + replaceVars(body, eff) + '</p><p>' + esc(eff.generalNotes || '') + '</p><div class="sign">' + esc(eff.managerTitle || '') + '<br><br>' + esc(eff.managerName || '') + '</div></div></section>'; }
-  function attendancePage(eff) { var dc = daysCount(); var rows = employees().map(function(e, i){ var days = (e.days || []).slice(0, dc).map(function(d){ return esc(d || 'ح'); }).join(' '); return '<tr><td>' + (i+1) + '</td><td>' + esc(e.name || '') + '</td><td>' + esc(e.jobTitle || '') + '</td><td class="days">' + days + '</td><td>' + esc(e.nationality || '') + '</td><td>' + esc(e.iqamaId || e.idNumber || '') + '</td></tr>'; }).join(''); return '<section class="page">' + pageHeader('جدول الحضور والانصراف', eff) + '<table class="tbl"><thead><tr><th>م</th><th>الاسم</th><th>الوظيفة</th><th>الأيام</th><th>الجنسية</th><th>رقم الهوية/الإقامة</th></tr></thead><tbody>' + rows + '</tbody></table></section>'; }
-  function performanceTablePage(eff) { var t = calcTotals(); return '<section class="page">' + pageHeader('جدول تقييم الأداء كامل', eff) + '<div class="summary"><div>عدد العمالة<br>' + t.employees + '</div><div>أيام الحضور<br>' + t.present + '</div><div>أيام الغياب<br>' + t.absent + '</div><div>الإجازات<br>' + t.vacation + '</div></div><table class="tbl"><tr><th>البند</th><th>التقييم</th><th>ملاحظات</th></tr><tr><td>الالتزام بالحضور والانصراف</td><td>حسب الجدول</td><td></td></tr><tr><td>تنفيذ الأعمال</td><td>حسب شهادة الأداء</td><td></td></tr><tr><td>الانضباط العام</td><td>حسب بيانات المستخلص</td><td></td></tr></table></section>'; }
-  function certPage(title, text, eff) { return '<section class="page">' + pageHeader(title, eff) + '<div class="letter"><p>' + esc(text) + '</p><div class="sign">' + esc(eff.managerTitle || '') + '<br><br>' + esc(eff.managerName || '') + '</div></div></section>'; }
   function simpleTable(title, rows, eff) { var body = rows.map(function(e,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(e.name||'')+'</td><td>'+esc(e.jobTitle||'')+'</td><td>'+esc((e.days||[]).join(' '))+'</td></tr>'; }).join('') || '<tr><td colspan="4">لا توجد بيانات</td></tr>'; return '<section class="page">' + pageHeader(title, eff) + '<table class="tbl"><thead><tr><th>م</th><th>الاسم</th><th>الوظيفة</th><th>الحالات</th></tr></thead><tbody>' + body + '</tbody></table></section>'; }
   function salaryPage(eff) { var rows = employees().map(function(e,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(e.name||'')+'</td><td>'+esc(e.jobTitle||'')+'</td><td>'+money(e.salary||e.monthlySalary||0)+'</td></tr>'; }).join(''); return '<section class="page">' + pageHeader('شهادة تسليم الرواتب', eff) + '<p>تشهد الشركة بأنه تم تسليم رواتب العمالة الموضحة أدناه حسب البيانات المتاحة للمستخلص.</p><table class="tbl"><tr><th>م</th><th>الاسم</th><th>الوظيفة</th><th>الراتب</th></tr>' + rows + '</table></section>'; }
   function entitlementPage(eff) { var t = calcTotals(); return '<section class="page">' + pageHeader('بيان استحقاق', eff) + '<div class="summary"><div>عدد العمالة<br>' + t.employees + '</div><div>إجمالي الرواتب<br>' + money(t.totalSalary) + '</div><div>أيام الغياب<br>' + t.absent + '</div><div>الشواغر<br>' + t.vacant + '</div></div></section>'; }
-  function buildDoc(key, eff) {
+
+  function cleanClone(root) {
+    if (!root) return '';
+    var clone = root.cloneNode(true);
+    clone.querySelectorAll('script,.no-print,.action-buttons,.zoom-buttons,.nav-bar,.dialog,.overlay,#particles-js-bg,.std-action-bar,button,input[type="button"],input[type="file"]').forEach(function(el){ el.remove(); });
+    clone.querySelectorAll('.department-table,.table-container').forEach(function(el){ el.style.display = 'block'; el.style.visibility = 'visible'; el.style.opacity = '1'; });
+    return clone.outerHTML;
+  }
+  function cloneDocumentStyles(doc) {
+    return Array.prototype.slice.call((doc || document).querySelectorAll('link[rel="stylesheet"],style')).map(function(n){
+      if (n.tagName === 'LINK') return '<link rel="stylesheet" href="' + esc(n.href) + '">';
+      return '<style>' + (n.textContent || '') + '</style>';
+    }).join('\n');
+  }
+  function originalAttendancePage(eff) {
+    try { if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint(); } catch (_) {}
+    try { if (typeof window.renderTables === 'function') window.renderTables(); } catch (_) {}
+    var parts = [];
+    ['.header-info', '.page-contract-info', '.extract-details'].forEach(function(sel){ var el = document.querySelector(sel); if (el) parts.push(cleanClone(el)); });
+    var tables = Array.prototype.slice.call(document.querySelectorAll('.department-table'));
+    if (!tables.length) tables = Array.prototype.slice.call(document.querySelectorAll('.table-container'));
+    if (!tables.length) tables = Array.prototype.slice.call(document.querySelectorAll('table'));
+    tables.forEach(function(t){ parts.push(cleanClone(t)); });
+    var sigs = Array.prototype.slice.call(document.querySelectorAll('.print-signatures'));
+    sigs.forEach(function(s){ parts.push(cleanClone(s)); });
+    if (!parts.length) return letterPage('جدول الحضور والانصراف', 'لم يتم العثور على جداول الحضور الأصلية في الصفحة الحالية.', eff);
+    return '<section class="page original-page original-attendance">' + parts.join('\n') + '</section>';
+  }
+  function wait(ms) { return new Promise(function(resolve){ setTimeout(resolve, ms); }); }
+  function captureOriginalPage(pageName, title) {
+    return new Promise(function(resolve){
+      var iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position:absolute;width:1px;height:1px;left:-9999px;top:-9999px;opacity:0;pointer-events:none;';
+      iframe.src = '/original/' + pageName + '?cleanCapture=1';
+      var done = false;
+      function finish(html) { if (done) return; done = true; try { iframe.remove(); } catch (_) {} resolve(html); }
+      iframe.onload = async function(){
+        try {
+          await wait(1800);
+          var doc = iframe.contentDocument || iframe.contentWindow.document;
+          try { if (iframe.contentWindow.updateContractDataForPrint) iframe.contentWindow.updateContractDataForPrint(); } catch (_) {}
+          try { if (iframe.contentWindow.renderTables) iframe.contentWindow.renderTables(); } catch (_) {}
+          await wait(500);
+          var body = doc.body ? doc.body.cloneNode(true) : null;
+          if (!body) return finish('<section class="page"><h1>' + esc(title) + '</h1><p>تعذر قراءة الصفحة الأصلية.</p></section>');
+          body.querySelectorAll('script,.no-print,.action-buttons,.zoom-buttons,.nav-bar,.dialog,.overlay,#particles-js-bg,.std-action-bar,button,input[type="button"],input[type="file"],select#navigation').forEach(function(el){ el.remove(); });
+          finish('<section class="page original-page original-' + esc(pageName.replace(/\.html/g,'')) + '">' + body.innerHTML + '</section>');
+        } catch (e) {
+          finish('<section class="page"><h1>' + esc(title) + '</h1><p>تعذر تحميل الصفحة الأصلية: ' + esc(e.message || e) + '</p></section>');
+        }
+      };
+      iframe.onerror = function(){ finish('<section class="page"><h1>' + esc(title) + '</h1><p>فشل تحميل الصفحة الأصلية.</p></section>'); };
+      document.body.appendChild(iframe);
+      setTimeout(function(){ finish('<section class="page"><h1>' + esc(title) + '</h1><p>انتهت مهلة تحميل الصفحة الأصلية.</p></section>'); }, 7000);
+    });
+  }
+
+  async function buildDoc(key, eff) {
     if (key === 'finalRaise') return letterPage('خطاب الرفع النهائي', eff.finalOpening + ' ' + eff.finalClosing, eff);
     if (key === 'laborRaise') return letterPage('خطاب الرفع للمستخلص', 'نرفع لسعادتكم مستخلص عمالة {hospitalName} دفعة رقم ({paymentNo}) عن الفترة من {start} إلى {end}.', eff);
     if (key === 'noPrevious') return letterPage('إقرار عدم أسبقية الصرف', 'نقر بأنه لم يسبق صرف مستحقات هذا المستخلص عن الفترة من {start} إلى {end} دفعة رقم ({paymentNo}).', eff);
-    if (key === 'attendance') return attendancePage(eff);
-    if (key === 'performanceTable') return performanceTablePage(eff);
-    if (key === 'performanceCert') return certPage('شهادة الأداء', 'تشهد الجهة المختصة بأن أداء المقاول عن فترة المستخلص تم وفق البيانات والسجلات المرفقة.', eff);
-    if (key === 'achievement') return certPage('شهادة الإنجاز', 'تشهد الجهة المختصة بأنه تم إنجاز الأعمال محل المستخلص حسب البيانات المرفقة.', eff);
+    if (key === 'attendance') return originalAttendancePage(eff);
+    if (key === 'performanceTable' || key === 'performanceCert') return captureOriginalPage('performance.html', 'جداول الأداء / شهادة الأداء');
+    if (key === 'achievement') return captureOriginalPage('achievement.html', 'شهادة الإنجاز');
     if (key === 'vacations') return simpleTable('بيان الإجازات', vacationRows(), eff);
     if (key === 'vacancies') return simpleTable('بيان الشواغر', vacancyRows(), eff);
     if (key === 'salary') return salaryPage(eff);
     if (key === 'entitlement') return entitlementPage(eff);
-    if (key === 'fullExtract') return ['finalRaise','laborRaise','noPrevious','attendance','performanceTable','performanceCert','achievement','vacations','vacancies','salary','entitlement'].map(function(k){ return buildDoc(k, effective(k)); }).join('');
+    if (key === 'fullExtract') {
+      var order = ['finalRaise','laborRaise','noPrevious','attendance','performanceTable','achievement','vacations','vacancies','salary','entitlement'];
+      var html = [];
+      for (var i = 0; i < order.length; i++) html.push(await buildDoc(order[i], effective(order[i])));
+      return html.join('');
+    }
     return '';
   }
-  function printDoc(key) { var eff = effective(key); var html = '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>' + esc(DOCS.find(function(d){return d.key===key;})?.label || key) + '</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">' + printStyle(eff) + '</head><body>' + buildDoc(key, eff) + '<script>setTimeout(function(){window.print()},500)<\/script></body></html>'; var w = window.open('', '_blank', 'width=1200,height=900'); if (!w) return alert('المتصفح منع فتح نافذة الطباعة.'); w.document.open(); w.document.write(html); w.document.close(); }
+  function docLabel(key) { var d = DOCS.find(function(x){ return x.key === key; }); return d ? d.label : key; }
+  async function printDoc(key) {
+    var eff = effective(key);
+    var waitBox = showWait('جاري تجهيز الطباعة الأصلية...');
+    try {
+      var html = '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>' + esc(docLabel(key)) + '</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">' + cloneDocumentStyles(document) + letterheadCss(eff) + '</head><body>' + await buildDoc(key, eff) + '<script>setTimeout(function(){window.print()},700)<\/script></body></html>';
+      var w = window.open('', '_blank', 'width=1200,height=900');
+      if (!w) return alert('المتصفح منع فتح نافذة الطباعة.');
+      w.document.open(); w.document.write(html); w.document.close();
+    } finally { if (waitBox) waitBox.remove(); }
+  }
+  function showWait(text) { var old = document.getElementById('hrl-wait'); if (old) old.remove(); var div = document.createElement('div'); div.id = 'hrl-wait'; div.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:2147483600;display:flex;align-items:center;justify-content:center;font-family:Tajawal,Arial,sans-serif;direction:rtl'; div.innerHTML = '<div style="background:#fff;border-radius:18px;padding:22px 30px;font-weight:950;color:#003087;box-shadow:0 20px 60px rgba(0,0,0,.25)">' + esc(text || 'جاري التجهيز...') + '</div>'; document.body.appendChild(div); return div; }
 
   function input(name, label, type, scope, val) { return '<label class="hrl-field"><span>' + esc(label) + '</span><input type="' + esc(type || 'text') + '" ' + (scope === 'doc' ? 'data-doc-field' : 'data-global-field') + '="' + esc(name) + '" value="' + esc(val == null ? '' : val) + '"></label>'; }
   function area(name, label, scope, val) { return '<label class="hrl-field wide"><span>' + esc(label) + '</span><textarea ' + (scope === 'doc' ? 'data-doc-field' : 'data-global-field') + '="' + esc(name) + '">' + esc(val || '') + '</textarea></label>'; }
@@ -198,13 +263,13 @@
   function docCards(group, cls) { return DOCS.filter(function(d){ return d.group === group; }).map(function(d){ return '<div class="hrl-doc-card"><div><b>' + esc(d.label) + '</b><div class="hrl-note">' + (docSettings(d.key).enabled ? 'إعداد مستقل مفعل' : 'يستخدم الإعداد العام') + '</div></div><div>' + btn(d.key, 'طباعة', cls, d.key) + btn('openDoc', 'إعدادات', '', d.key) + '</div></div>'; }).join(''); }
   function renderSettings() { var s = settings(); return '<section id="hrl-settings" class="hrl-panel ' + (UI.settingsOpen ? 'open' : '') + '"><h3>الإعدادات العامة والترويسة</h3><div class="hrl-grid">' + fieldHtml('global', s) + '</div><div class="hrl-row"><label><input type="checkbox" id="hrl-letterhead-enabled" ' + (s.letterheadEnabled ? 'checked' : '') + '> تفعيل الترويسة</label><input type="file" id="hrl-letterhead-file" accept="image/*">' + btn('saveGlobal','حفظ الإعدادات العامة','primary') + btn('export','تصدير','') + '<label class="hrl-btn">استيراد<input hidden type="file" id="hrl-import-file" accept=".json,application/json"></label>' + btn('reset','إعادة ضبط','danger') + '</div></section>'; }
   function renderDocPanel() { var s = settings(), key = s.selectedDocKey || 'fullExtract', d = docSettings(key); return '<section id="hrl-doc-panel" class="hrl-panel ' + (UI.docOpen ? 'open' : '') + '"><h3>إعداد مستقل لكل خطاب</h3><div class="hrl-row"><label class="hrl-field"><span>اختر الخطاب</span><select id="hrl-doc-select">' + DOCS.map(function(x){ return '<option value="' + x.key + '" ' + (x.key === key ? 'selected' : '') + '>' + esc(x.label) + '</option>'; }).join('') + '</select></label><label class="hrl-field"><input type="checkbox" id="hrl-doc-enabled" ' + (d.enabled ? 'checked' : '') + '> تفعيل إعداد مستقل</label><label class="hrl-field"><input type="checkbox" id="hrl-doc-use-global-letterhead" ' + (d.useGlobalLetterhead !== false ? 'checked' : '') + '> استخدام الترويسة العامة</label></div><div class="hrl-grid">' + fieldHtml('doc', d) + '</div><div class="hrl-row">' + btn('saveDoc','حفظ إعداد الخطاب','primary') + btn(key,'تجربة طباعة','cert',key) + '</div></section>'; }
-  function render() { document.getElementById('hospital-letters-clean')?.remove(); css(); var html = '<div id="hospital-letters-clean"><div class="hrl-box"><div class="hrl-head"><div><h2>خطابات رفع عمالة المستشفى</h2><div class="hrl-note">نسخة اختبار مستقلة بدون ربط رسمي. بدون أقسام.</div></div>' + btn('close','إغلاق','danger') + '</div><div id="hrl-flash"></div><div class="hrl-row">' + btn('toggleSettings','الإعدادات العامة والترويسة','primary') + btn('toggleDoc','إعداد مستقل لكل خطاب','') + '</div>' + renderSettings() + renderDocPanel() + '<section class="hrl-group"><h3>١. مستندات المستخلص</h3>' + docCards('extract','primary') + '</section><section class="hrl-group"><h3>٢. الجداول والشهادات التشغيلية</h3>' + docCards('ops','cert') + '</section><section class="hrl-group"><h3>٣. البيانات والمرفقات</h3>' + docCards('attach','') + '</section></div></div>'; document.body.insertAdjacentHTML('beforeend', html); }
+  function render() { document.getElementById('hospital-letters-clean')?.remove(); css(); var html = '<div id="hospital-letters-clean"><div class="hrl-box"><div class="hrl-head"><div><h2>خطابات رفع عمالة المستشفى</h2><div class="hrl-note">نسخة اختبار مستقلة. الحضور يطبع جداول الصفحة الأصلية بزوم 85، والأداء والإنجاز من صفحاتهما الأصلية.</div></div>' + btn('close','إغلاق','danger') + '</div><div id="hrl-flash"></div><div class="hrl-row">' + btn('toggleSettings','الإعدادات العامة والترويسة','primary') + btn('toggleDoc','إعداد مستقل لكل خطاب','') + '</div>' + renderSettings() + renderDocPanel() + '<section class="hrl-group"><h3>١. مستندات المستخلص</h3>' + docCards('extract','primary') + '</section><section class="hrl-group"><h3>٢. الجداول والشهادات التشغيلية</h3>' + docCards('ops','cert') + '</section><section class="hrl-group"><h3>٣. البيانات والمرفقات</h3>' + docCards('attach','') + '</section></div></div>'; document.body.insertAdjacentHTML('beforeend', html); }
 
-  document.addEventListener('click', function(e){ var b = e.target.closest && e.target.closest('#hospital-letters-clean [data-action]'); if (!b) return; e.preventDefault(); var a = b.dataset.action, k = b.dataset.docKey; if (k) { var s = settings(); s.selectedDocKey = k; saveSettings(s); } if (a === 'close') return document.getElementById('hospital-letters-clean')?.remove(); if (a === 'toggleSettings') { UI.settingsOpen = !UI.settingsOpen; return render(); } if (a === 'toggleDoc') { UI.docOpen = !UI.docOpen; return render(); } if (a === 'openDoc') { UI.docOpen = true; return render(); } if (a === 'saveGlobal') return saveGlobal(); if (a === 'saveDoc') return saveDoc(); if (a === 'export') return exportSettings(); if (a === 'reset') { if (confirm('حذف إعدادات خطابات المستشفى؟')) { localStorage.removeItem(SETTINGS_KEY); render(); } return; } if (DOCS.some(function(d){ return d.key === a; })) return printDoc(a); }, true);
+  document.addEventListener('click', async function(e){ var b = e.target.closest && e.target.closest('#hospital-letters-clean [data-action]'); if (!b) return; e.preventDefault(); var a = b.dataset.action, k = b.dataset.docKey; if (k) { var s = settings(); s.selectedDocKey = k; saveSettings(s); } if (a === 'close') return document.getElementById('hospital-letters-clean')?.remove(); if (a === 'toggleSettings') { UI.settingsOpen = !UI.settingsOpen; return render(); } if (a === 'toggleDoc') { UI.docOpen = !UI.docOpen; return render(); } if (a === 'openDoc') { UI.docOpen = true; return render(); } if (a === 'saveGlobal') return saveGlobal(); if (a === 'saveDoc') return saveDoc(); if (a === 'export') return exportSettings(); if (a === 'reset') { if (confirm('حذف إعدادات خطابات المستشفى؟')) { localStorage.removeItem(SETTINGS_KEY); render(); } return; } if (DOCS.some(function(d){ return d.key === a; })) return printDoc(a); }, true);
   document.addEventListener('change', function(e){ if (e.target && e.target.id === 'hrl-letterhead-file') return uploadHead(e.target.files && e.target.files[0]); if (e.target && e.target.id === 'hrl-import-file') return importSettings(e.target.files && e.target.files[0]); if (e.target && e.target.id === 'hrl-doc-select') { var s = settings(); s.selectedDocKey = e.target.value; saveSettings(s); UI.docOpen = true; render(); } }, true);
 
-  window.HospitalRaiseLettersCleanV1 = { render: render, settings: settings, printDoc: printDoc, employees: employees };
+  window.HospitalRaiseLettersCleanV1 = { render: render, settings: settings, printDoc: printDoc, employees: employees, originalAttendancePage: originalAttendancePage, captureOriginalPage: captureOriginalPage };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render); else render();
   setTimeout(render, 700);
-  console.info('[Hospital Raise Letters Clean V1] installed test screen');
+  console.info('[Hospital Raise Letters Clean V1] installed original-print aligned test screen');
 })();
