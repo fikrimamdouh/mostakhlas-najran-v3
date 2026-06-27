@@ -33,7 +33,7 @@
       document.body.classList.add('hospital-letters-clean-loading');
       var div = document.createElement('div');
       div.id = 'hospital-letters-clean-preload';
-      div.innerHTML = '<div>جاري فتح مركز خطابات المستشفى<br><small style="color:#64748b">نسخة اختبار نهائية</small></div>';
+      div.innerHTML = '<div>جاري فتح مركز خطابات المستشفى<br><small style="color:#64748b">بعد شهادة الإنجاز</small></div>';
       document.body.appendChild(div);
     };
     make();
@@ -44,21 +44,21 @@
   function loadHospitalRaiseLettersCleanIfRequested() {
     try {
       var full = location.pathname + (location.search || '');
-      var isAttendance = /attendance\.html(?:$|[?#])/.test(full) || /original-viewer\?page=attendance\.html/.test(full);
-      var isAdminOffices = /admin_offices_attendance\.html(?:$|[?#])/.test(full) || /original-viewer\?page=admin_offices_attendance\.html/.test(full);
-      if (!isAttendance || isAdminOffices) return;
+      var isAchievement = /achievement\.html(?:$|[?#])/.test(full) || /original-viewer\?page=achievement\.html/.test(full);
+      var isAdminOffices = /admin_offices_/.test(full);
+      if (!isAchievement || isAdminOffices) return;
       if (new URLSearchParams(location.search || '').get('hospitalLettersClean') !== '1') return;
       installHospitalLettersPreloadMask();
       if (document.getElementById('hospital-raise-letters-clean-loader')) return;
       var s = document.createElement('script');
       s.id = 'hospital-raise-letters-clean-loader';
-      s.src = '/original/hospital_raise_letters_final_v1.js?v=20260627_hospital_letters_final_v1';
+      s.src = '/original/hospital_raise_letters_final_v2.js?v=20260627_after_achievement_v2';
       s.defer = true;
-      s.onerror = function () { console.error('[Hospital Raise Letters Final] failed to load'); };
+      s.onerror = function () { console.error('[Hospital Letters After Achievement] failed to load'); };
       document.head.appendChild(s);
-      console.info('[Hospital Raise Letters Final] requested by URL flag');
+      console.info('[Hospital Letters After Achievement] requested by URL flag');
     } catch (e) {
-      console.warn('[Hospital Raise Letters Final] loader failed', e);
+      console.warn('[Hospital Letters After Achievement] loader failed', e);
     }
   }
 
