@@ -1,5 +1,5 @@
 // ===================================================================
-// Settings Contract Fixed Patch — V4
+// Settings Contract Fixed Patch — V5
 // Scope: settings_main.html / original-viewer?page=settings_main.html
 // يثبت بيانات العقد المطلوبة بدون تغيير najran_session + يحمي حفظ بيانات المستخلص.
 // ===================================================================
@@ -7,11 +7,14 @@
   'use strict';
 
   if (!/settings_main\.html|original-viewer\?page=settings_main\.html/.test(location.pathname + location.search)) return;
-  if (window.__SETTINGS_CONTRACT_FIXED_PATCH_V4__) return;
-  window.__SETTINGS_CONTRACT_FIXED_PATCH_V4__ = true;
+  if (window.__SETTINGS_CONTRACT_FIXED_PATCH_V5__) return;
+  window.__SETTINGS_CONTRACT_FIXED_PATCH_V5__ = true;
 
+  var OLD_NAJRAN_GENERAL = 'مستشفى نجران العام القديم';
+  var OLD_NAJRAN_GENERAL_WITH_NURSES = 'مستشفى نجران العام القديم وسكن الممرضات الخارجي';
+  var NEW_NAJRAN_GENERAL_DISPLAY = 'مستشفى غرب نجران للولادة والأطفال والعيادات التخصصية';
   var CANONICAL_OFFICES_SITE = 'المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة';
-  var CONTRACT_DETAILS = 'الصيانة والتشغيل غير الطبي لمواقع (مستشفى الولادة والأطفال ومستشفى نجران العام القديم والمكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات)';
+  var CONTRACT_DETAILS = 'الصيانة والتشغيل غير الطبي لمواقع (مستشفى الولادة والأطفال ومستشفى غرب نجران للولادة والأطفال والعيادات التخصصية والمكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات)';
   var EXTRACT_KEY = 'persistentExtractData';
   var SAFE_EXTRACT_KEY = 'najranExtractDataSafe_v1';
   var SAFE_EXTRACT_TS_KEY = 'najranExtractDataSafe_v1_ts';
@@ -27,7 +30,7 @@
   };
 
   var TARGET_KEYS = [
-    'مستشفى الولادة والأطفال','مستشفى الولاده والاطفال','مستشفى نجران العام القديم','مستشفى نجران العام القديم وسكن الممرضات الخارجي',
+    'مستشفى الولادة والأطفال','مستشفى الولاده والاطفال',OLD_NAJRAN_GENERAL,OLD_NAJRAN_GENERAL_WITH_NURSES,NEW_NAJRAN_GENERAL_DISPLAY,
     CANONICAL_OFFICES_SITE,'المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات','المكاتب الادارية والمرافق الصحية وصيانة واصلاح السيارات',
     'المكاتب الادارية والمرافق الصحية وصيانة واصلاح السيارات والعيادات المتنقلة','المكاتب الإدارية والمرافق الصحية','المكاتب الادارية والمرافق الصحية',
     'صيانة وإصلاح السيارات والعيادات المتنقلة','صيانة واصلاح السيارات والعيادات المتنقلة'
@@ -40,6 +43,11 @@
   function hospitalContractKey(hospitalName) { return 'contractData__h__' + encodeURIComponent(hospitalName || ''); }
   function currentSession() { return readJson('najran_session', {}); }
   function currentHospital() { var s = currentSession(); var p = readJson('persistentContractData', {}); return s.hospital || p.hospitalName || localStorage.getItem('hospitalName') || ''; }
+  function isOldNajranGeneral(hospitalName) {
+    var h = clean(hospitalName);
+    return h === clean(OLD_NAJRAN_GENERAL) || h === clean(OLD_NAJRAN_GENERAL_WITH_NURSES) || h === clean('نجران العام القديم') || h === clean(NEW_NAJRAN_GENERAL_DISPLAY) || h.indexOf('نجران العام القديم') > -1;
+  }
+  function displayHospitalName(hospitalName) { return isOldNajranGeneral(hospitalName) ? NEW_NAJRAN_GENERAL_DISPLAY : hospitalName; }
   function isOldOfficeSplitName(hospitalName) {
     var h = clean(hospitalName);
     return h === clean('المكاتب الإدارية والمرافق الصحية') || h === clean('المكاتب الادارية والمرافق الصحية') ||
@@ -47,11 +55,11 @@
       h === clean('المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات') || h === clean('المكاتب الادارية والمرافق الصحية وصيانة واصلاح السيارات') ||
       h === clean(CANONICAL_OFFICES_SITE) || h.indexOf('المكاتب الاداري') > -1 || h.indexOf('اصلاح السيارات') > -1;
   }
-  function normalizeHospitalName(hospitalName) { return isOldOfficeSplitName(hospitalName) ? CANONICAL_OFFICES_SITE : hospitalName; }
+  function normalizeHospitalName(hospitalName) { return isOldOfficeSplitName(hospitalName) ? CANONICAL_OFFICES_SITE : displayHospitalName(hospitalName); }
   function isTargetHospital(hospitalName) {
     var h = clean(hospitalName);
     if (!h) return false;
-    return TARGET_KEYS.some(function (k) { return clean(k) === h; }) || (h.indexOf('الولاده') > -1 && h.indexOf('الاطفال') > -1) || h.indexOf('نجران العام القديم') > -1 || isOldOfficeSplitName(hospitalName);
+    return TARGET_KEYS.some(function (k) { return clean(k) === h; }) || (h.indexOf('الولاده') > -1 && h.indexOf('الاطفال') > -1) || h.indexOf('نجران العام القديم') > -1 || h.indexOf('غرب نجران') > -1 || isOldOfficeSplitName(hospitalName);
   }
 
   function extractScore(d) {
@@ -113,7 +121,7 @@
     return false;
   }
   function patchExtractSave() {
-    if (typeof window.saveExtractData === 'function' && !window.saveExtractData.__extractPersistenceWrappedV4) {
+    if (typeof window.saveExtractData === 'function' && !window.saveExtractData.__extractPersistenceWrappedV5) {
       var old = window.saveExtractData;
       window.saveExtractData = function () {
         mirrorExtract('before-saveExtractData');
@@ -122,19 +130,19 @@
         setTimeout(function(){ mirrorExtract('after-saveExtractData-late'); }, 800);
         return result;
       };
-      window.saveExtractData.__extractPersistenceWrappedV4 = true;
+      window.saveExtractData.__extractPersistenceWrappedV5 = true;
     }
   }
 
   function patchMaps() {
     try {
-      if (window.HOSPITAL_CONTRACT_MAP) { TARGET_KEYS.forEach(function (key) { window.HOSPITAL_CONTRACT_MAP[key] = Object.assign({}, window.HOSPITAL_CONTRACT_MAP[key] || {}, FIXED); }); window.HOSPITAL_CONTRACT_MAP[CANONICAL_OFFICES_SITE] = Object.assign({}, FIXED); }
-      if (window.HOSPITAL_COMPANY_MAP) { TARGET_KEYS.forEach(function (key) { window.HOSPITAL_COMPANY_MAP[key] = FIXED.companyName; }); window.HOSPITAL_COMPANY_MAP[CANONICAL_OFFICES_SITE] = FIXED.companyName; }
+      if (window.HOSPITAL_CONTRACT_MAP) { TARGET_KEYS.forEach(function (key) { window.HOSPITAL_CONTRACT_MAP[key] = Object.assign({}, window.HOSPITAL_CONTRACT_MAP[key] || {}, FIXED); }); window.HOSPITAL_CONTRACT_MAP[CANONICAL_OFFICES_SITE] = Object.assign({}, FIXED); window.HOSPITAL_CONTRACT_MAP[NEW_NAJRAN_GENERAL_DISPLAY] = Object.assign({}, FIXED); }
+      if (window.HOSPITAL_COMPANY_MAP) { TARGET_KEYS.forEach(function (key) { window.HOSPITAL_COMPANY_MAP[key] = FIXED.companyName; }); window.HOSPITAL_COMPANY_MAP[CANONICAL_OFFICES_SITE] = FIXED.companyName; window.HOSPITAL_COMPANY_MAP[NEW_NAJRAN_GENERAL_DISPLAY] = FIXED.companyName; }
     } catch (_) {}
   }
   function setValue(id, value) { var el = document.getElementById(id); if (!el) return; if (el.type === 'checkbox') el.checked = !!value; else el.value = value || ''; }
   function updateDom(data) {
-    setValue('hospital-name', data.hospitalName || currentHospital()); setValue('contract-details', data.contractDetails || ''); setValue('company-name', data.companyName || '');
+    setValue('hospital-name', displayHospitalName(data.hospitalName || currentHospital())); setValue('contract-details', data.contractDetails || ''); setValue('company-name', data.companyName || '');
     setValue('contract-start-date', data.startDate || ''); setValue('contract-end-date', data.endDate || ''); setValue('contract-value', data.contractValue || ''); setValue('contract-type', data.contractType || 'عقد أساسي');
     try { if (typeof window.toggleDirectPurchase === 'function') window.toggleDirectPurchase(); } catch (_) {}
   }
@@ -147,18 +155,21 @@
     data.hospitalName = normalizeHospitalName(data.hospitalName || canonicalHospitalName);
     if (!isTargetHospital(data.hospitalName)) data.hospitalName = canonicalHospitalName;
     data.contractNumber = FIXED.contractNumber; data.companyName = FIXED.companyName; data.startDate = FIXED.startDate; data.endDate = FIXED.endDate; data.contractType = FIXED.contractType; data.contractValue = FIXED.contractValue; data.contractDetails = FIXED.contractDetails; data._autoHospitalName = data.hospitalName; data._fixedAdditionalRequestContract = true;
+    writeJson(EXTRACT_KEY, normalizeExtract(readJson(EXTRACT_KEY, {})));
     writeJson('persistentContractData', data);
     try { localStorage.setItem('hospitalName', data.hospitalName); localStorage.setItem('companyName', FIXED.companyName); localStorage.setItem('contractNumber', FIXED.contractNumber); } catch (_) {}
     writeJson(hospitalContractKey(data.hospitalName), data);
     if (originalHospitalName && originalHospitalName !== data.hospitalName) writeJson(hospitalContractKey(originalHospitalName), data);
+    if (OLD_NAJRAN_GENERAL && data.hospitalName === NEW_NAJRAN_GENERAL_DISPLAY) writeJson(hospitalContractKey(OLD_NAJRAN_GENERAL), data);
+    if (OLD_NAJRAN_GENERAL_WITH_NURSES && data.hospitalName === NEW_NAJRAN_GENERAL_DISPLAY) writeJson(hospitalContractKey(OLD_NAJRAN_GENERAL_WITH_NURSES), data);
     if (forceDom !== false) updateDom(data);
     return true;
   }
   function wrapFunction(name) {
     var fn = window[name];
-    if (typeof fn !== 'function' || fn.__fixedAdditionalContractWrappedV4) return;
+    if (typeof fn !== 'function' || fn.__fixedAdditionalContractWrappedV5) return;
     window[name] = function () { var result = fn.apply(this, arguments); setTimeout(function () { applyFixedContract(true); restoreExtract(name); patchExtractSave(); }, 30); return result; };
-    window[name].__fixedAdditionalContractWrappedV4 = true;
+    window[name].__fixedAdditionalContractWrappedV5 = true;
   }
   function install() {
     patchMaps();
@@ -173,5 +184,5 @@
   window.addEventListener('beforeunload', function(){ mirrorExtract('beforeunload'); });
   window.ExtractPersistence = { mirror: mirrorExtract, restore: restoreExtract, score: function(){ return { main: extractScore(readJson(EXTRACT_KEY, {})), safe: extractScore(readJson(SAFE_EXTRACT_KEY, {})), mainData: readJson(EXTRACT_KEY, {}), safeData: readJson(SAFE_EXTRACT_KEY, {}) }; } };
 
-  console.info('[Settings Contract Fixed Patch] installed v4 — contract fixed + extract persistence protected');
+  console.info('[Settings Contract Fixed Patch] installed v5 — display alias for West Najran + contract fixed + extract persistence protected');
 })();
