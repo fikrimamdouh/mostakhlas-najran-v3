@@ -33,7 +33,7 @@
       document.body.classList.add('hospital-letters-clean-loading');
       var div = document.createElement('div');
       div.id = 'hospital-letters-clean-preload';
-      div.innerHTML = '<div>جاري فتح مركز خطابات المستشفى<br><small style="color:#64748b">نسخة نظيفة مستقلة</small></div>';
+      div.innerHTML = '<div>جاري فتح مركز خطابات المستشفى<br><small style="color:#64748b">نسخة اختبار نهائية</small></div>';
       document.body.appendChild(div);
     };
     make();
@@ -52,13 +52,13 @@
       if (document.getElementById('hospital-raise-letters-clean-loader')) return;
       var s = document.createElement('script');
       s.id = 'hospital-raise-letters-clean-loader';
-      s.src = '/original/hospital_raise_letters_clean_v1.js?v=20260625_hospital_letters_standalone_v2';
+      s.src = '/original/hospital_raise_letters_final_v1.js?v=20260627_hospital_letters_final_v1';
       s.defer = true;
-      s.onerror = function () { console.error('[Hospital Raise Letters Clean] failed to load'); };
+      s.onerror = function () { console.error('[Hospital Raise Letters Final] failed to load'); };
       document.head.appendChild(s);
-      console.info('[Hospital Raise Letters Clean] requested by URL flag');
+      console.info('[Hospital Raise Letters Final] requested by URL flag');
     } catch (e) {
-      console.warn('[Hospital Raise Letters Clean] loader failed', e);
+      console.warn('[Hospital Raise Letters Final] loader failed', e);
     }
   }
 
