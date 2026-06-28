@@ -21,14 +21,6 @@
     .loading{max-width:720px;margin:40px auto;background:#fff;border:1px solid #dbe4f0;border-radius:18px;box-shadow:0 12px 30px rgba(15,23,42,.08);padding:28px;text-align:center;font-weight:900;color:#003087;}
     body #rl-root{max-width:1200px!important;margin:22px auto!important;position:relative!important;z-index:5!important;}
   </style>
-  <script>
-    (function(){
-      var qs = new URLSearchParams(location.search || '');
-      if (qs.get('hospitalLettersClean') !== '1' || !qs.get('page')) {
-        location.replace('/original/hospital_raise_letters.html?hospitalLettersClean=1&page=achievement.html#hospital-letters-clean');
-      }
-    })();
-  </script>
 </head>
 <body>
   <header class="standalone-header">
@@ -41,13 +33,23 @@
   <div id="letters-host">
     <div class="loading">جاري تحميل مركز خطابات المستشفى...</div>
   </div>
-  <script src="/original/hospital_raise_letters_final_v3.js?v=20260628_standalone_v1"></script>
+  <script>
+    (function(){
+      window.__HOSPITAL_LETTERS_STANDALONE_PAGE__ = true;
+      window.__HOSPITAL_LETTERS_CLEAN_URL__ = '/original/hospital_raise_letters.html';
+      if (!location.search.includes('hospitalLettersClean=1')) {
+        history.replaceState(null, '', '/original/hospital_raise_letters.html?hospitalLettersClean=1&page=achievement.html#hospital-letters-clean');
+      }
+    })();
+  </script>
+  <script src="/original/hospital_raise_letters_final_v3.js?v=20260628_standalone_clean_v2"></script>
   <script>
     window.addEventListener('load', function(){
       setTimeout(function(){
         var root = document.getElementById('rl-root');
         var loading = document.querySelector('.loading');
         if (root && loading) loading.remove();
+        if (root) history.replaceState(null, '', '/original/hospital_raise_letters.html');
         if (!root && loading) loading.textContent = 'تعذر تحميل مركز الخطابات. اعمل تحديث للصفحة.';
       }, 800);
     });
