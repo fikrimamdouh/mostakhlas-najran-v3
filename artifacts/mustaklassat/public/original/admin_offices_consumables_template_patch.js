@@ -70,6 +70,48 @@ if(!status){r.status='نعم';changed=true;}
 if(changed)w(S.subcontractors,rows);
 return changed;
 }
+function addConsumablesButtonStyles(){
+if(document.getElementById('admin-office-consumables-button-polish'))return;
+const css=`
+body .std-action-bar button,
+body .main-action-buttons button,
+body #tables-area .table-header button,
+body #tables-area .back-to-dashboard,
+body #unified-modal .modal-buttons button,
+body #apply-consumables-office-template-btn{
+  color:#fff!important;
+  border:0!important;
+  border-radius:10px!important;
+  font-weight:800!important;
+  box-shadow:0 5px 14px rgba(15,23,42,.18)!important;
+  text-shadow:none!important;
+}
+body #tables-area .back-to-dashboard{background:linear-gradient(135deg,#0f766e,#14b8a6)!important;}
+body #tables-area .btn-print,body .ab-print{background:linear-gradient(135deg,#334155,#0f172a)!important;}
+body #tables-area .btn-manage,body .ab-manage{background:linear-gradient(135deg,#4338ca,#7c3aed)!important;}
+body #tables-area .btn-add-item,body .ab-excel{background:linear-gradient(135deg,#15803d,#22c55e)!important;}
+body #tables-area .btn-remove-item,body .ab-clear{background:linear-gradient(135deg,#b91c1c,#ef4444)!important;}
+body .ab-update{background:linear-gradient(135deg,#0369a1,#0284c7)!important;}
+body .ab-backup{background:linear-gradient(135deg,#b45309,#f97316)!important;}
+body .ab-sig{background:linear-gradient(135deg,#4f46e5,#8b5cf6)!important;}
+body .ab-titles,body #apply-consumables-office-template-btn{background:linear-gradient(135deg,#be185d,#db2777)!important;}
+body #tables-area .btn:hover,
+body .std-action-bar button:hover,
+body .main-action-buttons button:hover{
+  filter:brightness(1.05)!important;
+  transform:translateY(-2px)!important;
+}
+body #tables-area .btn-manage.edit-mode{
+  background:linear-gradient(135deg,#ca8a04,#f59e0b)!important;
+  color:#111827!important;
+}
+@media print{body .std-action-bar button,body .main-action-buttons button,body #tables-area .table-header button,body #tables-area .back-to-dashboard,body #apply-consumables-office-template-btn{display:none!important;}}
+`;
+const st=document.createElement('style');
+st.id='admin-office-consumables-button-polish';
+st.textContent=css;
+document.head.appendChild(st);
+}
 function addButton(){
 const bar=document.querySelector('.main-action-buttons,.std-action-bar');
 if(!bar||document.getElementById('apply-consumables-office-template-btn'))return;
@@ -79,8 +121,8 @@ b.innerHTML='<i class="fas fa-file-contract"></i> تطبيق نموذج مسته
 b.onclick=function(){if(confirm('سيتم تطبيق نموذج مستهلكات المكاتب مع بقاء المعادلات.')){localStorage.removeItem(FLAG);apply();location.reload()}};
 bar.appendChild(b);
 }
-function boot(){addButton();if(!localStorage.getItem(FLAG))apply();if(normalizeSubcontractors())setTimeout(function(){location.reload()},50)}
+function boot(){addConsumablesButtonStyles();addButton();if(!localStorage.getItem(FLAG))apply();if(normalizeSubcontractors())setTimeout(function(){location.reload()},50)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
-setTimeout(addButton,1200);
-console.info('[Admin Offices Consumables Template Patch] installed normalized subcontractors');
+setTimeout(function(){addConsumablesButtonStyles();addButton()},1200);
+console.info('[Admin Offices Consumables Template Patch] installed normalized subcontractors + button polish');
 })();
