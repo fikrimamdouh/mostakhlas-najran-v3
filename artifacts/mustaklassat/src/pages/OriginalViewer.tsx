@@ -146,30 +146,25 @@ export default function OriginalViewer() {
   const moduleKey = getModuleKey(page);
   const isAllowed = isModuleAllowed(moduleKey, allowedModuleKeys, role);
 
-// ✅ بعد
-const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <div className="flex h-screen overflow-hidden" style={{ background: "#f0f4ff" }}>
-      <Sidebar dbUserOverride={dbUser} />
-      <main className="flex-1 overflow-hidden">{children}</main>
-    </div>
+  let content = (
+    <iframe
+      ref={iframeRef}
+      src={`/original/${page}`}
+      className="w-full h-full border-0 block"
+      title={page}
+    />
   );
 
   if (isComingSoon) {
-    return <Wrapper><ComingSoonPage /></Wrapper>;
-  }
-
-  if (!isAllowed && dbUser) {
-    return <Wrapper><UnauthorizedPage /></Wrapper>;
+    content = <ComingSoonPage />;
+  } else if (!isAllowed && dbUser) {
+    content = <UnauthorizedPage />;
   }
 
   return (
-    <Wrapper>
-      <iframe
-        ref={iframeRef}
-        src={`/original/${page}`}
-        className="w-full h-full border-0 block"
-        title={page}
-      />
-    </Wrapper>
+    <div className="flex h-screen overflow-hidden" style={{ background: "#f0f4ff" }}>
+      <Sidebar dbUserOverride={dbUser} />
+      <main className="flex-1 overflow-hidden">{content}</main>
+    </div>
   );
 }
