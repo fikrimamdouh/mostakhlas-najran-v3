@@ -1167,10 +1167,138 @@ function getAttendanceData() {
     };
   }
 }
+function writeDeptCalculatedCostsFromAttendanceData(data) {
+  try {
+    const deptKeys = [
+      'cleaning',
+      'electricity',
+      'agriculture',
+      'civil_works',
+      'mechanical',
+      'security',
+      'laundry',
+      'patient_services',
+      'admin_saudi'
+    ];
 
+    const finesByCategory = typeof ABSENCE_FINES_BY_CATEGORY !== 'undefined'
+      ? ABSENCE_FINES_BY_CATEGORY
+      : {
+          1: { saudi: 500, non_saudi: 500 },
+          2: { saudi: 500, non_saudi: 500 },
+          3: { saudi: 250, non_saudi: 100 },
+          4: { saudi: 180, non_saudi: 80 },
+          5: { saudi: 150, non_saudi: 80 },
+          6: { saudi: 20, non_saudi: 20 },
+          7: { saudi: 10, non_saudi: 10 },
+          default: { saudi: 0, non_saudi: 0 }
+        };
+
+    function readJson(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    function parseLocalDate(str) {
+      if (!str) return null;
+      const parts = String(str).split('-');
+      if (parts.length === 3) return new Date(+parts[0], +parts[1] - 1, +parts[2]);
+      return new Date(str);
+    }
+
+    function getPeriodForCost() {
+      const extractData = readJson('persistentExtractData', {});
+      const startRaw = extractData.extractStart || localStorage.getItem('extractStart');
+      const endRaw = extractData.extractEnd || localStorage.getItem('extractEnd');
+
+      const start = parseLocalDate(startRaw) || new Date();
+      const end = parseLocalDate(endRaw) || new Date(start.getFullYear(), start.getMonth() + 1, 0);
+
+      const daysInMonth = Math.max(1, Math.ceil((end - start) / 86400000) + 1);
+      const totalDaysInMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
+
+      return { daysInMonth, totalDaysInMonth };
+    }
+
+    function calcDept(list, period, contractType, directPurchaseRatio) {
+      let totalCost = 0;
+      let totalDeduction = 0;
+      let totalFine = 0;
+
+      (Array.isArray(list) ? list : []).forEach(emp => {
+        const salary = parseFloat(emp.salary) || 0;
+        const category = emp.category || '1';
+        const nationality = emp.nationality || 'سعودي';
+        const isSaudi = String(nationality).trim() === 'سعودي';
+
+        let adjustedSalary = salary;
+        if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) {
+          adjustedSalary = salary + (salary * directPurchaseRatio / 100);
+        }
+
+        const dailySalary = adjustedSalary / period.totalDaysInMonth;
+        const extractBaseSalary = period.daysInMonth >= period.totalDaysInMonth
+          ? adjustedSalary
+          : dailySalary * period.daysInMonth;
+
+        let days = Array.isArray(emp.days)
+          ? emp.days.slice(0, period.daysInMonth)
+          : Array(period.daysInMonth).fill('ح');
+
+        if (days.length < period.daysInMonth) {
+          days = days.concat(Array(period.daysInMonth - days.length).fill('ح'));
+        }
+
+        let absenceDays = 0;
+        let deductionOnlyDays = 0;
+
+        days.forEach(day => {
+          if (day === 'غ') absenceDays++;
+          else if (day !== 'ح' && day !== 'ت') deductionOnlyDays++;
+        });
+
+        const deduction = (absenceDays + deductionOnlyDays) * dailySalary;
+        const fineConfig = finesByCategory[category] || finesByCategory.default;
+        const absenceFine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
+        const nationalityFine = parseFloat(emp.nationalityFine) || 0;
+
+        totalCost += extractBaseSalary;
+        totalDeduction += deduction;
+        totalFine += absenceFine + nationalityFine;
+      });
+
+      return { totalCost, totalDeduction, totalFine };
+    }
+
+    const contractData = readJson('persistentContractData', {});
+    const contractType = contractData.contractType || localStorage.getItem('contractType') || 'عقد أساسي';
+    const directPurchaseRatio = parseFloat(contractData.directPurchaseRatio || localStorage.getItem('directPurchaseRatio') || 0);
+    const period = getPeriodForCost();
+
+    let finalLaborCost = 0;
+
+    deptKeys.forEach(key => {
+      const result = calcDept(data[key] || [], period, contractType, directPurchaseRatio);
+      const net = result.totalCost - result.totalDeduction - result.totalFine;
+
+      localStorage.setItem('deptCalculatedCost_' + key, result.totalCost.toFixed(2));
+      finalLaborCost += net;
+    });
+
+    localStorage.setItem('finalLaborCost', finalLaborCost.toFixed(2));
+
+  } catch (error) {
+    console.warn('[Attendance] failed to write dept calculated costs:', error);
+  }
+}
 function saveAttendanceData(data) {
   try {
     localStorage.setItem('attendanceData', JSON.stringify(data));
+    writeDeptCalculatedCostsFromAttendanceData(data);
 
     try {
       var totalRows = 0;
