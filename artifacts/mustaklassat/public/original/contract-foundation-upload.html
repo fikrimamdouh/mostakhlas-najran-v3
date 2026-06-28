@@ -277,7 +277,7 @@ async function loadHospitalsFromUsers() {
         opt.value = h; opt.textContent = h;
         grpDb.appendChild(opt);
       });
-      hint.textContent = `✓ تم تحميل ${16 + extra.size} مستشفى — اختر من القائمة`;
+      hint.textContent = `✓ تم تحميل ${ALL_KNOWN.size + extra.size} مستشفى — اختر من القائمة`;
     } else {
       hint.textContent = '✓ جميع المستشفيات المعروفة محملة — اختر من القائمة';
     }
