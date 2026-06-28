@@ -817,7 +817,6 @@ Object.keys(statusCounts).forEach(statusKey => {
                 emp.absencePenalty = fine;
                 emp.totalFine = totalFine;
                 emp.netSalary = netSalary;
-                saveAttendanceData(attendanceData);
 
 // --- START: التعديل المطلوب لحساب التكلفة الصحيحة ---
 deptTotalCost += extractBaseSalary; // اجمع التكلفة المحسوبة حسب أيام المستخلص
