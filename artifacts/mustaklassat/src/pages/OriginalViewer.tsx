@@ -148,11 +148,11 @@ export default function OriginalViewer() {
 
 // ✅ بعد
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
-  <div className="flex h-screen overflow-hidden" style={{ background: "#f0f4ff" }}>
-    <Sidebar dbUserOverride={dbUser} />
-    <main className="flex-1 overflow-hidden">{children}</main>
-  </div>
-);
+    <div className="flex h-screen overflow-hidden" style={{ background: "#f0f4ff" }}>
+      <Sidebar dbUserOverride={dbUser} />
+      <main className="flex-1 overflow-hidden">{children}</main>
+    </div>
+  );
 
   if (isComingSoon) {
     return <Wrapper><ComingSoonPage /></Wrapper>;
@@ -162,17 +162,14 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
     return <Wrapper><UnauthorizedPage /></Wrapper>;
   }
 
-return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "#f0f4ff" }}>
-      <Sidebar dbUserOverride={dbUser} />
-      <main className="flex-1 overflow-hidden">
-        <iframe
-          ref={iframeRef}
-          src={`/original/${page}`}
-          className="w-full h-full border-0 block"
-          title={page}
-        />
-      </main>
-    </div>
+  return (
+    <Wrapper>
+      <iframe
+        ref={iframeRef}
+        src={`/original/${page}`}
+        className="w-full h-full border-0 block"
+        title={page}
+      />
+    </Wrapper>
   );
 }
