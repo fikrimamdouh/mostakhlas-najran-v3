@@ -2,6 +2,24 @@
  * contract_data_connector.js
  * ملف جافاسكريبت موحد لربط بيانات العقد بين صفحة الإعدادات وباقي الصفحات
  */
+(function suppressHospitalLettersAchievementMissingAttendanceAlert(){
+    try {
+        const sig = location.pathname + location.search;
+        const isHospitalLettersMode = /hospitalLettersClean=1/.test(sig) && /achievement\.html|original-viewer\?page=achievement\.html/.test(sig);
+        if (!isHospitalLettersMode || window.__hospitalLettersMissingAttendanceAlertSuppressed) return;
+        window.__hospitalLettersMissingAttendanceAlertSuppressed = true;
+        const nativeAlert = window.alert;
+        window.alert = function(message) {
+            if (String(message || '').indexOf('لا توجد بيانات حضور وانصراف') !== -1) {
+                console.info('[HospitalLetters] تم تجاهل تنبيه شهادة الإنجاز لأن الصفحة مفتوحة بوضع خطابات الرفع فقط.');
+                return;
+            }
+            return nativeAlert.apply(window, arguments);
+        };
+        sessionStorage.setItem('dataMissingAlertShown', 'true');
+    } catch (_) {}
+})();
+
 function initializeContractDisplay(config = {}) {
     const { containerSelector = '.side-data', fields = [
         'hospitalName', 'contractDetails', 'companyName', 'contractType', 
