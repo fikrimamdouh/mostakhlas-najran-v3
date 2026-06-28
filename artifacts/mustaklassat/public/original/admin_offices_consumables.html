@@ -156,9 +156,34 @@
         .data-table tbody tr:hover { background-color: #e9ecef; }
         .data-table tbody tr.selected-row { background-color: var(--secondary-accent) !important; color: white; }
         .data-table tfoot tr { background: #fee08b; color: #a85912; font-size: 16px; font-weight: 800; }
-        .data-table input, .data-table select {
+        .data-table input, .data-table select, .data-table textarea {
             width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 6px;
             font-size: 14px; box-sizing: border-box; text-align: center; background-color: transparent;
+            font-family: 'Tajawal', sans-serif;
+        }
+        .data-table textarea.table-textarea {
+            min-height: 38px;
+            line-height: 1.55;
+            resize: none;
+            overflow: hidden;
+            text-align: right;
+            white-space: normal;
+            word-break: normal;
+            overflow-wrap: anywhere;
+        }
+        #subcontractors-table {
+            table-layout: fixed;
+            min-width: 1250px;
+        }
+        #subcontractors-table th,
+        #subcontractors-table td {
+            overflow-wrap: anywhere;
+            word-break: normal;
+        }
+        #subcontractors-table th:first-child,
+        #subcontractors-table td:first-child {
+            width: 26%;
+            min-width: 260px;
         }
         .data-table .editable-always { background-color: #fff !important; border: 1px solid #ced4da !important; pointer-events: auto !important; }
         .data-table .editable-on-manage {
@@ -166,7 +191,7 @@
             pointer-events: none !important; -webkit-appearance: none; -moz-appearance: none; appearance: none;
         }
         .data-table.edit-mode .editable-on-manage { background-color: #fff !important; border: 1px solid #ced4da !important; pointer-events: auto !important; }
-        .data-table input:focus, .data-table select:focus {
+        .data-table input:focus, .data-table select:focus, .data-table textarea:focus {
             border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.25); outline: none;
         }
         select.status-yes { background-color: var(--status-yes-bg) !important; color: var(--status-yes-text) !important; }
@@ -238,7 +263,7 @@
             }
             .printable-header .print-logo { width: 70px; height: auto; }
             .printable-header .print-title-container { flex-grow: 1; }
-            .data-table input, .data-table select { display: none; }
+            .data-table input, .data-table select, .data-table textarea { display: none; }
             .cell-print-content { display: block !important; }
             .data-table th, .data-table td { border: 1px solid #333 !important; font-size: 8.5pt; padding: 4px; }
             .data-table th { background-color: var(--primary-main) !important; color: white !important; }
@@ -587,6 +612,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return parseFloat(value) || 0;
     };
     const formatNumber = (num) => new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parseNumericValue(num));
+    const escapeHtml = (value) => String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
     const generateUniqueId = (prefix) => `${prefix}_${Date.now()}`;
     // --- ✅✅✅ بداية الكود المضاف لإصلاح الخطأ ✅✅✅ ---
 
@@ -788,7 +819,7 @@ const visitDateSelect = visitDateOptions
             
             
             row.innerHTML = `
-                <td><input type="text" value="${item.name}" data-field="name" class="editable-on-manage"><span class="cell-print-content">${item.name}</span></td>
+                <td class="text-cell"><textarea rows="1" data-field="name" class="editable-on-manage table-textarea" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</textarea><span class="cell-print-content">${escapeHtml(item.name)}</span></td>
                 <td><input type="text" value="${formatNumber(visitValue)}" data-field="visitValue" class="editable-on-manage"><span class="cell-print-content">${formatNumber(visitValue)}</span></td>
                 <td><input type="number" value="${annualVisits}" data-field="annualVisits" class="editable-on-manage"><span class="cell-print-content">${annualVisits}</span></td>
                 <td><select data-field="visitDate" class="editable-always ${visitDateClass}">${visitDateSelect}</select><span class="cell-print-content">${normalizedVisitDate}</span></td>
@@ -799,6 +830,7 @@ const visitDateSelect = visitDateOptions
                 <td><input type="text" value="${formatNumber(damagePenalty)}" data-field="damagePenalty" class="editable-always"><span class="cell-print-content">${formatNumber(damagePenalty)}</span></td>
                 <td class="readonly-cell">${formatNumber(netDue)}</td>
             `;
+            row.querySelectorAll('textarea.table-textarea').forEach(autoGrowTextarea);
         });
         
         const netDueTotal = totals.netDue;
@@ -1194,7 +1226,7 @@ const visitDateSelect = visitDateOptions
             }
             
             // ب. التعامل مع حقول الجداول
-            if (target.tagName !== 'INPUT' && target.tagName !== 'SELECT') return;
+            if (target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.tagName !== 'TEXTAREA') return;
             const tr = target.closest('tr');
             if (!tr) return;
 
@@ -1237,6 +1269,68 @@ const visitDateSelect = visitDateOptions
                     const summaryItem = summaryData.find(item => item.id === itemId);
                     if (summaryItem) summaryItem.name = value;
                 }
+                if (target.tagName === 'TEXTAREA') autoGrowTextarea(target);
+            }
+        });
+
+        document.getElementById('tables-area').addEventListener('change', (e) => {
+            const target = e.target;
+
+            const notesSection = target.closest('.notes-section');
+            if (notesSection && target.classList.contains('notes-checkbox')) {
+                const key = notesSection.dataset.sectionKey;
+                const textarea = notesSection.querySelector('textarea');
+
+                if (!notesData[key]) notesData[key] = {};
+                notesData[key].text = textarea ? textarea.value : '';
+                notesData[key].print = target.checked;
+
+                notesSection.classList.toggle('print-notes-active', target.checked);
+                localStorage.setItem(`notes_data_${DB_VERSION}`, JSON.stringify(notesData));
+                return;
+            }
+
+            if (target.tagName !== 'INPUT' && target.tagName !== 'SELECT' && target.tagName !== 'TEXTAREA') return;
+
+            const tr = target.closest('tr[data-table]');
+            if (!tr) return;
+
+            const tableType = tr.dataset.table;
+            const index = parseInt(tr.dataset.index, 10);
+            const field = target.dataset.field;
+            if (!field || Number.isNaN(index)) return;
+
+            let dataArray;
+            switch (tableType) {
+                case 'subcontractors': dataArray = subcontractorsData; break;
+                case 'performance': dataArray = performanceData; break;
+                case 'water': dataArray = waterData; break;
+                case 'laundry': dataArray = laundryData; break;
+                case 'sewage': dataArray = sewageData; break;
+                case 'summary': dataArray = summaryData; break;
+                default: return;
+            }
+
+            if (!dataArray || !dataArray[index]) return;
+
+            dataArray[index][field] = target.value.replace(/,/g, '');
+
+            if (tableType === 'performance' && field === 'name') {
+                const itemId = dataArray[index].id;
+                const summaryItem = summaryData.find(item => item.id === itemId);
+                if (summaryItem) summaryItem.name = target.value;
+            }
+
+            if (target.tagName === 'TEXTAREA') autoGrowTextarea(target);
+
+            const shouldRecalculate = target.tagName === 'SELECT' ||
+                (tableType === 'subcontractors' && ['visitValue', 'annualVisits', 'delayDays', 'damagePenalty'].includes(field));
+
+            saveAllData();
+            if (shouldRecalculate) {
+                const editTarget = activeEditSession ? tableType : null;
+                renderAllTables();
+                if (editTarget) updateEditSessionUI(editTarget);
             }
         });
     }
@@ -1778,7 +1872,8 @@ function printSingleTable(sectionId) {
 
     const headerContent = getPrintHeaders(sectionKey);
     const tableClone = sectionElement.querySelector('.data-table').cloneNode(true);
-    tableClone.querySelectorAll('input, select').forEach(input => {
+    if (sectionKey === 'subcontractors') tableClone.classList.add('subcontractors-print-table');
+    tableClone.querySelectorAll('input, select, textarea').forEach(input => {
         const cell = input.parentElement;
         const printSpan = cell.querySelector('.cell-print-content');
         if (printSpan) printSpan.style.display = 'block';
@@ -1795,25 +1890,37 @@ function printSingleTable(sectionId) {
         <title>طباعة - ${sectionElement.querySelector('h2')?.textContent || 'جدول'}</title>
         <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
-            @page { size: A4 landscape; margin: 0.75in; } /* صفحات بالعرض مع هوامش أكبر */
+            @page { size: A4 landscape; margin: 6mm; }
             * { box-sizing: border-box; font-family: 'Tajawal', Arial, sans-serif; }
-            html, body { margin: 0; padding: 0; background: #fff; color: #000; direction: rtl; text-align: right; -webkit-print-color-adjust: exact; }
-            .container { max-width: 95%; margin: 0 auto; } /* هوامش داخلية للجدول */
-            .header-table { width: 100%; border-bottom: 2px solid #0056b3; margin-bottom: 15px; direction: rtl; }
+            html, body { width: 100%; margin: 0; padding: 0; background: #fff; color: #000; direction: rtl; text-align: right; -webkit-print-color-adjust: exact; print-color-adjust: exact; overflow: visible; }
+            .container { width: 100%; max-width: 100%; margin: 0 auto; padding: 0; overflow: visible; }
+            .header-table { width: 100%; border-bottom: 2px solid #0056b3; margin-bottom: 10px; direction: rtl; table-layout: fixed; }
             .header-table td { vertical-align: middle; text-align: center; padding: 2px 4px; }
-            .logo { width: 75px; height: auto; }
+            .logo { width: 62px; height: auto; }
             .title-box { text-align: center; }
-            .title-box h1 { font-size: 16pt; margin: 2px; color: #003087; font-weight: 700; }
-            .title-box h2, .title-box h3 { font-size: 12pt; margin: 2px; }
-            .data-table { width: 100%; border-collapse: collapse; font-size: 8pt; table-layout: auto; direction: rtl; }
-            .data-table th, .data-table td { border: 1px solid #333; padding: 6px 8px; text-align: center; vertical-align: middle; white-space: nowrap; }
+            .title-box h1 { font-size: 14pt; margin: 2px; color: #003087; font-weight: 700; }
+            .title-box h2, .title-box h3 { font-size: 10pt; margin: 2px; }
+            .data-table { width: 100%; max-width: 100%; border-collapse: collapse; font-size: 7.2pt; table-layout: fixed; direction: rtl; }
+            .data-table th, .data-table td { border: 1px solid #333; padding: 3px 4px; text-align: center; vertical-align: middle; white-space: normal; overflow-wrap: anywhere; word-break: normal; line-height: 1.25; }
             .data-table th { background-color: #e9ecef !important; font-weight: 700; }
-            .data-table td { font-size: 7.5pt; min-width: 50px; max-width: 180px; text-overflow: ellipsis; }
+            .data-table td { font-size: 7pt; min-width: 0; max-width: none; text-overflow: clip; }
             .data-table tfoot tr { background-color: #fff9e0 !important; font-weight: bold; }
-            .signatures { margin-top: 20px; display: flex; justify-content: space-around; border-top: 1px solid #333; padding-top: 15px; direction: rtl; }
-            .sign-box { text-align: center; font-size: 10pt; width: 24%; font-weight: 500; }
+            .subcontractors-print-table { font-size: 6.4pt; table-layout: fixed; }
+            .subcontractors-print-table th, .subcontractors-print-table td { font-size: 6.4pt; padding: 2.5px 3px; line-height: 1.2; }
+            .subcontractors-print-table th:nth-child(1), .subcontractors-print-table td:nth-child(1) { width: 24%; }
+            .subcontractors-print-table th:nth-child(2), .subcontractors-print-table td:nth-child(2) { width: 10%; }
+            .subcontractors-print-table th:nth-child(3), .subcontractors-print-table td:nth-child(3) { width: 6%; }
+            .subcontractors-print-table th:nth-child(4), .subcontractors-print-table td:nth-child(4) { width: 10%; }
+            .subcontractors-print-table th:nth-child(5), .subcontractors-print-table td:nth-child(5) { width: 10%; }
+            .subcontractors-print-table th:nth-child(6), .subcontractors-print-table td:nth-child(6) { width: 7%; }
+            .subcontractors-print-table th:nth-child(7), .subcontractors-print-table td:nth-child(7) { width: 7%; }
+            .subcontractors-print-table th:nth-child(8), .subcontractors-print-table td:nth-child(8) { width: 10%; }
+            .subcontractors-print-table th:nth-child(9), .subcontractors-print-table td:nth-child(9) { width: 8%; }
+            .subcontractors-print-table th:nth-child(10), .subcontractors-print-table td:nth-child(10) { width: 8%; }
+            .signatures { margin-top: 14px; display: flex; justify-content: space-around; border-top: 1px solid #333; padding-top: 10px; direction: rtl; }
+            .sign-box { text-align: center; font-size: 9pt; width: 24%; font-weight: 500; }
             .sign-box .name-placeholder { min-height: 18px; margin-top: 5px; }
-            .printed-notes { margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; page-break-inside: avoid; text-align: right; direction: rtl; }
+            .printed-notes { margin-top: 14px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; page-break-inside: avoid; text-align: right; direction: rtl; }
             .printed-notes h3 { margin-top: 0; text-align: right; }
         </style>
     </head>
@@ -1883,29 +1990,41 @@ function printAllSections() {
         <title>مستخلص المستهلكات والمكاتب الإدارية</title>
         <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
-            @page { size: A4 landscape; margin: 0.75in; } /* صفحات بالعرض مع هوامش أكبر */
+            @page { size: A4 landscape; margin: 6mm; }
             * { box-sizing: border-box; font-family: 'Tajawal', Arial, sans-serif; }
-            html, body { margin: 0; padding: 0; background: #fff; color: #000; direction: rtl; text-align: right; -webkit-print-color-adjust: exact; }
-            .container { max-width: 95%; margin: 0 auto; } /* هوامش داخلية للجدول */
+            html, body { width: 100%; margin: 0; padding: 0; background: #fff; color: #000; direction: rtl; text-align: right; -webkit-print-color-adjust: exact; print-color-adjust: exact; overflow: visible; }
+            .container { width: 100%; max-width: 100%; margin: 0 auto; padding: 0; overflow: visible; }
+            .header-table { width: 100%; border-bottom: 2px solid #0056b3; margin-bottom: 10px; direction: rtl; table-layout: fixed; }
+            .header-table td { vertical-align: middle; text-align: center; padding: 2px 4px; }
+            .logo { width: 62px; height: auto; }
+            .title-box { text-align: center; }
+            .title-box h1 { font-size: 14pt; margin: 2px; color: #003087; font-weight: 700; }
+            .title-box h2, .title-box h3 { font-size: 10pt; margin: 2px; }
+            .data-table { width: 100%; max-width: 100%; border-collapse: collapse; font-size: 7.2pt; table-layout: fixed; direction: rtl; }
+            .data-table th, .data-table td { border: 1px solid #333; padding: 3px 4px; text-align: center; vertical-align: middle; white-space: normal; overflow-wrap: anywhere; word-break: normal; line-height: 1.25; }
+            .data-table th { background-color: #e9ecef !important; font-weight: 700; }
+            .data-table td { font-size: 7pt; min-width: 0; max-width: none; text-overflow: clip; }
+            .data-table tfoot tr { background-color: #fff9e0 !important; font-weight: bold; }
+            .subcontractors-print-table { font-size: 6.4pt; table-layout: fixed; }
+            .subcontractors-print-table th, .subcontractors-print-table td { font-size: 6.4pt; padding: 2.5px 3px; line-height: 1.2; }
+            .subcontractors-print-table th:nth-child(1), .subcontractors-print-table td:nth-child(1) { width: 24%; }
+            .subcontractors-print-table th:nth-child(2), .subcontractors-print-table td:nth-child(2) { width: 10%; }
+            .subcontractors-print-table th:nth-child(3), .subcontractors-print-table td:nth-child(3) { width: 6%; }
+            .subcontractors-print-table th:nth-child(4), .subcontractors-print-table td:nth-child(4) { width: 10%; }
+            .subcontractors-print-table th:nth-child(5), .subcontractors-print-table td:nth-child(5) { width: 10%; }
+            .subcontractors-print-table th:nth-child(6), .subcontractors-print-table td:nth-child(6) { width: 7%; }
+            .subcontractors-print-table th:nth-child(7), .subcontractors-print-table td:nth-child(7) { width: 7%; }
+            .subcontractors-print-table th:nth-child(8), .subcontractors-print-table td:nth-child(8) { width: 10%; }
+            .subcontractors-print-table th:nth-child(9), .subcontractors-print-table td:nth-child(9) { width: 8%; }
+            .subcontractors-print-table th:nth-child(10), .subcontractors-print-table td:nth-child(10) { width: 8%; }
+            .signatures { margin-top: 14px; display: flex; justify-content: space-around; border-top: 1px solid #333; padding-top: 10px; direction: rtl; }
+            .sign-box { text-align: center; font-size: 9pt; width: 24%; font-weight: 500; }
+            .sign-box .name-placeholder { min-height: 18px; margin-top: 5px; }
+            .printed-notes { margin-top: 14px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; page-break-inside: avoid; text-align: right; direction: rtl; }
+            .printed-notes h3 { margin-top: 0; text-align: right; }
             .page-break { page-break-after: always; }
             .printable-section { page-break-inside: avoid; direction: rtl; }
-            .header-table { width: 100%; border-bottom: 2px solid #0056b3; margin-bottom: 15px; direction: rtl; }
-            .header-table td { vertical-align: middle; text-align: center; padding: 2px 4px; }
-            .logo { width: 75px; height: auto; }
-            .title-box { text-align: center; }
-            .title-box h1 { font-size: 16pt; margin: 2px; color: #003087; font-weight: 700; }
-            .title-box h2, .title-box h3 { font-size: 12pt; margin: 2px; }
-            .data-table { width: 100%; border-collapse: collapse; font-size: 8pt; table-layout: auto; direction: rtl; }
-            .data-table th, .data-table td { border: 1px solid #333; padding: 6px 8px; text-align: center; vertical-align: middle; white-space: nowrap; }
-            .data-table th { background-color: #e9ecef !important; font-weight: 700; }
-            .data-table td { font-size: 7.5pt; min-width: 50px; max-width: 180px; text-overflow: ellipsis; }
-            .data-table tfoot tr { background-color: #fff9e0 !important; font-weight: bold; }
-            .signatures { margin-top: 20px; display: flex; justify-content: space-around; border-top: 1px solid #333; padding-top: 15px; direction: rtl; }
-            .sign-box { text-align: center; font-size: 10pt; width: 24%; font-weight: 500; }
-            .sign-box .name-placeholder { min-height: 18px; margin-top: 5px; }
-            .printed-notes { margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; page-break-inside: avoid; text-align: right; direction: rtl; }
-            .printed-notes h3 { margin-top: 0; text-align: right; }
-            .first-two-pages .data-table th, .first-two-pages .data-table td { font-size: 7.5pt; padding: 6px 10px; }
+            .first-two-pages .data-table th, .first-two-pages .data-table td { font-size: 6.8pt; padding: 3px 4px; }
         </style>
     </head>
     <body>
@@ -1936,7 +2055,8 @@ function printAllSections() {
         }
 
         const tableClone = section.querySelector('.data-table').cloneNode(true);
-        tableClone.querySelectorAll('input, select').forEach(input => {
+        if (sectionKey === 'subcontractors') tableClone.classList.add('subcontractors-print-table');
+        tableClone.querySelectorAll('input, select, textarea').forEach(input => {
             const cell = input.parentElement;
             const printSpan = cell.querySelector('.cell-print-content');
             if (printSpan) printSpan.style.display = 'block';
@@ -2025,7 +2145,7 @@ function printAllSections() {
             }
 
             if (dataArray && dataArray[index] !== undefined) {
-                row.querySelectorAll('input[data-field], select[data-field]').forEach(input => {
+                row.querySelectorAll('input[data-field], select[data-field], textarea[data-field]').forEach(input => {
                     const field = input.dataset.field;
                     const value = input.value.replace(/,/g, ''); // إزالة الفواصل للأرقام
                     dataArray[index][field] = value;
@@ -2124,30 +2244,30 @@ function printAllSections() {
         }
         return finalResult + " لا غير.";
     }
-/**
- * ✅ [جديد] دالة لجعل صناديق الملاحظات تنمو تلقائيًا مع الكتابة.
- */
-function autoGrowTextarea(textarea) {
-    textarea.style.height = 'auto'; // إعادة تعيين الارتفاع أولاً
-    textarea.style.height = (textarea.scrollHeight) + 'px'; // ضبط الارتفاع ليساوي حجم المحتوى
-}
+ /**
+  * ✅ [جديد] دالة لجعل صناديق الملاحظات تنمو تلقائيًا مع الكتابة.
+  */
+ function autoGrowTextarea(textarea) {
+     textarea.style.height = 'auto'; // إعادة تعيين الارتفاع أولاً
+     textarea.style.height = (textarea.scrollHeight) + 'px'; // ضبط الارتفاع ليساوي حجم المحتوى
+ }
 
-    // --- Application Initialization ---
-    function initialize() {
-        createTableSections();
-        setupEventListeners();
-        if (typeof updateContractDisplayData === 'function') {
-            updateContractDisplayData();
-        }
-        renderAllTables();
-        if (typeof SignatureBlock !== 'undefined') {
-            SignatureBlock.init('admin_offices_consumables');
-        }
-    }
+     // --- Application Initialization ---
+     function initialize() {
+         createTableSections();
+         setupEventListeners();
+         if (typeof updateContractDisplayData === 'function') {
+             updateContractDisplayData();
+         }
+         renderAllTables();
+         if (typeof SignatureBlock !== 'undefined') {
+             SignatureBlock.init('admin_offices_consumables');
+         }
+     }
 
-    initialize();
-});
-</script>
+     initialize();
+ });
+ </script>
 
 <script src="/original/signature-block.js"></script>
 <script src="/original/extract-submit.js"></script>
