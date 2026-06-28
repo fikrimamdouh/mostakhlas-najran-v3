@@ -14,6 +14,65 @@
     return true;
   }
 
+  function isHospitalLettersMode() {
+    var sig = String(window.location.pathname + window.location.search + window.location.hash);
+    return sig.indexOf('hospitalLettersClean=1') > -1 && sig.indexOf('achievement.html') > -1;
+  }
+
+  function injectHospitalLettersTopStyle() {
+    if (!isHospitalLettersMode()) return;
+    if (document.getElementById('hospital-letters-force-visible-style')) return;
+
+    try { document.body.classList.add('hospital-letters-mode'); } catch (_) {}
+
+    var st = document.createElement('style');
+    st.id = 'hospital-letters-force-visible-style';
+    st.textContent = [
+      'body.hospital-letters-mode #rl-root{',
+      'position:fixed!important;',
+      'inset:18px 24px!important;',
+      'max-width:1200px!important;',
+      'width:calc(100vw - 48px)!important;',
+      'max-height:calc(100vh - 36px)!important;',
+      'overflow:auto!important;',
+      'margin:0 auto!important;',
+      'z-index:2147483647!important;',
+      '}',
+      'body.hospital-letters-mode #_najran_approve_btn{display:none!important;}'
+    ].join('');
+    document.head.appendChild(st);
+  }
+
+  function hideHospitalLettersOpeningLoader() {
+    if (!isHospitalLettersMode() || !document.body) return;
+    injectHospitalLettersTopStyle();
+
+    var nodes = Array.prototype.slice.call(document.querySelectorAll('body *'));
+    nodes.forEach(function (el) {
+      if (!el || el.id === 'rl-root' || (el.closest && el.closest('#rl-root'))) return;
+      var text = textOf(el);
+      if (
+        text.indexOf('جاري فتح مركز خطابات المستشفى') > -1 ||
+        (text.indexOf('بعد شهادة الإنجاز') > -1 && text.length < 120)
+      ) {
+        try {
+          var target = el;
+          while (
+            target.parentElement &&
+            target.parentElement !== document.body &&
+            textOf(target.parentElement).length < 180 &&
+            target.parentElement.querySelectorAll('*').length < 8
+          ) {
+            target = target.parentElement;
+          }
+          target.style.setProperty('display', 'none', 'important');
+          target.style.setProperty('visibility', 'hidden', 'important');
+          target.setAttribute('data-hospital-letters-loader-hidden', '1');
+        } catch (_) {}
+      }
+    });
+  }
+
   function isSidebarLike(el) {
   if (!el || el.nodeType !== 1) return false;
 
@@ -97,6 +156,12 @@
     setTimeout(cleanupDuplicateSidebars, 150);
     setTimeout(cleanupDuplicateSidebars, 600);
     setTimeout(cleanupDuplicateSidebars, 1500);
+
+    setTimeout(hideHospitalLettersOpeningLoader, 0);
+    setTimeout(hideHospitalLettersOpeningLoader, 150);
+    setTimeout(hideHospitalLettersOpeningLoader, 600);
+    setTimeout(hideHospitalLettersOpeningLoader, 1500);
+    setTimeout(hideHospitalLettersOpeningLoader, 3000);
   }
 
   function installObserver() {
@@ -109,9 +174,11 @@
 
         for (var j = 0; j < m.addedNodes.length; j++) {
           var n = m.addedNodes[j];
+          var nText = textOf(n);
           if (
             isSidebarLike(n) ||
-            (n.querySelector && n.querySelector('[id*="sidebar"],[class*="sidebar"],[class*="drawer"],[class*="mobile-menu"]'))
+            (n.querySelector && n.querySelector('[id*="sidebar"],[class*="sidebar"],[class*="drawer"],[class*="mobile-menu"]')) ||
+            (isHospitalLettersMode() && nText.indexOf('جاري فتح مركز خطابات المستشفى') > -1)
           ) {
             scheduleCleanup();
             return;
@@ -152,5 +219,5 @@
     installObserver();
   }
 
-  console.warn('[HomeSidebarGuard] installed safe duplicate-cleanup only');
+  console.warn('[HomeSidebarGuard] installed safe duplicate-cleanup + hospital letters loader cleanup');
 })();
