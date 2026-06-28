@@ -284,7 +284,64 @@ function syncExtractBanner() {
     });
 }
 
+function isPerformancePage() {
+    return /performance\.html(?:$|[?#])|original-viewer\?page=performance\.html/.test(location.pathname + location.search);
+}
+
+function syncPerformanceAmountsFromCurrentAttendance() {
+    if (!isPerformancePage()) return false;
+    try {
+        const attendanceData = loadFromLocalStorage('attendanceData') || {};
+        if (!attendanceData || typeof attendanceData !== 'object') return false;
+
+        const extractData = loadFromLocalStorage('persistentExtractData') || {};
+        const contractData = loadFromLocalStorage('persistentContractData') || {};
+        const contractType = contractData.contractType || localStorage.getItem('contractType') || 'عقد أساسي';
+        const directPurchaseRatio = parseFloat(contractData.directPurchaseRatio || localStorage.getItem('directPurchaseRatio') || 0) || 0;
+
+        const start = extractData.extractStart ? new Date(extractData.extractStart) : new Date();
+        const end = extractData.extractEnd ? new Date(extractData.extractEnd) : new Date();
+        let daysInExtract = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+        if (!Number.isFinite(daysInExtract) || daysInExtract < 1) daysInExtract = 1;
+        const totalDaysInMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate() || 30;
+
+        const deptKeys = ['cleaning', 'electricity', 'agriculture', 'civil_works', 'mechanical', 'laundry', 'patient_services', 'security', 'admin_saudi'];
+        const totals = {};
+
+        deptKeys.forEach(key => {
+            const rows = Array.isArray(attendanceData[key]) ? attendanceData[key] : [];
+            let total = 0;
+            rows.forEach(emp => {
+                const salary = parseFloat(emp && emp.salary) || 0;
+                let adjustedSalary = salary;
+                if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) {
+                    adjustedSalary = salary + (salary * directPurchaseRatio / 100);
+                }
+                const dailySalary = totalDaysInMonth > 0 ? adjustedSalary / totalDaysInMonth : 0;
+                const extractBaseSalary = daysInExtract >= totalDaysInMonth ? adjustedSalary : dailySalary * daysInExtract;
+                total += extractBaseSalary;
+            });
+            totals[key] = total;
+            localStorage.setItem('deptCalculatedCost_' + key, total.toFixed(2));
+        });
+
+        localStorage.setItem('najran_performance_attendance_sync_stamp', JSON.stringify({
+            at: new Date().toISOString(),
+            source: 'contract_data_connector',
+            totals
+        }));
+
+        return true;
+    } catch (error) {
+        console.warn('[PerformanceSync] failed to sync current attendance amounts', error);
+        return false;
+    }
+}
+
+window.syncPerformanceAmountsFromCurrentAttendance = syncPerformanceAmountsFromCurrentAttendance;
+
 document.addEventListener('DOMContentLoaded', () => {
+    syncPerformanceAmountsFromCurrentAttendance();
     initializeContractDisplay();
     syncExtractBanner();
     forceContractDirectDisplay();
@@ -296,19 +353,29 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.addEventListener('najranCloudPulled', function () {
+    syncPerformanceAmountsFromCurrentAttendance();
     updateContractDisplayData();
     syncExtractBanner();
     forceContractDirectDisplay();
+
+    if (isPerformancePage() && typeof window.updateAllPerformanceData === 'function') {
+        try { window.updateAllPerformanceData(); } catch (_) {}
+    }
 
     setTimeout(forceContractDirectDisplay, 300);
     setTimeout(forceContractDirectDisplay, 1000);
 });
 
 window.addEventListener('storage', function (e) {
-    if (!e || e.key === 'persistentContractData' || e.key === 'persistentExtractData') {
+    if (!e || e.key === 'persistentContractData' || e.key === 'persistentExtractData' || e.key === 'attendanceData') {
+        syncPerformanceAmountsFromCurrentAttendance();
         updateContractDisplayData();
         syncExtractBanner();
         forceContractDirectDisplay();
+
+        if (isPerformancePage() && typeof window.updateAllPerformanceData === 'function') {
+            try { window.updateAllPerformanceData(); } catch (_) {}
+        }
 
         setTimeout(forceContractDirectDisplay, 300);
     }
