@@ -4,14 +4,15 @@
   if (window.__NAJRAN_HOME_SIDEBAR_GUARD__) return;
   window.__NAJRAN_HOME_SIDEBAR_GUARD__ = true;
 
+  var HOSPITAL_LETTERS_STANDALONE_URL = '/original/hospital_raise_letters.html?hospitalLettersClean=1&page=achievement.html#hospital-letters-clean';
+
   function redirectLegacyHospitalLettersRoute() {
     try {
       var sig = String(window.location.pathname + window.location.search + window.location.hash);
       var isOldLettersRoute = sig.indexOf('hospitalLettersClean=1') > -1 && sig.indexOf('achievement.html') > -1 && sig.indexOf('hospital_raise_letters.html') === -1;
       if (!isOldLettersRoute) return false;
-      var target = '/original/hospital_raise_letters.html?hospitalLettersClean=1&page=achievement.html#hospital-letters-clean';
-      console.warn('[HospitalLetters] legacy achievement route redirected to standalone page:', target);
-      window.location.replace(target);
+      console.warn('[HospitalLetters] legacy achievement route redirected to standalone page:', HOSPITAL_LETTERS_STANDALONE_URL);
+      window.location.replace(HOSPITAL_LETTERS_STANDALONE_URL);
       return true;
     } catch (_) {
       return false;
@@ -22,6 +23,46 @@
 
   function textOf(el) {
     return String((el && (el.textContent || el.innerText)) || '').trim();
+  }
+
+  function shouldOpenStandaloneLetters(target) {
+    if (!target || !target.closest) return false;
+    if (target.closest('#rl-root')) return false;
+
+    var text = textOf(target);
+    var href = String(target.getAttribute && (target.getAttribute('href') || target.getAttribute('data-href') || '') || '');
+    var onclick = String(target.getAttribute && (target.getAttribute('onclick') || '') || '');
+    var sig = [text, href, onclick].join(' ');
+
+    if (sig.indexOf('hospital_raise_letters.html') > -1) return false;
+
+    var hasLettersText =
+      sig.indexOf('خطابات') > -1 ||
+      sig.indexOf('خطاب الرفع') > -1 ||
+      sig.indexOf('مركز خطابات') > -1 ||
+      sig.indexOf('hospitalLettersClean') > -1;
+
+    var hasOldRoute =
+      sig.indexOf('achievement.html') > -1 ||
+      sig.indexOf('بعد شهادة الإنجاز') > -1 ||
+      sig.indexOf('بعد شهادة الانجاز') > -1;
+
+    return hasLettersText && (hasOldRoute || sig.indexOf('hospitalLettersClean') > -1);
+  }
+
+  function openStandaloneHospitalLetters(event, target) {
+    try {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+      }
+      console.warn('[HospitalLetters] button click routed to standalone page:', HOSPITAL_LETTERS_STANDALONE_URL, target);
+      window.location.href = HOSPITAL_LETTERS_STANDALONE_URL;
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   function isVisibleEnough(el) {
@@ -108,11 +149,26 @@
     console.warn('[HomeSidebarGuard] duplicate sidebars cleaned:', nodes.length - 1);
   }
 
+  function rewriteLegacyHospitalLettersLinks() {
+    try {
+      Array.prototype.slice.call(document.querySelectorAll('a[href],button,[onclick],[data-href]')).forEach(function (el) {
+        if (!shouldOpenStandaloneLetters(el)) return;
+        if (el.tagName === 'A') el.setAttribute('href', HOSPITAL_LETTERS_STANDALONE_URL);
+        el.setAttribute('data-hospital-letters-standalone-route', '1');
+      });
+    } catch (_) {}
+  }
+
   function scheduleCleanup() {
     setTimeout(cleanupDuplicateSidebars, 0);
     setTimeout(cleanupDuplicateSidebars, 150);
     setTimeout(cleanupDuplicateSidebars, 600);
     setTimeout(cleanupDuplicateSidebars, 1500);
+
+    setTimeout(rewriteLegacyHospitalLettersLinks, 0);
+    setTimeout(rewriteLegacyHospitalLettersLinks, 150);
+    setTimeout(rewriteLegacyHospitalLettersLinks, 600);
+    setTimeout(rewriteLegacyHospitalLettersLinks, 1500);
   }
 
   function installObserver() {
@@ -127,6 +183,7 @@
           var n = m.addedNodes[j];
           if (
             isSidebarLike(n) ||
+            shouldOpenStandaloneLetters(n) ||
             (n.querySelector && n.querySelector('[id*="sidebar"],[class*="sidebar"],[class*="drawer"],[class*="mobile-menu"]'))
           ) {
             scheduleCleanup();
@@ -146,6 +203,11 @@
       : null;
 
     if (!target) return;
+
+    if (shouldOpenStandaloneLetters(target)) {
+      openStandaloneHospitalLetters(e, target);
+      return;
+    }
 
     var text = textOf(target);
 
@@ -168,5 +230,5 @@
     installObserver();
   }
 
-  console.warn('[HomeSidebarGuard] installed safe duplicate-cleanup + standalone hospital letters redirect');
+  console.warn('[HomeSidebarGuard] installed safe duplicate-cleanup + standalone hospital letters button routing');
 })();
