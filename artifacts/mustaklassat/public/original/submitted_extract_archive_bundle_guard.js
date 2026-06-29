@@ -116,11 +116,14 @@
     ];
 
     var adminLabor = [
-      'adminOfficesAttendanceData_v1', 'adminOfficesAttendanceData_v1_localBackup', 'adminOfficesAttendanceData_v1_lastGood',
-      'adminOfficesLaborDataSafe_v2', 'adminOfficesAttendanceData', 'adminOfficeNames_v1', 'adminOfficeAffiliations_v1',
-      'adminOfficesRaiseLettersSettings_v1', 'adminOfficesLetterScopedSettings_v1', 'adminOfficesAbsenceVacationNotes_v1',
-      'adminOfficePerformanceDeductions_v1', 'performanceDeductions', 'performanceData_v4', 'achievementData',
-      'achievementTitles_v1', 'achievementItemNames', 'najran_admin_offices_attendance_done'
+      'adminOfficesAttendanceData_v1', 'adminOfficesAttendanceData_v1_localBackup', 'adminOfficesAttendanceData_v1_localBackup_ts',
+      'adminOfficesAttendanceData_v1_lastGood', 'adminOfficesAttendanceData_v1_lastGood_ts', 'adminOfficesLaborDataSafe_v2',
+      'adminOfficesLaborDataSafe_v2_ts', 'adminOfficesAttendanceData', 'adminOfficeNames_v1', 'adminOfficeAffiliations_v1',
+      'adminOfficesLaborNamesSafe_v2', 'adminOfficesLaborAffiliationsSafe_v2', 'adminOfficesRaiseLettersSettings_v1',
+      'adminOfficesRaiseLettersSettings_v1_backup', 'adminOfficesRaiseLettersSettings_v1_backup_ts', 'adminOfficesLetterScopedSettings_v1',
+      'adminOfficesAbsenceVacationNotes_v1', 'adminOfficePerformanceScores_v1', 'adminOfficePerformanceDeductions_v1',
+      'performanceDeductions', 'performanceData', 'performanceData_v4', 'performanceTotalDeduction', 'performanceTotalDue',
+      'achievementData', 'achievementTitles_v1', 'achievementItemNames', 'najran_admin_offices_attendance_done'
     ];
 
     var adminConsumables = [
@@ -147,11 +150,12 @@
       return common.concat([
         'adminOffice', 'adminOffices', 'admin_offices_', 'healthCenters_Signatures_attendance',
         'healthCenters_Signatures_performance', 'healthCenters_Signatures_achievement',
-        'performance', 'achievement', 'najran_admin_offices_'
+        'performance', 'achievement', 'najran_admin_offices_', 'sb_sigs_admin_offices_', 'sb_prefs_admin_offices_',
+        'sb_sigs_', 'sb_prefs_'
       ]);
     }
-    if (moduleName === 'admin_offices_consumables') return ['adminOffice', 'adminOffices', 'admin_offices_', 'consumables_', 'subcontractors_', 'najran_admin_offices_'];
-    if (moduleName.indexOf('health_centers') === 0) return ['healthCenters', 'health_centers', 'healthCenters_Signatures_', 'najran_health_', 'consumables_'];
+    if (moduleName === 'admin_offices_consumables') return ['adminOffice', 'adminOffices', 'admin_offices_', 'consumables_', 'subcontractors_', 'najran_admin_offices_', 'sb_sigs_', 'sb_prefs_'];
+    if (moduleName.indexOf('health_centers') === 0) return ['healthCenters', 'health_centers', 'healthCenters_Signatures_', 'najran_health_', 'consumables_', 'sb_sigs_', 'sb_prefs_'];
     return common.concat(['consumables_', 'spare_', 'najran_labor_']);
   }
 
@@ -195,14 +199,97 @@
       module: moduleName,
       adminOfficesSites: countObjectKeys(src.adminOfficeNames_v1),
       adminOfficesEmployees: countRows(adminData),
+      adminOfficesPerformanceScores: countObjectKeys(src.adminOfficePerformanceScores_v1),
       adminOfficesPerformanceKeys: countObjectKeys(src.adminOfficePerformanceDeductions_v1 || src.performanceDeductions),
       adminOfficesLettersSettings: !!src.adminOfficesRaiseLettersSettings_v1,
       adminOfficesScopedLettersSettings: !!src.adminOfficesLetterScopedSettings_v1,
+      adminOfficesSignatureKeys: Object.keys(src).filter(function (key) { return key.indexOf('sb_sigs_admin_offices_') === 0; }).length,
       healthCentersEmployees: countRows(healthData),
       normalLaborEmployees: countRows(laborData),
       hasAchievement: hasAny(src, ['achievementData', 'achievementTitles_v1']),
       hasConsumables: hasAny(src, ['admin_offices_consumables_v1.0', 'healthCentersConsumables', 'consumablesTableData', 'mainHospitalConsumables']),
       trackedKeysCount: Object.keys(keyCopies).length
+    };
+  }
+
+  function pickKeysByPrefix(src, prefixes) {
+    var out = {};
+    src = src || {};
+    Object.keys(src).forEach(function (key) {
+      if (prefixes.some(function (p) { return key.indexOf(p) === 0; })) out[key] = src[key];
+    });
+    return out;
+  }
+
+  function buildAdminOfficesUploadSnapshot(moduleName, snapshot, keyCopies, integrity) {
+    if (moduleName !== 'admin_offices_attendance' && moduleName !== 'admin_offices_consumables') return null;
+    var src = Object.assign({}, snapshot || {}, keyCopies || {});
+    var attendance = src.adminOfficesAttendanceData_v1 || src.adminOfficesAttendanceData_v1_localBackup || src.adminOfficesLaborDataSafe_v2 || src.adminOfficesAttendanceData || {};
+    var names = src.adminOfficeNames_v1 || src.adminOfficesLaborNamesSafe_v2 || {};
+    var affiliations = src.adminOfficeAffiliations_v1 || src.adminOfficesLaborAffiliationsSafe_v2 || {};
+    var signatures = pickKeysByPrefix(src, ['sb_sigs_admin_offices_', 'sb_prefs_admin_offices_', 'healthCenters_Signatures_attendance', 'healthCenters_Signatures_performance', 'healthCenters_Signatures_achievement']);
+    var performanceItems = pickKeysByPrefix(src, ['adminOfficePerformanceItems_']);
+    var deptCosts = pickKeysByPrefix(src, ['deptCalculatedCost_', 'dept_']);
+    var achievementKeys = pickKeysByPrefix(src, ['achievement_']);
+    var adminPrefixes = pickKeysByPrefix(src, ['najran_admin_offices_']);
+
+    return {
+      version: 1,
+      createdAt: new Date().toISOString(),
+      sourceModule: moduleName,
+      reviewPage: pageForModule(moduleName),
+      sitesCount: countObjectKeys(names),
+      employeesCount: countRows(attendance),
+      contract: src.persistentContractData || {},
+      period: src.persistentExtractData || {},
+      identity: {
+        companyName: src.companyName || (src.persistentContractData && src.persistentContractData.companyName) || '',
+        contractNumber: src.contractNumber || (src.persistentContractData && src.persistentContractData.contractNumber) || '',
+        hospitalName: src.hospitalName || (src.persistentContractData && src.persistentContractData.hospitalName) || '',
+        paymentNumber: src.paymentNumber || src.extractNumber || (src.persistentExtractData && (src.persistentExtractData.paymentNumber || src.persistentExtractData.extractNumber)) || '',
+        extractStart: src.extractStart || (src.persistentExtractData && src.persistentExtractData.extractStart) || '',
+        extractEnd: src.extractEnd || (src.persistentExtractData && src.persistentExtractData.extractEnd) || ''
+      },
+      sites: names,
+      affiliations: affiliations,
+      attendance: attendance,
+      attendanceBackups: {
+        localBackup: src.adminOfficesAttendanceData_v1_localBackup || {},
+        lastGood: src.adminOfficesAttendanceData_v1_lastGood || {},
+        legacy: src.adminOfficesAttendanceData || {},
+        safe: src.adminOfficesLaborDataSafe_v2 || {}
+      },
+      performance: {
+        scores: src.adminOfficePerformanceScores_v1 || {},
+        deductions: src.adminOfficePerformanceDeductions_v1 || {},
+        legacyDeductions: src.performanceDeductions || {},
+        performanceData: src.performanceData || {},
+        performanceDataV4: src.performanceData_v4 || {},
+        items: performanceItems,
+        totalDeduction: src.performanceTotalDeduction || '',
+        totalDue: src.performanceTotalDue || ''
+      },
+      achievement: {
+        data: src.achievementData || {},
+        titles: src.achievementTitles_v1 || {},
+        itemNames: src.achievementItemNames || {},
+        dynamicKeys: achievementKeys
+      },
+      letters: {
+        settings: src.adminOfficesRaiseLettersSettings_v1 || {},
+        settingsBackup: src.adminOfficesRaiseLettersSettings_v1_backup || {},
+        settingsBackupTs: src.adminOfficesRaiseLettersSettings_v1_backup_ts || '',
+        scopedSettings: src.adminOfficesLetterScopedSettings_v1 || {},
+        absenceVacationNotes: src.adminOfficesAbsenceVacationNotes_v1 || {}
+      },
+      signatures: signatures,
+      totals: {
+        grandNetTotalAdmin: src['grand-net-total-admin'] || '',
+        finalLaborCost: src.finalLaborCost || '',
+        deptCosts: deptCosts
+      },
+      adminFlags: adminPrefixes,
+      integrity: integrity || makeIntegrity(moduleName, snapshot, keyCopies)
     };
   }
 
@@ -215,11 +302,13 @@
     var reviewPage = pageForModule(moduleName, payload.extractType);
     var keyCopies = collectTrackedKeyCopies(moduleName);
     var integrity = makeIntegrity(moduleName, snapshot, keyCopies);
+    var adminOfficesUploadSnapshot = buildAdminOfficesUploadSnapshot(moduleName, snapshot, keyCopies, integrity);
 
     snapshot.__najranSourceModule = moduleName;
     snapshot.__najranReviewPage = reviewPage;
     snapshot.sourceModule = snapshot.sourceModule || moduleName;
     snapshot.reviewPage = snapshot.reviewPage || reviewPage;
+    if (adminOfficesUploadSnapshot) snapshot.__adminOfficesUploadSnapshot_v1 = adminOfficesUploadSnapshot;
 
     snapshot.__submittedExtractArchiveBundle_v1 = {
       version: 1,
@@ -296,7 +385,8 @@
     enrichPayload: enrichPayload,
     detectSourceModule: detectSourceModule,
     pageForModule: pageForModule,
-    collectTrackedKeyCopies: collectTrackedKeyCopies
+    collectTrackedKeyCopies: collectTrackedKeyCopies,
+    buildAdminOfficesUploadSnapshot: buildAdminOfficesUploadSnapshot
   };
 
   console.info('[SubmittedExtractArchiveBundle] installed v1');
