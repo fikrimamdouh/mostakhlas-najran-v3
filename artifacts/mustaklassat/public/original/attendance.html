@@ -1,20 +1,16 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <script>
+  <script>
 (function () {
   var SAFE_ATTENDANCE_GUARD_SRC = '/original/attendance-cloud-refresh-guard.js?v=20260618safe4';
-
   function shouldRewriteAttendanceGuard(node) {
     try {
       if (!node || String(node.tagName || '').toLowerCase() !== 'script') return false;
       var src = node.getAttribute('src') || node.src || '';
       return src.indexOf('attendance-cloud-refresh-guard.js') !== -1;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
-
   function rewriteAttendanceGuard(node) {
     try {
       if (shouldRewriteAttendanceGuard(node)) {
@@ -24,40 +20,87 @@
     } catch (_) {}
     return node;
   }
-
   var originalAppendChild = Node.prototype.appendChild;
-  Node.prototype.appendChild = function (node) {
-    return originalAppendChild.call(this, rewriteAttendanceGuard(node));
-  };
-
+  Node.prototype.appendChild = function (node) { return originalAppendChild.call(this, rewriteAttendanceGuard(node)); };
   var originalInsertBefore = Node.prototype.insertBefore;
-  Node.prototype.insertBefore = function (node, ref) {
-    return originalInsertBefore.call(this, rewriteAttendanceGuard(node), ref);
-  };
+  Node.prototype.insertBefore = function (node, ref) { return originalInsertBefore.call(this, rewriteAttendanceGuard(node), ref); };
 })();
 </script>
-<script src="/original/user-storage-proxy.js"></script>
-    <script src="/original/auth-check.js"></script>
-    <script src="/original/cloud-sync.js"></script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>جدول الحضور والغياب</title>
-    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AAABAAEAAQEAAAEAGAAoAAAAFgAAACgAAAAQAAAAIAAAAAEAGAAAAAAAAAAAAAAA">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-
-<!-- <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script> -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="attendance_contract_info.css">
-    <script src="contract_data_connector.js"></script>
-    <script src="/original/month-context.js"></script>
-    <script src="/original/extract-stepper.js"></script>
-    <script src="/original/audit-tracker.js"></script>
-    <script src="/original/attendance_interactive_v9_corrected.js?v=20260629_restore_attendance_v1"></script>
+  <script src="/original/user-storage-proxy.js"></script>
+  <script src="/original/auth-check.js"></script>
+  <script src="/original/cloud-sync.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>جدول الحضور والغياب</title>
+  <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AAABAAEAAQEAAAEAGAAoAAAAFgAAACgAAAAQAAAAIAAAAAEAGAAAAAAAAAAAAAAA">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="attendance_contract_info.css">
+  <link rel="stylesheet" href="/original/shared-styles.css">
+  <script src="contract_data_connector.js"></script>
+  <script src="/original/month-context.js"></script>
+  <script src="/original/extract-stepper.js"></script>
+  <script src="/original/audit-tracker.js"></script>
+  <style>
+    body{font-family:Tajawal,Arial,sans-serif;background:#f8fafc;color:#111827;margin:0;direction:rtl;overflow-x:auto}
+    .container{padding:18px;min-width:1200px}
+    .page-title{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px 20px;margin-bottom:14px;box-shadow:0 8px 24px rgba(15,23,42,.06)}
+    .page-title h1{margin:0;color:#003087;font-size:24px;font-weight:900}
+    .header-info,.extract-details,.action-buttons{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin:12px 0;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+    .action-buttons button{border:0;border-radius:9px;background:#003087;color:#fff;padding:9px 14px;font-weight:800;cursor:pointer}
+    .department-table{background:#fff;border:1px solid #dbe4f0;border-radius:14px;padding:14px;margin:16px 0;box-shadow:0 8px 22px rgba(15,23,42,.06);overflow-x:auto}
+    .department-table h3{margin:0 0 10px;color:#003087;font-size:18px}
+    table{width:100%;border-collapse:collapse;background:#fff;table-layout:auto}
+    th,td{border:1px solid #d1d5db;padding:5px;text-align:center;vertical-align:middle;white-space:nowrap;font-size:12px}
+    th{background:#eaf1fb;color:#111827;font-weight:900}
+    .total{margin-top:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px}
+    .empty-message{display:none;color:#64748b;padding:8px;text-align:center}
+    .grand-total-professional{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0;padding:12px;background:#eef6ff;border:1px solid #bfdbfe;border-radius:12px}
+    .total-card{background:#fff;border:1px solid #dbeafe;border-radius:10px;padding:10px 12px;min-width:180px;display:flex;gap:8px;align-items:center}
+    .card-content{display:flex;flex-direction:column}.label{font-size:12px;color:#475569}.value{font-size:15px;font-weight:900;color:#003087}
+    .print-only{display:none}
+    @media print{button,.action-buttons,.no-print{display:none!important}.container{padding:0;min-width:0}.department-table{box-shadow:none;border:0;page-break-inside:avoid}th,td{font-size:10px;padding:2px}}
+  </style>
+  <script src="/original/attendance_interactive_v9_corrected.js?v=20260629_restore_attendance_v2"></script>
 </head>
-<body></body>
+<body>
+  <div class="container">
+    <div class="page-title">
+      <h1>جدول الحضور والانصراف</h1>
+      <div id="current-date-time"></div>
+    </div>
+    <div class="header-info">
+      <div>المستشفى: <strong class="hospitalName">غير محدد</strong></div>
+      <div>الشركة: <strong class="companyName">غير محدد</strong></div>
+      <div>العقد: <strong class="contractDetails">غير محدد</strong></div>
+      <div>نوع العقد: <strong class="contractType">غير محدد</strong></div>
+      <div class="directPurchaseContainer">نسبة الشراء المباشر: <strong class="directPurchaseRatio">0</strong>%</div>
+    </div>
+    <div class="extract-details">
+      <div>بداية المستخلص: <strong id="extract-start-date">غير محدد</strong></div>
+      <div>نهاية المستخلص: <strong id="extract-end-date">غير محدد</strong></div>
+      <div>الشهر: <strong id="extract-month">غير محدد</strong></div>
+      <div>السنة: <strong id="extract-year">غير محدد</strong></div>
+    </div>
+    <div class="action-buttons no-print">
+      <button onclick="openManagementPasswordDialog()">إدارة</button>
+      <button onclick="document.getElementById('excel-file-input').click()">تحميل المناصب</button>
+      <button onclick="window.print()">طباعة</button>
+      <input id="excel-file-input" type="file" accept=".xlsx,.xls" style="display:none" onchange="importExcelWithDepartment()">
+    </div>
+    <div id="grand-total-anchor"></div>
+    <div class="department-table"><h3>جدول رقم 1: النظافة</h3><table id="cleaning-table"><thead><tr><th rowspan="2">م</th><th rowspan="2">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2">اسم الموظف</th><th id="cleaning-days-header" colspan="30">الأيام</th><th rowspan="2">التكلفة</th><th rowspan="2">حضور</th><th rowspan="2">غياب</th><th rowspan="2">الحسم</th><th rowspan="2">غرامة الغياب</th><th rowspan="2">الصافي</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة الجنسية</th><th rowspan="2">الإقامة</th></tr><tr id="cleaning-table-header"></tr></thead><tbody id="cleaning-table-body"></tbody></table><div id="cleaning-empty" class="empty-message">لا توجد بيانات</div><div class="total"></div></div>
+    <div class="department-table"><h3>جدول رقم 2: الكهرباء</h3><table id="electricity-table"><thead><tr><th rowspan="2">م</th><th rowspan="2">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2">اسم الموظف</th><th id="electricity-days-header" colspan="30">الأيام</th><th rowspan="2">التكلفة</th><th rowspan="2">حضور</th><th rowspan="2">غياب</th><th rowspan="2">الحسم</th><th rowspan="2">غرامة الغياب</th><th rowspan="2">الصافي</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة الجنسية</th><th rowspan="2">الإقامة</th></tr><tr id="electricity-table-header"></tr></thead><tbody id="electricity-table-body"></tbody></table><div id="electricity-empty" class="empty-message">لا توجد بيانات</div><div class="total"></div></div>
+    <div class="department-table"><h3>جدول رقم 3: الزراعة</h3><table id="agriculture-table"><thead><tr><th rowspan="2">م</th><th rowspan="2">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2">اسم الموظف</th><th id="agriculture-days-header" colspan="30">الأيام</th><th rowspan="2">التكلفة</th><th rowspan="2">حضور</th><th rowspan="2">غياب</th><th rowspan="2">الحسم</th><th rowspan="2">غرامة الغياب</th><th rowspan="2">الصافي</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة الجنسية</th><th rowspan="2">الإقامة</th></tr><tr id="agriculture-table-header"></tr></thead><tbody id="agriculture-table-body"></tbody></table><div id="agriculture-empty" class="empty-message">لا توجد بيانات</div><div class="total"></div></div>
+    <div class="department-table"><h3>جدول رقم 4: الأعمال المدنية</h3><table id="civil-works-table"><thead><tr><th rowspan="2">م</th><th rowspan="2">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2">اسم الموظف</th><th id="civil-works-days-header" colspan="30">الأيام</th><th rowspan="2">التكلفة</th><th rowspan="2">حضور</th><th rowspan="2">غياب</th><th rowspan="2">الحسم</th><th rowspan="2">غرامة الغياب</th><th rowspan="2">الصافي</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة الجنسية</th><th rowspan="2">الإقامة</th></tr><tr id="civil-works-table-header"></tr></thead><tbody id="civil-works-table-body"></tbody></table><div id="civil-works-empty" class="empty-message">لا توجد بيانات</div><div class="total"></div></div>
+    <div class="department-table"><h3>جدول رقم 5: الميكانيكا</h3><table id="mechanical-table"><thead><tr><th rowspan="2">م</th><th rowspan="2">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2">اسم الموظف</th><th id="mechanical-days-header" colspan="30">الأيام</th><th rowspan="2">التكلفة</th><th rowspan="2">حضور</th><th rowspan="2">غياب</th><th rowspan="2">الحسم</th><th rowspan="2">غرامة الغياب</th><th rowspan="2">الصافي</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة الجنسية</th><th rowspan="2">الإقامة</th></tr><tr id="mechanical-table-header"></tr></thead><tbody id="mechanical-table-body"></tbody></table><div id="mechanical-empty" class="empty-message">لا توجد بيانات</div><div class="total"></div></div>
+    <div class="department-table"><h3>جدول رقم 5: الأمن</h3><table id="security-table"><thead><tr><th rowspan="2">م</th><th rowspan="2">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2">اسم الموظف</th><th id="security-days-header" colspan="30">الأيام</th><th rowspan="2">التكلفة</th><th rowspan="2">حضور</th><th rowspan="2">غياب</th><th rowspan="2">الحسم</th><th rowspan="2">غرامة الغياب</th><th rowspan="2">الصافي</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة الجنسية</th><th rowspan="2">الإقامة</th></tr><tr id="security-table-header"></tr></thead><tbody id="security-table-body"></tbody></table><div id="security-empty" class="empty-message">لا توجد بيانات</div><div class="total"></div></div>
+    <div class="department-table"><h3>جدول رقم 6: المغسلة</h3><table id="laundry-table"><thead><tr><th rowspan="2">م</th><th rowspan="2">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2">اسم الموظف</th><th id="laundry-days-header" colspan="30">الأيام</th><th rowspan="2">التكلفة</th><th rowspan="2">حضور</th><th rowspan="2">غياب</th><th rowspan="2">الحسم</th><th rowspan="2">غرامة الغياب</th><th rowspan="2">الصافي</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة الجنسية</th><th rowspan="2">الإقامة</th></tr><tr id="laundry-table-header"></tr></thead><tbody id="laundry-table-body"></tbody></table><div id="laundry-empty" class="empty-message">لا توجد بيانات</div><div class="total"></div></div>
+    <div class="department-table"><h3>جدول رقم 7: خدمات المرضى</h3><table id="patient-services-table"><thead><tr><th rowspan="2">م</th><th rowspan="2">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2">اسم الموظف</th><th id="patient-services-days-header" colspan="30">الأيام</th><th rowspan="2">التكلفة</th><th rowspan="2">حضور</th><th rowspan="2">غياب</th><th rowspan="2">الحسم</th><th rowspan="2">غرامة الغياب</th><th rowspan="2">الصافي</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة الجنسية</th><th rowspan="2">الإقامة</th></tr><tr id="patient-services-table-header"></tr></thead><tbody id="patient-services-table-body"></tbody></table><div id="patient-services-empty" class="empty-message">لا توجد بيانات</div><div class="total"></div></div>
+    <div class="department-table"><h3>جدول رقم 8: الإدارة السعودية</h3><table id="admin-saudi-table"><thead><tr><th rowspan="2">م</th><th rowspan="2">مسمى الوظيفة</th><th rowspan="2">الفئة</th><th rowspan="2">اسم الموظف</th><th id="admin-saudi-days-header" colspan="30">الأيام</th><th rowspan="2">التكلفة</th><th rowspan="2">حضور</th><th rowspan="2">غياب</th><th rowspan="2">الحسم</th><th rowspan="2">غرامة الغياب</th><th rowspan="2">الصافي</th><th rowspan="2">الجنسية</th><th rowspan="2">غرامة الجنسية</th><th rowspan="2">الإقامة</th></tr><tr id="admin-saudi-table-header"></tr></thead><tbody id="admin-saudi-table-body"></tbody></table><div id="admin-saudi-empty" class="empty-message">لا توجد بيانات</div><div class="total"></div></div>
+  </div>
+</body>
 </html>
