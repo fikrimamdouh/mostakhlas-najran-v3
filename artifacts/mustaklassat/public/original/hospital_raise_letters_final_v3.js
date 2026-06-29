@@ -16,9 +16,9 @@ function showFail(){
 function loadEngine(){
   if(window.__HL_ENGINE_V8__)return;
   var s=document.createElement('script');
-  s.src='/original/hospital_raise_letters_engine_v8.js?v=20260628_engine_v8_2';
+  s.src='/original/hospital_raise_letters_engine_v8.js?v=20260629_official_templates_v12';
   s.async=false;
-  s.onload=function(){console.info('[HospitalLetters] engine loaded v8');};
+  s.onload=function(){console.info('[HospitalLetters] engine loaded v8 official templates v12');};
   s.onerror=showFail;
   (document.head||document.documentElement).appendChild(s);
 }
