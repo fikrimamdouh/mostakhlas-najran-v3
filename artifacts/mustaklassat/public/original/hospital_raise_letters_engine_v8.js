@@ -36,7 +36,22 @@ function ttl(s,k,t){var l=L(s,k);return blk('rl-title','<h1>'+E(t)+'</h1>','text
 function to(s,k,x){var l=L(s,k);return x.recipient?blk('rl-recipient','<span>'+E(x.recipient)+'</span><b>'+E(x.suffix)+'</b>','justify-content:'+flexAlign(l.recipientAlign||'right')+';text-align:'+E(l.recipientAlign||'right')+';font-size:'+N(l.recipientFont||16)+'pt;margin-bottom:'+N(l.recipientGap||0)+'mm'):''}
 function greet(s,k){var l=L(s,k),g=P(l.greetingText);return g?blk('rl-greeting',E(g),'text-align:'+E(l.greetingAlign||'center')+';font-size:'+N(l.greetingFont||15)+'pt;margin-bottom:'+N(l.greetingAfter||0)+'mm'):''}
 function bodyBlock(s,k,txt,extra){var l=L(s,k);return blk('rl-body '+(extra||''),String(txt||''),'text-align:'+E(l.bodyAlign||'justify')+';font-size:'+N(l.bodyFont||15)+'pt;line-height:'+N(l.bodyLine||2)+';width:'+N(l.bodyWidth||100)+'%;margin-right:'+N(l.bodyRight||0)+'mm;margin-bottom:'+N(l.bodyAfter||0)+'mm')}
-function pg(s,k,html){var l=L(s,k);return'<section class="page"><div class="letter-content" style="margin-top:'+N(l.top)+'mm;margin-right:'+N(l.right)+'mm;width:'+N(l.width||174)+'mm;text-align:'+E(l.align||'right')+';font-size:'+N(l.font||15)+'pt;line-height:'+N(l.line||1.9)+'">'+html+'</div></section>'}
+function headLayer(s){
+  if(!s.letterheadEnabled||!s.letterheadDataUrl||s.letterheadMode==='external')return'';
+  var cls=s.letterheadMode==='top'?'top':'full';
+  var style='';
+  if(cls==='top')style='height:'+N(s.letterheadHeightMm||45)+'mm';
+  return '<img class="rl-letterhead '+cls+'" src="'+E(s.letterheadDataUrl)+'" style="'+style+'" alt="">';
+}
+
+function pg(s,k,html){
+  var l=L(s,k);
+  return '<section class="page">'+
+    headLayer(s)+
+    '<div class="letter-content" style="margin-top:'+N(l.top)+'mm;margin-right:'+N(l.right)+'mm;width:'+N(l.width||174)+'mm;text-align:'+E(l.align||'right')+';font-size:'+N(l.font||15)+'pt;line-height:'+N(l.line||1.9)+'">'+
+    html+
+    '</div></section>';
+}
 function sig(s,k,items){var l=L(s,k);if(l.signatureEnabled==='no')return'';var cols=Math.max(1,Math.min(3,N(l.signatureColumns)||2));items=items&&items.length?items:[{t:s.engineeringTitle,n:s.engineeringName},{t:s.accountantTitle,n:s.accountantName}];return'<div class="rl-signatures" style="margin-top:'+N(l.sigTop||18)+'mm;grid-template-columns:repeat('+cols+',1fr);font-size:'+N(l.signatureFont||14)+'pt;text-align:'+E(l.signatureAlign||'center')+'">'+items.map(function(x){return'<div><b>'+E(x.t||'')+'</b><br><br><b>'+E(x.n||'')+'</b></div>'}).join('')+'</div>'}
 function amt(s,k){var l=L(s,k);if(l.showTable==='no')return'';var a=AM(s);return'<table class="amt" style="'+tableStyle(l)+'"><thead><tr><th>البيان</th><th>المبلغ</th></tr></thead><tbody><tr><td>المبلغ الصافي الشهري المستحق للمقاول</td><td>'+M(a.net)+'</td></tr><tr><td>ضريبة القيمة المضافة '+N(s.vatRate)+'%</td><td>'+M(a.vat)+'</td></tr><tr><td>الإجمالي</td><td>'+M(a.grand)+'</td></tr><tr><td>فقط وقدره</td><td class="words">'+E(T(a.grand))+'</td></tr></tbody></table>'}
 function tb(s,k,h,rows,empty){var l=L(s,k);return'<table class="tbl" style="'+tableStyle(l)+'"><thead><tr>'+h.map(function(x){return'<th>'+E(x)+'</th>'}).join('')+'</tr></thead><tbody>'+(rows.length?rows.join(''):'<tr><td colspan="'+h.length+'">'+empty+'</td></tr>')+'</tbody></table>'}
@@ -48,8 +63,35 @@ function vacations(s){var k='vacations',x=s.letters[k],v=V(),rows=EM().filter(le
 function saudi(s){var k='saudi',x=s.letters[k],v=V(),all=EM(),vc=all.filter(vac).length,sa=all.filter(saud).length,total=Math.max(all.length,sa+vc),req=N(s.requiredSaudi)||5,act=total?sa*100/total:0,sh=Math.max(0,req-act);var row='<tr><td>'+an(total)+'</td><td>'+an(sa)+'</td><td>'+an(vc)+'</td><td>'+req+'%</td><td>'+act.toFixed(2)+'%</td><td>'+sh.toFixed(2)+'%</td></tr>';return pg(s,k,to(s,k,x)+ttl(s,k,x.title)+greet(s,k)+'<div class="project"><b>'+E(s.contractName)+'</b><br><b>'+E(s.hospitalName)+'</b><br><br>الفترة من : '+D(v.st)+' وحتى '+D(v.en)+'م</div>'+tb(s,k,['عدد الوظائف بالعقد','عدد السعوديين الفعلي','عدد الوظائف الشاغرة','النسبة المطلوبة','نسبة السعوديين الفعلية','نسبة عدم تحقيق السعودة'],[row],'')+sig(s,k))}
 function finalDoc(s){var k='final',x=s.letters[k],v=V(),a=AM(s),l=L(s,k);var table=l.showTable==='no'?'':'<table class="amt" style="'+tableStyle(l)+'"><tbody><tr><td>المستشفى</td><td>'+E(s.hospitalName)+'</td></tr><tr><td>الشركة</td><td>'+E(s.companyName)+'</td></tr><tr><td>الفترة</td><td>من '+D(v.st)+' إلى '+D(v.en)+'</td></tr><tr><td>رقم الدفعة</td><td>'+E(v.pay)+'</td></tr><tr><td>الإجمالي شامل الضريبة</td><td>'+M(a.grand)+'</td></tr><tr><td>فقط وقدره</td><td class="words">'+E(T(a.grand))+'</td></tr></tbody></table>';return pg(s,k,to(s,k,x)+ttl(s,k,x.title)+greet(s,k)+bodyBlock(s,k,E(x.body))+table+bodyBlock(s,k,E(x.close))+sig(s,k,[{t:s.managerTitle,n:s.managerName}]))}
 function build(k,s){if(k==='packet')return['labor','noPrev','salary','vacancies','vacations','saudi','final'].map(function(q){return build(q,s)}).join('');return k==='labor'?labor(s):k==='noPrev'?noPrev(s):k==='salary'?salary(s):k==='vacancies'?vacancies(s):k==='vacations'?vacations(s):k==='saudi'?saudi(s):k==='final'?finalDoc(s):pg(s,'custom',to(s,'custom',s.letters.custom)+ttl(s,'custom',s.letters.custom.title)+greet(s,'custom')+bodyBlock(s,'custom',E(s.customBody||s.letters.custom.body).replace(/\n/g,'<br>'))+sig(s,'custom',[{t:s.managerTitle,n:s.managerName}]))}
-function CSS(s){s=s||C();var top=totalTop(s),sc=printScale(s),img=s.letterheadEnabled&&s.letterheadDataUrl?String(s.letterheadDataUrl):'',mode=s.letterheadMode||'external',h=N(s.letterheadHeightMm)||45,before='';if(img&&mode==='full')before='body:before{content:"";position:fixed;inset:0;background:url("'+img+'") top center/210mm 297mm no-repeat!important;z-index:-1;pointer-events:none}';if(img&&mode==='top')before='body:before{content:"";position:fixed;top:0;left:0;right:0;height:'+h+'mm;background:url("'+img+'") top center/100% '+h+'mm no-repeat!important;z-index:999999;pointer-events:none}';return'<style>@page{size:A4;margin:0}html,body{margin:0;direction:rtl;font-family:Tajawal,Arial,sans-serif;background:#e5e7eb;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{padding-top:'+top+'mm;transform:scale('+sc+');transform-origin:top center}'+before+'.page{width:210mm;min-height:297mm;margin:10mm auto;background:#fff;box-sizing:border-box;padding:22mm 18mm 18mm;page-break-after:always;position:relative;box-shadow:0 10px 30px #0002}.letter-content{font-weight:700;color:#111}.rl-title h1{font-size:inherit;text-align:inherit;text-decoration:none;margin:0;color:#003087;border-bottom:2px solid #003087;padding-bottom:7px}.rl-recipient{display:flex;gap:12mm;white-space:nowrap;font-weight:800}.rl-greeting{font-weight:800}.rl-body{font-weight:700}.date{text-align:right;margin-bottom:12mm;font-weight:700}.project{text-align:center;line-height:1.8;margin:8mm 0}.amt,.tbl{border-collapse:collapse;direction:rtl;background:#fff}.amt th,.amt td,.tbl th,.tbl td{border:1px solid #333;padding:2mm 2.5mm;text-align:center;vertical-align:middle}.amt th,.tbl th{background:#f1f5f9;font-weight:900}.amt th:first-child,.amt td:first-child{text-align:right;width:65%}.amt td:nth-child(2){direction:ltr}.amt .words{direction:rtl;text-align:right;font-size:90%}.rl-signatures{display:grid;gap:20mm;font-weight:800}.stamp{text-align:center;margin-top:12mm;font-size:17pt}@media print{html,body{background:#fff}.page{margin:0;box-shadow:none}.page:last-child{page-break-after:auto}.no-print{display:none!important}}</style>'}
-function htmlDoc(k,s){return'<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>'+E(DOC[k]||'خطابات الرفع')+'</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">'+CSS(s)+'</head><body>'+build(k,s)+'</body></html>'}
+function CSS(s){
+  s=s||C();
+  var top=totalTop(s),sc=printScale(s);
+  return '<style>'+
+  '@page{size:A4;margin:0}'+
+  'html,body{margin:0;direction:rtl;font-family:Tajawal,Arial,sans-serif;background:#e5e7eb;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+  'body{margin:0}'+
+  '.page{width:210mm;height:297mm;margin:10mm auto;background:#fff;box-sizing:border-box;padding:22mm 18mm 18mm;page-break-after:always;position:relative;overflow:hidden;box-shadow:0 10px 30px #0002}'+
+  '.rl-letterhead{position:absolute;left:0;right:0;top:0;width:210mm;z-index:0;pointer-events:none;user-select:none}'+
+  '.rl-letterhead.full{height:297mm;object-fit:fill}'+
+  '.rl-letterhead.top{object-fit:fill}'+
+  '.letter-content{font-weight:700;color:#111;position:relative;z-index:1;padding-top:'+top+'mm;transform:scale('+sc+');transform-origin:top right}'+
+  '.rl-title h1{font-size:inherit;text-align:inherit;text-decoration:none;margin:0;color:#003087;border-bottom:2px solid #003087;padding-bottom:7px}'+
+  '.rl-recipient{display:flex;gap:12mm;white-space:nowrap;font-weight:800}'+
+  '.rl-greeting{font-weight:800}'+
+  '.rl-body{font-weight:700}'+
+  '.date{text-align:right;margin-bottom:12mm;font-weight:700}'+
+  '.project{text-align:center;line-height:1.8;margin:8mm 0}'+
+  '.amt,.tbl{border-collapse:collapse;direction:rtl;background:rgba(255,255,255,.88)}'+
+  '.amt th,.amt td,.tbl th,.tbl td{border:1px solid #333;padding:2mm 2.5mm;text-align:center;vertical-align:middle}'+
+  '.amt th,.tbl th{background:#f1f5f9;font-weight:900}'+
+  '.amt th:first-child,.amt td:first-child{text-align:right;width:65%}'+
+  '.amt td:nth-child(2){direction:ltr}'+
+  '.amt .words{direction:rtl;text-align:right;font-size:90%}'+
+  '.rl-signatures{display:grid;gap:20mm;font-weight:800}'+
+  '.stamp{text-align:center;margin-top:12mm;font-size:17pt}'+
+  '@media print{html,body{background:#fff}.page{margin:0;box-shadow:none}.page:last-child{page-break-after:auto}.no-print{display:none!important}}'+
+  '</style>';
+}  function htmlDoc(k,s){return'<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>'+E(DOC[k]||'خطابات الرفع')+'</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">'+CSS(s)+'</head><body>'+build(k,s)+'</body></html>'}
 function PR(k){var s=C(),w=window.open('','_blank','width=1200,height=900');if(!w)return alert('المتصفح منع فتح نافذة الطباعة');w.document.open();w.document.write(htmlDoc(k,s));w.document.close();setTimeout(function(){try{w.focus();w.print()}catch(e){}},600)}
 function F(p,l,v,t){return'<label><span>'+E(l)+'</span><input data-f="'+p+'" type="'+(t||'text')+'" value="'+E(v||'')+'"></label>'}
 function A(p,l,v){return'<label class="wide"><span>'+E(l)+'</span><textarea data-f="'+p+'">'+E(v||'')+'</textarea></label>'}
