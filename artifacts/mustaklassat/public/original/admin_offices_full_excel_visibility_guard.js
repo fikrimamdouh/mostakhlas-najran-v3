@@ -1,17 +1,35 @@
 // ===================================================================
-// Admin Offices Full Excel Visibility Guard — V2
+// Admin Offices Full Excel Visibility Guard — V3
 // Scope: admin_offices_attendance.html
-// يمنع ظهور "استيراد ملف شامل لكل الأقسام" خارج نافذة Excel فقط.
-// لا يغير منطق الاستيراد. ينظف الظهور الخاطئ فقط.
+// يمنع ظهور "استيراد ملف شامل لكل الأقسام" خارج نافذة Excel النظيفة فقط.
+// لا يغير منطق الاستيراد. ينظف الظهور الخاطئ ويمنع الحقن التلقائي القديم.
 // ===================================================================
 (function () {
   'use strict';
   if (!/admin_offices_attendance\.html(?:$|[?#])|original-viewer\?page=admin_offices_attendance\.html/.test(location.pathname + location.search)) return;
-  if (window.__ADMIN_OFFICES_FULL_EXCEL_VISIBILITY_GUARD_V2__) return;
-  window.__ADMIN_OFFICES_FULL_EXCEL_VISIBILITY_GUARD_V2__ = true;
+  if (window.__ADMIN_OFFICES_FULL_EXCEL_VISIBILITY_GUARD_V3__) return;
+  window.__ADMIN_OFFICES_FULL_EXCEL_VISIBILITY_GUARD_V3__ = true;
 
   function clean(v) {
     return String(v || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function removeNode(el) {
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+  }
+
+  function closestLeakedBlock(el) {
+    if (!el) return null;
+    return el.closest(
+      '#admin-offices-full-excel-section,' +
+      '.admin-offices-full-excel-section,' +
+      '[data-admin-offices-full-excel],' +
+      '.excel-clean-card,' +
+      'fieldset,' +
+      '.section-box,' +
+      '.form-section,' +
+      '.card'
+    ) || el;
   }
 
   function managementDialog() {
@@ -21,100 +39,54 @@
   function isVisible(el) {
     if (!el) return false;
     var style = window.getComputedStyle ? getComputedStyle(el) : null;
-    return !style || (style.display !== 'none' && style.visibility !== 'hidden');
+    return !!(!style || (style.display !== 'none' && style.visibility !== 'hidden'));
   }
 
-  function isExcelImportDialog() {
+  function isCleanExcelDialog() {
     var dlg = managementDialog();
     if (!dlg || !isVisible(dlg)) return false;
-    var titleNode = dlg.querySelector('.dialog-header h3, .excel-clean-head h3, h3');
-    var title = clean(titleNode && titleNode.textContent);
-    var bodyText = clean(dlg.textContent);
-    var hasExcelInput = !!dlg.querySelector('input[type="file"][accept*=".xlsx"], input[type="file"][accept*=".xls"], #admin-offices-full-excel-input, #excel-file-input, #excel-file-input-normal');
-    var isCleanDialog = dlg.classList.contains('admin-excel-clean-dialog') || !!dlg.querySelector('.excel-clean-wrap');
-
-    return isCleanDialog || (
-      hasExcelInput && (
-        title.indexOf('Excel') > -1 ||
-        title.indexOf('إكسل') > -1 ||
-        title.indexOf('اكسل') > -1 ||
-        title.indexOf('استيراد') > -1 ||
-        bodyText.indexOf('تامبليت الوظائف') > -1 ||
-        bodyText.indexOf('استيراد التامبليت بعد التعبئة') > -1 ||
-        bodyText.indexOf('استيراد Excel عادي') > -1 ||
-        bodyText.indexOf('استيراد ملف شامل لكل الأقسام') > -1
-      )
-    );
+    return dlg.classList.contains('admin-excel-clean-dialog') || !!dlg.querySelector('.excel-clean-wrap');
   }
 
-  function removeNode(el) {
-    if (el && el.parentNode) el.parentNode.removeChild(el);
-  }
-
-  function closestExcelBlock(el) {
-    if (!el) return null;
-    return el.closest(
-      '#admin-offices-full-excel-section,' +
-      '.excel-clean-card,' +
-      '.admin-offices-full-excel-section,' +
-      '[data-admin-offices-full-excel],' +
-      'fieldset,' +
-      '.section-box'
-    ) || el;
-  }
-
-  function removeFromNonExcelDialogs() {
-    if (isExcelImportDialog()) return;
-
+  function removeLeakedBlocks() {
     document.querySelectorAll('#admin-offices-full-excel-section, .admin-offices-full-excel-section, [data-admin-offices-full-excel]').forEach(removeNode);
 
-    document.querySelectorAll('#admin-offices-full-excel-input').forEach(function (input) {
-      removeNode(closestExcelBlock(input));
+    if (!isCleanExcelDialog()) {
+      document.querySelectorAll('#admin-offices-full-excel-input').forEach(function (input) {
+        removeNode(closestLeakedBlock(input));
+      });
+    }
+
+    Array.prototype.slice.call(document.querySelectorAll('body div, body section, body fieldset')).forEach(function (el) {
+      if (el.id === 'management-dialog' || el.classList.contains('excel-clean-wrap')) return;
+      var text = clean(el.textContent);
+      if (text.indexOf('استيراد ملف شامل لكل الأقسام') > -1 && !isCleanExcelDialog()) {
+        removeNode(closestLeakedBlock(el));
+      }
     });
-
-    var dlg = managementDialog();
-    if (dlg && isVisible(dlg)) {
-      Array.prototype.slice.call(dlg.querySelectorAll('div, section, fieldset')).forEach(function (el) {
-        var text = clean(el.textContent);
-        if (text.indexOf('استيراد ملف شامل لكل الأقسام') > -1 && !isExcelImportDialog()) {
-          removeNode(closestExcelBlock(el));
-        }
-      });
-    }
-
-    var bar = document.getElementById('main-action-buttons');
-    if (bar) {
-      Array.prototype.slice.call(bar.querySelectorAll('div, section, fieldset')).forEach(function (el) {
-        var text = clean(el.textContent);
-        if (text.indexOf('استيراد ملف شامل لكل الأقسام') > -1 || el.querySelector('#admin-offices-full-excel-input')) {
-          removeNode(closestExcelBlock(el));
-        }
-      });
-    }
   }
 
-  function wrapPublicInject() {
+  function wrapPublicApi() {
     var api = window.AdminOfficesFullExcelImport;
-    if (!api || typeof api.inject !== 'function' || api.inject.__excelOnlyWrappedV2) return false;
-    var old = api.inject;
-    api.inject = function excelOnlyInject() {
-      if (!isExcelImportDialog()) {
-        removeFromNonExcelDialogs();
+    if (!api || api.__excelGuardNoAutoInjectV3) return false;
+    if (typeof api.inject === 'function') {
+      api.inject = function excelAutoInjectDisabled() {
+        removeLeakedBlocks();
         return false;
-      }
-      return old.apply(this, arguments);
-    };
-    api.inject.__excelOnlyWrappedV2 = true;
+      };
+    }
+    api.__excelGuardNoAutoInjectV3 = true;
     return true;
   }
 
   function guard() {
-    wrapPublicInject();
-    removeFromNonExcelDialogs();
+    wrapPublicApi();
+    removeLeakedBlocks();
   }
 
   function scheduleGuard() {
-    setTimeout(guard, 20);
+    setTimeout(guard, 0);
+    setTimeout(guard, 30);
     setTimeout(guard, 90);
     setTimeout(guard, 170);
     setTimeout(guard, 360);
@@ -126,14 +98,19 @@
   else guard();
 
   document.addEventListener('click', scheduleGuard, true);
+  document.addEventListener('input', scheduleGuard, true);
+  document.addEventListener('change', scheduleGuard, true);
+
+  var mo = new MutationObserver(function () { scheduleGuard(); });
+  try { mo.observe(document.documentElement, { childList: true, subtree: true }); } catch (_) {}
 
   var tries = 0;
   var timer = setInterval(function () {
     tries++;
     guard();
-    if (tries > 100) clearInterval(timer);
-  }, 150);
+    if (tries > 160) clearInterval(timer);
+  }, 120);
 
-  window.AdminOfficesFullExcelVisibilityGuard = { clean: guard, isExcelImportDialog: isExcelImportDialog };
-  console.info('[Admin Offices Full Excel Visibility Guard] installed v2');
+  window.AdminOfficesFullExcelVisibilityGuard = { clean: guard, isCleanExcelDialog: isCleanExcelDialog };
+  console.info('[Admin Offices Full Excel Visibility Guard] installed v3 force cleanup');
 })();
