@@ -1,5 +1,6 @@
 // Admin Offices Employee Delete Index Fix
 // Fixes wrong employee name/delete target in management dialog after search/sort or duplicate/empty iqama IDs.
+// Adds safe employee transfer between admin office sites without changing calculations or storage keys.
 (function () {
   'use strict';
 
@@ -10,6 +11,15 @@
     } catch (_) {
       return fallback;
     }
+  }
+
+  function esc(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function getNames() {
@@ -34,6 +44,36 @@
     return 'asc';
   }
 
+  function sortedCenterKeys(names) {
+    return Object.keys(names || {}).sort((a, b) => {
+      if (a.startsWith('center_') && b.startsWith('center_')) {
+        return (parseInt(a.split('_')[1], 10) || 0) - (parseInt(b.split('_')[1], 10) || 0);
+      }
+      if (a.startsWith('center_')) return -1;
+      if (b.startsWith('center_')) return 1;
+      return String(names[a] || a).localeCompare(String(names[b] || b), 'ar');
+    });
+  }
+
+  function closeTransferDialog() {
+    const dlg = document.getElementById('admin-office-transfer-dialog');
+    const overlay = document.getElementById('admin-office-transfer-overlay');
+    if (dlg) dlg.remove();
+    if (overlay) overlay.remove();
+  }
+
+  function refreshAfterChange(centerKey) {
+    try { window.displayEmployeesForCenter(centerKey); } catch (_) {}
+    try { if (typeof renderCenterIcons === 'function') renderCenterIcons(); } catch (_) {}
+    try { if (typeof calculateAndDisplayGrandTotal === 'function') calculateAndDisplayGrandTotal(); } catch (_) {}
+    try { if (typeof updateGrandTotal === 'function') updateGrandTotal(); } catch (_) {}
+    try {
+      if (typeof showCenterDetails === 'function' && document.getElementById('center-details-view')?.style.display !== 'none') {
+        showCenterDetails(centerKey);
+      }
+    } catch (_) {}
+  }
+
   window.displayEmployeesForCenter = function displayEmployeesForCenterPatched(centerKey) {
     if (!centerKey) return;
 
@@ -50,7 +90,7 @@
 
     const names = getNames();
     const centerName = names[centerKey] || centerKey;
-    title.innerHTML = `<i class="fas fa-users"></i> موظفو موقع: <strong>${centerName}</strong>`;
+    title.innerHTML = `<i class="fas fa-users"></i> موظفو موقع: <strong>${esc(centerName)}</strong>`;
     addButton.style.display = 'inline-flex';
 
     const allData = getData();
@@ -86,22 +126,119 @@
       card.className = 'employee-card-v3';
       card.innerHTML = `
         <div class="employee-details">
-          <strong class="employee-name">${emp.name || ''}</strong>
-          <span class="employee-job">${emp.jobTitle || ''}</span>
+          <strong class="employee-name">${esc(emp.name || '')}</strong>
+          <span class="employee-job">${esc(emp.jobTitle || '')}</span>
           <div class="employee-meta">
-            <span><i class="fas fa-id-card"></i> ${emp.iqamaId || 'لا يوجد'}</span>
-            <span><i class="fas fa-flag"></i> ${emp.nationality || ''}</span>
-            <span><i class="fas fa-layer-group"></i> فئة ${emp.category || ''}</span>
+            <span><i class="fas fa-id-card"></i> ${esc(emp.iqamaId || 'لا يوجد')}</span>
+            <span><i class="fas fa-flag"></i> ${esc(emp.nationality || '')}</span>
+            <span><i class="fas fa-layer-group"></i> فئة ${esc(emp.category || '')}</span>
           </div>
         </div>
         <div class="employee-actions">
           <button title="تعديل بيانات الموظف" class="action-btn btn-edit" onclick="openEditEmployeeForm('${centerKey}', ${originalIndex})"><i class="fas fa-pencil-alt"></i></button>
           <button title="تعديل الحضور الجماعي" class="action-btn btn-attendance" onclick="openBulkAttendanceForm('${centerKey}', ${originalIndex})"><i class="fas fa-calendar-alt"></i></button>
+          <button title="نقل الموظف لموقع آخر" class="action-btn btn-transfer" style="background:#2563eb;color:white" onclick="openTransferEmployeeDialog('${centerKey}', ${originalIndex})"><i class="fas fa-exchange-alt"></i></button>
           <button title="حذف الموظف" class="action-btn btn-danger" onclick="confirmDeleteEmployee('${centerKey}', ${originalIndex})"><i class="fas fa-trash"></i></button>
         </div>
       `;
       contentArea.appendChild(card);
     });
+  };
+
+  window.openTransferEmployeeDialog = function openTransferEmployeeDialog(centerKey, empIndex) {
+    const data = getData();
+    const rows = Array.isArray(data[centerKey]) ? data[centerKey] : [];
+    const employee = rows[empIndex];
+    const names = getNames();
+
+    if (!employee) {
+      alert('تعذر تحديد الموظف المطلوب نقله. أعد فتح شاشة الإدارة وحاول مرة أخرى.');
+      return;
+    }
+
+    const targetOptions = sortedCenterKeys(names)
+      .filter(key => key !== centerKey)
+      .map(key => `<option value="${esc(key)}">${esc(names[key] || key)}</option>`)
+      .join('');
+
+    if (!targetOptions) {
+      alert('لا يوجد موقع آخر متاح لنقل الموظف إليه.');
+      return;
+    }
+
+    closeTransferDialog();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'admin-office-transfer-overlay';
+    overlay.className = 'overlay';
+    overlay.style.display = 'block';
+    overlay.onclick = closeTransferDialog;
+
+    const dlg = document.createElement('div');
+    dlg.id = 'admin-office-transfer-dialog';
+    dlg.className = 'dialog';
+    dlg.style.display = 'block';
+    dlg.style.maxWidth = '560px';
+    dlg.innerHTML = `
+      <div class="dialog-header">
+        <h3><i class="fas fa-exchange-alt"></i> نقل موظف</h3>
+        <span class="close" onclick="closeTransferEmployeeDialog()">×</span>
+      </div>
+      <div class="dialog-body">
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px;margin-bottom:14px;line-height:1.8">
+          <div><strong>الموظف:</strong> ${esc(employee.name || 'بدون اسم')}</div>
+          <div><strong>الوظيفة:</strong> ${esc(employee.jobTitle || '')}</div>
+          <div><strong>من موقع:</strong> ${esc(names[centerKey] || centerKey)}</div>
+        </div>
+        <div class="form-group">
+          <label for="admin-office-transfer-target">اختر الموقع الجديد:</label>
+          <select id="admin-office-transfer-target">${targetOptions}</select>
+        </div>
+        <p class="info-text-v3" style="margin-top:10px">سيتم نقل نفس بيانات الموظف ونفس أيام الحضور كما هي، بدون تغيير الحسابات أو الحفظ.</p>
+      </div>
+      <div class="dialog-footer" style="display:flex;gap:10px;justify-content:flex-end;padding:12px 16px;border-top:1px solid #e5e7eb">
+        <button class="btn btn-secondary" onclick="closeTransferEmployeeDialog()">إلغاء</button>
+        <button class="btn btn-success" onclick="confirmTransferEmployee('${centerKey}', ${empIndex})"><i class="fas fa-check"></i> نقل الموظف</button>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(dlg);
+  };
+
+  window.closeTransferEmployeeDialog = closeTransferDialog;
+
+  window.confirmTransferEmployee = function confirmTransferEmployee(centerKey, empIndex) {
+    const targetKey = document.getElementById('admin-office-transfer-target')?.value;
+    const data = getData();
+    const sourceRows = Array.isArray(data[centerKey]) ? data[centerKey] : [];
+    const employee = sourceRows[empIndex];
+    const names = getNames();
+
+    if (!targetKey || targetKey === centerKey) {
+      alert('اختر موقعاً مختلفاً للنقل.');
+      return;
+    }
+
+    if (!employee) {
+      alert('تعذر تحديد الموظف المطلوب نقله. أعد فتح شاشة الإدارة وحاول مرة أخرى.');
+      closeTransferDialog();
+      return;
+    }
+
+    const employeeName = employee.name || 'بدون اسم';
+    if (!confirm(`تأكيد نقل الموظف "${employeeName}" من "${names[centerKey] || centerKey}" إلى "${names[targetKey] || targetKey}"؟`)) return;
+
+    const movedEmployee = sourceRows.splice(empIndex, 1)[0];
+    if (!Array.isArray(data[targetKey])) data[targetKey] = [];
+    data[targetKey].push(movedEmployee);
+    data[centerKey] = sourceRows;
+
+    saveData(data);
+    closeTransferDialog();
+
+    try { if (typeof showSuccessMessage === 'function') showSuccessMessage(`تم نقل الموظف "${employeeName}" بنجاح.`); } catch (_) {}
+    refreshAfterChange(centerKey);
   };
 
   window.confirmDeleteEmployee = function confirmDeleteEmployeePatched(centerKey, empIndex) {
@@ -122,8 +259,6 @@
     saveData(data);
 
     try { if (typeof showSuccessMessage === 'function') showSuccessMessage(`تم حذف الموظف "${employeeName}" بنجاح.`); } catch (_) {}
-    try { window.displayEmployeesForCenter(centerKey); } catch (_) {}
-    try { if (typeof renderCenterIcons === 'function') renderCenterIcons(); } catch (_) {}
-    try { if (typeof calculateAndDisplayGrandTotal === 'function') calculateAndDisplayGrandTotal(); } catch (_) {}
+    refreshAfterChange(centerKey);
   };
 })();
