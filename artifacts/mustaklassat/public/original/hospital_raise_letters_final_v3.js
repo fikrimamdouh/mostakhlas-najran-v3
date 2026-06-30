@@ -4,6 +4,7 @@
 var ok=/hospital_raise_letters\.html/.test(location.pathname)||window.__HOSPITAL_LETTERS_STANDALONE_PAGE__||/hospitalLettersClean=1/.test(location.href);
 if(!ok||window.__HOSPITAL_RAISE_LETTERS_BOOT__)return;
 window.__HOSPITAL_RAISE_LETTERS_BOOT__=true;
+window.__HOSPITAL_RAISE_LETTERS_ADMIN_MODEL_ACTIVE__=true;
 try{
   if(/hospital_raise_letters\.html/.test(location.pathname)&&(location.search||location.hash)){
     history.replaceState(null,'','/original/hospital_raise_letters.html');
@@ -32,9 +33,9 @@ function loadEngine(){
   if(window.__HL_ENGINE_V8__)return;
   sanitizeSettings();
   var s=document.createElement('script');
-  s.src='/original/hospital_raise_letters_engine_v8.js?v=20260629_office_quality_documents_v14_index_settings_fix_selected';
+  s.src='/original/hospital_raise_letters_engine_v8.js?v=20260630_hospital_admin_model_loader_v2';
   s.async=false;
-  s.onload=function(){console.info('[HospitalLetters] engine loaded v8 office-quality documents v14 + index/settings + selected fix');};
+  s.onload=function(){console.info('[HospitalLetters] engine loaded v8 hospital admin model loader v2');};
   s.onerror=showFail;
   (document.head||document.documentElement).appendChild(s);
 }
