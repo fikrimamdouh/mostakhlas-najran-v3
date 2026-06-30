@@ -122,7 +122,6 @@
   var pageSig = window.location.pathname + window.location.search;
   var pageFile = getOriginalPageFile();
   var isAttendancePage = pageFile === 'attendance.html' || /\/original\/attendance\.html(?:$|[?#])/.test(pageSig);
-  var isAchievementPage = pageFile === 'achievement.html' || /\/original\/achievement\.html(?:$|[?#])/.test(pageSig);
   var isAdminOfficesPage = pageFile === 'admin_offices_attendance.html' || /\/original\/admin_offices_attendance\.html(?:$|[?#])/.test(pageSig);
   var isAdminOfficesConsumablesPage = pageFile === 'admin_offices_consumables.html' || /\/original\/admin_offices_consumables\.html(?:$|[?#])/.test(pageSig);
   var isSidebarSensitivePage = isAttendancePage || isAdminOfficesPage;
@@ -159,10 +158,6 @@
   if (snapshotPages[pageFile]) {
     appendScript('/original/extract-snapshot.js?v=' + BUILD_V, true);
     appendScript('/original/submitted_extract_archive_bundle_guard.js?v=' + BUILD_V, true);
-  }
-
-  if (isAchievementPage) {
-    appendScript('/original/achievement_penalty_bridge_v1.js?v=20260630_achievement_penalty_bridge_v1', true);
   }
 
   if (isAdminOfficesPage || isAdminOfficesConsumablesPage) {
