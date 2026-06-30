@@ -263,7 +263,7 @@
     var saveBtn = shell.querySelector('#rl-save-signatures-only');
     if (saveBtn) saveBtn.onclick = saveSignaturesOnly;
     var previewBtn = shell.querySelector('#rl-preview-signatures-only');
-    if (previewBtn) previewBtn.onclick = function () { var preview = shell.querySelector('#rl-sign-preview-box'); if (preview) preview.innerHTML = renderSignaturePreview(getSigDoc(currentSigDocKey), collectSignatureValues(shell)); bindGrandSignatureButton(shell); };
+    if (previewBtn) previewBtn.onclick = function () { var preview = shell.querySelector('#rl-sign-preview-box'); if (preview) preview.innerHTML = renderSignaturePreview(getSigDoc(currentSigDocKey), collectSignatureValues(shell)); bindGrandSignatureButton(shell); shell.setAttribute('data-rl-sign-rendered-key', currentSigDocKey);};
     bindGrandSignatureButton(shell);
   }
 
@@ -292,7 +292,7 @@
     if (note) { note.classList.add('show'); note.textContent = 'تم حفظ إعدادات التواقيع.'; setTimeout(function () { note.classList.remove('show'); }, 900); }
   }
 
-  function ensureSignatureSettingsShell(panel) {
+function ensureSignatureSettingsShell(panel) {
     var shell = panel.querySelector('#rl-signature-settings-shell');
     if (!shell) {
       shell = document.createElement('div');
@@ -302,7 +302,26 @@
       if (content) panel.insertBefore(shell, content);
       else panel.appendChild(shell);
     }
+
+    // منع إعادة بناء نافذة التواقيع كل 900ms أثناء الكتابة أو الضغط.
+    // السبب: renderSignatureSettings يستخدم innerHTML ويعيد إنشاء الحقول، فيجمد التفاعل.
+    var active = document.activeElement;
+    var userInsideSignaturePanel = !!(
+      active &&
+      shell.contains(active) &&
+      /^(INPUT|TEXTAREA|SELECT|BUTTON)$/i.test(active.tagName || '')
+    );
+
+    if (
+      shell.getAttribute('data-rl-sign-rendered-key') === currentSigDocKey &&
+      shell.querySelector('#rl-sign-settings-selector')
+    ) {
+      if (userInsideSignaturePanel) return;
+      return;
+    }
+
     renderSignatureSettings(shell);
+    shell.setAttribute('data-rl-sign-rendered-key', currentSigDocKey);
   }
 
   function ensureSettingsPanel() {
