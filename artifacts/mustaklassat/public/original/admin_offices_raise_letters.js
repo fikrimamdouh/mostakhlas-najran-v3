@@ -33,7 +33,7 @@ function loadCleanScreen(){
   var boot=document.getElementById('admin-raise-clean-boot-shell');
   if(boot)boot.remove();
   loadScript('admin-offices-raise-letters-print-fallbacks-v1','/original/admin_offices_raise_letters_print_fallbacks_v1.js?v=20260630_print_fallbacks_v1');
-  loadScript('admin-offices-raise-letters-clean-signatures-v2','/original/admin_offices_raise_letters_clean_signatures_v1.js?v=20260630_clean_signatures_v2_persistent');
+  loadScript('admin-offices-raise-letters-clean-signatures-v4','/original/admin_offices_raise_letters_clean_signatures_v1.js?v=20260630_clean_signatures_v4_rebuilt');
   loadScript('admin-offices-raise-letters-clean-v1','/original/admin_offices_raise_letters_clean_v1.js?v=20260630_clean_screen_loader_v2',function(){console.info('[Admin Offices Raise Letters] clean screen loaded');});
 }
 function closeOnly(){try{window.close()}catch(_){}}
