@@ -23,9 +23,7 @@
         return null;
       }
       return s;
-    } catch (_) {
-      return null;
-    }
+    } catch (_) { return null; }
   }
 
   var session = getSession();
@@ -38,8 +36,7 @@
     try {
       var fromQuery = new URLSearchParams(window.location.search || '').get('page') || '';
       if (fromQuery) return String(fromQuery).split('/').pop();
-      var pathFile = (window.location.pathname || '').split('/').pop() || '';
-      return pathFile;
+      return (window.location.pathname || '').split('/').pop() || '';
     } catch (_) {
       return (window.location.pathname || '').split('/').pop() || '';
     }
@@ -51,9 +48,7 @@
     try {
       var parsed = JSON.parse(String(raw));
       return Array.isArray(parsed) ? parsed.map(String) : null;
-    } catch (_) {
-      return null;
-    }
+    } catch (_) { return null; }
   }
 
   function moduleKeyFromPage(pageFile) {
@@ -116,6 +111,7 @@
   }
 
   function appendScript(src, defer) {
+    if (document.querySelector('script[src="' + src.replace(/"/g, '\\"') + '"]')) return null;
     var script = document.createElement('script');
     script.src = src;
     script.defer = defer !== false;
@@ -126,6 +122,7 @@
   var pageSig = window.location.pathname + window.location.search;
   var pageFile = getOriginalPageFile();
   var isAttendancePage = pageFile === 'attendance.html' || /\/original\/attendance\.html(?:$|[?#])/.test(pageSig);
+  var isAchievementPage = pageFile === 'achievement.html' || /\/original\/achievement\.html(?:$|[?#])/.test(pageSig);
   var isAdminOfficesPage = pageFile === 'admin_offices_attendance.html' || /\/original\/admin_offices_attendance\.html(?:$|[?#])/.test(pageSig);
   var isAdminOfficesConsumablesPage = pageFile === 'admin_offices_consumables.html' || /\/original\/admin_offices_consumables\.html(?:$|[?#])/.test(pageSig);
   var isSidebarSensitivePage = isAttendancePage || isAdminOfficesPage;
@@ -164,6 +161,10 @@
     appendScript('/original/submitted_extract_archive_bundle_guard.js?v=' + BUILD_V, true);
   }
 
+  if (isAchievementPage) {
+    appendScript('/original/achievement_penalty_bridge_v1.js?v=20260630_achievement_penalty_bridge_v1', true);
+  }
+
   if (isAdminOfficesPage || isAdminOfficesConsumablesPage) {
     appendScript('/original/admin_offices_full_submit_snapshot_guard.js?v=20260630_full_submit_v1', true);
   }
@@ -173,8 +174,6 @@
   }
 
   if (isAdminOfficesPage) {
-    // admin_offices_attendance_patch.js موجود داخل admin_offices_attendance.html بعد الملف الأساسي.
-    // ممنوع تحميله هنا مرة ثانية.
     appendScript('/original/admin_offices_performance_logic.js?v=' + BUILD_V, true);
     appendScript('/original/admin_offices_attendance_persistence_fix.js?v=20260623_admin_persist_v1', true);
     appendScript('/original/admin_offices_letter_scoped_settings.js?v=20260623_letter_scoped_v1', true);
@@ -276,9 +275,7 @@
     try {
       var parsed = JSON.parse(localStorage.getItem(NOTIF_SEEN_KEY) || '[]');
       return Array.isArray(parsed) ? parsed.map(String) : [];
-    } catch (_) {
-      return [];
-    }
+    } catch (_) { return []; }
   }
   function getExtractChangedAt(e) { return String((e && (e.updatedAt || e.revisedAt || e.approvedAt || e.createdAt)) || ''); }
   function getNotifMarker(e) { if (!e) return ''; return [String(e.id || ''), String(e.status || ''), getExtractChangedAt(e)].join('|'); }
