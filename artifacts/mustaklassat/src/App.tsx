@@ -8,7 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useGetMe, setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
-
+ 
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import NotFound from "@/pages/not-found";
