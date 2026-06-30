@@ -397,16 +397,19 @@ const isAdminLike =
   roleText.includes("مدير") ||
   roleText.includes("مشرف");
 
-const fallbackHospital =
+const serverHospital =
+  dbUser.hospital ||
   parsedSessionHospitals[0] ||
+  null;
+
+const fallbackHospital =
+  serverHospital ||
   existingStoredHospital ||
   (isAdminLike ? "المقر الرئيسي — تجمع نجران الصحي" : null);
 
 const activeHospital =
-  existingHospital ||
-  dbUser.hospital ||
+  serverHospital ||
   fallbackHospital;
-
 let companyCode =
   (dbUser as any).company ||
   null;
