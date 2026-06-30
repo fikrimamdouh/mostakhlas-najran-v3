@@ -113,9 +113,19 @@
     document.head.appendChild(s);
   }
 
+  function loadPerformanceSignatureFit() {
+    if (document.getElementById('admin-offices-performance-signature-fit-v1')) return;
+    var s = document.createElement('script');
+    s.id = 'admin-offices-performance-signature-fit-v1';
+    s.src = '/original/admin_offices_performance_signature_fit_v1.js?v=20260630_perf_sig_fit_v1';
+    s.onerror = function () { console.error('[Admin Offices Performance Signature Fit] failed to load'); };
+    document.head.appendChild(s);
+  }
+
   function boot() {
     patchExcelButton();
     loadCleanRoutes();
+    loadPerformanceSignatureFit();
   }
 
   window.openAdminOfficesExcelImportCleanDialog = renderDialog;
@@ -127,5 +137,5 @@
   setTimeout(boot, 900);
   setTimeout(boot, 1800);
 
-  console.info('[Admin Offices Excel Import Clean] installed v2');
+  console.info('[Admin Offices Excel Import Clean] installed v2 + performance signature fit');
 })();
