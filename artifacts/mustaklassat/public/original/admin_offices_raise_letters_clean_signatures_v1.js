@@ -1,21 +1,23 @@
 // ===================================================================
-// Admin Offices Raise Letters Clean Signatures — V1
+// Admin Offices Raise Letters Clean Signatures — V2
 // Scope: admin_offices_attendance.html?raiseLettersClean=1
 // يضيف قسم إعدادات التواقيع داخل شاشة مركز الخطابات النظيفة.
+// يعيد تركيبه تلقائياً إذا أعادت شاشة الخطابات رسم نفسها.
 // لا يغير أماكن التواقيع في الطباعة ولا مفاتيح الحفظ.
 // ===================================================================
 (function () {
   'use strict';
   if (!/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
   if (new URLSearchParams(location.search || '').get('raiseLettersClean') !== '1') return;
-  if (window.__ADMIN_OFFICES_CLEAN_SIGNATURES_V1__) return;
-  window.__ADMIN_OFFICES_CLEAN_SIGNATURES_V1__ = true;
+  if (window.__ADMIN_OFFICES_CLEAN_SIGNATURES_V2__) return;
+  window.__ADMIN_OFFICES_CLEAN_SIGNATURES_V2__ = true;
 
   var SETTINGS_KEY = 'adminOfficesRaiseLettersSettings_v1';
   var currentDoc = 'general';
+  var installing = false;
 
   var DOCS = [
-    { key: 'general', label: 'خطابات الرفع العامة / خطاب الموقع', hint: 'يستخدمها خطاب الرفع للمستخلص وخطابات المواقع.', fields: [
+    { key: 'general', label: 'خطابات الرفع العامة / خطاب الموقع', hint: 'يستخدمها خطاب رفع عمالة المكاتب الإدارية وخطابات المواقع.', fields: [
       ['managerTitle', 'صفة توقيع الخطاب'],
       ['managerName', 'اسم توقيع الخطاب']
     ]},
@@ -47,18 +49,19 @@
   function doc() { return DOCS.find(function (d) { return d.key === currentDoc; }) || DOCS[0]; }
 
   function ensureCss() {
-    if (document.getElementById('admin-clean-signatures-css-v1')) return;
+    if (document.getElementById('admin-clean-signatures-css-v2')) return;
     var st = document.createElement('style');
-    st.id = 'admin-clean-signatures-css-v1';
+    st.id = 'admin-clean-signatures-css-v2';
     st.textContent = [
       '#admin-raise-clean .rl-clean-signatures-box{background:#fff;border:2px solid #bfdbfe;border-right:7px solid #003087;border-radius:18px;padding:14px;margin:14px 0;box-shadow:0 12px 28px rgba(0,48,135,.08);font-family:Tajawal,Arial,sans-serif}',
       '#admin-raise-clean .rl-clean-signatures-head{display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid #dbeafe;padding-bottom:10px;margin-bottom:12px}',
       '#admin-raise-clean .rl-clean-signatures-head h3{margin:0;color:#003087;font-size:18px;font-weight:950}',
       '#admin-raise-clean .rl-clean-signatures-head p{margin:4px 0 0;color:#475569;font-size:12px;font-weight:800;line-height:1.7}',
-      '#admin-raise-clean .rl-clean-signatures-toggle{background:#003087!important;color:#fff!important;border:0!important;border-radius:10px!important;padding:9px 13px!important;font-weight:950!important;cursor:pointer}',
+      '#admin-raise-clean .rl-clean-signatures-toggle,#admin-raise-clean .rl-clean-signatures-top-btn{background:#003087!important;color:#fff!important;border:0!important;border-radius:10px!important;padding:9px 13px!important;font-weight:950!important;cursor:pointer;font-family:Tajawal,Arial,sans-serif!important}',
+      '#admin-raise-clean .rl-clean-signatures-top-btn{margin-inline-start:8px!important;background:#0f766e!important}',
       '#admin-raise-clean .rl-clean-signatures-body{display:none;grid-template-columns:minmax(240px,.8fr) 1.2fr;gap:12px;align-items:start}',
       '#admin-raise-clean .rl-clean-signatures-box.open .rl-clean-signatures-body{display:grid}',
-      '#admin-raise-clean .rl-clean-signatures-select-card,.rl-clean-signatures-form-card,.rl-clean-signatures-preview{background:#f8fafc;border:1px solid #dbeafe;border-radius:14px;padding:12px}',
+      '#admin-raise-clean .rl-clean-signatures-select-card,#admin-raise-clean .rl-clean-signatures-form-card,#admin-raise-clean .rl-clean-signatures-preview{background:#f8fafc;border:1px solid #dbeafe;border-radius:14px;padding:12px}',
       '#admin-raise-clean .rl-clean-signatures-select-card label{display:block;font-weight:950;color:#0f172a;margin-bottom:7px}',
       '#admin-raise-clean #rl-clean-sign-doc{width:100%;padding:10px;border:1px solid #94a3b8;border-radius:10px;font-family:Tajawal,Arial,sans-serif;font-weight:900;background:#fff}',
       '#admin-raise-clean .rl-clean-sign-hint{margin-top:8px;color:#475569;font-size:12px;font-weight:800;line-height:1.7}',
@@ -103,32 +106,38 @@
   function renderBody(box) {
     var d = doc();
     var s = settings();
+    var body = box.querySelector('.rl-clean-signatures-body');
+    if (!body) return;
     var fields = d.fields.length ? d.fields.map(function (f) {
       return '<label class="rl-clean-sign-field"><span>' + esc(f[1]) + '</span><input type="text" data-clean-sign-field="' + esc(f[0]) + '" value="' + esc(s[f[0]] || '') + '"></label>';
     }).join('') : '<div style="font-weight:850;color:#334155;line-height:1.8">هذا النوع له نافذة تواقيع مستقلة. استخدم زر فتح إعدادات تواقيع الشهادة الإجمالية.</div>';
 
-    box.querySelector('.rl-clean-signatures-body').innerHTML = '<div class="rl-clean-signatures-select-card"><label>اختر الشهادة / الخطاب</label><select id="rl-clean-sign-doc">' + DOCS.map(function (x) { return '<option value="' + esc(x.key) + '" ' + (x.key === currentDoc ? 'selected' : '') + '>' + esc(x.label) + '</option>'; }).join('') + '</select><div class="rl-clean-sign-hint">' + esc(d.hint) + '</div><div class="rl-clean-sign-actions"><button type="button" class="rl-clean-sign-save">حفظ التواقيع</button><button type="button" class="rl-clean-sign-preview-btn">تحديث المعاينة</button></div></div><div><div class="rl-clean-signatures-form-card"><div class="rl-clean-sign-fields">' + fields + '</div></div><div class="rl-clean-sign-preview">' + previewHtml(d, s) + '</div></div>';
+    body.innerHTML = '<div class="rl-clean-signatures-select-card"><label>اختر الشهادة / الخطاب</label><select id="rl-clean-sign-doc">' + DOCS.map(function (x) { return '<option value="' + esc(x.key) + '" ' + (x.key === currentDoc ? 'selected' : '') + '>' + esc(x.label) + '</option>'; }).join('') + '</select><div class="rl-clean-sign-hint">' + esc(d.hint) + '</div><div class="rl-clean-sign-actions"><button type="button" class="rl-clean-sign-save">حفظ التواقيع</button><button type="button" class="rl-clean-sign-preview-btn">تحديث المعاينة</button></div></div><div><div class="rl-clean-signatures-form-card"><div class="rl-clean-sign-fields">' + fields + '</div></div><div class="rl-clean-signatures-preview">' + previewHtml(d, s) + '</div></div>';
 
-    box.querySelector('#rl-clean-sign-doc').onchange = function () { currentDoc = this.value || 'general'; renderBody(box); };
+    var selector = box.querySelector('#rl-clean-sign-doc');
+    if (selector) selector.onchange = function () { currentDoc = this.value || 'general'; renderBody(box); };
     Array.prototype.slice.call(box.querySelectorAll('[data-clean-sign-field]')).forEach(function (input) {
-      input.oninput = function () { box.querySelector('.rl-clean-sign-preview').innerHTML = previewHtml(doc(), currentValuesFromBox(box)); bindGrand(box); };
+      input.oninput = function () { box.querySelector('.rl-clean-signatures-preview').innerHTML = previewHtml(doc(), currentValuesFromBox(box)); bindGrand(box); };
     });
-    box.querySelector('.rl-clean-sign-save').onclick = function () {
+    var saveBtn = box.querySelector('.rl-clean-sign-save');
+    if (saveBtn) saveBtn.onclick = function () {
       var next = currentValuesFromBox(box);
       writeJson(SETTINGS_KEY, next);
       flash('تم حفظ إعدادات التواقيع.');
     };
-    box.querySelector('.rl-clean-sign-preview-btn').onclick = function () { box.querySelector('.rl-clean-sign-preview').innerHTML = previewHtml(doc(), currentValuesFromBox(box)); bindGrand(box); };
+    var prevBtn = box.querySelector('.rl-clean-sign-preview-btn');
+    if (prevBtn) prevBtn.onclick = function () { box.querySelector('.rl-clean-signatures-preview').innerHTML = previewHtml(doc(), currentValuesFromBox(box)); bindGrand(box); };
     bindGrand(box);
   }
 
   function flash(msg) {
     var f = document.getElementById('rl-clean-flash');
     if (f) { f.textContent = msg; f.classList.add('show'); setTimeout(function () { f.classList.remove('show'); }, 1600); }
+    else alert(msg);
   }
 
   function bindGrand(box) {
-    var btn = box.querySelector('#rl-clean-open-grand-signs');
+    var btn = box && box.querySelector('#rl-clean-open-grand-signs');
     if (!btn) return;
     btn.onclick = function () {
       if (typeof window.openAdminOfficesGrandCertificateSignatures === 'function') window.openAdminOfficesGrandCertificateSignatures();
@@ -145,29 +154,73 @@
     });
   }
 
+  function openSignaturesBox() {
+    var box = document.getElementById('rl-clean-signatures-box');
+    if (!box) { install(); box = document.getElementById('rl-clean-signatures-box'); }
+    if (!box) return;
+    box.classList.add('open');
+    try { box.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) { box.scrollIntoView(); }
+  }
+
+  function ensureTopButton(root, box) {
+    if (root.querySelector('#rl-clean-open-signatures-top')) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'rl-clean-open-signatures-top';
+    btn.className = 'rl-clean-signatures-top-btn';
+    btn.textContent = 'تعديل التواقيع';
+    btn.onclick = openSignaturesBox;
+    var closeBtn = Array.prototype.slice.call(root.querySelectorAll('button')).find(function (b) { return String(b.textContent || '').trim() === 'إغلاق'; });
+    if (closeBtn && closeBtn.parentNode) closeBtn.parentNode.insertBefore(btn, closeBtn);
+    else if (box && box.parentNode) box.parentNode.insertBefore(btn, box);
+    else root.insertBefore(btn, root.firstChild);
+  }
+
   function install() {
-    var root = document.getElementById('admin-raise-clean');
-    if (!root) return false;
-    ensureCss();
-    patchLabels(root);
-    if (document.getElementById('rl-clean-signatures-box')) return true;
-    var box = document.createElement('div');
-    box.id = 'rl-clean-signatures-box';
-    box.className = 'rl-clean-signatures-box';
-    box.innerHTML = '<div class="rl-clean-signatures-head"><div><h3>إعدادات التواقيع</h3><p>قسم مستقل لتعديل تواقيع خطابات الرفع والشهادات بدون تغيير أماكنها في الطباعة.</p></div><button type="button" class="rl-clean-signatures-toggle">فتح / إخفاء</button></div><div class="rl-clean-signatures-body"></div>';
-    var anchor = root.querySelector('.rl-toolbar,.rl-clean-toolbar,.rl-actions,.rl-top-actions') || root.querySelector('h2') || root.firstElementChild;
-    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(box, anchor.nextSibling);
-    else root.insertBefore(box, root.firstChild);
-    box.querySelector('.rl-clean-signatures-toggle').onclick = function () { box.classList.toggle('open'); };
-    renderBody(box);
-    return true;
+    if (installing) return false;
+    installing = true;
+    try {
+      var root = document.getElementById('admin-raise-clean');
+      if (!root) return false;
+      ensureCss();
+      patchLabels(root);
+
+      var box = document.getElementById('rl-clean-signatures-box');
+      if (!box || !root.contains(box)) {
+        box = document.createElement('div');
+        box.id = 'rl-clean-signatures-box';
+        box.className = 'rl-clean-signatures-box';
+        box.innerHTML = '<div class="rl-clean-signatures-head"><div><h3>إعدادات التواقيع</h3><p>قسم مستقل لتعديل تواقيع خطابات الرفع والشهادات بدون تغيير أماكنها في الطباعة.</p></div><button type="button" class="rl-clean-signatures-toggle">فتح / إخفاء</button></div><div class="rl-clean-signatures-body"></div>';
+        var anchor = root.querySelector('.rl-toolbar,.rl-clean-toolbar,.rl-actions,.rl-top-actions') || root.querySelector('h2') || root.firstElementChild;
+        if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(box, anchor.nextSibling);
+        else root.insertBefore(box, root.firstChild);
+      }
+
+      var toggle = box.querySelector('.rl-clean-signatures-toggle');
+      if (toggle && !toggle.__rlBound) {
+        toggle.onclick = function () { box.classList.toggle('open'); };
+        toggle.__rlBound = true;
+      }
+      renderBody(box);
+      ensureTopButton(root, box);
+      return true;
+    } finally {
+      installing = false;
+    }
   }
 
   var tries = 0;
   var timer = setInterval(function () {
     tries++;
-    if (install() || tries > 120) clearInterval(timer);
-  }, 120);
-  document.addEventListener('click', function () { setTimeout(function () { var root = document.getElementById('admin-raise-clean'); if (root) patchLabels(root); }, 80); }, true);
-  console.info('[Admin Offices Raise Letters Clean Signatures] installed v1');
+    install();
+    if (document.getElementById('admin-raise-clean') && document.getElementById('rl-clean-signatures-box') && tries > 20) clearInterval(timer);
+    if (tries > 160) clearInterval(timer);
+  }, 150);
+
+  var mo = new MutationObserver(function () { setTimeout(install, 80); });
+  try { mo.observe(document.documentElement, { childList: true, subtree: true }); } catch (_) {}
+  document.addEventListener('click', function () { setTimeout(install, 80); setTimeout(install, 350); }, true);
+
+  window.AdminOfficesCleanSignatureSettings = { open: openSignaturesBox, refresh: install };
+  console.info('[Admin Offices Raise Letters Clean Signatures] installed v2 persistent editor');
 })();
