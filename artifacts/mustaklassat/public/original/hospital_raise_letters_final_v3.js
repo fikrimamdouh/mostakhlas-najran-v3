@@ -14,6 +14,9 @@ function showFail(){
   var l=document.querySelector('.loading');
   if(l)l.textContent='تعذر تحميل محرك خطابات المستشفى. اعمل تحديث قوي للصفحة.';
 }
+function hasOwnData(o){
+  return !!(o&&typeof o==='object'&&Object.keys(o).length>0);
+}
 function sanitizeSettings(){
   try{
     var key='hospitalRaiseLettersSettings_v8';
@@ -22,8 +25,8 @@ function sanitizeSettings(){
     var s=JSON.parse(raw);
     var allowed={index:1,final:1,labor:1,noPrev:1,salary:1,vacancies:1,vacations:1,saudi:1,custom:1};
     if(!allowed[s.selectedDocKey])s.selectedDocKey='final';
-    s.letters=s.letters&&typeof s.letters==='object'?s.letters:{};
-    s.layout=s.layout&&typeof s.layout==='object'?s.layout:{};
+    if(!hasOwnData(s.letters))delete s.letters;
+    if(!hasOwnData(s.layout))delete s.layout;
     localStorage.setItem(key,JSON.stringify(s));
   }catch(e){
     try{localStorage.removeItem('hospitalRaiseLettersSettings_v8')}catch(_){}
@@ -33,9 +36,9 @@ function loadEngine(){
   if(window.__HL_ENGINE_V8__)return;
   sanitizeSettings();
   var s=document.createElement('script');
-  s.src='/original/hospital_raise_letters_engine_v8.js?v=20260630_hospital_admin_model_loader_v2';
+  s.src='/original/hospital_raise_letters_engine_v8.js?v=20260630_hospital_admin_model_loader_v3_safe_settings';
   s.async=false;
-  s.onload=function(){console.info('[HospitalLetters] engine loaded v8 hospital admin model loader v2');};
+  s.onload=function(){console.info('[HospitalLetters] engine loaded v8 hospital admin model loader v3 safe settings');};
   s.onerror=showFail;
   (document.head||document.documentElement).appendChild(s);
 }
