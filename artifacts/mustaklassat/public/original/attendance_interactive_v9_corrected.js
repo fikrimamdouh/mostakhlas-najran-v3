@@ -18,7 +18,15 @@ const ABSENCE_FINES_BY_CATEGORY = {
   7: { saudi: 10,  non_saudi: 10  },
   default: { saudi: 0, non_saudi: 0 }
 };
+function normalizeAttendanceCategory(value) {
+  const v = String(value || '').trim();
 
+  // يقبل الأرقام العربية والإنجليزية
+  const arabicDigits = { '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7' };
+  const normalized = arabicDigits[v] || v;
+
+  return /^[1-7]$/.test(normalized) ? normalized : '1';
+}
 const STATUS_CODES = {
   'ح': { name: 'حاضر', color: '#d4edda', isAbsence: false },
   'غ': { name: 'غائب', color: '#f8d7da', isAbsence: true },
@@ -198,7 +206,7 @@ function updateEmployeeCategory(departmentKey, employeeIndex, newCategory) {
     const employee = data[departmentKey]?.[employeeIndex];
     if (!employee) return;
 
-    employee.category = newCategory;
+    employee.category = normalizeAttendanceCategory(newCategory);
     saveAttendanceData(data);
     renderTables();
   } catch (error) {
@@ -288,8 +296,9 @@ function updateEmployeeAttendance(departmentKey, employeeIndex, dayIndex, newSta
         const dailySalary = salary / totalDaysInMonth;
         const extractBaseSalary = dailySalary * daysInMonth;
         const deduction = (absenceDays + deductionOnlyDays) * dailySalary;
-        const fineConfig = ABSENCE_FINES_BY_CATEGORY[employee.category || '1'] || ABSENCE_FINES_BY_CATEGORY[1];
-        const isSaudi = (employee.nationality || 'سعودي').trim() === 'سعودي';
+const category = normalizeAttendanceCategory(employee.category);
+employee.category = category;
+const fineConfig = ABSENCE_FINES_BY_CATEGORY[category] || ABSENCE_FINES_BY_CATEGORY[1];        const isSaudi = (employee.nationality || 'سعودي').trim() === 'سعودي';
         const fine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
         const nationalityFine = parseFloat(employee.nationalityFine) || 0;
         const totalFine = fine + nationalityFine;
@@ -615,7 +624,7 @@ function processAndFilterExcelData(file) {
                         jobTitle: jobTitle,
                         name: name,
                         salary: parseFloat(row[salaryIndex]) || 0,
-                        category: String(row[categoryIndex] || "7").trim(),
+                        category: normalizeAttendanceCategory(row[categoryIndex]),
                         nationality: nationalityValue, // استخدام القيمة الصحيحة هنا
                         iqamaId: String(row[iqamaIdIndex] || "").trim(),
                         nationalityFine: 0,
@@ -741,8 +750,8 @@ if (emptyMessage) {
             deptData.forEach((emp, index) => {
                 const row = document.createElement('tr');
                 const salary = parseFloat(emp.salary) || 0;
-                const category = emp.category || '1';
-                const nationality = emp.nationality || 'سعودي';
+const category = normalizeAttendanceCategory(emp.category);
+emp.category = category;                const nationality = emp.nationality || 'سعودي';
                 const isSaudi = nationality.trim() === 'سعودي';
 
                 let adjustedSalary = salary;
@@ -1170,6 +1179,14 @@ function getAttendanceData() {
 
 function saveAttendanceData(data) {
   try {
+    try {
+  Object.keys(data || {}).forEach(function (deptKey) {
+    if (!Array.isArray(data[deptKey])) return;
+    data[deptKey].forEach(function (emp) {
+      emp.category = normalizeAttendanceCategory(emp.category);
+    });
+  });
+} catch (_) {}
     localStorage.setItem('attendanceData', JSON.stringify(data));
 
     try {
@@ -1606,8 +1623,7 @@ function saveEmployeeEdit(departmentKey, employeeIndex) {
     employee.jobTitle = newJobTitle;
     employee.name = newName;
     employee.salary = newSalary;
-    employee.category = newCategory;
-    employee.nationality = newNationality;
+employee.category = normalizeAttendanceCategory(newCategory);    employee.nationality = newNationality;
 
     // حفظ البيانات وإعادة عرض الجداول
     saveAttendanceData(data);
