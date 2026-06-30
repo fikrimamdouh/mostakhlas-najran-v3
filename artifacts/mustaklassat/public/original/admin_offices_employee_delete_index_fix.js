@@ -1,8 +1,20 @@
 // Admin Offices Employee Delete Index Fix
 // Fixes wrong employee name/delete target in management dialog after search/sort or duplicate/empty iqama IDs.
 // Adds safe employee transfer between admin office sites without changing calculations or storage keys.
+// Adds missing DEFAULT_TITLES guard used by the title editor.
 (function () {
   'use strict';
+
+  if (!window.DEFAULT_TITLES) {
+    window.DEFAULT_TITLES = {
+      attendanceMainTitle: 'بيان الحضور والانصراف لمنسوبي {companyName} بموقع {centerName} عن الفترة من {startDate} إلى {endDate}',
+      performanceMainTitle: 'شهادة تقييم الأداء الشهري',
+      achievementMainTitle: 'شهادة الاستحقاق الشهري',
+      achievementSubTitle: 'عن أعمال الصيانة والنظافة والتشغيل غير الطبي',
+      grandMainTitle: 'الشهادة الإجمالية للمكاتب الإدارية والمرافق الصحية',
+      grandSubTitle: 'إجمالي صافي الاستحقاق لجميع المواقع'
+    };
+  }
 
   function readJson(key, fallback) {
     try {
@@ -74,6 +86,21 @@
     } catch (_) {}
   }
 
+  function ensureTransferHelpButton() {
+    const bar = document.querySelector('#management-dialog .dialog-header, #management-dialog .employee-management-header, #management-dialog');
+    if (!bar || document.getElementById('admin-transfer-help-btn')) return;
+    const btn = document.createElement('button');
+    btn.id = 'admin-transfer-help-btn';
+    btn.type = 'button';
+    btn.className = 'btn btn-primary no-print';
+    btn.style.margin = '6px';
+    btn.innerHTML = '<i class="fas fa-exchange-alt"></i> نقل موظف';
+    btn.onclick = function () {
+      alert('افتح أي موقع من إدارة الموظفين، وستجد زر "نقل الموظف" واضحًا داخل كارت كل موظف.');
+    };
+    bar.appendChild(btn);
+  }
+
   window.displayEmployeesForCenter = function displayEmployeesForCenterPatched(centerKey) {
     if (!centerKey) return;
 
@@ -92,6 +119,7 @@
     const centerName = names[centerKey] || centerKey;
     title.innerHTML = `<i class="fas fa-users"></i> موظفو موقع: <strong>${esc(centerName)}</strong>`;
     addButton.style.display = 'inline-flex';
+    ensureTransferHelpButton();
 
     const allData = getData();
     const originalRows = Array.isArray(allData[centerKey]) ? allData[centerKey] : [];
@@ -134,10 +162,10 @@
             <span><i class="fas fa-layer-group"></i> فئة ${esc(emp.category || '')}</span>
           </div>
         </div>
-        <div class="employee-actions">
+        <div class="employee-actions" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end">
           <button title="تعديل بيانات الموظف" class="action-btn btn-edit" onclick="openEditEmployeeForm('${centerKey}', ${originalIndex})"><i class="fas fa-pencil-alt"></i></button>
           <button title="تعديل الحضور الجماعي" class="action-btn btn-attendance" onclick="openBulkAttendanceForm('${centerKey}', ${originalIndex})"><i class="fas fa-calendar-alt"></i></button>
-          <button title="نقل الموظف لموقع آخر" class="action-btn btn-transfer" style="background:#2563eb;color:white" onclick="openTransferEmployeeDialog('${centerKey}', ${originalIndex})"><i class="fas fa-exchange-alt"></i></button>
+          <button title="نقل الموظف لموقع آخر" class="action-btn btn-transfer" style="background:#2563eb;color:white;min-width:94px;padding:8px 10px;border-radius:9px;font-weight:900" onclick="openTransferEmployeeDialog('${centerKey}', ${originalIndex})"><i class="fas fa-exchange-alt"></i> نقل موظف</button>
           <button title="حذف الموظف" class="action-btn btn-danger" onclick="confirmDeleteEmployee('${centerKey}', ${originalIndex})"><i class="fas fa-trash"></i></button>
         </div>
       `;
@@ -261,4 +289,8 @@
     try { if (typeof showSuccessMessage === 'function') showSuccessMessage(`تم حذف الموظف "${employeeName}" بنجاح.`); } catch (_) {}
     refreshAfterChange(centerKey);
   };
+
+  setTimeout(ensureTransferHelpButton, 700);
+  setTimeout(ensureTransferHelpButton, 1800);
+  console.info('[Admin Offices Employee Tools] delete index + visible transfer + titles guard installed v2');
 })();
