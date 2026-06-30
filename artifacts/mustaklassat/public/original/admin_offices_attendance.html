@@ -155,8 +155,8 @@
     <script src="/original/performance_logic.js?v=20260622_workshop_grouped_v3"></script>
 <script src="/original/achievement_logic.js?v=20260622_site_v2"></script>
 <script src="/original/admin_offices_attendance_patch.js?v=20260623_positions_all_v5"></script>
+<script src="/original/admin_offices_attendance_persistence_fix.js?v=20260630_restore_support_v1"></script>
 <script src="/original/admin_offices_employee_delete_index_fix.js?v=20260629_delete_index_v1"></script>
-
 
 <script>
 (function(){
@@ -239,5 +239,28 @@
 })();
 </script>
 
+<script src="/original/extract-submit.js?v=20260630_restore_support_v1"></script>
+<script src="/original/track.js?v=20260630_restore_support_v1"></script>
+<script src="/original/signature-block.js?v=20260630_restore_support_v1"></script>
+<script>
+if (window.SignatureBlock && typeof window.SignatureBlock.init === 'function') {
+  window.SignatureBlock.init('admin_offices', { showStamp: true });
+}
+</script>
+<style id="hide-fullscreen-btn-admin-offices">
+.zoom-fullscreen-btn.zoom-fullscreen-btn.zoom-fullscreen-btn { display: none !important; }
+</style>
+<script src="/original/admin_offices_page_signatures.js?v=20260630_restore_support_v1"></script>
+<script src="/original/admin_offices_grand_certificate_polish.js?v=20260622_grand_cert_v1"></script>
+<script src="/original/admin_offices_grand_certificate_signatures.js?v=20260622_grand_sigs_v1"></script>
+<script src="/original/admin_offices_raise_letters.js?v=20260623_raise_letters_clean_v1"></script>
+<script src="/original/admin_offices_raise_letters_autofill.js?v=20260622_raise_letters_autofill_v1"></script>
+<script src="/original/admin_offices_raise_letters_signature_labels.js?v=20260630_restore_support_v1"></script>
+<script src="/original/admin_offices_letter_scoped_settings.js?v=20260630_restore_support_v1"></script>
+<script src="/original/admin_offices_raise_letters_ui_fix.js?v=20260623_raise_letters_ui_fix_v4"></script>
+<script src="/original/admin_offices_raise_letters_tab_mode.js?v=20260624_raise_letters_tab_v4_no_duplicate"></script>
+<script src="/original/admin_offices_print_all_letters_patch.js?v=20260624_print_letters_safe_v3"></script>
+<script src="/original/admin_offices_print_all_complete_patch.js?v=20260624_complete_print_safe_v3"></script>
+<script src="/original/admin_offices_full_excel_visibility_guard.js?v=20260630_restore_support_v1"></script>
 </body>
 </html>
