@@ -1,23 +1,14 @@
 // ===================================================================
-// Admin Offices Excel Import Clean V1
-// Clean dialog only. Does not change import logic, storage keys, parser, or save functions.
-// It only replaces the Excel button action with a clean dialog that calls existing APIs.
-// Also loads clean button routes for other damaged buttons.
+// Admin Offices Excel Import Clean V2
+// واجهة Excel للمكاتب الإدارية فقط.
+// لا تغير منطق الاستيراد أو مفاتيح الحفظ أو parser.
 // ===================================================================
 (function () {
   'use strict';
 
   if (!/admin_offices_attendance\.html(?:$|[?#])|original-viewer\?page=admin_offices_attendance\.html/.test(location.pathname + location.search)) return;
-  if (window.__ADMIN_OFFICES_EXCEL_IMPORT_CLEAN_V1__) return;
-  window.__ADMIN_OFFICES_EXCEL_IMPORT_CLEAN_V1__ = true;
-
-  function esc(v) {
-    return String(v == null ? '' : v)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
+  if (window.__ADMIN_OFFICES_EXCEL_IMPORT_CLEAN_V2__) return;
+  window.__ADMIN_OFFICES_EXCEL_IMPORT_CLEAN_V2__ = true;
 
   function ensureCss() {
     if (document.getElementById('admin-offices-excel-import-clean-css')) return;
@@ -77,14 +68,14 @@
         '<div class="excel-clean-head">' +
           '<div>' +
             '<h3><i class="fas fa-file-excel"></i> استيراد Excel للمكاتب الإدارية</h3>' +
-            '<p>دايلوج نظيف للتحميل فقط. يستخدم نفس دوال الاستيراد الحالية بدون تغيير المفاتيح أو طريقة القراءة أو الحفظ.</p>' +
+            '<p>استيراد وتحديث بيانات المكاتب من ملف Excel مع الحفاظ على نفس مفاتيح الحفظ وطريقة القراءة الحالية.</p>' +
           '</div>' +
           '<button type="button" class="excel-clean-btn danger" id="excel-clean-close">إغلاق</button>' +
         '</div>' +
         '<div class="excel-clean-body">' +
           '<div class="excel-clean-card">' +
             '<h4><i class="fas fa-layer-group"></i> استيراد ملف شامل لكل الأقسام</h4>' +
-            '<div class="excel-clean-note">كل Sheet يتم ربطه تلقائياً بالمكتب/القسم المطابق لاسمه. نفس محرك الاستيراد القديم يعمل هنا كما هو.</div>' +
+            '<div class="excel-clean-note">كل Sheet يتم ربطه تلقائياً بالمكتب/القسم المطابق لاسمه. اختر استبدال شامل أو تحديث شامل حسب المطلوب.</div>' +
             '<input type="file" id="admin-offices-full-excel-input" class="excel-clean-file" accept=".xlsx,.xls">' +
             '<div class="excel-clean-actions">' +
               '<button type="button" class="excel-clean-btn success" id="excel-clean-replace"><i class="fas fa-trash-alt"></i> استبدال شامل لكل الأقسام</button>' +
@@ -103,13 +94,13 @@
   function patchExcelButton() {
     var buttons = Array.prototype.slice.call(document.querySelectorAll('#main-action-buttons button'));
     var btn = buttons.find(function (b) { return /Excel|إكسل|اكسل/.test((b.textContent || '').trim()); });
-    if (!btn || btn.__adminExcelCleanPatched) return false;
+    if (!btn || btn.__adminExcelCleanPatchedV2) return false;
     btn.onclick = function (e) {
       if (e && e.preventDefault) e.preventDefault();
       renderDialog();
       return false;
     };
-    btn.__adminExcelCleanPatched = true;
+    btn.__adminExcelCleanPatchedV2 = true;
     return true;
   }
 
@@ -117,7 +108,7 @@
     if (document.getElementById('admin-offices-clean-button-routes-v1')) return;
     var s = document.createElement('script');
     s.id = 'admin-offices-clean-button-routes-v1';
-    s.src = '/original/admin_offices_clean_button_routes_v1.js?v=20260625_clean_routes_v1';
+    s.src = '/original/admin_offices_clean_button_routes_v1.js?v=20260630_clean_routes_v3';
     s.onerror = function () { console.error('[Admin Offices Clean Button Routes] failed to load'); };
     document.head.appendChild(s);
   }
@@ -136,5 +127,5 @@
   setTimeout(boot, 900);
   setTimeout(boot, 1800);
 
-  console.info('[Admin Offices Excel Import Clean] installed v1');
+  console.info('[Admin Offices Excel Import Clean] installed v2');
 })();
