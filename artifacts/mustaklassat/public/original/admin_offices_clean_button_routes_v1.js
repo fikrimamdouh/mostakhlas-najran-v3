@@ -1,5 +1,5 @@
 // ===================================================================
-// Admin Offices Clean Button Routes V1
+// Admin Offices Clean Button Routes V2
 // Purpose: route only damaged buttons to clean dialogs without changing business logic.
 // Affected buttons: Excel, Bulk Attendance, Print.
 // Does not change parser, storage keys, calculations, print builders, or save functions.
@@ -8,8 +8,8 @@
   'use strict';
 
   if (!/admin_offices_attendance\.html(?:$|[?#])|original-viewer\?page=admin_offices_attendance\.html/.test(location.pathname + location.search)) return;
-  if (window.__ADMIN_OFFICES_CLEAN_BUTTON_ROUTES_V1__) return;
-  window.__ADMIN_OFFICES_CLEAN_BUTTON_ROUTES_V1__ = true;
+  if (window.__ADMIN_OFFICES_CLEAN_BUTTON_ROUTES_V2__) return;
+  window.__ADMIN_OFFICES_CLEAN_BUTTON_ROUTES_V2__ = true;
 
   function txt(el) { return String((el && el.textContent) || '').replace(/\s+/g, ' ').trim(); }
   function buttons() { return Array.prototype.slice.call(document.querySelectorAll('#main-action-buttons button')); }
@@ -17,12 +17,22 @@
 
   function closeDialog() {
     try {
-      if (typeof window.closeDialog === 'function') return window.closeDialog('management-dialog');
+      if (typeof window.closeDialog === 'function') {
+        window.closeDialog('management-dialog');
+      }
     } catch (_) {}
     var overlay = document.getElementById('dialog-overlay');
     var dlg = document.getElementById('management-dialog');
-    if (overlay) overlay.style.display = 'none';
-    if (dlg) dlg.style.display = 'none';
+    if (overlay) {
+      overlay.style.display = 'none';
+      overlay.classList.remove('show');
+    }
+    if (dlg) {
+      dlg.style.display = 'none';
+      dlg.classList.remove('admin-print-clean-dialog');
+    }
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
   }
 
   function ensurePrintCss() {
@@ -38,7 +48,8 @@
       '.print-clean-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:12px;border-top:1px solid #e2e8f0;background:#f8fafc}' +
       '.print-clean-btn{border:0;border-radius:10px;padding:10px 14px;font-family:Tajawal,Arial,sans-serif;font-weight:950;cursor:pointer}' +
       '.print-clean-btn.primary{background:#166534;color:white}' +
-      '.print-clean-btn.light{background:#e2e8f0;color:#0f172a}';
+      '.print-clean-btn.light{background:#e2e8f0;color:#0f172a}' +
+      '@media print{#management-dialog,#dialog-overlay,.print-clean-note,.print-clean-actions{display:none!important}}';
     document.head.appendChild(st);
   }
 
@@ -51,6 +62,20 @@
     document.querySelectorAll('#' + containerId + ' input[type="checkbox"]').forEach(function (cb) { cb.checked = !!checked; });
   }
 
+  function runPrintSelected() {
+    try {
+      if (typeof window.printSelected !== 'function') {
+        alert('دالة الطباعة غير محملة بعد. أعد فتح الصفحة ثم جرّب مرة أخرى.');
+        return;
+      }
+      window.printSelected();
+    } finally {
+      setTimeout(closeDialog, 300);
+      setTimeout(closeDialog, 1200);
+      setTimeout(closeDialog, 2600);
+    }
+  }
+
   function openPrintCleanDialog() {
     ensurePrintCss();
     var names = getNames();
@@ -60,9 +85,8 @@
     }).join('') || '<div class="print-clean-note">لا توجد مواقع محفوظة للطباعة.</div>';
 
     var content = '' +
-      '<div class="dialog-header"><h3><i class="fas fa-print"></i> طباعة التقارير المجمعة</h3><span class="close" onclick="closeDialog(\'management-dialog\')">×</span></div>' +
+      '<div class="dialog-header"><h3><i class="fas fa-print"></i> طباعة التقارير المجمعة</h3><span class="close" onclick="AdminOfficesCleanButtonRoutes.close()">×</span></div>' +
       '<div class="dialog-body">' +
-        '<div class="print-clean-note">دايلوج نظيف فقط. يستخدم نفس دالة الطباعة الحالية <b>printSelected()</b> ونفس خيارات الطباعة بدون تغيير.</div>' +
         '<fieldset><legend>1. اختر المكاتب والمرافق</legend>' +
           '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">' +
             '<button type="button" class="print-clean-btn light" onclick="AdminOfficesCleanButtonRoutes.toggleAll(\'print-centers-checkboxes\', true)">تحديد الكل</button>' +
@@ -79,8 +103,8 @@
         '</fieldset>' +
       '</div>' +
       '<div class="print-clean-actions">' +
-        '<button type="button" class="print-clean-btn light" onclick="closeDialog(\'management-dialog\')">إلغاء</button>' +
-        '<button type="button" class="print-clean-btn primary" onclick="printSelected()"><i class="fas fa-print"></i> بدء الطباعة</button>' +
+        '<button type="button" class="print-clean-btn light" onclick="AdminOfficesCleanButtonRoutes.close()">إلغاء</button>' +
+        '<button type="button" class="print-clean-btn primary" onclick="AdminOfficesCleanButtonRoutes.runPrint()"><i class="fas fa-print"></i> بدء الطباعة</button>' +
       '</div>';
 
     if (typeof window.openDialog === 'function') {
@@ -133,9 +157,9 @@
   }
 
   function boot() {
-    patchButton(findButton(/Excel|إكسل|اكسل/), openExcelCleanDialog, '__cleanExcelRoute');
-    patchButton(findButton(/تعديل\s*جماعي/), openBulkCleanDialog, '__cleanBulkRoute');
-    patchButton(findButton(/^\s*طباعة\s*$/), openPrintCleanDialog, '__cleanPrintRoute');
+    patchButton(findButton(/Excel|إكسل|اكسل/), openExcelCleanDialog, '__cleanExcelRouteV2');
+    patchButton(findButton(/تعديل\s*جماعي/), openBulkCleanDialog, '__cleanBulkRouteV2');
+    patchButton(findButton(/^\s*طباعة\s*$/), openPrintCleanDialog, '__cleanPrintRouteV2');
   }
 
   window.AdminOfficesCleanButtonRoutes = {
@@ -143,6 +167,7 @@
     openPrint: openPrintCleanDialog,
     openBulk: openBulkCleanDialog,
     openExcel: openExcelCleanDialog,
+    runPrint: runPrintSelected,
     toggleAll: toggleAll,
     close: closeDialog
   };
@@ -154,5 +179,5 @@
   setTimeout(boot, 1800);
   setTimeout(boot, 3500);
 
-  console.info('[Admin Offices Clean Button Routes] installed v1');
+  console.info('[Admin Offices Clean Button Routes] installed v2');
 })();
