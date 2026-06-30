@@ -2,6 +2,7 @@
 // Admin Offices Page Signatures
 // Scope: admin_offices_attendance.html only
 // فصل التواقيع لكل مكتب + لكل صفحة: الحضور / الأداء / الإنجاز + الشهادة الإجمالية
+// + نسخ تواقيع مكتب مصدر إلى مكاتب مختارة لنفس نوع الصفحة.
 // ===================================================================
 (function () {
   'use strict';
@@ -10,9 +11,13 @@
   const PREFIX = 'sb_sigs_';
   const PREFS = 'sb_prefs_';
   const GRAND_KEY = 'admin_offices_grand_certificate';
+  const COPY_DIALOG_ID = 'admin-office-signature-copy-dialog';
 
   function readJson(key, fallback) {
     try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
+  }
+  function writeJson(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (_) { return false; }
   }
   function esc(v) {
     return String(v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -73,7 +78,10 @@
     const label = type === 'grand_certificate'
       ? 'تواقيع الشهادة الإجمالية'
       : `تواقيع ${typeArabic(type)} — ${names[c] || c || 'الموقع'}`;
-    return `<div class="admin-page-signature-bar no-print" style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin:14px 0 8px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;"><strong style="color:#1e3c72;">${esc(label)}</strong><button type="button" class="btn-action btn-signatures" onclick="SignatureBlock.open('${key}')"><i class="fas fa-signature"></i> تعديل التواقيع</button></div>`;
+    const copyBtn = type === 'grand_certificate'
+      ? ''
+      : `<button type="button" class="btn-action btn-signatures" onclick="AdminOfficesPageSignatures.openCopy('${type}','${esc(c)}')"><i class="fas fa-copy"></i> نسخ للمكاتب</button>`;
+    return `<div class="admin-page-signature-bar no-print" style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin:14px 0 8px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;"><strong style="color:#1e3c72;">${esc(label)}</strong><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${copyBtn}<button type="button" class="btn-action btn-signatures" onclick="SignatureBlock.open('${key}')"><i class="fas fa-signature"></i> تعديل التواقيع</button></div></div>`;
   }
   function containerFor(type, centerKey) {
     const t = normalizeType(type);
@@ -99,8 +107,101 @@
     const target = t === 'grand_certificate' ? null : containerFor(t, c);
     if (!target) return;
     target.innerHTML = `<div class="admin-page-signature-block" data-admin-signature-key="${key}">${buildEditBar(t, c, key)}<div id="sb-container-${key}" data-sb-page="${key}"></div></div>`;
-    try { window.SignatureBlock.rerender(key); } catch (_) {}
+    try { window.SignatureBlock.init(key, { showStamp: true }); } catch (_) {}
+    try { window.SignatureBlock.rerender ? window.SignatureBlock.rerender(key) : null; } catch (_) {}
   }
+
+  function getToken() {
+    try {
+      const s = JSON.parse(localStorage.getItem('najran_session') || '{}');
+      if (!s.clerkToken) return null;
+      return (Date.now() - (s.timestamp || 0)) < 55000 ? s.clerkToken : null;
+    } catch (_) { return null; }
+  }
+  async function pushSignatureCopies(payload) {
+    const token = getToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = 'Bearer ' + token;
+    try {
+      const r = await fetch('/api/hospital-storage', {
+        method: 'PUT',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ data: payload })
+      });
+      return r.ok;
+    } catch (_) { return false; }
+  }
+  function ensureCopyCss() {
+    if (document.getElementById('admin-office-signature-copy-css')) return;
+    const st = document.createElement('style');
+    st.id = 'admin-office-signature-copy-css';
+    st.textContent = `#${COPY_DIALOG_ID}{position:fixed;inset:0;z-index:2147483500;background:rgba(15,23,42,.58);display:flex;align-items:center;justify-content:center;direction:rtl;font-family:Tajawal,Arial,sans-serif}#${COPY_DIALOG_ID} .sig-copy-box{width:min(780px,94vw);max-height:88vh;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.25);padding:18px}#${COPY_DIALOG_ID} h3{margin:0 0 6px;color:#003087;font-size:20px;font-weight:950}#${COPY_DIALOG_ID} p{margin:0 0 12px;color:#64748b;font-weight:800;line-height:1.8}.sig-copy-row{display:grid;grid-template-columns:1fr;gap:10px;margin:12px 0}.sig-copy-field{display:block;background:#f8fafc;border:1px solid #dbe4f0;border-radius:12px;padding:10px}.sig-copy-field span{display:block;font-size:12px;font-weight:950;color:#334155;margin-bottom:6px}.sig-copy-field select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:9px;font-family:inherit;font-weight:900}.sig-copy-targets{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;max-height:290px;overflow:auto;border:1px solid #e2e8f0;border-radius:12px;padding:10px}.sig-copy-target{display:flex;gap:8px;align-items:center;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px;font-weight:850}.sig-copy-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}.sig-copy-actions button{border:0;border-radius:10px;padding:10px 15px;font-family:inherit;font-weight:950;cursor:pointer}.sig-copy-primary{background:#166534;color:white}.sig-copy-light{background:#e2e8f0;color:#0f172a}.sig-copy-danger{background:#fee2e2;color:#991b1b}.sig-copy-note{background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:9px;color:#92400e;font-weight:850;line-height:1.8}`;
+    document.head.appendChild(st);
+  }
+  function closeCopyDialog() {
+    const d = document.getElementById(COPY_DIALOG_ID);
+    if (d) d.remove();
+  }
+  function officeOptions(selected) {
+    const names = getNames();
+    return Object.keys(names).map(k => `<option value="${esc(k)}" ${k === selected ? 'selected' : ''}>${esc(names[k] || k)}</option>`).join('');
+  }
+  function targetChecks(sourceKey) {
+    const names = getNames();
+    return Object.keys(names).map(k => `<label class="sig-copy-target"><input type="checkbox" class="sig-copy-target-check" value="${esc(k)}" ${k === sourceKey ? '' : 'checked'}><span>${esc(names[k] || k)}</span></label>`).join('');
+  }
+  function openCopyDialog(type, centerKey) {
+    if (!ensureSignatureBlockReady()) return alert('نظام التواقيع لم يكتمل تحميله بعد. أعد تحميل الصفحة.');
+    const t = normalizeType(type);
+    if (t === 'grand_certificate') return alert('الشهادة الإجمالية لها توقيع واحد مستقل، ولا تحتاج نسخ بين المكاتب.');
+    ensureCopyCss();
+    closeCopyDialog();
+    const source = cleanCenterKey(centerKey) || currentCenterKey();
+    const names = getNames();
+    const dialog = document.createElement('div');
+    dialog.id = COPY_DIALOG_ID;
+    dialog.innerHTML = `<div class="sig-copy-box"><h3>نسخ تواقيع ${esc(typeArabic(t))} إلى مكاتب مختارة</h3><p>سيتم نسخ تواقيع نوع الصفحة الحالي فقط. لن يتم خلط تواقيع الحضور مع الأداء أو الإنجاز.</p><div class="sig-copy-note">المصدر الحالي: <b>${esc(names[source] || source)}</b>. سيتم نسخ التواقيع وخيارات الطباعة الخاصة بها إلى المكاتب المختارة.</div><div class="sig-copy-row"><label class="sig-copy-field"><span>مكتب المصدر</span><select id="sig-copy-source">${officeOptions(source)}</select></label></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><button type="button" class="sig-copy-light" id="sig-copy-all">تحديد الكل</button><button type="button" class="sig-copy-light" id="sig-copy-none">إلغاء الكل</button></div><div id="sig-copy-targets" class="sig-copy-targets">${targetChecks(source)}</div><div class="sig-copy-actions"><button type="button" class="sig-copy-primary" id="sig-copy-apply">نسخ التواقيع للمكاتب المختارة</button><button type="button" class="sig-copy-danger" id="sig-copy-close">إغلاق</button></div></div>`;
+    document.body.appendChild(dialog);
+    document.getElementById('sig-copy-close').onclick = closeCopyDialog;
+    document.getElementById('sig-copy-all').onclick = () => document.querySelectorAll('.sig-copy-target-check').forEach(cb => { cb.checked = true; });
+    document.getElementById('sig-copy-none').onclick = () => document.querySelectorAll('.sig-copy-target-check').forEach(cb => { cb.checked = false; });
+    document.getElementById('sig-copy-source').onchange = function () {
+      const src = this.value;
+      const holder = document.getElementById('sig-copy-targets');
+      if (holder) holder.innerHTML = targetChecks(src);
+    };
+    document.getElementById('sig-copy-apply').onclick = function () { applyCopy(t); };
+  }
+  async function applyCopy(type) {
+    const src = cleanCenterKey(document.getElementById('sig-copy-source')?.value || currentCenterKey());
+    const targets = Array.from(document.querySelectorAll('.sig-copy-target-check:checked')).map(cb => cleanCenterKey(cb.value)).filter(Boolean);
+    if (!src || !targets.length) return alert('اختر مكتب مصدر ومكتب هدف واحد على الأقل.');
+    const sourceKey = signatureKey(type, src);
+    let sigs = [];
+    try { sigs = window.SignatureBlock.getSigs(sourceKey) || []; } catch (_) {}
+    if (!sigs.length) sigs = readJson(PREFIX + sourceKey, []);
+    const prefs = readJson(PREFS + sourceKey, readJson(PREFS + sourceKey, {}));
+    if (!Array.isArray(sigs) || !sigs.length) {
+      if (!confirm('مكتب المصدر لا يحتوي على توقيعات محفوظة. الاستمرار سيجعل المكاتب المختارة بدون توقيعات.')) return;
+      sigs = [];
+    }
+    const payload = {};
+    targets.forEach(target => {
+      const key = signatureKey(type, target);
+      writeJson(PREFIX + key, sigs);
+      writeJson(PREFS + key, prefs || {});
+      payload[PREFIX + key] = JSON.stringify(sigs);
+      payload[PREFS + key] = JSON.stringify(prefs || {});
+      try { window.SignatureBlock.init(key, { showStamp: true }); } catch (_) {}
+      try { renderSeparatedSignatures(type, target); } catch (_) {}
+    });
+    const ok = await pushSignatureCopies(payload);
+    alert(ok ? 'تم نسخ التواقيع للمكاتب المختارة ومزامنتها.' : 'تم نسخ التواقيع محلياً. المزامنة السحابية لم تكتمل الآن.');
+    closeCopyDialog();
+    rerenderCurrent();
+  }
+
   function patchDialogs() {
     window.getAdminOfficePageSignatureKey = signatureKey;
     window.displaySignatures = function patchedDisplaySignatures(type, centerKey) {
@@ -199,7 +300,14 @@
     if (attempt < 20) setTimeout(() => boot(attempt + 1), 500);
   }
 
+  window.AdminOfficesPageSignatures = {
+    openCopy: openCopyDialog,
+    closeCopy: closeCopyDialog,
+    signatureKey,
+    refresh: rerenderCurrent
+  };
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(0));
   else boot(0);
-  console.info('[Admin Offices Signatures] page-level independent signatures installed');
+  console.info('[Admin Offices Signatures] page-level independent signatures installed + copy selected offices');
 })();
