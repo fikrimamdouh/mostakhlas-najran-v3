@@ -127,6 +127,7 @@
   var pageFile = getOriginalPageFile();
   var isAttendancePage = pageFile === 'attendance.html' || /\/original\/attendance\.html(?:$|[?#])/.test(pageSig);
   var isAdminOfficesPage = pageFile === 'admin_offices_attendance.html' || /\/original\/admin_offices_attendance\.html(?:$|[?#])/.test(pageSig);
+  var isAdminOfficesConsumablesPage = pageFile === 'admin_offices_consumables.html' || /\/original\/admin_offices_consumables\.html(?:$|[?#])/.test(pageSig);
   var isSidebarSensitivePage = isAttendancePage || isAdminOfficesPage;
 
   console.info('[AuthCheck] original page resolved:', pageFile);
@@ -161,6 +162,10 @@
   if (snapshotPages[pageFile]) {
     appendScript('/original/extract-snapshot.js?v=' + BUILD_V, true);
     appendScript('/original/submitted_extract_archive_bundle_guard.js?v=' + BUILD_V, true);
+  }
+
+  if (isAdminOfficesPage || isAdminOfficesConsumablesPage) {
+    appendScript('/original/admin_offices_full_submit_snapshot_guard.js?v=20260630_full_submit_v1', true);
   }
 
   if (isAttendancePage) {
