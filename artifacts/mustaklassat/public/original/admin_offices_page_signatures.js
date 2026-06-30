@@ -100,6 +100,17 @@
     return el;
   }
   function renderSeparatedSignatures(type, centerKey) {
+        // لا تعيد تهيئة تواقيع صفحات المكاتب أثناء فتح شاشة خطابات الرفع أو تعديل تواقيع الخطابات.
+    // هذا يمنع SignatureBlock.init / pullCloud المتكرر من تجميد حقول إعدادات الخطابات.
+    if (
+      document.getElementById('raise-letters-overlay') &&
+      (
+        document.getElementById('rl-professional-settings-panel') ||
+        document.getElementById('rl-signature-settings-shell')
+      )
+    ) {
+      return;
+    }
     if (!ensureSignatureBlockReady()) return;
     const t = normalizeType(type);
     const c = cleanCenterKey(centerKey) || currentCenterKey();
