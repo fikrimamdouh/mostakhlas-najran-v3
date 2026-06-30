@@ -44,7 +44,10 @@
       var isHospitalStorageGet = method === 'GET' && /\/api\/hospital-storage(?:\?|$)/.test(url);
 
       if (isHospitalStorageGet && !isRevisionOrPreviewMode()) {
-        console.warn('[AttendanceLocalOnly] تم منع سحب الحضور/المستشفى من السحابة في التشغيل العادي. البيانات المحلية هي المصدر الوحيد.');
+        if (!window.__NAJRAN_ATTENDANCE_LOCAL_ONLY_NOTICE_SHOWN__) {
+          window.__NAJRAN_ATTENDANCE_LOCAL_ONLY_NOTICE_SHOWN__ = true;
+          console.info('[AttendanceLocalOnly] السحب من hospital-storage ممنوع في تشغيل الحضور العادي. سيتم إخفاء الرسائل المتكررة.');
+        }
         return Promise.resolve(new Response(JSON.stringify({ ok: true, data: {}, localOnly: true }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
