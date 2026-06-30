@@ -200,8 +200,38 @@ function collectDataForBackup(backupType) {
     const SHARED_KEYS = ['persistentContractData', 'persistentExtractData', 'appTitles_v1', 'hospitalName', 'companyName', 'contractNumber'];
     const keyPatterns = {
         settings: [...SHARED_KEYS, 'distributionSettings', 'performanceTableNames', 'performanceSignatures_v2', 'contractData', 'contractDetails', 'contractType', 'contractStartDate', 'contractEndDate', 'contractSignatureData', 'extractMonth', 'extractYear', 'extractNumber', 'extractStart', 'extractEnd', 'extractFromDate', 'extractToDate', 'directPurchaseRatio', 'centerNames_v3', 'departmentNames', 'admin_staff', 'adminOfficeNames_v1', 'settings_main', 'settings_advanced', 'dynamicSignatures', 'contractorSignature', /^contract_foundation/, /^sb_sigs_/, /^signatures?/i],
-        main_hospital_attendance: [...SHARED_KEYS, 'attendanceData', 'ng_attendanceData', 'nd_attendanceData', 'performanceTotalDeduction', 'finalLaborCost', 'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin', 'performanceData', 'performanceSignatures', 'performanceTableNames', 'achievementData', 'achievementTitles_v1', 'najran_labor_attendance_done', 'najran_labor_performance_done', /^tableData_/, /^deptCalculatedCost_/, /^dept_/, /^ng_/, /^nd_/, /attendance/i, /labor/i, /employee/i, /staff/i],
-        main_hospital_consumables: [...SHARED_KEYS, /^main_hospital_consumables_/, /^sparePartsData_/, 'mainHospitalConsumables', 'spare_partsData', 'sparePartsTotalAmount', 'subcontractors_data_consumables_v27', 'performance_data_consumables_v27', 'water_supply_data_consumables_v27', 'sewage_disposal_data_consumables_v27', 'summary_data_consumables_v27', /^summary_data_consumables/, /^signatures_data_consumables/, /consumables/i, /subcontractors/i, /water_supply/i, /sewage/i, /laundry_supply/i],
+main_hospital_attendance: [
+    ...SHARED_KEYS,
+    'attendanceData',
+    'ng_attendanceData',
+    'nd_attendanceData',
+    'performanceTotalDeduction',
+    'finalLaborCost',
+    'grand-net-total',
+    'grand-net-total-centers',
+    'grand-net-total-admin',
+    'performanceData',
+    'performanceSignatures',
+    'performanceTableNames',
+    'achievementData',
+    'achievementTitles_v1',
+    'najran_labor_attendance_done',
+    'najran_labor_performance_done',
+
+    // تواقيع صفحة الحضور العادي + تفضيلات ظهور التوقيع والختم في الطباعة
+    'sb_sigs_attendance',
+    'sb_prefs_attendance',
+
+    /^tableData_/,
+    /^deptCalculatedCost_/,
+    /^dept_/,
+    /^ng_/,
+    /^nd_/,
+    /attendance/i,
+    /labor/i,
+    /employee/i,
+    /staff/i
+],        main_hospital_consumables: [...SHARED_KEYS, /^main_hospital_consumables_/, /^sparePartsData_/, 'mainHospitalConsumables', 'spare_partsData', 'sparePartsTotalAmount', 'subcontractors_data_consumables_v27', 'performance_data_consumables_v27', 'water_supply_data_consumables_v27', 'sewage_disposal_data_consumables_v27', 'summary_data_consumables_v27', /^summary_data_consumables/, /^signatures_data_consumables/, /consumables/i, /subcontractors/i, /water_supply/i, /sewage/i, /laundry_supply/i],
         spare_parts: [...SHARED_KEYS, 'spare_partsData', 'sparePartsTotalAmount', /^sparePartsData_/, /^spare_parts/, /spare/i, /parts/i],
         health_centers_attendance: [...SHARED_KEYS, 'centerNames_v3', 'centersAttendanceData_v2', 'healthCentersAttendanceData', 'performanceData_v4', 'performanceDeductions', 'grand-net-total', 'admin_staff', 'najran_health_attendance_done', /^table-/, /healthCenters/i],
         health_centers_consumables: [...SHARED_KEYS, 'healthCentersConsumables', 'consumables_final_v1.0', /^subcontractors_data_consumables_final_/, /^performance_data_consumables_final_/, /^water_supply_data_consumables_final_/, /^laundry_supply_data_consumables_final_/, /^sewage_disposal_data_consumables_final_/, /^summary_data_consumables_final_/, /^signatures_data_consumables_final_/, /^print_titles_data_consumables_final_/, /^notes_data_consumables_final_/],
