@@ -1,20 +1,22 @@
 // ===================================================================
-// Admin Offices Full Submit Snapshot Guard — V1
+// Admin Offices Full Submit Snapshot Guard — V2
 // Scope: admin_offices_attendance.html + admin_offices_consumables.html
 // يلتقط نسخة تشغيل كاملة قبل الرفع مباشرة حتى تكون متاحة عند تعديل المستخلص لاحقًا.
-// لا يغير API ولا حسابات ولا مفاتيح الحفظ الأصلية.
+// ويجبر رفع المكاتب على extractType=admin_offices حتى لا تعرضه المراجعة كعمالة/مستهلكات عادية.
+// لا يغير الحسابات أو مفاتيح الحفظ الأصلية.
 // ===================================================================
 (function () {
   'use strict';
 
   var page = (location.pathname || '').split('/').pop() || '';
   if (!/admin_offices_(attendance|consumables)\.html/.test(page)) return;
-  if (window.__ADMIN_OFFICES_FULL_SUBMIT_SNAPSHOT_GUARD_V1__) return;
-  window.__ADMIN_OFFICES_FULL_SUBMIT_SNAPSHOT_GUARD_V1__ = true;
+  if (window.__ADMIN_OFFICES_FULL_SUBMIT_SNAPSHOT_GUARD_V2__) return;
+  window.__ADMIN_OFFICES_FULL_SUBMIT_SNAPSHOT_GUARD_V2__ = true;
 
   var SNAPSHOT_KEY = 'najran_admin_offices_complete_submit_snapshot_v1';
   var LABOR_KEY = 'najran_admin_offices_labor_submit_snapshot_v1';
   var CONSUMABLES_KEY = 'najran_admin_offices_consumables_submit_snapshot_v1';
+  var submitting = false;
 
   function safeJsonParse(raw, fallback) {
     try { return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
@@ -73,6 +75,48 @@
     );
   }
 
+  function getSession() {
+    return readLocal('najran_session') || {};
+  }
+
+  function getContractData() {
+    var c = readLocal('persistentContractData') || {};
+    var e = readLocal('persistentExtractData') || {};
+    var extractMonth = e.extractMonth || localStorage.getItem('extractMonth') || '';
+    var extractYear = e.extractYear || localStorage.getItem('extractYear') || new Date().getFullYear();
+    var paymentNumber = e.paymentNumber || localStorage.getItem('paymentNumber') || '';
+    var extractStart = e.extractStart || localStorage.getItem('extractStart') || '';
+    var extractEnd = e.extractEnd || localStorage.getItem('extractEnd') || '';
+    return {
+      companyName: localStorage.getItem('companyName') || c.companyName || c.company || '',
+      contractNumber: c.contractNumber || localStorage.getItem('contractDetails') || '',
+      hospitalName: c.hospitalName || localStorage.getItem('hospitalName') || '',
+      extractMonth: extractMonth,
+      extractYear: String(extractYear || ''),
+      paymentNumber: paymentNumber,
+      extractStart: extractStart,
+      extractEnd: extractEnd,
+      periodMonth: String((extractMonth || '') + ' ' + (extractYear || '')).trim()
+    };
+  }
+
+  function captureStorageSnapshot() {
+    var skipPrefixes = ['najran_session', '__clerk', 'clerk_', 'loglevel', 'amplitude', 'chakra', 'persist:'];
+    var snapshot = {};
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (!key) continue;
+        if (skipPrefixes.some(function (p) { return key.indexOf(p) === 0; })) continue;
+        var val = localStorage.getItem(key);
+        if (val !== null) snapshot[key] = safeJsonParse(val, val);
+      }
+    } catch (err) {
+      console.warn('[Admin Offices Submit] snapshot error', err);
+    }
+    return snapshot;
+  }
+
   function forceSaveCurrentScreen() {
     try { if (typeof window.captureUIData === 'function') window.captureUIData(); } catch (_) {}
     try { if (typeof window.saveAllData === 'function') window.saveAllData(); } catch (_) {}
@@ -118,6 +162,18 @@
     return out;
   }
 
+  function collectByPattern(pattern) {
+    var out = {};
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (!key || isOwnSnapshotKey(key)) continue;
+        if (pattern.test(key)) out[key] = readLocal(key);
+      }
+    } catch (_) {}
+    return out;
+  }
+
   function buildLaborSnapshot() {
     var data = readLocal('adminOfficesAttendanceData_v1') || {};
     var names = readLocal('adminOfficeNames_v1') || {};
@@ -145,18 +201,6 @@
         grandNetTotalAdmin: readLocal('grand-net-total-admin')
       }
     };
-  }
-
-  function collectByPattern(pattern) {
-    var out = {};
-    try {
-      for (var i = 0; i < localStorage.length; i++) {
-        var key = localStorage.key(i);
-        if (!key || isOwnSnapshotKey(key)) continue;
-        if (pattern.test(key)) out[key] = readLocal(key);
-      }
-    } catch (_) {}
-    return out;
   }
 
   function buildConsumablesSnapshot() {
@@ -197,7 +241,7 @@
     var relevantLocalStorage = collectRelevantLocalStorage();
 
     var complete = {
-      schema: 'admin_offices_complete_submit_snapshot_v1',
+      schema: 'admin_offices_complete_submit_snapshot_v2',
       capturedAt: new Date().toISOString(),
       trigger: trigger || 'manual',
       page: page,
@@ -223,24 +267,131 @@
     return complete;
   }
 
-  function isSubmitButton(target) {
+  function numericLocal(keys) {
+    for (var i = 0; i < keys.length; i++) {
+      var n = parseFloat(String(localStorage.getItem(keys[i]) || '').replace(/,/g, ''));
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+    return 0;
+  }
+
+  function getAdminOfficePart() {
+    return page.indexOf('consumables') > -1 ? 'consumables' : 'labor';
+  }
+
+  function getPartTotal(part, complete) {
+    if (part === 'consumables') {
+      return numericLocal(['finalConsumablesCost']) || 0;
+    }
+    return numericLocal(['grand-net-total-admin', 'finalLaborCost']) || 0;
+  }
+
+  async function getToken() {
+    var session = getSession();
+    var token = session.clerkToken || null;
+    try {
+      if (window.najranGetFreshToken) {
+        var fresh = await Promise.race([
+          window.najranGetFreshToken(),
+          new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 1200); })
+        ]);
+        if (fresh) token = fresh;
+      }
+    } catch (_) {}
+    return token;
+  }
+
+  async function submitAdminOffices(part) {
+    if (submitting) return;
+    submitting = true;
+
+    var label = part === 'consumables' ? 'مستهلكات المكاتب' : 'عمالة المكاتب';
+    var btn = document.getElementById('_najran_approve_btn_inner');
+    var oldHtml = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.7'; btn.innerHTML = '<span>جاري رفع ' + label + '...</span>'; }
+
+    try {
+      var complete = buildCompleteSnapshot('forced-admin-offices-submit-' + part);
+      var contractData = getContractData();
+      var extractData = captureStorageSnapshot();
+      var total = getPartTotal(part, complete);
+      var sourceModule = part === 'consumables' ? 'admin_offices_consumables' : 'admin_offices_attendance';
+      var revisionId = localStorage.getItem('najran_revision_extract_id') || localStorage.getItem('najran_editing_submitted_extract_id') || '';
+      var isRevision = (localStorage.getItem('najran_revision_mode') === 'true' && revisionId) || (localStorage.getItem('najran_editing_submitted_extract_mode') === 'true' && revisionId);
+
+      var payload = Object.assign({}, contractData, {
+        extractType: 'admin_offices',
+        totalAmount: total,
+        adminOfficeExtract: true,
+        adminOfficePart: part,
+        adminOfficeLabor: part === 'labor',
+        adminOfficeConsumables: part === 'consumables',
+        sourceModule: sourceModule,
+        reviewScope: part === 'labor' ? 'admin_offices_labor_only' : 'admin_offices_consumables_only',
+        extractData: extractData
+      });
+
+      var token = await getToken();
+      var headers = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = 'Bearer ' + token;
+
+      var res = await fetch(isRevision ? '/api/submitted-extracts/' + encodeURIComponent(revisionId) : '/api/submitted-extracts', {
+        method: isRevision ? 'PUT' : 'POST',
+        headers: headers,
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        var err = await res.json().catch(function () { return {}; });
+        throw new Error(err.error || 'تعذر رفع مستخلص المكاتب');
+      }
+      var result = await res.json().catch(function () { return {}; });
+      try {
+        localStorage.setItem('najran_last_submitted_extract_id', String(result.id || result.extractId || ''));
+        localStorage.setItem('najran_last_submitted_extract_type', 'admin_offices');
+        localStorage.setItem('najran_last_submitted_admin_office_part', part);
+        localStorage.setItem('najran_last_submitted_period', String(contractData.periodMonth || ''));
+        localStorage.setItem('najran_last_submitted_payment', String(contractData.paymentNumber || ''));
+        localStorage.setItem('najran_last_submitted_at', new Date().toISOString());
+        var mk = String(contractData.extractYear || '') + '_' + String(contractData.extractMonth || '').trim();
+        if (mk !== '_') localStorage.setItem(part === 'consumables' ? 'najran_admin_offices_consumables_locked_' + mk : 'najran_admin_offices_labor_locked_' + mk, '1');
+      } catch (_) {}
+      window.location.href = '/extracts/track';
+    } catch (e) {
+      alert('حدث خطأ: ' + (e && e.message ? e.message : e));
+      submitting = false;
+      if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = oldHtml || '<span>رفع مستخلص المكاتب للاعتماد</span><span style="font-size:1.2rem">←</span>'; }
+    }
+  }
+
+  function isAdminOfficesSubmitButton(target) {
     var btn = target && target.closest && target.closest('#_najran_approve_btn_inner, #_najran_approve_btn button');
     if (!btn) return false;
     var text = String(btn.textContent || '');
-    return /رفع مستخلص/.test(text) || /جاري رفع/.test(text);
+    return /رفع\s+مستخلص\s+(عمالة|مستهلكات)\s+المكاتب/.test(text) || /جاري\s+رفع\s+مستخلص\s+(عمالة|مستهلكات)\s+المكاتب/.test(text);
   }
 
   document.addEventListener('click', function (e) {
-    if (!isSubmitButton(e.target)) return;
-    buildCompleteSnapshot('before-submit-click');
+    if (!isAdminOfficesSubmitButton(e.target)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    e.stopPropagation();
+    var part = getAdminOfficePart();
+    var msg = part === 'consumables'
+      ? 'هل تريد رفع مستخلص مستهلكات المكاتب الإدارية للاعتماد؟\n\nسيتم تصنيفه كمستخلص مكاتب إدارية حتى تظهر المراجعة الصحيحة.'
+      : 'هل تريد رفع مستخلص عمالة المكاتب الإدارية للاعتماد؟\n\nسيتم تصنيفه كمستخلص مكاتب إدارية حتى تظهر كل المكاتب في المراجعة.';
+    if (!confirm(msg)) return false;
+    submitAdminOffices(part);
+    return false;
   }, true);
 
   window.AdminOfficesFullSubmitSnapshot = {
     capture: buildCompleteSnapshot,
+    submit: submitAdminOffices,
     keys: { complete: SNAPSHOT_KEY, labor: LABOR_KEY, consumables: CONSUMABLES_KEY }
   };
 
   setTimeout(function () { buildCompleteSnapshot('page-ready'); }, 1200);
 
-  console.info('[Admin Offices Full Submit Snapshot Guard] installed v1');
+  console.info('[Admin Offices Full Submit Snapshot Guard] installed v2 forced admin_offices submit type');
 })();
