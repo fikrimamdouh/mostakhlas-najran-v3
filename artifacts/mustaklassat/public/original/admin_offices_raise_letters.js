@@ -26,6 +26,9 @@ function loadScript(id,src,onload){
   document.head.appendChild(s);
   return s;
 }
+function loadCleanSignatures(){
+  loadScript('admin-offices-raise-letters-clean-signatures-v4','/original/admin_offices_raise_letters_clean_signatures_v1.js?v=20260630_clean_signatures_v4_rebuilt_after_screen');
+}
 function loadCleanScreen(){
   if(!isClean||cleanLoadStarted)return;
   cleanLoadStarted=true;
@@ -33,8 +36,12 @@ function loadCleanScreen(){
   var boot=document.getElementById('admin-raise-clean-boot-shell');
   if(boot)boot.remove();
   loadScript('admin-offices-raise-letters-print-fallbacks-v1','/original/admin_offices_raise_letters_print_fallbacks_v1.js?v=20260630_print_fallbacks_v1');
-  loadScript('admin-offices-raise-letters-clean-signatures-v4','/original/admin_offices_raise_letters_clean_signatures_v1.js?v=20260630_clean_signatures_v4_rebuilt');
-  loadScript('admin-offices-raise-letters-clean-v1','/original/admin_offices_raise_letters_clean_v1.js?v=20260630_clean_screen_loader_v2',function(){console.info('[Admin Offices Raise Letters] clean screen loaded');});
+  loadScript('admin-offices-raise-letters-clean-v1','/original/admin_offices_raise_letters_clean_v1.js?v=20260630_clean_screen_loader_v2',function(){
+    console.info('[Admin Offices Raise Letters] clean screen loaded');
+    loadCleanSignatures();
+    setTimeout(loadCleanSignatures,300);
+    setTimeout(loadCleanSignatures,900);
+  });
 }
 function closeOnly(){try{window.close()}catch(_){}}
 function installCloseOnly(){
