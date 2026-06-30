@@ -1,8 +1,8 @@
 // ===================================================================
-// Admin Offices Full Submit Snapshot Guard — V2
+// Admin Offices Full Submit Snapshot Guard — V3
 // Scope: admin_offices_attendance.html + admin_offices_consumables.html
-// يلتقط نسخة تشغيل كاملة قبل الرفع مباشرة حتى تكون متاحة عند تعديل المستخلص لاحقًا.
-// ويجبر رفع المكاتب على extractType=admin_offices حتى لا تعرضه المراجعة كعمالة/مستهلكات عادية.
+// يحفظ صورة تشغيل كاملة قابلة للاسترجاع عند التعديل، لكن يرسلها كـ flat snapshot
+// بدون نسخ localStorage الضخمة والمتداخلة التي كانت تسبب 413 Content Too Large.
 // لا يغير الحسابات أو مفاتيح الحفظ الأصلية.
 // ===================================================================
 (function () {
@@ -10,12 +10,13 @@
 
   var page = (location.pathname || '').split('/').pop() || '';
   if (!/admin_offices_(attendance|consumables)\.html/.test(page)) return;
-  if (window.__ADMIN_OFFICES_FULL_SUBMIT_SNAPSHOT_GUARD_V2__) return;
-  window.__ADMIN_OFFICES_FULL_SUBMIT_SNAPSHOT_GUARD_V2__ = true;
+  if (window.__ADMIN_OFFICES_FULL_SUBMIT_SNAPSHOT_GUARD_V3__) return;
+  window.__ADMIN_OFFICES_FULL_SUBMIT_SNAPSHOT_GUARD_V3__ = true;
 
   var SNAPSHOT_KEY = 'najran_admin_offices_complete_submit_snapshot_v1';
   var LABOR_KEY = 'najran_admin_offices_labor_submit_snapshot_v1';
   var CONSUMABLES_KEY = 'najran_admin_offices_consumables_submit_snapshot_v1';
+  var META_KEY = 'najran_admin_offices_submit_meta_v1';
   var submitting = false;
 
   function safeJsonParse(raw, fallback) {
@@ -34,7 +35,7 @@
   }
 
   function isOwnSnapshotKey(key) {
-    return key === SNAPSHOT_KEY || key === LABOR_KEY || key === CONSUMABLES_KEY;
+    return key === SNAPSHOT_KEY || key === LABOR_KEY || key === CONSUMABLES_KEY || key === META_KEY;
   }
 
   function shouldCaptureKey(key) {
@@ -70,8 +71,11 @@
       key === 'extractMonth' ||
       key === 'extractYear' ||
       key === 'paymentNumber' ||
+      key === 'extractNumber' ||
       key === 'extractStart' ||
-      key === 'extractEnd'
+      key === 'extractEnd' ||
+      key === 'extractFromDate' ||
+      key === 'extractToDate'
     );
   }
 
@@ -84,9 +88,9 @@
     var e = readLocal('persistentExtractData') || {};
     var extractMonth = e.extractMonth || localStorage.getItem('extractMonth') || '';
     var extractYear = e.extractYear || localStorage.getItem('extractYear') || new Date().getFullYear();
-    var paymentNumber = e.paymentNumber || localStorage.getItem('paymentNumber') || '';
-    var extractStart = e.extractStart || localStorage.getItem('extractStart') || '';
-    var extractEnd = e.extractEnd || localStorage.getItem('extractEnd') || '';
+    var paymentNumber = e.paymentNumber || e.extractNumber || localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber') || '';
+    var extractStart = e.extractStart || e.extractFromDate || localStorage.getItem('extractStart') || localStorage.getItem('extractFromDate') || '';
+    var extractEnd = e.extractEnd || e.extractToDate || localStorage.getItem('extractEnd') || localStorage.getItem('extractToDate') || '';
     return {
       companyName: localStorage.getItem('companyName') || c.companyName || c.company || '',
       contractNumber: c.contractNumber || localStorage.getItem('contractDetails') || '',
@@ -98,23 +102,6 @@
       extractEnd: extractEnd,
       periodMonth: String((extractMonth || '') + ' ' + (extractYear || '')).trim()
     };
-  }
-
-  function captureStorageSnapshot() {
-    var skipPrefixes = ['najran_session', '__clerk', 'clerk_', 'loglevel', 'amplitude', 'chakra', 'persist:'];
-    var snapshot = {};
-    try {
-      for (var i = 0; i < localStorage.length; i++) {
-        var key = localStorage.key(i);
-        if (!key) continue;
-        if (skipPrefixes.some(function (p) { return key.indexOf(p) === 0; })) continue;
-        var val = localStorage.getItem(key);
-        if (val !== null) snapshot[key] = safeJsonParse(val, val);
-      }
-    } catch (err) {
-      console.warn('[Admin Offices Submit] snapshot error', err);
-    }
-    return snapshot;
   }
 
   function forceSaveCurrentScreen() {
@@ -241,7 +228,7 @@
     var relevantLocalStorage = collectRelevantLocalStorage();
 
     var complete = {
-      schema: 'admin_offices_complete_submit_snapshot_v2',
+      schema: 'admin_offices_complete_submit_snapshot_v3',
       capturedAt: new Date().toISOString(),
       trigger: trigger || 'manual',
       page: page,
@@ -267,6 +254,115 @@
     return complete;
   }
 
+  function put(out, key, value) {
+    if (!key || value == null) return;
+    out[key] = value;
+  }
+
+  function copyMap(out, map) {
+    if (!map || typeof map !== 'object') return;
+    Object.keys(map).forEach(function (key) {
+      if (!key || isOwnSnapshotKey(key)) return;
+      if (out[key] === undefined) out[key] = map[key];
+    });
+  }
+
+  function stripLargeInlineAssets(value) {
+    if (typeof value === 'string') {
+      if (/^data:image\//i.test(value) && value.length > 500000) {
+        return '[large-inline-image-omitted-from-submit-payload]';
+      }
+      return value;
+    }
+    if (Array.isArray(value)) return value.map(stripLargeInlineAssets);
+    if (value && typeof value === 'object') {
+      var out = {};
+      Object.keys(value).forEach(function (key) {
+        out[key] = stripLargeInlineAssets(value[key]);
+      });
+      return out;
+    }
+    return value;
+  }
+
+  function buildFlatSubmitExtractData(complete, contractData, part) {
+    var out = {};
+    var labor = complete.labor || {};
+    var consumables = complete.consumables || {};
+    var extract = complete.extract || readLocal('persistentExtractData') || {};
+    var contract = complete.contract || readLocal('persistentContractData') || {};
+
+    put(out, 'persistentContractData', contract);
+    put(out, 'persistentExtractData', extract);
+    put(out, 'companyName', contractData.companyName || contract.companyName || contract.company || '');
+    put(out, 'hospitalName', contractData.hospitalName || contract.hospitalName || '');
+    put(out, 'contractDetails', contractData.contractNumber || contract.contractNumber || '');
+    put(out, 'extractMonth', contractData.extractMonth || extract.extractMonth || '');
+    put(out, 'extractYear', contractData.extractYear || extract.extractYear || '');
+    put(out, 'paymentNumber', contractData.paymentNumber || extract.paymentNumber || extract.extractNumber || '');
+    put(out, 'extractNumber', contractData.paymentNumber || extract.extractNumber || extract.paymentNumber || '');
+    put(out, 'extractStart', contractData.extractStart || extract.extractStart || extract.extractFromDate || '');
+    put(out, 'extractEnd', contractData.extractEnd || extract.extractEnd || extract.extractToDate || '');
+    put(out, 'extractFromDate', contractData.extractStart || extract.extractFromDate || extract.extractStart || '');
+    put(out, 'extractToDate', contractData.extractEnd || extract.extractToDate || extract.extractEnd || '');
+
+    put(out, 'adminOfficesAttendanceData_v1', labor.attendanceData || readLocal('adminOfficesAttendanceData_v1') || {});
+    put(out, 'adminOfficeNames_v1', labor.names || readLocal('adminOfficeNames_v1') || {});
+    put(out, 'adminOfficeAffiliations_v1', labor.affiliations || readLocal('adminOfficeAffiliations_v1') || {});
+    put(out, 'adminOfficesPositionsSetup_v1', labor.positionsSetup || readLocal('adminOfficesPositionsSetup_v1'));
+
+    copyMap(out, labor.signatures);
+    copyMap(out, labor.letters);
+    copyMap(out, labor.titles);
+
+    if (consumables.tables) {
+      copyMap(out, consumables.tables.subcontractors);
+      copyMap(out, consumables.tables.performance);
+      copyMap(out, consumables.tables.water);
+      copyMap(out, consumables.tables.laundry);
+      copyMap(out, consumables.tables.sewage);
+      copyMap(out, consumables.tables.summary);
+      copyMap(out, consumables.tables.notes);
+      copyMap(out, consumables.tables.signatures);
+      copyMap(out, consumables.tables.titles);
+    }
+
+    put(out, 'finalLaborCost', labor.totals ? labor.totals.finalLaborCost : readLocal('finalLaborCost'));
+    put(out, 'finalConsumablesCost', consumables.totals ? consumables.totals.finalConsumablesCost : readLocal('finalConsumablesCost'));
+    put(out, 'grand-net-total-admin', labor.totals ? labor.totals.grandNetTotalAdmin : readLocal('grand-net-total-admin'));
+
+    copyMap(out, complete.localStorageSubset);
+
+    out[META_KEY] = {
+      schema: 'admin_offices_flat_submit_snapshot_v3',
+      capturedAt: complete.capturedAt,
+      sourcePage: page,
+      submittedPart: part,
+      offices: labor.officeCount || 0,
+      employees: labor.employeeRows || 0,
+      keys: Object.keys(out).length
+    };
+
+    return out;
+  }
+
+  function shrinkPayloadIfNeeded(payload) {
+    try {
+      var size = JSON.stringify(payload).length;
+      if (size <= 18 * 1024 * 1024) return payload;
+      var clone = Object.assign({}, payload, {
+        extractData: stripLargeInlineAssets(payload.extractData || {})
+      });
+      console.warn('[Admin Offices Full Submit Snapshot] payload trimmed only for oversized inline image assets', {
+        beforeBytes: size,
+        afterBytes: JSON.stringify(clone).length
+      });
+      return clone;
+    } catch (_) {
+      return payload;
+    }
+  }
+
   function numericLocal(keys) {
     for (var i = 0; i < keys.length; i++) {
       var n = parseFloat(String(localStorage.getItem(keys[i]) || '').replace(/,/g, ''));
@@ -279,7 +375,7 @@
     return page.indexOf('consumables') > -1 ? 'consumables' : 'labor';
   }
 
-  function getPartTotal(part, complete) {
+  function getPartTotal(part) {
     if (part === 'consumables') {
       return numericLocal(['finalConsumablesCost']) || 0;
     }
@@ -313,8 +409,8 @@
     try {
       var complete = buildCompleteSnapshot('forced-admin-offices-submit-' + part);
       var contractData = getContractData();
-      var extractData = captureStorageSnapshot();
-      var total = getPartTotal(part, complete);
+      var extractData = buildFlatSubmitExtractData(complete, contractData, part);
+      var total = getPartTotal(part);
       var sourceModule = part === 'consumables' ? 'admin_offices_consumables' : 'admin_offices_attendance';
       var revisionId = localStorage.getItem('najran_revision_extract_id') || localStorage.getItem('najran_editing_submitted_extract_id') || '';
       var isRevision = (localStorage.getItem('najran_revision_mode') === 'true' && revisionId) || (localStorage.getItem('najran_editing_submitted_extract_mode') === 'true' && revisionId);
@@ -330,6 +426,7 @@
         reviewScope: part === 'labor' ? 'admin_offices_labor_only' : 'admin_offices_consumables_only',
         extractData: extractData
       });
+      payload = shrinkPayloadIfNeeded(payload);
 
       var token = await getToken();
       var headers = { 'Content-Type': 'application/json' };
@@ -388,10 +485,10 @@
   window.AdminOfficesFullSubmitSnapshot = {
     capture: buildCompleteSnapshot,
     submit: submitAdminOffices,
-    keys: { complete: SNAPSHOT_KEY, labor: LABOR_KEY, consumables: CONSUMABLES_KEY }
+    keys: { complete: SNAPSHOT_KEY, labor: LABOR_KEY, consumables: CONSUMABLES_KEY, meta: META_KEY }
   };
 
   setTimeout(function () { buildCompleteSnapshot('page-ready'); }, 1200);
 
-  console.info('[Admin Offices Full Submit Snapshot Guard] installed v2 forced admin_offices submit type');
+  console.info('[Admin Offices Full Submit Snapshot Guard] installed v3 compact flat submit payload');
 })();
