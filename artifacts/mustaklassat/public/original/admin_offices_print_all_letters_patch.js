@@ -1,6 +1,7 @@
-// Admin Offices Print Letters Builders Only — V5
+// Admin Offices Print Letters Builders Only — V6
 // لا يضيف أي اختيارات داخل زر الطباعة. المصدر الوحيد للاختيارات هو admin_offices_print_all_complete_patch.js.
 // يثبت بيانات الاتصال في أسفل صفحة الخطاب فقط.
+// يصلح التفقيط في خطابات المواقع مع تقريب الهلالات الصغيرة.
 (function () {
   'use strict';
   if (!/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
@@ -58,10 +59,80 @@
     if (/شراء\s*مباشر/.test(String(s.purchasePeriodLabel || ''))) s.purchasePeriodLabel = '';
     return s;
   }
-  function tafqeet(v) {
-    if (window.AdminOfficesRaiseLetters && typeof window.AdminOfficesRaiseLetters.tafqeetSAR === 'function') return window.AdminOfficesRaiseLetters.tafqeetSAR(v);
-    return `فقط وقدره ${money(v)} ريال سعودي لا غير`;
+
+  function normalizeMoneyForTafqeet(v) {
+    let cents = Math.round(num(v) * 100);
+    let halalas = ((cents % 100) + 100) % 100;
+    // تقريب التفقيط فقط: تجاهل الكسور الصغيرة جداً، وارفع إذا كانت قريبة من الريال التالي.
+    if (halalas > 0 && halalas <= 5) cents -= halalas;
+    else if (halalas >= 95) cents += (100 - halalas);
+    return { riyals: Math.floor(cents / 100), halalas: cents % 100 };
   }
+
+  function underHundred(n) {
+    const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة'];
+    const teens = ['عشرة', 'أحد عشر', 'اثنا عشر', 'ثلاثة عشر', 'أربعة عشر', 'خمسة عشر', 'ستة عشر', 'سبعة عشر', 'ثمانية عشر', 'تسعة عشر'];
+    const tens = ['', '', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون'];
+    if (n < 10) return ones[n];
+    if (n < 20) return teens[n - 10];
+    const o = n % 10, t = Math.floor(n / 10);
+    return o ? ones[o] + ' و' + tens[t] : tens[t];
+  }
+
+  function underThousand(n) {
+    const hundreds = ['', 'مائة', 'مائتان', 'ثلاثمائة', 'أربعمائة', 'خمسمائة', 'ستمائة', 'سبعمائة', 'ثمانمائة', 'تسعمائة'];
+    const h = Math.floor(n / 100), r = n % 100;
+    if (!h) return underHundred(r);
+    return r ? hundreds[h] + ' و' + underHundred(r) : hundreds[h];
+  }
+
+  function scaleWord(value, one, two, plural, singular) {
+    if (!value) return '';
+    if (value === 1) return one;
+    if (value === 2) return two;
+    if (value >= 3 && value <= 10) return underThousand(value) + ' ' + plural;
+    return underThousand(value) + ' ' + singular;
+  }
+
+  function numberToArabicWords(n) {
+    n = Math.floor(Math.abs(Number(n) || 0));
+    if (n === 0) return 'صفر';
+    const billions = Math.floor(n / 1000000000); n %= 1000000000;
+    const millions = Math.floor(n / 1000000); n %= 1000000;
+    const thousands = Math.floor(n / 1000); n %= 1000;
+    const parts = [];
+    if (billions) parts.push(scaleWord(billions, 'مليار', 'ملياران', 'مليارات', 'مليار'));
+    if (millions) parts.push(scaleWord(millions, 'مليون', 'مليونان', 'ملايين', 'مليون'));
+    if (thousands) parts.push(scaleWord(thousands, 'ألف', 'ألفان', 'آلاف', 'ألف'));
+    if (n) parts.push(underThousand(n));
+    return parts.join(' و');
+  }
+
+  function riyalUnit(n) {
+    if (n === 1) return 'ريال سعودي واحد';
+    if (n === 2) return 'ريالان سعوديان';
+    if (n >= 3 && n <= 10) return 'ريالات سعودية';
+    return 'ريال سعودي';
+  }
+
+  function halalaUnit(n) {
+    if (n === 1) return 'هللة واحدة';
+    if (n === 2) return 'هللتان';
+    if (n >= 3 && n <= 10) return 'هللات';
+    return 'هللة';
+  }
+
+  function tafqeet(v) {
+    const rounded = normalizeMoneyForTafqeet(v);
+    const r = rounded.riyals;
+    const h = rounded.halalas;
+    let text = '';
+    if (r > 0) text = numberToArabicWords(r) + ' ' + riyalUnit(r);
+    else text = 'صفر ريال سعودي';
+    if (h > 0) text += ' و' + numberToArabicWords(h) + ' ' + halalaUnit(h);
+    return 'فقط وقدره ' + text + ' لا غير';
+  }
+
   function headerHtml(s) {
     return `<div class="raise-head"><img src="moh_logo.png"><div><h1>${esc(s.entityTitle)}</h1><h2>${esc(s.departmentTitle)}</h2></div><img src="moh_logo.png"></div>`;
   }
@@ -116,11 +187,12 @@
   window.AdminOfficePrintLetters = {
     lettersCss,
     buildSiteRaiseLetterForSite,
+    tafqeetSAR: tafqeet,
     buildSelectedLetters: function(){ return ''; },
     hasSelection: function(){ return false; },
     hasAnyPrintSelection: function(){ return false; },
     openLettersOnly: function(){ return false; }
   };
 
-  console.info('[Admin Offices Print All Letters] builder only v5 footer anchored');
+  console.info('[Admin Offices Print All Letters] builder only v6 tafqeet fixed');
 })();
