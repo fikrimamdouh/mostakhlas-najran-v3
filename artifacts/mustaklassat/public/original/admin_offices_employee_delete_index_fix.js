@@ -86,21 +86,6 @@
     } catch (_) {}
   }
 
-  function ensureTransferHelpButton() {
-    const bar = document.querySelector('#management-dialog .dialog-header, #management-dialog .employee-management-header, #management-dialog');
-    if (!bar || document.getElementById('admin-transfer-help-btn')) return;
-    const btn = document.createElement('button');
-    btn.id = 'admin-transfer-help-btn';
-    btn.type = 'button';
-    btn.className = 'btn btn-primary no-print';
-    btn.style.margin = '6px';
-    btn.innerHTML = '<i class="fas fa-exchange-alt"></i> نقل موظف';
-    btn.onclick = function () {
-      alert('افتح أي موقع من إدارة الموظفين، وستجد زر "نقل الموظف" واضحًا داخل كارت كل موظف.');
-    };
-    bar.appendChild(btn);
-  }
-
   window.displayEmployeesForCenter = function displayEmployeesForCenterPatched(centerKey) {
     if (!centerKey) return;
 
@@ -119,7 +104,6 @@
     const centerName = names[centerKey] || centerKey;
     title.innerHTML = `<i class="fas fa-users"></i> موظفو موقع: <strong>${esc(centerName)}</strong>`;
     addButton.style.display = 'inline-flex';
-    ensureTransferHelpButton();
 
     const allData = getData();
     const originalRows = Array.isArray(allData[centerKey]) ? allData[centerKey] : [];
@@ -162,10 +146,10 @@
             <span><i class="fas fa-layer-group"></i> فئة ${esc(emp.category || '')}</span>
           </div>
         </div>
-        <div class="employee-actions" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end">
+        <div class="employee-actions">
           <button title="تعديل بيانات الموظف" class="action-btn btn-edit" onclick="openEditEmployeeForm('${centerKey}', ${originalIndex})"><i class="fas fa-pencil-alt"></i></button>
           <button title="تعديل الحضور الجماعي" class="action-btn btn-attendance" onclick="openBulkAttendanceForm('${centerKey}', ${originalIndex})"><i class="fas fa-calendar-alt"></i></button>
-          <button title="نقل الموظف لموقع آخر" class="action-btn btn-transfer" style="background:#2563eb;color:white;min-width:94px;padding:8px 10px;border-radius:9px;font-weight:900" onclick="openTransferEmployeeDialog('${centerKey}', ${originalIndex})"><i class="fas fa-exchange-alt"></i> نقل موظف</button>
+          <button title="نقل الموظف لموقع آخر" class="action-btn btn-transfer" style="background:#2563eb;color:white" onclick="openTransferEmployeeDialog('${centerKey}', ${originalIndex})"><i class="fas fa-exchange-alt"></i></button>
           <button title="حذف الموظف" class="action-btn btn-danger" onclick="confirmDeleteEmployee('${centerKey}', ${originalIndex})"><i class="fas fa-trash"></i></button>
         </div>
       `;
@@ -290,7 +274,5 @@
     refreshAfterChange(centerKey);
   };
 
-  setTimeout(ensureTransferHelpButton, 700);
-  setTimeout(ensureTransferHelpButton, 1800);
-  console.info('[Admin Offices Employee Tools] delete index + visible transfer + titles guard installed v2');
+  console.info('[Admin Offices Employee Tools] delete index + compact transfer + titles guard installed v3');
 })();
