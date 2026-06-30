@@ -1,5 +1,6 @@
-// Admin Offices Print Letters Builders Only — V4
+// Admin Offices Print Letters Builders Only — V5
 // لا يضيف أي اختيارات داخل زر الطباعة. المصدر الوحيد للاختيارات هو admin_offices_print_all_complete_patch.js.
+// يثبت بيانات الاتصال في أسفل صفحة الخطاب فقط.
 (function () {
   'use strict';
   if (!/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
@@ -65,7 +66,7 @@
     return `<div class="raise-head"><img src="moh_logo.png"><div><h1>${esc(s.entityTitle)}</h1><h2>${esc(s.departmentTitle)}</h2></div><img src="moh_logo.png"></div>`;
   }
   function footerHtml(s) {
-    return `<div class="raise-footer"><span>${esc(s.phoneFaxEn)}</span><span dir="rtl">${esc(s.phoneFaxAr)}</span></div>`;
+    return `<footer class="raise-contact-footer"><span class="raise-footer-en">${esc(s.phoneFaxEn)}</span><span class="raise-footer-ar" dir="rtl">${esc(s.phoneFaxAr)}</span></footer>`;
   }
   function signaturesHtml() {
     const rows = readJson(SIG_KEY, [{ title: 'مدير إدارة الإمداد والصيانة', name: '' }]);
@@ -78,7 +79,7 @@
   function letterPage(title, body, rows, total, declarationDate) {
     const s = getSettings();
     const date = declarationDate ? `<div style="text-align:left;font-size:14px;font-weight:800">التاريخ : ${esc(fmtDate(s.declarationDate))} م</div>` : '';
-    return `<div class="page-container raise-letter-page">${headerHtml(s)}${date}<div class="raise-to">${esc(s.recipient)} &nbsp;&nbsp; ${esc(s.recipientSuffix)}</div>${title ? `<div class="raise-title">${esc(title)}</div>` : ''}<div class="raise-body">${body}</div>${amountTable(rows, total)}<div class="raise-body">لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / ${esc(getCompanyName())}<br>وتقبلوا تحياتنا ،،،</div>${signaturesHtml()}${footerHtml(s)}</div>`;
+    return `<div class="page-container raise-letter-page">${headerHtml(s)}<main class="raise-letter-content">${date}<div class="raise-to">${esc(s.recipient)} &nbsp;&nbsp; ${esc(s.recipientSuffix)}</div>${title ? `<div class="raise-title">${esc(title)}</div>` : ''}<div class="raise-body">${body}</div>${amountTable(rows, total)}<div class="raise-body">لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / ${esc(getCompanyName())}<br>وتقبلوا تحياتنا ،،،</div>${signaturesHtml()}</main>${footerHtml(s)}</div>`;
   }
 
   function buildSiteRaiseLetterForSite(arg) {
@@ -97,7 +98,19 @@
   }
 
   function lettersCss() {
-    return `<style id="raise-letters-print-all-css">@page raise-letter-page{size:A4 portrait;margin:12mm}.raise-letter-page{page:raise-letter-page!important;direction:rtl;font-family:Tajawal,Arial,sans-serif;color:#111827;background:#fff;min-height:270mm;padding:8mm 10mm;position:relative;page-break-after:always}.raise-head{display:grid;grid-template-columns:78px 1fr 78px;align-items:center;border-bottom:2px solid #003087;padding-bottom:8px;margin-bottom:18px}.raise-head img{width:68px}.raise-head div{text-align:center}.raise-head h1{font-size:17px;margin:0 0 4px;color:#003087}.raise-head h2{font-size:15px;margin:0}.raise-to{font-size:15px;font-weight:900;margin:18px 0 12px}.raise-body{font-size:15px;line-height:2.05;text-align:justify}.raise-title{text-align:center;font-size:19px;font-weight:900;color:#003087;margin:20px 0}.raise-amount-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}.raise-amount-table td{border:1px solid #333;padding:8px}.raise-amount-table td:first-child{text-align:right;font-weight:800;width:72%}.raise-amount-table td:last-child{text-align:center;font-weight:900;direction:ltr}.raise-amount-table .grand td{background:#fff7d6;font-weight:900}.raise-amount-table .tafqeet-row td{background:#f8fafc!important;text-align:center!important;direction:rtl!important;font-weight:900!important;line-height:1.8!important;font-size:14px!important}.raise-signatures{display:grid;gap:20px;margin-top:35px;text-align:center}.raise-signatures .sig-title{font-weight:900}.raise-signatures .sig-name{font-weight:800;margin-top:10px}.raise-signatures .line{height:42px;border-bottom:1px solid #111;margin:8px 30px}.raise-footer{position:absolute;bottom:4mm;left:10mm;right:10mm;border-top:1px solid #cbd5e1;padding-top:5px;font-size:11px;display:flex;justify-content:space-between;direction:ltr}</style>`;
+    return `<style id="raise-letters-print-all-css">
+      @page raise-letter-page{size:A4 portrait;margin:12mm}
+      .raise-letter-page{page:raise-letter-page!important;direction:rtl;font-family:Tajawal,Arial,sans-serif;color:#111827;background:#fff;height:273mm;min-height:273mm;padding:8mm 10mm 18mm;position:relative;box-sizing:border-box;page-break-after:always;overflow:hidden}
+      .raise-letter-content{position:relative;z-index:1;padding-bottom:8mm}
+      .raise-head{display:grid;grid-template-columns:78px 1fr 78px;align-items:center;border-bottom:2px solid #003087;padding-bottom:8px;margin-bottom:18px}
+      .raise-head img{width:68px}.raise-head div{text-align:center}.raise-head h1{font-size:17px;margin:0 0 4px;color:#003087}.raise-head h2{font-size:15px;margin:0}
+      .raise-to{font-size:15px;font-weight:900;margin:18px 0 12px}.raise-body{font-size:15px;line-height:2.05;text-align:justify}.raise-title{text-align:center;font-size:19px;font-weight:900;color:#003087;margin:20px 0}
+      .raise-amount-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}.raise-amount-table td{border:1px solid #333;padding:8px}.raise-amount-table td:first-child{text-align:right;font-weight:800;width:72%}.raise-amount-table td:last-child{text-align:center;font-weight:900;direction:ltr}.raise-amount-table .grand td{background:#fff7d6;font-weight:900}.raise-amount-table .tafqeet-row td{background:#f8fafc!important;text-align:center!important;direction:rtl!important;font-weight:900!important;line-height:1.8!important;font-size:14px!important}
+      .raise-signatures{display:grid;gap:20px;margin-top:28px;text-align:center;break-inside:avoid;page-break-inside:avoid}.raise-signatures .sig-title{font-weight:900}.raise-signatures .sig-name{font-weight:800;margin-top:8px}.raise-signatures .line{height:34px;border-bottom:1px solid #111;margin:7px 30px}
+      .raise-contact-footer{position:absolute!important;bottom:5mm!important;left:10mm!important;right:10mm!important;height:7mm!important;border-top:1px solid #cbd5e1;padding-top:3px;font-size:10.5px;line-height:1.4;display:flex;justify-content:space-between;align-items:center;direction:ltr;background:#fff;color:#475569;z-index:2;box-sizing:border-box}
+      .raise-footer-ar{text-align:right}.raise-footer-en{text-align:left}
+      @media print{.raise-contact-footer{position:absolute!important;bottom:5mm!important}.raise-letter-page{overflow:hidden!important}}
+    </style>`;
   }
 
   window.AdminOfficePrintLetters = {
@@ -109,5 +122,5 @@
     openLettersOnly: function(){ return false; }
   };
 
-  console.info('[Admin Offices Print All Letters] builder only v4 no legacy UI');
+  console.info('[Admin Offices Print All Letters] builder only v5 footer anchored');
 })();
