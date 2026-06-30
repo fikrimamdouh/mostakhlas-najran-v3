@@ -1,5 +1,5 @@
 // ===================================================================
-// Admin Offices Clean Button Routes V2
+// Admin Offices Clean Button Routes V3
 // Purpose: route only damaged buttons to clean dialogs without changing business logic.
 // Affected buttons: Excel, Bulk Attendance, Print.
 // Does not change parser, storage keys, calculations, print builders, or save functions.
@@ -8,8 +8,8 @@
   'use strict';
 
   if (!/admin_offices_attendance\.html(?:$|[?#])|original-viewer\?page=admin_offices_attendance\.html/.test(location.pathname + location.search)) return;
-  if (window.__ADMIN_OFFICES_CLEAN_BUTTON_ROUTES_V2__) return;
-  window.__ADMIN_OFFICES_CLEAN_BUTTON_ROUTES_V2__ = true;
+  if (window.__ADMIN_OFFICES_CLEAN_BUTTON_ROUTES_V3__) return;
+  window.__ADMIN_OFFICES_CLEAN_BUTTON_ROUTES_V3__ = true;
 
   function txt(el) { return String((el && el.textContent) || '').replace(/\s+/g, ' ').trim(); }
   function buttons() { return Array.prototype.slice.call(document.querySelectorAll('#main-action-buttons button')); }
@@ -62,18 +62,56 @@
     document.querySelectorAll('#' + containerId + ' input[type="checkbox"]').forEach(function (cb) { cb.checked = !!checked; });
   }
 
-  function runPrintSelected() {
+  function loadCompletePrintPatch() {
+    if (document.getElementById('admin-offices-print-all-complete-fallback-v3')) return;
     try {
-      if (typeof window.printSelected !== 'function') {
-        alert('دالة الطباعة غير محملة بعد. أعد فتح الصفحة ثم جرّب مرة أخرى.');
+      if (typeof window.printSelected !== 'function') window.__ADMIN_OFFICES_PRINT_ALL_LIGHT_V10__ = false;
+    } catch (_) {}
+    var s = document.createElement('script');
+    s.id = 'admin-offices-print-all-complete-fallback-v3';
+    s.src = '/original/admin_offices_print_all_complete_patch.js?v=20260630_print_fallback_v3';
+    s.defer = false;
+    s.onload = function () { console.info('[Admin Offices Clean Button Routes] print patch fallback loaded'); };
+    s.onerror = function () { console.warn('[Admin Offices Clean Button Routes] failed to load print patch fallback'); };
+    document.head.appendChild(s);
+  }
+
+  function ensurePrintFunction(callback) {
+    if (typeof window.printSelected === 'function') return callback();
+
+    var waited = 0;
+    var startedFallback = false;
+    var timer = setInterval(function () {
+      waited += 100;
+      if (typeof window.printSelected === 'function') {
+        clearInterval(timer);
+        callback();
         return;
       }
-      window.printSelected();
-    } finally {
-      setTimeout(closeDialog, 300);
-      setTimeout(closeDialog, 1200);
-      setTimeout(closeDialog, 2600);
-    }
+      if (!startedFallback && waited >= 200) {
+        startedFallback = true;
+        loadCompletePrintPatch();
+      }
+      if (waited >= 2600) {
+        clearInterval(timer);
+        alert('دالة الطباعة لم تكتمل بعد. أعد تحميل الصفحة Ctrl+F5 ثم جرّب مرة واحدة.');
+      }
+    }, 100);
+  }
+
+  function runPrintSelected() {
+    var btn = document.querySelector('#management-dialog .print-clean-btn.primary');
+    if (btn) { btn.disabled = true; btn.textContent = 'جاري تجهيز الطباعة...'; }
+
+    ensurePrintFunction(function () {
+      try {
+        window.printSelected();
+      } finally {
+        setTimeout(closeDialog, 300);
+        setTimeout(closeDialog, 1200);
+        setTimeout(closeDialog, 2600);
+      }
+    });
   }
 
   function openPrintCleanDialog() {
@@ -99,6 +137,7 @@
             '<label class="print-clean-row"><input type="checkbox" id="print-opt-attendance" checked><span>تقرير الحضور والانصراف</span></label>' +
             '<label class="print-clean-row"><input type="checkbox" id="print-opt-performance" checked><span>شهادة تقييم الأداء</span></label>' +
             '<label class="print-clean-row"><input type="checkbox" id="print-opt-achievement" checked><span>شهادة الإنجاز</span></label>' +
+            '<label class="print-clean-row"><input type="checkbox" id="print-opt-site-raise-letter" checked><span>خطابات الرفع</span></label>' +
           '</div>' +
         '</fieldset>' +
       '</div>' +
@@ -157,9 +196,9 @@
   }
 
   function boot() {
-    patchButton(findButton(/Excel|إكسل|اكسل/), openExcelCleanDialog, '__cleanExcelRouteV2');
-    patchButton(findButton(/تعديل\s*جماعي/), openBulkCleanDialog, '__cleanBulkRouteV2');
-    patchButton(findButton(/^\s*طباعة\s*$/), openPrintCleanDialog, '__cleanPrintRouteV2');
+    patchButton(findButton(/Excel|إكسل|اكسل/), openExcelCleanDialog, '__cleanExcelRouteV3');
+    patchButton(findButton(/تعديل\s*جماعي/), openBulkCleanDialog, '__cleanBulkRouteV3');
+    patchButton(findButton(/^\s*طباعة\s*$/), openPrintCleanDialog, '__cleanPrintRouteV3');
   }
 
   window.AdminOfficesCleanButtonRoutes = {
@@ -168,6 +207,7 @@
     openBulk: openBulkCleanDialog,
     openExcel: openExcelCleanDialog,
     runPrint: runPrintSelected,
+    ensurePrintFunction: ensurePrintFunction,
     toggleAll: toggleAll,
     close: closeDialog
   };
@@ -179,5 +219,5 @@
   setTimeout(boot, 1800);
   setTimeout(boot, 3500);
 
-  console.info('[Admin Offices Clean Button Routes] installed v2');
+  console.info('[Admin Offices Clean Button Routes] installed v3 print fallback + raise letters option');
 })();
