@@ -1,6 +1,6 @@
-// Hospital Consumables Settings Route Guard V8
+// Hospital Consumables Settings Route Guard V9
 // Scope: normal consumables.html only.
-// Routes consumables letters settings button to the standalone consumables settings page.
+// Routes consumables letters settings button to standalone autosave settings page.
 (function () {
   'use strict';
 
@@ -15,10 +15,10 @@
 
   if (pageFile !== 'consumables.html' && !/\/original\/consumables\.html(?:$|[?#])/.test(sig)) return;
   if (/admin_offices_consumables\.html|health_centers_consumables\.html|najran_general_consumables\.html/.test(pageFile)) return;
-  if (window.__HOSPITAL_CONSUMABLES_SETTINGS_ROUTE_GUARD_V8__) return;
-  window.__HOSPITAL_CONSUMABLES_SETTINGS_ROUTE_GUARD_V8__ = true;
+  if (window.__HOSPITAL_CONSUMABLES_SETTINGS_ROUTE_GUARD_V9__) return;
+  window.__HOSPITAL_CONSUMABLES_SETTINGS_ROUTE_GUARD_V9__ = true;
 
-  var SETTINGS_URL = '/original/hospital_consumables_letters_settings.html?v=20260702_v2_form';
+  var SETTINGS_URL = '/original/hospital_consumables_letters_settings.html?v=20260702_v3_autosave_signatures';
 
   function clean(v) {
     return String(v || '').replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim();
@@ -79,5 +79,5 @@
   setTimeout(neutralizeBadLinks, 1500);
   setTimeout(neutralizeBadLinks, 3000);
 
-  console.info('[Hospital Consumables Settings Route Guard] installed v8 standalone settings page');
+  console.info('[Hospital Consumables Settings Route Guard] installed v9 autosave signatures page');
 })();
