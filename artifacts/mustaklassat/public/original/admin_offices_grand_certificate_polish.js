@@ -1,7 +1,7 @@
 // ===================================================================
 // Admin Offices Grand Certificate Polish + Calculation Unifier
 // Scope: admin_offices_attendance.html only
-// يوحد حساب شهادة الإنجاز والشهادة الإجمالية مع منطق الحضور والانصراف المعتمد.
+// يوحد حساب شهادة الإنجاز والشهادة الإجمالية وإجمالي الصفحة مع منطق الحضور والانصراف المعتمد.
 // ===================================================================
 (function () {
   'use strict';
@@ -241,9 +241,44 @@
     };
   }
 
-  function installAchievementCalculationOverride() {
+  function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  function calculateAndDisplayGrandTotalUnified() {
+    const data = getData();
+    const keys = Array.from(new Set([...orderedKeys(), ...Object.keys(data || {})]));
+    const total = { count: 0, cost: 0, deduction: 0, fines: 0, net: 0 };
+
+    keys.forEach(key => {
+      if (!Array.isArray(data[key])) return;
+      const c = calcSite(key);
+      total.count += c.count;
+      total.cost += c.cost;
+      total.deduction += c.absenceDeduction;
+      total.fines += c.fines;
+      total.net += c.laborNet;
+    });
+
+    setText('grand-total-count', String(total.count));
+    setText('grand-total-cost', money(total.cost));
+    setText('grand-total-deduction', money(total.deduction));
+    setText('grand-total-fines', money(total.fines));
+    setText('grand-net-total', money(total.net));
+    try { localStorage.setItem('grand-net-total-admin', money(total.net)); } catch (_) {}
+
+    return total;
+  }
+
+  function installCalculationOverrides() {
     window.calculateAchievementValues = calculateAchievementValuesUnified;
+    window.calculateAndDisplayGrandTotal = calculateAndDisplayGrandTotalUnified;
+    window.updateGrandTotal = calculateAndDisplayGrandTotalUnified;
+
     try { calculateAchievementValues = calculateAchievementValuesUnified; } catch (_) {}
+    try { calculateAndDisplayGrandTotal = calculateAndDisplayGrandTotalUnified; } catch (_) {}
+    try { updateGrandTotal = calculateAndDisplayGrandTotalUnified; } catch (_) {}
   }
 
   function certCss() {
@@ -282,7 +317,7 @@
   }
 
   function buildCertificateHtml() {
-    installAchievementCalculationOverride();
+    installCalculationOverrides();
 
     const names = getNames();
     const contract = getContract();
@@ -393,7 +428,7 @@
   }
 
   function showPolishedGrandCertificate() {
-    installAchievementCalculationOverride();
+    installCalculationOverrides();
     const win = window.open('', '', 'width=1400,height=900');
     if (!win) return alert('المتصفح منع نافذة الشهادة. اسمح بالنوافذ المنبثقة.');
     win.document.open();
@@ -402,7 +437,7 @@
   }
 
   function bindExistingButton() {
-    installAchievementCalculationOverride();
+    installCalculationOverrides();
     window.showAdminOfficesGrandCertificate = showPolishedGrandCertificate;
     window.showGrandAchievementCertificate = showPolishedGrandCertificate;
     try { showGrandAchievementCertificate = showPolishedGrandCertificate; } catch (_) {}
@@ -419,14 +454,16 @@
         };
       }
     });
+
+    try { calculateAndDisplayGrandTotalUnified(); } catch (_) {}
   }
 
-  installAchievementCalculationOverride();
+  installCalculationOverrides();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindExistingButton);
   else bindExistingButton();
   setTimeout(bindExistingButton, 700);
   setTimeout(bindExistingButton, 1800);
   setTimeout(bindExistingButton, 3500);
 
-  console.info('[Admin Offices Grand Certificate] unified with attendance calculations v2');
+  console.info('[Admin Offices Grand Certificate] unified achievement + page totals with attendance calculations v3');
 })();
