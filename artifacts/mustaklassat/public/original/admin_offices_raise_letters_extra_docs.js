@@ -162,8 +162,46 @@
   function footer() { const s = settings(); return `<div class="footer"><span>${esc(s.phoneFaxEn)}</span><span dir="rtl">${esc(s.phoneFaxAr)}</span></div>`; }
   function signature(two = true) { const s = settings(); return two ? `<div class="signatures"><div><div class="sig-title">${esc(s.unitManagerTitle)}</div><div class="line"></div><div class="sig-name">${esc(s.unitManagerName)}</div></div><div><div class="sig-title">${esc(s.managerTitle)}</div><div class="line"></div><div class="sig-name">${esc(s.managerName)}</div></div></div>` : `<div class="signatures one"><div><div class="sig-title">${esc(s.managerTitle)}</div><div class="line"></div><div class="sig-name">${esc(s.managerName)}</div></div></div>`; }
 
-  function pageFinalRaiseLetter() { const s = settings(), p = period(), g = grandTotals(), c = contractData(); const net = g.finalNet, vat = net * 0.15, other = number(localStorage.getItem('finalLetterOtherAmount')), total = net + vat + other; const iban = firstValue(c.iban, c.bankIban, c.accountIban, c.bankAccount, localStorage.getItem('contractorIban')) || 'SA................................'; const subject = firstValue(s.finalLetterSubject, `مستخلص ${contractName()}`); const title = firstValue(s.finalLetterSignatureTitle, s.managerTitle, 'مساعد المدير العام للدعم المساند'); const name = firstValue(s.finalLetterSignatureName, s.managerName, '................................'); return `<section class="page">${finalHead()}<div class="final-subject">${esc(subject)}</div><div class="final-to"><span>${esc(s.finalLetterTo)}</span><span>${esc(s.finalLetterToSuffix)}</span></div><div class="cert-title" style="font-size:16px">${esc(s.finalLetterGreeting)}</div><div class="body-text">${esc(replaceTokens(s.finalLetterOpening))}</div><ol style="line-height:1.9"><li>اسم العقد: ${esc(contractName())}</li><li>اسم المقاول / الشركة: ${esc(companyName())}</li><li>الموقع: ${esc(s.scopeName)}</li><li>الفترة الزمنية: من ${esc(dateText(p.startDate))} م حتى ${esc(dateText(p.endDate))} م</li><li>رقم الدفعة / المستخلص: ${esc(paymentNo())}</li><li>رقم العقد: ${esc(contractNumber())}</li></ol><table class="amount-table final-table"><tr><td>صافي المستحق للمقاول</td><td>${sar(net)}</td></tr><tr><td>ضريبة القيمة المضافة 15%</td><td>${sar(vat)}</td></tr><tr><td>مبالغ أخرى / تعويضات / حسميات</td><td>${sar(other)}</td></tr><tr class="total-row"><td>الإجمالي</td><td>${sar(total)}</td></tr></table><div class="iban">رقم الحساب البنكي الآيبان: ${esc(iban)}</div><div class="body-text" style="text-align:center;font-weight:800">${esc(replaceTokens(s.finalLetterClosing))}</div><div class="body-text" style="text-align:center;font-weight:900">${esc(s.finalLetterRegards)}</div><div class="signatures one"><div><div class="sig-title">${esc(title)}</div><div class="line"></div><div class="sig-name">${esc(name)}</div></div></div></section>`; }
-  function pageNoPreviousPayment() { const g = grandTotals(); const total = g.finalNet + g.finalNet * 0.15; return `<section class="page">${commonHead()}<div class="cert-title">إقرار بعدم أسبقية صرف</div><div class="body-text">تقر إدارة الصيانة بالشئون الهندسية بصحة نجران بأن مستخلص العمالة لشركة <strong>${esc(companyName())}</strong> لمواقع ${esc(settings().scopeName)}، ${extractPhrase()}، بمبلغ وقدره (${sar(total)}).<br>لم يسبق صرفه من قبلنا.</div>${signature(true)}${footer()}</section>`; }
+function readReadyFinalNet() {
+  const candidates = [
+    document.getElementById('grand-net-total')?.textContent,
+    document.getElementById('admin-net-total')?.textContent,
+    localStorage.getItem('grand-net-total-admin'),
+    localStorage.getItem('adminOfficesGrandNetTotal'),
+    localStorage.getItem('finalAdminOfficesLaborCost'),
+    localStorage.getItem('finalLaborCost')
+  ];
+
+  for (const v of candidates) {
+    const n = number(v);
+    if (n > 0) return n;
+  }
+
+  return 0;
+}
+
+function pageFinalRaiseLetter() {
+  const s = settings(), p = period(), g = grandTotals(), c = contractData();
+
+  const net = readReadyFinalNet() || number(g.finalNet);
+  const vat = net * 0.15;
+  const other = number(localStorage.getItem('finalLetterOtherAmount'));
+  const total = net + vat + other;
+
+  const iban = firstValue(
+    c.iban,
+    c.bankIban,
+    c.accountIban,
+    c.bankAccount,
+    localStorage.getItem('contractorIban')
+  ) || 'SA................................';
+
+  const subject = firstValue(s.finalLetterSubject, `مستخلص ${contractName()}`);
+  const title = firstValue(s.finalLetterSignatureTitle, s.managerTitle, 'مساعد المدير العام للدعم المساند');
+  const name = firstValue(s.finalLetterSignatureName, s.managerName, '................................');
+
+  return `<section class="page">${finalHead()}<div class="final-subject">${esc(subject)}</div><div class="final-to"><span>${esc(s.finalLetterTo)}</span><span>${esc(s.finalLetterToSuffix)}</span></div><div class="cert-title" style="font-size:16px">${esc(s.finalLetterGreeting)}</div><div class="body-text">${esc(replaceTokens(s.finalLetterOpening))}</div><ol style="line-height:1.9"><li>اسم العقد: ${esc(contractName())}</li><li>اسم المقاول / الشركة: ${esc(companyName())}</li><li>الموقع: ${esc(s.scopeName)}</li><li>الفترة الزمنية: من ${esc(dateText(p.startDate))} م حتى ${esc(dateText(p.endDate))} م</li><li>رقم الدفعة / المستخلص: ${esc(paymentNo())}</li><li>رقم العقد: ${esc(contractNumber())}</li></ol><table class="amount-table final-table"><tr><td>صافي المستحق للمقاول</td><td>${sar(net)}</td></tr><tr><td>ضريبة القيمة المضافة 15%</td><td>${sar(vat)}</td></tr><tr><td>مبالغ أخرى / تعويضات / حسميات</td><td>${sar(other)}</td></tr><tr class="total-row"><td>الإجمالي</td><td>${sar(total)}</td></tr></table><div class="iban">رقم الحساب البنكي الآيبان: ${esc(iban)}</div><div class="body-text" style="text-align:center;font-weight:800">${esc(replaceTokens(s.finalLetterClosing))}</div><div class="body-text" style="text-align:center;font-weight:900">${esc(s.finalLetterRegards)}</div><div class="signatures one"><div><div class="sig-title">${esc(title)}</div><div class="line"></div><div class="sig-name">${esc(name)}</div></div></div></section>`;
+}  function pageNoPreviousPayment() { const g = grandTotals(); const total = g.finalNet + g.finalNet * 0.15; return `<section class="page">${commonHead()}<div class="cert-title">إقرار بعدم أسبقية صرف</div><div class="body-text">تقر إدارة الصيانة بالشئون الهندسية بصحة نجران بأن مستخلص العمالة لشركة <strong>${esc(companyName())}</strong> لمواقع ${esc(settings().scopeName)}، ${extractPhrase()}، بمبلغ وقدره (${sar(total)}).<br>لم يسبق صرفه من قبلنا.</div>${signature(true)}${footer()}</section>`; }
   function pageRaiseSummary() { const s = settings(), g = grandTotals(), net = g.finalNet, vat = net * 0.15; return `<section class="page">${commonHead()}<div class="final-to"><span>${esc(s.recipient)}</span><span>${esc(s.recipientSuffix)}</span></div><div class="cert-title" style="font-size:16px">السلام عليكم ورحمة الله وبركاته، وبعد:</div><div class="body-text">نرفق لسعادتكم المستخلص الشهري لشركة ${esc(companyName())} والخاص ببند العمالة لمواقع ${esc(s.scopeName)}، ${extractPhrase()}.</div><table class="amount-table final-table"><tr><td>صافي مستحقات العمالة عن مدة المستخلص</td><td>${sar(net)}</td></tr><tr><td>ضريبة القيمة المضافة 15%</td><td>${sar(vat)}</td></tr><tr class="total-row"><td>الإجمالي</td><td>${sar(net + vat)}</td></tr></table>${signature(false)}${footer()}</section>`; }
   function pageGroupedCertificate() { const g = groupedTotals(), total = {}; ['cost','absenceDeduction','absenceFine','nationalityFine','totalDeduction','finalNet'].forEach(k => total[k] = g.offices[k] + g.workshops[k]); const rows = [g.offices, g.workshops].map(r => `<tr><td>${esc(r.label)}</td><td>${sar(r.cost)}</td><td>${sar(r.absenceDeduction)}</td><td>${sar(r.absenceFine)}</td><td>${sar(r.nationalityFine)}</td><td>${sar(r.totalDeduction)}</td><td>${sar(r.finalNet)}</td></tr>`).join(''); return `<section class="page">${commonHead()}<div class="cert-title">شهادة الاستحقاق الشهري للعماله لأعمال النظافة والصيانة والتشغيل غير الطبي لمشروع ${esc(settings().scopeName)}</div><div class="sub-title">لشركة / ${esc(companyName())}<br>${extractPhrase()}</div><table class="amount-table"><thead><tr><th>البند</th><th>تكاليف العمالة</th><th>حسم الغياب</th><th>غرامة الغياب</th><th>غرامة الجنسية</th><th>إجمالي الحسم</th><th>الصافي المستحق</th></tr></thead><tbody>${rows}<tr class="total-row"><td>الإجمالي</td><td>${sar(total.cost)}</td><td>${sar(total.absenceDeduction)}</td><td>${sar(total.absenceFine)}</td><td>${sar(total.nationalityFine)}</td><td>${sar(total.totalDeduction)}</td><td>${sar(total.finalNet)}</td></tr></tbody></table>${signature(true)}${footer()}</section>`; }
   function pageEntitlementStatement() { const rows = centerKeys().map(k => { const c = calcSite(k); return `<tr><td>${esc(names()[k] || k)}</td><td>${esc(monthLabel())}</td><td>${sar(c.cost)}</td><td>${sar(c.absenceDeduction)}</td><td>${sar(c.absenceFine)}</td><td>${sar(c.nationalityFine)}</td><td>${sar(c.totalDeduction)}</td><td>${sar(c.finalNet)}</td></tr>`; }).join(''); return `<section class="page landscape">${commonHead()}<div class="cert-title">بيان استحقاق</div><div class="sub-title">اسم الشركة: ${esc(companyName())} | عقد: ${esc(contractName())}<br>لشهر ${esc(monthLabel())} سنة ${esc(yearLabel())} — ${extractPhrase()}</div><table class="amount-table"><thead><tr><th>اسم المشروع / الموقع</th><th>شهر الاستحقاق</th><th>تكاليف العمالة</th><th>حسم الغياب</th><th>غرامة الغياب</th><th>غرامة الجنسية</th><th>إجمالي الحسم</th><th>الصافي المستحق</th></tr></thead><tbody>${rows}</tbody></table>${signature(true)}${footer()}</section>`; }
