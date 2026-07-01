@@ -302,19 +302,16 @@
     </style>`;
   }
 
-  function grandSignaturesHtml() {
-    try {
-      const key = typeof getAdminOfficePageSignatureKey === 'function'
-        ? getAdminOfficePageSignatureKey('grand_certificate', 'grand_certificate')
-        : 'admin_offices_grand_certificate';
-      if (window.SignatureBlock && typeof window.SignatureBlock.buildPrintHTML === 'function') {
-        const html = window.SignatureBlock.buildPrintHTML(key);
-        if (html && String(html).trim()) return html;
-      }
-    } catch (_) {}
-
-    return '<section class="sign"><div>إعداد<div class="line"></div></div><div>مراجعة<div class="line"></div></div><div>اعتماد<div class="line"></div></div></section>';
-  }
+function grandSignaturesHtml() {
+  return `
+    <section class="sign">
+      <div>إعداد<div class="line"></div></div>
+      <div>مراجعة<div class="line"></div></div>
+      <div>اعتماد<div class="line"></div></div>
+      <div>ختم<div class="line"></div></div>
+    </section>
+  `;
+}
 
   function buildCertificateHtml() {
     installCalculationOverrides();
