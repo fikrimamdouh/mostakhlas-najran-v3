@@ -394,25 +394,7 @@
             background-color: #fff !important;
         }
         
-        /* تنسيق خانة اختيار عمالة الأسنان */
-        .dental-labor-toggle {
-            text-align: center;
-            margin: 15px 0;
-            padding: 10px;
-            background-color: #f0f8ff;
-            border: 1px solid #d1e3f3;
-            border-radius: 8px;
-        }
-        .dental-labor-toggle label {
-            font-weight: bold;
-            color: #0056b3;
-            cursor: pointer;
-        }
-        .dental-labor-toggle input[type="checkbox"] {
-            margin-left: 10px;
-            transform: scale(1.2);
-            cursor: pointer;
-        }
+       
         /* --- START: NEW STYLES TO BE ADDED --- */
 
         /* 1. Unified Action Bar */
@@ -518,19 +500,13 @@
     }
 }
 
-/* 2. تعديل قاعدة الألوان لتجنب الصفوف المتجاورة بنفس اللون */
-.cosmic-table.achievement-table tbody tr:not(#dental-row):nth-child(even) {
+/* ألوان صفوف جدول الإنجاز بعد إلغاء صف الأسنان القديم */
+.cosmic-table.achievement-table tbody tr:nth-child(even) {
     background-color: #f5f5f5;
 }
 
-.cosmic-table.achievement-table tbody tr:not(#dental-row):nth-child(odd) {
-    background-color: #ffffff; /* تأكد من أن الصفوف الفردية لها خلفية بيضاء */
-}
-
-/* 3. أعطِ صف الأسنان تنسيقاً خاصاً به لتمييزه */
-#dental-row {
-    background-color: #e6f7ff !important; /* لون أزرق فاتح مميز */
-    font-style: italic;
+.cosmic-table.achievement-table tbody tr:nth-child(odd) {
+    background-color: #ffffff;
 }
 
 /* --- END: نهاية الكود المطلوب إضافته --- */
@@ -701,12 +677,7 @@
 
             <!-- START: NEW Print Toggles -->
             <div class="print-toggles no-print">
-                <div class="toggle-switch">
-                    <label for="dental-labor-checkbox">
-                        <input type="checkbox" id="dental-labor-checkbox" onchange="toggleDentalRow()">
-                        طباعة عمالة مركز الأسنان
-                    </label>
-                </div>
+                
                 <div class="toggle-switch">
                     <label for="admin-jobs-print-checkbox">
                         <input type="checkbox" id="admin-jobs-print-checkbox" onchange="toggleAdminRowPrint(this.checked)">
@@ -734,15 +705,7 @@
                     <tbody id="tableBody">
                         <!-- Data populated dynamically -->
                         <!-- *** START: NEW DENTAL LABOR ROW *** -->
-                        <tr id="dental-row" style="display: none;">
-                            <td>عمالة مركز الأسنان</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-monthlyValue" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-absenceDeduction" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-absencePenalty" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-performancePenalty" onblur="saveDentalData()">0</td>
-                            <td contenteditable="true" class="editable-cell" id="dental-nationalityPenalty" onblur="saveDentalData()">0</td>
-                            <td id="dental-netMonthly">0.00 ر.س.</td>
-                        </tr>
+                        
                         <!-- *** END: NEW DENTAL LABOR ROW *** -->
                     </tbody>
                 </table>
@@ -759,80 +722,43 @@
 
  <script>
     let departmentDataForAchievement = [];
-    const departmentKeysForAchievement = [
-        'cleaning', 'electricity', 'agriculture', 'civil_works', 'mechanical', 'security', 'laundry', 'patient_services'
-    ];
+const departmentKeysForAchievement = [
+    'cleaning', 'electricity', 'agriculture', 'civil_works', 'mechanical', 'laundry', 'patient_services'
+];
 
     window.navigateTo = function(page) {
         if (page && page !== "#") window.location.href = page;
     }
 
-    // *** START: NEW DENTAL LABOR FUNCTIONS ***
-    function toggleDentalRow() {
-        const checkbox = document.getElementById('dental-labor-checkbox');
-        const dentalRow = document.getElementById('dental-row');
-        
-        if (checkbox.checked) {
-            dentalRow.style.display = ''; // Show the row
-            dentalRow.classList.remove('no-print-row');
-        } else {
-            dentalRow.style.display = 'none'; // Hide the row
-            dentalRow.classList.add('no-print-row');
-        }
-        localStorage.setItem('dentalLaborCheckboxState', checkbox.checked);
-        // Recalculate totals when toggling
-        loadAndProcessAchievementData();
-    }
+   // *** START: DENTAL LABOR LEGACY DISABLED ***
+// تم تعطيل صف عمالة مركز الأسنان القديم لأن الأسنان أصبحت قسمًا مستقلًا.
+// هذه الدوال باقية فقط لمنع كسر أي استدعاءات قديمة داخل الصفحة.
 
-    function getDentalData() {
-        const isEnabled = document.getElementById('dental-labor-checkbox').checked;
-        if (!isEnabled) {
-            return {
-                monthlyValue: 0, absenceDeduction: 0, absencePenalty: 0,
-                performancePenalty: 0, nationalityPenalty: 0, netMonthly: 0
-            };
-        }
-        
-        const monthlyValue = parseFloat(document.getElementById('dental-monthlyValue').textContent) || 0;
-        const absenceDeduction = parseFloat(document.getElementById('dental-absenceDeduction').textContent) || 0;
-        const absencePenalty = parseFloat(document.getElementById('dental-absencePenalty').textContent) || 0;
-        const performancePenalty = parseFloat(document.getElementById('dental-performancePenalty').textContent) || 0;
-        const nationalityPenalty = parseFloat(document.getElementById('dental-nationalityPenalty').textContent) || 0;
-        const netMonthly = monthlyValue - (absenceDeduction + absencePenalty + performancePenalty + nationalityPenalty);
+function toggleDentalRow() {
+    // Disabled: dental labor is now handled as a separate department.
+}
 
-        document.getElementById('dental-netMonthly').textContent = netMonthly.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
+function getDentalData() {
+    return {
+        monthlyValue: 0,
+        absenceDeduction: 0,
+        absencePenalty: 0,
+        performancePenalty: 0,
+        nationalityPenalty: 0,
+        netMonthly: 0
+    };
+}
 
-        return { monthlyValue, absenceDeduction, absencePenalty, performancePenalty, nationalityPenalty, netMonthly };
-    }
+function saveDentalData() {
+    localStorage.removeItem('dentalLaborData');
+    localStorage.removeItem('dentalLaborCheckboxState');
+}
 
-    function saveDentalData() {
-        const data = {
-            monthlyValue: document.getElementById('dental-monthlyValue').textContent,
-            absenceDeduction: document.getElementById('dental-absenceDeduction').textContent,
-            absencePenalty: document.getElementById('dental-absencePenalty').textContent,
-            performancePenalty: document.getElementById('dental-performancePenalty').textContent,
-            nationalityPenalty: document.getElementById('dental-nationalityPenalty').textContent,
-        };
-        localStorage.setItem('dentalLaborData', JSON.stringify(data));
-        // Recalculate totals after editing a value
-        loadAndProcessAchievementData();
-    }
-
-    function loadDentalData() {
-        const checkbox = document.getElementById('dental-labor-checkbox');
-        const savedState = localStorage.getItem('dentalLaborCheckboxState') === 'true';
-        checkbox.checked = savedState;
-
-        const savedData = JSON.parse(localStorage.getItem('dentalLaborData')) || {};
-        document.getElementById('dental-monthlyValue').textContent = savedData.monthlyValue || '0';
-        document.getElementById('dental-absenceDeduction').textContent = savedData.absenceDeduction || '0';
-        document.getElementById('dental-absencePenalty').textContent = savedData.absencePenalty || '0';
-        document.getElementById('dental-performancePenalty').textContent = savedData.performancePenalty || '0';
-        document.getElementById('dental-nationalityPenalty').textContent = savedData.nationalityPenalty || '0';
-        
-        toggleDentalRow(); // Apply visibility based on saved state
-    }
-    // *** END: NEW DENTAL LABOR FUNCTIONS ***
+function loadDentalData() {
+    localStorage.removeItem('dentalLaborData');
+    localStorage.removeItem('dentalLaborCheckboxState');
+}
+// *** END: DENTAL LABOR LEGACY DISABLED ***
 
 
 
@@ -1257,16 +1183,7 @@ function exportAchievementToExcel() {
             ['البند', 'القيمة الشهرية حسب العقد', 'حسم الغياب', 'غرامة الغياب', 'غرامة الأداء', 'غرامة الجنسية', 'المبلغ الصافي الشهري']
         ];
 
-        let allItems = [...departmentDataForAchievement];
-        const dentalData = getDentalData();
-        const isDentalEnabled = document.getElementById('dental-labor-checkbox').checked;
-
-        if (isDentalEnabled) {
-            allItems.push({
-                name: getItemName('dental'),
-                ...dentalData
-            });
-        }
+     let allItems = [...departmentDataForAchievement];
 
         allItems.forEach(item => {
             ws_data.push([
@@ -1473,11 +1390,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- START: NEW CONFIGURATION & FUNCTIONS TO BE ADDED ---
 
     // Configuration for editable item names
-    const itemKeys = {
-        workforce: 'العمالة',
-        saudi_admin: 'الوظائف الإدارية السعوديين',
-        dental: 'عمالة مركز الأسنان'
-    };
+   const itemKeys = {
+    workforce: 'العمالة',
+    saudi_admin: 'الوظائف الإدارية السعوديين'
+};
 
     // Function to refresh data
     // هذه هي النسخة الصحيحة والمُنظّفة
