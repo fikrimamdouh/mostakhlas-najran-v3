@@ -14,6 +14,6 @@
 
   loadScript('hospital-raise-letters-engine-v8', '/original/hospital_raise_letters_engine_v8.js?v=20260701_restored_admin_clean_pattern');
   setTimeout(function(){
-    loadScript('hospital-raise-letters-print-polish-v2', '/original/hospital_raise_letters_print_polish_v1.js?v=20260702_v2_consumables_like');
+    loadScript('hospital-raise-letters-print-polish-v3', '/original/hospital_raise_letters_print_polish_v1.js?v=20260702_v3_a4_exit');
   }, 150);
 })();
