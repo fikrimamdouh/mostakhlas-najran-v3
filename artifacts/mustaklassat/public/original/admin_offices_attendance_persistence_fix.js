@@ -58,7 +58,7 @@ var OFFICE_KEY_SUFFIX = '_v1';
     });
     return total;
   }
-  function score(data) { return { rows: counfunction countOffices(data) {
+ function countOffices(data) {
   var total = 0;
   data = data || {};
   Object.keys(data).forEach(function (k) {
@@ -75,15 +75,17 @@ function score(data) {
   };
 }
 
-function betterData(a, b) {
-  var as = score(a), bs = score(b);
+function isBetterData(next, current) {
+  var ns = score(next);
+  var cs = score(current);
 
-  if (as.offices !== bs.offices) return as.offices > bs.offices ? a : b;
-  if (as.named !== bs.named) return as.named > bs.named ? a : b;
-  if (as.rows !== bs.rows) return as.rows > bs.rows ? a : b;
+  if (ns.offices !== cs.offices) return ns.offices > cs.offices;
+  if (ns.named !== cs.named) return ns.named > cs.named;
+  if (ns.rows !== cs.rows) return ns.rows > cs.rows;
 
-  return a || {};
-}tRows(data), named: countNamed(data) }; }
+  return false;
+}
+
 
   function extractScore(d) {
     d = d || {};
@@ -197,13 +199,25 @@ function readOfficeKeysData() {
   ];
 
   return candidates.reduce(function (best, item) {
-    return betterData(best, item);
+    return isBetterData(item, best) ? item : best;
   }, {});
 }
   function mirrorData(data, reason) {
     if (!data || typeof data !== 'object') return false;
     var s = score(data);
     if (s.rows <= 0) return false;
+    var currentBest = bestData();
+var currentScore = score(currentBest);
+
+// حماية المحلي: ممنوع نسخة مكتب واحد تكتب فوق نسخة فيها أكثر من مكتب
+if (
+  currentScore.offices > 1 &&
+  s.offices <= 1 &&
+  s.rows <= currentScore.rows
+) {
+  console.warn('[Admin Offices Persistence] blocked incomplete one-office mirror:', reason, s, 'best=', currentScore);
+  return false;
+}
     var raw = JSON.stringify(data);
     try {
       localStorage.setItem(MAIN_KEY, raw);
@@ -291,20 +305,25 @@ if (
     };
   }
 
-  function saveCurrentSnapshot(reason) {
-    try {
-      var data = null;
-      if (typeof window.getAttendanceData === 'function') data = window.getAttendanceData();
-      if (!data || !countRows(data)) data = bestData();
-      mirrorData(data, reason || 'snapshot');
-      mirrorNames(reason || 'snapshot');
-      mirrorExtract(reason || 'snapshot');
-    } catch (_) {
-      mirrorData(bestData(), reason || 'snapshot-fallback');
-      mirrorNames(reason || 'snapshot-fallback');
-      mirrorExtract(reason || 'snapshot-fallback');
-    }
+function saveCurrentSnapshot(reason) {
+  try {
+    var live = null;
+    if (typeof window.getAttendanceData === 'function') live = window.getAttendanceData();
+
+    var best = bestData();
+    var data = isBetterData(live || {}, best || {}) ? live : best;
+
+    if (!data || !countRows(data)) data = live || best || {};
+
+    mirrorData(data, reason || 'snapshot');
+    mirrorNames(reason || 'snapshot');
+    mirrorExtract(reason || 'snapshot');
+  } catch (_) {
+    mirrorData(bestData(), reason || 'snapshot-fallback');
+    mirrorNames(reason || 'snapshot-fallback');
+    mirrorExtract(reason || 'snapshot-fallback');
   }
+}
   function wrapFunction(name, after) {
     var fn = window[name];
     if (typeof fn !== 'function' || fn.__adminOfficesPersistV3Wrapped) return false;
@@ -340,7 +359,7 @@ if (
         var data = originalGet.apply(this, arguments) || {};
         var best = bestData();
         var ds = score(data), bs = score(best);
-        if (bs.rows > 0 && (ds.rows === 0 || bs.named > ds.named || bs.rows > ds.rows)) return best;
+        if (bs.rows > 0 && isBetterData(best, data)) return best;
         return data;
       };
       window.getAttendanceData.__adminOfficesPersistV3Wrapped = true;
