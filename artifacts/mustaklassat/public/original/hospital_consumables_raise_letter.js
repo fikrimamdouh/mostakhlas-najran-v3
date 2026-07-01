@@ -1,8 +1,8 @@
 // ===================================================================
-// Hospital Consumables Raise Letter — V2
+// Hospital Consumables Raise Letter — V3
 // Scope: normal consumables.html only.
-// Adds: raise letter settings + signature + A4 letterhead + print letter for normal hospital consumables.
-// Separate from admin offices keys and logic.
+// Adds: consumables letter settings + signature + A4 letterhead + print letter for normal hospital consumables.
+// Separate from admin offices keys and normal raise-letters engine.
 // ===================================================================
 (function () {
   'use strict';
@@ -18,8 +18,8 @@
 
   if (pageFile !== 'consumables.html' && !/\/original\/consumables\.html(?:$|[?#])/.test(sig)) return;
   if (/admin_offices_consumables\.html|health_centers_consumables\.html|najran_general_consumables\.html/.test(pageFile)) return;
-  if (window.__HOSPITAL_CONSUMABLES_RAISE_LETTER_V2__) return;
-  window.__HOSPITAL_CONSUMABLES_RAISE_LETTER_V2__ = true;
+  if (window.__HOSPITAL_CONSUMABLES_RAISE_LETTER_V3__) return;
+  window.__HOSPITAL_CONSUMABLES_RAISE_LETTER_V3__ = true;
 
   const SETTINGS_KEY = 'hospitalConsumablesRaiseLettersSettings_v1';
 
@@ -242,8 +242,8 @@
   function renderDialog() {
     const s = getSettings();
     const net = currentConsumablesNet();
-    const preview = useLetterhead(s) ? `<div class="field wide"><label>معاينة الترويسة الحالية</label><img class="letterhead-preview" src="${esc(s.letterheadDataUrl)}"></div>` : '';
-    const html = `<div class="settings-overlay" id="hospital-consumables-raise-letter-overlay" onclick="if(event.target.id==='hospital-consumables-raise-letter-overlay') HospitalConsumablesRaiseLetter.closeDialog()"><div class="settings-dialog"><h2>خطاب رفع المستهلكات — المستشفى</h2><div class="btn-row"><button class="btn btn-primary" onclick="HospitalConsumablesRaiseLetter.saveDialog()">حفظ الإعدادات</button><button class="btn btn-gold" onclick="HospitalConsumablesRaiseLetter.generate()">طباعة خطاب المستهلكات</button><button class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.closeDialog()">إغلاق</button></div><div class="section-box"><h3>بيانات المستخلص الحالية — قراءة فقط</h3><div class="settings-grid"><div class="field"><label>رقم الدفعة ومدة المستخلص</label><div class="readonly-box">${extractPhrase()}</div></div><div class="field"><label>اسم المقاول / الشركة</label><div class="readonly-box">${esc(companyName())}</div></div><div class="field"><label>اسم المستشفى / الموقع</label><div class="readonly-box">${esc(hospitalName())}</div></div><div class="field"><label>صافي مستخلص المستهلكات الحالي</label><div class="readonly-box">${moneySAR(net)}</div></div></div></div><div class="section-box"><h3>الترويسة A4</h3><div class="settings-grid">${selectField('letterheadEnabled','تفعيل الترويسة',[['no','لا'],['yes','نعم']])}${selectField('letterheadHasPlaceData','الترويسة تحتوي بيانات الجهة والمكان',[['yes','نعم — إخفاء الهيدر الداخلي واسم الموقع'],['no','لا — اطبع الهيدر الداخلي']])}${field('contentTop','بداية محتوى الخطاب بعد الترويسة mm','number')}<div class="field wide"><label>رفع صورة الترويسة A4</label><input id="hospital-cons-letterhead-file" type="file" accept="image/*"><small>يفضل صورة A4 رأسية كاملة تحتوي الشعارات وبيانات المستشفى.</small></div>${preview}</div><div class="btn-row"><button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.deleteLetterhead()">حذف الترويسة</button></div></div><div class="section-box"><h3>إعدادات الخطاب المحفوظة</h3><div class="settings-grid">${field('recipient','اسم المخاطب')}${field('recipientSuffix','الصفة / المحترم')}${field('entityTitle','العنوان الرئيسي')}${field('departmentTitle','الإدارة')}${field('scopeName','الموقع / نطاق الخطاب')}${field('vatRate','نسبة الضريبة','number')}${field('phoneFaxAr','الهاتف والفاكس عربي')}${field('phoneFaxEn','الهاتف والفاكس إنجليزي')}</div></div><div class="section-box"><h3>التوقيع المحفوظ للخطاب</h3><div class="settings-grid">${field('managerTitle','صفة التوقيع')}${field('managerName','اسم صاحب التوقيع')}</div><div class="btn-row"><button type="button" class="btn btn-primary" onclick="HospitalConsumablesRaiseLetter.saveDialog()">حفظ التوقيع</button></div></div></div></div>`;
+    const preview = useLetterhead(s) ? `<div class="field wide"><label>معاينة ترويسة خطاب المستهلكات الحالية</label><img class="letterhead-preview" src="${esc(s.letterheadDataUrl)}"></div>` : '';
+    const html = `<div class="settings-overlay" id="hospital-consumables-raise-letter-overlay" onclick="if(event.target.id==='hospital-consumables-raise-letter-overlay') HospitalConsumablesRaiseLetter.closeDialog()"><div class="settings-dialog"><h2>إعدادات خطاب رفع المستهلكات — المستشفى</h2><div class="btn-row"><button class="btn btn-primary" onclick="HospitalConsumablesRaiseLetter.saveDialog()">حفظ إعدادات خطاب المستهلكات</button><button class="btn btn-gold" onclick="HospitalConsumablesRaiseLetter.generate()">طباعة خطاب المستهلكات</button><button class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.closeDialog()">إغلاق</button></div><div class="section-box"><h3>بيانات مستخلص المستهلكات الحالية — قراءة فقط</h3><div class="settings-grid"><div class="field"><label>رقم الدفعة ومدة المستخلص</label><div class="readonly-box">${extractPhrase()}</div></div><div class="field"><label>اسم المقاول / الشركة</label><div class="readonly-box">${esc(companyName())}</div></div><div class="field"><label>اسم المستشفى / الموقع</label><div class="readonly-box">${esc(hospitalName())}</div></div><div class="field"><label>صافي مستخلص المستهلكات الحالي</label><div class="readonly-box">${moneySAR(net)}</div></div></div></div><div class="section-box"><h3>ترويسة خطاب المستهلكات A4</h3><div class="settings-grid">${selectField('letterheadEnabled','تفعيل ترويسة خطاب المستهلكات',[['no','لا'],['yes','نعم']])}${selectField('letterheadHasPlaceData','الترويسة تحتوي بيانات الجهة والمكان',[['yes','نعم — إخفاء الهيدر الداخلي واسم الموقع'],['no','لا — اطبع الهيدر الداخلي']])}${field('contentTop','بداية محتوى خطاب المستهلكات بعد الترويسة mm','number')}<div class="field wide"><label>رفع صورة ترويسة خطاب المستهلكات A4</label><input id="hospital-cons-letterhead-file" type="file" accept="image/*"><small>يفضل صورة A4 رأسية كاملة تحتوي الشعارات وبيانات المستشفى.</small></div>${preview}</div><div class="btn-row"><button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.deleteLetterhead()">حذف ترويسة خطاب المستهلكات</button></div></div><div class="section-box"><h3>إعدادات نص خطاب المستهلكات المحفوظة</h3><div class="settings-grid">${field('recipient','اسم المخاطب')}${field('recipientSuffix','الصفة / المحترم')}${field('entityTitle','العنوان الرئيسي الداخلي')}${field('departmentTitle','الإدارة الداخلية')}${field('scopeName','الموقع / نطاق خطاب المستهلكات')}${field('vatRate','نسبة الضريبة','number')}${field('phoneFaxAr','الهاتف والفاكس عربي')}${field('phoneFaxEn','الهاتف والفاكس إنجليزي')}</div></div><div class="section-box"><h3>التوقيع المحفوظ لخطاب المستهلكات</h3><div class="settings-grid">${field('managerTitle','صفة التوقيع')}${field('managerName','اسم صاحب التوقيع')}</div><div class="btn-row"><button type="button" class="btn btn-primary" onclick="HospitalConsumablesRaiseLetter.saveDialog()">حفظ توقيع خطاب المستهلكات</button></div></div></div></div>`;
     document.body.insertAdjacentHTML('beforeend', html);
     document.body.classList.add('hospital-consumables-letter-modal-open');
     installAutoSaveForDialog();
@@ -262,7 +262,7 @@
       note.style.cssText = 'margin:10px 0;padding:10px 14px;border-radius:12px;background:#ecfdf5;color:#166534;font-weight:900;text-align:center;border:1px solid #bbf7d0;';
       document.querySelector('#hospital-consumables-raise-letter-overlay .settings-dialog')?.prepend(note);
     }
-    note.textContent = 'تم حفظ إعدادات خطاب رفع المستهلكات والتوقيع بنجاح.';
+    note.textContent = 'تم حفظ إعدادات خطاب المستهلكات وترويسته وتوقيعه بنجاح.';
     setTimeout(() => { if (note) note.textContent = ''; }, 2500);
   }
 
@@ -344,7 +344,7 @@
       settingsBtn.type = 'button';
       settingsBtn.id = 'hospital-consumables-raise-letter-settings-btn';
       settingsBtn.className = 'ab ab-sig no-print';
-      settingsBtn.innerHTML = '<i class="fas fa-envelope-open-text"></i> إعدادات خطاب الرفع';
+      settingsBtn.innerHTML = '<i class="fas fa-envelope-open-text"></i> إعدادات خطاب المستهلكات';
       settingsBtn.onclick = openDialog;
       bar.appendChild(settingsBtn);
     }
@@ -364,5 +364,5 @@
   setTimeout(installButtons, 700);
   setTimeout(installButtons, 1800);
   setTimeout(installButtons, 3500);
-  console.info('[Hospital Consumables Raise Letter] installed v2 with A4 letterhead');
+  console.info('[Hospital Consumables Raise Letter] installed v3 with dedicated consumables labels');
 })();
