@@ -4540,7 +4540,13 @@ function getSignatures() {
     applySuggestedCategories: applySuggestedCategoriesFromSameJob
   };
 })();
-
+function openExtractAuditDialog() {
+  if (window.NJSExtractAudit && typeof window.NJSExtractAudit.open === 'function') {
+    window.NJSExtractAudit.open();
+  } else {
+    alert('نظام فحص المستخلص غير محمل. حدّث الصفحة ثم حاول مرة أخرى.');
+  }
+}
 function backupAttendanceData() {
   try {
     const attendanceData = getAttendanceData();
