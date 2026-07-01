@@ -106,7 +106,7 @@
 
   function loadExtraDocsOnlyWhenOverlayExists() {
     if (!document.getElementById('raise-letters-overlay')) return;
-    loadScriptOnce('admin-offices-extra-docs-script', '/original/admin_offices_raise_letters_extra_docs.js?v=20260623_extra_docs_safe_v10', '[Admin Offices Extra Docs]');
+    loadScriptOnce('admin-offices-extra-docs-script', '/original/admin_offices_raise_letters_extra_docs.js?v=20260701_extra_docs_final_raise_v11', '[Admin Offices Extra Docs]');
   }
 
   function callSaveDialogSilently() {
