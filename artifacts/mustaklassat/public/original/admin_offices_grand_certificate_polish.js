@@ -303,14 +303,7 @@
   }
 
 function grandSignaturesHtml() {
-  return `
-    <section class="sign">
-      <div>إعداد<div class="line"></div></div>
-      <div>مراجعة<div class="line"></div></div>
-      <div>اعتماد<div class="line"></div></div>
-      <div>ختم<div class="line"></div></div>
-    </section>
-  `;
+  return '';
 }
 
   function buildCertificateHtml() {
