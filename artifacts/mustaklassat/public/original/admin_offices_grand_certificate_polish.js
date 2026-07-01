@@ -1,7 +1,7 @@
 // ===================================================================
-// Admin Offices Grand Certificate Polish
+// Admin Offices Grand Certificate Polish + Calculation Unifier
 // Scope: admin_offices_attendance.html only
-// يضبط زر الشهادة الإجمالية الموجود: يجمع كل المكاتب والورش في صفحة منمقة مع طباعة
+// يوحد حساب شهادة الإنجاز والشهادة الإجمالية مع منطق الحضور والانصراف المعتمد.
 // ===================================================================
 (function () {
   'use strict';
@@ -19,30 +19,60 @@
   };
 
   function readJson(key, fallback) {
-    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (_) {
+      return fallback;
+    }
   }
+
   function esc(v) {
-    return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return String(v ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
+
   function money(v) {
-    return (Number(v) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return (Number(v) || 0).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
   }
+
   function fmtDate(v) {
     if (!v) return 'غير محدد';
     try { return new Date(v).toLocaleDateString('en-CA'); } catch (_) { return 'غير محدد'; }
   }
+
   function getNames() {
     try { if (typeof getCenterNames === 'function') return getCenterNames() || {}; } catch (_) {}
     return readJson('adminOfficeNames_v1', {});
   }
+
   function getData() {
     try { if (typeof getAttendanceData === 'function') return getAttendanceData() || {}; } catch (_) {}
     return readJson('adminOfficesAttendanceData_v1', {});
   }
-  function getExtract() { return readJson('persistentExtractData', {}); }
-  function getContract() { return readJson('persistentContractData', {}); }
+
+  function getExtract() {
+    return readJson('persistentExtractData', {});
+  }
+
+  function getContract() {
+    return readJson('persistentContractData', {});
+  }
+
   function getPeriod() {
-    try { if (typeof getExtractPeriodDetails === 'function') return getExtractPeriodDetails(); } catch (_) {}
+    try {
+      if (typeof getExtractPeriodDetails === 'function') {
+        const p = getExtractPeriodDetails() || {};
+        if (p.daysInExtract && p.totalDaysInMonth) return p;
+      }
+    } catch (_) {}
+
     const extract = getExtract();
     const start = new Date(extract.extractStart || new Date());
     const end = new Date(extract.extractEnd || extract.extractStart || new Date());
@@ -52,6 +82,7 @@
       totalDaysInMonth: new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate() || 30
     };
   }
+
   function orderedKeys() {
     const names = getNames();
     const data = getData();
@@ -67,51 +98,152 @@
         return String(a).localeCompare(String(b), 'ar');
       });
   }
-  function isSaudi(n) { return String(n || '').replace(/\s+/g, '').includes('سعودي'); }
-  function fineConfig(cat) { return ABSENCE_FINES[cat] || ABSENCE_FINES[String(cat)] || ABSENCE_FINES.default; }
+
+  function isSaudi(n) {
+    return String(n || '').replace(/\s+/g, '').includes('سعودي');
+  }
+
+  function fineConfig(cat) {
+    try {
+      if (typeof getAdminOfficeFineConfig === 'function') return getAdminOfficeFineConfig(cat);
+    } catch (_) {}
+    return ABSENCE_FINES[cat] || ABSENCE_FINES[String(cat)] || ABSENCE_FINES.default;
+  }
+
   function getHeader() {
     try { if (typeof getHeaderForCenter === 'function') return getHeaderForCenter(orderedKeys()[0]); } catch (_) {}
     return { logoSrc: 'najran_health_cluster_logo.png', h1: 'فرع وزارة الصحة بمنطقة نجران', h3: 'المكاتب الإدارية والمرافق الصحية' };
   }
 
-  function calcSite(centerKey) {
-    const rows = getData()[centerKey] || [];
-    const period = getPeriod();
-    const contract = getContract();
-    const ratio = Number(contract.directPurchaseRatio) || 0;
-    const out = { count: rows.length, cost: 0, absenceDeduction: 0, absenceFine: 0, nationalityFine: 0, fines: 0, laborNet: 0 };
+  function getStatusMeta(code) {
+    try {
+      if (typeof STATUS_CODES !== 'undefined' && STATUS_CODES && STATUS_CODES[code]) return STATUS_CODES[code];
+    } catch (_) {}
+    if (code === 'غ') return { isAbsence: true };
+    if (code === 'غ•') return { noDeduction: true, noFine: true };
+    if (['ج', 'ش', 'ب', 'ن'].includes(code)) return { isSpecial: true };
+    return { isAbsence: false };
+  }
 
-    rows.forEach(emp => {
-      const salary = Number(emp.salary) || 0;
-      const daily = period.totalDaysInMonth > 0 ? salary / period.totalDaysInMonth : 0;
-      const days = Array.isArray(emp.days) ? emp.days.slice(0, period.daysInExtract) : [];
-      while (days.length < period.daysInExtract) days.push('ح');
+  function fallbackEmployeeCalc(emp, period, contract) {
+    const totalDaysInMonth = Number(period.totalDaysInMonth) || 30;
+    const daysInExtract = Number(period.daysInExtract) || 30;
+    const salary = Number(emp && emp.salary) || 0;
+    const dailyRate = totalDaysInMonth > 0 ? salary / totalDaysInMonth : 0;
+    const ratio = Number(contract && contract.directPurchaseRatio) || 0;
 
-      let cost = daily * period.daysInExtract;
-      if (contract.contractType === 'شراء مباشر' && ratio > 0) cost += cost * ratio / 100;
+    let costForPeriod = dailyRate * daysInExtract;
+    if (contract && contract.contractType === 'شراء مباشر' && ratio > 0) {
+      costForPeriod += costForPeriod * ratio / 100;
+    }
 
-      const absenceDays = days.filter(d => d === 'غ').length;
-      const absDed = absenceDays * daily;
-      const cfg = fineConfig(emp.category || 1);
-      const absFine = absenceDays * (isSaudi(emp.nationality) ? cfg.saudi : cfg.non_saudi);
-      const natFine = Number(emp.nationalityFine) || 0;
-      const fines = absFine + natFine;
-      const net = cost - absDed - fines;
+    const days = Array.isArray(emp && emp.days) ? emp.days.slice(0, daysInExtract) : [];
+    while (days.length < daysInExtract) days.push('ح');
 
-      out.cost += cost;
-      out.absenceDeduction += absDed;
-      out.absenceFine += absFine;
-      out.nationalityFine += natFine;
-      out.fines += fines;
-      out.laborNet += net;
+    let attendanceDays = 0;
+    let absenceDays = 0;
+    let deductionOnlyDays = 0;
+
+    days.forEach(day => {
+      const meta = getStatusMeta(day);
+      if (day === 'غ•' || meta.noDeduction || meta.noFine) return;
+      if (day === 'ح' || day === 'ت') attendanceDays++;
+      else if (day === 'غ' || meta.isAbsence) absenceDays++;
+      else deductionOnlyDays++;
     });
-    return out;
+
+    const deduction = (absenceDays + deductionOnlyDays) * dailyRate;
+    const cfg = fineConfig(emp && emp.category || 1);
+    const absenceFine = absenceDays * (isSaudi(emp && emp.nationality) ? cfg.saudi : cfg.non_saudi);
+    const nationalityFine = Number(emp && emp.nationalityFine) || 0;
+    const totalFine = absenceFine + nationalityFine;
+    const netSalary = costForPeriod - deduction - totalFine;
+
+    return {
+      days,
+      dailyRate,
+      costForPeriod,
+      attendanceDays,
+      absenceDays,
+      deductionOnlyDays,
+      deduction,
+      absenceFine,
+      nationalityFine,
+      totalFine,
+      netSalary
+    };
+  }
+
+  function employeeCalc(emp, period, contract) {
+    try {
+      if (typeof calculateAdminOfficeEmployeeFinancials === 'function') {
+        return calculateAdminOfficeEmployeeFinancials(emp, {
+          totalDaysInMonth: period.totalDaysInMonth,
+          daysInExtract: period.daysInExtract,
+          contractType: contract.contractType || 'عقد أساسي',
+          directPurchaseRatio: Number(contract.directPurchaseRatio) || 0
+        });
+      }
+    } catch (err) {
+      console.warn('[Admin Offices Calculation Unifier] fallback employee calc used:', err);
+    }
+    return fallbackEmployeeCalc(emp, period, contract);
   }
 
   function performanceDeductions() {
-    const separated = readJson('adminOfficePerformanceDeductions_v1', {});
     const legacy = readJson('performanceDeductions', {});
+    const separated = readJson('adminOfficePerformanceDeductions_v1', {});
     return Object.assign({}, legacy, separated);
+  }
+
+  function calcSite(centerKey) {
+    const rows = Array.isArray(getData()[centerKey]) ? getData()[centerKey] : [];
+    const period = getPeriod();
+    const contract = getContract();
+    const out = {
+      count: rows.length,
+      cost: 0,
+      absenceDeduction: 0,
+      absenceFine: 0,
+      nationalityFine: 0,
+      fines: 0,
+      laborNet: 0
+    };
+
+    rows.forEach(emp => {
+      const c = employeeCalc(emp, period, contract);
+      out.cost += Number(c.costForPeriod) || 0;
+      out.absenceDeduction += Number(c.deduction) || 0;
+      out.absenceFine += Number(c.absenceFine) || 0;
+      out.nationalityFine += Number(c.nationalityFine) || 0;
+      out.fines += Number(c.totalFine) || 0;
+      out.laborNet += Number(c.netSalary) || 0;
+    });
+
+    return out;
+  }
+
+  function calculateAchievementValuesUnified(centerKey) {
+    const centerData = Array.isArray(getData()[centerKey]) ? getData()[centerKey] : [];
+    const site = calcSite(centerKey);
+    const perf = performanceDeductions();
+    const performancePenalty = Number(perf[centerKey]) || 0;
+    const netMonthly = site.laborNet - performancePenalty;
+
+    return {
+      centerData,
+      totalMonthlyValue: site.cost,
+      totalAbsenceDeduction: site.absenceDeduction,
+      totalAbsencePenalty: site.absenceFine,
+      performancePenalty,
+      totalNationalityPenalty: site.nationalityFine,
+      netMonthly
+    };
+  }
+
+  function installAchievementCalculationOverride() {
+    window.calculateAchievementValues = calculateAchievementValuesUnified;
+    try { calculateAchievementValues = calculateAchievementValuesUnified; } catch (_) {}
   }
 
   function certCss() {
@@ -130,11 +262,28 @@
       .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:14px 0}.card{background:linear-gradient(135deg,#003087,#1e40af);color:#fff;border-radius:16px;padding:13px;text-align:center}.card.gold{background:linear-gradient(135deg,#d4af37,#f8e08e);color:#111827}.card span{display:block;font-size:12px;opacity:.92}.card strong{display:block;font-size:20px;margin-top:5px}
       table{width:100%;border-collapse:collapse;font-size:12px;background:#fff;margin-top:12px}th{background:#003087;color:#fff;border:1px solid #1e3a8a;padding:8px}td{border:1px solid #cbd5e1;padding:7px;text-align:center}td.site{text-align:right;font-weight:800}tbody tr:nth-child(even) td{background:#f8fafc}tfoot th{background:#d4af37;color:#111827;border:1px solid #b08921;padding:8px}
       .sign{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;text-align:center;margin-top:28px}.sign>div{font-weight:900}.line{height:48px;border-bottom:1px solid #111;margin:8px 25px 0}
+      .sb-print,.sb-print *{font-family:Tajawal,Arial,sans-serif!important}
       @media print{body{background:#fff}.toolbar{display:none}.cert{max-width:none;margin:0;box-shadow:none;border:0;border-radius:0;padding:0}.head{margin-top:0}table{font-size:10.5px}td,th{padding:5px}.cards{gap:6px}.info{gap:6px}}
     </style>`;
   }
 
+  function grandSignaturesHtml() {
+    try {
+      const key = typeof getAdminOfficePageSignatureKey === 'function'
+        ? getAdminOfficePageSignatureKey('grand_certificate', 'grand_certificate')
+        : 'admin_offices_grand_certificate';
+      if (window.SignatureBlock && typeof window.SignatureBlock.buildPrintHTML === 'function') {
+        const html = window.SignatureBlock.buildPrintHTML(key);
+        if (html && String(html).trim()) return html;
+      }
+    } catch (_) {}
+
+    return '<section class="sign"><div>إعداد<div class="line"></div></div><div>مراجعة<div class="line"></div></div><div>اعتماد<div class="line"></div></div></section>';
+  }
+
   function buildCertificateHtml() {
+    installAchievementCalculationOverride();
+
     const names = getNames();
     const contract = getContract();
     const extract = getExtract();
@@ -142,11 +291,23 @@
     const perf = performanceDeductions();
     const keys = orderedKeys();
 
-    const total = { count:0, cost:0, absenceDeduction:0, absenceFine:0, nationalityFine:0, fines:0, laborNet:0, perf:0, finalNet:0 };
+    const total = {
+      count: 0,
+      cost: 0,
+      absenceDeduction: 0,
+      absenceFine: 0,
+      nationalityFine: 0,
+      fines: 0,
+      laborNet: 0,
+      perf: 0,
+      finalNet: 0
+    };
+
     const rows = keys.map((key, i) => {
       const c = calcSite(key);
       const p = Number(perf[key]) || 0;
       const finalNet = c.laborNet - p;
+
       total.count += c.count;
       total.cost += c.cost;
       total.absenceDeduction += c.absenceDeduction;
@@ -156,13 +317,83 @@
       total.laborNet += c.laborNet;
       total.perf += p;
       total.finalNet += finalNet;
-      return `<tr><td>${i + 1}</td><td class="site">${esc(names[key] || (key === 'admin_staff' ? 'الورش (صيانة وإصلاح السيارات)' : key))}</td><td>${c.count}</td><td>${money(c.cost)}</td><td>${money(c.absenceDeduction)}</td><td>${money(c.absenceFine)}</td><td>${money(c.nationalityFine)}</td><td>${money(c.fines)}</td><td>${money(c.laborNet)}</td><td>${money(p)}</td><td><b>${money(finalNet)}</b></td></tr>`;
+
+      const siteName = names[key] || (key === 'admin_staff' ? 'الورش (صيانة وإصلاح السيارات)' : key);
+      return `
+        <tr>
+          <td>${i + 1}</td>
+          <td class="site">${esc(siteName)}</td>
+          <td>${c.count}</td>
+          <td>${money(c.cost)}</td>
+          <td>${money(c.absenceDeduction)}</td>
+          <td>${money(c.absenceFine)}</td>
+          <td>${money(c.nationalityFine)}</td>
+          <td>${money(c.fines)}</td>
+          <td>${money(c.laborNet)}</td>
+          <td>${money(p)}</td>
+          <td><b>${money(finalNet)}</b></td>
+        </tr>`;
     }).join('');
 
-    return `<div class="toolbar"><button onclick="window.print()">طباعة الشهادة</button><button class="secondary" onclick="window.close()">إغلاق</button></div><main class="cert"><section class="head"><img class="r" src="${esc(header.logoSrc || 'najran_health_cluster_logo.png')}"><img class="l" src="${esc(header.logoSrc || 'najran_health_cluster_logo.png')}"><h1>${esc(header.h1 || 'فرع وزارة الصحة بمنطقة نجران')}</h1><h2>الشهادة الإجمالية للمكاتب الإدارية والمرافق الصحية</h2><h3>مستخلص العمالة لجميع المواقع والورش</h3></section><section class="info"><div><b>الشركة:</b> ${esc(contract.companyName || document.querySelector('.companyName')?.textContent || 'غير محدد')}</div><div><b>نوع العقد:</b> ${esc(contract.contractType || 'غير محدد')}</div><div><b>الفترة:</b> من ${esc(fmtDate(extract.extractStart))} إلى ${esc(fmtDate(extract.extractEnd))}</div><div><b>عدد المواقع:</b> ${keys.length}</div></section><section class="cards"><div class="card"><span>إجمالي العمالة</span><strong>${total.count}</strong></div><div class="card"><span>إجمالي التكلفة</span><strong>${money(total.cost)}</strong></div><div class="card"><span>غرامات وحسميات العمالة</span><strong>${money(total.absenceDeduction + total.fines)}</strong></div><div class="card"><span>خصم الأداء</span><strong>${money(total.perf)}</strong></div><div class="card gold"><span>الصافي النهائي</span><strong>${money(total.finalNet)}</strong></div></section><table><thead><tr><th>م</th><th>الموقع</th><th>العمالة</th><th>التكلفة</th><th>حسم الغياب</th><th>غرامة الغياب</th><th>غرامة الجنسية</th><th>إجمالي الغرامات</th><th>صافي العمالة</th><th>خصم الأداء</th><th>الصافي النهائي</th></tr></thead><tbody>${rows || '<tr><td colspan="11">لا توجد بيانات للمكاتب.</td></tr>'}</tbody><tfoot><tr><th colspan="2">الإجمالي</th><th>${total.count}</th><th>${money(total.cost)}</th><th>${money(total.absenceDeduction)}</th><th>${money(total.absenceFine)}</th><th>${money(total.nationalityFine)}</th><th>${money(total.fines)}</th><th>${money(total.laborNet)}</th><th>${money(total.perf)}</th><th>${money(total.finalNet)}</th></tr></tfoot></table><section class="sign"><div>إعداد<div class="line"></div></div><div>مراجعة<div class="line"></div></div><div>اعتماد<div class="line"></div></div></section></main>`;
+    return `
+      <div class="toolbar">
+        <button onclick="window.print()">طباعة الشهادة</button>
+        <button class="secondary" onclick="window.close()">إغلاق</button>
+      </div>
+      <main class="cert">
+        <section class="head">
+          <img class="r" src="${esc(header.logoSrc || 'najran_health_cluster_logo.png')}">
+          <img class="l" src="${esc(header.logoSrc || 'najran_health_cluster_logo.png')}">
+          <h1>${esc(header.h1 || 'فرع وزارة الصحة بمنطقة نجران')}</h1>
+          <h2>الشهادة الإجمالية للمكاتب الإدارية والمرافق الصحية</h2>
+          <h3>مستخلص العمالة لجميع المواقع والورش</h3>
+        </section>
+
+        <section class="info">
+          <div><b>الشركة:</b> ${esc(contract.companyName || document.querySelector('.companyName')?.textContent || 'غير محدد')}</div>
+          <div><b>نوع العقد:</b> ${esc(contract.contractType || 'غير محدد')}</div>
+          <div><b>الفترة:</b> من ${esc(fmtDate(extract.extractStart))} إلى ${esc(fmtDate(extract.extractEnd))}</div>
+          <div><b>عدد المواقع:</b> ${keys.length}</div>
+        </section>
+
+        <section class="cards">
+          <div class="card"><span>إجمالي العمالة</span><strong>${total.count}</strong></div>
+          <div class="card"><span>إجمالي التكلفة</span><strong>${money(total.cost)}</strong></div>
+          <div class="card"><span>غرامات وحسميات العمالة</span><strong>${money(total.absenceDeduction + total.fines)}</strong></div>
+          <div class="card"><span>خصم الأداء</span><strong>${money(total.perf)}</strong></div>
+          <div class="card gold"><span>الصافي النهائي</span><strong>${money(total.finalNet)}</strong></div>
+        </section>
+
+        <table>
+          <thead>
+            <tr>
+              <th>م</th><th>الموقع</th><th>العمالة</th><th>التكلفة</th><th>حسم الغياب/الحالات</th>
+              <th>غرامة الغياب</th><th>غرامة الجنسية</th><th>إجمالي الغرامات</th><th>صافي العمالة</th><th>خصم الأداء</th><th>الصافي النهائي</th>
+            </tr>
+          </thead>
+          <tbody>${rows || '<tr><td colspan="11">لا توجد بيانات للمكاتب.</td></tr>'}</tbody>
+          <tfoot>
+            <tr>
+              <th colspan="2">الإجمالي</th>
+              <th>${total.count}</th>
+              <th>${money(total.cost)}</th>
+              <th>${money(total.absenceDeduction)}</th>
+              <th>${money(total.absenceFine)}</th>
+              <th>${money(total.nationalityFine)}</th>
+              <th>${money(total.fines)}</th>
+              <th>${money(total.laborNet)}</th>
+              <th>${money(total.perf)}</th>
+              <th>${money(total.finalNet)}</th>
+            </tr>
+          </tfoot>
+        </table>
+
+        ${grandSignaturesHtml()}
+      </main>`;
   }
 
   function showPolishedGrandCertificate() {
+    installAchievementCalculationOverride();
     const win = window.open('', '', 'width=1400,height=900');
     if (!win) return alert('المتصفح منع نافذة الشهادة. اسمح بالنوافذ المنبثقة.');
     win.document.open();
@@ -171,7 +402,11 @@
   }
 
   function bindExistingButton() {
+    installAchievementCalculationOverride();
     window.showAdminOfficesGrandCertificate = showPolishedGrandCertificate;
+    window.showGrandAchievementCertificate = showPolishedGrandCertificate;
+    try { showGrandAchievementCertificate = showPolishedGrandCertificate; } catch (_) {}
+
     const buttons = Array.from(document.querySelectorAll('button, a'));
     buttons.forEach(btn => {
       const text = (btn.textContent || '').trim();
@@ -186,10 +421,12 @@
     });
   }
 
+  installAchievementCalculationOverride();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindExistingButton);
   else bindExistingButton();
   setTimeout(bindExistingButton, 700);
   setTimeout(bindExistingButton, 1800);
   setTimeout(bindExistingButton, 3500);
-  console.info('[Admin Offices Grand Certificate] polished existing button installed');
+
+  console.info('[Admin Offices Grand Certificate] unified with attendance calculations v2');
 })();
