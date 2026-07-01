@@ -624,7 +624,9 @@ function injectAdminOfficesBackupButton() {
     patchLoadAndImportFunctions();
     patchPositionsDialogButton();
     saveCurrentSnapshot(reason || 'boot-snapshot');
-    injectAdminOfficesBackupButton();
+        try {
+      window.backupData = downloadAdminOfficesFullBackup;
+    } catch (_) {}
   }
 
   boot('initial');
@@ -650,7 +652,7 @@ window.AdminOfficesAttendancePersistence = {
   restore: function () { restoreExtractIfNeeded('manual'); restoreNamesIfNeeded('manual'); return restoreDataIfNeeded('manual'); },
   snapshot: function () { return saveCurrentSnapshot('manual'); },
   downloadBackup: downloadAdminOfficesFullBackup,
-  injectBackupButton: injectAdminOfficesBackupButton,
+  
   score: function () { return { current: score(readJson(MAIN_KEY, {})), best: score(bestData()), extract: { main: extractScore(readJson(EXTRACT_KEY, {})), safe: extractScore(readJson(SAFE_EXTRACT_KEY, {})) }, names: Object.keys(readJson(NAMES_KEY, {})).length, safeNames: Object.keys(readJson(SAFE_NAMES_KEY, {})).length }; }
 };
 
