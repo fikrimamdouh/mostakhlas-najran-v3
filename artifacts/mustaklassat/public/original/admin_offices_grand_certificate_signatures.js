@@ -69,8 +69,12 @@
       </div>
     `).join('');
 
-    return `<section class="sign grand-signatures">${body}</section>`;
-  }
+return `<section class="sign grand-signatures" data-source="admin_offices_grand_certificate_signatures.js" style="outline:3px solid blue;">
+  <div style="font-size:12px;color:blue;font-weight:900;text-align:center;margin-bottom:6px">
+    SOURCE: admin_offices_grand_certificate_signatures.js
+  </div>
+  ${body}
+</section>`;  }
 
   function injectGrandSignatureStyle(doc) {
     if (!doc || doc.getElementById('grand-signatures-style')) return;
