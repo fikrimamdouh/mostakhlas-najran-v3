@@ -16,4 +16,7 @@
   setTimeout(function(){
     loadScript('hospital-raise-letters-print-polish-v3', '/original/hospital_raise_letters_print_polish_v1.js?v=20260702_v3_a4_exit');
   }, 150);
+  setTimeout(function(){
+    loadScript('hospital-raise-letters-print-compact-v4', '/original/hospital_raise_letters_print_compact_v4.js?v=20260702_v4_compact_a4');
+  }, 260);
 })();
