@@ -19,4 +19,7 @@
   setTimeout(function(){
     loadScript('hospital-raise-letters-print-compact-v4', '/original/hospital_raise_letters_print_compact_v4.js?v=20260702_v4_compact_a4');
   }, 260);
+  setTimeout(function(){
+    loadScript('hospital-raise-letters-custom-exclude-v1', '/original/hospital_raise_letters_custom_exclude_v1.js?v=20260702_v1_no_custom_packet');
+  }, 360);
 })();
