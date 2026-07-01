@@ -1,7 +1,7 @@
 // Consumables Summary Data Cleaner
 // Scope: normal consumables.html only.
 // Removes accidental total/net-payable rows saved as normal summary items.
-// Also loads hospital consumables letters center for normal hospital consumables only.
+// Also loads hospital consumables letters center and print polish for normal hospital consumables only.
 (function () {
   'use strict';
 
@@ -17,15 +17,22 @@
   if (pageFile !== 'consumables.html' && !/\/original\/consumables\.html(?:$|[?#])/.test(sig)) return;
   if (/admin_offices_consumables\.html|health_centers_consumables\.html|najran_general_consumables\.html/.test(pageFile)) return;
 
-  function loadHospitalConsumablesRaiseLetter() {
+  function loadScriptOnce(id, src) {
     try {
-      if (document.getElementById('hospital-consumables-raise-letter-js')) return;
+      if (document.getElementById(id)) return;
       var s = document.createElement('script');
-      s.id = 'hospital-consumables-raise-letter-js';
-      s.src = '/original/hospital_consumables_raise_letter.js?v=20260701_v5';
+      s.id = id;
+      s.src = src;
       s.defer = false;
       document.head.appendChild(s);
     } catch (_) {}
+  }
+
+  function loadHospitalConsumablesRaiseLetter() {
+    loadScriptOnce('hospital-consumables-raise-letter-js', '/original/hospital_consumables_raise_letter.js?v=20260701_v5');
+    setTimeout(function () {
+      loadScriptOnce('hospital-consumables-print-polish-js', '/original/hospital_consumables_print_polish_v6.js?v=20260701_v6');
+    }, 120);
   }
 
   var DB_VERSION = 'consumables_v27';
@@ -94,4 +101,5 @@
   }
   setTimeout(function () { cleanSummaryData('late-500'); loadHospitalConsumablesRaiseLetter(); }, 500);
   setTimeout(function () { cleanSummaryData('late-1500'); loadHospitalConsumablesRaiseLetter(); }, 1500);
+  setTimeout(function () { loadHospitalConsumablesRaiseLetter(); }, 3000);
 })();
