@@ -1,7 +1,7 @@
 // ===================================================================
 // Admin Offices Grand Certificate Stamp + Signature Print Fix
 // Scope: admin_offices_attendance.html only
-// يقيد حجم الختم وينظف تكرار مسمى/اسم التوقيع داخل الشهادة الإجمالية فقط.
+// يقيد حجم الختم ويزيل تكرار عناصر التوقيع داخل الشهادة الإجمالية فقط.
 // ===================================================================
 (function () {
   'use strict';
@@ -102,16 +102,41 @@
     const holder = document.createElement('div');
     holder.innerHTML = html;
 
-    holder.querySelectorAll('.sb-item:not(.sb-stamp)').forEach(item => {
-      const titleEl = item.querySelector('.sb-item-title');
-      const nameEl = item.querySelector('.sb-item-name');
-      if (!titleEl) return;
+    holder.querySelectorAll('.sb-grid').forEach(grid => {
+      const uniqueSignatureItems = [];
+      const seenTitles = new Set();
+      let stampItem = null;
 
-      const title = cleanText(titleEl.textContent);
-      const name = cleanText(nameEl && nameEl.textContent);
+      Array.from(grid.children).forEach(item => {
+        if (!item.classList || !item.classList.contains('sb-item')) return;
 
-      if (title) titleEl.textContent = title;
-      if (nameEl && (!name || name === title)) nameEl.textContent = '';
+        if (item.classList.contains('sb-stamp')) {
+          if (!stampItem) stampItem = item.cloneNode(true);
+          return;
+        }
+
+        const titleEl = item.querySelector('.sb-item-title');
+        const nameEl = item.querySelector('.sb-item-name');
+        const title = cleanText(titleEl && titleEl.textContent);
+        const name = cleanText(nameEl && nameEl.textContent);
+
+        if (!title) return;
+        if (seenTitles.has(title)) return;
+        seenTitles.add(title);
+
+        const clone = item.cloneNode(true);
+        const cloneTitle = clone.querySelector('.sb-item-title');
+        const cloneName = clone.querySelector('.sb-item-name');
+
+        if (cloneTitle) cloneTitle.textContent = title;
+        if (cloneName && (!name || name === title)) cloneName.textContent = '';
+
+        uniqueSignatureItems.push(clone);
+      });
+
+      grid.innerHTML = '';
+      uniqueSignatureItems.forEach(item => grid.appendChild(item));
+      if (stampItem) grid.appendChild(stampItem);
     });
 
     return holder.innerHTML;
@@ -130,7 +155,7 @@
       return FIX_STYLE + `<div class="admin-grand-cert-print">${normalized}</div>`;
     };
     window.SignatureBlock.buildPrintHTML.__ADMIN_OFFICES_STAMP_FIX__ = true;
-    console.info('[Admin Offices Grand Certificate] stamp size + duplicate labels constrained v2');
+    console.info('[Admin Offices Grand Certificate] stamp size + duplicate signature items constrained v3');
     return true;
   }
 
