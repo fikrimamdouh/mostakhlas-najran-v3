@@ -1,7 +1,7 @@
 // ===================================================================
-// Admin Offices Grand Certificate Stamp Fix
+// Admin Offices Grand Certificate Stamp + Signature Print Fix
 // Scope: admin_offices_attendance.html only
-// يقيد حجم الختم داخل نافذة الشهادة الإجمالية فقط.
+// يقيد حجم الختم وينظف تكرار مسمى/اسم التوقيع داخل الشهادة الإجمالية فقط.
 // ===================================================================
 (function () {
   'use strict';
@@ -46,6 +46,12 @@
       .admin-grand-cert-print .sb-item-name{
         font-size:11px!important;
         color:#111!important;
+        min-height:12px!important;
+      }
+      .cert .sb-item-name:empty,
+      .admin-grand-cert-print .sb-item-name:empty{
+        display:block!important;
+        min-height:12px!important;
       }
       .cert .sb-stamp,
       .admin-grand-cert-print .sb-stamp{
@@ -83,6 +89,34 @@
     return key === GRAND_KEY || key.includes('grand_certificate');
   }
 
+  function cleanText(v) {
+    return String(v || '')
+      .replace(/[:：]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function normalizeGrandSignatureHtml(html) {
+    if (!html) return html;
+
+    const holder = document.createElement('div');
+    holder.innerHTML = html;
+
+    holder.querySelectorAll('.sb-item:not(.sb-stamp)').forEach(item => {
+      const titleEl = item.querySelector('.sb-item-title');
+      const nameEl = item.querySelector('.sb-item-name');
+      if (!titleEl) return;
+
+      const title = cleanText(titleEl.textContent);
+      const name = cleanText(nameEl && nameEl.textContent);
+
+      if (title) titleEl.textContent = title;
+      if (nameEl && (!name || name === title)) nameEl.textContent = '';
+    });
+
+    return holder.innerHTML;
+  }
+
   function patchSignatureBlock() {
     if (!window.SignatureBlock || typeof window.SignatureBlock.buildPrintHTML !== 'function') return false;
     if (window.SignatureBlock.buildPrintHTML.__ADMIN_OFFICES_STAMP_FIX__) return true;
@@ -91,11 +125,12 @@
     window.SignatureBlock.buildPrintHTML = function patchedBuildPrintHTML(pageKey) {
       const html = originalBuildPrintHTML(pageKey) || '';
       if (!html || !isGrandKey(pageKey)) return html;
-      if (html.includes(STYLE_ID)) return html;
-      return FIX_STYLE + `<div class="admin-grand-cert-print">${html}</div>`;
+      const normalized = normalizeGrandSignatureHtml(html);
+      if (normalized.includes(STYLE_ID)) return normalized;
+      return FIX_STYLE + `<div class="admin-grand-cert-print">${normalized}</div>`;
     };
     window.SignatureBlock.buildPrintHTML.__ADMIN_OFFICES_STAMP_FIX__ = true;
-    console.info('[Admin Offices Grand Certificate] stamp size constrained v1');
+    console.info('[Admin Offices Grand Certificate] stamp size + duplicate labels constrained v2');
     return true;
   }
 
