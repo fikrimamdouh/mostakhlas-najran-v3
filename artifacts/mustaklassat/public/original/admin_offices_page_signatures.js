@@ -282,8 +282,7 @@
           const title = doc.title || '';
           const cert = doc.querySelector && doc.querySelector('.cert');
           if (!cert || !title.includes('الشهادة الإجمالية')) return;
-          const oldSign = doc.querySelector('.sign');
-          if (oldSign) oldSign.remove();
+         doc.querySelectorAll('.cert > .sign, .cert > .grand-signatures, .cert .admin-grand-cert-print').forEach(el => el.remove());
           const holder = doc.createElement('div');
           holder.innerHTML = buildGrandSignatureHTML();
           cert.appendChild(holder.firstElementChild);
