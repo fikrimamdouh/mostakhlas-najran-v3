@@ -23,7 +23,10 @@
   var SAFE_DATA_TS_KEY = 'adminOfficesLaborDataSafe_v2_ts';
   var SAFE_NAMES_KEY = 'adminOfficesLaborNamesSafe_v2';
   var SAFE_AFF_KEY = 'adminOfficesLaborAffiliationsSafe_v2';
-
+var FULL_BUNDLE_KEY = 'adminOfficesFullAttendanceBundle_v1';
+var FULL_BUNDLE_TS_KEY = 'adminOfficesFullAttendanceBundle_v1_ts';
+var OFFICE_KEY_PREFIX = 'adminOfficeAttendance_';
+var OFFICE_KEY_SUFFIX = '_v1';
   var EXTRACT_KEY = 'persistentExtractData';
   var SAFE_EXTRACT_KEY = 'najranExtractDataSafe_v1';
   var SAFE_EXTRACT_TS_KEY = 'najranExtractDataSafe_v1_ts';
@@ -55,7 +58,32 @@
     });
     return total;
   }
-  function score(data) { return { rows: countRows(data), named: countNamed(data) }; }
+  function score(data) { return { rows: counfunction countOffices(data) {
+  var total = 0;
+  data = data || {};
+  Object.keys(data).forEach(function (k) {
+    if (Array.isArray(data[k]) && data[k].length) total++;
+  });
+  return total;
+}
+
+function score(data) {
+  return {
+    offices: countOffices(data),
+    rows: countRows(data),
+    named: countNamed(data)
+  };
+}
+
+function betterData(a, b) {
+  var as = score(a), bs = score(b);
+
+  if (as.offices !== bs.offices) return as.offices > bs.offices ? a : b;
+  if (as.named !== bs.named) return as.named > bs.named ? a : b;
+  if (as.rows !== bs.rows) return as.rows > bs.rows ? a : b;
+
+  return a || {};
+}tRows(data), named: countNamed(data) }; }
 
   function extractScore(d) {
     d = d || {};
@@ -109,16 +137,69 @@
     if (extractScore(main) > 0) mirrorExtract(reason || 'keep-extract');
     return false;
   }
+function makeFullBundle(data) {
+  return {
+    schema: 1,
+    updatedAt: new Date().toISOString(),
+    names: readJson(NAMES_KEY, {}),
+    affiliations: readJson(AFF_KEY, {}),
+    attendanceByOffice: data || {},
+    extractData: normalizeExtract(readJson(EXTRACT_KEY, {}))
+  };
+}
 
-  function bestData() {
-    var candidates = [readJson(MAIN_KEY, {}), readJson(BACKUP_KEY, {}), readJson(LAST_GOOD_KEY, {}), readJson(LEGACY_KEY, {}), readJson(SAFE_DATA_KEY, {})];
-    return candidates.reduce(function (best, item) {
-      var b = score(best), s = score(item);
-      if (s.named > b.named) return item;
-      if (s.named === b.named && s.rows > b.rows) return item;
-      return best;
-    }, {});
-  }
+function readBundleData() {
+  var b = readJson(FULL_BUNDLE_KEY, {});
+  return b && b.attendanceByOffice && typeof b.attendanceByOffice === 'object'
+    ? b.attendanceByOffice
+    : {};
+}
+
+function writeFullBundle(data) {
+  try {
+    var bundle = makeFullBundle(data || {});
+    localStorage.setItem(FULL_BUNDLE_KEY, JSON.stringify(bundle));
+    localStorage.setItem(FULL_BUNDLE_TS_KEY, String(Date.now()));
+  } catch (_) {}
+}
+
+function writeOfficeKeys(data) {
+  try {
+    data = data || {};
+    Object.keys(data).forEach(function (officeKey) {
+      if (!Array.isArray(data[officeKey])) return;
+      localStorage.setItem(OFFICE_KEY_PREFIX + officeKey + OFFICE_KEY_SUFFIX, JSON.stringify(data[officeKey]));
+    });
+  } catch (_) {}
+}
+
+function readOfficeKeysData() {
+  var out = {};
+  try {
+    Object.keys(localStorage).forEach(function (k) {
+      if (k.indexOf(OFFICE_KEY_PREFIX) !== 0 || k.slice(-OFFICE_KEY_SUFFIX.length) !== OFFICE_KEY_SUFFIX) return;
+      var officeKey = k.slice(OFFICE_KEY_PREFIX.length, -OFFICE_KEY_SUFFIX.length);
+      var rows = readJson(k, []);
+      if (Array.isArray(rows) && rows.length) out[officeKey] = rows;
+    });
+  } catch (_) {}
+  return out;
+}
+ function bestData() {
+  var candidates = [
+    readJson(MAIN_KEY, {}),
+    readJson(BACKUP_KEY, {}),
+    readJson(LAST_GOOD_KEY, {}),
+    readJson(LEGACY_KEY, {}),
+    readJson(SAFE_DATA_KEY, {}),
+    readBundleData(),
+    readOfficeKeysData()
+  ];
+
+  return candidates.reduce(function (best, item) {
+    return betterData(best, item);
+  }, {});
+}
   function mirrorData(data, reason) {
     if (!data || typeof data !== 'object') return false;
     var s = score(data);
@@ -134,6 +215,8 @@
       localStorage.setItem(LAST_GOOD_TS_KEY, String(Date.now()));
       localStorage.setItem(SAFE_DATA_TS_KEY, String(Date.now()));
       localStorage.setItem('najran_admin_offices_attendance_done', 'true');
+      writeFullBundle(data);
+writeOfficeKeys(data);
       if (reason) console.info('[Admin Offices Persistence] mirrored data:', reason, s);
       return true;
     } catch (err) {
@@ -158,8 +241,15 @@
   function restoreDataIfNeeded(reason) {
     var current = readJson(MAIN_KEY, {}), best = bestData();
     var cs = score(current), bs = score(best);
-    if (bs.rows > 0 && (cs.rows === 0 || bs.named > cs.named || bs.rows > cs.rows)) {
-      mirrorData(best, reason || 'restore');
+if (
+  bs.rows > 0 &&
+  (
+    cs.rows === 0 ||
+    bs.offices > cs.offices ||
+    bs.named > cs.named ||
+    bs.rows > cs.rows
+  )
+) {      mirrorData(best, reason || 'restore');
       try { if (typeof window.renderCenterIcons === 'function') window.renderCenterIcons(); } catch (_) {}
       try { if (typeof window.renderMainGrid === 'function') window.renderMainGrid(); } catch (_) {}
       try { if (typeof window.calculateAndDisplayGrandTotal === 'function') window.calculateAndDisplayGrandTotal(); } catch (_) {}
