@@ -742,20 +742,16 @@ window.najranClearAttendancePendingUpload = function(reason) {
     console.warn('[AttendanceCloudGuard] تعذر تصفير حالة pending upload', e);
   }
 };
-window.addEventListener('beforeunload', function(e) {
+window.addEventListener('beforeunload', function() {
   try {
     if (localStorage.getItem('najran_allow_attendance_leave_once') === '1') {
       localStorage.removeItem('najran_allow_attendance_leave_once');
-      pendingLocalAttendanceUpload = false;
-      return;
     }
-  } catch (_) {}
 
-  if (pendingLocalAttendanceUpload && !isReviewOnlySession()) {
-    e.preventDefault();
-    e.returnValue = '';
-    return '';
-  }
+    // الخروج من الصفحة لا يمنع المستخدم بعد الحفظ المحلي.
+    // التحذير من عدم الرفع للسحابة يبقى فقط في نافذة الروابط التي يمسكها الكود داخل الصفحة.
+    pendingLocalAttendanceUpload = false;
+  } catch (_) {}
 });
 
 document.addEventListener('DOMContentLoaded', function(){
