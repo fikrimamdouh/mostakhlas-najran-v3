@@ -398,9 +398,41 @@
     return true;
   }
 
-  var tries = 0;
-  var timer = setInterval(function () {
-    tries += 1;
-    if (install() || tries > 120) clearInterval(timer);
-  }, 150);
+function ensureSignatureEditorAlive() {
+  var root = document.getElementById('admin-raise-clean');
+  if (!root) return false;
+
+  ensureCss();
+  patchLabels(root);
+
+  var box = document.getElementById(BOX_ID);
+  var btn = document.getElementById(TOP_BTN_ID);
+
+  if (!box || !btn || !document.body.contains(box) || !document.body.contains(btn)) {
+    buildEditor(root);
+    return true;
+  }
+
+  return true;
+}
+
+var tries = 0;
+var timer = setInterval(function () {
+  tries += 1;
+  ensureSignatureEditorAlive();
+  if (tries > 80 && document.getElementById(BOX_ID)) clearInterval(timer);
+}, 150);
+
+var reviveTimer = null;
+try {
+  new MutationObserver(function () {
+    clearTimeout(reviveTimer);
+    reviveTimer = setTimeout(ensureSignatureEditorAlive, 120);
+  }).observe(document.body, { childList: true, subtree: true });
+} catch (_) {}
+
+document.addEventListener('click', function () {
+  setTimeout(ensureSignatureEditorAlive, 120);
+  setTimeout(ensureSignatureEditorAlive, 400);
+}, true);
 })();
