@@ -1,7 +1,7 @@
 // ===================================================================
-// Hospital Consumables Raise Letter — V1
+// Hospital Consumables Raise Letter — V2
 // Scope: normal consumables.html only.
-// Adds: raise letter settings + signature + print letter for normal hospital consumables.
+// Adds: raise letter settings + signature + A4 letterhead + print letter for normal hospital consumables.
 // Separate from admin offices keys and logic.
 // ===================================================================
 (function () {
@@ -18,8 +18,8 @@
 
   if (pageFile !== 'consumables.html' && !/\/original\/consumables\.html(?:$|[?#])/.test(sig)) return;
   if (/admin_offices_consumables\.html|health_centers_consumables\.html|najran_general_consumables\.html/.test(pageFile)) return;
-  if (window.__HOSPITAL_CONSUMABLES_RAISE_LETTER_V1__) return;
-  window.__HOSPITAL_CONSUMABLES_RAISE_LETTER_V1__ = true;
+  if (window.__HOSPITAL_CONSUMABLES_RAISE_LETTER_V2__) return;
+  window.__HOSPITAL_CONSUMABLES_RAISE_LETTER_V2__ = true;
 
   const SETTINGS_KEY = 'hospitalConsumablesRaiseLettersSettings_v1';
 
@@ -36,6 +36,7 @@
   function moneySAR(v) { return money(v) + ' ريال'; }
   function fmtDate(v) { if (!v) return 'غير محدد'; try { const d = new Date(v); return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleDateString('en-CA'); } catch (_) { return String(v || 'غير محدد'); } }
 
+  function yes(v) { return v === true || v === 'yes' || v === 'true' || v === '1'; }
   function getContract() { return readJson('persistentContractData', {}); }
   function getExtract() { return readJson('persistentExtractData', {}); }
 
@@ -66,7 +67,12 @@
       phoneFaxAr: '',
       phoneFaxEn: '',
       managerTitle: 'مدير المستشفى',
-      managerName: ''
+      managerName: '',
+      letterheadEnabled: 'no',
+      letterheadDataUrl: '',
+      letterheadMode: 'full',
+      letterheadHasPlaceData: 'yes',
+      contentTop: 52
     };
   }
 
@@ -80,6 +86,9 @@
     ['paymentNo', 'extractStart', 'extractEnd', 'hospitalName', 'companyName'].forEach(k => delete cleanPatch[k]);
     writeJson(SETTINGS_KEY, Object.assign(defaultSettings(), current, cleanPatch));
   }
+
+  function useLetterhead(s) { return yes(s.letterheadEnabled) && clean(s.letterheadDataUrl); }
+  function hideInternalHeader(s) { return useLetterhead(s) && yes(s.letterheadHasPlaceData); }
 
   function extractMeta() {
     const e = getExtract();
@@ -169,14 +178,18 @@
     return total < 0 ? 'سالب ' + txt : txt;
   }
 
-  function printCss() {
+  function printCss(s) {
+    const top = Math.max(0, num(s.contentTop) || 52);
     return `<style>
-      @page{size:A4 portrait;margin:12mm}
+      @page{size:A4 portrait;margin:0}
       *{box-sizing:border-box}
       body{direction:rtl;margin:0;background:#e9eef5;color:#111827;font-family:Tajawal,Arial,sans-serif}
       .toolbar{position:sticky;top:0;display:flex;justify-content:center;gap:10px;background:#111827;padding:10px;z-index:5}
       .toolbar button{border:0;border-radius:10px;padding:10px 18px;font-weight:900;cursor:pointer;background:#d4af37;color:#111}
-      .page{width:210mm;min-height:297mm;margin:12px auto;background:#fff;padding:14mm 15mm 18mm;box-shadow:0 10px 30px rgba(15,23,42,.16);position:relative}
+      .page{width:210mm;min-height:297mm;margin:12px auto;background:#fff;box-shadow:0 10px 30px rgba(15,23,42,.16);position:relative;overflow:hidden;padding:0}
+      .letterhead-bg{position:absolute;inset:0;width:210mm;height:297mm;object-fit:cover;z-index:0;pointer-events:none}
+      .letter-content{position:relative;z-index:1;padding:${top}mm 15mm 18mm 15mm;min-height:297mm}
+      .letter-content.no-letterhead{padding:14mm 15mm 18mm}
       .head{display:grid;grid-template-columns:82px 1fr 82px;align-items:center;border-bottom:2px solid #003087;padding-bottom:12px;margin-bottom:30px}
       .head img{width:72px}.head .t{text-align:center}.head h1{font-size:17px;margin:0 0 5px;color:#003087;font-weight:900}.head h2{font-size:15px;margin:0;color:#111827;font-weight:800}
       .to{display:flex;justify-content:space-between;align-items:center;width:100%;gap:18px;direction:rtl;font-size:15.5px;font-weight:900;margin:4px 0 24px;line-height:2;white-space:nowrap}
@@ -186,27 +199,23 @@
       .amount-table{width:100%;border-collapse:collapse;margin:18px 0 14px;font-size:14px;table-layout:fixed}.amount-table td{border:1px solid #333;padding:8px;text-align:center;vertical-align:middle}.amount-table td:first-child{text-align:right;font-weight:700;width:68%}.amount-table td:last-child{font-weight:900;direction:ltr;white-space:nowrap}.amount-table .grand td{background:#fff7d6;font-weight:900}
       .tafqeet{border:1px solid #94a3b8;background:#f8fafc;border-radius:8px;padding:8px 12px;margin-top:8px;font-weight:900;line-height:1.8}
       .closing{font-size:15px;line-height:2;margin-top:18px}
-      .signatures.one{display:block;margin-top:48px}.signatures.one>div{width:78mm;margin-right:auto;margin-left:0;text-align:center}.sig-title{font-weight:900;margin-bottom:18px}.line{height:34px;border-bottom:1px solid #111;margin:0 18px 10px}.sig-name{font-weight:900;margin-top:8px}
+      .signatures.one{display:block;margin-top:48px}.signatures.one>div{width:78mm;margin-right:auto;margin-left:0;text-align:center}.sig-title{font-weight:900;margin-bottom:18px;white-space:nowrap}.line{height:34px;border-bottom:1px solid #111;margin:0 18px 10px}.sig-name{font-weight:900;margin-top:8px;white-space:nowrap}
       .footer{position:absolute;bottom:10mm;left:15mm;right:15mm;border-top:1px solid #cbd5e1;padding-top:5px;font-size:11px;display:flex;justify-content:space-between;direction:ltr}
-      @media print{body{background:#fff}.toolbar{display:none}.page{margin:0;box-shadow:none;width:auto;min-height:calc(297mm - 24mm);padding:0}.footer{bottom:0}}
+      @media print{body{background:#fff}.toolbar{display:none}.page{margin:0;box-shadow:none;width:210mm;min-height:297mm}.footer{bottom:0}}
     </style>`;
   }
 
-  function openPrintDoc(title, bodyHtml) {
+  function openPrintDoc(title, bodyHtml, s) {
     const win = window.open('', '', 'width=1000,height=900');
     if (!win) return alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.');
     win.document.open();
-    win.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${esc(title)}</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">${printCss()}</head><body><div class="toolbar"><button onclick="window.print()">طباعة</button><button onclick="window.close()">إغلاق</button></div>${bodyHtml}</body></html>`);
+    win.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${esc(title)}</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">${printCss(s || getSettings())}</head><body><div class="toolbar"><button onclick="window.print()">طباعة</button><button onclick="window.close()">إغلاق</button></div>${bodyHtml}</body></html>`);
     win.document.close();
   }
 
-  function headerHtml(s) {
-    return `<div class="head"><img src="najran_health_cluster_logo.png"><div class="t"><h1>${esc(s.entityTitle)}</h1><h2>${esc(s.departmentTitle)}</h2></div><img src="najran_health_cluster_logo.png"></div>`;
-  }
-  function footerHtml(s) {
-    if (!clean(s.phoneFaxAr) && !clean(s.phoneFaxEn)) return '';
-    return `<div class="footer"><span>${esc(s.phoneFaxEn)}</span><span dir="rtl">${esc(s.phoneFaxAr)}</span></div>`;
-  }
+  function letterheadHtml(s) { return useLetterhead(s) ? `<img class="letterhead-bg" src="${esc(s.letterheadDataUrl)}">` : ''; }
+  function headerHtml(s) { return hideInternalHeader(s) ? '' : `<div class="head"><img src="najran_health_cluster_logo.png"><div class="t"><h1>${esc(s.entityTitle)}</h1><h2>${esc(s.departmentTitle)}</h2></div><img src="najran_health_cluster_logo.png"></div>`; }
+  function footerHtml(s) { if (hideInternalHeader(s) || (!clean(s.phoneFaxAr) && !clean(s.phoneFaxEn))) return ''; return `<div class="footer"><span>${esc(s.phoneFaxEn)}</span><span dir="rtl">${esc(s.phoneFaxAr)}</span></div>`; }
   function toHtml(s) { return `<div class="to"><span class="recipient-name">${esc(s.recipient)}</span><span class="recipient-suffix">${esc(s.recipientSuffix)}</span></div>`; }
   function signatureHtml(s) { return `<div class="signatures one"><div><div class="sig-title">${esc(s.managerTitle)}</div><div class="line"></div><div class="sig-name">${esc(s.managerName)}</div></div></div>`; }
 
@@ -216,21 +225,29 @@
     if (net <= 0) return alert('لم يتم العثور على صافي مستهلكات صالح داخل مستخلص المستهلكات الحالي.');
     const vat = net * num(s.vatRate) / 100;
     const grand = net + vat;
-    const body = `<section class="page">${headerHtml(s)}${toHtml(s)}<div class="salam">السلام عليكم ورحمة الله وبركاته، وبعد:</div><div class="body-text">نرفق لسعادتكم المستخلص الشهري لشركة ${esc(companyName())} والخاص ببند المستهلكات ومقاولي الباطن بموقع ${esc(s.scopeName || hospitalName())}، ${extractPhrase()}.</div><table class="amount-table"><tbody><tr><td>صافي مستحقات المستهلكات ومقاولي الباطن عن مدة المستخلص</td><td>${moneySAR(net)}</td></tr><tr><td>ضريبة القيمة المضافة ${money(s.vatRate)}%</td><td>${moneySAR(vat)}</td></tr><tr class="grand"><td>الإجمالي</td><td>${moneySAR(grand)}</td></tr></tbody></table><div class="tafqeet">${esc(tafqeetSAR(grand))}</div><div class="closing">لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / ${esc(companyName())}.<br>وتقبلوا تحياتنا ،،،</div>${signatureHtml(s)}${footerHtml(s)}</section>`;
-    openPrintDoc('خطاب رفع المستهلكات', body);
+    const placeText = hideInternalHeader(s) ? '' : ` بموقع ${esc(s.scopeName || hospitalName())}`;
+    const body = `<section class="page">${letterheadHtml(s)}<div class="letter-content ${useLetterhead(s) ? '' : 'no-letterhead'}">${headerHtml(s)}${toHtml(s)}<div class="salam">السلام عليكم ورحمة الله وبركاته، وبعد:</div><div class="body-text">نرفق لسعادتكم المستخلص الشهري لشركة ${esc(companyName())} والخاص ببند المستهلكات ومقاولي الباطن${placeText}، ${extractPhrase()}.</div><table class="amount-table"><tbody><tr><td>صافي مستحقات المستهلكات ومقاولي الباطن عن مدة المستخلص</td><td>${moneySAR(net)}</td></tr><tr><td>ضريبة القيمة المضافة ${money(s.vatRate)}%</td><td>${moneySAR(vat)}</td></tr><tr class="grand"><td>الإجمالي</td><td>${moneySAR(grand)}</td></tr></tbody></table><div class="tafqeet">${esc(tafqeetSAR(grand))}</div><div class="closing">لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / ${esc(companyName())}.<br>وتقبلوا تحياتنا ،،،</div>${signatureHtml(s)}${footerHtml(s)}</div></section>`;
+    openPrintDoc('خطاب رفع المستهلكات', body, s);
   }
 
   function field(key, label, type) {
     const s = getSettings();
     return `<div class="field"><label>${esc(label)}</label><input type="${type || 'text'}" data-hosp-cons-letter-setting="${esc(key)}" value="${esc(s[key])}"></div>`;
   }
+  function selectField(key, label, options) {
+    const s = getSettings();
+    return `<div class="field"><label>${esc(label)}</label><select data-hosp-cons-letter-setting="${esc(key)}">${options.map(o => `<option value="${esc(o[0])}" ${String(s[key]) === String(o[0]) ? 'selected' : ''}>${esc(o[1])}</option>`).join('')}</select></div>`;
+  }
 
   function renderDialog() {
+    const s = getSettings();
     const net = currentConsumablesNet();
-    const html = `<div class="settings-overlay" id="hospital-consumables-raise-letter-overlay" onclick="if(event.target.id==='hospital-consumables-raise-letter-overlay') HospitalConsumablesRaiseLetter.closeDialog()"><div class="settings-dialog"><h2>خطاب رفع المستهلكات — المستشفى</h2><div class="btn-row"><button class="btn btn-primary" onclick="HospitalConsumablesRaiseLetter.saveDialog()">حفظ الإعدادات</button><button class="btn btn-gold" onclick="HospitalConsumablesRaiseLetter.generate()">طباعة خطاب المستهلكات</button><button class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.closeDialog()">إغلاق</button></div><div class="section-box"><h3>بيانات المستخلص الحالية — قراءة فقط</h3><div class="settings-grid"><div class="field"><label>رقم الدفعة ومدة المستخلص</label><div class="readonly-box">${extractPhrase()}</div></div><div class="field"><label>اسم المقاول / الشركة</label><div class="readonly-box">${esc(companyName())}</div></div><div class="field"><label>اسم المستشفى / الموقع</label><div class="readonly-box">${esc(hospitalName())}</div></div><div class="field"><label>صافي مستخلص المستهلكات الحالي</label><div class="readonly-box">${moneySAR(net)}</div></div></div></div><div class="section-box"><h3>إعدادات الخطاب المحفوظة</h3><div class="settings-grid">${field('recipient','اسم المخاطب')}${field('recipientSuffix','الصفة / المحترم')}${field('entityTitle','العنوان الرئيسي')}${field('departmentTitle','الإدارة')}${field('scopeName','الموقع / نطاق الخطاب')}${field('vatRate','نسبة الضريبة','number')}${field('phoneFaxAr','الهاتف والفاكس عربي')}${field('phoneFaxEn','الهاتف والفاكس إنجليزي')}</div></div><div class="section-box"><h3>التوقيع المحفوظ للخطاب</h3><div class="settings-grid">${field('managerTitle','صفة التوقيع')}${field('managerName','اسم صاحب التوقيع')}</div><div class="btn-row"><button type="button" class="btn btn-primary" onclick="HospitalConsumablesRaiseLetter.saveDialog()">حفظ التوقيع</button></div></div></div></div>`;
+    const preview = useLetterhead(s) ? `<div class="field wide"><label>معاينة الترويسة الحالية</label><img class="letterhead-preview" src="${esc(s.letterheadDataUrl)}"></div>` : '';
+    const html = `<div class="settings-overlay" id="hospital-consumables-raise-letter-overlay" onclick="if(event.target.id==='hospital-consumables-raise-letter-overlay') HospitalConsumablesRaiseLetter.closeDialog()"><div class="settings-dialog"><h2>خطاب رفع المستهلكات — المستشفى</h2><div class="btn-row"><button class="btn btn-primary" onclick="HospitalConsumablesRaiseLetter.saveDialog()">حفظ الإعدادات</button><button class="btn btn-gold" onclick="HospitalConsumablesRaiseLetter.generate()">طباعة خطاب المستهلكات</button><button class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.closeDialog()">إغلاق</button></div><div class="section-box"><h3>بيانات المستخلص الحالية — قراءة فقط</h3><div class="settings-grid"><div class="field"><label>رقم الدفعة ومدة المستخلص</label><div class="readonly-box">${extractPhrase()}</div></div><div class="field"><label>اسم المقاول / الشركة</label><div class="readonly-box">${esc(companyName())}</div></div><div class="field"><label>اسم المستشفى / الموقع</label><div class="readonly-box">${esc(hospitalName())}</div></div><div class="field"><label>صافي مستخلص المستهلكات الحالي</label><div class="readonly-box">${moneySAR(net)}</div></div></div></div><div class="section-box"><h3>الترويسة A4</h3><div class="settings-grid">${selectField('letterheadEnabled','تفعيل الترويسة',[['no','لا'],['yes','نعم']])}${selectField('letterheadHasPlaceData','الترويسة تحتوي بيانات الجهة والمكان',[['yes','نعم — إخفاء الهيدر الداخلي واسم الموقع'],['no','لا — اطبع الهيدر الداخلي']])}${field('contentTop','بداية محتوى الخطاب بعد الترويسة mm','number')}<div class="field wide"><label>رفع صورة الترويسة A4</label><input id="hospital-cons-letterhead-file" type="file" accept="image/*"><small>يفضل صورة A4 رأسية كاملة تحتوي الشعارات وبيانات المستشفى.</small></div>${preview}</div><div class="btn-row"><button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.deleteLetterhead()">حذف الترويسة</button></div></div><div class="section-box"><h3>إعدادات الخطاب المحفوظة</h3><div class="settings-grid">${field('recipient','اسم المخاطب')}${field('recipientSuffix','الصفة / المحترم')}${field('entityTitle','العنوان الرئيسي')}${field('departmentTitle','الإدارة')}${field('scopeName','الموقع / نطاق الخطاب')}${field('vatRate','نسبة الضريبة','number')}${field('phoneFaxAr','الهاتف والفاكس عربي')}${field('phoneFaxEn','الهاتف والفاكس إنجليزي')}</div></div><div class="section-box"><h3>التوقيع المحفوظ للخطاب</h3><div class="settings-grid">${field('managerTitle','صفة التوقيع')}${field('managerName','اسم صاحب التوقيع')}</div><div class="btn-row"><button type="button" class="btn btn-primary" onclick="HospitalConsumablesRaiseLetter.saveDialog()">حفظ التوقيع</button></div></div></div></div>`;
     document.body.insertAdjacentHTML('beforeend', html);
     document.body.classList.add('hospital-consumables-letter-modal-open');
     installAutoSaveForDialog();
+    installLetterheadUpload();
   }
 
   function saveDialog(silent) {
@@ -247,6 +264,38 @@
     }
     note.textContent = 'تم حفظ إعدادات خطاب رفع المستهلكات والتوقيع بنجاح.';
     setTimeout(() => { if (note) note.textContent = ''; }, 2500);
+  }
+
+  function installLetterheadUpload() {
+    const inp = document.getElementById('hospital-cons-letterhead-file');
+    if (!inp || inp.__installed) return;
+    inp.__installed = true;
+    inp.onchange = function () {
+      const f = this.files && this.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = function () {
+        saveDialog(true);
+        const s = getSettings();
+        s.letterheadDataUrl = String(r.result || '');
+        s.letterheadEnabled = 'yes';
+        s.letterheadMode = 'full';
+        writeJson(SETTINGS_KEY, s);
+        closeDialog();
+        openDialog();
+      };
+      r.readAsDataURL(f);
+    };
+  }
+
+  function deleteLetterhead() {
+    saveDialog(true);
+    const s = getSettings();
+    s.letterheadDataUrl = '';
+    s.letterheadEnabled = 'no';
+    writeJson(SETTINGS_KEY, s);
+    closeDialog();
+    openDialog();
   }
 
   let saveTimer = null;
@@ -273,13 +322,15 @@
       #hospital-consumables-raise-letter-overlay h2{text-align:center;color:#003087;margin:0 0 14px;font-weight:900}
       #hospital-consumables-raise-letter-overlay .settings-grid{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))!important;gap:10px!important}
       #hospital-consumables-raise-letter-overlay .field{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px}
+      #hospital-consumables-raise-letter-overlay .field.wide{grid-column:1/-1}
       #hospital-consumables-raise-letter-overlay .field label{display:block;font-size:12px;font-weight:900;color:#334155;margin-bottom:6px}
-      #hospital-consumables-raise-letter-overlay .field input{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit}
+      #hospital-consumables-raise-letter-overlay .field input,#hospital-consumables-raise-letter-overlay .field select{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit}
       #hospital-consumables-raise-letter-overlay .readonly-box{padding:9px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;font-weight:900;line-height:1.8}
       #hospital-consumables-raise-letter-overlay .btn-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:12px 0}
       #hospital-consumables-raise-letter-overlay .btn{border:0;border-radius:10px;padding:9px 14px;font-weight:900;cursor:pointer}
       #hospital-consumables-raise-letter-overlay .btn-primary{background:#003087;color:#fff}.btn-gold{background:#d4af37;color:#111}.btn-light{background:#f1f5f9;color:#111;border:1px solid #cbd5e1}
       #hospital-consumables-raise-letter-overlay .section-box{border:1px solid #e2e8f0;border-radius:14px;padding:12px;margin-top:12px;background:#f8fafc}
+      #hospital-consumables-raise-letter-overlay .letterhead-preview{display:block;max-width:190px;max-height:270px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;margin:8px auto}
     `;
     document.head.appendChild(style);
   }
@@ -308,10 +359,10 @@
     }
   }
 
-  window.HospitalConsumablesRaiseLetter = { openDialog, closeDialog, saveDialog, generate: generateConsumablesRaiseLetter, getCurrentConsumablesNet: currentConsumablesNet, tafqeetSAR };
+  window.HospitalConsumablesRaiseLetter = { openDialog, closeDialog, saveDialog, generate: generateConsumablesRaiseLetter, getCurrentConsumablesNet: currentConsumablesNet, tafqeetSAR, deleteLetterhead };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installButtons); else installButtons();
   setTimeout(installButtons, 700);
   setTimeout(installButtons, 1800);
   setTimeout(installButtons, 3500);
-  console.info('[Hospital Consumables Raise Letter] installed v1');
+  console.info('[Hospital Consumables Raise Letter] installed v2 with A4 letterhead');
 })();
