@@ -1001,7 +1001,14 @@ localStorage.setItem(`deptCalculatedCost_${dept.key}`, deptTotalCost.toFixed(2))
         });
 
 updateGrandTotals(grandTotalCount, grandTotalCost, grandTotalDeduction, grandTotalFine); // <--- السطر الصحيح
-        updateSpecialStatusColumns(usedSpecialStatuses);
+      try {
+  localStorage.setItem('attendanceData', JSON.stringify(attendanceData));
+  localStorage.setItem('attendanceRecalculatedSavedAt', new Date().toISOString());
+  console.warn('[AttendanceRender] تم حفظ attendanceData بعد إعادة الحساب الكامل');
+} catch (e) {
+  console.warn('[AttendanceRender] تعذر حفظ attendanceData بعد إعادة الحساب الكامل', e);
+}
+      updateSpecialStatusColumns(usedSpecialStatuses);
         updateStatusLegend(usedSpecialStatuses);
 // rebuildTableHeaders();
     } catch (error) {
