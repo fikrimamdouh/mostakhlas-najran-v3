@@ -236,10 +236,27 @@ function isRevisionMode() {
       s.timestamp = Date.now();
       localStorage.setItem(SESSION_KEY, JSON.stringify(s));
       localStorage.removeItem('najran_active_hospital_context');
-      Object.keys(localStorage).forEach(function(k){
-        const lk = String(k || '').toLowerCase();
-        if (lk.includes('attendance') || lk.includes('hospitalactivitystatus')) localStorage.removeItem(k);
-      });
+    const reviewKeepKeys = new Set([
+  'adminOfficesAttendanceData_v1_localBackup',
+  'adminOfficesAttendanceData_v1_localBackup_ts',
+  'adminOfficesAttendanceData_v1_lastGood',
+  'adminOfficesAttendanceData_v1_lastGood_ts',
+  'adminOfficesAttendanceData',
+  'adminOfficesLaborDataSafe_v2',
+  'adminOfficesLaborDataSafe_v2_ts',
+  'adminOfficesLaborNamesSafe_v2',
+  'adminOfficesLaborAffiliationsSafe_v2',
+  'najranExtractDataSafe_v1',
+  'najranExtractDataSafe_v1_ts',
+  'adminOfficesFullAttendanceBundle_v1',
+  'adminOfficesFullAttendanceBundle_v1_ts'
+]);
+
+Object.keys(localStorage).forEach(function(k){
+  if (reviewKeepKeys.has(k)) return;
+  const lk = String(k || '').toLowerCase();
+  if (lk.includes('attendance') || lk.includes('hospitalactivitystatus')) localStorage.removeItem(k);
+});
       sessionStorage.clear();
       console.warn('[MzamanaCloud] REVIEW ONLY: تم فرض وضع المراجعة قبل التهيئة للمستشفى «' + hospital + '»');
       return true;
@@ -247,8 +264,28 @@ function isRevisionMode() {
   }
 
   function clearOperationalKeysForHospitalSwitch() {
-    const keepKeys = new Set([SESSION_KEY, 'hospitalName', 'companyName', 'contractNumber', 'sidebar_collapsed', 'najran_read_notifications']);
-    const clearPrefixes = ['deptCalculatedCost_', 'dept_', 'sb_sigs_', 'sb_prefs_', 'tableData_', 'achievement_', 'consumables_', 'spare_', 'water_', 'sewage_', 'subcontractors_', 'najran_labor_', 'najran_health_', 'najran_admin_', 'monthSnapshot_', '_u'];
+const keepKeys = new Set([
+  SESSION_KEY,
+  'hospitalName',
+  'companyName',
+  'contractNumber',
+  'sidebar_collapsed',
+  'najran_read_notifications',
+
+  'adminOfficesAttendanceData_v1_localBackup',
+  'adminOfficesAttendanceData_v1_localBackup_ts',
+  'adminOfficesAttendanceData_v1_lastGood',
+  'adminOfficesAttendanceData_v1_lastGood_ts',
+  'adminOfficesAttendanceData',
+  'adminOfficesLaborDataSafe_v2',
+  'adminOfficesLaborDataSafe_v2_ts',
+  'adminOfficesLaborNamesSafe_v2',
+  'adminOfficesLaborAffiliationsSafe_v2',
+  'najranExtractDataSafe_v1',
+  'najranExtractDataSafe_v1_ts',
+  'adminOfficesFullAttendanceBundle_v1',
+  'adminOfficesFullAttendanceBundle_v1_ts'
+]);    const clearPrefixes = ['deptCalculatedCost_', 'dept_', 'sb_sigs_', 'sb_prefs_', 'tableData_', 'achievement_', 'consumables_', 'spare_', 'water_', 'sewage_', 'subcontractors_', 'najran_labor_', 'najran_health_', 'najran_admin_', 'monthSnapshot_', '_u'];
     const clearKeys = [
       'persistentContractData','persistentExtractData','contractData','contractDetails','contractType','contractStartDate','contractEndDate','contractSignatureData',
       'extractMonth','extractYear','extractNumber','extractStart','extractEnd','extractFromDate','extractToDate','paymentNumber',
@@ -402,7 +439,13 @@ function isRevisionMode() {
 
 function shouldPullAttendanceKeyForCurrentPage(nk) {
   const page = getCurrentPageFile();
-
+if (
+  nk === 'adminOfficesFullAttendanceBundle_v1' ||
+  nk === 'adminOfficesFullAttendanceBundle_v1_ts' ||
+  nk.indexOf('adminOfficeAttendance_') === 0
+) {
+  return page === 'admin_offices_attendance.html';
+}
   if (!ATTENDANCE_PAGE_KEYS.has(nk)) return true;
 
   if (nk === 'adminOfficesAttendanceData_v1') {
@@ -430,6 +473,17 @@ function shouldPullAttendanceKeyForCurrentPage(nk) {
 
 function mergeOne(key, value, fromHospital) {
   const nk = normalizeKey(key);
+  if (nk === 'adminOfficesAttendanceData_v1' || nk === 'adminOfficesFullAttendanceBundle_v1') {
+  var localRaw = localStorage.getItem(nk);
+  var localScore = adminOfficeDataScoreFromRaw(localRaw);
+  var pulledScore = adminOfficeDataScoreFromRaw(value);
+
+  if (localScore.offices > 1 && pulledScore.offices <= 1) {
+    skippedByPage++;
+    console.warn('[Admin Offices Sync Guard] blocked incomplete cloud pull over local full data:', nk, pulledScore, 'local=', localScore);
+    return;
+  }
+}
   if (!shouldPullAttendanceKeyForCurrentPage(nk)) { skippedByPage++; return; }
       if (fromHospital && PERSONAL_KEYS.has(nk)) return;
       if (!fromHospital && hospitalName && !PERSONAL_KEYS.has(nk)) { skippedUserOperational++; return; }
@@ -469,7 +523,13 @@ function mergeOne(key, value, fromHospital) {
     }
     return { saved };
   }
-function adminOfficeDataScoreFromRaw(raw) {
+
+
+function isAdminOfficesProtectedKey(key) {
+  var nk = normalizeKey(key);
+  return nk === 'adminOfficesAttendanceData_v1' || nk === 'adminOfficesFullAttendanceBundle_v1';
+}
+  function adminOfficeDataScoreFromRaw(raw) {
   try {
     var data = JSON.parse(String(raw || '{}'));
 
@@ -493,11 +553,6 @@ function adminOfficeDataScoreFromRaw(raw) {
   } catch (_) {
     return { offices: 0, rows: 0, named: 0 };
   }
-}
-
-function isAdminOfficesProtectedKey(key) {
-  var nk = normalizeKey(key);
-  return nk === 'adminOfficesAttendanceData_v1' || nk === 'adminOfficesFullAttendanceBundle_v1';
 }
   async function filterUnsafeHospitalWrites(hospitalData) {
     const keys = Object.keys(hospitalData || {});
