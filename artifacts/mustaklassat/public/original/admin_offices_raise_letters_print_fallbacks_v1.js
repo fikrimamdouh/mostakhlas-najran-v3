@@ -23,7 +23,6 @@
   const candidates = [
     document.getElementById('grand-net-total')?.textContent,
     document.getElementById('admin-net-total')?.textContent,
-    document.getElementById('grand-total-cost')?.textContent,
     localStorage.getItem('grand-net-total-admin'),
     localStorage.getItem('adminOfficesGrandNetTotal'),
     localStorage.getItem('finalLaborCost'),
@@ -98,14 +97,20 @@ function data() {
   ].forEach(key => sources.push(readJson(key, {})));
 
   const best = sources.reduce((bestObj, obj) => {
-    const bestNamed = countNamedRows(bestObj);
-    const objNamed = countNamedRows(obj);
+  const bestSalary = countSalaryRows(bestObj);
+  const objSalary = countSalaryRows(obj);
 
-    if (objNamed > bestNamed) return obj;
-    if (objNamed === bestNamed && countRows(obj) > countRows(bestObj)) return obj;
+  if (objSalary > bestSalary) return obj;
+  if (objSalary < bestSalary) return bestObj;
 
-    return bestObj;
-  }, {});
+  const bestNamed = countNamedRows(bestObj);
+  const objNamed = countNamedRows(obj);
+
+  if (objNamed > bestNamed) return obj;
+  if (objNamed === bestNamed && countRows(obj) > countRows(bestObj)) return obj;
+
+  return bestObj;
+}, {});
 
 if (countRows(best) > 0 && countSalaryRows(best) > 0) {    try {
       localStorage.setItem('adminOfficesAttendanceData_v1', JSON.stringify(best));
