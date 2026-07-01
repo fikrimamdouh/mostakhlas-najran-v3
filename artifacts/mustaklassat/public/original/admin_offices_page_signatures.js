@@ -259,21 +259,23 @@
     else bar.appendChild(btn);
   }
   function buildGrandSignatureHTML() {
-    const prefs = readJson(PREFS + GRAND_KEY, {});
-    if (prefs.includeSigs === false) return '';
-    const sigs = readJson(PREFIX + GRAND_KEY, []);
-    const rows = Array.isArray(sigs) && sigs.length ? sigs : [
-      { title: 'إعداد', name: '' },
-      { title: 'مراجعة', name: '' },
-      { title: 'اعتماد', name: '' }
-    ];
-    const items = rows.map(s => `<div><div class="g-title">${esc(s.title)}</div><div class="line"></div><div class="g-name">${esc(s.name || '')}</div></div>`).join('');
-return `<section class="sign grand-signatures" data-source="admin_offices_page_signatures.js" style="outline:3px solid red;">
-  <div style="font-size:12px;color:red;font-weight:900;text-align:center;margin-bottom:6px">
-    SOURCE: admin_offices_page_signatures.js
-  </div>
-  ${items}
-</section>`;  }
+  const prefs = readJson(PREFS + GRAND_KEY, {});
+  if (prefs.includeSigs === false) return '';
+
+  const sigs = readJson(PREFIX + GRAND_KEY, []);
+
+  // لا تنشئ توقيع افتراضي للشهادة الإجمالية إذا المستخدم حذف التواقيع
+  if (!Array.isArray(sigs) || !sigs.length) return '';
+
+  const items = sigs
+    .filter(s => String(s?.title || '').trim() || String(s?.name || '').trim())
+    .map(s => `<div><div class="g-title">${esc(s.title)}</div><div class="line"></div><div class="g-name">${esc(s.name || '')}</div></div>`)
+    .join('');
+
+  if (!items) return '';
+
+  return `<section class="sign grand-signatures">${items}</section>`;
+}
   function patchGrandWindowOpen() {
     if (window.open.__adminOfficeGrandSignaturePatched) return;
     const originalOpen = window.open;
