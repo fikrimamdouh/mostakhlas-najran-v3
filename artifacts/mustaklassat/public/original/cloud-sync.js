@@ -50,13 +50,13 @@
     'finalLaborCost', 'performanceTotalDeduction', 'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin',
     'performanceSignatures', 'performanceSignatures_v2', 'performanceTableNames',
     'najran_labor_attendance_done', 'najran_labor_performance_done', 'najran_health_attendance_done', 'najran_admin_offices_attendance_done',
-    'adminOfficeNames_v1', 'adminOfficeAffiliations_v1',
-    'backupLog', 'backupLogs'
+'adminOfficeNames_v1', 'adminOfficeAffiliations_v1',
+'adminOfficesFullAttendanceBundle_v1', 'adminOfficesFullAttendanceBundle_v1_ts',    'backupLog', 'backupLogs'
   ]);
 
   const OPERATIONAL_EXACT_KEYS = new Set([
-    'attendanceData', 'centersAttendanceData_v2', 'healthCentersAttendanceData', 'adminOfficesAttendanceData_v1',
-    'ng_attendanceData', 'ng_departmentNames', 'ng_distributionSettings', 'ng_finalLaborCost', 'ng_performanceTotalDeduction',
+'attendanceData', 'centersAttendanceData_v2', 'healthCentersAttendanceData', 'adminOfficesAttendanceData_v1',
+'adminOfficesFullAttendanceBundle_v1',    'ng_attendanceData', 'ng_departmentNames', 'ng_distributionSettings', 'ng_finalLaborCost', 'ng_performanceTotalDeduction',
     'nd_attendanceData', 'nd_departmentNames', 'nd_distributionSettings', 'nd_finalLaborCost', 'nd_performanceTotalDeduction', 'nd_dentalAchievementTotals',
     'consumablesTableData', 'healthCentersConsumables', 'mainHospitalConsumables', 'admin_offices_consumables_v1.0', 'finalConsumablesCost',
     'subcontractors_data_consumables_v27', 'performance_data_consumables_v27', 'water_supply_data_consumables_v27', 'sewage_disposal_data_consumables_v27', 'summary_data_consumables_v27',
@@ -69,11 +69,11 @@
   const OPERATIONAL_PREFIXES = [
     'deptCalculatedCost_', 'dept_', 'tableData_', 'achievement_', 'consumables_', 'spare_',
     'water_', 'sewage_', 'subcontractors_', 'najran_labor_', 'najran_health_', 'najran_admin_',
-    'monthSnapshot_'
-  ];
+'monthSnapshot_', 'adminOfficeAttendance_'  ];
 
   const EMPTY_OVERWRITE_PROTECTED_KEYS = new Set([
     ...ATTENDANCE_PAGE_KEYS,
+    'adminOfficesFullAttendanceBundle_v1',
     'performanceData', 'performanceData_v4', 'performanceDeductions', 'achievementData',
     'consumablesTableData', 'healthCentersConsumables', 'mainHospitalConsumables',
     'admin_offices_consumables_v1.0', 'spare_partsData'
@@ -469,7 +469,36 @@ function mergeOne(key, value, fromHospital) {
     }
     return { saved };
   }
+function adminOfficeDataScoreFromRaw(raw) {
+  try {
+    var data = JSON.parse(String(raw || '{}'));
 
+    if (data && data.attendanceByOffice && typeof data.attendanceByOffice === 'object') {
+      data = data.attendanceByOffice;
+    }
+
+    var offices = 0, rows = 0, named = 0;
+
+    Object.keys(data || {}).forEach(function (k) {
+      var arr = data[k];
+      if (!Array.isArray(arr) || !arr.length) return;
+      offices++;
+      rows += arr.length;
+      arr.forEach(function (emp) {
+        if (String((emp && (emp.name || emp.employeeName || emp.workerName || emp.empName)) || '').trim()) named++;
+      });
+    });
+
+    return { offices: offices, rows: rows, named: named };
+  } catch (_) {
+    return { offices: 0, rows: 0, named: 0 };
+  }
+}
+
+function isAdminOfficesProtectedKey(key) {
+  var nk = normalizeKey(key);
+  return nk === 'adminOfficesAttendanceData_v1' || nk === 'adminOfficesFullAttendanceBundle_v1';
+}
   async function filterUnsafeHospitalWrites(hospitalData) {
     const keys = Object.keys(hospitalData || {});
     if (!keys.length) return hospitalData;
@@ -486,11 +515,23 @@ function mergeOne(key, value, fromHospital) {
     const safe = {};
     let skipped = 0;
     keys.forEach(key => {
-      const newValue = hospitalData[key];
-      const oldValue = remoteData[key];
-      if (isUnsafeEmptyOverwrite(key, newValue, oldValue)) { skipped++; return; }
-      safe[key] = newValue;
-    });
+  const newValue = hospitalData[key];
+  const oldValue = remoteData[key];
+
+  if (isAdminOfficesProtectedKey(key)) {
+    const ns = adminOfficeDataScoreFromRaw(newValue);
+    const os = adminOfficeDataScoreFromRaw(oldValue);
+
+    if (os.offices > 1 && ns.offices <= 1) {
+      skipped++;
+      console.warn('[Admin Offices Sync Guard] blocked incomplete office-only upload:', key, 'local=', ns, 'remote=', os);
+      return;
+    }
+  }
+
+  if (isUnsafeEmptyOverwrite(key, newValue, oldValue)) { skipped++; return; }
+  safe[key] = newValue;
+});
     if (skipped) console.warn('[MzamanaCloud] SKIP EMPTY OVERWRITE — ' + skipped + ' مفتاح');
     return safe;
   }
