@@ -2,6 +2,7 @@
 // Admin Offices Grand Certificate Stamp + Signature Print Fix
 // Scope: admin_offices_attendance.html only
 // يقيد حجم الختم ويزيل تكرار عناصر التوقيع داخل الشهادة الإجمالية فقط.
+// كما يعيد تحميل محرك الشهادة المصحح بعد سكربتات HTML القديمة.
 // ===================================================================
 (function () {
   'use strict';
@@ -11,6 +12,8 @@
 
   const GRAND_KEY = 'admin_offices_grand_certificate';
   const STYLE_ID = 'admin-offices-grand-cert-stamp-fix-style';
+  const FINAL_ENGINE_SRC = '/original/admin_offices_grand_certificate_polish.js?v=20260701_fixed_static_sigs_v5';
+
   const FIX_STYLE = `
     <style id="${STYLE_ID}">
       .cert .sb-grid,
@@ -155,8 +158,20 @@
       return FIX_STYLE + `<div class="admin-grand-cert-print">${normalized}</div>`;
     };
     window.SignatureBlock.buildPrintHTML.__ADMIN_OFFICES_STAMP_FIX__ = true;
-    console.info('[Admin Offices Grand Certificate] stamp size + duplicate signature items constrained v3');
+    console.info('[Admin Offices Grand Certificate] stamp size + duplicate signature items constrained v4');
     return true;
+  }
+
+  function forceFinalGrandCertificateEngine() {
+    if (Array.from(document.scripts).some(s => String(s.src || '').includes('20260701_fixed_static_sigs_v5'))) return;
+    const s = document.createElement('script');
+    s.src = FINAL_ENGINE_SRC;
+    s.defer = false;
+    s.onload = function () {
+      console.info('[Admin Offices Grand Certificate] final static-signature engine loaded v5');
+      try { patchSignatureBlock(); } catch (_) {}
+    };
+    document.head.appendChild(s);
   }
 
   function retryPatch(attempt) {
@@ -166,5 +181,13 @@
   }
 
   retryPatch(0);
-  document.addEventListener('DOMContentLoaded', function () { retryPatch(0); });
+  document.addEventListener('DOMContentLoaded', function () {
+    retryPatch(0);
+    setTimeout(forceFinalGrandCertificateEngine, 1200);
+  });
+  window.addEventListener('load', function () {
+    setTimeout(forceFinalGrandCertificateEngine, 300);
+    setTimeout(forceFinalGrandCertificateEngine, 1800);
+  });
+  setTimeout(forceFinalGrandCertificateEngine, 3500);
 })();
