@@ -362,10 +362,29 @@ window.startExtractRevision = function () {
     createApproveBtn({
       label: 'اعتماد الحضور والانصراف',
       onClick: () => {
-        if (!confirm('هل تريد اعتماد بيانات الحضور والانصراف والانتقال لجداول الأداء؟')) return;
-        localStorage.setItem(STEP_KEY.labor_attendance, '1');
-        window.location.href = '/original/performance.html';
-      },
+  if (!confirm('هل تريد اعتماد بيانات الحضور والانصراف والانتقال لجداول الأداء؟')) return;
+
+  try {
+    if (typeof renderTables === 'function') {
+      renderTables();
+    }
+
+    if (typeof getAttendanceData === 'function' && typeof saveAttendanceData === 'function') {
+      const attendanceData = getAttendanceData();
+      saveAttendanceData(attendanceData);
+    }
+
+    localStorage.setItem('attendanceSavedAtBeforePerformance', new Date().toISOString());
+    localStorage.setItem('attendanceApprovedAtBeforePerformance', new Date().toISOString());
+
+    console.warn('[AttendanceApprove] تم حفظ بيانات الحضور إجبارياً قبل الانتقال للأداء');
+  } catch (e) {
+    console.warn('[AttendanceApprove] تعذر تنفيذ الحفظ الإجباري قبل الانتقال', e);
+  }
+
+  localStorage.setItem(STEP_KEY.labor_attendance, '1');
+  window.location.href = '/original/performance.html';
+},
     });
   };
 
