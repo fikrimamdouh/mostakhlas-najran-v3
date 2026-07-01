@@ -4249,12 +4249,32 @@ function showBulkAttendanceOptions(departmentKey) {
                     </div>
                 </div>
                 <div id="bulk-employee-checkboxes" class="checkbox-grid" style="max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;">
-                    ${employees.map((emp, index) => `
-                        <div class="form-group-checkbox">
-                            <input type="checkbox" class="employee-checkbox" value="${index}" id="bulk-emp-${index}" checked>
-                            <label for="bulk-emp-${index}">${emp.name}</label>
-                        </div>
-                    `).join('')}
+                  <div style="margin-bottom:8px;">
+    <input
+        type="text"
+        id="bulk-employee-search"
+        placeholder="ابحث بالاسم / الوظيفة / رقم الإقامة"
+        oninput="filterBulkAttendanceEmployees(this.value)"
+        style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-family:Tajawal,Arial,sans-serif;"
+    >
+</div>
+
+${employees.map((emp, index) => {
+    const name = String(emp.name || '').trim() || 'بدون اسم';
+    const jobTitle = String(emp.jobTitle || '').trim() || 'بدون وظيفة';
+    const iqamaId = String(emp.iqamaId || '').trim() || 'بدون إقامة';
+    const searchText = `${name} ${jobTitle} ${iqamaId}`.toLowerCase();
+
+    return `
+        <div class="form-group-checkbox bulk-employee-row" data-search="${searchText.replace(/"/g, '&quot;')}">
+            <input type="checkbox" class="employee-checkbox" value="${index}" id="bulk-emp-${index}" checked>
+            <label for="bulk-emp-${index}">
+                <strong>${name}</strong>
+                <span style="color:#64748b;font-size:12px;"> — ${jobTitle} — ${iqamaId} — رقم ${index + 1}</span>
+            </label>
+        </div>
+    `;
+}).join('')}
                 </div>
             </div>
         `;
@@ -4282,7 +4302,14 @@ function showBulkAttendanceOptions(departmentKey) {
     `;
     optionsDiv.style.display = 'block';
 }
+function filterBulkAttendanceEmployees(query) {
+    query = String(query || '').trim().toLowerCase();
 
+    document.querySelectorAll('#bulk-employee-checkboxes .bulk-employee-row').forEach(row => {
+        const text = row.getAttribute('data-search') || '';
+        row.style.display = !query || text.includes(query) ? '' : 'none';
+    });
+}
 function applyBulkAttendance(departmentKey) {
     const selectedEmployeeIndexes = Array.from(document.querySelectorAll('#bulk-employee-checkboxes input:checked')).map(cb => parseInt(cb.value));
     if (selectedEmployeeIndexes.length === 0) {
