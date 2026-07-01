@@ -22,7 +22,7 @@
       if (document.getElementById('hospital-consumables-raise-letter-js')) return;
       var s = document.createElement('script');
       s.id = 'hospital-consumables-raise-letter-js';
-      s.src = '/original/hospital_consumables_raise_letter.js?v=20260701_v1';
+      s.src = '/original/hospital_consumables_raise_letter.js?v=20260701_v2';
       s.defer = false;
       document.head.appendChild(s);
     } catch (_) {}
