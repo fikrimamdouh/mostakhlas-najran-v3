@@ -19,6 +19,24 @@
   function clean(v) { return String(v == null ? '' : v).replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim(); }
   function num(v) { const n = Number(String(v ?? '').replace(/,/g, '').replace(/[ ريال﷼]/g, '').trim()); return Number.isFinite(n) ? n : 0; }
   function money(v) { return num(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function readReadyAmountFromPage() {
+  const candidates = [
+    document.getElementById('grand-net-total')?.textContent,
+    document.getElementById('admin-net-total')?.textContent,
+    document.getElementById('grand-total-cost')?.textContent,
+    localStorage.getItem('grand-net-total-admin'),
+    localStorage.getItem('adminOfficesGrandNetTotal'),
+    localStorage.getItem('finalLaborCost'),
+    localStorage.getItem('finalAdminOfficesLaborCost')
+  ];
+
+  for (const v of candidates) {
+    const n = num(v);
+    if (n > 0) return n;
+  }
+
+  return 0;
+}
   function today() { return new Date().toLocaleDateString('en-CA'); }
 
   function settings() {
@@ -55,7 +73,12 @@ function countNamedRows(obj) {
     return sum + rows.filter(emp => clean(emp && (emp.name || emp.employeeName || emp.workerName))).length;
   }, 0);
 }
-
+function countSalaryRows(obj) {
+  return Object.values(obj || {}).reduce((sum, rows) => {
+    if (!Array.isArray(rows)) return sum;
+    return sum + rows.filter(emp => empSalary(emp) > 0).length;
+  }, 0);
+}
 function data() {
   const sources = [];
 
@@ -84,8 +107,7 @@ function data() {
     return bestObj;
   }, {});
 
-  if (countRows(best) > 0) {
-    try {
+if (countRows(best) > 0 && countSalaryRows(best) > 0) {    try {
       localStorage.setItem('adminOfficesAttendanceData_v1', JSON.stringify(best));
       localStorage.setItem('adminOfficesAttendanceData_v1_localBackup', JSON.stringify(best));
       localStorage.setItem('adminOfficesAttendanceData_v1_lastGood', JSON.stringify(best));
@@ -210,26 +232,7 @@ function calcEmpFallback(emp) {
   const p = periodInfo();
   const c = contractInfo();
 
-const salary = num(
-  emp.salary ||
-  emp.monthlySalary ||
-  emp.cost ||
-  emp.monthlyCost ||
-  emp.totalCost ||
-  emp.periodCost ||
-  emp.contractCost ||
-  emp.employeeCost ||
-  emp.basicSalary ||
-  emp['الراتب'] ||
-  emp['الراتب الشهري'] ||
-  emp['التكلفة'] ||
-  emp['التكلفه'] ||
-  emp['التكلفة الشهرية'] ||
-  emp['التكلفه الشهريه'] ||
-  emp['القيمة الشهرية'] ||
-  emp['القيمه الشهريه'] ||
-  0
-);  const dailyRate = p.totalDaysInMonth > 0 ? salary / p.totalDaysInMonth : 0;
+const salary = empSalary(emp);  const dailyRate = p.totalDaysInMonth > 0 ? salary / p.totalDaysInMonth : 0;
 
   let costForPeriod = dailyRate * p.daysInExtract;
 
@@ -298,6 +301,9 @@ function siteTotal(k) {
 }
 
 function grandLaborTotal() {
+  const ready = readReadyAmountFromPage();
+  if (ready > 0) return ready;
+
   return keys().reduce((sum, k) => sum + siteTotal(k), 0);
 }
   function css() {
