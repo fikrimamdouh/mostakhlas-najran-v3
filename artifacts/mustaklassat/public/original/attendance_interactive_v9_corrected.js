@@ -4428,16 +4428,37 @@ overlay.onclick = function(event) {
         <div style="background:#fff;border:2px solid ${statusColor};border-radius:14px;padding:14px;margin-bottom:12px;">
           <div style="font-size:16px;font-weight:900;color:${statusColor};">${auditEscapeHtml(statusText)}</div>
         </div>
-
+<div style="background:#ecfeff;border:1px solid #67e8f9;color:#164e63;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-weight:800;line-height:1.8;">
+  هذا الفحص لا يعتمد المستخلص ولا يغير البيانات تلقائيًا. أي إصلاح للفئات هو اقتراح مساعد ويجب مراجعته قبل الطباعة أو الاعتماد.
+</div>
         <div style="background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;border-radius:12px;padding:12px;margin-bottom:12px;white-space:pre-line;line-height:1.8;font-weight:800;">
           ${auditEscapeHtml(categoryNotice)}
         </div>
 
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-          <button onclick="NJSExtractAudit.applySuggestedCategories()"
-            style="background:#166534;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:900;cursor:pointer;">
-            إصلاح الفئات المقترحة من نفس الوظيفة
-          </button>
+<div style="
+  position:sticky;
+  top:0;
+  z-index:5;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+  background:#f8fafc;
+  padding:10px 0;
+  border-bottom:1px solid #e2e8f0;
+">          <button onclick="NJSExtractAudit.applySuggestedCategories()"
+  ${audit.safeCategorySuggestions.length === 0 ? 'disabled' : ''}
+  style="
+    background:${audit.safeCategorySuggestions.length === 0 ? '#94a3b8' : '#166534'};
+    color:#fff;
+    border:none;
+    border-radius:10px;
+    padding:10px 16px;
+    font-weight:900;
+    cursor:${audit.safeCategorySuggestions.length === 0 ? 'not-allowed' : 'pointer'};
+  ">
+  إصلاح الفئات المقترحة من نفس الوظيفة
+</button>
 
           <button onclick="NJSExtractAudit.open()"
             style="background:#1e3c72;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:900;cursor:pointer;">
