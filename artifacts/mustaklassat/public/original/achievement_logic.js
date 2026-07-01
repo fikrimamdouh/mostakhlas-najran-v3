@@ -2,6 +2,7 @@
 // Achievement Logic - Admin Offices / Facilities
 // - شهادة الإنجاز تعرض "لموقع" بدل "لمركز"
 // - تحافظ على حساب الحسم والغرامات وغرامة الأداء
+// - الحساب موحد مع منطق الحضور والانصراف للمكاتب الإدارية
 // ===================================================================
 
 const DEFAULT_ACHIEVEMENT_TITLES = {
@@ -130,31 +131,85 @@ function handleUpdateClick(centerKey) {
     renderAchievementCertificate(centerKey);
 }
 
+function getAchievementPerformanceDeductions() {
+    const legacy = JSON.parse(localStorage.getItem('performanceDeductions') || '{}');
+    const separated = JSON.parse(localStorage.getItem('adminOfficePerformanceDeductions_v1') || '{}');
+    return Object.assign({}, legacy, separated);
+}
+
+function fallbackAchievementEmployeeFinancials(emp, options = {}) {
+    const totalDaysInMonth = Number(options.totalDaysInMonth) || 30;
+    const daysInExtract = Number(options.daysInExtract) || 30;
+    const contractType = options.contractType || 'عقد أساسي';
+    const directPurchaseRatio = Number(options.directPurchaseRatio) || 0;
+
+    const salary = parseFloat(emp.salary) || 0;
+    const dailyRate = totalDaysInMonth > 0 ? salary / totalDaysInMonth : 0;
+    let costForPeriod = dailyRate * daysInExtract;
+    if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) {
+        costForPeriod += costForPeriod * (directPurchaseRatio / 100);
+    }
+
+    const days = Array.isArray(emp.days) ? emp.days.slice(0, daysInExtract) : [];
+    while (days.length < daysInExtract) days.push('ح');
+
+    let absenceDays = 0;
+    let deductionOnlyDays = 0;
+
+    days.forEach(day => {
+        const meta = (typeof STATUS_CODES !== 'undefined' && STATUS_CODES[day]) ? STATUS_CODES[day] : {};
+        if (day === 'غ•' || meta.noDeduction || meta.noFine) return;
+        if (day === 'ح' || day === 'ت') return;
+        if (day === 'غ' || meta.isAbsence) absenceDays++;
+        else deductionOnlyDays++;
+    });
+
+    const deduction = (absenceDays + deductionOnlyDays) * dailyRate;
+    const fineConfig = typeof getAdminOfficeFineConfig === 'function'
+        ? getAdminOfficeFineConfig(emp.category || 1)
+        : ((typeof ABSENCE_FINES_BY_CATEGORY !== 'undefined' && (ABSENCE_FINES_BY_CATEGORY[emp.category] || ABSENCE_FINES_BY_CATEGORY[String(emp.category)] || ABSENCE_FINES_BY_CATEGORY.default)) || { saudi: 0, non_saudi: 0 });
+    const isSaudi = typeof isAdminOfficeSaudi === 'function'
+        ? isAdminOfficeSaudi(emp.nationality)
+        : String(emp.nationality || '').replace(/\s+/g, '').includes('سعودي');
+    const absenceFine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
+    const nationalityFine = parseFloat(emp.nationalityFine) || 0;
+    const totalFine = absenceFine + nationalityFine;
+    const netSalary = costForPeriod - deduction - totalFine;
+
+    return { costForPeriod, deduction, absenceFine, nationalityFine, totalFine, netSalary };
+}
+
 function calculateAchievementValues(centerKey) {
     const centerData = getAttendanceData()[centerKey] || [];
-    const { totalDaysInMonth } = getExtractPeriodDetails();
+    const period = getExtractPeriodDetails();
+    const totalDaysInMonth = Number(period.totalDaysInMonth || period.daysInMonth) || 30;
+    const daysInExtract = Number(period.daysInExtract || period.daysInMonth) || 30;
     const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
     const contractType = contractData.contractType || 'عقد أساسي';
     const directPurchaseRatio = parseFloat(contractData.directPurchaseRatio) || 0;
-    let totalMonthlyValue = 0, totalAbsenceDeduction = 0, totalAbsencePenalty = 0, totalNationalityPenalty = 0;
+
+    let totalMonthlyValue = 0;
+    let totalAbsenceDeduction = 0;
+    let totalAbsencePenalty = 0;
+    let totalNationalityPenalty = 0;
+    let laborNetTotal = 0;
 
     centerData.forEach(emp => {
-        const salary = parseFloat(emp.salary) || 0;
-        let adjustedSalary = salary;
-        if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) adjustedSalary = salary + (salary * directPurchaseRatio / 100);
-        totalMonthlyValue += adjustedSalary;
-        const dailySalary = totalDaysInMonth > 0 ? adjustedSalary / totalDaysInMonth : 0;
-        const absenceDays = (emp.days || []).filter(day => STATUS_CODES[day]?.isAbsence).length;
-        const fineConfig = ABSENCE_FINES_BY_CATEGORY[emp.category] || ABSENCE_FINES_BY_CATEGORY.default;
-        const isSaudi = (emp.nationality || '').includes('سعودي');
-        totalAbsenceDeduction += absenceDays * dailySalary;
-        totalAbsencePenalty += absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
-        totalNationalityPenalty += parseFloat(emp.nationalityFine) || 0;
+        const calc = typeof calculateAdminOfficeEmployeeFinancials === 'function'
+            ? calculateAdminOfficeEmployeeFinancials(emp, { totalDaysInMonth, daysInExtract, contractType, directPurchaseRatio })
+            : fallbackAchievementEmployeeFinancials(emp, { totalDaysInMonth, daysInExtract, contractType, directPurchaseRatio });
+
+        totalMonthlyValue += Number(calc.costForPeriod) || 0;
+        totalAbsenceDeduction += Number(calc.deduction) || 0;
+        totalAbsencePenalty += Number(calc.absenceFine) || 0;
+        totalNationalityPenalty += Number(calc.nationalityFine) || 0;
+        laborNetTotal += Number(calc.netSalary) || 0;
     });
 
-    const allDeductions = JSON.parse(localStorage.getItem('performanceDeductions') || '{}');
+    const allDeductions = getAchievementPerformanceDeductions();
     const performancePenalty = parseFloat(allDeductions[centerKey]) || 0;
-    const netMonthly = totalMonthlyValue - totalAbsenceDeduction - totalAbsencePenalty - performancePenalty - totalNationalityPenalty;
+    const netMonthly = laborNetTotal - performancePenalty;
+
     return { centerData, totalMonthlyValue, totalAbsenceDeduction, totalAbsencePenalty, performancePenalty, totalNationalityPenalty, netMonthly };
 }
 
