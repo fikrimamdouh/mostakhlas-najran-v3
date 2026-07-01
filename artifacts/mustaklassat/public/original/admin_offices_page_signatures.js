@@ -268,8 +268,12 @@
       { title: 'اعتماد', name: '' }
     ];
     const items = rows.map(s => `<div><div class="g-title">${esc(s.title)}</div><div class="line"></div><div class="g-name">${esc(s.name || '')}</div></div>`).join('');
-    return `<section class="sign grand-signatures">${items}</section>`;
-  }
+return `<section class="sign grand-signatures" data-source="admin_offices_page_signatures.js" style="outline:3px solid red;">
+  <div style="font-size:12px;color:red;font-weight:900;text-align:center;margin-bottom:6px">
+    SOURCE: admin_offices_page_signatures.js
+  </div>
+  ${items}
+</section>`;  }
   function patchGrandWindowOpen() {
     if (window.open.__adminOfficeGrandSignaturePatched) return;
     const originalOpen = window.open;
