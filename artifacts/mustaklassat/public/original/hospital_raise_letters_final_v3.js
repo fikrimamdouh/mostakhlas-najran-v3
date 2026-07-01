@@ -1,0 +1,18 @@
+// Hospital Raise Letters Bootstrap
+// Restored route. Loads the independent hospital letters engine only.
+(function(){
+  'use strict';
+  if (window.__HOSPITAL_RAISE_LETTERS_BOOTSTRAP__) return;
+  window.__HOSPITAL_RAISE_LETTERS_BOOTSTRAP__ = true;
+
+  function loadScript(id, src) {
+    if (document.getElementById(id)) return;
+    var s = document.createElement('script');
+    s.id = id;
+    s.src = src;
+    s.defer = false;
+    document.head.appendChild(s);
+  }
+
+  loadScript('hospital-raise-letters-engine-v8', '/original/hospital_raise_letters_engine_v8.js?v=20260701_restored_admin_clean_pattern');
+})();
