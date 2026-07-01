@@ -4356,35 +4356,50 @@ function getSignatures() {
 
     closeAuditDialog();
 
-    const dialog = document.createElement('div');
-    dialog.id = 'extract-audit-dialog';
-    dialog.className = 'dialog wide-dialog';
-    dialog.style.cssText = `
-      display:flex;
-      position:fixed;
-      inset:4vh auto auto 50%;
-      transform:translateX(-50%);
-      width:min(1100px,94vw);
-      max-height:92vh;
-      z-index:10002;
-      background:#fff;
-      border-radius:16px;
-      box-shadow:0 20px 70px rgba(15,23,42,.35);
-      flex-direction:column;
-      direction:rtl;
-      font-family:Tajawal,Arial,sans-serif;
-      overflow:hidden;
-    `;
+   const dialog = document.createElement('div');
+dialog.id = 'extract-audit-dialog';
+dialog.className = 'wide-dialog';
+dialog.style.cssText = `
+  display:flex !important;
+  position:fixed !important;
+  top:50% !important;
+  left:50% !important;
+  transform:translate(-50%, -50%) !important;
+  width:min(1120px,94vw) !important;
+  max-height:92vh !important;
+  z-index:2147483647 !important;
+  background:#ffffff !important;
+  color:#0f172a !important;
+  opacity:1 !important;
+  filter:none !important;
+  backdrop-filter:none !important;
+  border-radius:18px !important;
+  box-shadow:0 24px 90px rgba(0,0,0,.45) !important;
+  flex-direction:column !important;
+  direction:rtl !important;
+  font-family:Tajawal,Arial,sans-serif !important;
+  overflow:hidden !important;
+  pointer-events:auto !important;
+`;
 
-    const overlay = document.createElement('div');
-    overlay.id = 'extract-audit-overlay';
-    overlay.style.cssText = `
-      position:fixed;
-      inset:0;
-      background:rgba(15,23,42,.55);
-      z-index:10001;
-    `;
-    overlay.onclick = closeAuditDialog;
+dialog.addEventListener('click', function(event) {
+  event.stopPropagation();
+});
+
+const overlay = document.createElement('div');
+overlay.id = 'extract-audit-overlay';
+overlay.style.cssText = `
+  position:fixed !important;
+  inset:0 !important;
+  background:rgba(15,23,42,.72) !important;
+  z-index:2147483646 !important;
+  pointer-events:auto !important;
+`;
+
+// لا تغلق النافذة عند الضغط خارجها
+overlay.onclick = function(event) {
+  event.stopPropagation();
+};
 
     const statusColor = audit.critical.length > 0 ? '#991b1b' : '#166534';
     const statusText = audit.critical.length > 0
