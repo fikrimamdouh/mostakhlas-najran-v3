@@ -1,6 +1,6 @@
-// Hospital Consumables Settings Route Guard V7
+// Hospital Consumables Settings Route Guard V8
 // Scope: normal consumables.html only.
-// Prevents the consumables letters settings button from navigating to normal hospital raise letters.
+// Routes consumables letters settings button to the standalone consumables settings page.
 (function () {
   'use strict';
 
@@ -15,8 +15,10 @@
 
   if (pageFile !== 'consumables.html' && !/\/original\/consumables\.html(?:$|[?#])/.test(sig)) return;
   if (/admin_offices_consumables\.html|health_centers_consumables\.html|najran_general_consumables\.html/.test(pageFile)) return;
-  if (window.__HOSPITAL_CONSUMABLES_SETTINGS_ROUTE_GUARD_V7__) return;
-  window.__HOSPITAL_CONSUMABLES_SETTINGS_ROUTE_GUARD_V7__ = true;
+  if (window.__HOSPITAL_CONSUMABLES_SETTINGS_ROUTE_GUARD_V8__) return;
+  window.__HOSPITAL_CONSUMABLES_SETTINGS_ROUTE_GUARD_V8__ = true;
+
+  var SETTINGS_URL = '/original/hospital_consumables_letters_settings.html?v=20260702_v2_form';
 
   function clean(v) {
     return String(v || '').replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim();
@@ -42,15 +44,8 @@
     return false;
   }
 
-  function openConsumablesSettings() {
-    try {
-      if (document.getElementById('hc-cons-settings-modal')) return true;
-      if (window.HospitalConsumablesRaiseLetter && typeof window.HospitalConsumablesRaiseLetter.openDialog === 'function') {
-        window.HospitalConsumablesRaiseLetter.openDialog();
-        return true;
-      }
-    } catch (_) {}
-    return false;
+  function goSettings() {
+    location.href = SETTINGS_URL;
   }
 
   document.addEventListener('click', function (e) {
@@ -58,14 +53,7 @@
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
-
-    if (openConsumablesSettings()) return;
-
-    var tries = 0;
-    var timer = setInterval(function () {
-      tries++;
-      if (openConsumablesSettings() || tries >= 20) clearInterval(timer);
-    }, 150);
+    goSettings();
   }, true);
 
   function neutralizeBadLinks() {
@@ -74,22 +62,22 @@
         if (!isConsumablesSettingsTrigger(node)) return;
         if (node.tagName === 'A') {
           node.dataset.originalHref = node.getAttribute('href') || '';
-          node.setAttribute('href', 'javascript:void(0)');
+          node.setAttribute('href', SETTINGS_URL);
         }
         node.onclick = function (e) {
           e.preventDefault();
           e.stopPropagation();
-          openConsumablesSettings();
+          goSettings();
           return false;
         };
       });
     } catch (_) {}
   }
 
-  setTimeout(neutralizeBadLinks, 300);
-  setTimeout(neutralizeBadLinks, 900);
-  setTimeout(neutralizeBadLinks, 1800);
-  setTimeout(neutralizeBadLinks, 3500);
+  setTimeout(neutralizeBadLinks, 200);
+  setTimeout(neutralizeBadLinks, 700);
+  setTimeout(neutralizeBadLinks, 1500);
+  setTimeout(neutralizeBadLinks, 3000);
 
-  console.info('[Hospital Consumables Settings Route Guard] installed v7');
+  console.info('[Hospital Consumables Settings Route Guard] installed v8 standalone settings page');
 })();
