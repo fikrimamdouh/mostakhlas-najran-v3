@@ -3620,56 +3620,82 @@ function getSignatures() {
 /**
  * يقوم بحفظ بيانات الحضور والغياب الحالية في ملف JSON وتنزيله.
  */
+/**
+ * =================================================
+ *  نسخة احتياطية كاملة للحضور + التواقيع
+ * =================================================
+ */
 function backupAttendanceData() {
   try {
-    // 1. الحصول على البيانات من localStorage
-    const attendanceData = localStorage.getItem('attendanceData');
-    if (!attendanceData) {
-      alert('لا توجد بيانات لحفظها!');
-      return;
+    const attendanceData = getAttendanceData();
+
+    const backupPayload = {
+      __najranAttendanceBackupVersion: 2,
+      exportedAt: new Date().toISOString(),
+      page: 'attendance.html',
+
+      // بيانات الحضور الأساسية
+      attendanceData: attendanceData,
+
+      // التواقيع الديناميكية الحالية
+      dynamicSignatures: JSON.parse(localStorage.getItem('dynamicSignatures') || 'null'),
+
+      // بيانات العقد التي قد تحتوي أسماء/مسميات التواقيع القديمة
+      persistentContractData: JSON.parse(localStorage.getItem('persistentContractData') || '{}'),
+
+      // بيانات المستخلص اختيارية لكنها مفيدة عند الرجوع
+      persistentExtractData: JSON.parse(localStorage.getItem('persistentExtractData') || '{}')
+    };
+
+    if (
+      !backupPayload.attendanceData ||
+      Object.values(backupPayload.attendanceData).every(v => Array.isArray(v) && v.length === 0)
+    ) {
+      if (!confirm('لا توجد عمالة واضحة في الحضور. هل تريد تنزيل النسخة الاحتياطية trotzdem؟')) {
+        return;
+      }
     }
 
-    // 2. إنشاء كائن Blob (Binary Large Object) من البيانات
-    const blob = new Blob([attendanceData], { type: 'application/json' });
+    const blob = new Blob(
+      [JSON.stringify(backupPayload, null, 2)],
+      { type: 'application/json;charset=utf-8' }
+    );
 
-    // 3. إنشاء رابط مؤقت لتنزيل الملف
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    
-    // 4. تحديد اسم الملف (مثال: backup-2025-07-29.json)
-    const date = new Date().toISOString().split('T')[0];
-    a.download = `attendance-backup-${date}.json`;
+    const date = new Date().toISOString().slice(0, 10);
 
-    // 5. محاكاة النقر على الرابط لبدء التنزيل
+    a.href = url;
+    a.download = `attendance-full-backup-${date}.json`;
+
     document.body.appendChild(a);
     a.click();
 
-    // 6. تنظيف الرابط المؤقت من الذاكرة
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    showSuccessMessage('تم تنزيل ملف النسخة الاحتياطية بنجاح!');
+    showSuccessMessage('تم تنزيل نسخة احتياطية كاملة: الحضور + التواقيع.');
 
   } catch (error) {
-    console.error('حدث خطأ أثناء إنشاء النسخة الاحتياطية:', error);
-    alert('فشل إنشاء النسخة الاحتياطية. راجع الكونسول لمزيد من التفاصيل.');
+    console.error('حدث خطأ أثناء إنشاء النسخة الاحتياطية الكاملة:', error);
+    alert('فشل إنشاء النسخة الاحتياطية. راجع الكونسول.');
   }
 }
 
 /**
- * يقوم بقراءة ملف نسخة احتياطية واستعادة البيانات منه.
- * @param {Event} event - الحدث الناتج عن تغيير حقل إدخال الملف.
+ * =================================================
+ *  استعادة الحضور + التواقيع من النسخة الاحتياطية
+ *  يدعم النسخ القديمة والجديدة
+ * =================================================
  */
 function restoreAttendanceData(event) {
   const file = event.target.files[0];
-  if (!file) {
-    return; // لم يتم اختيار ملف
-  }
+  if (!file) return;
 
-  // التأكد من أن المستخدم يريد فعلاً استبدال البيانات الحالية
-  if (!confirm('هل أنت متأكد من رغبتك في استعادة البيانات من هذا الملف؟\nسيتم حذف جميع البيانات الحالية واستبدالها ببيانات الملف.')) {
-    // إعادة تعيين قيمة حقل الإدخال للسماح باختيار نفس الملف مرة أخرى
+  if (!confirm(
+    'هل أنت متأكد من استعادة النسخة الاحتياطية؟\n' +
+    'سيتم استبدال بيانات الحضور الحالية، وسيتم استعادة التواقيع الموجودة داخل الملف إن وجدت.'
+  )) {
     event.target.value = '';
     return;
   }
@@ -3678,47 +3704,92 @@ function restoreAttendanceData(event) {
 
   reader.onload = function(e) {
     try {
-      const content = e.target.result;
-      
-      // 1. التحقق من أن المحتوى هو JSON صالح
-      const restoredData = JSON.parse(content);
+      const restoredFile = JSON.parse(e.target.result);
 
-      // 2. التحقق من أن البيانات المستعادة لها الهيكل المتوقع (اختياري ولكنه جيد)
-      if (typeof restoredData.cleaning === 'undefined' || typeof restoredData.electricity === 'undefined') {
-        throw new Error('الملف غير صالح أو لا يطابق هيكل البيانات المطلوب.');
+      let attendanceDataToRestore = null;
+      let dynamicSignaturesToRestore = null;
+      let persistentContractDataToRestore = null;
+      let persistentExtractDataToRestore = null;
+
+      // نسخة جديدة V2
+      if (restoredFile && restoredFile.__najranAttendanceBackupVersion >= 2) {
+        attendanceDataToRestore = restoredFile.attendanceData;
+        dynamicSignaturesToRestore = restoredFile.dynamicSignatures;
+        persistentContractDataToRestore = restoredFile.persistentContractData;
+        persistentExtractDataToRestore = restoredFile.persistentExtractData;
+      } else {
+        // دعم النسخ القديمة: الملف نفسه كان attendanceData مباشرة
+        attendanceDataToRestore = restoredFile;
       }
 
-      // 3. حفظ البيانات المستعادة في localStorage
-      localStorage.setItem('attendanceData', JSON.stringify(restoredData));
+      // تحقق من شكل الحضور
+      if (
+        !attendanceDataToRestore ||
+        typeof attendanceDataToRestore.cleaning === 'undefined' ||
+        typeof attendanceDataToRestore.electricity === 'undefined'
+      ) {
+        throw new Error('ملف النسخة غير صالح أو لا يحتوي بيانات حضور صحيحة.');
+      }
 
-      // 4. إعادة تحميل الصفحة لتطبيق البيانات الجديدة
-      alert('تم استعادة البيانات بنجاح! سيتم إعادة تحميل الصفحة الآن.');
+      // استعادة الحضور
+      saveAttendanceData(attendanceDataToRestore);
+
+      // استعادة التواقيع الديناميكية إن وجدت
+      if (Array.isArray(dynamicSignaturesToRestore)) {
+        localStorage.setItem('dynamicSignatures', JSON.stringify(dynamicSignaturesToRestore));
+      }
+
+      // استعادة بيانات العقد/التواقيع القديمة إن وجدت
+      if (
+        persistentContractDataToRestore &&
+        typeof persistentContractDataToRestore === 'object' &&
+        !Array.isArray(persistentContractDataToRestore)
+      ) {
+        const currentContractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+        localStorage.setItem(
+          'persistentContractData',
+          JSON.stringify({
+            ...currentContractData,
+            ...persistentContractDataToRestore
+          })
+        );
+      }
+
+      // استعادة بيانات المستخلص إن وجدت بدون إجبار لو فاضية
+      if (
+        persistentExtractDataToRestore &&
+        typeof persistentExtractDataToRestore === 'object' &&
+        !Array.isArray(persistentExtractDataToRestore) &&
+        Object.keys(persistentExtractDataToRestore).length > 0
+      ) {
+        localStorage.setItem('persistentExtractData', JSON.stringify(persistentExtractDataToRestore));
+      }
+
+      // تحديث العرض قبل إعادة التحميل
+      try {
+        if (typeof displaySignaturesOnPage === 'function') displaySignaturesOnPage();
+        if (typeof updatePrintSignatures === 'function') updatePrintSignatures();
+        if (typeof renderTables === 'function') renderTables();
+      } catch (_) {}
+
+      alert('تم استعادة الحضور والتواقيع بنجاح. سيتم إعادة تحميل الصفحة الآن.');
       window.location.reload();
 
     } catch (error) {
-      console.error('حدث خطأ أثناء استعادة البيانات:', error);
-      alert(`فشل استعادة الملف. تأكد من أنك اخترت ملف نسخة احتياطية صحيح.\n\nالخطأ: ${error.message}`);
+      console.error('حدث خطأ أثناء استعادة النسخة الاحتياطية:', error);
+      alert('فشل استعادة الملف: ' + error.message);
     } finally {
-      // إعادة تعيين قيمة حقل الإدخال للسماح باختيار نفس الملف مرة أخرى
       event.target.value = '';
     }
   };
 
   reader.onerror = function() {
-    alert('حدث خطأ أثناء قراءة الملف.');
+    alert('فشلت قراءة ملف النسخة الاحتياطية.');
     event.target.value = '';
   };
 
-  // بدء قراءة الملف كنص
-  reader.readAsText(file);
+  reader.readAsText(file, 'utf-8');
 }
-// ✅✅✅ [إضافة رقم 3: دوال الرفع الذكي والتعديل الجماعي] ✅✅✅
-
-// ✅✅✅ [إضافة رقم 3: دوال الرفع الذكي والتعديل الجماعي] ✅✅✅
-
-// --- دوال الرفع الذكي ---
-
-// --- دوال التعديل الجماعي للحضور ---
 
 /* ================================================================ */
 /* ✅ 2. الكود الكامل والنهائي لكل النوافذ المنبثقة (مع إصلاح الباسورد) ✅ */
