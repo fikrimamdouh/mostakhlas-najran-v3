@@ -731,7 +731,17 @@ document.addEventListener('click', function(e) {
     });
   }
 }, true);
-
+window.najranClearAttendancePendingUpload = function(reason) {
+  try {
+    pendingLocalAttendanceUpload = false;
+    localWinsUntilSynced = false;
+    userTouchedAttendance = false;
+    clearLocalWinsPersistent(getActiveAttendanceKeys());
+    console.warn('[AttendanceCloudGuard] تم السماح بالخروج بعد الحفظ المحلي: ' + (reason || ''));
+  } catch (e) {
+    console.warn('[AttendanceCloudGuard] تعذر تصفير حالة pending upload', e);
+  }
+};
 window.addEventListener('beforeunload', function(e) {
   try {
     if (localStorage.getItem('najran_allow_attendance_leave_once') === '1') {
