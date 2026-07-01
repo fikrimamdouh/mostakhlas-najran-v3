@@ -14,7 +14,20 @@
     'centersAttendanceData_v2',
     'healthCentersAttendanceData',
     'adminOfficesAttendanceData_v1',
-
+    // نسخ حماية المكاتب الإدارية — لا تدخل تحت بادئة المستخدم ولا تتمسح
+    'adminOfficesAttendanceData_v1_localBackup',
+    'adminOfficesAttendanceData_v1_localBackup_ts',
+    'adminOfficesAttendanceData_v1_lastGood',
+    'adminOfficesAttendanceData_v1_lastGood_ts',
+    'adminOfficesAttendanceData',
+    'adminOfficesLaborDataSafe_v2',
+    'adminOfficesLaborDataSafe_v2_ts',
+    'adminOfficesLaborNamesSafe_v2',
+    'adminOfficesLaborAffiliationsSafe_v2',
+    'najranExtractDataSafe_v1',
+    'najranExtractDataSafe_v1_ts',
+    'adminOfficesFullAttendanceBundle_v1',
+    'adminOfficesFullAttendanceBundle_v1_ts',
     // آخر نشاط داخل المستشفى
     'hospitalActivityStatus',
 
