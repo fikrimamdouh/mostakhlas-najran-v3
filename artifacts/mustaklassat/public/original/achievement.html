@@ -604,6 +604,7 @@
   .ab-titles   { background: #ea580c !important; }
   .ab-clear    { background: #dc2626 !important; }
   .ab-update   { background: #0369a1 !important; }
+        .ab-tax      { background: #0f766e !important; }
 @media print {
     .std-action-bar,
     .std-action-bar *,
@@ -669,6 +670,9 @@
 
             <div class="std-action-bar no-print">
                 <button class="ab ab-excel" onclick="exportAchievementToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
+                <button class="ab ab-tax" onclick="openTaxInvoiceDialog()">
+  <i class="fas fa-file-invoice-dollar"></i> فاتورة ضريبية
+</button>
                 <button class="ab ab-print" onclick="window.print()"><i class="fas fa-print"></i> طباعة</button>
                 <button class="ab ab-update" onclick="refreshAllData()"><i class="fas fa-sync-alt"></i> تحديث البيانات</button>
                 <button class="ab ab-sig" onclick="SignatureBlock.open('achievement')"><i class="fas fa-signature"></i> تعديل التواقيع</button>
@@ -891,7 +895,14 @@ function renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeducti
     const tableBody = document.getElementById('tableBody');
     const dentalRow = document.getElementById('dental-row');
     tableBody.innerHTML = ''; // امسح الجدول لإعادة بنائه
-
+window.__achievementTotalsForTaxInvoice = {
+    monthlyValue: grandTotalMonthlyValue,
+    absenceDeduction: grandTotalAbsenceDeduction,
+    absencePenalty: grandTotalAbsencePenalty,
+    performancePenalty: grandTotalPerformancePenalty,
+    nationalityPenalty: grandTotalNationalityPenalty,
+    netMonthly: grandTotalNetMonthly
+};
     departmentDataForAchievement.forEach(item => {
         const row = tableBody.insertRow();
         row.innerHTML = `
@@ -947,7 +958,274 @@ function renderAchievementTable(grandTotalMonthlyValue, grandTotalAbsenceDeducti
         localStorage.setItem('finalLaborCost', grandTotalNetMonthly.toFixed(2));
     } catch (_) {}
 }
+function taxMoney2(value) {
+    const n = Number(value) || 0;
+    return Math.round((n + Number.EPSILON) * 100) / 100;
+}
 
+function taxMoneyText(value) {
+    return taxMoney2(value).toFixed(2);
+}
+
+function getAchievementTotalsForTaxInvoice() {
+    if (window.__achievementTotalsForTaxInvoice) {
+        return window.__achievementTotalsForTaxInvoice;
+    }
+
+    const rows = Array.isArray(departmentDataForAchievement) ? departmentDataForAchievement : [];
+    return {
+        monthlyValue: rows.reduce((sum, item) => sum + (Number(item.monthlyValue) || 0), 0),
+        absenceDeduction: rows.reduce((sum, item) => sum + (Number(item.absenceDeduction) || 0), 0),
+        absencePenalty: rows.reduce((sum, item) => sum + (Number(item.absencePenalty) || 0), 0),
+        performancePenalty: rows.reduce((sum, item) => sum + (Number(item.performancePenalty) || 0), 0),
+        nationalityPenalty: rows.reduce((sum, item) => sum + (Number(item.nationalityPenalty) || 0), 0),
+        netMonthly: rows.reduce((sum, item) => sum + (Number(item.netMonthly) || 0), 0)
+    };
+}
+
+function getTaxInvoiceData() {
+    const totals = getAchievementTotalsForTaxInvoice();
+
+    const grossLabor = taxMoney2(totals.monthlyValue);
+    const absenceDeduction = taxMoney2(totals.absenceDeduction);
+
+    const absencePenalty = taxMoney2(totals.absencePenalty);
+    const performancePenalty = taxMoney2(totals.performancePenalty);
+    const nationalityPenalty = taxMoney2(totals.nationalityPenalty);
+    const totalPenalties = taxMoney2(absencePenalty + performancePenalty + nationalityPenalty);
+
+    const netBeforeVat = taxMoney2(grossLabor - absenceDeduction);
+    const vatAmount = taxMoney2(netBeforeVat * 0.15);
+    const totalAfterVat = taxMoney2(netBeforeVat + vatAmount);
+    const finalAfterVat = taxMoney2(totalAfterVat - totalPenalties);
+
+    const achievementNetBeforeVat = taxMoney2(totals.netMonthly);
+    const invoiceNetBeforeVatAfterPenalties = taxMoney2(netBeforeVat - totalPenalties);
+    const comparisonDiff = taxMoney2(invoiceNetBeforeVatAfterPenalties - achievementNetBeforeVat);
+
+    const diffAbs = Math.abs(comparisonDiff);
+    const diffStatus = diffAbs === 0
+        ? 'مطابق مع شهادة الإنجاز'
+        : diffAbs <= 1
+            ? 'فرق هللات مقبول بسبب التقريب'
+            : 'فرق غير طبيعي — راجع الحضور والغرامات والأداء';
+
+    return {
+        vatRate: 15,
+        totals,
+        rows: [
+            { id: 1, total: grossLabor, description: 'اجمالي قيمة مستخلص بند العمالة', type: 'number' },
+            { id: 2, total: absenceDeduction, description: 'اجمالي ( الحسميات )', type: 'number' },
+            { id: 3, total: netBeforeVat, description: 'صافي قيمة الاعمال المنفذة خلال فترة المستخلص - قبل ضريبة القيمة المضافة', type: 'number' },
+            { id: 4, total: vatAmount, description: 'يضاف ضريبة القيمة المضافة بنسبة 15%', type: 'number' },
+            { id: 5, total: totalAfterVat, description: 'قيمة المستخلص بعد اضافة ضريبة القيمة المضافة 15%', type: 'number' },
+            { id: 6, total: totalPenalties, description: 'الغرامات (غرامة غياب + غرامة أداء + غرامة جنسية)', type: 'number' },
+            { id: 7, total: finalAfterVat, description: 'صافي قيمة المستخلص بعد اضافة ضريبة القيمة المضافة 15%', type: 'number' }
+        ],
+        breakdown: {
+            absencePenalty,
+            performancePenalty,
+            nationalityPenalty,
+            totalPenalties,
+            achievementNetBeforeVat,
+            invoiceNetBeforeVatAfterPenalties,
+            comparisonDiff,
+            diffStatus
+        }
+    };
+}
+
+function formatTaxInvoiceCell(row) {
+    return row.type === 'dash' ? '-' : taxMoneyText(row.total);
+}
+
+function openTaxInvoiceDialog() {
+    try {
+        if (typeof loadAndProcessAchievementData === 'function') {
+            loadAndProcessAchievementData();
+        }
+
+        const oldDialog = document.getElementById('tax-invoice-dialog');
+        const oldOverlay = document.getElementById('tax-invoice-overlay');
+        if (oldDialog) oldDialog.remove();
+        if (oldOverlay) oldOverlay.remove();
+
+        const invoice = getTaxInvoiceData();
+        const diff = invoice.breakdown.comparisonDiff;
+        const diffAbs = Math.abs(diff);
+        const statusColor = diffAbs === 0 ? '#166534' : diffAbs <= 1 ? '#92400e' : '#991b1b';
+
+        const rowsHtml = invoice.rows.map(row => `
+            <tr>
+                <td style="border:1px solid #cbd5e1;padding:8px;text-align:center;font-weight:900;">${row.id}</td>
+                <td style="border:1px solid #cbd5e1;padding:8px;text-align:right;">${row.description}</td>
+                <td style="border:1px solid #cbd5e1;padding:8px;text-align:left;direction:ltr;font-weight:900;">${formatTaxInvoiceCell(row)}</td>
+            </tr>
+        `).join('');
+
+        const overlay = document.createElement('div');
+        overlay.id = 'tax-invoice-overlay';
+        overlay.className = 'no-print';
+        overlay.style.cssText = `
+            position:fixed;inset:0;background:rgba(15,23,42,.65);
+            z-index:2147483645;
+        `;
+        overlay.onclick = function(event) { event.stopPropagation(); };
+
+        const dialog = document.createElement('div');
+        dialog.id = 'tax-invoice-dialog';
+        dialog.className = 'no-print';
+        dialog.style.cssText = `
+            position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+            width:min(1050px,95vw);max-height:92vh;overflow:auto;
+            background:#fff;color:#0f172a;direction:rtl;
+            z-index:2147483646;border-radius:18px;
+            box-shadow:0 24px 90px rgba(0,0,0,.45);
+            font-family:Tajawal,Arial,sans-serif;
+        `;
+
+        dialog.innerHTML = `
+            <div style="background:linear-gradient(135deg,#0f766e,#115e59);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;">
+                <div>
+                    <div style="font-size:20px;font-weight:900;">فاتورة ضريبية</div>
+                    <div style="font-size:12px;opacity:.9;margin-top:4px;">أداة داخلية ظاهرة في الصفحة فقط ولا تطبع في شهادة الإنجاز</div>
+                </div>
+                <button onclick="closeTaxInvoiceDialog()" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:10px;padding:7px 12px;cursor:pointer;font-weight:900;">×</button>
+            </div>
+
+            <div style="padding:16px;background:#f8fafc;">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+                    <button onclick="copyTaxInvoiceAsExcel()" style="background:#166534;color:#fff;border:none;border-radius:9px;padding:9px 14px;font-weight:900;cursor:pointer;">نسخ Excel</button>
+                    <button onclick="exportTaxInvoiceToExcel()" style="background:#1e3c72;color:#fff;border:none;border-radius:9px;padding:9px 14px;font-weight:900;cursor:pointer;">تصدير Excel</button>
+                    <button onclick="closeTaxInvoiceDialog()" style="background:#64748b;color:#fff;border:none;border-radius:9px;padding:9px 14px;font-weight:900;cursor:pointer;">إغلاق</button>
+                </div>
+
+                <table style="width:100%;border-collapse:collapse;background:#fff;direction:rtl;font-size:13px;border:2px solid #334155;">
+                    <thead>
+                        <tr>
+                            <th style="border:1px solid #334155;background:#e2e8f0;padding:8px;width:70px;">م</th>
+                            <th style="border:1px solid #334155;background:#e2e8f0;padding:8px;">وصف الصنف</th>
+                            <th style="border:1px solid #334155;background:#e2e8f0;padding:8px;width:190px;">الإجمالي</th>
+                        </tr>
+                        <tr>
+                            <th style="border:1px solid #cbd5e1;background:#f8fafc;padding:7px;">ID</th>
+                            <th style="border:1px solid #cbd5e1;background:#f8fafc;padding:7px;">Item Description</th>
+                            <th style="border:1px solid #cbd5e1;background:#f8fafc;padding:7px;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+
+                <div style="margin-top:12px;border:1px solid ${statusColor};background:#fff;border-radius:12px;padding:12px;line-height:1.8;">
+                    <div style="font-weight:900;color:${statusColor};">مراجعة الفرق: ${invoice.breakdown.diffStatus}</div>
+                    <div>صافي شهادة الإنجاز قبل الضريبة بعد الغرامات: <strong>${taxMoneyText(invoice.breakdown.achievementNetBeforeVat)}</strong> ريال</div>
+                    <div>صافي الفاتورة الضريبية قبل الضريبة بعد الغرامات: <strong>${taxMoneyText(invoice.breakdown.invoiceNetBeforeVatAfterPenalties)}</strong> ريال</div>
+                    <div>فرق المقارنة: <strong style="color:${statusColor};">${diff > 0 ? '+' : ''}${taxMoneyText(diff)}</strong> ريال</div>
+                </div>
+
+                <div style="margin-top:12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:12px;color:#7c2d12;line-height:1.8;font-weight:800;">
+                    الغرامات في الفاتورة الضريبية تشمل: غرامة الغياب + غرامة الأداء + غرامة الجنسية.
+                    إجمالي الحسميات في السطر 2 هو حسم الغياب فقط. لا تستخدم فرق التسوية إلا لفروق هللات بسيطة.
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+        document.body.appendChild(dialog);
+
+        try {
+            localStorage.setItem('taxInvoiceData', JSON.stringify(invoice));
+        } catch (_) {}
+
+    } catch (error) {
+        console.error('خطأ في فتح الفاتورة الضريبية:', error);
+        alert('حدث خطأ أثناء تجهيز الفاتورة الضريبية. راجع الكونسول.');
+    }
+}
+
+function closeTaxInvoiceDialog() {
+    const dialog = document.getElementById('tax-invoice-dialog');
+    const overlay = document.getElementById('tax-invoice-overlay');
+    if (dialog) dialog.remove();
+    if (overlay) overlay.remove();
+}
+
+function copyTaxInvoiceAsExcel() {
+    const invoice = getTaxInvoiceData();
+
+    const lines = [
+        ['الإجمالي', 'وصف الصنف', 'م'],
+        ['Total', 'Item Description', 'ID'],
+        ...invoice.rows.map(row => [
+            formatTaxInvoiceCell(row),
+            row.description,
+            row.id
+        ])
+    ];
+
+    const text = lines.map(row => row.join('\t')).join('\n');
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert('تم نسخ الفاتورة الضريبية. افتح Excel واضغط Paste.');
+        }).catch(() => fallbackCopyTaxInvoice(text));
+    } else {
+        fallbackCopyTaxInvoice(text);
+    }
+}
+
+function fallbackCopyTaxInvoice(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.top = '-1000px';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+
+    try {
+        document.execCommand('copy');
+        alert('تم نسخ الفاتورة الضريبية. افتح Excel واضغط Paste.');
+    } catch (_) {
+        alert('تعذر النسخ التلقائي. استخدم زر تصدير Excel.');
+    }
+
+    textarea.remove();
+}
+
+function exportTaxInvoiceToExcel() {
+    const invoice = getTaxInvoiceData();
+
+    if (typeof XLSX === 'undefined') {
+        alert('مكتبة Excel غير متوفرة. استخدم زر نسخ Excel.');
+        return;
+    }
+
+    const wsData = [
+        ['الإجمالي', 'وصف الصنف', 'م'],
+        ['Total', 'Item Description', 'ID'],
+        ...invoice.rows.map(row => [
+            row.type === 'dash' ? '-' : taxMoney2(row.total),
+            row.description,
+            row.id
+        ]),
+        [],
+        ['مراجعة الفرق', '', ''],
+        ['صافي شهادة الإنجاز قبل الضريبة بعد الغرامات', taxMoney2(invoice.breakdown.achievementNetBeforeVat), ''],
+        ['صافي الفاتورة الضريبية قبل الضريبة بعد الغرامات', taxMoney2(invoice.breakdown.invoiceNetBeforeVatAfterPenalties), ''],
+        ['فرق المقارنة', taxMoney2(invoice.breakdown.comparisonDiff), ''],
+        ['حالة الفرق', invoice.breakdown.diffStatus, '']
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(wsData);
+    worksheet['!cols'] = [{ wch: 22 }, { wch: 75 }, { wch: 10 }];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'فاتورة ضريبية');
+
+    const hospitalName = document.querySelector('.hospitalName')?.textContent?.trim() || 'najran';
+    XLSX.writeFile(workbook, `فاتورة_ضريبية_${hospitalName}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
 // --- START: كود JavaScript الجديد والكامل لإدارة التواقيع ---
 
 // 1. المفتاح الجديد لتخزين التواقيع وكلمة المرور
