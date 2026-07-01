@@ -27,7 +27,7 @@ function loadScript(id,src,onload){
   return s;
 }
 function loadCleanSignatures(){
-  loadScript('admin-offices-raise-letters-clean-signatures-v4','/original/admin_offices_raise_letters_clean_signatures_v1.js?v=20260630_clean_signatures_v4_rebuilt_after_screen');
+  loadScript('admin-offices-raise-letters-clean-signatures-v4','/original/admin_offices_raise_letters_clean_signatures_v1.js?v=20260701_clean_signatures_sticky_v5');
 }
 function loadCleanScreen(){
   if(!isClean||cleanLoadStarted)return;
