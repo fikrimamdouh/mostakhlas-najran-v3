@@ -184,13 +184,52 @@ function isSaudiNationality(value) {
   const v = String(value || '').replace(/\s+/g, '');
   return v.includes('سعودي') && !v.includes('غيرسعودي');
 }
-
+function empSalary(emp) {
+  return num(
+    emp.salary ||
+    emp.monthlySalary ||
+    emp.cost ||
+    emp.monthlyCost ||
+    emp.totalCost ||
+    emp.periodCost ||
+    emp.contractCost ||
+    emp.employeeCost ||
+    emp.basicSalary ||
+    emp['الراتب'] ||
+    emp['الراتب الشهري'] ||
+    emp['التكلفة'] ||
+    emp['التكلفه'] ||
+    emp['التكلفة الشهرية'] ||
+    emp['التكلفه الشهريه'] ||
+    emp['القيمة الشهرية'] ||
+    emp['القيمه الشهريه'] ||
+    0
+  );
+}
 function calcEmpFallback(emp) {
   const p = periodInfo();
   const c = contractInfo();
 
-  const salary = num(emp.salary || emp.monthlySalary || emp.cost || emp.monthlyCost);
-  const dailyRate = p.totalDaysInMonth > 0 ? salary / p.totalDaysInMonth : 0;
+const salary = num(
+  emp.salary ||
+  emp.monthlySalary ||
+  emp.cost ||
+  emp.monthlyCost ||
+  emp.totalCost ||
+  emp.periodCost ||
+  emp.contractCost ||
+  emp.employeeCost ||
+  emp.basicSalary ||
+  emp['الراتب'] ||
+  emp['الراتب الشهري'] ||
+  emp['التكلفة'] ||
+  emp['التكلفه'] ||
+  emp['التكلفة الشهرية'] ||
+  emp['التكلفه الشهريه'] ||
+  emp['القيمة الشهرية'] ||
+  emp['القيمه الشهريه'] ||
+  0
+);  const dailyRate = p.totalDaysInMonth > 0 ? salary / p.totalDaysInMonth : 0;
 
   let costForPeriod = dailyRate * p.daysInExtract;
 
