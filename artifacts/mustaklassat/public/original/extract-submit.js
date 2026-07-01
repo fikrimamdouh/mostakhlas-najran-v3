@@ -303,6 +303,13 @@ try {
 // sets boot lock, clears current operational data, then writes the old snapshot.
 window.startExtractRevision = function () {
   alert('فتح تعديل المستخلص يجب أن يتم من صفحة متابعة المستخلصات حتى يتم تحميل بيانات المستخلص القديمة بشكل آمن.');
+try {
+  localStorage.setItem('najran_allow_attendance_leave_once', '1');
+
+  if (typeof window.najranClearAttendancePendingUpload === 'function') {
+    window.najranClearAttendancePendingUpload('admin-offices-attendance-approved-before-submit');
+  }
+} catch (_) {}
   window.location.href = '/extracts/track';
 };
   // ── إخفاء الزر عند الطباعة ─────────────────────────────────────────────────
