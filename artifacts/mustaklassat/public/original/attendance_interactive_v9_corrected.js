@@ -3625,6 +3625,922 @@ function getSignatures() {
  *  نسخة احتياطية كاملة للحضور + التواقيع
  * =================================================
  */
+/**
+ * =====================================================================
+ *  NJS Extract Audit Center
+ *  فحص المستخلص قبل الطباعة / الاعتماد
+ *  قراءة فقط + اقتراح إصلاح الفئات من نفس مسمى الوظيفة
+ *  لا يغير الحسابات الأصلية ولا مفاتيح التخزين
+ * =====================================================================
+ */
+(function () {
+  const VERSION = 'NJS_EXTRACT_AUDIT_2026_07_01_V1';
+
+  if (window.NJSExtractAudit && window.NJSExtractAudit.__version === VERSION) {
+    return;
+  }
+
+  const DEPARTMENT_KEYS = [
+    'cleaning',
+    'electricity',
+    'agriculture',
+    'civil_works',
+    'mechanical',
+    'laundry',
+    'patient_services',
+    'admin_saudi'
+  ];
+
+  const SPECIAL_STATUS_CODES = ['ش', 'ج', 'ب', 'ن', 'ت'];
+
+  const SPECIAL_STATUS_NAMES = {
+    'ش': 'شاغرة',
+    'ج': 'إجازة',
+    'ب': 'بداية العقد',
+    'ن': 'نهاية العقد',
+    'ت': 'تحت الإجراء'
+  };
+
+  function auditEscapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[ch]));
+  }
+
+  function auditNormalizeText(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[أإآ]/g, 'ا')
+      .replace(/ى/g, 'ي')
+      .replace(/ة/g, 'ه')
+      .replace(/[ًٌٍَُِّْـ]/g, '')
+      .replace(/\s+/g, ' ');
+  }
+
+  function auditMoney(value) {
+    const n = Number(value) || 0;
+    return n.toLocaleString('ar-SA', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  function getAuditDepartmentName(deptKey) {
+    try {
+      if (typeof getDepartmentName === 'function') {
+        return getDepartmentName(deptKey);
+      }
+    } catch (_) {}
+
+    const fallback = {
+      cleaning: 'النظافة',
+      electricity: 'الكهرباء',
+      agriculture: 'الزراعة',
+      civil_works: 'الأعمال المدنية',
+      mechanical: 'الميكانيكا',
+      security: 'الأمن',
+      laundry: 'المغسلة',
+      patient_services: 'الأمن والسلامة',
+      admin_saudi: 'الوظائف الإدارية السعوديين'
+    };
+
+    return fallback[deptKey] || deptKey;
+  }
+
+  function getAuditAttendanceData() {
+    try {
+      if (typeof getAttendanceData === 'function') {
+        return getAttendanceData() || {};
+      }
+    } catch (_) {}
+
+    try {
+      return JSON.parse(localStorage.getItem('attendanceData') || '{}') || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function getAuditPeriod() {
+    try {
+      if (typeof getExtractPeriodDetails === 'function') {
+        const p = getExtractPeriodDetails();
+        return {
+          daysInMonth: Number(p.daysInMonth) || 30,
+          totalDaysInMonth: Number(p.totalDaysInMonth) || 30
+        };
+      }
+    } catch (_) {}
+
+    return {
+      daysInMonth: 30,
+      totalDaysInMonth: 30
+    };
+  }
+
+  function getAuditSignatures() {
+    try {
+      if (
+        typeof SignatureBlock !== 'undefined' &&
+        SignatureBlock &&
+        typeof SignatureBlock.getSigs === 'function'
+      ) {
+        const sigs = SignatureBlock.getSigs('attendance');
+        return Array.isArray(sigs) ? sigs : [];
+      }
+    } catch (_) {}
+
+    try {
+      if (typeof getSignatures === 'function') {
+        const sigs = getSignatures();
+        return Array.isArray(sigs) ? sigs : [];
+      }
+    } catch (_) {}
+
+    try {
+      const stored = JSON.parse(localStorage.getItem('dynamicSignatures') || '[]');
+      return Array.isArray(stored) ? stored : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function getAuditDepartmentKeys(data) {
+    const keys = new Set(DEPARTMENT_KEYS);
+
+    Object.keys(data || {}).forEach(key => {
+      if (Array.isArray(data[key])) {
+        keys.add(key);
+      }
+    });
+
+    return Array.from(keys);
+  }
+
+  function normalizeAttendanceCategoryForAudit(value) {
+    const raw = String(value ?? '').trim();
+
+    const arabicDigits = {
+      '١': '1',
+      '٢': '2',
+      '٣': '3',
+      '٤': '4',
+      '٥': '5',
+      '٦': '6',
+      '٧': '7'
+    };
+
+    const normalized = arabicDigits[raw] || raw;
+
+    if (/^[1-7]$/.test(normalized)) {
+      return {
+        ok: true,
+        raw,
+        normalized,
+        fixableArabicDigit: raw !== normalized
+      };
+    }
+
+    return {
+      ok: false,
+      raw,
+      normalized: '',
+      fixableArabicDigit: false
+    };
+  }
+
+  function buildJobTitleCategoryIndexForAudit(data) {
+    const index = {};
+    const deptKeys = getAuditDepartmentKeys(data);
+
+    deptKeys.forEach(deptKey => {
+      const employees = Array.isArray(data[deptKey]) ? data[deptKey] : [];
+
+      employees.forEach((emp, empIndex) => {
+        const jobKey = auditNormalizeText(emp && emp.jobTitle);
+        if (!jobKey) return;
+
+        const categoryResult = normalizeAttendanceCategoryForAudit(emp && emp.category);
+        if (!categoryResult.ok) return;
+
+        if (!index[jobKey]) {
+          index[jobKey] = {
+            jobTitle: emp.jobTitle || '',
+            categories: {},
+            samples: []
+          };
+        }
+
+        index[jobKey].categories[categoryResult.normalized] =
+          (index[jobKey].categories[categoryResult.normalized] || 0) + 1;
+
+        index[jobKey].samples.push({
+          deptKey,
+          deptName: getAuditDepartmentName(deptKey),
+          index: empIndex,
+          name: emp.name || 'بدون اسم',
+          category: categoryResult.normalized
+        });
+      });
+    });
+
+    return index;
+  }
+
+  function getSuggestedCategoryFromSameJobForAudit(jobTitle, categoryIndex) {
+    const jobKey = auditNormalizeText(jobTitle);
+    const info = categoryIndex[jobKey];
+
+    if (!info) {
+      return {
+        status: 'no_match',
+        suggestedCategory: '',
+        note: 'لا توجد نفس الوظيفة بفئة صحيحة داخل بيانات الحضور.'
+      };
+    }
+
+    const categories = Object.keys(info.categories || {});
+
+    if (categories.length === 1) {
+      const category = categories[0];
+
+      return {
+        status: 'single',
+        suggestedCategory: category,
+        note: `اقتراح آلي: نفس الوظيفة موجودة بفئة واحدة فقط (${category}) عند ${info.categories[category]} موظف. راجع الفئة قبل الاعتماد.`
+      };
+    }
+
+    return {
+      status: 'conflict',
+      suggestedCategory: '',
+      note: `تعارض: نفس الوظيفة موجودة بأكثر من فئة (${categories.map(c => `${c}: ${info.categories[c]} موظف`).join('، ')}). يلزم مراجعة يدوية.`
+    };
+  }
+
+  function pushIssue(list, title, detail, meta) {
+    list.push({
+      title: String(title || ''),
+      detail: String(detail || ''),
+      meta: meta || {}
+    });
+  }
+
+  function computeEmployeeFinancialsForAudit(emp, daysInMonth, totalDaysInMonth, contractType, directPurchaseRatio) {
+    const salary = parseFloat(emp && emp.salary) || 0;
+    const nationality = String((emp && emp.nationality) || 'سعودي').trim();
+    const isSaudi = nationality === 'سعودي';
+
+    let adjustedSalary = salary;
+
+    if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) {
+      adjustedSalary = salary + (salary * directPurchaseRatio / 100);
+    }
+
+    const dailySalary = totalDaysInMonth > 0 ? adjustedSalary / totalDaysInMonth : 0;
+
+    const extractBaseSalary = daysInMonth >= totalDaysInMonth
+      ? adjustedSalary
+      : dailySalary * daysInMonth;
+
+    const days = Array.isArray(emp && emp.days)
+      ? emp.days.slice(0, daysInMonth)
+      : Array(daysInMonth).fill('ح');
+
+    let attendanceDays = 0;
+    let absenceDays = 0;
+    let deductionOnlyDays = 0;
+
+    days.forEach(day => {
+      if (day === 'ح' || day === 'ت') {
+        attendanceDays++;
+      } else if (day === 'غ') {
+        absenceDays++;
+      } else {
+        deductionOnlyDays++;
+      }
+    });
+
+    const deduction = (absenceDays + deductionOnlyDays) * dailySalary;
+
+    const categoryCheck = normalizeAttendanceCategoryForAudit(emp && emp.category);
+    const categoryForCalculation = categoryCheck.ok ? categoryCheck.normalized : '1';
+
+    const fineConfig = (
+      typeof ABSENCE_FINES_BY_CATEGORY !== 'undefined' &&
+      ABSENCE_FINES_BY_CATEGORY &&
+      ABSENCE_FINES_BY_CATEGORY[categoryForCalculation]
+    )
+      ? ABSENCE_FINES_BY_CATEGORY[categoryForCalculation]
+      : { saudi: 0, non_saudi: 0 };
+
+    const absenceFine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
+    const nationalityFine = parseFloat((emp && emp.nationalityFine) || 0) || 0;
+    const totalFine = absenceFine + nationalityFine;
+    const netSalary = extractBaseSalary - deduction - totalFine;
+
+    return {
+      salary,
+      adjustedSalary,
+      extractBaseSalary,
+      deduction,
+      absenceFine,
+      nationalityFine,
+      totalFine,
+      netSalary,
+      attendanceDays,
+      absenceDays,
+      deductionOnlyDays,
+      categoryCheck
+    };
+  }
+
+  function collectExtractAuditResults() {
+    const data = getAuditAttendanceData();
+    const period = getAuditPeriod();
+    const daysInMonth = period.daysInMonth;
+    const totalDaysInMonth = period.totalDaysInMonth;
+    const deptKeys = getAuditDepartmentKeys(data);
+    const categoryIndex = buildJobTitleCategoryIndexForAudit(data);
+
+    const result = {
+      critical: [],
+      warnings: [],
+      info: [],
+      categoryIssues: [],
+      safeCategorySuggestions: [],
+      stats: {
+        totalEmployees: 0,
+        totalVacantDays: 0,
+        totalAbsenceDays: 0,
+        totalZeroSalary: 0,
+        signaturesCount: 0,
+        incompleteSignatures: 0,
+        specialStatuses: {}
+      },
+      totals: {
+        cost: 0,
+        deduction: 0,
+        fine: 0,
+        net: 0
+      }
+    };
+
+    const iqamaMap = {};
+    const nameMap = {};
+
+    let contractType = 'عقد أساسي';
+    let directPurchaseRatio = 0;
+
+    try {
+      const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+      contractType = contractData.contractType || localStorage.getItem('contractType') || 'عقد أساسي';
+      directPurchaseRatio = parseFloat(contractData.directPurchaseRatio || localStorage.getItem('directPurchaseRatio') || 0) || 0;
+    } catch (_) {}
+
+    deptKeys.forEach(deptKey => {
+      const employees = Array.isArray(data[deptKey]) ? data[deptKey] : [];
+      const deptName = getAuditDepartmentName(deptKey);
+
+      if (employees.length === 0) {
+        pushIssue(
+          result.warnings,
+          'قسم فارغ',
+          `${deptName}: لا يوجد موظفون في هذا القسم.`,
+          { deptKey }
+        );
+      }
+
+      employees.forEach((emp, index) => {
+        result.stats.totalEmployees++;
+
+        const name = String((emp && emp.name) || '').trim();
+        const jobTitle = String((emp && emp.jobTitle) || '').trim();
+        const iqamaId = String((emp && emp.iqamaId) || '').trim();
+        const days = Array.isArray(emp && emp.days) ? emp.days : [];
+
+        const financial = computeEmployeeFinancialsForAudit(
+          emp,
+          daysInMonth,
+          totalDaysInMonth,
+          contractType,
+          directPurchaseRatio
+        );
+
+        result.totals.cost += financial.extractBaseSalary;
+        result.totals.deduction += financial.deduction;
+        result.totals.fine += financial.totalFine;
+        result.totals.net += financial.netSalary;
+
+        if (!name) {
+          pushIssue(
+            result.critical,
+            'موظف بدون اسم',
+            `${deptName} — صف ${index + 1}: اسم الموظف فارغ.`,
+            { deptKey, index }
+          );
+        }
+
+        if (!jobTitle) {
+          pushIssue(
+            result.critical,
+            'موظف بدون مسمى وظيفة',
+            `${deptName} — صف ${index + 1} — ${name || 'بدون اسم'}: مسمى الوظيفة فارغ.`,
+            { deptKey, index }
+          );
+        }
+
+        if (!iqamaId) {
+          pushIssue(
+            result.critical,
+            'موظف بدون رقم إقامة/هوية',
+            `${deptName} — صف ${index + 1} — ${name || 'بدون اسم'}: رقم الإقامة/الهوية فارغ.`,
+            { deptKey, index }
+          );
+        } else {
+          if (!iqamaMap[iqamaId]) iqamaMap[iqamaId] = [];
+          iqamaMap[iqamaId].push({ deptName, index, name, jobTitle });
+        }
+
+        const normalizedName = auditNormalizeText(name);
+
+        if (normalizedName) {
+          if (!nameMap[normalizedName]) nameMap[normalizedName] = [];
+          nameMap[normalizedName].push({ deptName, index, name, jobTitle, iqamaId });
+        }
+
+        if (financial.salary <= 0) {
+          result.stats.totalZeroSalary++;
+
+          pushIssue(
+            result.critical,
+            'راتب/تكلفة شهرية صفر أو غير صحيحة',
+            `${deptName} — صف ${index + 1} — ${name || 'بدون اسم'} — ${jobTitle || 'بدون وظيفة'}: التكلفة الشهرية = ${financial.salary}.`,
+            { deptKey, index }
+          );
+        }
+
+        const categoryCheck = financial.categoryCheck;
+
+        if (!categoryCheck.ok) {
+          const suggestion = getSuggestedCategoryFromSameJobForAudit(jobTitle, categoryIndex);
+
+          const issue = {
+            deptKey,
+            deptName,
+            index,
+            name: name || 'بدون اسم',
+            jobTitle: jobTitle || 'بدون وظيفة',
+            iqamaId,
+            rawCategory: String((emp && emp.category) ?? '').trim() || 'فارغ',
+            suggestedCategory: suggestion.suggestedCategory,
+            suggestionStatus: suggestion.status,
+            suggestionNote: suggestion.note
+          };
+
+          result.categoryIssues.push(issue);
+
+          pushIssue(
+            result.critical,
+            'فئة غير صالحة تؤثر على غرامات الغياب',
+            `${deptName} — صف ${index + 1} — ${issue.name} — ${issue.jobTitle} — الفئة المخزنة: "${issue.rawCategory}" — ${issue.suggestionNote}`,
+            { deptKey, index, categoryIssue: true }
+          );
+
+          if (
+            suggestion.status === 'single' &&
+            /^[1-7]$/.test(String(suggestion.suggestedCategory || ''))
+          ) {
+            result.safeCategorySuggestions.push(issue);
+          }
+        }
+
+        if (categoryCheck.ok && categoryCheck.fixableArabicDigit) {
+          pushIssue(
+            result.warnings,
+            'فئة مكتوبة بأرقام عربية',
+            `${deptName} — صف ${index + 1} — ${name || 'بدون اسم'}: الفئة "${categoryCheck.raw}" تُقرأ كـ "${categoryCheck.normalized}".`,
+            { deptKey, index }
+          );
+        }
+
+        if (!Array.isArray(emp && emp.days)) {
+          pushIssue(
+            result.critical,
+            'أيام الحضور غير موجودة',
+            `${deptName} — صف ${index + 1} — ${name || 'بدون اسم'}: حقل days غير موجود أو ليس مصفوفة.`,
+            { deptKey, index }
+          );
+        } else if (days.length !== daysInMonth) {
+          pushIssue(
+            result.warnings,
+            'عدد أيام الموظف لا يساوي مدة المستخلص',
+            `${deptName} — صف ${index + 1} — ${name || 'بدون اسم'}: عدد الأيام المخزن ${days.length} بينما مدة المستخلص ${daysInMonth}.`,
+            { deptKey, index }
+          );
+        }
+
+        days.forEach((day, dayIndex) => {
+          if (day === 'غ') {
+            result.stats.totalAbsenceDays++;
+          }
+
+          if (day === 'ش') {
+            result.stats.totalVacantDays++;
+          }
+
+          if (SPECIAL_STATUS_CODES.includes(day)) {
+            if (!result.stats.specialStatuses[day]) {
+              result.stats.specialStatuses[day] = {
+                code: day,
+                name: SPECIAL_STATUS_NAMES[day] || day,
+                dayCount: 0,
+                employeeKeys: new Set()
+              };
+            }
+
+            result.stats.specialStatuses[day].dayCount++;
+            result.stats.specialStatuses[day].employeeKeys.add(`${deptKey}:${index}`);
+          }
+
+          if (
+            day &&
+            typeof STATUS_CODES !== 'undefined' &&
+            STATUS_CODES &&
+            !STATUS_CODES[day] &&
+            day !== 'default'
+          ) {
+            pushIssue(
+              result.warnings,
+              'حالة حضور غير معروفة',
+              `${deptName} — صف ${index + 1} — ${name || 'بدون اسم'} — اليوم ${dayIndex + 1}: الحالة "${day}" غير معرفة.`,
+              { deptKey, index, dayIndex }
+            );
+          }
+        });
+      });
+    });
+
+    Object.keys(iqamaMap).forEach(iqama => {
+      if (iqamaMap[iqama].length > 1) {
+        pushIssue(
+          result.critical,
+          'رقم إقامة/هوية مكرر',
+          `رقم ${iqama} مكرر عند: ${iqamaMap[iqama].map(x => `${x.deptName} — صف ${x.index + 1} — ${x.name || 'بدون اسم'} — ${x.jobTitle || 'بدون وظيفة'}`).join(' | ')}`,
+          { iqama }
+        );
+      }
+    });
+
+    Object.keys(nameMap).forEach(nameKey => {
+      if (nameMap[nameKey].length > 1) {
+        pushIssue(
+          result.warnings,
+          'اسم موظف مكرر',
+          `الاسم "${nameMap[nameKey][0].name}" مكرر عند: ${nameMap[nameKey].map(x => `${x.deptName} — صف ${x.index + 1} — ${x.jobTitle || 'بدون وظيفة'} — إقامة: ${x.iqamaId || 'فارغ'}`).join(' | ')}`,
+          { nameKey }
+        );
+      }
+    });
+
+    const signatures = getAuditSignatures();
+    result.stats.signaturesCount = signatures.length;
+
+    const incompleteSignatures = signatures.filter(sig =>
+      !String((sig && sig.title) || '').trim() ||
+      !String((sig && sig.name) || '').trim()
+    );
+
+    result.stats.incompleteSignatures = incompleteSignatures.length;
+
+    if (!Array.isArray(signatures) || signatures.length === 0) {
+      pushIssue(
+        result.warnings,
+        'لا توجد تواقيع',
+        'لم يتم العثور على تواقيع معتمدة في صفحة الحضور.'
+      );
+    } else if (incompleteSignatures.length > 0) {
+      pushIssue(
+        result.warnings,
+        'تواقيع غير مكتملة',
+        `يوجد ${incompleteSignatures.length} توقيع بدون مسمى أو بدون اسم.`
+      );
+    }
+
+    try {
+      const savedFinalLaborCost = parseFloat(localStorage.getItem('finalLaborCost') || '0') || 0;
+      const diff = Math.abs(result.totals.net - savedFinalLaborCost);
+
+      if (savedFinalLaborCost > 0 && diff > 0.05) {
+        pushIssue(
+          result.warnings,
+          'فرق بين إجمالي الأقسام والإجمالي العام',
+          `صافي الاستحقاق المحسوب من الفحص = ${auditMoney(result.totals.net)}، بينما الإجمالي العام المحفوظ = ${auditMoney(savedFinalLaborCost)}، والفرق = ${auditMoney(diff)}. أعد عرض الجداول أو راجع البيانات قبل الطباعة.`
+        );
+      }
+
+      if (savedFinalLaborCost <= 0 && result.stats.totalEmployees > 0) {
+        pushIssue(
+          result.warnings,
+          'الإجمالي العام غير محفوظ',
+          'يوجد موظفون في الحضور، لكن finalLaborCost غير موجود أو يساوي صفر. أعد عرض الجداول قبل الطباعة.'
+        );
+      }
+    } catch (error) {
+      pushIssue(
+        result.warnings,
+        'تعذر فحص إجمالي الأقسام مقابل الإجمالي العام',
+        error && error.message ? error.message : 'حدث خطأ غير معروف أثناء فحص الإجماليات.'
+      );
+    }
+
+    const specialStatusesInfo = Object.values(result.stats.specialStatuses).map(item => ({
+      code: item.code,
+      name: item.name,
+      dayCount: item.dayCount,
+      employeeCount: item.employeeKeys.size
+    }));
+
+    result.info.push({ title: 'إجمالي الموظفين', detail: String(result.stats.totalEmployees) });
+    result.info.push({ title: 'إجمالي أيام الغياب', detail: String(result.stats.totalAbsenceDays) });
+    result.info.push({ title: 'إجمالي أيام الشواغر', detail: String(result.stats.totalVacantDays) });
+    result.info.push({ title: 'عدد الموظفين بتكلفة صفر', detail: String(result.stats.totalZeroSalary) });
+    result.info.push({ title: 'عدد التواقيع', detail: String(result.stats.signaturesCount) });
+    result.info.push({ title: 'عدد التواقيع غير المكتملة', detail: String(result.stats.incompleteSignatures) });
+    result.info.push({ title: 'عدد الفئات غير الصالحة', detail: String(result.categoryIssues.length) });
+    result.info.push({ title: 'فئات يمكن اقتراحها من نفس الوظيفة', detail: String(result.safeCategorySuggestions.length) });
+    result.info.push({ title: 'إجمالي التكلفة المحسوبة', detail: auditMoney(result.totals.cost) });
+    result.info.push({ title: 'إجمالي الحسم المحسوب', detail: auditMoney(result.totals.deduction) });
+    result.info.push({ title: 'إجمالي الغرامات المحسوبة', detail: auditMoney(result.totals.fine) });
+    result.info.push({ title: 'صافي الاستحقاق المحسوب', detail: auditMoney(result.totals.net) });
+
+    if (specialStatusesInfo.length > 0) {
+      specialStatusesInfo.forEach(item => {
+        result.info.push({
+          title: `حالة خاصة: ${item.name}`,
+          detail: `${item.employeeCount} موظف / ${item.dayCount} يوم`
+        });
+      });
+    } else {
+      result.info.push({
+        title: 'الحالات الخاصة',
+        detail: 'لا توجد حالات خاصة ظاهرة.'
+      });
+    }
+
+    return result;
+  }
+
+  function renderAuditCards(audit) {
+    const cards = [
+      { label: 'أخطاء حرجة', value: audit.critical.length, color: '#991b1b', bg: '#fef2f2' },
+      { label: 'تحذيرات', value: audit.warnings.length, color: '#b45309', bg: '#fffbeb' },
+      { label: 'معلومات', value: audit.info.length, color: '#1e3c72', bg: '#eff6ff' },
+      { label: 'اقتراحات فئات', value: audit.safeCategorySuggestions.length, color: '#166534', bg: '#f0fdf4' }
+    ];
+
+    return `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px;">
+        ${cards.map(card => `
+          <div style="background:${card.bg};border:1px solid ${card.color};border-radius:14px;padding:12px;">
+            <div style="font-size:12px;font-weight:900;color:${card.color};margin-bottom:6px;">${auditEscapeHtml(card.label)}</div>
+            <div style="font-size:26px;font-weight:900;color:${card.color};">${auditEscapeHtml(card.value)}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function renderAuditSection(title, items, color, emptyText, openByDefault) {
+    const isOpen = openByDefault ? 'open' : '';
+
+    if (!items || items.length === 0) {
+      return `
+        <details ${isOpen} style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px;margin-bottom:10px;">
+          <summary style="cursor:pointer;font-weight:900;color:${color};font-size:15px;">${auditEscapeHtml(title)} (0)</summary>
+          <div style="color:#64748b;font-weight:700;margin-top:10px;">${auditEscapeHtml(emptyText)}</div>
+        </details>
+      `;
+    }
+
+    return `
+      <details ${isOpen} style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px;margin-bottom:10px;">
+        <summary style="cursor:pointer;font-weight:900;color:${color};font-size:15px;">${auditEscapeHtml(title)} (${items.length})</summary>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;max-height:360px;overflow:auto;padding-left:4px;">
+          ${items.map(item => `
+            <div style="border:1px solid #e5e7eb;border-radius:10px;padding:9px 10px;background:#f8fafc;">
+              <div style="font-weight:900;color:#0f172a;margin-bottom:4px;">${auditEscapeHtml(item.title)}</div>
+              <div style="font-size:13px;color:#334155;line-height:1.8;">${auditEscapeHtml(item.detail)}</div>
+            </div>
+          `).join('')}
+        </div>
+      </details>
+    `;
+  }
+
+  function closeAuditDialog() {
+    const dialog = document.getElementById('extract-audit-dialog');
+    const overlay = document.getElementById('extract-audit-overlay');
+
+    if (dialog) dialog.remove();
+    if (overlay) overlay.remove();
+  }
+
+  function openAuditDialog() {
+    const audit = collectExtractAuditResults();
+
+    closeAuditDialog();
+
+    const dialog = document.createElement('div');
+    dialog.id = 'extract-audit-dialog';
+    dialog.className = 'dialog wide-dialog';
+    dialog.style.cssText = `
+      display:flex;
+      position:fixed;
+      inset:4vh auto auto 50%;
+      transform:translateX(-50%);
+      width:min(1100px,94vw);
+      max-height:92vh;
+      z-index:10002;
+      background:#fff;
+      border-radius:16px;
+      box-shadow:0 20px 70px rgba(15,23,42,.35);
+      flex-direction:column;
+      direction:rtl;
+      font-family:Tajawal,Arial,sans-serif;
+      overflow:hidden;
+    `;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'extract-audit-overlay';
+    overlay.style.cssText = `
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,.55);
+      z-index:10001;
+    `;
+    overlay.onclick = closeAuditDialog;
+
+    const statusColor = audit.critical.length > 0 ? '#991b1b' : '#166534';
+    const statusText = audit.critical.length > 0
+      ? `يوجد ${audit.critical.length} خطأ حرج يجب مراجعته قبل الطباعة أو الاعتماد`
+      : 'لا توجد أخطاء حرجة ظاهرة';
+
+    const categoryNotice = `
+تنبيه مهم للفئات:
+القيم الحرفية مثل "س" لا يتم تحويلها تلقائيًا إلى فئة رقمية.
+نفس الرمز قد يخص مهن مختلفة وفئات مختلفة حسب العقد أو ملف المناصب.
+عند استخدام زر الإصلاح المقترح، يتم الإصلاح فقط إذا وجد النظام نفس مسمى الوظيفة بفئة واحدة واضحة.
+بعد الإصلاح، يجب على المستخدم مراجعة الفئات قبل الطباعة أو الاعتماد.
+`;
+
+    dialog.innerHTML = `
+      <div style="background:linear-gradient(135deg,#1e3c72,#0f2444);color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">
+        <h3 style="margin:0;font-size:18px;font-weight:900;">
+          <i class="fas fa-clipboard-check"></i> فحص المستخلص قبل الطباعة / الاعتماد
+        </h3>
+        <button onclick="NJSExtractAudit.close()" style="background:transparent;border:none;color:#fff;font-size:28px;cursor:pointer;line-height:1;">×</button>
+      </div>
+
+      <div style="padding:16px;background:#f8fafc;overflow:auto;">
+        ${renderAuditCards(audit)}
+
+        <div style="background:#fff;border:2px solid ${statusColor};border-radius:14px;padding:14px;margin-bottom:12px;">
+          <div style="font-size:16px;font-weight:900;color:${statusColor};">${auditEscapeHtml(statusText)}</div>
+        </div>
+
+        <div style="background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;border-radius:12px;padding:12px;margin-bottom:12px;white-space:pre-line;line-height:1.8;font-weight:800;">
+          ${auditEscapeHtml(categoryNotice)}
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <button onclick="NJSExtractAudit.applySuggestedCategories()"
+            style="background:#166534;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:900;cursor:pointer;">
+            إصلاح الفئات المقترحة من نفس الوظيفة
+          </button>
+
+          <button onclick="NJSExtractAudit.open()"
+            style="background:#1e3c72;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:900;cursor:pointer;">
+            إعادة الفحص
+          </button>
+
+          <button onclick="NJSExtractAudit.close()"
+            style="background:#475569;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:900;cursor:pointer;">
+            إغلاق
+          </button>
+        </div>
+
+        ${renderAuditSection('أخطاء حرجة', audit.critical, '#991b1b', 'لا توجد أخطاء حرجة.', true)}
+        ${renderAuditSection('تحذيرات', audit.warnings, '#b45309', 'لا توجد تحذيرات.', audit.critical.length === 0)}
+        ${renderAuditSection('معلومات', audit.info, '#1e3c72', 'لا توجد معلومات.', false)}
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(dialog);
+  }
+
+  function saveAttendanceDataExactForAudit(data) {
+    try {
+      localStorage.setItem('attendanceData', JSON.stringify(data));
+
+      try {
+        let totalRows = 0;
+        Object.keys(data || {}).forEach(key => {
+          if (Array.isArray(data[key])) totalRows += data[key].length;
+        });
+
+        if (totalRows > 0) {
+          sessionStorage.removeItem('najran_new_extract_clear_attendance_once');
+          localStorage.removeItem('najran_new_extract_clear_attendance_once');
+        }
+      } catch (_) {}
+
+      return true;
+    } catch (error) {
+      console.error('فشل الحفظ الدقيق من فحص المستخلص:', error);
+      alert('فشل حفظ الفئات المقترحة. راجع الكونسول.');
+      return false;
+    }
+  }
+
+  function applySuggestedCategoriesFromSameJob() {
+    const data = getAuditAttendanceData();
+    const audit = collectExtractAuditResults();
+
+    const safeSuggestions = audit.safeCategorySuggestions.filter(item =>
+      item.suggestionStatus === 'single' &&
+      /^[1-7]$/.test(String(item.suggestedCategory || ''))
+    );
+
+    if (safeSuggestions.length === 0) {
+      alert('لا توجد فئات يمكن اقتراحها بأمان من نفس مسمى الوظيفة.');
+      return;
+    }
+
+    const preview = safeSuggestions.slice(0, 20).map(item =>
+      `${item.deptName} — صف ${item.index + 1} — ${item.name} — ${item.jobTitle} — من "${item.rawCategory}" إلى "${item.suggestedCategory}"`
+    ).join('\n');
+
+    const more = safeSuggestions.length > 20
+      ? `\n\n...وعدد ${safeSuggestions.length - 20} آخر`
+      : '';
+
+    if (!confirm(
+      `سيتم إصلاح ${safeSuggestions.length} فئة بناءً على نفس مسمى الوظيفة فقط.\n\n` +
+      preview + more +
+      `\n\nتنبيه مهم:\n` +
+      `هذا اقتراح آلي بناءً على تطابق مسمى الوظيفة داخل نفس بيانات الحضور.\n` +
+      `يجب على المستخدم مراجعة الفئات بعد الإصلاح، لأن نفس الوظيفة قد تختلف فئتها حسب العقد أو الموقع أو ملف المناصب.\n\n` +
+      `لن يتم تعديل أي وظيفة لها أكثر من فئة أو ليس لها مرجع.`
+    )) {
+      return;
+    }
+
+    let updatedCount = 0;
+
+    safeSuggestions.forEach(item => {
+      const emp = data?.[item.deptKey]?.[item.index];
+      if (!emp) return;
+
+      emp.category = item.suggestedCategory;
+      updatedCount++;
+    });
+
+    if (!saveAttendanceDataExactForAudit(data)) {
+      return;
+    }
+
+    try {
+      if (typeof renderTables === 'function') {
+        renderTables();
+      }
+    } catch (error) {
+      console.warn('تم حفظ الفئات لكن فشل تحديث الجداول:', error);
+    }
+
+    alert(
+      `تم إصلاح ${updatedCount} فئة بناءً على نفس مسمى الوظيفة.\n\n` +
+      `مطلوب مراجعة الفئات التي تم تعديلها قبل الطباعة أو الاعتماد، لأن الإصلاح اقتراح مساعد وليس اعتمادًا نهائيًا.`
+    );
+
+    openAuditDialog();
+  }
+
+  window.NJSExtractAudit = {
+    __version: VERSION,
+    open: openAuditDialog,
+    close: closeAuditDialog,
+    collect: collectExtractAuditResults,
+    applySuggestedCategories: applySuggestedCategoriesFromSameJob
+  };
+})();
+
 function backupAttendanceData() {
   try {
     const attendanceData = getAttendanceData();
