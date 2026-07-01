@@ -1,4 +1,3 @@
-@@ -1,656 +0,0 @@
 /**
  * cloud-sync.js — V8 Local-first
  * السحب من السحابة عند فتح الصفحة فقط.
@@ -401,9 +400,37 @@ function isRevisionMode() {
     let mergedUser = 0, mergedHospital = 0, skippedUserOperational = 0, skippedByPage = 0;
     const safeWrite = _origSetItem || localStorage.setItem.bind(localStorage);
 
-    function mergeOne(key, value, fromHospital) {
-      const nk = normalizeKey(key);
-      if (ATTENDANCE_PAGE_KEYS.has(nk)) { skippedByPage++; return; }
+function shouldPullAttendanceKeyForCurrentPage(nk) {
+  const page = getCurrentPageFile();
+
+  if (!ATTENDANCE_PAGE_KEYS.has(nk)) return true;
+
+  if (nk === 'adminOfficesAttendanceData_v1') {
+    return page === 'admin_offices_attendance.html';
+  }
+
+  if (nk === 'healthCentersAttendanceData') {
+    return page === 'health_centers_attendance.html';
+  }
+
+  if (nk === 'attendanceData') {
+    return page === 'attendance.html';
+  }
+
+  if (nk === 'centersAttendanceData_v2') {
+    return page === 'attendance.html';
+  }
+
+  if (nk === 'ng_attendanceData' || nk === 'nd_attendanceData') {
+    return page === 'attendance.html';
+  }
+
+  return false;
+}
+
+function mergeOne(key, value, fromHospital) {
+  const nk = normalizeKey(key);
+  if (!shouldPullAttendanceKeyForCurrentPage(nk)) { skippedByPage++; return; }
       if (fromHospital && PERSONAL_KEYS.has(nk)) return;
       if (!fromHospital && hospitalName && !PERSONAL_KEYS.has(nk)) { skippedUserOperational++; return; }
       if (!shouldMergePulledKeyForCurrentPage(nk)) { skippedByPage++; return; }
