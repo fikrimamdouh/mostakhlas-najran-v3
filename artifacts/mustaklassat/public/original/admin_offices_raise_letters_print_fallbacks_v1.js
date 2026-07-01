@@ -45,8 +45,56 @@
   function contract() { return readJson('persistentContractData', {}); }
   function extract() { return readJson('persistentExtractData', {}); }
   function names() { try { if (typeof window.getCenterNames === 'function') return window.getCenterNames() || {}; } catch (_) {} return readJson('adminOfficeNames_v1', {}); }
-  function data() { try { if (typeof window.getAttendanceData === 'function') return window.getAttendanceData() || {}; } catch (_) {} return readJson('adminOfficesAttendanceData_v1', {}); }
+function countRows(obj) {
+  return Object.values(obj || {}).reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0);
+}
 
+function countNamedRows(obj) {
+  return Object.values(obj || {}).reduce((sum, rows) => {
+    if (!Array.isArray(rows)) return sum;
+    return sum + rows.filter(emp => clean(emp && (emp.name || emp.employeeName || emp.workerName))).length;
+  }, 0);
+}
+
+function data() {
+  const sources = [];
+
+  try {
+    if (typeof window.getAttendanceData === 'function') {
+      sources.push(window.getAttendanceData() || {});
+    }
+  } catch (_) {}
+
+  [
+    'adminOfficesAttendanceData_v1',
+    'adminOfficesAttendanceData_v1_localBackup',
+    'adminOfficesAttendanceData_v1_lastGood',
+    'adminOfficesLaborDataSafe_v2',
+    'adminOfficesAttendanceData',
+    'admin_offices_attendance_data'
+  ].forEach(key => sources.push(readJson(key, {})));
+
+  const best = sources.reduce((bestObj, obj) => {
+    const bestNamed = countNamedRows(bestObj);
+    const objNamed = countNamedRows(obj);
+
+    if (objNamed > bestNamed) return obj;
+    if (objNamed === bestNamed && countRows(obj) > countRows(bestObj)) return obj;
+
+    return bestObj;
+  }, {});
+
+  if (countRows(best) > 0) {
+    try {
+      localStorage.setItem('adminOfficesAttendanceData_v1', JSON.stringify(best));
+      localStorage.setItem('adminOfficesAttendanceData_v1_localBackup', JSON.stringify(best));
+      localStorage.setItem('adminOfficesAttendanceData_v1_lastGood', JSON.stringify(best));
+      localStorage.setItem('adminOfficesAttendanceData_v1_localBackup_ts', String(Date.now()));
+    } catch (_) {}
+  }
+
+  return best;
+}
   function companyName() {
     const c = contract();
     const s = readJson('najran_session', {});
@@ -71,14 +119,148 @@
   }
   function officeRows(k) { return Array.isArray(data()[k]) ? data()[k] : []; }
   function allRows() { return keys().flatMap(k => officeRows(k).map(emp => Object.assign({ __siteKey: k, __siteName: names()[k] || k }, emp || {}))); }
-  function salary(emp) { return num(emp.salary || emp.monthlySalary || emp.cost || emp.monthlyCost); }
-  function grandLaborTotal() {
-    const explicit = num(localStorage.getItem('finalLaborCost') || localStorage.getItem('grand-net-total-admin'));
-    if (explicit) return explicit;
-    return allRows().reduce((sum, e) => sum + salary(e), 0);
-  }
-  function siteTotal(k) { return officeRows(k).reduce((sum, e) => sum + salary(e), 0); }
+function periodInfo() {
+  try {
+    if (typeof window.getExtractPeriodDetails === 'function') {
+      const p = window.getExtractPeriodDetails() || {};
+      return {
+        daysInExtract: Number(p.daysInExtract || p.daysInMonth || p.duration || 30),
+        totalDaysInMonth: Number(p.totalDaysInMonth || p.daysInMonth || 30)
+      };
+    }
+  } catch (_) {}
 
+  const e = extract();
+  const startRaw = e.extractStart || e.periodStart || localStorage.getItem('extractStart') || localStorage.getItem('periodStart') || '';
+  const endRaw = e.extractEnd || e.periodEnd || localStorage.getItem('extractEnd') || localStorage.getItem('periodEnd') || '';
+
+  const start = new Date(startRaw);
+  const end = new Date(endRaw || startRaw);
+
+  if (!Number.isNaN(start.getTime())) {
+    const totalDaysInMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate() || 30;
+    let daysInExtract = 30;
+
+    if (!Number.isNaN(end.getTime())) {
+      daysInExtract = Math.max(1, Math.ceil((end - start) / 86400000) + 1);
+    }
+
+    return { daysInExtract, totalDaysInMonth };
+  }
+
+  return { daysInExtract: 30, totalDaysInMonth: 30 };
+}
+
+function contractInfo() {
+  const c = contract();
+  return {
+    contractType: c.contractType || 'عقد أساسي',
+    directPurchaseRatio: num(c.directPurchaseRatio || 0)
+  };
+}
+
+function normalizeDays(days, daysInExtract) {
+  const out = Array.isArray(days) ? days.slice(0, daysInExtract) : [];
+  while (out.length < daysInExtract) out.push('ح');
+  return out;
+}
+
+function fineConfig(category) {
+  const map = {
+    1: { saudi: 500, non_saudi: 500 },
+    2: { saudi: 500, non_saudi: 500 },
+    3: { saudi: 250, non_saudi: 100 },
+    4: { saudi: 180, non_saudi: 80 },
+    5: { saudi: 150, non_saudi: 80 },
+    6: { saudi: 20, non_saudi: 20 },
+    7: { saudi: 10, non_saudi: 10 },
+    default: { saudi: 0, non_saudi: 0 }
+  };
+
+  return map[category] || map[String(category)] || map.default;
+}
+
+function isSaudiNationality(value) {
+  const v = String(value || '').replace(/\s+/g, '');
+  return v.includes('سعودي') && !v.includes('غيرسعودي');
+}
+
+function calcEmpFallback(emp) {
+  const p = periodInfo();
+  const c = contractInfo();
+
+  const salary = num(emp.salary || emp.monthlySalary || emp.cost || emp.monthlyCost);
+  const dailyRate = p.totalDaysInMonth > 0 ? salary / p.totalDaysInMonth : 0;
+
+  let costForPeriod = dailyRate * p.daysInExtract;
+
+  if (String(c.contractType || '').includes('شراء مباشر') && c.directPurchaseRatio > 0) {
+    costForPeriod += costForPeriod * (c.directPurchaseRatio / 100);
+  }
+
+  const days = normalizeDays(emp.days, p.daysInExtract);
+
+  let absenceDays = 0;
+  let deductionOnlyDays = 0;
+
+  days.forEach(day => {
+    const d = clean(day);
+
+    if (!d || d === 'ح' || d === 'ت' || d === 'غ•') return;
+
+    if (d === 'غ') {
+      absenceDays++;
+      return;
+    }
+
+    deductionOnlyDays++;
+  });
+
+  const deduction = (absenceDays + deductionOnlyDays) * dailyRate;
+  const cfg = fineConfig(emp.category || 1);
+  const absenceFine = absenceDays * (isSaudiNationality(emp.nationality) ? cfg.saudi : cfg.non_saudi);
+  const nationalityFine = num(emp.nationalityFine);
+  const totalFine = absenceFine + nationalityFine;
+  const netSalary = costForPeriod - deduction - totalFine;
+
+  return {
+    costForPeriod,
+    deduction,
+    absenceFine,
+    nationalityFine,
+    totalFine,
+    netSalary
+  };
+}
+
+function calcEmpNet(emp) {
+  const p = periodInfo();
+  const c = contractInfo();
+
+  if (typeof window.calculateAdminOfficeEmployeeFinancials === 'function') {
+    try {
+      const r = window.calculateAdminOfficeEmployeeFinancials(emp, {
+        totalDaysInMonth: p.totalDaysInMonth,
+        daysInExtract: p.daysInExtract,
+        contractType: c.contractType,
+        directPurchaseRatio: c.directPurchaseRatio
+      });
+
+      const net = num(r && r.netSalary);
+      if (net || num(r && r.costForPeriod)) return net;
+    } catch (_) {}
+  }
+
+  return calcEmpFallback(emp).netSalary;
+}
+
+function siteTotal(k) {
+  return officeRows(k).reduce((sum, emp) => sum + calcEmpNet(emp), 0);
+}
+
+function grandLaborTotal() {
+  return keys().reduce((sum, k) => sum + siteTotal(k), 0);
+}
   function css() {
     const letterCss = window.AdminOfficePrintLetters && typeof window.AdminOfficePrintLetters.lettersCss === 'function' ? window.AdminOfficePrintLetters.lettersCss() : '';
     return `<style>
