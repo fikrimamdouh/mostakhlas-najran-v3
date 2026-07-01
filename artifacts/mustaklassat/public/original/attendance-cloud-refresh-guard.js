@@ -733,6 +733,14 @@ document.addEventListener('click', function(e) {
 }, true);
 
 window.addEventListener('beforeunload', function(e) {
+  try {
+    if (localStorage.getItem('najran_allow_attendance_leave_once') === '1') {
+      localStorage.removeItem('najran_allow_attendance_leave_once');
+      pendingLocalAttendanceUpload = false;
+      return;
+    }
+  } catch (_) {}
+
   if (pendingLocalAttendanceUpload && !isReviewOnlySession()) {
     e.preventDefault();
     e.returnValue = '';
