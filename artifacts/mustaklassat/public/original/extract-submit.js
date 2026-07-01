@@ -382,8 +382,16 @@ window.startExtractRevision = function () {
     console.warn('[AttendanceApprove] تعذر تنفيذ الحفظ الإجباري قبل الانتقال', e);
   }
 
-  localStorage.setItem(STEP_KEY.labor_attendance, '1');
-  window.location.href = '/original/performance.html';
+try {
+  localStorage.setItem('najran_allow_attendance_leave_once', '1');
+
+  if (typeof window.najranClearAttendancePendingUpload === 'function') {
+    window.najranClearAttendancePendingUpload('attendance-approved-local-save-before-performance');
+  }
+} catch (_) {}
+
+localStorage.setItem(STEP_KEY.labor_attendance, '1');
+window.location.href = '/original/performance.html';
 },
     });
   };
