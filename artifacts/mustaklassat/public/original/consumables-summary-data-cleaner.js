@@ -1,7 +1,7 @@
 // Consumables Summary Data Cleaner
 // Scope: normal consumables.html only.
 // Removes accidental total/net-payable rows saved as normal summary items.
-// Also loads hospital consumables letters center, settings fix, settings deep link, and print polish for normal hospital consumables only.
+// Also loads hospital consumables letters center, settings fix, route guard, settings deep link, and print polish for normal hospital consumables only.
 (function () {
   'use strict';
 
@@ -34,11 +34,14 @@
       loadScriptOnce('hospital-consumables-settings-fix-js', '/original/hospital_consumables_settings_fix_v6.js?v=20260702_v6');
     }, 80);
     setTimeout(function () {
+      loadScriptOnce('hospital-consumables-settings-route-guard-js', '/original/hospital_consumables_settings_route_guard_v7.js?v=20260702_v7_no_normal_letters');
+    }, 100);
+    setTimeout(function () {
       loadScriptOnce('hospital-consumables-settings-deeplink-js', '/original/hospital_consumables_settings_deeplink_v1.js?v=20260702_v1_open_settings');
-    }, 120);
+    }, 140);
     setTimeout(function () {
       loadScriptOnce('hospital-consumables-print-polish-js', '/original/hospital_consumables_print_polish_v6.js?v=20260701_v6');
-    }, 180);
+    }, 200);
   }
 
   var DB_VERSION = 'consumables_v27';
