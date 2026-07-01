@@ -173,6 +173,7 @@
     appendScript('/original/admin_offices_attendance_persistence_fix.js?v=20260623_admin_persist_v1', true);
     appendScript('/original/admin_offices_letter_scoped_settings.js?v=20260623_letter_scoped_v1', true);
     appendScript('/original/admin_offices_excel_import_clean_v1.js?v=20260625_excel_clean_dialog_v1', true);
+    appendScript('/original/admin_offices_grand_certificate_polish.js?v=20260701_calc_unified_v4', true);
   }
 
   if (isAttendancePage || isAdminOfficesPage) {
