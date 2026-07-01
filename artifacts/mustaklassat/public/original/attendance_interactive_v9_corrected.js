@@ -3007,219 +3007,6 @@ function showSuccessMessage(message) {
     console.warn('خطأ في عرض رسالة النجاح:', error);
   }
 }
-// ===== دوال جديدة للتحكم في الحضور الجماعي على مستوى الموظف =====
-
-// دالة لتعيين حالة معينة لجميع أيام الشهر لموظف واحد
-// (هذه الدالة موجودة بالفعل في كودك، تأكد من أنها بهذه الصيغة)
-function setEmployeeAttendanceForAllDays(departmentKey, employeeIndex, status) {
-  try {
-    const data = getAttendanceData();
-    const employee = data[departmentKey]?.[employeeIndex];
-    if (!employee) return;
-
-    const { daysInMonth } = getExtractPeriodDetails();
-    employee.days = Array(daysInMonth).fill(status); // تعيين الحالة لجميع الأيام
-
-    saveAttendanceData(data);
-    renderTables(); // إعادة عرض الجداول لتحديث الواجهة
-    showSuccessMessage(`تم تعيين حالة الموظف ${employee.name} إلى "${STATUS_CODES[status].name}" لجميع أيام الشهر.`);
-  } catch (error) {
-    console.error('خطأ في تعيين الحضور لجميع الأيام:', error);
-    alert('حدث خطأ أثناء تعيين الحضور لجميع الأيام.');
-  }
-}
-
-// دالة لفتح نافذة التعديل الجماعي (الخطوة 1: اختيار القسم)
-// (هذه الدالة ستحل محل أي تعريف سابق لـ openBulkAttendanceDialog)
-// ✅✅✅ [تعديل رقم 4: تعديل جماعي مرن للحضور] ✅✅✅
-function openBulkAttendanceDialog() {
-    const dialog = document.createElement('div');
-    dialog.id = 'bulk-attendance-dialog';
-    dialog.className = 'dialog'; // استخدم تنسيقاتك الجاهزة
-    
-    const overlay = document.createElement('div');
-    overlay.id = 'bulk-attendance-overlay';
-    overlay.className = 'overlay';
-
-    const departments = Object.keys(getAttendanceData());
-    let deptOptions = '';
-    departments.forEach(key => {
-        deptOptions += `<option value="${key}">${getDepartmentName(key)}</option>`;
-    });
-
-    dialog.innerHTML = `
-        <div class="dialog-content">
-            <span class="close" onclick="closeDialog('bulk-attendance-dialog')">×</span>
-            <h3>تعديل حضور جماعي</h3>
-            <div class="form-group">
-                <label>اختر القسم:</label>
-                <select id="bulk-dept-select" onchange="showEmployeesForBulkAttendance(this.value)">
-                    <option value="">-- اختر قسمًا --</option>
-                    ${deptOptions}
-                </select>
-            </div>
-            <div id="bulk-attendance-employee-list" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
-                <p style="text-align: center; color: #666;">اختر قسمًا لعرض الموظفين</p>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(overlay);
-    document.body.appendChild(dialog);
-    openDialog('bulk-attendance-dialog');
-}
-
-function showEmployeesForBulkAttendance(departmentKey) {
-    const employeeListDiv = document.getElementById('bulk-attendance-employee-list');
-    if (!departmentKey) {
-        employeeListDiv.innerHTML = `<p style="text-align: center; color: #666;">اختر قسمًا لعرض الموظفين</p>`;
-        return;
-    }
-    
-    const { monthDaysArray } = getExtractPeriodDetails();
-    let dayOptions = '';
-    monthDaysArray.forEach((day, index) => {
-        dayOptions += `<option value="${index}">${day}</option>`;
-    });
-
-    let statusOptions = '';
-    for (const code in STATUS_CODES) {
-        if (code !== 'default') {
-            statusOptions += `<option value="${code}">${STATUS_CODES[code].name} (${code})</option>`;
-        }
-    }
-
-    employeeListDiv.innerHTML = `
-        <div class="form-group">
-            <label>اختر الحالة الجديدة:</label>
-            <select id="bulk-status-select">${statusOptions}</select>
-        </div>
-        <div class="form-group-inline">
-            <div class="form-group">
-                <label>من يوم:</label>
-                <select id="bulk-start-day">${dayOptions}</select>
-            </div>
-            <div class="form-group">
-                <label>إلى يوم:</label>
-                <select id="bulk-end-day">${dayOptions}</select>
-            </div>
-        </div>
-        <div class="buttons">
-            <button class="btn btn-success" onclick="applyBulkAttendance('${departmentKey}')"><i class="fas fa-check"></i> تطبيق على كل القسم</button>
-        </div>
-    `;
-}
-
-function applyBulkAttendance(departmentKey) {
-    const newStatus = document.getElementById('bulk-status-select').value;
-    const startIndex = parseInt(document.getElementById('bulk-start-day').value);
-    const endIndex = parseInt(document.getElementById('bulk-end-day').value);
-
-    if (startIndex > endIndex) {
-        alert("خطأ: يوم البداية يجب أن يكون قبل أو نفس يوم النهاية.");
-        return;
-    }
-
-    const startDay = document.getElementById('bulk-start-day').options[startIndex].text;
-    const endDay = document.getElementById('bulk-end-day').options[endIndex].text;
-
-    if (confirm(`هل أنت متأكد من تطبيق الحالة "${STATUS_CODES[newStatus].name}" على جميع موظفي قسم "${getDepartmentName(departmentKey)}" من يوم ${startDay} إلى يوم ${endDay}؟`)) {
-        const data = getAttendanceData();
-        if (data[departmentKey]) {
-            data[departmentKey].forEach(employee => {
-                for (let i = startIndex; i <= endIndex; i++) {
-                    if (employee.days && i < employee.days.length) {
-                        employee.days[i] = newStatus;
-                    }
-                }
-            });
-            saveAttendanceData(data);
-            renderTables();
-            closeDialog('bulk-attendance-dialog');
-            showSuccessMessage("تم تطبيق التعديل الجماعي بنجاح.");
-        }
-    }
-}
-
-// دالة لعرض الموظفين بعد اختيار القسم (الخطوة 2: اختيار الموظف)
-function showEmployeesForBulkAttendance(departmentKey) {
-  const employeeListDiv = document.getElementById('bulk-attendance-employee-list');
-  const attendanceData = getAttendanceData();
-  const employees = attendanceData[departmentKey] || [];
-
-  if (employees.length === 0) {
-    employeeListDiv.innerHTML = `<p style="text-align: center; color: #666;">لا يوجد موظفون في هذا القسم.</p>`;
-    return;
-  }
-
-  let employeesHtml = '<h4 style="margin-bottom: 10px; color: #6f42c1;">اختر موظفًا:</h4>';
-  employees.forEach((emp, index) => {
-    employeesHtml += `
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee;">
-        <span>${emp.name} (${emp.jobTitle})</span>
-        <button onclick="showAttendanceStatusOptions('${departmentKey}', ${index}, '${emp.name}')"
-                style="background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">
-          تحديد حالة
-        </button>
-      </div>
-    `;
-  });
-  employeeListDiv.innerHTML = employeesHtml;
-}
-
-// دالة لعرض خيارات الحالة بعد اختيار الموظف (الخطوة 3: اختيار الحالة)
-function showAttendanceStatusOptions(departmentKey, employeeIndex, employeeName) {
-  const dialog = document.getElementById('bulk-attendance-dialog'); // نستخدم نفس النافذة
-  if (!dialog) return;
-
-  let statusOptions = '';
-  for (const code in STATUS_CODES) {
-    if (code === 'default') continue;
-    const statusInfo = STATUS_CODES[code];
-    statusOptions += `<option value="${code}">${statusInfo.name} (${code})</option>`;
-  }
-
-  dialog.innerHTML = `
-    <h3 style="margin-top: 0; color: #6f42c1; text-align: center;">تحديد حالة حضور لـ: ${employeeName}</h3>
-    <div style="margin-bottom: 20px;">
-      <label style="display: block; margin-bottom: 5px; font-weight: bold;">اختر الحالة لتطبيقها على جميع أيام الشهر:</label>
-      <select id="bulk-attendance-status-select" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-        ${statusOptions}
-      </select>
-    </div>
-    <div style="text-align: center;">
-      <button onclick="applyBulkAttendanceToEmployee('${departmentKey}', ${employeeIndex})" 
-              style="background: #28a745; color: white; border: none; padding: 10px 20px; margin: 5px; border-radius: 4px; cursor: pointer; font-size: 14px;">
-        تطبيق الحالة
-      </button>
-      <button onclick="openBulkAttendanceDialog()" // للعودة لقائمة الأقسام
-              style="background: #6c757d; color: white; border: none; padding: 10px 20px; margin: 5px; border-radius: 4px; cursor: pointer; font-size: 14px;">
-        العودة
-      </button>
-      <button onclick="closeDialog('bulk-attendance-dialog')" 
-              style="background: #dc3545; color: white; border: none; padding: 10px 20px; margin: 5px; border-radius: 4px; cursor: pointer; font-size: 14px;">
-        إلغاء
-      </button>
-    </div>
-  `;
-}
-
-// دالة لتطبيق الحالة على الموظف المحدد
-function applyBulkAttendanceToEmployee(departmentKey, employeeIndex) {
-  const status = document.getElementById('bulk-attendance-status-select').value;
-  const data = getAttendanceData();
-  const employee = data[departmentKey]?.[employeeIndex];
-
-  if (!employee) {
-    alert('خطأ: لم يتم العثور على الموظف.');
-    return;
-  }
-
-  if (confirm(`هل أنت متأكد من تعيين حالة "${STATUS_CODES[status].name}" للموظف ${employee.name} لجميع أيام الشهر؟`)) {
-    setEmployeeAttendanceForAllDays(departmentKey, employeeIndex, status); // نستخدم الدالة الموجودة بالفعل
-    closeDialog('bulk-attendance-dialog');
-  }
-}
 
 /* ================================================================ */
 /* ✅✅✅ الكود النهائي والكامل لنظام إدارة الموظفين (استبدل به القديم) ✅✅✅ */
@@ -3247,42 +3034,7 @@ function closeDialog(dialogId) {
 /* ✅ 2. تحديث دوال النوافذ المنبثقة الأخرى بالتصميم الموحد ✅ */
 /* ================================================================ */
 
-// --- دالة "تعديل جماعي" المحدثة ---
-function openBulkAttendanceDialog() {
-    let dialog = document.getElementById('bulk-attendance-dialog');
-    if (!dialog) {
-        dialog = document.createElement('div');
-        dialog.id = 'bulk-attendance-dialog';
-        dialog.className = 'dialog wide-dialog'; // نافذة عريضة
-        document.body.appendChild(dialog);
-    }
 
-    const departments = Object.keys(getAttendanceData());
-    let deptOptions = departments.map(key => `<option value="${key}">${getDepartmentName(key)}</option>`).join('');
-
-    dialog.innerHTML = `
-        <div class="dialog-header">
-            <h3><i class="fas fa-calendar-alt"></i> تعديل جماعي للحضور</h3>
-            <span class="close" onclick="closeDialog('bulk-attendance-dialog')">×</span>
-        </div>
-        <div class="dialog-body">
-            <div class="form-group">
-                <label>1. اختر القسم لعرض الخيارات:</label>
-                <select id="bulk-dept-select" onchange="showBulkAttendanceOptions(this.value)">
-                    <option value="">-- اختر قسمًا --</option>
-                    ${deptOptions}
-                </select>
-            </div>
-            <div id="bulk-attendance-options" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; display: none;">
-                <!-- الخيارات ستظهر هنا -->
-            </div>
-        </div>
-        <div class="dialog-footer">
-            <button class="btn-secondary" onclick="closeDialog('bulk-attendance-dialog')">إغلاق</button>
-        </div>
-    `;
-    openDialog('bulk-attendance-dialog');
-}
 
 // --- دالة "تعديل التواقيع" المحدثة ---
 function openSignatureEditDialog() {
@@ -4189,6 +3941,98 @@ async function handleSmartUpload(event) {
 
 // --- 3. نظام تعديل الحضور الجماعي (بالتصميم الاحترافي) ---
 
+// =================================================================================
+// Professional Bulk Attendance Editor — Search + Select Employees Safely
+// لا يغير الحسابات — لا يغير مفاتيح الحفظ — يغير واجهة التعديل الجماعي فقط
+// =================================================================================
+
+function bulkEscapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    }[ch]));
+}
+
+function normalizeBulkSearchText(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[أإآ]/g, 'ا')
+        .replace(/ى/g, 'ي')
+        .replace(/ة/g, 'ه')
+        .replace(/[ًٌٍَُِّْـ]/g, '')
+        .replace(/\s+/g, ' ');
+}
+
+function getBulkAttendanceEmployeePool(scopeKey) {
+    const data = getAttendanceData();
+    const allDeptKeys = Object.keys(data || {}).filter(key => Array.isArray(data[key]));
+    const deptKeys = scopeKey && scopeKey !== '__all__' ? [scopeKey] : allDeptKeys;
+
+    const nameCounter = {};
+    allDeptKeys.forEach(deptKey => {
+        (data[deptKey] || []).forEach(emp => {
+            const normalizedName = normalizeBulkSearchText(emp?.name || '');
+            if (!normalizedName) return;
+            nameCounter[normalizedName] = (nameCounter[normalizedName] || 0) + 1;
+        });
+    });
+
+    const pool = [];
+
+    deptKeys.forEach(deptKey => {
+        const deptName = typeof getDepartmentName === 'function' ? getDepartmentName(deptKey) : deptKey;
+
+        (data[deptKey] || []).forEach((emp, index) => {
+            const name = String(emp?.name || '').trim() || 'بدون اسم';
+            const jobTitle = String(emp?.jobTitle || '').trim() || 'بدون وظيفة';
+            const iqamaId = String(emp?.iqamaId || '').trim() || 'بدون إقامة';
+            const nationality = String(emp?.nationality || '').trim() || 'غير محدد';
+            const category = String(emp?.category || '').trim() || 'غير محدد';
+            const normalizedName = normalizeBulkSearchText(name);
+
+            const days = Array.isArray(emp?.days) ? emp.days : [];
+            const vacantByStatus = days.includes('ش');
+            const vacantByText =
+                normalizeBulkSearchText(name).includes('شاغر') ||
+                normalizeBulkSearchText(jobTitle).includes('شاغر');
+
+            const isVacant = vacantByStatus || vacantByText;
+            const isDuplicateName = normalizedName && nameCounter[normalizedName] > 1;
+
+            const searchText = normalizeBulkSearchText([
+                name,
+                jobTitle,
+                iqamaId,
+                nationality,
+                category,
+                deptName,
+                isVacant ? 'شاغر شاغرة' : '',
+                isDuplicateName ? 'مكرر تكرار' : ''
+            ].join(' '));
+
+            pool.push({
+                deptKey,
+                deptName,
+                index,
+                name,
+                jobTitle,
+                iqamaId,
+                nationality,
+                category,
+                isVacant,
+                isDuplicateName,
+                searchText
+            });
+        });
+    });
+
+    return pool;
+}
+
 function openBulkAttendanceDialog() {
     let dialog = document.getElementById('bulk-attendance-dialog');
     if (!dialog) {
@@ -4198,163 +4042,317 @@ function openBulkAttendanceDialog() {
         document.body.appendChild(dialog);
     }
 
-    const departments = Object.keys(getAttendanceData());
-    let deptOptions = departments.map(key => `<option value="${key}">${getDepartmentName(key)}</option>`).join('');
+    let overlay = document.getElementById('bulk-attendance-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'bulk-attendance-overlay';
+        overlay.className = 'overlay';
+        overlay.onclick = () => closeDialog('bulk-attendance-dialog');
+        document.body.appendChild(overlay);
+    }
+
+    const data = getAttendanceData();
+    const departments = Object.keys(data || {}).filter(key => Array.isArray(data[key]));
+    const deptOptions = departments
+        .map(key => `<option value="${bulkEscapeHtml(key)}">${bulkEscapeHtml(getDepartmentName(key))}</option>`)
+        .join('');
+
+    const { monthDaysArray } = getExtractPeriodDetails();
+    const dayOptions = monthDaysArray
+        .map((day, index) => `<option value="${index}">${day}</option>`)
+        .join('');
+
+    const statusOptions = Object.keys(STATUS_CODES)
+        .filter(code => code !== 'default')
+        .map(code => `<option value="${code}">${STATUS_CODES[code].name} (${code})</option>`)
+        .join('');
 
     dialog.innerHTML = `
-        <div class="dialog-header">
-            <h3><i class="fas fa-calendar-alt"></i> تعديل جماعي للحضور</h3>
-            <span class="close" onclick="closeDialog('bulk-attendance-dialog')">×</span>
+        <div class="dialog-header" style="background:linear-gradient(135deg,#0f2444,#1e3c72);color:#fff;padding:16px 20px;border-radius:14px 14px 0 0;">
+            <h3 style="margin:0;font-size:18px;font-weight:900;">
+                <i class="fas fa-users-cog"></i> تعديل حالة حضور جماعي
+            </h3>
+            <span class="close" onclick="closeDialog('bulk-attendance-dialog')" style="color:#fff;font-size:28px;">×</span>
         </div>
-        <div class="dialog-body">
-            <div class="form-group">
-                <label>1. اختر القسم لعرض الخيارات:</label>
-                <select id="bulk-dept-select" onchange="showBulkAttendanceOptions(this.value)">
-                    <option value="">-- اختر قسمًا --</option>
-                    ${deptOptions}
-                </select>
+
+        <div class="dialog-body" style="padding:18px;background:#f8fafc;max-height:78vh;overflow:auto;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:14px;">
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px;">
+                    <label style="font-weight:800;color:#334155;display:block;margin-bottom:6px;">نطاق البحث</label>
+                    <select id="bulk-dept-select" onchange="showBulkAttendanceOptions(this.value)" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:9px;font-family:Tajawal,Arial,sans-serif;">
+                        <option value="__all__">كل الأقسام</option>
+                        ${deptOptions}
+                    </select>
+                </div>
+
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px;">
+                    <label style="font-weight:800;color:#334155;display:block;margin-bottom:6px;">الحالة الجديدة</label>
+                    <select id="bulk-status-select" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:9px;font-family:Tajawal,Arial,sans-serif;">
+                        ${statusOptions}
+                    </select>
+                </div>
+
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px;">
+                    <label style="font-weight:800;color:#334155;display:block;margin-bottom:6px;">من يوم</label>
+                    <select id="bulk-start-day" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:9px;font-family:Tajawal,Arial,sans-serif;">
+                        ${dayOptions}
+                    </select>
+                </div>
+
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px;">
+                    <label style="font-weight:800;color:#334155;display:block;margin-bottom:6px;">إلى يوم</label>
+                    <select id="bulk-end-day" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:9px;font-family:Tajawal,Arial,sans-serif;">
+                        ${dayOptions}
+                    </select>
+                </div>
             </div>
-            <div id="bulk-attendance-options" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; display: none;">
-                <!-- الخيارات ستظهر هنا ديناميكياً -->
+
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;margin-bottom:12px;">
+                <label style="font-weight:900;color:#1e3c72;display:block;margin-bottom:8px;">بحث الموظفين</label>
+                <input
+                    type="text"
+                    id="bulk-employee-search"
+                    placeholder="اكتب الاسم مثل: محمد — أو الوظيفة — أو رقم الإقامة — أو شاغر"
+                    oninput="filterBulkAttendanceEmployees(this.value)"
+                    style="width:100%;padding:12px 14px;border:2px solid #dbeafe;border-radius:12px;font-family:Tajawal,Arial,sans-serif;font-size:15px;font-weight:700;outline:none;"
+                    autocomplete="off"
+                >
+
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+                    <button type="button" onclick="setBulkQuickFilter('all')" style="background:#1e3c72;color:#fff;border:none;border-radius:999px;padding:7px 14px;font-weight:800;cursor:pointer;">الكل</button>
+                    <button type="button" onclick="setBulkQuickFilter('duplicate')" style="background:#7c3aed;color:#fff;border:none;border-radius:999px;padding:7px 14px;font-weight:800;cursor:pointer;">الأسماء المكررة</button>
+                    <button type="button" onclick="setBulkQuickFilter('vacant')" style="background:#0891b2;color:#fff;border:none;border-radius:999px;padding:7px 14px;font-weight:800;cursor:pointer;">الشواغر</button>
+                    <button type="button" onclick="selectVisibleBulkEmployees(true)" style="background:#16a34a;color:#fff;border:none;border-radius:999px;padding:7px 14px;font-weight:800;cursor:pointer;">تحديد الظاهر</button>
+                    <button type="button" onclick="selectVisibleBulkEmployees(false)" style="background:#dc2626;color:#fff;border:none;border-radius:999px;padding:7px 14px;font-weight:800;cursor:pointer;">إلغاء تحديد الظاهر</button>
+                    <button type="button" onclick="clearBulkSelection()" style="background:#64748b;color:#fff;border:none;border-radius:999px;padding:7px 14px;font-weight:800;cursor:pointer;">مسح التحديد</button>
+                </div>
+
+                <div id="bulk-selection-summary" style="margin-top:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3c72;border-radius:10px;padding:9px 12px;font-size:13px;font-weight:800;">
+                    المحدد: 0 | الظاهر: 0 | الإجمالي: 0
+                </div>
             </div>
+
+            <div id="bulk-attendance-options"></div>
         </div>
-        <div class="dialog-footer">
-            <button class="btn-secondary" onclick="closeDialog('bulk-attendance-dialog')">إغلاق</button>
+
+        <div class="dialog-footer" style="display:flex;gap:10px;justify-content:flex-start;background:#fff;padding:14px 18px;border-top:1px solid #e2e8f0;border-radius:0 0 14px 14px;">
+            <button class="btn-success" onclick="applyBulkAttendance()" style="background:#166534;color:#fff;border:none;border-radius:10px;padding:11px 18px;font-weight:900;cursor:pointer;">
+                <i class="fas fa-check"></i> تطبيق على المحددين فقط
+            </button>
+            <button class="btn-secondary" onclick="closeDialog('bulk-attendance-dialog')" style="background:#475569;color:#fff;border:none;border-radius:10px;padding:11px 18px;font-weight:800;cursor:pointer;">
+                إغلاق
+            </button>
         </div>
     `;
+
+    window.__bulkAttendanceQuickFilter = 'all';
     openDialog('bulk-attendance-dialog');
+    showBulkAttendanceOptions('__all__');
+
+    setTimeout(() => {
+        const search = document.getElementById('bulk-employee-search');
+        if (search) search.focus();
+    }, 100);
 }
 
-function showBulkAttendanceOptions(departmentKey) {
+function showBulkAttendanceOptions(scopeKey) {
     const optionsDiv = document.getElementById('bulk-attendance-options');
-    if (!departmentKey) {
-        optionsDiv.style.display = 'none';
-        return;
-    }
-    
-    const { monthDaysArray } = getExtractPeriodDetails();
-    let dayOptions = monthDaysArray.map((day, index) => `<option value="${index}">${day}</option>`).join('');
-    let statusOptions = Object.keys(STATUS_CODES).filter(c => c !== 'default').map(c => `<option value="${c}">${STATUS_CODES[c].name} (${c})</option>`).join('');
-    const employees = getAttendanceData()[departmentKey] || [];
+    if (!optionsDiv) return;
 
-    let employeeCheckboxes = '<p class="info-text">لا يوجد موظفون في هذا القسم.</p>';
-    if (employees.length > 0) {
-        employeeCheckboxes = `
-            <div class="form-group">
-                <label>2. اختر الموظفين (أو اتركهم جميعاً محددين):</label>
-                <div class="checkbox-grid">
-                    <div class="form-group-checkbox">
-                        <input type="checkbox" id="select-all-employees-bulk" checked onchange="toggleAllCheckboxes(this, 'bulk-employee-checkboxes')">
-                        <label for="select-all-employees-bulk"><strong>تحديد الكل / إلغاء التحديد</strong></label>
-                    </div>
-                </div>
-                <div id="bulk-employee-checkboxes" class="checkbox-grid" style="max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;">
-                  <div style="margin-bottom:8px;">
-    <input
-        type="text"
-        id="bulk-employee-search"
-        placeholder="ابحث بالاسم / الوظيفة / رقم الإقامة"
-        oninput="filterBulkAttendanceEmployees(this.value)"
-        style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-family:Tajawal,Arial,sans-serif;"
-    >
-</div>
+    const pool = getBulkAttendanceEmployeePool(scopeKey || '__all__');
+    window.__bulkAttendanceScopeKey = scopeKey || '__all__';
+    window.__bulkAttendancePool = pool;
 
-${employees.map((emp, index) => {
-    const name = String(emp.name || '').trim() || 'بدون اسم';
-    const jobTitle = String(emp.jobTitle || '').trim() || 'بدون وظيفة';
-    const iqamaId = String(emp.iqamaId || '').trim() || 'بدون إقامة';
-    const searchText = `${name} ${jobTitle} ${iqamaId}`.toLowerCase();
-
-    return `
-        <div class="form-group-checkbox bulk-employee-row" data-search="${searchText.replace(/"/g, '&quot;')}">
-            <input type="checkbox" class="employee-checkbox" value="${index}" id="bulk-emp-${index}" checked>
-            <label for="bulk-emp-${index}">
-                <strong>${name}</strong>
-                <span style="color:#64748b;font-size:12px;"> — ${jobTitle} — ${iqamaId} — رقم ${index + 1}</span>
-            </label>
-        </div>
-    `;
-}).join('')}
-                </div>
+    if (pool.length === 0) {
+        optionsDiv.innerHTML = `
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px;text-align:center;color:#64748b;font-weight:800;">
+                لا يوجد موظفون في النطاق المحدد.
             </div>
         `;
+        updateBulkSelectionSummary();
+        return;
     }
 
     optionsDiv.innerHTML = `
-        ${employeeCheckboxes}
-        <div class="form-group" style="margin-top: 15px;">
-            <label>3. اختر الحالة الجديدة والفترة:</label>
-            <select id="bulk-status-select">${statusOptions}</select>
-        </div>
-        <div style="display:flex; gap: 15px;">
-            <div class="form-group" style="flex:1;">
-                <label>من يوم:</label>
-                <select id="bulk-start-day">${dayOptions}</select>
-            </div>
-            <div class="form-group" style="flex:1;">
-                <label>إلى يوم:</label>
-                <select id="bulk-end-day">${dayOptions}</select>
-            </div>
-        </div>
-        <div class="buttons" style="justify-content: center;">
-            <button class="btn-success" onclick="applyBulkAttendance('${departmentKey}')"><i class="fas fa-check"></i> تطبيق على الموظفين المحددين</button>
+        <div id="bulk-employee-checkboxes" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:10px;">
+            ${pool.map(item => {
+                const badges = [
+                    item.isDuplicateName ? '<span style="background:#ede9fe;color:#5b21b6;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:900;">اسم مكرر</span>' : '',
+                    item.isVacant ? '<span style="background:#ecfeff;color:#0e7490;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:900;">شاغر</span>' : ''
+                ].filter(Boolean).join(' ');
+
+                return `
+                    <label
+                        class="bulk-employee-row"
+                        data-search="${bulkEscapeHtml(item.searchText)}"
+                        data-duplicate="${item.isDuplicateName ? '1' : '0'}"
+                        data-vacant="${item.isVacant ? '1' : '0'}"
+                        style="display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px;cursor:pointer;box-shadow:0 1px 4px rgba(15,23,42,.05);"
+                    >
+                        <input
+                            type="checkbox"
+                            class="employee-checkbox"
+                            data-dept="${bulkEscapeHtml(item.deptKey)}"
+                            data-index="${item.index}"
+                            onchange="updateBulkSelectionSummary()"
+                            style="margin-top:5px;width:18px;height:18px;cursor:pointer;"
+                        >
+                        <div style="min-width:0;flex:1;">
+                            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:5px;">
+                                <strong style="color:#0f172a;font-size:15px;">${bulkEscapeHtml(item.name)}</strong>
+                                ${badges}
+                            </div>
+                            <div style="color:#475569;font-size:12.5px;line-height:1.7;">
+                                <div><b>القسم:</b> ${bulkEscapeHtml(item.deptName)}</div>
+                                <div><b>الوظيفة:</b> ${bulkEscapeHtml(item.jobTitle)}</div>
+                                <div><b>الإقامة:</b> ${bulkEscapeHtml(item.iqamaId)} | <b>الجنسية:</b> ${bulkEscapeHtml(item.nationality)} | <b>الفئة:</b> ${bulkEscapeHtml(item.category)}</div>
+                                <div style="color:#64748b;">مفتاح التحديد: ${bulkEscapeHtml(item.deptKey)} / صف ${item.index + 1}</div>
+                            </div>
+                        </div>
+                    </label>
+                `;
+            }).join('')}
         </div>
     `;
-    optionsDiv.style.display = 'block';
+
+    const search = document.getElementById('bulk-employee-search');
+    filterBulkAttendanceEmployees(search ? search.value : '');
 }
+
 function filterBulkAttendanceEmployees(query) {
-    query = String(query || '').trim().toLowerCase();
+    const normalizedQuery = normalizeBulkSearchText(query);
+    const quickFilter = window.__bulkAttendanceQuickFilter || 'all';
 
     document.querySelectorAll('#bulk-employee-checkboxes .bulk-employee-row').forEach(row => {
-        const text = row.getAttribute('data-search') || '';
-        row.style.display = !query || text.includes(query) ? '' : 'none';
+        const searchText = row.getAttribute('data-search') || '';
+        const isDuplicate = row.getAttribute('data-duplicate') === '1';
+        const isVacant = row.getAttribute('data-vacant') === '1';
+
+        let quickOk = true;
+        if (quickFilter === 'duplicate') quickOk = isDuplicate;
+        if (quickFilter === 'vacant') quickOk = isVacant;
+
+        const searchOk = !normalizedQuery || searchText.includes(normalizedQuery);
+        row.style.display = quickOk && searchOk ? 'flex' : 'none';
     });
+
+    updateBulkSelectionSummary();
 }
-function applyBulkAttendance(departmentKey) {
-    const selectedEmployeeIndexes = Array.from(document.querySelectorAll('#bulk-employee-checkboxes input:checked')).map(cb => parseInt(cb.value));
-    if (selectedEmployeeIndexes.length === 0) {
-        alert("الرجاء اختيار موظف واحد على الأقل.");
+
+function setBulkQuickFilter(filterName) {
+    window.__bulkAttendanceQuickFilter = filterName || 'all';
+    const search = document.getElementById('bulk-employee-search');
+    filterBulkAttendanceEmployees(search ? search.value : '');
+}
+
+function selectVisibleBulkEmployees(checked) {
+    document.querySelectorAll('#bulk-employee-checkboxes .bulk-employee-row').forEach(row => {
+        if (row.style.display === 'none') return;
+        const checkbox = row.querySelector('.employee-checkbox');
+        if (checkbox) checkbox.checked = !!checked;
+    });
+
+    updateBulkSelectionSummary();
+}
+
+function clearBulkSelection() {
+    document.querySelectorAll('#bulk-employee-checkboxes .employee-checkbox').forEach(cb => {
+        cb.checked = false;
+    });
+
+    updateBulkSelectionSummary();
+}
+
+function updateBulkSelectionSummary() {
+    const rows = Array.from(document.querySelectorAll('#bulk-employee-checkboxes .bulk-employee-row'));
+    const visibleRows = rows.filter(row => row.style.display !== 'none');
+    const selected = Array.from(document.querySelectorAll('#bulk-employee-checkboxes .employee-checkbox:checked'));
+
+    const summary = document.getElementById('bulk-selection-summary');
+    if (summary) {
+        summary.textContent = `المحدد: ${selected.length} | الظاهر: ${visibleRows.length} | الإجمالي: ${rows.length}`;
+    }
+}
+
+function applyBulkAttendance() {
+    const selectedCheckboxes = Array.from(
+        document.querySelectorAll('#bulk-employee-checkboxes .employee-checkbox:checked')
+    );
+
+    if (selectedCheckboxes.length === 0) {
+        alert('اختر موظفًا واحدًا على الأقل.');
         return;
     }
 
-    const newStatus = document.getElementById('bulk-status-select').value;
-    const startIndex = parseInt(document.getElementById('bulk-start-day').value);
-    const endIndex = parseInt(document.getElementById('bulk-end-day').value);
+    const newStatus = document.getElementById('bulk-status-select')?.value;
+    const startIndex = parseInt(document.getElementById('bulk-start-day')?.value, 10);
+    const endIndex = parseInt(document.getElementById('bulk-end-day')?.value, 10);
 
-    if (startIndex > endIndex) {
-        alert("خطأ: يوم البداية يجب أن يكون قبل أو نفس يوم النهاية.");
+    if (!newStatus || !STATUS_CODES[newStatus]) {
+        alert('اختر حالة صحيحة.');
         return;
     }
 
-    const startDayText = document.getElementById('bulk-start-day').options[startIndex].text;
-    const endDayText = document.getElementById('bulk-end-day').options[endIndex].text;
+    if (Number.isNaN(startIndex) || Number.isNaN(endIndex) || startIndex > endIndex) {
+        alert('خطأ في الفترة: يوم البداية يجب أن يكون قبل أو نفس يوم النهاية.');
+        return;
+    }
 
-    if (confirm(`هل أنت متأكد من تطبيق الحالة "${STATUS_CODES[newStatus].name}" على ${selectedEmployeeIndexes.length} موظف من يوم ${startDayText} إلى يوم ${endDayText}؟`)) {
-        const data = getAttendanceData();
-        if (data[departmentKey]) {
-            selectedEmployeeIndexes.forEach(empIndex => {
-                const employee = data[departmentKey][empIndex];
-                if (employee) {
-                    for (let i = startIndex; i <= endIndex; i++) {
-                        if (employee.days && i < employee.days.length) employee.days[i] = newStatus;
-                    }
-                }
-            });
-            saveAttendanceData(data);
-            renderTables();
-            closeDialog('bulk-attendance-dialog');
-            showSuccessMessage("تم تطبيق التعديل الجماعي بنجاح.");
+    const startDayText = document.getElementById('bulk-start-day')?.options[startIndex]?.text || String(startIndex + 1);
+    const endDayText = document.getElementById('bulk-end-day')?.options[endIndex]?.text || String(endIndex + 1);
+
+    const refs = selectedCheckboxes.map(cb => ({
+        deptKey: cb.getAttribute('data-dept'),
+        index: parseInt(cb.getAttribute('data-index'), 10)
+    })).filter(ref => ref.deptKey && !Number.isNaN(ref.index));
+
+    if (refs.length === 0) {
+        alert('لم يتم العثور على موظفين صالحين للتعديل.');
+        return;
+    }
+
+    const statusName = STATUS_CODES[newStatus].name;
+
+    if (!confirm(`سيتم تطبيق الحالة "${statusName}" على ${refs.length} موظف من يوم ${startDayText} إلى يوم ${endDayText}.\n\nالتطبيق سيكون على الموظفين المحددين فقط.`)) {
+        return;
+    }
+
+    const data = getAttendanceData();
+    const { daysInMonth } = getExtractPeriodDetails();
+
+    let updatedCount = 0;
+
+    refs.forEach(ref => {
+        const employee = data?.[ref.deptKey]?.[ref.index];
+        if (!employee) return;
+
+        if (!Array.isArray(employee.days)) {
+            employee.days = Array(daysInMonth).fill('ح');
         }
-    }
+
+        if (employee.days.length < daysInMonth) {
+            employee.days = employee.days.concat(Array(daysInMonth - employee.days.length).fill('ح'));
+        }
+
+        for (let i = startIndex; i <= endIndex; i++) {
+            if (i >= 0 && i < employee.days.length) {
+                employee.days[i] = newStatus;
+            }
+        }
+
+        updatedCount++;
+    });
+
+    saveAttendanceData(data);
+    renderTables();
+
+    closeDialog('bulk-attendance-dialog');
+    showSuccessMessage(`تم تطبيق التعديل الجماعي على ${updatedCount} موظف بنجاح.`);
 }
 
-// دالة مساعدة لتحديد كل الخيارات
+// توافق مع أي نداء قديم موجود في الصفحة
 function toggleAllCheckboxes(source, containerId) {
-    const container = document.getElementById(containerId);
-    if (container) {
-        const checkboxes = container.querySelectorAll('.employee-checkbox');
-        checkboxes.forEach(checkbox => checkbox.checked = source.checked);
-    }
+    selectVisibleBulkEmployees(source && source.checked);
 }
 
 // =================================================================================
