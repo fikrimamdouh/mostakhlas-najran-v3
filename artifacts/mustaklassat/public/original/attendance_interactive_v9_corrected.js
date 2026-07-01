@@ -3638,8 +3638,9 @@ function backupAttendanceData() {
       attendanceData: attendanceData,
 
       // التواقيع الديناميكية الحالية
-      dynamicSignatures: JSON.parse(localStorage.getItem('dynamicSignatures') || 'null'),
-
+dynamicSignatures: (typeof getSignatures === 'function')
+  ? getSignatures()
+  : JSON.parse(localStorage.getItem('dynamicSignatures') || '[]'),
       // بيانات العقد التي قد تحتوي أسماء/مسميات التواقيع القديمة
       persistentContractData: JSON.parse(localStorage.getItem('persistentContractData') || '{}'),
 
@@ -3651,7 +3652,7 @@ function backupAttendanceData() {
       !backupPayload.attendanceData ||
       Object.values(backupPayload.attendanceData).every(v => Array.isArray(v) && v.length === 0)
     ) {
-      if (!confirm('لا توجد عمالة واضحة في الحضور. هل تريد تنزيل النسخة الاحتياطية trotzdem؟')) {
+      if (!confirm('لا توجد عمالة واضحة في الحضور. هل تريد تنزيل النسخة الاحتياطية رغم ذلك؟')) {
         return;
       }
     }
