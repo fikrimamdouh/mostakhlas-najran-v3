@@ -1,12 +1,12 @@
-// Hospital Raise Letters Toolbar Organizer V2
+// Hospital Raise Letters Toolbar Organizer V3
 // Scope: hospital_raise_letters.html only.
-// Separates printing controls from settings controls and removes explanatory text from official documents.
+// Keeps print/settings split but removes sticky overlay and scrolls opened panels into view.
 (function () {
   'use strict';
 
   if (!/hospital_raise_letters\.html/.test(location.pathname) && !window.__HOSPITAL_LETTERS_STANDALONE_PAGE__) return;
-  if (window.__HOSPITAL_RAISE_LETTERS_TOOLBAR_ORGANIZER_V2__) return;
-  window.__HOSPITAL_RAISE_LETTERS_TOOLBAR_ORGANIZER_V2__ = true;
+  if (window.__HOSPITAL_RAISE_LETTERS_TOOLBAR_ORGANIZER_V3__) return;
+  window.__HOSPITAL_RAISE_LETTERS_TOOLBAR_ORGANIZER_V3__ = true;
 
   var SETTINGS_KEY = 'hospitalRaiseLettersSettings_v8';
   var BAD_TEXT_RE = /يتضمن\s+هذا\s+الفهرس|لاستخدامه\s+كغلاف\s+تنظيمي|غلاف\s+تنظيمي|الحزمة\s+الرسمية|شرح\s+تعريفي|الشروحات\s+التعريفية/i;
@@ -54,14 +54,14 @@
   }
 
   function patchPrintWindowText() {
-    if (window.__HOSPITAL_RAISE_LETTERS_OFFICIAL_WRITE_PATCHED_V2__) return;
-    window.__HOSPITAL_RAISE_LETTERS_OFFICIAL_WRITE_PATCHED_V2__ = true;
+    if (window.__HOSPITAL_RAISE_LETTERS_OFFICIAL_WRITE_PATCHED_V3__) return;
+    window.__HOSPITAL_RAISE_LETTERS_OFFICIAL_WRITE_PATCHED_V3__ = true;
     var oldOpen = window.open;
     window.open = function () {
       var win = oldOpen.apply(window, arguments);
       try {
-        if (win && win.document && !win.__officialTextPatchedV2) {
-          win.__officialTextPatchedV2 = true;
+        if (win && win.document && !win.__officialTextPatchedV3) {
+          win.__officialTextPatchedV3 = true;
           var oldWrite = win.document.write.bind(win.document);
           win.document.write = function (html) {
             html = String(html || '')
@@ -82,7 +82,8 @@
     var st = document.createElement('style');
     st.id = 'hrl-toolbar-organizer-css';
     st.textContent = [
-      '#hrl .toolbar.hrl-organized{display:block!important;position:sticky;top:8px;z-index:30;background:#ffffff!important;border:1px solid #dbe3ef;border-radius:18px;padding:12px;box-shadow:0 8px 25px rgba(15,23,42,.10);}',
+      '#hrl .toolbar.hrl-organized{display:block!important;position:relative!important;top:auto!important;z-index:1!important;background:#ffffff!important;border:1px solid #dbe3ef;border-radius:18px;padding:12px;box-shadow:0 8px 25px rgba(15,23,42,.08);}',
+      '#hrl .panel{scroll-margin-top:18px;}',
       '#hrl .hrl-tool-section{border:1px solid #e2e8f0;border-radius:16px;background:#f8fafc;padding:12px;margin:0 0 10px;}',
       '#hrl .hrl-tool-section:last-child{margin-bottom:0;}',
       '#hrl .hrl-tool-title{font-weight:950;color:#003087;text-align:center;margin:0 0 10px;font-size:16px;}',
@@ -110,7 +111,14 @@
 
   function labelFromButton(btn) {
     var text = clean(btn && (btn.innerText || btn.textContent || ''));
-    return text.replace(/^طباعة\s*/,'').trim() || clean(btn && btn.dataset && btn.dataset.print) || 'خطاب';
+    return text.replace(/^طباعة\s*/, '').trim() || clean(btn && btn.dataset && btn.dataset.print) || 'خطاب';
+  }
+
+  function scrollOpenPanel(root) {
+    try {
+      var panel = root.querySelector('.panel.open') || root.querySelector('.panel:not([hidden])');
+      if (panel && panel.scrollIntoView) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (_) {}
   }
 
   function selectDocAndOpenSettings(root, key) {
@@ -123,10 +131,7 @@
       setTimeout(function () {
         var docBtn = root.querySelector('[data-toggle="doc"]');
         if (docBtn) docBtn.click();
-        setTimeout(function () {
-          var panel = root.querySelector('.panel.open');
-          if (panel && panel.scrollIntoView) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
+        setTimeout(function () { scrollOpenPanel(root); }, 160);
       }, 80);
     } catch (_) {}
   }
@@ -140,6 +145,17 @@
     return b;
   }
 
+  function bindSettingsAutoScroll(root) {
+    if (root.__hrlSettingsAutoScrollBound) return;
+    root.__hrlSettingsAutoScrollBound = true;
+    root.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest && e.target.closest('[data-toggle]');
+      if (!btn) return;
+      setTimeout(function () { scrollOpenPanel(root); }, 180);
+      setTimeout(function () { scrollOpenPanel(root); }, 420);
+    }, true);
+  }
+
   function refreshPreviewIfNeeded(changed) {
     if (!changed) return;
     try {
@@ -151,6 +167,7 @@
   function organizeToolbar() {
     var root = document.getElementById('hrl');
     if (!root) return;
+    bindSettingsAutoScroll(root);
     refreshPreviewIfNeeded(scrubOfficialText('organize'));
     patchPrintWindowText();
 
@@ -269,5 +286,5 @@
   } catch (_) {}
 
   window.HospitalRaiseLettersOfficialTextCleaner = { clean: scrubOfficialText };
-  console.info('[Hospital Raise Letters Toolbar Organizer] installed v2 + official text cleaner');
+  console.info('[Hospital Raise Letters Toolbar Organizer] installed v3 non-sticky + auto-scroll');
 })();
