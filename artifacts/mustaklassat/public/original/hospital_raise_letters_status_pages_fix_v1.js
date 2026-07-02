@@ -94,8 +94,13 @@
     return /إجاز|اجاز|اجازه|إجازه|vacation|annual\s+leave|leave/i.test(t) || hasExactCode(row, ['ج', 'إ', 'أجازة', 'إجازة', 'اجازة']);
   }
   function isVacant(row) {
-    var t = deepText(row, 0);
-    return /شاغر|vacant|vacancy/i.test(t) || (!name(row) && !!job(row)) || hasExactCode(row, ['ش']);
+    var n = name(row);
+    var j = job(row);
+    var st = first(row, ['status', 'attendanceStatus', 'type', 'حالة', 'الحالة']);
+    var directText = [n, j, st].join(' ');
+
+    // لا تعتبر كود "ش" داخل days شاغرًا إذا كان للصف اسم موظف.
+    return (!n && !!j) || /شاغر|vacant|vacancy/i.test(directText);
   }
   function isSaudi(row) {
     var t = deepText(row, 0);
@@ -121,7 +126,8 @@
   function serialize(doc) { return '<!doctype html>\n' + doc.documentElement.outerHTML; }
   function findPages(doc, keyword) {
     return Array.prototype.filter.call(doc.querySelectorAll('section.page'), function (p) {
-      return clean(p.textContent).indexOf(keyword) >= 0;
+      var title = p.querySelector('.title');
+      return title && clean(title.textContent) === keyword;
     });
   }
   function setTableRows(table, rowHtml) {

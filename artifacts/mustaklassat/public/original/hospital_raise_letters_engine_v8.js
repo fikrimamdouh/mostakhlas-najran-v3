@@ -284,8 +284,14 @@
   }
 
   function isVacant(e) {
-    const t = deepTextLocal(e, 0);
-    return /شاغر|vacant|vacancy/i.test(t) || (!empName(e) && !!empJob(e)) || hasExactCode(e, ['ش']);
+    const name = empName(e);
+    const job = empJob(e);
+    const status = empStatus(e);
+    const directText = [name, job, status].join(' ');
+
+    // الشاغر الحقيقي: صف بدون اسم ومعه وظيفة، أو نص مباشر يقول شاغر.
+    // لا تعتبر كود "ش" داخل days شاغرًا إذا كان للصف اسم موظف.
+    return (!name && !!job) || /شاغر|vacant|vacancy/i.test(directText);
   }
 
   function isLeave(e) {
