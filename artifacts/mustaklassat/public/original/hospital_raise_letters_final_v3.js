@@ -26,7 +26,7 @@
     loadScript('hospital-raise-letters-print-compact-v4', '/original/hospital_raise_letters_print_compact_v4.js?v=20260702_v4_compact_a4');
   }, 260);
   setTimeout(function(){
-    loadScript('hospital-raise-letters-selected-print-polish-v3', '/original/hospital_raise_letters_selected_print_polish_v1.js?v=20260702_v3_new_docs_only');
+    loadScript('hospital-raise-letters-selected-print-polish-v4', '/original/hospital_raise_letters_selected_print_polish_v1.js?v=20260702_v4_compact_saudi_names');
   }, 330);
   setTimeout(function(){
     loadScript('hospital-raise-letters-custom-exclude-v1', '/original/hospital_raise_letters_custom_exclude_v1.js?v=20260702_v2_safe_index_rows');
