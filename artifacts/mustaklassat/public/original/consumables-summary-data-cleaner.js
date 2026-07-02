@@ -77,7 +77,7 @@
           e.stopPropagation();
           if (e.stopImmediatePropagation) e.stopImmediatePropagation();
         }
-        location.href = '/original/hospital_consumables_letters_settings.html?v=20260702_v7_fallback_letterhead_key&t=' + Date.now();
+        location.href = '/original/hospital_consumables_letters_settings.html?v=20260702_v8_print_now_auto&t=' + Date.now();
         return false;
       };
 
