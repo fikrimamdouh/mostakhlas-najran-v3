@@ -396,8 +396,23 @@
   }
 
   function isSaudi(e) {
-    const t = deepTextLocal(e, 0);
-    return /سعودي|سعودى|سعودية|السعودية|saudi|ksa/i.test(t) || /\bSA\b/i.test(t) || e.isSaudi === true || e.saudi === true;
+    const nat = empNationality(e);
+    const status = empStatus(e);
+    const directText = [nat, status].join(' ');
+
+    // لا تعتبر "غير سعودي" سعوديًا لمجرد احتوائها على كلمة سعودي.
+    if (/غير\s*سعود|غير\s*سعودي|غير\s*سعودى|non[-\s]*saudi|not\s+saudi|أجنبي|اجنبي/i.test(directText)) return false;
+
+    // فحص مباشر للجنسية/الحالة فقط، وليس كامل الصف.
+    return /(^|\s)(سعودي|سعودى|سعودية|السعودية|saudi|ksa)(\s|$)/i.test(directText) || e.isSaudi === true || e.saudi === true;
+  }
+
+  function isRealNamedEmployee(e) {
+    const n = clean(empName(e));
+    if (!n) return false;
+    if (/^(شاغر|شاغره|شاغرة|vacant|vacancy)$/i.test(n)) return false;
+    if (/شاغر|شاغره|شاغرة|vacant|vacancy/i.test(n)) return false;
+    return true;
   }
 
   const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة'];
@@ -634,10 +649,11 @@
       const rows = attendance().filter(isAbsence).map((e, i) => '<tr><td>' + ar(i + 1) + '</td><td>' + esc(empName(e)) + '</td><td>' + esc(empJob(e)) + '</td><td>' + esc(absenceNote(e)) + '</td></tr>');
       html += table(s, k, ['م', 'الاسم', 'الوظيفة', 'ملاحظات'], rows);
     } else if (k === 'saudi') {
-      const all = attendance(), sa = all.filter(isSaudi).length, total = all.length, perc = total ? sa * 100 / total : 0;
+      const all = attendance().filter(e => isRealNamedEmployee(e));
+      const sa = all.filter(isSaudi).length, total = all.length, perc = total ? sa * 100 / total : 0;
       html += table(s, k, ['عدد الوظائف', 'عدد السعوديين', 'النسبة الفعلية', 'النسبة المطلوبة'], ['<tr><td>' + ar(total) + '</td><td>' + ar(sa) + '</td><td>' + perc.toFixed(2) + '%</td><td>' + num(s.requiredSaudi) + '%</td></tr>']);
     } else if (k === 'saudiNames') {
-      const rows = attendance().filter(isSaudi).map((e, i) => '<tr><td>' + ar(i + 1) + '</td><td>' + esc(empName(e)) + '</td><td>' + esc(empJob(e)) + '</td><td>' + esc(empNationality(e)) + '</td><td>' + esc(empId(e)) + '</td></tr>');
+      const rows = attendance().filter(e => isRealNamedEmployee(e) && isSaudi(e)).map((e, i) => '<tr><td>' + ar(i + 1) + '</td><td>' + esc(empName(e)) + '</td><td>' + esc(empJob(e)) + '</td><td>' + esc(empNationality(e)) + '</td><td>' + esc(empId(e)) + '</td></tr>');
       html += table(s, k, ['م', 'الاسم', 'الوظيفة', 'الجنسية', 'رقم الهوية / الإقامة'], rows);
     }
     if (k === 'custom') html = lead(s, k) + body(s, k, d.body);

@@ -159,8 +159,23 @@
   }
 
   function isSaudi(row) {
-    var t = deepText(row, 0);
-    return /سعودي|سعودى|سعودية|السعودية|saudi|ksa/i.test(t) || /\bSA\b/i.test(t) || row.isSaudi === true || row.saudi === true;
+    var nat = nationality(row);
+    var st = first(row, ['status', 'attendanceStatus', 'type', 'حالة', 'الحالة']);
+    var directText = [nat, st].join(' ');
+
+    // لا تعتبر "غير سعودي" سعوديًا لمجرد احتوائها على كلمة سعودي.
+    if (/غير\s*سعود|غير\s*سعودي|غير\s*سعودى|non[-\s]*saudi|not\s+saudi|أجنبي|اجنبي/i.test(directText)) return false;
+
+    // فحص مباشر للجنسية/الحالة فقط، وليس كامل الصف.
+    return /(^|\s)(سعودي|سعودى|سعودية|السعودية|saudi|ksa)(\s|$)/i.test(directText) || row.isSaudi === true || row.saudi === true;
+  }
+
+  function isRealNamedEmployee(row) {
+    var n = clean(name(row));
+    if (!n) return false;
+    if (/^(شاغر|شاغره|شاغرة|vacant|vacancy)$/i.test(n)) return false;
+    if (/شاغر|شاغره|شاغرة|vacant|vacancy/i.test(n)) return false;
+    return true;
   }
 
   function statusFixCss() {
@@ -291,7 +306,7 @@
   function fixSaudi(doc) {
     var pages = findPages(doc, 'بيان السعودة');
     if (!pages.length) return;
-    var rows = attendanceRows();
+    var rows = attendanceRows().filter(function (r) { return isRealNamedEmployee(r); });
     var total = rows.length;
     var sa = rows.filter(isSaudi).length;
     var perc = total ? ((sa * 100 / total).toFixed(1) + '%') : '0%';
@@ -303,25 +318,16 @@
   }
 
   function fixSaudiNames(doc) {
-    var rows = attendanceRows().filter(isSaudi);
+    var rows = attendanceRows().filter(function (r) { return isRealNamedEmployee(r) && isSaudi(r); });
     var pages = findPages(doc, 'بيان أسماء السعوديين');
     if (!pages.length) return;
     var base = pages[0], table = base.querySelector('table.tbl');
     if (!table) return;
     var rowHtml = rows.map(function (r, i) {
       return '<tr><td>' + ar(i + 1) + '</td><td>' + esc(name(r)) + '</td><td>' + esc(job(r)) + '</td><td>' + esc(nationality(r)) + '</td><td>' + esc(empId(r)) + '</td></tr>';
-    });
-    var groups = chunk(rowHtml, SAUDI_NAMES_ROWS_PER_PAGE);
-    var parent = base.parentNode;
-    groups.forEach(function (g, idx) {
-      var page = idx === 0 ? base : base.cloneNode(true);
-      page.classList.add('saudi-names-page');
-      setTableRows(page.querySelector('table.tbl'), g.join('') || '<tr><td colspan="5">لا توجد بيانات</td></tr>');
-      if (groups.length > 1) insertCounter(page, idx + 1, groups.length);
-      if (idx < groups.length - 1) removeAfterTable(page);
-      if (idx > 0) parent.insertBefore(page, base.nextSibling);
-    });
-    pages.slice(1).forEach(function (p) { if (p.parentNode) p.parentNode.removeChild(p); });
+    }).join('');
+    setTableRows(table, rowHtml);
+    paginateRows(doc, pages, base, table, rowHtml, SAUDI_NAMES_ROWS_PER_PAGE, ['م', 'الاسم', 'الوظيفة', 'الجنسية', 'رقم الهوية / الإقامة']);
   }
 
   function transform(html) {
