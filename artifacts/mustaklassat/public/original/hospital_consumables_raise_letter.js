@@ -22,10 +22,9 @@
   if (window.__HOSPITAL_CONSUMABLES_LETTERS_CENTER_V6__) return;
   window.__HOSPITAL_CONSUMABLES_LETTERS_CENTER_V6__ = true;
 
-  const SETTINGS_KEY = 'hospitalConsumablesRaiseLettersSettings_v1';
-  const DB_VERSION = 'consumables_v27';
-  const FIXED_OLD_ENTITY = 'تجمع نجران الصحي';
-  const DOCS = [
+const SETTINGS_KEY = 'hospitalConsumablesRaiseLettersSettings_v1';
+const FALLBACK_LETTERHEAD_KEY = 'hospitalConsumablesLetterheadDataUrl_v1';
+const DB_VERSION = 'consumables_v27';  const DOCS = [
     ['main', 'خطاب المستهلكات للمستشفى'],
     ['noPrev', 'عدم أسبقية صرف - مقاولين'],
     ['electricity', 'محضر استهلاك كهرباء'],
@@ -49,10 +48,65 @@
   function getExtract() { return readJson('persistentExtractData', {}); }
   function domText(selector) { const el = document.querySelector(selector); return clean(el && el.textContent); }
 
-  function currentHospitalName() {
-    const c = getContract();
-    return clean(c.hospitalName || c.siteName || c.centerName || localStorage.getItem('hospitalName') || localStorage.getItem('currentHospital') || domText('.hospitalName') || 'المستشفى');
-  }
+ function currentHospitalName() {
+  const c = getContract();
+  const e = getExtract();
+
+  const blocked = /^(تجمع نجران الصحي|غير محدد|المستشفى|الموقع الحالي)$/i;
+
+  const possible = [
+    c.displayHospitalName,
+    c.siteDisplayName,
+    c.locationName,
+    c.activeHospitalName,
+    c.selectedHospitalName,
+    c.siteName,
+    c.centerName,
+
+    e.displayHospitalName,
+    e.siteDisplayName,
+    e.locationName,
+    e.activeHospitalName,
+    e.selectedHospitalName,
+    e.siteName,
+    e.centerName,
+
+    localStorage.getItem('selectedHospital'),
+    localStorage.getItem('selectedHospitalName'),
+    localStorage.getItem('currentSite'),
+    localStorage.getItem('currentSiteName'),
+    localStorage.getItem('siteName'),
+    localStorage.getItem('centerName'),
+    localStorage.getItem('currentHospital'),
+    localStorage.getItem('hospitalName'),
+
+    sessionStorage.getItem('selectedHospital'),
+    sessionStorage.getItem('selectedHospitalName'),
+    sessionStorage.getItem('currentSite'),
+    sessionStorage.getItem('currentSiteName'),
+    sessionStorage.getItem('siteName'),
+    sessionStorage.getItem('centerName'),
+    sessionStorage.getItem('currentHospital'),
+    sessionStorage.getItem('hospitalName'),
+
+    domText('[data-current-hospital]'),
+    domText('[data-hospital-name]'),
+    domText('[data-site-name]'),
+    domText('#hospital-name'),
+    domText('#site-name'),
+    domText('.hospitalName'),
+    domText('.siteName'),
+
+    c.hospitalName,
+    e.hospitalName
+  ];
+
+  const found = possible
+    .map(clean)
+    .find(v => v && !blocked.test(v));
+
+  return found || 'الموقع الحالي';
+}
   function currentCompanyName() {
     const c = getContract();
     const dom = domText('.companyName');
@@ -93,9 +147,8 @@
       contentTop: 52,
       letterheadHeight: 45,
       vatRate: 15,
-      entityTitleMode: 'auto',
-      entityTitle: '',
-      departmentTitle: 'وحدة الصيانة العامة',
+      
+      
       phoneFaxAr: '',
       phoneFaxEn: '',
       letters: defaultLetterSettings()
@@ -107,14 +160,13 @@
       const d = defaultSettings(); raw = raw || {};
       d.letterheadEnabled = raw.letterheadEnabled || d.letterheadEnabled;
       d.letterheadMode = raw.letterheadMode || (raw.letterheadDataUrl ? 'full' : d.letterheadMode);
-      d.letterheadDataUrl = raw.letterheadDataUrl || d.letterheadDataUrl;
+      d.letterheadDataUrl = raw.letterheadDataUrl || fallbackLetterheadImage() || d.letterheadDataUrl;
       d.letterheadHasPlaceData = raw.letterheadHasPlaceData || d.letterheadHasPlaceData;
       d.contentTop = raw.contentTop || d.contentTop;
       d.letterheadHeight = raw.letterheadHeight || d.letterheadHeight;
       d.vatRate = raw.vatRate || d.vatRate;
-      d.entityTitleMode = raw.entityTitleMode || (clean(raw.entityTitle) && clean(raw.entityTitle) !== FIXED_OLD_ENTITY ? 'manual' : 'auto');
-      d.entityTitle = clean(raw.entityTitle) === FIXED_OLD_ENTITY ? '' : (raw.entityTitle || d.entityTitle);
-      d.departmentTitle = raw.departmentTitle || d.departmentTitle;
+    
+
       d.phoneFaxAr = raw.phoneFaxAr || d.phoneFaxAr;
       d.phoneFaxEn = raw.phoneFaxEn || d.phoneFaxEn;
       d.letters.main.recipient = raw.recipient || d.letters.main.recipient;
@@ -124,19 +176,40 @@
     }
     const s = merge(defaultSettings(), raw);
     if (!s.letterheadMode) s.letterheadMode = s.letterheadDataUrl ? 'full' : 'external';
-    if (!s.entityTitleMode) s.entityTitleMode = clean(s.entityTitle) && clean(s.entityTitle) !== FIXED_OLD_ENTITY ? 'manual' : 'auto';
-    if (clean(s.entityTitle) === FIXED_OLD_ENTITY) { s.entityTitle = ''; s.entityTitleMode = 'auto'; }
+    if (!clean(s.letterheadDataUrl)) {
+  s.letterheadDataUrl = fallbackLetterheadImage();
+}
+  
+
     return s;
   }
   function getSettings() { return normalizeOldSettings(readJson(SETTINGS_KEY, {})); }
   function setSettings(s) { s.version = 'hospital-consumables-letters-v6'; writeJson(SETTINGS_KEY, s); }
 
-  function activeLetterhead(s) { return yes(s.letterheadEnabled) && (s.letterheadMode === 'external' || clean(s.letterheadDataUrl)); }
-  function useLetterhead(s) { return activeLetterhead(s); }
-  function headImage(s) { return yes(s.letterheadEnabled) && s.letterheadMode !== 'external' && clean(s.letterheadDataUrl) ? s.letterheadDataUrl : ''; }
+ function fallbackLetterheadImage() {
+  return clean(localStorage.getItem(FALLBACK_LETTERHEAD_KEY) || '');
+}
+
+function resolvedLetterheadImage(s) {
+  return clean((s && s.letterheadDataUrl) || '') || fallbackLetterheadImage();
+}
+
+function activeLetterhead(s) {
+  const img = resolvedLetterheadImage(s);
+  return yes(s.letterheadEnabled) && (s.letterheadMode === 'external' || !!img);
+}
+
+function useLetterhead(s) { return activeLetterhead(s); }
+
+function headImage(s) {
+  const img = resolvedLetterheadImage(s);
+  if (!yes(s.letterheadEnabled)) return '';
+  if (s.letterheadMode === 'external') return '';
+  return img;
+}
   function hidePlaceData(s) { return activeLetterhead(s) && yes(s.letterheadHasPlaceData); }
-  function effectiveEntityTitle(s) { return s.entityTitleMode === 'manual' && clean(s.entityTitle) ? clean(s.entityTitle) : currentHospitalName(); }
-  function ctx(s) { const m = extractMeta(), net = currentConsumablesNet(), vat = net * num(s.vatRate) / 100, grand = net + vat; return { hospital: hidePlaceData(s) ? '' : currentHospitalName(), placePhrase: hidePlaceData(s) ? '' : ' لمستشفى ' + currentHospitalName(), company: currentCompanyName(), paymentNo: m.paymentNo, start: fmtDate(m.start), end: fmtDate(m.end), period: extractPhrase(), net: money(net), vat: money(vat), grand: money(grand), grandWords: tafqeetSAR(grand) }; }
+
+   function ctx(s) {   const m = extractMeta();   const hospital = currentHospitalName();   const company = currentCompanyName();   const net = currentConsumablesNet();   const vat = net * num(s.vatRate) / 100;   const grand = net + vat;    return {     hospital: hidePlaceData(s) ? '' : hospital,     placePhrase: hidePlaceData(s) ? '' : ' لموقع ' + hospital,     company,     paymentNo: m.paymentNo,     start: fmtDate(m.start),     end: fmtDate(m.end),     period: extractPhrase(),     net: money(net),     vat: money(vat),     grand: money(grand),     grandWords: tafqeetSAR(grand)   }; }
   function tpl(t, s) { const c = ctx(s); return String(t || '').replace(/\{([a-zA-Z0-9_]+)\}/g, (_, k) => c[k] ?? ''); }
 
   function readRenderedNumber(selector) { const el = document.querySelector(selector); return el ? num(el.textContent) : 0; }
@@ -179,17 +252,101 @@
     return `<style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box}body{direction:rtl;margin:0;background:#e9eef5;color:#111827;font-family:Tajawal,Arial,sans-serif}.toolbar{position:sticky;top:0;display:flex;justify-content:center;gap:10px;background:#111827;padding:10px;z-index:5}.toolbar button{border:0;border-radius:10px;padding:10px 18px;font-weight:900;cursor:pointer;background:#d4af37;color:#111}.page{width:210mm;min-height:297mm;margin:12px auto;background:#fff;box-shadow:0 10px 30px rgba(15,23,42,.16);position:relative;overflow:hidden;padding:0;page-break-after:always}.letterhead-bg{position:absolute;top:0;left:0;width:210mm;z-index:0;pointer-events:none}.letterhead-bg.full{height:297mm;object-fit:cover}.letterhead-bg.top{height:${lhHeight}mm;object-fit:cover}.letter-content{position:relative;z-index:1;padding:${top}mm 15mm 18mm 15mm;min-height:297mm}.letter-content.no-letterhead{padding:14mm 15mm 18mm}.head{display:grid;grid-template-columns:82px 1fr 82px;align-items:center;border-bottom:2px solid #003087;padding-bottom:12px;margin-bottom:30px}.head img{width:72px}.head .t{text-align:center}.head h1{font-size:17px;margin:0 0 5px;color:#003087;font-weight:900}.head h2{font-size:15px;margin:0;color:#111827;font-weight:800}.date-line{text-align:right;font-size:15px;font-weight:900;margin-bottom:18mm}.title{text-align:center;font-size:18px;font-weight:900;text-decoration:underline;text-underline-offset:5px;margin:0 0 18mm;line-height:1.8}.to{display:flex;justify-content:space-between;align-items:center;width:100%;gap:18px;direction:rtl;font-size:15.5px;font-weight:900;margin:4px 0 24px;line-height:2;white-space:nowrap}.recipient-name{max-width:78%;text-align:right}.recipient-suffix{min-width:72px;text-align:left;white-space:nowrap}.salam{text-align:center;font-size:15.5px;font-weight:900;margin:20px 0 14px}.body-text{font-size:15px;line-height:2.15;text-align:justify;margin-top:6px;white-space:pre-line}.std-table{width:100%;border-collapse:collapse;margin:18px auto 14px;font-size:14px;table-layout:fixed}.std-table td,.std-table th{border:1px solid #333;padding:8px;text-align:center;vertical-align:middle;line-height:1.65}.std-table th{font-weight:900;background:#f8fafc}.std-table td:first-child{text-align:right;font-weight:700}.amount-table td:last-child{font-weight:900;direction:ltr;white-space:nowrap}.grand td{background:#fff7d6;font-weight:900}.tafqeet{border:1px solid #94a3b8;background:#f8fafc;border-radius:8px;padding:8px 12px;margin-top:8px;font-weight:900;line-height:1.8}.closing{font-size:15px;line-height:2;margin-top:18px;white-space:pre-line}.sig-grid{display:grid;gap:14mm;margin-top:38mm;align-items:start}.sig-cell{text-align:center;font-weight:900;white-space:nowrap}.sig-title{font-weight:900;margin-bottom:14px;white-space:nowrap}.sig-line{height:28px;border-bottom:1px solid #111;margin:0 14px 10px}.sig-name{font-weight:900;margin-top:8px;white-space:normal;line-height:1.7}.stamp{text-align:center;margin-top:20mm;font-size:17px;font-weight:900}.footer{position:absolute;bottom:10mm;left:15mm;right:15mm;border-top:1px solid #cbd5e1;padding-top:5px;font-size:11px;display:flex;justify-content:space-between;direction:ltr}.extract-page{padding:14mm 12mm 18mm!important}.extract-page h1{text-align:center;color:#003087;font-size:18px;margin:0 0 8mm}.extract-page h2{text-align:center;font-size:15px;margin:0 0 6mm}.extract-page table{width:100%;border-collapse:collapse;font-size:10.5px}.extract-page td,.extract-page th{border:1px solid #333;padding:4px;text-align:center;vertical-align:middle}.extract-page th{background:#f8fafc;font-weight:900}@media print{body{background:#fff}.toolbar{display:none}.page{margin:0;box-shadow:none;width:210mm;min-height:297mm}.footer{bottom:0}.page:last-child{page-break-after:auto}}</style>`;
   }
   function letterheadHtml(s) { const img = headImage(s); return img ? `<img class="letterhead-bg ${s.letterheadMode === 'top' ? 'top' : 'full'}" src="${esc(img)}">` : ''; }
-  function headerHtml(s) { return hidePlaceData(s) ? '' : `<div class="head"><img src="najran_health_cluster_logo.png"><div class="t"><h1>${esc(effectiveEntityTitle(s))}</h1><h2>${esc(s.departmentTitle || 'وحدة الصيانة العامة')}</h2></div><img src="najran_health_cluster_logo.png"></div>`; }
+ function headerHtml(s) {
+  return '';
+}
   function footerHtml(s) { if (hidePlaceData(s) || (!clean(s.phoneFaxAr) && !clean(s.phoneFaxEn))) return ''; return `<div class="footer"><span>${esc(s.phoneFaxEn)}</span><span dir="rtl">${esc(s.phoneFaxAr)}</span></div>`; }
-  function pageWrap(s, html) { return `<section class="page">${letterheadHtml(s)}<div class="letter-content ${activeLetterhead(s) ? '' : 'no-letterhead'}">${headerHtml(s)}${html}${footerHtml(s)}</div></section>`; }
-  function signaturesHtml(letter) { const sigs = (letter.signatures || []).filter(x => clean(x.title) || clean(x.name)); if (!sigs.length) return ''; const cols = sigs.length === 1 ? 1 : sigs.length === 2 ? 2 : 3; return `<div class="sig-grid" style="grid-template-columns:repeat(${cols},1fr)">${sigs.map(x => `<div class="sig-cell"><div class="sig-title">${esc(x.title)}</div><div class="sig-line"></div><div class="sig-name">${esc(x.name)}</div></div>`).join('')}</div>`; }
+function pageWrap(s, html) {
+  return `<section class="page">${letterheadHtml(s)}<div class="letter-content ${activeLetterhead(s) ? '' : 'no-letterhead'}">${html}${footerHtml(s)}</div></section>`;
+}  function signaturesHtml(letter) { const sigs = (letter.signatures || []).filter(x => clean(x.title) || clean(x.name)); if (!sigs.length) return ''; const cols = sigs.length === 1 ? 1 : sigs.length === 2 ? 2 : 3; return `<div class="sig-grid" style="grid-template-columns:repeat(${cols},1fr)">${sigs.map(x => `<div class="sig-cell"><div class="sig-title">${esc(x.title)}</div><div class="sig-line"></div><div class="sig-name">${esc(x.name)}</div></div>`).join('')}</div>`; }
   function stampHtml(letter) { return yes(letter.showStamp) ? '<div class="stamp">الختم</div>' : ''; }
   function amountTable(s) { const c = ctx(s); return `<table class="std-table amount-table"><tbody><tr><td>صافي مستحقات المستهلكات ومقاولي الباطن عن مدة المستخلص</td><td>${moneySAR(c.net)}</td></tr><tr><td>ضريبة القيمة المضافة ${money(s.vatRate)}%</td><td>${moneySAR(c.vat)}</td></tr><tr class="grand"><td>الإجمالي</td><td>${moneySAR(c.grand)}</td></tr></tbody></table><div class="tafqeet">${esc(c.grandWords)}</div>`; }
   function buildMain(s) { const l = s.letters.main; return pageWrap(s, `<div class="to"><span class="recipient-name">${esc(tpl(l.recipient, s))}</span><span class="recipient-suffix">${esc(tpl(l.recipientSuffix, s))}</span></div><div class="salam">السلام عليكم ورحمة الله وبركاته، وبعد:</div><div class="body-text">${esc(tpl(l.body, s))}</div>${amountTable(s)}<div class="closing">${esc(tpl(l.closing, s))}</div>${signaturesHtml(l)}${stampHtml(l)}`); }
   function buildNoPrev(s) { const l = s.letters.noPrev, c = ctx(s); return pageWrap(s, `${yes(l.showDate) ? `<div class="date-line">التاريخ : ${esc(c.end)}</div>` : ''}<h1 class="title">${esc(tpl(l.title, s))}</h1><div class="body-text" style="font-size:17px;font-weight:900;text-align:center">${esc(tpl(l.body, s))}</div><div class="closing" style="text-align:center;font-weight:900">${esc(tpl(l.closing, s))}</div>${signaturesHtml(l)}${stampHtml(l)}`); }
   function buildCertificate(s) { const l = s.letters.certificate; return pageWrap(s, `<h1 class="title">${esc(tpl(l.title, s))}</h1><div class="body-text" style="font-size:16px;font-weight:900;text-align:center">${esc(tpl(l.body, s))}</div>${signaturesHtml(l)}${stampHtml(l)}`); }
   function buildWater(s) { const l = s.letters.water, rows = effectiveWaterRows(s); const rowHtml = rows.map(r => `<tr><td>${esc(r.item || 'توريد مياه')}</td><td>${esc(r.unit || 'م³')}</td><td>${esc(r.qty || r.quantity || '')}</td><td>${esc(r.notes || '')}</td></tr>`).join(''); return pageWrap(s, `<h1 class="title">${esc(tpl(l.title, s))}</h1><div class="body-text" style="font-size:16px;font-weight:900;text-align:center">${esc(tpl(l.body, s))}</div><table class="std-table"><thead><tr><th>البيان</th><th>الوحدة</th><th>الكمية</th><th>ملاحظات</th></tr></thead><tbody>${rowHtml || '<tr><td>توريد مياه</td><td>م³</td><td></td><td></td></tr>'}</tbody></table>${signaturesHtml(l)}${stampHtml(l)}`); }
-  function buildElectricity(s) { const l = s.letters.electricity, rows = l.rows || []; const totalPower = rows.reduce((sum, r) => sum + num(r.power), 0); const daily = totalPower * num(l.hoursPerDay); const monthly = daily * num(l.daysCount); const value = monthly * num(l.rate); const rowHtml = rows.map(r => `<tr><td>${esc(r.place)}</td><td>${esc(r.load)}</td><td>${money(r.power)} ك.واط</td></tr>`).join(''); return pageWrap(s, `<h1 class="title">${esc(tpl(l.title, s))}</h1><table class="std-table"><thead><tr><th>المكان</th><th>نوع الحمل</th><th>القدرة ك.واط</th></tr></thead><tbody>${rowHtml}<tr class="grand"><td colspan="2">إجمالي القدرة المستهلكة</td><td>${money(totalPower)} ك.واط</td></tr><tr><td colspan="2">الاستهلاك اليومي</td><td>${money(daily)} ك.واط</td></tr><tr><td colspan="2">الاستهلاك الشهري</td><td>${money(monthly)} ك.واط / س</td></tr><tr class="grand"><td colspan="2">قيمة الاستهلاك الشهري = ${money(monthly)} × ${money(l.rate)} ريال</td><td>${money(value)} ريال</td></tr></tbody></table>${signaturesHtml(l)}${stampHtml(l)}`); }
+  function defaultElectricityColumns() {
+  return [
+    { key: 'place', label: 'المكان', type: 'text', unit: '', calc: 'none' },
+    { key: 'load', label: 'نوع الحمل', type: 'text', unit: '', calc: 'none' },
+    { key: 'power', label: 'القدرة', type: 'number', unit: 'ك.واط', calc: 'sum' }
+  ];
+}
+
+function electricityColumns(letter) {
+  const cols = Array.isArray(letter && letter.columns) && letter.columns.length
+    ? letter.columns
+    : defaultElectricityColumns();
+
+  return cols.map((c, i) => ({
+    key: clean(c.key) || ('col' + (i + 1)),
+    label: clean(c.label) || clean(c.key) || ('عمود ' + (i + 1)),
+    type: clean(c.type) || 'text',
+    unit: clean(c.unit || ''),
+    calc: clean(c.calc || 'none')
+  }));
+}
+
+function electricityRows(letter) {
+  return Array.isArray(letter && letter.rows) ? letter.rows : [];
+}
+
+function electricityPowerColumn(cols) {
+  return cols.find(c => c.key === 'power') ||
+    cols.find(c => c.calc === 'sum') ||
+    cols.find(c => c.type === 'number') ||
+    cols[0];
+}
+
+function electricityCellValue(row, col) {
+  const raw = row && row[col.key];
+  if (col.type === 'number' || col.type === 'money') return money(raw);
+  return clean(raw);
+}
+
+function electricityCellText(row, col) {
+  const val = electricityCellValue(row, col);
+  if (!val) return '';
+  return val + (col.unit ? ' ' + col.unit : '');
+}
+
+function buildElectricity(s) {
+  const l = s.letters.electricity;
+  const cols = electricityColumns(l);
+  const rows = electricityRows(l);
+  const powerCol = electricityPowerColumn(cols);
+  const powerKey = powerCol ? powerCol.key : 'power';
+
+  const totalPower = rows.reduce((sum, r) => sum + num(r && r[powerKey]), 0);
+  const daily = totalPower * num(l.hoursPerDay);
+  const monthly = daily * num(l.daysCount);
+  const value = monthly * num(l.rate);
+
+  const headHtml = cols.map(c => `<th>${esc(c.label)}</th>`).join('');
+
+  const bodyHtml = rows.map(r => {
+    return '<tr>' + cols.map(c => `<td>${esc(electricityCellText(r, c))}</td>`).join('') + '</tr>';
+  }).join('');
+
+  const totalColspan = Math.max(1, cols.length - 1);
+
+  const totalRows = `
+    <tr class="grand"><td colspan="${totalColspan}">إجمالي القدرة المستهلكة</td><td>${money(totalPower)} ك.واط</td></tr>
+    <tr><td colspan="${totalColspan}">الاستهلاك اليومي</td><td>${money(daily)} ك.واط</td></tr>
+    <tr><td colspan="${totalColspan}">الاستهلاك الشهري</td><td>${money(monthly)} ك.واط / س</td></tr>
+    <tr class="grand"><td colspan="${totalColspan}">قيمة الاستهلاك الشهري = ${money(monthly)} × ${money(l.rate)} ريال</td><td>${money(value)} ريال</td></tr>
+  `;
+
+  return pageWrap(s, `
+    <h1 class="title">${esc(tpl(l.title, s))}</h1>
+    <table class="std-table">
+      <thead><tr>${headHtml}</tr></thead>
+      <tbody>${bodyHtml || '<tr><td colspan="' + cols.length + '">لا توجد صفوف</td></tr>'}${totalRows}</tbody>
+    </table>
+    ${signaturesHtml(l)}
+    ${stampHtml(l)}
+  `);
+}
   function buildDoc(key, s) { if (key === 'main') return buildMain(s); if (key === 'noPrev') return buildNoPrev(s); if (key === 'electricity') return buildElectricity(s); if (key === 'water') return buildWater(s); if (key === 'certificate') return buildCertificate(s); if (key === 'all') return DOCS.map(d => buildDoc(d[0], s)).join(''); return buildMain(s); }
 
   function cellDisplayValue(cell) { const print = cell.querySelector('.cell-print-content'); const field = cell.querySelector('input,select,textarea'); return clean((print && print.textContent) || (field && field.value) || cell.textContent || ''); }
@@ -205,12 +362,42 @@
   function saveDialog(silent) { const s = getSettings(); document.querySelectorAll('#hospital-consumables-raise-letter-overlay [data-path]').forEach(el => setByPath(s, el.dataset.path, el.value)); setSettings(s); if (silent) return; const note = document.getElementById('hospital-consumables-letters-note'); if (note) { note.textContent = 'تم حفظ إعدادات الخطاب والترويسة والتوقيعات.'; setTimeout(() => note.textContent = '', 2500); } }
   function renderDocButtons(s) { return DOCS.map(d => `<button class="btn ${s.selectedDoc === d[0] ? 'btn-primary' : 'btn-light'}" onclick="HospitalConsumablesRaiseLetter.selectDoc('${d[0]}')">${d[1]}</button>`).join(''); }
   function renderSignatureEditor(key, letter) { return `<div class="settings-grid">${(letter.signatures || []).map((sig, i) => `${field(`letters.${key}.signatures.${i}.title`, `صفة التوقيع ${i + 1}`, sig.title)}${field(`letters.${key}.signatures.${i}.name`, `اسم التوقيع ${i + 1}`, sig.name)}`).join('')}</div><div class="btn-row"><button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.addSignature()">إضافة توقيع</button><button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.removeSignature()">حذف آخر توقيع</button></div>`; }
-  function renderElectricityRows(l) { return `<div class="mini-table">${(l.rows || []).map((r, i) => `<div class="mini-row">${field(`letters.electricity.rows.${i}.place`, 'المكان', r.place)}${field(`letters.electricity.rows.${i}.load`, 'نوع الحمل', r.load)}${field(`letters.electricity.rows.${i}.power`, 'القدرة ك.واط', r.power, 'number')}</div>`).join('')}</div><div class="btn-row"><button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.addElectricityRow()">إضافة صف كهرباء</button><button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.removeElectricityRow()">حذف آخر صف</button></div>`; }
-  function renderWaterRows(l) { return `<div class="mini-table">${(l.rows || []).map((r, i) => `<div class="mini-row">${field(`letters.water.rows.${i}.item`, 'البيان', r.item)}${field(`letters.water.rows.${i}.unit`, 'الوحدة', r.unit)}${field(`letters.water.rows.${i}.qty`, 'الكمية', r.qty)}${field(`letters.water.rows.${i}.notes`, 'ملاحظات', r.notes)}</div>`).join('')}</div><div class="btn-row"><button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.refreshWaterRows()">تحديث من جدول توريد المياه فقط</button><button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.addWaterRow()">إضافة صف مياه</button><button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.removeWaterRow()">حذف آخر صف</button></div>`; }
-  function renderLetterSpecific(s) { const key = s.selectedDoc, l = s.letters[key]; let html = `<h3>إعدادات: ${LABELS[key]}</h3><div class="settings-grid">${field(`letters.${key}.title`, 'العنوان', l.title)}`; if (key === 'main') html += `${field('letters.main.recipient', 'اسم المخاطب', l.recipient)}${field('letters.main.recipientSuffix', 'الصفة / المحترم', l.recipientSuffix)}${area('letters.main.body', 'نص الخطاب', l.body)}${area('letters.main.closing', 'الخاتمة', l.closing)}${selectField('letters.main.showStamp','إظهار الختم',l.showStamp || 'no',[['yes','نعم'],['no','لا']])}`; if (key === 'noPrev') html += `${selectField('letters.noPrev.showDate','إظهار التاريخ',l.showDate,[['yes','نعم'],['no','لا']])}${area('letters.noPrev.body','نص الإقرار',l.body)}${area('letters.noPrev.closing','الخاتمة',l.closing)}${selectField('letters.noPrev.showStamp','إظهار الختم',l.showStamp,[['yes','نعم'],['no','لا']])}`; if (key === 'certificate') html += `${area('letters.certificate.body','نص الشهادة',l.body)}${selectField('letters.certificate.showStamp','إظهار الختم',l.showStamp,[['yes','نعم'],['no','لا']])}`; if (key === 'water') html += `${area('letters.water.body','نص محضر المياه',l.body)}${selectField('letters.water.showStamp','إظهار الختم',l.showStamp,[['yes','نعم'],['no','لا']])}`; if (key === 'electricity') html += `${field('letters.electricity.hoursPerDay','عدد ساعات التشغيل اليومية',l.hoursPerDay,'number')}${field('letters.electricity.daysCount','عدد أيام الفترة',l.daysCount,'number')}${field('letters.electricity.rate','سعر الكيلو وات / ساعة',l.rate,'number')}${selectField('letters.electricity.showStamp','إظهار الختم',l.showStamp,[['yes','نعم'],['no','لا']])}`; html += `</div>`; if (key === 'electricity') html += `<div class="section-box"><h3>جدول أحمال الكهرباء</h3>${renderElectricityRows(l)}</div>`; if (key === 'water') html += `<div class="section-box"><h3>جدول المياه — مصدره جدول توريد المياه فقط</h3>${renderWaterRows(l)}</div>`; html += `<div class="section-box"><h3>توقيعات مستقلة لهذا الخطاب فقط</h3>${renderSignatureEditor(key, l)}</div>`; return html; }
+function renderElectricityColumns(l) {
+  const cols = electricityColumns(l);
+  return `<div class="mini-table">${cols.map((c, i) => `
+    <div class="mini-row">
+      ${field(`letters.electricity.columns.${i}.key`, 'مفتاح العمود', c.key)}
+      ${field(`letters.electricity.columns.${i}.label`, 'اسم العمود', c.label)}
+      ${selectField(`letters.electricity.columns.${i}.type`, 'نوع العمود', c.type, [['text','نص'],['number','رقم'],['money','مبلغ']])}
+      ${field(`letters.electricity.columns.${i}.unit`, 'الوحدة', c.unit)}
+      ${selectField(`letters.electricity.columns.${i}.calc`, 'الحساب', c.calc, [['none','لا يدخل في الحساب'],['sum','يجمع']])}
+    </div>
+  `).join('')}</div>
+  <div class="btn-row">
+    <button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.addElectricityColumn()">إضافة عمود</button>
+    <button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.removeElectricityColumn()">حذف آخر عمود</button>
+  </div>`;
+}
+
+function renderElectricityRows(l) {
+  const cols = electricityColumns(l);
+  const rows = electricityRows(l);
+
+  return `<div class="mini-table">${rows.map((r, i) => `
+    <div class="mini-row">
+      ${cols.map(c => field(`letters.electricity.rows.${i}.${c.key}`, c.label, r[c.key] ?? '', (c.type === 'number' || c.type === 'money') ? 'number' : 'text')).join('')}
+    </div>
+  `).join('')}</div>
+  <div class="btn-row">
+    <button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.addElectricityRow()">إضافة صف كهرباء</button>
+    <button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.removeElectricityRow()">حذف آخر صف</button>
+  </div>`;
+}
+function renderWaterRows(l) { return `<div class="mini-table">${(l.rows || []).map((r, i) => `<div class="mini-row">${field(`letters.water.rows.${i}.item`, 'البيان', r.item)}${field(`letters.water.rows.${i}.unit`, 'الوحدة', r.unit)}${field(`letters.water.rows.${i}.qty`, 'الكمية', r.qty)}${field(`letters.water.rows.${i}.notes`, 'ملاحظات', r.notes)}</div>`).join('')}</div><div class="btn-row"><button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.refreshWaterRows()">تحديث من جدول توريد المياه فقط</button><button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.addWaterRow()">إضافة صف مياه</button><button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.removeWaterRow()">حذف آخر صف</button></div>`; }
+  function renderLetterSpecific(s) { const key = s.selectedDoc, l = s.letters[key]; let html = `<h3>إعدادات: ${LABELS[key]}</h3><div class="settings-grid">${field(`letters.${key}.title`, 'العنوان', l.title)}`; if (key === 'main') html += `${field('letters.main.recipient', 'اسم المخاطب', l.recipient)}${field('letters.main.recipientSuffix', 'الصفة / المحترم', l.recipientSuffix)}${area('letters.main.body', 'نص الخطاب', l.body)}${area('letters.main.closing', 'الخاتمة', l.closing)}${selectField('letters.main.showStamp','إظهار الختم',l.showStamp || 'no',[['yes','نعم'],['no','لا']])}`; if (key === 'noPrev') html += `${selectField('letters.noPrev.showDate','إظهار التاريخ',l.showDate,[['yes','نعم'],['no','لا']])}${area('letters.noPrev.body','نص الإقرار',l.body)}${area('letters.noPrev.closing','الخاتمة',l.closing)}${selectField('letters.noPrev.showStamp','إظهار الختم',l.showStamp,[['yes','نعم'],['no','لا']])}`; if (key === 'certificate') html += `${area('letters.certificate.body','نص الشهادة',l.body)}${selectField('letters.certificate.showStamp','إظهار الختم',l.showStamp,[['yes','نعم'],['no','لا']])}`; if (key === 'water') html += `${area('letters.water.body','نص محضر المياه',l.body)}${selectField('letters.water.showStamp','إظهار الختم',l.showStamp,[['yes','نعم'],['no','لا']])}`; if (key === 'electricity') html += `${field('letters.electricity.hoursPerDay','عدد ساعات التشغيل اليومية',l.hoursPerDay,'number')}${field('letters.electricity.daysCount','عدد أيام الفترة',l.daysCount,'number')}${field('letters.electricity.rate','سعر الكيلو وات / ساعة',l.rate,'number')}${selectField('letters.electricity.showStamp','إظهار الختم',l.showStamp,[['yes','نعم'],['no','لا']])}`; html += `</div>`; if (key === 'electricity') {   html += `<div class="section-box"><h3>أعمدة جدول الكهرباء</h3>${renderElectricityColumns(l)}</div>`;   html += `<div class="section-box"><h3>صفوف جدول أحمال الكهرباء</h3>${renderElectricityRows(l)}</div>`; } if (key === 'water') html += `<div class="section-box"><h3>جدول المياه — مصدره جدول توريد المياه فقط</h3>${renderWaterRows(l)}</div>`; html += `<div class="section-box"><h3>توقيعات مستقلة لهذا الخطاب فقط</h3>${renderSignatureEditor(key, l)}</div>`; return html; }
   function renderDialog() {
-    const s = getSettings(), c = ctx(s), preview = clean(s.letterheadDataUrl) ? `<div class="field wide"><label>معاينة الترويسة الحالية</label><img class="letterhead-preview" src="${esc(s.letterheadDataUrl)}"></div>` : '';
-    const html = `<div class="settings-overlay" id="hospital-consumables-raise-letter-overlay" onclick="if(event.target.id==='hospital-consumables-raise-letter-overlay') HospitalConsumablesRaiseLetter.closeDialog()"><div class="settings-dialog"><h2>إعدادات خطابات رفع المستهلكات</h2><div id="hospital-consumables-letters-note"></div><div class="btn-row">${renderDocButtons(s)}</div><div class="btn-row"><button class="btn btn-primary" onclick="HospitalConsumablesRaiseLetter.saveDialog()">حفظ</button><button class="btn btn-gold" onclick="HospitalConsumablesRaiseLetter.printSelected()">طباعة المختار</button><button class="btn btn-gold" onclick="HospitalConsumablesRaiseLetter.printFullExtract()">طباعة مستخلص المستهلكات كامل</button><button class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.closeDialog()">إغلاق</button></div><div class="section-box"><h3>بيانات حية من المستخلص الحالي — لا تحفظ كموقع ثابت</h3><div class="settings-grid"><div class="field"><label>الموقع الحالي</label><div class="readonly-box">${esc(currentHospitalName())}</div></div><div class="field"><label>الشركة الحالية</label><div class="readonly-box">${esc(currentCompanyName())}</div></div><div class="field"><label>الفترة</label><div class="readonly-box">${extractPhrase()}</div></div><div class="field"><label>الإجمالي شامل الضريبة</label><div class="readonly-box">${moneySAR(c.grand)}</div></div></div></div><div class="section-box"><h3>الترويسة المشتركة لكل خطابات المستهلكات</h3><div class="settings-grid">${selectField('letterheadEnabled','تفعيل الترويسة',s.letterheadEnabled,[['no','لا'],['yes','نعم']])}${selectField('letterheadHasPlaceData','الترويسة تحتوي بيانات الجهة والمكان',s.letterheadHasPlaceData,[['yes','نعم — لا تكرر الموقع'],['no','لا — اطبع الهيدر الداخلي']])}${selectField('letterheadMode','طريقة طباعة الترويسة',s.letterheadMode,[['external','طباعة على ورق رسمي جاهز'],['full','صورة A4 كاملة كخلفية'],['top','صورة علوية فقط']])}${field('contentTop','بداية المحتوى بعد الترويسة mm',s.contentTop,'number')}${field('letterheadHeight','ارتفاع الترويسة العلوية mm',s.letterheadHeight,'number')}${field('vatRate','نسبة الضريبة',s.vatRate,'number')}${selectField('entityTitleMode','عنوان الهيدر الداخلي',s.entityTitleMode,[['auto','من اسم المستشفى الحالي'],['manual','يدوي']])}${field('entityTitle','عنوان يدوي للهيدر الداخلي',s.entityTitle)}${field('departmentTitle','اسم الإدارة/الوحدة في الهيدر الداخلي',s.departmentTitle)}<div class="field wide"><label>رفع صورة الترويسة A4</label><input id="hospital-cons-letterhead-file" type="file" accept="image/*"><small>تطبق على كل خطابات المستهلكات مثل خطابات العمالة العادية.</small></div>${preview}</div><div class="btn-row"><button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.deleteLetterhead()">حذف الترويسة</button></div></div><div class="section-box">${renderLetterSpecific(s)}</div></div></div>`;
+    const s = getSettings(); const c = ctx(s); const previewImg = resolvedLetterheadImage(s); const preview = previewImg   ? `<div class="field wide"><label>معاينة الترويسة الحالية</label><img class="letterhead-preview" src="${esc(previewImg)}"></div>`   : '';
+    const html = `<div class="settings-overlay" id="hospital-consumables-raise-letter-overlay" onclick="if(event.target.id==='hospital-consumables-raise-letter-overlay') HospitalConsumablesRaiseLetter.closeDialog()"><div class="settings-dialog"><h2>إعدادات خطابات رفع المستهلكات</h2><div id="hospital-consumables-letters-note"></div><div class="btn-row">${renderDocButtons(s)}</div><div class="btn-row"><button class="btn btn-primary" onclick="HospitalConsumablesRaiseLetter.saveDialog()">حفظ</button><button class="btn btn-gold" onclick="HospitalConsumablesRaiseLetter.printSelected()">طباعة المختار</button><button class="btn btn-gold" onclick="HospitalConsumablesRaiseLetter.printFullExtract()">طباعة مستخلص المستهلكات كامل</button><button class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.closeDialog()">إغلاق</button></div><div class="section-box"><h3>بيانات حية من المستخلص الحالي — لا تحفظ كموقع ثابت</h3><div class="settings-grid"><div class="field"><label>الموقع الحالي</label><div class="readonly-box">${esc(currentHospitalName())}</div></div><div class="field"><label>الشركة الحالية</label><div class="readonly-box">${esc(currentCompanyName())}</div></div><div class="field"><label>الفترة</label><div class="readonly-box">${extractPhrase()}</div></div><div class="field"><label>الإجمالي شامل الضريبة</label><div class="readonly-box">${moneySAR(c.grand)}</div></div></div></div><div class="section-box"><h3>الترويسة المشتركة لكل خطابات المستهلكات</h3><div class="settings-grid">${selectField('letterheadEnabled','تفعيل الترويسة',s.letterheadEnabled,[['no','لا'],['yes','نعم']])}${selectField('letterheadHasPlaceData','الترويسة تحتوي بيانات الجهة والمكان',s.letterheadHasPlaceData,[['yes','نعم — لا تكرر الموقع'],['no','لا — اطبع الهيدر الداخلي']])}${selectField('letterheadMode','طريقة طباعة الترويسة',s.letterheadMode,[['external','طباعة على ورق رسمي جاهز'],['full','صورة A4 كاملة كخلفية'],['top','صورة علوية فقط']])}${field('contentTop','بداية المحتوى بعد الترويسة mm',s.contentTop,'number')}${field('letterheadHeight','ارتفاع الترويسة العلوية mm',s.letterheadHeight,'number')}${field('vatRate','نسبة الضريبة',s.vatRate,'number')} <div class="field wide"><label>رفع صورة الترويسة A4</label><input id="hospital-cons-letterhead-file" type="file" accept="image/*"><small>تطبق على كل خطابات المستهلكات مثل خطابات العمالة العادية.</small></div>${preview}</div><div class="btn-row"><button type="button" class="btn btn-light" onclick="HospitalConsumablesRaiseLetter.deleteLetterhead()">حذف الترويسة</button></div></div><div class="section-box">${renderLetterSpecific(s)}</div></div></div>`;
     document.body.insertAdjacentHTML('beforeend', html);
     document.body.classList.add('hospital-consumables-letter-modal-open');
     installAutoSaveForDialog();
@@ -220,11 +407,237 @@
   let saveTimer = null;
   function scheduleAutoSave() { clearTimeout(saveTimer); saveTimer = setTimeout(() => saveDialog(true), 250); }
   function installAutoSaveForDialog() { const overlay = document.getElementById('hospital-consumables-raise-letter-overlay'); if (!overlay || overlay.__installed) return; overlay.__installed = true; overlay.addEventListener('input', e => { if (e.target && e.target.matches('[data-path]')) scheduleAutoSave(); }, true); overlay.addEventListener('change', e => { if (e.target && e.target.matches('[data-path]')) scheduleAutoSave(); }, true); }
-  function installLetterheadUpload() { const inp = document.getElementById('hospital-cons-letterhead-file'); if (!inp || inp.__installed) return; inp.__installed = true; inp.onchange = function () { const f = this.files && this.files[0]; if (!f) return; const r = new FileReader(); r.onload = function () { saveDialog(true); const s = getSettings(); s.letterheadDataUrl = String(r.result || ''); s.letterheadEnabled = 'yes'; s.letterheadMode = 'full'; setSettings(s); closeDialog(); openDialog(); }; r.readAsDataURL(f); }; }
-  function openDialog() { if (!document.getElementById('hospital-consumables-raise-letter-overlay')) renderDialog(); }
+function installLetterheadUpload() {
+  const inp = document.getElementById('hospital-cons-letterhead-file');
+  if (!inp || inp.__installed) return;
+
+  inp.__installed = true;
+
+  inp.onchange = function () {
+    const f = this.files && this.files[0];
+    if (!f) return;
+
+    const r = new FileReader();
+
+    r.onload = function () {
+      const img = String(r.result || '');
+
+      saveDialog(true);
+
+      const s = getSettings();
+      s.letterheadDataUrl = img;
+      s.letterheadEnabled = 'yes';
+      s.letterheadMode = 'full';
+
+      try {
+        localStorage.setItem(FALLBACK_LETTERHEAD_KEY, img);
+        localStorage.setItem('hospitalConsumablesLetterheadMeta_v1', JSON.stringify({
+          name: f.name || '',
+          type: f.type || '',
+          size: f.size || 0,
+          savedAt: new Date().toISOString()
+        }));
+      } catch (_) {}
+
+      setSettings(s);
+      closeDialog();
+      openDialog();
+    };
+
+    r.readAsDataURL(f);
+  };
+}  function openDialog() { if (!document.getElementById('hospital-consumables-raise-letter-overlay')) renderDialog(); }
   function closeDialog() { if (document.getElementById('hospital-consumables-raise-letter-overlay')) saveDialog(true); document.getElementById('hospital-consumables-raise-letter-overlay')?.remove(); document.body.classList.remove('hospital-consumables-letter-modal-open'); }
   function injectPageCss() { if (document.getElementById('hospital-consumables-raise-letter-css')) return; const style = document.createElement('style'); style.id = 'hospital-consumables-raise-letter-css'; style.textContent = `body.hospital-consumables-letter-modal-open{overflow:hidden!important}.hospital-consumables-letters-center{margin:22px auto 30px;padding:16px;border:2px solid #0f766e;border-radius:18px;background:linear-gradient(135deg,#ecfdf5,#f8fafc);box-shadow:0 10px 28px rgba(15,118,110,.12);direction:rtl;font-family:Tajawal,Arial,sans-serif}.hospital-consumables-letters-center h3{margin:0 0 6px;text-align:center;color:#064e3b;font-weight:900}.hospital-consumables-letters-center p{margin:0 0 12px;text-align:center;color:#475569;font-weight:800}.hospital-consumables-letters-toolbar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.hospital-consumables-letters-toolbar button{border:0;border-radius:10px;padding:10px 14px;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(15,23,42,.08)}.hc-primary{background:#003087;color:#fff}.hc-green{background:#047857;color:#fff}.hc-gold{background:#d4af37;color:#111}.hc-light{background:#fff;color:#0f172a;border:1px solid #cbd5e1!important}#hospital-consumables-raise-letter-overlay.settings-overlay{position:fixed!important;inset:0!important;background:rgba(15,23,42,.76)!important;backdrop-filter:blur(3px);z-index:2147483000!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:18px!important;direction:rtl!important;font-family:Tajawal,Arial,sans-serif!important}#hospital-consumables-raise-letter-overlay .settings-dialog{width:min(1120px,96vw)!important;max-height:90vh!important;overflow:auto!important;background:#fff!important;border-radius:22px!important;padding:20px!important;box-shadow:0 28px 80px rgba(0,0,0,.35)!important;color:#0f172a!important}#hospital-consumables-raise-letter-overlay h2{text-align:center;color:#003087;margin:0 0 14px;font-weight:900}#hospital-consumables-raise-letter-overlay .settings-grid{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))!important;gap:10px!important}#hospital-consumables-raise-letter-overlay .field{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px}#hospital-consumables-raise-letter-overlay .field.wide{grid-column:1/-1}#hospital-consumables-raise-letter-overlay .field label{display:block;font-size:12px;font-weight:900;color:#334155;margin-bottom:6px}#hospital-consumables-raise-letter-overlay .field input,#hospital-consumables-raise-letter-overlay .field select,#hospital-consumables-raise-letter-overlay .field textarea{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit}#hospital-consumables-raise-letter-overlay .field textarea{min-height:90px}#hospital-consumables-raise-letter-overlay .readonly-box{padding:9px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;font-weight:900;line-height:1.8}#hospital-consumables-raise-letter-overlay .btn-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:12px 0}#hospital-consumables-raise-letter-overlay .btn{border:0;border-radius:10px;padding:9px 14px;font-weight:900;cursor:pointer}#hospital-consumables-raise-letter-overlay .btn-primary{background:#003087;color:#fff}.btn-gold{background:#d4af37;color:#111}.btn-light{background:#f1f5f9;color:#111;border:1px solid #cbd5e1}#hospital-consumables-raise-letter-overlay .section-box{border:1px solid #e2e8f0;border-radius:14px;padding:12px;margin-top:12px;background:#f8fafc}#hospital-consumables-raise-letter-overlay .letterhead-preview{display:block;max-width:190px;max-height:270px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;margin:8px auto}#hospital-consumables-raise-letter-overlay .mini-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin:8px 0;padding:8px;border:1px dashed #cbd5e1;border-radius:12px}`; document.head.appendChild(style); }
   function installButtons() { injectPageCss(); document.querySelectorAll('#hospital-consumables-raise-letter-settings-btn,[id^="hospital-consumables-letter-print-"]').forEach(el => el.remove()); if (document.getElementById('hospital-consumables-letters-center')) return; const anchor = document.querySelector('.main-action-buttons') || document.getElementById('main-action-buttons') || document.querySelector('.penalty-info-bar') || document.querySelector('.dashboard-container'); if (!anchor || !anchor.parentNode) return; const box = document.createElement('section'); box.id = 'hospital-consumables-letters-center'; box.className = 'hospital-consumables-letters-center no-print'; box.innerHTML = `<h3><i class="fas fa-envelope-open-text"></i> خطابات رفع المستهلكات</h3><p>كل إعدادات وطباعة خطابات المستهلكات هنا فقط — منفصلة عن خطابات الرفع العادية.</p><div class="hospital-consumables-letters-toolbar"><button class="hc-primary" type="button" data-hc-action="settings"><i class="fas fa-cog"></i> إعدادات خطابات المستهلكات</button>${DOCS.map(d => `<button class="hc-light" type="button" data-hc-print="${d[0]}"><i class="fas fa-print"></i> ${d[1]}</button>`).join('')}<button class="hc-gold" type="button" data-hc-action="full"><i class="fas fa-file-invoice"></i> طباعة مستخلص المستهلكات كامل</button></div>`; anchor.insertAdjacentElement('afterend', box); box.addEventListener('click', e => { const st = e.target.closest('[data-hc-action="settings"]'); const full = e.target.closest('[data-hc-action="full"]'); const p = e.target.closest('[data-hc-print]'); if (st) openDialog(); if (full) openFullConsumablesExtract(); if (p) openPrintDoc(p.dataset.hcPrint); }); }
-  window.HospitalConsumablesRaiseLetter = { openDialog, closeDialog, saveDialog, printSelected: () => openPrintDoc(getSettings().selectedDoc || 'main'), printAll: () => openPrintDoc('all'), printFullExtract: openFullConsumablesExtract, generate: () => openPrintDoc('main'), getCurrentConsumablesNet: currentConsumablesNet, tafqeetSAR, selectDoc: key => { saveDialog(true); const s = getSettings(); s.selectedDoc = key; setSettings(s); closeDialog(); openDialog(); }, deleteLetterhead: () => { saveDialog(true); const s = getSettings(); s.letterheadDataUrl = ''; s.letterheadEnabled = 'no'; setSettings(s); closeDialog(); openDialog(); }, addSignature: () => { saveDialog(true); const s = getSettings(), k = s.selectedDoc; s.letters[k].signatures = s.letters[k].signatures || []; s.letters[k].signatures.push({ title: '', name: '' }); setSettings(s); closeDialog(); openDialog(); }, removeSignature: () => { saveDialog(true); const s = getSettings(), k = s.selectedDoc; if ((s.letters[k].signatures || []).length > 1) s.letters[k].signatures.pop(); setSettings(s); closeDialog(); openDialog(); }, addElectricityRow: () => { saveDialog(true); const s = getSettings(); s.letters.electricity.rows.push({ place: '', load: '', power: 0 }); setSettings(s); closeDialog(); openDialog(); }, removeElectricityRow: () => { saveDialog(true); const s = getSettings(); if (s.letters.electricity.rows.length > 1) s.letters.electricity.rows.pop(); setSettings(s); closeDialog(); openDialog(); }, addWaterRow: () => { saveDialog(true); const s = getSettings(); s.letters.water.rows.push({ item: 'توريد مياه', unit: 'م³', qty: '', notes: '' }); setSettings(s); closeDialog(); openDialog(); }, removeWaterRow: () => { saveDialog(true); const s = getSettings(); if (s.letters.water.rows.length > 1) s.letters.water.rows.pop(); setSettings(s); closeDialog(); openDialog(); }, refreshWaterRows: () => { saveDialog(true); const s = getSettings(), rows = collectWaterRowsFromPage(); if (rows.length) s.letters.water.rows = rows; else alert('لم أجد صفوف مياه في جدول توريد المياه فقط. استخدم الإضافة اليدوية.'); setSettings(s); closeDialog(); openDialog(); } };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installButtons); else installButtons(); setTimeout(installButtons, 700); setTimeout(installButtons, 1800); setTimeout(installButtons, 3500); console.info('[Hospital Consumables Letters Center] installed v6 dynamic letterhead/header');
+window.HospitalConsumablesRaiseLetter = {
+  openDialog,
+  closeDialog,
+  saveDialog,
+
+  printSelected: () => openPrintDoc(getSettings().selectedDoc || 'main'),
+  printAll: () => openPrintDoc('all'),
+  printFullExtract: openFullConsumablesExtract,
+  generate: () => openPrintDoc('main'),
+
+  getCurrentConsumablesNet: currentConsumablesNet,
+  tafqeetSAR,
+
+  selectDoc: key => {
+    saveDialog(true);
+    const s = getSettings();
+    s.selectedDoc = key;
+    setSettings(s);
+    closeDialog();
+    openDialog();
+  },
+
+  deleteLetterhead: () => {
+    saveDialog(true);
+    const s = getSettings();
+    s.letterheadDataUrl = '';
+    s.letterheadEnabled = 'no';
+
+    try {
+      localStorage.removeItem(FALLBACK_LETTERHEAD_KEY);
+      localStorage.removeItem('hospitalConsumablesLetterheadMeta_v1');
+    } catch (_) {}
+
+    setSettings(s);
+    closeDialog();
+    openDialog();
+  },
+
+  addSignature: () => {
+    saveDialog(true);
+    const s = getSettings();
+    const k = s.selectedDoc;
+    s.letters[k].signatures = s.letters[k].signatures || [];
+    s.letters[k].signatures.push({ title: '', name: '' });
+    setSettings(s);
+    closeDialog();
+    openDialog();
+  },
+
+  removeSignature: () => {
+    saveDialog(true);
+    const s = getSettings();
+    const k = s.selectedDoc;
+    if ((s.letters[k].signatures || []).length > 1) {
+      s.letters[k].signatures.pop();
+    }
+    setSettings(s);
+    closeDialog();
+    openDialog();
+  },
+
+  addElectricityRow: () => {
+    saveDialog(true);
+    const s = getSettings();
+    const l = s.letters.electricity;
+
+    const cols = electricityColumns(l);
+    l.rows = electricityRows(l);
+
+    const row = {};
+    cols.forEach(c => {
+      row[c.key] = (c.type === 'number' || c.type === 'money') ? 0 : '';
+    });
+
+    l.rows.push(row);
+
+    setSettings(s);
+    closeDialog();
+    openDialog();
+  },
+
+  removeElectricityRow: () => {
+    saveDialog(true);
+    const s = getSettings();
+    const l = s.letters.electricity;
+
+    l.rows = electricityRows(l);
+
+    if (l.rows.length > 1) {
+      l.rows.pop();
+    }
+
+    setSettings(s);
+    closeDialog();
+    openDialog();
+  },
+
+  addElectricityColumn: () => {
+    saveDialog(true);
+    const s = getSettings();
+    const l = s.letters.electricity;
+
+    l.columns = electricityColumns(l);
+    l.rows = electricityRows(l);
+
+    const key = 'col' + (l.columns.length + 1);
+
+    l.columns.push({
+      key,
+      label: 'عمود جديد',
+      type: 'text',
+      unit: '',
+      calc: 'none'
+    });
+
+    l.rows.forEach(r => {
+      r[key] = '';
+    });
+
+    setSettings(s);
+    closeDialog();
+    openDialog();
+  },
+
+  removeElectricityColumn: () => {
+    saveDialog(true);
+    const s = getSettings();
+    const l = s.letters.electricity;
+
+    l.columns = electricityColumns(l);
+
+    if (l.columns.length <= 1) {
+      return;
+    }
+
+    const removed = l.columns.pop();
+
+    l.rows = electricityRows(l);
+    l.rows.forEach(r => {
+      if (removed && removed.key) {
+        delete r[removed.key];
+      }
+    });
+
+    setSettings(s);
+    closeDialog();
+    openDialog();
+  },
+
+  addWaterRow: () => {
+    saveDialog(true);
+    const s = getSettings();
+    s.letters.water.rows.push({
+      item: 'توريد مياه',
+      unit: 'م³',
+      qty: '',
+      notes: ''
+    });
+    setSettings(s);
+    closeDialog();
+    openDialog();
+  },
+
+  removeWaterRow: () => {
+    saveDialog(true);
+    const s = getSettings();
+    if (s.letters.water.rows.length > 1) {
+      s.letters.water.rows.pop();
+    }
+    setSettings(s);
+    closeDialog();
+    openDialog();
+  },
+
+  refreshWaterRows: () => {
+    saveDialog(true);
+    const s = getSettings();
+    const rows = collectWaterRowsFromPage();
+
+    if (rows.length) {
+      s.letters.water.rows = rows;
+    } else {
+      alert('لم أجد صفوف مياه في جدول توريد المياه فقط. استخدم الإضافة اليدوية.');
+    }
+
+    setSettings(s);
+    closeDialog();
+    openDialog();
+  }
+};  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installButtons); else installButtons(); setTimeout(installButtons, 700); setTimeout(installButtons, 1800); setTimeout(installButtons, 3500); console.info('[Hospital Consumables Letters Center] installed v6 dynamic letterhead/header');
 })();
