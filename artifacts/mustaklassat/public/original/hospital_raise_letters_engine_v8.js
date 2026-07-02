@@ -71,32 +71,118 @@
   }
 
   function amount(s) {
-    const e = readJson('persistentExtractData', {}), vat = num(s.vatRate) || 15;
-    if (num(s.manualGrand) > 0) {
-      const g = num(s.manualGrand), n = g / (1 + vat / 100);
-      return { net: n, vat: g - n, grand: g, source: 'manualGrand' };
-    }
-    const gross = ['grandTotal', 'grandAmount', 'totalWithVat', 'totalAfterVat', 'grossAmount', 'finalTotal', 'totalIncludingVat', 'invoiceTotal', 'extractTotal', 'amountWithVat', 'netPayableWithVat'];
-    for (const k of gross) {
-      const g = num(e[k]);
-      if (g > 0) { const n = g / (1 + vat / 100); return { net: n, vat: g - n, grand: g, source: 'persistentExtractData.' + k }; }
-    }
-    const nets = ['netTotal', 'netAmount', 'netPayable', 'laborNetTotal', 'finalLaborCost', 'amountBeforeVat', 'subtotal', 'totalBeforeVat', 'extractNetTotal', 'netDue'];
-    for (const k of nets) {
-      const n = num(e[k]);
-      if (n > 0) return { net: n, vat: n * vat / 100, grand: n * (1 + vat / 100), source: 'persistentExtractData.' + k };
-    }
+    const e = readJson('persistentExtractData', {}), vatRate = num(s.vatRate) || 15;
     const b = baseData();
-    const keys = ['grandTotal_' + b.hospital, 'grandNetTotal_' + b.hospital, 'invoiceTotal_' + b.hospital, 'grandTotal', 'grandNetTotal', 'invoiceTotal', 'totalWithVat', 'extractTotal', 'finalLaborCost_' + b.hospital, 'laborNetTotal_' + b.hospital, 'netAmount_' + b.hospital, 'finalLaborCost', 'laborNetTotal', 'netAmount'];
-    for (const k of keys) {
-      const v = num(localStorage.getItem(k));
-      if (v > 0) {
-        if (/finalLaborCost|laborNetTotal|netAmount/.test(k)) return { net: v, vat: v * vat / 100, grand: v * (1 + vat / 100), source: 'localStorage.' + k };
-        const n = v / (1 + vat / 100);
-        return { net: n, vat: v - n, grand: v, source: 'localStorage.' + k };
+    const round2 = v => Math.round((num(v) + Number.EPSILON) * 100) / 100;
+
+    const firstObjNum = (obj, keys) => {
+      for (const k of keys) {
+        const v = num(obj && obj[k]);
+        if (v > 0) return v;
       }
+      return 0;
+    };
+
+    const firstLocalNum = keys => {
+      for (const k of keys) {
+        const v = num(localStorage.getItem(k));
+        if (v > 0) return v;
+      }
+      return 0;
+    };
+
+    const empVal = (emp, keys) => {
+      for (const k of keys) {
+        const v = num(emp && emp[k]);
+        if (v > 0) return v;
+      }
+      return 0;
+    };
+
+    const DEPTS = ['cleaning', 'electricity', 'agriculture', 'civil_works', 'mechanical', 'laundry', 'patient_services', 'admin_saudi'];
+    const attendanceData = readJson('attendanceData', {});
+    let deptGross = 0, attendanceDeduction = 0, attendanceAbsencePenalty = 0, attendanceNationalityPenalty = 0;
+
+    DEPTS.forEach(d => {
+      deptGross += num(localStorage.getItem('deptCalculatedCost_' + d));
+      const arr = Array.isArray(attendanceData && attendanceData[d]) ? attendanceData[d] : [];
+      arr.forEach(emp => {
+        attendanceDeduction += empVal(emp, ['deduction', 'absenceDeduction', 'absenceDiscount', 'deductionAmount', 'totalAbsenceDeduction']);
+        attendanceAbsencePenalty += empVal(emp, ['absencePenalty', 'absenceFine', 'absencePenaltyAmount']);
+        attendanceNationalityPenalty += empVal(emp, ['nationalityFine', 'nationalityPenalty', 'nationalityPenaltyAmount']);
+      });
+    });
+
+    const grossLabor =
+      firstObjNum(e, ['grossLabor', 'laborTotal', 'totalLaborCost', 'grossLaborCost', 'totalBeforeDeductions', 'totalLaborBeforeDeduction']) ||
+      firstLocalNum(['grossLabor_' + b.hospital, 'laborTotal_' + b.hospital, 'totalLaborCost_' + b.hospital, 'grossLabor', 'laborTotal', 'totalLaborCost']) ||
+      deptGross;
+
+    const absenceDeduction =
+      firstObjNum(e, ['absenceDeduction', 'absenceDiscount', 'totalAbsenceDeduction', 'deduction', 'deductionAmount']) ||
+      firstLocalNum(['absenceDeduction_' + b.hospital, 'totalAbsenceDeduction_' + b.hospital, 'absenceDeduction', 'absenceDiscount', 'totalAbsenceDeduction']) ||
+      attendanceDeduction;
+
+    const absencePenalty =
+      firstObjNum(e, ['absencePenalty', 'absenceFine', 'absencePenaltyAmount']) ||
+      firstLocalNum(['absencePenalty_' + b.hospital, 'absenceFine_' + b.hospital, 'absencePenalty', 'absenceFine']) ||
+      attendanceAbsencePenalty;
+
+    const performancePenalty =
+      firstObjNum(e, ['performancePenalty', 'performanceTotalDeduction', 'totalPerformancePenalty']) ||
+      firstLocalNum(['performancePenalty_' + b.hospital, 'performanceTotalDeduction_' + b.hospital, 'totalPerformancePenalty_' + b.hospital, 'performancePenalty', 'performanceTotalDeduction', 'totalPerformancePenalty']);
+
+    const nationalityPenalty =
+      firstObjNum(e, ['nationalityPenalty', 'nationalityFine', 'nationalityPenaltyAmount']) ||
+      firstLocalNum(['nationalityPenalty_' + b.hospital, 'nationalityFine_' + b.hospital, 'nationalityPenalty', 'nationalityFine']) ||
+      attendanceNationalityPenalty;
+
+    let penalties =
+      firstObjNum(e, ['totalPenalties', 'penalties', 'totalFines']) ||
+      firstLocalNum(['totalPenalties_' + b.hospital, 'penalties_' + b.hospital, 'totalFines_' + b.hospital, 'totalPenalties', 'penalties', 'totalFines']) ||
+      round2(absencePenalty + performancePenalty + nationalityPenalty);
+
+    const storedFinal =
+      firstObjNum(e, ['finalLaborCost', 'laborNetTotal', 'netAmount', 'netPayable', 'netDue']) ||
+      firstLocalNum(['finalLaborCost_' + b.hospital, 'laborNetTotal_' + b.hospital, 'netAmount_' + b.hospital, 'finalLaborCost', 'laborNetTotal', 'netAmount', 'netPayable', 'netDue']);
+
+    let laborGross = grossLabor;
+    if (!laborGross && storedFinal) laborGross = round2(storedFinal + penalties + absenceDeduction);
+
+    let beforeVat = round2(laborGross - absenceDeduction);
+    if (!beforeVat && storedFinal) beforeVat = round2(storedFinal + penalties);
+
+    if (num(s.manualGrand) > 0) {
+      const gross = round2(num(s.manualGrand));
+      beforeVat = round2(gross / (1 + vatRate / 100));
+      const vat = round2(gross - beforeVat);
+      const due = round2(gross - penalties);
+      return {
+        beforeVat,
+        vat,
+        gross,
+        penalties,
+        due,
+        net: beforeVat,
+        grand: due,
+        source: 'manualGrand - final VAT logic'
+      };
     }
-    return { net: 0, vat: 0, grand: 0, source: 'غير متوفر' };
+
+    const vat = round2(beforeVat * vatRate / 100);
+    const gross = round2(beforeVat + vat);
+    const due = round2(gross - penalties);
+
+    return {
+      beforeVat,
+      vat,
+      gross,
+      penalties,
+      due,
+      net: beforeVat,
+      grand: due,
+      source: grossLabor ? 'final VAT logic: labor - deduction + VAT - penalties' : 'غير متوفر'
+    };
   }
 
   function attendance() {
@@ -190,7 +276,16 @@
       company: s.company || b.company, contract: s.contract || b.contract, issuer: s.issuer || ('إدارة ' + b.hospital),
       sigTitle: s.sigTitle || '', sigName: s.sigName || '', start: fmtDate(b.start), end: fmtDate(b.end), payment: b.payment, contractNo: b.contractNo, iban: b.iban,
       period: 'دفعة رقم (' + b.payment + ') عن الفترة من ' + fmtDate(b.start) + ' م إلى ' + fmtDate(b.end) + ' م',
-      net: money(am.net), vat: money(am.vat), grand: money(am.grand), grandWords: tafqeetSAR(am.grand), source: am.source
+      beforeVat: money(am.beforeVat),
+      vat: money(am.vat),
+      gross: money(am.gross),
+      penalties: money(am.penalties),
+      due: money(am.due),
+      dueWords: tafqeetSAR(am.due),
+      net: money(am.beforeVat),
+      grand: money(am.due),
+      grandWords: tafqeetSAR(am.due),
+      source: am.source
     };
   }
   function tpl(t, s) { const c = ctx(s); return String(t || '').replace(/\{([a-zA-Z0-9_]+)\}/g, (_, k) => c[k] || ''); }
@@ -294,7 +389,16 @@
     return '<div class="sig-grid" style="margin-top:' + num(l.sigTop) + 'mm;grid-template-columns:repeat(' + Math.max(1, num(l.signCols) || 1) + ',1fr)">' + a.map(x => '<div class="sig-left"><div class="sig-role">' + esc(x[0]) + '</div><div class="sig-line"></div><div class="sig-name">' + esc(x[1]) + '</div></div>').join('') + '</div>';
   }
   function stamp(s, k) { const l = s.layout[k]; return l.showStamp === 'yes' ? '<div class="stamp" style="margin-top:' + num(l.stampTop) + 'mm">الختم</div>' : ''; }
-  function amtTable(s, k) { const c = ctx(s); return table(s, k, ['البيان', 'المبلغ'], ['<tr><td>الصافي</td><td>' + c.net + ' ريال</td></tr>', '<tr><td>ضريبة القيمة المضافة</td><td>' + c.vat + ' ريال</td></tr>', '<tr class="grand"><td>الإجمالي شامل الضريبة</td><td>' + c.grand + ' ريال</td></tr>'], true) + '<div class="tafqeet">' + esc(c.grandWords) + '</div>'; }
+  function amtTable(s, k) {
+    const c = ctx(s);
+    return table(s, k, ['البيان', 'المبلغ'], [
+      '<tr><td>المبلغ قبل الضريبة</td><td>' + c.beforeVat + ' ريال</td></tr>',
+      '<tr><td>ضريبة القيمة المضافة (15%)</td><td>' + c.vat + ' ريال</td></tr>',
+      '<tr><td>الإجمالي شامل الضريبة</td><td>' + c.gross + ' ريال</td></tr>',
+      '<tr><td>الغرامات</td><td>' + c.penalties + ' ريال</td></tr>',
+      '<tr class="grand"><td>الصافي المستحق بعد الضريبة والغرامات</td><td>' + c.due + ' ريال</td></tr>'
+    ], true) + '<div class="tafqeet">' + esc(c.dueWords) + '</div>';
+  }
   function ibanTable(s, k) {
     const c = ctx(s), iban = formatIban(c.iban);
     if (!iban) return '';
