@@ -1,4 +1,4 @@
-// Hospital Consumables Settings Route Guard V10
+// Hospital Consumables Settings Route Guard V11
 // Scope: normal consumables.html only.
 // Forces the consumables letters settings button to the standalone autosave settings page.
 (function () {
@@ -15,10 +15,10 @@
 
   if (pageFile !== 'consumables.html' && !/\/original\/consumables\.html(?:$|[?#])/.test(sig)) return;
   if (/admin_offices_consumables\.html|health_centers_consumables\.html|najran_general_consumables\.html/.test(pageFile)) return;
-  if (window.__HOSPITAL_CONSUMABLES_SETTINGS_ROUTE_GUARD_V10__) return;
-  window.__HOSPITAL_CONSUMABLES_SETTINGS_ROUTE_GUARD_V10__ = true;
+  if (window.__HOSPITAL_CONSUMABLES_SETTINGS_ROUTE_GUARD_V11__) return;
+  window.__HOSPITAL_CONSUMABLES_SETTINGS_ROUTE_GUARD_V11__ = true;
 
-  var SETTINGS_URL = '/original/hospital_consumables_letters_settings.html?v=20260702_v3_autosave_signatures';
+  var SETTINGS_URL = '/original/hospital_consumables_letters_settings.html?v=20260702_v4_dynamic_letterhead';
 
   function clean(v) {
     return String(v || '').replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim();
@@ -96,5 +96,5 @@
   } catch (_) {}
 
   window.openConsumablesLettersStandaloneSettings = goSettings;
-  console.info('[Hospital Consumables Settings Route Guard] installed v10 hard standalone route');
+  console.info('[Hospital Consumables Settings Route Guard] installed v11 dynamic letterhead route');
 })();
