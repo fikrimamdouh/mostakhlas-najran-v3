@@ -1,6 +1,7 @@
-// Hospital Consumables Letters Settings Fix V6
+// Hospital Consumables Letters Settings Fix V7
 // Scope: normal consumables.html only.
 // Provides a safe independent settings modal for consumables letters, using the same storage key.
+// Aligns consumables letterhead controls with normal hospital labor raise letters.
 (function () {
   'use strict';
 
@@ -14,10 +15,11 @@
   }
   if (pageFile !== 'consumables.html' && !/\/original\/consumables\.html(?:$|[?#])/.test(sig)) return;
   if (/admin_offices_consumables\.html|health_centers_consumables\.html|najran_general_consumables\.html/.test(pageFile)) return;
-  if (window.__HOSPITAL_CONSUMABLES_SETTINGS_FIX_V6__) return;
-  window.__HOSPITAL_CONSUMABLES_SETTINGS_FIX_V6__ = true;
+  if (window.__HOSPITAL_CONSUMABLES_SETTINGS_FIX_V7__) return;
+  window.__HOSPITAL_CONSUMABLES_SETTINGS_FIX_V7__ = true;
 
   var KEY = 'hospitalConsumablesRaiseLettersSettings_v1';
+  var FIXED_OLD_ENTITY = 'تجمع نجران الصحي';
   var DOCS = [
     ['main', 'خطاب المستهلكات للمستشفى'],
     ['noPrev', 'عدم أسبقية صرف - مقاولين'],
@@ -38,14 +40,17 @@
 
   function defaults() {
     return {
-      version: 'hospital-consumables-letters-v6-settings-fixed',
+      version: 'hospital-consumables-letters-v7-settings-fixed',
       selectedDoc: 'main',
       letterheadEnabled: 'no',
       letterheadDataUrl: '',
       letterheadHasPlaceData: 'yes',
+      letterheadMode: 'full',
       contentTop: 52,
+      letterheadHeight: 45,
       vatRate: 15,
-      entityTitle: 'تجمع نجران الصحي',
+      entityTitleMode: 'auto',
+      entityTitle: '',
       departmentTitle: 'وحدة الصيانة العامة',
       phoneFaxAr: '',
       phoneFaxEn: '',
@@ -58,9 +63,19 @@
       }
     };
   }
+
   function merge(a, b) { a = a || {}; b = b || {}; Object.keys(b).forEach(function (k) { if (b[k] && typeof b[k] === 'object' && !Array.isArray(b[k])) a[k] = merge(a[k] || {}, b[k]); else a[k] = b[k]; }); return a; }
-  function settings() { return merge(defaults(), readJson(KEY, {})); }
-  function saveSettings(s) { s.version = 'hospital-consumables-letters-v6-settings-fixed'; writeJson(KEY, s); }
+  function normalize(s) {
+    s = merge(defaults(), s || {});
+    if (!s.letterheadMode) s.letterheadMode = clean(s.letterheadDataUrl) ? 'full' : 'external';
+    if (clean(s.letterheadDataUrl) && s.letterheadEnabled === 'yes' && s.letterheadMode === 'external') s.letterheadMode = 'full';
+    if (!s.letterheadHeight) s.letterheadHeight = 45;
+    if (!s.entityTitleMode) s.entityTitleMode = clean(s.entityTitle) && clean(s.entityTitle) !== FIXED_OLD_ENTITY ? 'manual' : 'auto';
+    if (clean(s.entityTitle) === FIXED_OLD_ENTITY) { s.entityTitle = ''; s.entityTitleMode = 'auto'; }
+    return s;
+  }
+  function settings() { return normalize(readJson(KEY, {})); }
+  function saveSettings(s) { s.version = 'hospital-consumables-letters-v7-settings-fixed'; writeJson(KEY, normalize(s)); }
 
   function currentMetaHtml() {
     var cd = readJson('persistentContractData', {});
@@ -82,7 +97,7 @@
   function letterFields(s, key) {
     var l = s.letters[key] || {};
     var html = '<div class="hc-section"><h3>إعدادات: ' + esc(LABELS[key]) + '</h3><div class="hc-grid">' + field('letters.' + key + '.title', 'العنوان', l.title || '');
-    if (key === 'main') html += field('letters.main.recipient', 'المخاطب', l.recipient || '') + field('letters.main.recipientSuffix', 'المحترم / الصفة', l.recipientSuffix || '') + area('letters.main.body', 'نص الخطاب', l.body || '') + area('letters.main.closing', 'الخاتمة', l.closing || '');
+    if (key === 'main') html += field('letters.main.recipient', 'المخاطب', l.recipient || '') + field('letters.main.recipientSuffix', 'المحترم / الصفة', l.recipientSuffix || '') + area('letters.main.body', 'نص الخطاب', l.body || '') + area('letters.main.closing', 'الخاتمة', l.closing || '') + selectField('letters.main.showStamp', 'إظهار الختم', l.showStamp || 'no', [['yes', 'نعم'], ['no', 'لا']]);
     if (key === 'noPrev') html += selectField('letters.noPrev.showDate', 'إظهار التاريخ', l.showDate || 'yes', [['yes', 'نعم'], ['no', 'لا']]) + area('letters.noPrev.body', 'نص الإقرار', l.body || '') + area('letters.noPrev.closing', 'الخاتمة', l.closing || '') + selectField('letters.noPrev.showStamp', 'إظهار الختم', l.showStamp || 'yes', [['yes', 'نعم'], ['no', 'لا']]);
     if (key === 'certificate') html += area('letters.certificate.body', 'نص الشهادة', l.body || '') + selectField('letters.certificate.showStamp', 'إظهار الختم', l.showStamp || 'no', [['yes', 'نعم'], ['no', 'لا']]);
     if (key === 'water') html += area('letters.water.body', 'نص محضر المياه', l.body || '') + selectField('letters.water.showStamp', 'إظهار الختم', l.showStamp || 'no', [['yes', 'نعم'], ['no', 'لا']]);
@@ -95,7 +110,7 @@
     if (document.getElementById('hc-cons-settings-fix-css')) return;
     var st = document.createElement('style');
     st.id = 'hc-cons-settings-fix-css';
-    st.textContent = '.hc-cons-modal{position:fixed;inset:0;background:rgba(15,23,42,.76);z-index:2147483200;display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl;font-family:Tajawal,Arial,sans-serif}.hc-cons-dialog{width:min(1120px,96vw);max-height:90vh;overflow:auto;background:#fff;border-radius:22px;padding:18px;box-shadow:0 28px 80px rgba(0,0,0,.35);color:#0f172a}.hc-cons-dialog h2{text-align:center;color:#003087;margin:0 0 12px}.hc-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0}.hc-row button{border:0;border-radius:10px;padding:10px 14px;font-weight:900;cursor:pointer;background:#f1f5f9}.hc-row .primary{background:#003087;color:#fff}.hc-row .gold{background:#d4af37;color:#111}.hc-section{border:1px solid #e2e8f0;border-radius:14px;padding:12px;margin-top:12px;background:#f8fafc}.hc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.hc-field{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px}.hc-field.wide{grid-column:1/-1}.hc-field label{display:block;font-size:12px;font-weight:900;margin-bottom:6px;color:#334155}.hc-field input,.hc-field select,.hc-field textarea{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px;font-family:inherit}.hc-field textarea{min-height:92px}.hc-live{background:#ecfdf5;border:1px solid #99f6e4;border-radius:12px;padding:10px;text-align:center;font-weight:800}.hc-note{color:#047857;text-align:center;font-weight:900;min-height:24px}.hc-head-preview{display:block;max-width:180px;max-height:250px;margin:8px auto;border:1px solid #cbd5e1;border-radius:10px}';
+    st.textContent = '.hc-cons-modal{position:fixed;inset:0;background:rgba(15,23,42,.76);z-index:2147483200;display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl;font-family:Tajawal,Arial,sans-serif}.hc-cons-dialog{width:min(1120px,96vw);max-height:90vh;overflow:auto;background:#fff;border-radius:22px;padding:18px;box-shadow:0 28px 80px rgba(0,0,0,.35);color:#0f172a}.hc-cons-dialog h2{text-align:center;color:#003087;margin:0 0 12px}.hc-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0}.hc-row button{border:0;border-radius:10px;padding:10px 14px;font-weight:900;cursor:pointer;background:#f1f5f9}.hc-row .primary{background:#003087;color:#fff}.hc-row .gold{background:#d4af37;color:#111}.hc-section{border:1px solid #e2e8f0;border-radius:14px;padding:12px;margin-top:12px;background:#f8fafc}.hc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.hc-field{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px}.hc-field.wide{grid-column:1/-1}.hc-field label{display:block;font-size:12px;font-weight:900;margin-bottom:6px;color:#334155}.hc-field input,.hc-field select,.hc-field textarea{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px;font-family:inherit}.hc-field textarea{min-height:92px}.hc-live{background:#ecfdf5;border:1px solid #99f6e4;border-radius:12px;padding:10px;text-align:center;font-weight:800}.hc-note{color:#047857;text-align:center;font-weight:900;min-height:24px}.hc-head-preview{display:block;max-width:180px;max-height:250px;margin:8px auto;border:1px solid #cbd5e1;border-radius:10px}.hc-tip{display:block;margin-top:6px;color:#047857;font-weight:900;font-size:12px}';
     document.head.appendChild(st);
   }
 
@@ -113,7 +128,7 @@
     var img = clean(s.letterheadDataUrl || '');
     var old = document.getElementById('hc-cons-settings-modal');
     if (old) old.remove();
-    var html = '<div class="hc-cons-modal" id="hc-cons-settings-modal"><div class="hc-cons-dialog"><h2>إعدادات خطابات رفع المستهلكات</h2><div class="hc-note" id="hc-cons-note"></div>' + currentMetaHtml() + '<div class="hc-row">' + DOCS.map(function (d) { return '<button type="button" data-hc-doc="' + d[0] + '" class="' + (key === d[0] ? 'primary' : '') + '">' + esc(d[1]) + '</button>'; }).join('') + '</div><div class="hc-row"><button type="button" class="primary" data-hc-save>حفظ</button><button type="button" class="gold" data-hc-print>طباعة المختار</button><button type="button" class="gold" data-hc-full>طباعة مستخلص المستهلكات كامل</button><button type="button" data-hc-close>إغلاق</button></div><div class="hc-section"><h3>الترويسة المشتركة لكل خطابات المستهلكات</h3><div class="hc-grid">' + selectField('letterheadEnabled', 'تفعيل الترويسة', s.letterheadEnabled || 'no', [['no', 'لا'], ['yes', 'نعم']]) + selectField('letterheadHasPlaceData', 'الترويسة تحتوي بيانات الجهة والمكان', s.letterheadHasPlaceData || 'yes', [['yes', 'نعم — لا تكرر الموقع'], ['no', 'لا — اطبع الهيدر الداخلي']]) + field('contentTop', 'بداية المحتوى بعد الترويسة mm', s.contentTop || 52, 'number') + field('vatRate', 'نسبة الضريبة', s.vatRate || 15, 'number') + '<div class="hc-field wide"><label>رفع صورة الترويسة A4</label><input type="file" id="hc-cons-head-file" accept="image/*">' + (img ? '<img class="hc-head-preview" src="' + esc(img) + '">' : '') + '</div></div><div class="hc-row"><button type="button" data-hc-delete-head>حذف الترويسة</button></div></div>' + letterFields(s, key) + '</div></div>';
+    var html = '<div class="hc-cons-modal" id="hc-cons-settings-modal"><div class="hc-cons-dialog"><h2>إعدادات خطابات رفع المستهلكات</h2><div class="hc-note" id="hc-cons-note"></div>' + currentMetaHtml() + '<div class="hc-row">' + DOCS.map(function (d) { return '<button type="button" data-hc-doc="' + d[0] + '" class="' + (key === d[0] ? 'primary' : '') + '">' + esc(d[1]) + '</button>'; }).join('') + '</div><div class="hc-row"><button type="button" class="primary" data-hc-save>حفظ</button><button type="button" class="gold" data-hc-print>طباعة المختار</button><button type="button" class="gold" data-hc-full>طباعة مستخلص المستهلكات كامل</button><button type="button" data-hc-close>إغلاق</button></div><div class="hc-section"><h3>ترويسة A4</h3><p class="hc-tip">نفس منطق ترويسة خطابات العمالة: تفعيل، هل تحتوي بيانات الجهة، طريقة الطباعة، بداية المحتوى، ارتفاع الترويسة العلوية.</p><div class="hc-grid">' + selectField('letterheadEnabled', 'تفعيل الترويسة', s.letterheadEnabled || 'no', [['no', 'لا'], ['yes', 'نعم']]) + selectField('letterheadHasPlaceData', 'الترويسة تحتوي بيانات الجهة والمكان', s.letterheadHasPlaceData || 'yes', [['yes', 'نعم — لا تكرر الموقع'], ['no', 'لا — اطبع الهيدر الداخلي']]) + selectField('letterheadMode', 'طريقة طباعة الترويسة', s.letterheadMode || 'full', [['external', 'طباعة على ورق رسمي جاهز'], ['full', 'صورة A4 كاملة كخلفية'], ['top', 'صورة علوية فقط']]) + field('contentTop', 'بداية المحتوى بعد الترويسة mm', s.contentTop || 52, 'number') + field('letterheadHeight', 'ارتفاع الترويسة العلوية mm', s.letterheadHeight || 45, 'number') + field('vatRate', 'نسبة الضريبة', s.vatRate || 15, 'number') + selectField('entityTitleMode', 'عنوان الهيدر الداخلي', s.entityTitleMode || 'auto', [['auto', 'من اسم المستشفى الحالي'], ['manual', 'يدوي']]) + field('entityTitle', 'عنوان يدوي للهيدر الداخلي', s.entityTitle || '') + field('departmentTitle', 'اسم الإدارة/الوحدة في الهيدر الداخلي', s.departmentTitle || 'وحدة الصيانة العامة') + '<div class="hc-field wide"><label>رفع صورة الترويسة A4</label><input type="file" id="hc-cons-head-file" accept="image/*"><span class="hc-tip">بعد الرفع يتم ضبطها تلقائيًا على: تفعيل = نعم، طريقة الطباعة = صورة A4 كاملة كخلفية.</span>' + (img ? '<img class="hc-head-preview" src="' + esc(img) + '">' : '') + '</div></div><div class="hc-row"><button type="button" data-hc-delete-head>حذف الترويسة</button></div></div>' + letterFields(s, key) + '</div></div>';
     document.body.insertAdjacentHTML('beforeend', html);
     bindModal();
   }
@@ -134,7 +149,20 @@
     }, true);
     modal.addEventListener('input', function (e) { if (e.target && e.target.matches('[data-hc-path]')) readModalIntoSettings(); }, true);
     var file = document.getElementById('hc-cons-head-file');
-    if (file) file.onchange = function () { var f = this.files && this.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { var s = readModalIntoSettings(); s.letterheadDataUrl = String(r.result || ''); s.letterheadEnabled = 'yes'; saveSettings(s); renderModal(); }; r.readAsDataURL(f); };
+    if (file) file.onchange = function () {
+      var f = this.files && this.files[0];
+      if (!f) return;
+      var r = new FileReader();
+      r.onload = function () {
+        var s = readModalIntoSettings();
+        s.letterheadDataUrl = String(r.result || '');
+        s.letterheadEnabled = 'yes';
+        s.letterheadMode = 'full';
+        saveSettings(s);
+        renderModal();
+      };
+      r.readAsDataURL(f);
+    };
   }
 
   function interceptSettingsButtons() {
@@ -159,5 +187,5 @@
   patchGlobal();
   setTimeout(patchGlobal, 700);
   setTimeout(patchGlobal, 1600);
-  console.info('[Hospital Consumables Settings Fix] installed v6');
+  console.info('[Hospital Consumables Settings Fix] installed v7 labor-like letterhead');
 })();
