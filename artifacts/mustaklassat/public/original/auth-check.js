@@ -132,7 +132,7 @@
   appendScript('/original/hospital-storage-extract-context-guard.js?v=' + BUILD_V, false);
 
   if (!isSidebarSensitivePage) {
-    appendScript('/original/home-sidebar-guard.js?v=20260621homeSidebarGuard1', false);
+    appendScript('/original/home-sidebar-guard.js?v=20260702hrlSnapshotRouteV1', false);
   }
 
   appendScript('/original/approve-button-polish.js?v=' + BUILD_V, true);

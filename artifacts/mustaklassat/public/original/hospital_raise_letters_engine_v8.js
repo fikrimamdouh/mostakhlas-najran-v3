@@ -288,8 +288,25 @@
 
   function attendance() {
     const snapshot = readJson('najran_revision_snapshot', {});
+    const hrlSnapshot = readJson('hrl_snapshot_v1', {});
+    let hrlSessionSnapshot = {};
+    try { hrlSessionSnapshot = JSON.parse(sessionStorage.getItem('hrl_snapshot_v1') || '{}'); } catch (_) {}
 
     const sources = [
+      ['hrlSession.attendanceData', hrlSessionSnapshot && hrlSessionSnapshot.attendanceData],
+      ['hrlSession.ng_attendanceData', hrlSessionSnapshot && hrlSessionSnapshot.ng_attendanceData],
+      ['hrlSession.nd_attendanceData', hrlSessionSnapshot && hrlSessionSnapshot.nd_attendanceData],
+      ['hrlSession.persistentAttendanceData', hrlSessionSnapshot && hrlSessionSnapshot.persistentAttendanceData],
+      ['hrlSession.revision.attendanceData', hrlSessionSnapshot && hrlSessionSnapshot.najran_revision_snapshot && hrlSessionSnapshot.najran_revision_snapshot.attendanceData],
+      ['hrlSession.revision.persistentAttendanceData', hrlSessionSnapshot && hrlSessionSnapshot.najran_revision_snapshot && hrlSessionSnapshot.najran_revision_snapshot.persistentAttendanceData],
+
+      ['hrlSnapshot.attendanceData', hrlSnapshot && hrlSnapshot.attendanceData],
+      ['hrlSnapshot.ng_attendanceData', hrlSnapshot && hrlSnapshot.ng_attendanceData],
+      ['hrlSnapshot.nd_attendanceData', hrlSnapshot && hrlSnapshot.nd_attendanceData],
+      ['hrlSnapshot.persistentAttendanceData', hrlSnapshot && hrlSnapshot.persistentAttendanceData],
+      ['hrlSnapshot.revision.attendanceData', hrlSnapshot && hrlSnapshot.najran_revision_snapshot && hrlSnapshot.najran_revision_snapshot.attendanceData],
+      ['hrlSnapshot.revision.persistentAttendanceData', hrlSnapshot && hrlSnapshot.najran_revision_snapshot && hrlSnapshot.najran_revision_snapshot.persistentAttendanceData],
+
       ['attendanceData', readJson('attendanceData', null)],
       ['ng_attendanceData', readJson('ng_attendanceData', null)],
       ['nd_attendanceData', readJson('nd_attendanceData', null)],
