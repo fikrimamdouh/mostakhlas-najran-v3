@@ -493,9 +493,38 @@ return fallback;
     return (total < 0 ? 'سالب ' : '') + t + ' لا غير';
   }
 
-  function defaultDoc() {
-    return { top: 0, right: 0, width: 171, titleFont: 16, bodyFont: 14.5, tableWidth: 158, tableFont: 11.5, bodyAlign: 'justify', titleAlign: 'center', showRecipient: 'yes', showGreeting: 'yes', showBody: 'yes', showTable: 'yes', showSign: 'yes', showStamp: 'no', signCount: 1, signCols: 1, sigTop: 18, stampTop: 8 };
-  }
+function defaultDoc() {
+  return {
+    top: 0,
+    right: 0,
+    width: 171,
+    titleFont: 16,
+    bodyFont: 14.5,
+    tableWidth: 158,
+    tableFont: 11.5,
+    bodyAlign: 'justify',
+    titleAlign: 'center',
+    showRecipient: 'yes',
+    showGreeting: 'yes',
+    showBody: 'yes',
+    showTable: 'yes',
+    showSign: 'yes',
+    showStamp: 'no',
+
+    signCount: 1,
+    signCols: 1,
+
+    sigTop: 18,
+    sigX: 0,
+    sigWidth: 62,
+    sigGap: 10,
+    sigRoleFont: 11.5,
+    sigNameFont: 11,
+    sigLineWidth: 45,
+
+    stampTop: 8
+  };
+}
   function defaultTexts() {
     return {
       index: { to: '', suffix: '', subject: 'فهرس مستندات المستخلص', title: 'فهرس مستندات المستخلص', body: 'يتضمن هذا الفهرس ترتيب مستندات المستخلص والصفحات الخاصة بكل مستند، لاستخدامه كغلاف تنظيمي للحزمة الرسمية.', close: '', note: '', s1t: '', s1n: '', s2t: '', s2n: '', s3t: '', s3n: '' },
@@ -590,10 +619,36 @@ return fallback;
     const k = s.selected, d = s.texts[k], l = s.layout[k];
     return '<section class="panel ' + (openPanel === 'doc' ? 'open' : '') + '"><h3>إعداد الخطاب: ' + LABEL[k] + '</h3><div class="grid">' + input('texts.' + k + '.subject', 'سطر الموضوع', d.subject || d.title) + input('texts.' + k + '.to', 'المخاطب', d.to) + input('texts.' + k + '.suffix', 'الصفة / المحترم', d.suffix) + input('texts.' + k + '.title', 'عنوان الخطاب', d.title) + area('texts.' + k + '.body', 'جسم الخطاب', d.body) + area('texts.' + k + '.close', 'الخاتمة', d.close) + area('texts.' + k + '.note', 'ملاحظة ختامية', d.note) + section('الشكل') + input('layout.' + k + '.top', 'نزول داخل الصفحة mm', l.top, 'number') + input('layout.' + k + '.right', 'تحريك يمين mm', l.right, 'number') + input('layout.' + k + '.width', 'عرض مساحة الخطاب mm', l.width, 'number') + input('layout.' + k + '.titleFont', 'حجم العنوان', l.titleFont, 'number') + align('layout.' + k + '.titleAlign', 'محاذاة العنوان', l.titleAlign) + input('layout.' + k + '.bodyFont', 'حجم الجسم', l.bodyFont, 'number') + align('layout.' + k + '.bodyAlign', 'محاذاة الجسم', l.bodyAlign) + yn('layout.' + k + '.showTable', 'إظهار الجدول', l.showTable) + input('layout.' + k + '.tableWidth', 'عرض الجدول mm', l.tableWidth, 'number') + input('layout.' + k + '.tableFont', 'حجم خط الجدول', l.tableFont, 'number') + '</div></section>';
   }
-  function signPanel(s) {
-    const k = s.selected, d = s.texts[k], l = s.layout[k];
-    return '<section class="panel ' + (openPanel === 'sign' ? 'open' : '') + '"><h3>تواقيع: ' + LABEL[k] + '</h3><div class="grid">' + yn('layout.' + k + '.showSign', 'إظهار التواقيع', l.showSign) + input('layout.' + k + '.signCount', 'عدد التواقيع', l.signCount, 'number') + input('layout.' + k + '.signCols', 'عدد الأعمدة', l.signCols, 'number') + input('layout.' + k + '.sigTop', 'مسافة التواقيع من أعلى mm', l.sigTop, 'number') + input('texts.' + k + '.s1t', 'صفة التوقيع 1', d.s1t) + input('texts.' + k + '.s1n', 'اسم التوقيع 1', d.s1n) + input('texts.' + k + '.s2t', 'صفة التوقيع 2', d.s2t) + input('texts.' + k + '.s2n', 'اسم التوقيع 2', d.s2n) + input('texts.' + k + '.s3t', 'صفة التوقيع 3', d.s3t) + input('texts.' + k + '.s3n', 'اسم التوقيع 3', d.s3n) + yn('layout.' + k + '.showStamp', 'إظهار الختم', l.showStamp) + input('layout.' + k + '.stampTop', 'مكان الختم mm', l.stampTop, 'number') + '</div></section>';
-  }
+function signPanel(s) {
+  const k = s.selected, d = s.texts[k], l = s.layout[k];
+
+  return '<section class="panel ' + (openPanel === 'sign' ? 'open' : '') + '"><h3>تواقيع: ' + LABEL[k] + '</h3><div class="grid">' +
+    yn('layout.' + k + '.showSign', 'إظهار التواقيع', l.showSign) +
+    input('layout.' + k + '.signCount', 'عدد التواقيع', l.signCount, 'number') +
+    input('layout.' + k + '.signCols', 'عدد الأعمدة', l.signCols, 'number') +
+
+    section('مكان وحجم التوقيع') +
+    input('layout.' + k + '.sigTop', 'نزول التوقيع من أعلى mm', l.sigTop, 'number') +
+    input('layout.' + k + '.sigX', 'تحريك التوقيع يمين/يسار mm', l.sigX, 'number') +
+    input('layout.' + k + '.sigWidth', 'عرض كل توقيع mm', l.sigWidth, 'number') +
+    input('layout.' + k + '.sigGap', 'المسافة بين التواقيع mm', l.sigGap, 'number') +
+    input('layout.' + k + '.sigRoleFont', 'حجم خط الصفة', l.sigRoleFont, 'number') +
+    input('layout.' + k + '.sigNameFont', 'حجم خط الاسم', l.sigNameFont, 'number') +
+    input('layout.' + k + '.sigLineWidth', 'عرض خط التوقيع mm', l.sigLineWidth, 'number') +
+
+    section('النصوص') +
+    input('texts.' + k + '.s1t', 'صفة التوقيع 1', d.s1t) +
+    input('texts.' + k + '.s1n', 'اسم التوقيع 1', d.s1n) +
+    input('texts.' + k + '.s2t', 'صفة التوقيع 2', d.s2t) +
+    input('texts.' + k + '.s2n', 'اسم التوقيع 2', d.s2n) +
+    input('texts.' + k + '.s3t', 'صفة التوقيع 3', d.s3t) +
+    input('texts.' + k + '.s3n', 'اسم التوقيع 3', d.s3n) +
+
+    section('الختم') +
+    yn('layout.' + k + '.showStamp', 'إظهار الختم', l.showStamp) +
+    input('layout.' + k + '.stampTop', 'مكان الختم mm', l.stampTop, 'number') +
+    '</div></section>';
+}
 
   function readUi() {
     const s = settings();
@@ -647,13 +702,90 @@ return fallback;
     return '<table class="tbl ' + (dense ? 'dense' : '') + (amountMode ? ' amount-table' : '') + '" style="width:' + tw + 'mm;font-size:' + tf + 'pt"><thead><tr>' + heads.map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + (rows.length ? rows.join('') : '<tr><td colspan="' + heads.length + '">لا توجد بيانات</td></tr>') + '</tbody></table>';
   }
   function sign(s, k) {
-    const d = s.texts[k], l = s.layout[k]; if (l.showSign === 'no') return '';
-    let a = [];
-    for (let i = 1; i <= 3; i++) { const t = tpl(d['s' + i + 't'], s), n = tpl(d['s' + i + 'n'], s); if (t || n) a.push([t, n]); }
-    a = a.slice(0, Math.max(1, num(l.signCount) || 1)); if (!a.length) return '';
-    if (a.length === 1) return '<div class="sig sig-left" style="margin-top:' + num(l.sigTop) + 'mm"><div class="sig-role">' + esc(a[0][0]) + '</div><div class="sig-line"></div><div class="sig-name">' + esc(a[0][1]) + '</div></div>';
-    return '<div class="sig-grid" style="margin-top:' + num(l.sigTop) + 'mm;grid-template-columns:repeat(' + Math.max(1, num(l.signCols) || 1) + ',1fr)">' + a.map(x => '<div class="sig-left"><div class="sig-role">' + esc(x[0]) + '</div><div class="sig-line"></div><div class="sig-name">' + esc(x[1]) + '</div></div>').join('') + '</div>';
+  const d = s.texts[k], l = s.layout[k];
+  if (l.showSign === 'no') return '';
+
+  let a = [];
+  for (let i = 1; i <= 3; i++) {
+    const t = tpl(d['s' + i + 't'], s);
+    const n = tpl(d['s' + i + 'n'], s);
+    if (t || n) a.push([t, n]);
   }
+
+  const count = Math.max(1, Math.min(3, num(l.signCount) || 1));
+  a = a.slice(0, count);
+  if (!a.length) return '';
+
+  const cols = Math.max(1, Math.min(3, num(l.signCols) || 1));
+  const gap = Math.max(0, Math.min(30, num(l.sigGap) || 10));
+  const maxBoxWidth = Math.max(32, Math.floor((170 - (gap * (cols - 1))) / cols));
+
+  const boxWidth = Math.max(32, Math.min(maxBoxWidth, num(l.sigWidth) || 62));
+  const lineWidth = Math.max(24, Math.min(boxWidth - 6, num(l.sigLineWidth) || 45));
+  const roleFont = Math.max(8, Math.min(18, num(l.sigRoleFont) || 11.5));
+  const nameFont = Math.max(8, Math.min(18, num(l.sigNameFont) || 11));
+  const top = Math.max(0, num(l.sigTop) || 18);
+  const x = Math.max(-60, Math.min(60, num(l.sigX) || 0));
+
+  const boxStyle =
+    'width:' + boxWidth + 'mm!important;' +
+    'max-width:' + boxWidth + 'mm!important;' +
+    'box-sizing:border-box!important;' +
+    'text-align:center!important;' +
+    'white-space:normal!important;' +
+    'overflow:visible!important;' +
+    'overflow-wrap:anywhere!important;' +
+    'word-break:normal!important;';
+
+  const roleStyle =
+    'font-size:' + roleFont + 'pt!important;' +
+    'line-height:1.18!important;' +
+    'white-space:normal!important;' +
+    'overflow-wrap:anywhere!important;' +
+    'word-break:normal!important;';
+
+  const nameStyle =
+    'font-size:' + nameFont + 'pt!important;' +
+    'line-height:1.18!important;' +
+    'white-space:normal!important;' +
+    'overflow-wrap:anywhere!important;' +
+    'word-break:normal!important;';
+
+  const lineStyle =
+    'width:' + lineWidth + 'mm!important;' +
+    'min-width:20mm!important;' +
+    'max-width:' + lineWidth + 'mm!important;' +
+    'margin-right:auto!important;' +
+    'margin-left:auto!important;';
+
+  const one = x =>
+    '<div class="sig-left" style="' + boxStyle + '">' +
+      '<div class="sig-role" style="' + roleStyle + '">' + esc(x[0]) + '</div>' +
+      '<div class="sig-line" style="' + lineStyle + '"></div>' +
+      '<div class="sig-name" style="' + nameStyle + '">' + esc(x[1]) + '</div>' +
+    '</div>';
+
+  if (a.length === 1) {
+    return '<div class="sig sig-left" style="' + boxStyle + 'margin-top:' + top + 'mm!important;transform:translateX(' + x + 'mm)!important;">' +
+      '<div class="sig-role" style="' + roleStyle + '">' + esc(a[0][0]) + '</div>' +
+      '<div class="sig-line" style="' + lineStyle + '"></div>' +
+      '<div class="sig-name" style="' + nameStyle + '">' + esc(a[0][1]) + '</div>' +
+    '</div>';
+  }
+
+  return '<div class="sig-grid" style="' +
+    'margin-top:' + top + 'mm!important;' +
+    'display:grid!important;' +
+    'grid-template-columns:repeat(' + cols + ',' + boxWidth + 'mm)!important;' +
+    'justify-content:center!important;' +
+    'align-items:start!important;' +
+    'gap:' + gap + 'mm!important;' +
+    'transform:translateX(' + x + 'mm)!important;' +
+    'width:100%!important;' +
+    'box-sizing:border-box!important;">' +
+    a.map(one).join('') +
+  '</div>';
+}
   function stamp(s, k) { const l = s.layout[k]; return l.showStamp === 'yes' ? '<div class="stamp" style="margin-top:' + num(l.stampTop) + 'mm">الختم</div>' : ''; }
   function amtTable(s, k) {
     const c = ctx(s);
