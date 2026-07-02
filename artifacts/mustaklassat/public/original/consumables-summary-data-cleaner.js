@@ -5,7 +5,7 @@
 (function () {
   'use strict';
 
-  var CACHE_MARKER = '20260702_v8_consumables_a4_letterhead_print';
+  var CACHE_MARKER = '20260702_v9_consumables_letterhead_like_labor';
   try { window.__CONSUMABLES_SUMMARY_CLEANER_CACHE_MARKER = CACHE_MARKER; } catch (_) {}
 
   var sig = location.pathname + location.search;
@@ -37,7 +37,7 @@
   function loadHospitalConsumablesRaiseLetter() {
     loadScriptFresh('hospital-consumables-raise-letter-js', '/original/hospital_consumables_raise_letter.js?v=20260702_v8_consumables_a4_letterhead_print');
     setTimeout(function () {
-      loadScriptFresh('hospital-consumables-settings-fix-js', '/original/hospital_consumables_settings_fix_v6.js?v=20260702_v8_consumables_a4_letterhead_print');
+      loadScriptFresh('hospital-consumables-settings-fix-js', '/original/hospital_consumables_settings_fix_v6.js?v=20260702_v9_consumables_letterhead_like_labor');
     }, 80);
     setTimeout(function () {
       loadScriptFresh('hospital-consumables-settings-route-guard-js', '/original/hospital_consumables_settings_route_guard_v7.js?v=20260702_v13_consumables_a4_letterhead_print');
