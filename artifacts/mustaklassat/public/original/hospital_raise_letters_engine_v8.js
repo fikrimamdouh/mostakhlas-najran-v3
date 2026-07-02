@@ -99,7 +99,7 @@
       return 0;
     };
 
-    const DEPTS = ['cleaning', 'electricity', 'agriculture', 'civil_works', 'mechanical', 'laundry', 'patient_services', 'admin_saudi'];
+    const DEPTS = ['cleaning', 'electricity', 'agriculture', 'civil_works', 'mechanical', 'laundry', 'patient_services', 'admin_saudi', 'security'];
     const attendanceData = readJson('attendanceData', {});
     let deptGross = 0, attendanceDeduction = 0, attendanceAbsencePenalty = 0, attendanceNationalityPenalty = 0;
 
@@ -113,12 +113,12 @@
       });
     });
 
-    const grossLabor =
+    const monthlyValue =
       firstObjNum(e, ['grossLabor', 'laborTotal', 'totalLaborCost', 'grossLaborCost', 'totalBeforeDeductions', 'totalLaborBeforeDeduction']) ||
       firstLocalNum(['grossLabor_' + b.hospital, 'laborTotal_' + b.hospital, 'totalLaborCost_' + b.hospital, 'grossLabor', 'laborTotal', 'totalLaborCost']) ||
       deptGross;
 
-    const absenceDeduction =
+    const deduction =
       firstObjNum(e, ['absenceDeduction', 'absenceDiscount', 'totalAbsenceDeduction', 'deduction', 'deductionAmount']) ||
       firstLocalNum(['absenceDeduction_' + b.hospital, 'totalAbsenceDeduction_' + b.hospital, 'absenceDeduction', 'absenceDiscount', 'totalAbsenceDeduction']) ||
       attendanceDeduction;
@@ -146,42 +146,51 @@
       firstObjNum(e, ['finalLaborCost', 'laborNetTotal', 'netAmount', 'netPayable', 'netDue']) ||
       firstLocalNum(['finalLaborCost_' + b.hospital, 'laborNetTotal_' + b.hospital, 'netAmount_' + b.hospital, 'finalLaborCost', 'laborNetTotal', 'netAmount', 'netPayable', 'netDue']);
 
-    let laborGross = grossLabor;
-    if (!laborGross && storedFinal) laborGross = round2(storedFinal + penalties + absenceDeduction);
+    let baseMonthly = monthlyValue;
+    if (!baseMonthly && storedFinal) baseMonthly = round2(storedFinal + deduction + penalties);
 
-    let beforeVat = round2(laborGross - absenceDeduction);
-    if (!beforeVat && storedFinal) beforeVat = round2(storedFinal + penalties);
+    let taxBase = round2(baseMonthly - deduction);
+    if (!taxBase && storedFinal) taxBase = round2(storedFinal + penalties);
 
     if (num(s.manualGrand) > 0) {
-      const gross = round2(num(s.manualGrand));
-      beforeVat = round2(gross / (1 + vatRate / 100));
-      const vat = round2(gross - beforeVat);
-      const due = round2(gross - penalties);
+      const totalExtract = round2(num(s.manualGrand));
+      taxBase = round2((totalExtract + penalties) / (1 + vatRate / 100));
+      const vat = round2(taxBase * vatRate / 100);
+      const contractorNet = round2(totalExtract - vat);
+
       return {
-        beforeVat,
+        monthlyValue: round2(baseMonthly),
+        deduction: round2(deduction),
+        taxBase,
+        penalties: round2(penalties),
+        contractorNet,
         vat,
-        gross,
-        penalties,
-        due,
-        net: beforeVat,
-        grand: due,
-        source: 'manualGrand - final VAT logic'
+        gross: totalExtract,
+        due: totalExtract,
+        beforeVat: contractorNet,
+        net: contractorNet,
+        grand: totalExtract,
+        source: 'manualGrand - total monthly extract'
       };
     }
 
-    const vat = round2(beforeVat * vatRate / 100);
-    const gross = round2(beforeVat + vat);
-    const due = round2(gross - penalties);
+    const contractorNet = round2(taxBase - penalties);
+    const vat = round2(taxBase * vatRate / 100);
+    const totalExtract = round2(contractorNet + vat);
 
     return {
-      beforeVat,
+      monthlyValue: round2(baseMonthly),
+      deduction: round2(deduction),
+      taxBase,
+      penalties: round2(penalties),
+      contractorNet,
       vat,
-      gross,
-      penalties,
-      due,
-      net: beforeVat,
-      grand: due,
-      source: grossLabor ? 'final VAT logic: labor - deduction + VAT - penalties' : 'غير متوفر'
+      gross: totalExtract,
+      due: totalExtract,
+      beforeVat: contractorNet,
+      net: contractorNet,
+      grand: totalExtract,
+      source: baseMonthly ? 'contractor net + VAT on monthly minus deduction' : 'غير متوفر'
     };
   }
 
@@ -269,18 +278,48 @@
 
   function attendance() {
     const snapshot = readJson('najran_revision_snapshot', {});
+
     const sources = [
-      readJson('attendanceData', null),
-      readJson('ng_attendanceData', null),
-      readJson('nd_attendanceData', null),
-      readJson('persistentAttendanceData', null),
-      snapshot && snapshot.attendanceData,
-      snapshot && snapshot.persistentAttendanceData
+      ['attendanceData', readJson('attendanceData', null)],
+      ['ng_attendanceData', readJson('ng_attendanceData', null)],
+      ['nd_attendanceData', readJson('nd_attendanceData', null)],
+      ['persistentAttendanceData', readJson('persistentAttendanceData', null)],
+      ['snapshot.attendanceData', snapshot && snapshot.attendanceData],
+      ['snapshot.persistentAttendanceData', snapshot && snapshot.persistentAttendanceData]
     ];
 
-    const out = [], seen = {};
-    sources.forEach(src => collectAttendanceRows(src, out, seen, 0));
-    return out;
+    for (const pair of sources) {
+      const out = [], seen = {};
+      collectAttendanceRows(pair[1], out, seen, 0);
+      if (out.length) {
+        try { window.__HospitalRaiseLettersAttendanceSource = pair[0]; } catch (_) {}
+        return out;
+      }
+    }
+
+    try { window.__HospitalRaiseLettersAttendanceSource = 'empty'; } catch (_) {}
+    return [];
+  }
+
+  function dayCodeCount(e, code) {
+    return Array.isArray(e && e.days) ? e.days.filter(x => clean(x) === code).length : 0;
+  }
+
+  function vacancyDays(e) {
+    return dayCodeCount(e, 'ش');
+  }
+
+  function vacancyNote(e) {
+    const vd = vacancyDays(e);
+    const base = empNotes(e);
+    const employee = empName(e);
+
+    if (vd > 0) {
+      return 'شاغر عدد ' + ar(vd) + ' يوم' + (employee ? ' - الموظف: ' + employee : '') + (base ? ' - ' + base : '');
+    }
+
+    if (!employee && empJob(e)) return base || 'شاغر كامل';
+    return base;
   }
 
   function isVacant(e) {
@@ -289,9 +328,7 @@
     const status = empStatus(e);
     const directText = [name, job, status].join(' ');
 
-    // الشاغر الحقيقي: صف بدون اسم ومعه وظيفة، أو نص مباشر يقول شاغر.
-    // لا تعتبر كود "ش" داخل days شاغرًا إذا كان للصف اسم موظف.
-    return (!name && !!job) || /شاغر|vacant|vacancy/i.test(directText);
+    return vacancyDays(e) > 0 || (!name && !!job) || /شاغر|vacant|vacancy/i.test(directText);
   }
 
   function isLeave(e) {
@@ -380,13 +417,17 @@
       company: s.company || b.company, contract: s.contract || b.contract, issuer: s.issuer || ('إدارة ' + b.hospital),
       sigTitle: s.sigTitle || '', sigName: s.sigName || '', start: fmtDate(b.start), end: fmtDate(b.end), payment: b.payment, contractNo: b.contractNo, iban: b.iban,
       period: 'دفعة رقم (' + b.payment + ') عن الفترة من ' + fmtDate(b.start) + ' م إلى ' + fmtDate(b.end) + ' م',
-      beforeVat: money(am.beforeVat),
+      monthlyValue: money(am.monthlyValue),
+      deduction: money(am.deduction),
+      taxBase: money(am.taxBase),
+      penalties: money(am.penalties),
+      contractorNet: money(am.contractorNet),
+      beforeVat: money(am.contractorNet),
       vat: money(am.vat),
       gross: money(am.gross),
-      penalties: money(am.penalties),
       due: money(am.due),
       dueWords: tafqeetSAR(am.due),
-      net: money(am.beforeVat),
+      net: money(am.contractorNet),
       grand: money(am.due),
       grandWords: tafqeetSAR(am.due),
       source: am.source
@@ -496,11 +537,9 @@
   function amtTable(s, k) {
     const c = ctx(s);
     return table(s, k, ['البيان', 'المبلغ'], [
-      '<tr><td>المبلغ قبل الضريبة</td><td>' + c.beforeVat + ' ريال</td></tr>',
+      '<tr><td>صافي المستحق للمقاول</td><td>' + c.contractorNet + ' ريال</td></tr>',
       '<tr><td>ضريبة القيمة المضافة (15%)</td><td>' + c.vat + ' ريال</td></tr>',
-      '<tr><td>الإجمالي شامل الضريبة</td><td>' + c.gross + ' ريال</td></tr>',
-      '<tr><td>الغرامات</td><td>' + c.penalties + ' ريال</td></tr>',
-      '<tr class="grand"><td>الصافي المستحق بعد الضريبة والغرامات</td><td>' + c.due + ' ريال</td></tr>'
+      '<tr class="grand"><td>إجمالي المستخلص الشهري</td><td>' + c.gross + ' ريال</td></tr>'
     ], true) + '<div class="tafqeet">' + esc(c.dueWords) + '</div>';
   }
   function ibanTable(s, k) {
@@ -525,7 +564,7 @@
     } else if (k === 'noPrev') {
       html += amtTable(s, k) + ibanTable(s, k);
     } else if (k === 'vacancies') {
-      const rows = attendance().filter(isVacant).map((e, i) => '<tr><td>' + ar(i + 1) + '</td><td>' + esc(empJob(e) || 'شاغر') + '</td><td>' + esc(empNotes(e)) + '</td></tr>');
+      const rows = attendance().filter(isVacant).map((e, i) => '<tr><td>' + ar(i + 1) + '</td><td>' + esc(empJob(e) || 'شاغر') + '</td><td>' + esc(vacancyNote(e)) + '</td></tr>');
       html += table(s, k, ['م', 'الوظيفة', 'ملاحظات'], rows);
     } else if (k === 'vacations') {
       const rows = attendance().filter(isLeave).map((e, i) => '<tr><td>' + ar(i + 1) + '</td><td>' + esc(empName(e)) + '</td><td>' + esc(empJob(e)) + '</td><td>' + esc(empNotes(e)) + '</td></tr>');
