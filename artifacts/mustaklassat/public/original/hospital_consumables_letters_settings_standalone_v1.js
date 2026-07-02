@@ -128,7 +128,7 @@
   function render() {
     var s = read(), k = s.selectedDoc || 'main', mode = viewMode();
     var body = mode === 'sign' ? signatures(s, k) : (letterhead(s) + letterFields(s, k) + signatures(s, k));
-    document.body.innerHTML = '<main class="box"><h1>إعدادات خطابات رفع المستهلكات</h1><p>صفحة مستقلة تحفظ إعدادات المستهلكات فقط، ولا تفتح خطابات الرفع العادية.</p><div id="msg"></div><div class="actions top"><button id="save" class="ok">حفظ</button><button id="open">فتح صفحة المستهلكات</button><button id="back" class="danger">رجوع</button></div><div class="actions view"><button type="button" data-view="full" class="viewbtn ' + (mode === 'full' ? 'active' : '') + '">الإعدادات كاملة</button><button type="button" data-view="sign" class="viewbtn ' + (mode === 'sign' ? 'active' : '') + '">تعديل التواقيع فقط</button></div><div class="actions docs">' + DOCS.map(function (d) { return '<button type="button" data-doc="' + d[0] + '" class="doc ' + (k === d[0] ? 'active' : '') + '">' + d[1] + '</button>'; }).join('') + '</div>' + body + '</main>';
+    document.body.innerHTML = '<main class="box"><h1>إعدادات خطابات رفع المستهلكات</h1><p>صفحة مستقلة تحفظ إعدادات المستهلكات فقط، ولا تفتح خطابات الرفع العادية.</p><div id="msg"></div><div class="actions top"><button id="save" class="ok">حفظ</button><button id="open">فتح صفحة المستهلكات</button><button id="printNow" class="ok">حفظ وفتح الطباعة</button><button id="back" class="danger">رجوع</button></div><div class="actions view"><button type="button" data-view="full" class="viewbtn ' + (mode === 'full' ? 'active' : '') + '">الإعدادات كاملة</button><button type="button" data-view="sign" class="viewbtn ' + (mode === 'sign' ? 'active' : '') + '">تعديل التواقيع فقط</button></div><div class="actions docs">' + DOCS.map(function (d) { return '<button type="button" data-doc="' + d[0] + '" class="doc ' + (k === d[0] ? 'active' : '') + '">' + d[1] + '</button>'; }).join('') + '</div>' + body + '</main>';
     bind();
   }
 
@@ -138,6 +138,14 @@
     document.querySelectorAll('[data-view]').forEach(function (btn) { btn.onclick = function () { readForm(); setViewMode(btn.dataset.view); render(); }; });
     document.getElementById('save').onclick = function () { readForm(); note('تم حفظ إعدادات خطابات المستهلكات.'); };
     document.getElementById('open').onclick = function () { readForm(); location.href = '/original/consumables.html'; };
+    var printNow = document.getElementById('printNow');
+if (printNow) {
+  printNow.onclick = function () {
+    var s = readForm();
+    var doc = s.selectedDoc || 'main';
+    location.href = '/original/consumables.html?printConsumablesLetter=' + encodeURIComponent(doc) + '&t=' + Date.now();
+  };
+}
     document.getElementById('back').onclick = function () { readForm(); history.length > 1 ? history.back() : (location.href = '/original/consumables.html'); };
     var del = document.getElementById('deleteHead');
     if (del) del.onclick = function () { var s = readForm(); s.letterheadDataUrl = ''; s.letterheadEnabled = 'no'; save(s); render(); };
