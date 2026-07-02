@@ -37,7 +37,9 @@
   setTimeout(function(){
     loadScript('hospital-raise-letters-status-pages-fix-v1', '/original/hospital_raise_letters_status_pages_fix_v1.js?v=20260702_v1_status_pages_signature');
   }, 760);
-  setTimeout(function(){
-    loadScript('hospital-raise-letters-vat-logic-v1', '/original/hospital_raise_letters_tax_invoice_logic_v1.js?v=20260702_v1_vat_logic');
-  }, 880);
+  // Disabled: tax logic is now handled by hospital_raise_letters_engine_v8.js.
+  // Keeping this layer enabled causes delayed overwrite of amount table and tafqeet.
+  // setTimeout(function(){
+  //   loadScript('hospital-raise-letters-vat-logic-v1', '/original/hospital_raise_letters_tax_invoice_logic_v1.js?v=20260702_v1_vat_logic');
+  // }, 880);
 })();
