@@ -17,6 +17,9 @@
     loadScript('hospital-raise-letters-index-guard-v1', '/original/hospital_raise_letters_index_guard_v1.js?v=20260702_v1_index_not_empty');
   }, 80);
   setTimeout(function(){
+    loadScript('hospital-raise-letters-status-pages-fix-v2', '/original/hospital_raise_letters_status_pages_fix_v1.js?v=20260702_v12_merged_saudi_count_all_sources');
+  }, 120);
+  setTimeout(function(){
     loadScript('hospital-raise-letters-print-polish-v3', '/original/hospital_raise_letters_print_polish_v1.js?v=20260702_v3_a4_exit');
   }, 150);
   setTimeout(function(){
@@ -37,9 +40,7 @@
   setTimeout(function(){
     loadScript('hospital-raise-letters-paginate-rows-polyfill-v1', '/original/hospital_raise_letters_paginate_rows_polyfill_v1.js?v=20260702_v1_polyfill');
   }, 710);
-  setTimeout(function(){
-    loadScript('hospital-raise-letters-status-pages-fix-v1', '/original/hospital_raise_letters_status_pages_fix_v1.js?v=20260702_v11_saudi_names_paginate_fix');
-  }, 780);
+  // Disabled: older status-pages fix loader. V2 merged Saudi count is loaded earlier at 120ms.
   // Disabled: tax logic is now handled by hospital_raise_letters_engine_v8.js.
   // Keeping this layer enabled causes delayed overwrite of amount table and tafqeet.
   // setTimeout(function(){
