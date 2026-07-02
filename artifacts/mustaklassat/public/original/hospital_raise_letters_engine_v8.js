@@ -264,13 +264,15 @@
     );
   }
 
- function collectAttendanceRows(src, out, seen, depth, path) {
+function collectAttendanceRows(src, out, seen, depth, path) {
   if (!src || depth > 8) return;
 
   path = path || 'root';
 
   if (Array.isArray(src)) {
-    src.forEach((x, idx) => collectAttendanceRows(x, out, seen, depth + 1, path + '/' + idx));
+    src.forEach((x, idx) => {
+      collectAttendanceRows(x, out, seen, depth + 1, path + '/' + idx);
+    });
     return;
   }
 
@@ -282,18 +284,15 @@
     const job = clean(empJob(src));
     const nat = clean(empNationality(src));
 
-    const isVacantLike =
-      !name ||
-      /شاغر|شاغره|شاغرة|vacant|vacancy/i.test(name) ||
-      /شاغر|شاغره|شاغرة|vacant|vacancy/i.test(deepTextLocal(src, 0));
-
+    /*
+      القاعدة:
+      - الصف الذي له رقم إقامة/هوية: يعتبر نفس الشخص، فلا يتكرر بنفس الهوية.
+      - الصف الذي لا يملك رقم إقامة/هوية: يعتبر صف مستقل حسب مكانه في الجدول.
+      هذا يحافظ على الشواغر المتكررة ونفس الوظيفة.
+    */
     const key = id
       ? 'id|' + id
-      : (
-          isVacantLike
-            ? 'vacant|' + job + '|path|' + path
-            : 'name|' + name + '|' + job + '|' + nat
-        );
+      : 'row-path|' + path + '|' + job + '|' + name + '|' + nat;
 
     if (!seen[key]) {
       seen[key] = true;
@@ -302,7 +301,9 @@
     return;
   }
 
-  Object.keys(src).forEach(k => collectAttendanceRows(src[k], out, seen, depth + 1, path + '/' + k));
+  Object.keys(src).forEach(k => {
+    collectAttendanceRows(src[k], out, seen, depth + 1, path + '/' + k);
+  });
 }
 
   function attendance() {
