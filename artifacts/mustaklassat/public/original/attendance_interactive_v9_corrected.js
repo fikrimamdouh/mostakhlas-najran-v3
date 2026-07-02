@@ -39,14 +39,46 @@ const STATUS_CODES = {
 };
 const PASSWORD = "admin123"; // تعريف الباسورد هنا
 let currentDialogPurpose = null; // هذا المتغير أيضاً يجب أن يكون معرفاً في النطاق العام
+function normalizeExcelHeader(value) {
+  return String(value || '')
+    .replace(/[\u200e\u200f\u202a-\u202e]/g, '')
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/[ـ\u064B-\u065F\u0670]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function findHeaderIndex(headers, patterns) {
+  const normalizedHeaders = headers.map(normalizeExcelHeader);
+  const normalizedPatterns = patterns.map(normalizeExcelHeader);
+
+  return normalizedHeaders.findIndex(function(header) {
+    return normalizedPatterns.some(function(pattern) {
+      return header.includes(pattern);
+    });
+  });
+}
+
 function normalizeNationality(value) {
-  const v = String(value || '').replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim();
+  const raw = String(value || '')
+    .replace(/[\u200e\u200f\u202a-\u202e]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const v = normalizeExcelHeader(raw);
 
   if (!v || /^(غير محدد|—|-|null|undefined)$/i.test(v)) return 'غير سعودي';
 
-  if (/^(سعودي|سعودى|سعودية|السعودية|saudi|ksa)$/i.test(v)) return 'سعودي';
+  if (/^(غير سعودي|غير سعوديه|non saudi|non-saudi)$/i.test(v)) return 'غير سعودي';
 
-  return v;
+  if (/^(سعودي|سعوديه|السعودي|السعوديه|saudi|ksa|k\.s\.a|saudi arabia)$/i.test(v)) {
+    return 'سعودي';
+  }
+
+  return raw;
 }
 
 function isSaudiNationality(value) {
@@ -623,26 +655,83 @@ function processAndFilterExcelData(file) {
                     return reject(new Error("الملف فارغ أو لا يمكن قراءته."));
                 }
 
-                let headerRowIndex = -1;
-                for (let i = 0; i < Math.min(10, jsonData.length); i++) {
-                    const row = jsonData[i].map(cell => String(cell).toLowerCase().trim());
-                    if (row.some(c => c.includes("مسمى الوظيفة")) && row.some(c => c.includes("اسم شاغل الوظيفة"))) {
-                        headerRowIndex = i;
-                        break;
-                    }
-                }
-                if (headerRowIndex === -1) {
-                    return reject(new Error("لم يتم العثور على صف العناوين."));
-                }
-                
-                const headers = jsonData[headerRowIndex].map(h => String(h).trim());
-                
-                const jobTitleIndex = headers.findIndex(h => h.includes("مسمى الوظيفة"));
-                const nameIndex = headers.findIndex(h => h.includes("اسم شاغل الوظيفة"));
-                const salaryIndex = headers.findIndex(h => h.includes("التكلفة الشهرية"));
-                const categoryIndex = headers.findIndex(h => h.includes("الفئة"));
-                const nationalityIndex = headers.findIndex(h => h.includes("الجنسية"));
-                const iqamaIdIndex = headers.findIndex(h => h.includes("رقم الاقامة") || h.includes("رقم الإقامة"));
+               let headerRowIndex = -1;
+
+for (let i = 0; i < Math.min(10, jsonData.length); i++) {
+    const row = jsonData[i].map(cell => normalizeExcelHeader(cell));
+
+    const hasJobTitle = row.some(c =>
+        c.includes("مسمي الوظيفه") ||
+        c.includes("المسمي الوظيفي") ||
+        c.includes("job title") ||
+        c.includes("position")
+    );
+
+    const hasName = row.some(c =>
+        c.includes("اسم شاغل الوظيفه") ||
+        c.includes("اسم الموظف") ||
+        c.includes("employee name") ||
+        c === "name"
+    );
+
+    if (hasJobTitle && hasName) {
+        headerRowIndex = i;
+        break;
+    }
+}
+
+if (headerRowIndex === -1) {
+    return reject(new Error("لم يتم العثور على صف العناوين."));
+}
+
+const headers = jsonData[headerRowIndex].map(h => String(h).trim());
+
+const jobTitleIndex = findHeaderIndex(headers, [
+    "مسمى الوظيفة",
+    "المسمى الوظيفي",
+    "job title",
+    "position"
+]);
+
+const nameIndex = findHeaderIndex(headers, [
+    "اسم شاغل الوظيفة",
+    "اسم الموظف",
+    "employee name",
+    "name"
+]);
+
+const salaryIndex = findHeaderIndex(headers, [
+    "التكلفة الشهرية",
+    "الراتب",
+    "salary",
+    "cost"
+]);
+
+const categoryIndex = findHeaderIndex(headers, [
+    "الفئة",
+    "فئة",
+    "category",
+    "cat"
+]);
+
+const nationalityIndex = findHeaderIndex(headers, [
+    "الجنسية",
+    "جنسيه",
+    "nationality",
+    "nat"
+]);
+
+const iqamaIdIndex = findHeaderIndex(headers, [
+    "رقم الإقامة",
+    "رقم الاقامة",
+    "رقم الهوية",
+    "هوية",
+    "هويه",
+    "إقامة",
+    "اقامة",
+    "iqama",
+    "id"
+]);
 
                 const employees = [];
                 const { daysInMonth } = getExtractPeriodDetails();
