@@ -43,6 +43,9 @@
   setTimeout(function(){
     loadScript('hospital-raise-letters-paginate-rows-polyfill-v1', '/original/hospital_raise_letters_paginate_rows_polyfill_v1.js?v=20260702_v1_polyfill');
   }, 710);
+  setTimeout(function(){
+    loadScript('hospital-raise-letters-signature-bounds-fix-v1', '/original/hospital_raise_letters_signature_bounds_fix_v1.js?v=20260702_v1_keep_signatures_inside_page');
+  }, 780);
   // Disabled: older status-pages fix loader. V2 merged Saudi count is loaded earlier at 120ms.
   // Disabled: tax logic is now handled by hospital_raise_letters_engine_v8.js.
   // Keeping this layer enabled causes delayed overwrite of amount table and tafqeet.
