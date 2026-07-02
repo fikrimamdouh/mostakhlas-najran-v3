@@ -20,12 +20,15 @@
     loadScript('hospital-raise-letters-print-compact-v4', '/original/hospital_raise_letters_print_compact_v4.js?v=20260702_v4_compact_a4');
   }, 260);
   setTimeout(function(){
+    loadScript('hospital-raise-letters-selected-print-polish-v1', '/original/hospital_raise_letters_selected_print_polish_v1.js?v=20260702_v1_all_selected_docs');
+  }, 330);
+  setTimeout(function(){
     loadScript('hospital-raise-letters-custom-exclude-v1', '/original/hospital_raise_letters_custom_exclude_v1.js?v=20260702_v2_safe_index_rows');
-  }, 360);
+  }, 390);
   setTimeout(function(){
     loadScript('hospital-raise-letters-iban-preview-toggle-v1', '/original/hospital_raise_letters_iban_preview_toggle_v1.js?v=20260702_v1_iban_preview_toggle');
-  }, 460);
+  }, 490);
   setTimeout(function(){
     loadScript('hospital-raise-letters-toolbar-clean-css-v1', '/original/hospital_raise_letters_toolbar_clean_css_v1.js?v=20260702_v1_css_only_no_flicker');
-  }, 620);
+  }, 650);
 })();
