@@ -639,5 +639,36 @@ window.HospitalConsumablesRaiseLetter = {
     closeDialog();
     openDialog();
   }
-};  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installButtons); else installButtons(); setTimeout(installButtons, 700); setTimeout(installButtons, 1800); setTimeout(installButtons, 3500); console.info('[Hospital Consumables Letters Center] installed v6 dynamic letterhead/header');
+};
+
+(function autoPrintFromSettingsReturn() {
+  try {
+    var params = new URLSearchParams(location.search || '');
+    var doc = params.get('printConsumablesLetter');
+    if (!doc) return;
+
+    setTimeout(function () {
+      try {
+        var s = getSettings();
+        s.selectedDoc = doc;
+        setSettings(s);
+        openPrintDoc(doc);
+      } catch (e) {
+        console.error('[HospitalConsumablesRaiseLetter] auto print failed:', e);
+      }
+    }, 900);
+  } catch (_) {}
+})();
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', installButtons);
+} else {
+  installButtons();
+}
+
+setTimeout(installButtons, 700);
+setTimeout(installButtons, 1800);
+setTimeout(installButtons, 3500);
+
+console.info('[Hospital Consumables Letters Center] installed v6 dynamic letterhead/header');
 })();
