@@ -55,6 +55,13 @@
     Object.keys(src).forEach(function (k) { collectRows(src[k], out, seen, depth + 1); });
   }
   function attendanceRows() {
+    try {
+      if (window.HospitalRaiseLettersEngineV8 && typeof window.HospitalRaiseLettersEngineV8.attendanceRows === 'function') {
+        var engineRows = window.HospitalRaiseLettersEngineV8.attendanceRows();
+        if (Array.isArray(engineRows)) return engineRows;
+      }
+    } catch (_) {}
+
     var sources = [
       readJson('attendanceData', null),
       readJson('ng_attendanceData', null),

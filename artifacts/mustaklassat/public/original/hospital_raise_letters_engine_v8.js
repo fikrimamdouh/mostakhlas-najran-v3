@@ -185,20 +185,113 @@
     };
   }
 
+  function deepTextLocal(x, depth) {
+    if (depth > 6 || x == null) return '';
+    if (typeof x === 'string' || typeof x === 'number' || typeof x === 'boolean') return ' ' + String(x) + ' ';
+    if (Array.isArray(x)) return x.map(v => deepTextLocal(v, depth + 1)).join(' ');
+    if (typeof x === 'object') return Object.keys(x).map(k => ' ' + k + ' ' + deepTextLocal(x[k], depth + 1)).join(' ');
+    return '';
+  }
+
+  function fieldVal(row, keys) {
+    for (const k of keys) {
+      const v = clean(row && row[k]);
+      if (v && !['undefined', 'null', 'غير محدد', '—', '-'].includes(v)) return v;
+    }
+    return '';
+  }
+
+  function empName(e) {
+    return fieldVal(e, ['name', 'employeeName', 'fullName', 'empName', 'arabicName', 'اسم الموظف', 'الاسم']);
+  }
+
+  function empJob(e) {
+    return fieldVal(e, ['jobTitle', 'position', 'title', 'job', 'profession', 'وظيفة', 'الوظيفة', 'المهنة']);
+  }
+
+  function empStatus(e) {
+    return fieldVal(e, ['status', 'attendanceStatus', 'type', 'حالة', 'الحالة']);
+  }
+
+  function empNotes(e) {
+    return fieldVal(e, ['notes', 'note', 'remarks', 'ملاحظات', 'الملاحظات']);
+  }
+
+  function hasExactCode(row, codes) {
+    let found = false;
+    const walk = (x, depth) => {
+      if (found || depth > 6 || x == null) return;
+      if (typeof x === 'string' || typeof x === 'number') {
+        const v = clean(x);
+        if (codes.indexOf(v) >= 0) found = true;
+        return;
+      }
+      if (Array.isArray(x)) return x.forEach(v => walk(v, depth + 1));
+      if (typeof x === 'object') Object.keys(x).forEach(k => walk(x[k], depth + 1));
+    };
+    walk(row, 0);
+    return found;
+  }
+
+  function looksLikeEmployeeRow(o) {
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return false;
+    if (empName(o) || empJob(o)) return true;
+    const t = deepTextLocal(o, 0);
+    return /شاغر|إجاز|اجاز|سعود|غياب|حضور|vacant|vacancy|leave|vacation|saudi|nationality|jobTitle|employeeName/i.test(t) && Object.keys(o).length > 1;
+  }
+
+  function collectAttendanceRows(src, out, seen, depth) {
+    if (!src || depth > 8) return;
+
+    if (Array.isArray(src)) {
+      src.forEach(x => collectAttendanceRows(x, out, seen, depth + 1));
+      return;
+    }
+
+    if (typeof src !== 'object') return;
+
+    if (looksLikeEmployeeRow(src)) {
+      const key = clean(empName(src) + '|' + empJob(src) + '|' + deepTextLocal(src, 0).slice(0, 120));
+      if (!seen[key]) {
+        seen[key] = true;
+        out.push(src);
+      }
+      return;
+    }
+
+    Object.keys(src).forEach(k => collectAttendanceRows(src[k], out, seen, depth + 1));
+  }
+
   function attendance() {
-    const raw = readJson('attendanceData', []), out = [];
-    const add = x => { if (x && typeof x === 'object') out.push(x); };
-    if (Array.isArray(raw)) raw.forEach(add);
-    else if (raw && typeof raw === 'object') Object.keys(raw).forEach(k => Array.isArray(raw[k]) ? raw[k].forEach(add) : add(raw[k]));
+    const snapshot = readJson('najran_revision_snapshot', {});
+    const sources = [
+      readJson('attendanceData', null),
+      readJson('ng_attendanceData', null),
+      readJson('nd_attendanceData', null),
+      readJson('persistentAttendanceData', null),
+      snapshot && snapshot.attendanceData,
+      snapshot && snapshot.persistentAttendanceData
+    ];
+
+    const out = [], seen = {};
+    sources.forEach(src => collectAttendanceRows(src, out, seen, 0));
     return out;
   }
-  function empName(e) { return first(e.name, e.employeeName, e.fullName); }
-  function empJob(e) { return first(e.jobTitle, e.position, e.title, e.job); }
-  function empStatus(e) { return first(e.status, e.attendanceStatus, e.type); }
-  function empDays(e) { const d = e.days || e.attendance || e.statuses || e.daily || []; return Array.isArray(d) ? d : (d && typeof d === 'object' ? Object.values(d) : []); }
-  function isVacant(e) { return !empName(e) || /شاغر/.test(empName(e) + empStatus(e)) || empDays(e).indexOf('ش') >= 0; }
-  function isLeave(e) { return /إجاز|اجاز/.test(empStatus(e)) || empDays(e).indexOf('ج') >= 0 || empDays(e).indexOf('إ') >= 0; }
-  function isSaudi(e) { return e.isSaudi === true || /سعود|saudi/i.test(first(e.nationality, e.nationalityName, e.country, e.citizenship, empStatus(e))); }
+
+  function isVacant(e) {
+    const t = deepTextLocal(e, 0);
+    return /شاغر|vacant|vacancy/i.test(t) || (!empName(e) && !!empJob(e)) || hasExactCode(e, ['ش']);
+  }
+
+  function isLeave(e) {
+    const t = deepTextLocal(e, 0);
+    return /إجاز|اجاز|اجازه|إجازه|vacation|annual\s+leave|leave/i.test(t) || hasExactCode(e, ['ج', 'إ', 'أجازة', 'إجازة', 'اجازة']);
+  }
+
+  function isSaudi(e) {
+    const t = deepTextLocal(e, 0);
+    return /سعودي|سعودية|السعودية|saudi|ksa/i.test(t) || /\bSA\b/i.test(t) || e.isSaudi === true || e.saudi === true;
+  }
 
   const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة'];
   const tens = ['', 'عشرة', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون'];
@@ -421,10 +514,10 @@
     } else if (k === 'noPrev') {
       html += amtTable(s, k) + ibanTable(s, k);
     } else if (k === 'vacancies') {
-      const rows = attendance().filter(isVacant).map((e, i) => '<tr><td>' + ar(i + 1) + '</td><td>' + esc(empJob(e) || 'شاغر') + '</td><td>' + esc(e.notes || '') + '</td></tr>');
+      const rows = attendance().filter(isVacant).map((e, i) => '<tr><td>' + ar(i + 1) + '</td><td>' + esc(empJob(e) || 'شاغر') + '</td><td>' + esc(empNotes(e)) + '</td></tr>');
       html += table(s, k, ['م', 'الوظيفة', 'ملاحظات'], rows);
     } else if (k === 'vacations') {
-      const rows = attendance().filter(isLeave).map((e, i) => '<tr><td>' + ar(i + 1) + '</td><td>' + esc(empName(e)) + '</td><td>' + esc(empJob(e)) + '</td><td>' + esc(e.notes || '') + '</td></tr>');
+      const rows = attendance().filter(isLeave).map((e, i) => '<tr><td>' + ar(i + 1) + '</td><td>' + esc(empName(e)) + '</td><td>' + esc(empJob(e)) + '</td><td>' + esc(empNotes(e)) + '</td></tr>');
       html += table(s, k, ['م', 'الاسم', 'الوظيفة', 'ملاحظات'], rows);
     } else if (k === 'saudi') {
       const all = attendance(), sa = all.filter(isSaudi).length, total = all.length, perc = total ? sa * 100 / total : 0;
@@ -445,6 +538,11 @@
     win.document.write(renderDocument(key, s, true));
     win.document.close();
   }
+
+  window.HospitalRaiseLettersEngineV8 = Object.assign(window.HospitalRaiseLettersEngineV8 || {}, {
+    attendanceRows: attendance,
+    renderDocument: renderDocument
+  });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
 })();
