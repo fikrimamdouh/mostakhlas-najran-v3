@@ -65,7 +65,19 @@
   function dayCodeCount(row, code) {
     return Array.isArray(row && row.days) ? row.days.filter(function (x) { return clean(x) === code; }).length : 0;
   }
+  function hasCode(row, code) {
+    return Array.isArray(row && row.days) && row.days.some(function (x) {
+      return clean(x) === code;
+    });
+  }
 
+  function isVacantByCode(row) {
+    return hasCode(row, 'ش');
+  }
+
+  function isActualSaudiEmployee(row) {
+    return isRealNamedEmployee(row) && !isVacantByCode(row) && isSaudi(row);
+  }
   function vacancyDays(row) { return dayCodeCount(row, 'ش'); }
   function vacancyNote(row) {
     var vd = vacancyDays(row);
@@ -356,7 +368,7 @@ var pages = findPages(doc, 'بيان الإجازات');
     var rows = attendanceRows();
     var countable = rows.filter(isCountableLaborPosition);
     var total = countable.length;
-    var sa = rows.filter(function (r) { return isRealNamedEmployee(r) && isSaudi(r); }).length;
+    var sa = rows.filter(isActualSaudiEmployee).length;
     var perc = total ? ((sa * 100 / total).toFixed(2) + '%') : '0.00%';
     try {
       window.__HospitalRaiseLettersSaudiTotal = total;
@@ -370,7 +382,7 @@ var pages = findPages(doc, 'بيان الإجازات');
   }
 
   function fixSaudiNames(doc) {
-    var rows = attendanceRows().filter(function (r) { return isRealNamedEmployee(r) && isSaudi(r); });
+    var rows = attendanceRows().filter(isActualSaudiEmployee);
     var pages = findPages(doc, 'بيان أسماء السعوديين');
     var rowHtml = rows.map(function (r, i) {
       return '<tr><td>' + ar(i + 1) + '</td><td>' + esc(name(r)) + '</td><td>' + esc(job(r)) + '</td><td>' + esc(nationality(r)) + '</td><td>' + esc(empId(r)) + '</td></tr>';
