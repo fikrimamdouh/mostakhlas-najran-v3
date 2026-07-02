@@ -35,7 +35,7 @@
   }
 
   function loadHospitalConsumablesRaiseLetter() {
-    loadScriptFresh('hospital-consumables-raise-letter-js', '/original/hospital_consumables_raise_letter.js?v=20260702_v11_match_labor_letterhead_behavior');
+    loadScriptFresh('hospital-consumables-raise-letter-js', '/original/hospital_consumables_raise_letter.js?v=20260702_v12_auto_print_from_settings');
     setTimeout(function () {
       loadScriptFresh('hospital-consumables-letterhead-storage-guard-js', '/original/hospital_consumables_letterhead_storage_guard_v1.js?v=20260702_v2_fallback_letterhead_key');
     }, 60);
