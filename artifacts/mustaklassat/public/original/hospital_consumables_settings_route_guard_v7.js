@@ -1,6 +1,6 @@
-// Hospital Consumables Settings Route Guard V12
+// Hospital Consumables Settings Route Guard V13
 // Scope: normal consumables.html only.
-// Forces the consumables letters settings button to the standalone autosave settings page.
+// Forces the consumables letters settings button to the standalone autosave settings page with fallback letterhead key support.
 (function () {
   'use strict';
 
@@ -15,10 +15,10 @@
 
   if (pageFile !== 'consumables.html' && !/\/original\/consumables\.html(?:$|[?#])/.test(sig)) return;
   if (/admin_offices_consumables\.html|health_centers_consumables\.html|najran_general_consumables\.html/.test(pageFile)) return;
-  if (window.__HOSPITAL_CONSUMABLES_SETTINGS_ROUTE_GUARD_V12__) return;
-  window.__HOSPITAL_CONSUMABLES_SETTINGS_ROUTE_GUARD_V12__ = true;
+  if (window.__HOSPITAL_CONSUMABLES_SETTINGS_ROUTE_GUARD_V13__) return;
+  window.__HOSPITAL_CONSUMABLES_SETTINGS_ROUTE_GUARD_V13__ = true;
 
-  var SETTINGS_URL = '/original/hospital_consumables_letters_settings.html?v=20260702_v5_force_full_letterhead';
+  var SETTINGS_URL = '/original/hospital_consumables_letters_settings.html?v=20260702_v7_fallback_letterhead_key';
 
   function clean(v) {
     return String(v || '').replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim();
@@ -96,5 +96,5 @@
   } catch (_) {}
 
   window.openConsumablesLettersStandaloneSettings = goSettings;
-  console.info('[Hospital Consumables Settings Route Guard] installed v12 force full letterhead route');
+  console.info('[Hospital Consumables Settings Route Guard] installed v13 fallback letterhead route');
 })();
