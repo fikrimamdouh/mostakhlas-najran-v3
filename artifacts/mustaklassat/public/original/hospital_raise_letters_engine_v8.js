@@ -283,16 +283,29 @@ function collectAttendanceRows(src, out, seen, depth, path) {
     const name = clean(empName(src));
     const job = clean(empJob(src));
     const nat = clean(empNationality(src));
+    const status = clean(empStatus(src));
+    const note = clean(empNotes(src));
+
+    const directText = [name, job, status, note].join(' ');
+
+    const isVacantLike =
+      !name ||
+      /شاغر|شاغره|شاغرة|vacant|vacancy/i.test(directText) ||
+      vacancyDays(src) > 0;
 
     /*
-      القاعدة:
-      - الصف الذي له رقم إقامة/هوية: يعتبر نفس الشخص، فلا يتكرر بنفس الهوية.
-      - الصف الذي لا يملك رقم إقامة/هوية: يعتبر صف مستقل حسب مكانه في الجدول.
-      هذا يحافظ على الشواغر المتكررة ونفس الوظيفة.
+      القاعدة النهائية:
+      - الشاغر يتحسب حسب مكان الصف، حتى لو له id مكرر.
+      - الموظف الحقيقي فقط يتحسب بالهوية لمنع التكرار.
+      - أي صف بلا هوية يتحسب حسب مكانه.
     */
-    const key = id
-      ? 'id|' + id
-      : 'row-path|' + path + '|' + job + '|' + name + '|' + nat;
+    const key = isVacantLike
+      ? 'vacant-row-path|' + path + '|' + job + '|' + name + '|' + nat
+      : (
+          id
+            ? 'id|' + id
+            : 'row-path|' + path + '|' + job + '|' + name + '|' + nat
+        );
 
     if (!seen[key]) {
       seen[key] = true;
@@ -305,7 +318,6 @@ function collectAttendanceRows(src, out, seen, depth, path) {
     collectAttendanceRows(src[k], out, seen, depth + 1, path + '/' + k);
   });
 }
-
   function attendance() {
     const snapshot = readJson('najran_revision_snapshot', {});
     const hrlSnapshot = readJson('hrl_snapshot_v1', {});
