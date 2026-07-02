@@ -235,9 +235,14 @@
 
   function looksLikeEmployeeRow(o) {
     if (!o || typeof o !== 'object' || Array.isArray(o)) return false;
+
+    // لا تعتبر حاوية الأقسام صف موظف.
+    // صف الموظف الحقيقي لازم يكون فيه اسم أو وظيفة كمفاتيح مباشرة داخل نفس الـ object.
     if (empName(o) || empJob(o)) return true;
-    const t = deepTextLocal(o, 0);
-    return /شاغر|إجاز|اجاز|سعود|غياب|حضور|vacant|vacancy|leave|vacation|saudi|nationality|jobTitle|employeeName/i.test(t) && Object.keys(o).length > 1;
+
+    return Object.keys(o).some(k =>
+      /^(name|employeeName|fullName|empName|arabicName|jobTitle|position|title|job|profession|اسم الموظف|الاسم|وظيفة|الوظيفة|المهنة)$/i.test(k)
+    );
   }
 
   function collectAttendanceRows(src, out, seen, depth) {
