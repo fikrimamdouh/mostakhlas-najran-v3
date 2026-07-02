@@ -35,7 +35,7 @@
   setTimeout(function(){
     loadScript(
       'hospital-raise-letters-status-pages-fix-v4',
-      '/original/hospital_raise_letters_status_pages_fix_v1.js?v=20260702_v16_vacation_named_only'
+      '/original/hospital_raise_letters_status_pages_fix_v1.js?v=20260702_v17_saudi_exclude_sh_code'
     );
   }, 120);
 
