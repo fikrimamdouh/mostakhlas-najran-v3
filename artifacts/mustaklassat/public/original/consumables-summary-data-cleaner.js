@@ -5,7 +5,7 @@
 (function () {
   'use strict';
 
-  var CACHE_MARKER = '20260702_v12_consumables_fallback_letterhead_key';
+  var CACHE_MARKER = '20260702_v13_match_labor_letterhead_behavior';
   try { window.__CONSUMABLES_SUMMARY_CLEANER_CACHE_MARKER = CACHE_MARKER; } catch (_) {}
 
   var sig = location.pathname + location.search;
