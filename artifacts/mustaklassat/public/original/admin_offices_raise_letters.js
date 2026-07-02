@@ -29,6 +29,9 @@ function loadScript(id,src,onload){
 function loadCleanSignatures(){
   loadScript('admin-offices-raise-letters-clean-signatures-v4','/original/admin_offices_raise_letters_clean_signatures_v1.js?v=20260701_clean_signatures_sticky_v5');
 }
+function loadIbanAutosave(){
+  loadScript('admin-offices-raise-letters-iban-autosave-v1','/original/admin_offices_raise_letters_iban_autosave_v1.js?v=20260702_v1_iban_autosave');
+}
 function loadCleanScreen(){
   if(!isClean||cleanLoadStarted)return;
   cleanLoadStarted=true;
@@ -39,8 +42,11 @@ loadScript('admin-offices-raise-letters-print-fallbacks-v1','/original/admin_off
   loadScript('admin-offices-raise-letters-clean-v1','/original/admin_offices_raise_letters_clean_v1.js?v=20260701_clean_screen_signatures_v3',function(){
     console.info('[Admin Offices Raise Letters] clean screen loaded');
     loadCleanSignatures();
+    loadIbanAutosave();
     setTimeout(loadCleanSignatures,300);
     setTimeout(loadCleanSignatures,900);
+    setTimeout(loadIbanAutosave,300);
+    setTimeout(loadIbanAutosave,900);
   });
 }
 function closeOnly(){try{window.close()}catch(_){}}
