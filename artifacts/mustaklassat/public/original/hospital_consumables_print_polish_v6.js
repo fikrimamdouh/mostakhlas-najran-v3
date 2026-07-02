@@ -1,7 +1,7 @@
-// Hospital Consumables Print Polish V7
+// Hospital Consumables Print Polish V8
 // Scope: normal consumables.html only.
 // Keeps original calculations. Polishes full consumables extract print and makes subcontractors landscape.
-// Also fixes consumables letters A4 letterhead rendering and removes the irrelevant "وحدة الصيانة العامة" subheader.
+// Forces consumables letters A4 letterhead from main settings or fallback image key.
 (function () {
   'use strict';
 
@@ -15,10 +15,11 @@
   }
   if (pageFile !== 'consumables.html' && !/\/original\/consumables\.html(?:$|[?#])/.test(sig)) return;
   if (/admin_offices_consumables\.html|health_centers_consumables\.html|najran_general_consumables\.html/.test(pageFile)) return;
-  if (window.__HOSPITAL_CONSUMABLES_PRINT_POLISH_V7__) return;
-  window.__HOSPITAL_CONSUMABLES_PRINT_POLISH_V7__ = true;
+  if (window.__HOSPITAL_CONSUMABLES_PRINT_POLISH_V8__) return;
+  window.__HOSPITAL_CONSUMABLES_PRINT_POLISH_V8__ = true;
 
   var SETTINGS_KEY = 'hospitalConsumablesRaiseLettersSettings_v1';
+  var FALLBACK_IMG_KEY = 'hospitalConsumablesLetterheadDataUrl_v1';
 
   function clean(v) { return String(v == null ? '' : v).replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim(); }
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[c]; }); }
@@ -26,6 +27,8 @@
   function yes(v) { return v === true || v === 'yes' || v === 'true' || v === '1'; }
 
   function settings() { return readJson(SETTINGS_KEY, {}); }
+  function fallbackImage() { return clean(localStorage.getItem(FALLBACK_IMG_KEY) || ''); }
+  function letterheadData(s) { return clean((s && s.letterheadDataUrl) || '') || fallbackImage(); }
 
   function activeHospital() {
     try {
@@ -48,7 +51,7 @@
 
   function polishCss() {
     return `
-<style id="consumables-polish-print-css-v7">
+<style id="consumables-polish-print-css-v8">
 @page consumablesPortrait { size: A4 portrait; margin: 0; }
 @page consumablesLandscape { size: A4 landscape; margin: 0; }
 .extract-page{position:relative!important;padding:14mm 12mm 18mm!important;font-family:Tajawal,Arial,sans-serif!important;}
@@ -93,19 +96,18 @@
     if (!consumablesLetterHtml(html)) return html;
 
     var s = settings();
-    var dataUrl = clean(s.letterheadDataUrl || '');
+    var dataUrl = letterheadData(s);
     var enabled = yes(s.letterheadEnabled) || !!dataUrl;
 
-    if (html.indexOf('consumables-polish-print-css-v7') === -1) html = html.replace('</head>', polishCss() + '</head>');
+    if (html.indexOf('consumables-polish-print-css-v8') === -1) html = html.replace('</head>', polishCss() + '</head>');
 
-    // Remove the irrelevant maintenance-unit subheader. Keep only hospital/site data when internal header is printed.
     html = html.replace(/<h2>\s*وحدة\s+الصيانة\s+العامة\s*<\/h2>/g, '');
     html = html.replace(/<h2>\s*وحدة\s+الصيانه\s+العامه\s*<\/h2>/g, '');
 
-    // If an A4 image exists, print it even if an old setting accidentally kept letterheadMode=external.
     if (enabled && dataUrl) {
       var img = '<img class="letterhead-bg full consumables-letterhead-force" src="' + esc(dataUrl) + '">';
-      html = html.replace(/<section class="page">(?!\s*<img[^>]+(?:letterhead-bg|consumables-letterhead-force))/g, '<section class="page">' + img);
+      html = html.replace(/<section class="page">\s*<img[^>]+(?:letterhead-bg|consumables-letterhead-force)[^>]*>/g, '<section class="page">');
+      html = html.replace(/<section class="page">/g, '<section class="page">' + img);
       html = html.replace(/letter-content\s+no-letterhead/g, 'letter-content');
     }
 
@@ -117,7 +119,7 @@
     var period = activePeriod();
     html = String(html || '');
     html = forceConsumablesLetterhead(html);
-    if (html.indexOf('consumables-polish-print-css-v7') === -1) html = html.replace('</head>', polishCss() + '</head>');
+    if (html.indexOf('consumables-polish-print-css-v8') === -1) html = html.replace('</head>', polishCss() + '</head>');
     html = html.replace(/<section class="page"><div class="extract-page"><h1>([\s\S]*?)<\/h1><h2>([\s\S]*?)<\/h2>/g, function (_, title, subtitle) {
       var plainTitle = clean(title.replace(/<[^>]*>/g, ''));
       var isSub = /باطن|مقاول/i.test(plainTitle);
@@ -133,14 +135,14 @@
   }
 
   function installAnyLetterPrintInterceptor() {
-    if (window.__HOSPITAL_CONSUMABLES_ANY_LETTER_PRINT_INTERCEPTOR_V7__) return;
-    window.__HOSPITAL_CONSUMABLES_ANY_LETTER_PRINT_INTERCEPTOR_V7__ = true;
+    if (window.__HOSPITAL_CONSUMABLES_ANY_LETTER_PRINT_INTERCEPTOR_V8__) return;
+    window.__HOSPITAL_CONSUMABLES_ANY_LETTER_PRINT_INTERCEPTOR_V8__ = true;
     var oldOpen = window.open;
     window.open = function () {
       var win = oldOpen.apply(window, arguments);
       try {
-        if (win && win.document && !win.__consumablesAnyLetterPolishV7) {
-          win.__consumablesAnyLetterPolishV7 = true;
+        if (win && win.document && !win.__consumablesAnyLetterPolishV8) {
+          win.__consumablesAnyLetterPolishV8 = true;
           var oldWrite = win.document.write.bind(win.document);
           win.document.write = function (html) { return oldWrite(forceConsumablesLetterhead(html)); };
         }
@@ -150,7 +152,7 @@
   }
 
   function installFullPrintInterceptor() {
-    if (!window.HospitalConsumablesRaiseLetter || window.HospitalConsumablesRaiseLetter.__polishedV7) return false;
+    if (!window.HospitalConsumablesRaiseLetter || window.HospitalConsumablesRaiseLetter.__polishedV8) return false;
     var oldFull = window.HospitalConsumablesRaiseLetter.printFullExtract;
     if (typeof oldFull !== 'function') return false;
 
@@ -158,8 +160,8 @@
       var realOpen = window.open;
       window.open = function () {
         var win = realOpen.apply(window, arguments);
-        if (win && win.document && !win.__consumablesPolishWrappedV7) {
-          win.__consumablesPolishWrappedV7 = true;
+        if (win && win.document && !win.__consumablesPolishWrappedV8) {
+          win.__consumablesPolishWrappedV8 = true;
           var oldWrite = win.document.write.bind(win.document);
           win.document.write = function (html) { return oldWrite(transformFullHtml(html)); };
         }
@@ -170,15 +172,15 @@
     }
 
     window.HospitalConsumablesRaiseLetter.printFullExtract = polishedFullPrint;
-    window.HospitalConsumablesRaiseLetter.__polishedV7 = true;
+    window.HospitalConsumablesRaiseLetter.__polishedV8 = true;
     return true;
   }
 
   function interceptCenterFullButton() {
     var box = document.getElementById('hospital-consumables-letters-center');
     var btn = box && box.querySelector('[data-hc-action="full"]');
-    if (!btn || btn.__polishedFullPrintV7) return false;
-    btn.__polishedFullPrintV7 = true;
+    if (!btn || btn.__polishedFullPrintV8) return false;
+    btn.__polishedFullPrintV8 = true;
     btn.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -192,14 +194,14 @@
 
   function installSubcontractorsLandscape() {
     var btn = document.querySelector('.btn-print[data-section="subcontractors"]');
-    if (!btn || btn.__subLandscapeV7) return false;
-    btn.__subLandscapeV7 = true;
+    if (!btn || btn.__subLandscapeV8) return false;
+    btn.__subLandscapeV8 = true;
     btn.addEventListener('click', function () {
       document.body.classList.add('print-subcontractors-landscape');
-      var st = document.getElementById('subcontractors-landscape-v7-style');
+      var st = document.getElementById('subcontractors-landscape-v8-style');
       if (!st) {
         st = document.createElement('style');
-        st.id = 'subcontractors-landscape-v7-style';
+        st.id = 'subcontractors-landscape-v8-style';
         st.textContent = `
 @page subcontractorsLandscape { size: A4 landscape; margin: 0; }
 @media print{
@@ -209,8 +211,8 @@
   body.print-subcontractors-landscape #subcontractors-section .print-title-container{text-align:center!important;}
   body.print-subcontractors-landscape #subcontractors-section .print-title-container h1{font-size:15px!important;color:#003087!important;margin:0!important;font-weight:900!important;}
   body.print-subcontractors-landscape #subcontractors-section .print-title-container h2,body.print-subcontractors-landscape #subcontractors-section .print-title-container h3{font-size:11px!important;margin:2px 0!important;font-weight:800!important;}
-  body.print-subcontractors-landscape #subcontractors-section table{font-size:9.2px!important;table-layout:auto!important;width:100%!important;}
-  body.print-subcontractors-landscape #subcontractors-section th{background:#003087!important;color:#fff!important;font-weight:900!important;padding:3px 4px!important;line-height:1.25!important;}
+  body.print-subcontractors-landscape #subcontractors-section table{font-size:9px!important;table-layout:auto!important;width:100%!important;}
+  body.print-subcontractors-landscape #subcontractors-section th,
   body.print-subcontractors-landscape #subcontractors-section td{padding:3px 4px!important;line-height:1.25!important;}
 }
 `;
@@ -232,5 +234,5 @@
   setTimeout(boot, 600);
   setTimeout(boot, 1600);
   setTimeout(boot, 3000);
-  console.info('[Hospital Consumables Print Polish] installed v7 letterhead force + no maintenance unit');
+  console.info('[Hospital Consumables Print Polish] installed v8 fallback letterhead key');
 })();
