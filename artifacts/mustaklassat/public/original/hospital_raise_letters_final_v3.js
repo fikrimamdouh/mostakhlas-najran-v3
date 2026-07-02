@@ -12,7 +12,7 @@
     document.head.appendChild(s);
   }
 
-  loadScript('hospital-raise-letters-engine-v8', '/original/hospital_raise_letters_engine_v8.js?v=20260701_restored_admin_clean_pattern');
+  loadScript('hospital-raise-letters-engine-v8', '/original/hospital_raise_letters_engine_v8.js?v=20260702_final_vat_engine_dec83b5');
   setTimeout(function(){
     loadScript('hospital-raise-letters-index-guard-v1', '/original/hospital_raise_letters_index_guard_v1.js?v=20260702_v1_index_not_empty');
   }, 80);
