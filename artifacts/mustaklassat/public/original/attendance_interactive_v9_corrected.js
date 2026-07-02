@@ -39,7 +39,19 @@ const STATUS_CODES = {
 };
 const PASSWORD = "admin123"; // تعريف الباسورد هنا
 let currentDialogPurpose = null; // هذا المتغير أيضاً يجب أن يكون معرفاً في النطاق العام
+function normalizeNationality(value) {
+  const v = String(value || '').replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim();
 
+  if (!v || /^(غير محدد|—|-|null|undefined)$/i.test(v)) return 'غير سعودي';
+
+  if (/^(سعودي|سعودى|سعودية|السعودية|saudi|ksa)$/i.test(v)) return 'سعودي';
+
+  return v;
+}
+
+function isSaudiNationality(value) {
+  return normalizeNationality(value) === 'سعودي';
+}
 
 // ===== 2. دوال القوائم المنسدلة التفاعلية =====
 /* ================================================================ */
@@ -164,19 +176,33 @@ function createAttendanceSelect(currentStatus, departmentKey, employeeIndex, day
 }
 
 function createNationalitySelect(currentNationality, departmentKey, employeeIndex) {
+  const current = normalizeNationality(currentNationality);
+
   const nationalities = [
     'سعودي',
-    'مصري', 
+    'غير سعودي',
+    'مصري',
     'هندي',
     'باكستاني',
     'فلبيني',
     'بنجلادش',
+    'نيبالي',
+    'سوداني',
+    'أوغندي',
+    'إثيوبي',
+    'يمني',
+    'سوري',
+    'أردني',
     'أخرى'
   ];
-  
+
+  if (current && !nationalities.includes(current)) {
+    nationalities.splice(1, 0, current);
+  }
+
   const select = document.createElement('select');
   select.style.cssText = `
-    width: 100px;
+    width: 110px;
     border: 1px solid #ddd;
     padding: 2px;
     text-align: center;
@@ -184,22 +210,49 @@ function createNationalitySelect(currentNationality, departmentKey, employeeInde
     border-radius: 4px;
     background-color: white;
   `;
-  
+
   nationalities.forEach(nat => {
     const option = document.createElement('option');
     option.value = nat;
     option.textContent = nat;
-    option.selected = nat === currentNationality;
+    option.selected = nat === current;
     select.appendChild(option);
   });
-  
+
   select.onchange = function() {
-    updateEmployeeNationality(departmentKey, employeeIndex, this.value);
+    updateEmployeeNationality(departmentKey, employeeIndex, normalizeNationality(this.value));
   };
-  
+
   return select;
 }
+function nationalityOptionsHtml(currentNationality) {
+  const current = normalizeNationality(currentNationality);
+  const list = [
+    'سعودي',
+    'غير سعودي',
+    'مصري',
+    'هندي',
+    'باكستاني',
+    'فلبيني',
+    'بنجلادش',
+    'نيبالي',
+    'سوداني',
+    'أوغندي',
+    'إثيوبي',
+    'يمني',
+    'سوري',
+    'أردني',
+    'أخرى'
+  ];
 
+  if (current && !list.includes(current)) {
+    list.splice(1, 0, current);
+  }
+
+  return list.map(n =>
+    `<option value="${n}" ${current === n ? 'selected' : ''}>${n}</option>`
+  ).join('');
+}
 function updateEmployeeCategory(departmentKey, employeeIndex, newCategory) {
   try {
     const data = getAttendanceData();
@@ -298,7 +351,7 @@ function updateEmployeeAttendance(departmentKey, employeeIndex, dayIndex, newSta
         const deduction = (absenceDays + deductionOnlyDays) * dailySalary;
 const category = normalizeAttendanceCategory(employee.category);
 employee.category = category;
-const fineConfig = ABSENCE_FINES_BY_CATEGORY[category] || ABSENCE_FINES_BY_CATEGORY[1];        const isSaudi = (employee.nationality || 'سعودي').trim() === 'سعودي';
+const fineConfig = ABSENCE_FINES_BY_CATEGORY[category] || ABSENCE_FINES_BY_CATEGORY[1];        const isSaudi = isSaudiNationality(employee.nationality);
         const fine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
         const nationalityFine = parseFloat(employee.nationalityFine) || 0;
         const totalFine = fine + nationalityFine;
@@ -346,8 +399,7 @@ function updateEmployeeNationality(departmentKey, employeeIndex, newNationality)
     const employee = data[departmentKey]?.[employeeIndex];
     if (!employee) return;
 
-    employee.nationality = newNationality;
-    saveAttendanceData(data);
+employee.nationality = normalizeNationality(newNationality);    saveAttendanceData(data);
     renderTables();
   } catch (error) {
     console.error('خطأ في تحديث الجنسية:', error);
@@ -612,10 +664,10 @@ function processAndFilterExcelData(file) {
                     }
 
                     // =====> هذا هو الجزء الذي تم إصلاحه <=====
-                    let nationalityValue = "سعودي"; // القيمة الافتراضية
+                    let nationalityValue = "غير سعودي"; // القيمة الافتراضية
                     if (nationalityIndex !== -1 && String(row[nationalityIndex]).trim() !== "") {
                         // إذا وجدنا العمود، وكانت الخلية ليست فارغة، نستخدم قيمتها
-                        nationalityValue = String(row[nationalityIndex]).trim();
+                        nationalityValue = normalizeNationality(row[nationalityIndex]);
                     }
                     // =====> نهاية الإصلاح <=====
     console.log(`الموظف: ${name}, الجنسية المقروءة من الملف: "${String(row[nationalityIndex]).trim()}", الجنسية النهائية: "${nationalityValue}"`);
@@ -751,8 +803,9 @@ if (emptyMessage) {
                 const row = document.createElement('tr');
                 const salary = parseFloat(emp.salary) || 0;
 const category = normalizeAttendanceCategory(emp.category);
-emp.category = category;                const nationality = emp.nationality || 'سعودي';
-                const isSaudi = nationality.trim() === 'سعودي';
+emp.category = category;                const nationality = normalizeNationality(emp.nationality);
+emp.nationality = nationality;
+const isSaudi = isSaudiNationality(nationality);
 
                 let adjustedSalary = salary;
                 if (contractType === 'شراء مباشر' && directPurchaseRatio > 0) {
@@ -1191,6 +1244,7 @@ function saveAttendanceData(data) {
     if (!Array.isArray(data[deptKey])) return;
     data[deptKey].forEach(function (emp) {
       emp.category = normalizeAttendanceCategory(emp.category);
+      emp.nationality = normalizeNationality(emp.nationality);
     });
   });
 } catch (_) {}
@@ -1502,7 +1556,7 @@ function editEmployee(departmentKey, employeeIndex) {
     const newCategory = prompt('الفئة (1-7):', employee.category || '1');
     if (newCategory === null) return;
 
-    const newNationality = prompt('الجنسية:', employee.nationality || 'سعودي');
+    const newNationality = prompt('الجنسية:', normalizeNationality(employee.nationality));
     if (newNationality === null) return;
 
     // التحقق من صحة البيانات
@@ -1524,7 +1578,7 @@ function editEmployee(departmentKey, employeeIndex) {
     employee.name = newName.trim();
     employee.salary = salary;
     employee.category = category;
-    employee.nationality = newNationality.trim();
+    employee.nationality = normalizeNationality(newNationality);
 
     // حفظ البيانات وإعادة عرض الجداول
     saveAttendanceData(data);
@@ -1573,10 +1627,10 @@ function editEmployeeAdvanced(departmentKey, employeeIndex) {
             ${[1,2,3,4,5,6,7].map(n => `<option value="${n}" ${employee.category == n ? 'selected' : ''}>${n}</option>`).join('')}
           </select>
         </div>
-        <div class="form-group">
+               <div class="form-group">
           <label>الجنسية:</label>
           <select id="edit-nationality">
-            ${['سعودي','مصري','هندي','باكستاني','فلبيني','بنجلادش','أخرى'].map(n => `<option value="${n}" ${employee.nationality === n ? 'selected' : ''}>${n}</option>`).join('')}
+            ${nationalityOptionsHtml(employee.nationality)}
           </select>
         </div>
         <div class="buttons">
@@ -1630,7 +1684,7 @@ function saveEmployeeEdit(departmentKey, employeeIndex) {
     employee.jobTitle = newJobTitle;
     employee.name = newName;
     employee.salary = newSalary;
-employee.category = normalizeAttendanceCategory(newCategory);    employee.nationality = newNationality;
+employee.category = normalizeAttendanceCategory(newCategory);    employee.nationality = normalizeNationality(newNationality);
 
     // حفظ البيانات وإعادة عرض الجداول
     saveAttendanceData(data);
@@ -2178,8 +2232,10 @@ function exportSelectedDepartmentsToExcel() {
                     });
 
                     const deduction = (absenceDays + deductionOnlyDays) * dailySalary;
-                    const fineConfig = ABSENCE_FINES_BY_CATEGORY[emp.category || '1'] || ABSENCE_FINES_BY_CATEGORY[1];
-                    const isSaudi = (emp.nationality || 'سعودي').trim() === 'سعودي';
+                    const category = normalizeAttendanceCategory(emp.category);
+const fineConfig = ABSENCE_FINES_BY_CATEGORY[category] || ABSENCE_FINES_BY_CATEGORY.default;
+const nationality = normalizeNationality(emp.nationality);
+const isSaudi = isSaudiNationality(nationality);
                     const absenceFine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
                     const nationalityFine = parseFloat(emp.nationalityFine) || 0;
                     const totalFine = absenceFine + nationalityFine;
@@ -2189,7 +2245,7 @@ function exportSelectedDepartmentsToExcel() {
                     if (isNaN(netSalary) || isNaN(deduction) || isNaN(totalFine)) {
                         console.error(`خطأ حسابي للموظف: ${emp.name} في قسم ${deptName}. تم تخطي الحسابات.`);
                         // في حالة الخطأ، نضيف القيم كـ 0 لتجنب فشل التصدير
-                        row.push(adjustedSalary.toFixed(2), daysInMonth, attendanceDays, absenceDays, '0.00', '0.00', '0.00', emp.nationality || '', nationalityFine.toFixed(2));
+                        row.push(adjustedSalary.toFixed(2), daysInMonth, attendanceDays, absenceDays, '0.00', '0.00', '0.00', nationality, nationalityFine.toFixed(2));
                     } else {
                          row.push(
                         adjustedSalary.toFixed(2),
@@ -2199,7 +2255,7 @@ function exportSelectedDepartmentsToExcel() {
                         deduction.toFixed(2),
                         absenceFine.toFixed(2),
                         netSalary.toFixed(2),
-                        emp.nationality || '',
+                        nationality,
                         nationalityFine.toFixed(2),
                         emp.iqamaId || '' // ✅ تأكد من وجود هذا السطر
 
@@ -2386,7 +2442,7 @@ function addEmployee() {
     const category = document.getElementById('add-employee-category').value;
     const name = document.getElementById('add-employee-name').value;
     const salary = parseFloat(document.getElementById('add-employee-salary').value) || 0;
-    const nationality = document.getElementById('add-employee-nationality').value;
+    const nationality = normalizeNationality(document.getElementById('add-employee-nationality').value);
 
     const iqamaId = (document.getElementById('add-employee-iqama')?.value || '').trim();
 
@@ -2402,7 +2458,7 @@ function addEmployee() {
       name,
       salary,
       days: Array(daysInMonth).fill('ح'),
-      nationality: nationality || 'سعودي',
+      nationality: nationality,
       iqamaId,
       nationalityFine: 0
     };
@@ -3900,8 +3956,8 @@ function getSignatures() {
 
   function computeEmployeeFinancialsForAudit(emp, daysInMonth, totalDaysInMonth, contractType, directPurchaseRatio) {
     const salary = parseFloat(emp && emp.salary) || 0;
-    const nationality = String((emp && emp.nationality) || 'سعودي').trim();
-    const isSaudi = nationality === 'سعودي';
+    const nationality = normalizeNationality(emp && emp.nationality);
+const isSaudi = isSaudiNationality(nationality);
 
     let adjustedSalary = salary;
 
@@ -5706,7 +5762,7 @@ function showAddEmployeeFormForCenter() {
         <div class="form-group"><label>رقم الإقامة/الهوية:</label><input type="text" id="add-emp-iqama" placeholder="10 أرقام أو أكثر"></div>
         <div class="form-group"><label>التكلفة الشهرية:</label><input type="number" id="add-emp-salary" placeholder="مثال: 3000"></div>
         <div class="form-group"><label>الفئة:</label><select id="add-emp-category">${[1,2,3,4,5,6,7].map(n=>`<option value="${n}">${n}</option>`).join('')}</select></div>
-        <div class="form-group"><label>الجنسية:</label><select id="add-emp-nationality">${['سعودي', 'مصري', 'هندي', 'باكستاني', 'فلبيني', 'بنغلاديشي', 'أخرى'].map(n=>`<option value="${n}">${n}</option>`).join('')}</select></div>
+        <div class="form-group"><label>الجنسية:</label><select id="add-emp-nationality">${nationalityOptionsHtml('غير سعودي')}</select></div>
         <div class="buttons" style="justify-content: flex-start;"><button class="btn-success" onclick="addEmployeeFromManagement()"><i class="fas fa-check"></i> إضافة</button><button class="btn-secondary" onclick="displayEmployeesForCenter('${deptKey}')"><i class="fas fa-times"></i> إلغاء</button></div>`;
 }
 
@@ -5722,7 +5778,7 @@ function addEmployeeFromManagement() {
         iqamaId: document.getElementById('add-emp-iqama').value.trim(),
         salary: parseFloat(document.getElementById('add-emp-salary').value) || 0,
         category: document.getElementById('add-emp-category').value,
-        nationality: document.getElementById('add-emp-nationality').value,
+        nationality: normalizeNationality(document.getElementById('add-emp-nationality').value),
         nationalityFine: 0,
         days: Array(getExtractPeriodDetails().daysInMonth).fill('ح')
     };
@@ -5749,7 +5805,7 @@ function openEditEmployeeForm(deptKey, index) {
         <div class="form-group"><label>رقم الإقامة/الهوية:</label><input type="text" id="edit-emp-iqama" value="${emp.iqamaId}"></div>
         <div class="form-group"><label>التكلفة الشهرية:</label><input type="number" id="edit-emp-salary" value="${emp.salary}"></div>
         <div class="form-group"><label>الفئة:</label><select id="edit-emp-category">${[1,2,3,4,5,6,7].map(n => `<option value="${n}" ${emp.category == n ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
-        <div class="form-group"><label>الجنسية:</label><select id="edit-emp-nationality">${['سعودي', 'مصري', 'هندي', 'باكستاني', 'فلبيني', 'بنغلاديشي', 'أخرى'].map(n => `<option value="${n}" ${emp.nationality == n ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+        <div class="form-group"><label>الجنسية:</label><select id="edit-emp-nationality">${nationalityOptionsHtml(emp.nationality)}</select></div>
         <div class="buttons" style="justify-content: flex-start;"><button class="btn-success" onclick="saveEmployeeChanges('${deptKey}', ${index})"><i class="fas fa-save"></i> حفظ التعديلات</button><button class="btn-secondary" onclick="displayEmployeesForCenter('${deptKey}')"><i class="fas fa-times"></i> إلغاء</button></div>`;
 }
 
@@ -5783,7 +5839,7 @@ function saveEmployeeChanges(deptKey, index) {
     emp.iqamaId = newIqama;
     emp.salary = parseFloat(document.getElementById('edit-emp-salary').value) || 0;
     emp.category = document.getElementById('edit-emp-category').value;
-    emp.nationality = document.getElementById('edit-emp-nationality').value;
+    emp.nationality = normalizeNationality(document.getElementById('edit-emp-nationality').value);
     saveAttendanceData(data);
     showSuccessMessage("تم حفظ التعديلات بنجاح.");
     renderTables();
