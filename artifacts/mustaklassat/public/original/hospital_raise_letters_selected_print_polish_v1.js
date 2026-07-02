@@ -1,28 +1,16 @@
-// Hospital Raise Letters Selected Print Polish V2
+// Hospital Raise Letters Selected Print Polish V3
 // Scope: hospital_raise_letters.html only.
-// Fixes selected-print pages that did not match the old polish trigger words.
-// Ensures every normal hospital raise letter has editable/printable signatures, including added status documents.
+// Keeps existing labor letters untouched.
+// Only ensures the two added documents are recognized by selected-print polish and have signature fields available in settings.
 (function () {
   'use strict';
 
   if (!/hospital_raise_letters\.html/.test(location.pathname) && !window.__HOSPITAL_LETTERS_STANDALONE_PAGE__) return;
-  if (window.__HOSPITAL_RAISE_LETTERS_SELECTED_PRINT_POLISH_V2__) return;
-  window.__HOSPITAL_RAISE_LETTERS_SELECTED_PRINT_POLISH_V2__ = true;
+  if (window.__HOSPITAL_RAISE_LETTERS_SELECTED_PRINT_POLISH_V3__) return;
+  window.__HOSPITAL_RAISE_LETTERS_SELECTED_PRINT_POLISH_V3__ = true;
 
   var SETTINGS_KEY = 'hospitalRaiseLettersSettings_v8';
-  var SIGN_DOCS = ['final', 'labor', 'noPrev', 'salary', 'vacancies', 'vacations', 'absences', 'saudi', 'saudiNames', 'custom'];
-  var DOC_TITLES = [
-    'خطاب الرفع النهائي',
-    'خطاب العمالة',
-    'عدم أسبقية الصرف',
-    'شهادة تسليم الرواتب',
-    'بيان الشواغر',
-    'بيان الإجازات',
-    'بيان الغياب',
-    'بيان السعودة',
-    'بيان أسماء السعوديين',
-    'خطاب مخصص'
-  ];
+  var NEW_DOCS_ONLY = ['absences', 'saudiNames'];
 
   function readJson(k, f) {
     try { var raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : f; } catch (_) { return f; }
@@ -31,31 +19,25 @@
     try { localStorage.setItem(k, JSON.stringify(v || {})); return true; } catch (_) { return false; }
   }
   function clean(v) { return String(v == null ? '' : v).replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim(); }
-  function esc(v) {
-    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
-      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[c];
-    });
-  }
 
-  function ensureSignatureDefaults(reason) {
+  function ensureNewDocsSignatureFields(reason) {
     var s = readJson(SETTINGS_KEY, {});
     if (!s || typeof s !== 'object') s = {};
     s.texts = s.texts || {};
     s.layout = s.layout || {};
-
     var changed = false;
-    SIGN_DOCS.forEach(function (key) {
+
+    NEW_DOCS_ONLY.forEach(function (key) {
       s.texts[key] = s.texts[key] || {};
       s.layout[key] = s.layout[key] || {};
 
-      if (!clean(s.texts[key].s1t)) { s.texts[key].s1t = '{sigTitle}'; changed = true; }
+      if (s.texts[key].s1t == null || !clean(s.texts[key].s1t)) { s.texts[key].s1t = '{sigTitle}'; changed = true; }
       if (s.texts[key].s1n == null) { s.texts[key].s1n = '{sigName}'; changed = true; }
       if (s.texts[key].s2t == null) { s.texts[key].s2t = ''; changed = true; }
       if (s.texts[key].s2n == null) { s.texts[key].s2n = ''; changed = true; }
       if (s.texts[key].s3t == null) { s.texts[key].s3t = ''; changed = true; }
       if (s.texts[key].s3n == null) { s.texts[key].s3n = ''; changed = true; }
 
-      if (s.layout[key].showSign === 'no') { s.layout[key].showSign = 'yes'; changed = true; }
       if (s.layout[key].showSign == null) { s.layout[key].showSign = 'yes'; changed = true; }
       if (!Number(s.layout[key].signCount)) { s.layout[key].signCount = 1; changed = true; }
       if (!Number(s.layout[key].signCols)) { s.layout[key].signCols = 1; changed = true; }
@@ -65,16 +47,9 @@
     if (changed) {
       s.version = s.version || 'hospital-v8-compact';
       writeJson(SETTINGS_KEY, s);
-      try { console.warn('[Hospital Raise Letters Signatures Guard] fixed signature defaults:', reason || 'run'); } catch (_) {}
+      try { console.warn('[Hospital Raise Letters New Docs Signature Fields] fixed:', reason || 'run'); } catch (_) {}
     }
     return s;
-  }
-
-  function currentSignatureHtml() {
-    var s = readJson(SETTINGS_KEY, {});
-    var title = clean(s.sigTitle) || 'مدير المستشفى';
-    var name = clean(s.sigName) || '';
-    return '<div class="sig sig-left hrl-auto-signature" style="margin-top:18mm"><div class="sig-role">' + esc(title) + '</div><div class="sig-line"></div><div class="sig-name">' + esc(name) + '</div></div>';
   }
 
   function needsPolish(html) {
@@ -85,7 +60,7 @@
   }
 
   function lightPolishCss() {
-    return '<style id="hospital-raise-selected-print-polish-v2">' +
+    return '<style id="hospital-raise-selected-print-polish-v3">' +
       '@page{size:A4 portrait;margin:0}' +
       'html,body{margin:0!important;direction:rtl!important;font-family:Tajawal,Arial,sans-serif!important;background:#e9eef5;color:#111827}' +
       'body.hrl-polished .page{width:210mm!important;min-height:297mm!important;max-height:297mm!important;margin:0 auto!important;background:#fff!important;box-shadow:none!important;position:relative!important;overflow:hidden!important;padding:0!important;page-break-after:always!important;break-after:page!important}' +
@@ -120,54 +95,27 @@
       '</style>';
   }
 
-  function pageTitle(page) {
-    try { return clean(page.querySelector('.title') && page.querySelector('.title').textContent); } catch (_) { return ''; }
-  }
-
-  function addMissingSignatures(html) {
-    try {
-      var doc = new DOMParser().parseFromString(String(html || ''), 'text/html');
-      var changed = false;
-      Array.prototype.forEach.call(doc.querySelectorAll('section.page'), function (page) {
-        var title = pageTitle(page);
-        if (DOC_TITLES.indexOf(title) < 0) return;
-        if (page.querySelector('.sig,.sig-grid,.hrl-auto-signature')) return;
-        var content = page.querySelector('.content') || page;
-        content.insertAdjacentHTML('beforeend', currentSignatureHtml());
-        changed = true;
-      });
-      return changed ? '<!doctype html>\n' + doc.documentElement.outerHTML : html;
-    } catch (_) {
-      return html;
-    }
-  }
-
   function transform(html) {
     html = String(html || '');
     if (!needsPolish(html)) return html;
-    ensureSignatureDefaults('transform');
-
-    if (html.indexOf('hospital-raise-selected-print-polish-v2') === -1) {
+    if (html.indexOf('hospital-raise-selected-print-polish-v3') === -1) {
       html = html.replace('</head>', lightPolishCss() + '</head>');
     }
-
     if (!/<body[^>]*class="[^"]*hrl-polished/.test(html)) {
       html = html.replace(/<body([^>]*)>/i, '<body$1 class="hrl-polished">');
     }
-
-    html = addMissingSignatures(html);
     return html;
   }
 
   function wrapWindowOpen() {
-    if (window.__HOSPITAL_RAISE_SELECTED_PRINT_POLISH_OPEN_WRAPPED_V2__) return;
-    window.__HOSPITAL_RAISE_SELECTED_PRINT_POLISH_OPEN_WRAPPED_V2__ = true;
+    if (window.__HOSPITAL_RAISE_SELECTED_PRINT_POLISH_OPEN_WRAPPED_V3__) return;
+    window.__HOSPITAL_RAISE_SELECTED_PRINT_POLISH_OPEN_WRAPPED_V3__ = true;
     var oldOpen = window.open;
     window.open = function () {
       var win = oldOpen.apply(window, arguments);
       try {
-        if (win && win.document && !win.__hospitalRaiseSelectedPrintPolishWriteWrappedV2) {
-          win.__hospitalRaiseSelectedPrintPolishWriteWrappedV2 = true;
+        if (win && win.document && !win.__hospitalRaiseSelectedPrintPolishWriteWrappedV3) {
+          win.__hospitalRaiseSelectedPrintPolishWriteWrappedV3 = true;
           var oldWrite = win.document.write.bind(win.document);
           win.document.write = function (html) { return oldWrite(transform(html)); };
         }
@@ -185,12 +133,12 @@
     } catch (_) {}
   }
 
-  ensureSignatureDefaults('boot');
+  ensureNewDocsSignatureFields('boot');
   wrapWindowOpen();
-  setTimeout(function () { ensureSignatureDefaults('late-500'); patchPreview(); }, 500);
-  setTimeout(function () { ensureSignatureDefaults('late-1500'); patchPreview(); }, 1500);
+  setTimeout(function () { ensureNewDocsSignatureFields('late-500'); patchPreview(); }, 500);
+  setTimeout(function () { ensureNewDocsSignatureFields('late-1500'); patchPreview(); }, 1500);
   setInterval(patchPreview, 900);
 
-  window.HospitalRaiseLettersSignatureGuardV2 = { ensure: ensureSignatureDefaults, transform: transform };
-  console.info('[Hospital Raise Letters Selected Print Polish] installed v2 all documents + signatures guard');
+  window.HospitalRaiseLettersNewDocsSignatureFieldsV3 = { ensure: ensureNewDocsSignatureFields, transform: transform };
+  console.info('[Hospital Raise Letters Selected Print Polish] installed v3 new docs only');
 })();
