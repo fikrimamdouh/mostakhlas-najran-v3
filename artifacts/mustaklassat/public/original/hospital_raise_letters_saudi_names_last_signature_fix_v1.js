@@ -1,12 +1,13 @@
-// Hospital Raise Letters Saudi Names Last Signature Fix V1
+// Hospital Raise Letters Saudi Names Last Signature Fix V2
 // Scope: hospital_raise_letters.html only.
 // Runs after selected print polish. Re-paginates Saudi names compactly and keeps signatures on the final page only.
+// Signature columns are kept in one row when signCols is set; long titles are compacted to avoid stacking.
 (function () {
   'use strict';
 
   if (!/hospital_raise_letters\.html/.test(location.pathname) && !window.__HOSPITAL_LETTERS_STANDALONE_PAGE__) return;
-  if (window.__HOSPITAL_RAISE_LETTERS_SAUDI_NAMES_LAST_SIGNATURE_FIX_V1__) return;
-  window.__HOSPITAL_RAISE_LETTERS_SAUDI_NAMES_LAST_SIGNATURE_FIX_V1__ = true;
+  if (window.__HOSPITAL_RAISE_LETTERS_SAUDI_NAMES_LAST_SIGNATURE_FIX_V2__) return;
+  window.__HOSPITAL_RAISE_LETTERS_SAUDI_NAMES_LAST_SIGNATURE_FIX_V2__ = true;
 
   var SETTINGS_KEY = 'hospitalRaiseLettersSettings_v8';
   var ROWS_PER_PAGE = 36;
@@ -17,16 +18,18 @@
   function readJson(k, f) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : f; } catch (_) { return f; } }
   function serialize(doc) { return '<!doctype html>\n' + doc.documentElement.outerHTML; }
   function parseHtml(html) { try { return new DOMParser().parseFromString(String(html || ''), 'text/html'); } catch (_) { return null; } }
+  function mm(v, fallback) { var n = Number(v); return Number.isFinite(n) && n >= 0 ? n : fallback; }
 
   function pageCss() {
-    return '<style id="hospital-raise-saudi-names-last-signature-fix-v1">' +
+    return '<style id="hospital-raise-saudi-names-last-signature-fix-v2">' +
       'body.hrl-polished .saudi-names-page .tbl{width:176mm!important;font-size:8.1px!important;margin:2mm auto!important;table-layout:fixed!important}' +
       'body.hrl-polished .saudi-names-page .tbl th,body.hrl-polished .saudi-names-page .tbl td{padding:1.2px 1.7px!important;line-height:1.04!important;vertical-align:middle!important;word-break:break-word!important}' +
       'body.hrl-polished .saudi-names-page .doc-page-counter{font-size:10.5px!important;margin:0 0 2.5mm!important;line-height:1.2!important;color:#003087!important;font-weight:900!important;text-align:left!important}' +
-      'body.hrl-polished .saudi-names-page .sig,body.hrl-polished .saudi-names-page .sig-grid{margin-top:8mm!important}' +
-      'body.hrl-polished .saudi-names-page .sig-line{height:8mm!important}' +
-      'body.hrl-polished .saudi-names-page .sig-role{font-size:12.5pt!important}' +
-      'body.hrl-polished .saudi-names-page .sig-name{font-size:11.5pt!important}' +
+      'body.hrl-polished .saudi-names-page .sig-grid{display:grid!important;align-items:start!important;justify-content:space-between!important;width:100%!important;margin-right:auto!important;margin-left:auto!important}' +
+      'body.hrl-polished .saudi-names-page .sig-left{width:100%!important;max-width:62mm!important;margin:0 auto!important;text-align:center!important;font-weight:900!important;white-space:normal!important}' +
+      'body.hrl-polished .saudi-names-page .sig-line{height:7mm!important;border-bottom:1px solid #111!important;margin:0 8mm 1.5mm!important}' +
+      'body.hrl-polished .saudi-names-page .sig-role{font-size:9.8pt!important;font-weight:900!important;line-height:1.18!important;white-space:normal!important;overflow-wrap:anywhere!important}' +
+      'body.hrl-polished .saudi-names-page .sig-name{font-size:9.6pt!important;font-weight:900!important;line-height:1.22!important;white-space:normal!important;overflow-wrap:anywhere!important}' +
       '</style>';
   }
 
@@ -55,12 +58,18 @@
       if (t || n) arr.push([t, n]);
     }
     if (!arr.length) arr.push([clean(s.sigTitle || 'مدير المستشفى'), clean(s.sigName || '')]);
-    arr = arr.slice(0, Math.max(1, Number(layout.signCount) || 1));
+
+    var signCount = Math.max(1, Math.min(3, Number(layout.signCount) || arr.length || 1));
+    arr = arr.slice(0, signCount);
+    var cols = Math.max(1, Math.min(signCount, Number(layout.signCols) || signCount));
+    var gap = cols > 1 ? 18 : 0;
+    var top = mm(layout.sigTop, 18);
 
     if (arr.length === 1) {
-      return '<div class="sig sig-left"><div class="sig-role">' + esc(arr[0][0]) + '</div><div class="sig-line"></div><div class="sig-name">' + esc(arr[0][1]) + '</div></div>';
+      return '<div class="sig sig-left" style="margin-top:' + top + 'mm!important"><div class="sig-role">' + esc(arr[0][0]) + '</div><div class="sig-line"></div><div class="sig-name">' + esc(arr[0][1]) + '</div></div>';
     }
-    return '<div class="sig-grid" style="grid-template-columns:repeat(' + Math.max(1, Number(layout.signCols) || 1) + ',1fr)">' + arr.map(function (x) {
+
+    return '<div class="sig-grid" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr))!important;gap:' + gap + 'mm!important;margin-top:' + top + 'mm!important">' + arr.map(function (x) {
       return '<div class="sig-left"><div class="sig-role">' + esc(x[0]) + '</div><div class="sig-line"></div><div class="sig-name">' + esc(x[1]) + '</div></div>';
     }).join('') + '</div>';
   }
@@ -103,7 +112,7 @@
 
   function fixDoc(doc) {
     if (!doc || !doc.documentElement) return false;
-    if (!doc.getElementById('hospital-raise-saudi-names-last-signature-fix-v1')) {
+    if (!doc.getElementById('hospital-raise-saudi-names-last-signature-fix-v2')) {
       try { doc.head.insertAdjacentHTML('beforeend', pageCss()); } catch (_) {}
     }
     try { doc.body.classList.add('hrl-polished'); } catch (_) {}
@@ -155,14 +164,14 @@
   }
 
   function wrapWindowOpen() {
-    if (window.__HOSPITAL_RAISE_SAUDI_NAMES_LAST_SIGNATURE_OPEN_WRAPPED_V1__) return;
-    window.__HOSPITAL_RAISE_SAUDI_NAMES_LAST_SIGNATURE_OPEN_WRAPPED_V1__ = true;
+    if (window.__HOSPITAL_RAISE_SAUDI_NAMES_LAST_SIGNATURE_OPEN_WRAPPED_V2__) return;
+    window.__HOSPITAL_RAISE_SAUDI_NAMES_LAST_SIGNATURE_OPEN_WRAPPED_V2__ = true;
     var oldOpen = window.open;
     window.open = function () {
       var win = oldOpen.apply(window, arguments);
       try {
-        if (win && win.document && !win.__hospitalRaiseSaudiNamesLastSignatureWrappedV1) {
-          win.__hospitalRaiseSaudiNamesLastSignatureWrappedV1 = true;
+        if (win && win.document && !win.__hospitalRaiseSaudiNamesLastSignatureWrappedV2) {
+          win.__hospitalRaiseSaudiNamesLastSignatureWrappedV2 = true;
           var oldWrite = win.document.write.bind(win.document);
           win.document.write = function (html) {
             var result = oldWrite(html);
@@ -189,6 +198,6 @@
   setTimeout(patchPreview, 1500);
   setInterval(patchPreview, 1200);
 
-  window.HospitalRaiseLettersSaudiNamesLastSignatureFixV1 = { transform: transform, fixDoc: fixDoc };
-  console.info('[Hospital Raise Letters Saudi Names Last Signature Fix] installed v1');
+  window.HospitalRaiseLettersSaudiNamesLastSignatureFixV2 = { transform: transform, fixDoc: fixDoc };
+  console.info('[Hospital Raise Letters Saudi Names Last Signature Fix] installed v2 one-row signatures');
 })();
