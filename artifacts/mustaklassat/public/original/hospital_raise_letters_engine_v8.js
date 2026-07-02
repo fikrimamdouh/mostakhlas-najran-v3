@@ -285,20 +285,13 @@ function collectAttendanceRows(src, out, seen, depth, path) {
     const nat = clean(empNationality(src));
     const status = clean(empStatus(src));
     const note = clean(empNotes(src));
-
     const directText = [name, job, status, note].join(' ');
 
     const isVacantLike =
       !name ||
-      /شاغر|شاغره|شاغرة|vacant|vacancy/i.test(directText) ||
-      vacancyDays(src) > 0;
+      vacancyDays(src) > 0 ||
+      /شاغر|شاغره|شاغرة|vacant|vacancy/i.test(directText);
 
-    /*
-      القاعدة النهائية:
-      - الشاغر يتحسب حسب مكان الصف، حتى لو له id مكرر.
-      - الموظف الحقيقي فقط يتحسب بالهوية لمنع التكرار.
-      - أي صف بلا هوية يتحسب حسب مكانه.
-    */
     const key = isVacantLike
       ? 'vacant-row-path|' + path + '|' + job + '|' + name + '|' + nat
       : (
