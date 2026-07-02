@@ -273,6 +273,63 @@
     try { if (typeof showSuccessMessage === 'function') showSuccessMessage(`تم حذف الموظف "${employeeName}" بنجاح.`); } catch (_) {}
     refreshAfterChange(centerKey);
   };
+window.saveEmployeeChanges = function saveEmployeeChangesPatched(centerKey, empIndex) {
+  const data = getData();
+  const rows = Array.isArray(data[centerKey]) ? data[centerKey] : [];
+  const employee = rows[empIndex];
 
+  if (!employee) {
+    alert('تعذر تحديد الموظف المطلوب تعديله. أعد فتح شاشة الإدارة وحاول مرة أخرى.');
+    return;
+  }
+
+  const name = document.getElementById('emp-name')?.value?.trim() || '';
+  const jobTitle = document.getElementById('emp-job')?.value?.trim() || '';
+  const iqamaId = document.getElementById('emp-iqama')?.value?.trim() || '';
+  const salary = parseFloat(document.getElementById('emp-salary')?.value) || 0;
+  const category = document.getElementById('emp-category')?.value || employee.category || '7';
+  const nationality = document.getElementById('emp-nationality')?.value || employee.nationality || 'سعودي';
+
+  if (!name || !jobTitle || !iqamaId) {
+    alert('الرجاء ملء جميع الحقول الأساسية: الاسم، الوظيفة، رقم الإقامة.');
+    return;
+  }
+
+  for (const officeKey in data) {
+    const officeRows = Array.isArray(data[officeKey]) ? data[officeKey] : [];
+    for (let i = 0; i < officeRows.length; i++) {
+      if (officeKey === centerKey && i === empIndex) continue;
+      if (String(officeRows[i]?.iqamaId || '').trim() === iqamaId) {
+        alert('خطأ: رقم الإقامة مسجل بالفعل لموظف آخر.');
+        return;
+      }
+    }
+  }
+
+  rows[empIndex] = Object.assign({}, employee, {
+    name,
+    jobTitle,
+    iqamaId,
+    salary,
+    category,
+    nationality
+  });
+
+  data[centerKey] = rows;
+  saveData(data);
+
+  try { if (typeof showSuccessMessage === 'function') showSuccessMessage(`تم تحديث بيانات "${name}" بنجاح.`); } catch (_) {}
+  try { if (typeof closeDialog === 'function') closeDialog('form-dialog'); } catch (_) {}
+
+  refreshAfterChange(centerKey);
+
+  try {
+    if (typeof window.najranSyncNow === 'function') {
+      window.najranSyncNow().catch(function (err) {
+        console.warn('[Admin Offices Employee Edit] تعذر الرفع السحابي بعد تعديل الموظف، محفوظ محليًا:', err);
+      });
+    }
+  } catch (_) {}
+};
   console.info('[Admin Offices Employee Tools] delete index + compact transfer + titles guard installed v3');
 })();
