@@ -1,12 +1,13 @@
-// Hospital Raise Letters Status Pages Fix V1
+// Hospital Raise Letters Status Pages Fix V2
 // Scope: hospital_raise_letters.html only.
-// Fixes vacancies pagination, vacation detection, Saudi counting, and signature styling in print windows.
+// Fixes vacancies pagination, vacation/absence detection, Saudi counting, Saudi names, and signature styling in print windows.
+// Saudi count now merges all available attendance sources instead of trusting the first source only.
 (function () {
   'use strict';
 
   if (!/hospital_raise_letters\.html/.test(location.pathname) && !window.__HOSPITAL_LETTERS_STANDALONE_PAGE__) return;
-  if (window.__HOSPITAL_RAISE_LETTERS_STATUS_PAGES_FIX_V1__) return;
-  window.__HOSPITAL_RAISE_LETTERS_STATUS_PAGES_FIX_V1__ = true;
+  if (window.__HOSPITAL_RAISE_LETTERS_STATUS_PAGES_FIX_V2__) return;
+  window.__HOSPITAL_RAISE_LETTERS_STATUS_PAGES_FIX_V2__ = true;
 
   var VACANCY_ROWS_PER_PAGE = 22;
   var VACATION_ROWS_PER_PAGE = 24;
@@ -20,15 +21,17 @@
   }
   function clean(v) { return String(v == null ? '' : v).replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim(); }
   function readJson(k, f) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : f; } catch (_) { return f; } }
+  function readSessionJson(k, f) { try { var r = sessionStorage.getItem(k); return r ? JSON.parse(r) : f; } catch (_) { return f; } }
   function ar(v) { return String(v).replace(/\d/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'[d]; }); }
 
   function deepText(x, depth) {
-    if (depth > 5 || x == null) return '';
+    if (depth > 6 || x == null) return '';
     if (typeof x === 'string' || typeof x === 'number' || typeof x === 'boolean') return ' ' + String(x) + ' ';
     if (Array.isArray(x)) return x.map(function (v) { return deepText(v, depth + 1); }).join(' ');
     if (typeof x === 'object') return Object.keys(x).map(function (k) { return ' ' + k + ' ' + deepText(x[k], depth + 1); }).join(' ');
     return '';
   }
+
   function first(row, keys) {
     for (var i = 0; i < keys.length; i++) {
       var v = clean(row && row[keys[i]]);
@@ -36,48 +39,84 @@
     }
     return '';
   }
-  function name(row) { return first(row, ['name', 'employeeName', 'fullName', 'empName', 'arabicName', 'اسم الموظف', 'الاسم']); }
-  function job(row) { return first(row, ['jobTitle', 'position', 'title', 'job', 'profession', 'وظيفة', 'الوظيفة', 'المهنة']); }
+  function name(row) { return first(row, ['name', 'employeeName', 'fullName', 'empName', 'arabicName', 'employee_name', 'workerName', 'اسم الموظف', 'الاسم', 'اسم العامل']); }
+  function job(row) { return first(row, ['jobTitle', 'position', 'title', 'job', 'profession', 'occupation', 'وظيفة', 'الوظيفة', 'المهنة']); }
   function notes(row) { return first(row, ['notes', 'note', 'remarks', 'ملاحظات', 'الملاحظات']); }
-  function nationality(row) { return first(row, ['nationality', 'nationalityName', 'country', 'citizenship', 'الجنسية']); }
-  function empId(row) { return first(row, ['iqamaId', 'iqama', 'idNumber', 'nationalId', 'identity', 'هوية', 'الإقامة', 'رقم الهوية', 'رقم الإقامة']); }
+  function nationality(row) { return first(row, ['nationality', 'nationalityName', 'country', 'citizenship', 'nat', 'الجنسية']); }
+  function empId(row) { return first(row, ['iqamaId', 'iqama', 'idNumber', 'nationalId', 'identity', 'employeeId', 'id', 'هوية', 'الإقامة', 'رقم الهوية', 'رقم الإقامة']); }
+
   function looksLikeEmployeeRow(o) {
     if (!o || typeof o !== 'object' || Array.isArray(o)) return false;
     if (name(o) || job(o)) return true;
     var t = deepText(o, 0);
-    return /شاغر|إجاز|اجاز|سعود|غياب|حضور|nationality|jobTitle|employeeName/i.test(t) && Object.keys(o).length > 1;
+    return /شاغر|إجاز|اجاز|سعود|غياب|حضور|nationality|jobTitle|employeeName|admin_saudi/i.test(t) && Object.keys(o).length > 1;
   }
+
+  function rowKey(row) {
+    var id = clean(empId(row));
+    var n = clean(name(row));
+    var j = clean(job(row));
+    var nat = clean(nationality(row));
+    if (id) return 'id|' + id;
+    if (n) return 'name|' + n + '|' + j + '|' + nat;
+    return 'row|' + j + '|' + deepText(row, 0).slice(0, 160);
+  }
+
   function collectRows(src, out, seen, depth) {
-    if (!src || depth > 6) return;
+    if (!src || depth > 8) return;
     if (Array.isArray(src)) { src.forEach(function (x) { collectRows(x, out, seen, depth + 1); }); return; }
     if (typeof src !== 'object') return;
     if (looksLikeEmployeeRow(src)) {
-      var key = clean(name(src) + '|' + job(src) + '|' + deepText(src, 0).slice(0, 80));
+      var key = rowKey(src);
       if (!seen[key]) { seen[key] = true; out.push(src); }
       return;
     }
     Object.keys(src).forEach(function (k) { collectRows(src[k], out, seen, depth + 1); });
   }
+
+  function addSnapshotSources(snapshot, sources) {
+    if (!snapshot || typeof snapshot !== 'object') return;
+    sources.push(snapshot.attendanceData);
+    sources.push(snapshot.ng_attendanceData);
+    sources.push(snapshot.nd_attendanceData);
+    sources.push(snapshot.persistentAttendanceData);
+    if (snapshot.najran_revision_snapshot) {
+      sources.push(snapshot.najran_revision_snapshot.attendanceData);
+      sources.push(snapshot.najran_revision_snapshot.persistentAttendanceData);
+    }
+  }
+
   function attendanceRows() {
+    var sources = [];
     try {
       if (window.HospitalRaiseLettersEngineV8 && typeof window.HospitalRaiseLettersEngineV8.attendanceRows === 'function') {
-        var engineRows = window.HospitalRaiseLettersEngineV8.attendanceRows();
-        if (Array.isArray(engineRows)) return engineRows;
+        sources.push(window.HospitalRaiseLettersEngineV8.attendanceRows());
       }
     } catch (_) {}
 
-    var sources = [
-      readJson('attendanceData', null),
-      readJson('ng_attendanceData', null),
-      readJson('nd_attendanceData', null),
-      readJson('persistentAttendanceData', null),
-      readJson('najran_revision_snapshot', {}).attendanceData,
-      readJson('najran_revision_snapshot', {}).persistentAttendanceData
-    ];
+    addSnapshotSources(readSessionJson('hrl_snapshot_v1', {}), sources);
+    addSnapshotSources(readJson('hrl_snapshot_v1', {}), sources);
+
+    var revision = readJson('najran_revision_snapshot', {});
+    sources.push(readJson('attendanceData', null));
+    sources.push(readJson('ng_attendanceData', null));
+    sources.push(readJson('nd_attendanceData', null));
+    sources.push(readJson('persistentAttendanceData', null));
+    sources.push(revision.attendanceData);
+    sources.push(revision.ng_attendanceData);
+    sources.push(revision.nd_attendanceData);
+    sources.push(revision.persistentAttendanceData);
+
     var rows = [], seen = {};
     sources.forEach(function (s) { collectRows(s, rows, seen, 0); });
+
+    try {
+      window.__HospitalRaiseLettersMergedAttendanceCount = rows.length;
+      window.__HospitalRaiseLettersMergedAttendanceSources = sources.length;
+    } catch (_) {}
     return rows;
   }
+
   function hasExactCode(row, codes) {
     var found = false;
     function walk(x, depth) {
@@ -93,68 +132,51 @@
     walk(row, 0);
     return found;
   }
-  function leaveDays(row) {
-    return dayCodeCount(row, 'ج');
+
+  function dayCodeCount(row, code) {
+    return Array.isArray(row && row.days) ? row.days.filter(function (x) { return clean(x) === code; }).length : 0;
   }
 
+  function leaveDays(row) { return dayCodeCount(row, 'ج'); }
   function leaveNote(row) {
     var ld = leaveDays(row);
     var base = notes(row);
     if (ld > 0) return 'إجازة عدد ' + ar(ld) + ' يوم' + (base ? ' - ' + base : '');
     return base || 'إجازة';
   }
-
   function isVacation(row) {
     var t = deepText(row, 0);
     return leaveDays(row) > 0 || /إجاز|اجاز|اجازه|إجازه|vacation|annual\s+leave|leave/i.test(t) || hasExactCode(row, ['ج', 'إ', 'أجازة', 'إجازة', 'اجازة']);
   }
-  function dayCodeCount(row, code) {
-    return Array.isArray(row && row.days) ? row.days.filter(function (x) { return clean(x) === code; }).length : 0;
-  }
 
-  function vacancyDays(row) {
-    return dayCodeCount(row, 'ش');
-  }
-
+  function vacancyDays(row) { return dayCodeCount(row, 'ش'); }
   function vacancyNote(row) {
     var vd = vacancyDays(row);
     var base = notes(row);
     var employee = name(row);
-
-    if (vd > 0) {
-      return 'شاغر عدد ' + ar(vd) + ' يوم' + (employee ? ' - الموظف: ' + employee : '') + (base ? ' - ' + base : '');
-    }
-
+    if (vd > 0) return 'شاغر عدد ' + ar(vd) + ' يوم' + (employee ? ' - الموظف: ' + employee : '') + (base ? ' - ' + base : '');
     if (!employee && job(row)) return base || 'شاغر كامل';
     return base;
   }
-
   function isVacant(row) {
     var n = name(row);
     var j = job(row);
     var st = first(row, ['status', 'attendanceStatus', 'type', 'حالة', 'الحالة']);
     var directText = [n, j, st].join(' ');
-
     return vacancyDays(row) > 0 || (!n && !!j) || /شاغر|vacant|vacancy/i.test(directText);
   }
-  function absenceDays(row) {
-    return dayCodeCount(row, 'غ');
-  }
 
+  function absenceDays(row) { return dayCodeCount(row, 'غ'); }
   function absenceNote(row) {
     var gd = absenceDays(row);
     var base = notes(row);
     if (gd > 0) return 'غياب عدد ' + ar(gd) + ' يوم' + (base ? ' - ' + base : '');
     return base || 'غياب';
   }
-
   function isAbsence(row) {
     var st = first(row, ['status', 'attendanceStatus', 'type', 'حالة', 'الحالة']);
     var nt = notes(row);
     var directText = [st, nt].join(' ');
-
-    // الغياب الحقيقي من كود "غ" داخل days فقط.
-    // لا تفتش داخل كامل الصف حتى لا تمسك مفاتيح مثل absenceDays / absencePenalty.
     return absenceDays(row) > 0 || /(^|\s)(غ|غياب|غائب|absence|absent)(\s|$)/i.test(directText);
   }
 
@@ -162,11 +184,7 @@
     var nat = nationality(row);
     var st = first(row, ['status', 'attendanceStatus', 'type', 'حالة', 'الحالة']);
     var directText = [nat, st].join(' ');
-
-    // لا تعتبر "غير سعودي" سعوديًا لمجرد احتوائها على كلمة سعودي.
     if (/غير\s*سعود|غير\s*سعودي|غير\s*سعودى|non[-\s]*saudi|not\s+saudi|أجنبي|اجنبي/i.test(directText)) return false;
-
-    // فحص مباشر للجنسية/الحالة فقط، وليس كامل الصف.
     return /(^|\s)(سعودي|سعودى|سعودية|السعودية|saudi|ksa)(\s|$)/i.test(directText) || row.isSaudi === true || row.saudi === true;
   }
 
@@ -179,7 +197,7 @@
   }
 
   function statusFixCss() {
-    return '<style id="hospital-raise-status-pages-fix-v1">' +
+    return '<style id="hospital-raise-status-pages-fix-v2">' +
       'body.hrl-polished .doc-page-counter{font-weight:900;text-align:left;color:#003087;margin:0 0 3.5mm;font-size:11.5px!important}' +
       'body.hrl-polished .status-cont-note{font-weight:900;text-align:center;color:#475569;margin:4mm 0;font-size:12px!important}' +
       'body.hrl-polished .sig-line{border-bottom:none!important;height:15mm!important;margin:0 8mm 2mm!important}' +
@@ -191,9 +209,7 @@
       '</style>';
   }
 
-  function parseHtml(html) {
-    try { return new DOMParser().parseFromString(String(html || ''), 'text/html'); } catch (_) { return null; }
-  }
+  function parseHtml(html) { try { return new DOMParser().parseFromString(String(html || ''), 'text/html'); } catch (_) { return null; } }
   function serialize(doc) { return '<!doctype html>\n' + doc.documentElement.outerHTML; }
   function findPages(doc, keyword) {
     return Array.prototype.filter.call(doc.querySelectorAll('section.page'), function (p) {
@@ -306,10 +322,10 @@
   function fixSaudi(doc) {
     var pages = findPages(doc, 'بيان السعودة');
     if (!pages.length) return;
-    var rows = attendanceRows().filter(function (r) { return isRealNamedEmployee(r); });
+    var rows = attendanceRows().filter(isRealNamedEmployee);
     var total = rows.length;
     var sa = rows.filter(isSaudi).length;
-    var perc = total ? ((sa * 100 / total).toFixed(1) + '%') : '0%';
+    var perc = total ? ((sa * 100 / total).toFixed(2) + '%') : '0.00%';
     pages.forEach(function (page) {
       var table = page.querySelector('table.tbl');
       if (!table) return;
@@ -321,17 +337,13 @@
     var rows = attendanceRows().filter(function (r) { return isRealNamedEmployee(r) && isSaudi(r); });
     var pages = findPages(doc, 'بيان أسماء السعوديين');
     if (!pages.length) return;
-
     var base = pages[0], table = base.querySelector('table.tbl');
     if (!table) return;
-
     var rowHtml = rows.map(function (r, i) {
       return '<tr><td>' + ar(i + 1) + '</td><td>' + esc(name(r)) + '</td><td>' + esc(job(r)) + '</td><td>' + esc(nationality(r)) + '</td><td>' + esc(empId(r)) + '</td></tr>';
     });
-
     var groups = chunk(rowHtml, SAUDI_NAMES_ROWS_PER_PAGE);
     var parent = base.parentNode;
-
     groups.forEach(function (g, idx) {
       var page = idx === 0 ? base : base.cloneNode(true);
       page.classList.add('saudi-names-page');
@@ -340,7 +352,6 @@
       if (idx < groups.length - 1) removeAfterTable(page);
       if (idx > 0) parent.insertBefore(page, base.nextSibling);
     });
-
     pages.slice(1).forEach(function (p) { if (p.parentNode) p.parentNode.removeChild(p); });
   }
 
@@ -350,9 +361,7 @@
     if (!/بيان الشواغر|بيان الإجازات|بيان الغياب|بيان السعودة|بيان أسماء السعوديين|خطابات رفع المستخلص العادي|خطاب العمالة|خطاب الرفع النهائي/.test(html)) return html;
     var doc = parseHtml(html);
     if (!doc || !doc.documentElement) return html;
-    if (!doc.getElementById('hospital-raise-status-pages-fix-v1')) {
-      doc.head.insertAdjacentHTML('beforeend', statusFixCss());
-    }
+    if (!doc.getElementById('hospital-raise-status-pages-fix-v2')) doc.head.insertAdjacentHTML('beforeend', statusFixCss());
     if (!/\bhrl-polished\b/.test(doc.body.className || '')) doc.body.classList.add('hrl-polished');
     fixVacancies(doc);
     fixVacations(doc);
@@ -363,14 +372,14 @@
   }
 
   function wrapWindowOpen() {
-    if (window.__HOSPITAL_RAISE_STATUS_PAGES_FIX_OPEN_WRAPPED__) return;
-    window.__HOSPITAL_RAISE_STATUS_PAGES_FIX_OPEN_WRAPPED__ = true;
+    if (window.__HOSPITAL_RAISE_STATUS_PAGES_FIX_OPEN_WRAPPED_V2__) return;
+    window.__HOSPITAL_RAISE_STATUS_PAGES_FIX_OPEN_WRAPPED_V2__ = true;
     var oldOpen = window.open;
     window.open = function () {
       var win = oldOpen.apply(window, arguments);
       try {
-        if (win && win.document && !win.__hospitalRaiseStatusPagesFixWriteWrapped) {
-          win.__hospitalRaiseStatusPagesFixWriteWrapped = true;
+        if (win && win.document && !win.__hospitalRaiseStatusPagesFixWriteWrappedV2) {
+          win.__hospitalRaiseStatusPagesFixWriteWrappedV2 = true;
           var oldWrite = win.document.write.bind(win.document);
           win.document.write = function (html) { return oldWrite(transform(html)); };
         }
@@ -379,7 +388,32 @@
     };
   }
 
+  function patchEngineRender() {
+    try {
+      var api = window.HospitalRaiseLettersEngineV8;
+      if (!api || typeof api.renderDocument !== 'function' || api.__statusPagesMergedSaudiV2) return false;
+      var oldRender = api.renderDocument;
+      api.renderDocument = function () { return transform(oldRender.apply(this, arguments)); };
+      api.__statusPagesMergedSaudiV2 = true;
+      return true;
+    } catch (_) { return false; }
+  }
+
+  function patchPreview() {
+    try {
+      var f = document.getElementById('prev');
+      if (!f || !f.srcdoc || !/بيان السعودة|بيان أسماء السعوديين|بيان الشواغر|بيان الإجازات|بيان الغياب/.test(f.srcdoc)) return;
+      var fixed = transform(f.srcdoc);
+      if (fixed && fixed !== f.srcdoc) f.srcdoc = fixed;
+    } catch (_) {}
+  }
+
   wrapWindowOpen();
-  window.HospitalRaiseLettersStatusPagesFix = { rows: attendanceRows, transform: transform };
-  console.info('[Hospital Raise Letters Status Pages Fix] installed v1 vacancies/vacations/absences/saudi/saudiNames/signatures');
+  patchEngineRender();
+  setTimeout(patchEngineRender, 300);
+  setTimeout(patchEngineRender, 1000);
+  setInterval(patchPreview, 700);
+
+  window.HospitalRaiseLettersStatusPagesFix = { rows: attendanceRows, transform: transform, isSaudi: isSaudi, isRealNamedEmployee: isRealNamedEmployee };
+  console.info('[Hospital Raise Letters Status Pages Fix] installed v2 merged attendance saudi count');
 })();
