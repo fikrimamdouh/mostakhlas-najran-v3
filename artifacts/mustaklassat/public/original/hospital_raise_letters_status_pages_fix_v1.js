@@ -1,7 +1,7 @@
-// Hospital Raise Letters Status Pages Fix V2
+// Hospital Raise Letters Status Pages Fix V3
 // Scope: hospital_raise_letters.html only.
 // Fixes vacancies pagination, vacation/absence detection, Saudi counting, Saudi names, and signature styling in print windows.
-// Saudi count now merges all available attendance sources instead of trusting the first source only.
+// Saudi ratio denominator counts all labor positions, including vacant positions. Duplicate vacant rows are preserved by row path.
 (function () {
   'use strict';
 
@@ -44,6 +44,85 @@
   function notes(row) { return first(row, ['notes', 'note', 'remarks', 'ملاحظات', 'الملاحظات']); }
   function nationality(row) { return first(row, ['nationality', 'nationalityName', 'country', 'citizenship', 'nat', 'الجنسية']); }
   function empId(row) { return first(row, ['iqamaId', 'iqama', 'idNumber', 'nationalId', 'identity', 'employeeId', 'id', 'هوية', 'الإقامة', 'رقم الهوية', 'رقم الإقامة']); }
+  function status(row) { return first(row, ['status', 'attendanceStatus', 'type', 'حالة', 'الحالة']); }
+
+  function hasExactCode(row, codes) {
+    var found = false;
+    function walk(x, depth) {
+      if (found || depth > 5 || x == null) return;
+      if (typeof x === 'string' || typeof x === 'number') {
+        var v = clean(x);
+        if (codes.indexOf(v) >= 0) found = true;
+        return;
+      }
+      if (Array.isArray(x)) { x.forEach(function (v) { walk(v, depth + 1); }); return; }
+      if (typeof x === 'object') Object.keys(x).forEach(function (k) { walk(x[k], depth + 1); });
+    }
+    walk(row, 0);
+    return found;
+  }
+
+  function dayCodeCount(row, code) {
+    return Array.isArray(row && row.days) ? row.days.filter(function (x) { return clean(x) === code; }).length : 0;
+  }
+
+  function vacancyDays(row) { return dayCodeCount(row, 'ش'); }
+  function vacancyNote(row) {
+    var vd = vacancyDays(row);
+    var base = notes(row);
+    var employee = name(row);
+    if (vd > 0) return 'شاغر عدد ' + ar(vd) + ' يوم' + (employee ? ' - الموظف: ' + employee : '') + (base ? ' - ' + base : '');
+    if (!employee && job(row)) return base || 'شاغر كامل';
+    return base;
+  }
+  function isVacant(row) {
+    var n = name(row);
+    var j = job(row);
+    var directText = [n, j, status(row)].join(' ');
+    return vacancyDays(row) > 0 || (!n && !!j) || /شاغر|vacant|vacancy/i.test(directText);
+  }
+
+  function leaveDays(row) { return dayCodeCount(row, 'ج'); }
+  function leaveNote(row) {
+    var ld = leaveDays(row);
+    var base = notes(row);
+    if (ld > 0) return 'إجازة عدد ' + ar(ld) + ' يوم' + (base ? ' - ' + base : '');
+    return base || 'إجازة';
+  }
+  function isVacation(row) {
+    var t = deepText(row, 0);
+    return leaveDays(row) > 0 || /إجاز|اجاز|اجازه|إجازه|vacation|annual\s+leave|leave/i.test(t) || hasExactCode(row, ['ج', 'إ', 'أجازة', 'إجازة', 'اجازة']);
+  }
+
+  function absenceDays(row) { return dayCodeCount(row, 'غ'); }
+  function absenceNote(row) {
+    var gd = absenceDays(row);
+    var base = notes(row);
+    if (gd > 0) return 'غياب عدد ' + ar(gd) + ' يوم' + (base ? ' - ' + base : '');
+    return base || 'غياب';
+  }
+  function isAbsence(row) {
+    var directText = [status(row), notes(row)].join(' ');
+    return absenceDays(row) > 0 || /(^|\s)(غ|غياب|غائب|absence|absent)(\s|$)/i.test(directText);
+  }
+
+  function isSaudi(row) {
+    var directText = [nationality(row), status(row)].join(' ');
+    if (/غير\s*سعود|غير\s*سعودي|غير\s*سعودى|non[-\s]*saudi|not\s+saudi|أجنبي|اجنبي/i.test(directText)) return false;
+    return /(^|\s)(سعودي|سعودى|سعودية|السعودية|saudi|ksa)(\s|$)/i.test(directText) || row.isSaudi === true || row.saudi === true;
+  }
+
+  function isRealNamedEmployee(row) {
+    var n = clean(name(row));
+    if (!n) return false;
+    if (/^(شاغر|شاغره|شاغرة|vacant|vacancy)$/i.test(n)) return false;
+    if (/شاغر|شاغره|شاغرة|vacant|vacancy/i.test(n)) return false;
+    return true;
+  }
+
+  function isCountableLaborPosition(row) {
+    return isRealNamedEmployee(row) || isVacant(row);
+  }
 
   function looksLikeEmployeeRow(o) {
     if (!o || typeof o !== 'object' || Array.isArray(o)) return false;
@@ -52,26 +131,30 @@
     return /شاغر|إجاز|اجاز|سعود|غياب|حضور|nationality|jobTitle|employeeName|admin_saudi/i.test(t) && Object.keys(o).length > 1;
   }
 
-  function rowKey(row) {
+  function rowKey(row, path) {
     var id = clean(empId(row));
     var n = clean(name(row));
     var j = clean(job(row));
     var nat = clean(nationality(row));
     if (id) return 'id|' + id;
     if (n) return 'name|' + n + '|' + j + '|' + nat;
-    return 'row|' + j + '|' + deepText(row, 0).slice(0, 160);
+    return 'row|' + j + '|' + clean(path) + '|' + deepText(row, 0).slice(0, 160);
   }
 
-  function collectRows(src, out, seen, depth) {
+  function collectRows(src, out, seen, depth, path) {
     if (!src || depth > 8) return;
-    if (Array.isArray(src)) { src.forEach(function (x) { collectRows(x, out, seen, depth + 1); }); return; }
+    path = path || 'root';
+    if (Array.isArray(src)) {
+      src.forEach(function (x, idx) { collectRows(x, out, seen, depth + 1, path + '/' + idx); });
+      return;
+    }
     if (typeof src !== 'object') return;
     if (looksLikeEmployeeRow(src)) {
-      var key = rowKey(src);
+      var key = rowKey(src, path);
       if (!seen[key]) { seen[key] = true; out.push(src); }
       return;
     }
-    Object.keys(src).forEach(function (k) { collectRows(src[k], out, seen, depth + 1); });
+    Object.keys(src).forEach(function (k) { collectRows(src[k], out, seen, depth + 1, path + '/' + k); });
   }
 
   function addSnapshotSources(snapshot, sources) {
@@ -82,6 +165,8 @@
     sources.push(snapshot.persistentAttendanceData);
     if (snapshot.najran_revision_snapshot) {
       sources.push(snapshot.najran_revision_snapshot.attendanceData);
+      sources.push(snapshot.najran_revision_snapshot.ng_attendanceData);
+      sources.push(snapshot.najran_revision_snapshot.nd_attendanceData);
       sources.push(snapshot.najran_revision_snapshot.persistentAttendanceData);
     }
   }
@@ -108,92 +193,13 @@
     sources.push(revision.persistentAttendanceData);
 
     var rows = [], seen = {};
-    sources.forEach(function (s) { collectRows(s, rows, seen, 0); });
+    sources.forEach(function (s) { collectRows(s, rows, seen, 0, 'root'); });
 
     try {
       window.__HospitalRaiseLettersMergedAttendanceCount = rows.length;
       window.__HospitalRaiseLettersMergedAttendanceSources = sources.length;
     } catch (_) {}
     return rows;
-  }
-
-  function hasExactCode(row, codes) {
-    var found = false;
-    function walk(x, depth) {
-      if (found || depth > 5 || x == null) return;
-      if (typeof x === 'string' || typeof x === 'number') {
-        var v = clean(x);
-        if (codes.indexOf(v) >= 0) found = true;
-        return;
-      }
-      if (Array.isArray(x)) { x.forEach(function (v) { walk(v, depth + 1); }); return; }
-      if (typeof x === 'object') Object.keys(x).forEach(function (k) { walk(x[k], depth + 1); });
-    }
-    walk(row, 0);
-    return found;
-  }
-
-  function dayCodeCount(row, code) {
-    return Array.isArray(row && row.days) ? row.days.filter(function (x) { return clean(x) === code; }).length : 0;
-  }
-
-  function leaveDays(row) { return dayCodeCount(row, 'ج'); }
-  function leaveNote(row) {
-    var ld = leaveDays(row);
-    var base = notes(row);
-    if (ld > 0) return 'إجازة عدد ' + ar(ld) + ' يوم' + (base ? ' - ' + base : '');
-    return base || 'إجازة';
-  }
-  function isVacation(row) {
-    var t = deepText(row, 0);
-    return leaveDays(row) > 0 || /إجاز|اجاز|اجازه|إجازه|vacation|annual\s+leave|leave/i.test(t) || hasExactCode(row, ['ج', 'إ', 'أجازة', 'إجازة', 'اجازة']);
-  }
-
-  function vacancyDays(row) { return dayCodeCount(row, 'ش'); }
-  function vacancyNote(row) {
-    var vd = vacancyDays(row);
-    var base = notes(row);
-    var employee = name(row);
-    if (vd > 0) return 'شاغر عدد ' + ar(vd) + ' يوم' + (employee ? ' - الموظف: ' + employee : '') + (base ? ' - ' + base : '');
-    if (!employee && job(row)) return base || 'شاغر كامل';
-    return base;
-  }
-  function isVacant(row) {
-    var n = name(row);
-    var j = job(row);
-    var st = first(row, ['status', 'attendanceStatus', 'type', 'حالة', 'الحالة']);
-    var directText = [n, j, st].join(' ');
-    return vacancyDays(row) > 0 || (!n && !!j) || /شاغر|vacant|vacancy/i.test(directText);
-  }
-
-  function absenceDays(row) { return dayCodeCount(row, 'غ'); }
-  function absenceNote(row) {
-    var gd = absenceDays(row);
-    var base = notes(row);
-    if (gd > 0) return 'غياب عدد ' + ar(gd) + ' يوم' + (base ? ' - ' + base : '');
-    return base || 'غياب';
-  }
-  function isAbsence(row) {
-    var st = first(row, ['status', 'attendanceStatus', 'type', 'حالة', 'الحالة']);
-    var nt = notes(row);
-    var directText = [st, nt].join(' ');
-    return absenceDays(row) > 0 || /(^|\s)(غ|غياب|غائب|absence|absent)(\s|$)/i.test(directText);
-  }
-
-  function isSaudi(row) {
-    var nat = nationality(row);
-    var st = first(row, ['status', 'attendanceStatus', 'type', 'حالة', 'الحالة']);
-    var directText = [nat, st].join(' ');
-    if (/غير\s*سعود|غير\s*سعودي|غير\s*سعودى|non[-\s]*saudi|not\s+saudi|أجنبي|اجنبي/i.test(directText)) return false;
-    return /(^|\s)(سعودي|سعودى|سعودية|السعودية|saudi|ksa)(\s|$)/i.test(directText) || row.isSaudi === true || row.saudi === true;
-  }
-
-  function isRealNamedEmployee(row) {
-    var n = clean(name(row));
-    if (!n) return false;
-    if (/^(شاغر|شاغره|شاغرة|vacant|vacancy)$/i.test(n)) return false;
-    if (/شاغر|شاغره|شاغرة|vacant|vacancy/i.test(n)) return false;
-    return true;
   }
 
   function statusFixCss() {
@@ -217,10 +223,10 @@
       return title && clean(title.textContent) === keyword;
     });
   }
-  function setTableRows(table, rowHtml) {
+  function setTableRows(table, rowHtml, colspan) {
     var tbody = table && table.querySelector('tbody');
     if (!tbody) return;
-    tbody.innerHTML = rowHtml || '<tr><td colspan="4">لا توجد بيانات</td></tr>';
+    tbody.innerHTML = rowHtml || '<tr><td colspan="' + (colspan || 4) + '">لا توجد بيانات</td></tr>';
   }
   function insertCounter(page, i, total) {
     var old = page.querySelector('.doc-page-counter');
@@ -248,111 +254,89 @@
   }
   function chunk(arr, size) {
     var out = [];
+    size = Math.max(1, Number(size) || 24);
     for (var i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
     return out.length ? out : [[]];
+  }
+
+  function paginateStatusPages(pages, rowHtml, rowsPerPage, pageClass, colspan) {
+    if (!pages.length) return;
+    var base = pages[0], table = base.querySelector('table.tbl');
+    if (!table || !base.parentNode) return;
+
+    var template = base.cloneNode(true);
+    var groups = chunk(rowHtml, rowsPerPage);
+    var parent = base.parentNode;
+    var anchor = base;
+
+    groups.forEach(function (g, idx) {
+      var page = idx === 0 ? base : template.cloneNode(true);
+      page.classList.add(pageClass);
+      setTableRows(page.querySelector('table.tbl'), g.join('') || '<tr><td colspan="' + colspan + '">لا توجد بيانات</td></tr>', colspan);
+      if (groups.length > 1) insertCounter(page, idx + 1, groups.length);
+      if (idx < groups.length - 1) removeAfterTable(page);
+      if (idx > 0) {
+        parent.insertBefore(page, anchor.nextSibling);
+        anchor = page;
+      }
+    });
+
+    pages.slice(1).forEach(function (p) { if (p.parentNode) p.parentNode.removeChild(p); });
   }
 
   function fixVacancies(doc) {
     var rows = attendanceRows().filter(isVacant);
     var pages = findPages(doc, 'بيان الشواغر');
-    if (!pages.length) return;
-    pages.forEach(function (p) { p.classList.add('vacancies-page'); });
-    var base = pages[0], table = base.querySelector('table.tbl');
-    if (!table) return;
     var rowHtml = rows.map(function (r, i) {
       return '<tr><td>' + ar(i + 1) + '</td><td>' + esc(job(r) || 'شاغر') + '</td><td>' + esc(vacancyNote(r)) + '</td></tr>';
     });
-    var groups = chunk(rowHtml, VACANCY_ROWS_PER_PAGE);
-    var parent = base.parentNode;
-    groups.forEach(function (g, idx) {
-      var page = idx === 0 ? base : base.cloneNode(true);
-      page.classList.add('vacancies-page');
-      setTableRows(page.querySelector('table.tbl'), g.join('') || '<tr><td colspan="3">لا توجد بيانات</td></tr>');
-      insertCounter(page, idx + 1, groups.length);
-      if (idx < groups.length - 1) removeAfterTable(page);
-      if (idx > 0) parent.insertBefore(page, base.nextSibling);
-    });
-    pages.slice(1).forEach(function (p) { if (p.parentNode) p.parentNode.removeChild(p); });
+    pages.forEach(function (p) { p.classList.add('vacancies-page'); });
+    paginateStatusPages(pages, rowHtml, VACANCY_ROWS_PER_PAGE, 'vacancies-page', 3);
   }
 
   function fixVacations(doc) {
     var rows = attendanceRows().filter(isVacation);
     var pages = findPages(doc, 'بيان الإجازات');
-    if (!pages.length) return;
-    var base = pages[0], table = base.querySelector('table.tbl');
-    if (!table) return;
     var rowHtml = rows.map(function (r, i) {
       return '<tr><td>' + ar(i + 1) + '</td><td>' + esc(name(r)) + '</td><td>' + esc(job(r)) + '</td><td>' + esc(leaveNote(r)) + '</td></tr>';
     });
-    var groups = chunk(rowHtml, VACATION_ROWS_PER_PAGE);
-    var parent = base.parentNode;
-    groups.forEach(function (g, idx) {
-      var page = idx === 0 ? base : base.cloneNode(true);
-      page.classList.add('vacations-page');
-      setTableRows(page.querySelector('table.tbl'), g.join('') || '<tr><td colspan="4">لا توجد بيانات</td></tr>');
-      if (groups.length > 1) insertCounter(page, idx + 1, groups.length);
-      if (idx < groups.length - 1) removeAfterTable(page);
-      if (idx > 0) parent.insertBefore(page, base.nextSibling);
-    });
-    pages.slice(1).forEach(function (p) { if (p.parentNode) p.parentNode.removeChild(p); });
+    pages.forEach(function (p) { p.classList.add('vacations-page'); });
+    paginateStatusPages(pages, rowHtml, VACATION_ROWS_PER_PAGE, 'vacations-page', 4);
   }
 
   function fixAbsences(doc) {
     var rows = attendanceRows().filter(isAbsence);
     var pages = findPages(doc, 'بيان الغياب');
-    if (!pages.length) return;
-    var base = pages[0], table = base.querySelector('table.tbl');
-    if (!table) return;
     var rowHtml = rows.map(function (r, i) {
       return '<tr><td>' + ar(i + 1) + '</td><td>' + esc(name(r)) + '</td><td>' + esc(job(r)) + '</td><td>' + esc(absenceNote(r)) + '</td></tr>';
     });
-    var groups = chunk(rowHtml, ABSENCE_ROWS_PER_PAGE);
-    var parent = base.parentNode;
-    groups.forEach(function (g, idx) {
-      var page = idx === 0 ? base : base.cloneNode(true);
-      page.classList.add('absences-page');
-      setTableRows(page.querySelector('table.tbl'), g.join('') || '<tr><td colspan="4">لا توجد بيانات</td></tr>');
-      if (groups.length > 1) insertCounter(page, idx + 1, groups.length);
-      if (idx < groups.length - 1) removeAfterTable(page);
-      if (idx > 0) parent.insertBefore(page, base.nextSibling);
-    });
-    pages.slice(1).forEach(function (p) { if (p.parentNode) p.parentNode.removeChild(p); });
+    pages.forEach(function (p) { p.classList.add('absences-page'); });
+    paginateStatusPages(pages, rowHtml, ABSENCE_ROWS_PER_PAGE, 'absences-page', 4);
   }
 
   function fixSaudi(doc) {
     var pages = findPages(doc, 'بيان السعودة');
     if (!pages.length) return;
-    var rows = attendanceRows().filter(isRealNamedEmployee);
-    var total = rows.length;
-    var sa = rows.filter(isSaudi).length;
+    var rows = attendanceRows();
+    var countable = rows.filter(isCountableLaborPosition);
+    var total = countable.length;
+    var sa = rows.filter(function (r) { return isRealNamedEmployee(r) && isSaudi(r); }).length;
     var perc = total ? ((sa * 100 / total).toFixed(2) + '%') : '0.00%';
     pages.forEach(function (page) {
       var table = page.querySelector('table.tbl');
       if (!table) return;
-      setTableRows(table, '<tr><td>' + ar(total) + '</td><td>' + ar(sa) + '</td><td>' + ar(perc) + '</td><td>حسب متطلبات العقد</td></tr>');
+      setTableRows(table, '<tr><td>' + ar(total) + '</td><td>' + ar(sa) + '</td><td>' + ar(perc) + '</td><td>حسب متطلبات العقد</td></tr>', 4);
     });
   }
 
   function fixSaudiNames(doc) {
     var rows = attendanceRows().filter(function (r) { return isRealNamedEmployee(r) && isSaudi(r); });
     var pages = findPages(doc, 'بيان أسماء السعوديين');
-    if (!pages.length) return;
-    var base = pages[0], table = base.querySelector('table.tbl');
-    if (!table) return;
     var rowHtml = rows.map(function (r, i) {
       return '<tr><td>' + ar(i + 1) + '</td><td>' + esc(name(r)) + '</td><td>' + esc(job(r)) + '</td><td>' + esc(nationality(r)) + '</td><td>' + esc(empId(r)) + '</td></tr>';
     });
-    var groups = chunk(rowHtml, SAUDI_NAMES_ROWS_PER_PAGE);
-    var parent = base.parentNode;
-    groups.forEach(function (g, idx) {
-      var page = idx === 0 ? base : base.cloneNode(true);
-      page.classList.add('saudi-names-page');
-      setTableRows(page.querySelector('table.tbl'), g.join('') || '<tr><td colspan="5">لا توجد بيانات</td></tr>');
-      if (groups.length > 1) insertCounter(page, idx + 1, groups.length);
-      if (idx < groups.length - 1) removeAfterTable(page);
-      if (idx > 0) parent.insertBefore(page, base.nextSibling);
-    });
-    pages.slice(1).forEach(function (p) { if (p.parentNode) p.parentNode.removeChild(p); });
+    pages.forEach(function (p) { p.classList.add('saudi-names-page'); });
+    paginateStatusPages(pages, rowHtml, SAUDI_NAMES_ROWS_PER_PAGE, 'saudi-names-page', 5);
   }
 
   function transform(html) {
@@ -414,6 +398,12 @@
   setTimeout(patchEngineRender, 1000);
   setInterval(patchPreview, 700);
 
-  window.HospitalRaiseLettersStatusPagesFix = { rows: attendanceRows, transform: transform, isSaudi: isSaudi, isRealNamedEmployee: isRealNamedEmployee };
-  console.info('[Hospital Raise Letters Status Pages Fix] installed v2 merged attendance saudi count');
+  window.HospitalRaiseLettersStatusPagesFix = {
+    rows: attendanceRows,
+    transform: transform,
+    isSaudi: isSaudi,
+    isRealNamedEmployee: isRealNamedEmployee,
+    isCountableLaborPosition: isCountableLaborPosition
+  };
+  console.info('[Hospital Raise Letters Status Pages Fix] installed v3 saudi vacancies signatures');
 })();
