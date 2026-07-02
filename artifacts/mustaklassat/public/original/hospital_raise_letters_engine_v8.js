@@ -9,7 +9,7 @@
   window.__HOSPITAL_RAISE_LETTERS_ENGINE_V8_COMPACT__ = true;
 
   const KEY = 'hospitalRaiseLettersSettings_v8';
-  const ORDER = ['index', 'final', 'labor', 'noPrev', 'salary', 'vacancies', 'vacations', 'saudi', 'custom'];
+  const ORDER = ['index', 'final', 'labor', 'noPrev', 'salary', 'vacancies', 'vacations', 'absences', 'saudi', 'saudiNames', 'custom'];
   const LABEL = {
     index: 'فهرس مستندات المستخلص',
     final: 'خطاب الرفع النهائي',
@@ -18,7 +18,9 @@
     salary: 'شهادة تسليم الرواتب',
     vacancies: 'بيان الشواغر',
     vacations: 'بيان الإجازات',
+    absences: 'بيان الغياب',
     saudi: 'بيان السعودة',
+    saudiNames: 'بيان أسماء السعوديين',
     custom: 'خطاب مخصص'
   };
 
@@ -218,6 +220,14 @@
     return fieldVal(e, ['jobTitle', 'position', 'title', 'job', 'profession', 'وظيفة', 'الوظيفة', 'المهنة']);
   }
 
+  function empNationality(e) {
+    return fieldVal(e, ['nationality', 'nationalityName', 'country', 'citizenship', 'الجنسية']);
+  }
+
+  function empId(e) {
+    return fieldVal(e, ['iqamaId', 'iqama', 'idNumber', 'nationalId', 'identity', 'هوية', 'الإقامة', 'رقم الهوية', 'رقم الإقامة']);
+  }
+
   function empStatus(e) {
     return fieldVal(e, ['status', 'attendanceStatus', 'type', 'حالة', 'الحالة']);
   }
@@ -331,9 +341,36 @@
     return vacancyDays(e) > 0 || (!name && !!job) || /شاغر|vacant|vacancy/i.test(directText);
   }
 
+  function leaveDays(e) {
+    return dayCodeCount(e, 'ج');
+  }
+
+  function leaveNote(e) {
+    const ld = leaveDays(e);
+    const base = empNotes(e);
+    if (ld > 0) return 'إجازة عدد ' + ar(ld) + ' يوم' + (base ? ' - ' + base : '');
+    return base || 'إجازة';
+  }
+
   function isLeave(e) {
     const t = deepTextLocal(e, 0);
-    return /إجاز|اجاز|اجازه|إجازه|vacation|annual\s+leave|leave/i.test(t) || hasExactCode(e, ['ج', 'إ', 'أجازة', 'إجازة', 'اجازة']);
+    return leaveDays(e) > 0 || /إجاز|اجاز|اجازه|إجازه|vacation|annual\s+leave|leave/i.test(t) || hasExactCode(e, ['ج', 'إ', 'أجازة', 'إجازة', 'اجازة']);
+  }
+
+  function absenceDays(e) {
+    return dayCodeCount(e, 'غ');
+  }
+
+  function absenceNote(e) {
+    const gd = absenceDays(e);
+    const base = empNotes(e);
+    if (gd > 0) return 'غياب عدد ' + ar(gd) + ' يوم' + (base ? ' - ' + base : '');
+    return base || 'غياب';
+  }
+
+  function isAbsence(e) {
+    const t = deepTextLocal(e, 0);
+    return absenceDays(e) > 0 || /غياب|غائب|absence|absent/i.test(t) || hasExactCode(e, ['غ', 'غياب']);
   }
 
   function isSaudi(e) {
@@ -386,7 +423,9 @@
       salary: { to: '', suffix: '', subject: 'شهادة تسليم الرواتب', title: 'شهادة تسليم الرواتب', body: 'تشهد {issuer} بأن {company} قامت بتسليم رواتب العاملين التابعين لها{placePhrase} عن {period} بحسب المستندات المقدمة.', close: 'وقد أعطيت هذه الشهادة ضمن مستندات المستخلص.', note: '', s1t: '{sigTitle}', s1n: '{sigName}', s2t: '', s2n: '', s3t: '', s3n: '' },
       vacancies: { to: '', suffix: '', subject: 'بيان الشواغر', title: 'بيان الشواغر', body: 'نرفق بيان الوظائف الشاغرة{placePhrase} عن {period}.', close: 'للاطلاع واستكمال ما يلزم.', note: '', s1t: '{sigTitle}', s1n: '{sigName}', s2t: '', s2n: '', s3t: '', s3n: '' },
       vacations: { to: '', suffix: '', subject: 'بيان الإجازات', title: 'بيان الإجازات', body: 'نرفق بيان الإجازات المسجلة للعاملين{placePhrase} عن {period}.', close: 'للاطلاع واستكمال ما يلزم.', note: '', s1t: '{sigTitle}', s1n: '{sigName}', s2t: '', s2n: '', s3t: '', s3n: '' },
+      absences: { to: '', suffix: '', subject: 'بيان الغياب', title: 'بيان الغياب', body: 'نرفق بيان الغياب المسجل للعاملين{placePhrase} عن {period}.', close: 'للاطلاع واستكمال ما يلزم.', note: '', s1t: '{sigTitle}', s1n: '{sigName}', s2t: '', s2n: '', s3t: '', s3n: '' },
       saudi: { to: '', suffix: '', subject: 'بيان السعودة', title: 'بيان السعودة', body: 'نرفق بيان نسبة السعودة{placePhrase} عن {period}.', close: 'للاطلاع واستكمال ما يلزم.', note: '', s1t: '{sigTitle}', s1n: '{sigName}', s2t: '', s2n: '', s3t: '', s3n: '' },
+      saudiNames: { to: '', suffix: '', subject: 'بيان أسماء السعوديين', title: 'بيان أسماء السعوديين', body: 'نرفق بيان أسماء العاملين السعوديين ووظائفهم{placePhrase} عن {period}.', close: 'للاطلاع واستكمال ما يلزم.', note: '', s1t: '{sigTitle}', s1n: '{sigName}', s2t: '', s2n: '', s3t: '', s3n: '' },
       custom: { to: '', suffix: '', subject: 'خطاب مخصص', title: 'خطاب مخصص', body: '', close: '', note: '', s1t: '{sigTitle}', s1n: '{sigName}', s2t: '', s2n: '', s3t: '', s3n: '' }
     };
   }
@@ -394,7 +433,7 @@
     const b = baseData(), layout = {}, pageCount = {};
     ORDER.forEach(k => { layout[k] = defaultDoc(); pageCount[k] = 1; });
     layout.index.showSign = 'no';
-    ['vacancies', 'vacations', 'saudi'].forEach(k => { layout[k].tableWidth = 171; layout[k].tableFont = 10.5; layout[k].bodyFont = 13.5; });
+    ['vacancies', 'vacations', 'absences', 'saudi', 'saudiNames'].forEach(k => { layout[k].tableWidth = 171; layout[k].tableFont = 10.5; layout[k].bodyFont = 13.5; });
     return {
       version: 'hospital-v8-compact', selected: 'final', hospital: b.hospital, company: b.company, contract: b.contract, issuer: 'إدارة ' + b.hospital,
       sigTitle: 'مدير المستشفى', sigName: '', vatRate: 15, manualGrand: 0, requiredSaudi: 5,
@@ -522,7 +561,7 @@
   function body(s, k, t, cls) { const l = s.layout[k]; if (l.showBody === 'no' || !t) return ''; return '<div class="body ' + (cls || '') + '" style="font-size:' + num(l.bodyFont) + 'pt;text-align:' + esc(l.bodyAlign) + '">' + esc(tpl(t, s)) + '</div>'; }
   function table(s, k, heads, rows, amountMode) {
     const l = s.layout[k]; if (l.showTable === 'no') return '';
-    const dense = /^(vacancies|vacations|saudi)$/.test(k), tw = dense ? 171 : (num(l.tableWidth) || 158), tf = dense ? Math.min(num(l.tableFont) || 10.5, 11) : (num(l.tableFont) || 11.5);
+    const dense = /^(vacancies|vacations|absences|saudi|saudiNames)$/.test(k), tw = dense ? 171 : (num(l.tableWidth) || 158), tf = dense ? Math.min(num(l.tableFont) || 10.5, 11) : (num(l.tableFont) || 11.5);
     return '<table class="tbl ' + (dense ? 'dense' : '') + (amountMode ? ' amount-table' : '') + '" style="width:' + tw + 'mm;font-size:' + tf + 'pt"><thead><tr>' + heads.map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + (rows.length ? rows.join('') : '<tr><td colspan="' + heads.length + '">لا توجد بيانات</td></tr>') + '</tbody></table>';
   }
   function sign(s, k) {
@@ -567,11 +606,17 @@
       const rows = attendance().filter(isVacant).map((e, i) => '<tr><td>' + ar(i + 1) + '</td><td>' + esc(empJob(e) || 'شاغر') + '</td><td>' + esc(vacancyNote(e)) + '</td></tr>');
       html += table(s, k, ['م', 'الوظيفة', 'ملاحظات'], rows);
     } else if (k === 'vacations') {
-      const rows = attendance().filter(isLeave).map((e, i) => '<tr><td>' + ar(i + 1) + '</td><td>' + esc(empName(e)) + '</td><td>' + esc(empJob(e)) + '</td><td>' + esc(empNotes(e)) + '</td></tr>');
+      const rows = attendance().filter(isLeave).map((e, i) => '<tr><td>' + ar(i + 1) + '</td><td>' + esc(empName(e)) + '</td><td>' + esc(empJob(e)) + '</td><td>' + esc(leaveNote(e)) + '</td></tr>');
+      html += table(s, k, ['م', 'الاسم', 'الوظيفة', 'ملاحظات'], rows);
+    } else if (k === 'absences') {
+      const rows = attendance().filter(isAbsence).map((e, i) => '<tr><td>' + ar(i + 1) + '</td><td>' + esc(empName(e)) + '</td><td>' + esc(empJob(e)) + '</td><td>' + esc(absenceNote(e)) + '</td></tr>');
       html += table(s, k, ['م', 'الاسم', 'الوظيفة', 'ملاحظات'], rows);
     } else if (k === 'saudi') {
       const all = attendance(), sa = all.filter(isSaudi).length, total = all.length, perc = total ? sa * 100 / total : 0;
       html += table(s, k, ['عدد الوظائف', 'عدد السعوديين', 'النسبة الفعلية', 'النسبة المطلوبة'], ['<tr><td>' + ar(total) + '</td><td>' + ar(sa) + '</td><td>' + perc.toFixed(2) + '%</td><td>' + num(s.requiredSaudi) + '%</td></tr>']);
+    } else if (k === 'saudiNames') {
+      const rows = attendance().filter(isSaudi).map((e, i) => '<tr><td>' + ar(i + 1) + '</td><td>' + esc(empName(e)) + '</td><td>' + esc(empJob(e)) + '</td><td>' + esc(empNationality(e)) + '</td><td>' + esc(empId(e)) + '</td></tr>');
+      html += table(s, k, ['م', 'الاسم', 'الوظيفة', 'الجنسية', 'رقم الهوية / الإقامة'], rows);
     }
     if (k === 'custom') html = lead(s, k) + body(s, k, d.body);
     html += body(s, k, d.close, 'after-text') + body(s, k, d.note, 'after-text') + sign(s, k) + stamp(s, k);
