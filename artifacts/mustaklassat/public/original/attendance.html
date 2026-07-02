@@ -2035,8 +2035,11 @@ async function loadJobPositionsFromTemplate() {
       if (!allData[r.dept]) allData[r.dept] = [];
       allData[r.dept].push({
         name: '', jobTitle: r.jobTitle || '', category: String(r.category || '1'),
-        salary: parseFloat(r.salary) || 0, nationality: r.nationality || 'غير سعودي',
-        nationalityFine: 0,
+      salary: parseFloat(r.salary) || 0,
+nationality: (typeof normalizeNationality === 'function')
+  ? normalizeNationality(r.nationality || 'غير سعودي')
+  : (r.nationality || 'غير سعودي'),
+nationalityFine: 0,
         iqamaId: '',
         days: Array(daysCount).fill('ح')
       });
@@ -2078,8 +2081,9 @@ function downloadPositionsTemplate() {
         r.jobTitle || '',
         r.salary || 0,
         r.category || '1',
-        r.nationality || 'غير سعودي'
-      ];
+(typeof normalizeNationality === 'function')
+  ? normalizeNationality(r.nationality || 'غير سعودي')
+  : (r.nationality || 'غير سعودي')      ];
     });
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([headers].concat(dataRows));
@@ -2175,8 +2179,15 @@ function importPositionsTemplate() {
           var deptAr   = iDept >= 0 ? String(row[iDept]|| '').trim() : '';
           var jobTitle = iJob  >= 0 ? String(row[iJob] || '').trim() : '';
           var salary   = iSalary >= 0 ? parseFloat(row[iSalary]) || 0 : 0;
-          var category = iCat >= 0 ? String(row[iCat] || '1').trim() : '1';
-          var nat      = iNat >= 0 ? String(row[iNat] || 'غير سعودي').trim() : 'غير سعودي';
+       var categoryRaw = iCat >= 0 ? String(row[iCat] || '1').trim() : '1';
+var category = (typeof normalizeAttendanceCategory === 'function')
+  ? normalizeAttendanceCategory(categoryRaw)
+  : categoryRaw;
+
+var natRaw = iNat >= 0 ? String(row[iNat] || 'غير سعودي').trim() : 'غير سعودي';
+var nat = (typeof normalizeNationality === 'function')
+  ? normalizeNationality(natRaw)
+  : natRaw;
 
           if (!empName && !jobTitle && !salary) { totalSkipped++; continue; }
 
