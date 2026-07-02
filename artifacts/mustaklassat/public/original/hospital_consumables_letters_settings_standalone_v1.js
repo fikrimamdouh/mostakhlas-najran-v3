@@ -1,4 +1,4 @@
-// Standalone Consumables Letters Settings V4
+// Standalone Consumables Letters Settings V5
 (function () {
   'use strict';
 
@@ -16,6 +16,7 @@
   var LABEL = DOCS.reduce(function (m, x) { m[x[0]] = x[1]; return m; }, {});
 
   function clean(v) { return String(v == null ? '' : v).replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim(); }
+  function yes(v) { return v === true || v === 'yes' || v === 'true' || v === '1'; }
   function readJson(k, f) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : f; } catch (_) { return f; } }
   function currentHospitalName() {
     var c = readJson('persistentContractData', {});
@@ -24,7 +25,7 @@
 
   function defaults() {
     return {
-      version: 'standalone-consumables-settings-v4',
+      version: 'standalone-consumables-settings-v5',
       selectedDoc: 'main',
       letterheadEnabled: 'no',
       letterheadHasPlaceData: 'yes',
@@ -52,12 +53,13 @@
   function normalize(s) {
     s = merge(defaults(), s || {});
     if (!s.letterheadMode) s.letterheadMode = s.letterheadDataUrl ? 'full' : 'external';
+    if (clean(s.letterheadDataUrl) && yes(s.letterheadEnabled) && s.letterheadMode === 'external') s.letterheadMode = 'full';
     if (!s.entityTitleMode) s.entityTitleMode = clean(s.entityTitle) && clean(s.entityTitle) !== FIXED_OLD_ENTITY ? 'manual' : 'auto';
     if (clean(s.entityTitle) === FIXED_OLD_ENTITY) { s.entityTitle = ''; s.entityTitleMode = 'auto'; }
     return s;
   }
   function read() { return normalize(readJson(KEY, {})); }
-  function save(s) { s.version = 'standalone-consumables-settings-v4'; localStorage.setItem(KEY, JSON.stringify(s)); localStorage.setItem(TS_KEY, String(Date.now())); }
+  function save(s) { s = normalize(s); s.version = 'standalone-consumables-settings-v5'; localStorage.setItem(KEY, JSON.stringify(s)); localStorage.setItem(TS_KEY, String(Date.now())); }
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[c]; }); }
   function setPath(o, p, v) { p = p.split('.'); for (var i = 0; i < p.length - 1; i++) { o[p[i]] = o[p[i]] || {}; o = o[p[i]]; } o[p[p.length - 1]] = v; }
   function field(p, l, v, t) { return '<label class="field"><span>' + esc(l) + '</span><input data-p="' + esc(p) + '" type="' + (t || 'text') + '" value="' + esc(v) + '"></label>'; }
@@ -120,7 +122,7 @@
       sel('entityTitleMode', 'عنوان الهيدر الداخلي', s.entityTitleMode || 'auto', [['auto', 'من اسم المستشفى الحالي'], ['manual', 'يدوي']]) +
       field('entityTitle', 'عنوان يدوي للهيدر الداخلي', s.entityTitle || '') +
       field('departmentTitle', 'اسم الإدارة/الوحدة في الهيدر الداخلي', s.departmentTitle || 'وحدة الصيانة العامة') +
-      '<label class="field wide"><span>رفع صورة الترويسة A4</span><input id="headFile" type="file" accept="image/*">' + (s.letterheadDataUrl ? '<img class="preview" src="' + esc(s.letterheadDataUrl) + '">' : '') + '</label></div><div class="actions"><button type="button" id="deleteHead">حذف الترويسة</button></div></section>';
+      '<label class="field wide"><span>رفع صورة الترويسة A4</span><input id="headFile" type="file" accept="image/*"><small>بعد الرفع يتم ضبطها تلقائيًا كصورة A4 كاملة كخلفية.</small>' + (s.letterheadDataUrl ? '<img class="preview" src="' + esc(s.letterheadDataUrl) + '">' : '') + '</label></div><div class="actions"><button type="button" id="deleteHead">حذف الترويسة</button></div></section>';
   }
 
   function render() {
