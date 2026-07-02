@@ -1,13 +1,13 @@
-// Hospital Raise Letters Status Pages Fix V3
+// Hospital Raise Letters Status Pages Fix V4
 // Scope: hospital_raise_letters.html only.
 // Fixes vacancies pagination, vacation/absence detection, Saudi counting, Saudi names, and signature styling in print windows.
-// Saudi ratio denominator counts all labor positions, including vacant positions. Duplicate vacant rows are preserved by row path.
+// Saudi denominator counts every captured attendance/labor row, including admin rows and duplicate vacant rows by row path.
 (function () {
   'use strict';
 
   if (!/hospital_raise_letters\.html/.test(location.pathname) && !window.__HOSPITAL_LETTERS_STANDALONE_PAGE__) return;
-  if (window.__HOSPITAL_RAISE_LETTERS_STATUS_PAGES_FIX_V2__) return;
-  window.__HOSPITAL_RAISE_LETTERS_STATUS_PAGES_FIX_V2__ = true;
+  if (window.__HOSPITAL_RAISE_LETTERS_STATUS_PAGES_FIX_V4__) return;
+  window.__HOSPITAL_RAISE_LETTERS_STATUS_PAGES_FIX_V4__ = true;
 
   var VACANCY_ROWS_PER_PAGE = 22;
   var VACATION_ROWS_PER_PAGE = 24;
@@ -39,12 +39,12 @@
     }
     return '';
   }
-  function name(row) { return first(row, ['name', 'employeeName', 'fullName', 'empName', 'arabicName', 'employee_name', 'workerName', 'اسم الموظف', 'الاسم', 'اسم العامل']); }
-  function job(row) { return first(row, ['jobTitle', 'position', 'title', 'job', 'profession', 'occupation', 'وظيفة', 'الوظيفة', 'المهنة']); }
-  function notes(row) { return first(row, ['notes', 'note', 'remarks', 'ملاحظات', 'الملاحظات']); }
+  function name(row) { return first(row, ['name', 'employeeName', 'fullName', 'empName', 'arabicName', 'employee_name', 'workerName', 'worker_name', 'اسم الموظف', 'الاسم', 'اسم العامل']); }
+  function job(row) { return first(row, ['jobTitle', 'position', 'title', 'job', 'jobName', 'job_name', 'positionName', 'position_name', 'workPosition', 'role', 'roleName', 'profession', 'occupation', 'adminJob', 'وظيفة', 'الوظيفة', 'المهنة', 'المسمى الوظيفي']); }
+  function notes(row) { return first(row, ['notes', 'note', 'remarks', 'comment', 'ملاحظات', 'الملاحظات']); }
   function nationality(row) { return first(row, ['nationality', 'nationalityName', 'country', 'citizenship', 'nat', 'الجنسية']); }
-  function empId(row) { return first(row, ['iqamaId', 'iqama', 'idNumber', 'nationalId', 'identity', 'employeeId', 'id', 'هوية', 'الإقامة', 'رقم الهوية', 'رقم الإقامة']); }
-  function status(row) { return first(row, ['status', 'attendanceStatus', 'type', 'حالة', 'الحالة']); }
+  function empId(row) { return first(row, ['iqamaId', 'iqama', 'idNumber', 'nationalId', 'identity', 'employeeId', 'id', 'workerId', 'هوية', 'الإقامة', 'رقم الهوية', 'رقم الإقامة']); }
+  function status(row) { return first(row, ['status', 'attendanceStatus', 'type', 'state', 'حالة', 'الحالة']); }
 
   function hasExactCode(row, codes) {
     var found = false;
@@ -71,15 +71,15 @@
     var vd = vacancyDays(row);
     var base = notes(row);
     var employee = name(row);
-    if (vd > 0) return 'شاغر عدد ' + ar(vd) + ' يوم' + (employee ? ' - الموظف: ' + employee : '') + (base ? ' - ' + base : '');
-    if (!employee && job(row)) return base || 'شاغر كامل';
+    if (vd > 0) return 'شاغر عدد ' + ar(vd) + ' يوم' + (employee && !/شاغر|vacant|vacancy/i.test(employee) ? ' - الموظف: ' + employee : '') + (base ? ' - ' + base : '');
+    if ((!employee || /شاغر|vacant|vacancy/i.test(employee)) && job(row)) return base || 'شاغر كامل';
     return base;
   }
   function isVacant(row) {
     var n = name(row);
     var j = job(row);
-    var directText = [n, j, status(row)].join(' ');
-    return vacancyDays(row) > 0 || (!n && !!j) || /شاغر|vacant|vacancy/i.test(directText);
+    var directText = [n, j, status(row), notes(row)].join(' ');
+    return vacancyDays(row) > 0 || (!n && !!j) || /شاغر|شاغره|شاغرة|vacant|vacancy/i.test(directText);
   }
 
   function leaveDays(row) { return dayCodeCount(row, 'ج'); }
@@ -120,15 +120,29 @@
     return true;
   }
 
+  function hasAttendanceShape(row) {
+    return !!row && typeof row === 'object' && !Array.isArray(row) && (
+      Array.isArray(row.days) ||
+      !!name(row) ||
+      !!job(row) ||
+      !!nationality(row) ||
+      !!status(row) ||
+      !!empId(row) ||
+      isVacant(row)
+    );
+  }
+
   function isCountableLaborPosition(row) {
-    return isRealNamedEmployee(row) || isVacant(row);
+    // كل صف تم التقاطه من الحضور والانصراف كصف عمالة يتحسب في مقام السعودة.
+    // لا نستبعد الإداريين أو الشواغر أو الصفوف التي ليس بها جنسية.
+    return hasAttendanceShape(row);
   }
 
   function looksLikeEmployeeRow(o) {
     if (!o || typeof o !== 'object' || Array.isArray(o)) return false;
-    if (name(o) || job(o)) return true;
+    if (hasAttendanceShape(o)) return true;
     var t = deepText(o, 0);
-    return /شاغر|إجاز|اجاز|سعود|غياب|حضور|nationality|jobTitle|employeeName|admin_saudi/i.test(t) && Object.keys(o).length > 1;
+    return /شاغر|شاغره|شاغرة|إجاز|اجاز|سعود|غياب|حضور|nationality|jobTitle|jobName|positionName|employeeName|workerName|admin_saudi/i.test(t) && Object.keys(o).length > 1;
   }
 
   function rowKey(row, path) {
@@ -136,6 +150,10 @@
     var n = clean(name(row));
     var j = clean(job(row));
     var nat = clean(nationality(row));
+
+    // الشواغر لا تتدمج بالاسم/الوظيفة؛ كل صف شاغر في الحضور له مسار مستقل.
+    // نفس المسار داخل مصادر متعددة يظل يمنع التكرار الناتج عن snapshot/localStorage.
+    if (isVacant(row)) return 'vacant|' + j + '|' + clean(path) + '|' + vacancyDays(row);
     if (id) return 'id|' + id;
     if (n) return 'name|' + n + '|' + j + '|' + nat;
     return 'row|' + j + '|' + clean(path) + '|' + deepText(row, 0).slice(0, 160);
@@ -193,17 +211,19 @@
     sources.push(revision.persistentAttendanceData);
 
     var rows = [], seen = {};
-    sources.forEach(function (s) { collectRows(s, rows, seen, 0, 'root'); });
+    sources.forEach(function (s, srcIdx) { collectRows(s, rows, seen, 0, 'src' + srcIdx); });
 
     try {
       window.__HospitalRaiseLettersMergedAttendanceCount = rows.length;
       window.__HospitalRaiseLettersMergedAttendanceSources = sources.length;
+      window.__HospitalRaiseLettersMergedVacancyCount = rows.filter(isVacant).length;
+      window.__HospitalRaiseLettersMergedCountableCount = rows.filter(isCountableLaborPosition).length;
     } catch (_) {}
     return rows;
   }
 
   function statusFixCss() {
-    return '<style id="hospital-raise-status-pages-fix-v2">' +
+    return '<style id="hospital-raise-status-pages-fix-v4">' +
       'body.hrl-polished .doc-page-counter{font-weight:900;text-align:left;color:#003087;margin:0 0 3.5mm;font-size:11.5px!important}' +
       'body.hrl-polished .status-cont-note{font-weight:900;text-align:center;color:#475569;margin:4mm 0;font-size:12px!important}' +
       'body.hrl-polished .sig-line{border-bottom:none!important;height:15mm!important;margin:0 8mm 2mm!important}' +
@@ -322,6 +342,10 @@
     var total = countable.length;
     var sa = rows.filter(function (r) { return isRealNamedEmployee(r) && isSaudi(r); }).length;
     var perc = total ? ((sa * 100 / total).toFixed(2) + '%') : '0.00%';
+    try {
+      window.__HospitalRaiseLettersSaudiTotal = total;
+      window.__HospitalRaiseLettersSaudiNamedCount = sa;
+    } catch (_) {}
     pages.forEach(function (page) {
       var table = page.querySelector('table.tbl');
       if (!table) return;
@@ -345,7 +369,7 @@
     if (!/بيان الشواغر|بيان الإجازات|بيان الغياب|بيان السعودة|بيان أسماء السعوديين|خطابات رفع المستخلص العادي|خطاب العمالة|خطاب الرفع النهائي/.test(html)) return html;
     var doc = parseHtml(html);
     if (!doc || !doc.documentElement) return html;
-    if (!doc.getElementById('hospital-raise-status-pages-fix-v2')) doc.head.insertAdjacentHTML('beforeend', statusFixCss());
+    if (!doc.getElementById('hospital-raise-status-pages-fix-v4')) doc.head.insertAdjacentHTML('beforeend', statusFixCss());
     if (!/\bhrl-polished\b/.test(doc.body.className || '')) doc.body.classList.add('hrl-polished');
     fixVacancies(doc);
     fixVacations(doc);
@@ -356,14 +380,14 @@
   }
 
   function wrapWindowOpen() {
-    if (window.__HOSPITAL_RAISE_STATUS_PAGES_FIX_OPEN_WRAPPED_V2__) return;
-    window.__HOSPITAL_RAISE_STATUS_PAGES_FIX_OPEN_WRAPPED_V2__ = true;
+    if (window.__HOSPITAL_RAISE_STATUS_PAGES_FIX_OPEN_WRAPPED_V4__) return;
+    window.__HOSPITAL_RAISE_STATUS_PAGES_FIX_OPEN_WRAPPED_V4__ = true;
     var oldOpen = window.open;
     window.open = function () {
       var win = oldOpen.apply(window, arguments);
       try {
-        if (win && win.document && !win.__hospitalRaiseStatusPagesFixWriteWrappedV2) {
-          win.__hospitalRaiseStatusPagesFixWriteWrappedV2 = true;
+        if (win && win.document && !win.__hospitalRaiseStatusPagesFixWriteWrappedV4) {
+          win.__hospitalRaiseStatusPagesFixWriteWrappedV4 = true;
           var oldWrite = win.document.write.bind(win.document);
           win.document.write = function (html) { return oldWrite(transform(html)); };
         }
@@ -375,10 +399,10 @@
   function patchEngineRender() {
     try {
       var api = window.HospitalRaiseLettersEngineV8;
-      if (!api || typeof api.renderDocument !== 'function' || api.__statusPagesMergedSaudiV2) return false;
+      if (!api || typeof api.renderDocument !== 'function' || api.__statusPagesMergedSaudiV4) return false;
       var oldRender = api.renderDocument;
       api.renderDocument = function () { return transform(oldRender.apply(this, arguments)); };
-      api.__statusPagesMergedSaudiV2 = true;
+      api.__statusPagesMergedSaudiV4 = true;
       return true;
     } catch (_) { return false; }
   }
@@ -403,7 +427,8 @@
     transform: transform,
     isSaudi: isSaudi,
     isRealNamedEmployee: isRealNamedEmployee,
-    isCountableLaborPosition: isCountableLaborPosition
+    isCountableLaborPosition: isCountableLaborPosition,
+    isVacant: isVacant
   };
-  console.info('[Hospital Raise Letters Status Pages Fix] installed v3 saudi vacancies signatures');
+  console.info('[Hospital Raise Letters Status Pages Fix] installed v4 count-all attendance duplicate vacancies');
 })();
