@@ -32,7 +32,7 @@
     loadScript('hospital-raise-letters-iban-preview-toggle-v1', '/original/hospital_raise_letters_iban_preview_toggle_v1.js?v=20260702_v1_iban_preview_toggle');
   }, 490);
   setTimeout(function(){
-    loadScript('hospital-raise-letters-toolbar-clean-css-v1', '/original/hospital_raise_letters_toolbar_clean_css_v1.js?v=20260702_v2_index_prominent');
+    loadScript('hospital-raise-letters-toolbar-clean-css-v1', '/original/hospital_raise_letters_toolbar_clean_css_v1.js?v=20260702_v3_no_index_visual_change');
   }, 650);
   setTimeout(function(){
     loadScript('hospital-raise-letters-status-pages-fix-v1', '/original/hospital_raise_letters_status_pages_fix_v1.js?v=20260702_v1_status_pages_signature');
