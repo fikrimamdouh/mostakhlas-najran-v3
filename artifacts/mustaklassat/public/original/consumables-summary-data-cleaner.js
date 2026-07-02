@@ -5,6 +5,9 @@
 (function () {
   'use strict';
 
+  var CACHE_MARKER = '20260702_v7_force_dynamic_letterhead';
+  try { window.__CONSUMABLES_SUMMARY_CLEANER_CACHE_MARKER = CACHE_MARKER; } catch (_) {}
+
   var sig = location.pathname + location.search;
   var pageFile = '';
   try {
@@ -17,30 +20,33 @@
   if (pageFile !== 'consumables.html' && !/\/original\/consumables\.html(?:$|[?#])/.test(sig)) return;
   if (/admin_offices_consumables\.html|health_centers_consumables\.html|najran_general_consumables\.html/.test(pageFile)) return;
 
-  function loadScriptOnce(id, src) {
+  function loadScriptFresh(id, src) {
     try {
-      if (document.getElementById(id)) return;
+      var old = document.getElementById(id);
+      if (old && old.getAttribute('data-cache-marker') === CACHE_MARKER) return;
+      if (old) old.remove();
       var s = document.createElement('script');
       s.id = id;
       s.src = src;
       s.defer = false;
+      s.setAttribute('data-cache-marker', CACHE_MARKER);
       document.head.appendChild(s);
     } catch (_) {}
   }
 
   function loadHospitalConsumablesRaiseLetter() {
-    loadScriptOnce('hospital-consumables-raise-letter-js', '/original/hospital_consumables_raise_letter.js?v=20260702_v6_dynamic_letterhead');
+    loadScriptFresh('hospital-consumables-raise-letter-js', '/original/hospital_consumables_raise_letter.js?v=20260702_v7_force_dynamic_letterhead');
     setTimeout(function () {
-      loadScriptOnce('hospital-consumables-settings-fix-js', '/original/hospital_consumables_settings_fix_v6.js?v=20260702_v6');
+      loadScriptFresh('hospital-consumables-settings-fix-js', '/original/hospital_consumables_settings_fix_v6.js?v=20260702_v7_force_dynamic_letterhead');
     }, 80);
     setTimeout(function () {
-      loadScriptOnce('hospital-consumables-settings-route-guard-js', '/original/hospital_consumables_settings_route_guard_v7.js?v=20260702_v11_dynamic_letterhead');
+      loadScriptFresh('hospital-consumables-settings-route-guard-js', '/original/hospital_consumables_settings_route_guard_v7.js?v=20260702_v12_force_dynamic_letterhead');
     }, 100);
     setTimeout(function () {
-      loadScriptOnce('hospital-consumables-settings-deeplink-js', '/original/hospital_consumables_settings_deeplink_v1.js?v=20260702_v1_open_settings');
+      loadScriptFresh('hospital-consumables-settings-deeplink-js', '/original/hospital_consumables_settings_deeplink_v1.js?v=20260702_v2_force_dynamic_letterhead');
     }, 140);
     setTimeout(function () {
-      loadScriptOnce('hospital-consumables-print-polish-js', '/original/hospital_consumables_print_polish_v6.js?v=20260701_v6');
+      loadScriptFresh('hospital-consumables-print-polish-js', '/original/hospital_consumables_print_polish_v6.js?v=20260702_v7_force_dynamic_letterhead');
     }, 200);
   }
 
@@ -68,13 +74,13 @@
           e.stopPropagation();
           if (e.stopImmediatePropagation) e.stopImmediatePropagation();
         }
-        location.href = '/original/hospital_consumables_letters_settings.html?v=20260702_v4_dynamic_letterhead&t=' + Date.now();
+        location.href = '/original/hospital_consumables_letters_settings.html?v=20260702_v7_force_dynamic_letterhead&t=' + Date.now();
         return false;
       };
 
       btn.style.display = '';
       btn.style.visibility = '';
-      console.warn('[HospitalConsumablesLettersButton] ensured:', reason || 'run');
+      console.warn('[HospitalConsumablesLettersButton] ensured:', reason || 'run', CACHE_MARKER);
       return true;
     } catch (e) {
       console.warn('[HospitalConsumablesLettersButton] failed:', e);
@@ -155,4 +161,5 @@
   setTimeout(function () { cleanSummaryData('late-500'); loadHospitalConsumablesRaiseLetter(); ensureConsumablesLettersButton('late-500'); }, 500);
   setTimeout(function () { cleanSummaryData('late-1500'); loadHospitalConsumablesRaiseLetter(); ensureConsumablesLettersButton('late-1500'); }, 1500);
   setTimeout(function () { loadHospitalConsumablesRaiseLetter(); ensureConsumablesLettersButton('late-3000'); }, 3000);
+  console.info('[ConsumablesSummaryCleaner] cache marker:', CACHE_MARKER);
 })();
