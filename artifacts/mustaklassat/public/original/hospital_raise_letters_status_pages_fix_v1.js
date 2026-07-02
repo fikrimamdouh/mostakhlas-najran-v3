@@ -90,9 +90,21 @@
     return base || 'إجازة';
   }
   function isVacation(row) {
-    var t = deepText(row, 0);
-    return leaveDays(row) > 0 || /إجاز|اجاز|اجازه|إجازه|vacation|annual\s+leave|leave/i.test(t) || hasExactCode(row, ['ج', 'إ', 'أجازة', 'إجازة', 'اجازة']);
-  }
+  if (!row || typeof row !== 'object' || Array.isArray(row)) return false;
+
+  // بيان الإجازات للموظفين الحقيقيين فقط.
+  // يمنع الصفوف الفاضية والشواغر من الظهور.
+  if (!isRealNamedEmployee(row)) return false;
+  if (isVacant(row)) return false;
+
+  // المصدر الأساسي المعتمد: كود الإجازة "ج" داخل days.
+  if (leaveDays(row) > 0) return true;
+
+  // احتياطي محدود: الحالة أو الملاحظات المباشرة فقط.
+  // ممنوع التفتيش داخل كامل الصف حتى لا يمسك مفاتيح أو بيانات قديمة.
+  var directText = [status(row), notes(row)].join(' ');
+  return /(^|\s)(ج|إجازة|اجازة|أجازة|إجازه|اجازه|vacation|annual\s+leave|leave)(\s|$)/i.test(directText);
+}
 
   function absenceDays(row) { return dayCodeCount(row, 'غ'); }
   function absenceNote(row) {
@@ -317,8 +329,10 @@
   }
 
   function fixVacations(doc) {
-    var rows = attendanceRows().filter(isVacation);
-    var pages = findPages(doc, 'بيان الإجازات');
+var rows = attendanceRows().filter(function (r) {
+  return isRealNamedEmployee(r) && !isVacant(r) && isVacation(r);
+});
+var pages = findPages(doc, 'بيان الإجازات');
     var rowHtml = rows.map(function (r, i) {
       return '<tr><td>' + ar(i + 1) + '</td><td>' + esc(name(r)) + '</td><td>' + esc(job(r)) + '</td><td>' + esc(leaveNote(r)) + '</td></tr>';
     });
