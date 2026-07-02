@@ -175,20 +175,24 @@ function createAttendanceSelect(currentStatus, departmentKey, employeeIndex, day
   return select;
 }
 
-function createNationalitySelect(currentNationality, departmentKey, employeeIndex) {
+function getNationalityList(currentNationality) {
   const current = normalizeNationality(currentNationality);
 
-  const nationalities = [
+  const list = [
     'سعودي',
     'غير سعودي',
     'مصري',
     'هندي',
     'باكستاني',
     'فلبيني',
+    'بنجلاديشي',
     'بنجلادش',
     'نيبالي',
     'سوداني',
+    'اوغندا',
     'أوغندي',
+    'سريلانكي',
+    'إندونيسي',
     'إثيوبي',
     'يمني',
     'سوري',
@@ -196,9 +200,16 @@ function createNationalitySelect(currentNationality, departmentKey, employeeInde
     'أخرى'
   ];
 
-  if (current && !nationalities.includes(current)) {
-    nationalities.splice(1, 0, current);
+  if (current && !list.includes(current)) {
+    list.splice(1, 0, current);
   }
+
+  return list;
+}
+
+function createNationalitySelect(currentNationality, departmentKey, employeeIndex) {
+  const current = normalizeNationality(currentNationality);
+  const nationalities = getNationalityList(currentNationality);
 
   const select = document.createElement('select');
   select.style.cssText = `
@@ -227,27 +238,7 @@ function createNationalitySelect(currentNationality, departmentKey, employeeInde
 }
 function nationalityOptionsHtml(currentNationality) {
   const current = normalizeNationality(currentNationality);
-  const list = [
-    'سعودي',
-    'غير سعودي',
-    'مصري',
-    'هندي',
-    'باكستاني',
-    'فلبيني',
-    'بنجلادش',
-    'نيبالي',
-    'سوداني',
-    'أوغندي',
-    'إثيوبي',
-    'يمني',
-    'سوري',
-    'أردني',
-    'أخرى'
-  ];
-
-  if (current && !list.includes(current)) {
-    list.splice(1, 0, current);
-  }
+  const list = getNationalityList(currentNationality);
 
   return list.map(n =>
     `<option value="${n}" ${current === n ? 'selected' : ''}>${n}</option>`
@@ -351,8 +342,13 @@ function updateEmployeeAttendance(departmentKey, employeeIndex, dayIndex, newSta
         const deduction = (absenceDays + deductionOnlyDays) * dailySalary;
 const category = normalizeAttendanceCategory(employee.category);
 employee.category = category;
-const fineConfig = ABSENCE_FINES_BY_CATEGORY[category] || ABSENCE_FINES_BY_CATEGORY[1];        const isSaudi = isSaudiNationality(employee.nationality);
-        const fine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
+
+const nationality = normalizeNationality(employee.nationality);
+employee.nationality = nationality;
+
+const fineConfig = ABSENCE_FINES_BY_CATEGORY[category] || ABSENCE_FINES_BY_CATEGORY.default;
+const isSaudi = isSaudiNationality(nationality);
+const fine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
         const nationalityFine = parseFloat(employee.nationalityFine) || 0;
         const totalFine = fine + nationalityFine;
         const netSalary = extractBaseSalary - deduction - totalFine;
