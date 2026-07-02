@@ -149,8 +149,13 @@
   }
 
   function isAbsence(row) {
-    var t = deepText(row, 0);
-    return absenceDays(row) > 0 || /غياب|غائب|absence|absent/i.test(t) || hasExactCode(row, ['غ', 'غياب']);
+    var st = first(row, ['status', 'attendanceStatus', 'type', 'حالة', 'الحالة']);
+    var nt = notes(row);
+    var directText = [st, nt].join(' ');
+
+    // الغياب الحقيقي من كود "غ" داخل days فقط.
+    // لا تفتش داخل كامل الصف حتى لا تمسك مفاتيح مثل absenceDays / absencePenalty.
+    return absenceDays(row) > 0 || /(^|\s)(غ|غياب|غائب|absence|absent)(\s|$)/i.test(directText);
   }
 
   function isSaudi(row) {
