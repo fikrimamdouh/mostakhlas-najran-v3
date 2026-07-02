@@ -26,6 +26,6 @@
     loadScript('hospital-raise-letters-iban-preview-toggle-v1', '/original/hospital_raise_letters_iban_preview_toggle_v1.js?v=20260702_v1_iban_preview_toggle');
   }, 460);
   setTimeout(function(){
-    loadScript('hospital-raise-letters-toolbar-organizer-v1', '/original/hospital_raise_letters_toolbar_organizer_v1.js?v=20260702_v1_print_settings_split');
+    loadScript('hospital-raise-letters-toolbar-organizer-v1', '/original/hospital_raise_letters_toolbar_organizer_v1.js?v=20260702_v2');
   }, 620);
 })();
