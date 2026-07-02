@@ -264,27 +264,46 @@
     );
   }
 
-  function collectAttendanceRows(src, out, seen, depth) {
-    if (!src || depth > 8) return;
+ function collectAttendanceRows(src, out, seen, depth, path) {
+  if (!src || depth > 8) return;
 
-    if (Array.isArray(src)) {
-      src.forEach(x => collectAttendanceRows(x, out, seen, depth + 1));
-      return;
-    }
+  path = path || 'root';
 
-    if (typeof src !== 'object') return;
-
-    if (looksLikeEmployeeRow(src)) {
-      const key = clean(empName(src) + '|' + empJob(src) + '|' + deepTextLocal(src, 0).slice(0, 120));
-      if (!seen[key]) {
-        seen[key] = true;
-        out.push(src);
-      }
-      return;
-    }
-
-    Object.keys(src).forEach(k => collectAttendanceRows(src[k], out, seen, depth + 1));
+  if (Array.isArray(src)) {
+    src.forEach((x, idx) => collectAttendanceRows(x, out, seen, depth + 1, path + '/' + idx));
+    return;
   }
+
+  if (typeof src !== 'object') return;
+
+  if (looksLikeEmployeeRow(src)) {
+    const id = clean(empId(src));
+    const name = clean(empName(src));
+    const job = clean(empJob(src));
+    const nat = clean(empNationality(src));
+
+    const isVacantLike =
+      !name ||
+      /شاغر|شاغره|شاغرة|vacant|vacancy/i.test(name) ||
+      /شاغر|شاغره|شاغرة|vacant|vacancy/i.test(deepTextLocal(src, 0));
+
+    const key = id
+      ? 'id|' + id
+      : (
+          isVacantLike
+            ? 'vacant|' + job + '|path|' + path
+            : 'name|' + name + '|' + job + '|' + nat
+        );
+
+    if (!seen[key]) {
+      seen[key] = true;
+      out.push(src);
+    }
+    return;
+  }
+
+  Object.keys(src).forEach(k => collectAttendanceRows(src[k], out, seen, depth + 1, path + '/' + k));
+}
 
   function attendance() {
     const snapshot = readJson('najran_revision_snapshot', {});
@@ -315,19 +334,44 @@
       ['snapshot.persistentAttendanceData', snapshot && snapshot.persistentAttendanceData]
     ];
 
-    for (const pair of sources) {
-      const out = [], seen = {};
-      collectAttendanceRows(pair[1], out, seen, 0);
-      if (out.length) {
-        try { window.__HospitalRaiseLettersAttendanceSource = pair[0]; } catch (_) {}
-        return out;
-      }
-    }
+   const preferredSources = [
+  ['attendanceData', readJson('attendanceData', null)],
+  ['ng_attendanceData', readJson('ng_attendanceData', null)],
+  ['nd_attendanceData', readJson('nd_attendanceData', null)],
+  ['persistentAttendanceData', readJson('persistentAttendanceData', null)]
+];
 
-    try { window.__HospitalRaiseLettersAttendanceSource = 'empty'; } catch (_) {}
-    return [];
+for (const pair of preferredSources) {
+  const out = [];
+  const seen = {};
+  collectAttendanceRows(pair[1], out, seen, 0);
+
+  if (out.length) {
+    try {
+      window.__HospitalRaiseLettersAttendanceSource = pair[0];
+      window.__HospitalRaiseLettersAttendanceMergedCount = out.length;
+    } catch (_) {}
+    return out;
   }
+}
 
+const fallback = [];
+const seen = {};
+const usedSources = [];
+
+for (const pair of sources) {
+  const before = fallback.length;
+  collectAttendanceRows(pair[1], fallback, seen, 0);
+  if (fallback.length > before) usedSources.push(pair[0]);
+}
+
+try {
+  window.__HospitalRaiseLettersAttendanceSource = usedSources.length ? usedSources.join(' + ') : 'empty';
+  window.__HospitalRaiseLettersAttendanceMergedCount = fallback.length;
+} catch (_) {}
+
+return fallback;
+}
   function dayCodeCount(e, code) {
     return Array.isArray(e && e.days) ? e.days.filter(x => clean(x) === code).length : 0;
   }
@@ -649,9 +693,11 @@
       const rows = attendance().filter(isAbsence).map((e, i) => '<tr><td>' + ar(i + 1) + '</td><td>' + esc(empName(e)) + '</td><td>' + esc(empJob(e)) + '</td><td>' + esc(absenceNote(e)) + '</td></tr>');
       html += table(s, k, ['م', 'الاسم', 'الوظيفة', 'ملاحظات'], rows);
     } else if (k === 'saudi') {
-      const all = attendance().filter(e => isRealNamedEmployee(e));
-      const sa = all.filter(isSaudi).length, total = all.length, perc = total ? sa * 100 / total : 0;
-      html += table(s, k, ['عدد الوظائف', 'عدد السعوديين', 'النسبة الفعلية', 'النسبة المطلوبة'], ['<tr><td>' + ar(total) + '</td><td>' + ar(sa) + '</td><td>' + perc.toFixed(2) + '%</td><td>' + num(s.requiredSaudi) + '%</td></tr>']);
+     const rows = attendance();
+const total = rows.length;
+const sa = rows.filter(e => isRealNamedEmployee(e) && isSaudi(e)).length;
+const perc = total ? sa * 100 / total : 0;
+html += table(s, k, ['عدد الوظائف', 'عدد السعوديين', 'النسبة الفعلية', 'النسبة المطلوبة'], ['<tr><td>' + ar(total) + '</td><td>' + ar(sa) + '</td><td>' + perc.toFixed(2) + '%</td><td>' + num(s.requiredSaudi) + '%</td></tr>']);
     } else if (k === 'saudiNames') {
       const rows = attendance().filter(e => isRealNamedEmployee(e) && isSaudi(e)).map((e, i) => '<tr><td>' + ar(i + 1) + '</td><td>' + esc(empName(e)) + '</td><td>' + esc(empJob(e)) + '</td><td>' + esc(empNationality(e)) + '</td><td>' + esc(empId(e)) + '</td></tr>');
       html += table(s, k, ['م', 'الاسم', 'الوظيفة', 'الجنسية', 'رقم الهوية / الإقامة'], rows);
