@@ -2159,14 +2159,63 @@ function importPositionsTemplate() {
         var raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
         if (raw.length < 2) continue;
 
-        var headers = raw[0].map(function(h){ return String(h).trim(); });
-        var iName   = headers.findIndex(function(h){ return (h.includes('اسم') && !h.includes('مستشفى') && !h.includes('مسمى')); });
-        var iId     = headers.findIndex(function(h){ return h.includes('هوية') || h.includes('إقامة') || h.includes('اقامة') || h.includes('iqama'); });
-        var iDept   = headers.findIndex(function(h){ return h.includes('قسم'); });
-        var iJob    = headers.findIndex(function(h){ return h.includes('مسمى') || (h.includes('وظيفة') && !h.includes('اسم')); });
-        var iSalary = headers.findIndex(function(h){ return h.includes('تكلفة') || h.includes('راتب'); });
-        var iCat    = headers.findIndex(function(h){ return h === 'الفئة' || h.includes('فئة'); });
-        var iNat    = headers.findIndex(function(h){ return h.includes('جنسية'); });
+var headers = raw[0].map(function(h){ return String(h).trim(); });
+
+var iName = findHeaderIndex(headers, [
+  'اسم الموظف',
+  'اسم شاغل الوظيفة',
+  'employee name',
+  'name'
+]);
+
+var iId = findHeaderIndex(headers, [
+  'رقم الهوية',
+  'رقم الإقامة',
+  'رقم الاقامة',
+  'هوية',
+  'هويه',
+  'إقامة',
+  'اقامة',
+  'iqama',
+  'id'
+]);
+
+var iDept = findHeaderIndex(headers, [
+  'القسم',
+  'قسم',
+  'department',
+  'dept'
+]);
+
+var iJob = findHeaderIndex(headers, [
+  'مسمى الوظيفة',
+  'المسمى الوظيفي',
+  'وظيفة',
+  'job title',
+  'position'
+]);
+
+var iSalary = findHeaderIndex(headers, [
+  'التكلفة الشهرية',
+  'التكلفة',
+  'الراتب',
+  'salary',
+  'cost'
+]);
+
+var iCat = findHeaderIndex(headers, [
+  'الفئة',
+  'فئة',
+  'category',
+  'cat'
+]);
+
+var iNat = findHeaderIndex(headers, [
+  'الجنسية',
+  'جنسيه',
+  'nationality',
+  'nat'
+]);
 
         if (iName < 0) continue;
 
