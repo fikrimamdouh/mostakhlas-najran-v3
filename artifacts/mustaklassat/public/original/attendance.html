@@ -1890,7 +1890,7 @@ window.navigateTo = function (url) {
 
     <script src="/original/extract-snapshot.js"></script>
     <script src="/original/signature-block.js"></script>
-    <script src="attendance_interactive_v9_corrected.js?v=20260514c"></script>
+    <script src="attendance_interactive_v9_corrected.js?v=20260702-nationality1"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             updateContractDisplayData();
@@ -1958,6 +1958,28 @@ if (typeof particlesJS !== 'undefined') {
 </script>
 <script src="/original/job-positions-helper.js"></script>
 <script>
+    function normalizeExcelHeaderLocal(value) {
+  return String(value || '')
+    .replace(/[\u200e\u200f\u202a-\u202e]/g, '')
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/[ـ\u064B-\u065F\u0670]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function findHeaderIndex(headers, patterns) {
+  const normalizedHeaders = headers.map(normalizeExcelHeaderLocal);
+  const normalizedPatterns = patterns.map(normalizeExcelHeaderLocal);
+
+  return normalizedHeaders.findIndex(function(header) {
+    return normalizedPatterns.some(function(pattern) {
+      return header.includes(pattern);
+    });
+  });
+}
 // ======= تحميل المناصب من القاعدة =======
 async function loadJobPositionsFromTemplate() {
   // اقرأ اسم المستشفى من الجلسة أولاً (أدق من DOM)
