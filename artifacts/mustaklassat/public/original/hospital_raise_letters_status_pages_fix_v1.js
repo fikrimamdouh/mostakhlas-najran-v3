@@ -155,7 +155,7 @@
 
   function isSaudi(row) {
     var t = deepText(row, 0);
-    return /سعودي|سعودية|السعودية|saudi|ksa/i.test(t) || /\bSA\b/i.test(t) || row.isSaudi === true || row.saudi === true;
+    return /سعودي|سعودى|سعودية|السعودية|saudi|ksa/i.test(t) || /\bSA\b/i.test(t) || row.isSaudi === true || row.saudi === true;
   }
 
   function statusFixCss() {

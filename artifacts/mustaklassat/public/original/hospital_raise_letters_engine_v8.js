@@ -375,7 +375,7 @@
 
   function isSaudi(e) {
     const t = deepTextLocal(e, 0);
-    return /سعودي|سعودية|السعودية|saudi|ksa/i.test(t) || /\bSA\b/i.test(t) || e.isSaudi === true || e.saudi === true;
+    return /سعودي|سعودى|سعودية|السعودية|saudi|ksa/i.test(t) || /\bSA\b/i.test(t) || e.isSaudi === true || e.saudi === true;
   }
 
   const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة'];
