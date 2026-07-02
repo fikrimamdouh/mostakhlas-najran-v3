@@ -35,8 +35,11 @@
     loadScript('hospital-raise-letters-toolbar-clean-css-v1', '/original/hospital_raise_letters_toolbar_clean_css_v1.js?v=20260702_v3_no_index_visual_change');
   }, 650);
   setTimeout(function(){
-    loadScript('hospital-raise-letters-status-pages-fix-v1', '/original/hospital_raise_letters_status_pages_fix_v1.js?v=20260702_v10_saudi_vacant_name_fix');
-  }, 760);
+    loadScript('hospital-raise-letters-paginate-rows-polyfill-v1', '/original/hospital_raise_letters_paginate_rows_polyfill_v1.js?v=20260702_v1_polyfill');
+  }, 710);
+  setTimeout(function(){
+    loadScript('hospital-raise-letters-status-pages-fix-v1', '/original/hospital_raise_letters_status_pages_fix_v1.js?v=20260702_v11_saudi_names_paginate_fix');
+  }, 780);
   // Disabled: tax logic is now handled by hospital_raise_letters_engine_v8.js.
   // Keeping this layer enabled causes delayed overwrite of amount table and tafqeet.
   // setTimeout(function(){
