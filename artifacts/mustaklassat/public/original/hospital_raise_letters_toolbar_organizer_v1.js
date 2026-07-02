@@ -1,12 +1,81 @@
-// Hospital Raise Letters Toolbar Organizer V1
+// Hospital Raise Letters Toolbar Organizer V2
 // Scope: hospital_raise_letters.html only.
-// Separates printing controls from settings controls and adds per-letter settings + print rows.
+// Separates printing controls from settings controls and removes explanatory text from official documents.
 (function () {
   'use strict';
 
   if (!/hospital_raise_letters\.html/.test(location.pathname) && !window.__HOSPITAL_LETTERS_STANDALONE_PAGE__) return;
-  if (window.__HOSPITAL_RAISE_LETTERS_TOOLBAR_ORGANIZER_V1__) return;
-  window.__HOSPITAL_RAISE_LETTERS_TOOLBAR_ORGANIZER_V1__ = true;
+  if (window.__HOSPITAL_RAISE_LETTERS_TOOLBAR_ORGANIZER_V2__) return;
+  window.__HOSPITAL_RAISE_LETTERS_TOOLBAR_ORGANIZER_V2__ = true;
+
+  var SETTINGS_KEY = 'hospitalRaiseLettersSettings_v8';
+  var BAD_TEXT_RE = /يتضمن\s+هذا\s+الفهرس|لاستخدامه\s+كغلاف\s+تنظيمي|غلاف\s+تنظيمي|الحزمة\s+الرسمية|شرح\s+تعريفي|الشروحات\s+التعريفية/i;
+
+  function readJson(k, fallback) {
+    try { var raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
+  }
+  function writeJson(k, v) {
+    try { localStorage.setItem(k, JSON.stringify(v || {})); return true; } catch (_) { return false; }
+  }
+  function scrubOfficialText(reason) {
+    var s = readJson(SETTINGS_KEY, {});
+    var changed = false;
+    s.texts = s.texts || {};
+    s.texts.index = s.texts.index || {};
+
+    ['body', 'close', 'note'].forEach(function (field) {
+      if (BAD_TEXT_RE.test(String(s.texts.index[field] || ''))) {
+        s.texts.index[field] = '';
+        changed = true;
+      }
+    });
+
+    if (typeof s.texts.index.body === 'undefined' || BAD_TEXT_RE.test(String(s.texts.index.body || ''))) {
+      s.texts.index.body = '';
+      changed = true;
+    }
+
+    Object.keys(s.texts).forEach(function (k) {
+      var t = s.texts[k] || {};
+      ['body', 'close', 'note'].forEach(function (field) {
+        if (BAD_TEXT_RE.test(String(t[field] || ''))) {
+          t[field] = '';
+          changed = true;
+        }
+      });
+    });
+
+    if (changed) {
+      writeJson(SETTINGS_KEY, s);
+      try { localStorage.setItem('hospitalRaiseLettersOfficialTextCleaner_v1_ts', String(Date.now())); } catch (_) {}
+      console.warn('[Hospital Raise Letters Official Text Cleaner] removed explanatory text:', reason || 'clean');
+    }
+    return changed;
+  }
+
+  function patchPrintWindowText() {
+    if (window.__HOSPITAL_RAISE_LETTERS_OFFICIAL_WRITE_PATCHED_V2__) return;
+    window.__HOSPITAL_RAISE_LETTERS_OFFICIAL_WRITE_PATCHED_V2__ = true;
+    var oldOpen = window.open;
+    window.open = function () {
+      var win = oldOpen.apply(window, arguments);
+      try {
+        if (win && win.document && !win.__officialTextPatchedV2) {
+          win.__officialTextPatchedV2 = true;
+          var oldWrite = win.document.write.bind(win.document);
+          win.document.write = function (html) {
+            html = String(html || '')
+              .replace(/يتضمن\s+هذا\s+الفهرس[\s\S]*?الحزمة\s+الرسمية\.?/g, '')
+              .replace(/لاستخدامه\s+كغلاف\s+تنظيمي[\s\S]*?الحزمة\s+الرسمية\.?/g, '')
+              .replace(/غلاف\s+تنظيمي/g, '')
+              .replace(/الحزمة\s+الرسمية/g, '');
+            return oldWrite(html);
+          };
+        }
+      } catch (_) {}
+      return win;
+    };
+  }
 
   function ensureCss() {
     if (document.getElementById('hrl-toolbar-organizer-css')) return;
@@ -71,9 +140,20 @@
     return b;
   }
 
+  function refreshPreviewIfNeeded(changed) {
+    if (!changed) return;
+    try {
+      var el = document.querySelector('#hrl [data-f="selected"]');
+      if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
+    } catch (_) {}
+  }
+
   function organizeToolbar() {
     var root = document.getElementById('hrl');
     if (!root) return;
+    refreshPreviewIfNeeded(scrubOfficialText('organize'));
+    patchPrintWindowText();
+
     var toolbar = root.querySelector('.toolbar');
     if (!toolbar || toolbar.__hrlOrganizing) return;
     if (toolbar.querySelector('.hrl-print-zone') && toolbar.querySelector('.hrl-settings-zone')) return;
@@ -81,7 +161,6 @@
     ensureCss();
     toolbar.__hrlOrganizing = true;
     try {
-      var allButtons = Array.from(toolbar.querySelectorAll('button'));
       var docSelect = toolbar.querySelector('.doc-select');
       var printSelected = toolbar.querySelector('button[data-print="selected"]');
       var printPacket = toolbar.querySelector('button[data-print="packet"]');
@@ -175,6 +254,8 @@
     setTimeout(function () { scheduled = false; organizeToolbar(); }, 120);
   }
 
+  scrubOfficialText('initial');
+  patchPrintWindowText();
   schedule();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', schedule);
   setTimeout(schedule, 700);
@@ -187,5 +268,6 @@
     mo.observe(document.documentElement, { childList: true, subtree: true });
   } catch (_) {}
 
-  console.info('[Hospital Raise Letters Toolbar Organizer] installed v1');
+  window.HospitalRaiseLettersOfficialTextCleaner = { clean: scrubOfficialText };
+  console.info('[Hospital Raise Letters Toolbar Organizer] installed v2 + official text cleaner');
 })();
