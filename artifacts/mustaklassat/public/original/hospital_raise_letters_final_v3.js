@@ -12,11 +12,11 @@
     document.head.appendChild(s);
   }
 
-loadScript('hospital-raise-letters-engine-v8', '/original/hospital_raise_letters_engine_v8.js?v=20260702_v18_vacancy_row_path_count');  setTimeout(function(){
+loadScript('hospital-raise-letters-engine-v8', '/original/hospital_raise_letters_engine_v8.js?v=20260702_v19_vacant_path_before_id');  setTimeout(function(){
     loadScript('hospital-raise-letters-index-guard-v1', '/original/hospital_raise_letters_index_guard_v1.js?v=20260702_v1_index_not_empty');
   }, 80);
   setTimeout(function(){
-    loadScript('hospital-raise-letters-status-pages-fix-v4', '/original/hospital_raise_letters_status_pages_fix_v1.js?v=20260702_v14_count_all_attendance_duplicate_vacancies');
+    loadScript('hospital-raise-letters-status-pages-fix-v4', '/original/hospital_raise_letters_status_pages_fix_v1.js?v=20260702_v15_vacant_path_before_id');
   }, 120);
   setTimeout(function(){
     loadScript('hospital-raise-letters-print-polish-v3', '/original/hospital_raise_letters_print_polish_v1.js?v=20260702_v3_a4_exit');
