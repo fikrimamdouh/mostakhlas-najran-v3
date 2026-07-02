@@ -44,6 +44,44 @@
     }, 200);
   }
 
+  function ensureConsumablesLettersButton(reason) {
+    try {
+      var bar = document.querySelector('.std-action-bar');
+      if (!bar) return false;
+
+      var btn = document.getElementById('hospital-consumables-raise-letter-settings-btn');
+      if (!btn) {
+        btn = document.createElement('button');
+        btn.className = 'ab ab-sig';
+        btn.id = 'hospital-consumables-raise-letter-settings-btn';
+        btn.setAttribute('data-hc-action', 'settings');
+        btn.innerHTML = '<i class="fas fa-file-signature"></i> خطابات المستهلكات';
+
+        var printBtn = document.getElementById('print-all-btn');
+        if (printBtn && printBtn.parentNode) printBtn.insertAdjacentElement('afterend', btn);
+        else bar.appendChild(btn);
+      }
+
+      btn.onclick = function (e) {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+        }
+        location.href = '/original/hospital_consumables_letters_settings.html?v=20260702_v3_autosave_signatures&t=' + Date.now();
+        return false;
+      };
+
+      btn.style.display = '';
+      btn.style.visibility = '';
+      console.warn('[HospitalConsumablesLettersButton] ensured:', reason || 'run');
+      return true;
+    } catch (e) {
+      console.warn('[HospitalConsumablesLettersButton] failed:', e);
+      return false;
+    }
+  }
+
   var DB_VERSION = 'consumables_v27';
   var SUMMARY_KEY = 'summary_data_' + DB_VERSION;
   var BACKUP_PREFIX = SUMMARY_KEY + '_dirty_backup_';
@@ -101,14 +139,20 @@
   }
 
   loadHospitalConsumablesRaiseLetter();
+  ensureConsumablesLettersButton('immediate');
   cleanSummaryData('immediate');
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { cleanSummaryData('domcontentloaded'); loadHospitalConsumablesRaiseLetter(); });
+    document.addEventListener('DOMContentLoaded', function () {
+      cleanSummaryData('domcontentloaded');
+      loadHospitalConsumablesRaiseLetter();
+      ensureConsumablesLettersButton('domcontentloaded');
+    });
   } else {
     cleanSummaryData('ready');
     loadHospitalConsumablesRaiseLetter();
+    ensureConsumablesLettersButton('ready');
   }
-  setTimeout(function () { cleanSummaryData('late-500'); loadHospitalConsumablesRaiseLetter(); }, 500);
-  setTimeout(function () { cleanSummaryData('late-1500'); loadHospitalConsumablesRaiseLetter(); }, 1500);
-  setTimeout(function () { loadHospitalConsumablesRaiseLetter(); }, 3000);
+  setTimeout(function () { cleanSummaryData('late-500'); loadHospitalConsumablesRaiseLetter(); ensureConsumablesLettersButton('late-500'); }, 500);
+  setTimeout(function () { cleanSummaryData('late-1500'); loadHospitalConsumablesRaiseLetter(); ensureConsumablesLettersButton('late-1500'); }, 1500);
+  setTimeout(function () { loadHospitalConsumablesRaiseLetter(); ensureConsumablesLettersButton('late-3000'); }, 3000);
 })();
