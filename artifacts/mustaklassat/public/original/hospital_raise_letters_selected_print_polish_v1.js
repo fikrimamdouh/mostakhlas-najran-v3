@@ -1,16 +1,17 @@
-// Hospital Raise Letters Selected Print Polish V3
+// Hospital Raise Letters Selected Print Polish V4
 // Scope: hospital_raise_letters.html only.
 // Keeps existing labor letters untouched.
-// Only ensures the two added documents are recognized by selected-print polish and have signature fields available in settings.
+// Ensures added documents have signatures and compacts/paginates Saudi names pages for large counts.
 (function () {
   'use strict';
 
   if (!/hospital_raise_letters\.html/.test(location.pathname) && !window.__HOSPITAL_LETTERS_STANDALONE_PAGE__) return;
-  if (window.__HOSPITAL_RAISE_LETTERS_SELECTED_PRINT_POLISH_V3__) return;
-  window.__HOSPITAL_RAISE_LETTERS_SELECTED_PRINT_POLISH_V3__ = true;
+  if (window.__HOSPITAL_RAISE_LETTERS_SELECTED_PRINT_POLISH_V4__) return;
+  window.__HOSPITAL_RAISE_LETTERS_SELECTED_PRINT_POLISH_V4__ = true;
 
   var SETTINGS_KEY = 'hospitalRaiseLettersSettings_v8';
   var NEW_DOCS_ONLY = ['absences', 'saudiNames'];
+  var SAUDI_NAMES_ROWS_PER_PAGE = 32;
 
   function readJson(k, f) {
     try { var raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : f; } catch (_) { return f; }
@@ -19,6 +20,7 @@
     try { localStorage.setItem(k, JSON.stringify(v || {})); return true; } catch (_) { return false; }
   }
   function clean(v) { return String(v == null ? '' : v).replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim(); }
+  function ar(v) { return String(v).replace(/\d/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'[d]; }); }
 
   function ensureNewDocsSignatureFields(reason) {
     var s = readJson(SETTINGS_KEY, {});
@@ -60,7 +62,7 @@
   }
 
   function lightPolishCss() {
-    return '<style id="hospital-raise-selected-print-polish-v3">' +
+    return '<style id="hospital-raise-selected-print-polish-v4">' +
       '@page{size:A4 portrait;margin:0}' +
       'html,body{margin:0!important;direction:rtl!important;font-family:Tajawal,Arial,sans-serif!important;background:#e9eef5;color:#111827}' +
       'body.hrl-polished .page{width:210mm!important;min-height:297mm!important;max-height:297mm!important;margin:0 auto!important;background:#fff!important;box-shadow:none!important;position:relative!important;overflow:hidden!important;padding:0!important;page-break-after:always!important;break-after:page!important}' +
@@ -91,31 +93,124 @@
       'body.hrl-polished .sig-line{height:7mm!important;border-bottom:1px solid #111!important;margin:0 8mm 1.5mm!important}' +
       'body.hrl-polished .sig-grid{display:grid!important;gap:7mm!important;margin-top:7mm!important}' +
       'body.hrl-polished .stamp{border:2px solid #333!important;border-radius:50%!important;width:34mm!important;height:18mm!important;line-height:18mm!important;margin:4mm auto!important;font-weight:900!important;text-align:center!important}' +
+      'body.hrl-polished .saudi-names-page .tbl{width:176mm!important;font-size:8.5px!important;margin:2mm auto!important;table-layout:fixed!important}' +
+      'body.hrl-polished .saudi-names-page .tbl th,body.hrl-polished .saudi-names-page .tbl td{padding:1.5px 2px!important;line-height:1.06!important;vertical-align:middle!important;word-break:break-word!important}' +
+      'body.hrl-polished .saudi-names-page .tbl th:nth-child(1),body.hrl-polished .saudi-names-page .tbl td:nth-child(1){width:9mm!important}' +
+      'body.hrl-polished .saudi-names-page .tbl th:nth-child(2),body.hrl-polished .saudi-names-page .tbl td:nth-child(2){width:58mm!important}' +
+      'body.hrl-polished .saudi-names-page .tbl th:nth-child(3),body.hrl-polished .saudi-names-page .tbl td:nth-child(3){width:45mm!important}' +
+      'body.hrl-polished .saudi-names-page .tbl th:nth-child(4),body.hrl-polished .saudi-names-page .tbl td:nth-child(4){width:25mm!important}' +
+      'body.hrl-polished .saudi-names-page .tbl th:nth-child(5),body.hrl-polished .saudi-names-page .tbl td:nth-child(5){width:39mm!important}' +
+      'body.hrl-polished .saudi-names-page .doc-page-counter{font-size:10.5px!important;margin:0 0 2.5mm!important;line-height:1.2!important;color:#003087!important;font-weight:900!important;text-align:left!important}' +
+      'body.hrl-polished .saudi-names-page .sig,body.hrl-polished .saudi-names-page .sig-grid{margin-top:8mm!important}' +
+      'body.hrl-polished .saudi-names-page .sig-line{height:8mm!important}' +
+      'body.hrl-polished .saudi-names-page .sig-role{font-size:12.5pt!important}' +
+      'body.hrl-polished .saudi-names-page .sig-name{font-size:11.5pt!important}' +
+      'body.hrl-polished .status-cont-note{font-weight:900;text-align:center;color:#475569;margin:3mm 0;font-size:11.5px!important}' +
       '@media print{html,body{background:#fff!important}.print-toolbar{display:none!important}body.hrl-polished .page{margin:0!important;box-shadow:none!important;width:210mm!important;min-height:297mm!important;max-height:297mm!important}}' +
       '</style>';
+  }
+
+  function parseHtml(html) { try { return new DOMParser().parseFromString(String(html || ''), 'text/html'); } catch (_) { return null; } }
+  function serialize(doc) { return '<!doctype html>\n' + doc.documentElement.outerHTML; }
+  function findSaudiPages(doc) {
+    return Array.prototype.filter.call(doc.querySelectorAll('section.page'), function (p) {
+      var title = p.querySelector('.title');
+      return title && clean(title.textContent) === 'بيان أسماء السعوديين';
+    });
+  }
+  function insertCounter(page, i, total, totalRows, start, end) {
+    var old = page.querySelector('.doc-page-counter');
+    if (old) old.remove();
+    var title = page.querySelector('.title') || page.querySelector('h1') || page.querySelector('.subject-wrap');
+    var div = page.ownerDocument.createElement('div');
+    div.className = 'doc-page-counter';
+    div.textContent = 'صفحة ' + ar(i) + ' من ' + ar(total) + ' — إجمالي السعوديين: ' + ar(totalRows) + ' — الصفوف ' + ar(start) + '–' + ar(end);
+    if (title && title.parentNode) title.parentNode.insertBefore(div, title.nextSibling);
+    else page.insertBefore(div, page.firstChild);
+  }
+  function setRows(page, rows) {
+    var tbody = page.querySelector('table.tbl tbody');
+    if (!tbody) return;
+    tbody.innerHTML = rows.map(function (tr) { return tr.outerHTML; }).join('') || '<tr><td colspan="5">لا توجد بيانات</td></tr>';
+  }
+  function removeAfterTable(page, keep) {
+    var table = page.querySelector('table.tbl');
+    if (!table) return;
+    var n = table.nextSibling;
+    while (n) {
+      var next = n.nextSibling;
+      if (n.nodeType === 1) n.remove();
+      n = next;
+    }
+    if (!keep) {
+      var note = page.ownerDocument.createElement('div');
+      note.className = 'status-cont-note';
+      note.textContent = 'يتبع في الصفحة التالية';
+      table.parentNode.appendChild(note);
+    }
+  }
+  function compactSaudiNamesPages(html) {
+    if (!/بيان أسماء السعوديين/.test(html)) return html;
+    var doc = parseHtml(html);
+    if (!doc || !doc.documentElement) return html;
+    var pages = findSaudiPages(doc);
+    if (!pages.length) return html;
+
+    var rows = [];
+    pages.forEach(function (page) {
+      Array.prototype.forEach.call(page.querySelectorAll('table.tbl tbody tr'), function (tr) {
+        var text = clean(tr.textContent);
+        if (!text || /لا توجد بيانات/.test(text)) return;
+        rows.push(tr.cloneNode(true));
+      });
+    });
+    rows.forEach(function (tr, idx) {
+      var first = tr.querySelector('td');
+      if (first) first.textContent = ar(idx + 1);
+    });
+
+    var total = rows.length;
+    var groups = [];
+    for (var i = 0; i < rows.length; i += SAUDI_NAMES_ROWS_PER_PAGE) groups.push(rows.slice(i, i + SAUDI_NAMES_ROWS_PER_PAGE));
+    if (!groups.length) groups = [[]];
+
+    var parent = pages[0].parentNode;
+    var anchor = pages[0];
+    var template = pages[pages.length - 1].cloneNode(true);
+    groups.forEach(function (group, idx) {
+      var page = template.cloneNode(true);
+      page.classList.add('saudi-names-page');
+      setRows(page, group);
+      insertCounter(page, idx + 1, groups.length, total, idx * SAUDI_NAMES_ROWS_PER_PAGE + 1, idx * SAUDI_NAMES_ROWS_PER_PAGE + group.length);
+      removeAfterTable(page, idx === groups.length - 1);
+      parent.insertBefore(page, anchor);
+    });
+    pages.forEach(function (p) { if (p.parentNode) p.parentNode.removeChild(p); });
+    return serialize(doc);
   }
 
   function transform(html) {
     html = String(html || '');
     if (!needsPolish(html)) return html;
-    if (html.indexOf('hospital-raise-selected-print-polish-v3') === -1) {
+    if (html.indexOf('hospital-raise-selected-print-polish-v4') === -1) {
       html = html.replace('</head>', lightPolishCss() + '</head>');
     }
     if (!/<body[^>]*class="[^"]*hrl-polished/.test(html)) {
       html = html.replace(/<body([^>]*)>/i, '<body$1 class="hrl-polished">');
     }
+    html = compactSaudiNamesPages(html);
     return html;
   }
 
   function wrapWindowOpen() {
-    if (window.__HOSPITAL_RAISE_SELECTED_PRINT_POLISH_OPEN_WRAPPED_V3__) return;
-    window.__HOSPITAL_RAISE_SELECTED_PRINT_POLISH_OPEN_WRAPPED_V3__ = true;
+    if (window.__HOSPITAL_RAISE_SELECTED_PRINT_POLISH_OPEN_WRAPPED_V4__) return;
+    window.__HOSPITAL_RAISE_SELECTED_PRINT_POLISH_OPEN_WRAPPED_V4__ = true;
     var oldOpen = window.open;
     window.open = function () {
       var win = oldOpen.apply(window, arguments);
       try {
-        if (win && win.document && !win.__hospitalRaiseSelectedPrintPolishWriteWrappedV3) {
-          win.__hospitalRaiseSelectedPrintPolishWriteWrappedV3 = true;
+        if (win && win.document && !win.__hospitalRaiseSelectedPrintPolishWriteWrappedV4) {
+          win.__hospitalRaiseSelectedPrintPolishWriteWrappedV4 = true;
           var oldWrite = win.document.write.bind(win.document);
           win.document.write = function (html) { return oldWrite(transform(html)); };
         }
@@ -139,6 +234,6 @@
   setTimeout(function () { ensureNewDocsSignatureFields('late-1500'); patchPreview(); }, 1500);
   setInterval(patchPreview, 900);
 
-  window.HospitalRaiseLettersNewDocsSignatureFieldsV3 = { ensure: ensureNewDocsSignatureFields, transform: transform };
-  console.info('[Hospital Raise Letters Selected Print Polish] installed v3 new docs only');
+  window.HospitalRaiseLettersNewDocsSignatureFieldsV4 = { ensure: ensureNewDocsSignatureFields, transform: transform };
+  console.info('[Hospital Raise Letters Selected Print Polish] installed v4 compact Saudi names pages');
 })();
