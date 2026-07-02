@@ -4,15 +4,22 @@
   window.__HOSPITAL_RAISE_LETTERS_BOOTSTRAP__ = true;
 
   function loadScript(id, src) {
-    if (document.getElementById(id)) return;
-    var s = document.createElement('script');
-    s.id = id;
-    s.src = src;
-    s.defer = false;
-    document.head.appendChild(s);
+  var old = document.getElementById(id);
+
+  if (old) {
+    var oldSrc = old.getAttribute('src') || '';
+    if (old.tagName === 'SCRIPT' && oldSrc === src) return;
+    old.remove();
   }
 
-loadScript('hospital-raise-letters-engine-v8', '/original/hospital_raise_letters_engine_v8.js?v=20260702_v19_vacant_path_before_id');  setTimeout(function(){
+  var s = document.createElement('script');
+  s.id = id;
+  s.src = src;
+  s.defer = false;
+  document.head.appendChild(s);
+}
+
+loadScript('hospital-raise-letters-status-pages-fix-v4', '/original/hospital_raise_letters_status_pages_fix_v1.js?v=20260702_v15_vacant_path_before_id'); setTimeout(function(){
     loadScript('hospital-raise-letters-index-guard-v1', '/original/hospital_raise_letters_index_guard_v1.js?v=20260702_v1_index_not_empty');
   }, 80);
   setTimeout(function(){
