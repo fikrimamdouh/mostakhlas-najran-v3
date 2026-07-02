@@ -31,4 +31,7 @@
   setTimeout(function(){
     loadScript('hospital-raise-letters-toolbar-clean-css-v1', '/original/hospital_raise_letters_toolbar_clean_css_v1.js?v=20260702_v1_css_only_no_flicker');
   }, 650);
+  setTimeout(function(){
+    loadScript('hospital-raise-letters-status-pages-fix-v1', '/original/hospital_raise_letters_status_pages_fix_v1.js?v=20260702_v1_status_pages_signature');
+  }, 760);
 })();
