@@ -146,19 +146,21 @@
   }
 
   function rowKey(row, path) {
-    var id = clean(empId(row));
-    var n = clean(name(row));
-    var j = clean(job(row));
-    var nat = clean(nationality(row));
+  var id = clean(empId(row));
+  var n = clean(name(row));
+  var j = clean(job(row));
+  var nat = clean(nationality(row));
 
-    // الشواغر لا تتدمج بالاسم/الوظيفة؛ كل صف شاغر في الحضور له مسار مستقل.
-    // نفس المسار داخل مصادر متعددة يظل يمنع التكرار الناتج عن snapshot/localStorage.
-    if (isVacant(row)) return 'vacant|' + j + '|' + clean(path) + '|' + vacancyDays(row);
-    if (id) return 'id|' + id;
-    if (n) return 'name|' + n + '|' + j + '|' + nat;
-    return 'row|' + j + '|' + clean(path) + '|' + deepText(row, 0).slice(0, 160);
+  if (isVacant(row)) {
+    return 'vacant-row-path|' + clean(path) + '|' + j + '|' + n + '|' + nat + '|' + vacancyDays(row);
   }
 
+  if (id) return 'id|' + id;
+
+  if (n) return 'name|' + n + '|' + j + '|' + nat;
+
+  return 'row-path|' + clean(path) + '|' + j + '|' + nat + '|' + deepText(row, 0).slice(0, 160);
+}
   function collectRows(src, out, seen, depth, path) {
     if (!src || depth > 8) return;
     path = path || 'root';
