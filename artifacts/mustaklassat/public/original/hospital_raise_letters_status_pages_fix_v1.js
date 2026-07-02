@@ -321,13 +321,27 @@
     var rows = attendanceRows().filter(function (r) { return isRealNamedEmployee(r) && isSaudi(r); });
     var pages = findPages(doc, 'بيان أسماء السعوديين');
     if (!pages.length) return;
+
     var base = pages[0], table = base.querySelector('table.tbl');
     if (!table) return;
+
     var rowHtml = rows.map(function (r, i) {
       return '<tr><td>' + ar(i + 1) + '</td><td>' + esc(name(r)) + '</td><td>' + esc(job(r)) + '</td><td>' + esc(nationality(r)) + '</td><td>' + esc(empId(r)) + '</td></tr>';
-    }).join('');
-    setTableRows(table, rowHtml);
-    paginateRows(doc, pages, base, table, rowHtml, SAUDI_NAMES_ROWS_PER_PAGE, ['م', 'الاسم', 'الوظيفة', 'الجنسية', 'رقم الهوية / الإقامة']);
+    });
+
+    var groups = chunk(rowHtml, SAUDI_NAMES_ROWS_PER_PAGE);
+    var parent = base.parentNode;
+
+    groups.forEach(function (g, idx) {
+      var page = idx === 0 ? base : base.cloneNode(true);
+      page.classList.add('saudi-names-page');
+      setTableRows(page.querySelector('table.tbl'), g.join('') || '<tr><td colspan="5">لا توجد بيانات</td></tr>');
+      if (groups.length > 1) insertCounter(page, idx + 1, groups.length);
+      if (idx < groups.length - 1) removeAfterTable(page);
+      if (idx > 0) parent.insertBefore(page, base.nextSibling);
+    });
+
+    pages.slice(1).forEach(function (p) { if (p.parentNode) p.parentNode.removeChild(p); });
   }
 
   function transform(html) {
