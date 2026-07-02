@@ -17,7 +17,7 @@
     loadScript('hospital-raise-letters-index-guard-v1', '/original/hospital_raise_letters_index_guard_v1.js?v=20260702_v1_index_not_empty');
   }, 80);
   setTimeout(function(){
-    loadScript('hospital-raise-letters-status-pages-fix-v2', '/original/hospital_raise_letters_status_pages_fix_v1.js?v=20260702_v12_merged_saudi_count_all_sources');
+    loadScript('hospital-raise-letters-status-pages-fix-v2', '/original/hospital_raise_letters_status_pages_fix_v1.js?v=20260702_v13_saudi_vacancies_signatures');
   }, 120);
   setTimeout(function(){
     loadScript('hospital-raise-letters-print-polish-v3', '/original/hospital_raise_letters_print_polish_v1.js?v=20260702_v3_a4_exit');
