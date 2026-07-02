@@ -1,10 +1,11 @@
-// Standalone Consumables Letters Settings V3
+// Standalone Consumables Letters Settings V4
 (function () {
   'use strict';
 
   var KEY = 'hospitalConsumablesRaiseLettersSettings_v1';
   var TS_KEY = KEY + '_autosave_ts';
   var VIEW_KEY = 'hospitalConsumablesSettingsView_v1';
+  var FIXED_OLD_ENTITY = 'تجمع نجران الصحي';
   var DOCS = [
     ['main', 'خطاب المستهلكات للمستشفى'],
     ['noPrev', 'عدم أسبقية صرف - مقاولين'],
@@ -14,15 +15,29 @@
   ];
   var LABEL = DOCS.reduce(function (m, x) { m[x[0]] = x[1]; return m; }, {});
 
+  function clean(v) { return String(v == null ? '' : v).replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim(); }
+  function readJson(k, f) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : f; } catch (_) { return f; } }
+  function currentHospitalName() {
+    var c = readJson('persistentContractData', {});
+    return clean(c.hospitalName || c.siteName || c.centerName || localStorage.getItem('hospitalName') || localStorage.getItem('currentHospital') || 'المستشفى الحالي');
+  }
+
   function defaults() {
     return {
-      version: 'standalone-consumables-settings-v3',
+      version: 'standalone-consumables-settings-v4',
       selectedDoc: 'main',
       letterheadEnabled: 'no',
       letterheadHasPlaceData: 'yes',
+      letterheadMode: 'full',
       letterheadDataUrl: '',
       contentTop: 52,
+      letterheadHeight: 45,
       vatRate: 15,
+      entityTitleMode: 'auto',
+      entityTitle: '',
+      departmentTitle: 'وحدة الصيانة العامة',
+      phoneFaxAr: '',
+      phoneFaxEn: '',
       letters: {
         main: { title: 'خطاب رفع المستهلكات', recipient: 'سعادة / مساعد المدير العام للدعم المساند', recipientSuffix: 'المحترم', body: 'نرفق لسعادتكم المستخلص الشهري لشركة {company} والخاص ببند المستهلكات ومقاولي الباطن{placePhrase}، {period}.', closing: 'لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / {company}.\nوتقبلوا تحياتنا ،،،', signatures: [{ title: 'مدير المستشفى', name: '' }], showStamp: 'no' },
         noPrev: { title: 'إقرار بعدم أسبقية الصرف', body: 'تشهد إدارة / {hospital} بأن استحقاق شركة / {company} لمستخلص المستهلكات ومقاولي الباطن دفعة رقم ({paymentNo}) بمبلغ ({grand} ريال).\n\nلم يسبق صرف هذا المستخلص من قبلنا.', closing: 'مع أطيب تحياتي ،،،', signatures: [{ title: 'الموظف المختص', name: '' }, { title: 'مدير الإدارة', name: '' }], showDate: 'yes', showStamp: 'yes' },
@@ -33,21 +48,22 @@
     };
   }
 
-  function merge(a, b) {
-    a = a || {}; b = b || {};
-    Object.keys(b).forEach(function (k) {
-      if (b[k] && typeof b[k] === 'object' && !Array.isArray(b[k])) a[k] = merge(a[k] || {}, b[k]);
-      else a[k] = b[k];
-    });
-    return a;
+  function merge(a, b) { a = a || {}; b = b || {}; Object.keys(b).forEach(function (k) { if (b[k] && typeof b[k] === 'object' && !Array.isArray(b[k])) a[k] = merge(a[k] || {}, b[k]); else a[k] = b[k]; }); return a; }
+  function normalize(s) {
+    s = merge(defaults(), s || {});
+    if (!s.letterheadMode) s.letterheadMode = s.letterheadDataUrl ? 'full' : 'external';
+    if (!s.entityTitleMode) s.entityTitleMode = clean(s.entityTitle) && clean(s.entityTitle) !== FIXED_OLD_ENTITY ? 'manual' : 'auto';
+    if (clean(s.entityTitle) === FIXED_OLD_ENTITY) { s.entityTitle = ''; s.entityTitleMode = 'auto'; }
+    return s;
   }
-  function read() { try { return merge(defaults(), JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (_) { return defaults(); } }
-  function save(s) { s.version = 'standalone-consumables-settings-v3'; localStorage.setItem(KEY, JSON.stringify(s)); localStorage.setItem(TS_KEY, String(Date.now())); }
+  function read() { return normalize(readJson(KEY, {})); }
+  function save(s) { s.version = 'standalone-consumables-settings-v4'; localStorage.setItem(KEY, JSON.stringify(s)); localStorage.setItem(TS_KEY, String(Date.now())); }
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[c]; }); }
   function setPath(o, p, v) { p = p.split('.'); for (var i = 0; i < p.length - 1; i++) { o[p[i]] = o[p[i]] || {}; o = o[p[i]]; } o[p[p.length - 1]] = v; }
   function field(p, l, v, t) { return '<label class="field"><span>' + esc(l) + '</span><input data-p="' + esc(p) + '" type="' + (t || 'text') + '" value="' + esc(v) + '"></label>'; }
   function area(p, l, v) { return '<label class="field wide"><span>' + esc(l) + '</span><textarea data-p="' + esc(p) + '">' + esc(v) + '</textarea></label>'; }
-  function yn(p, l, v) { return '<label class="field"><span>' + esc(l) + '</span><select data-p="' + esc(p) + '"><option value="yes" ' + (v === 'yes' ? 'selected' : '') + '>نعم</option><option value="no" ' + (v === 'no' ? 'selected' : '') + '>لا</option></select></label>'; }
+  function sel(p, l, v, opts) { return '<label class="field"><span>' + esc(l) + '</span><select data-p="' + esc(p) + '">' + opts.map(function (o) { return '<option value="' + esc(o[0]) + '" ' + (String(v) === String(o[0]) ? 'selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select></label>'; }
+  function yn(p, l, v) { return sel(p, l, v || 'no', [['yes', 'نعم'], ['no', 'لا']]); }
   function viewMode() { return localStorage.getItem(VIEW_KEY) || 'full'; }
   function setViewMode(v) { localStorage.setItem(VIEW_KEY, v); }
 
@@ -62,6 +78,16 @@
     var n = document.getElementById('msg');
     if (n) n.textContent = t || '';
     if (t) setTimeout(function () { if (n && n.textContent === t) n.textContent = ''; }, 1800);
+  }
+
+  function currentMetaHtml() {
+    var cd = readJson('persistentContractData', {});
+    var ex = readJson('persistentExtractData', {});
+    var hospital = currentHospitalName();
+    var company = clean(cd.contractorName || cd.companyName || cd.company || ex.companyName || 'الشركة الحالية');
+    var start = clean(ex.extractStart || ex.periodStart || ex.startDate || localStorage.getItem('extractStart') || 'غير محدد');
+    var end = clean(ex.extractEnd || ex.periodEnd || ex.endDate || localStorage.getItem('extractEnd') || 'غير محدد');
+    return '<div class="section-note"><b>الموقع النشط:</b> ' + esc(hospital) + ' &nbsp; <b>الشركة:</b> ' + esc(company) + ' &nbsp; <b>الفترة:</b> ' + esc(start) + ' إلى ' + esc(end) + '</div>';
   }
 
   function signatures(s, k) {
@@ -84,7 +110,17 @@
   }
 
   function letterhead(s) {
-    return '<section class="section"><h2>الترويسة المشتركة</h2><div class="grid">' + yn('letterheadEnabled', 'تفعيل الترويسة', s.letterheadEnabled || 'no') + yn('letterheadHasPlaceData', 'الترويسة تحتوي بيانات الجهة والمكان', s.letterheadHasPlaceData || 'yes') + field('contentTop', 'بداية المحتوى بعد الترويسة mm', s.contentTop || 52, 'number') + field('vatRate', 'نسبة الضريبة', s.vatRate || 15, 'number') + '<label class="field wide"><span>رفع صورة الترويسة A4</span><input id="headFile" type="file" accept="image/*">' + (s.letterheadDataUrl ? '<img class="preview" src="' + esc(s.letterheadDataUrl) + '">' : '') + '</label></div><div class="actions"><button type="button" id="deleteHead">حذف الترويسة</button></div></section>';
+    return '<section class="section"><h2>الترويسة المشتركة</h2>' + currentMetaHtml() + '<div class="grid">' +
+      yn('letterheadEnabled', 'تفعيل الترويسة', s.letterheadEnabled || 'no') +
+      yn('letterheadHasPlaceData', 'الترويسة تحتوي بيانات الجهة والمكان', s.letterheadHasPlaceData || 'yes') +
+      sel('letterheadMode', 'طريقة طباعة الترويسة', s.letterheadMode || 'full', [['external', 'طباعة على ورق رسمي جاهز'], ['full', 'صورة A4 كاملة كخلفية'], ['top', 'صورة علوية فقط']]) +
+      field('contentTop', 'بداية المحتوى بعد الترويسة mm', s.contentTop || 52, 'number') +
+      field('letterheadHeight', 'ارتفاع الترويسة العلوية mm', s.letterheadHeight || 45, 'number') +
+      field('vatRate', 'نسبة الضريبة', s.vatRate || 15, 'number') +
+      sel('entityTitleMode', 'عنوان الهيدر الداخلي', s.entityTitleMode || 'auto', [['auto', 'من اسم المستشفى الحالي'], ['manual', 'يدوي']]) +
+      field('entityTitle', 'عنوان يدوي للهيدر الداخلي', s.entityTitle || '') +
+      field('departmentTitle', 'اسم الإدارة/الوحدة في الهيدر الداخلي', s.departmentTitle || 'وحدة الصيانة العامة') +
+      '<label class="field wide"><span>رفع صورة الترويسة A4</span><input id="headFile" type="file" accept="image/*">' + (s.letterheadDataUrl ? '<img class="preview" src="' + esc(s.letterheadDataUrl) + '">' : '') + '</label></div><div class="actions"><button type="button" id="deleteHead">حذف الترويسة</button></div></section>';
   }
 
   function render() {
@@ -99,15 +135,16 @@
     document.querySelectorAll('[data-doc]').forEach(function (btn) { btn.onclick = function () { var s = readForm(); s.selectedDoc = btn.dataset.doc; save(s); render(); }; });
     document.querySelectorAll('[data-view]').forEach(function (btn) { btn.onclick = function () { readForm(); setViewMode(btn.dataset.view); render(); }; });
     document.getElementById('save').onclick = function () { readForm(); note('تم حفظ إعدادات خطابات المستهلكات.'); };
-    document.getElementById('open').onclick = function () { location.href = '/original/consumables.html?v=from_settings_' + Date.now(); };
-    document.getElementById('back').onclick = function () { history.length > 1 ? history.back() : location.href = '/'; };
+    document.getElementById('open').onclick = function () { readForm(); location.href = '/original/consumables.html'; };
+    document.getElementById('back').onclick = function () { readForm(); history.length > 1 ? history.back() : (location.href = '/original/consumables.html'); };
     var del = document.getElementById('deleteHead');
     if (del) del.onclick = function () { var s = readForm(); s.letterheadDataUrl = ''; s.letterheadEnabled = 'no'; save(s); render(); };
-    document.getElementById('addSig').onclick = function () { var s = readForm(), k = s.selectedDoc; s.letters[k].signatures = s.letters[k].signatures || []; s.letters[k].signatures.push({ title: '', name: '' }); save(s); render(); };
-    document.getElementById('removeSig').onclick = function () { var s = readForm(), k = s.selectedDoc; if ((s.letters[k].signatures || []).length > 1) s.letters[k].signatures.pop(); save(s); render(); };
-    var head = document.getElementById('headFile');
-    if (head) head.onchange = function () { var f = this.files && this.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { var s = readForm(); s.letterheadDataUrl = String(r.result || ''); s.letterheadEnabled = 'yes'; save(s); render(); }; r.readAsDataURL(f); };
-    window.onbeforeunload = function () { try { readForm(); } catch (_) {} };
+    var hf = document.getElementById('headFile');
+    if (hf) hf.onchange = function () { var f = this.files && this.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { var s = readForm(); s.letterheadDataUrl = String(r.result || ''); s.letterheadEnabled = 'yes'; s.letterheadMode = 'full'; save(s); render(); }; r.readAsDataURL(f); };
+    var add = document.getElementById('addSig');
+    if (add) add.onclick = function () { var s = readForm(), k = s.selectedDoc || 'main'; s.letters[k].signatures = s.letters[k].signatures || []; s.letters[k].signatures.push({ title: '', name: '' }); save(s); render(); };
+    var rem = document.getElementById('removeSig');
+    if (rem) rem.onclick = function () { var s = readForm(), k = s.selectedDoc || 'main'; if ((s.letters[k].signatures || []).length > 1) s.letters[k].signatures.pop(); save(s); render(); };
   }
 
   render();
