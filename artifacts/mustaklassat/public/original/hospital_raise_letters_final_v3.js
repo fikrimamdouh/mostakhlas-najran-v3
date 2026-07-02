@@ -26,7 +26,7 @@
     loadScript('hospital-raise-letters-print-compact-v4', '/original/hospital_raise_letters_print_compact_v4.js?v=20260702_v4_compact_a4');
   }, 260);
   setTimeout(function(){
-    loadScript('hospital-raise-letters-selected-print-polish-v1', '/original/hospital_raise_letters_selected_print_polish_v1.js?v=20260702_v1_all_selected_docs');
+    loadScript('hospital-raise-letters-selected-print-polish-v2', '/original/hospital_raise_letters_selected_print_polish_v1.js?v=20260702_v2_all_docs_signatures_guard');
   }, 330);
   setTimeout(function(){
     loadScript('hospital-raise-letters-custom-exclude-v1', '/original/hospital_raise_letters_custom_exclude_v1.js?v=20260702_v2_safe_index_rows');
