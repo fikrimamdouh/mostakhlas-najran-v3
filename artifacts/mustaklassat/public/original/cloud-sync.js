@@ -237,6 +237,7 @@ function isRevisionMode() {
       localStorage.setItem(SESSION_KEY, JSON.stringify(s));
       localStorage.removeItem('najran_active_hospital_context');
     const reviewKeepKeys = new Set([
+  'adminOfficesPreWipeSnapshot_v1',
   'adminOfficesAttendanceData_v1_localBackup',
   'adminOfficesAttendanceData_v1_localBackup_ts',
   'adminOfficesAttendanceData_v1_lastGood',
@@ -255,7 +256,10 @@ function isRevisionMode() {
 Object.keys(localStorage).forEach(function(k){
   if (reviewKeepKeys.has(k)) return;
   const lk = String(k || '').toLowerCase();
-  if (lk.includes('attendance') || lk.includes('hospitalactivitystatus')) localStorage.removeItem(k);
+  if (lk.includes('attendance') || lk.includes('hospitalactivitystatus')) {
+    if (!window.__adminOfficesPreWipeCaptured) captureAdminOfficesPreWipeSnapshot('review-force');
+    localStorage.removeItem(k);
+  }
 });
       sessionStorage.clear();
       console.warn('[MzamanaCloud] REVIEW ONLY: تم فرض وضع المراجعة قبل التهيئة للمستشفى «' + hospital + '»');
@@ -263,7 +267,31 @@ Object.keys(localStorage).forEach(function(k){
     } catch (_) { return false; }
   }
 
+  // snapshot طوارئ قبل أي مسح تشغيلي يلمس بيانات المكاتب الإدارية —
+  // يُخزَّن في مفتاح محمي (ضمن keepKeys/reviewKeepKeys) ويستخدمه persistence_fix كمصدر استرجاع.
+  function captureAdminOfficesPreWipeSnapshot(reason) {
+    try {
+      const rawAtt = localStorage.getItem('adminOfficesAttendanceData_v1');
+      const s = adminOfficeDataScoreFromRaw(rawAtt);
+      if (!s.rows) return; // لا شيء يستحق الحفظ
+      const snap = {
+        capturedAt: new Date().toISOString(),
+        reason: reason || 'pre-wipe',
+        score: s,
+        core: {
+          attendanceData: JSON.parse(rawAtt || '{}'),
+          names: JSON.parse(localStorage.getItem('adminOfficeNames_v1') || '{}'),
+          affiliations: JSON.parse(localStorage.getItem('adminOfficeAffiliations_v1') || '{}')
+        }
+      };
+      (_origSetItem || localStorage.setItem.bind(localStorage))('adminOfficesPreWipeSnapshot_v1', JSON.stringify(snap));
+      window.__adminOfficesPreWipeCaptured = true;
+      console.warn('[MzamanaCloud] PRE-WIPE SNAPSHOT captured (' + (reason || '') + '):', s);
+    } catch (_) {}
+  }
+
   function clearOperationalKeysForHospitalSwitch() {
+    captureAdminOfficesPreWipeSnapshot('hospital-switch-or-review');
 const keepKeys = new Set([
   SESSION_KEY,
   'hospitalName',
@@ -272,6 +300,7 @@ const keepKeys = new Set([
   'sidebar_collapsed',
   'najran_read_notifications',
 
+  'adminOfficesPreWipeSnapshot_v1',
   'adminOfficesAttendanceData_v1_localBackup',
   'adminOfficesAttendanceData_v1_localBackup_ts',
   'adminOfficesAttendanceData_v1_lastGood',
@@ -730,9 +759,9 @@ function isAdminOfficesProtectedKey(key) {
         if (DIRTY_KEYS.size > 0) syncNow({ includeOperational:false }).catch(function(){});
       }, SETTINGS_AUTO_SYNC_MS);
       window.addEventListener('beforeunload', function(){
-        // includeOperational:true — لو المستخدم قفل التاب خلال نافذة الـ1.2 ثانية بعد آخر حفظ،
-        // آخر تعديلاته التشغيلية تترفع برضه بدل ما تفضل محلية فقط.
-        if (DIRTY_KEYS.size > 0) pushToCloud({ includeOperational:true }).catch(function(){});
+        // includeOperational:false — البيانات التشغيلية تُرفع فقط بمسار الحفظ الصريح (saveAttendanceData → najranSyncNow)
+        // حتى لا يتسبب إغلاق التاب بعد استرجاع/تجربة محلية في رفع غير مقصود لبيانات المستشفى المشتركة.
+        if (DIRTY_KEYS.size > 0) pushToCloud({ includeOperational:false }).catch(function(){});
       });
     } else {
       console.warn('[MzamanaCloud] REVIEW ONLY: الرفع والتحديث الدوري معطّلان');

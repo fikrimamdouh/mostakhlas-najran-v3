@@ -15,6 +15,7 @@
     'healthCentersAttendanceData',
     'adminOfficesAttendanceData_v1',
     // نسخ حماية المكاتب الإدارية — لا تدخل تحت بادئة المستخدم ولا تتمسح
+    'adminOfficesPreWipeSnapshot_v1',
     'adminOfficesAttendanceData_v1_localBackup',
     'adminOfficesAttendanceData_v1_localBackup_ts',
     'adminOfficesAttendanceData_v1_lastGood',
