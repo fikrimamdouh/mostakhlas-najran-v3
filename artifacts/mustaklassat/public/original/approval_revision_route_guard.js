@@ -1,19 +1,29 @@
 // ===================================================================
-// Approval Revision Route Guard — V1
+// Approval Revision Route Guard — V2
 // Scope: approval.html
 // يعيد تعريف startRevision بحيث يفتح صفحة المراجعة الصحيحة من snapshot/sourceModule،
-// بدلاً من تحويل مستخلص المكاتب إلى attendance.html العادي.
+// ويسترجع trackedKeyCopies المرفقة بالرفع، خصوصًا تواقيع المكاتب sb_sigs_/sb_prefs_.
 // ===================================================================
 (function () {
   'use strict';
   if (!/approval\.html|review_extract\.html|original-viewer\?page=approval\.html/.test(location.pathname + location.search)) return;
-  if (window.__NAJRAN_APPROVAL_REVISION_ROUTE_GUARD_V1__) return;
-  window.__NAJRAN_APPROVAL_REVISION_ROUTE_GUARD_V1__ = true;
+  if (window.__NAJRAN_APPROVAL_REVISION_ROUTE_GUARD_V2__) return;
+  window.__NAJRAN_APPROVAL_REVISION_ROUTE_GUARD_V2__ = true;
 
   function readJson(key, fallback) { try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; } }
   function parseValue(v) { if (!v) return {}; if (typeof v === 'string') { try { return JSON.parse(v); } catch (_) { return {}; } } if (typeof v === 'object') return v; return {}; }
   function clean(v) { return String(v || '').replace(/\s+/g, ' ').trim(); }
   function has(obj, key) { return obj && Object.prototype.hasOwnProperty.call(obj, key) && obj[key] != null && clean(typeof obj[key] === 'string' ? obj[key] : JSON.stringify(obj[key])) !== '{}' && clean(typeof obj[key] === 'string' ? obj[key] : JSON.stringify(obj[key])) !== '[]'; }
+
+  function mergeTrackedCopies(snapshot) {
+    snapshot = snapshot && typeof snapshot === 'object' ? snapshot : {};
+    var bundle = parseValue(snapshot.__submittedExtractArchiveBundle_v1);
+    var tracked = parseValue(bundle.trackedKeyCopies);
+    Object.keys(tracked || {}).forEach(function (key) {
+      if (snapshot[key] === undefined) snapshot[key] = tracked[key];
+    });
+    return snapshot;
+  }
 
   function normalizeSnapshot(raw) {
     raw = parseValue(raw);
@@ -26,11 +36,13 @@
       'achievementData','achievementTitles_v1','achievementItemNames',
       'consumablesTableData','healthCentersConsumables','mainHospitalConsumables',
       'admin_offices_consumables_v1.0','spare_partsData','sparePartsTotalAmount',
-      '__submittedExtractArchiveBundle_v1','__najranReviewPage','reviewPage','__najranSourceModule','sourceModule'
+      '__submittedExtractArchiveBundle_v1','__najranReviewPage','reviewPage','__najranSourceModule','sourceModule',
+      'sb_sigs_admin_offices_grand_certificate','signatures_data_consumables_v27'
     ];
     for (var i = 0; i < candidates.length; i++) {
       var p = parseValue(candidates[i]);
-      if (p && typeof p === 'object' && Object.keys(p).some(function (k) { return knownKeys.indexOf(k) > -1; })) return p;
+      p = mergeTrackedCopies(p);
+      if (p && typeof p === 'object' && Object.keys(p).some(function (k) { return knownKeys.indexOf(k) > -1 || /^sb_(sigs|prefs)_/.test(k); })) return p;
     }
     return {};
   }
@@ -84,9 +96,22 @@
       'approvalData','displayApprovalData','finalLaborCost','finalConsumablesCost','grand-net-total','grand-net-total-centers','grand-net-total-admin',
       'najran_labor_attendance_done','najran_labor_performance_done','najran_health_attendance_done','najran_admin_offices_attendance_done',
       'najran_revision_mode','najran_revision_extract_id','najran_revision_snapshot','najran_revision_boot_lock','najran_revision_extract_type','najran_revision_started_at','najran_revision_source','najran_revision_previous_total_amount',
-      'najran_editing_submitted_extract_id','najran_editing_submitted_extract_mode','najran_editing_submitted_extract_started_at'
+      'najran_editing_submitted_extract_id','najran_editing_submitted_extract_mode','najran_editing_submitted_extract_started_at',
+      'signatures_data_consumables_v27','adminOfficesManualCleared_v1'
+    ];
+    var prefixes = [
+      'deptCalculatedCost_', 'dept_', 'tableData_', 'achievement_', 'consumables_', 'spare_',
+      'water_', 'sewage_', 'subcontractors_', 'najran_labor_', 'najran_health_', 'najran_admin_',
+      'adminOffice', 'adminOffices', 'admin_offices_', 'healthCenters_Signatures_', 'sb_sigs_', 'sb_prefs_'
     ];
     keys.forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
+    try {
+      for (var i = localStorage.length - 1; i >= 0; i--) {
+        var key = localStorage.key(i);
+        if (!key) continue;
+        if (prefixes.some(function (p) { return key.indexOf(p) === 0; })) localStorage.removeItem(key);
+      }
+    } catch (_) {}
   }
 
   function writeValue(key, value) {
@@ -124,9 +149,16 @@
       localStorage.setItem('najran_revision_snapshot', JSON.stringify(snapshot));
       localStorage.setItem('najran_revision_extract_id', String(id));
       localStorage.setItem('najran_revision_extract_type', extractType);
-      localStorage.setItem('najran_revision_source', 'approval_revision_route_guard');
+      localStorage.setItem('najran_revision_source', 'approval_revision_route_guard_v2');
 
-      console.warn('[ApprovalRevisionRouteGuard] redirect', { id: id, extractType: extractType, target: target, sourceModule: snapshot.__najranSourceModule || snapshot.sourceModule });
+      console.warn('[ApprovalRevisionRouteGuard] redirect', {
+        id: id,
+        extractType: extractType,
+        target: target,
+        keys: Object.keys(snapshot).length,
+        sourceModule: snapshot.__najranSourceModule || snapshot.sourceModule,
+        signatureKeys: Object.keys(snapshot).filter(function (k) { return /^sb_(sigs|prefs)_/.test(k) || /^healthCenters_Signatures_/.test(k); }).length
+      });
       window.location.href = target;
     } catch (err) {
       console.error('[ApprovalRevisionRouteGuard] failed', err);
@@ -142,5 +174,5 @@
   setTimeout(install, 300);
   setTimeout(install, 1000);
   setTimeout(install, 2500);
-  console.info('[ApprovalRevisionRouteGuard] installed v1');
+  console.info('[ApprovalRevisionRouteGuard] installed v2 full snapshot restore');
 })();
