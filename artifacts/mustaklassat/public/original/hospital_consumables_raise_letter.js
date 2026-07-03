@@ -641,29 +641,57 @@ window.HospitalConsumablesRaiseLetter = {
   }
 };
 
-(function autoPrintFromSettingsReturn() {
+function autoPrintFromSettingsReturn() {
   try {
+    if (window.__consumablesAutoPrintDone) return;
+
     var params = new URLSearchParams(location.search || '');
     var doc = params.get('printConsumablesLetter');
     if (!doc) return;
+
+    var allowed = ['main', 'noPrev', 'electricity', 'water', 'certificate', 'all'];
+    if (allowed.indexOf(doc) === -1) return;
+
+    window.__consumablesAutoPrintDone = true;
 
     setTimeout(function () {
       try {
         var s = getSettings();
         s.selectedDoc = doc;
         setSettings(s);
+
+        var hasLetterhead = s.letterheadEnabled === 'yes' && !!clean(s.letterheadDataUrl);
+        if (!hasLetterhead && !window.__consumablesAutoPrintRetried) {
+          window.__consumablesAutoPrintRetried = true;
+          window.__consumablesAutoPrintDone = false;
+          setTimeout(autoPrintFromSettingsReturn, 700);
+          return;
+        }
+
         openPrintDoc(doc);
+
+        try {
+          var cleanUrl = new URL(location.href);
+          cleanUrl.searchParams.delete('printConsumablesLetter');
+          cleanUrl.searchParams.delete('t');
+          history.replaceState(null, '', cleanUrl.pathname + (cleanUrl.search ? cleanUrl.search : '') + cleanUrl.hash);
+        } catch (_) {}
+
       } catch (e) {
         console.error('[HospitalConsumablesRaiseLetter] auto print failed:', e);
       }
     }, 900);
   } catch (_) {}
-})();
+}
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', installButtons);
+  document.addEventListener('DOMContentLoaded', function () {
+    installButtons();
+    setTimeout(autoPrintFromSettingsReturn, 300);
+  });
 } else {
   installButtons();
+  setTimeout(autoPrintFromSettingsReturn, 300);
 }
 
 setTimeout(installButtons, 700);

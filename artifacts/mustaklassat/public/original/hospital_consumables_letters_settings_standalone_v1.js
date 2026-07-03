@@ -99,6 +99,18 @@
     }).join('') + '</div><div class="actions"><button type="button" id="addSig">إضافة توقيع</button><button type="button" id="removeSig">حذف آخر توقيع</button></div></section>';
   }
 
+  function electricityRowsHtml(l) {
+    var rows = Array.isArray(l.rows) && l.rows.length ? l.rows : [{ place: '', load: '', power: 0 }];
+    var rowsHtml = rows.map(function (r, i) {
+      return '<div class="grid">' +
+        field('letters.electricity.rows.' + i + '.place', 'المكان', r.place || '') +
+        field('letters.electricity.rows.' + i + '.load', 'نوع الحمل', r.load || '') +
+        field('letters.electricity.rows.' + i + '.power', 'القدرة (ك.واط)', r.power != null ? r.power : '', 'number') +
+        '</div>';
+    }).join('');
+    return '<section class="section"><h2>جدول أحمال الكهرباء — ' + esc(LABEL.electricity) + '</h2><p class="section-note">هذا الجدول هو مصدر بنود محضر الكهرباء عند الطباعة، كل صف يمثل مكان/حمل/قدرة.</p>' + rowsHtml + '<div class="actions"><button type="button" id="addElecRow">إضافة صف كهرباء</button><button type="button" id="removeElecRow">حذف آخر صف</button></div></section>';
+  }
+
   function letterFields(s, k) {
     var l = s.letters[k] || {};
     var h = '<section class="section"><h2>إعدادات: ' + esc(LABEL[k]) + '</h2><div class="grid">' + field('letters.' + k + '.title', 'عنوان الخطاب', l.title || '');
@@ -108,6 +120,7 @@
     if (k === 'water') h += area('letters.water.body', 'نص محضر المياه', l.body || '') + yn('letters.water.showStamp', 'إظهار الختم', l.showStamp || 'no');
     if (k === 'certificate') h += area('letters.certificate.body', 'نص الشهادة', l.body || '') + yn('letters.certificate.showStamp', 'إظهار الختم', l.showStamp || 'no');
     h += '</div></section>';
+    if (k === 'electricity') h += electricityRowsHtml(l);
     return h;
   }
 
@@ -143,6 +156,10 @@ if (printNow) {
   printNow.onclick = function () {
     var s = readForm();
     var doc = s.selectedDoc || 'main';
+
+    var allowed = ['main', 'noPrev', 'electricity', 'water', 'certificate', 'all'];
+    if (allowed.indexOf(doc) === -1) doc = 'main';
+
     location.href = '/original/consumables.html?printConsumablesLetter=' + encodeURIComponent(doc) + '&t=' + Date.now();
   };
 }
@@ -151,10 +168,14 @@ if (printNow) {
     if (del) del.onclick = function () { var s = readForm(); s.letterheadDataUrl = ''; s.letterheadEnabled = 'no'; save(s); render(); };
     var hf = document.getElementById('headFile');
     if (hf) hf.onchange = function () { var f = this.files && this.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { var s = readForm(); s.letterheadDataUrl = String(r.result || ''); s.letterheadEnabled = 'yes'; s.letterheadMode = 'full'; save(s); render(); }; r.readAsDataURL(f); };
-    var add = document.getElementById('addSig');
-    if (add) add.onclick = function () { var s = readForm(), k = s.selectedDoc || 'main'; s.letters[k].signatures = s.letters[k].signatures || []; s.letters[k].signatures.push({ title: '', name: '' }); save(s); render(); };
+    var addSig2 = document.getElementById('addSig');
+    if (addSig2) addSig2.onclick = function () { var s = readForm(), k = s.selectedDoc || 'main'; s.letters[k].signatures = s.letters[k].signatures || []; s.letters[k].signatures.push({ title: '', name: '' }); save(s); render(); };
     var rem = document.getElementById('removeSig');
     if (rem) rem.onclick = function () { var s = readForm(), k = s.selectedDoc || 'main'; if ((s.letters[k].signatures || []).length > 1) s.letters[k].signatures.pop(); save(s); render(); };
+    var addRow = document.getElementById('addElecRow');
+    if (addRow) addRow.onclick = function () { var s = readForm(); s.letters.electricity.rows = Array.isArray(s.letters.electricity.rows) ? s.letters.electricity.rows : []; s.letters.electricity.rows.push({ place: '', load: '', power: 0 }); save(s); render(); };
+    var removeRow = document.getElementById('removeElecRow');
+    if (removeRow) removeRow.onclick = function () { var s = readForm(); if ((s.letters.electricity.rows || []).length > 1) s.letters.electricity.rows.pop(); save(s); render(); };
   }
 
   render();
