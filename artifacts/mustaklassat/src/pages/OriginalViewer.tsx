@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearch } from "wouter";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { usePageTracking } from "@/hooks/usePageTracking";
@@ -99,6 +99,7 @@ export default function OriginalViewer() {
   const params = new URLSearchParams(search);
   const page = params.get("page") || "index.html";
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [frameEscaped, setFrameEscaped] = useState(false);
 
   const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
 
@@ -137,6 +138,20 @@ export default function OriginalViewer() {
     } catch {}
   }, [dbUser]);
 
+  const handleIframeLoad = () => {
+    try {
+      const win = iframeRef.current?.contentWindow;
+      const loc = win?.location;
+      if (!loc) return;
+      const path = loc.pathname || "";
+      if (path.startsWith("/original/")) return;
+      const next = path + (loc.search || "") + (loc.hash || "");
+      console.warn("[OriginalViewer] iframe tried to load SPA/non-original route; breaking out:", next);
+      setFrameEscaped(true);
+      window.location.assign(next || "/dashboard");
+    } catch {}
+  };
+
   // Check if this page is blocked by coming soon
   const isComingSoon = page === "settings_advanced.html";
 
@@ -148,14 +163,22 @@ export default function OriginalViewer() {
 
   let content = (
     <iframe
+      key={page}
       ref={iframeRef}
       src={`/original/${page}`}
       className="w-full h-full border-0 block"
       title={page}
+      onLoad={handleIframeLoad}
     />
   );
 
-  if (isComingSoon) {
+  if (frameEscaped) {
+    content = (
+      <div className="flex h-full items-center justify-center text-center" style={{ direction: "rtl", color: "#1e3c72" }}>
+        جاري فتح الصفحة في المسار الصحيح...
+      </div>
+    );
+  } else if (isComingSoon) {
     content = <ComingSoonPage />;
   } else if (!isAllowed && dbUser) {
     content = <UnauthorizedPage />;
