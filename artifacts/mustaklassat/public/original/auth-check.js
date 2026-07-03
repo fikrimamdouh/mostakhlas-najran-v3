@@ -160,7 +160,7 @@
   if (snapshotPages[pageFile]) {
     appendScript('/original/extract-snapshot.js?v=' + SNAPSHOT_BUILD_V, true);
     // نسخة مخصصة: e4e0c2c حدّث محتوى الحارس (slim payload v3) دون رفع الإصدار — المتصفحات كانت تقدّم v2/v1 من الكاش
-    appendScript('/original/submitted_extract_archive_bundle_guard.js?v=20260703_submit_payload_v3', true);
+    appendScript('/original/submitted_extract_archive_bundle_guard.js?v=20260703_module_detect_v4', true);
   }
 
   if (isAdminOfficesPage || isAdminOfficesConsumablesPage) {

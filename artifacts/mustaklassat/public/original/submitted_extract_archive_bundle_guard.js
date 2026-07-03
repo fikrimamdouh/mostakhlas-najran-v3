@@ -130,6 +130,15 @@
     if (payload.adminOfficeLabor === true || payload.adminOfficeLabor === 'true') return 'admin_offices_attendance';
     if (payload.adminOfficeConsumables === true || payload.adminOfficeConsumables === 'true') return 'admin_offices_consumables';
 
+    // تصنيف غلط سابق: مستخلص عمالة مرفوع من مسار attendance→performance→achievement كان يُصنّف
+    // "مكاتب إدارية" لمجرد وجود مفاتيح مكاتب قديمة في localStorage لنفس المتصفح.
+    // القاعدة: صفحة مسار العمالة + extractType=labor + غياب adminOfficeLabor ⇒ labor_attendance دائمًا.
+    try {
+      var pg = String((typeof location !== 'undefined' && location.pathname) || '');
+      var onLaborFlowPage = /(?:^|\/)(achievement|attendance|performance|approval)\.html$/.test(pg);
+      if (onLaborFlowPage && String(payload.extractType || '') === 'labor') return 'labor_attendance';
+    } catch (_) {}
+
     if (hasAny(snapshot, [
       'adminOfficesAttendanceData_v1', 'adminOfficesAttendanceData_v1_localBackup', 'adminOfficesAttendanceData_v1_lastGood',
       'adminOfficesLaborDataSafe_v2', 'adminOfficeNames_v1', 'adminOfficeAffiliations_v1'
