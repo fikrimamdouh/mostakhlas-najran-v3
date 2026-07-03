@@ -1,23 +1,25 @@
 // ===================================================================
-// Admin Offices Page Signatures — controls separated V6
+// Admin Offices Page Signatures — controls separated V7
 // Scope: admin_offices_attendance.html only
 //
 // - يضيف زرًا مستقلًا لتوقيع الشهادة الإجمالية أعلى الصفحة.
 // - يربط توقيع الشهادة الإجمالية فعليًا بنافذة الشهادة عند الطباعة/العرض.
 // - لا يدمج الشهادة الإجمالية مع توحيد تواقيع المكاتب.
-// - يمنع ظهور تعديل/إضافة/بلوكات التواقيع أسفل صفحات المكاتب.
-// - يترك getSignatures/signatureKey متاحة للطباعة والمنطق الداخلي.
+// - يمنع ظهور تعديل/إضافة/بلوكات التواقيع أسفل صفحات المكاتب بدون حلقة DOM ثقيلة.
 // ===================================================================
 (function () {
   'use strict';
   if (!/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
-  if (window.__ADMIN_OFFICES_PAGE_SIGNATURES_CONTROLS_SEPARATED_V6__) return;
-  window.__ADMIN_OFFICES_PAGE_SIGNATURES_CONTROLS_SEPARATED_V6__ = true;
+  if (window.__ADMIN_OFFICES_PAGE_SIGNATURES_CONTROLS_SEPARATED_V7__) return;
+  window.__ADMIN_OFFICES_PAGE_SIGNATURES_CONTROLS_SEPARATED_V7__ = true;
 
   var GRAND_KEY = 'admin_offices_grand_certificate';
   var SIG_PREFIX = 'sb_sigs_';
   var PREF_PREFIX = 'sb_prefs_';
   var GRAND_BTN_ID = 'admin-offices-grand-certificate-signature-btn';
+  var cleanupScheduled = false;
+  var cleanupRunning = false;
+  var cleanupObserver = null;
 
   function readJson(key, fallback) {
     try {
@@ -117,15 +119,15 @@
       ];
     }
 
-    return '<section class="sign grand-signatures" data-source="admin_offices_page_signatures_v6">' + rows.map(function (s) {
+    return '<section class="sign grand-signatures" data-source="admin_offices_page_signatures_v7">' + rows.map(function (s) {
       return '<div><div class="g-title">' + esc(s.title || '') + '</div><div class="line"></div><div class="g-name">' + esc(s.name || '') + '</div></div>';
     }).join('') + '</section>';
   }
 
   function injectGrandStyle(doc) {
-    if (!doc || doc.getElementById('admin-offices-grand-signatures-v6-style')) return;
+    if (!doc || doc.getElementById('admin-offices-grand-signatures-v7-style')) return;
     var style = doc.createElement('style');
-    style.id = 'admin-offices-grand-signatures-v6-style';
+    style.id = 'admin-offices-grand-signatures-v7-style';
     style.textContent = '' +
       '.grand-signatures{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:24px;text-align:center;margin-top:28px}' +
       '.grand-signatures>div{font-weight:900}' +
@@ -159,45 +161,59 @@
   }
 
   function patchWindowOpenForGrandSignatures() {
-    if (window.open.__adminOfficesGrandSignatureInjectV6) return;
+    if (window.open.__adminOfficesGrandSignatureInjectV7) return;
     var originalOpen = window.open;
     window.open = function patchedWindowOpen() {
       var win = originalOpen.apply(window, arguments);
       setTimeout(function () { applyGrandSignaturesToWindow(win); }, 120);
       setTimeout(function () { applyGrandSignaturesToWindow(win); }, 450);
       setTimeout(function () { applyGrandSignaturesToWindow(win); }, 1000);
-      setTimeout(function () { applyGrandSignaturesToWindow(win); }, 1800);
       return win;
     };
-    window.open.__adminOfficesGrandSignatureInjectV6 = true;
+    window.open.__adminOfficesGrandSignatureInjectV7 = true;
   }
 
-  function removeOfficePageSignatureControls() {
-    var selectors = [
-      '.admin-page-signature-bar',
-      '.admin-page-signature-block',
-      '#sb-container-admin_offices',
-      '[id^="attendance-signatures-"]',
-      '[id^="perf-signatures-"]',
-      '[id^="ach-signatures-"]'
-    ];
-    document.querySelectorAll(selectors.join(',')).forEach(function (el) {
-      try { el.remove(); } catch (_) {}
-    });
-
-    var details = document.getElementById('center-details-view');
-    if (details) {
-      details.querySelectorAll('button').forEach(function (btn) {
-        var text = String(btn.textContent || '').replace(/\s+/g, ' ').trim();
-        if (/تعديل التواقيع|تعديل التوقيع|إضافة توقيع|نسخ للمكاتب/.test(text)) {
-          try { btn.remove(); } catch (_) {}
-        }
+  function removeOfficePageSignatureControlsNow() {
+    if (cleanupRunning) return;
+    cleanupRunning = true;
+    try {
+      document.querySelectorAll('.admin-page-signature-bar, .admin-page-signature-block, #sb-container-admin_offices').forEach(function (el) {
+        try { el.remove(); } catch (_) {}
       });
+
+      document.querySelectorAll('[id^="attendance-signatures-"], [id^="perf-signatures-"], [id^="ach-signatures-"]').forEach(function (el) {
+        if (el.dataset.adminOfficesNoInlineSigs === '1' && !el.innerHTML) return;
+        el.dataset.adminOfficesNoInlineSigs = '1';
+        if (el.innerHTML) el.innerHTML = '';
+      });
+
+      var details = document.getElementById('center-details-view');
+      if (details) {
+        details.querySelectorAll('button').forEach(function (btn) {
+          var text = String(btn.textContent || '').replace(/\s+/g, ' ').trim();
+          if (/تعديل التواقيع|تعديل التوقيع|إضافة توقيع|نسخ للمكاتب/.test(text)) {
+            try { btn.remove(); } catch (_) {}
+          }
+        });
+      }
+    } finally {
+      cleanupRunning = false;
     }
   }
 
+  function scheduleOfficeSignatureCleanup() {
+    if (cleanupScheduled) return;
+    cleanupScheduled = true;
+    var run = function () {
+      cleanupScheduled = false;
+      removeOfficePageSignatureControlsNow();
+    };
+    if (window.requestAnimationFrame) window.requestAnimationFrame(run);
+    else setTimeout(run, 60);
+  }
+
   function renderSeparatedSignatures(type, centerKey) {
-    removeOfficePageSignatureControls();
+    scheduleOfficeSignatureCleanup();
   }
 
   function openGrandSignatureDialog() {
@@ -255,7 +271,7 @@
   window.AdminOfficesPageSignatures = {
     signatureKey: signatureKey,
     currentCenterKey: currentCenterKey,
-    refresh: function () { removeOfficePageSignatureControls(); },
+    refresh: scheduleOfficeSignatureCleanup,
     openGrand: openGrandSignatureDialog,
     buildGrandSignaturesHtml: buildGrandSignaturesHtml,
     applyGrandSignaturesToWindow: applyGrandSignaturesToWindow
@@ -265,8 +281,8 @@
     ensureGrandDefaults();
     patchWindowOpenForGrandSignatures();
     ensureGrandButton(attempt || 0);
-    removeOfficePageSignatureControls();
-    if ((attempt || 0) < 20) setTimeout(function () { boot((attempt || 0) + 1); }, 500);
+    scheduleOfficeSignatureCleanup();
+    if ((attempt || 0) < 8) setTimeout(function () { boot((attempt || 0) + 1); }, 500);
   }
 
   if (document.readyState === 'loading') {
@@ -275,8 +291,10 @@
     boot(0);
   }
   try {
-    new MutationObserver(removeOfficePageSignatureControls).observe(document.body || document.documentElement, { childList: true, subtree: true });
+    var root = document.getElementById('center-details-view') || document.body || document.documentElement;
+    cleanupObserver = new MutationObserver(scheduleOfficeSignatureCleanup);
+    cleanupObserver.observe(root, { childList: true, subtree: true });
   } catch (_) {}
 
-  console.info('[Admin Offices Signatures] grand certificate signatures bound; lower office signatures purged v6');
+  console.info('[Admin Offices Signatures] v7: grand signatures bound; lower signatures cleanup throttled');
 })();
