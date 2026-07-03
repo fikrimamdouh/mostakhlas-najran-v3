@@ -1,8 +1,8 @@
 /* admin_offices_review_detail_patch.js — v2 stable admin offices review preview */
 (function(){
   'use strict';
-  if (window.__ADMIN_OFFICES_REVIEW_DETAIL_PATCH_V2__) return;
-  window.__ADMIN_OFFICES_REVIEW_DETAIL_PATCH_V2__ = true;
+  if (window.__ADMIN_OFFICES_REVIEW_DETAIL_PATCH_V3__) return;
+  window.__ADMIN_OFFICES_REVIEW_DETAIL_PATCH_V3__ = true;
   if (!/(approval|review_extract)\.html/.test(location.pathname + location.search)) return;
 
   function p(v,f){ if(v==null)return f; if(typeof v==='object')return v; try{return JSON.parse(String(v));}catch(_){return f;} }
@@ -26,7 +26,23 @@
     Object.keys(names||{}).forEach(function(k){off[k]=names[k]||k;}); Object.keys(att||{}).forEach(function(k){if(!off[k])off[k]=names[k]||k;});
     var keys=Object.keys(off),emp=rows(att)||Number(integrity.adminOfficesEmployees||0)||0,sg=sigs(d)||Number(integrity.signatureKeysCount||0)||0,meta=p(d.persistentExtractData,{}),pay=meta.paymentNumber||meta.extractNumber||d.paymentNumber||e.paymentNumber||'—',period=e.periodMonth||[meta.extractMonth||d.extractMonth||'',meta.extractYear||d.extractYear||''].filter(Boolean).join(' ')||'—';
     var totals={m:0,d:0,n:0};
-    var tr=keys.map(function(k,i){var arr=Array.isArray(att[k])?att[k]:[],m=0,dd=0,nn=0;arr.forEach(function(r){m+=sal(r);dd+=ded(r);nn+=net(r);});totals.m+=m;totals.d+=dd;totals.n+=nn;return '<tr><td>'+(i+1)+'</td><td style="text-align:right;font-weight:900">'+h(off[k]||k)+'</td><td>'+arr.length+'</td><td>'+(arr.length?'✓':'—')+'</td><td>'+(ok(perf)?'✓':'—')+'</td><td>'+(ok(ach)?'✓':'محسوب')+'</td><td>'+plain(m)+'</td><td>'+plain(dd)+'</td><td><b>'+plain(nn)+'</b></td></tr>';}).join('');
+    // v3: صف المكتب قابل للنقر — يفرد جدول العمالة الكاملة داخل المكتب
+    function empName(r){ return val(r,'name')||val(r,'employeeName')||val(r,'workerName')||val(r,'empName')||'—'; }
+    function empJob(r){ return val(r,'position')||val(r,'jobTitle')||val(r,'job')||val(r,'title')||'—'; }
+    function empNat(r){ return val(r,'nationality')||'—'; }
+    function empAbs(r){ var a=val(r,'absence'); if(a===''||a==null)a=val(r,'absenceDays'); if(a===''||a==null)a=val(r,'absentDays'); return (a===''||a==null)?'—':a; }
+    function empTable(arr){
+      if(!arr.length) return '<div class="rv-empty" style="padding:12px">لا يوجد موظفون مسجلون في هذا المكتب داخل اللقطة.</div>';
+      var body=arr.map(function(r,j){
+        return '<tr><td>'+(j+1)+'</td><td style="text-align:right;font-weight:800">'+h(empName(r))+'</td><td>'+h(empJob(r))+'</td><td>'+h(empNat(r))+'</td><td>'+h(empAbs(r))+'</td><td>'+plain(sal(r))+'</td><td>'+plain(ded(r))+'</td><td><b>'+plain(net(r))+'</b></td></tr>';
+      }).join('');
+      return '<div class="rv-scroll"><table class="rv-table generic rv-emp-table"><thead><tr><th>م</th><th>الاسم</th><th>الوظيفة</th><th>الجنسية</th><th>الغياب</th><th>الراتب الشهري</th><th>الحسم/الغرامة</th><th>الصافي</th></tr></thead><tbody>'+body+'</tbody></table></div>';
+    }
+    var tr=keys.map(function(k,i){var arr=Array.isArray(att[k])?att[k]:[],m=0,dd=0,nn=0;arr.forEach(function(r){m+=sal(r);dd+=ded(r);nn+=net(r);});totals.m+=m;totals.d+=dd;totals.n+=nn;
+      var head='<tr class="rv-off-row" data-rv-off="'+i+'" style="cursor:pointer" title="اضغط لعرض عمالة المكتب"><td>'+(i+1)+'</td><td style="text-align:right;font-weight:900"><span class="rv-off-caret" style="display:inline-block;margin-left:6px;color:#1e3c72;transition:transform .18s">▼</span>'+h(off[k]||k)+'</td><td>'+arr.length+'</td><td>'+(arr.length?'✓':'—')+'</td><td>'+(ok(perf)?'✓':'—')+'</td><td>'+(ok(ach)?'✓':'محسوب')+'</td><td>'+plain(m)+'</td><td>'+plain(dd)+'</td><td><b>'+plain(nn)+'</b></td></tr>';
+      var detail='<tr class="rv-off-emp" data-rv-off-emp="'+i+'" style="display:none"><td colspan="9" style="background:#f8fafc;padding:10px 12px">'+empTable(arr)+'</td></tr>';
+      return head+detail;
+    }).join('');
     if(!tr)tr='<tr><td colspan="9" class="rv-empty">لا توجد أسماء مكاتب أو بيانات حضور داخل snapshot المرفوع.</td></tr>';
     return '<div class="rv-doc" data-admin-offices-review="1"><header class="rv-doc-head"><div><h2>مستخلص المكاتب الإدارية</h2><p>'+h(e.hospitalName||e.submittedByHospital||'—')+' — '+h(e.companyName||'—')+' — '+h(period)+' — دفعة '+h(pay)+'</p></div><b>'+h(e.status||'—')+'</b></header><nav class="rv-tabs"><a href="#rv-summary" class="rv-nav-card"><b>ملخص المراجعة</b><span>بيانات المستخلص</span></a><a href="#rv-admin" class="rv-nav-card"><b>المكاتب</b><span>'+keys.length+' مكتب</span></a><a href="#rv-ach" class="rv-nav-card"><b>الإنجاز</b><span>جدول الاستحقاق</span></a></nav><section id="rv-summary"><h3>ملخص المراجعة</h3><div class="rv-main-stats">'+stat('نوع المستخلص','مستخلص المكاتب الإدارية','primary')+stat('رقم الدفعة',pay,'primary')+stat('الفترة',period,'primary')+stat('قيمة الكارت',money(e.totalAmount||0),'ok')+'</div><div class="rv-info-grid"><div><b>عدد المكاتب</b><span>'+keys.length+'</span></div><div><b>عدد الموظفين</b><span>'+emp+'</span></div><div><b>الأداء</b><span>'+(ok(perf)?'موجود':'غير ظاهر')+'</span></div><div><b>الإنجاز</b><span>'+(ok(ach)?'موجود / محسوب':'محسوب من العمالة')+'</span></div><div><b>التواقيع</b><span>'+(sg?sg+' مفتاح':'غير ظاهرة')+'</span></div><div><b>مصدر المراجعة</b><span>'+h(d.__najranSourceModule||d.sourceModule||'—')+'</span></div></div></section><section id="rv-admin" class="rv-section-break"><h3>تفاصيل مستخلص المكاتب</h3><div class="rv-block rv-print-block"><div class="rv-block-title"><h4>ملخص المكاتب الإدارية والمرافق</h4><span>'+keys.length+' مكتب / مرفق</span></div><div class="rv-scroll"><table class="rv-table generic"><thead><tr><th>م</th><th>المكتب / المرفق</th><th>الموظفون</th><th>الحضور</th><th>الأداء</th><th>الإنجاز</th><th>القيمة الشهرية</th><th>الحسم/الغرامة</th><th>الصافي</th></tr></thead><tbody>'+tr+'</tbody></table></div></div></section><section id="rv-ach" class="rv-section-break"><h3>شهادة الإنجاز</h3><div class="rv-main-stats">'+stat('القيمة الشهرية',money(totals.m),'primary')+stat('إجمالي الحسم',money(totals.d),totals.d>0?'warn':'ok')+stat('الصافي',money(totals.n),'ok')+stat('عدد المكاتب',keys.length,'primary')+'</div></section><section id="rv-decision" class="rv-no-print"><h3>قرار المراجع</h3><textarea id="rv-notes" placeholder="اكتب الملاحظة هنا عند طلب التعديل أو الرفض. الاعتماد لا يحتاج ملاحظة.">'+h(e.adminNotes||'')+'</textarea><div class="rv-actions"><button class="rv-act review" data-rv-status="under_review">بدء المراجعة</button><button class="rv-act revision" data-rv-status="needs_revision">طلب تعديل</button><button class="rv-act approve" data-rv-status="approved">اعتماد</button><button class="rv-act reject" data-rv-status="rejected">رفض</button></div></section></div>';
   }
@@ -45,11 +61,26 @@
     });
   }
 
+  function bindOfficeToggles(b){
+    b.querySelectorAll('.rv-off-row').forEach(function(row){
+      row.onclick=function(){
+        var i=row.getAttribute('data-rv-off');
+        var det=b.querySelector('[data-rv-off-emp="'+i+'"]');
+        if(!det)return;
+        var open=det.style.display!=='none';
+        det.style.display=open?'none':'table-row';
+        var caret=row.querySelector('.rv-off-caret');
+        if(caret)caret.style.transform=open?'':'rotate(180deg)';
+      };
+    });
+  }
+
   function renderStable(id,e){
     var body=document.getElementById('rv-body');
     if(!body)return false;
     body.innerHTML=build(e);
     bindActions(body,id,e);
+    bindOfficeToggles(body);
     body.setAttribute('data-admin-offices-review-id',String(id));
     body.setAttribute('data-admin-offices-review-locked','1');
     return true;
@@ -72,7 +103,7 @@
 
   function patch(){
     if(typeof window.rvOpenExtract!=='function')return false;
-    if(window.rvOpenExtract.__adminOfficeReviewDetailPatchV2)return true;
+    if(window.rvOpenExtract.__adminOfficeReviewDetailPatchV3)return true;
     var old=window.rvOpenExtract;
     window.rvOpenExtract=function(id){
       var e=getExtract(id);
@@ -80,8 +111,8 @@
       old.apply(this,arguments);
       keepPreviewAlive(id,e);
     };
-    window.rvOpenExtract.__adminOfficeReviewDetailPatchV2=true;
-    console.info('[AdminOfficesReviewDetailPatch] installed v2 stable preview');
+    window.rvOpenExtract.__adminOfficeReviewDetailPatchV3=true;
+    console.info('[AdminOfficesReviewDetailPatch] installed v3 per-office employees expand');
     return true;
   }
   var i=0;(function retry(){i++; if(!patch()&&i<80)setTimeout(retry,200);})();
