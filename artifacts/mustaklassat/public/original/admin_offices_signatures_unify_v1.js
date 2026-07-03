@@ -1,17 +1,17 @@
 // ===================================================================
-// Admin Offices Signature Unification + Backup Integrity — V3
+// Admin Offices Signature Unification + Backup Integrity — V4
 // Scope: admin_offices_attendance.html only
 //
 // الزر الوحيد أعلى الصفحة: "توحيد التواقيع بين المكاتب".
 // داخله: إضافة/تعديل توقيع للمكتب المصدر + نسخ نفس التوقيع للمكاتب.
-// لا يتدخل في الشهادة الإجمالية نهائيًا.
+// لا يتدخل في الشهادة الإجمالية.
 // يحذف فقط أشرطة التوقيع السفلية القديمة داخل تبويبات الحضور/الأداء/الإنجاز.
 // ===================================================================
 (function () {
   'use strict';
   if (!/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
-  if (window.__ADMIN_OFFICES_SIGNATURE_UNIFY_V3__) return;
-  window.__ADMIN_OFFICES_SIGNATURE_UNIFY_V3__ = true;
+  if (window.__ADMIN_OFFICES_SIGNATURE_UNIFY_V4__) return;
+  window.__ADMIN_OFFICES_SIGNATURE_UNIFY_V4__ = true;
 
   var PREFIX = 'sb_sigs_';
   var PREFS = 'sb_prefs_';
@@ -189,7 +189,9 @@
     var srcEl = document.getElementById('unify-source');
     var src = srcEl ? srcEl.value : currentCenterKey();
     var firstType = selectedTypes()[0] || TYPES.find(function (t) { return t.id === currentVisibleType(); }) || TYPES[0];
-    window.SignatureBlock.open(sigKey(src, firstType.id));
+    var key = sigKey(src, firstType.id);
+    closeDialog();
+    setTimeout(function () { window.SignatureBlock.open(key); }, 60);
   }
   function openDialog() {
     var names = getNames();
@@ -206,7 +208,7 @@
     dialog.innerHTML =
       '<div class="unify-box">' +
       '<h3><i class="fas fa-signature"></i> توحيد التواقيع بين المكاتب</h3>' +
-      '<p>اختر مكتب المصدر، أضف أو عدّل توقيعه، ثم انسخ نفس التوقيع إلى كل المكاتب أو مكتب محدد. الشهادة الإجمالية مستقلة.</p>' +
+      '<p>اختر مكتب المصدر، أضف أو عدّل توقيعه، ثم انسخ نفس التوقيع إلى كل المكاتب أو مكتب محدد.</p>' +
       '<label class="unify-field"><span>مكتب المصدر</span><select id="unify-source">' + officeOptions(names, defaultSource) + '</select></label>' +
       '<div class="unify-field"><span>أنواع الصفحات المشمولة</span><div class="unify-types">' +
       TYPES.map(function (t) { return '<label class="unify-check"><input type="checkbox" id="unify-type-' + t.id + '"' + (t.id === visibleType ? ' checked' : '') + '><span>' + t.label + '</span></label>'; }).join('') +
@@ -283,7 +285,7 @@
     document.querySelectorAll('button').forEach(function (b) {
       if (b.id === BTN_ID) return;
       var txt = clean(b.textContent || '');
-      if (txt === 'إدارة كل التواقيع') b.remove();
+      if (txt === 'إدارة كل التواقيع' || txt === 'إضافة توقيع') b.remove();
     });
   }
   function injectButton(attempt) {
@@ -342,7 +344,7 @@
     var affiliations = readJson('adminOfficeAffiliations_v1', {});
     var localSubset = collectRelevantLocalStorage();
     return {
-      schema: 'admin_offices_full_local_backup_v3',
+      schema: 'admin_offices_full_local_backup_v4',
       createdAt: new Date().toISOString(),
       reason: reason || 'manual',
       page: 'admin_offices_attendance',
@@ -472,8 +474,8 @@
     window.AdminOfficesFullLocalBackup = { export: exportAdminOfficesFullBackup, restore: importAdminOfficesFullBackup, build: buildFullBackupObject };
   }
   function installDirtyWarning() {
-    if (window.__ADMIN_OFFICES_DIRTY_WARNING_V3__) return;
-    window.__ADMIN_OFFICES_DIRTY_WARNING_V3__ = true;
+    if (window.__ADMIN_OFFICES_DIRTY_WARNING_V4__) return;
+    window.__ADMIN_OFFICES_DIRTY_WARNING_V4__ = true;
     var initialRows = countRows(getAttendanceDataSafe());
     window.addEventListener('beforeunload', function (e) {
       try {
@@ -499,5 +501,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { boot(0); });
   else boot(0);
   try { new MutationObserver(removeLegacyInlineButtons).observe(document.body || document.documentElement, { childList: true, subtree: true }); } catch (_) {}
-  console.info('[Admin Offices Integrity] signature unification button installed v3; grand certificate untouched');
+  console.info('[Admin Offices Integrity] signature unification button installed v4');
 })();
