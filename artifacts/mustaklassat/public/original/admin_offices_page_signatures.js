@@ -7,7 +7,7 @@
 // - نسخ للمكاتب
 // تم إيقاف حقن هذه الأزرار من المصدر بناءً على طلب المستخدم.
 // زر التوقيع الوحيد يكون أعلى الصفحة من admin_offices_signatures_unify_v1.js.
-// لا يتدخل هذا الملف في الشهادة الإجمالية.
+// الشهادة الإجمالية مستقلة ولا يتم حذف أزرارها أو منطقها هنا.
 // ===================================================================
 (function () {
   'use strict';
@@ -78,8 +78,6 @@
   function removeInlineSignatureBars() {
     var selectors = [
       '.admin-page-signature-bar',
-      '#edit-grand-certificate-signatures-btn',
-      '#grand-certificate-signatures-btn',
       '#sb-container-admin_offices'
     ];
     document.querySelectorAll(selectors.join(',')).forEach(function (el) {
@@ -150,5 +148,5 @@
     new MutationObserver(removeInlineSignatureBars).observe(document.body || document.documentElement, { childList: true, subtree: true });
   } catch (_) {}
 
-  console.info('[Admin Offices Signatures] inline signature buttons removed from source');
+  console.info('[Admin Offices Signatures] inline signature buttons removed; grand certificate untouched');
 })();
