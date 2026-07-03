@@ -94,6 +94,22 @@ const COMPANY_SITES = {
       { name: "مستشفى شروره العام", contract: "" },
     ],
   },
+  "زهران": {
+    label: "شركة زهران للصيانة والتشغيل",
+    sites: [
+      { name: "مستشفى يدمه العام — زهران", contract: "" },
+      { name: "مستشفى حبونا العام — زهران", contract: "" },
+      { name: "مستشفى بدر الجنوب العام — زهران", contract: "" },
+    ],
+  },
+  "إيمان": {
+    label: "شركة إيمان للتجارة والمقاولات",
+    sites: [
+      { name: "مستشفى الولادة والأطفال — إيمان", contract: "" },
+      { name: "مستشفى غرب نجران للولادة والأطفال والعيادات التخصصية — إيمان", contract: "" },
+      { name: "المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة — إيمان", contract: "" },
+    ],
+  },
 } as const;
 
 type CompanyKey = keyof typeof COMPANY_SITES;
@@ -378,7 +394,9 @@ try {
 const companyLabelMap: Record<string, string> = {
   "بيت_العرب": "شركة مجموعة بيت العرب الحديثة المحدودة",
   "سراكو": "شركة سراكو",
-  "تجمع_نجران": "تجمع نجران الصحي — وحدة الصيانة العامة"
+  "تجمع_نجران": "تجمع نجران الصحي — وحدة الصيانة العامة",
+  "زهران": "شركة زهران للصيانة والتشغيل",
+  "إيمان": "شركة إيمان للتجارة والمقاولات"
 };
 
 let parsedSessionHospitals: string[] = [];
@@ -418,6 +436,8 @@ if (!companyCode && existingStoredCompanyName) {
   if (existingStoredCompanyName === "تجمع نجران الصحي — وحدة الصيانة العامة") companyCode = "تجمع_نجران";
   else if (existingStoredCompanyName === "شركة سراكو") companyCode = "سراكو";
   else if (existingStoredCompanyName === "شركة مجموعة بيت العرب الحديثة المحدودة") companyCode = "بيت_العرب";
+  else if (existingStoredCompanyName === "شركة زهران للصيانة والتشغيل") companyCode = "زهران";
+  else if (existingStoredCompanyName === "شركة إيمان للتجارة والمقاولات") companyCode = "إيمان";
 }
 
 if (!companyCode && activeHospital === "المقر الرئيسي — تجمع نجران الصحي") {

@@ -5,7 +5,7 @@ import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Building2, Users, AlertCircle, ArrowRightLeft, X, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-type CompanyKey = "الإدارة" | "بيت_العرب" | "سراكو";
+type CompanyKey = "الإدارة" | "بيت_العرب" | "سراكو" | "زهران" | "إيمان";
 
 const COMPANY_SITES: Record<CompanyKey, string[]> = {
  "الإدارة": [
@@ -30,12 +30,24 @@ const COMPANY_SITES: Record<CompanyKey, string[]> = {
     "مركز الأمير سلطان",
     "مستشفى شروره العام",
   ],
+  "زهران": [
+    "مستشفى يدمه العام — زهران",
+    "مستشفى حبونا العام — زهران",
+    "مستشفى بدر الجنوب العام — زهران",
+  ],
+  "إيمان": [
+    "مستشفى الولادة والأطفال — إيمان",
+    "مستشفى غرب نجران للولادة والأطفال والعيادات التخصصية — إيمان",
+    "المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة — إيمان",
+  ],
 };
 
 const COMPANY_TABS: { key: CompanyKey; label: string; icon: string }[] = [
   { key: "الإدارة", label: "الإدارة", icon: "🏢" },
   { key: "بيت_العرب", label: "بيت العرب", icon: "🏥" },
   { key: "سراكو", label: "سراكو", icon: "🏨" },
+  { key: "زهران", label: "زهران", icon: "🛠️" },
+  { key: "إيمان", label: "إيمان", icon: "🏗️" },
 ];
 
 const ALL_HOSPITALS = Object.values(COMPANY_SITES).flat();

@@ -67,8 +67,8 @@ export function getSiteType(hospital: string | null | undefined): SiteType {
   if (hospital === "المراكز الصحية" || hospital === "المراكز الصحية (مجمع)") return "health_centers";
 if (
   hospital === "المكاتب الإدارية" ||
-  hospital === "المكاتب الإدارية والمرافق الصحية" ||
-  hospital === "المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة"
+  // startsWith حتى تعمل المواقع المكرّرة تحت شركات جديدة بلاحقة الشركة (مثل "... — إيمان")
+  hospital.startsWith("المكاتب الإدارية والمرافق الصحية")
 ) return "admin_offices";  return "hospital";
 }
 
@@ -76,6 +76,8 @@ const COMPANY_SITE_TYPES: Record<string, SiteType[]> = {
   "بيت_العرب": ["hospital", "admin_offices"],
   "سراكو": ["hospital", "health_centers", "najran_general"],
   "تجمع_نجران": [],
+  "زهران": ["hospital"],
+  "إيمان": ["hospital", "admin_offices"],
 };
 
 export function getCompanySiteTypes(company: string | null | undefined): SiteType[] | null {

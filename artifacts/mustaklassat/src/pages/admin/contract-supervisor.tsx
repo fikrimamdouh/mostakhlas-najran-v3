@@ -19,6 +19,8 @@ const COMPANY_LABELS: Record<string, string> = {
   "تجمع_نجران": "تجمع نجران الصحي",
   "بيت_العرب": "بيت العرب",
   "سراكو": "سراكو",
+  "زهران": "زهران للصيانة والتشغيل",
+  "إيمان": "إيمان للتجارة والمقاولات",
 };
 
 const EXTRACT_TYPE_LABELS: Record<string, string> = {

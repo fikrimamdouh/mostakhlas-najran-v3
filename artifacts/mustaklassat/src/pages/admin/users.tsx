@@ -665,6 +665,8 @@ export default function AdminUsers() {
                                 >
                                   <option value="بيت_العرب">بيت العرب</option>
                                   <option value="سراكو">سراكو</option>
+                                  <option value="زهران">زهران</option>
+                                  <option value="إيمان">إيمان</option>
                                 </select>
                                 <Button
                                   size="sm"
