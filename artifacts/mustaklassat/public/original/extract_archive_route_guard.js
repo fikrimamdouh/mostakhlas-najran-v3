@@ -152,9 +152,9 @@
             '<div style="background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;border-radius:15px;padding:13px;display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:1.7;">' + selectedSummaryHtml(snap) + '</div>' +
           '</div>' +
           '<div style="display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;margin-top:16px;">' +
-            '<button id="najran-open-selected-save" style="background:linear-gradient(135deg,#15803d,#16a34a);color:white;border:0;border-radius:12px;padding:12px 18px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">حفظ الحالي وفتح المختار</button>' +
-            '<button id="najran-open-selected-force" style="background:#b91c1c;color:white;border:0;border-radius:12px;padding:12px 18px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">فتح المختار بدون حفظ الحالي</button>' +
-            '<button id="najran-open-selected-cancel" style="background:#475569;color:white;border:0;border-radius:12px;padding:12px 18px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">إلغاء</button>' +
+            '<button id="najran-open-selected-save" style="background:linear-gradient(135deg,#166534,#16a34a);color:#fff;border:0;border-radius:12px;padding:13px 22px;font-weight:950;font-size:15px;cursor:pointer;font-family:Tajawal,Arial,sans-serif;box-shadow:0 6px 18px rgba(22,163,74,.35);"><i class="fas fa-save"></i> حفظ الحالي وفتح المختار (مُوصى به)</button>' +
+            '<button id="najran-open-selected-force" style="background:#fff;color:#b91c1c;border:2px solid #fca5a5;border-radius:12px;padding:11px 18px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">فتح المختار بدون حفظ الحالي</button>' +
+            '<button id="najran-open-selected-cancel" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;border-radius:12px;padding:11px 18px;font-weight:800;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">إلغاء</button>' +
           '</div>' +
         '</div>';
       document.body.appendChild(overlay);

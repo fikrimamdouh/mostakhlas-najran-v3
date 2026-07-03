@@ -365,19 +365,33 @@
       var totalNetAmount = 0;
       var departments = {};
       try {
-        var att = readJson('attendanceData', {});
+        // v4: الحساب حسب نوع المستخلص — كان يقرأ attendanceData فقط
+        // فتظهر كروت المكاتب/المراكز بأصفار مهما حُفظ.
+        var ATT_KEY_BY_TYPE = {
+          labor: 'attendanceData',
+          admin_offices: 'adminOfficesAttendanceData_v1',
+          health_centers: 'centersAttendanceData_v2'
+        };
+        var attKey = ATT_KEY_BY_TYPE[extractType] || 'attendanceData';
+        var att = readJson(attKey, {});
+        function empNet(emp) {
+          var direct = parseFloat(emp.netSalary != null ? emp.netSalary : emp.finalSalary);
+          if (isFinite(direct) && direct !== 0) return Math.max(0, direct);
+          var sal = parseFloat(emp.salary || emp.monthlySalary) || 0;
+          var ded = parseFloat(emp.totalDeduction != null ? emp.totalDeduction : (emp.deduction != null ? emp.deduction : emp.absenceDeduction)) || 0;
+          var fine = (parseFloat(emp.totalFine) || 0) + (parseFloat(emp.nationalityFine) || 0);
+          return Math.max(0, sal - ded - fine);
+        }
         Object.keys(att || {}).forEach(function (dept) {
-          var emps = att[dept] || [];
-          var deptNet = emps.reduce(function (s, emp) {
-            var sal = parseFloat(emp.salary) || 0;
-            var ded = parseFloat(emp.totalDeduction || emp.deduction) || 0;
-            var fine = parseFloat(emp.totalFine) || 0;
-            return s + Math.max(0, sal - ded - fine);
-          }, 0);
+          var emps = Array.isArray(att[dept]) ? att[dept] : [];
+          var deptNet = emps.reduce(function (s, emp) { return s + empNet(emp); }, 0);
           departments[dept] = { count: emps.length, total: deptNet };
           totalEmployees += emps.length;
           totalNetAmount += deptNet;
         });
+        // أنواع بلا جدول موظفين: استخدم إجمالي النظام المحفوظ
+        if (extractType === 'consumables' && !totalNetAmount) totalNetAmount = parseFloat(localStorage.getItem('finalConsumablesCost')) || 0;
+        if (extractType === 'spare_parts' && !totalNetAmount) totalNetAmount = parseFloat(localStorage.getItem('sparePartsTotalAmount')) || 0;
       } catch (e) {}
 
       var draftKey = makeDraftKey({

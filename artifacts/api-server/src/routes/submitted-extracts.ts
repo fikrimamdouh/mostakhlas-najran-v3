@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, usersTable, submittedExtractsTable, userStorageTable, extractRevisionsTable } from "@workspace/db";
 import { requireAuth } from "../middleware/requireAuth";
+import { createNotificationSafe } from "./notifications";
 import { eq, desc, and } from "drizzle-orm";
 import { sendNewExtractEmail } from "../lib/email";
 
@@ -369,8 +370,9 @@ router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (r
 
     // إشعار صاحب المستخلص بتغيير الحالة (لا يفشل الطلب أبدًا)
     try {
-      if (row.userId && ["needs_revision", "approved", "rejected"].includes(status)) {
-        const { createNotificationSafe } = await import("./notifications");
+      if (!row.userId) {
+        req.log?.warn?.({ extractId: row.id }, "notification skipped: extract has no userId");
+      } else if (["needs_revision", "approved", "rejected"].includes(status)) {
         const period = [row.extractMonth, row.extractYear].filter(Boolean).join(" ") || row.periodMonth || "";
         const pay = row.paymentNumber || row.extractNumber || "";
         const label = period + (pay ? " — دفعة " + pay : "");
@@ -380,7 +382,10 @@ router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (r
           rejected: { type: "extract_rejected", title: "تم رفض المستخلص", body: "تم رفض مستخلص شهر " + label + (adminNotes ? " — ملاحظة المراجع: " + adminNotes : "") },
         };
         const n = map[status];
-        if (n) await createNotificationSafe({ userId: row.userId, ...n, href: "/extracts/track", createdBy: req.currentUser?.name || "reviewer" });
+        if (n) {
+          await createNotificationSafe({ userId: row.userId, ...n, href: "/extracts/track", createdBy: req.currentUser?.name || "reviewer" });
+          req.log?.info?.({ extractId: row.id, userId: row.userId, status }, "notification created for extract owner");
+        }
       }
     } catch (notifErr) {
       req.log?.warn?.({ notifErr }, "notification create skipped (non-fatal)");
