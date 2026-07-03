@@ -9,6 +9,7 @@
 
   var BASE = window.location.origin;
   var BUILD_V = '20260623archiveBundleRouteV1';
+  var SNAPSHOT_BUILD_V = '20260703_snapshot_resume_sig_v3';
   var NOTIF_INTERVAL_MS = 300000;
   var notifFetchInProgress = false;
 
@@ -156,7 +157,7 @@
     'najran_dental_performance.html': true
   };
   if (snapshotPages[pageFile]) {
-    appendScript('/original/extract-snapshot.js?v=' + BUILD_V, true);
+    appendScript('/original/extract-snapshot.js?v=' + SNAPSHOT_BUILD_V, true);
     appendScript('/original/submitted_extract_archive_bundle_guard.js?v=' + BUILD_V, true);
   }
 
@@ -170,9 +171,6 @@
 
   if (isAdminOfficesPage) {
     appendScript('/original/admin_offices_performance_logic.js?v=' + BUILD_V, true);
-    // ملاحظة: persistence_fix / letter_scoped_settings / excel_import_clean_v1 / grand_certificate_polish
-    // أُزيلت من هنا — موجودة كـ <script> tags داخل admin_offices_attendance.html بإصدارات أحدث.
-    // حقنها هنا بإصدارات query قديمة كان يجعل المتصفح يقدّم نسخًا قديمة من الكاش وتعمل قبل النسخ الجديدة.
     appendScript('/original/admin_offices_grand_certificate_stamp_fix.js?v=20260701_stamp_v3', true);
   }
 
