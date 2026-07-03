@@ -1,22 +1,26 @@
 // ===================================================================
-// Submitted Extract Archive Bundle Guard — V3 slim submit payload
+// Submitted Extract Archive Bundle Guard — V4 final labor review snapshot
 // Scope: original work pages before POST/PUT /api/submitted-extracts
-// يحفظ بيانات المراجعة المهمة فقط داخل extractData عند الرفع:
-// - يمنع إدخال الأرشيفات/النسخ المحلية الثقيلة داخل payload.
-// - ينظف قفل رفع المستخلص بعد نجاح/فشل الشبكة حتى لا يعلق المستخدم.
-// - يثبت مصدر المستخلص الحقيقي ومفاتيح التواقيع/الجداول اللازمة.
+// - keeps submit payload slim
+// - persists a final display-only labor review snapshot inside extractData
+// - blocks raw recalculation sources from being re-added when final snapshot exists
 // ===================================================================
 (function () {
   'use strict';
-  if (window.__NAJRAN_SUBMITTED_EXTRACT_ARCHIVE_BUNDLE_GUARD_V3__) return;
-  window.__NAJRAN_SUBMITTED_EXTRACT_ARCHIVE_BUNDLE_GUARD_V3__ = true;
+  if (window.__NAJRAN_SUBMITTED_EXTRACT_ARCHIVE_BUNDLE_GUARD_V4__) return;
+  window.__NAJRAN_SUBMITTED_EXTRACT_ARCHIVE_BUNDLE_GUARD_V4__ = true;
 
   var MAX_VALUE_CHARS = 300 * 1024;
   var WARN_PAYLOAD_CHARS = 850 * 1024;
-
-  function readJson(key, fallback) {
-    try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
-  }
+  var FINAL_LABOR_REVIEW_SCHEMA = 'labor_final_review_snapshot_v1';
+  var FINAL_SNAPSHOT_STORAGE_KEY = 'najran_labor_final_review_snapshot_v1';
+  var RAW_REVIEW_KEYS = [
+    'attendanceData', 'ng_attendanceData', 'nd_attendanceData',
+    'performanceData', 'performanceData_v4', 'performanceDeductions',
+    'performanceTotalDeduction', 'performanceTotalDue',
+    'achievementData', 'achievementTitles_v1', 'achievementItemNames',
+    'najran_labor_attendance_done', 'najran_labor_performance_done'
+  ];
 
   function parseMaybeJson(value, fallback) {
     if (value == null) return fallback;
@@ -54,6 +58,15 @@
     try { return JSON.parse(raw); } catch (_) { return raw; }
   }
 
+  function readStorageJson(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   function valueSize(value) {
     try {
       if (typeof value === 'string') return value.length;
@@ -82,16 +95,13 @@
 
   function isHeavyValue(value) {
     var s = '';
-    try {
-      s = typeof value === 'string' ? value : JSON.stringify(value);
-    } catch (_) {
-      s = String(value == null ? '' : value);
-    }
+    try { s = typeof value === 'string' ? value : JSON.stringify(value); }
+    catch (_) { s = String(value == null ? '' : value); }
     if (!s) return false;
     if (s.length > MAX_VALUE_CHARS) return true;
     if (s.indexOf('data:image') > -1) return true;
     if (s.indexOf(';base64,') > -1) return true;
-    if (s.indexOf('"base64"') > -1) return true;
+    if (s.indexOf('base64') > -1 && s.length > 20000) return true;
     return false;
   }
 
@@ -120,6 +130,40 @@
     return keys.some(function (key) { return hasKey(snapshot, key); });
   }
 
+  function isFinalReviewSnapshot(snapshot) {
+    return !!(
+      snapshot &&
+      snapshot.reviewSnapshotSchema === FINAL_LABOR_REVIEW_SCHEMA &&
+      snapshot.finalReviewSnapshot &&
+      typeof snapshot.finalReviewSnapshot === 'object'
+    );
+  }
+
+  function stripRawReviewKeys(snapshot) {
+    snapshot = snapshot || {};
+    RAW_REVIEW_KEYS.forEach(function (key) { delete snapshot[key]; });
+    Object.keys(snapshot).forEach(function (key) {
+      if (/^deptCalculatedCost_/.test(key)) delete snapshot[key];
+      else if (/^dept_/.test(key)) delete snapshot[key];
+      else if (/^performance_/.test(key)) delete snapshot[key];
+      else if (/^achievement_/.test(key)) delete snapshot[key];
+      else if (/^tableData_/.test(key)) delete snapshot[key];
+    });
+    return snapshot;
+  }
+
+  function shouldSkipTrackedCopy(key, snapshot) {
+    if (!isFinalReviewSnapshot(snapshot)) return false;
+    key = String(key || '');
+    if (RAW_REVIEW_KEYS.indexOf(key) !== -1) return true;
+    if (/^deptCalculatedCost_/.test(key)) return true;
+    if (/^dept_/.test(key)) return true;
+    if (/^performance_/.test(key)) return true;
+    if (/^achievement_/.test(key)) return true;
+    if (/^tableData_/.test(key)) return true;
+    return false;
+  }
+
   function detectSourceModule(payload, snapshot) {
     payload = payload || {};
     snapshot = snapshot || {};
@@ -130,9 +174,6 @@
     if (payload.adminOfficeLabor === true || payload.adminOfficeLabor === 'true') return 'admin_offices_attendance';
     if (payload.adminOfficeConsumables === true || payload.adminOfficeConsumables === 'true') return 'admin_offices_consumables';
 
-    // تصنيف غلط سابق: مستخلص عمالة مرفوع من مسار attendance→performance→achievement كان يُصنّف
-    // "مكاتب إدارية" لمجرد وجود مفاتيح مكاتب قديمة في localStorage لنفس المتصفح.
-    // القاعدة: صفحة مسار العمالة + extractType=labor + غياب adminOfficeLabor ⇒ labor_attendance دائمًا.
     try {
       var pg = String((typeof location !== 'undefined' && location.pathname) || '');
       var onLaborFlowPage = /(?:^|\/)(achievement|attendance|performance|approval)\.html$/.test(pg);
@@ -145,7 +186,6 @@
     ])) return 'admin_offices_attendance';
 
     if (hasAny(snapshot, ['admin_offices_consumables_v1.0', 'adminOfficesConsumablesRaiseLetterSettings_v1'])) return 'admin_offices_consumables';
-
     if (hasAny(snapshot, ['healthCentersAttendanceData', 'centersAttendanceData_v2'])) return 'health_centers_attendance';
     if (hasAny(snapshot, ['healthCentersConsumables'])) return 'health_centers_consumables';
     if (hasAny(snapshot, ['spare_partsData', 'sparePartsTotalAmount'])) return 'spare_parts';
@@ -183,7 +223,7 @@
       'persistentExtractData', 'persistentContractData', 'companyName', 'contractNumber', 'hospitalName',
       'extractMonth', 'extractYear', 'extractStart', 'extractEnd', 'paymentNumber', 'extractNumber', 'periodMonth',
       'finalLaborCost', 'finalConsumablesCost', 'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin',
-      'signatures_data_consumables_v27'
+      'signatures_data_consumables_v27', FINAL_SNAPSHOT_STORAGE_KEY
     ];
 
     var adminLabor = [
@@ -264,21 +304,160 @@
     var healthData = src.healthCentersAttendanceData || src.centersAttendanceData_v2 || {};
     var laborData = src.attendanceData || src.ng_attendanceData || src.nd_attendanceData || {};
     var signatureKeys = Object.keys(src).filter(function (key) { return /^sb_(sigs|prefs)_/.test(key) || /^healthCenters_Signatures_/.test(key) || key === 'signatures_data_consumables_v27'; });
+    var final = isFinalReviewSnapshot(snapshot);
 
     return {
       module: moduleName,
+      finalReviewSnapshot: final,
+      reviewSnapshotSchema: final ? FINAL_LABOR_REVIEW_SCHEMA : '',
       adminOfficesSites: countObjectKeys(src.adminOfficeNames_v1),
       adminOfficesEmployees: countRows(adminData),
       adminOfficesPerformanceKeys: countObjectKeys(src.adminOfficePerformanceDeductions_v1 || src.performanceDeductions),
       adminOfficesLettersSettings: !!src.adminOfficesRaiseLettersSettings_v1,
       adminOfficesScopedLettersSettings: !!src.adminOfficesLetterScopedSettings_v1,
       healthCentersEmployees: countRows(healthData),
-      normalLaborEmployees: countRows(laborData),
-      hasAchievement: hasAny(src, ['achievementData', 'achievementTitles_v1']),
+      normalLaborEmployees: final ? 0 : countRows(laborData),
+      hasAchievement: final || hasAny(src, ['achievementData', 'achievementTitles_v1']),
       hasConsumables: hasAny(src, ['admin_offices_consumables_v1.0', 'healthCentersConsumables', 'consumablesTableData', 'mainHospitalConsumables']),
       signatureKeysCount: signatureKeys.length,
       trackedKeysCount: Object.keys(keyCopies).length
     };
+  }
+
+  function text(selector) {
+    try {
+      var el = document.querySelector(selector);
+      return clean(el ? el.textContent : '');
+    } catch (_) { return ''; }
+  }
+
+  function numberFromText(value) {
+    var raw = String(value == null ? '' : value)
+      .replace(/[٠-٩]/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'.indexOf(d); })
+      .replace(/[۰-۹]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d); })
+      .replace(/,/g, '')
+      .replace(/[^0-9.\-]/g, '');
+    var n = parseFloat(raw);
+    return isFinite(n) ? n : 0;
+  }
+
+  function moneyText(value) {
+    var n = Number(value || 0);
+    return n ? n.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' }) : '—';
+  }
+
+  function safeRun(name) {
+    try {
+      if (typeof window[name] === 'function') window[name]();
+    } catch (e) {
+      console.warn('[SubmittedExtractArchiveBundle] finalizer step failed:', name, e);
+    }
+  }
+
+  function captureAchievementRows() {
+    var table = null;
+    try { table = document.getElementById('achievementTable') || document.querySelector('table.achievement-table'); } catch (_) {}
+    if (!table) return { headers: [], rows: [] };
+
+    var headers = [];
+    try {
+      headers = Array.prototype.slice.call(table.querySelectorAll('thead th')).map(function (th, i) {
+        return clean(th.textContent) || ('عمود ' + (i + 1));
+      });
+    } catch (_) { headers = []; }
+
+    var rows = [];
+    try {
+      Array.prototype.slice.call(table.querySelectorAll('tbody tr')).forEach(function (tr) {
+        var cells = Array.prototype.slice.call(tr.children || []).map(function (td) { return clean(td.textContent); });
+        if (!cells.some(Boolean)) return;
+        var obj = { rowType: tr.classList.contains('total-row') ? 'total' : tr.classList.contains('tafqeet-row') ? 'tafqeet' : 'line', cells: cells };
+        headers.forEach(function (h, idx) { obj[h] = cells[idx] || ''; });
+        rows.push(obj);
+      });
+    } catch (_) {}
+
+    return { headers: headers, rows: rows };
+  }
+
+  function createLaborFinalReviewSnapshot() {
+    try {
+      safeRun('renderTables');
+      safeRun('updateCertificateFromPerformance');
+      safeRun('loadAndProcessAchievementData');
+
+      var storedExtract = readStorageJson('persistentExtractData', {});
+      var storedContract = readStorageJson('persistentContractData', {});
+      var totals = window.__achievementTotalsForTaxInvoice || {};
+      var table = captureAchievementRows();
+      var totalRow = table.rows.filter(function (r) { return r.rowType === 'total'; }).pop() || null;
+      var totalCell = totalRow && totalRow.cells ? totalRow.cells[totalRow.cells.length - 1] : '';
+      var finalAmount = Number(totals.netMonthly || 0) || numberFromText(localStorage.getItem('finalLaborCost') || '') || numberFromText(totalCell);
+
+      var meta = {
+        paymentNumber: text('#extract-payment-number') || storedExtract.paymentNumber || localStorage.getItem('paymentNumber') || '',
+        extractMonth: text('.extract-month-display') || storedExtract.extractMonth || localStorage.getItem('extractMonth') || '',
+        extractYear: text('.extract-year-display') || storedExtract.extractYear || localStorage.getItem('extractYear') || '',
+        extractStart: text('#extract-start-date') || storedExtract.extractStart || localStorage.getItem('extractStart') || '',
+        extractEnd: text('#extract-end-date') || storedExtract.extractEnd || localStorage.getItem('extractEnd') || '',
+        companyName: text('.companyName') || localStorage.getItem('companyName') || storedContract.companyName || '',
+        hospitalName: text('.hospitalName') || localStorage.getItem('hospitalName') || storedContract.hospitalName || '',
+        contractNumber: text('.contractDetails') || localStorage.getItem('contractDetails') || storedContract.contractNumber || ''
+      };
+      meta.period = clean([meta.extractMonth, meta.extractYear].filter(Boolean).join(' '));
+
+      var snapshot = {
+        schema: FINAL_LABOR_REVIEW_SCHEMA,
+        createdAt: new Date().toISOString(),
+        sourcePage: window.location.pathname + window.location.search,
+        extractType: 'labor',
+        reviewMode: 'final_display_only',
+        displayOnly: true,
+        noRecalculate: true,
+        meta: meta,
+        finalAmount: {
+          value: Math.round((Number(finalAmount || 0) + Number.EPSILON) * 100) / 100,
+          text: moneyText(finalAmount),
+          source: Number(totals.netMonthly || 0) ? 'achievement_totals' : 'display_table_or_finalLaborCost'
+        },
+        achievementTotals: {
+          monthlyValue: Number(totals.monthlyValue || 0),
+          absenceDeduction: Number(totals.absenceDeduction || 0),
+          absencePenalty: Number(totals.absencePenalty || 0),
+          performancePenalty: Number(totals.performancePenalty || 0),
+          nationalityPenalty: Number(totals.nationalityPenalty || 0),
+          netMonthly: Number(finalAmount || 0)
+        },
+        table: table,
+        displayRows: table.rows,
+        blockedReviewSources: [
+          'attendanceData', 'ng_attendanceData', 'nd_attendanceData',
+          'performanceData', 'performanceData_v4', 'performanceDeductions',
+          'employee rows', 'localStorage recalculation', 'achievement recalculation'
+        ]
+      };
+
+      window.__najranLaborFinalReviewSnapshot = snapshot;
+      try { localStorage.setItem(FINAL_SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshot)); } catch (_) {}
+      console.warn('[SubmittedExtractArchiveBundle] labor final review snapshot captured', {
+        schema: snapshot.schema,
+        finalAmount: snapshot.finalAmount.value,
+        rows: snapshot.displayRows.length
+      });
+      return snapshot;
+    } catch (e) {
+      console.warn('[SubmittedExtractArchiveBundle] labor final review snapshot failed', e);
+      return null;
+    }
+  }
+
+  window.finalizeLaborExtractBeforeSubmit = window.finalizeLaborExtractBeforeSubmit || createLaborFinalReviewSnapshot;
+
+  function shouldCreateFinalLaborSnapshot(payload, moduleName) {
+    if (!payload || String(payload.extractType || '') !== 'labor') return false;
+    if (payload.adminOfficeLabor === true || payload.adminOfficeLabor === 'true') return false;
+    if (String(moduleName || '') !== 'labor_attendance') return false;
+    return true;
   }
 
   function enrichPayload(payload) {
@@ -289,13 +468,45 @@
     snapshot = sanitizeSnapshot(snapshot);
 
     var moduleName = detectSourceModule(payload, snapshot);
+    var finalSnapshot = null;
+
+    if (shouldCreateFinalLaborSnapshot(payload, moduleName)) {
+      finalSnapshot = (typeof window.finalizeLaborExtractBeforeSubmit === 'function')
+        ? window.finalizeLaborExtractBeforeSubmit()
+        : createLaborFinalReviewSnapshot();
+      if (!finalSnapshot) finalSnapshot = parseMaybeJson(localStorage.getItem(FINAL_SNAPSHOT_STORAGE_KEY), null);
+      if (finalSnapshot && finalSnapshot.schema === FINAL_LABOR_REVIEW_SCHEMA) {
+        snapshot.finalReviewSnapshot = finalSnapshot;
+        snapshot.reviewSnapshotSchema = FINAL_LABOR_REVIEW_SCHEMA;
+        snapshot.__reviewRendererMode = 'final_snapshot_only';
+        snapshot.achievementData = finalSnapshot.displayRows || [];
+        snapshot.achievementDataSource = 'finalReviewSnapshot';
+        snapshot = stripRawReviewKeys(snapshot);
+        snapshot.finalReviewSnapshot = finalSnapshot;
+        snapshot.reviewSnapshotSchema = FINAL_LABOR_REVIEW_SCHEMA;
+        snapshot.achievementData = finalSnapshot.displayRows || [];
+        var amount = Number(finalSnapshot.finalAmount && finalSnapshot.finalAmount.value);
+        if (isFinite(amount) && amount > 0) payload.totalAmount = amount;
+      }
+    }
+
     var reviewPage = pageForModule(moduleName, payload.extractType);
     var keyCopies = collectTrackedKeyCopies(moduleName);
-    var integrity = makeIntegrity(moduleName, snapshot, keyCopies);
 
     Object.keys(keyCopies).forEach(function (key) {
+      if (shouldSkipTrackedCopy(key, snapshot)) return;
       if (snapshot[key] === undefined && allowSubmitKey(key, keyCopies[key])) snapshot[key] = keyCopies[key];
     });
+
+    if (isFinalReviewSnapshot(snapshot)) {
+      var keepFinal = snapshot.finalReviewSnapshot;
+      snapshot = stripRawReviewKeys(snapshot);
+      snapshot.finalReviewSnapshot = keepFinal;
+      snapshot.reviewSnapshotSchema = FINAL_LABOR_REVIEW_SCHEMA;
+      snapshot.__reviewRendererMode = 'final_snapshot_only';
+      snapshot.achievementData = keepFinal.displayRows || [];
+      snapshot.achievementDataSource = 'finalReviewSnapshot';
+    }
 
     snapshot = sanitizeSnapshot(snapshot);
 
@@ -304,8 +515,9 @@
     snapshot.sourceModule = snapshot.sourceModule || moduleName;
     snapshot.reviewPage = snapshot.reviewPage || reviewPage;
 
+    var integrity = makeIntegrity(moduleName, snapshot, keyCopies);
     snapshot.__submittedExtractArchiveBundle_v1 = {
-      version: 3,
+      version: 4,
       createdAt: new Date().toISOString(),
       extractType: String(payload.extractType || ''),
       sourceModule: moduleName,
@@ -327,10 +539,8 @@
     payload.reviewPage = payload.reviewPage || reviewPage;
 
     var finalSize = valueSize(payload);
-    console.log('[SubmittedExtractArchiveBundle] payload size', { before: originalSize, after: finalSize, module: moduleName });
-    if (finalSize > WARN_PAYLOAD_CHARS) {
-      console.warn('[SubmittedExtractArchiveBundle] payload still large after cleanup:', finalSize);
-    }
+    console.log('[SubmittedExtractArchiveBundle] payload size', { before: originalSize, after: finalSize, module: moduleName, finalReviewSnapshot: isFinalReviewSnapshot(snapshot) });
+    if (finalSize > WARN_PAYLOAD_CHARS) console.warn('[SubmittedExtractArchiveBundle] payload still large after cleanup:', finalSize);
     return payload;
   }
 
@@ -349,9 +559,7 @@
       localStorage.setItem(probe, new Array(4096).join('x'));
       localStorage.removeItem(probe);
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   function shouldSkipLocalSnapshotBeforeSubmit() {
@@ -375,9 +583,7 @@
         console.warn('[SubmittedExtractArchiveBundle] local snapshot skipped: storage near quota or archive too large');
         return;
       }
-      if (typeof window.saveExtractSnapshot === 'function') {
-        window.saveExtractSnapshot('submit-to-approval');
-      }
+      if (typeof window.saveExtractSnapshot === 'function') window.saveExtractSnapshot('submit-to-approval');
     } catch (e) {
       console.warn('[SubmittedExtractArchiveBundle] local snapshot before submit failed', e);
     }
@@ -406,14 +612,13 @@
   }
 
   function patchFetch() {
-    if (window.fetch.__najranSubmittedArchiveBundleWrappedV3) return;
+    if (window.fetch.__najranSubmittedArchiveBundleWrappedV4) return;
     var originalFetch = window.fetch;
     window.fetch = function (input, init) {
       try {
         if (shouldPatchFetch(input, init || {})) {
           var nextInit = Object.assign({}, init || {});
           var body = nextInit.body;
-
           if (!body && input && typeof input !== 'string' && input instanceof Request) {
             // لا نعيد بناء Request body غير المقروء. أغلب الرفع عندنا يستخدم fetch(url,{body}).
           } else if (typeof body === 'string' && body.trim().charAt(0) === '{') {
@@ -438,7 +643,7 @@
       }
       return originalFetch.apply(this, arguments);
     };
-    window.fetch.__najranSubmittedArchiveBundleWrappedV3 = true;
+    window.fetch.__najranSubmittedArchiveBundleWrappedV4 = true;
   }
 
   patchFetch();
@@ -447,8 +652,9 @@
     detectSourceModule: detectSourceModule,
     pageForModule: pageForModule,
     collectTrackedKeyCopies: collectTrackedKeyCopies,
-    sanitizeSnapshot: sanitizeSnapshot
+    sanitizeSnapshot: sanitizeSnapshot,
+    createLaborFinalReviewSnapshot: createLaborFinalReviewSnapshot
   };
 
-  console.info('[SubmittedExtractArchiveBundle] installed v3 slim payload + submit-lock cleanup');
+  console.info('[SubmittedExtractArchiveBundle] installed v4 final labor review snapshot');
 })();
