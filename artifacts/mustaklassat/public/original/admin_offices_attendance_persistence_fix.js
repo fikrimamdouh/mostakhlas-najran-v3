@@ -631,7 +631,23 @@ function injectAdminOfficesBackupButton() {
   setTimeout(function () { boot('t1200'); }, 1200);
   setTimeout(function () { boot('t2500'); }, 2500);
   setTimeout(function () { boot('t4500'); }, 4500);
-  window.addEventListener('najranCloudPulled', function () { setTimeout(function () { boot('after-cloud-pull'); }, 100); });
+  window.addEventListener('najranCloudPulled', function (ev) {
+    setTimeout(function () {
+      boot('after-cloud-pull');
+      // لو السحب كتب بيانات المكاتب فعليًا (متصفح جديد)، أعد الرندر دائمًا —
+      // مش بس في فرع الاسترجاع الفاضي — عشان البيانات تظهر بدون ريفريش يدوي.
+      try {
+        var mergedKeys = (ev && ev.detail && ev.detail.mergedKeys) || [];
+        var wroteAdminOffices = mergedKeys.indexOf('adminOfficesAttendanceData_v1') !== -1 ||
+                                mergedKeys.indexOf('adminOfficesFullAttendanceBundle_v1') !== -1;
+        if (!wroteAdminOffices) return;
+        if (typeof window.renderCenterIcons === 'function') window.renderCenterIcons();
+        if (typeof window.renderMainGrid === 'function') window.renderMainGrid();
+        if (typeof window.calculateAndDisplayGrandTotal === 'function') window.calculateAndDisplayGrandTotal();
+        console.info('[Admin Offices Persistence] re-rendered after cloud pull wrote office data');
+      } catch (_) {}
+    }, 100);
+  });
 
   var ticks = 0;
   var timer = setInterval(function () {

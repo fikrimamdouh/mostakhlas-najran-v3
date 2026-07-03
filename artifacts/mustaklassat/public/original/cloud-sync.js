@@ -435,6 +435,7 @@ const keepKeys = new Set([
     const userData = (results[0] && results[0].data) || {};
     const hospitalData = (results[1] && results[1].data) || {};
     let mergedUser = 0, mergedHospital = 0, skippedUserOperational = 0, skippedByPage = 0;
+    const mergedKeys = [];
     const safeWrite = _origSetItem || localStorage.setItem.bind(localStorage);
 
 function shouldPullAttendanceKeyForCurrentPage(nk) {
@@ -476,11 +477,12 @@ function mergeOne(key, value, fromHospital) {
   if (nk === 'adminOfficesAttendanceData_v1' || nk === 'adminOfficesFullAttendanceBundle_v1') {
   var localRaw = localStorage.getItem(nk);
   var localScore = adminOfficeDataScoreFromRaw(localRaw);
-  var pulledScore = adminOfficeDataScoreFromRaw(value);
 
-  if (localScore.offices > 1 && pulledScore.offices <= 1) {
+  // المحلي يكسب دائمًا أثناء الشغل: السحب من السحابة مسموح فقط لو المحلي فاضي تمامًا
+  // (متصفح جديد / كراش / تنظيف). لا مقارنات عددية — أي بيانات محلية = ممنوع الدهس.
+  if (localScore.rows > 0) {
     skippedByPage++;
-    console.warn('[Admin Offices Sync Guard] blocked incomplete cloud pull over local full data:', nk, pulledScore, 'local=', localScore);
+    console.info('[Admin Offices Sync Guard] LOCAL-FIRST: skip cloud pull, local data present:', nk, 'local=', localScore);
     return;
   }
 }
@@ -488,7 +490,7 @@ function mergeOne(key, value, fromHospital) {
       if (fromHospital && PERSONAL_KEYS.has(nk)) return;
       if (!fromHospital && hospitalName && !PERSONAL_KEYS.has(nk)) { skippedUserOperational++; return; }
       if (!shouldMergePulledKeyForCurrentPage(nk)) { skippedByPage++; return; }
-      try { safeWrite(nk, value); fromHospital ? mergedHospital++ : mergedUser++; } catch (_) {}
+      try { safeWrite(nk, value); fromHospital ? mergedHospital++ : mergedUser++; mergedKeys.push(nk); } catch (_) {}
     }
 
     Object.entries(userData).forEach(([k, v]) => mergeOne(k, v, false));
@@ -500,7 +502,7 @@ function mergeOne(key, value, fromHospital) {
       (skippedByPage ? ' · ' + skippedByPage + ' خارج نطاق الصفحة' : '')
     );
 
-    try { window.dispatchEvent(new CustomEvent('najranCloudPulled', { detail: { monthChanged: false } })); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('najranCloudPulled', { detail: { monthChanged: false, mergedKeys: mergedKeys } })); } catch (_) {}
     try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
     try { if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint(); } catch (_) {}
   }
@@ -573,17 +575,8 @@ function isAdminOfficesProtectedKey(key) {
   const newValue = hospitalData[key];
   const oldValue = remoteData[key];
 
-  if (isAdminOfficesProtectedKey(key)) {
-    const ns = adminOfficeDataScoreFromRaw(newValue);
-    const os = adminOfficeDataScoreFromRaw(oldValue);
-
-    if (os.offices > 1 && ns.offices <= 1) {
-      skipped++;
-      console.warn('[Admin Offices Sync Guard] blocked incomplete office-only upload:', key, 'local=', ns, 'remote=', os);
-      return;
-    }
-  }
-
+  // حماية الرفع الوحيدة: ممنوع رفع فاضي تمامًا فوق مليان (isUnsafeEmptyOverwrite).
+  // تقليل عدد المكاتب/الصفوف تعديل شرعي ويجب أن يُرفع — لا مقارنات عددية هنا.
   if (isUnsafeEmptyOverwrite(key, newValue, oldValue)) { skipped++; return; }
   safe[key] = newValue;
 });
@@ -737,7 +730,9 @@ function isAdminOfficesProtectedKey(key) {
         if (DIRTY_KEYS.size > 0) syncNow({ includeOperational:false }).catch(function(){});
       }, SETTINGS_AUTO_SYNC_MS);
       window.addEventListener('beforeunload', function(){
-        if (DIRTY_KEYS.size > 0) pushToCloud({ includeOperational:false }).catch(function(){});
+        // includeOperational:true — لو المستخدم قفل التاب خلال نافذة الـ1.2 ثانية بعد آخر حفظ،
+        // آخر تعديلاته التشغيلية تترفع برضه بدل ما تفضل محلية فقط.
+        if (DIRTY_KEYS.size > 0) pushToCloud({ includeOperational:true }).catch(function(){});
       });
     } else {
       console.warn('[MzamanaCloud] REVIEW ONLY: الرفع والتحديث الدوري معطّلان');
