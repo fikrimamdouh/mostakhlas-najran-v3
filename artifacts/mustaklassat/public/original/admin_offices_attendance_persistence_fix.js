@@ -206,18 +206,13 @@ function readOfficeKeysData() {
     if (!data || typeof data !== 'object') return false;
     var s = score(data);
     if (s.rows <= 0) return false;
-    var currentBest = bestData();
-var currentScore = score(currentBest);
 
-// حماية المحلي: ممنوع نسخة مكتب واحد تكتب فوق نسخة فيها أكثر من مكتب
-if (
-  currentScore.offices > 1 &&
-  s.offices <= 1 &&
-  s.rows <= currentScore.rows
-) {
-  console.warn('[Admin Offices Persistence] blocked incomplete one-office mirror:', reason, s, 'best=', currentScore);
-  return false;
-}
+    // ملاحظة: أُزيل هنا حظر "نسخة مكتب واحد فوق نسخة فيها أكثر من مكتب" —
+    // كان بيمنع حفظ تعديلات حقيقية للمستخدم بصمت لمجرد أن عدد الصفوف أقل من نسخة احتياطية قديمة.
+    // أي استدعاء لـ saveAttendanceData في التطبيق الفعلي يمرر دائمًا كامل البيانات (كل المكاتب)،
+    // لذلك الحماية الحقيقية المطلوبة هي فقط ضد استرجاع نسخة قديمة فوق بيانات حالية غير فارغة
+    // (موجودة الآن في restoreDataIfNeeded و getAttendanceData wrapper)، مش ضد الحفظ نفسه.
+
     var raw = JSON.stringify(data);
     try {
       localStorage.setItem(MAIN_KEY, raw);
@@ -255,15 +250,11 @@ writeOfficeKeys(data);
   function restoreDataIfNeeded(reason) {
     var current = readJson(MAIN_KEY, {}), best = bestData();
     var cs = score(current), bs = score(best);
-if (
-  bs.rows > 0 &&
-  (
-    cs.rows === 0 ||
-    bs.offices > cs.offices ||
-    bs.named > cs.named ||
-    bs.rows > cs.rows
-  )
-) {      mirrorData(best, reason || 'restore');
+    // الاسترجاع التلقائي يعمل فقط لو البيانات الحالية فاضية فعلاً (حماية من الكراش/الريفريش/تنظيف السياق).
+    // لو فيه أي بيانات حالية (ولو أقل من نسخة احتياطية قديمة)، دي غالبًا تعديل شرعي من المستخدم
+    // (حذف صف، تصحيح، إلخ) ومينفعش نرجّع نسخة أقدم فوقها بصمت.
+    if (cs.rows === 0 && bs.rows > 0) {
+      mirrorData(best, reason || 'restore');
       try { if (typeof window.renderCenterIcons === 'function') window.renderCenterIcons(); } catch (_) {}
       try { if (typeof window.renderMainGrid === 'function') window.renderMainGrid(); } catch (_) {}
       try { if (typeof window.calculateAndDisplayGrandTotal === 'function') window.calculateAndDisplayGrandTotal(); } catch (_) {}
@@ -271,7 +262,7 @@ if (
         var active = document.querySelector('.tab-link.active[data-center-key]')?.dataset?.centerKey || window.activeCenterKeyForManagement || '';
         if (active && typeof window.showCenterDetails === 'function' && document.getElementById('center-details-view')?.style.display !== 'none') window.showCenterDetails(active);
       } catch (_) {}
-      console.warn('[Admin Offices Persistence] restored labor data:', reason || 'restore', bs);
+      console.warn('[Admin Offices Persistence] restored labor data (main was empty):', reason || 'restore', bs);
       return true;
     }
     if (cs.rows > 0) mirrorData(current, reason || 'keep-current');
@@ -310,10 +301,11 @@ function saveCurrentSnapshot(reason) {
     var live = null;
     if (typeof window.getAttendanceData === 'function') live = window.getAttendanceData();
 
-    var best = bestData();
-    var data = isBetterData(live || {}, best || {}) ? live : best;
+    // فضّل البيانات الحية دايمًا طالما فيها أي محتوى (حتى لو أقل من نسخة احتياطية قديمة) —
+    // النسخة الاحتياطية تُستخدم بس لو الحية فاضية تمامًا (يعني مفيش حاجة نحفظها أصلًا).
+    var data = (live && countRows(live) > 0) ? live : bestData();
 
-    if (!data || !countRows(data)) data = live || best || {};
+    if (!data || !countRows(data)) data = live || bestData() || {};
 
     mirrorData(data, reason || 'snapshot');
     mirrorNames(reason || 'snapshot');
@@ -357,9 +349,13 @@ function saveCurrentSnapshot(reason) {
         restoreNamesIfNeeded('before-getAttendanceData');
         restoreDataIfNeeded('before-getAttendanceData');
         var data = originalGet.apply(this, arguments) || {};
-        var best = bestData();
-        var ds = score(data), bs = score(best);
-        if (bs.rows > 0 && isBetterData(best, data)) return best;
+        var ds = score(data);
+        // استبدال بالنسخة الاحتياطية بس لو البيانات الفعلية فاضية تمامًا (حماية من الكراش) —
+        // مش لمجرد إن نسخة قديمة عندها عدد صفوف/مكاتب أكبر (كان بيمسح تعديلات شرعية للمستخدم).
+        if (ds.rows === 0) {
+          var best = bestData();
+          if (score(best).rows > 0) return best;
+        }
         return data;
       };
       window.getAttendanceData.__adminOfficesPersistV3Wrapped = true;
