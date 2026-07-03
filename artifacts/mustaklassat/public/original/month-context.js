@@ -41,13 +41,84 @@ function isRevisionMode() {
 
   const DYNAMIC_PREFIXES = ['deptCalculatedCost_', 'dept_'];
 
+  function readJson(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function normalizePaymentNumber(value) {
+    const raw = String(value == null ? '' : value).trim();
+    if (!raw) return '1';
+
+    const digits = raw
+      .replace(/[٠-٩]/g, function (d) { return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)); })
+      .replace(/[۰-۹]/g, function (d) { return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)); })
+      .replace(/[^0-9]/g, '');
+
+    if (!digits) return raw.replace(/\s+/g, '_');
+    return String(parseInt(digits, 10) || 1);
+  }
+
+  function safePart(value, fallback) {
+    return String(value == null ? '' : value).trim().replace(/\s+/g, '_') || fallback || '';
+  }
+
+  function readExtractData() {
+    const ed = readJson('persistentExtractData', {}) || {};
+
+    if (!ed.extractMonth) ed.extractMonth = localStorage.getItem('extractMonth') || '';
+    if (!ed.extractYear) ed.extractYear = localStorage.getItem('extractYear') || new Date().getFullYear();
+
+    if (!ed.paymentNumber && !ed.extractNumber) {
+      ed.paymentNumber = localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber') || '001';
+    }
+
+    return ed;
+  }
+
+  function getLegacyMonthKeyFromExtractData(ed) {
+    ed = ed || readExtractData();
+
+    const month = String(ed.extractMonth || '').trim();
+    const year = String(ed.extractYear || new Date().getFullYear()).trim();
+
+    if (!month) return null;
+
+    return safePart(year, String(new Date().getFullYear())) + '_' + safePart(month, 'month');
+  }
+
+  function getMonthKeyFromExtractData(ed) {
+    ed = ed || readExtractData();
+
+    const legacyKey = getLegacyMonthKeyFromExtractData(ed);
+    if (!legacyKey) return null;
+
+    const paymentDisplay = String(
+      ed.paymentNumber ||
+      ed.extractNumber ||
+      localStorage.getItem('paymentNumber') ||
+      localStorage.getItem('extractNumber') ||
+      '001'
+    ).trim() || '001';
+
+    return legacyKey + '_p' + normalizePaymentNumber(paymentDisplay);
+  }
+
+  function getMonthKeyFromParts(year, month, paymentNumber) {
+    return getMonthKeyFromExtractData({
+      extractYear: year,
+      extractMonth: month,
+      paymentNumber: paymentNumber || '001'
+    });
+  }
+
   function getCurrentMonthKey() {
     try {
-      const ed = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
-      const month = (ed.extractMonth || '').trim();
-      const year = (ed.extractYear || new Date().getFullYear());
-      if (!month) return null;
-      return `${year}_${month}`;
+      return getMonthKeyFromExtractData(readExtractData());
     } catch (e) {
       return null;
     }
@@ -66,51 +137,170 @@ function isRevisionMode() {
     return [...MONTH_DATA_KEYS, ...getDynamicKeys()];
   }
 
-  window.saveMonthSnapshot = function (monthKey) {
-    if (!monthKey) return;
+  function collectMonthSnapshotData() {
     const snapshot = {};
+
     for (const key of getAllMonthDataKeys()) {
       const val = localStorage.getItem(key);
       if (val !== null) snapshot[key] = val;
     }
-    localStorage.setItem('monthSnapshot_' + monthKey, JSON.stringify(snapshot));
-    console.log('[MonthCtx] snapshot saved:', monthKey);
+
+    return snapshot;
+  }
+
+  function readMonthSnapshotRecord(monthKey) {
+    if (!monthKey) return null;
+
+    let raw = localStorage.getItem('monthSnapshot_' + monthKey);
+    if (raw) return { raw, key: monthKey, legacy: false };
+
+    const legacyKey = String(monthKey).replace(/_p[^_]+$/, '');
+    if (legacyKey && legacyKey !== monthKey) {
+      raw = localStorage.getItem('monthSnapshot_' + legacyKey);
+      if (raw) return { raw, key: legacyKey, legacy: true };
+    }
+
+    return null;
+  }
+
+  function parseMonthSnapshot(monthKey) {
+    const rec = readMonthSnapshotRecord(monthKey);
+    if (!rec) return null;
+
+    try {
+      const snap = JSON.parse(rec.raw);
+      if (!snap || typeof snap !== 'object') return null;
+      return { snap, key: rec.key, legacy: rec.legacy };
+    } catch (e) {
+      console.error('[MonthCtx] invalid snapshot:', monthKey, e);
+      return null;
+    }
+  }
+
+  function saveMonthSafetySnapshot(reason) {
+    try {
+      const safety = {
+        schema: 'month_context_safety_v1',
+        reason: reason || 'unknown',
+        sourceKey: getCurrentMonthKey(),
+        createdAt: new Date().toISOString(),
+        data: collectMonthSnapshotData()
+      };
+
+      const raw = JSON.stringify(safety);
+      const key = 'monthSafetySnapshot_' + Date.now();
+
+      localStorage.setItem(key, raw);
+      localStorage.setItem('monthSafetySnapshot_last', raw);
+
+      if (localStorage.getItem(key) !== raw || localStorage.getItem('monthSafetySnapshot_last') !== raw) {
+        throw new Error('SAFETY_VERIFY_FAILED');
+      }
+
+      const safetyKeys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('monthSafetySnapshot_')) safetyKeys.push(k);
+      }
+
+      safetyKeys.sort();
+
+      while (safetyKeys.length > 5) {
+        localStorage.removeItem(safetyKeys.shift());
+      }
+
+      return true;
+    } catch (e) {
+      console.error('[MonthCtx] safety snapshot failed:', e);
+      alert('تعذر حفظ نسخة أمان قبل تبديل الشهر/الدفعة. تم إيقاف العملية لحماية البيانات.');
+      return false;
+    }
+  }
+
+  window.saveMonthSnapshot = function (monthKey) {
+    monthKey = monthKey || getCurrentMonthKey();
+    if (!monthKey) return false;
+
+    try {
+      const raw = JSON.stringify(collectMonthSnapshotData());
+      localStorage.setItem('monthSnapshot_' + monthKey, raw);
+
+      const ok = localStorage.getItem('monthSnapshot_' + monthKey) === raw;
+      if (ok) console.log('[MonthCtx] snapshot saved:', monthKey);
+
+      return ok;
+    } catch (e) {
+      console.error('[MonthCtx] snapshot save failed:', e);
+      return false;
+    }
   };
 
-  window.loadMonthSnapshot = function (monthKey) {
-    for (const key of getAllMonthDataKeys()) {
-      localStorage.removeItem(key);
+  window.loadMonthSnapshot = function (monthKey, options) {
+    options = options || {};
+
+    const parsed = parseMonthSnapshot(monthKey);
+
+    if (!parsed) {
+      console.log('[MonthCtx] no valid snapshot for', monthKey, '— current data kept');
+      return false;
     }
-    const raw = localStorage.getItem('monthSnapshot_' + monthKey);
-    if (raw) {
-      try {
-        const snap = JSON.parse(raw);
-        for (const [k, v] of Object.entries(snap)) localStorage.setItem(k, v);
-        console.log('[MonthCtx] snapshot loaded:', monthKey);
-        return true;
-      } catch (e) {
-        return false;
+
+    if (!options.skipSafety && !saveMonthSafetySnapshot('before-load-month-snapshot')) {
+      return false;
+    }
+
+    try {
+      for (const key of getAllMonthDataKeys()) {
+        localStorage.removeItem(key);
       }
+
+      for (const [k, v] of Object.entries(parsed.snap)) {
+        localStorage.setItem(k, v);
+      }
+
+      console.log('[MonthCtx] snapshot loaded:', parsed.key, parsed.legacy ? '(legacy fallback)' : '');
+      return true;
+    } catch (e) {
+      console.error('[MonthCtx] snapshot load failed:', e);
+      return false;
     }
-    console.log('[MonthCtx] no snapshot for', monthKey, '— starting fresh');
-    return false;
   };
 
   window.getSavedMonths = function () {
     const months = [];
+    const seen = {};
+
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && k.startsWith('monthSnapshot_')) months.push(k.replace('monthSnapshot_', ''));
+
+      if (k && k.startsWith('monthSnapshot_')) {
+        const val = k.replace('monthSnapshot_', '');
+
+        if (!seen[val]) {
+          seen[val] = true;
+          months.push(val);
+        }
+      }
     }
+
     return months.sort((a, b) => b.localeCompare(a));
   };
 
   window.switchToMonth = function (targetMonthKey) {
     const currentKey = getCurrentMonthKey();
-    if (currentKey) window.saveMonthSnapshot(currentKey);
+
+    if (currentKey && !window.saveMonthSnapshot(currentKey)) {
+      alert('تعذر حفظ نسخة من الفترة الحالية. تم إيقاف التبديل لحماية البيانات.');
+      return false;
+    }
+
     return window.loadMonthSnapshot(targetMonthKey);
   };
 
+  window.getLegacyMonthKeyFromExtractData = getLegacyMonthKeyFromExtractData;
+  window.getMonthKeyFromExtractData = getMonthKeyFromExtractData;
+  window.getMonthKeyFromParts = getMonthKeyFromParts;
+  window.normalizePaymentNumberForMonthKey = normalizePaymentNumber;
   window.getCurrentMonthKey = getCurrentMonthKey;
   window.MONTH_DATA_KEYS_LIST = MONTH_DATA_KEYS;
 
@@ -125,13 +315,17 @@ function isRevisionMode() {
   const currentKey = getCurrentMonthKey();
   if (!currentKey) return;
 
-  const hasLocalData = !!localStorage.getItem('attendanceData');
-  const hasSnapshot = !!localStorage.getItem('monthSnapshot_' + currentKey);
+  const hasLocalData =
+  !!localStorage.getItem('attendanceData') ||
+  !!localStorage.getItem('centersAttendanceData_v2') ||
+  !!localStorage.getItem('consumablesTableData');
 
-  if (!hasLocalData && hasSnapshot) {
-    window.loadMonthSnapshot(currentKey);
-    console.log('[MonthCtx] auto-restored snapshot for', currentKey);
-  }
+const hasSnapshot = !!readMonthSnapshotRecord(currentKey);
+
+if (!hasLocalData && hasSnapshot) {
+  window.loadMonthSnapshot(currentKey, { skipSafety: true });
+  console.log('[MonthCtx] auto-restored snapshot for', currentKey);
+}
 });
 
   /**
@@ -512,8 +706,10 @@ function getAttendancePageAfterExtractSave() {
           }
           const prevMonth = (prevData.extractMonth || '').trim();
           const prevYear  = String(prevData.extractYear || '').trim();
-          const prevKey   = prevMonth && prevYear ? `${prevYear}_${prevMonth}` : null;
-          const newKey    = newMonth && newYear ? `${newYear}_${newMonth}` : null;
+       const prevKey = prevMonth && prevYear ? getMonthKeyFromExtractData(prevData) : null;
+const newKey = newMonth && newYear
+  ? getMonthKeyFromParts(newYear, newMonth, currentPayment || oldPayment || prevData.paymentNumber || '001')
+  : null;
 
           const hasRealPreviousExtract =
             !!prevData.paymentNumber &&
@@ -523,8 +719,14 @@ function getAttendancePageAfterExtractSave() {
             !!prevYear;
 
           if (hasRealPreviousExtract && prevKey && newKey && prevKey !== newKey) {
-            const laborLocked = localStorage.getItem('najran_labor_locked_' + prevKey);
-            const consumablesLocked = localStorage.getItem('najran_consumables_locked_' + prevKey);
+            const legacyPrevKey = getLegacyMonthKeyFromExtractData(prevData);
+const laborLocked =
+  localStorage.getItem('najran_labor_locked_' + prevKey) ||
+  (legacyPrevKey ? localStorage.getItem('najran_labor_locked_' + legacyPrevKey) : null);
+
+const consumablesLocked =
+  localStorage.getItem('najran_consumables_locked_' + prevKey) ||
+  (legacyPrevKey ? localStorage.getItem('najran_consumables_locked_' + legacyPrevKey) : null);
 
             const laborStatus = laborLocked ? 'تم اعتماده' : 'لم يتم اعتماده';
             const consumablesStatus = consumablesLocked ? 'تم اعتماده' : 'لم يتم اعتماده';
@@ -618,7 +820,7 @@ function getAttendancePageAfterExtractSave() {
           await pushExtractSettingsDirect(data);
 
           // احفظ المستخلص الحالي في الأرشيف بعد الحفظ وبعد تثبيت المفاتيح المختصرة.
-          const savedKey = data.extractMonth && data.extractYear ? `${data.extractYear}_${data.extractMonth}` : null;
+          const savedKey = getMonthKeyFromExtractData(data);
           if (savedKey && typeof window.saveMonthSnapshot === 'function') {
             window.saveMonthSnapshot(savedKey);
           }
