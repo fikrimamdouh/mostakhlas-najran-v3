@@ -1,42 +1,40 @@
 // ===================================================================
-// Admin Offices Attendance Persistence Fix — V3
+// Admin Offices Attendance Persistence Fix — V4
 // Scope: admin_offices_attendance.html / original-viewer?page=admin_offices_attendance.html
-// يحمي حفظ عمالة المكاتب + بيانات المستخلص بعد الريفريش أو تنظيف السياق.
-// القاعدة: أي بيانات صالحة يتم نسخها في مفاتيح آمنة لا تحتوي attendance ولا يمسحها تبديل السياق.
-// بدون MutationObserver وبدون تعديل جداول أثناء التحميل.
+// يحمي بيانات المكاتب بدون استدعاء render داخل getAttendanceData حتى لا يحدث loop عند تصفير البيانات.
 // ===================================================================
 (function () {
   'use strict';
 
   if (!/admin_offices_attendance\.html|original-viewer\?page=admin_offices_attendance\.html/.test(location.pathname + location.search)) return;
-  if (window.__ADMIN_OFFICES_ATTENDANCE_PERSISTENCE_FIX_V3__) return;
-  window.__ADMIN_OFFICES_ATTENDANCE_PERSISTENCE_FIX_V3__ = true;
+  if (window.__ADMIN_OFFICES_ATTENDANCE_PERSISTENCE_FIX_V4__) return;
+  window.__ADMIN_OFFICES_ATTENDANCE_PERSISTENCE_FIX_V4__ = true;
 
   var MAIN_KEY = 'adminOfficesAttendanceData_v1';
-  // آخر نسخة تم عمل mirror لها — لتجنّب تكرار الكتابة واللوج بلا تغيير فعلي
-  var lastMirroredDataRaw = null;
-  var lastMirroredExtractRaw = null;
-  var lastMirroredNamesRaw = null;
   var BACKUP_KEY = 'adminOfficesAttendanceData_v1_localBackup';
   var BACKUP_TS_KEY = 'adminOfficesAttendanceData_v1_localBackup_ts';
   var LAST_GOOD_KEY = 'adminOfficesAttendanceData_v1_lastGood';
   var LAST_GOOD_TS_KEY = 'adminOfficesAttendanceData_v1_lastGood_ts';
   var LEGACY_KEY = 'adminOfficesAttendanceData';
-
   var SAFE_DATA_KEY = 'adminOfficesLaborDataSafe_v2';
   var SAFE_DATA_TS_KEY = 'adminOfficesLaborDataSafe_v2_ts';
   var SAFE_NAMES_KEY = 'adminOfficesLaborNamesSafe_v2';
   var SAFE_AFF_KEY = 'adminOfficesLaborAffiliationsSafe_v2';
-var FULL_BUNDLE_KEY = 'adminOfficesFullAttendanceBundle_v1';
-var FULL_BUNDLE_TS_KEY = 'adminOfficesFullAttendanceBundle_v1_ts';
-var OFFICE_KEY_PREFIX = 'adminOfficeAttendance_';
-var OFFICE_KEY_SUFFIX = '_v1';
+  var FULL_BUNDLE_KEY = 'adminOfficesFullAttendanceBundle_v1';
+  var FULL_BUNDLE_TS_KEY = 'adminOfficesFullAttendanceBundle_v1_ts';
+  var OFFICE_KEY_PREFIX = 'adminOfficeAttendance_';
+  var OFFICE_KEY_SUFFIX = '_v1';
   var EXTRACT_KEY = 'persistentExtractData';
   var SAFE_EXTRACT_KEY = 'najranExtractDataSafe_v1';
   var SAFE_EXTRACT_TS_KEY = 'najranExtractDataSafe_v1_ts';
-
   var NAMES_KEY = 'adminOfficeNames_v1';
   var AFF_KEY = 'adminOfficeAffiliations_v1';
+
+  var lastMirroredDataRaw = null;
+  var lastMirroredExtractRaw = null;
+  var lastMirroredNamesRaw = null;
+  var inGetAttendanceData = false;
+  var restoringData = false;
 
   function readJson(key, fallback) {
     try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
@@ -62,35 +60,22 @@ var OFFICE_KEY_SUFFIX = '_v1';
     });
     return total;
   }
- function countOffices(data) {
-  var total = 0;
-  data = data || {};
-  Object.keys(data).forEach(function (k) {
-    if (Array.isArray(data[k]) && data[k].length) total++;
-  });
-  return total;
-}
-
-function score(data) {
-  return {
-    offices: countOffices(data),
-    rows: countRows(data),
-    named: countNamed(data)
-  };
-}
-
-function isBetterData(next, current) {
-  var ns = score(next);
-  var cs = score(current);
-
-  if (ns.offices !== cs.offices) return ns.offices > cs.offices;
-  if (ns.named !== cs.named) return ns.named > cs.named;
-  if (ns.rows !== cs.rows) return ns.rows > cs.rows;
-
-  return false;
-}
-
-
+  function countOffices(data) {
+    var total = 0;
+    data = data || {};
+    Object.keys(data).forEach(function (k) { if (Array.isArray(data[k]) && data[k].length) total++; });
+    return total;
+  }
+  function score(data) {
+    return { offices: countOffices(data), rows: countRows(data), named: countNamed(data) };
+  }
+  function isBetterData(next, current) {
+    var ns = score(next), cs = score(current);
+    if (ns.offices !== cs.offices) return ns.offices > cs.offices;
+    if (ns.named !== cs.named) return ns.named > cs.named;
+    if (ns.rows !== cs.rows) return ns.rows > cs.rows;
+    return false;
+  }
   function extractScore(d) {
     d = d || {};
     var n = 0;
@@ -110,6 +95,7 @@ function isBetterData(next, current) {
     return d;
   }
   function mirrorExtract(reason) {
+    if (window.__ADMIN_OFFICES_CLEARING__) return false;
     var data = normalizeExtract(readJson(EXTRACT_KEY, {}));
     if (extractScore(data) <= 0) return false;
     var raw = JSON.stringify(data);
@@ -129,6 +115,7 @@ function isBetterData(next, current) {
     return true;
   }
   function restoreExtractIfNeeded(reason) {
+    if (window.__ADMIN_OFFICES_CLEARING__) return false;
     var main = normalizeExtract(readJson(EXTRACT_KEY, {}));
     var safe = normalizeExtract(readJson(SAFE_EXTRACT_KEY, {}));
     if (extractScore(safe) > extractScore(main)) {
@@ -146,83 +133,40 @@ function isBetterData(next, current) {
     if (extractScore(main) > 0) mirrorExtract(reason || 'keep-extract');
     return false;
   }
-function makeFullBundle(data) {
-  return {
-    schema: 1,
-    updatedAt: new Date().toISOString(),
-    names: readJson(NAMES_KEY, {}),
-    affiliations: readJson(AFF_KEY, {}),
-    attendanceByOffice: data || {},
-    extractData: normalizeExtract(readJson(EXTRACT_KEY, {}))
-  };
-}
-
-function readBundleData() {
-  var b = readJson(FULL_BUNDLE_KEY, {});
-  return b && b.attendanceByOffice && typeof b.attendanceByOffice === 'object'
-    ? b.attendanceByOffice
-    : {};
-}
-
-function writeFullBundle(data) {
-  try {
-    var bundle = makeFullBundle(data || {});
-    localStorage.setItem(FULL_BUNDLE_KEY, JSON.stringify(bundle));
-    localStorage.setItem(FULL_BUNDLE_TS_KEY, String(Date.now()));
-  } catch (_) {}
-}
-
-function writeOfficeKeys(data) {
-  try {
-    data = data || {};
-    Object.keys(data).forEach(function (officeKey) {
-      if (!Array.isArray(data[officeKey])) return;
-      localStorage.setItem(OFFICE_KEY_PREFIX + officeKey + OFFICE_KEY_SUFFIX, JSON.stringify(data[officeKey]));
-    });
-  } catch (_) {}
-}
-
-function readOfficeKeysData() {
-  var out = {};
-  try {
-    Object.keys(localStorage).forEach(function (k) {
-      if (k.indexOf(OFFICE_KEY_PREFIX) !== 0 || k.slice(-OFFICE_KEY_SUFFIX.length) !== OFFICE_KEY_SUFFIX) return;
-      var officeKey = k.slice(OFFICE_KEY_PREFIX.length, -OFFICE_KEY_SUFFIX.length);
-      var rows = readJson(k, []);
-      if (Array.isArray(rows) && rows.length) out[officeKey] = rows;
-    });
-  } catch (_) {}
-  return out;
-}
- function bestData() {
-  var candidates = [
-    readJson(MAIN_KEY, {}),
-    readJson(BACKUP_KEY, {}),
-    readJson(LAST_GOOD_KEY, {}),
-    readJson(LEGACY_KEY, {}),
-    readJson(SAFE_DATA_KEY, {}),
-    readBundleData(),
-    readOfficeKeysData()
-  ];
-
-  return candidates.reduce(function (best, item) {
-    return isBetterData(item, best) ? item : best;
-  }, {});
-}
+  function makeFullBundle(data) {
+    return { schema: 1, updatedAt: new Date().toISOString(), names: readJson(NAMES_KEY, {}), affiliations: readJson(AFF_KEY, {}), attendanceByOffice: data || {}, extractData: normalizeExtract(readJson(EXTRACT_KEY, {})) };
+  }
+  function readBundleData() {
+    var b = readJson(FULL_BUNDLE_KEY, {});
+    return b && b.attendanceByOffice && typeof b.attendanceByOffice === 'object' ? b.attendanceByOffice : {};
+  }
+  function writeFullBundle(data) {
+    try { localStorage.setItem(FULL_BUNDLE_KEY, JSON.stringify(makeFullBundle(data || {}))); localStorage.setItem(FULL_BUNDLE_TS_KEY, String(Date.now())); } catch (_) {}
+  }
+  function writeOfficeKeys(data) {
+    try { data = data || {}; Object.keys(data).forEach(function (officeKey) { if (Array.isArray(data[officeKey])) localStorage.setItem(OFFICE_KEY_PREFIX + officeKey + OFFICE_KEY_SUFFIX, JSON.stringify(data[officeKey])); }); } catch (_) {}
+  }
+  function readOfficeKeysData() {
+    var out = {};
+    try {
+      Object.keys(localStorage).forEach(function (k) {
+        if (k.indexOf(OFFICE_KEY_PREFIX) !== 0 || k.slice(-OFFICE_KEY_SUFFIX.length) !== OFFICE_KEY_SUFFIX) return;
+        var officeKey = k.slice(OFFICE_KEY_PREFIX.length, -OFFICE_KEY_SUFFIX.length);
+        var rows = readJson(k, []);
+        if (Array.isArray(rows) && rows.length) out[officeKey] = rows;
+      });
+    } catch (_) {}
+    return out;
+  }
+  function bestData() {
+    return [readJson(MAIN_KEY, {}), readJson(BACKUP_KEY, {}), readJson(LAST_GOOD_KEY, {}), readJson(LEGACY_KEY, {}), readJson(SAFE_DATA_KEY, {}), readBundleData(), readOfficeKeysData()].reduce(function (best, item) { return isBetterData(item, best) ? item : best; }, {});
+  }
   function mirrorData(data, reason) {
+    if (window.__ADMIN_OFFICES_CLEARING__) return false;
     if (!data || typeof data !== 'object') return false;
     var s = score(data);
     if (s.rows <= 0) return false;
-
-    // ملاحظة: أُزيل هنا حظر "نسخة مكتب واحد فوق نسخة فيها أكثر من مكتب" —
-    // كان بيمنع حفظ تعديلات حقيقية للمستخدم بصمت لمجرد أن عدد الصفوف أقل من نسخة احتياطية قديمة.
-    // أي استدعاء لـ saveAttendanceData في التطبيق الفعلي يمرر دائمًا كامل البيانات (كل المكاتب)،
-    // لذلك الحماية الحقيقية المطلوبة هي فقط ضد استرجاع نسخة قديمة فوق بيانات حالية غير فارغة
-    // (موجودة الآن في restoreDataIfNeeded و getAttendanceData wrapper)، مش ضد الحفظ نفسه.
-
     var raw = JSON.stringify(data);
-    // لا تكرر الكتابة واللوج لو البيانات لم تتغير منذ آخر mirror —
-    // getAttendanceData يُستدعى مئات المرات أثناء الرندر وكان يسبب فيضان كونسول وكتابات زائدة.
     if (raw === lastMirroredDataRaw) return true;
     try {
       localStorage.setItem(MAIN_KEY, raw);
@@ -235,7 +179,7 @@ function readOfficeKeysData() {
       localStorage.setItem(SAFE_DATA_TS_KEY, String(Date.now()));
       localStorage.setItem('najran_admin_offices_attendance_done', 'true');
       writeFullBundle(data);
-writeOfficeKeys(data);
+      writeOfficeKeys(data);
       lastMirroredDataRaw = raw;
       if (reason) console.info('[Admin Offices Persistence] mirrored data:', reason, s);
       return true;
@@ -245,6 +189,7 @@ writeOfficeKeys(data);
     }
   }
   function mirrorNames(reason) {
+    if (window.__ADMIN_OFFICES_CLEARING__) return;
     var names = readJson(NAMES_KEY, {}), aff = readJson(AFF_KEY, {});
     var raw = JSON.stringify([names, aff]);
     if (raw === lastMirroredNamesRaw) return;
@@ -254,6 +199,7 @@ writeOfficeKeys(data);
     if (reason && names && Object.keys(names).length) console.info('[Admin Offices Persistence] mirrored names:', reason, Object.keys(names).length);
   }
   function restoreNamesIfNeeded(reason) {
+    if (window.__ADMIN_OFFICES_CLEARING__) return false;
     var names = readJson(NAMES_KEY, {}), safeNames = readJson(SAFE_NAMES_KEY, {}), restored = false;
     if ((!names || !Object.keys(names).length) && safeNames && Object.keys(safeNames).length) { writeJson(NAMES_KEY, safeNames); restored = true; }
     var aff = readJson(AFF_KEY, {}), safeAff = readJson(SAFE_AFF_KEY, {});
@@ -262,425 +208,115 @@ writeOfficeKeys(data);
     return restored;
   }
   function restoreDataIfNeeded(reason) {
+    if (window.__ADMIN_OFFICES_CLEARING__ || restoringData) return false;
     var current = readJson(MAIN_KEY, {}), best = bestData();
     var cs = score(current), bs = score(best);
-    // الاسترجاع التلقائي يعمل فقط لو البيانات الحالية فاضية فعلاً (حماية من الكراش/الريفريش/تنظيف السياق).
-    // لو فيه أي بيانات حالية (ولو أقل من نسخة احتياطية قديمة)، دي غالبًا تعديل شرعي من المستخدم
-    // (حذف صف، تصحيح، إلخ) ومينفعش نرجّع نسخة أقدم فوقها بصمت.
     if (cs.rows === 0 && bs.rows > 0) {
-      mirrorData(best, reason || 'restore');
-      try { if (typeof window.renderCenterIcons === 'function') window.renderCenterIcons(); } catch (_) {}
-      try { if (typeof window.renderMainGrid === 'function') window.renderMainGrid(); } catch (_) {}
-      try { if (typeof window.calculateAndDisplayGrandTotal === 'function') window.calculateAndDisplayGrandTotal(); } catch (_) {}
-      try {
-        var active = document.querySelector('.tab-link.active[data-center-key]')?.dataset?.centerKey || window.activeCenterKeyForManagement || '';
-        if (active && typeof window.showCenterDetails === 'function' && document.getElementById('center-details-view')?.style.display !== 'none') window.showCenterDetails(active);
-      } catch (_) {}
-      console.warn('[Admin Offices Persistence] restored labor data (main was empty):', reason || 'restore', bs);
+      restoringData = true;
+      try { mirrorData(best, reason || 'restore'); } finally { restoringData = false; }
+      console.warn('[Admin Offices Persistence] restored labor data without render loop:', reason || 'restore', bs);
       return true;
     }
     if (cs.rows > 0) mirrorData(current, reason || 'keep-current');
     return false;
   }
-
+  function zeroLocalBackupsForClear() {
+    window.__ADMIN_OFFICES_CLEARING__ = true;
+    [MAIN_KEY, BACKUP_KEY, LAST_GOOD_KEY, LEGACY_KEY, SAFE_DATA_KEY, FULL_BUNDLE_KEY, NAMES_KEY, AFF_KEY, SAFE_NAMES_KEY, SAFE_AFF_KEY, EXTRACT_KEY, SAFE_EXTRACT_KEY].forEach(function (key) { try { localStorage.setItem(key, '{}'); } catch (_) {} });
+    [BACKUP_TS_KEY, LAST_GOOD_TS_KEY, SAFE_DATA_TS_KEY, FULL_BUNDLE_TS_KEY, SAFE_EXTRACT_TS_KEY, 'extractMonth', 'extractYear', 'extractStart', 'extractEnd', 'extractNumber', 'paymentNumber', 'najran_admin_offices_attendance_done'].forEach(function (key) { try { localStorage.setItem(key, ''); } catch (_) {} });
+    try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf(OFFICE_KEY_PREFIX) === 0 && k.slice(-OFFICE_KEY_SUFFIX.length) === OFFICE_KEY_SUFFIX) localStorage.setItem(k, '[]'); }); } catch (_) {}
+  }
   function patchSetItem() {
-    if (window.__ADMIN_OFFICES_PERSISTENCE_SETITEM_V3__) return;
-    window.__ADMIN_OFFICES_PERSISTENCE_SETITEM_V3__ = true;
+    if (window.__ADMIN_OFFICES_PERSISTENCE_SETITEM_V4__) return;
+    window.__ADMIN_OFFICES_PERSISTENCE_SETITEM_V4__ = true;
     var old = Storage.prototype.setItem;
     Storage.prototype.setItem = function (key, value) {
       var result = old.apply(this, arguments);
       try {
-        if (this === localStorage) {
-          if (String(key) === MAIN_KEY) {
-            var data = JSON.parse(String(value || '{}'));
-            mirrorData(data, 'setItem:' + MAIN_KEY);
-          } else if (String(key) === NAMES_KEY) {
-            var names = JSON.parse(String(value || '{}'));
-            if (names && Object.keys(names).length) old.call(localStorage, SAFE_NAMES_KEY, JSON.stringify(names));
-          } else if (String(key) === AFF_KEY) {
-            var aff = JSON.parse(String(value || '{}'));
-            if (aff && Object.keys(aff).length) old.call(localStorage, SAFE_AFF_KEY, JSON.stringify(aff));
-          } else if (String(key) === EXTRACT_KEY) {
-            var ex = normalizeExtract(JSON.parse(String(value || '{}')));
-            if (extractScore(ex) > 0) { old.call(localStorage, SAFE_EXTRACT_KEY, JSON.stringify(ex)); old.call(localStorage, SAFE_EXTRACT_TS_KEY, String(Date.now())); }
-          }
+        if (this === localStorage && !window.__ADMIN_OFFICES_CLEARING__) {
+          if (String(key) === MAIN_KEY) mirrorData(JSON.parse(String(value || '{}')), 'setItem:' + MAIN_KEY);
+          else if (String(key) === NAMES_KEY) { var names = JSON.parse(String(value || '{}')); if (names && Object.keys(names).length) old.call(localStorage, SAFE_NAMES_KEY, JSON.stringify(names)); }
+          else if (String(key) === AFF_KEY) { var aff = JSON.parse(String(value || '{}')); if (aff && Object.keys(aff).length) old.call(localStorage, SAFE_AFF_KEY, JSON.stringify(aff)); }
+          else if (String(key) === EXTRACT_KEY) { var ex = normalizeExtract(JSON.parse(String(value || '{}'))); if (extractScore(ex) > 0) { old.call(localStorage, SAFE_EXTRACT_KEY, JSON.stringify(ex)); old.call(localStorage, SAFE_EXTRACT_TS_KEY, String(Date.now())); } }
         }
       } catch (_) {}
       return result;
     };
   }
-
-function saveCurrentSnapshot(reason) {
-  try {
-    var live = null;
-    if (typeof window.getAttendanceData === 'function') live = window.getAttendanceData();
-
-    // فضّل البيانات الحية دايمًا طالما فيها أي محتوى (حتى لو أقل من نسخة احتياطية قديمة) —
-    // النسخة الاحتياطية تُستخدم بس لو الحية فاضية تمامًا (يعني مفيش حاجة نحفظها أصلًا).
-    var data = (live && countRows(live) > 0) ? live : bestData();
-
-    if (!data || !countRows(data)) data = live || bestData() || {};
-
-    mirrorData(data, reason || 'snapshot');
-    mirrorNames(reason || 'snapshot');
-    mirrorExtract(reason || 'snapshot');
-  } catch (_) {
-    mirrorData(bestData(), reason || 'snapshot-fallback');
-    mirrorNames(reason || 'snapshot-fallback');
-    mirrorExtract(reason || 'snapshot-fallback');
+  function saveCurrentSnapshot(reason) {
+    if (window.__ADMIN_OFFICES_CLEARING__) return;
+    try {
+      var live = null;
+      if (typeof window.getAttendanceData === 'function') live = window.getAttendanceData();
+      var data = (live && countRows(live) > 0) ? live : bestData();
+      if (data && countRows(data)) mirrorData(data, reason || 'snapshot');
+      mirrorNames(reason || 'snapshot');
+      mirrorExtract(reason || 'snapshot');
+    } catch (_) {}
   }
-}
   function wrapFunction(name, after) {
     var fn = window[name];
-    if (typeof fn !== 'function' || fn.__adminOfficesPersistV3Wrapped) return false;
+    if (typeof fn !== 'function' || fn.__adminOfficesPersistV4Wrapped) return false;
     window[name] = function () {
       var result = fn.apply(this, arguments);
-      Promise.resolve(result).finally(function () {
-        setTimeout(function () { after(name); }, 80);
-        setTimeout(function () { after(name + ':late'); }, 700);
-      });
+      Promise.resolve(result).finally(function () { if (!window.__ADMIN_OFFICES_CLEARING__) { setTimeout(function () { after(name); }, 80); setTimeout(function () { after(name + ':late'); }, 700); } });
       return result;
     };
-    window[name].__adminOfficesPersistV3Wrapped = true;
+    window[name].__adminOfficesPersistV4Wrapped = true;
     return true;
   }
   function patchCoreFunctions() {
-    if (typeof window.saveAttendanceData === 'function' && !window.saveAttendanceData.__adminOfficesPersistV3Wrapped) {
+    if (typeof window.saveAttendanceData === 'function' && !window.saveAttendanceData.__adminOfficesPersistV4Wrapped) {
       var originalSave = window.saveAttendanceData;
-      window.saveAttendanceData = function (data) {
-        var result = originalSave.apply(this, arguments);
-        mirrorData(data || {}, 'saveAttendanceData');
-        mirrorNames('saveAttendanceData');
-        mirrorExtract('saveAttendanceData');
-        return result;
-      };
-      window.saveAttendanceData.__adminOfficesPersistV3Wrapped = true;
+      window.saveAttendanceData = function (data) { var result = originalSave.apply(this, arguments); mirrorData(data || {}, 'saveAttendanceData'); mirrorNames('saveAttendanceData'); mirrorExtract('saveAttendanceData'); return result; };
+      window.saveAttendanceData.__adminOfficesPersistV4Wrapped = true;
     }
-    if (typeof window.getAttendanceData === 'function' && !window.getAttendanceData.__adminOfficesPersistV3Wrapped) {
+    if (typeof window.getAttendanceData === 'function' && !window.getAttendanceData.__adminOfficesPersistV4Wrapped) {
       var originalGet = window.getAttendanceData;
       window.getAttendanceData = function () {
-        restoreExtractIfNeeded('before-getAttendanceData');
-        restoreNamesIfNeeded('before-getAttendanceData');
-        restoreDataIfNeeded('before-getAttendanceData');
-        var data = originalGet.apply(this, arguments) || {};
-        var ds = score(data);
-        // استبدال بالنسخة الاحتياطية بس لو البيانات الفعلية فاضية تمامًا (حماية من الكراش) —
-        // مش لمجرد إن نسخة قديمة عندها عدد صفوف/مكاتب أكبر (كان بيمسح تعديلات شرعية للمستخدم).
-        if (ds.rows === 0) {
-          var best = bestData();
-          if (score(best).rows > 0) return best;
+        if (window.__ADMIN_OFFICES_CLEARING__) return originalGet.apply(this, arguments) || {};
+        if (inGetAttendanceData) return originalGet.apply(this, arguments) || {};
+        inGetAttendanceData = true;
+        try {
+          restoreExtractIfNeeded('before-getAttendanceData');
+          restoreNamesIfNeeded('before-getAttendanceData');
+          restoreDataIfNeeded('before-getAttendanceData');
+          var data = originalGet.apply(this, arguments) || {};
+          var ds = score(data);
+          if (ds.rows === 0) {
+            var best = bestData();
+            if (score(best).rows > 0) return best;
+          }
+          return data;
+        } finally {
+          inGetAttendanceData = false;
         }
-        return data;
       };
-      window.getAttendanceData.__adminOfficesPersistV3Wrapped = true;
+      window.getAttendanceData.__adminOfficesPersistV4Wrapped = true;
+    }
+    if (typeof window.clearAllData === 'function' && !window.clearAllData.__adminOfficesPersistV4Wrapped) {
+      var originalClear = window.clearAllData;
+      window.clearAllData = function () {
+        window.__ADMIN_OFFICES_CLEARING__ = true;
+        try { zeroLocalBackupsForClear(); } catch (_) {}
+        try { return originalClear.apply(this, arguments); }
+        finally { setTimeout(function () { zeroLocalBackupsForClear(); window.__ADMIN_OFFICES_CLEARING__ = false; }, 1000); }
+      };
+      window.clearAllData.__adminOfficesPersistV4Wrapped = true;
     }
   }
   function patchLoadAndImportFunctions() {
     var after = function (reason) { saveCurrentSnapshot(reason); restoreNamesIfNeeded(reason); restoreDataIfNeeded(reason); restoreExtractIfNeeded(reason); };
     ['confirmLoadAdminOfficePositions','confirmLoadAllAdminOfficePositions','confirmAdminOfficeImportReplace','confirmAdminOfficeImportUpdate','handleSingleFileImport','runAdminOfficeNormalImport'].forEach(function (name) { wrapFunction(name, after); });
   }
-  function safeSheetName(v) { return clean(v).replace(/[\\/:*?"<>|]/g, '-').substring(0, 31) || 'مكتب'; }
-  function downloadAllTemplatesWithNames() {
-    if (!window.XLSX) return alert('مكتبة Excel غير محملة.');
-    restoreDataIfNeeded('download-all-template');
-    var names = readJson(NAMES_KEY, {}), data = bestData();
-    var keys = Object.keys(names || {}).sort(function (a, b) {
-      if (/^center_\d+$/.test(a) && /^center_\d+$/.test(b)) return parseInt(a.split('_')[1], 10) - parseInt(b.split('_')[1], 10);
-      if (/^center_\d+$/.test(a)) return -1;
-      if (/^center_\d+$/.test(b)) return 1;
-      return String(a).localeCompare(String(b), 'ar');
-    });
-    if (!keys.length) keys = Object.keys(data || {});
-    var wb = XLSX.utils.book_new(), has = false;
-    keys.forEach(function (key) {
-      var rows = Array.isArray(data[key]) ? data[key] : [];
-      var aoa = [['اسم الموظف', 'رقم الهوية / الإقامة', 'مسمى الوظيفة', 'التكلفة الشهرية', 'الفئة', 'الجنسية', 'غرامة جنسية']];
-      rows.forEach(function (r) { aoa.push([r.name || '', r.iqamaId || r.idNumber || r.identity || r.nationalId || '', r.jobTitle || r.title || '', Number(r.salary || 0), r.category || '1', r.nationality || '', Number(r.nationalityFine || 0)]); });
-      var ws = XLSX.utils.aoa_to_sheet(aoa);
-      ws['!cols'] = [{ wch: 30 }, { wch: 22 }, { wch: 34 }, { wch: 18 }, { wch: 8 }, { wch: 16 }, { wch: 14 }];
-      XLSX.utils.book_append_sheet(wb, ws, safeSheetName(names[key] || key));
-      has = true;
-    });
-    if (!has) return alert('لا توجد مكاتب للتنزيل.');
-    XLSX.writeFile(wb, 'تامبلت-المكاتب-كامل-بالأسماء.xlsx');
-  }
-  function patchPositionsDialogButton() {
-    window.downloadAdminOfficesAllTemplateWithNames = downloadAllTemplatesWithNames;
-    if (typeof window.loadAdminOfficePositionsFromTemplate !== 'function' || window.loadAdminOfficePositionsFromTemplate.__adminOfficesPersistV3Wrapped) return;
-    var original = window.loadAdminOfficePositionsFromTemplate;
-    window.loadAdminOfficePositionsFromTemplate = function () {
-      var result = original.apply(this, arguments);
-      setTimeout(function () {
-        var body = document.querySelector('#management-dialog .dialog-body') || document.querySelector('.dialog-body');
-        if (!body || document.getElementById('download-admin-all-template-names-btn')) return;
-        var row = document.createElement('div');
-        row.style.cssText = 'display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:10px 0 16px;';
-        row.innerHTML = '<button id="download-admin-all-template-names-btn" class="btn btn-secondary" type="button"><i class="fas fa-file-excel"></i> تنزيل تامبلت كامل بالأسماء</button>';
-        body.insertBefore(row, body.firstChild && body.firstChild.nextSibling ? body.firstChild.nextSibling : body.firstChild);
-        var btn = document.getElementById('download-admin-all-template-names-btn');
-        if (btn) btn.onclick = downloadAllTemplatesWithNames;
-      }, 100);
-      return result;
-    };
-    window.loadAdminOfficePositionsFromTemplate.__adminOfficesPersistV3Wrapped = true;
-  }
-  function pad2(n) {
-  return String(n).padStart(2, '0');
-}
-
-function backupStamp() {
-  var d = new Date();
-  return [
-    d.getFullYear(),
-    pad2(d.getMonth() + 1),
-    pad2(d.getDate())
-  ].join('-') + '_' + [
-    pad2(d.getHours()),
-    pad2(d.getMinutes()),
-    pad2(d.getSeconds())
-  ].join('-');
-}
-
-function parseMaybeJson(raw) {
-  if (raw == null) return null;
-  try { return JSON.parse(raw); } catch (_) { return raw; }
-}
-
-function isSensitiveBackupKey(key) {
-  key = String(key || '').toLowerCase();
-  return (
-    key.indexOf('token') > -1 ||
-    key.indexOf('clerk') > -1 ||
-    key.indexOf('jwt') > -1 ||
-    key.indexOf('auth') > -1 ||
-    key.indexOf('password') > -1 ||
-    key === 'najran_session'
-  );
-}
-
-function normalizeBackupKey(key) {
-  return String(key || '').replace(/^(?:_u\d+_)+/, '');
-}
-
-function shouldIncludeAdminOfficeBackupKey(key) {
-  var nk = normalizeBackupKey(key);
-  var lk = nk.toLowerCase();
-
-  if (isSensitiveBackupKey(nk)) return false;
-
-  return (
-    lk.indexOf('adminoffice') > -1 ||
-    lk.indexOf('admin_office') > -1 ||
-    lk.indexOf('admin_offices') > -1 ||
-    lk.indexOf('adminoffices') > -1 ||
-    lk.indexOf('office') > -1 ||
-    lk.indexOf('signature') > -1 ||
-    lk.indexOf('signatures') > -1 ||
-    lk.indexOf('sig') > -1 ||
-    lk.indexOf('sigs') > -1 ||
-    lk.indexOf('prefs') > -1 ||
-    lk.indexOf('contractor') > -1 ||
-    lk.indexOf('dynamic') > -1 ||
-    lk.indexOf('performance') > -1 ||
-    lk.indexOf('achievement') > -1 ||
-    lk.indexOf('grand') > -1 ||
-    lk.indexOf('extract') > -1 ||
-    lk.indexOf('payment') > -1 ||
-    lk.indexOf('contract') > -1 ||
-    lk.indexOf('hospital') > -1 ||
-    lk.indexOf('company') > -1 ||
-    lk.indexOf('najran_admin') > -1 ||
-    nk === MAIN_KEY ||
-    nk === BACKUP_KEY ||
-    nk === LAST_GOOD_KEY ||
-    nk === LEGACY_KEY ||
-    nk === SAFE_DATA_KEY ||
-    nk === SAFE_NAMES_KEY ||
-    nk === SAFE_AFF_KEY ||
-    nk === FULL_BUNDLE_KEY ||
-    nk === EXTRACT_KEY ||
-    nk === SAFE_EXTRACT_KEY ||
-    nk === NAMES_KEY ||
-    nk === AFF_KEY
-  );
-}
-
-function collectAdminOfficesStorageSnapshot() {
-  var out = {};
-  var seen = {};
-  var stores = [];
-
-  try { stores.push(localStorage); } catch (_) {}
-  try {
-    if (window._najranRealStorage && window._najranRealStorage !== localStorage) {
-      stores.push(window._najranRealStorage);
-    }
-  } catch (_) {}
-
-  stores.forEach(function (store) {
-    try {
-      for (var i = 0; i < store.length; i++) {
-        var rawKey = store.key(i);
-        if (!rawKey) continue;
-
-        var cleanKey = normalizeBackupKey(rawKey);
-        if (seen[cleanKey]) continue;
-        if (!shouldIncludeAdminOfficeBackupKey(cleanKey)) continue;
-
-        var rawValue = store.getItem(rawKey);
-        if (rawValue == null) continue;
-
-        seen[cleanKey] = true;
-        out[cleanKey] = parseMaybeJson(rawValue);
-      }
-    } catch (_) {}
-  });
-
-  return out;
-}
-
-function downloadAdminOfficesFullBackup() {
-  try {
-    restoreExtractIfNeeded('full-backup-download');
-    restoreNamesIfNeeded('full-backup-download');
-    restoreDataIfNeeded('full-backup-download');
-    saveCurrentSnapshot('full-backup-download');
-
-    var data = bestData();
-    var allStorage = collectAdminOfficesStorageSnapshot();
-
-    var payload = {
-      type: 'admin_offices_full_backup',
-      schema: 2,
-      createdAt: new Date().toISOString(),
-      localTime: new Date().toLocaleString('ar-SA'),
-      page: 'admin_offices_attendance.html',
-
-      summary: {
-        attendanceScore: score(data),
-        namesCount: Object.keys(readJson(NAMES_KEY, {})).length,
-        affiliationsCount: Object.keys(readJson(AFF_KEY, {})).length,
-        storageKeysCount: Object.keys(allStorage).length
-      },
-
-      core: {
-        attendanceData: data,
-        names: readJson(NAMES_KEY, {}),
-        affiliations: readJson(AFF_KEY, {}),
-        extractData: normalizeExtract(readJson(EXTRACT_KEY, {})),
-        fullBundle: readJson(FULL_BUNDLE_KEY, {})
-      },
-
-      allAdminOfficeStorage: allStorage
-    };
-
-    var blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: 'application/json;charset=utf-8'
-    });
-
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'نسخة-احتياطية-كاملة-المكاتب-الإدارية_' + backupStamp() + '.json';
-    document.body.appendChild(a);
-    a.click();
-
-    setTimeout(function () {
-      URL.revokeObjectURL(a.href);
-      if (a.parentElement) a.remove();
-    }, 1000);
-
-    console.info('[Admin Offices Persistence] full backup downloaded:', payload.summary);
-    return payload.summary;
-  } catch (err) {
-    console.error('[Admin Offices Persistence] full backup download failed:', err);
-    alert('فشل تنزيل النسخة الاحتياطية الكاملة للمكاتب');
-    return null;
-  }
-}
-
-function injectAdminOfficesBackupButton() {
-  try {
-    if (document.getElementById('admin-offices-full-backup-btn')) return;
-
-    var host =
-      document.querySelector('.top-actions') ||
-      document.querySelector('.page-actions') ||
-      document.querySelector('.actions-bar') ||
-      document.querySelector('.toolbar') ||
-      document.querySelector('.header-actions') ||
-      document.querySelector('.controls') ||
-      document.body;
-
-    var btn = document.createElement('button');
-    btn.id = 'admin-offices-full-backup-btn';
-    btn.type = 'button';
-    btn.className = 'btn btn-secondary no-print';
-    btn.innerHTML = '<i class="fas fa-download"></i> نسخة احتياطية كاملة';
-    btn.style.cssText = 'margin:6px;padding:9px 14px;border-radius:10px;font-weight:800;';
-
-    btn.onclick = function () {
-      downloadAdminOfficesFullBackup();
-    };
-
-    host.appendChild(btn);
-  } catch (_) {}
-}
-  function boot(reason) {
+  function boot(attempt) {
     patchSetItem();
-    restoreExtractIfNeeded(reason || 'boot');
-    restoreNamesIfNeeded(reason || 'boot');
-    restoreDataIfNeeded(reason || 'boot');
     patchCoreFunctions();
     patchLoadAndImportFunctions();
-    patchPositionsDialogButton();
-    saveCurrentSnapshot(reason || 'boot-snapshot');
-        try {
-      window.backupData = downloadAdminOfficesFullBackup;
-    } catch (_) {}
+    saveCurrentSnapshot('initial');
+    if ((attempt || 0) < 20) setTimeout(function () { boot((attempt || 0) + 1); }, 500);
   }
-
-  boot('initial');
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { boot('dom-ready'); });
-  setTimeout(function () { boot('t500'); }, 500);
-  setTimeout(function () { boot('t1200'); }, 1200);
-  setTimeout(function () { boot('t2500'); }, 2500);
-  setTimeout(function () { boot('t4500'); }, 4500);
-  window.addEventListener('najranCloudPulled', function (ev) {
-    setTimeout(function () {
-      boot('after-cloud-pull');
-      // لو السحب كتب بيانات المكاتب فعليًا (متصفح جديد)، أعد الرندر دائمًا —
-      // مش بس في فرع الاسترجاع الفاضي — عشان البيانات تظهر بدون ريفريش يدوي.
-      try {
-        var mergedKeys = (ev && ev.detail && ev.detail.mergedKeys) || [];
-        var wroteAdminOffices = mergedKeys.indexOf('adminOfficesAttendanceData_v1') !== -1 ||
-                                mergedKeys.indexOf('adminOfficesFullAttendanceBundle_v1') !== -1;
-        if (!wroteAdminOffices) return;
-        if (typeof window.renderCenterIcons === 'function') window.renderCenterIcons();
-        if (typeof window.renderMainGrid === 'function') window.renderMainGrid();
-        if (typeof window.calculateAndDisplayGrandTotal === 'function') window.calculateAndDisplayGrandTotal();
-        console.info('[Admin Offices Persistence] re-rendered after cloud pull wrote office data');
-      } catch (_) {}
-    }, 100);
-  });
-
-  var ticks = 0;
-  var timer = setInterval(function () {
-    ticks++;
-    saveCurrentSnapshot('interval-' + ticks);
-    patchCoreFunctions();
-    patchLoadAndImportFunctions();
-    patchPositionsDialogButton();
-    if (ticks >= 20) clearInterval(timer);
-  }, 1500);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { boot(0); }); else boot(0);
   window.addEventListener('beforeunload', function () { saveCurrentSnapshot('beforeunload'); });
-
-window.AdminOfficesAttendancePersistence = {
-  restore: function () { restoreExtractIfNeeded('manual'); restoreNamesIfNeeded('manual'); return restoreDataIfNeeded('manual'); },
-  snapshot: function () { return saveCurrentSnapshot('manual'); },
-  downloadBackup: downloadAdminOfficesFullBackup,
-  
-  score: function () { return { current: score(readJson(MAIN_KEY, {})), best: score(bestData()), extract: { main: extractScore(readJson(EXTRACT_KEY, {})), safe: extractScore(readJson(SAFE_EXTRACT_KEY, {})) }, names: Object.keys(readJson(NAMES_KEY, {})).length, safeNames: Object.keys(readJson(SAFE_NAMES_KEY, {})).length }; }
-};
-
-  console.info('[Admin Offices Attendance Persistence] installed v3 labor + extract save protection');
+  console.info('[Admin Offices Attendance Persistence] installed v4 no restore render loop');
 })();
