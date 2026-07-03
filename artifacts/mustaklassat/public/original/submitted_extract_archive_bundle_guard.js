@@ -1,15 +1,16 @@
 // ===================================================================
-// Submitted Extract Archive Bundle Guard — V1
+// Submitted Extract Archive Bundle Guard — V2
 // Scope: original work pages before POST/PUT /api/submitted-extracts
 // يحفظ نسخة مراجعة/أرشفة صريحة داخل extractData عند الرفع:
 // - يثبت مصدر المستخلص الحقيقي حتى لو extractType = labor.
 // - ينسخ مفاتيح المكاتب/المراكز/المستهلكات/الأداء/الإنجاز/الخطابات المهمة.
+// - يلتقط مفاتيح التواقيع الجديدة sb_sigs_/sb_prefs_ داخل trackedKeyCopies.
 // - يحفظ لقطة محلية عند الرفع قبل أي تنظيف لاحق.
 // ===================================================================
 (function () {
   'use strict';
-  if (window.__NAJRAN_SUBMITTED_EXTRACT_ARCHIVE_BUNDLE_GUARD_V1__) return;
-  window.__NAJRAN_SUBMITTED_EXTRACT_ARCHIVE_BUNDLE_GUARD_V1__ = true;
+  if (window.__NAJRAN_SUBMITTED_EXTRACT_ARCHIVE_BUNDLE_GUARD_V2__) return;
+  window.__NAJRAN_SUBMITTED_EXTRACT_ARCHIVE_BUNDLE_GUARD_V2__ = true;
 
   function readJson(key, fallback) {
     try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
@@ -112,7 +113,8 @@
     var common = [
       'persistentExtractData', 'persistentContractData', 'companyName', 'contractNumber', 'hospitalName',
       'extractMonth', 'extractYear', 'extractStart', 'extractEnd', 'paymentNumber', 'extractNumber', 'periodMonth',
-      'finalLaborCost', 'finalConsumablesCost', 'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin'
+      'finalLaborCost', 'finalConsumablesCost', 'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin',
+      'signatures_data_consumables_v27'
     ];
 
     var adminLabor = [
@@ -142,7 +144,8 @@
   }
 
   function prefixListFor(moduleName) {
-    var common = ['healthCenters_Signatures_', 'dept_', 'deptCalculatedCost_', 'tableData_', 'achievement_'];
+    var signaturePrefixes = ['sb_sigs_', 'sb_prefs_', 'healthCenters_Signatures_'];
+    var common = signaturePrefixes.concat(['dept_', 'deptCalculatedCost_', 'tableData_', 'achievement_']);
     if (moduleName === 'admin_offices_attendance') {
       return common.concat([
         'adminOffice', 'adminOffices', 'admin_offices_', 'healthCenters_Signatures_attendance',
@@ -150,8 +153,8 @@
         'performance', 'achievement', 'najran_admin_offices_'
       ]);
     }
-    if (moduleName === 'admin_offices_consumables') return ['adminOffice', 'adminOffices', 'admin_offices_', 'consumables_', 'subcontractors_', 'najran_admin_offices_'];
-    if (moduleName.indexOf('health_centers') === 0) return ['healthCenters', 'health_centers', 'healthCenters_Signatures_', 'najran_health_', 'consumables_'];
+    if (moduleName === 'admin_offices_consumables') return signaturePrefixes.concat(['adminOffice', 'adminOffices', 'admin_offices_', 'consumables_', 'subcontractors_', 'najran_admin_offices_']);
+    if (moduleName.indexOf('health_centers') === 0) return signaturePrefixes.concat(['healthCenters', 'health_centers', 'najran_health_', 'consumables_']);
     return common.concat(['consumables_', 'spare_', 'najran_labor_']);
   }
 
@@ -190,6 +193,7 @@
     var adminData = src.adminOfficesAttendanceData_v1 || src.adminOfficesAttendanceData_v1_localBackup || src.adminOfficesLaborDataSafe_v2 || {};
     var healthData = src.healthCentersAttendanceData || src.centersAttendanceData_v2 || {};
     var laborData = src.attendanceData || src.ng_attendanceData || src.nd_attendanceData || {};
+    var signatureKeys = Object.keys(src).filter(function (key) { return /^sb_(sigs|prefs)_/.test(key) || /^healthCenters_Signatures_/.test(key) || key === 'signatures_data_consumables_v27'; });
 
     return {
       module: moduleName,
@@ -202,6 +206,7 @@
       normalLaborEmployees: countRows(laborData),
       hasAchievement: hasAny(src, ['achievementData', 'achievementTitles_v1']),
       hasConsumables: hasAny(src, ['admin_offices_consumables_v1.0', 'healthCentersConsumables', 'consumablesTableData', 'mainHospitalConsumables']),
+      signatureKeysCount: signatureKeys.length,
       trackedKeysCount: Object.keys(keyCopies).length
     };
   }
@@ -216,13 +221,17 @@
     var keyCopies = collectTrackedKeyCopies(moduleName);
     var integrity = makeIntegrity(moduleName, snapshot, keyCopies);
 
+    Object.keys(keyCopies).forEach(function (key) {
+      if (snapshot[key] === undefined) snapshot[key] = keyCopies[key];
+    });
+
     snapshot.__najranSourceModule = moduleName;
     snapshot.__najranReviewPage = reviewPage;
     snapshot.sourceModule = snapshot.sourceModule || moduleName;
     snapshot.reviewPage = snapshot.reviewPage || reviewPage;
 
     snapshot.__submittedExtractArchiveBundle_v1 = {
-      version: 1,
+      version: 2,
       createdAt: new Date().toISOString(),
       extractType: String(payload.extractType || ''),
       sourceModule: moduleName,
@@ -265,7 +274,7 @@
   }
 
   function patchFetch() {
-    if (window.fetch.__najranSubmittedArchiveBundleWrapped) return;
+    if (window.fetch.__najranSubmittedArchiveBundleWrappedV2) return;
     var originalFetch = window.fetch;
     window.fetch = function (input, init) {
       try {
@@ -288,7 +297,7 @@
       }
       return originalFetch.apply(this, arguments);
     };
-    window.fetch.__najranSubmittedArchiveBundleWrapped = true;
+    window.fetch.__najranSubmittedArchiveBundleWrappedV2 = true;
   }
 
   patchFetch();
@@ -299,5 +308,5 @@
     collectTrackedKeyCopies: collectTrackedKeyCopies
   };
 
-  console.info('[SubmittedExtractArchiveBundle] installed v1');
+  console.info('[SubmittedExtractArchiveBundle] installed v2 signature keys captured');
 })();
