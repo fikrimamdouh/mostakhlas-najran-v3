@@ -74,15 +74,37 @@
     return '/original/attendance.html';
   }
 
+  // V3: backup خفيف quota-safe — يستبعد الأرشيفات والنسخ الثقيلة والقيم الضخمة.
+  // فشل الـ backup بسبب الحصة لا يوقف فتح التعديل (warning فقط).
+  var HEAVY_KEY_PATTERNS = [/^_u/, /extractArchive/i, /^monthSnapshot_/, /^monthSafetySnapshot_/, /backup/i, /Archive/, /PreWipeSnapshot/i, /^najran_revision_/, /^najran_submit_(lock|done)_/];
+  function isHeavyBackupKey(k) { return HEAVY_KEY_PATTERNS.some(function (rx) { return rx.test(k); }); }
+  function isHeavyBackupValue(v) {
+    if (v == null) return true;
+    var s = String(v);
+    if (s.length > 300 * 1024) return true;
+    if (s.indexOf('data:image') > -1) return true;
+    if (s.indexOf(';base64,') > -1) return true;
+    return false;
+  }
   function backupCurrent(id) {
     try {
-      var backup = {};
+      var backup = {}, skipped = 0;
       for (var i = 0; i < localStorage.length; i++) {
         var k = localStorage.key(i); if (!k) continue;
-        var v = localStorage.getItem(k); if (v != null) backup[k] = v;
+        if (isHeavyBackupKey(k)) { skipped++; continue; }
+        var v = localStorage.getItem(k);
+        if (isHeavyBackupValue(v)) { skipped++; continue; }
+        backup[k] = v;
       }
-      localStorage.setItem('najran_revision_previous_local_backup', JSON.stringify({ extractId: id, createdAt: new Date().toISOString(), data: backup }));
-    } catch (_) {}
+      var raw = JSON.stringify({ extractId: id, createdAt: new Date().toISOString(), data: backup });
+      localStorage.setItem('najran_revision_previous_local_backup', raw);
+      console.info('[ApprovalRevisionRouteGuard] light backup saved:', Object.keys(backup).length, 'keys, skipped', skipped, ',', Math.round(raw.length / 1024) + 'KB');
+      return true;
+    } catch (e) {
+      console.warn('[ApprovalRevisionRouteGuard] light backup skipped (quota?) — revision continues:', e && e.name);
+      try { localStorage.removeItem('najran_revision_previous_local_backup'); } catch (_) {}
+      return false;
+    }
   }
 
   function clearOperational() {
@@ -134,9 +156,22 @@
       var extractType = String(full.extractType || type || 'labor');
       var target = reviewPageFromSnapshot(snapshot, extractType);
 
-      backupCurrent(id);
+      backupCurrent(id); // خفيف — فشله لا يوقف الفتح
       clearOperational();
       Object.keys(snapshot).forEach(function (k) { writeValue(k, snapshot[k]); });
+
+      // V3 verify: مفتاح المستخلص + مفتاح بيانات واحد حسب النوع
+      var VERIFY_DATA_KEY = extractType === 'admin_offices' ? 'adminOfficesAttendanceData_v1'
+        : extractType === 'health_centers' ? 'centersAttendanceData_v2'
+        : extractType === 'consumables' ? 'consumablesTableData'
+        : extractType === 'spare_parts' ? 'spare_partsData'
+        : 'attendanceData';
+      if (snapshot.persistentExtractData != null && localStorage.getItem('persistentExtractData') == null) {
+        return alert('فشل التحقق بعد الاسترجاع (persistentExtractData). لم يتم فتح التعديل.');
+      }
+      if (snapshot[VERIFY_DATA_KEY] != null && localStorage.getItem(VERIFY_DATA_KEY) == null) {
+        return alert('فشل التحقق بعد الاسترجاع (' + VERIFY_DATA_KEY + '). لم يتم فتح التعديل.');
+      }
 
       if (full.companyName) localStorage.setItem('companyName', String(full.companyName));
       if (full.contractNumber) localStorage.setItem('contractNumber', String(full.contractNumber));
@@ -146,10 +181,28 @@
       localStorage.setItem('najran_editing_submitted_extract_id', String(id));
       localStorage.setItem('najran_editing_submitted_extract_mode', 'true');
       localStorage.setItem('najran_editing_submitted_extract_started_at', new Date().toISOString());
-      localStorage.setItem('najran_revision_snapshot', JSON.stringify(snapshot));
+      // V3: metadata خفيفة فقط — لا snapshot كامل (كان يسبب QuotaExceededError).
+      // najran_revision_snapshot يبقى بقيمة خفيفة لأن سكربتات أخرى تفحص وجوده وتقرأ persistentExtractData منه.
+      try {
+        var lightSummary = JSON.stringify({
+          schema: 'revision_summary_v3',
+          extractId: String(id),
+          extractType: extractType,
+          keys: Object.keys(snapshot).length,
+          persistentExtractData: snapshot.persistentExtractData || null,
+          companyName: full.companyName || null,
+          hospitalName: full.hospitalName || null,
+          totalAmount: full.totalAmount != null ? full.totalAmount : null,
+          createdAt: new Date().toISOString()
+        });
+        localStorage.setItem('najran_revision_snapshot', lightSummary);
+        localStorage.setItem('najran_revision_snapshot_summary', lightSummary);
+      } catch (metaErr) {
+        console.warn('[ApprovalRevisionRouteGuard] optional metadata skipped:', metaErr && metaErr.name);
+      }
       localStorage.setItem('najran_revision_extract_id', String(id));
       localStorage.setItem('najran_revision_extract_type', extractType);
-      localStorage.setItem('najran_revision_source', 'approval_revision_route_guard_v2');
+      localStorage.setItem('najran_revision_source', 'approval_revision_route_guard_v3');
 
       console.warn('[ApprovalRevisionRouteGuard] redirect', {
         id: id,
@@ -174,5 +227,5 @@
   setTimeout(install, 300);
   setTimeout(install, 1000);
   setTimeout(install, 2500);
-  console.info('[ApprovalRevisionRouteGuard] installed v2 full snapshot restore');
+  console.info('[ApprovalRevisionRouteGuard] installed v3 quota-safe revision restore');
 })();

@@ -8,6 +8,7 @@ import {
   ChevronRight, PanelLeftClose, PanelLeftOpen,
   BookOpen, ContactRound, Bell, X, Check, Clock, UserCheck,
   FileCheck2, FileSearch, LayoutGrid, Archive, MessageSquare,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
@@ -98,33 +99,76 @@ function readActiveHospitalFromStorage(): string {
     return "";
   }
 }
-function useNotifications(isAdmin: boolean, pendingUsersCount: number) {
+type ServerNotif = { id: number; type: string; title: string; body: string; href: string | null; isRead: boolean; createdAt: string };
+
+function useNotifications(isAdmin: boolean, pendingUsersCount: number, getToken: () => Promise<string | null>) {
   const [readIds, setReadIds] = useState<Set<string>>(() => {
     try { return new Set(JSON.parse(localStorage.getItem(READ_NOTIFS_KEY) || "[]")); } catch { return new Set(); }
   });
+  const [serverNotifs, setServerNotifs] = useState<ServerNotif[]>([]);
+  const lastFetchRef = useRef(0);
 
-  const notifications = isAdmin && pendingUsersCount > 0
+  // تحميل خفيف: عند الفتح + عند focus + كل 5 دقائق كحد أقصى — ممنوع polling سريع
+  useEffect(() => {
+    let cancelled = false;
+    async function load(force?: boolean) {
+      const now = Date.now();
+      if (!force && now - lastFetchRef.current < 5 * 60_000) return;
+      lastFetchRef.current = now;
+      try {
+        const token = await getToken();
+        const res = await fetch("/api/notifications", { headers: token ? { Authorization: `Bearer ${token}` } : {}, credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data.notifications)) setServerNotifs(data.notifications);
+      } catch { /* صامت */ }
+    }
+    load(true);
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    const t = setInterval(() => load(), 5 * 60_000);
+    return () => { cancelled = true; window.removeEventListener("focus", onFocus); clearInterval(t); };
+  }, [getToken]);
+
+  const localNotifs = isAdmin && pendingUsersCount > 0
     ? [{ id: "pending_users", type: "warning" as const, title: "مستخدمون بانتظار الموافقة", body: `يوجد ${pendingUsersCount} مستخدم بانتظار موافقتك`, href: "/admin/users", time: "" }]
     : [];
 
-  const unread = notifications.filter(n => !readIds.has(n.id));
+  const notifications = [
+    ...serverNotifs.map(n => ({
+      id: `srv_${n.id}`, type: (n.type === "extract_approved" ? "success" : n.type === "extract_rejected" || n.type === "warning" ? "warning" : "info") as any,
+      title: n.title, body: n.body, href: n.href || "", time: n.createdAt ? new Date(n.createdAt).toLocaleString("ar-EG", { dateStyle: "short", timeStyle: "short" }) : "",
+      _srvId: n.id, _srvRead: n.isRead,
+    })),
+    ...localNotifs,
+  ];
 
-  function markRead(id: string) {
+  const unread = notifications.filter(n => (n as any)._srvId ? !(n as any)._srvRead : !readIds.has(n.id));
+
+  function markLocal(id: string) {
     setReadIds(prev => {
-      const next = new Set(prev);
-      next.add(id);
+      const next = new Set(prev); next.add(id);
       try { localStorage.setItem(READ_NOTIFS_KEY, JSON.stringify([...next])); } catch {}
       return next;
     });
   }
-
+  async function patchRead(path: string) {
+    try {
+      const token = await getToken();
+      await fetch(path, { method: "PATCH", headers: token ? { Authorization: `Bearer ${token}` } : {}, credentials: "include" });
+    } catch { /* صامت */ }
+  }
+  function markRead(id: string) {
+    const srv = notifications.find(n => n.id === id) as any;
+    if (srv?._srvId) {
+      setServerNotifs(prev => prev.map(n => (n.id === srv._srvId ? { ...n, isRead: true } : n)));
+      patchRead(`/api/notifications/${srv._srvId}/read`);
+    } else markLocal(id);
+  }
   function markAllRead() {
-    const ids = notifications.map(n => n.id);
-    setReadIds(prev => {
-      const next = new Set([...prev, ...ids]);
-      try { localStorage.setItem(READ_NOTIFS_KEY, JSON.stringify([...next])); } catch {}
-      return next;
-    });
+    setServerNotifs(prev => prev.map(n => ({ ...n, isRead: true })));
+    patchRead("/api/notifications/read-all");
+    notifications.forEach(n => { if (!(n as any)._srvId) markLocal(n.id); });
   }
 
   return { notifications, unread, markRead, markAllRead };
@@ -554,7 +598,7 @@ const siteType = getSiteType(currentHospital || dbUser?.hospital);
     { query: { queryKey: ["/api/users", "pending"], enabled: isAdmin, refetchInterval: 60000 } }
   );
   const pendingUsersCount = isAdmin ? (usersData?.users?.length ?? 0) : 0;
-  const { notifications, unread, markRead, markAllRead } = useNotifications(isAdmin, pendingUsersCount);
+  const { notifications, unread, markRead, markAllRead } = useNotifications(isAdmin, pendingUsersCount, getToken);
   const initials = (dbUser?.name || user?.fullName || "م").charAt(0);
 
   const handleSignOut = async () => {
@@ -1012,6 +1056,19 @@ title={collapsed ? currentHospitalLabel : undefined}
               </div>
             </div>
             {(dbUser as any)?.lastLoginAt && <p className="text-[10px] px-1" style={{ color: "rgba(255,255,255,0.3)" }}>آخر دخول: {formatLastLogin((dbUser as any).lastLoginAt)}</p>}
+            <button
+              onClick={() => {
+                // تحديث النظام: snapshot محلي سريع إن أمكن ثم reload فقط — بدون مسح بيانات أو logout
+                try { (window as any).saveMonthSnapshot?.(); } catch { /* صامت */ }
+                window.location.reload();
+              }}
+              className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:bg-white/10"
+              style={{ color: "rgba(212,175,55,0.9)" }}
+              title="إعادة تحميل الصفحة للحصول على آخر تحديث — لا يمسح أي بيانات"
+            >
+              <RefreshCw className="h-3.5 w-3.5 flex-shrink-0" />
+              <span>تحديث النظام</span>
+            </button>
             <button onClick={handleSignOut} className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:bg-red-500/20" style={{ color: "rgba(255,100,100,0.8)" }}>
               <LogOut className="h-3.5 w-3.5 flex-shrink-0" />
               <span>تسجيل الخروج</span>

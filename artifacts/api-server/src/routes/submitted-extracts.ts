@@ -367,6 +367,25 @@ router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (r
       }
     }
 
+    // إشعار صاحب المستخلص بتغيير الحالة (لا يفشل الطلب أبدًا)
+    try {
+      if (row.userId && ["needs_revision", "approved", "rejected"].includes(status)) {
+        const { createNotificationSafe } = await import("./notifications");
+        const period = [row.extractMonth, row.extractYear].filter(Boolean).join(" ") || row.periodMonth || "";
+        const pay = row.paymentNumber || row.extractNumber || "";
+        const label = period + (pay ? " — دفعة " + pay : "");
+        const map: Record<string, { type: string; title: string; body: string }> = {
+          needs_revision: { type: "revision_requested", title: "مستخلص مطلوب تعديله", body: "تم طلب تعديل على مستخلص شهر " + label + (adminNotes ? " — ملاحظة المراجع: " + adminNotes : "") },
+          approved: { type: "extract_approved", title: "تم اعتماد مستخلصك", body: "تم اعتماد مستخلص شهر " + label },
+          rejected: { type: "extract_rejected", title: "تم رفض المستخلص", body: "تم رفض مستخلص شهر " + label + (adminNotes ? " — ملاحظة المراجع: " + adminNotes : "") },
+        };
+        const n = map[status];
+        if (n) await createNotificationSafe({ userId: row.userId, ...n, href: "/extracts/track", createdBy: req.currentUser?.name || "reviewer" });
+      }
+    } catch (notifErr) {
+      req.log?.warn?.({ notifErr }, "notification create skipped (non-fatal)");
+    }
+
     return res.json({ ...row, monthAdvanced: status === "approved" });
   } catch (err) {
     req.log.error({ err }, "Failed to update extract status");

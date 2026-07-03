@@ -198,3 +198,18 @@ export const systemSettingsTable = pgTable("system_settings", {
 });
 
 export type SystemSetting = typeof systemSettingsTable.$inferSelect;
+
+// إشعارات المستخدمين داخل النظام (طلب تعديل / اعتماد / رفض / تنبيه إداري)
+export const notificationsTable = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  type: text("type").notNull().default("system"), // system | revision_requested | extract_approved | extract_rejected | admin_message | warning
+  title: text("title").notNull(),
+  body: text("body").notNull().default(""),
+  href: text("href"),
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: text("created_by"),
+});
+
+export type NotificationRow = typeof notificationsTable.$inferSelect;

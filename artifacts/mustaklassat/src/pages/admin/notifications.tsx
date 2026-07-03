@@ -61,6 +61,39 @@ export default function AdminNotificationsPage() {
   const [broadcastResult, setBroadcastResult] = useState<{ ok: boolean; sent?: number; error?: string } | null>(null);
 
   const [testing, setTesting] = useState(false);
+  // تنبيه داخل النظام (جرس المستخدمين)
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertBody, setAlertBody] = useState("");
+  const [alertType, setAlertType] = useState("admin_message");
+  const [alertHref, setAlertHref] = useState("");
+  const [alertTargetKind, setAlertTargetKind] = useState<"all" | "company" | "hospital" | "user" | "role">("all");
+  const [alertTargetValue, setAlertTargetValue] = useState("");
+  const [alertSending, setAlertSending] = useState(false);
+  const [alertResult, setAlertResult] = useState<{ ok: boolean; sent?: number; error?: string } | null>(null);
+
+  async function sendInAppAlert() {
+    if (!alertTitle.trim()) { setAlertResult({ ok: false, error: "العنوان مطلوب" }); return; }
+    setAlertSending(true); setAlertResult(null);
+    try {
+      const token = localStorage.getItem("najran_session") ? JSON.parse(localStorage.getItem("najran_session")!).clerkToken : null;
+      const target: any = { kind: alertTargetKind };
+      if (alertTargetKind === "company") target.company = alertTargetValue;
+      if (alertTargetKind === "hospital") target.hospital = alertTargetValue;
+      if (alertTargetKind === "user") target.userId = Number(alertTargetValue);
+      if (alertTargetKind === "role") target.role = alertTargetValue;
+      const res = await fetch("/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        credentials: "include",
+        body: JSON.stringify({ title: alertTitle.trim(), body: alertBody.trim(), type: alertType, href: alertHref.trim() || undefined, target }),
+      });
+      const data = await res.json();
+      if (res.ok) { setAlertResult({ ok: true, sent: data.sent }); setAlertTitle(""); setAlertBody(""); setAlertHref(""); }
+      else setAlertResult({ ok: false, error: data.error || "فشل الإرسال" });
+    } catch { setAlertResult({ ok: false, error: "خطأ في الاتصال" }); }
+    finally { setAlertSending(false); }
+  }
+
   const [testResult, setTestResult] = useState<{ ok: boolean; sentTo?: string; error?: string } | null>(null);
 
   const isAdmin = me?.role === "admin";
@@ -215,6 +248,37 @@ export default function AdminNotificationsPage() {
 
       {/* Broadcast */}
       <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", padding: "28px 28px", marginBottom: 20 }}>
+        {sectionTitle("🔔 إرسال تنبيه داخل النظام (جرس الإشعارات)")}
+        <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+          {([["all","كل المستخدمين"],["company","شركة محددة"],["hospital","موقع محدد"],["user","مستخدم محدد"],["role","دور محدد"]] as const).map(([k, label]) => (
+            <button key={k} onClick={() => { setAlertTargetKind(k as any); setAlertTargetValue(""); }} style={{ padding: "7px 14px", borderRadius: 18, border: "1px solid", borderColor: alertTargetKind === k ? "#1e3c72" : "#e2e8f0", background: alertTargetKind === k ? "#1e3c72" : "#fff", color: alertTargetKind === k ? "#fff" : "#64748b", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
+          ))}
+        </div>
+        {alertTargetKind !== "all" && (
+          <input value={alertTargetValue} onChange={e => setAlertTargetValue(e.target.value)}
+            placeholder={alertTargetKind === "company" ? "كود الشركة (مثال: زهران / إيمان / بيت_العرب)" : alertTargetKind === "hospital" ? "اسم الموقع كما هو مسجل في حساب المستخدم" : alertTargetKind === "user" ? "رقم المستخدم (ID)" : "الدور (user / contract_supervisor / viewer)"}
+            style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13.5, marginBottom: 10, direction: "rtl", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
+        )}
+        <div style={{ display: "flex", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+          <input value={alertTitle} onChange={e => setAlertTitle(e.target.value)} placeholder="عنوان التنبيه..." style={{ flex: 2, minWidth: 220, padding: "10px 14px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13.5, direction: "rtl", outline: "none", fontFamily: "inherit" }} />
+          <select value={alertType} onChange={e => setAlertType(e.target.value)} style={{ flex: 1, minWidth: 140, padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit", fontWeight: 700 }}>
+            <option value="admin_message">رسالة إدارية</option>
+            <option value="system">نظام</option>
+            <option value="warning">تحذير</option>
+          </select>
+        </div>
+        <textarea value={alertBody} onChange={e => setAlertBody(e.target.value)} placeholder="نص التنبيه..." rows={3}
+          style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13.5, marginBottom: 10, direction: "rtl", outline: "none", boxSizing: "border-box", fontFamily: "inherit", resize: "vertical" }} />
+        <input value={alertHref} onChange={e => setAlertHref(e.target.value)} placeholder="رابط اختياري (مثال: /extracts/track)" style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13, marginBottom: 10, direction: "ltr", textAlign: "left", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
+        {alertResult && (
+          <div style={{ padding: "9px 14px", borderRadius: 10, marginBottom: 10, fontSize: 13, fontWeight: 700, background: alertResult.ok ? "#f0fdf4" : "#fef2f2", color: alertResult.ok ? "#166534" : "#991b1b", border: `1px solid ${alertResult.ok ? "#bbf7d0" : "#fecaca"}` }}>
+            {alertResult.ok ? `تم إرسال التنبيه إلى ${alertResult.sent} مستخدم ✅` : `فشل: ${alertResult.error}`}
+          </div>
+        )}
+        <button onClick={sendInAppAlert} disabled={alertSending} style={{ padding: "11px 26px", borderRadius: 10, border: 0, background: alertSending ? "#94a3b8" : "linear-gradient(135deg,#1e3c72,#2a5298)", color: "#fff", fontSize: 14, fontWeight: 800, cursor: alertSending ? "default" : "pointer", fontFamily: "inherit", marginBottom: 26 }}>
+          {alertSending ? "جاري الإرسال..." : "إرسال التنبيه"}
+        </button>
+
         {sectionTitle("📢 إرسال إشعار لجميع المستخدمين")}
         <div style={{ display: "flex", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
           {(["approved", "all"] as const).map(v => (

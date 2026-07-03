@@ -12,6 +12,42 @@
   var SNAPSHOT_BUILD_V = '20260703_snapshot_resume_sig_v3';
   var REVIEW_BUILD_V = '20260703_admin_offices_detail_v1';
   var NOTIF_INTERVAL_MS = 300000;
+
+  // ============ آلية النسخة المركزية ============
+  // عند كل deploy مهم: غيّر هذا الرقم فقط. يظهر في console، ويُعرض شريط تحديث
+  // للمستخدمين الذين يشغّلون نسخة أقدم — بدون مسح localStorage أو reload إجباري.
+  var NAJRAN_BUILD_VERSION = '2026.07.03-r1';
+  window.NAJRAN_BUILD_VERSION = NAJRAN_BUILD_VERSION;
+  try { console.info('%c[Najran] النسخة: ' + NAJRAN_BUILD_VERSION, 'color:#1e3c72;font-weight:bold'); } catch (_) {}
+  (function versionUpdateBanner() {
+    try {
+      var KEY = 'najran_runtime_version';
+      var stored = localStorage.getItem(KEY);
+      if (!stored) { localStorage.setItem(KEY, NAJRAN_BUILD_VERSION); return; }
+      if (stored === NAJRAN_BUILD_VERSION) return;
+      localStorage.setItem(KEY, NAJRAN_BUILD_VERSION);
+      var hasOpenWork = !!(localStorage.getItem('attendanceData') || localStorage.getItem('adminOfficesAttendanceData_v1') || localStorage.getItem('centersAttendanceData_v2') || localStorage.getItem('consumablesTableData'));
+      var show = function () {
+        if (document.getElementById('najran-update-banner')) return;
+        var bar = document.createElement('div');
+        bar.id = 'najran-update-banner';
+        bar.setAttribute('dir', 'rtl');
+        bar.style.cssText = 'position:fixed;top:0;right:0;left:0;z-index:2147483600;background:linear-gradient(90deg,#0f2050,#1e3c72);color:#fff;padding:9px 14px;display:flex;gap:10px;align-items:center;justify-content:center;font-family:Tajawal,Arial,sans-serif;font-weight:800;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,.25)';
+        bar.innerHTML = '<span style="color:#d4af37">⬆</span><span>' +
+          (hasOpenWork ? 'يوجد تحديث جديد. احفظ عملك أولًا ثم حدّث الصفحة.' : 'يوجد تحديث جديد للنظام — اضغط لتحديث الصفحة') +
+          '</span><button id="najran-update-reload" style="border:0;border-radius:8px;padding:5px 14px;background:#d4af37;color:#0f2050;font-family:inherit;font-weight:900;cursor:pointer">تحديث</button>' +
+          '<button id="najran-update-dismiss" style="border:0;border-radius:8px;padding:5px 10px;background:rgba(255,255,255,.15);color:#fff;font-family:inherit;font-weight:800;cursor:pointer">لاحقًا</button>';
+        document.body.appendChild(bar);
+        document.getElementById('najran-update-reload').onclick = function () {
+          try { if (typeof window.saveMonthSnapshot === 'function') window.saveMonthSnapshot(); } catch (_) {}
+          location.reload(); // بدون مسح أي بيانات
+        };
+        document.getElementById('najran-update-dismiss').onclick = function () { bar.remove(); };
+      };
+      if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
+    } catch (_) {}
+  })();
+  // ============================================
   var notifFetchInProgress = false;
 
   function getSession() {
@@ -181,16 +217,16 @@
   }
 
   if (pageFile === 'approval.html') {
-    appendScript('/original/approval_revision_route_guard.js?v=20260703_approval_revision_v2', true);
+    appendScript('/original/approval_revision_route_guard.js?v=20260703_approval_revision_v3', true);
     appendScript('/original/review-print-override.js?v=' + BUILD_V, true);
     appendScript('/original/review-workflow.js?v=' + BUILD_V, true);
     appendScript('/original/review-generic-tables.js?v=20260703_admin_preview_v3', true);
-    appendScript('/original/admin_offices_review_detail_patch.js?v=' + REVIEW_BUILD_V, true);
+    appendScript('/original/admin_offices_review_detail_patch.js?v=20260703_admin_offices_detail_v2', true);
     appendScript('/original/review-consumables-summary-exact.js?v=' + BUILD_V, true);
   }
 
   if (pageFile === 'extract-archive.html') {
-    appendScript('/original/extract_archive_route_guard.js?v=' + BUILD_V, true);
+    appendScript('/original/extract_archive_route_guard.js?v=20260703_extract_archive_route_v3', true);
   }
 
   if (/consumables\.html$/.test(pageFile)) {

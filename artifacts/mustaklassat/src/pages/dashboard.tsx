@@ -1,6 +1,5 @@
 import { useGetMe } from "@workspace/api-client-react";
 import { useUser } from "@clerk/react";
-import { useState, useEffect } from "react";
 import {
   Phone, Briefcase, Hash, Calendar, MessageSquare, PlayCircle, Activity,
   Zap, UserPlus, Building2,
@@ -22,72 +21,50 @@ const ISLAMIC_REMINDERS = [
   { type: "hadith", text: "الدِّينُ النَّصِيحَةُ… لِلَّهِ وَلِكِتَابِهِ وَلِرَسُولِهِ وَلِأَئِمَّةِ الْمُسْلِمِينَ وَعَامَّتِهِمْ", source: "رواه مسلم" },
 ];
 
-function IslamicReminderCard() {
-  const [idx, setIdx] = useState(0);
-  const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setVisible(false);
-      setTimeout(() => {
-        setIdx(i => (i + 1) % ISLAMIC_REMINDERS.length);
-        setVisible(true);
-      }, 500);
-    }, 9000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const item = ISLAMIC_REMINDERS[idx];
-  const isQuran = item.type === "quran";
-
+function IslamicReminderTicker() {
+  // شريط تذكيرات متحرك (نمط شريط الأخبار) — أزرق غامق + ذهبي، يتوقف عند hover.
+  const items = [
+    ...ISLAMIC_REMINDERS.map(r => ({ label: r.type === "quran" ? "آية" : "حديث", text: r.text + " — " + r.source })),
+    { label: "تسبيح", text: "سبحان الله" },
+    { label: "تسبيح", text: "الحمد لله" },
+    { label: "تسبيح", text: "لا إله إلا الله" },
+    { label: "تسبيح", text: "الله أكبر" },
+    { label: "ذكر", text: "لا حول ولا قوة إلا بالله" },
+    { label: "ذكر", text: "أستغفر الله العظيم" },
+    { label: "تسبيح", text: "سبحان الله وبحمده" },
+    { label: "تسبيح", text: "سبحان الله العظيم" },
+    { label: "تذكير", text: "راقب الله في عملك" },
+    { label: "تذكير", text: "الأمانة قبل الإنجاز" },
+    { label: "تذكير", text: "الإتقان عبادة" },
+    { label: "تذكير", text: "الدقة أمانة" },
+    { label: "مقولة", text: "المراجعة تمنع الخطأ" },
+    { label: "مقولة", text: "العمل المتقن يترك أثرًا" },
+    { label: "مقولة", text: "النظام يحمي الجهد" },
+    { label: "مقولة", text: "الأمانة أساس الثقة" },
+  ];
+  // تكرار القائمة مرتين لضمان حركة مستمرة بلا فراغ
+  const doubled = [...items, ...items];
   return (
-    <div className="rounded-2xl overflow-hidden"
+    <div className="rounded-2xl overflow-hidden" dir="rtl"
       style={{ background: "linear-gradient(135deg,#0f2050 0%,#1e3c72 60%,#2a5298 100%)", boxShadow: "0 4px 20px rgba(30,60,114,0.15)" }}>
       <div className="h-0.5" style={{ background: "linear-gradient(90deg,#d4af37,#f0d060,#d4af37)" }} />
-      <div className="p-6 text-center" style={{ direction: "rtl" }}>
-        {/* Label */}
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <span className="text-xs font-bold px-3 py-1 rounded-full"
-            style={{
-              background: isQuran ? "rgba(212,175,55,0.2)" : "rgba(134,239,172,0.15)",
-              color: isQuran ? "#d4af37" : "#86efac",
-              border: `1px solid ${isQuran ? "rgba(212,175,55,0.35)" : "rgba(134,239,172,0.3)"}`,
-              letterSpacing: "0.06em",
-            }}>
-            {isQuran ? "✦ آية قرآنية كريمة ✦" : "☽ حديث شريف ☽"}
-          </span>
-        </div>
-
-        {/* Text */}
-        <div style={{ transition: "opacity 0.5s ease", opacity: visible ? 1 : 0, minHeight: 72 }}>
-          <p className="font-black leading-loose mb-3"
-            style={{
-              color: "#ffffff",
-              fontSize: "clamp(15px,2vw,20px)",
-              fontFamily: "'Tajawal',sans-serif",
-              textShadow: "0 1px 10px rgba(0,0,0,0.3)",
-            }}>
-            {isQuran ? `﴿ ${item.text} ﴾` : `« ${item.text} »`}
-          </p>
-          <p className="text-xs font-semibold" style={{ color: "rgba(212,175,55,0.75)" }}>
-            — {item.source}
-          </p>
-        </div>
-
-        {/* Dots */}
-        <div className="flex items-center justify-center gap-1.5 mt-5">
-          {ISLAMIC_REMINDERS.map((r, i) => (
-            <button key={i}
-              onClick={() => { setVisible(false); setTimeout(() => { setIdx(i); setVisible(true); }, 300); }}
-              title={r.type === "quran" ? "آية" : "حديث"}
-              style={{
-                width: i === idx ? 22 : 6, height: 6, borderRadius: 99, border: "none", cursor: "pointer",
-                background: i === idx ? (r.type === "quran" ? "#d4af37" : "#86efac") : "rgba(255,255,255,0.2)",
-                transition: "all 0.35s ease", padding: 0,
-              }} />
+      <style>{`
+        @keyframes najranTickerMove { from { transform: translateX(0); } to { transform: translateX(50%); } }
+        .najran-ticker-track { display: inline-flex; white-space: nowrap; animation: najranTickerMove 90s linear infinite; will-change: transform; }
+        .najran-ticker-viewport:hover .najran-ticker-track { animation-play-state: paused; }
+      `}</style>
+      <div className="najran-ticker-viewport" style={{ overflow: "hidden", maxWidth: "100%", padding: "10px 0" }}>
+        <div className="najran-ticker-track">
+          {doubled.map((it, i) => (
+            <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "0 22px", color: "#fff", fontWeight: 800, fontSize: 15 }}>
+              <span style={{ fontSize: 11, fontWeight: 900, padding: "2px 10px", borderRadius: 999, background: "rgba(212,175,55,0.18)", color: "#d4af37", border: "1px solid rgba(212,175,55,0.35)" }}>{it.label}</span>
+              <span style={{ lineHeight: 1.8 }}>{it.text}</span>
+              <span style={{ color: "#d4af37", opacity: 0.7 }}>✦</span>
+            </span>
           ))}
         </div>
       </div>
+      <div className="h-0.5" style={{ background: "linear-gradient(90deg,#d4af37,#f0d060,#d4af37)" }} />
     </div>
   );
 }
@@ -272,7 +249,7 @@ export default function Dashboard() {
       </div>
 
       {/* ═══ Islamic Reminder ═══ */}
-      <IslamicReminderCard />
+      <IslamicReminderTicker />
 
       {/* ═══ Modules Grid ═══ */}
       <div>
