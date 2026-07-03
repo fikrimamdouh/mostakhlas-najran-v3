@@ -1,13 +1,26 @@
 // ===================================================================
-// Extract Archive Route Guard — V1
+// Extract Archive Route Guard — V2
 // Scope: extract-archive.html
 // يمنع زر "الحضور" في الأرشيف من فتح attendance.html العادي عندما يكون السياق مكاتب أو مراكز صحية.
+// + يحمّل تجربة فتح اللقطة المختارة مباشرة مع حماية المستخلص المفتوح.
 // ===================================================================
 (function () {
   'use strict';
   if (!/extract-archive\.html|original-viewer\?page=extract-archive\.html/.test(location.pathname + location.search)) return;
-  if (window.__NAJRAN_EXTRACT_ARCHIVE_ROUTE_GUARD_V1__) return;
-  window.__NAJRAN_EXTRACT_ARCHIVE_ROUTE_GUARD_V1__ = true;
+  if (window.__NAJRAN_EXTRACT_ARCHIVE_ROUTE_GUARD_V2__) return;
+  window.__NAJRAN_EXTRACT_ARCHIVE_ROUTE_GUARD_V2__ = true;
+
+  function loadOpenSelectedGuard() {
+    try {
+      if (window.__NAJRAN_LOCAL_ARCHIVE_OPEN_SELECTED_GUARD_V1__) return;
+      var src = '/original/local-archive-open-selected-guard.js?v=20260703_open_selected_v1';
+      if (document.querySelector('script[src="' + src + '"]')) return;
+      var s = document.createElement('script');
+      s.src = src;
+      s.defer = true;
+      document.head.appendChild(s);
+    } catch (_) {}
+  }
 
   function readJson(key, fallback) {
     try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
@@ -80,9 +93,12 @@
   }
 
   window.NajranArchiveRouteGuard = { resolveAttendancePage: resolveAttendancePage, patch: patchHeaderAttendanceButton };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', patchHeaderAttendanceButton); else patchHeaderAttendanceButton();
+  loadOpenSelectedGuard();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { patchHeaderAttendanceButton(); loadOpenSelectedGuard(); }); else { patchHeaderAttendanceButton(); loadOpenSelectedGuard(); }
   setTimeout(patchHeaderAttendanceButton, 400);
   setTimeout(patchHeaderAttendanceButton, 1200);
-  document.addEventListener('click', function () { setTimeout(patchHeaderAttendanceButton, 40); }, true);
+  setTimeout(loadOpenSelectedGuard, 400);
+  setTimeout(loadOpenSelectedGuard, 1200);
+  document.addEventListener('click', function () { setTimeout(patchHeaderAttendanceButton, 40); setTimeout(loadOpenSelectedGuard, 40); }, true);
   console.info('[ExtractArchiveRouteGuard] attendance button route:', resolveAttendancePage());
 })();
