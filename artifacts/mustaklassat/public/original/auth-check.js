@@ -16,7 +16,7 @@
   // ============ آلية النسخة المركزية ============
   // عند كل deploy مهم: غيّر هذا الرقم فقط. يظهر في console، ويُعرض شريط تحديث
   // للمستخدمين الذين يشغّلون نسخة أقدم — بدون مسح localStorage أو reload إجباري.
-  var NAJRAN_BUILD_VERSION = '2026.07.03-r1';
+  var NAJRAN_BUILD_VERSION = '2026.07.03-r2';
   window.NAJRAN_BUILD_VERSION = NAJRAN_BUILD_VERSION;
   try { console.info('%c[Najran] النسخة: ' + NAJRAN_BUILD_VERSION, 'color:#1e3c72;font-weight:bold'); } catch (_) {}
   (function versionUpdateBanner() {
@@ -40,7 +40,17 @@
         document.body.appendChild(bar);
         document.getElementById('najran-update-reload').onclick = function () {
           try { if (typeof window.saveMonthSnapshot === 'function') window.saveMonthSnapshot(); } catch (_) {}
-          location.reload(); // بدون مسح أي بيانات
+          // تحديث إجباري: كاش المتصفح فقط — localStorage لا يُمس
+          var done = function () { try { location.reload(); } catch (_) { location.href = location.href; } };
+          try {
+            var jobs = [];
+            try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister().catch(function(){}); })); })); } catch (_) {}
+            try { if (window.caches && caches.keys) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })); } catch (_) {}
+            try { jobs.push(fetch('/original/auth-check.js', { cache: 'reload' }).catch(function(){})); } catch (_) {}
+            try { jobs.push(fetch(location.pathname + location.search, { cache: 'reload' }).catch(function(){})); } catch (_) {}
+            Promise.all(jobs).then(done, done);
+            setTimeout(done, 4000); // مهلة أمان لو علقت أي مهمة
+          } catch (_) { done(); }
         };
         document.getElementById('najran-update-dismiss').onclick = function () { bar.remove(); };
       };

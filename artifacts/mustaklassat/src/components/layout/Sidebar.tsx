@@ -1059,9 +1059,20 @@ title={collapsed ? currentHospitalLabel : undefined}
             </div>
             {(dbUser as any)?.lastLoginAt && <p className="text-[10px] px-1" style={{ color: "rgba(255,255,255,0.3)" }}>آخر دخول: {formatLastLogin((dbUser as any).lastLoginAt)}</p>}
             <button
-              onClick={() => {
-                // تحديث النظام: snapshot محلي سريع إن أمكن ثم reload فقط — بدون مسح بيانات أو logout
+              onClick={async () => {
+                // تحديث إجباري: snapshot سريع → مسح كاش المتصفح (Cache Storage + SW) →
+                // إجبار جلب المحمّل من السيرفر → إعادة تحميل. localStorage لا يُمس إطلاقًا.
                 try { (window as any).saveMonthSnapshot?.(); } catch { /* صامت */ }
+                try {
+                  const regs = await (navigator as any).serviceWorker?.getRegistrations?.();
+                  if (regs) for (const r of regs) { try { await r.unregister(); } catch { /* صامت */ } }
+                } catch { /* صامت */ }
+                try {
+                  const ks = await (window as any).caches?.keys?.();
+                  if (ks) await Promise.all(ks.map((k: string) => (window as any).caches.delete(k)));
+                } catch { /* صامت */ }
+                try { await fetch("/original/auth-check.js", { cache: "reload" }); } catch { /* صامت */ }
+                try { await fetch(window.location.pathname, { cache: "reload" }); } catch { /* صامت */ }
                 window.location.reload();
               }}
               className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:bg-white/10"
