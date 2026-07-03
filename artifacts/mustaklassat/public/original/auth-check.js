@@ -10,6 +10,7 @@
   var BASE = window.location.origin;
   var BUILD_V = '20260623archiveBundleRouteV1';
   var SNAPSHOT_BUILD_V = '20260703_snapshot_resume_sig_v3';
+  var REVIEW_BUILD_V = '20260703_admin_offices_detail_v1';
   var NOTIF_INTERVAL_MS = 300000;
   var notifFetchInProgress = false;
 
@@ -179,10 +180,11 @@
   }
 
   if (pageFile === 'approval.html') {
-    appendScript('/original/approval_revision_route_guard.js?v=' + BUILD_V, true);
+    appendScript('/original/approval_revision_route_guard.js?v=20260703_approval_revision_v2', true);
     appendScript('/original/review-print-override.js?v=' + BUILD_V, true);
     appendScript('/original/review-workflow.js?v=' + BUILD_V, true);
-    appendScript('/original/review-generic-tables.js?v=' + BUILD_V, true);
+    appendScript('/original/review-generic-tables.js?v=20260703_admin_preview_v3', true);
+    appendScript('/original/admin_offices_review_detail_patch.js?v=' + REVIEW_BUILD_V, true);
     appendScript('/original/review-consumables-summary-exact.js?v=' + BUILD_V, true);
   }
 
