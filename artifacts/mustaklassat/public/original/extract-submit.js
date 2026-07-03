@@ -11,16 +11,38 @@
   };
 
   const REVISION_KEY = 'najran_revision_extract_id';
+  const LABOR_FINAL_REVIEW_SCHEMA = 'labor_final_review_snapshot_v1';
 
   function getSession() {
     try { return JSON.parse(localStorage.getItem('najran_session') || '{}'); }
     catch { return {}; }
   }
 
+  function readJson(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (_) { return fallback; }
+  }
+
+  function cleanText(v) {
+    return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+  }
+
+  function numberFromText(value) {
+    const raw = String(value == null ? '' : value)
+      .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+      .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+      .replace(/,/g, '')
+      .replace(/[^0-9.\-]/g, '');
+    const n = parseFloat(raw);
+    return Number.isFinite(n) ? n : 0;
+  }
+
   function getContractData() {
     try {
-      const c = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-      const e = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+      const c = readJson('persistentContractData', {});
+      const e = readJson('persistentExtractData', {});
       const extractMonth = e.extractMonth || localStorage.getItem('extractMonth') || '';
       const extractYear = e.extractYear || localStorage.getItem('extractYear') || new Date().getFullYear();
       const paymentNumber = e.paymentNumber || localStorage.getItem('paymentNumber') || '';
@@ -67,6 +89,90 @@
     return snapshot;
   }
 
+  function collectAchievementTableSnapshot() {
+    const table = document.getElementById('achievementTable') || document.querySelector('table.achievement-table') || document.querySelector('.achievement-table');
+    if (!table) return { headers: [], rows: [] };
+    const headers = Array.from(table.querySelectorAll('thead th')).map((th, i) => cleanText(th.textContent) || ('عمود ' + (i + 1)));
+    const rows = Array.from(table.querySelectorAll('tbody tr')).map((tr) => {
+      const cells = Array.from(tr.children || []).map(td => cleanText(td.textContent));
+      const item = {
+        rowType: tr.classList.contains('total-row') ? 'total' : (tr.classList.contains('tafqeet-row') ? 'tafqeet' : 'line'),
+        cells
+      };
+      headers.forEach((h, i) => { item[h] = cells[i] || ''; });
+      return item;
+    }).filter(row => (row.cells || []).some(Boolean));
+    return { headers, rows };
+  }
+
+  async function finalizeLaborExtractBeforeSubmit() {
+    const steps = ['renderTables', 'updateCertificateFromPerformance', 'loadAndProcessAchievementData'];
+    for (const name of steps) {
+      try {
+        if (typeof window[name] === 'function') {
+          const out = window[name]();
+          if (out && typeof out.then === 'function') await out;
+        }
+      } catch (e) {
+        console.warn('[ExtractSubmit] final review step failed:', name, e);
+      }
+    }
+
+    await Promise.resolve();
+
+    const contractData = getContractData();
+    const table = collectAchievementTableSnapshot();
+    const totals = window.__achievementTotalsForTaxInvoice || {};
+    const totalRow = table.rows.filter(r => r.rowType === 'total').pop();
+    const totalCell = totalRow && totalRow.cells ? totalRow.cells[totalRow.cells.length - 1] : '';
+    const finalAmount =
+      Number(totals.netMonthly || 0) ||
+      numberFromText(localStorage.getItem('finalLaborCost')) ||
+      numberFromText(totalCell) ||
+      Number(contractData.totalAmount || 0) ||
+      0;
+
+    return {
+      schema: LABOR_FINAL_REVIEW_SCHEMA,
+      createdAt: new Date().toISOString(),
+      sourcePage: window.location.pathname + window.location.search,
+      extractType: 'labor',
+      displayOnly: true,
+      noRecalculate: true,
+      meta: {
+        companyName: contractData.companyName || '',
+        contractNumber: contractData.contractNumber || '',
+        hospitalName: contractData.hospitalName || '',
+        extractMonth: contractData.extractMonth || '',
+        extractYear: contractData.extractYear || '',
+        paymentNumber: contractData.paymentNumber || '',
+        extractStart: contractData.extractStart || '',
+        extractEnd: contractData.extractEnd || '',
+        periodMonth: contractData.periodMonth || ''
+      },
+      finalAmount: {
+        value: Math.round((Number(finalAmount || 0) + Number.EPSILON) * 100) / 100,
+        text: Number(finalAmount || 0).toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ر.س'
+      },
+      achievementTotals: {
+        monthlyValue: Number(totals.monthlyValue || 0),
+        absenceDeduction: Number(totals.absenceDeduction || 0),
+        absencePenalty: Number(totals.absencePenalty || 0),
+        performancePenalty: Number(totals.performancePenalty || 0),
+        nationalityPenalty: Number(totals.nationalityPenalty || 0),
+        netMonthly: Number(finalAmount || 0)
+      },
+      table,
+      displayRows: table.rows,
+      blockedReviewSources: [
+        'raw salary', 'deduction', 'absence', 'employee rows', 'localStorage',
+        'performance recalculation', 'achievement recalculation'
+      ]
+    };
+  }
+
+  window.finalizeLaborExtractBeforeSubmit = finalizeLaborExtractBeforeSubmit;
+
   function clearRevisionSubmitState(reason) {
     try {
       localStorage.removeItem(REVISION_KEY);
@@ -95,7 +201,16 @@
 
     const contractData = getContractData();
     const extractData = captureStorageSnapshot();
-    const payload = { extractType: type, ...contractData, ...extraData, extractData };
+    const safeExtraData = Object.assign({}, extraData || {});
+
+    if (safeExtraData.finalReviewSnapshot) {
+      extractData.finalReviewSnapshot = safeExtraData.finalReviewSnapshot;
+      extractData.reviewSnapshotSchema = safeExtraData.reviewSnapshotSchema || `${type}_final_review_snapshot_v1`;
+      delete safeExtraData.finalReviewSnapshot;
+      delete safeExtraData.reviewSnapshotSchema;
+    }
+
+    const payload = { extractType: type, ...contractData, ...safeExtraData, extractData };
 
     const submitUniqueKey = [
       'submitted_extract',
@@ -158,38 +273,29 @@
         !!localStorage.getItem('najran_editing_submitted_extract_id')
       );
 
-    if (localStorage.getItem(REVISION_KEY) && !isRevision) {
-      clearRevisionSubmitState('incomplete-revision-state');
-    }
+    if (localStorage.getItem(REVISION_KEY) && !isRevision) clearRevisionSubmitState('incomplete-revision-state');
 
     if (isRevision) {
       try {
         const snapshotRaw = localStorage.getItem('najran_revision_snapshot');
         const snapshot = snapshotRaw ? JSON.parse(snapshotRaw) : {};
         const oldExtractRaw = snapshot.persistentExtractData;
-        const oldExtract = typeof oldExtractRaw === 'string'
-          ? JSON.parse(oldExtractRaw || '{}')
-          : (oldExtractRaw || {});
-
+        const oldExtract = typeof oldExtractRaw === 'string' ? JSON.parse(oldExtractRaw || '{}') : (oldExtractRaw || {});
         const oldMonth = String(oldExtract.extractMonth || '').trim();
         const oldYear = String(oldExtract.extractYear || '').trim();
         const oldPayment = String(oldExtract.paymentNumber || oldExtract.extractNumber || '').trim();
         const newMonth = String(contractData.extractMonth || '').trim();
         const newYear = String(contractData.extractYear || '').trim();
         const newPayment = String(contractData.paymentNumber || '').trim();
-
         const changed =
           (oldMonth && newMonth && oldMonth !== newMonth) ||
           (oldYear && newYear && oldYear !== newYear) ||
           (oldPayment && newPayment && oldPayment !== newPayment);
-
         if (changed) {
           alert(
             'تم إيقاف الرفع لحماية المستخلص.\n\n' +
-            'أنت تعدّل مستخلصًا قديمًا:\n' +
-            oldMonth + ' ' + oldYear + ' — دفعة ' + (oldPayment || '-') + '\n\n' +
-            'لكن البيانات الحالية:\n' +
-            newMonth + ' ' + newYear + ' — دفعة ' + (newPayment || '-') + '\n\n' +
+            'أنت تعدّل مستخلصًا قديمًا:\n' + oldMonth + ' ' + oldYear + ' — دفعة ' + (oldPayment || '-') + '\n\n' +
+            'لكن البيانات الحالية:\n' + newMonth + ' ' + newYear + ' — دفعة ' + (newPayment || '-') + '\n\n' +
             'لا يمكن حفظ شهر/دفعة مختلفة على نفس المستخلص.\n' +
             'اخرج من وضع التعديل إذا كنت تريد إنشاء مستخلص جديد.'
           );
@@ -239,10 +345,7 @@
           body: JSON.stringify(payload),
         });
       } else {
-        throw new Error(
-          errData.error ||
-          'تعذر إعادة رفع المستخلص المعدل على نفس السجل. لم يتم إنشاء مستخلص جديد.'
-        );
+        throw new Error(errData.error || 'تعذر إعادة رفع المستخلص المعدل على نفس السجل. لم يتم إنشاء مستخلص جديد.');
       }
     }
 
@@ -272,12 +375,7 @@
     } catch (_) {}
 
     try {
-      const submittedId =
-        result?.id ||
-        result?.extract?.id ||
-        result?.extractId ||
-        (effectiveRevision ? revisionId : '') ||
-        '';
+      const submittedId = result?.id || result?.extract?.id || result?.extractId || (effectiveRevision ? revisionId : '') || '';
       if (submittedId) {
         localStorage.setItem('najran_last_submitted_extract_id', String(submittedId));
         localStorage.setItem('najran_last_submitted_extract_type', String(type || ''));
@@ -361,14 +459,10 @@
           localStorage.setItem('attendanceSavedAtBeforePerformance', new Date().toISOString());
           localStorage.setItem('attendanceApprovedAtBeforePerformance', new Date().toISOString());
           console.warn('[AttendanceApprove] تم حفظ بيانات الحضور إجبارياً قبل الانتقال للأداء');
-        } catch (e) {
-          console.warn('[AttendanceApprove] تعذر تنفيذ الحفظ الإجباري قبل الانتقال', e);
-        }
+        } catch (e) { console.warn('[AttendanceApprove] تعذر تنفيذ الحفظ الإجباري قبل الانتقال', e); }
         try {
           localStorage.setItem('najran_allow_attendance_leave_once', '1');
-          if (typeof window.najranClearAttendancePendingUpload === 'function') {
-            window.najranClearAttendancePendingUpload('attendance-approved-local-save-before-performance');
-          }
+          if (typeof window.najranClearAttendancePendingUpload === 'function') window.najranClearAttendancePendingUpload('attendance-approved-local-save-before-performance');
         } catch (_) {}
         localStorage.setItem(STEP_KEY.labor_attendance, '1');
         window.location.href = '/original/performance.html';
@@ -395,9 +489,7 @@
           const totalDueEl = document.getElementById('total-due');
           if (totalDueEl) localStorage.setItem('performanceTotalDue', String(totalDueEl.textContent || '0').replace(/[^0-9.\-]/g, ''));
           localStorage.setItem('performanceSavedAtBeforeAchievement', new Date().toISOString());
-        } catch (e) {
-          console.warn('[PerformanceApprove] تعذر حفظ بعض بيانات الأداء قبل الانتقال', e);
-        }
+        } catch (e) { console.warn('[PerformanceApprove] تعذر حفظ بعض بيانات الأداء قبل الانتقال', e); }
         localStorage.setItem(STEP_KEY.labor_performance, '1');
         window.location.href = '/original/achievement.html';
       },
@@ -411,14 +503,11 @@
         if (!confirm('هل تريد رفع مستخلص العمالة كاملاً للاعتماد؟\n\nسيشمل المستخلص:\n✓ الحضور والانصراف\n✓ جداول الأداء\n✓ شهادة الإنجاز')) return;
         setLoading('جاري الرفع...');
         try {
-          try {
-            if (typeof window.finalizeLaborExtractBeforeSubmit === 'function') {
-              window.finalizeLaborExtractBeforeSubmit();
-            }
-          } catch (e) {
-            console.warn('[ExtractSubmit] تعذر إنشاء لقطة المراجعة النهائية قبل الرفع', e);
-          }
-          await submitExtract('labor');
+          const finalReviewSnapshot = await finalizeLaborExtractBeforeSubmit();
+          await submitExtract('labor', {
+            finalReviewSnapshot,
+            reviewSnapshotSchema: LABOR_FINAL_REVIEW_SCHEMA
+          });
           localStorage.removeItem(STEP_KEY.labor_attendance);
           localStorage.removeItem(STEP_KEY.labor_performance);
           try {
@@ -513,27 +602,11 @@
     createApproveBtn({
       label: 'رفع مستخلص عمالة المكاتب للاعتماد',
       onClick: async () => {
-        if (!confirm(
-          'هل تريد رفع مستخلص عمالة المكاتب الإدارية للاعتماد؟\n\n' +
-          'سيشمل المستخلص:\n' +
-          '✓ الحضور والانصراف\n' +
-          '✓ جداول الأداء\n' +
-          '✓ شهادة الإنجاز\n' +
-          '✓ الشهادة الإجمالية\n' +
-          '✓ خطابات الرفع'
-        )) return;
+        if (!confirm('هل تريد رفع مستخلص عمالة المكاتب الإدارية للاعتماد؟\n\nسيشمل المستخلص:\n✓ الحضور والانصراف\n✓ جداول الأداء\n✓ شهادة الإنجاز\n✓ الشهادة الإجمالية\n✓ خطابات الرفع')) return;
         setLoading('جاري رفع مستخلص عمالة المكاتب...');
         try {
-          const laborTotal =
-            parseFloat(localStorage.getItem('grand-net-total-admin') || '0') ||
-            parseFloat(localStorage.getItem('finalLaborCost') || '0') ||
-            0;
-          await submitExtract('labor', {
-            totalAmount: laborTotal,
-            adminOfficeLabor: true,
-            sourceModule: 'admin_offices_attendance',
-            reviewScope: 'attendance_performance_achievement'
-          });
+          const laborTotal = parseFloat(localStorage.getItem('grand-net-total-admin') || '0') || parseFloat(localStorage.getItem('finalLaborCost') || '0') || 0;
+          await submitExtract('labor', { totalAmount: laborTotal, adminOfficeLabor: true, sourceModule: 'admin_offices_attendance', reviewScope: 'attendance_performance_achievement' });
           localStorage.removeItem('najran_admin_offices_attendance_done');
           try {
             const _ed = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
@@ -553,18 +626,11 @@
     createApproveBtn({
       label: 'رفع مستخلص مستهلكات المكاتب للاعتماد',
       onClick: async () => {
-        if (!confirm(
-          'هل تريد رفع مستخلص مستهلكات المكاتب الإدارية للاعتماد؟\n\n' +
-          'سيشمل المستخلص المستهلكات فقط، ولن يرتبط باعتماد العمالة.'
-        )) return;
+        if (!confirm('هل تريد رفع مستخلص مستهلكات المكاتب الإدارية للاعتماد؟\n\nسيشمل المستخلص المستهلكات فقط، ولن يرتبط باعتماد العمالة.')) return;
         setLoading('جاري رفع مستخلص مستهلكات المكاتب...');
         try {
           const consumablesTotal = parseFloat(localStorage.getItem('finalConsumablesCost') || '0') || 0;
-          await submitExtract('consumables', {
-            totalAmount: consumablesTotal,
-            adminOfficeConsumables: true,
-            sourceModule: 'admin_offices_consumables'
-          });
+          await submitExtract('consumables', { totalAmount: consumablesTotal, adminOfficeConsumables: true, sourceModule: 'admin_offices_consumables' });
           try {
             const _ed = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
             const _mk = String(_ed.extractYear || '') + '_' + String(_ed.extractMonth || '').trim();
@@ -582,29 +648,13 @@
   document.addEventListener('DOMContentLoaded', function () {
     const path = window.location.pathname;
     if (path.includes('najran_general_attendance')) {
-      createApproveBtn({ label: 'اعتماد الحضور والانصراف', onClick: () => {
-        if (!confirm('هل تريد اعتماد بيانات الحضور والانصراف والانتقال لجداول الأداء؟')) return;
-        localStorage.setItem(STEP_KEY.labor_attendance, '1');
-        window.location.href = '/original/najran_general_performance.html';
-      }});
+      createApproveBtn({ label: 'اعتماد الحضور والانصراف', onClick: () => { if (!confirm('هل تريد اعتماد بيانات الحضور والانصراف والانتقال لجداول الأداء؟')) return; localStorage.setItem(STEP_KEY.labor_attendance, '1'); window.location.href = '/original/najran_general_performance.html'; }});
     } else if (path.includes('najran_dental_attendance')) {
-      createApproveBtn({ label: 'اعتماد الحضور والانصراف', onClick: () => {
-        if (!confirm('هل تريد اعتماد بيانات الحضور والانصراف والانتقال لجداول الأداء؟')) return;
-        localStorage.setItem(STEP_KEY.labor_attendance, '1');
-        window.location.href = '/original/najran_dental_performance.html';
-      }});
+      createApproveBtn({ label: 'اعتماد الحضور والانصراف', onClick: () => { if (!confirm('هل تريد اعتماد بيانات الحضور والانصراف والانتقال لجداول الأداء؟')) return; localStorage.setItem(STEP_KEY.labor_attendance, '1'); window.location.href = '/original/najran_dental_performance.html'; }});
     } else if (path.includes('najran_general_performance')) {
-      createApproveBtn({ label: 'اعتماد جداول الأداء', onClick: () => {
-        if (!confirm('هل تريد اعتماد جداول الأداء والانتقال لشهادة الإنجاز؟')) return;
-        localStorage.setItem(STEP_KEY.labor_performance, '1');
-        window.location.href = '/original/najran_general_achievement.html';
-      }});
+      createApproveBtn({ label: 'اعتماد جداول الأداء', onClick: () => { if (!confirm('هل تريد اعتماد جداول الأداء والانتقال لشهادة الإنجاز؟')) return; localStorage.setItem(STEP_KEY.labor_performance, '1'); window.location.href = '/original/najran_general_achievement.html'; }});
     } else if (path.includes('najran_dental_performance')) {
-      createApproveBtn({ label: 'اعتماد جداول الأداء', onClick: () => {
-        if (!confirm('هل تريد اعتماد جداول الأداء والانتقال لشهادة الإنجاز؟')) return;
-        localStorage.setItem(STEP_KEY.labor_performance, '1');
-        window.location.href = '/original/najran_general_achievement.html';
-      }});
+      createApproveBtn({ label: 'اعتماد جداول الأداء', onClick: () => { if (!confirm('هل تريد اعتماد جداول الأداء والانتقال لشهادة الإنجاز؟')) return; localStorage.setItem(STEP_KEY.labor_performance, '1'); window.location.href = '/original/najran_general_achievement.html'; }});
     } else if (path.endsWith('attendance.html') && !path.includes('health_centers') && !path.includes('admin_offices')) {
       window.initAttendanceApproveBtn();
     } else if (path.endsWith('performance.html')) {
