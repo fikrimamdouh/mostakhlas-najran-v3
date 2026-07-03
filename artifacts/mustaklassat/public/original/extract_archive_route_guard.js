@@ -224,5 +224,61 @@
   setTimeout(runPatches, 1200);
   setTimeout(runPatches, 2500);
   document.addEventListener('click', function () { setTimeout(runPatches, 40); }, true);
-  console.info('[ExtractArchiveRouteGuard] installed v3 inline open-selected · attendance route:', resolveAttendancePage());
+
+  // ── v5: إصلاح ذاتي للكروت القديمة المحفوظة بأصفار ──
+  // اللقطات المحفوظة قبل إصلاح totals كانت تخزّن totalEmployees/totalNetAmount = 0
+  // لمستخلصات المكاتب/المراكز. نعيد الحساب من extractData مرة واحدة ونحفظ ثم نعيد الرندر.
+  function healSnapshotTotals() {
+    try {
+      if (typeof window.getExtractArchive !== 'function' || typeof window.setExtractArchive !== 'function') return;
+      var archive = window.getExtractArchive() || [];
+      if (!Array.isArray(archive) || !archive.length) return;
+      var ATT_KEY_BY_TYPE = { labor: 'attendanceData', admin_offices: 'adminOfficesAttendanceData_v1', health_centers: 'centersAttendanceData_v2' };
+      function num(v) { var x = parseFloat(v); return isFinite(x) ? x : 0; }
+      function empNet(emp) {
+        var direct = num(emp.netSalary != null ? emp.netSalary : emp.finalSalary);
+        if (direct !== 0) return Math.max(0, direct);
+        var sal = num(emp.salary || emp.monthlySalary);
+        var ded = num(emp.totalDeduction != null ? emp.totalDeduction : (emp.deduction != null ? emp.deduction : emp.absenceDeduction));
+        var fine = num(emp.totalFine) + num(emp.nationalityFine);
+        return Math.max(0, sal - ded - fine);
+      }
+      function parseMaybe(v) { if (v == null) return null; if (typeof v === 'object') return v; try { return JSON.parse(v); } catch (_) { return null; } }
+      var healed = 0;
+      archive.forEach(function (snap) {
+        if (!snap || !snap.extractData) return;
+        var hasTotals = (num(snap.totalEmployees) > 0 || num(snap.totalNetAmount) > 0);
+        if (hasTotals) return;
+        var attKey = ATT_KEY_BY_TYPE[snap.extractType] || 'attendanceData';
+        var att = parseMaybe(snap.extractData[attKey]);
+        var employees = 0, net = 0, departments = {};
+        if (att && typeof att === 'object') {
+          Object.keys(att).forEach(function (dept) {
+            var emps = Array.isArray(att[dept]) ? att[dept] : [];
+            var dNet = emps.reduce(function (a, e) { return a + empNet(e); }, 0);
+            departments[dept] = { count: emps.length, total: dNet };
+            employees += emps.length; net += dNet;
+          });
+        }
+        if (!net && snap.extractType === 'consumables') net = num(parseMaybe(snap.extractData.finalConsumablesCost) || snap.extractData.finalConsumablesCost);
+        if (!net && snap.extractType === 'spare_parts') net = num(parseMaybe(snap.extractData.sparePartsTotalAmount) || snap.extractData.sparePartsTotalAmount);
+        if (employees > 0 || net > 0) {
+          snap.totalEmployees = employees;
+          snap.totalNetAmount = net;
+          snap.departments = departments;
+          healed++;
+        }
+      });
+      if (healed > 0) {
+        window.setExtractArchive(archive);
+        console.info('[ExtractArchiveRouteGuard] healed ' + healed + ' snapshot card totals');
+        try { if (typeof window.renderArchive === 'function') window.renderArchive(); } catch (_) {}
+        try { if (typeof window.renderStats === 'function') window.renderStats(archive); } catch (_) {}
+      }
+    } catch (e) { console.warn('[ExtractArchiveRouteGuard] heal totals skipped', e); }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(healSnapshotTotals, 400); });
+  else setTimeout(healSnapshotTotals, 400);
+
+  console.info('[ExtractArchiveRouteGuard] installed v5 inline open-selected + totals self-heal · attendance route:', resolveAttendancePage());
 })();

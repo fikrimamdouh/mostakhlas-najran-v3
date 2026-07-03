@@ -191,7 +191,7 @@
   }
 
   function writeSnapshotToLocalStorage(snapshot) {
-    var report = { written: 0, failed: 0, failedKeys: [] };
+    var report = { written: 0, failed: 0, failedKeys: [], prunedKeys: 0 };
     Object.keys(snapshot || {}).forEach(function (key) {
       if (writeLocalStorageValue(key, snapshot[key])) report.written++;
       else {
@@ -199,7 +199,74 @@
         report.failedKeys.push(key);
       }
     });
+    // v5: عند فشل بعض المفاتيح (امتلاء المساحة) — نظّف النسخ الأقدم فقط ثم أعد المحاولة تلقائيًا.
+    // القاعدة: لا يُحذف أبدًا أحدث عنصر من أي فئة — البيانات الأخيرة محفوظة دائمًا.
+    if (report.failed > 0) {
+      report.prunedKeys = pruneOldLocalCopiesForSpace();
+      console.warn('extract-snapshot: quota hit — pruned ' + report.prunedKeys + ' old copies, retrying failed keys');
+      var stillFailed = [];
+      report.failedKeys.forEach(function (key) {
+        if (writeLocalStorageValue(key, snapshot[key])) { report.written++; report.failed--; }
+        else stillFailed.push(key);
+      });
+      report.failedKeys = stillFailed;
+    }
     return report;
+  }
+
+  // يحرر مساحة بحذف النسخ الأقدم فقط، بترتيب الأقل خطورة: 
+  // safety snapshots الأقدم (يبقى الأحدث) → monthSnapshots غير الفترة الحالية الأقدم (يبقى أحدث 3)
+  // → hrl_snapshot → أقدم عناصر أرشيف اللقطات (يبقى أحدث 2 لكل draftKey مختلف).
+  function pruneOldLocalCopiesForSpace() {
+    var removed = 0;
+    function del(k) { try { localStorage.removeItem(k); removed++; } catch (_) {} }
+    try {
+      // 1) safety snapshots الأقدم — يبقى الأحدث + _last
+      var safety = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && /^monthSafetySnapshot_\d+$/.test(k)) safety.push(k);
+      }
+      safety.sort();
+      while (safety.length > 1) del(safety.shift());
+
+      // 2) monthSnapshots الأقدم لغير الفترة الحالية — يبقى أحدث 3 لقطات فترات
+      var currentKey = '';
+      try { currentKey = (typeof window.getCurrentMonthKey === 'function' && window.getCurrentMonthKey()) || ''; } catch (_) {}
+      var months = [];
+      for (var j = 0; j < localStorage.length; j++) {
+        var mk = localStorage.key(j);
+        if (mk && mk.indexOf('monthSnapshot_') === 0 && mk !== 'monthSnapshot_' + currentKey) months.push(mk);
+      }
+      // الأقدم أولًا بحجم القيمة كمؤشر (لا يوجد طابع زمني موثوق في المفتاح) — نحذف الزائد عن 3
+      months.sort();
+      while (months.length > 3) del(months.shift());
+
+      // 3) لقطة الخطابات المؤقتة
+      if (localStorage.getItem('hrl_snapshot_v1')) del('hrl_snapshot_v1');
+
+      // 4) أرشيف اللقطات: يبقى أحدث عنصرين لكل draftKey، والباقي الأقدم يُحذف
+      try {
+        var archive = (typeof window.getExtractArchive === 'function' && window.getExtractArchive()) || [];
+        if (Array.isArray(archive) && archive.length > 2) {
+          var byKey = {};
+          archive.forEach(function (snapItem) {
+            var dk = (snapItem && snapItem.draftKey) || 'unknown';
+            (byKey[dk] = byKey[dk] || []).push(snapItem);
+          });
+          var keep = [];
+          Object.keys(byKey).forEach(function (dk) {
+            byKey[dk].sort(function (a, b) { return String(b.savedAt || '').localeCompare(String(a.savedAt || '')); });
+            keep = keep.concat(byKey[dk].slice(0, 2));
+            removed += Math.max(0, byKey[dk].length - 2);
+          });
+          if (keep.length < archive.length && typeof window.setExtractArchive === 'function') {
+            window.setExtractArchive(keep);
+          }
+        }
+      } catch (_) {}
+    } catch (_) {}
+    return removed;
   }
 
   function markResumeTransaction(snap, clearCount, writeReport) {
@@ -521,9 +588,12 @@
       markResumeTransaction(snap, clearCount, writeReport);
 
       if (writeReport.failed > 0) {
-        console.warn('extract-snapshot: resume partial write failure', writeReport);
-        alert('تم استكمال اللقطة جزئيًا، لكن فشل حفظ بعض المفاتيح محليًا. راجع مساحة المتصفح أو أعد المحاولة.');
+        console.warn('extract-snapshot: resume partial write failure (after auto-prune)', writeReport);
+        alert('تم استكمال اللقطة، لكن ' + writeReport.failed + ' مفتاحًا ثانويًا لم يُحفظ رغم تنظيف ' + (writeReport.prunedKeys || 0) + ' نسخة قديمة تلقائيًا.\nبياناتك الأساسية محفوظة. أغلق تبويبات النظام الأخرى وأعد المحاولة لو ظهرت نواقص.');
         return false;
+      }
+      if (writeReport.prunedKeys > 0) {
+        console.info('extract-snapshot: auto-pruned ' + writeReport.prunedKeys + ' old local copies to complete the resume — newest data kept');
       }
 
       localStorage.removeItem('najran_revision_extract_id');

@@ -226,7 +226,7 @@
   }
 
   if (pageFile === 'extract-archive.html') {
-    appendScript('/original/extract_archive_route_guard.js?v=20260703_extract_archive_route_v4', true);
+    appendScript('/original/extract_archive_route_guard.js?v=20260703_extract_archive_route_v5', true);
   }
 
   if (/consumables\.html$/.test(pageFile)) {
