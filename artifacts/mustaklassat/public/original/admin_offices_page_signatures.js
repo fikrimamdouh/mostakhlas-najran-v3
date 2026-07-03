@@ -1,19 +1,20 @@
 // ===================================================================
-// Admin Offices Page Signatures — disabled inline controls
+// Admin Offices Page Signatures — controls separated
 // Scope: admin_offices_attendance.html only
 //
-// هذا الملف كان يحقن زرين في نهاية تبويبات الحضور/الأداء/الإنجاز:
-// - تعديل التواقيع
-// - نسخ للمكاتب
-// تم إيقاف حقن هذه الأزرار من المصدر بناءً على طلب المستخدم.
-// زر التوقيع الوحيد يكون أعلى الصفحة من admin_offices_signatures_unify_v1.js.
-// الشهادة الإجمالية مستقلة ولا يتم حذف أزرارها أو منطقها هنا.
+// - يضيف زرًا مستقلًا لتوقيع الشهادة الإجمالية أعلى الصفحة.
+// - لا يدمج الشهادة الإجمالية مع توحيد تواقيع المكاتب.
+// - يمنع ظهور تعديل/إضافة التواقيع أسفل صفحات المكاتب.
+// - يترك getSignatures/signatureKey متاحة للطباعة والمنطق الداخلي.
 // ===================================================================
 (function () {
   'use strict';
   if (!/admin_offices_attendance\.html(?:$|[?#])/.test(location.pathname + location.search)) return;
-  if (window.__ADMIN_OFFICES_PAGE_SIGNATURES_INLINE_DISABLED__) return;
-  window.__ADMIN_OFFICES_PAGE_SIGNATURES_INLINE_DISABLED__ = true;
+  if (window.__ADMIN_OFFICES_PAGE_SIGNATURES_CONTROLS_SEPARATED_V5__) return;
+  window.__ADMIN_OFFICES_PAGE_SIGNATURES_CONTROLS_SEPARATED_V5__ = true;
+
+  var GRAND_KEY = 'admin_offices_grand_certificate';
+  var GRAND_BTN_ID = 'admin-offices-grand-certificate-signature-btn';
 
   function readJson(key, fallback) {
     try {
@@ -59,7 +60,7 @@
       if (names[keys[i]] && title.indexOf(names[keys[i]]) > -1) return keys[i];
     }
     if (title.indexOf('الورش') > -1) return 'admin_staff';
-    return 'general';
+    return keys[0] || 'general';
   }
 
   function normalizeType(type) {
@@ -75,42 +76,79 @@
     return 'admin_offices_' + c + '_' + t;
   }
 
-  function removeInlineSignatureBars() {
+  function removeOfficePageSignatureControls() {
     var selectors = [
       '.admin-page-signature-bar',
-      '#sb-container-admin_offices'
+      '#sb-container-admin_offices',
+      '.admin-page-signature-block .sb-empty',
+      '[id^="attendance-signatures-"] .sb-empty',
+      '[id^="perf-signatures-"] .sb-empty',
+      '[id^="ach-signatures-"] .sb-empty'
     ];
     document.querySelectorAll(selectors.join(',')).forEach(function (el) {
       try { el.remove(); } catch (_) {}
     });
+
+    document.querySelectorAll('button').forEach(function (btn) {
+      if (btn.id === GRAND_BTN_ID) return;
+      var text = String(btn.textContent || '').replace(/\s+/g, ' ').trim();
+      var inOfficeSignatureArea = !!btn.closest('[id^="attendance-signatures-"], [id^="perf-signatures-"], [id^="ach-signatures-"], .admin-page-signature-block, #sb-container-admin_offices');
+      if (inOfficeSignatureArea && /تعديل التواقيع|إضافة توقيع|نسخ للمكاتب/.test(text)) {
+        try { btn.remove(); } catch (_) {}
+      }
+    });
   }
 
-  function ensureSignatureContainer(type, centerKey) {
+  function clearOfficeSignatureContainer(type, centerKey) {
     var t = normalizeType(type);
     var c = cleanCenterKey(centerKey) || currentCenterKey();
-    var id = t === 'performance' ? 'perf-signatures-' + c : t === 'achievement' ? 'ach-signatures-' + c : 'attendance-signatures-' + c;
-    var el = document.getElementById(id);
-    if (!el && t === 'attendance') {
-      var tab = document.getElementById('attendance-tab');
-      if (!tab) return null;
-      el = document.createElement('div');
-      el.id = id;
-      el.className = 'signatures-display-section attendance-signatures-display-section';
-      tab.appendChild(el);
-    }
-    return el;
+    var ids = [
+      'attendance-signatures-' + c,
+      'perf-signatures-' + c,
+      'ach-signatures-' + c
+    ];
+    ids.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.innerHTML = '';
+    });
+    removeOfficePageSignatureControls();
   }
 
   function renderSeparatedSignatures(type, centerKey) {
-    removeInlineSignatureBars();
-    if (!window.SignatureBlock || typeof window.SignatureBlock.init !== 'function') return;
-    var key = signatureKey(type, centerKey);
-    var target = ensureSignatureContainer(type, centerKey);
-    if (!target) return;
-    target.innerHTML = '<div class="admin-page-signature-block" data-admin-signature-key="' + key + '"><div id="sb-container-' + key + '" data-sb-page="' + key + '"></div></div>';
-    try { window.SignatureBlock.init(key, { showStamp: true }); } catch (_) {}
-    try { if (window.SignatureBlock.rerender) window.SignatureBlock.rerender(key); } catch (_) {}
-    removeInlineSignatureBars();
+    // لا نعرض أي محرر/رسالة إضافة تحت صفحات المكاتب.
+    // التعديل والإضافة من الزر العلوي فقط.
+    clearOfficeSignatureContainer(type, centerKey);
+  }
+
+  function openGrandSignatureDialog() {
+    if (!window.SignatureBlock || typeof window.SignatureBlock.open !== 'function') {
+      alert('نظام التواقيع لم يكتمل تحميله بعد. أعد تحميل الصفحة.');
+      return;
+    }
+    window.SignatureBlock.open(GRAND_KEY);
+  }
+
+  function ensureGrandButton(attempt) {
+    var bar = document.getElementById('main-action-buttons');
+    if (!bar) {
+      if ((attempt || 0) < 20) setTimeout(function () { ensureGrandButton((attempt || 0) + 1); }, 500);
+      return;
+    }
+
+    if (document.getElementById(GRAND_BTN_ID)) return;
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = GRAND_BTN_ID;
+    btn.className = 'ab ab-titles';
+    btn.innerHTML = '<i class="fas fa-signature"></i> توقيع الشهادة الإجمالية';
+    btn.onclick = openGrandSignatureDialog;
+
+    var certBtn = Array.prototype.slice.call(bar.querySelectorAll('button')).find(function (b) {
+      return String(b.textContent || '').indexOf('الشهادة الإجمالية') > -1 && b.id !== GRAND_BTN_ID;
+    });
+    if (certBtn && certBtn.nextSibling) bar.insertBefore(btn, certBtn.nextSibling);
+    else bar.appendChild(btn);
   }
 
   window.displaySignatures = function (type, centerKey) {
@@ -136,17 +174,24 @@
   window.AdminOfficesPageSignatures = {
     signatureKey: signatureKey,
     currentCenterKey: currentCenterKey,
-    refresh: function () { removeInlineSignatureBars(); }
+    refresh: function () { removeOfficePageSignatureControls(); },
+    openGrand: openGrandSignatureDialog
   };
 
+  function boot(attempt) {
+    ensureGrandButton(attempt || 0);
+    removeOfficePageSignatureControls();
+    if ((attempt || 0) < 20) setTimeout(function () { boot((attempt || 0) + 1); }, 500);
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', removeInlineSignatureBars);
+    document.addEventListener('DOMContentLoaded', function () { boot(0); });
   } else {
-    removeInlineSignatureBars();
+    boot(0);
   }
   try {
-    new MutationObserver(removeInlineSignatureBars).observe(document.body || document.documentElement, { childList: true, subtree: true });
+    new MutationObserver(removeOfficePageSignatureControls).observe(document.body || document.documentElement, { childList: true, subtree: true });
   } catch (_) {}
 
-  console.info('[Admin Offices Signatures] inline signature buttons removed; grand certificate untouched');
+  console.info('[Admin Offices Signatures] grand certificate button separated; office-page signature prompts removed v5');
 })();
