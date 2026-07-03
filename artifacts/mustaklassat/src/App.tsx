@@ -464,8 +464,23 @@ const companyName = companyCode ? companyLabelMap[companyCode] || companyCode : 
   return <>{children}</>;
 }
 
-function ProtectedRoute({ component: ComponentToRender }: { component: any; adminOnly?: boolean }) {
-  return <Show when="signed-in" fallback={<Redirect to="/sign-in" />}><AuthGuard><MainLayout><ComponentToRender /></MainLayout></AuthGuard></Show>;
+function RoleGate({ children, adminOnly, roles }: { children: React.ReactNode; adminOnly?: boolean; roles?: string[] }) {
+  // حارس الدور: يمنع فتح صفحات الإدارة بالرابط المباشر لمن لا يملك الصلاحية.
+  // السيرفر يرفض البيانات أصلاً (requireAdmin)، هذا يخفي الواجهة نفسها لتقليل الغلط.
+  const { data: dbUser, isLoading } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
+  if (isLoading || !dbUser) return <>{children}</>; // AuthGuard يعرض شاشة التحميل قبلنا
+  const role = String((dbUser as any).role || "").toLowerCase();
+  const allowed = adminOnly
+    ? (role === "admin" || role === "supervisor")
+    : roles
+      ? roles.includes(role) || role === "admin"
+      : true;
+  if (!allowed) return <Redirect to="/dashboard" />;
+  return <>{children}</>;
+}
+
+function ProtectedRoute({ component: ComponentToRender, adminOnly, roles }: { component: any; adminOnly?: boolean; roles?: string[] }) {
+  return <Show when="signed-in" fallback={<Redirect to="/sign-in" />}><AuthGuard><RoleGate adminOnly={adminOnly} roles={roles}><MainLayout><ComponentToRender /></MainLayout></RoleGate></AuthGuard></Show>;
 }
 
 function HomeRedirect() {
@@ -513,15 +528,15 @@ function ClerkProviderWithRoutes() {
             <Route path="/extracts/:id" component={() => <ProtectedRoute component={ExtractDetail} />} />
             <Route path="/projects" component={() => <ProtectedRoute component={ProjectsList} />} />
             <Route path="/projects/new" component={() => <ProtectedRoute component={NewProject} />} />
-            <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsers} />} />
-            <Route path="/admin/audit" component={() => <ProtectedRoute component={AuditLog} />} />
-            <Route path="/admin/users-view" component={() => <ProtectedRoute component={UsersView} />} />
-            <Route path="/admin/backup" component={() => <ProtectedRoute component={AdminBackup} />} />
-            <Route path="/admin/hospitals" component={() => <ProtectedRoute component={HospitalsAdmin} />} />
-            <Route path="/admin/extracts-stats" component={() => <ProtectedRoute component={ExtractsStats} />} />
-            <Route path="/admin/notifications" component={() => <ProtectedRoute component={AdminNotifications} />} />
-            <Route path="/contract-supervisor" component={() => <ProtectedRoute component={ContractSupervisorPage} />} />
-            <Route path="/viewer" component={() => <ProtectedRoute component={ViewerDashboard} />} />
+            <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsers} adminOnly />} />
+            <Route path="/admin/audit" component={() => <ProtectedRoute component={AuditLog} adminOnly />} />
+            <Route path="/admin/users-view" component={() => <ProtectedRoute component={UsersView} adminOnly />} />
+            <Route path="/admin/backup" component={() => <ProtectedRoute component={AdminBackup} adminOnly />} />
+            <Route path="/admin/hospitals" component={() => <ProtectedRoute component={HospitalsAdmin} adminOnly />} />
+            <Route path="/admin/extracts-stats" component={() => <ProtectedRoute component={ExtractsStats} adminOnly />} />
+            <Route path="/admin/notifications" component={() => <ProtectedRoute component={AdminNotifications} adminOnly />} />
+            <Route path="/contract-supervisor" component={() => <ProtectedRoute component={ContractSupervisorPage} roles={["contract_supervisor", "supervisor"]} />} />
+            <Route path="/viewer" component={() => <ProtectedRoute component={ViewerDashboard} roles={["viewer", "supervisor"]} />} />
             <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
             <Route path="/contacts" component={() => <ProtectedRoute component={ContactsRegistry} />} />
             <Route path="/original-viewer" component={() => <Show when="signed-in" fallback={<Redirect to="/sign-in" />}><AuthGuard><OriginalViewer /></AuthGuard></Show>} />
