@@ -915,7 +915,9 @@ title={collapsed ? currentHospitalLabel : undefined}
         </div>
       )}
 
-      {isAdmin && (
+      {/* الجرس لكل المستخدمين — إشعارات السيرفر (طلب تعديل/اعتماد/رفض/تنبيهات إدارية) للجميع،
+          وإشعار "مستخدمون معلقون" المحلي يظهر للأدمن فقط من داخل الـ hook نفسه */}
+      {(
         <div className="px-2 pt-1 pb-0.5" style={{ position: "relative", zIndex: 50 }}>
           <button
             ref={bellBtnRef}
