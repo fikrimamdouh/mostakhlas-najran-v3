@@ -330,6 +330,9 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { boot(0); }); else boot(0);
   window.addEventListener('beforeunload', function () { saveCurrentSnapshot('beforeunload'); });
+function pad2(n) {
+  return String(n).padStart(2, '0');
+}
 function backupStamp() {
   var d = new Date();
   return [

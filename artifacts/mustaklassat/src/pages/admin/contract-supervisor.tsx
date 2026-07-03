@@ -28,6 +28,7 @@ const EXTRACT_TYPE_LABELS: Record<string, string> = {
   consumables: "مستخلص المستهلكات",
   spare_parts: "مستخلص قطع الغيار",
   health_centers: "مستخلص المراكز الصحية",
+  admin_offices: "مستخلص المكاتب الإدارية",
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
