@@ -244,6 +244,10 @@
       var salary = iSalary >= 0 ? parseNumber(row[iSalary]) : 0;
       var category = iCat >= 0 ? trim(row[iCat]) : '1';
       var nationality = iNat >= 0 ? trim(row[iNat]) : 'غير سعودي';
+      // توحيد صيغ الجنسية (بنجلاديشي→بنجلادش، الهند→هندي، مصرى→مصري، سعودى→سعودي...)
+      if (typeof window.normalizeAdminOfficeNationality === 'function') {
+        nationality = window.normalizeAdminOfficeNationality(nationality);
+      }
       var fine = iFine >= 0 ? parseNumber(row[iFine]) : 0;
       if (!empName && !jobTitle && !iqamaId && !salary) { skipped++; continue; }
       if (['اسم الموظف','اسم شاغل الوظيفة','مندوب المقاول','مدير المركز'].indexOf(empName) > -1) { skipped++; continue; }

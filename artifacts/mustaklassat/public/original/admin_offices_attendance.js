@@ -140,8 +140,42 @@ function getAdminOfficeFineConfig(category) {
         || ABSENCE_FINES_BY_CATEGORY.default;
 }
 
+/**
+ * توحيد قيمة الجنسية القادمة من الاستيراد أو الإدخال اليدوي إلى الصيغة القياسية للنظام.
+ * يتعامل مع: اختلاف ى/ي والهمزات، اسم الدولة مقابل صفة الجنسية، والمسافات الزائدة.
+ * أمثلة: "بنجلاديشي"/"بنغلاديش" → "بنجلادش" — "الهند" → "هندي" — "مصرى" → "مصري" — "سعودى" → "سعودي".
+ */
+function normalizeAdminOfficeNationality(value) {
+    var v = String(value == null ? '' : value).trim();
+    if (!v) return v;
+    // تطبيع الحروف: ى→ي، أ/إ/آ→ا، ة→ه، إزالة "ال" التعريف من البداية، وضغط المسافات
+    var key = v.replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/\s+/g, ' ').trim();
+    var noAl = key.replace(/^ال/, '');
+    var MAP = {
+        'سعودي': 'سعودي', 'سعوديه': 'سعودي',
+        'غير سعودي': 'غير سعودي', 'غيرسعودي': 'غير سعودي',
+        'مصر': 'مصري', 'مصري': 'مصري',
+        'هند': 'هندي', 'هندي': 'هندي',
+        'باكستان': 'باكستاني', 'باكستاني': 'باكستاني', 'الباكستان': 'باكستاني',
+        'نيبال': 'نيبالي', 'نيبالي': 'نيبالي',
+        'فلبين': 'فلبيني', 'فلبيني': 'فلبيني',
+        'بنجلادش': 'بنجلادش', 'بنجلاديش': 'بنجلادش', 'بنجلاديشي': 'بنجلادش',
+        'بنغلادش': 'بنجلادش', 'بنغلاديش': 'بنجلادش', 'بنغلاديشي': 'بنجلادش', 'بنغالي': 'بنجلادش',
+        'يمن': 'يمني', 'يمني': 'يمني',
+        'سودان': 'سوداني', 'سوداني': 'سوداني',
+        'سيريلانكا': 'سيريلانكي', 'سريلانكا': 'سيريلانكي', 'سيريلانكي': 'سيريلانكي', 'سريلانكي': 'سيريلانكي'
+    };
+    if (MAP[key]) return MAP[key];
+    if (MAP[noAl]) return MAP[noAl];
+    // غير معروفة: أعِد القيمة بعد تنظيف بسيط (توحيد ى→ي والمسافات) حتى تعمل مقارنات السعودي صح
+    return key;
+}
+window.normalizeAdminOfficeNationality = normalizeAdminOfficeNationality;
+
 function isAdminOfficeSaudi(nationality) {
-    return String(nationality || '').replace(/\s+/g, '').includes('سعودي');
+    // توحيد ى→ي قبل الفحص — "سعودى" بالألف المقصورة كانت تُحسب غير سعودي وتُطبق عليها غرامة الجنسية خطأً
+    var v = String(nationality || '').replace(/ى/g, 'ي').replace(/\s+/g, '');
+    return v.includes('سعودي') && !v.includes('غيرسعودي');
 }
 
 function normalizeAdminOfficeDays(days, daysInExtract) {
@@ -743,7 +777,7 @@ function processSingleExcelFile(file) {
                         name: employeeName,
                         salary: salaryIndex !== -1 ? parseFloat(row[salaryIndex]) || 0 : 0,
                         category: categoryIndex !== -1 ? String(row[categoryIndex] || '7') : '7',
-                        nationality: nationalityIndex !== -1 ? String(row[nationalityIndex] || 'سعودي') : 'سعودي',
+                        nationality: normalizeAdminOfficeNationality(nationalityIndex !== -1 ? String(row[nationalityIndex] || 'سعودي') : 'سعودي'),
                         iqamaId: iqamaIdIndex !== -1 ? String(row[iqamaIdIndex] || '') : '',
                         nationalityFine: nationalityFineIndex !== -1 ? parseFloat(row[nationalityFineIndex]) || 0 : 0,
                         days: Array(daysInExtract).fill('ح')
@@ -900,7 +934,7 @@ function parseAdminOfficeWorksheetRows(jsonData) {
             name: employeeName,
             salary: salaryIndex >= 0 ? parseAdminOfficeNumber(row[salaryIndex]) : 0,
             category: categoryIndex >= 0 ? String(row[categoryIndex] || '7').trim() : '7',
-            nationality: nationalityIndex >= 0 ? (String(row[nationalityIndex] || '').trim() || 'سعودي') : 'سعودي',
+            nationality: normalizeAdminOfficeNationality(nationalityIndex >= 0 ? (String(row[nationalityIndex] || '').trim() || 'سعودي') : 'سعودي'),
             iqamaId: iqamaIdIndex >= 0 ? String(row[iqamaIdIndex] || '').trim() : '',
             nationalityFine: nationalityFineIndex >= 0 ? parseAdminOfficeNumber(row[nationalityFineIndex]) : 0,
             days
@@ -1593,9 +1627,12 @@ function createCategorySelect(currentCategory, centerKey, empIndex) {
  * @returns {string} - كود HTML للقائمة المنسدلة.
  */
 function createNationalitySelect(currentNationality, centerKey, empIndex) {
-    // القائمة الأساسية للجنسيات
-    const defaultNationalities = ['سعودي', 'مصري', 'هندي', 'باكستاني', 'فلبيني', 'بنجلادش', 'أخرى'];
-    
+    // القائمة الأساسية للجنسيات (موحّدة مع normalizeAdminOfficeNationality)
+    const defaultNationalities = ['سعودي', 'غير سعودي', 'مصري', 'هندي', 'باكستاني', 'نيبالي', 'فلبيني', 'بنجلادش', 'يمني', 'سوداني', 'أخرى'];
+
+    // توحيد الجنسية الحالية أولاً حتى تُطابق أحد خيارات القائمة بدل إضافة صيغة مكررة
+    currentNationality = normalizeAdminOfficeNationality(currentNationality);
+
     // إنشاء نسخة فريدة من القائمة لضمان عدم التكرار
     const nationalities = [...new Set(defaultNationalities)];
 
