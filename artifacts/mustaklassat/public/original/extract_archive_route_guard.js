@@ -1,15 +1,16 @@
 // ===================================================================
-// Extract Archive Route Guard — V3
+// Extract Archive Route Guard — V5
 // Scope: extract-archive.html
 // - يمنع زر الحضور في الأرشيف من فتح attendance.html العادي عندما يكون السياق مكاتب أو مراكز صحية.
 // - يضبط زر اللقطة المحلية: فتح هذا المستخلص، مع حماية المستخلص المفتوح قبل الاستبدال.
+// - يثبت ألوان أزرار مودال فتح المستخلص المحلي.
 // - لا يضيف ملفات جديدة ولا يرفع أي بيانات للسحابة.
 // ===================================================================
 (function () {
   'use strict';
   if (!/extract-archive\.html|original-viewer\?page=extract-archive\.html/.test(location.pathname + location.search)) return;
-  if (window.__NAJRAN_EXTRACT_ARCHIVE_ROUTE_GUARD_V3__) return;
-  window.__NAJRAN_EXTRACT_ARCHIVE_ROUTE_GUARD_V3__ = true;
+  if (window.__NAJRAN_EXTRACT_ARCHIVE_ROUTE_GUARD_V5_COLOR__) return;
+  window.__NAJRAN_EXTRACT_ARCHIVE_ROUTE_GUARD_V5_COLOR__ = true;
 
   function readJson(key, fallback) {
     try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
@@ -152,9 +153,9 @@
             '<div style="background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;border-radius:15px;padding:13px;display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:1.7;">' + selectedSummaryHtml(snap) + '</div>' +
           '</div>' +
           '<div style="display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;margin-top:16px;">' +
-            '<button id="najran-open-selected-save" style="background:linear-gradient(135deg,#166534,#16a34a);color:#fff;border:0;border-radius:12px;padding:13px 22px;font-weight:950;font-size:15px;cursor:pointer;font-family:Tajawal,Arial,sans-serif;box-shadow:0 6px 18px rgba(22,163,74,.35);"><i class="fas fa-save"></i> حفظ الحالي وفتح المختار (مُوصى به)</button>' +
-            '<button id="najran-open-selected-force" style="background:#fff;color:#b91c1c;border:2px solid #fca5a5;border-radius:12px;padding:11px 18px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">فتح المختار بدون حفظ الحالي</button>' +
-            '<button id="najran-open-selected-cancel" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;border-radius:12px;padding:11px 18px;font-weight:800;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">إلغاء</button>' +
+            '<button id="najran-open-selected-save" style="background:linear-gradient(135deg,#14532d,#16a34a)!important;color:#ffffff!important;border:0!important;border-radius:14px!important;padding:13px 22px!important;font-weight:950!important;font-size:15px!important;cursor:pointer!important;font-family:Tajawal,Arial,sans-serif!important;box-shadow:0 8px 22px rgba(22,163,74,.45)!important;min-width:235px!important;"><i class="fas fa-save"></i> حفظ الحالي وفتح المختار (مُوصى به)</button>' +
+            '<button id="najran-open-selected-force" style="background:linear-gradient(135deg,#991b1b,#dc2626)!important;color:#ffffff!important;border:0!important;border-radius:14px!important;padding:13px 20px!important;font-weight:950!important;font-size:15px!important;cursor:pointer!important;font-family:Tajawal,Arial,sans-serif!important;box-shadow:0 8px 22px rgba(220,38,38,.38)!important;min-width:210px!important;">فتح المختار بدون حفظ الحالي</button>' +
+            '<button id="najran-open-selected-cancel" style="background:linear-gradient(135deg,#334155,#64748b)!important;color:#ffffff!important;border:0!important;border-radius:14px!important;padding:13px 20px!important;font-weight:900!important;font-size:15px!important;cursor:pointer!important;font-family:Tajawal,Arial,sans-serif!important;box-shadow:0 8px 18px rgba(51,65,85,.28)!important;min-width:110px!important;">إلغاء</button>' +
           '</div>' +
         '</div>';
       document.body.appendChild(overlay);
@@ -167,7 +168,7 @@
 
   function patchResume() {
     if (typeof window.resumeExtractSnapshot !== 'function') return false;
-    if (window.resumeExtractSnapshot.__openSelectedWrappedV3) return true;
+    if (window.resumeExtractSnapshot.__openSelectedWrappedV5Color) return true;
     var original = window.resumeExtractSnapshot;
     window.resumeExtractSnapshot = function (id, options) {
       options = options || {};
@@ -196,15 +197,15 @@
       });
       return false;
     };
-    window.resumeExtractSnapshot.__openSelectedWrappedV3 = true;
+    window.resumeExtractSnapshot.__openSelectedWrappedV5Color = true;
     return true;
   }
 
   function patchArchiveResumeButtons() {
     try {
       document.querySelectorAll('.arc-btn-resume').forEach(function (btn) {
-        if (!btn.__openSelectedTextPatchedV3) {
-          btn.__openSelectedTextPatchedV3 = true;
+        if (!btn.__openSelectedTextPatchedV5Color) {
+          btn.__openSelectedTextPatchedV5Color = true;
           btn.innerHTML = '<i class="fas fa-folder-open"></i> فتح هذا المستخلص';
           btn.title = 'فتح هذا المستخلص من الأرشيف المحلي';
         }
@@ -225,9 +226,6 @@
   setTimeout(runPatches, 2500);
   document.addEventListener('click', function () { setTimeout(runPatches, 40); }, true);
 
-  // ── v5: إصلاح ذاتي للكروت القديمة المحفوظة بأصفار ──
-  // اللقطات المحفوظة قبل إصلاح totals كانت تخزّن totalEmployees/totalNetAmount = 0
-  // لمستخلصات المكاتب/المراكز. نعيد الحساب من extractData مرة واحدة ونحفظ ثم نعيد الرندر.
   function healSnapshotTotals() {
     try {
       if (typeof window.getExtractArchive !== 'function' || typeof window.setExtractArchive !== 'function') return;
@@ -280,5 +278,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(healSnapshotTotals, 400); });
   else setTimeout(healSnapshotTotals, 400);
 
-  console.info('[ExtractArchiveRouteGuard] installed v5 inline open-selected + totals self-heal · attendance route:', resolveAttendancePage());
+  console.info('[ExtractArchiveRouteGuard] installed v5 colored open-selected buttons + totals self-heal · attendance route:', resolveAttendancePage());
 })();
