@@ -1,16 +1,18 @@
 // ===================================================================
-// Submitted Extract Archive Bundle Guard — V2
+// Submitted Extract Archive Bundle Guard — V3 slim submit payload
 // Scope: original work pages before POST/PUT /api/submitted-extracts
-// يحفظ نسخة مراجعة/أرشفة صريحة داخل extractData عند الرفع:
-// - يثبت مصدر المستخلص الحقيقي حتى لو extractType = labor.
-// - ينسخ مفاتيح المكاتب/المراكز/المستهلكات/الأداء/الإنجاز/الخطابات المهمة.
-// - يلتقط مفاتيح التواقيع الجديدة sb_sigs_/sb_prefs_ داخل trackedKeyCopies.
-// - يحفظ لقطة محلية عند الرفع قبل أي تنظيف لاحق.
+// يحفظ بيانات المراجعة المهمة فقط داخل extractData عند الرفع:
+// - يمنع إدخال الأرشيفات/النسخ المحلية الثقيلة داخل payload.
+// - ينظف قفل رفع المستخلص بعد نجاح/فشل الشبكة حتى لا يعلق المستخدم.
+// - يثبت مصدر المستخلص الحقيقي ومفاتيح التواقيع/الجداول اللازمة.
 // ===================================================================
 (function () {
   'use strict';
-  if (window.__NAJRAN_SUBMITTED_EXTRACT_ARCHIVE_BUNDLE_GUARD_V2__) return;
-  window.__NAJRAN_SUBMITTED_EXTRACT_ARCHIVE_BUNDLE_GUARD_V2__ = true;
+  if (window.__NAJRAN_SUBMITTED_EXTRACT_ARCHIVE_BUNDLE_GUARD_V3__) return;
+  window.__NAJRAN_SUBMITTED_EXTRACT_ARCHIVE_BUNDLE_GUARD_V3__ = true;
+
+  var MAX_VALUE_CHARS = 300 * 1024;
+  var WARN_PAYLOAD_CHARS = 850 * 1024;
 
   function readJson(key, fallback) {
     try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
@@ -50,6 +52,64 @@
   function parseStorageValue(raw) {
     if (raw == null) return raw;
     try { return JSON.parse(raw); } catch (_) { return raw; }
+  }
+
+  function valueSize(value) {
+    try {
+      if (typeof value === 'string') return value.length;
+      return JSON.stringify(value).length;
+    } catch (_) {
+      return String(value == null ? '' : value).length;
+    }
+  }
+
+  function isHeavyKey(key) {
+    key = String(key || '');
+    if (!key) return true;
+    if (key.indexOf('_u') === 0) return true;
+    if (key.indexOf('extractArchive') > -1) return true;
+    if (key.indexOf('ExtractArchive') > -1) return true;
+    if (key.indexOf('archive') > -1 || key.indexOf('Archive') > -1) return true;
+    if (key.indexOf('backup') > -1 || key.indexOf('Backup') > -1) return true;
+    if (key.indexOf('PreWipeSnapshot') > -1) return true;
+    if (key.indexOf('adminOfficesPreWipeSnapshot') > -1) return true;
+    if (key.indexOf('monthSnapshot_') === 0) return true;
+    if (key.indexOf('monthSafetySnapshot_') === 0) return true;
+    if (key.indexOf('last_local_snapshot') > -1) return true;
+    if (key.indexOf('najran_last_local_snapshot') === 0) return true;
+    return false;
+  }
+
+  function isHeavyValue(value) {
+    var s = '';
+    try {
+      s = typeof value === 'string' ? value : JSON.stringify(value);
+    } catch (_) {
+      s = String(value == null ? '' : value);
+    }
+    if (!s) return false;
+    if (s.length > MAX_VALUE_CHARS) return true;
+    if (s.indexOf('data:image') > -1) return true;
+    if (s.indexOf(';base64,') > -1) return true;
+    if (s.indexOf('"base64"') > -1) return true;
+    return false;
+  }
+
+  function allowSubmitKey(key, value) {
+    if (isHeavyKey(key)) return false;
+    if (isHeavyValue(value)) return false;
+    return true;
+  }
+
+  function sanitizeSnapshot(snapshot) {
+    var cleanSnap = {};
+    snapshot = snapshot || {};
+    Object.keys(snapshot).forEach(function (key) {
+      var value = snapshot[key];
+      if (!allowSubmitKey(key, value)) return;
+      cleanSnap[key] = value;
+    });
+    return cleanSnap;
   }
 
   function hasKey(snapshot, key) {
@@ -170,6 +230,7 @@
       try {
         var raw = localStorage.getItem(key);
         if (raw == null) return;
+        if (!allowSubmitKey(key, raw)) return;
         out[key] = parseStorageValue(raw);
       } catch (_) {}
     }
@@ -213,8 +274,10 @@
 
   function enrichPayload(payload) {
     if (!payload || typeof payload !== 'object') return payload;
+    var originalSize = valueSize(payload);
     var snapshot = parseMaybeJson(payload.extractData, {});
     if (!snapshot || typeof snapshot !== 'object') snapshot = {};
+    snapshot = sanitizeSnapshot(snapshot);
 
     var moduleName = detectSourceModule(payload, snapshot);
     var reviewPage = pageForModule(moduleName, payload.extractType);
@@ -222,8 +285,10 @@
     var integrity = makeIntegrity(moduleName, snapshot, keyCopies);
 
     Object.keys(keyCopies).forEach(function (key) {
-      if (snapshot[key] === undefined) snapshot[key] = keyCopies[key];
+      if (snapshot[key] === undefined && allowSubmitKey(key, keyCopies[key])) snapshot[key] = keyCopies[key];
     });
+
+    snapshot = sanitizeSnapshot(snapshot);
 
     snapshot.__najranSourceModule = moduleName;
     snapshot.__najranReviewPage = reviewPage;
@@ -231,7 +296,7 @@
     snapshot.reviewPage = snapshot.reviewPage || reviewPage;
 
     snapshot.__submittedExtractArchiveBundle_v1 = {
-      version: 2,
+      version: 3,
       createdAt: new Date().toISOString(),
       extractType: String(payload.extractType || ''),
       sourceModule: moduleName,
@@ -245,12 +310,18 @@
         archive: '/original/extract-archive.html'
       },
       integrity: integrity,
-      trackedKeyCopies: keyCopies
+      trackedKeysCount: Object.keys(keyCopies).length
     };
 
     payload.extractData = snapshot;
     payload.sourceModule = payload.sourceModule || moduleName;
     payload.reviewPage = payload.reviewPage || reviewPage;
+
+    var finalSize = valueSize(payload);
+    console.log('[SubmittedExtractArchiveBundle] payload size', { before: originalSize, after: finalSize, module: moduleName });
+    if (finalSize > WARN_PAYLOAD_CHARS) {
+      console.warn('[SubmittedExtractArchiveBundle] payload still large after cleanup:', finalSize);
+    }
     return payload;
   }
 
@@ -263,8 +334,38 @@
     return method === 'POST' || method === 'PUT';
   }
 
+  function hasStorageHeadroom() {
+    try {
+      var probe = '__najran_storage_probe__';
+      localStorage.setItem(probe, new Array(4096).join('x'));
+      localStorage.removeItem(probe);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function shouldSkipLocalSnapshotBeforeSubmit() {
+    try {
+      if (!hasStorageHeadroom()) return true;
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (!key) continue;
+        if (key.indexOf('extractArchive') > -1) {
+          var raw = localStorage.getItem(key) || '';
+          if (raw.length > 1024 * 1024) return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+
   function saveLocalSnapshotBeforeSubmit() {
     try {
+      if (shouldSkipLocalSnapshotBeforeSubmit()) {
+        console.warn('[SubmittedExtractArchiveBundle] local snapshot skipped: storage near quota or archive too large');
+        return;
+      }
       if (typeof window.saveExtractSnapshot === 'function') {
         window.saveExtractSnapshot('submit-to-approval');
       }
@@ -273,8 +374,30 @@
     }
   }
 
+  function submitLockKeyFromPayload(payload) {
+    payload = payload || {};
+    var contractData = payload || {};
+    return 'najran_submit_lock_' + [
+      'submitted_extract',
+      payload.extractType || '',
+      contractData.companyName || '',
+      contractData.hospitalName || localStorage.getItem('hospitalName') || '',
+      contractData.extractYear || '',
+      contractData.extractMonth || '',
+      contractData.paymentNumber || contractData.extractNumber || ''
+    ].join('__');
+  }
+
+  function clearSubmitLock(payload, reason) {
+    try {
+      var key = submitLockKeyFromPayload(payload);
+      if (key) sessionStorage.removeItem(key);
+      console.warn('[SubmittedExtractArchiveBundle] submit lock cleared:', reason || 'done');
+    } catch (_) {}
+  }
+
   function patchFetch() {
-    if (window.fetch.__najranSubmittedArchiveBundleWrappedV2) return;
+    if (window.fetch.__najranSubmittedArchiveBundleWrappedV3) return;
     var originalFetch = window.fetch;
     window.fetch = function (input, init) {
       try {
@@ -289,7 +412,16 @@
             saveLocalSnapshotBeforeSubmit();
             payload = enrichPayload(payload);
             nextInit.body = JSON.stringify(payload);
-            return originalFetch.call(this, input, nextInit);
+            return originalFetch.call(this, input, nextInit)
+              .then(function (res) {
+                if (!res || !res.ok) clearSubmitLock(payload, 'network-failed');
+                else clearSubmitLock(payload, 'network-ok');
+                return res;
+              })
+              .catch(function (err) {
+                clearSubmitLock(payload, 'network-error');
+                throw err;
+              });
           }
         }
       } catch (e) {
@@ -297,7 +429,7 @@
       }
       return originalFetch.apply(this, arguments);
     };
-    window.fetch.__najranSubmittedArchiveBundleWrappedV2 = true;
+    window.fetch.__najranSubmittedArchiveBundleWrappedV3 = true;
   }
 
   patchFetch();
@@ -305,8 +437,9 @@
     enrichPayload: enrichPayload,
     detectSourceModule: detectSourceModule,
     pageForModule: pageForModule,
-    collectTrackedKeyCopies: collectTrackedKeyCopies
+    collectTrackedKeyCopies: collectTrackedKeyCopies,
+    sanitizeSnapshot: sanitizeSnapshot
   };
 
-  console.info('[SubmittedExtractArchiveBundle] installed v2 signature keys captured');
+  console.info('[SubmittedExtractArchiveBundle] installed v3 slim payload + submit-lock cleanup');
 })();
