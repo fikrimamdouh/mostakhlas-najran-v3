@@ -1,8 +1,8 @@
 /**
- * cloud-sync.js — V8 Local-first
+ * cloud-sync.js — V9 Local-first / Revision-safe
  * السحب من السحابة عند فتح الصفحة فقط.
  * الرفع التلقائي مسموح للإعدادات الخفيفة فقط.
- * بيانات التشغيل الثقيلة تبقى محلية وتترفع فقط عند الرفع الصريح عبر najranSyncNow().
+ * أثناء تعديل مستخلص محفوظ: لا REVIEW ONLY، لا review-force، لا تنظيف سياق، ولا Pull/Push تلقائي تشغيلي.
  */
 (function () {
   'use strict';
@@ -10,12 +10,10 @@
   const API_BASE = '/api';
   const SESSION_KEY = 'najran_session';
   const SETTINGS_AUTO_SYNC_MS = 300000;
-  const ACTIVITY_STATUS_THROTTLE_MS = 300000;
   const DIRTY_KEYS = new Set();
 
   let _origSetItem = null;
   let isApplyingCloudPull = false;
-  let lastActivityStatusAt = 0;
   let syncInProgress = false;
   let syncIndicator = null;
 
@@ -50,13 +48,15 @@
     'finalLaborCost', 'performanceTotalDeduction', 'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin',
     'performanceSignatures', 'performanceSignatures_v2', 'performanceTableNames',
     'najran_labor_attendance_done', 'najran_labor_performance_done', 'najran_health_attendance_done', 'najran_admin_offices_attendance_done',
-'adminOfficeNames_v1', 'adminOfficeAffiliations_v1',
-'adminOfficesFullAttendanceBundle_v1', 'adminOfficesFullAttendanceBundle_v1_ts',    'backupLog', 'backupLogs'
+    'adminOfficeNames_v1', 'adminOfficeAffiliations_v1',
+    'adminOfficesFullAttendanceBundle_v1', 'adminOfficesFullAttendanceBundle_v1_ts',
+    'backupLog', 'backupLogs'
   ]);
 
   const OPERATIONAL_EXACT_KEYS = new Set([
-'attendanceData', 'centersAttendanceData_v2', 'healthCentersAttendanceData', 'adminOfficesAttendanceData_v1',
-'adminOfficesFullAttendanceBundle_v1',    'ng_attendanceData', 'ng_departmentNames', 'ng_distributionSettings', 'ng_finalLaborCost', 'ng_performanceTotalDeduction',
+    'attendanceData', 'centersAttendanceData_v2', 'healthCentersAttendanceData', 'adminOfficesAttendanceData_v1',
+    'adminOfficesFullAttendanceBundle_v1',
+    'ng_attendanceData', 'ng_departmentNames', 'ng_distributionSettings', 'ng_finalLaborCost', 'ng_performanceTotalDeduction',
     'nd_attendanceData', 'nd_departmentNames', 'nd_distributionSettings', 'nd_finalLaborCost', 'nd_performanceTotalDeduction', 'nd_dentalAchievementTotals',
     'consumablesTableData', 'healthCentersConsumables', 'mainHospitalConsumables', 'admin_offices_consumables_v1.0', 'finalConsumablesCost',
     'subcontractors_data_consumables_v27', 'performance_data_consumables_v27', 'water_supply_data_consumables_v27', 'sewage_disposal_data_consumables_v27', 'summary_data_consumables_v27',
@@ -69,7 +69,8 @@
   const OPERATIONAL_PREFIXES = [
     'deptCalculatedCost_', 'dept_', 'tableData_', 'achievement_', 'consumables_', 'spare_',
     'water_', 'sewage_', 'subcontractors_', 'najran_labor_', 'najran_health_', 'najran_admin_',
-'monthSnapshot_', 'adminOfficeAttendance_'  ];
+    'monthSnapshot_', 'adminOfficeAttendance_'
+  ];
 
   const EMPTY_OVERWRITE_PROTECTED_KEYS = new Set([
     ...ATTENDANCE_PAGE_KEYS,
@@ -91,10 +92,70 @@
     return getCurrentPageFile() === 'settings_main.html';
   }
 
+  function isRevisionMode() {
+    try {
+      return localStorage.getItem('najran_revision_mode') === 'true' &&
+        !!localStorage.getItem('najran_revision_extract_id') &&
+        !!localStorage.getItem('najran_revision_snapshot');
+    } catch (_) { return false; }
+  }
+
+  function getSession() {
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      if (!s || !s.timestamp) return null;
+      if (Date.now() - s.timestamp > 8 * 60 * 60 * 1000) return null;
+      return s;
+    } catch (_) { return null; }
+  }
+
+  function saveSession(s) {
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch (_) {}
+  }
+
+  function enforceRevisionEditSession() {
+    if (!isRevisionMode()) return false;
+    const s = getSession();
+    if (!s) return true;
+    let changed = false;
+    if (s.reviewOnly === true) { s.reviewOnly = false; changed = true; }
+    if (s.canReviewCurrentHospital === true) { s.canReviewCurrentHospital = false; changed = true; }
+    if (s.canEditCurrentHospital !== true) { s.canEditCurrentHospital = true; changed = true; }
+    if (changed) {
+      s.timestamp = Date.now();
+      saveSession(s);
+      console.warn('[MzamanaCloud] REVISION MODE: تم تعطيل REVIEW ONLY أثناء تعديل مستخلص محفوظ');
+    }
+    return true;
+  }
+
+  function isReviewOnlySession() {
+    if (isRevisionMode()) return false;
+    const s = getSession();
+    return !!(s && s.reviewOnly === true);
+  }
+
   function isAdminSession() {
     const s = getSession();
     const role = String((s && s.role) || '').toLowerCase();
     return role === 'admin' || role === 'super_admin' || role === 'administrator';
+  }
+
+  function getHospitalName() {
+    const s = getSession();
+    return s && s.hospital ? String(s.hospital).trim() : null;
+  }
+
+  function parseHospitalList(v) {
+    if (Array.isArray(v)) return v.map(String).map(x => x.trim()).filter(Boolean);
+    if (!v) return [];
+    try {
+      const p = JSON.parse(String(v));
+      if (Array.isArray(p)) return parseHospitalList(p);
+    } catch (_) {}
+    return String(v).split(/[،,|\n]/g).map(x => x.trim()).filter(Boolean);
   }
 
   function isOperationalKey(key) {
@@ -174,46 +235,8 @@
     return contentScoreForKey(key, oldValue) > 0 && contentScoreForKey(key, newValue) === 0;
   }
 
-  function getSession() {
-    try {
-      const raw = localStorage.getItem(SESSION_KEY);
-      if (!raw) return null;
-      const s = JSON.parse(raw);
-      if (!s || !s.timestamp) return null;
-      if (Date.now() - s.timestamp > 8 * 60 * 60 * 1000) return null;
-      return s;
-    } catch (_) { return null; }
-  }
-
-  function getHospitalName() {
-    const s = getSession();
-    return s && s.hospital ? String(s.hospital).trim() : null;
-  }
-
-  function isReviewOnlySession() {
-    const s = getSession();
-    return !!(s && s.reviewOnly === true);
-  }
-function isRevisionMode() {
-  try {
-    return localStorage.getItem('najran_revision_mode') === 'true'
-      && !!localStorage.getItem('najran_revision_extract_id')
-      && !!localStorage.getItem('najran_revision_snapshot');
-  } catch (_) {
-    return false;
-  }
-}
-  function parseHospitalList(v) {
-    if (Array.isArray(v)) return v.map(String).map(x => x.trim()).filter(Boolean);
-    if (!v) return [];
-    try {
-      const p = JSON.parse(String(v));
-      if (Array.isArray(p)) return parseHospitalList(p);
-    } catch (_) {}
-    return String(v).split(/[،,|\n]/g).map(x => x.trim()).filter(Boolean);
-  }
-
   function forceReviewOnlyBeforeInit() {
+    if (enforceRevisionEditSession()) return false;
     try {
       const raw = localStorage.getItem(SESSION_KEY);
       if (!raw) return false;
@@ -236,44 +259,37 @@ function isRevisionMode() {
       s.timestamp = Date.now();
       localStorage.setItem(SESSION_KEY, JSON.stringify(s));
       localStorage.removeItem('najran_active_hospital_context');
-    const reviewKeepKeys = new Set([
-  'adminOfficesPreWipeSnapshot_v1',
-  'adminOfficesAttendanceData_v1_localBackup',
-  'adminOfficesAttendanceData_v1_localBackup_ts',
-  'adminOfficesAttendanceData_v1_lastGood',
-  'adminOfficesAttendanceData_v1_lastGood_ts',
-  'adminOfficesAttendanceData',
-  'adminOfficesLaborDataSafe_v2',
-  'adminOfficesLaborDataSafe_v2_ts',
-  'adminOfficesLaborNamesSafe_v2',
-  'adminOfficesLaborAffiliationsSafe_v2',
-  'najranExtractDataSafe_v1',
-  'najranExtractDataSafe_v1_ts',
-  'adminOfficesFullAttendanceBundle_v1',
-  'adminOfficesFullAttendanceBundle_v1_ts'
-]);
-
-Object.keys(localStorage).forEach(function(k){
-  if (reviewKeepKeys.has(k)) return;
-  const lk = String(k || '').toLowerCase();
-  if (lk.includes('attendance') || lk.includes('hospitalactivitystatus')) {
-    if (!window.__adminOfficesPreWipeCaptured) captureAdminOfficesPreWipeSnapshot('review-force');
-    localStorage.removeItem(k);
-  }
-});
+      clearOperationalKeysForHospitalSwitch('review-force');
       sessionStorage.clear();
       console.warn('[MzamanaCloud] REVIEW ONLY: تم فرض وضع المراجعة قبل التهيئة للمستشفى «' + hospital + '»');
       return true;
     } catch (_) { return false; }
   }
 
-  // snapshot طوارئ قبل أي مسح تشغيلي يلمس بيانات المكاتب الإدارية —
-  // يُخزَّن في مفتاح محمي (ضمن keepKeys/reviewKeepKeys) ويستخدمه persistence_fix كمصدر استرجاع.
+  function adminOfficeDataScoreFromRaw(raw) {
+    try {
+      var data = JSON.parse(String(raw || '{}'));
+      if (data && data.attendanceByOffice && typeof data.attendanceByOffice === 'object') data = data.attendanceByOffice;
+      var offices = 0, rows = 0, named = 0;
+      Object.keys(data || {}).forEach(function (k) {
+        var arr = data[k];
+        if (!Array.isArray(arr) || !arr.length) return;
+        offices++;
+        rows += arr.length;
+        arr.forEach(function (emp) {
+          if (String((emp && (emp.name || emp.employeeName || emp.workerName || emp.empName)) || '').trim()) named++;
+        });
+      });
+      return { offices: offices, rows: rows, named: named };
+    } catch (_) { return { offices: 0, rows: 0, named: 0 }; }
+  }
+
   function captureAdminOfficesPreWipeSnapshot(reason) {
+    if (isRevisionMode()) return;
     try {
       const rawAtt = localStorage.getItem('adminOfficesAttendanceData_v1');
       const s = adminOfficeDataScoreFromRaw(rawAtt);
-      if (!s.rows) return; // لا شيء يستحق الحفظ
+      if (!s.rows) return;
       const snap = {
         capturedAt: new Date().toISOString(),
         reason: reason || 'pre-wipe',
@@ -290,31 +306,20 @@ Object.keys(localStorage).forEach(function(k){
     } catch (_) {}
   }
 
-  function clearOperationalKeysForHospitalSwitch() {
-    captureAdminOfficesPreWipeSnapshot('hospital-switch-or-review');
-const keepKeys = new Set([
-  SESSION_KEY,
-  'hospitalName',
-  'companyName',
-  'contractNumber',
-  'sidebar_collapsed',
-  'najran_read_notifications',
-
-  'adminOfficesPreWipeSnapshot_v1',
-  'adminOfficesAttendanceData_v1_localBackup',
-  'adminOfficesAttendanceData_v1_localBackup_ts',
-  'adminOfficesAttendanceData_v1_lastGood',
-  'adminOfficesAttendanceData_v1_lastGood_ts',
-  'adminOfficesAttendanceData',
-  'adminOfficesLaborDataSafe_v2',
-  'adminOfficesLaborDataSafe_v2_ts',
-  'adminOfficesLaborNamesSafe_v2',
-  'adminOfficesLaborAffiliationsSafe_v2',
-  'najranExtractDataSafe_v1',
-  'najranExtractDataSafe_v1_ts',
-  'adminOfficesFullAttendanceBundle_v1',
-  'adminOfficesFullAttendanceBundle_v1_ts'
-]);    const clearPrefixes = ['deptCalculatedCost_', 'dept_', 'sb_sigs_', 'sb_prefs_', 'tableData_', 'achievement_', 'consumables_', 'spare_', 'water_', 'sewage_', 'subcontractors_', 'najran_labor_', 'najran_health_', 'najran_admin_', 'monthSnapshot_', '_u'];
+  function clearOperationalKeysForHospitalSwitch(reason) {
+    if (isRevisionMode()) {
+      console.warn('[MzamanaCloud] REVISION MODE: تم منع تنظيف السياق أثناء تعديل مستخلص محفوظ');
+      return;
+    }
+    captureAdminOfficesPreWipeSnapshot(reason || 'hospital-switch-or-review');
+    const keepKeys = new Set([
+      SESSION_KEY, 'hospitalName', 'companyName', 'contractNumber', 'sidebar_collapsed', 'najran_read_notifications',
+      'adminOfficesPreWipeSnapshot_v1', 'adminOfficesAttendanceData_v1_localBackup', 'adminOfficesAttendanceData_v1_localBackup_ts',
+      'adminOfficesAttendanceData_v1_lastGood', 'adminOfficesAttendanceData_v1_lastGood_ts', 'adminOfficesAttendanceData',
+      'adminOfficesLaborDataSafe_v2', 'adminOfficesLaborDataSafe_v2_ts', 'adminOfficesLaborNamesSafe_v2', 'adminOfficesLaborAffiliationsSafe_v2',
+      'najranExtractDataSafe_v1', 'najranExtractDataSafe_v1_ts', 'adminOfficesFullAttendanceBundle_v1', 'adminOfficesFullAttendanceBundle_v1_ts'
+    ]);
+    const clearPrefixes = ['deptCalculatedCost_', 'dept_', 'sb_sigs_', 'sb_prefs_', 'tableData_', 'achievement_', 'consumables_', 'spare_', 'water_', 'sewage_', 'subcontractors_', 'najran_labor_', 'najran_health_', 'najran_admin_', 'monthSnapshot_', '_u'];
     const clearKeys = [
       'persistentContractData','persistentExtractData','contractData','contractDetails','contractType','contractStartDate','contractEndDate','contractSignatureData',
       'extractMonth','extractYear','extractNumber','extractStart','extractEnd','extractFromDate','extractToDate','paymentNumber',
@@ -340,6 +345,13 @@ const keepKeys = new Set([
   }
 
   function ensureHospitalContextClean() {
+    if (isRevisionMode()) {
+      enforceRevisionEditSession();
+      const hospitalName = getHospitalName();
+      if (hospitalName) localStorage.setItem('najran_active_hospital_context', hospitalName);
+      console.warn('[MzamanaCloud] REVISION MODE: context cleanup skipped');
+      return;
+    }
     const hospitalName = getHospitalName();
     if (!hospitalName) return;
     const ctxKey = 'najran_active_hospital_context';
@@ -348,7 +360,7 @@ const keepKeys = new Set([
     const mustClean = reviewOnly || (prev && prev !== hospitalName);
     if (mustClean) {
       console.warn('[MzamanaCloud] تنظيف السياق: «' + hospitalName + '»' + (reviewOnly ? ' [مراجعة — يتنظف دايماً]' : ' [تبديل مستشفى]'));
-      clearOperationalKeysForHospitalSwitch();
+      clearOperationalKeysForHospitalSwitch(reviewOnly ? 'review-force' : 'hospital-switch');
     }
     if (!reviewOnly) localStorage.setItem(ctxKey, hospitalName);
   }
@@ -381,13 +393,6 @@ const keepKeys = new Set([
     } catch (_) { return null; }
   }
 
-  function readExtractMeta() {
-    try {
-      const d = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
-      return { month: d.extractMonth || '', year: d.extractYear || '', extractNumber: d.extractNumber || d.paymentNumber || '' };
-    } catch (_) { return { month:'', year:'', extractNumber:'' }; }
-  }
-
   function getCurrentPageLabel() {
     const file = getCurrentPageFile();
     const map = {
@@ -400,11 +405,16 @@ const keepKeys = new Set([
     return map[file] || document.title || file || 'صفحة غير محددة';
   }
 
-  function updateHospitalActivityStatus() {
+  function readExtractMeta() {
     try {
-      const now = Date.now();
-      if (now - lastActivityStatusAt < ACTIVITY_STATUS_THROTTLE_MS) return;
-      lastActivityStatusAt = now;
+      const d = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+      return { month: d.extractMonth || '', year: d.extractYear || '', extractNumber: d.extractNumber || d.paymentNumber || '' };
+    } catch (_) { return { month:'', year:'', extractNumber:'' }; }
+  }
+
+  function updateHospitalActivityStatus() {
+    if (isRevisionMode()) return;
+    try {
       const s = getSession();
       if (!s || !s.hospital || isReviewOnlySession()) return;
       const meta = readExtractMeta();
@@ -412,7 +422,7 @@ const keepKeys = new Set([
       safeWrite('hospitalActivityStatus', JSON.stringify({
         userId: s.userId || '', userName: s.name || s.email || 'مستخدم', hospital: s.hospital,
         page: getCurrentPageLabel(), pageFile: getCurrentPageFile(), month: meta.month, year: meta.year,
-        extractNumber: meta.extractNumber, updatedAt: new Date(now).toISOString()
+        extractNumber: meta.extractNumber, updatedAt: new Date().toISOString()
       }));
       DIRTY_KEYS.add('hospitalActivityStatus');
     } catch (_) {}
@@ -420,7 +430,7 @@ const keepKeys = new Set([
 
   function showHospitalActivityNotice() {
     try {
-      if (isReviewOnlySession()) return;
+      if (isRevisionMode() || isReviewOnlySession()) return;
       const raw = localStorage.getItem('hospitalActivityStatus');
       if (!raw) return;
       const activity = JSON.parse(raw);
@@ -442,14 +452,26 @@ const keepKeys = new Set([
     } catch (_) {}
   }
 
- async function pullFromCloud() {
-  if (isRevisionMode() && !isSettingsMainPage()) {
-    console.warn('[MzamanaCloud] REVISION MODE: تم منع Pull السحابة للحفاظ على snapshot المستخلص القديم');
-    return;
+  function shouldPullAttendanceKeyForCurrentPage(nk) {
+    const page = getCurrentPageFile();
+    if (nk === 'adminOfficesFullAttendanceBundle_v1' || nk === 'adminOfficesFullAttendanceBundle_v1_ts' || nk.indexOf('adminOfficeAttendance_') === 0) return page === 'admin_offices_attendance.html';
+    if (!ATTENDANCE_PAGE_KEYS.has(nk)) return true;
+    if (nk === 'adminOfficesAttendanceData_v1') return page === 'admin_offices_attendance.html';
+    if (nk === 'healthCentersAttendanceData') return page === 'health_centers_attendance.html';
+    if (nk === 'attendanceData') return page === 'attendance.html';
+    if (nk === 'centersAttendanceData_v2') return page === 'attendance.html';
+    if (nk === 'ng_attendanceData' || nk === 'nd_attendanceData') return page === 'attendance.html';
+    return false;
   }
 
-  const hospitalName = getHospitalName();
-  const storageScope = isSettingsMainPage() ? 'scope=settings' : '';
+  async function pullFromCloud() {
+    if (isRevisionMode() && !isSettingsMainPage()) {
+      enforceRevisionEditSession();
+      console.warn('[MzamanaCloud] REVISION MODE: تم منع Pull السحابة للحفاظ على snapshot المستخلص القديم');
+      return;
+    }
+    const hospitalName = getHospitalName();
+    const storageScope = isSettingsMainPage() ? 'scope=settings' : '';
     const reviewOnly = isReviewOnlySession();
     const hospitalQueryParts = [];
     if (storageScope) hospitalQueryParts.push(storageScope);
@@ -467,55 +489,14 @@ const keepKeys = new Set([
     const mergedKeys = [];
     const safeWrite = _origSetItem || localStorage.setItem.bind(localStorage);
 
-function shouldPullAttendanceKeyForCurrentPage(nk) {
-  const page = getCurrentPageFile();
-if (
-  nk === 'adminOfficesFullAttendanceBundle_v1' ||
-  nk === 'adminOfficesFullAttendanceBundle_v1_ts' ||
-  nk.indexOf('adminOfficeAttendance_') === 0
-) {
-  return page === 'admin_offices_attendance.html';
-}
-  if (!ATTENDANCE_PAGE_KEYS.has(nk)) return true;
-
-  if (nk === 'adminOfficesAttendanceData_v1') {
-    return page === 'admin_offices_attendance.html';
-  }
-
-  if (nk === 'healthCentersAttendanceData') {
-    return page === 'health_centers_attendance.html';
-  }
-
-  if (nk === 'attendanceData') {
-    return page === 'attendance.html';
-  }
-
-  if (nk === 'centersAttendanceData_v2') {
-    return page === 'attendance.html';
-  }
-
-  if (nk === 'ng_attendanceData' || nk === 'nd_attendanceData') {
-    return page === 'attendance.html';
-  }
-
-  return false;
-}
-
-function mergeOne(key, value, fromHospital) {
-  const nk = normalizeKey(key);
-  if (nk === 'adminOfficesAttendanceData_v1' || nk === 'adminOfficesFullAttendanceBundle_v1') {
-  var localRaw = localStorage.getItem(nk);
-  var localScore = adminOfficeDataScoreFromRaw(localRaw);
-
-  // المحلي يكسب دائمًا أثناء الشغل: السحب من السحابة مسموح فقط لو المحلي فاضي تمامًا
-  // (متصفح جديد / كراش / تنظيف). لا مقارنات عددية — أي بيانات محلية = ممنوع الدهس.
-  if (localScore.rows > 0) {
-    skippedByPage++;
-    console.info('[Admin Offices Sync Guard] LOCAL-FIRST: skip cloud pull, local data present:', nk, 'local=', localScore);
-    return;
-  }
-}
-  if (!shouldPullAttendanceKeyForCurrentPage(nk)) { skippedByPage++; return; }
+    function mergeOne(key, value, fromHospital) {
+      const nk = normalizeKey(key);
+      if (nk === 'adminOfficesAttendanceData_v1' || nk === 'adminOfficesFullAttendanceBundle_v1') {
+        var localRaw = localStorage.getItem(nk);
+        var localScore = adminOfficeDataScoreFromRaw(localRaw);
+        if (localScore.rows > 0) { skippedByPage++; console.info('[Admin Offices Sync Guard] LOCAL-FIRST: skip cloud pull, local data present:', nk, 'local=', localScore); return; }
+      }
+      if (!shouldPullAttendanceKeyForCurrentPage(nk)) { skippedByPage++; return; }
       if (fromHospital && PERSONAL_KEYS.has(nk)) return;
       if (!fromHospital && hospitalName && !PERSONAL_KEYS.has(nk)) { skippedUserOperational++; return; }
       if (!shouldMergePulledKeyForCurrentPage(nk)) { skippedByPage++; return; }
@@ -524,13 +505,7 @@ function mergeOne(key, value, fromHospital) {
 
     Object.entries(userData).forEach(([k, v]) => mergeOne(k, v, false));
     Object.entries(hospitalData).forEach(([k, v]) => mergeOne(k, v, true));
-
-    console.log('[MzamanaCloud] PULL ✓' + (reviewOnly ? ' [مراجعة]' : '') +
-      ' ' + mergedUser + ' شخصي + ' + mergedHospital + ' مشترك' +
-      (skippedUserOperational ? ' · ' + skippedUserOperational + ' تشغيلي شخصي' : '') +
-      (skippedByPage ? ' · ' + skippedByPage + ' خارج نطاق الصفحة' : '')
-    );
-
+    console.log('[MzamanaCloud] PULL ✓' + (reviewOnly ? ' [مراجعة]' : '') + ' ' + mergedUser + ' شخصي + ' + mergedHospital + ' مشترك' + (skippedUserOperational ? ' · ' + skippedUserOperational + ' تشغيلي شخصي' : '') + (skippedByPage ? ' · ' + skippedByPage + ' خارج نطاق الصفحة' : ''));
     try { window.dispatchEvent(new CustomEvent('najranCloudPulled', { detail: { monthChanged: false, mergedKeys: mergedKeys } })); } catch (_) {}
     try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
     try { if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint(); } catch (_) {}
@@ -555,36 +530,6 @@ function mergeOne(key, value, fromHospital) {
     return { saved };
   }
 
-
-function isAdminOfficesProtectedKey(key) {
-  var nk = normalizeKey(key);
-  return nk === 'adminOfficesAttendanceData_v1' || nk === 'adminOfficesFullAttendanceBundle_v1';
-}
-  function adminOfficeDataScoreFromRaw(raw) {
-  try {
-    var data = JSON.parse(String(raw || '{}'));
-
-    if (data && data.attendanceByOffice && typeof data.attendanceByOffice === 'object') {
-      data = data.attendanceByOffice;
-    }
-
-    var offices = 0, rows = 0, named = 0;
-
-    Object.keys(data || {}).forEach(function (k) {
-      var arr = data[k];
-      if (!Array.isArray(arr) || !arr.length) return;
-      offices++;
-      rows += arr.length;
-      arr.forEach(function (emp) {
-        if (String((emp && (emp.name || emp.employeeName || emp.workerName || emp.empName)) || '').trim()) named++;
-      });
-    });
-
-    return { offices: offices, rows: rows, named: named };
-  } catch (_) {
-    return { offices: 0, rows: 0, named: 0 };
-  }
-}
   async function filterUnsafeHospitalWrites(hospitalData) {
     const keys = Object.keys(hospitalData || {});
     if (!keys.length) return hospitalData;
@@ -601,28 +546,24 @@ function isAdminOfficesProtectedKey(key) {
     const safe = {};
     let skipped = 0;
     keys.forEach(key => {
-  const newValue = hospitalData[key];
-  const oldValue = remoteData[key];
-
-  // حماية الرفع الوحيدة: ممنوع رفع فاضي تمامًا فوق مليان (isUnsafeEmptyOverwrite).
-  // تقليل عدد المكاتب/الصفوف تعديل شرعي ويجب أن يُرفع — لا مقارنات عددية هنا.
-  if (isUnsafeEmptyOverwrite(key, newValue, oldValue)) { skipped++; return; }
-  safe[key] = newValue;
-});
+      const newValue = hospitalData[key];
+      const oldValue = remoteData[key];
+      if (isUnsafeEmptyOverwrite(key, newValue, oldValue)) { skipped++; return; }
+      safe[key] = newValue;
+    });
     if (skipped) console.warn('[MzamanaCloud] SKIP EMPTY OVERWRITE — ' + skipped + ' مفتاح');
     return safe;
   }
 
   async function pushToCloud(options) {
-  options = options || {};
-
-  if (isRevisionMode() && options.includeOperational !== true) {
-    console.warn('[MzamanaCloud] REVISION MODE: تم منع Push تلقائي أثناء تعديل مستخلص قديم');
-    DIRTY_KEYS.clear();
-    return { ok: true, saved: 0, reason: 'REVISION_MODE_NO_AUTO_PUSH' };
-  }
-
-  const includeOperational = options.includeOperational === true;
+    options = options || {};
+    if (isRevisionMode() && options.includeOperational !== true) {
+      enforceRevisionEditSession();
+      console.warn('[MzamanaCloud] REVISION MODE: تم منع Push تلقائي أثناء تعديل مستخلص قديم');
+      DIRTY_KEYS.clear();
+      return { ok: true, saved: 0, reason: 'REVISION_MODE_NO_AUTO_PUSH' };
+    }
+    const includeOperational = options.includeOperational === true;
     if (!getSession()) throw new Error('NO_SESSION');
     if (isReviewOnlySession()) {
       console.warn('[MzamanaCloud] REVIEW ONLY: ممنوع الرفع');
@@ -658,10 +599,7 @@ function isAdminOfficesProtectedKey(key) {
       else hospitalData[nk] = val;
     });
 
-    if (skippedAdminAttendance) {
-      keysToSync.forEach(k => { if (ATTENDANCE_PAGE_KEYS.has(normalizeKey(k))) DIRTY_KEYS.delete(k); });
-    }
-
+    if (skippedAdminAttendance) keysToSync.forEach(k => { if (ATTENDANCE_PAGE_KEYS.has(normalizeKey(k))) DIRTY_KEYS.delete(k); });
     const safeHospitalData = hospitalName ? await filterUnsafeHospitalWrites(hospitalData) : {};
     const mustSaveUser = Object.keys(userData).length > 0;
     const mustSaveHospital = !!hospitalName && Object.keys(safeHospitalData).length > 0;
@@ -728,15 +666,16 @@ function isAdminOfficesProtectedKey(key) {
 
   async function init() {
     forceReviewOnlyBeforeInit();
+    enforceRevisionEditSession();
     const session = getSession();
     if (!session) return;
     const hospitalName = getHospitalName();
     const reviewOnly = isReviewOnlySession();
     _origSetItem = localStorage.setItem.bind(localStorage);
-
     ensureHospitalContextClean();
 
-    if (reviewOnly) console.log('[MzamanaCloud] وضع المراجعة [قراءة فقط]: «' + (hospitalName || '—') + '»');
+    if (isRevisionMode()) console.log('[MzamanaCloud] وضع تعديل مستخلص محفوظ: «' + (hospitalName || '—') + '»');
+    else if (reviewOnly) console.log('[MzamanaCloud] وضع المراجعة [قراءة فقط]: «' + (hospitalName || '—') + '»');
     else if (hospitalName) console.log('[MzamanaCloud] وضع المشاركة المحلي أولاً: «' + hospitalName + '»');
     else console.log('[MzamanaCloud] وضع شخصي');
 
@@ -749,20 +688,13 @@ function isAdminOfficesProtectedKey(key) {
       finally { pulling = false; isApplyingCloudPull = false; }
     }
     window.najranPullFromCloud = pullSafe;
-
     await pullSafe();
     showHospitalActivityNotice();
 
     if (!reviewOnly) {
       updateHospitalActivityStatus();
-      setInterval(function(){
-        if (DIRTY_KEYS.size > 0) syncNow({ includeOperational:false }).catch(function(){});
-      }, SETTINGS_AUTO_SYNC_MS);
-      window.addEventListener('beforeunload', function(){
-        // includeOperational:false — البيانات التشغيلية تُرفع فقط بمسار الحفظ الصريح (saveAttendanceData → najranSyncNow)
-        // حتى لا يتسبب إغلاق التاب بعد استرجاع/تجربة محلية في رفع غير مقصود لبيانات المستشفى المشتركة.
-        if (DIRTY_KEYS.size > 0) pushToCloud({ includeOperational:false }).catch(function(){});
-      });
+      setInterval(function(){ if (DIRTY_KEYS.size > 0) syncNow({ includeOperational:false }).catch(function(){}); }, SETTINGS_AUTO_SYNC_MS);
+      window.addEventListener('beforeunload', function(){ if (DIRTY_KEYS.size > 0) pushToCloud({ includeOperational:false }).catch(function(){}); });
     } else {
       console.warn('[MzamanaCloud] REVIEW ONLY: الرفع والتحديث الدوري معطّلان');
     }
@@ -796,7 +728,7 @@ function isAdminOfficesProtectedKey(key) {
       }
     };
 
-    console.log('[MzamanaCloud] ✓ V8 Local-first' + (reviewOnly ? ' [مراجعة]' : '') + ' — جاهز');
+    console.log('[MzamanaCloud] ✓ V9 Local-first' + (isRevisionMode() ? ' [تعديل مستخلص محفوظ]' : (reviewOnly ? ' [مراجعة]' : '')) + ' — جاهز');
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
