@@ -503,8 +503,57 @@ function downloadAdminOfficesFullBackup() {
   }
 }
 
+function unifyTopBackupButtons() {
+  // زر واحد لكل عملية: أزرار الصفحة العلوية ("حفظ نسخة" / "استعادة نسخة") تعمل بالمحرك الشامل.
+  // القديم كان يحفظ 3-4 مفاتيح فقط ويعيد تحميل الصفحة عند الاستعادة — الجديد يشمل كل شيء بدون reload.
+  try {
+    var rebound = false;
+    if (typeof window.backupData === 'function' || document.querySelector('.ab-backup')) {
+      window.backupData = function () { downloadAdminOfficesFullBackup(); };
+      rebound = true;
+    }
+    var fileInput = document.getElementById('restore-file-input');
+    if (fileInput) {
+      window.restoreData = function (ev) {
+        try {
+          var file = ev && ev.target && ev.target.files && ev.target.files[0];
+          if (ev && ev.target) ev.target.value = '';
+          if (!file) return;
+          var reader = new FileReader();
+          reader.onload = function (e2) {
+            try {
+              var payload = JSON.parse(String(e2.target.result || '{}'));
+              var norm = normalizeLegacyBackupPayload(payload);
+              var sum = (norm && norm.core && norm.core.attendanceData) ? score(norm.core.attendanceData) : null;
+              var msg = 'استرجاع نسخة احتياطية (محليًا فقط)؟\n' +
+                (sum ? ('المكاتب: ' + sum.offices + ' — الصفوف: ' + sum.rows + ' — الأسماء: ' + sum.named + '\n') : '') +
+                'سيتم استبدال البيانات المحلية الحالية بمحتوى النسخة. لن يُرفع شيء للسحابة تلقائيًا.';
+              if (!confirm(msg)) return;
+              var r = restoreAdminOfficesFullBackupFromObject(payload);
+              alert('✓ تم الاسترجاع محليًا: ' + r.attendance.offices + ' مكتب / ' + r.attendance.rows + ' صف / ' + r.attendance.named + ' اسم + ' + r.extraKeys + ' مفتاح إضافي.');
+            } catch (err) {
+              console.error('[Admin Offices Persistence] restore failed:', err);
+              alert('فشل الاسترجاع: ' + (err && err.message ? err.message : 'ملف غير صالح'));
+            }
+          };
+          reader.onerror = function () { alert('تعذر قراءة الملف.'); };
+          reader.readAsText(file, 'utf-8');
+        } catch (err) { alert('تعذر فتح الملف.'); }
+      };
+      rebound = true;
+    }
+    // أزل الأزرار المحقونة القديمة إن كانت ظهرت من نسخة سابقة
+    ['admin-offices-full-backup-btn', 'admin-offices-full-restore-btn', 'admin-offices-full-restore-input'].forEach(function (id) {
+      var el = document.getElementById(id); if (el) el.remove();
+    });
+    return rebound;
+  } catch (_) { return false; }
+}
+
 function injectAdminOfficesBackupButton() {
   try {
+    // أولوية: توحيد الأزرار العلوية الأصلية. الحقن فقط لو غير موجودة (تخطيطات أخرى).
+    if (unifyTopBackupButtons()) return;
     injectAdminOfficesRestoreButton();
     if (document.getElementById('admin-offices-full-backup-btn')) return;
 
@@ -533,7 +582,30 @@ function injectAdminOfficesBackupButton() {
 }
 
 // ── استرجاع النسخة الاحتياطية الكاملة (ملف JSON الذي ينزّله زر "نسخة احتياطية كاملة") ──
+function normalizeLegacyBackupPayload(payload) {
+  // دعم ملفات النسخ القديمة (backupData V4: {version, data:{...}}) — تتحول لصيغة schema 2
+  if (!payload || typeof payload !== 'object') return payload;
+  if (payload.core || payload.allAdminOfficeStorage) return payload; // صيغة جديدة أصلاً
+  var d = payload.data;
+  if (!d || typeof d !== 'object') return payload;
+  var att = d.adminOfficesAttendanceData_v1 || d.centersAttendanceData_v2 || {};
+  var names = d.adminOfficeNames_v1 || d.centerNames_v3 || {};
+  var extras = {};
+  Object.keys(d).forEach(function (k) {
+    if (k === 'adminOfficesAttendanceData_v1' || k === 'centersAttendanceData_v2') return;
+    if (k === 'adminOfficeNames_v1' || k === 'centerNames_v3') return;
+    extras[k] = d[k];
+  });
+  console.info('[Admin Offices Persistence] legacy backup format detected (v' + (payload.version || '?') + ') — converted');
+  return {
+    schema: 'legacy-converted',
+    core: { attendanceData: att, names: names, affiliations: d.adminOfficeAffiliations_v1 || {}, extractData: d.persistentExtractData || {} },
+    allAdminOfficeStorage: extras
+  };
+}
+
 function restoreAdminOfficesFullBackupFromObject(payload) {
+  payload = normalizeLegacyBackupPayload(payload);
   if (!payload || typeof payload !== 'object') throw new Error('ملف غير صالح');
   var core = payload.core || {};
   var att = core.attendanceData || (payload.allAdminOfficeStorage && readJsonValue(payload.allAdminOfficeStorage[MAIN_KEY])) || {};
@@ -654,5 +726,5 @@ function injectAdminOfficesRestoreButton() {
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { injectBackupButtonsWithRetry(0); }); else injectBackupButtonsWithRetry(0);
 
-  console.info('[Admin Offices Attendance Persistence] installed v5 = v4 anti-loop + backup/restore buttons + pre-wipe source');
+  console.info('[Admin Offices Attendance Persistence] installed v9 unified top backup/restore buttons (single pair, full engine, legacy files supported)');
 })();
