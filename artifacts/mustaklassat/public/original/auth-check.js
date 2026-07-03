@@ -9,16 +9,12 @@
 
   var BASE = window.location.origin;
   var BUILD_V = '20260623archiveBundleRouteV1';
-  var SNAPSHOT_BUILD_V = '20260703_snapshot_resume_sig_v3';
-  var REVIEW_BUILD_V = '20260703_admin_offices_detail_v1';
   var NOTIF_INTERVAL_MS = 300000;
-
-  // ============ آلية النسخة المركزية ============
-  // عند كل deploy مهم: غيّر هذا الرقم فقط. يظهر في console، ويُعرض شريط تحديث
-  // للمستخدمين الذين يشغّلون نسخة أقدم — بدون مسح localStorage أو reload إجباري.
-  var NAJRAN_BUILD_VERSION = '2026.07.03-r2';
+  var NAJRAN_BUILD_VERSION = '2026.07.03-r3';
   window.NAJRAN_BUILD_VERSION = NAJRAN_BUILD_VERSION;
+
   try { console.info('%c[Najran] النسخة: ' + NAJRAN_BUILD_VERSION, 'color:#1e3c72;font-weight:bold'); } catch (_) {}
+
   (function versionUpdateBanner() {
     try {
       var KEY = 'najran_runtime_version';
@@ -40,16 +36,17 @@
         document.body.appendChild(bar);
         document.getElementById('najran-update-reload').onclick = function () {
           try { if (typeof window.saveMonthSnapshot === 'function') window.saveMonthSnapshot(); } catch (_) {}
-          // تحديث إجباري: كاش المتصفح فقط — localStorage لا يُمس
           var done = function () { try { location.reload(); } catch (_) { location.href = location.href; } };
           try {
             var jobs = [];
             try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister().catch(function(){}); })); })); } catch (_) {}
             try { if (window.caches && caches.keys) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })); } catch (_) {}
             try { jobs.push(fetch('/original/auth-check.js', { cache: 'reload' }).catch(function(){})); } catch (_) {}
+            try { jobs.push(fetch('/original/extract-snapshot.js?v=20260703_snapshot_quota_v1', { cache: 'reload' }).catch(function(){})); } catch (_) {}
+            try { jobs.push(fetch('/original/submitted_extract_archive_bundle_guard.js?v=20260703_final_snapshot_v1', { cache: 'reload' }).catch(function(){})); } catch (_) {}
             try { jobs.push(fetch(location.pathname + location.search, { cache: 'reload' }).catch(function(){})); } catch (_) {}
             Promise.all(jobs).then(done, done);
-            setTimeout(done, 4000); // مهلة أمان لو علقت أي مهمة
+            setTimeout(done, 4000);
           } catch (_) { done(); }
         };
         document.getElementById('najran-update-dismiss').onclick = function () { bar.remove(); };
@@ -57,7 +54,7 @@
       if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
     } catch (_) {}
   })();
-  // ============================================
+
   var notifFetchInProgress = false;
 
   function getSession() {
@@ -179,9 +176,7 @@
   appendScript('/original/hospital-context-guard.js?v=20260611d', false);
   appendScript('/original/hospital-storage-extract-context-guard.js?v=' + BUILD_V, false);
 
-  if (!isSidebarSensitivePage) {
-    appendScript('/original/home-sidebar-guard.js?v=20260703_review_exclude_v2', false);
-  }
+  if (!isSidebarSensitivePage) appendScript('/original/home-sidebar-guard.js?v=20260703_review_exclude_v2', false);
 
   appendScript('/original/approve-button-polish.js?v=' + BUILD_V, true);
   appendScript('/original/revision-local-draft-restore.js?v=' + BUILD_V, true);
@@ -203,28 +198,19 @@
     'najran_dental_attendance.html': true,
     'najran_dental_performance.html': true
   };
+
   if (snapshotPages[pageFile]) {
-    appendScript('/original/extract-snapshot.js?v=20260703_snapshot_totals_v4', true);
-    // نسخة مخصصة: e4e0c2c حدّث محتوى الحارس (slim payload v3) دون رفع الإصدار — المتصفحات كانت تقدّم v2/v1 من الكاش
-    appendScript('/original/submitted_extract_archive_bundle_guard.js?v=20260703_module_detect_v4', true);
+    appendScript('/original/extract-snapshot.js?v=20260703_snapshot_quota_v1', true);
+    appendScript('/original/submitted_extract_archive_bundle_guard.js?v=20260703_final_snapshot_v1', true);
   }
 
-  if (isAdminOfficesPage || isAdminOfficesConsumablesPage) {
-    appendScript('/original/admin_offices_full_submit_snapshot_guard.js?v=20260630_full_submit_v1', true);
-  }
-
-  if (isAttendancePage) {
-    appendScript('/original/attendance-cloud-refresh-guard.js?v=' + BUILD_V, true);
-  }
-
+  if (isAdminOfficesPage || isAdminOfficesConsumablesPage) appendScript('/original/admin_offices_full_submit_snapshot_guard.js?v=20260630_full_submit_v1', true);
+  if (isAttendancePage) appendScript('/original/attendance-cloud-refresh-guard.js?v=' + BUILD_V, true);
   if (isAdminOfficesPage) {
     appendScript('/original/admin_offices_performance_logic.js?v=' + BUILD_V, true);
     appendScript('/original/admin_offices_grand_certificate_stamp_fix.js?v=20260701_stamp_v3', true);
   }
-
-  if (isAttendancePage || isAdminOfficesPage) {
-    appendScript('/original/special-absence-no-deduction.js?v=' + BUILD_V, true);
-  }
+  if (isAttendancePage || isAdminOfficesPage) appendScript('/original/special-absence-no-deduction.js?v=' + BUILD_V, true);
 
   if (pageFile === 'approval.html') {
     appendScript('/original/approval_revision_route_guard.js?v=20260703_approval_revision_v3', true);
@@ -235,14 +221,8 @@
     appendScript('/original/review-consumables-summary-exact.js?v=' + BUILD_V, true);
   }
 
-  if (pageFile === 'extract-archive.html') {
-    appendScript('/original/extract_archive_route_guard.js?v=20260703_extract_archive_route_v5', true);
-  }
-
-  if (/consumables\.html$/.test(pageFile)) {
-    appendScript('/original/consumables-submit-snapshot-guard.js?v=' + BUILD_V, true);
-  }
-
+  if (pageFile === 'extract-archive.html') appendScript('/original/extract_archive_route_guard.js?v=20260703_extract_archive_route_v5', true);
+  if (/consumables\.html$/.test(pageFile)) appendScript('/original/consumables-submit-snapshot-guard.js?v=' + BUILD_V, true);
   if (pageFile === 'settings_main.html') {
     appendScript('/original/settings-backup-complete-guard.js?v=20260611d', true);
     appendScript('/original/settings_contract_fixed_patch.js?v=20260623_fixed_contract_v1', true);
@@ -252,13 +232,9 @@
     if (pageFile !== 'performance.html') return;
     if (window.__NAJRAN_PERFORMANCE_TEMPLATE_GUARD__) return;
     window.__NAJRAN_PERFORMANCE_TEMPLATE_GUARD__ = true;
-
     var tableIds = ['cleaning', 'electricity', 'agriculture', 'civil', 'mechanics', 'laundry', 'security'];
     var templatePrefix = 'lastPerformanceTemplate_';
-
-    function inRevisionMode() {
-      return !!(localStorage.getItem('najran_revision_extract_id') || localStorage.getItem('najran_revision_mode') === 'true');
-    }
+    function inRevisionMode() { return !!(localStorage.getItem('najran_revision_extract_id') || localStorage.getItem('najran_revision_mode') === 'true'); }
     function safeSet(key, value) { if (value == null || value === '') return; try { localStorage.setItem(key, value); } catch (_) {} }
     function mirrorCurrentTableDataToTemplate(tableId) {
       if (!tableId || tableIds.indexOf(tableId) === -1) return;
@@ -297,7 +273,6 @@
       if (attempt >= 40) return;
       setTimeout(function () { retryWrapSaveTableData(attempt + 1); }, 250);
     }
-
     seedMissingTableDataFromTemplate();
     mirrorAllExistingTableDataToTemplate();
     retryWrapSaveTableData(0);
