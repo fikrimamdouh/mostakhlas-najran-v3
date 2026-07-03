@@ -13,6 +13,10 @@
   window.__ADMIN_OFFICES_ATTENDANCE_PERSISTENCE_FIX_V3__ = true;
 
   var MAIN_KEY = 'adminOfficesAttendanceData_v1';
+  // آخر نسخة تم عمل mirror لها — لتجنّب تكرار الكتابة واللوج بلا تغيير فعلي
+  var lastMirroredDataRaw = null;
+  var lastMirroredExtractRaw = null;
+  var lastMirroredNamesRaw = null;
   var BACKUP_KEY = 'adminOfficesAttendanceData_v1_localBackup';
   var BACKUP_TS_KEY = 'adminOfficesAttendanceData_v1_localBackup_ts';
   var LAST_GOOD_KEY = 'adminOfficesAttendanceData_v1_lastGood';
@@ -108,6 +112,8 @@ function isBetterData(next, current) {
   function mirrorExtract(reason) {
     var data = normalizeExtract(readJson(EXTRACT_KEY, {}));
     if (extractScore(data) <= 0) return false;
+    var raw = JSON.stringify(data);
+    if (raw === lastMirroredExtractRaw) return true;
     writeJson(EXTRACT_KEY, data);
     writeJson(SAFE_EXTRACT_KEY, data);
     try {
@@ -118,6 +124,7 @@ function isBetterData(next, current) {
       if (data.extractStart) localStorage.setItem('extractStart', data.extractStart);
       if (data.extractEnd) localStorage.setItem('extractEnd', data.extractEnd);
     } catch (_) {}
+    lastMirroredExtractRaw = raw;
     if (reason) console.info('[Admin Offices Persistence] mirrored extract:', reason, data);
     return true;
   }
@@ -214,6 +221,9 @@ function readOfficeKeysData() {
     // (موجودة الآن في restoreDataIfNeeded و getAttendanceData wrapper)، مش ضد الحفظ نفسه.
 
     var raw = JSON.stringify(data);
+    // لا تكرر الكتابة واللوج لو البيانات لم تتغير منذ آخر mirror —
+    // getAttendanceData يُستدعى مئات المرات أثناء الرندر وكان يسبب فيضان كونسول وكتابات زائدة.
+    if (raw === lastMirroredDataRaw) return true;
     try {
       localStorage.setItem(MAIN_KEY, raw);
       localStorage.setItem(BACKUP_KEY, raw);
@@ -226,6 +236,7 @@ function readOfficeKeysData() {
       localStorage.setItem('najran_admin_offices_attendance_done', 'true');
       writeFullBundle(data);
 writeOfficeKeys(data);
+      lastMirroredDataRaw = raw;
       if (reason) console.info('[Admin Offices Persistence] mirrored data:', reason, s);
       return true;
     } catch (err) {
@@ -235,8 +246,11 @@ writeOfficeKeys(data);
   }
   function mirrorNames(reason) {
     var names = readJson(NAMES_KEY, {}), aff = readJson(AFF_KEY, {});
+    var raw = JSON.stringify([names, aff]);
+    if (raw === lastMirroredNamesRaw) return;
     if (names && Object.keys(names).length) writeJson(SAFE_NAMES_KEY, names);
     if (aff && Object.keys(aff).length) writeJson(SAFE_AFF_KEY, aff);
+    lastMirroredNamesRaw = raw;
     if (reason && names && Object.keys(names).length) console.info('[Admin Offices Persistence] mirrored names:', reason, Object.keys(names).length);
   }
   function restoreNamesIfNeeded(reason) {

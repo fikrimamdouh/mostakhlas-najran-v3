@@ -170,10 +170,9 @@
 
   if (isAdminOfficesPage) {
     appendScript('/original/admin_offices_performance_logic.js?v=' + BUILD_V, true);
-    appendScript('/original/admin_offices_attendance_persistence_fix.js?v=20260623_admin_persist_v1', true);
-    appendScript('/original/admin_offices_letter_scoped_settings.js?v=20260623_letter_scoped_v1', true);
-    appendScript('/original/admin_offices_excel_import_clean_v1.js?v=20260625_excel_clean_dialog_v1', true);
-    appendScript('/original/admin_offices_grand_certificate_polish.js?v=20260701_calc_unified_v4', true);
+    // ملاحظة: persistence_fix / letter_scoped_settings / excel_import_clean_v1 / grand_certificate_polish
+    // أُزيلت من هنا — موجودة كـ <script> tags داخل admin_offices_attendance.html بإصدارات أحدث.
+    // حقنها هنا بإصدارات query قديمة كان يجعل المتصفح يقدّم نسخًا قديمة من الكاش وتعمل قبل النسخ الجديدة.
     appendScript('/original/admin_offices_grand_certificate_stamp_fix.js?v=20260701_stamp_v3', true);
   }
 
