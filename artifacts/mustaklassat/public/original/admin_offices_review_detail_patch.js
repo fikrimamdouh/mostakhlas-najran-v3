@@ -63,7 +63,8 @@
 
   function bindOfficeToggles(b){
     b.querySelectorAll('.rv-off-row').forEach(function(row){
-      row.onclick=function(){
+      row.onclick=function(ev){
+        try{ if(ev){ ev.preventDefault(); ev.stopPropagation(); } }catch(_){}
         var i=row.getAttribute('data-rv-off');
         var det=b.querySelector('[data-rv-off-emp="'+i+'"]');
         if(!det)return;
