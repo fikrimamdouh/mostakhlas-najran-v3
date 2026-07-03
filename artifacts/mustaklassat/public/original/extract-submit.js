@@ -12,6 +12,7 @@
 
   const REVISION_KEY = 'najran_revision_extract_id';
   const LABOR_FINAL_REVIEW_SCHEMA = 'labor_final_review_snapshot_v1';
+  const REVISION_PUT_ERROR = 'تعذر إعادة رفع المستخلص المعدل على نفس السجل. لم يتم إنشاء مستخلص جديد.';
 
   function getSession() {
     try { return JSON.parse(localStorage.getItem('najran_session') || '{}'); }
@@ -201,16 +202,25 @@
 
     const contractData = getContractData();
     const extractData = captureStorageSnapshot();
-    const safeExtraData = Object.assign({}, extraData || {});
 
-    if (safeExtraData.finalReviewSnapshot) {
-      extractData.finalReviewSnapshot = safeExtraData.finalReviewSnapshot;
-      extractData.reviewSnapshotSchema = safeExtraData.reviewSnapshotSchema || `${type}_final_review_snapshot_v1`;
-      delete safeExtraData.finalReviewSnapshot;
-      delete safeExtraData.reviewSnapshotSchema;
+    if (extraData && extraData.finalReviewSnapshot) {
+      extractData.finalReviewSnapshot = extraData.finalReviewSnapshot;
+      extractData.reviewSnapshotSchema = extraData.reviewSnapshotSchema || `${type}_final_review_snapshot_v1`;
     }
 
-    const payload = { extractType: type, ...contractData, ...safeExtraData, extractData };
+    const extraKeys = Object.keys(extraData || {}).filter(function (k) {
+      return k !== 'finalReviewSnapshot' && k !== 'reviewSnapshotSchema';
+    });
+    if (extraKeys.length) {
+      extractData.submitExtraData = {};
+      extraKeys.forEach(function (k) { extractData.submitExtraData[k] = extraData[k]; });
+    }
+
+    const payload = {
+      extractType: type,
+      ...contractData,
+      extractData
+    };
 
     const submitUniqueKey = [
       'submitted_extract',
@@ -273,8 +283,6 @@
         !!localStorage.getItem('najran_editing_submitted_extract_id')
       );
 
-    if (localStorage.getItem(REVISION_KEY) && !isRevision) clearRevisionSubmitState('incomplete-revision-state');
-
     if (isRevision) {
       try {
         const snapshotRaw = localStorage.getItem('najran_revision_snapshot');
@@ -321,8 +329,8 @@
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    let effectiveRevision = !!(isRevision && revisionId);
-    let res = await fetch(
+    const effectiveRevision = !!(isRevision && revisionId);
+    const res = await fetch(
       effectiveRevision ? `/api/submitted-extracts/${revisionId}` : '/api/submitted-extracts',
       {
         method: effectiveRevision ? 'PUT' : 'POST',
@@ -332,24 +340,10 @@
       }
     );
 
-    if (!res.ok && effectiveRevision) {
-      const errData = await res.clone().json().catch(() => ({}));
-      if (res.status === 404) {
-        console.warn('[ExtractSubmit] رقم تعديل قديم غير موجود، سيتم تنظيف وضع التعديل والرفع كمستخلص جديد:', revisionId);
-        clearRevisionSubmitState('stale-revision-404-' + revisionId);
-        effectiveRevision = false;
-        res = await fetch('/api/submitted-extracts', {
-          method: 'POST',
-          headers,
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-      } else {
-        throw new Error(errData.error || 'تعذر إعادة رفع المستخلص المعدل على نفس السجل. لم يتم إنشاء مستخلص جديد.');
-      }
-    }
-
     if (!res.ok) {
+      if (effectiveRevision) {
+        throw new Error(REVISION_PUT_ERROR);
+      }
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'خطأ في الاتصال بالخادم');
     }
