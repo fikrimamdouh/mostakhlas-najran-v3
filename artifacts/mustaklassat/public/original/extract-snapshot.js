@@ -1,14 +1,17 @@
 /**
  * extract-snapshot.js
- * أداة أرشفة مستخلصات العمالة — تحفظ سجلاً لكل عملية حفظ أو طباعة
- * تحديث: حفظ لقطة محلية كاملة قابلة للاستكمال بدون رفع للخادم.
- * تحديث: الاحتفاظ بآخر نسخة فقط لنفس المستخلص المحلي.
+ * أداة أرشفة مستخلصات العمالة — تحفظ سجلاً لكل عملية حفظ أو طباعة.
+ * V3:
+ * - حفظ لقطة محلية كاملة قابلة للاستكمال بدون رفع للخادم.
+ * - الاحتفاظ بآخر نسخة فقط لنفس المستخلص المحلي.
+ * - استكمال محلي آمن: Clear → Restore → Verify → Redirect.
+ * - منع خلط تواقيع/إعدادات توقيع مستخلص حالي مع لقطة محلية أخرى.
  */
 (function () {
-  if (window.__NAJRAN_EXTRACT_SNAPSHOT_V2__) return;
-  window.__NAJRAN_EXTRACT_SNAPSHOT_V2__ = true;
+  if (window.__NAJRAN_EXTRACT_SNAPSHOT_V3__) return;
+  window.__NAJRAN_EXTRACT_SNAPSHOT_V3__ = true;
 
-  var ARCHIVE_KEY   = 'extractArchive';
+  var ARCHIVE_KEY = 'extractArchive';
   var MAX_SNAPSHOTS = 100;
 
   var MONTH_NAMES = [
@@ -34,34 +37,52 @@
     'consumablesTableData', 'healthCentersConsumables', 'mainHospitalConsumables', 'admin_offices_consumables_v1.0',
     'spare_partsData', 'sparePartsTotalAmount', 'approvalData', 'displayApprovalData',
     'finalLaborCost', 'finalConsumablesCost', 'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin',
-'najran_labor_attendance_done', 'najran_labor_performance_done', 'najran_health_attendance_done', 'najran_admin_offices_attendance_done',
-'najran_revision_extract_id', 'najran_revision_mode', 'najran_revision_extract_type', 'najran_revision_started_at',
-'najran_revision_boot_lock', 'najran_revision_source', 'najran_revision_snapshot', 'najran_revision_previous_total_amount'
+    'najran_labor_attendance_done', 'najran_labor_performance_done', 'najran_health_attendance_done', 'najran_admin_offices_attendance_done',
+    'najran_revision_extract_id', 'najran_revision_mode', 'najran_revision_extract_type', 'najran_revision_started_at',
+    'najran_revision_boot_lock', 'najran_revision_source', 'najran_revision_snapshot', 'najran_revision_previous_total_amount',
+    'najran_local_draft_resume_id', 'najran_local_draft_resumed_at'
   ];
 
   var OPERATIONAL_PREFIXES = [
     'deptCalculatedCost_', 'dept_', 'tableData_', 'achievement_', 'consumables_', 'spare_',
     'water_', 'sewage_', 'subcontractors_', 'najran_labor_', 'najran_health_', 'najran_admin_',
-'adminOfficePerformanceItems_', 'adminOfficesPerformanceData_', 'adminOfficesPerformanceDeductions_'
+    'adminOfficePerformanceItems_', 'adminOfficesPerformanceData_', 'adminOfficesPerformanceDeductions_',
+    'adminOfficeAttendance_'
+  ];
+
+  var SIGNATURE_EXACT_KEYS = [
+    'signatures_data_consumables_v27'
+  ];
+
+  var SIGNATURE_PREFIXES = [
+    'sb_sigs_',
+    'sb_prefs_',
+    'healthCenters_Signatures_'
   ];
 
   var SNAPSHOT_SKIP_PREFIXES = [
     'najran_session', '__clerk', 'clerk_', 'loglevel', 'amplitude', 'chakra', 'persist:'
   ];
 
-var SNAPSHOT_SKIP_KEYS = {
-  extractArchive: true,
-  najranSignedPdfs: true,
-  najran_revision_previous_local_backup: true,
-  najran_revision_mode: true,
-  najran_revision_extract_id: true,
-  najran_revision_extract_type: true,
-  najran_revision_started_at: true,
-  najran_revision_boot_lock: true,
-  najran_revision_source: true,
-  najran_revision_snapshot: true,
-  najran_revision_previous_total_amount: true
-};
+  var SNAPSHOT_SKIP_KEYS = {
+    extractArchive: true,
+    najranSignedPdfs: true,
+    najran_revision_previous_local_backup: true,
+    najran_revision_mode: true,
+    najran_revision_extract_id: true,
+    najran_revision_extract_type: true,
+    najran_revision_started_at: true,
+    najran_revision_boot_lock: true,
+    najran_revision_source: true,
+    najran_revision_snapshot: true,
+    najran_revision_previous_total_amount: true,
+    adminOfficesManualCleared_v1: true,
+    najran_local_resume_transaction_id: true,
+    najran_local_resume_signature_policy: true,
+    najran_local_resume_signature_keys_count: true,
+    najran_local_resume_written_keys_count: true,
+    najran_local_resume_failed_keys_count: true
+  };
 
   function readJson(key, fallback) {
     try {
@@ -71,11 +92,17 @@ var SNAPSHOT_SKIP_KEYS = {
   }
 
   function writeLocalStorageValue(key, value) {
-    if (value == null) return;
+    if (value == null) return true;
     try {
       localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
+      return true;
     } catch (e) {
-      try { localStorage.setItem(key, String(value)); } catch (_) {}
+      try {
+        localStorage.setItem(key, String(value));
+        return true;
+      } catch (_) {
+        return false;
+      }
     }
   }
 
@@ -93,6 +120,30 @@ var SNAPSHOT_SKIP_KEYS = {
       normalizeDraftPart(parts.extractMonth),
       normalizeDraftPart(parts.extractYear)
     ].join('|');
+  }
+
+  function startsWithAny(key, prefixes) {
+    return prefixes.some(function (prefix) { return key.indexOf(prefix) === 0; });
+  }
+
+  function isOperationalSignatureKey(key) {
+    key = String(key || '');
+    return SIGNATURE_EXACT_KEYS.indexOf(key) > -1 || startsWithAny(key, SIGNATURE_PREFIXES);
+  }
+
+  function isOperationalKey(key) {
+    key = String(key || '');
+    return OPERATIONAL_EXACT_KEYS.indexOf(key) > -1 || startsWithAny(key, OPERATIONAL_PREFIXES) || isOperationalSignatureKey(key);
+  }
+
+  function countMatchingKeys(obj, predicate) {
+    var total = 0;
+    try {
+      Object.keys(obj || {}).forEach(function (key) {
+        if (predicate(key)) total++;
+      });
+    } catch (_) {}
+    return total;
   }
 
   function captureFullLocalSnapshot() {
@@ -116,18 +167,50 @@ var SNAPSHOT_SKIP_KEYS = {
   }
 
   function clearOperationalKeysBeforeLocalResume() {
+    var removed = 0;
     try {
-      OPERATIONAL_EXACT_KEYS.forEach(function (key) { localStorage.removeItem(key); });
+      OPERATIONAL_EXACT_KEYS.forEach(function (key) {
+        if (localStorage.getItem(key) !== null) removed++;
+        localStorage.removeItem(key);
+      });
+
       for (var i = localStorage.length - 1; i >= 0; i--) {
         var key = localStorage.key(i);
         if (!key) continue;
-        if (OPERATIONAL_PREFIXES.some(function (prefix) { return key.indexOf(prefix) === 0; })) {
+        if (isOperationalKey(key)) {
           localStorage.removeItem(key);
+          removed++;
         }
       }
+
+      localStorage.removeItem('adminOfficesManualCleared_v1');
     } catch (e) {
       console.warn('extract-snapshot: clear operational keys error', e);
     }
+    return removed;
+  }
+
+  function writeSnapshotToLocalStorage(snapshot) {
+    var report = { written: 0, failed: 0, failedKeys: [] };
+    Object.keys(snapshot || {}).forEach(function (key) {
+      if (writeLocalStorageValue(key, snapshot[key])) report.written++;
+      else {
+        report.failed++;
+        report.failedKeys.push(key);
+      }
+    });
+    return report;
+  }
+
+  function markResumeTransaction(snap, clearCount, writeReport) {
+    try {
+      localStorage.setItem('najran_local_resume_transaction_id', String(snap.id));
+      localStorage.setItem('najran_local_resume_signature_policy', 'clear-operational-signatures-then-restore-snapshot');
+      localStorage.setItem('najran_local_resume_signature_keys_count', String(countMatchingKeys(snap.extractData, isOperationalSignatureKey)));
+      localStorage.setItem('najran_local_resume_written_keys_count', String(writeReport.written || 0));
+      localStorage.setItem('najran_local_resume_failed_keys_count', String(writeReport.failed || 0));
+      localStorage.setItem('najran_local_resume_cleared_keys_count', String(clearCount || 0));
+    } catch (_) {}
   }
 
   function inferExtractType() {
@@ -161,131 +244,133 @@ var SNAPSHOT_SKIP_KEYS = {
         if (!raw) continue;
         if (raw !== '{}' && raw !== '[]' && raw !== '0') return true;
       }
+
+      for (var j = 0; j < localStorage.length; j++) {
+        var key = localStorage.key(j);
+        if (!key || !isOperationalSignatureKey(key)) continue;
+        var val = localStorage.getItem(key);
+        if (val && val !== '{}' && val !== '[]' && val !== '""') return true;
+      }
+
       return ['najran_labor_attendance_done', 'najran_labor_performance_done', 'najran_health_attendance_done', 'najran_admin_offices_attendance_done']
         .some(function (key) { return localStorage.getItem(key) === '1'; });
     } catch (_) { return false; }
   }
-function getCurrentLocalWorkLabel() {
-  try {
-    var extractData = readJson('persistentExtractData', {});
-    var contractData = readJson('persistentContractData', {});
 
-    var payment = extractData.paymentNumber || localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber') || '';
-    var month = extractData.extractMonth || localStorage.getItem('extractMonth') || '';
-    var year = extractData.extractYear || localStorage.getItem('extractYear') || '';
-    var hospital = contractData.hospitalName || localStorage.getItem('hospitalName') || '';
-    var company = contractData.companyName || localStorage.getItem('companyName') || '';
+  function getCurrentLocalWorkLabel() {
+    try {
+      var extractData = readJson('persistentExtractData', {});
+      var contractData = readJson('persistentContractData', {});
 
-    var parts = [];
-    if (payment) parts.push('رقم الدفعة: ' + payment);
-    if (month || year) parts.push('الفترة: ' + [month, year].filter(Boolean).join(' '));
-    if (hospital) parts.push('الموقع: ' + hospital);
-    if (company) parts.push('الشركة: ' + company);
+      var payment = extractData.paymentNumber || localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber') || '';
+      var month = extractData.extractMonth || localStorage.getItem('extractMonth') || '';
+      var year = extractData.extractYear || localStorage.getItem('extractYear') || '';
+      var hospital = contractData.hospitalName || localStorage.getItem('hospitalName') || '';
+      var company = contractData.companyName || localStorage.getItem('companyName') || '';
 
-    return parts.join(' — ') || 'مستخلص محلي مفتوح حاليًا';
-  } catch (_) {
-    return 'مستخلص محلي مفتوح حاليًا';
-  }
-}
+      var parts = [];
+      if (payment) parts.push('رقم الدفعة: ' + payment);
+      if (month || year) parts.push('الفترة: ' + [month, year].filter(Boolean).join(' '));
+      if (hospital) parts.push('الموقع: ' + hospital);
+      if (company) parts.push('الشركة: ' + company);
 
-function showLocalProtectionModal(options) {
-  options = options || {};
-
-  return new Promise(function (resolve) {
-    var old = document.getElementById('najran-local-protection-modal');
-    if (old) old.remove();
-
-    var overlay = document.createElement('div');
-    overlay.id = 'najran-local-protection-modal';
-    overlay.className = 'no-print';
-    overlay.style.cssText =
-      'position:fixed;inset:0;z-index:10000000;background:rgba(15,23,42,.62);' +
-      'display:flex;align-items:center;justify-content:center;direction:rtl;' +
-      'font-family:Tajawal,Arial,sans-serif;';
-
-    overlay.innerHTML =
-      '<div style="width:min(620px,94vw);background:#fff;border-radius:22px;padding:24px;' +
-        'box-shadow:0 28px 80px rgba(0,0,0,.32);border-top:7px solid #b45309;text-align:right;">' +
-
-        '<div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:14px;">' +
-          '<div style="width:52px;height:52px;border-radius:17px;background:#fff7ed;color:#b45309;' +
-            'display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;">!</div>' +
-          '<div style="flex:1;">' +
-            '<h2 style="margin:0;color:#92400e;font-size:22px;font-weight:900;">' + (options.title || 'يوجد مستخلص محلي غير محفوظ') + '</h2>' +
-            '<p style="margin:8px 0 0;color:#475569;font-size:14px;line-height:1.9;">' +
-              (options.message || 'قبل الانتقال، احفظ المستخلص الحالي محليًا حتى لا يتم استبدال البيانات الموجودة على هذا الجهاز.') +
-            '</p>' +
-          '</div>' +
-        '</div>' +
-
-        '<div style="background:#fffbeb;border:1px solid #fde68a;color:#78350f;border-radius:14px;' +
-          'padding:12px 14px;font-size:13px;line-height:1.9;margin:14px 0;">' +
-          '<b>البيانات الحالية:</b><br>' + getCurrentLocalWorkLabel() +
-        '</div>' +
-
-        '<div style="display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;margin-top:16px;">' +
-          '<button id="najran-local-protection-primary" style="background:linear-gradient(135deg,#15803d,#16a34a) !important;' +
-            'color:white;border:0;border-radius:12px;padding:12px 18px;font-weight:900;cursor:pointer;' +
-            'font-family:Tajawal,Arial,sans-serif;">' + (options.primaryText || 'حفظ محليًا ثم المتابعة') + '</button>' +
-
-          '<button id="najran-local-protection-secondary" style="background:#1e3a8a;color:white;border:0;border-radius:12px;' +
-            'padding:12px 18px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">' +
-            (options.secondaryText || 'استكمال المستخلص الحالي') + '</button>' +
-
-          '<button id="najran-local-protection-cancel" style="background:#475569;color:white;border:0;border-radius:12px;' +
-            'padding:12px 18px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">' +
-            (options.cancelText || 'إلغاء') + '</button>' +
-        '</div>' +
-      '</div>';
-
-    document.body.appendChild(overlay);
-
-    function close(result) {
-      overlay.remove();
-      resolve(result);
+      return parts.join(' — ') || 'مستخلص محلي مفتوح حاليًا';
+    } catch (_) {
+      return 'مستخلص محلي مفتوح حاليًا';
     }
+  }
 
-    document.getElementById('najran-local-protection-primary').onclick = function () { close('primary'); };
-    document.getElementById('najran-local-protection-secondary').onclick = function () { close('secondary'); };
-    document.getElementById('najran-local-protection-cancel').onclick = function () { close('cancel'); };
-  });
-}
-  /* ───── قراءة الأرشيف ───── */
+  function showLocalProtectionModal(options) {
+    options = options || {};
+
+    return new Promise(function (resolve) {
+      var old = document.getElementById('najran-local-protection-modal');
+      if (old) old.remove();
+
+      var overlay = document.createElement('div');
+      overlay.id = 'najran-local-protection-modal';
+      overlay.className = 'no-print';
+      overlay.style.cssText =
+        'position:fixed;inset:0;z-index:10000000;background:rgba(15,23,42,.62);' +
+        'display:flex;align-items:center;justify-content:center;direction:rtl;' +
+        'font-family:Tajawal,Arial,sans-serif;';
+
+      overlay.innerHTML =
+        '<div style="width:min(620px,94vw);background:#fff;border-radius:22px;padding:24px;' +
+          'box-shadow:0 28px 80px rgba(0,0,0,.32);border-top:7px solid #b45309;text-align:right;">' +
+          '<div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:14px;">' +
+            '<div style="width:52px;height:52px;border-radius:17px;background:#fff7ed;color:#b45309;' +
+              'display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;">!</div>' +
+            '<div style="flex:1;">' +
+              '<h2 style="margin:0;color:#92400e;font-size:22px;font-weight:900;">' + (options.title || 'يوجد مستخلص محلي غير محفوظ') + '</h2>' +
+              '<p style="margin:8px 0 0;color:#475569;font-size:14px;line-height:1.9;">' +
+                (options.message || 'قبل الانتقال، احفظ المستخلص الحالي محليًا حتى لا يتم استبدال البيانات الموجودة على هذا الجهاز.') +
+              '</p>' +
+            '</div>' +
+          '</div>' +
+          '<div style="background:#fffbeb;border:1px solid #fde68a;color:#78350f;border-radius:14px;' +
+            'padding:12px 14px;font-size:13px;line-height:1.9;margin:14px 0;">' +
+            '<b>البيانات الحالية:</b><br>' + getCurrentLocalWorkLabel() +
+          '</div>' +
+          '<div style="display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;margin-top:16px;">' +
+            '<button id="najran-local-protection-primary" style="background:linear-gradient(135deg,#15803d,#16a34a) !important;' +
+              'color:white;border:0;border-radius:12px;padding:12px 18px;font-weight:900;cursor:pointer;' +
+              'font-family:Tajawal,Arial,sans-serif;">' + (options.primaryText || 'حفظ محليًا ثم المتابعة') + '</button>' +
+            '<button id="najran-local-protection-secondary" style="background:#1e3a8a;color:white;border:0;border-radius:12px;' +
+              'padding:12px 18px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">' +
+              (options.secondaryText || 'استكمال المستخلص الحالي') + '</button>' +
+            '<button id="najran-local-protection-cancel" style="background:#475569;color:white;border:0;border-radius:12px;' +
+              'padding:12px 18px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">' +
+              (options.cancelText || 'إلغاء') + '</button>' +
+          '</div>' +
+        '</div>';
+
+      document.body.appendChild(overlay);
+
+      function close(result) {
+        overlay.remove();
+        resolve(result);
+      }
+
+      document.getElementById('najran-local-protection-primary').onclick = function () { close('primary'); };
+      document.getElementById('najran-local-protection-secondary').onclick = function () { close('secondary'); };
+      document.getElementById('najran-local-protection-cancel').onclick = function () { close('cancel'); };
+    });
+  }
+
   window.getExtractArchive = function () {
     try { return JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '[]'); }
     catch (e) { return []; }
   };
 
-  /* ───── حفظ snapshot ───── */
   window.saveExtractSnapshot = function (source) {
     source = source || 'manual';
     try {
-      var extractData  = readJson('persistentExtractData', {});
+      var extractData = readJson('persistentExtractData', {});
       var contractData = readJson('persistentContractData', {});
       var fullSnapshot = captureFullLocalSnapshot();
-      var extractType  = inferExtractType();
-      var currentPage  = window.location.pathname || pageForType(extractType);
+      var extractType = inferExtractType();
+      var currentPage = window.location.pathname || pageForType(extractType);
 
       var paymentNumber = extractData.paymentNumber || localStorage.getItem('paymentNumber') || '';
-      var extractMonth  = extractData.extractMonth || localStorage.getItem('extractMonth') || '';
-      var extractYear   = String(extractData.extractYear || localStorage.getItem('extractYear') || '');
-      var extractStart  = extractData.extractStart || localStorage.getItem('extractStart') || '';
-      var extractEnd    = extractData.extractEnd || localStorage.getItem('extractEnd') || '';
-      var hospitalName  = contractData.hospitalName || localStorage.getItem('hospitalName') || '';
-      var companyName   = contractData.companyName || localStorage.getItem('companyName') || '';
+      var extractMonth = extractData.extractMonth || localStorage.getItem('extractMonth') || '';
+      var extractYear = String(extractData.extractYear || localStorage.getItem('extractYear') || '');
+      var extractStart = extractData.extractStart || localStorage.getItem('extractStart') || '';
+      var extractEnd = extractData.extractEnd || localStorage.getItem('extractEnd') || '';
+      var hospitalName = contractData.hospitalName || localStorage.getItem('hospitalName') || '';
+      var companyName = contractData.companyName || localStorage.getItem('companyName') || '';
       var contractDetails = contractData.contractDetails || contractData.contractNumber || localStorage.getItem('contractDetails') || '';
 
-      /* ملخص أقسام الحضور */
       var totalEmployees = 0;
       var totalNetAmount = 0;
-      var departments    = {};
+      var departments = {};
       try {
         var att = readJson('attendanceData', {});
         Object.keys(att || {}).forEach(function (dept) {
           var emps = att[dept] || [];
           var deptNet = emps.reduce(function (s, emp) {
-            var sal  = parseFloat(emp.salary) || 0;
-            var ded  = parseFloat(emp.totalDeduction || emp.deduction) || 0;
+            var sal = parseFloat(emp.salary) || 0;
+            var ded = parseFloat(emp.totalDeduction || emp.deduction) || 0;
             var fine = parseFloat(emp.totalFine) || 0;
             return s + Math.max(0, sal - ded - fine);
           }, 0);
@@ -305,51 +390,51 @@ function showLocalProtectionModal(options) {
         extractYear: extractYear
       });
 
-     var archive = window.getExtractArchive();
-var existingSnap = archive.find(function (oldSnap) {
-  if (!oldSnap) return false;
-  if (oldSnap.draftKey && oldSnap.draftKey === draftKey) return true;
+      var archive = window.getExtractArchive();
+      var existingSnap = archive.find(function (oldSnap) {
+        if (!oldSnap) return false;
+        if (oldSnap.draftKey && oldSnap.draftKey === draftKey) return true;
+        if (!oldSnap.draftKey) {
+          var oldKey = makeDraftKey({
+            extractType: oldSnap.extractType || 'labor',
+            hospitalName: oldSnap.hospitalName,
+            companyName: oldSnap.companyName,
+            contractDetails: oldSnap.contractDetails,
+            paymentNumber: oldSnap.paymentNumber,
+            extractMonth: oldSnap.extractMonth,
+            extractYear: oldSnap.extractYear
+          });
+          return oldKey === draftKey;
+        }
+        return false;
+      });
 
-  if (!oldSnap.draftKey) {
-    var oldKey = makeDraftKey({
-      extractType: oldSnap.extractType || 'labor',
-      hospitalName: oldSnap.hospitalName,
-      companyName: oldSnap.companyName,
-      contractDetails: oldSnap.contractDetails,
-      paymentNumber: oldSnap.paymentNumber,
-      extractMonth: oldSnap.extractMonth,
-      extractYear: oldSnap.extractYear
-    });
-    return oldKey === draftKey;
-  }
-
-  return false;
-});
-
-var snap = {
-  id:             existingSnap && existingSnap.id ? String(existingSnap.id) : String(Date.now()),
-  draftKey:       draftKey,
-  savedAt:        new Date().toISOString(),
-  source:         source,
-        canResume:      true,
-        extractType:    extractType,
-        currentPage:    currentPage,
-        extractData:    fullSnapshot,
-        paymentNumber:  paymentNumber,
-        extractMonth:   extractMonth,
-        extractYear:    extractYear,
-        extractStart:   extractStart,
-        extractEnd:     extractEnd,
-        hospitalName:   hospitalName,
-        companyName:    companyName,
+      var snap = {
+        id: existingSnap && existingSnap.id ? String(existingSnap.id) : String(Date.now()),
+        draftKey: draftKey,
+        savedAt: new Date().toISOString(),
+        source: source,
+        canResume: true,
+        extractType: extractType,
+        currentPage: currentPage,
+        extractData: fullSnapshot,
+        paymentNumber: paymentNumber,
+        extractMonth: extractMonth,
+        extractYear: extractYear,
+        extractStart: extractStart,
+        extractEnd: extractEnd,
+        hospitalName: hospitalName,
+        companyName: companyName,
         contractDetails: contractDetails,
-        engineeringManager:    contractData.engineeringManager    || '',
+        engineeringManager: contractData.engineeringManager || '',
         generalServicesManager: contractData.generalServicesManager || '',
-        hospitalManager:       contractData.hospitalManager        || '',
-        followUpManager:       contractData.followUpManager        || '',
-        totalEmployees:  totalEmployees,
-        totalNetAmount:  totalNetAmount,
-        departments:     departments
+        hospitalManager: contractData.hospitalManager || '',
+        followUpManager: contractData.followUpManager || '',
+        totalEmployees: totalEmployees,
+        totalNetAmount: totalNetAmount,
+        departments: departments,
+        signatureKeysCount: countMatchingKeys(fullSnapshot, isOperationalSignatureKey),
+        operationalKeysCount: countMatchingKeys(fullSnapshot, isOperationalKey)
       };
 
       var before = archive.length;
@@ -384,8 +469,8 @@ var snap = {
     }
   };
 
-  /* ───── استكمال لقطة محلية ───── */
-  window.resumeExtractSnapshot = function (id, options) {     options = options || {};
+  window.resumeExtractSnapshot = function (id, options) {
+    options = options || {};
     try {
       var snap = window.getExtractArchive().find(function (s) { return String(s.id) === String(id); });
       if (!snap) { alert('لم يتم العثور على اللقطة المحلية.'); return false; }
@@ -394,13 +479,13 @@ var snap = {
         return false;
       }
 
-    if (hasMeaningfulLocalWork() && !options.skipProtection) {
+      if (hasMeaningfulLocalWork() && !options.skipProtection) {
         showLocalProtectionModal({
-        title: 'يوجد مستخلص مفتوح على هذا الجهاز',
-message: 'استكمال لقطة محلية أخرى سيستبدل البيانات الحالية. سيتم حفظ نسخة محلية أولًا على هذا الجهاز فقط، بدون رفع للسحابة.',
-primaryText: 'حفظ محلي ثم استكمال اللقطة',
-secondaryText: 'استكمال المستخلص الحالي',
-cancelText: 'إلغاء'
+          title: 'يوجد مستخلص مفتوح على هذا الجهاز',
+          message: 'استكمال لقطة محلية أخرى سيستبدل البيانات الحالية. سيتم حفظ نسخة محلية أولًا على هذا الجهاز فقط، بدون رفع للسحابة.',
+          primaryText: 'حفظ محلي ثم استكمال اللقطة',
+          secondaryText: 'استكمال المستخلص الحالي',
+          cancelText: 'إلغاء'
         }).then(function (action) {
           if (action === 'primary') {
             var saved = window.saveExtractSnapshot('before-resume-local-snapshot');
@@ -411,32 +496,42 @@ cancelText: 'إلغاء'
             window.resumeExtractSnapshot(id, { skipProtection: true });
             return;
           }
-
-          if (action === 'secondary') {
-            return;
-          }
-
+          if (action === 'secondary') return;
           return;
         });
-
         return false;
       }
 
-      clearOperationalKeysBeforeLocalResume();
-      Object.keys(snap.extractData).forEach(function (key) {
-        writeLocalStorageValue(key, snap.extractData[key]);
-      });
-      localStorage.removeItem('najran_revision_extract_id');
-localStorage.removeItem('najran_revision_mode');
-localStorage.removeItem('najran_revision_extract_type');
-localStorage.removeItem('najran_revision_started_at');
-localStorage.removeItem('najran_revision_boot_lock');
-localStorage.removeItem('najran_revision_source');
-localStorage.removeItem('najran_revision_snapshot');
-localStorage.removeItem('najran_revision_previous_total_amount');
+      var clearCount = clearOperationalKeysBeforeLocalResume();
+      var writeReport = writeSnapshotToLocalStorage(snap.extractData);
+      markResumeTransaction(snap, clearCount, writeReport);
 
-localStorage.setItem('najran_local_draft_resume_id', String(snap.id));
+      if (writeReport.failed > 0) {
+        console.warn('extract-snapshot: resume partial write failure', writeReport);
+        alert('تم استكمال اللقطة جزئيًا، لكن فشل حفظ بعض المفاتيح محليًا. راجع مساحة المتصفح أو أعد المحاولة.');
+        return false;
+      }
+
+      localStorage.removeItem('najran_revision_extract_id');
+      localStorage.removeItem('najran_revision_mode');
+      localStorage.removeItem('najran_revision_extract_type');
+      localStorage.removeItem('najran_revision_started_at');
+      localStorage.removeItem('najran_revision_boot_lock');
+      localStorage.removeItem('najran_revision_source');
+      localStorage.removeItem('najran_revision_snapshot');
+      localStorage.removeItem('najran_revision_previous_total_amount');
+      localStorage.removeItem('adminOfficesManualCleared_v1');
+
+      localStorage.setItem('najran_local_draft_resume_id', String(snap.id));
       localStorage.setItem('najran_local_draft_resumed_at', new Date().toISOString());
+
+      console.info('extract-snapshot: local resume transaction', {
+        id: snap.id,
+        type: snap.extractType,
+        cleared: clearCount,
+        written: writeReport.written,
+        signatureKeys: countMatchingKeys(snap.extractData, isOperationalSignatureKey)
+      });
 
       window.location.href = pageForType(snap.extractType || inferExtractType(), snap.currentPage);
       return true;
@@ -447,7 +542,6 @@ localStorage.setItem('najran_local_draft_resume_id', String(snap.id));
     }
   };
 
-  /* ───── حذف snapshot ───── */
   window.deleteExtractSnapshot = function (id) {
     try {
       var arc = window.getExtractArchive().filter(function (s) { return s.id !== id; });
@@ -456,18 +550,16 @@ localStorage.setItem('najran_local_draft_resume_id', String(snap.id));
     } catch (e) { return false; }
   };
 
-  /* ───── فحص التكرار ───── */
   window.checkDuplicateExtract = function (paymentNumber, month, year) {
     var pn = String(paymentNumber || '').trim();
     if (!pn) return null;
     return window.getExtractArchive().find(function (s) {
       return s.paymentNumber === pn &&
-             s.extractMonth  === String(month  || '') &&
+             s.extractMonth === String(month || '') &&
              String(s.extractYear) === String(year || '');
     }) || null;
   };
 
-  /* ───── مساعد: تنسيق التاريخ محلياً بدون تحويل UTC ───── */
   function toLocalDateStr(d) {
     var y = d.getFullYear();
     var m = String(d.getMonth() + 1).padStart(2, '0');
@@ -475,14 +567,12 @@ localStorage.setItem('najran_local_draft_resume_id', String(snap.id));
     return y + '-' + m + '-' + day;
   }
 
-  /* ───── مساعد: تحليل سلسلة YYYY-MM-DD كتاريخ محلي ───── */
   function parseLocalDate(str) {
     var parts = (str || '').split('-');
     if (parts.length < 3) return new Date(str);
     return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
   }
 
-  /* ───── تقديم تلقائي للفترة التالية ───── */
   window.autoIncrementExtractPeriod = function () {
     try {
       var data = readJson('persistentExtractData', {});
@@ -499,10 +589,10 @@ localStorage.setItem('najran_local_draft_resume_id', String(snap.id));
 
       var newData = Object.assign({}, data, {
         extractMonth: MONTH_NAMES[start.getMonth()],
-        extractYear:  start.getFullYear(),
+        extractYear: start.getFullYear(),
         paymentNumber: newPn,
         extractStart: toLocalDateStr(start),
-        extractEnd:   toLocalDateStr(end)
+        extractEnd: toLocalDateStr(end)
       });
 
       localStorage.setItem('persistentExtractData', JSON.stringify(newData));
@@ -513,7 +603,6 @@ localStorage.setItem('najran_local_draft_resume_id', String(snap.id));
     }
   };
 
-  /* ───── زر استكمال داخل تبويب المحلي الموجود ───── */
   function enhanceArchiveResumeButtons() {
     try {
       var archive = window.getExtractArchive();
@@ -553,7 +642,6 @@ localStorage.setItem('najran_local_draft_resume_id', String(snap.id));
     }, 100);
   }
 
-  /* ───── حفظ محلي عند الخروج للرئيسية بدل الرفع ───── */
   function installLocalSaveOnHomeExit() {
     var file = (window.location.pathname || '').split('/').pop() || '';
     var workPages = {
@@ -586,12 +674,12 @@ localStorage.setItem('najran_local_draft_resume_id', String(snap.id));
       e.preventDefault();
       e.stopPropagation();
 
-          showLocalProtectionModal({
+      showLocalProtectionModal({
         title: 'يوجد مستخلص مفتوح على هذا الجهاز',
-message: 'قبل الرجوع للرئيسية، سيتم حفظ نسخة محلية من المستخلص الحالي على هذا الجهاز فقط. لن يتم رفع أي بيانات للسحابة.',
-primaryText: 'حفظ محلي ثم الرجوع للرئيسية',
-secondaryText: 'استكمال المستخلص الحالي',
-cancelText: 'إلغاء'
+        message: 'قبل الرجوع للرئيسية، سيتم حفظ نسخة محلية من المستخلص الحالي على هذا الجهاز فقط. لن يتم رفع أي بيانات للسحابة.',
+        primaryText: 'حفظ محلي ثم الرجوع للرئيسية',
+        secondaryText: 'استكمال المستخلص الحالي',
+        cancelText: 'إلغاء'
       }).then(function (action) {
         if (action === 'primary') {
           var snap = window.saveExtractSnapshot('home-exit-save');
@@ -603,11 +691,7 @@ cancelText: 'إلغاء'
           window.location.href = href || '/dashboard';
           return;
         }
-
-        if (action === 'secondary') {
-          return;
-        }
-
+        if (action === 'secondary') return;
         return;
       });
     }, true);
@@ -622,4 +706,6 @@ cancelText: 'إلغاء'
     installArchiveRenderPatch();
     installLocalSaveOnHomeExit();
   }
+
+  console.info('[Najran Extract Snapshot] installed v3 signature-safe local resume');
 })();
