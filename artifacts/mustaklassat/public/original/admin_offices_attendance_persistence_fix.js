@@ -1,14 +1,14 @@
 // ===================================================================
-// Admin Offices Attendance Persistence Fix — V4
+// Admin Offices Attendance Persistence Fix — V10 revision-safe
 // Scope: admin_offices_attendance.html / original-viewer?page=admin_offices_attendance.html
-// يحمي بيانات المكاتب بدون استدعاء render داخل getAttendanceData حتى لا يحدث loop عند تصفير البيانات.
+// يمنع أي local draft / backup قديم من الدهس فوق بيانات تعديل مستخلص محفوظ.
 // ===================================================================
 (function () {
   'use strict';
 
   if (!/admin_offices_attendance\.html|original-viewer\?page=admin_offices_attendance\.html/.test(location.pathname + location.search)) return;
-  if (window.__ADMIN_OFFICES_ATTENDANCE_PERSISTENCE_FIX_V4__) return;
-  window.__ADMIN_OFFICES_ATTENDANCE_PERSISTENCE_FIX_V4__ = true;
+  if (window.__ADMIN_OFFICES_ATTENDANCE_PERSISTENCE_FIX_V10__) return;
+  window.__ADMIN_OFFICES_ATTENDANCE_PERSISTENCE_FIX_V10__ = true;
 
   var MAIN_KEY = 'adminOfficesAttendanceData_v1';
   var BACKUP_KEY = 'adminOfficesAttendanceData_v1_localBackup';
@@ -35,22 +35,62 @@
   var lastMirroredNamesRaw = null;
   var inGetAttendanceData = false;
   var restoringData = false;
+  var revisionSkipLogged = false;
 
   function readJson(key, fallback) {
     try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
   }
+
   function writeJson(key, value) {
     try { localStorage.setItem(key, JSON.stringify(value || {})); } catch (_) {}
   }
+
   function clean(v) {
     return String(v || '').replace(/[\u200f\u200e]/g, '').replace(/\s+/g, ' ').trim();
   }
+
+  function isRevisionEditMode() {
+    try {
+      return localStorage.getItem('najran_revision_mode') === 'true' &&
+        !!localStorage.getItem('najran_revision_extract_id') &&
+        !!localStorage.getItem('najran_revision_snapshot') &&
+        !!localStorage.getItem('najran_revision_snapshot_summary');
+    } catch (_) { return false; }
+  }
+
+  function revisionSkip(reason) {
+    if (!isRevisionEditMode()) return false;
+    if (!revisionSkipLogged) {
+      revisionSkipLogged = true;
+      console.warn('[Admin Offices Persistence] revision mode detected — local draft restore skipped');
+    }
+    if (reason) console.info('[Admin Offices Persistence] skipped local restore during revision:', reason);
+    return true;
+  }
+
+  function forceEditSessionDuringRevision() {
+    if (!isRevisionEditMode()) return;
+    try {
+      var raw = localStorage.getItem('najran_session');
+      if (!raw) return;
+      var s = JSON.parse(raw);
+      if (!s) return;
+      s.reviewOnly = false;
+      s.canReviewCurrentHospital = false;
+      s.canEditCurrentHospital = true;
+      s.timestamp = Date.now();
+      localStorage.setItem('najran_session', JSON.stringify(s));
+      if (s.hospital) localStorage.setItem('najran_active_hospital_context', String(s.hospital).trim());
+    } catch (_) {}
+  }
+
   function countRows(data) {
     var total = 0;
     data = data || {};
     Object.keys(data).forEach(function (k) { if (Array.isArray(data[k])) total += data[k].length; });
     return total;
   }
+
   function countNamed(data) {
     var total = 0;
     data = data || {};
@@ -60,15 +100,18 @@
     });
     return total;
   }
+
   function countOffices(data) {
     var total = 0;
     data = data || {};
     Object.keys(data).forEach(function (k) { if (Array.isArray(data[k]) && data[k].length) total++; });
     return total;
   }
+
   function score(data) {
     return { offices: countOffices(data), rows: countRows(data), named: countNamed(data) };
   }
+
   function isBetterData(next, current) {
     var ns = score(next), cs = score(current);
     if (ns.offices !== cs.offices) return ns.offices > cs.offices;
@@ -76,12 +119,14 @@
     if (ns.rows !== cs.rows) return ns.rows > cs.rows;
     return false;
   }
+
   function extractScore(d) {
     d = d || {};
     var n = 0;
     ['paymentNumber','extractNumber','extractMonth','extractYear','extractStart','extractEnd'].forEach(function(k){ if (clean(d[k])) n++; });
     return n;
   }
+
   function normalizeExtract(d) {
     d = Object.assign({}, d || {});
     d.paymentNumber = clean(d.paymentNumber || d.extractNumber || localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber'));
@@ -94,6 +139,55 @@
     d.extractDuration = clean(d.extractDuration || 'شهر واحد');
     return d;
   }
+
+  function makeFullBundle(data) {
+    return { schema: 2, updatedAt: new Date().toISOString(), names: readJson(NAMES_KEY, {}), affiliations: readJson(AFF_KEY, {}), attendanceByOffice: data || {}, extractData: normalizeExtract(readJson(EXTRACT_KEY, {})) };
+  }
+
+  function readBundleData() {
+    var b = readJson(FULL_BUNDLE_KEY, {});
+    return b && b.attendanceByOffice && typeof b.attendanceByOffice === 'object' ? b.attendanceByOffice : {};
+  }
+
+  function writeFullBundle(data) {
+    try { localStorage.setItem(FULL_BUNDLE_KEY, JSON.stringify(makeFullBundle(data || {}))); localStorage.setItem(FULL_BUNDLE_TS_KEY, String(Date.now())); } catch (_) {}
+  }
+
+  function writeOfficeKeys(data) {
+    try {
+      data = data || {};
+      Object.keys(data).forEach(function (officeKey) {
+        if (Array.isArray(data[officeKey])) localStorage.setItem(OFFICE_KEY_PREFIX + officeKey + OFFICE_KEY_SUFFIX, JSON.stringify(data[officeKey]));
+      });
+    } catch (_) {}
+  }
+
+  function readOfficeKeysData() {
+    var out = {};
+    try {
+      Object.keys(localStorage).forEach(function (k) {
+        if (k.indexOf(OFFICE_KEY_PREFIX) !== 0 || k.slice(-OFFICE_KEY_SUFFIX.length) !== OFFICE_KEY_SUFFIX) return;
+        var officeKey = k.slice(OFFICE_KEY_PREFIX.length, -OFFICE_KEY_SUFFIX.length);
+        var rows = readJson(k, []);
+        if (Array.isArray(rows) && rows.length) out[officeKey] = rows;
+      });
+    } catch (_) {}
+    return out;
+  }
+
+  function bestData() {
+    if (revisionSkip('bestData')) return {};
+    return [
+      readJson(MAIN_KEY, {}),
+      readJson(BACKUP_KEY, {}),
+      readJson(LAST_GOOD_KEY, {}),
+      readJson(LEGACY_KEY, {}),
+      readJson(SAFE_DATA_KEY, {}),
+      readBundleData(),
+      readOfficeKeysData()
+    ].reduce(function (best, item) { return isBetterData(item, best) ? item : best; }, {});
+  }
+
   function mirrorExtract(reason) {
     if (window.__ADMIN_OFFICES_CLEARING__) return false;
     var data = normalizeExtract(readJson(EXTRACT_KEY, {}));
@@ -114,8 +208,10 @@
     if (reason) console.info('[Admin Offices Persistence] mirrored extract:', reason, data);
     return true;
   }
+
   function restoreExtractIfNeeded(reason) {
     if (window.__ADMIN_OFFICES_CLEARING__) return false;
+    if (revisionSkip(reason || 'restoreExtract')) return false;
     var main = normalizeExtract(readJson(EXTRACT_KEY, {}));
     var safe = normalizeExtract(readJson(SAFE_EXTRACT_KEY, {}));
     if (extractScore(safe) > extractScore(main)) {
@@ -133,46 +229,7 @@
     if (extractScore(main) > 0) mirrorExtract(reason || 'keep-extract');
     return false;
   }
-  function makeFullBundle(data) {
-    return { schema: 1, updatedAt: new Date().toISOString(), names: readJson(NAMES_KEY, {}), affiliations: readJson(AFF_KEY, {}), attendanceByOffice: data || {}, extractData: normalizeExtract(readJson(EXTRACT_KEY, {})) };
-  }
-  function readBundleData() {
-    var b = readJson(FULL_BUNDLE_KEY, {});
-    return b && b.attendanceByOffice && typeof b.attendanceByOffice === 'object' ? b.attendanceByOffice : {};
-  }
-  function writeFullBundle(data) {
-    try { localStorage.setItem(FULL_BUNDLE_KEY, JSON.stringify(makeFullBundle(data || {}))); localStorage.setItem(FULL_BUNDLE_TS_KEY, String(Date.now())); } catch (_) {}
-  }
-  function writeOfficeKeys(data) {
-    try { data = data || {}; Object.keys(data).forEach(function (officeKey) { if (Array.isArray(data[officeKey])) localStorage.setItem(OFFICE_KEY_PREFIX + officeKey + OFFICE_KEY_SUFFIX, JSON.stringify(data[officeKey])); }); } catch (_) {}
-  }
-  function readOfficeKeysData() {
-    var out = {};
-    try {
-      Object.keys(localStorage).forEach(function (k) {
-        if (k.indexOf(OFFICE_KEY_PREFIX) !== 0 || k.slice(-OFFICE_KEY_SUFFIX.length) !== OFFICE_KEY_SUFFIX) return;
-        var officeKey = k.slice(OFFICE_KEY_PREFIX.length, -OFFICE_KEY_SUFFIX.length);
-        var rows = readJson(k, []);
-        if (Array.isArray(rows) && rows.length) out[officeKey] = rows;
-      });
-    } catch (_) {}
-    return out;
-  }
-  function bestData() {
-    return [readJson(MAIN_KEY, {}), readJson(BACKUP_KEY, {}), readJson(LAST_GOOD_KEY, {}), readJson(LEGACY_KEY, {}), readJson(SAFE_DATA_KEY, {}), readBundleData(), readOfficeKeysData(), readPreWipeSnapshotData()].reduce(function (best, item) { return isBetterData(item, best) ? item : best; }, {});
-  }
-  // بيانات snapshot الطوارئ الذي يلتقطه cloud-sync قبل أي مسح تشغيلي (تبديل سياق/مراجعة)
-  var PRE_WIPE_KEY = 'adminOfficesPreWipeSnapshot_v1';
-  function readPreWipeSnapshotData() {
-    try {
-      var snap = readJson(PRE_WIPE_KEY, null);
-      if (!snap || typeof snap !== 'object') return {};
-      // لا تستخدم snapshot الطوارئ في جلسة المراجعة — المراجعة تعتمد بيانات السحابة
-      var s = JSON.parse(localStorage.getItem('najran_session') || '{}');
-      if (s && (s.reviewOnly === true || (s.canReviewCurrentHospital === true && s.canEditCurrentHospital === false))) return {};
-      return (snap.core && snap.core.attendanceData) || {};
-    } catch (_) { return {}; }
-  }
+
   function mirrorData(data, reason) {
     if (window.__ADMIN_OFFICES_CLEARING__) return false;
     if (!data || typeof data !== 'object') return false;
@@ -200,6 +257,7 @@
       return false;
     }
   }
+
   function mirrorNames(reason) {
     if (window.__ADMIN_OFFICES_CLEARING__) return;
     var names = readJson(NAMES_KEY, {}), aff = readJson(AFF_KEY, {});
@@ -210,8 +268,10 @@
     lastMirroredNamesRaw = raw;
     if (reason && names && Object.keys(names).length) console.info('[Admin Offices Persistence] mirrored names:', reason, Object.keys(names).length);
   }
+
   function restoreNamesIfNeeded(reason) {
     if (window.__ADMIN_OFFICES_CLEARING__) return false;
+    if (revisionSkip(reason || 'restoreNames')) return false;
     var names = readJson(NAMES_KEY, {}), safeNames = readJson(SAFE_NAMES_KEY, {}), restored = false;
     if ((!names || !Object.keys(names).length) && safeNames && Object.keys(safeNames).length) { writeJson(NAMES_KEY, safeNames); restored = true; }
     var aff = readJson(AFF_KEY, {}), safeAff = readJson(SAFE_AFF_KEY, {});
@@ -219,8 +279,10 @@
     if (restored) console.warn('[Admin Offices Persistence] restored names/affiliations:', reason || 'restore');
     return restored;
   }
+
   function restoreDataIfNeeded(reason) {
     if (window.__ADMIN_OFFICES_CLEARING__ || restoringData) return false;
+    if (revisionSkip(reason || 'restoreData')) return false;
     var current = readJson(MAIN_KEY, {}), best = bestData();
     var cs = score(current), bs = score(best);
     if (cs.rows === 0 && bs.rows > 0) {
@@ -232,15 +294,17 @@
     if (cs.rows > 0) mirrorData(current, reason || 'keep-current');
     return false;
   }
+
   function zeroLocalBackupsForClear() {
     window.__ADMIN_OFFICES_CLEARING__ = true;
     [MAIN_KEY, BACKUP_KEY, LAST_GOOD_KEY, LEGACY_KEY, SAFE_DATA_KEY, FULL_BUNDLE_KEY, NAMES_KEY, AFF_KEY, SAFE_NAMES_KEY, SAFE_AFF_KEY, EXTRACT_KEY, SAFE_EXTRACT_KEY].forEach(function (key) { try { localStorage.setItem(key, '{}'); } catch (_) {} });
     [BACKUP_TS_KEY, LAST_GOOD_TS_KEY, SAFE_DATA_TS_KEY, FULL_BUNDLE_TS_KEY, SAFE_EXTRACT_TS_KEY, 'extractMonth', 'extractYear', 'extractStart', 'extractEnd', 'extractNumber', 'paymentNumber', 'najran_admin_offices_attendance_done'].forEach(function (key) { try { localStorage.setItem(key, ''); } catch (_) {} });
     try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf(OFFICE_KEY_PREFIX) === 0 && k.slice(-OFFICE_KEY_SUFFIX.length) === OFFICE_KEY_SUFFIX) localStorage.setItem(k, '[]'); }); } catch (_) {}
   }
+
   function patchSetItem() {
-    if (window.__ADMIN_OFFICES_PERSISTENCE_SETITEM_V4__) return;
-    window.__ADMIN_OFFICES_PERSISTENCE_SETITEM_V4__ = true;
+    if (window.__ADMIN_OFFICES_PERSISTENCE_SETITEM_V10__) return;
+    window.__ADMIN_OFFICES_PERSISTENCE_SETITEM_V10__ = true;
     var old = Storage.prototype.setItem;
     Storage.prototype.setItem = function (key, value) {
       var result = old.apply(this, arguments);
@@ -255,47 +319,71 @@
       return result;
     };
   }
+
   function saveCurrentSnapshot(reason) {
     if (window.__ADMIN_OFFICES_CLEARING__) return;
     try {
       var live = null;
       if (typeof window.getAttendanceData === 'function') live = window.getAttendanceData();
+      if (isRevisionEditMode()) {
+        if (live && countRows(live) > 0) mirrorData(live, reason || 'revision-current');
+        mirrorNames(reason || 'revision-current');
+        mirrorExtract(reason || 'revision-current');
+        revisionSkip(reason || 'snapshot');
+        return;
+      }
       var data = (live && countRows(live) > 0) ? live : bestData();
       if (data && countRows(data)) mirrorData(data, reason || 'snapshot');
       mirrorNames(reason || 'snapshot');
       mirrorExtract(reason || 'snapshot');
     } catch (_) {}
   }
+
   function wrapFunction(name, after) {
     var fn = window[name];
-    if (typeof fn !== 'function' || fn.__adminOfficesPersistV4Wrapped) return false;
+    if (typeof fn !== 'function' || fn.__adminOfficesPersistV10Wrapped) return false;
     window[name] = function () {
       var result = fn.apply(this, arguments);
-      Promise.resolve(result).finally(function () { if (!window.__ADMIN_OFFICES_CLEARING__) { setTimeout(function () { after(name); }, 80); setTimeout(function () { after(name + ':late'); }, 700); } });
+      Promise.resolve(result).finally(function () {
+        if (!window.__ADMIN_OFFICES_CLEARING__) {
+          setTimeout(function () { after(name); }, 80);
+          setTimeout(function () { after(name + ':late'); }, 700);
+        }
+      });
       return result;
     };
-    window[name].__adminOfficesPersistV4Wrapped = true;
+    window[name].__adminOfficesPersistV10Wrapped = true;
     return true;
   }
+
   function patchCoreFunctions() {
-    if (typeof window.saveAttendanceData === 'function' && !window.saveAttendanceData.__adminOfficesPersistV4Wrapped) {
+    if (typeof window.saveAttendanceData === 'function' && !window.saveAttendanceData.__adminOfficesPersistV10Wrapped) {
       var originalSave = window.saveAttendanceData;
-      window.saveAttendanceData = function (data) { var result = originalSave.apply(this, arguments); mirrorData(data || {}, 'saveAttendanceData'); mirrorNames('saveAttendanceData'); mirrorExtract('saveAttendanceData'); return result; };
-      window.saveAttendanceData.__adminOfficesPersistV4Wrapped = true;
+      window.saveAttendanceData = function (data) {
+        var result = originalSave.apply(this, arguments);
+        mirrorData(data || {}, 'saveAttendanceData');
+        mirrorNames('saveAttendanceData');
+        mirrorExtract('saveAttendanceData');
+        return result;
+      };
+      window.saveAttendanceData.__adminOfficesPersistV10Wrapped = true;
     }
-    if (typeof window.getAttendanceData === 'function' && !window.getAttendanceData.__adminOfficesPersistV4Wrapped) {
+    if (typeof window.getAttendanceData === 'function' && !window.getAttendanceData.__adminOfficesPersistV10Wrapped) {
       var originalGet = window.getAttendanceData;
       window.getAttendanceData = function () {
         if (window.__ADMIN_OFFICES_CLEARING__) return originalGet.apply(this, arguments) || {};
         if (inGetAttendanceData) return originalGet.apply(this, arguments) || {};
         inGetAttendanceData = true;
         try {
-          restoreExtractIfNeeded('before-getAttendanceData');
-          restoreNamesIfNeeded('before-getAttendanceData');
-          restoreDataIfNeeded('before-getAttendanceData');
+          if (!isRevisionEditMode()) {
+            restoreExtractIfNeeded('before-getAttendanceData');
+            restoreNamesIfNeeded('before-getAttendanceData');
+            restoreDataIfNeeded('before-getAttendanceData');
+          } else {
+            revisionSkip('before-getAttendanceData');
+          }
           var data = originalGet.apply(this, arguments) || {};
-          var ds = score(data);
-          if (ds.rows === 0) {
+          if (score(data).rows === 0 && !isRevisionEditMode()) {
             var best = bestData();
             if (score(best).rows > 0) return best;
           }
@@ -304,9 +392,9 @@
           inGetAttendanceData = false;
         }
       };
-      window.getAttendanceData.__adminOfficesPersistV4Wrapped = true;
+      window.getAttendanceData.__adminOfficesPersistV10Wrapped = true;
     }
-    if (typeof window.clearAllData === 'function' && !window.clearAllData.__adminOfficesPersistV4Wrapped) {
+    if (typeof window.clearAllData === 'function' && !window.clearAllData.__adminOfficesPersistV10Wrapped) {
       var originalClear = window.clearAllData;
       window.clearAllData = function () {
         window.__ADMIN_OFFICES_CLEARING__ = true;
@@ -314,208 +402,88 @@
         try { return originalClear.apply(this, arguments); }
         finally { setTimeout(function () { zeroLocalBackupsForClear(); window.__ADMIN_OFFICES_CLEARING__ = false; }, 1000); }
       };
-      window.clearAllData.__adminOfficesPersistV4Wrapped = true;
+      window.clearAllData.__adminOfficesPersistV10Wrapped = true;
     }
   }
+
   function patchLoadAndImportFunctions() {
-    var after = function (reason) { saveCurrentSnapshot(reason); restoreNamesIfNeeded(reason); restoreDataIfNeeded(reason); restoreExtractIfNeeded(reason); };
+    var after = function (reason) {
+      saveCurrentSnapshot(reason);
+      if (!isRevisionEditMode()) {
+        restoreNamesIfNeeded(reason);
+        restoreDataIfNeeded(reason);
+        restoreExtractIfNeeded(reason);
+      }
+    };
     ['confirmLoadAdminOfficePositions','confirmLoadAllAdminOfficePositions','confirmAdminOfficeImportReplace','confirmAdminOfficeImportUpdate','handleSingleFileImport','runAdminOfficeNormalImport'].forEach(function (name) { wrapFunction(name, after); });
   }
-  function boot(attempt) {
-    patchSetItem();
-    patchCoreFunctions();
-    patchLoadAndImportFunctions();
-    saveCurrentSnapshot('initial');
-    if ((attempt || 0) < 20) setTimeout(function () { boot((attempt || 0) + 1); }, 500);
+
+  function backupStamp() {
+    var d = new Date();
+    function p(n) { return String(n).padStart(2, '0'); }
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + '_' + p(d.getHours()) + '-' + p(d.getMinutes()) + '-' + p(d.getSeconds());
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { boot(0); }); else boot(0);
-  window.addEventListener('beforeunload', function () { saveCurrentSnapshot('beforeunload'); });
-function pad2(n) {
-  return String(n).padStart(2, '0');
-}
-function backupStamp() {
-  var d = new Date();
-  return [
-    d.getFullYear(),
-    pad2(d.getMonth() + 1),
-    pad2(d.getDate())
-  ].join('-') + '_' + [
-    pad2(d.getHours()),
-    pad2(d.getMinutes()),
-    pad2(d.getSeconds())
-  ].join('-');
-}
 
-function parseMaybeJson(raw) {
-  if (raw == null) return null;
-  try { return JSON.parse(raw); } catch (_) { return raw; }
-}
-
-function isSensitiveBackupKey(key) {
-  key = String(key || '').toLowerCase();
-  return (
-    key.indexOf('token') > -1 ||
-    key.indexOf('clerk') > -1 ||
-    key.indexOf('jwt') > -1 ||
-    key.indexOf('auth') > -1 ||
-    key.indexOf('password') > -1 ||
-    key === 'najran_session'
-  );
-}
-
-function normalizeBackupKey(key) {
-  return String(key || '').replace(/^(?:_u\d+_)+/, '');
-}
-
-function shouldIncludeAdminOfficeBackupKey(key) {
-  var nk = normalizeBackupKey(key);
-  var lk = nk.toLowerCase();
-
-  if (isSensitiveBackupKey(nk)) return false;
-
-  return (
-    lk.indexOf('adminoffice') > -1 ||
-    lk.indexOf('admin_office') > -1 ||
-    lk.indexOf('admin_offices') > -1 ||
-    lk.indexOf('adminoffices') > -1 ||
-    lk.indexOf('office') > -1 ||
-    lk.indexOf('signature') > -1 ||
-    lk.indexOf('signatures') > -1 ||
-    lk.indexOf('sig') > -1 ||
-    lk.indexOf('sigs') > -1 ||
-    lk.indexOf('prefs') > -1 ||
-    lk.indexOf('contractor') > -1 ||
-    lk.indexOf('dynamic') > -1 ||
-    lk.indexOf('performance') > -1 ||
-    lk.indexOf('achievement') > -1 ||
-    lk.indexOf('grand') > -1 ||
-    lk.indexOf('extract') > -1 ||
-    lk.indexOf('payment') > -1 ||
-    lk.indexOf('contract') > -1 ||
-    lk.indexOf('hospital') > -1 ||
-    lk.indexOf('company') > -1 ||
-    lk.indexOf('najran_admin') > -1 ||
-    nk === MAIN_KEY ||
-    nk === BACKUP_KEY ||
-    nk === LAST_GOOD_KEY ||
-    nk === LEGACY_KEY ||
-    nk === SAFE_DATA_KEY ||
-    nk === SAFE_NAMES_KEY ||
-    nk === SAFE_AFF_KEY ||
-    nk === FULL_BUNDLE_KEY ||
-    nk === EXTRACT_KEY ||
-    nk === SAFE_EXTRACT_KEY ||
-    nk === NAMES_KEY ||
-    nk === AFF_KEY
-  );
-}
-
-function collectAdminOfficesStorageSnapshot() {
-  var out = {};
-  var seen = {};
-  var stores = [];
-
-  try { stores.push(localStorage); } catch (_) {}
-  try {
-    if (window._najranRealStorage && window._najranRealStorage !== localStorage) {
-      stores.push(window._najranRealStorage);
-    }
-  } catch (_) {}
-
-  stores.forEach(function (store) {
+  function downloadAdminOfficesFullBackup() {
     try {
-      for (var i = 0; i < store.length; i++) {
-        var rawKey = store.key(i);
-        if (!rawKey) continue;
-
-        var cleanKey = normalizeBackupKey(rawKey);
-        if (seen[cleanKey]) continue;
-        if (!shouldIncludeAdminOfficeBackupKey(cleanKey)) continue;
-
-        var rawValue = store.getItem(rawKey);
-        if (rawValue == null) continue;
-
-        seen[cleanKey] = true;
-        out[cleanKey] = parseMaybeJson(rawValue);
-      }
-    } catch (_) {}
-  });
-
-  return out;
-}
-
-function downloadAdminOfficesFullBackup() {
-  try {
-    restoreExtractIfNeeded('full-backup-download');
-    restoreNamesIfNeeded('full-backup-download');
-    restoreDataIfNeeded('full-backup-download');
-    saveCurrentSnapshot('full-backup-download');
-
-    var data = bestData();
-    var allStorage = collectAdminOfficesStorageSnapshot();
-
-    var payload = {
-      type: 'admin_offices_full_backup',
-      schema: 2,
-      createdAt: new Date().toISOString(),
-      localTime: new Date().toLocaleString('ar-SA'),
-      page: 'admin_offices_attendance.html',
-
-      summary: {
-        attendanceScore: score(data),
-        namesCount: Object.keys(readJson(NAMES_KEY, {})).length,
-        affiliationsCount: Object.keys(readJson(AFF_KEY, {})).length,
-        storageKeysCount: Object.keys(allStorage).length
-      },
-
-      core: {
-        attendanceData: data,
-        names: readJson(NAMES_KEY, {}),
-        affiliations: readJson(AFF_KEY, {}),
-        extractData: normalizeExtract(readJson(EXTRACT_KEY, {})),
-        fullBundle: readJson(FULL_BUNDLE_KEY, {})
-      },
-
-      allAdminOfficeStorage: allStorage
-    };
-
-    var blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: 'application/json;charset=utf-8'
-    });
-
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'نسخة-احتياطية-كاملة-المكاتب-الإدارية_' + backupStamp() + '.json';
-    document.body.appendChild(a);
-    a.click();
-
-    setTimeout(function () {
-      URL.revokeObjectURL(a.href);
-      if (a.parentElement) a.remove();
-    }, 1000);
-
-    console.info('[Admin Offices Persistence] full backup downloaded:', payload.summary);
-    return payload.summary;
-  } catch (err) {
-    console.error('[Admin Offices Persistence] full backup download failed:', err);
-    alert('فشل تنزيل النسخة الاحتياطية الكاملة للمكاتب');
-    return null;
-  }
-}
-
-function unifyTopBackupButtons() {
-  // زر واحد لكل عملية: أزرار الصفحة العلوية ("حفظ نسخة" / "استعادة نسخة") تعمل بالمحرك الشامل.
-  // القديم كان يحفظ 3-4 مفاتيح فقط ويعيد تحميل الصفحة عند الاستعادة — الجديد يشمل كل شيء بدون reload.
-  try {
-    var rebound = false;
-    if (typeof window.backupData === 'function' || document.querySelector('.ab-backup')) {
-      window.backupData = function () { downloadAdminOfficesFullBackup(); };
-      rebound = true;
+      saveCurrentSnapshot('full-backup-download');
+      var data = isRevisionEditMode() ? readJson(MAIN_KEY, {}) : bestData();
+      var payload = {
+        type: 'admin_offices_full_backup',
+        schema: 3,
+        createdAt: new Date().toISOString(),
+        localTime: new Date().toLocaleString('ar-SA'),
+        page: 'admin_offices_attendance.html',
+        summary: { attendanceScore: score(data), namesCount: Object.keys(readJson(NAMES_KEY, {})).length, affiliationsCount: Object.keys(readJson(AFF_KEY, {})).length },
+        core: { attendanceData: data, names: readJson(NAMES_KEY, {}), affiliations: readJson(AFF_KEY, {}), extractData: normalizeExtract(readJson(EXTRACT_KEY, {})), fullBundle: readJson(FULL_BUNDLE_KEY, {}) }
+      };
+      var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'نسخة-احتياطية-كاملة-المكاتب-الإدارية_' + backupStamp() + '.json';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); if (a.parentElement) a.remove(); }, 1000);
+      console.info('[Admin Offices Persistence] full backup downloaded:', payload.summary);
+      return payload.summary;
+    } catch (err) {
+      console.error('[Admin Offices Persistence] full backup download failed:', err);
+      alert('فشل تنزيل النسخة الاحتياطية الكاملة للمكاتب');
+      return null;
     }
-    var fileInput = document.getElementById('restore-file-input');
-    if (fileInput) {
-      window.restoreData = function (ev) {
-        try {
+  }
+
+  function restoreAdminOfficesFullBackupFromObject(payload) {
+    if (isRevisionEditMode()) {
+      revisionSkip('manual-full-backup-restore');
+      throw new Error('وضع تعديل مستخلص محفوظ نشط — ممنوع استرجاع نسخة محلية فوق بيانات التعديل.');
+    }
+    if (!payload || typeof payload !== 'object') throw new Error('ملف غير صالح');
+    var core = payload.core || {};
+    var att = core.attendanceData || (payload.allAdminOfficeStorage && payload.allAdminOfficeStorage[MAIN_KEY]) || {};
+    var attScore = score(att);
+    if (attScore.rows <= 0) throw new Error('النسخة لا تحتوي بيانات حضور صالحة');
+    lastMirroredDataRaw = null;
+    mirrorData(att, 'restore-full-backup');
+    if (core.names && Object.keys(core.names).length) writeJson(NAMES_KEY, core.names);
+    if (core.affiliations && Object.keys(core.affiliations).length) writeJson(AFF_KEY, core.affiliations);
+    if (core.extractData && Object.keys(core.extractData).length) { writeJson(EXTRACT_KEY, normalizeExtract(core.extractData)); lastMirroredExtractRaw = null; mirrorExtract('restore-full-backup'); }
+    lastMirroredNamesRaw = null;
+    mirrorNames('restore-full-backup');
+    try { if (typeof window.renderCenterIcons === 'function') window.renderCenterIcons(); } catch (_) {}
+    try { if (typeof window.renderMainGrid === 'function') window.renderMainGrid(); } catch (_) {}
+    try { if (typeof window.calculateAndDisplayGrandTotal === 'function') window.calculateAndDisplayGrandTotal(); } catch (_) {}
+    console.info('[Admin Offices Persistence] full backup restored:', attScore);
+    return { attendance: attScore, extraKeys: 0 };
+  }
+
+  function unifyTopBackupButtons() {
+    try {
+      if (typeof window.backupData === 'function' || document.querySelector('.ab-backup')) window.backupData = function () { downloadAdminOfficesFullBackup(); };
+      var fileInput = document.getElementById('restore-file-input');
+      if (fileInput) {
+        window.restoreData = function () { fileInput.click(); };
+        fileInput.onchange = function (ev) {
           var file = ev && ev.target && ev.target.files && ev.target.files[0];
           if (ev && ev.target) ev.target.value = '';
           if (!file) return;
@@ -523,14 +491,8 @@ function unifyTopBackupButtons() {
           reader.onload = function (e2) {
             try {
               var payload = JSON.parse(String(e2.target.result || '{}'));
-              var norm = normalizeLegacyBackupPayload(payload);
-              var sum = (norm && norm.core && norm.core.attendanceData) ? score(norm.core.attendanceData) : null;
-              var msg = 'استرجاع نسخة احتياطية (محليًا فقط)؟\n' +
-                (sum ? ('المكاتب: ' + sum.offices + ' — الصفوف: ' + sum.rows + ' — الأسماء: ' + sum.named + '\n') : '') +
-                'سيتم استبدال البيانات المحلية الحالية بمحتوى النسخة. لن يُرفع شيء للسحابة تلقائيًا.';
-              if (!confirm(msg)) return;
               var r = restoreAdminOfficesFullBackupFromObject(payload);
-              alert('✓ تم الاسترجاع محليًا: ' + r.attendance.offices + ' مكتب / ' + r.attendance.rows + ' صف / ' + r.attendance.named + ' اسم + ' + r.extraKeys + ' مفتاح إضافي.');
+              alert('✓ تم الاسترجاع محليًا: ' + r.attendance.offices + ' مكتب / ' + r.attendance.rows + ' صف / ' + r.attendance.named + ' اسم.');
             } catch (err) {
               console.error('[Admin Offices Persistence] restore failed:', err);
               alert('فشل الاسترجاع: ' + (err && err.message ? err.message : 'ملف غير صالح'));
@@ -538,172 +500,28 @@ function unifyTopBackupButtons() {
           };
           reader.onerror = function () { alert('تعذر قراءة الملف.'); };
           reader.readAsText(file, 'utf-8');
-        } catch (err) { alert('تعذر فتح الملف.'); }
-      };
-      rebound = true;
-    }
-    // أزل الأزرار المحقونة القديمة إن كانت ظهرت من نسخة سابقة
-    ['admin-offices-full-backup-btn', 'admin-offices-full-restore-btn', 'admin-offices-full-restore-input'].forEach(function (id) {
-      var el = document.getElementById(id); if (el) el.remove();
-    });
-    return rebound;
-  } catch (_) { return false; }
-}
-
-function injectAdminOfficesBackupButton() {
-  try {
-    // أولوية: توحيد الأزرار العلوية الأصلية. الحقن فقط لو غير موجودة (تخطيطات أخرى).
-    if (unifyTopBackupButtons()) return;
-    injectAdminOfficesRestoreButton();
-    if (document.getElementById('admin-offices-full-backup-btn')) return;
-
-    var host =
-      document.querySelector('.top-actions') ||
-      document.querySelector('.page-actions') ||
-      document.querySelector('.actions-bar') ||
-      document.querySelector('.toolbar') ||
-      document.querySelector('.header-actions') ||
-      document.querySelector('.controls') ||
-      document.body;
-
-    var btn = document.createElement('button');
-    btn.id = 'admin-offices-full-backup-btn';
-    btn.type = 'button';
-    btn.className = 'btn btn-secondary no-print';
-    btn.innerHTML = '<i class="fas fa-download"></i> نسخة احتياطية كاملة';
-    btn.style.cssText = 'margin:6px;padding:9px 14px;border-radius:10px;font-weight:800;';
-
-    btn.onclick = function () {
-      downloadAdminOfficesFullBackup();
-    };
-
-    host.appendChild(btn);
-  } catch (_) {}
-}
-
-// ── استرجاع النسخة الاحتياطية الكاملة (ملف JSON الذي ينزّله زر "نسخة احتياطية كاملة") ──
-function normalizeLegacyBackupPayload(payload) {
-  // دعم ملفات النسخ القديمة (backupData V4: {version, data:{...}}) — تتحول لصيغة schema 2
-  if (!payload || typeof payload !== 'object') return payload;
-  if (payload.core || payload.allAdminOfficeStorage) return payload; // صيغة جديدة أصلاً
-  var d = payload.data;
-  if (!d || typeof d !== 'object') return payload;
-  var att = d.adminOfficesAttendanceData_v1 || d.centersAttendanceData_v2 || {};
-  var names = d.adminOfficeNames_v1 || d.centerNames_v3 || {};
-  var extras = {};
-  Object.keys(d).forEach(function (k) {
-    if (k === 'adminOfficesAttendanceData_v1' || k === 'centersAttendanceData_v2') return;
-    if (k === 'adminOfficeNames_v1' || k === 'centerNames_v3') return;
-    extras[k] = d[k];
-  });
-  console.info('[Admin Offices Persistence] legacy backup format detected (v' + (payload.version || '?') + ') — converted');
-  return {
-    schema: 'legacy-converted',
-    core: { attendanceData: att, names: names, affiliations: d.adminOfficeAffiliations_v1 || {}, extractData: d.persistentExtractData || {} },
-    allAdminOfficeStorage: extras
-  };
-}
-
-function restoreAdminOfficesFullBackupFromObject(payload) {
-  payload = normalizeLegacyBackupPayload(payload);
-  if (!payload || typeof payload !== 'object') throw new Error('ملف غير صالح');
-  var core = payload.core || {};
-  var att = core.attendanceData || (payload.allAdminOfficeStorage && readJsonValue(payload.allAdminOfficeStorage[MAIN_KEY])) || {};
-  var attScore = score(att);
-  if (attScore.rows <= 0) throw new Error('النسخة لا تحتوي بيانات حضور صالحة');
-
-  // 1) البيانات الأساسية عبر mirrorData (يكتب MAIN + كل نسخ الحماية + bundle)
-  lastMirroredDataRaw = null; // فرض الكتابة حتى لو تطابق آخر mirror
-  mirrorData(att, 'restore-full-backup');
-  if (core.names && Object.keys(core.names).length) writeJson(NAMES_KEY, core.names);
-  if (core.affiliations && Object.keys(core.affiliations).length) writeJson(AFF_KEY, core.affiliations);
-  if (core.extractData && Object.keys(core.extractData).length) { writeJson(EXTRACT_KEY, normalizeExtract(core.extractData)); lastMirroredExtractRaw = null; mirrorExtract('restore-full-backup'); }
-  lastMirroredNamesRaw = null;
-  mirrorNames('restore-full-backup');
-
-  // 2) باقي مفاتيح التخزين المرتبطة (توقيعات/عناوين/خطابات...) من allAdminOfficeStorage
-  var all = payload.allAdminOfficeStorage || {};
-  var restoredKeys = 0;
-  Object.keys(all).forEach(function (k) {
-    if (!k) return;
-    if (/^(najran_session|__clerk|clerk_|loglevel)/.test(k)) return; // لا تلمس الجلسة
-    if (k === MAIN_KEY) return; // كُتب أعلاه عبر mirrorData
-    try {
-      var v = all[k];
-      localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
-      restoredKeys++;
+        };
+      }
+      window.restoreAdminOfficesFullBackup = restoreAdminOfficesFullBackupFromObject;
     } catch (_) {}
-  });
+  }
 
-  // 3) إعادة الرندر — استرجاع محلي فقط، بدون أي رفع تلقائي للسحابة.
-  // الرفع يحصل فقط بالمسارات الاعتيادية (حفظ يدوي / اعتماد مستخلص) بقرار المستخدم.
-  try { if (typeof window.renderCenterIcons === 'function') window.renderCenterIcons(); } catch (_) {}
-  try { if (typeof window.renderMainGrid === 'function') window.renderMainGrid(); } catch (_) {}
-  try { if (typeof window.calculateAndDisplayGrandTotal === 'function') window.calculateAndDisplayGrandTotal(); } catch (_) {}
+  function boot(attempt) {
+    forceEditSessionDuringRevision();
+    patchSetItem();
+    patchCoreFunctions();
+    patchLoadAndImportFunctions();
+    unifyTopBackupButtons();
+    if (!isRevisionEditMode()) saveCurrentSnapshot('initial');
+    else revisionSkip('initial');
+    if ((attempt || 0) < 20) setTimeout(function () { boot((attempt || 0) + 1); }, 500);
+  }
 
-  console.info('[Admin Offices Persistence] full backup restored:', attScore, '+', restoredKeys, 'keys');
-  return { attendance: attScore, extraKeys: restoredKeys };
-}
-function readJsonValue(v) { try { return typeof v === 'string' ? JSON.parse(v) : v; } catch (_) { return v; } }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { boot(0); }); else boot(0);
+  window.addEventListener('beforeunload', function () { saveCurrentSnapshot('beforeunload'); });
 
-function injectAdminOfficesRestoreButton() {
-  try {
-    if (document.getElementById('admin-offices-full-restore-btn')) return;
-    var host =
-      document.querySelector('.top-actions') ||
-      document.querySelector('.page-actions') ||
-      document.querySelector('.actions-bar') ||
-      document.querySelector('.toolbar') ||
-      document.querySelector('.header-actions') ||
-      document.querySelector('.controls') ||
-      document.body;
-
-    var input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json,application/json';
-    input.style.display = 'none';
-    input.id = 'admin-offices-full-restore-input';
-    input.onchange = function () {
-      var file = input.files && input.files[0];
-      input.value = '';
-      if (!file) return;
-      var reader = new FileReader();
-      reader.onload = function (e) {
-        try {
-          var payload = JSON.parse(String(e.target.result || '{}'));
-          var sum = payload.summary && payload.summary.attendanceScore;
-          var msg = 'استرجاع نسخة احتياطية كاملة (محليًا فقط)؟\n' +
-            (sum ? ('المكاتب: ' + sum.offices + ' — الصفوف: ' + sum.rows + ' — الأسماء: ' + sum.named + '\n') : '') +
-            'سيتم استبدال البيانات المحلية الحالية بمحتوى النسخة. لن يتم رفع أي شيء للسحابة تلقائيًا.';
-          if (!confirm(msg)) return;
-          var r = restoreAdminOfficesFullBackupFromObject(payload);
-          alert('✓ تم الاسترجاع محليًا: ' + r.attendance.offices + ' مكتب / ' + r.attendance.rows + ' صف / ' + r.attendance.named + ' اسم + ' + r.extraKeys + ' مفتاح إضافي.\nلم يُرفع شيء للسحابة — الرفع يتم فقط عند الحفظ الصريح أو اعتماد المستخلص.');
-        } catch (err) {
-          console.error('[Admin Offices Persistence] restore failed:', err);
-          alert('فشل الاسترجاع: ' + (err && err.message ? err.message : 'ملف غير صالح'));
-        }
-      };
-      reader.onerror = function () { alert('تعذر قراءة الملف.'); };
-      reader.readAsText(file, 'utf-8');
-    };
-
-    var btn = document.createElement('button');
-    btn.id = 'admin-offices-full-restore-btn';
-    btn.type = 'button';
-    btn.className = 'btn btn-secondary no-print';
-    btn.innerHTML = '<i class="fas fa-upload"></i> استرجاع نسخة كاملة';
-    btn.style.cssText = 'margin:6px;padding:9px 14px;border-radius:10px;font-weight:800;';
-    btn.onclick = function () { input.click(); };
-
-    host.appendChild(input);
-    host.appendChild(btn);
-    window.restoreAdminOfficesFullBackup = restoreAdminOfficesFullBackupFromObject;
-  } catch (_) {}
-}
-
-
-  // إعادة الرندر بعد سحب سحابي كتب بيانات المكاتب فعليًا (متصفح جديد) — بدون المرور على مسار getAttendanceData
   window.addEventListener('najranCloudPulled', function (ev) {
+    if (isRevisionEditMode()) { revisionSkip('after-cloud-pull'); return; }
     setTimeout(function () {
       try {
         restoreNamesIfNeeded('after-cloud-pull');
@@ -719,12 +537,6 @@ function injectAdminOfficesRestoreButton() {
       } catch (_) {}
     }, 120);
   });
-  // حقن زرّي النسخة الاحتياطية والاسترجاع
-  function injectBackupButtonsWithRetry(n) {
-    injectAdminOfficesBackupButton();
-    if (!document.getElementById('admin-offices-full-backup-btn') && (n || 0) < 20) setTimeout(function () { injectBackupButtonsWithRetry((n || 0) + 1); }, 500);
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { injectBackupButtonsWithRetry(0); }); else injectBackupButtonsWithRetry(0);
 
-  console.info('[Admin Offices Attendance Persistence] installed v9 unified top backup/restore buttons (single pair, full engine, legacy files supported)');
+  console.info('[Admin Offices Attendance Persistence] installed v10 revision-safe local draft guard');
 })();
