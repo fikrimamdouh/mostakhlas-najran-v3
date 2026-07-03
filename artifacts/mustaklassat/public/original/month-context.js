@@ -661,15 +661,17 @@ function getAttendancePageAfterExtractSave() {
         try {
           console.log('بدء تشغيل دالة saveExtractData — stable no-auto-advance override');
 
-          const newMonth = document.getElementById('extract-month')?.value || '';
+                 const newMonth = document.getElementById('extract-month')?.value || '';
           const newYear  = document.getElementById('extract-year')?.value  || '';
+          const currentPayment = String(document.getElementById('payment-number')?.value || '').trim();
 
           const prevRaw = localStorage.getItem('persistentExtractData');
           const prevData = prevRaw ? JSON.parse(prevRaw) : {};
+          const oldPayment = String(prevData.paymentNumber || prevData.extractNumber || '').trim();
+
           if (isRevisionMode()) {
             const oldMonth = String(prevData.extractMonth || '').trim();
             const oldYear = String(prevData.extractYear || '').trim();
-            const oldPayment = String(prevData.paymentNumber || prevData.extractNumber || '').trim();
 
             const currentPayment = String(document.getElementById('payment-number')?.value || '').trim();
 
