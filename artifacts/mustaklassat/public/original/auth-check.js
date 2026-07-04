@@ -215,7 +215,7 @@
   if (pageFile === 'approval.html') {
     appendScript('/original/approval_revision_route_guard.js?v=20260703_approval_revision_v3', true);
     appendScript('/original/review-print-override.js?v=' + BUILD_V, true);
-    appendScript('/original/review-workflow.js?v=' + BUILD_V, true);
+    appendScript('/original/review-workflow.js?v=20260703_frozen_snapshot_v2', true);
     appendScript('/original/review-generic-tables.js?v=20260703_admin_preview_v3', true);
     appendScript('/original/admin_offices_review_detail_patch.js?v=20260703_admin_offices_detail_v4', true);
     appendScript('/original/review-consumables-summary-exact.js?v=' + BUILD_V, true);
