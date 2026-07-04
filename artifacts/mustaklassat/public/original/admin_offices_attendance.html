@@ -7,7 +7,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>مستخلص العمالة للمكاتب الإدارية والمرافق الصحية</title>
-    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AAABAAEAAQEAAAEAGAAoAAAAFgAAACgAAAAQAAAAIAAAAAEAGAAAAAAAAAAAAAAA">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet"> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -93,31 +92,17 @@
 
         <main>
             <div id="main-grid-view">
-                <div id="centers-grid-container">
-                    <h2><i class="fas fa-building"></i> المكاتب الإدارية والمرافق الصحية</h2>
-                    <div id="centers-grid"></div>
-                </div>
-                <div id="special-categories-container">
-                    <h2><i class="fas fa-star"></i> الفئات الخاصة</h2>
-                    <div id="special-categories-grid"></div>
-                </div>
+                <div id="centers-grid-container"><h2><i class="fas fa-building"></i> المكاتب الإدارية والمرافق الصحية</h2><div id="centers-grid"></div></div>
+                <div id="special-categories-container"><h2><i class="fas fa-star"></i> الفئات الخاصة</h2><div id="special-categories-grid"></div></div>
             </div>
-
             <div id="center-details-view" style="display: none;">
-                <div class="center-header-container">
-                    <button class="back-button" onclick="backToGrid()"><i class="fas fa-arrow-right"></i> العودة للقائمة</button>
-                    <div id="center-main-title" class="dynamic-title"></div>
-                </div>
+                <div class="center-header-container"><button class="back-button" onclick="backToGrid()"><i class="fas fa-arrow-right"></i> العودة للقائمة</button><div id="center-main-title" class="dynamic-title"></div></div>
                 <div class="tabs-container">
                     <button class="tab-link active" onclick="openTab(event, 'attendance-tab')"><i class="fas fa-calendar-check"></i> الحضور والانصراف</button>
                     <button class="tab-link" onclick="openTab(event, 'performance-tab')"><i class="fas fa-chart-line"></i> تقييم الأداء</button>
                     <button class="tab-link" onclick="openTab(event, 'achievement-tab')"><i class="fas fa-file-invoice-dollar"></i> شهادة الإنجاز</button>
                 </div>
-                <div id="tab-content-container">
-                    <div id="attendance-tab" class="tab-content" style="display: block;"></div>
-                    <div id="performance-tab" class="tab-content"></div>
-                    <div id="achievement-tab" class="tab-content"></div>
-                </div>
+                <div id="tab-content-container"><div id="attendance-tab" class="tab-content" style="display: block;"></div><div id="performance-tab" class="tab-content"></div><div id="achievement-tab" class="tab-content"></div></div>
             </div>
         </main>
 
@@ -132,52 +117,24 @@
                     <div class="total-item net-total"><span class="total-label">إجمالي صافي الاستحقاق:</span><span class="total-value" id="grand-net-total">0.00</span></div>
                 </div>
             </div>
-            <div class="grand-total admin-total" id="admin-total-section" style="display: none;">
-                <h3><i class="fas fa-user-tie"></i> إجمالي الفئات الإدارية الخاصة</h3>
-                <div class="total-grid">
-                    <div class="total-item"><span class="total-label">عدد الموظفين:</span><span class="total-value" id="admin-total-count">0</span></div>
-                    <div class="total-item"><span class="total-label">التكلفة الشهرية:</span><span class="total-value" id="admin-total-cost">0.00</span></div>
-                    <div class="total-item net-total"><span class="total-label">صافي الاستحقاق:</span><span class="total-value" id="admin-net-total">0.00</span></div>
-                </div>
-            </div>
             <div id="sb-container-admin_offices" class="sb-wrap"></div>
         </section>
     </div>
-
-    <div id="dialog-overlay" class="overlay" style="display: none;"></div>
-    <div id="management-dialog" class="dialog" style="display: none;"></div>
-    <div id="form-dialog" class="dialog" style="display: none;"></div>
-    <div id="signature-dialog" class="dialog wide-dialog" style="display: none;"></div>
-
+    <div id="dialog-overlay" class="overlay" style="display: none;"></div><div id="management-dialog" class="dialog" style="display: none;"></div><div id="form-dialog" class="dialog" style="display: none;"></div><div id="signature-dialog" class="dialog wide-dialog" style="display: none;"></div>
     <footer><p>© 2025 فرع وزارة الصحة بمنطقة نجران - المكاتب الإدارية والمرافق الصحية</p></footer>
-
 <script src="/original/admin_offices_attendance.js?v=20260703_nationality_v10"></script>
 <script src="/original/performance_logic.js?v=20260622_workshop_grouped_v3"></script>
 <script src="/original/achievement_logic.js?v=20260622_site_v2"></script>
 <script src="/original/admin_offices_attendance_patch.js?v=20260623_positions_all_v5"></script>
 <script src="/original/admin_offices_attendance_persistence_fix.js?v=20260703_v9_unified_backup"></script>
 <script src="/original/admin_offices_employee_delete_index_fix.js?v=20260630_transfer_v1"></script>
-
-<script>
-(function(){
-  'use strict';
-  window.adminOfficesLoadWorkshopData = function(){
-    console.info('[Admin Offices Workshop Seed] disabled — no hardcoded workshop data');
-  };
-})();
-</script>
-
+<script>(function(){'use strict';window.adminOfficesLoadWorkshopData=function(){console.info('[Admin Offices Workshop Seed] disabled — no hardcoded workshop data');};})();</script>
 <script src="/original/extract-submit.js?v=20260630_restore_support_v1"></script>
 <script src="/original/track.js?v=20260630_restore_support_v1"></script>
+<script src="/original/admin_offices_local_save_buttons.js?v=20260704_admin_local_save_v1"></script>
 <script src="/original/signature-block.js?v=20260703_signature_layout_v2"></script>
-<script>
-if (window.SignatureBlock && typeof window.SignatureBlock.init === 'function') {
-  window.SignatureBlock.init('admin_offices', { showStamp: true });
-}
-</script>
-<style id="hide-fullscreen-btn-admin-offices">
-.zoom-fullscreen-btn.zoom-fullscreen-btn.zoom-fullscreen-btn { display: none !important; }
-</style>
+<script>if(window.SignatureBlock&&typeof window.SignatureBlock.init==='function'){window.SignatureBlock.init('admin_offices',{showStamp:true});}</script>
+<style id="hide-fullscreen-btn-admin-offices">.zoom-fullscreen-btn.zoom-fullscreen-btn.zoom-fullscreen-btn{display:none!important;}</style>
 <script src="/original/admin_offices_page_signatures.js?v=20260703_controls_separated_v9"></script>
 <script src="/original/admin_offices_signatures_unify_v1.js?v=20260703_unify_sigs_v4"></script>
 <script src="/original/admin_offices_grand_certificate_polish.js?v=20260703_dedup_v5"></script>
