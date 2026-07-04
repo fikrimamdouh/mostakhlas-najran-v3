@@ -102,14 +102,43 @@
     // أقسام التفاصيل من snapshot المرفوع فقط (نفس عارضي المسار الكامل) — الإجماليات تبقى من frs بلا إعادة حساب.
     var sections = window.__najranReviewLaborSections || null;
     var s = snap(e);
+
+    // Diagnostic صريح — لا تخمين لاحقًا: يوضّح فورًا هل السبب cache قديم
+    // (sections غير موجود = auth-check.js حمّل نسخة قديمة من review-workflow.js)
+    // أم snapshot ناقص من السيرفر (مفاتيح الحضور/الأداء غير موجودة أصلًا).
+    (function diagnostics() {
+      try {
+        var snapKeys = Object.keys(s || {});
+        var attKeys = snapKeys.filter(function (k) { return /attendance/i.test(k) || /^dept_/i.test(k); });
+        var perfKeys = snapKeys.filter(function (k) { return /^tableData_/i.test(k) || /performance/i.test(k); });
+        console.info('[LaborFinalSnapshotExact][diagnostic] extractId=' + e.id, {
+          sectionsAvailable: !!sections,
+          attendanceKeysInSnapshot: attKeys,
+          performanceKeysInSnapshot: perfKeys,
+          allSnapshotKeys: snapKeys
+        });
+        if (!sections) {
+          console.warn('[LaborFinalSnapshotExact][diagnostic] window.__najranReviewLaborSections غير موجود — على الأغلب review-workflow.js نسخة قديمة من الـcache (تحقق من version query في auth-check.js).');
+        }
+        if (sections && !attKeys.length) {
+          console.warn('[LaborFinalSnapshotExact][diagnostic] لا توجد مفاتيح حضور (attendanceData/dept_*) داخل extractData — الأرجح أن submitted_extract_archive_bundle_guard.js كان نسخة قديمة وقت رفع هذا المستخلص (حذفت المفاتيح الخام قبل الحفظ). هذا المستخلص بالذات يحتاج إعادة رفع، لا إصلاح عرض.');
+        }
+      } catch (diagErr) { console.warn('[LaborFinalSnapshotExact][diagnostic] فشل التشخيص', diagErr); }
+    })();
+
     var attHtml = '', perfHtml = '';
     if (sections) {
       try {
         var pi = sections.periodInfo(sections.meta(e));
         attHtml = sections.attendanceHtml(s, pi) || '';
         perfHtml = sections.performanceHtml(s) || '';
+        console.info('[LaborFinalSnapshotExact][diagnostic] attendanceHtml length=' + attHtml.length + ' performanceHtml length=' + perfHtml.length);
       } catch (err) { console.warn('[LaborFinalSnapshotExact] detail sections skipped', err); }
     }
+    // القسمان يظهران دائمًا (حتى لو فارغين) بدل إخفائهما بصمت — رسالة واضحة
+    // تفرّق بين "لا بيانات محفوظة" و"تعطّل العرض"، بدل قسم مفقود بلا تفسير.
+    if (!attHtml) attHtml = '<div class="rv-empty">لا توجد بيانات حضور محفوظة داخل هذا المستخلص — راجع الـconsole للتشخيص.</div>';
+    if (!perfHtml) perfHtml = '<div class="rv-empty">لا توجد بيانات أداء محفوظة داخل هذا المستخلص — راجع الـconsole للتشخيص.</div>';
     html += '<nav class="rv-tabs"><a href="#rv-summary" class="rv-nav-card"><b>ملخص المراجعة</b><span>لقطة نهائية</span></a>' +
       (attHtml ? '<a href="#rv-attendance" class="rv-nav-card"><b>الحضور والانصراف</b><span>من snapshot المرفوع</span></a>' : '') +
       (perfHtml ? '<a href="#rv-performance" class="rv-nav-card"><b>شهادة الأداء الشهري</b><span>من snapshot المرفوع</span></a>' : '') +

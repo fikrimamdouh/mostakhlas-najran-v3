@@ -23,20 +23,19 @@
   window.__NAJRAN_SIGNATURE_STYLE_CONTROL_V1__ = true;
 
   var KEY = 'najranSignatureStyleSettings_v1';
-  var MAX_SIGS = 3;
+  var MAX_SIGS = 24; // سقف أمان فقط (صفحات "طباعة الكل" قد تجمّع خطابات كثيرة)
   var FONT_MIN = 10, FONT_MAX = 26;
   var GAP_MIN = -60, GAP_MAX = 140;
 
+  function defaultSlot() { return { fontSize: null, bold: null, gapBefore: 0, newLine: false }; }
+
   function defaults() {
-    return {
-      version: 1,
-      containerAlign: null, // null = اترك تنسيق القالب الأصلي كما هو
-      perSignature: [
-        { fontSize: null, bold: null, gapBefore: 0, newLine: false },
-        { fontSize: null, bold: null, gapBefore: 0, newLine: false },
-        { fontSize: null, bold: null, gapBefore: 0, newLine: false }
-      ]
-    };
+    return { version: 2, containerAlign: null, perSignature: [] };
+  }
+
+  function getSlot(settings, i) {
+    while (settings.perSignature.length <= i) settings.perSignature.push(defaultSlot());
+    return settings.perSignature[i];
   }
 
   function readSettings() {
@@ -48,7 +47,7 @@
       if (!p || typeof p !== 'object') return d;
       d.containerAlign = ['right', 'left', 'center', 'distribute'].indexOf(p.containerAlign) > -1 ? p.containerAlign : null;
       if (Array.isArray(p.perSignature)) {
-        for (var i = 0; i < MAX_SIGS; i++) {
+        for (var i = 0; i < Math.min(p.perSignature.length, MAX_SIGS); i++) {
           var s = p.perSignature[i];
           if (s && typeof s === 'object') {
             d.perSignature[i] = {
@@ -57,6 +56,8 @@
               gapBefore: typeof s.gapBefore === 'number' ? Math.max(GAP_MIN, Math.min(GAP_MAX, s.gapBefore)) : 0,
               newLine: s.newLine === true
             };
+          } else {
+            d.perSignature[i] = defaultSlot();
           }
         }
       }
@@ -78,13 +79,16 @@
     return '';
   }
 
-  // يجمع خلايا التوقيع في صفوف حسب أقرب أب مشترك — يعمل مع أي اسم صنف حاوية
-  // حالي أو مستقبلي (.sig-grid / .signatures / .sig ...) لأنه لا يعتمد إلا
-  // على أن .sig-title موجودة داخل خلية واحدة أبوها المباشر هو صف التوقيعات.
+  // يجمع خلايا التوقيع في صفوف حسب أقرب أب مشترك (لتطبيق المحاذاة على مستوى
+  // الصف)، ويعطي كل خلية أيضًا فهرسًا تسلسليًا عبر المستند كله (globalIndex)
+  // بترتيب ظهورها في الصفحة — فتوقيع "مدير المستشفى" في صف مستقل (خطاب آخر
+  // ضمن "طباعة الكل" مثلًا) لا يشارك إعداد "التوقيع الأول" مع "مندوب المقاول"
+  // في صف مختلف، حتى لو كان كلاهما أول توقيع في صفه.
   function findSignatureRows(doc) {
     var titles = doc.querySelectorAll('.sig-title');
     var rows = [];
     var rowIndex = new Map();
+    var globalIndex = 0;
     for (var i = 0; i < titles.length; i++) {
       var cell = titles[i].parentElement;
       if (!cell) continue;
@@ -92,7 +96,8 @@
       if (!row) continue;
       var idx = rowIndex.get(row);
       if (idx === undefined) { idx = rows.length; rowIndex.set(row, idx); rows.push({ row: row, cells: [] }); }
-      rows[idx].cells.push(cell);
+      rows[idx].cells.push({ cell: cell, globalIndex: globalIndex });
+      globalIndex++;
     }
     return rows;
   }
@@ -114,7 +119,8 @@
       var justify = alignToJustify(settings.containerAlign);
       g.row.style.justifyContent = justify || '';
       var usesFlexBreak = false;
-      g.cells.forEach(function (cell, i) {
+      g.cells.forEach(function (entry) {
+        var cell = entry.cell, i = entry.globalIndex;
         resetInlineOverrides(cell);
         if (i >= MAX_SIGS) return;
         var cfg = settings.perSignature[i];
@@ -141,7 +147,8 @@
       });
       if (usesFlexBreak) { g.row.style.display = 'flex'; g.row.style.flexWrap = 'wrap'; }
     });
-    return groups.length > 0;
+    var total = groups.reduce(function (n, g) { return n + g.cells.length; }, 0);
+    return total;
   }
 
   // ─── لوحة التحكم — تُبنى داخل نافذة الطباعة، لكن القراءة/الحفظ من
@@ -171,10 +178,11 @@
     doc.head.appendChild(style);
   }
 
-  function buildPanel(doc) {
+  function buildPanel(doc, count) {
     if (doc.getElementById('najran-sig-panel')) return;
     panelStyles(doc);
     var draft = readSettings();
+    for (var k = 0; k < count; k++) getSlot(draft, k);
 
     var toggle = doc.createElement('button');
     toggle.id = 'najran-sig-toggle';
@@ -186,8 +194,8 @@
     panel.id = 'najran-sig-panel';
     doc.body.appendChild(panel);
 
-    var ALIGN_LABELS = [['right', 'يمين'], ['left', 'يسار'], ['center', 'توسيط'], ['distribute', 'توزيع متساوٍ']];
-    var SIG_LABELS = ['التوقيع الأول', 'التوقيع الثاني', 'التوقيع الثالث'];
+    var ORDINALS = ['الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر'];
+    function sigLabel(i) { return 'التوقيع ' + (ORDINALS[i] || '#' + (i + 1)); }
 
     function render() {
       var alignBtns = ALIGN_LABELS.map(function (a) {
@@ -195,12 +203,12 @@
       }).join('');
 
       var groupsHtml = '';
-      for (var i = 0; i < MAX_SIGS; i++) {
-        var cfg = draft.perSignature[i];
+      for (var i = 0; i < count; i++) {
+        var cfg = getSlot(draft, i);
         var fs = cfg.fontSize || 15;
         groupsHtml += '' +
           '<div class="sig-group" data-idx="' + i + '">' +
-          '<b>' + SIG_LABELS[i] + '</b>' +
+          '<b>' + sigLabel(i) + '</b>' +
           '<div class="sig-row"><label style="min-width:78px">حجم الخط</label>' +
           '<input type="range" class="sig-font" min="' + FONT_MIN + '" max="' + FONT_MAX + '" value="' + fs + '">' +
           '<span>' + fs + 'px</span></div>' +
@@ -213,7 +221,7 @@
       }
 
       panel.innerHTML =
-        '<h4>تنسيق التواقيع (يُحفظ ويُطبَّق تلقائيًا على كل الخطابات)</h4>' +
+        '<h4>تنسيق التواقيع (' + count + ' توقيع في هذه الصفحة — كل توقيع مستقل تمامًا، ويُحفظ ويُطبَّق تلقائيًا على كل الخطابات)</h4>' +
         '<div class="sig-align-row">' + alignBtns + '</div>' +
         groupsHtml +
         '<div class="sig-actions"><button type="button" class="sig-save">حفظ</button><button type="button" class="sig-reset">استعادة الافتراضي</button></div>';
@@ -227,7 +235,7 @@
       });
       panel.querySelectorAll('.sig-group').forEach(function (g) {
         var idx = Number(g.getAttribute('data-idx'));
-        var cfg = draft.perSignature[idx];
+        var cfg = getSlot(draft, idx);
         var fontInput = g.querySelector('.sig-font');
         var gapInput = g.querySelector('.sig-gap');
         var boldInput = g.querySelector('.sig-bold');
@@ -252,6 +260,7 @@
       };
       panel.querySelector('.sig-reset').onclick = function () {
         draft = defaults();
+        for (var k2 = 0; k2 < count; k2++) getSlot(draft, k2);
         writeSettings(draft);
         applyStyles(doc, draft);
         render();
@@ -266,9 +275,9 @@
     try {
       var doc = win.document;
       if (!doc || !doc.body) return false;
-      var found = applyStyles(doc, readSettings());
-      if (found) buildPanel(doc);
-      return found;
+      var count = applyStyles(doc, readSettings());
+      if (count > 0) buildPanel(doc, count);
+      return count > 0;
     } catch (_) { return false; }
   }
 
