@@ -5,7 +5,7 @@
 (function () {
   'use strict';
 
-  var CACHE_MARKER = '20260702_v13_match_labor_letterhead_behavior';
+  var CACHE_MARKER = '20260704_v14_consumables_letter_signature_bridge';
   try { window.__CONSUMABLES_SUMMARY_CLEANER_CACHE_MARKER = CACHE_MARKER; } catch (_) {}
 
   var sig = location.pathname + location.search;
@@ -35,7 +35,7 @@
   }
 
   function loadHospitalConsumablesRaiseLetter() {
-    loadScriptFresh('hospital-consumables-raise-letter-js', '/original/hospital_consumables_raise_letter.js?v=20260702_v12_auto_print_from_settings');
+    loadScriptFresh('hospital-consumables-raise-letter-js', '/original/hospital_consumables_raise_letter.js?v=20260704_v14_signature_bridge');
     setTimeout(function () {
       loadScriptFresh('hospital-consumables-letterhead-storage-guard-js', '/original/hospital_consumables_letterhead_storage_guard_v1.js?v=20260702_v2_fallback_letterhead_key');
     }, 60);
@@ -51,6 +51,137 @@
     setTimeout(function () {
       loadScriptFresh('hospital-consumables-print-polish-js', '/original/hospital_consumables_print_polish_v6.js?v=20260702_v9_fallback_letterhead_print');
     }, 200);
+  }
+
+  function installConsumablesLetterSignatureBridge() {
+    try {
+      if (window.__HOSPITAL_CONSUMABLES_LETTER_SIGNATURE_BRIDGE_V14__) return;
+      window.__HOSPITAL_CONSUMABLES_LETTER_SIGNATURE_BRIDGE_V14__ = true;
+
+      var LETTER_SETTINGS_KEY = 'hospitalConsumablesRaiseLettersSettings_v1';
+      var LEGACY_SIGNATURES_KEY = 'signatures_data_consumables_v27';
+      var DEFAULT_NOPREV_TITLES = ['الموظف المختص', 'مدير الإدارة'];
+      var forceLegacySyncUntil = 0;
+      var originalSetItem = localStorage.setItem.bind(localStorage);
+
+      function clean(v) {
+        return String(v == null ? '' : v).replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim();
+      }
+
+      function readJson(key, fallback) {
+        try {
+          var raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : fallback;
+        } catch (_) {
+          return fallback;
+        }
+      }
+
+      function compactSignatures(arr) {
+        if (!Array.isArray(arr)) return [];
+        return arr
+          .map(function (s) { return { title: clean(s && s.title), name: clean(s && s.name) }; })
+          .filter(function (s) { return s.title || s.name; });
+      }
+
+      function pickLegacySignatures(legacy) {
+        legacy = legacy && typeof legacy === 'object' ? legacy : {};
+        var candidates = [legacy.noPrev, legacy.summary, legacy.subcontractors, legacy.performance, legacy.water, legacy.sewage];
+        for (var i = 0; i < candidates.length; i++) {
+          var sigs = compactSignatures(candidates[i]);
+          if (sigs.length) return sigs;
+        }
+        return [];
+      }
+
+      function noPrevIsBlankOrDefault(sigs) {
+        sigs = Array.isArray(sigs) ? sigs : [];
+        if (!sigs.length) return true;
+        var hasNames = sigs.some(function (s) { return clean(s && s.name); });
+        if (!hasNames) return true;
+        if (sigs.length !== DEFAULT_NOPREV_TITLES.length) return false;
+        return sigs.every(function (s, i) {
+          return clean(s && s.title) === DEFAULT_NOPREV_TITLES[i] && !clean(s && s.name);
+        });
+      }
+
+      function ensureLetterShape(s) {
+        s = s && typeof s === 'object' ? s : {};
+        s.letters = s.letters && typeof s.letters === 'object' ? s.letters : {};
+        s.letters.noPrev = s.letters.noPrev && typeof s.letters.noPrev === 'object' ? s.letters.noPrev : {};
+        if (!clean(s.letters.noPrev.title)) s.letters.noPrev.title = 'إقرار بعدم أسبقية الصرف';
+        if (!clean(s.letters.noPrev.body)) s.letters.noPrev.body = 'تشهد إدارة / {hospital} بأن استحقاق شركة / {company} لمستخلص المستهلكات ومقاولي الباطن دفعة رقم ({paymentNo}) بمبلغ ({grand} ريال).\n\nلم يسبق صرف هذا المستخلص من قبلنا.';
+        if (!clean(s.letters.noPrev.closing)) s.letters.noPrev.closing = 'مع أطيب تحياتي ،،،';
+        if (!s.letters.noPrev.showDate) s.letters.noPrev.showDate = 'yes';
+        if (!s.letters.noPrev.showStamp) s.letters.noPrev.showStamp = 'yes';
+        return s;
+      }
+
+      function syncLegacyToNoPrev(reason, force) {
+        try {
+          var legacy = readJson(LEGACY_SIGNATURES_KEY, {});
+          var mapped = pickLegacySignatures(legacy);
+          if (!mapped.length) return false;
+
+          var settings = ensureLetterShape(readJson(LETTER_SETTINGS_KEY, {}));
+          var existing = settings.letters.noPrev.signatures || [];
+          if (!force && !noPrevIsBlankOrDefault(existing)) return false;
+
+          settings.version = settings.version || 'hospital-consumables-letters-v6';
+          settings.letters.noPrev.signatures = mapped;
+          settings.__signatureBridge = {
+            source: LEGACY_SIGNATURES_KEY,
+            target: 'letters.noPrev.signatures',
+            reason: reason || 'auto',
+            syncedAt: new Date().toISOString()
+          };
+          originalSetItem(LETTER_SETTINGS_KEY, JSON.stringify(settings));
+          console.warn('[HospitalConsumablesSignatureBridge] synced legacy signatures to noPrev:', reason || 'auto');
+          return true;
+        } catch (e) {
+          console.warn('[HospitalConsumablesSignatureBridge] sync failed:', e);
+          return false;
+        }
+      }
+
+      function markLegacySignatureSave() {
+        forceLegacySyncUntil = Date.now() + 2500;
+      }
+
+      localStorage.setItem = function (key, value) {
+        var result = originalSetItem.apply(localStorage, arguments);
+        try {
+          if (String(key) === LEGACY_SIGNATURES_KEY) {
+            var force = Date.now() <= forceLegacySyncUntil;
+            setTimeout(function () { syncLegacyToNoPrev(force ? 'legacy-signature-editor-save' : 'legacy-setItem', force); }, 0);
+          }
+        } catch (_) {}
+        return result;
+      };
+
+      document.addEventListener('click', function (e) {
+        var target = e.target && e.target.closest && e.target.closest('#save-signatures-btn,#sb-save-btn');
+        if (!target) return;
+        if (target.id === 'save-signatures-btn' || document.getElementById('sb-consumables-cert')) markLegacySignatureSave();
+      }, true);
+
+      function relabelLegacySignatureButton() {
+        try {
+          var btn = document.getElementById('edit-signatures-btn');
+          if (!btn || btn.__hcLegacySignatureLabelV14) return;
+          btn.__hcLegacySignatureLabelV14 = true;
+          btn.title = 'هذا الزر يعدل تواقيع جداول المستهلكات فقط. تواقيع الخطابات من زر خطابات المستهلكات.';
+          btn.innerHTML = '<i class="fas fa-signature"></i> تواقيع جداول المستهلكات';
+        } catch (_) {}
+      }
+
+      relabelLegacySignatureButton();
+      setTimeout(relabelLegacySignatureButton, 500);
+      setTimeout(relabelLegacySignatureButton, 1500);
+      setTimeout(function () { syncLegacyToNoPrev('boot-if-letter-signature-empty', false); }, 1200);
+    } catch (e) {
+      console.warn('[HospitalConsumablesSignatureBridge] install failed:', e);
+    }
   }
 
   function ensureConsumablesLettersButton(reason) {
@@ -77,7 +208,7 @@
           e.stopPropagation();
           if (e.stopImmediatePropagation) e.stopImmediatePropagation();
         }
-        location.href = '/original/hospital_consumables_letters_settings.html?v=20260702_v8_print_now_auto&t=' + Date.now();
+        location.href = '/original/hospital_consumables_letters_settings.html?v=20260704_v14_signature_bridge&t=' + Date.now();
         return false;
       };
 
@@ -148,21 +279,24 @@
   }
 
   loadHospitalConsumablesRaiseLetter();
+  installConsumablesLetterSignatureBridge();
   ensureConsumablesLettersButton('immediate');
   cleanSummaryData('immediate');
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       cleanSummaryData('domcontentloaded');
       loadHospitalConsumablesRaiseLetter();
+      installConsumablesLetterSignatureBridge();
       ensureConsumablesLettersButton('domcontentloaded');
     });
   } else {
     cleanSummaryData('ready');
     loadHospitalConsumablesRaiseLetter();
+    installConsumablesLetterSignatureBridge();
     ensureConsumablesLettersButton('ready');
   }
-  setTimeout(function () { cleanSummaryData('late-500'); loadHospitalConsumablesRaiseLetter(); ensureConsumablesLettersButton('late-500'); }, 500);
-  setTimeout(function () { cleanSummaryData('late-1500'); loadHospitalConsumablesRaiseLetter(); ensureConsumablesLettersButton('late-1500'); }, 1500);
-  setTimeout(function () { loadHospitalConsumablesRaiseLetter(); ensureConsumablesLettersButton('late-3000'); }, 3000);
+  setTimeout(function () { cleanSummaryData('late-500'); loadHospitalConsumablesRaiseLetter(); installConsumablesLetterSignatureBridge(); ensureConsumablesLettersButton('late-500'); }, 500);
+  setTimeout(function () { cleanSummaryData('late-1500'); loadHospitalConsumablesRaiseLetter(); installConsumablesLetterSignatureBridge(); ensureConsumablesLettersButton('late-1500'); }, 1500);
+  setTimeout(function () { loadHospitalConsumablesRaiseLetter(); installConsumablesLetterSignatureBridge(); ensureConsumablesLettersButton('late-3000'); }, 3000);
   console.info('[ConsumablesSummaryCleaner] cache marker:', CACHE_MARKER);
 })();
