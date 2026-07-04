@@ -42,8 +42,51 @@ const requireApproved = async (req: any, res: any, next: any) => {
   next();
 };
 
+function parseExtractData(raw: unknown): Record<string, any> {
+  if (!raw) return {};
+  if (typeof raw === "object") return raw as Record<string, any>;
+  if (typeof raw !== "string") return {};
+  try {
+    const parsed = JSON.parse(raw || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function getAdminOfficeMeta(row: any) {
+  if (row?.extractType !== "admin_offices") {
+    return { adminOfficePart: null, sourceModule: null, reviewScope: null };
+  }
+
+  const data = parseExtractData(row.extractData);
+  const nestedMeta = parseExtractData(data.najran_admin_offices_submit_meta_v1);
+  const adminOfficePart =
+    data.adminOfficePart ||
+    data.draftPart ||
+    data.submittedPart ||
+    nestedMeta.submittedPart ||
+    nestedMeta.savedPart ||
+    (data.adminOfficeConsumables === true ? "consumables" : null) ||
+    (data.adminOfficeLabor === true ? "labor" : null) ||
+    (data.reviewScope === "admin_offices_consumables_only" ? "consumables" : null) ||
+    (data.reviewScope === "admin_offices_labor_only" ? "labor" : null) ||
+    (data.sourceModule === "admin_offices_consumables" ? "consumables" : null) ||
+    (data.sourceModule === "admin_offices_attendance" ? "labor" : null) ||
+    null;
+
+  const normalizedPart = adminOfficePart === "consumables" ? "consumables" : adminOfficePart === "labor" ? "labor" : null;
+
+  return {
+    adminOfficePart: normalizedPart,
+    sourceModule: data.sourceModule || (normalizedPart === "consumables" ? "admin_offices_consumables" : normalizedPart === "labor" ? "admin_offices_attendance" : null),
+    reviewScope: data.reviewScope || (normalizedPart === "consumables" ? "admin_offices_consumables_only" : normalizedPart === "labor" ? "admin_offices_labor_only" : null),
+  };
+}
+
 // GET /api/submitted-extracts-lite
-// Lightweight list for badges, dashboards, and status tracking. It intentionally excludes extractData snapshots.
+// Lightweight list for badges, dashboards, and status tracking. It excludes full extractData snapshots,
+// but returns small admin-office metadata so tracking cards can distinguish labor vs consumables.
 router.get("/", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const role = req.currentUser.role;
@@ -80,6 +123,7 @@ router.get("/", requireAuth, requireApproved, async (req: any, res) => {
         updatedAt: submittedExtractsTable.updatedAt,
         createdAt: submittedExtractsTable.createdAt,
         userId: submittedExtractsTable.userId,
+        extractData: submittedExtractsTable.extractData,
         hospitalNameFromUser: usersTable.hospital,
         submittedByName: usersTable.name,
         submittedByEmail: usersTable.email,
@@ -90,7 +134,15 @@ router.get("/", requireAuth, requireApproved, async (req: any, res) => {
       .where(whereClause)
       .orderBy(desc(submittedExtractsTable.updatedAt));
 
-    return res.json({ extracts: rows, total: rows.length, light: true });
+    const liteRows = rows.map((row: any) => {
+      const { extractData: _extractData, ...safeRow } = row;
+      return {
+        ...safeRow,
+        ...getAdminOfficeMeta(row),
+      };
+    });
+
+    return res.json({ extracts: liteRows, total: liteRows.length, light: true });
   } catch (err) {
     req.log.error({ err }, "Failed to list lightweight submitted extracts");
     return res.status(500).json({ error: "Internal server error" });
