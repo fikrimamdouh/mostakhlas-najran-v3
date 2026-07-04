@@ -9,8 +9,9 @@
 
   var BASE = window.location.origin;
   var BUILD_V = '20260623archiveBundleRouteV1';
+  var HOSPITAL_STORAGE_GUARD_V = '20260704_stale_revision_404_modal_v2';
   var NOTIF_INTERVAL_MS = 300000;
-  var NAJRAN_BUILD_VERSION = '2026.07.04-r9';
+  var NAJRAN_BUILD_VERSION = '2026.07.04-r10';
   window.NAJRAN_BUILD_VERSION = NAJRAN_BUILD_VERSION;
 
   try { console.info('%c[Najran] النسخة: ' + NAJRAN_BUILD_VERSION, 'color:#1e3c72;font-weight:bold'); } catch (_) {}
@@ -42,6 +43,7 @@
             try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister().catch(function(){}); })); })); } catch (_) {}
             try { if (window.caches && caches.keys) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })); } catch (_) {}
             try { jobs.push(fetch('/original/auth-check.js', { cache: 'reload' }).catch(function(){})); } catch (_) {}
+            try { jobs.push(fetch('/original/hospital-storage-extract-context-guard.js?v=' + HOSPITAL_STORAGE_GUARD_V, { cache: 'reload' }).catch(function(){})); } catch (_) {}
             try { jobs.push(fetch('/original/extract-snapshot.js?v=20260703_snapshot_quota_v1', { cache: 'reload' }).catch(function(){})); } catch (_) {}
             try { jobs.push(fetch('/original/submitted_extract_archive_bundle_guard.js?v=20260703_final_snapshot_v1', { cache: 'reload' }).catch(function(){})); } catch (_) {}
             try { jobs.push(fetch('/original/admin_offices_full_submit_snapshot_guard.js?v=20260704_full_submit_v4_quota_safe', { cache: 'reload' }).catch(function(){})); } catch (_) {}
@@ -179,7 +181,7 @@
   console.info('[AuthCheck] original page resolved:', pageFile);
 
   appendScript('/original/hospital-context-guard.js?v=20260611d', false);
-  appendScript('/original/hospital-storage-extract-context-guard.js?v=' + BUILD_V, false);
+  appendScript('/original/hospital-storage-extract-context-guard.js?v=' + HOSPITAL_STORAGE_GUARD_V, false);
 
   if (!isSidebarSensitivePage) appendScript('/original/home-sidebar-guard.js?v=20260703_review_exclude_v2', false);
 
