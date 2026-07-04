@@ -742,6 +742,37 @@
   } else {
     installArchiveRenderPatch();
     installLocalSaveOnHomeExit();
+
+  // ─── حفظ تلقائي دوري للمستهلكات وقطع الغيار (مفيهمش mirror مستمر زي المكاتب/العمالة) ───
+  (function installPeriodicAutoSave() {
+    var file = (window.location.pathname || '').split('/').pop() || '';
+    var autoSavePages = {
+      'consumables.html': ['consumablesTableData', 'summary_data_consumables_v27', 'finalConsumablesCost', 'subcontractors_data_consumables_v27', 'performance_data_consumables_v27', 'water_supply_data_consumables_v27', 'sewage_disposal_data_consumables_v27'],
+      'spare_parts.html': ['spare_partsData', 'sparePartsTotalAmount'],
+      'health_centers_consumables.html': ['healthCentersConsumables', 'healthCentersConsumablesSummary']
+    };
+    var keys = autoSavePages[file];
+    if (!keys) return;
+    var lastHash = '';
+    function computeHash() {
+      var parts = [];
+      keys.forEach(function (k) { var v = localStorage.getItem(k); if (v) parts.push(k + ':' + v.length); });
+      return parts.join('|');
+    }
+    function autoSave() {
+      try {
+        var h = computeHash();
+        if (h === lastHash || h === '') return;
+        lastHash = h;
+        if (typeof window.saveCurrentSnapshot === 'function') window.saveCurrentSnapshot('auto-save');
+        else if (typeof saveSnapshot === 'function') saveSnapshot('auto-save');
+      } catch (_) {}
+    }
+    lastHash = computeHash();
+    setInterval(autoSave, 30000); // كل 30 ثانية لو اتغيرت البيانات
+    window.addEventListener('beforeunload', autoSave);
+    console.info('[Najran Extract Snapshot] periodic auto-save installed for', file);
+  })();
   }
 
   console.info('[Najran Extract Snapshot] installed v4 quota-safe local resume');
