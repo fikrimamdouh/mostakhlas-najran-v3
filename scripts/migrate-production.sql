@@ -122,3 +122,63 @@ CREATE TABLE IF NOT EXISTS visit_requests (
 
 -- ─── Done ───────────────────────────────────────────────────
 SELECT 'Migration complete ✓' AS result;
+
+-- ============================================================
+-- P0 Stability Migration — idempotency + explicit columns + storage versioning
+-- Safe to run multiple times.
+-- ============================================================
+
+-- ─── A. submitted_extracts: أعمدة idempotency والأعمدة الصريحة ─────────────
+ALTER TABLE submitted_extracts ADD COLUMN IF NOT EXISTS idempotency_key   text;
+ALTER TABLE submitted_extracts ADD COLUMN IF NOT EXISTS admin_office_part text;
+ALTER TABLE submitted_extracts ADD COLUMN IF NOT EXISTS source_module     text;
+ALTER TABLE submitted_extracts ADD COLUMN IF NOT EXISTS review_scope      text;
+
+-- ─── B. Backfill الأعمدة الصريحة من extract_data (best-effort, per-row) ─────
+-- يتجاوز الصفوف ذات JSON التالف بدل إفشال الهجرة كاملة.
+DO $$
+DECLARE r RECORD; d jsonb; nested jsonb; part text; src text; scope text;
+BEGIN
+  FOR r IN SELECT id, extract_data FROM submitted_extracts
+           WHERE extract_type = 'admin_offices' AND admin_office_part IS NULL AND extract_data IS NOT NULL
+  LOOP
+    BEGIN
+      d := r.extract_data::jsonb;
+      nested := CASE WHEN jsonb_typeof(d->'najran_admin_offices_submit_meta_v1') = 'string'
+                     THEN (d->>'najran_admin_offices_submit_meta_v1')::jsonb
+                     WHEN jsonb_typeof(d->'najran_admin_offices_submit_meta_v1') = 'object'
+                     THEN d->'najran_admin_offices_submit_meta_v1'
+                     ELSE '{}'::jsonb END;
+      part := COALESCE(
+        NULLIF(d->>'adminOfficePart',''), NULLIF(d->>'draftPart',''), NULLIF(d->>'submittedPart',''),
+        NULLIF(nested->>'submittedPart',''), NULLIF(nested->>'savedPart',''),
+        CASE WHEN d->>'adminOfficeConsumables' = 'true' THEN 'consumables' END,
+        CASE WHEN d->>'adminOfficeLabor' = 'true' THEN 'labor' END,
+        CASE d->>'reviewScope' WHEN 'admin_offices_consumables_only' THEN 'consumables' WHEN 'admin_offices_labor_only' THEN 'labor' END,
+        CASE d->>'sourceModule' WHEN 'admin_offices_consumables' THEN 'consumables' WHEN 'admin_offices_attendance' THEN 'labor' END
+      );
+      part := CASE WHEN part IN ('consumables','labor') THEN part ELSE NULL END;
+      src := COALESCE(NULLIF(d->>'sourceModule',''),
+                      CASE part WHEN 'consumables' THEN 'admin_offices_consumables' WHEN 'labor' THEN 'admin_offices_attendance' END);
+      scope := COALESCE(NULLIF(d->>'reviewScope',''),
+                        CASE part WHEN 'consumables' THEN 'admin_offices_consumables_only' WHEN 'labor' THEN 'admin_offices_labor_only' END);
+      UPDATE submitted_extracts SET admin_office_part = part, source_module = src, review_scope = scope WHERE id = r.id;
+    EXCEPTION WHEN others THEN
+      RAISE NOTICE 'skip backfill for extract % (invalid JSON)', r.id;
+    END;
+  END LOOP;
+END $$;
+
+-- ─── C. unique index جزئي — لا يفشل على المكررات القديمة (NULL keys) ─────────
+-- السجلات القديمة تبقى idempotency_key = NULL ولا تدخل في القيد.
+-- كل رفع جديد يحصل على مفتاح ويُحمى بالقيد. لا حاجة لتنظيف مسبق.
+CREATE UNIQUE INDEX IF NOT EXISTS submitted_extracts_idempotency_key
+  ON submitted_extracts (idempotency_key);
+
+-- (اختياري — تشغيل يدوي بعد مراجعة المكررات القديمة):
+-- كشف المكررات التاريخية قبل أي backfill لمفاتيحها:
+--   SELECT user_id, extract_type, hospital_name, period_month, count(*)
+--   FROM submitted_extracts GROUP BY 1,2,3,4 HAVING count(*) > 1;
+
+-- ─── D. hospital_storage: عمود version لكشف التعارض ─────────────────────────
+ALTER TABLE hospital_storage ADD COLUMN IF NOT EXISTS version integer NOT NULL DEFAULT 1;

@@ -4,6 +4,11 @@ import { requireAuth } from "../middleware/requireAuth";
 import { createNotificationSafe } from "./notifications";
 import { eq, desc, and } from "drizzle-orm";
 import { sendNewExtractEmail } from "../lib/email";
+import {
+  buildListScope, canReadExtract, canUpdateExtractStatus,
+  deriveAdminOfficeMeta, extractPeriodMeta, buildIdempotencyKey,
+  validateExtractDataPayload, liteListColumns,
+} from "../lib/extract-scope";
 
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 const NOT_FOUND_OR_FORBIDDEN = "EXTRACT_NOT_FOUND_OR_FORBIDDEN";
@@ -57,29 +62,14 @@ const requireStrictAdmin = async (req: any, res: any, next: any) => {
   next();
 };
 
-const COMPANY_SITES: Record<string, { sites: string[] }> = {
-  "زهران": { sites: ["مستشفى يدمه العام — زهران", "مستشفى حبونا العام — زهران", "مستشفى بدر الجنوب العام — زهران"] },
-  "إيمان": { sites: ["مستشفى الولادة والأطفال — إيمان", "مستشفى غرب نجران للولادة والأطفال والعيادات التخصصية — إيمان", "المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة — إيمان"] },
-  "بيت_العرب": { sites: ["مستشفى يدمة العام", "مستشفى حبونا العام", "مستشفى بدر الجنوب العام", "مستشفى الولادة والأطفال", "مستشفى نجران العام القديم وسكن الممرضات الخارجي", "المكاتب الإدارية والمرافق الصحية", "صيانة وإصلاح السيارات والعيادات المتنقلة"] },
-  "سراكو": { sites: ["مستشفى نجران العام الجديد", "مركز طب الأسنان التخصصي", "مجمع الأمل للصحة النفسية", "مستشفى ثار العام", "مستشفى خباش العام", "المراكز الصحية", "مستشفى الملك خالد", "مركز الأمير سلطان", "مستشفى شروره العام"] },
-};
-
 router.get("/", requireAuth, requireApproved, async (req: any, res) => {
   try {
-    const role = req.currentUser.role;
-    const isAdminOrSup = role === "admin" || role === "supervisor" || role === "viewer";
-    const isContractSup = role === "contract_supervisor";
-    let whereClause: any = undefined;
-    if (isContractSup) {
-      const companyKey = req.currentUser.contractCompany;
-      const companySites = companyKey ? (COMPANY_SITES[companyKey]?.sites ?? []) : [];
-      if (companySites.length === 0) return res.json({ extracts: [], total: 0 });
-      const { inArray } = await import("drizzle-orm");
-      whereClause = inArray(usersTable.hospital, companySites);
-    } else if (!isAdminOrSup) {
-      whereClause = eq(submittedExtractsTable.userId, req.currentUser.id);
-    }
-    const rows = await db.select({ id: submittedExtractsTable.id, extractType: submittedExtractsTable.extractType, companyName: submittedExtractsTable.companyName, contractNumber: submittedExtractsTable.contractNumber, hospitalName: submittedExtractsTable.hospitalName, periodMonth: submittedExtractsTable.periodMonth, totalAmount: submittedExtractsTable.totalAmount, status: submittedExtractsTable.status, revisionCount: submittedExtractsTable.revisionCount, revisedAt: submittedExtractsTable.revisedAt, notes: submittedExtractsTable.notes, adminNotes: submittedExtractsTable.adminNotes, approvedBy: submittedExtractsTable.approvedBy, approvedAt: submittedExtractsTable.approvedAt, extractData: submittedExtractsTable.extractData, createdAt: submittedExtractsTable.createdAt, updatedAt: submittedExtractsTable.updatedAt, submittedByName: usersTable.name, submittedByEmail: usersTable.email, submittedByHospital: usersTable.hospital, userId: submittedExtractsTable.userId }).from(submittedExtractsTable).leftJoin(usersTable, eq(submittedExtractsTable.userId, usersTable.id)).where(whereClause).orderBy(desc(submittedExtractsTable.createdAt));
+    // نطاق موحد من الhelper — نفس المنطق في المسار الكامل و lite.
+    const scope = buildListScope(req.currentUser);
+    if (scope.kind === "empty") return res.json({ extracts: [], total: 0 });
+    const whereClause = scope.kind === "where" ? scope.where : undefined;
+    // القائمة لا تسحب extractData إطلاقًا — التفاصيل الكاملة عبر GET /:id فقط.
+    const rows = await db.select(liteListColumns()).from(submittedExtractsTable).leftJoin(usersTable, eq(submittedExtractsTable.userId, usersTable.id)).where(whereClause).orderBy(desc(submittedExtractsTable.createdAt));
     return res.json({ extracts: rows, total: rows.length });
   } catch (err) {
     req.log.error({ err }, "Failed to list submitted extracts");
@@ -112,7 +102,52 @@ router.post("/", requireAuth, requireApproved, async (req: any, res) => {
     const hospitalName = resolveHospitalName(user, req.body.hospitalName || null);
     const resolvedContractNumber = contractNumber || user.contractNumber || null;
     const extractDataJson = extractData ? JSON.stringify(extractData) : null;
-    const [row] = await db.insert(submittedExtractsTable).values({ userId: user.id, extractType, companyName, contractNumber: resolvedContractNumber, hospitalName, periodMonth: periodMonth || null, totalAmount: totalAmount != null ? String(totalAmount) : null, notes: notes || null, status: "submitted", extractData: extractDataJson }).returning();
+
+    // البند الثامن: الحماية النهائية لحجم البيانات في السيرفر (guards الواجهة تبقى كطبقة أولى فقط).
+    const payloadCheck = validateExtractDataPayload(extractDataJson);
+    if (!payloadCheck.ok) return res.status(payloadCheck.status).json({ error: payloadCheck.error, payloadRejected: true });
+
+    // أعمدة صريحة تُحسب مرة واحدة عند الكتابة — القوائم لا تقرأ extractData بعد الآن.
+    const officeMeta = deriveAdminOfficeMeta(extractType, extractDataJson);
+    const period = extractPeriodMeta(req.body, extractDataJson);
+
+    // البند الثاني: idempotency server-side. مفتاح حتمي + unique index في القاعدة.
+    const idempotencyKey = buildIdempotencyKey({
+      userId: user.id, extractType, adminOfficePart: officeMeta.adminOfficePart,
+      hospitalName, companyName, contractNumber: resolvedContractNumber,
+      extractYear: period.extractYear, extractMonth: period.extractMonth, paymentNumber: period.paymentNumber,
+    });
+
+    const duplicate409 = (existingRow: any) => res.status(409).json({
+      error: "تم رفع نفس المستخلص مسبقًا (نفس النوع/المستشفى/الشهر/السنة/رقم الدفعة). لم يتم إنشاء سجل مكرر. لرفع مستخلص جديد غيّر رقم الدفعة أو الشهر من الإعدادات، أو استخدم «تعديل» على المستخلص الموجود.",
+      duplicate: true,
+      existingId: existingRow?.id ?? null,
+      existingStatus: existingRow?.status ?? null,
+    });
+
+    // فحص مسبق (يوفر رسالة أوضح)، ثم قيد القاعدة يحسم أي سباق بين جهازين.
+    const [preExisting] = await db.select({ id: submittedExtractsTable.id, status: submittedExtractsTable.status }).from(submittedExtractsTable).where(eq(submittedExtractsTable.idempotencyKey, idempotencyKey)).limit(1);
+    if (preExisting) return duplicate409(preExisting);
+
+    let row: any;
+    try {
+      const inserted = await db.insert(submittedExtractsTable).values({
+        userId: user.id, extractType, companyName, contractNumber: resolvedContractNumber, hospitalName,
+        periodMonth: periodMonth || null, totalAmount: totalAmount != null ? String(totalAmount) : null,
+        notes: notes || null, status: "submitted", extractData: extractDataJson,
+        idempotencyKey,
+        adminOfficePart: officeMeta.adminOfficePart, sourceModule: officeMeta.sourceModule, reviewScope: officeMeta.reviewScope,
+      }).returning();
+      row = inserted[0];
+    } catch (insertErr: any) {
+      // 23505 = unique_violation → جهاز آخر أنشأ نفس المستخلص في نفس اللحظة.
+      if (insertErr?.code === "23505" || /duplicate key|unique/i.test(String(insertErr?.message || ""))) {
+        const [racedExisting] = await db.select({ id: submittedExtractsTable.id, status: submittedExtractsTable.status }).from(submittedExtractsTable).where(eq(submittedExtractsTable.idempotencyKey, idempotencyKey)).limit(1);
+        req.log.warn({ idempotencyKey }, "Duplicate extract submit blocked by unique index (race)");
+        return duplicate409(racedExisting);
+      }
+      throw insertErr;
+    }
     await db.insert(extractRevisionsTable).values({ extractId: row.id, changedBy: user.name, changedByRole: user.role, previousStatus: null, newStatus: "submitted", notes: "تقديم مستخلص جديد" });
     void (async () => { try { const admins = await db.select({ email: usersTable.email }).from(usersTable).where(and(eq(usersTable.role, "admin"), eq(usersTable.status, "approved"))); const hospitalSupervisors = hospitalName ? await db.select({ email: usersTable.email }).from(usersTable).where(and(eq(usersTable.role, "supervisor"), eq(usersTable.supervisedHospital, hospitalName), eq(usersTable.status, "approved"))) : []; const recipients = [...admins.map(a => a.email), ...hospitalSupervisors.map(s => s.email)].filter((e): e is string => !!e); if (recipients.length > 0) await sendNewExtractEmail(recipients, { submitterName: user.name, submitterEmail: user.email, hospitalName: hospitalName || "—", extractType, periodMonth, totalAmount: totalAmount != null ? String(totalAmount) : null, extractId: row.id }); } catch (_) {} })();
     return res.status(201).json(row);
@@ -135,8 +170,34 @@ router.put("/:id", requireAuth, requireApproved, async (req: any, res) => {
     const { periodMonth, totalAmount, notes, extractData } = req.body;
     const user = req.currentUser;
     const extractDataJson = extractData ? JSON.stringify(extractData) : existing.extractData;
+
+    // البند الثامن: نفس حماية الحجم/base64 على التعديل.
+    const payloadCheck = validateExtractDataPayload(extractData ? extractDataJson : null);
+    if (!payloadCheck.ok) return res.status(payloadCheck.status).json({ error: payloadCheck.error, payloadRejected: true });
+
+    const resolvedCompany = resolveCompanyName(user, existing.companyName);
+    const resolvedContract = resolveContractNumber(user, existing.contractNumber);
+    const resolvedHospital = resolveHospitalName(user, existing.hospitalName);
+    const officeMeta = deriveAdminOfficeMeta(existing.extractType, extractDataJson);
+    const period = extractPeriodMeta(req.body, extractDataJson);
+    const nextIdempotencyKey = buildIdempotencyKey({
+      userId: existing.userId, extractType: existing.extractType, adminOfficePart: officeMeta.adminOfficePart,
+      hospitalName: resolvedHospital, companyName: resolvedCompany, contractNumber: resolvedContract,
+      extractYear: period.extractYear, extractMonth: period.extractMonth, paymentNumber: period.paymentNumber,
+    });
+
     const nextRevisionCount = isReviewerRequestedRevision ? (existing.revisionCount ?? 0) + 1 : (existing.revisionCount ?? 0);
-    const [row] = await db.update(submittedExtractsTable).set({ companyName: resolveCompanyName(user, existing.companyName), contractNumber: resolveContractNumber(user, existing.contractNumber), hospitalName: resolveHospitalName(user, existing.hospitalName), periodMonth: periodMonth ?? existing.periodMonth, totalAmount: totalAmount != null ? String(totalAmount) : existing.totalAmount, extractData: extractDataJson, notes: notes ?? existing.notes, status: "submitted", revisionCount: nextRevisionCount, revisedAt: new Date(), adminNotes: isReviewerRequestedRevision ? null : existing.adminNotes, updatedAt: new Date() }).where(eq(submittedExtractsTable.id, id)).returning();
+    let row: any;
+    try {
+      const updated = await db.update(submittedExtractsTable).set({ companyName: resolvedCompany, contractNumber: resolvedContract, hospitalName: resolvedHospital, periodMonth: periodMonth ?? existing.periodMonth, totalAmount: totalAmount != null ? String(totalAmount) : existing.totalAmount, extractData: extractDataJson, notes: notes ?? existing.notes, status: "submitted", revisionCount: nextRevisionCount, revisedAt: new Date(), adminNotes: isReviewerRequestedRevision ? null : existing.adminNotes, idempotencyKey: nextIdempotencyKey, adminOfficePart: officeMeta.adminOfficePart, sourceModule: officeMeta.sourceModule, reviewScope: officeMeta.reviewScope, updatedAt: new Date() }).where(eq(submittedExtractsTable.id, id)).returning();
+      row = updated[0];
+    } catch (updateErr: any) {
+      // PUT لا ينشئ سجلًا أبدًا؛ وإن تصادم المفتاح مع مستخلص آخر قائم نرجع 409 واضحًا.
+      if (updateErr?.code === "23505" || /duplicate key|unique/i.test(String(updateErr?.message || ""))) {
+        return res.status(409).json({ error: "توجد بيانات مستخلص آخر بنفس الشهر/السنة/رقم الدفعة. لا يمكن حفظ هذا التعديل على نفس القيم. غيّر رقم الدفعة أو الشهر.", duplicate: true });
+      }
+      throw updateErr;
+    }
     await db.insert(extractRevisionsTable).values({ extractId: row.id, changedBy: req.currentUser.name, changedByRole: req.currentUser.role, previousStatus: existing.status, newStatus: "submitted", notes: isReviewerRequestedRevision ? `تعديل رقم ${row.revisionCount}` : "تعديل قبل بدء المراجعة" });
     return res.json(row);
   } catch (err) {
@@ -149,9 +210,8 @@ router.get("/:id", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const [row] = await db.select().from(submittedExtractsTable).leftJoin(usersTable, eq(submittedExtractsTable.userId, usersTable.id)).where(eq(submittedExtractsTable.id, Number(req.params.id))).limit(1);
     if (!row) return res.status(404).json({ error: "Not found" });
-    const isOwner = row.submitted_extracts.userId === req.currentUser.id;
-    const isAdminOrSup = req.currentUser.role === "admin" || req.currentUser.role === "supervisor";
-    if (!isOwner && !isAdminOrSup) return res.status(403).json({ error: "Forbidden" });
+    // نفس منطق القائمة تمامًا (helper واحد): مالك / admin / supervisor / viewer / contract_supervisor ضمن مواقع شركته.
+    if (!canReadExtract(req.currentUser, row.submitted_extracts, row.users?.hospital)) return res.status(403).json({ error: "Forbidden" });
     return res.json({ ...row.submitted_extracts, submittedByName: row.users?.name, submittedByEmail: row.users?.email });
   } catch (err) {
     req.log.error({ err }, "Failed to get submitted extract");
@@ -168,6 +228,15 @@ router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (r
     if (adminNotes !== undefined) updates.adminNotes = adminNotes;
     if (status === "approved") { updates.approvedBy = req.currentUser.name; updates.approvedAt = new Date(); }
     const [existing] = await db.select().from(submittedExtractsTable).where(eq(submittedExtractsTable.id, Number(req.params.id))).limit(1);
+    if (!existing) return res.status(404).json({ error: "Not found" });
+    // البند الثالث: مراجع خارج نطاقه لا يغيّر حالة مستخلص.
+    let submitterHospital: string | null = null;
+    if (existing.userId != null) {
+      const [submitter] = await db.select({ hospital: usersTable.hospital }).from(usersTable).where(eq(usersTable.id, existing.userId)).limit(1);
+      submitterHospital = submitter?.hospital ?? null;
+    }
+    const statusPermission = canUpdateExtractStatus(req.currentUser, existing, submitterHospital);
+    if (!statusPermission.allowed) return res.status(403).json({ error: statusPermission.reason || "Forbidden" });
     const [row] = await db.update(submittedExtractsTable).set(updates).where(eq(submittedExtractsTable.id, Number(req.params.id))).returning();
     if (!row) return res.status(404).json({ error: "Not found" });
     await db.insert(extractRevisionsTable).values({ extractId: row.id, changedBy: req.currentUser.name, changedByRole: req.currentUser.role, previousStatus: existing?.status ?? null, newStatus: status, notes: adminNotes || null }).catch(() => {});
@@ -183,8 +252,10 @@ router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (r
     try {
       if (!row.userId) req.log?.warn?.({ extractId: row.id }, "notification skipped: extract has no userId");
       else if (["needs_revision", "approved", "rejected"].includes(status)) {
-        const period = [row.extractMonth, row.extractYear].filter(Boolean).join(" ") || row.periodMonth || "";
-        const pay = row.paymentNumber || row.extractNumber || "";
+        // كانت تُقرأ من أعمدة غير موجودة (undefined دائمًا) — الآن من extractData الفعلي.
+        const rowPeriod = extractPeriodMeta({}, row.extractData);
+        const period = [rowPeriod.extractMonth, rowPeriod.extractYear].filter(Boolean).join(" ") || row.periodMonth || "";
+        const pay = rowPeriod.paymentNumber || "";
         const label = period + (pay ? " — دفعة " + pay : "");
         const map: Record<string, { type: string; title: string; body: string }> = {
           needs_revision: { type: "revision_requested", title: "مستخلص مطلوب تعديله", body: "تم طلب تعديل على مستخلص شهر " + label + (adminNotes ? " — ملاحظة المراجع: " + adminNotes : "") },
@@ -202,14 +273,18 @@ router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (r
   }
 });
 
-router.get(":id/revisions", requireAuth, requireApproved, async (req: any, res) => {
+router.get("/:id/revisions", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const extractId = Number(req.params.id);
-    const [extract] = await db.select({ userId: submittedExtractsTable.userId }).from(submittedExtractsTable).where(eq(submittedExtractsTable.id, extractId)).limit(1);
+    if (!Number.isFinite(extractId)) return res.status(400).json({ error: "Invalid ID" });
+    const [extract] = await db
+      .select({ userId: submittedExtractsTable.userId, hospitalName: submittedExtractsTable.hospitalName, submitterHospital: usersTable.hospital })
+      .from(submittedExtractsTable)
+      .leftJoin(usersTable, eq(submittedExtractsTable.userId, usersTable.id))
+      .where(eq(submittedExtractsTable.id, extractId)).limit(1);
     if (!extract) return res.status(404).json({ error: "Not found" });
-    const isOwner = extract.userId === req.currentUser.id;
-    const isAdminOrSup = ["admin", "supervisor", "contract_supervisor"].includes(req.currentUser.role);
-    if (!isOwner && !isAdminOrSup) return res.status(403).json({ error: "Forbidden" });
+    // نفس منطق القائمة: المالك، admin/supervisor/viewer، وcontract_supervisor لمواقع شركته فقط.
+    if (!canReadExtract(req.currentUser, extract, extract.submitterHospital)) return res.status(403).json({ error: "Forbidden" });
     const rows = await db.select().from(extractRevisionsTable).where(eq(extractRevisionsTable.extractId, extractId)).orderBy(desc(extractRevisionsTable.createdAt));
     return res.json({ revisions: rows });
   } catch (err) {

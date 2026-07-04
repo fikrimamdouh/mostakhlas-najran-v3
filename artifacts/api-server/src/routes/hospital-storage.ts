@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable, hospitalStorageTable, systemSettingsTable, userStorageTable } from "@workspace/db";
-import { eq, and, inArray, or, like } from "drizzle-orm";
+import { eq, and, inArray, or, like, notLike, sql } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
@@ -288,6 +288,14 @@ function parseCsvParam(value: unknown, maxItems: number): string[] {
   )).slice(0, maxItems);
 }
 
+// (مدمج من hospital-storage-filtered.ts — أصبح هذا الملف المسؤول الوحيد عن كل الفلترة)
+function pageFromReferrer(req: any): string {
+  const ref = String(req.headers?.referer || req.headers?.referrer || "");
+  if (!ref) return "";
+  try { return new URL(ref).pathname.split("/").pop() || ""; }
+  catch { return ref.split("?")[0].split("/").pop() || ""; }
+}
+
 function requestedFilters(req: any): { keys: string[]; prefixes: string[]; scope: string } | null {
   const keys = parseCsvParam(req.query?.keys, 250);
   const prefixes = parseCsvParam(req.query?.prefixes, 80);
@@ -298,7 +306,8 @@ function requestedFilters(req: any): { keys: string[]; prefixes: string[]; scope
     return { keys: SETTINGS_STORAGE_KEYS, prefixes: [], scope: "settings" };
   }
 
-  const page = String(req.query?.page || "").trim().split("/").pop() || "";
+  // query.page صراحةً أولًا، ثم referrer كما كان في الراوتر المصفّى سابقًا.
+  const page = (String(req.query?.page || "").trim().split("/").pop() || "") || pageFromReferrer(req);
   const pageFilter = PAGE_FILTERS[page];
 
   if (pageFilter) {
@@ -392,7 +401,17 @@ router.get("/", requireAuth, async (req: any, res) => {
 
     const filters = requestedFilters(req);
     const contextKey = requestedExtractContext(req);
-    const keyPredicate = contextKey ? null : buildStorageKeyPredicate(hospitalStorageTable.storageKey, filters);
+    let keyPredicate: any = null;
+    if (contextKey) {
+      // تصفية السياق في قاعدة البيانات: صفوف هذا السياق + الصفوف غير المسيّجة فقط.
+      // صفوف السياقات الأخرى (الغالبية عند تراكم المستخلصات) لا تُجلب أصلًا.
+      keyPredicate = or(
+        like(hospitalStorageTable.storageKey, `${EXTRACT_CTX_PREFIX}${contextKey}::%`),
+        notLike(hospitalStorageTable.storageKey, `${EXTRACT_CTX_PREFIX}%`)
+      );
+    } else {
+      keyPredicate = buildStorageKeyPredicate(hospitalStorageTable.storageKey, filters);
+    }
     const whereClause = keyPredicate
       ? and(eq(hospitalStorageTable.hospitalName, resolved.hospital), keyPredicate)
       : eq(hospitalStorageTable.hospitalName, resolved.hospital);
@@ -400,24 +419,32 @@ router.get("/", requireAuth, async (req: any, res) => {
     const rows = await db.select().from(hospitalStorageTable).where(whereClause);
 
     const result: Record<string, string> = {};
+    // metadata النسخ لكل مفتاح (باسمه المُرجَع للواجهة) — أساس كشف تعارض الكتابة.
+    const meta: Record<string, { version: number; updatedAt: string | null }> = {};
+    const putMeta = (name: string, row: any) => {
+      meta[name] = { version: Number(row.version ?? 1), updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : null };
+    };
 for (const row of rows) {
   const rawKey = String(row.storageKey || "");
   const ctx = unscopedFromContextKey(rawKey, contextKey);
   if (ctx.isScoped && !ctx.matchesContext) continue;
   if (!ctx.isScoped) {
     const normalized = normalizeKey(ctx.key);
-    if (contextKey && SETTINGS_STORAGE_SET.has(normalized)) result[normalized] = row.storageValue;
-    else if (!contextKey) result[normalized] = row.storageValue;
-    else if (result[normalized] == null) result[normalized] = row.storageValue;
+    if (contextKey && SETTINGS_STORAGE_SET.has(normalized)) { result[normalized] = row.storageValue; putMeta(normalized, row); }
+    else if (!contextKey) { result[normalized] = row.storageValue; putMeta(normalized, row); }
+    else if (result[normalized] == null) { result[normalized] = row.storageValue; putMeta(normalized, row); }
     continue;
   }
-  result[normalizeKey(ctx.key)] = row.storageValue;
+  const scopedName = normalizeKey(ctx.key);
+  result[scopedName] = row.storageValue;
+  putMeta(scopedName, row);
 }
 
 const migratedLegacyAttendance = 0;
 
 return res.json({
   data: result,
+  meta,
   count: Object.keys(result).length,
   originalCount: rows.length,
   migratedLegacyAttendance,
@@ -454,13 +481,77 @@ router.put("/", requireAuth, async (req: any, res) => {
     const entries = Object.entries(data);
     if (entries.length === 0) return res.json({ saved: 0, hospital: dbUser.hospital, extractContextKey: contextKey || null });
 
-    for (const [key, value] of entries) {
-      const storageKey = scopedStorageKey(contextKey, key);
+    // البند السادس: كشف تعارض «آخر كاتب يكسب».
+    // العميل يرسل versions اختياريًا: { [keyName]: expectedVersion }
+    // أو expectedUpdatedAt: { [keyName]: ISO timestamp }.
+    // أي مفتاح مُرسَل بنسخة متوقعة لا تطابق النسخة الحالية في القاعدة → 409 بلا أي كتابة
+    // (الدفعة كلها تُرفض ذريًا حتى لا يختلط قديم بجديد)، ولا تُستبدل بيانات الجهاز الآخر.
+    // المفاتيح بدون نسخة متوقعة (عملاء قدامى) تُكتب كما كان — لا كسر للعقد الحالي.
+    const expectedVersions: Record<string, number> = {};
+    const rawVersions = (req.body && (req.body.versions || req.body.expectedVersions)) || {};
+    if (rawVersions && typeof rawVersions === "object") {
+      for (const [k, v] of Object.entries(rawVersions)) {
+        const n = Number(v);
+        if (Number.isFinite(n) && n > 0) expectedVersions[String(k)] = n;
+      }
+    }
+    const expectedUpdatedAt: Record<string, number> = {};
+    const rawUpdatedAt = (req.body && req.body.expectedUpdatedAt) || {};
+    if (rawUpdatedAt && typeof rawUpdatedAt === "object") {
+      for (const [k, v] of Object.entries(rawUpdatedAt)) {
+        const t = Date.parse(String(v));
+        if (Number.isFinite(t)) expectedUpdatedAt[String(k)] = t;
+      }
+    }
+
+    const storageKeysToWrite = entries.map(([key]) => scopedStorageKey(contextKey, key));
+    const checkedNames = entries
+      .map(([key], i) => ({ name: key, storageKey: storageKeysToWrite[i] }))
+      .filter(e => expectedVersions[e.name] != null || expectedUpdatedAt[e.name] != null);
+
+    if (checkedNames.length) {
+      const currentRows = await db
+        .select({ storageKey: hospitalStorageTable.storageKey, version: hospitalStorageTable.version, updatedAt: hospitalStorageTable.updatedAt, updatedByUserId: hospitalStorageTable.updatedByUserId })
+        .from(hospitalStorageTable)
+        .where(and(
+          eq(hospitalStorageTable.hospitalName, dbUser.hospital),
+          inArray(hospitalStorageTable.storageKey, checkedNames.map(e => e.storageKey))
+        ));
+      const currentByKey = new Map(currentRows.map(r => [String(r.storageKey), r]));
+      const conflicts: Array<{ key: string; currentVersion: number; currentUpdatedAt: string | null; expectedVersion?: number }> = [];
+      for (const e of checkedNames) {
+        const current = currentByKey.get(e.storageKey);
+        if (!current) continue; // المفتاح غير موجود بعد — الكتابة الأولى آمنة.
+        const curVersion = Number(current.version ?? 1);
+        const curUpdated = current.updatedAt ? new Date(current.updatedAt).getTime() : 0;
+        const expV = expectedVersions[e.name];
+        const expT = expectedUpdatedAt[e.name];
+        const versionMismatch = expV != null && expV !== curVersion;
+        const timeMismatch = expT != null && Math.abs(curUpdated - expT) > 1500;
+        if (versionMismatch || (expV == null && timeMismatch)) {
+          conflicts.push({ key: e.name, currentVersion: curVersion, currentUpdatedAt: current.updatedAt ? new Date(current.updatedAt).toISOString() : null, expectedVersion: expV });
+        }
+      }
+      if (conflicts.length) {
+        req.log.warn({ hospital: dbUser.hospital, conflicts: conflicts.map(c => c.key) }, "hospital-storage write conflict (409)");
+        return res.status(409).json({
+          error: "تم تعديل هذه البيانات من جهاز آخر بعد آخر تحميل لديك. لم يتم استبدال أي بيانات. حدّث الصفحة لسحب أحدث نسخة ثم أعد الحفظ.",
+          conflict: true,
+          conflicts,
+          hospital: dbUser.hospital,
+        });
+      }
+    }
+
+    for (let i = 0; i < entries.length; i++) {
+      const [, value] = entries[i];
+      const storageKey = storageKeysToWrite[i];
       await db.insert(hospitalStorageTable)
         .values({
           hospitalName: dbUser.hospital,
           storageKey,
           storageValue: String(value),
+          version: 1,
           updatedAt: new Date(),
           updatedByUserId: dbUser.id,
         })
@@ -468,13 +559,26 @@ router.put("/", requireAuth, async (req: any, res) => {
           target: [hospitalStorageTable.hospitalName, hospitalStorageTable.storageKey],
           set: {
             storageValue: String(value),
+            version: sql`${hospitalStorageTable.version} + 1`,
             updatedAt: new Date(),
             updatedByUserId: dbUser.id,
           },
         });
     }
 
-    return res.json({ saved: entries.length, hospital: dbUser.hospital, extractContextKey: contextKey || null });
+    // إرجاع النسخ الجديدة (باسم المفتاح كما أرسله العميل) حتى يحدّث خريطته ولا يقع في 409 كاذب لاحقًا.
+    const writtenRows = await db
+      .select({ storageKey: hospitalStorageTable.storageKey, version: hospitalStorageTable.version })
+      .from(hospitalStorageTable)
+      .where(and(eq(hospitalStorageTable.hospitalName, dbUser.hospital), inArray(hospitalStorageTable.storageKey, storageKeysToWrite)));
+    const versionByStorageKey = new Map(writtenRows.map(r => [String(r.storageKey), Number(r.version ?? 1)]));
+    const newVersions: Record<string, number> = {};
+    for (let i = 0; i < entries.length; i++) {
+      const v = versionByStorageKey.get(storageKeysToWrite[i]);
+      if (v != null) newVersions[entries[i][0]] = v;
+    }
+
+    return res.json({ saved: entries.length, versions: newVersions, hospital: dbUser.hospital, extractContextKey: contextKey || null });
   } catch (err) {
     req.log.error({ err }, "Failed to save hospital storage");
     return res.status(500).json({ error: "Internal server error" });

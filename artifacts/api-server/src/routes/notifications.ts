@@ -32,10 +32,10 @@ router.get("/", requireAuth, requireApproved, async (req: any, res) => {
       .limit(10);
     const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(notificationsTable)
       .where(and(eq(notificationsTable.userId, userId), eq(notificationsTable.isRead, false)));
-    res.json({ notifications: rows, unreadCount: count || 0 });
+    return res.json({ notifications: rows, unreadCount: count || 0 });
   } catch (e) {
     console.error("[notifications] list failed", e);
-    res.status(500).json({ error: "فشل تحميل الإشعارات" });
+    return res.status(500).json({ error: "فشل تحميل الإشعارات" });
   }
 });
 
@@ -49,7 +49,7 @@ router.post("/", requireAuth, requireApproved, requireAdmin, async (req: any, re
     if (t.kind === "company" && t.company) conds.push(eq(usersTable.company, String(t.company)));
     else if (t.kind === "hospital" && t.hospital) conds.push(eq(usersTable.hospital, String(t.hospital)));
     else if (t.kind === "user" && t.userId) conds.push(eq(usersTable.id, Number(t.userId)));
-    else if (t.kind === "role" && t.role) conds.push(eq(usersTable.role, String(t.role)));
+    else if (t.kind === "role" && t.role) conds.push(eq(usersTable.role, String(t.role) as any));
     const targets = await db.select({ id: usersTable.id }).from(usersTable).where(and(...conds));
     if (!targets.length) return res.status(400).json({ error: "لا يوجد مستخدمون مطابقون للهدف" });
     const values = targets.map(u => ({
@@ -61,10 +61,10 @@ router.post("/", requireAuth, requireApproved, requireAdmin, async (req: any, re
       createdBy: String(req.currentUser?.name || req.currentUser?.email || "admin"),
     }));
     await db.insert(notificationsTable).values(values);
-    res.json({ ok: true, sent: values.length });
+    return res.json({ ok: true, sent: values.length });
   } catch (e) {
     console.error("[notifications] send failed", e);
-    res.status(500).json({ error: "فشل إرسال التنبيه" });
+    return res.status(500).json({ error: "فشل إرسال التنبيه" });
   }
 });
 

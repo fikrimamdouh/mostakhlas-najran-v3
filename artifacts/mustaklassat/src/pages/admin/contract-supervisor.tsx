@@ -358,10 +358,26 @@ function ExtractDetailModal({ extract, getToken, onClose, onUpdateStatus, isPend
   const sc = STATUS_CONFIG[extract.status] ?? { label: extract.status, color: "", icon: Clock };
   const StatusIcon = sc.icon;
 
-  // Parse extractData
+  // القائمة أصبحت خفيفة (بدون extractData) — نجلب السجل الكامل عند فتح المودال فقط.
+  // GET /:id يسمح لمشرف العقد ضمن مواقع شركته (منطق النطاق الموحد في السيرفر).
+  const { data: fullRecord } = useQuery({
+    queryKey: ["/api/submitted-extracts", extract.id, "full"],
+    queryFn: async () => {
+      const token = await getToken();
+      const res = await fetch(`/api/submitted-extracts/${extract.id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  // Parse extractData (من السجل الكامل؛ fallback على حقل القائمة إن وُجد لعملاء قدامى)
   const extractData: Record<string, any> | null = (() => {
-    if (!extract.extractData) return null;
-    try { return JSON.parse(extract.extractData); } catch { return null; }
+    const raw = fullRecord?.extractData ?? extract.extractData;
+    if (!raw) return null;
+    try { return typeof raw === "string" ? JSON.parse(raw) : raw; } catch { return null; }
   })();
 const extractInfo = extractData?.persistentExtractData ?? {};
 const contractInfo = extractData?.persistentContractData ?? {};

@@ -370,6 +370,31 @@
     );
 
     if (!res.ok) {
+      // 409: السيرفر منع تكرار المستخلص (idempotency) أو تعارض بيانات — رسالة السيرفر واضحة.
+      if (res.status === 409) {
+        const dup = await res.json().catch(() => ({}));
+        try { sessionStorage.removeItem(submitLockKey); } catch (_) {}
+        if (!effectiveRevision && dup && dup.duplicate) {
+          // سجّل قفل done محليًا حتى لا يعاد الضغط من نفس الجهاز.
+          try {
+            localStorage.setItem(submitDoneKey, JSON.stringify({
+              submittedAt: Date.now(),
+              resultId: dup.existingId || '',
+              type: type || '',
+              month: contractData.extractMonth || '',
+              year: contractData.extractYear || '',
+              payment: contractData.paymentNumber || contractData.extractNumber || ''
+            }));
+          } catch (_) {}
+        }
+        throw new Error(dup.error || 'تم رفع نفس المستخلص مسبقًا. لم يتم إنشاء سجل مكرر.');
+      }
+      // 413/400: السيرفر رفض حجم البيانات أو محتوى base64 — أظهر سبب الرفض الفعلي.
+      if (res.status === 413 || res.status === 400) {
+        const rej = await res.json().catch(() => ({}));
+        try { sessionStorage.removeItem(submitLockKey); } catch (_) {}
+        throw new Error(rej.error || 'رفض الخادم حجم أو محتوى بيانات المستخلص.');
+      }
       if (effectiveRevision) {
         throw new Error(REVISION_PUT_ERROR);
       }

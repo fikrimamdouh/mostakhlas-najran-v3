@@ -11,6 +11,9 @@
   const SESSION_KEY = 'najran_session';
   const SETTINGS_AUTO_SYNC_MS = 300000;
   const DIRTY_KEYS = new Set();
+  // نسخ مفاتيح hospital_storage كما وردت من آخر Pull — تُرسل مع PUT لكشف
+  // تعديل جهاز آخر (409) بدل «آخر كاتب يكسب». تعيش في الذاكرة لعمر الصفحة فقط.
+  const HOSPITAL_KEY_VERSIONS = {};
 
   let _origSetItem = null;
   let isApplyingCloudPull = false;
@@ -389,6 +392,11 @@
       const headers = Object.assign({'Content-Type':'application/json'}, (options && options.headers) || {}, { Authorization:'Bearer ' + token });
       const resp = await fetch(API_BASE + path, Object.assign({}, options || {}, { headers, credentials:'include' }));
       if (resp.status === 401) { console.warn('[MzamanaCloud] 401'); return null; }
+      if (resp.status === 409) {
+        // تعارض كتابة: نُرجِع جسم الاستجابة موسومًا حتى لا يُعامل كفشل شبكة صامت.
+        const body = await resp.json().catch(function(){ return {}; });
+        return Object.assign({ __httpStatus: 409, conflict: true }, body);
+      }
       return resp.ok ? resp.json() : null;
     } catch (_) { return null; }
   }
@@ -485,6 +493,12 @@
 
     const userData = (results[0] && results[0].data) || {};
     const hospitalData = (results[1] && results[1].data) || {};
+    try {
+      const hospitalMeta = (results[1] && results[1].meta) || {};
+      Object.keys(hospitalMeta).forEach(function (k) {
+        if (hospitalMeta[k] && hospitalMeta[k].version != null) HOSPITAL_KEY_VERSIONS[normalizeKey(k)] = Number(hospitalMeta[k].version);
+      });
+    } catch (_) {}
     let mergedUser = 0, mergedHospital = 0, skippedUserOperational = 0, skippedByPage = 0;
     const mergedKeys = [];
     const safeWrite = _origSetItem || localStorage.setItem.bind(localStorage);
@@ -518,13 +532,32 @@
     return chunks;
   }
 
-  async function putStorageInBatches(path, data, batchSize) {
+  async function putStorageInBatches(path, data, batchSize, withVersions) {
     const chunks = splitObjectIntoChunks(data, batchSize);
     let saved = 0;
     if (!chunks.length) return { saved:0 };
     for (const chunk of chunks) {
-      const result = await apiFetch(path, { method:'PUT', body:JSON.stringify({ data:chunk }) });
+      const body = { data: chunk };
+      if (withVersions) {
+        // نرسل النسخة المتوقعة لكل مفتاح لدينا نسخة له من آخر Pull.
+        const versions = {};
+        Object.keys(chunk).forEach(function (k) {
+          const nk = normalizeKey(k);
+          if (HOSPITAL_KEY_VERSIONS[nk] != null) versions[k] = HOSPITAL_KEY_VERSIONS[nk];
+        });
+        if (Object.keys(versions).length) body.versions = versions;
+      }
+      const result = await apiFetch(path, { method:'PUT', body:JSON.stringify(body) });
       if (!result) return null;
+      if (result.__httpStatus === 409 || result.conflict) {
+        // تعارض: لا نمسح المحلي ولا نكمل الدفعات — نُبلغ الأعلى بوضوح.
+        return { conflict: true, conflicts: result.conflicts || [], message: result.error || '' };
+      }
+      if (withVersions && result.versions && typeof result.versions === 'object') {
+        Object.keys(result.versions).forEach(function (k) {
+          HOSPITAL_KEY_VERSIONS[normalizeKey(k)] = Number(result.versions[k]);
+        });
+      }
       saved += result.saved || Object.keys(chunk).length || 0;
     }
     return { saved };
@@ -543,6 +576,12 @@
       return safe;
     }
     const remoteData = remote.data || {};
+    try {
+      const remoteMeta = remote.meta || {};
+      Object.keys(remoteMeta).forEach(function (k) {
+        if (remoteMeta[k] && remoteMeta[k].version != null) HOSPITAL_KEY_VERSIONS[normalizeKey(k)] = Number(remoteMeta[k].version);
+      });
+    } catch (_) {}
     const safe = {};
     let skipped = 0;
     keys.forEach(key => {
@@ -607,11 +646,23 @@
 
     console.log('[MzamanaCloud] PUSH →', includeOperational ? '[صريح]' : '[خفيف تلقائي]', hospitalName || 'user_storage', 'user=' + Object.keys(userData).length, 'hospital=' + Object.keys(safeHospitalData).length);
     const results = await Promise.all([
-      mustSaveUser ? putStorageInBatches('/storage', userData, 300) : Promise.resolve({ saved:0 }),
-      mustSaveHospital ? putStorageInBatches('/hospital-storage', safeHospitalData, 300) : Promise.resolve({ saved:0 })
+      mustSaveUser ? putStorageInBatches('/storage', userData, 300, false) : Promise.resolve({ saved:0 }),
+      mustSaveHospital ? putStorageInBatches('/hospital-storage', safeHospitalData, 300, true) : Promise.resolve({ saved:0 })
     ]);
     if (mustSaveUser && !results[0]) throw new Error('USER_STORAGE_SAVE_FAILED');
     if (mustSaveHospital && !results[1]) throw new Error('HOSPITAL_STORAGE_SAVE_FAILED');
+
+    if (results[1] && results[1].conflict) {
+      // 409: جهاز آخر عدّل نفس البيانات بعد آخر تحميل هنا.
+      // لا نمسح المحلي إطلاقًا، ونبقي المفاتيح dirty حتى يقرر المستخدم بعد إعادة السحب.
+      const conflictKeys = (results[1].conflicts || []).map(function (c) { return c.key; });
+      console.warn('[MzamanaCloud] ⚠ 409 CONFLICT — لم يتم استبدال بيانات الجهاز الآخر. المفاتيح:', conflictKeys.join(', '));
+      const msg = results[1].message ||
+        'تم تعديل بيانات هذا المستشفى من جهاز آخر بعد آخر تحميل لديك.\n\nلم يتم حفظ تعديلاتك حتى لا تستبدل عمل زميلك، وبياناتك المحلية محفوظة كما هي.\n\nحدّث الصفحة لسحب أحدث نسخة ثم أعد الحفظ.';
+      try { if (includeOperational) alert(msg); } catch (_) {}
+      showSyncStatus('error');
+      return { ok: false, conflict: true, conflicts: results[1].conflicts || [], reason: 'HOSPITAL_STORAGE_CONFLICT_409' };
+    }
 
     const userSaved = (results[0] && results[0].saved) || 0;
     const hospitalSaved = (results[1] && results[1].saved) || 0;

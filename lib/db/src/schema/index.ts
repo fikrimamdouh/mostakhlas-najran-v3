@@ -85,9 +85,20 @@ export const submittedExtractsTable = pgTable("submitted_extracts", {
   approvedBy: text("approved_by"),
   approvedAt: timestamp("approved_at"),
   extractData: text("extract_data"),
+  // Server-side idempotency: deterministic key derived from
+  // userId|extractType|adminOfficePart|hospital|company|contract|year|month|payment.
+  // Nullable so legacy rows (pre-idempotency) don't block the unique index —
+  // Postgres unique indexes allow multiple NULLs.
+  idempotencyKey: text("idempotency_key"),
+  // Explicit columns so list endpoints never need to read extractData.
+  adminOfficePart: text("admin_office_part"),   // "consumables" | "labor" | null
+  sourceModule: text("source_module"),
+  reviewScope: text("review_scope"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (t) => [
+  uniqueIndex("submitted_extracts_idempotency_key").on(t.idempotencyKey),
+]);
 
 export const extractRevisionsTable = pgTable("extract_revisions", {
   id: serial("id").primaryKey(),
@@ -125,6 +136,9 @@ export const hospitalStorageTable = pgTable("hospital_storage", {
   hospitalName: text("hospital_name").notNull(),
   storageKey: text("storage_key").notNull(),
   storageValue: text("storage_value").notNull(),
+  // Optimistic-concurrency version. Incremented on every write.
+  // PUT with expectedVersion mismatch → 409 (no silent last-writer-wins overwrite).
+  version: integer("version").notNull().default(1),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   updatedByUserId: integer("updated_by_user_id").references(() => usersTable.id),
 }, (t) => [

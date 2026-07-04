@@ -66,7 +66,18 @@
 
     // مفاتيح استكمال اللقطة المحلية بعد الرجوع من الريفيجن
     'najran_local_draft_resume_id',
-    'najran_local_draft_resumed_at'
+    'najran_local_draft_resumed_at',
+
+    // إعدادات خطابات المستهلكات — يجب أن تبقى عامة بدون بادئة مستخدم
+    // لأن صفحة الإعدادات المستقلة hospital_consumables_letters_settings.html
+    // لا تحمّل هذا الـproxy وتكتب على المفتاح الخام، بينما محرك الخطابات على
+    // consumables.html يعمل تحت الـproxy. بدون هذا الاستثناء تُكتب الترويسة
+    // والتواقيع على مفتاح لا يقرأه المحرك أبدًا.
+    'hospitalConsumablesRaiseLettersSettings_v1',
+    'hospitalConsumablesRaiseLettersSettings_v1_autosave_ts',
+    'hospitalConsumablesLetterheadDataUrl_v1',
+    'hospitalConsumablesLetterheadMeta_v1',
+    'hospitalConsumablesSettingsView_v1'
   ];
 
   function getPrefix() {
@@ -85,6 +96,23 @@
 
   const PREFIX = getPrefix();
   if (!PREFIX) return;
+
+  // ترحيل لمرة واحدة: إعدادات خطابات المستهلكات التي حُفظت سابقًا تحت بادئة
+  // المستخدم (من نافذة المحرك داخل consumables.html) تُنسخ للمفتاح الخام
+  // إن كان الخام فارغًا، حتى لا يفقد أي مستخدم ترويسته أو تواقيعه المحفوظة.
+  try {
+    [
+      'hospitalConsumablesRaiseLettersSettings_v1',
+      'hospitalConsumablesLetterheadDataUrl_v1',
+      'hospitalConsumablesLetterheadMeta_v1'
+    ].forEach(function (k) {
+      const rawVal = Storage.prototype.getItem.call(localStorage, k);
+      const prefixedVal = Storage.prototype.getItem.call(localStorage, PREFIX + k);
+      if ((rawVal == null || rawVal === '') && prefixedVal != null && prefixedVal !== '') {
+        Storage.prototype.setItem.call(localStorage, k, prefixedVal);
+      }
+    });
+  } catch (_) {}
 
   const _get = Storage.prototype.getItem.bind(localStorage);
   const _set = Storage.prototype.setItem.bind(localStorage);

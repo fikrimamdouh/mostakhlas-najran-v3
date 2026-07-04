@@ -43,7 +43,7 @@
   function money(n){return Number(n||0).toLocaleString('ar-SA',{style:'currency',currency:'SAR'});}
   function plain(n){return Number(n||0).toLocaleString('ar-SA',{minimumFractionDigits:2,maximumFractionDigits:2})+' ر.س';}
   function token(){try{return (JSON.parse(localStorage.getItem('najran_session')||'{}')||{}).clerkToken||'';}catch(e){return'';}}
-  async function findExtract(id){var tk=token();var r=await fetch('/api/submitted-extracts',{headers:tk?{Authorization:'Bearer '+tk}:{},credentials:'include'});if(!r.ok)throw new Error('api');var data=await r.json();var arr=data.extracts||[];return arr.find(function(x){return String(x.id)===String(id);});}
+  async function findExtract(id){var tk=token();var r=await fetch('/api/submitted-extracts/'+encodeURIComponent(id),{headers:tk?{Authorization:'Bearer '+tk}:{},credentials:'include'});if(!r.ok)throw new Error('api');return await r.json();}
 
   function meta(e){var d=raw(e),s=snap(e),p=get(s,'persistentExtractData')||get(s,'persistentContractData')||{};return {pay:e.paymentNumber||p.paymentNumber||d.paymentNumber||'—',period:e.periodMonth||[e.extractMonth||p.extractMonth||d.extractMonth||'',e.extractYear||p.extractYear||d.extractYear||''].filter(Boolean).join(' ')||'—',start:e.extractStart||p.extractStart||d.extractStart||p.startDate||d.startDate||'—',end:e.extractEnd||p.extractEnd||d.extractEnd||p.endDate||d.endDate||'—'};}
   function parseDate(v){if(!v||v==='—')return null;var s=String(v).trim(),m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);if(m)return new Date(+m[1],+m[2]-1,+m[3]);m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);if(m)return new Date(+m[3],+m[2]-1,+m[1]);var d=new Date(s);return isNaN(d.getTime())?null:d;}

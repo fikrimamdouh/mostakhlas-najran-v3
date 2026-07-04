@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useUser, useAuth } from "@clerk/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Clock, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Building2, CalendarDays, FileText, Banknote, Pencil, RotateCcw, RefreshCw } from "lucide-react";
@@ -75,7 +75,7 @@ const LOCAL_WORK_KEYS = [
   "persistentExtractData",
 ];
 
-const STATUS_CONFIG: Record<ExtractStatus, { label: string; color: string; bg: string; icon: JSX.Element }> = {
+const STATUS_CONFIG: Record<ExtractStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
   submitted: { label: "بانتظار المراجعة", color: "#2a5298", bg: "#eff6ff", icon: <Clock className="h-4 w-4" /> },
   under_review: { label: "قيد المراجعة", color: "#b45309", bg: "#fffbeb", icon: <Eye className="h-4 w-4" /> },
   approved: { label: "معتمد ✓", color: "#16a34a", bg: "#f0fdf4", icon: <CheckCircle className="h-4 w-4" /> },
@@ -195,7 +195,7 @@ async function trySaveCurrentLocalWork(): Promise<boolean> {
     if (!Object.keys(extractData).length) return true;
     const persistent = parseData(localStorage.getItem("persistentExtractData") || "{}");
     const parsedArchive = parseData(localStorage.getItem("extractArchive") || "[]");
-    const archive = Array.isArray(parsedArchive) ? parsedArchive : [];
+    const archive: any[] = Array.isArray(parsedArchive) ? (parsedArchive as any[]) : [];
     archive.unshift({
       id: String(Date.now()),
       source: "track-before-open-revision",
@@ -250,17 +250,107 @@ function askRevisionOpenDecision(): Promise<RevisionDecision> {
   });
 }
 
-function setRev(key: string, value: string) {
-  try { localStorage.setItem(key, value); } catch {}
-  try { sessionStorage.setItem(key, value); } catch {}
+// لا نمسك أخطاء localStorage بصمت: الدوال تُرجع false عند فشل الكتابة
+// (مثل امتلاء التخزين) حتى يوقف المستدعي فتح التعديل بدل فتحه على snapshot ناقص.
+function setRev(key: string, value: string): boolean {
+  let wroteMain = false;
+  try { localStorage.setItem(key, value); wroteMain = true; } catch (err) { console.error("[RevisionOpen] localStorage.setItem failed:", key, err); }
+  try { sessionStorage.setItem(key, value); } catch (err) { console.warn("[RevisionOpen] sessionStorage.setItem failed:", key, err); }
   try {
     const real = (window as any)._najranRealStorage;
     if (real && typeof real.setItem === "function") real.setItem(key, value);
-  } catch {}
+  } catch (err) { console.warn("[RevisionOpen] realStorage.setItem failed:", key, err); }
+  return wroteMain;
 }
 
-function writeLocal(key: string, value: unknown) {
-  try { localStorage.setItem(key, typeof value === "string" ? value : JSON.stringify(value)); } catch {}
+function writeLocal(key: string, value: unknown): boolean {
+  try { localStorage.setItem(key, typeof value === "string" ? value : JSON.stringify(value)); return true; }
+  catch (err) { console.error("[RevisionOpen] localStorage write failed:", key, err); return false; }
+}
+
+function clearRevisionKeys() {
+  const keys = [REVISION_KEYS.mode, REVISION_KEYS.extractId, REVISION_KEYS.extractType, REVISION_KEYS.startedAt, REVISION_KEYS.bootLock, REVISION_KEYS.source, REVISION_KEYS.snapshot, "najran_revision_admin_office_part", "najran_revision_previous_total_amount"];
+  for (const key of keys) {
+    try { localStorage.removeItem(key); } catch {}
+    try { sessionStorage.removeItem(key); } catch {}
+  }
+}
+
+// ─── فحص integrity قبل فتح تعديل مستخلص قديم ────────────────────────────────
+// يقارن السجل الكامل (السيرفر) مع محتوى الsnapshot المفكوك. أي اختلاف جوهري أو
+// نقص في البيانات الأساسية → لا يُفتح التعديل ولا يُسمح بإعادة الرفع من snapshot ناقص.
+const MIN_SNAPSHOT_KEYS = 2;
+
+function snapObj(v: unknown): Record<string, any> {
+  const p = parseData(v);
+  return p && typeof p === "object" ? (p as Record<string, any>) : {};
+}
+
+function countAttendanceRows(raw: unknown): number {
+  const d = snapObj(raw);
+  let rows = 0;
+  const scan = (v: any) => {
+    if (Array.isArray(v)) rows += v.length;
+    else if (v && typeof v === "object") Object.values(v).forEach(scan);
+  };
+  scan(d);
+  return rows;
+}
+
+function verifySnapshotIntegrity(full: any, data: Record<string, unknown>): { ok: boolean; failures: string[] } {
+  const failures: string[] = [];
+  const keys = Object.keys(data || {});
+  if (keys.length < MIN_SNAPSHOT_KEYS) failures.push(`عدد مفاتيح البيانات المحفوظة (${keys.length}) أقل من الحد الأدنى`);
+
+  const persistentExtract = snapObj((data as any).persistentExtractData);
+  const persistentContract = snapObj((data as any).persistentContractData);
+
+  const snapHospital = String(persistentContract.hospitalName || (data as any).hospitalName || "").trim();
+  const snapCompany = String(persistentContract.companyName || (data as any).companyName || "").trim();
+  const snapContract = String(persistentContract.contractNumber || (data as any).contractNumber || "").trim();
+  const snapMonth = String(persistentExtract.extractMonth || (data as any).extractMonth || "").trim();
+  const snapYear = String(persistentExtract.extractYear || (data as any).extractYear || "").trim();
+  const snapPayment = String(persistentExtract.paymentNumber || persistentExtract.extractNumber || (data as any).paymentNumber || "").trim();
+
+  const recType = String(full?.extractType || "").trim();
+  if (!recType) failures.push("نوع المستخلص مفقود في السجل");
+
+  const recHospital = String(full?.hospitalName || "").trim();
+  if (recHospital && snapHospital && recHospital !== snapHospital) failures.push(`المستشفى في السجل «${recHospital}» يخالف الsnapshot «${snapHospital}»`);
+
+  const recCompany = String(full?.companyName || "").trim();
+  if (recCompany && snapCompany && recCompany !== snapCompany) failures.push(`الشركة في السجل تخالف الsnapshot`);
+
+  const recContract = String(full?.contractNumber || "").trim();
+  if (recContract && snapContract && recContract !== snapContract) failures.push(`رقم العقد في السجل يخالف الsnapshot`);
+
+  const recPeriod = String(full?.periodMonth || "").trim();
+  if (recPeriod) {
+    if (snapMonth && recPeriod.indexOf(snapMonth) === -1) failures.push(`شهر المستخلص «${snapMonth}» لا يطابق فترة السجل «${recPeriod}»`);
+    if (snapYear && recPeriod.indexOf(snapYear) === -1) failures.push(`سنة المستخلص «${snapYear}» لا تطابق فترة السجل «${recPeriod}»`);
+  }
+  if (!snapMonth && !snapYear && !snapPayment && recType) failures.push("بيانات الشهر/السنة/الدفعة مفقودة بالكامل من الsnapshot");
+
+  if (full?.totalAmount != null && String(full.totalAmount).trim() !== "") {
+    const hasAnyAmount = keys.some((k) => /cost|total|amount|net/i.test(k) && String((data as any)[k] ?? "").trim() !== "");
+    if (!hasAnyAmount && persistentExtract.totalCost == null) failures.push("السجل يحمل إجماليًا لكن الsnapshot بلا أي قيمة إجمالية");
+  }
+
+  if (recType === "labor") {
+    const rows = countAttendanceRows((data as any).attendanceData) + countAttendanceRows((data as any).ng_attendanceData) + countAttendanceRows((data as any).nd_attendanceData);
+    if (rows === 0) failures.push("مستخلص عمالة بدون أي صفوف حضور موظفين في الsnapshot");
+  }
+
+  if (recType === "admin_offices") {
+    const part = String(full?.adminOfficePart || "").trim();
+    const laborRows = countAttendanceRows((data as any).adminOfficesAttendanceData_v1) + countAttendanceRows((data as any).adminOfficesFullAttendanceBundle_v1);
+    const consumRows = countAttendanceRows((data as any)["admin_offices_consumables_v1.0"]);
+    if (part === "labor" && laborRows === 0) failures.push("مستخلص عمالة مكاتب إدارية بدون بيانات مكاتب/موظفين في الsnapshot");
+    else if (part === "consumables" && consumRows === 0) failures.push("مستخلص مستهلكات مكاتب إدارية بدون بيانات مستهلكات في الsnapshot");
+    else if (!part && laborRows === 0 && consumRows === 0) failures.push("مستخلص مكاتب إدارية بدون أي بيانات مكاتب في الsnapshot");
+  }
+
+  return { ok: failures.length === 0, failures };
 }
 
 function useSubmittedExtracts() {
@@ -301,7 +391,7 @@ function StatusBadge({ status, revisionCount }: { status: ExtractStatus; revisio
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold" style={{ color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.color}30` }}>{cfg.icon}{cfg.label}</span>
-      {revisionCount > 0 && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: "#f3f4f6", color: "#6b7280", border: "1px solid #e5e7eb" }}><RotateCcw className="h-3 w-3" />مراجعة {revisionCount}</span>}
+      {(revisionCount ?? 0) > 0 && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: "#f3f4f6", color: "#6b7280", border: "1px solid #e5e7eb" }}><RotateCcw className="h-3 w-3" />مراجعة {revisionCount}</span>}
     </div>
   );
 }
@@ -345,23 +435,51 @@ function ExtractCard({ extract, isAdmin, currentUserId }: { extract: SubmittedEx
         }
       }
 
+      // 1) الsnapshot الكامل مجلوب أعلاه من GET /:id — 2) فحص integrity قبل أي كتابة أو تحويل.
+      const integrity = verifySnapshotIntegrity(full, data);
+      if (!integrity.ok) {
+        console.error("[RevisionOpen] snapshot integrity failed:", integrity.failures);
+        alert(
+          "تم إيقاف فتح التعديل لحماية المستخلص.\n\n" +
+          "البيانات المحفوظة داخل هذا المستخلص ناقصة أو لا تطابق سجله:\n• " +
+          integrity.failures.join("\n• ") +
+          "\n\nلا يمكن فتح التعديل أو إعادة الرفع من نسخة ناقصة حتى لا يُستبدل المستخلص ببيانات خاطئة.\n" +
+          "تواصل مع المشرف لمراجعة هذا المستخلص."
+        );
+        return;
+      }
+
+      // 3) كتابة localStorage مع رصد أي فشل — لا تحويل للصفحة على snapshot مكتوب جزئيًا.
       const startedAt = new Date().toISOString();
       const snapshot = JSON.stringify(data);
-      setRev(REVISION_KEYS.mode, "true");
-      setRev(REVISION_KEYS.extractId, String(extract.id));
-      setRev(REVISION_KEYS.extractType, String(full.extractType || extract.extractType));
-      setRev(REVISION_KEYS.startedAt, startedAt);
-      setRev(REVISION_KEYS.bootLock, "true");
-      setRev(REVISION_KEYS.source, "submitted_extract_snapshot");
-      setRev(REVISION_KEYS.snapshot, snapshot);
-      if (part) setRev("najran_revision_admin_office_part", part);
-      Object.entries(data).forEach(([key, value]) => writeLocal(key, value));
-      if (full.companyName) writeLocal("companyName", String(full.companyName));
-      if (full.contractNumber) writeLocal("contractNumber", String(full.contractNumber));
-      if (full.hospitalName) writeLocal("hospitalName", String(full.hospitalName));
-      if (full.periodMonth) writeLocal("periodMonth", String(full.periodMonth));
-      if (full.totalAmount != null) setRev("najran_revision_previous_total_amount", String(full.totalAmount));
-      if (part) writeLocal("najran_last_submitted_admin_office_part", part);
+      let writeFailures = 0;
+      const trackWrite = (ok: boolean) => { if (!ok) writeFailures++; };
+      trackWrite(setRev(REVISION_KEYS.mode, "true"));
+      trackWrite(setRev(REVISION_KEYS.extractId, String(extract.id)));
+      trackWrite(setRev(REVISION_KEYS.extractType, String(full.extractType || extract.extractType)));
+      trackWrite(setRev(REVISION_KEYS.startedAt, startedAt));
+      trackWrite(setRev(REVISION_KEYS.bootLock, "true"));
+      trackWrite(setRev(REVISION_KEYS.source, "submitted_extract_snapshot"));
+      trackWrite(setRev(REVISION_KEYS.snapshot, snapshot));
+      if (part) trackWrite(setRev("najran_revision_admin_office_part", part));
+      Object.entries(data).forEach(([key, value]) => trackWrite(writeLocal(key, value)));
+      if (full.companyName) trackWrite(writeLocal("companyName", String(full.companyName)));
+      if (full.contractNumber) trackWrite(writeLocal("contractNumber", String(full.contractNumber)));
+      if (full.hospitalName) trackWrite(writeLocal("hospitalName", String(full.hospitalName)));
+      if (full.periodMonth) trackWrite(writeLocal("periodMonth", String(full.periodMonth)));
+      if (full.totalAmount != null) trackWrite(setRev("najran_revision_previous_total_amount", String(full.totalAmount)));
+      if (part) trackWrite(writeLocal("najran_last_submitted_admin_office_part", part));
+
+      if (writeFailures > 0) {
+        // فشل جزئي (غالبًا امتلاء التخزين) → تراجع كامل عن وضع التعديل ولا تحويل.
+        clearRevisionKeys();
+        alert(
+          "تعذر تجهيز المستخلص للتعديل: فشلت كتابة " + writeFailures + " من مفاتيح البيانات محليًا (غالبًا بسبب امتلاء تخزين المتصفح).\n\n" +
+          "لم يتم فتح صفحة التعديل حتى لا تعمل على بيانات ناقصة.\n" +
+          "نظّف بيانات المتصفح لهذا الموقع أو احفظ عملك الحالي وأعد المحاولة."
+        );
+        return;
+      }
       window.location.href = targetPage;
     } catch (err) {
       console.error("Failed to start extract revision", err);

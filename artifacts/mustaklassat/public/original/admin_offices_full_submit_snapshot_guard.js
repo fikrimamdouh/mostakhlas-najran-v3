@@ -347,8 +347,13 @@
 
   function stripLargeInlineAssets(value) {
     if (typeof value === 'string') {
-      if (/^data:image\//i.test(value) && value.length > 500000) {
-        return '[large-inline-image-omitted-from-submit-payload]';
+      // السيرفر (P0) يرفض أي data:image/;base64 داخل extractData مهما صغر حجمها —
+      // نزيلها كلها ونُبقي كل المحتوى النصي (أسماء، مناصب، نصوص خطابات، جداول).
+      if (/^data:[a-z]+\//i.test(value) && value.indexOf(';base64,') > -1) {
+        return '[inline-image-omitted-from-submit-payload]';
+      }
+      if (value.indexOf(';base64,') > -1) {
+        return '[inline-asset-omitted-from-submit-payload]';
       }
       return value;
     }

@@ -396,7 +396,7 @@ export default function HospitalsAdmin() {
         }));
         if (!cancelled) {
           const next: ReviewMap = {};
-          pairs.forEach(([id, hospitals]) => { next[id] = hospitals; });
+          pairs.forEach(([id, hospitals]) => { next[id] = [...hospitals]; });
           setReviewMap(next);
         }
       } catch {

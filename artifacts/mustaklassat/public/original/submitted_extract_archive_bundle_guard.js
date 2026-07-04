@@ -105,6 +105,45 @@
     return false;
   }
 
+  // تنظيف عميق: يزيل سلاسل base64/data-URL من داخل JSON ويُبقي كل النصوص
+  // (إعدادات الخطابات، أسماء ومناصب التواقيع، عناوين ونصوص الجداول) — بدل
+  // إسقاط المفتاح كاملًا وضياع تفاصيل المراجعة. الصور لا تُرفع (حماية P0 حجم/base64).
+  function isBase64ishString(s) {
+    if (typeof s !== 'string') return false;
+    if (s.indexOf('data:') === 0 && s.indexOf(';base64,') > -1) return true;
+    if (s.indexOf(';base64,') > -1) return true;
+    if (s.length > 20000 && /^[A-Za-z0-9+/=\s]+$/.test(s.slice(0, 2000))) return true;
+    return false;
+  }
+  function stripBase64Deep(v) {
+    if (typeof v === 'string') return isBase64ishString(v) ? '' : v;
+    if (Array.isArray(v)) return v.map(stripBase64Deep);
+    if (v && typeof v === 'object') {
+      var out = {};
+      Object.keys(v).forEach(function (k) { out[k] = stripBase64Deep(v[k]); });
+      return out;
+    }
+    return v;
+  }
+  function sanitizeHeavyValue(value) {
+    var parsed = value;
+    var wasString = typeof value === 'string';
+    if (wasString) {
+      try { parsed = JSON.parse(value); }
+      catch (_) {
+        // ليست JSON: إن كانت صورة/أصل base64 خام → لا شيء نصي يُحفظ، وإلا فهي نص ضخم فقط.
+        return null;
+      }
+    }
+    if (parsed == null || typeof parsed !== 'object') return null;
+    var cleaned = stripBase64Deep(parsed);
+    var out = wasString ? JSON.stringify(cleaned) : cleaned;
+    var s = wasString ? out : JSON.stringify(out);
+    if (!s || s.length > MAX_VALUE_CHARS) return null;
+    if (s.indexOf(';base64,') > -1 || s.indexOf('data:image') > -1) return null;
+    return out;
+  }
+
   function allowSubmitKey(key, value) {
     if (isHeavyKey(key)) return false;
     if (isHeavyValue(value)) return false;
@@ -116,7 +155,13 @@
     snapshot = snapshot || {};
     Object.keys(snapshot).forEach(function (key) {
       var value = snapshot[key];
-      if (!allowSubmitKey(key, value)) return;
+      if (isHeavyKey(key)) return;
+      if (isHeavyValue(value)) {
+        // بدل الإسقاط: احتفظ بالمحتوى النصي بعد إزالة base64 إن أمكن.
+        var salvaged = sanitizeHeavyValue(value);
+        if (salvaged != null) cleanSnap[key] = salvaged;
+        return;
+      }
       cleanSnap[key] = value;
     });
     return cleanSnap;
@@ -141,26 +186,15 @@
 
   function stripRawReviewKeys(snapshot) {
     snapshot = snapshot || {};
-    RAW_REVIEW_KEYS.forEach(function (key) { delete snapshot[key]; });
-    Object.keys(snapshot).forEach(function (key) {
-      if (/^deptCalculatedCost_/.test(key)) delete snapshot[key];
-      else if (/^dept_/.test(key)) delete snapshot[key];
-      else if (/^performance_/.test(key)) delete snapshot[key];
-      else if (/^achievement_/.test(key)) delete snapshot[key];
-      else if (/^tableData_/.test(key)) delete snapshot[key];
-    });
+    // كان يحذف attendanceData/performanceData/achievementData والبادئات dept_/performance_/achievement_
+    // عند وجود finalReviewSnapshot، فيفقد المراجع تفاصيل الحضور والأقسام والأداء.
+    // الآن تبقى التفاصيل الخام (نصية ومحدودة الحجم بـMAX_VALUE_CHARS) — وإعادة الحساب
+    // تبقى ممنوعة عبر displayOnly/noRecalculate داخل finalReviewSnapshot نفسه.
     return snapshot;
   }
 
   function shouldSkipTrackedCopy(key, snapshot) {
-    if (!isFinalReviewSnapshot(snapshot)) return false;
-    key = String(key || '');
-    if (RAW_REVIEW_KEYS.indexOf(key) !== -1) return true;
-    if (/^deptCalculatedCost_/.test(key)) return true;
-    if (/^dept_/.test(key)) return true;
-    if (/^performance_/.test(key)) return true;
-    if (/^achievement_/.test(key)) return true;
-    if (/^tableData_/.test(key)) return true;
+    // التفاصيل الخام مطلوبة الآن في المراجعة — لا تخطٍّ (انظر stripRawReviewKeys).
     return false;
   }
 

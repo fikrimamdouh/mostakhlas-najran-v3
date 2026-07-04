@@ -118,11 +118,10 @@
   }
   async function findExtract(id) {
     var tk = token();
-    var res = await fetch('/api/submitted-extracts', { headers: tk ? { Authorization: 'Bearer ' + tk } : {}, credentials: 'include' });
+    // P0: القوائم لا ترجع extractData — نجلب السجل الكامل (snapshot المرفوع) من /:id فقط.
+    var res = await fetch('/api/submitted-extracts/' + encodeURIComponent(id), { headers: tk ? { Authorization: 'Bearer ' + tk } : {}, credentials: 'include' });
     if (!res.ok) throw new Error('api');
-    var data = await res.json();
-    var arr = data.extracts || [];
-    return arr.find(function (x) { return String(x.id) === String(id); });
+    return await res.json();
   }
   function bindActions(id) {
     var body = document.getElementById('rv-body');

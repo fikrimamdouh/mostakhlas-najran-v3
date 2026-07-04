@@ -174,7 +174,7 @@ function useNotifications(isAdmin: boolean, pendingUsersCount: number, getToken:
   return { notifications, unread, markRead, markAllRead };
 }
 
-export function Sidebar() {
+export function Sidebar(_props: { dbUserOverride?: any } = {}) {
   const [location] = useLocation();
   const { user } = useUser();
   const { signOut } = useClerk();
