@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
+import { QuranRadioFloatingPlayer } from "@/components/QuranRadioFloatingPlayer";
 import { usePageTracking } from "@/hooks/usePageTracking";
 
 export function MainLayout({ children }: { children: ReactNode }) {
@@ -7,6 +8,7 @@ export function MainLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-screen" style={{ background: "linear-gradient(135deg, #f0f4ff 0%, #e8edf5 100%)" }}>
       <Sidebar />
+      <QuranRadioFloatingPlayer />
       <main className="flex-1 overflow-y-auto">
         {/* Top bar */}
         <div
