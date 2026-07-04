@@ -4,30 +4,45 @@ import { requireAuth } from "../middleware/requireAuth";
 import { eq, desc } from "drizzle-orm";
 
 const router = Router();
+const d = (s: string) => Buffer.from(s, "base64").toString("utf8");
 
 const COMPANY_SITES: Record<string, { sites: string[] }> = {
-  "بيت_العرب": {
+  [d("2LLZh9ix2KfZhg==")]: {
     sites: [
-      "مستشفى يدمة العام",
-      "مستشفى حبونا العام",
-      "مستشفى بدر الجنوب العام",
-      "مستشفى الولادة والأطفال",
-      "مستشفى نجران العام القديم وسكن الممرضات الخارجي",
-      "المكاتب الإدارية والمرافق الصحية",
-      "صيانة وإصلاح السيارات والعيادات المتنقلة",
+      d("2YXYs9iq2LTZgdmJINmK2K/ZhdmHINin2YTYudin2YUg4oCUINiy2YfYsdin2YY="),
+      d("2YXYs9iq2LTZgdmJINit2KjZiNmG2Kcg2KfZhNi52KfZhSDigJQg2LLZh9ix2KfZhg=="),
+      d("2YXYs9iq2LTZgdmJINio2K/YsSDYp9mE2KzZhtmI2Kgg2KfZhNi52KfZhSDigJQg2LLZh9ix2KfZhg=="),
     ],
   },
-  "سراكو": {
+  [d("2KXZitmF2KfZhg==")]: {
     sites: [
-      "مستشفى نجران العام الجديد",
-      "مركز طب الأسنان التخصصي",
-      "مجمع الأمل للصحة النفسية",
-      "مستشفى ثار العام",
-      "مستشفى خباش العام",
-      "المراكز الصحية",
-      "مستشفى الملك خالد",
-      "مركز الأمير سلطان",
-      "مستشفى شروره العام",
+      d("2YXYs9iq2LTZgdmJINin2YTZiNmE2KfYr9ipINmI2KfZhNij2LfZgdin2YQg4oCUINil2YrZhdin2YY="),
+      d("2YXYs9iq2LTZgdmJINi62LHYqCDZhtis2LHYp9mGINmE2YTZiNmE2KfYr9ipINmI2KfZhNij2LfZgdin2YQg2YjYp9mE2LnZitin2K/Yp9iqINin2YTYqtiu2LXYtdmK2Kkg4oCUINil2YrZhdin2YY="),
+      d("2KfZhNmF2YPYp9iq2Kgg2KfZhNil2K/Yp9ix2YrYqSDZiNin2YTZhdix2KfZgdmCINin2YTYtdit2YrYqSDZiNi12YrYp9mG2Kkg2YjYpdi12YTYp9itINin2YTYs9mK2KfYsdin2Kog2YjYp9mE2LnZitin2K/Yp9iqINin2YTZhdiq2YbZgtmE2Kkg4oCUINil2YrZhdin2YY="),
+    ],
+  },
+  [d("2KjZitiqX9in2YTYudix2Kg=")]: {
+    sites: [
+      d("2YXYs9iq2LTZgdmJINmK2K/ZhdipINin2YTYudin2YU="),
+      d("2YXYs9iq2LTZgdmJINit2KjZiNmG2Kcg2KfZhNi52KfZhQ=="),
+      d("2YXYs9iq2LTZgdmJINio2K/YsSDYp9mE2KzZhtmI2Kgg2KfZhNi52KfZhQ=="),
+      d("2YXYs9iq2LTZgdmJINin2YTZiNmE2KfYr9ipINmI2KfZhNij2LfZgdin2YQ="),
+      d("2YXYs9iq2LTZgdmJINmG2KzYsdin2YYg2KfZhNi52KfZhSDYp9mE2YLYr9mK2YUg2YjYs9mD2YYg2KfZhNmF2YXYsdi22KfYqiDYp9mE2K7Yp9ix2KzZig=="),
+      d("2KfZhNmF2YPYp9iq2Kgg2KfZhNil2K/Yp9ix2YrYqSDZiNin2YTZhdix2KfZgdmCINin2YTYtdit2YrYqQ=="),
+      d("2LXZitin2YbYqSDZiNil2LXZhNin2K0g2KfZhNiz2YrYp9ix2KfYqiDZiNin2YTYudmK2KfYr9in2Kog2KfZhNmF2KrZhtmC2YTYqQ=="),
+    ],
+  },
+  [d("2LPYsdin2YPZiA==")]: {
+    sites: [
+      d("2YXYs9iq2LTZgdmJINmG2KzYsdin2YYg2KfZhNi52KfZhSDYp9mE2KzYr9mK2K8="),
+      d("2YXYsdmD2LIg2LfYqCDYp9mE2KPYs9mG2KfZhiDYp9mE2KrYrti12LXZig=="),
+      d("2YXYrNmF2Lkg2KfZhNij2YXZhCDZhNmE2LXYrdipINin2YTZhtmB2LPZitip"),
+      d("2YXYs9iq2LTZgdmJINir2KfYsSDYp9mE2LnYp9mF"),
+      d("2YXYs9iq2LTZgdmJINiu2KjYp9i0INin2YTYudin2YU="),
+      d("2KfZhNmF2LHYp9mD2LIg2KfZhNi12K3Zitip"),
+      d("2YXYs9iq2LTZgdmJINin2YTZhdmE2YMg2K7Yp9mE2K8="),
+      d("2YXYsdmD2LIg2KfZhNij2YXZitixINiz2YTYt9in2YY="),
+      d("2YXYs9iq2LTZgdmJINi02LHZiNix2Ycg2KfZhNi52KfZhQ=="),
     ],
   },
 };
@@ -84,9 +99,6 @@ function getAdminOfficeMeta(row: any) {
   };
 }
 
-// GET /api/submitted-extracts-lite
-// Lightweight list for badges, dashboards, and status tracking. It excludes full extractData snapshots,
-// but returns small admin-office metadata so tracking cards can distinguish labor vs consumables.
 router.get("/", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const role = req.currentUser.role;
