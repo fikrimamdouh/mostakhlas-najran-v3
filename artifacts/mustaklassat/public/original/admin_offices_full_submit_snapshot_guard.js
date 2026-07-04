@@ -1,22 +1,22 @@
 // ===================================================================
-// Admin Offices Full Submit Snapshot Guard — V3
+// Admin Offices Full Submit Snapshot Guard — V4 quota-safe
 // Scope: admin_offices_attendance.html + admin_offices_consumables.html
-// يحفظ صورة تشغيل كاملة قابلة للاسترجاع عند التعديل، لكن يرسلها كـ flat snapshot
-// بدون نسخ localStorage الضخمة والمتداخلة التي كانت تسبب 413 Content Too Large.
-// لا يغير الحسابات أو مفاتيح الحفظ الأصلية.
+// يبني لقطة كاملة في الذاكرة وقت الرفع، لكنه لا يخزن النسخة الكاملة الضخمة في localStorage.
+// التخزين المحلي يكون لنسخة خفيفة فقط لتجنب QuotaExceededError.
 // ===================================================================
 (function () {
   'use strict';
 
   var page = (location.pathname || '').split('/').pop() || '';
   if (!/admin_offices_(attendance|consumables)\.html/.test(page)) return;
-  if (window.__ADMIN_OFFICES_FULL_SUBMIT_SNAPSHOT_GUARD_V3__) return;
-  window.__ADMIN_OFFICES_FULL_SUBMIT_SNAPSHOT_GUARD_V3__ = true;
+  if (window.__ADMIN_OFFICES_FULL_SUBMIT_SNAPSHOT_GUARD_V4__) return;
+  window.__ADMIN_OFFICES_FULL_SUBMIT_SNAPSHOT_GUARD_V4__ = true;
 
   var SNAPSHOT_KEY = 'najran_admin_offices_complete_submit_snapshot_v1';
   var LABOR_KEY = 'najran_admin_offices_labor_submit_snapshot_v1';
   var CONSUMABLES_KEY = 'najran_admin_offices_consumables_submit_snapshot_v1';
   var META_KEY = 'najran_admin_offices_submit_meta_v1';
+  var MAX_LOCAL_SNAPSHOT_BYTES = 1024 * 1024;
   var submitting = false;
 
   function safeJsonParse(raw, fallback) {
@@ -30,8 +30,31 @@
     return safeJsonParse(raw, raw);
   }
 
+  function roughSize(value) {
+    try { return JSON.stringify(value).length; } catch (_) { return 0; }
+  }
+
   function writeLocal(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { console.warn('[Admin Offices Full Submit Snapshot] failed to write', key, e); }
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      console.warn('[Admin Offices Full Submit Snapshot] failed to write', key, e);
+      return false;
+    }
+  }
+
+  function writeLocalLight(key, fullValue, lightValue) {
+    var fullSize = roughSize(fullValue);
+    if (fullSize > 0 && fullSize <= MAX_LOCAL_SNAPSHOT_BYTES) return writeLocal(key, fullValue);
+    var ok = writeLocal(key, lightValue);
+    console.warn('[Admin Offices Full Submit Snapshot] local full snapshot skipped because oversized; in-memory submit snapshot preserved', {
+      key: key,
+      fullBytes: fullSize,
+      lightBytes: roughSize(lightValue),
+      storedLight: ok
+    });
+    return ok;
   }
 
   function isOwnSnapshotKey(key) {
@@ -220,6 +243,60 @@
     };
   }
 
+  function makeLightSnapshot(complete) {
+    var labor = complete.labor || {};
+    var consumables = complete.consumables || {};
+    return {
+      schema: 'admin_offices_complete_submit_snapshot_v4_light',
+      capturedAt: complete.capturedAt,
+      trigger: complete.trigger,
+      page: complete.page,
+      contract: complete.contract || null,
+      extract: complete.extract || null,
+      labor: {
+        type: labor.type,
+        capturedAt: labor.capturedAt,
+        page: labor.page,
+        officeCount: labor.officeCount || 0,
+        employeeRows: labor.employeeRows || 0,
+        officeRows: labor.officeRows || {},
+        totals: labor.totals || {}
+      },
+      consumables: {
+        type: consumables.type,
+        capturedAt: consumables.capturedAt,
+        page: consumables.page,
+        rowCounts: consumables.rowCounts || {},
+        totals: consumables.totals || {}
+      },
+      keyManifestCount: Array.isArray(complete.keyManifest) ? complete.keyManifest.length : 0
+    };
+  }
+
+  function makeLightLaborSnapshot(labor) {
+    return {
+      schema: 'admin_offices_labor_submit_snapshot_v4_light',
+      type: labor.type,
+      capturedAt: labor.capturedAt,
+      page: labor.page,
+      officeCount: labor.officeCount || 0,
+      employeeRows: labor.employeeRows || 0,
+      officeRows: labor.officeRows || {},
+      totals: labor.totals || {}
+    };
+  }
+
+  function makeLightConsumablesSnapshot(consumables) {
+    return {
+      schema: 'admin_offices_consumables_submit_snapshot_v4_light',
+      type: consumables.type,
+      capturedAt: consumables.capturedAt,
+      page: consumables.page,
+      rowCounts: consumables.rowCounts || {},
+      totals: consumables.totals || {}
+    };
+  }
+
   function buildCompleteSnapshot(trigger) {
     forceSaveCurrentScreen();
 
@@ -228,7 +305,7 @@
     var relevantLocalStorage = collectRelevantLocalStorage();
 
     var complete = {
-      schema: 'admin_offices_complete_submit_snapshot_v3',
+      schema: 'admin_offices_complete_submit_snapshot_v4',
       capturedAt: new Date().toISOString(),
       trigger: trigger || 'manual',
       page: page,
@@ -240,15 +317,16 @@
       keyManifest: Object.keys(relevantLocalStorage).sort()
     };
 
-    writeLocal(LABOR_KEY, labor);
-    writeLocal(CONSUMABLES_KEY, consumables);
-    writeLocal(SNAPSHOT_KEY, complete);
+    writeLocalLight(LABOR_KEY, labor, makeLightLaborSnapshot(labor));
+    writeLocalLight(CONSUMABLES_KEY, consumables, makeLightConsumablesSnapshot(consumables));
+    writeLocalLight(SNAPSHOT_KEY, complete, makeLightSnapshot(complete));
 
     console.info('[Admin Offices Full Submit Snapshot] captured', {
       trigger: trigger,
       offices: labor.officeCount,
       employees: labor.employeeRows,
-      keys: complete.keyManifest.length
+      keys: complete.keyManifest.length,
+      localMode: roughSize(complete) > MAX_LOCAL_SNAPSHOT_BYTES ? 'light-only' : 'full'
     });
 
     return complete;
@@ -334,7 +412,7 @@
     copyMap(out, complete.localStorageSubset);
 
     out[META_KEY] = {
-      schema: 'admin_offices_flat_submit_snapshot_v3',
+      schema: 'admin_offices_flat_submit_snapshot_v4',
       capturedAt: complete.capturedAt,
       sourcePage: page,
       submittedPart: part,
@@ -485,10 +563,11 @@
   window.AdminOfficesFullSubmitSnapshot = {
     capture: buildCompleteSnapshot,
     submit: submitAdminOffices,
+    makeLight: makeLightSnapshot,
     keys: { complete: SNAPSHOT_KEY, labor: LABOR_KEY, consumables: CONSUMABLES_KEY, meta: META_KEY }
   };
 
   setTimeout(function () { buildCompleteSnapshot('page-ready'); }, 1200);
 
-  console.info('[Admin Offices Full Submit Snapshot Guard] installed v3 compact flat submit payload');
+  console.info('[Admin Offices Full Submit Snapshot Guard] installed v4 quota-safe in-memory submit + light local snapshot');
 })();
