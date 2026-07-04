@@ -1,10 +1,6 @@
-import { useEffect, useRef, useState } from "react";
 import { useGetMe } from "@workspace/api-client-react";
 import { useUser } from "@clerk/react";
-import {
-  Phone, Briefcase, Hash, Calendar, MessageSquare, PlayCircle, Activity,
-  Zap, UserPlus, Building2, Radio, PauseCircle, Volume2,
-} from "lucide-react";
+import { Phone, Briefcase, Hash, Calendar, MessageSquare, PlayCircle, Activity, Zap, UserPlus, Building2 } from "lucide-react";
 import { ALL_MODULES, getSiteType, parseAllowedModules, filterModules } from "@/lib/modules";
 
 const ISLAMIC_REMINDERS = [
@@ -22,119 +18,6 @@ const ISLAMIC_REMINDERS = [
   { type: "hadith", text: "الدِّينُ النَّصِيحَةُ… لِلَّهِ وَلِكِتَابِهِ وَلِرَسُولِهِ وَلِأَئِمَّةِ الْمُسْلِمِينَ وَعَامَّتِهِمْ", source: "رواه مسلم" },
 ];
 
-const QURAN_RADIO_API = "https://mp3quran.net/api/v3/radios?language=ar";
-const FALLBACK_QURAN_RADIO = {
-  name: "إذاعة القرآن الكريم",
-  url: "https://server03.quran.com.kw:7002/;",
-};
-
-type QuranRadioInfo = { name: string; url: string };
-
-function normalizeArabic(value: string) {
-  return String(value || "")
-    .replace(/[إأآا]/g, "ا")
-    .replace(/ى/g, "ي")
-    .replace(/ة/g, "ه")
-    .replace(/ـ/g, "")
-    .toLowerCase();
-}
-
-function QuranRadioWidget() {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [radio, setRadio] = useState<QuranRadioInfo>(FALLBACK_QURAN_RADIO);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isBlocked, setIsBlocked] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const playRadio = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.play()
-      .then(() => {
-        setIsPlaying(true);
-        setIsBlocked(false);
-      })
-      .catch(() => {
-        setIsPlaying(false);
-        setIsBlocked(true);
-      });
-  };
-
-  const pauseRadio = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.pause();
-    setIsPlaying(false);
-  };
-
-  useEffect(() => {
-    const ctrl = new AbortController();
-    fetch(QURAN_RADIO_API, { signal: ctrl.signal })
-      .then(r => (r.ok ? r.json() : null))
-      .then(data => {
-        const radios = Array.isArray(data?.radios) ? data.radios : [];
-        const selected = radios.find((r: any) => {
-          const n = normalizeArabic(r?.name || "");
-          return n.includes("اذاعه القران الكريم") || n.includes("اذاعة القران الكريم") || n.includes("quran radio");
-        }) || radios.find((r: any) => String(r?.url || "").trim());
-        if (selected?.url) setRadio({ name: selected.name || FALLBACK_QURAN_RADIO.name, url: selected.url });
-      })
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
-    return () => ctrl.abort();
-  }, []);
-
-  useEffect(() => {
-    const t = window.setTimeout(playRadio, 700);
-    return () => window.clearTimeout(t);
-  }, [radio.url]);
-
-  return (
-    <div className="rounded-2xl overflow-hidden h-full" dir="rtl"
-      style={{ background: "linear-gradient(135deg,#0f2050 0%,#1e3c72 65%,#2a5298 100%)", boxShadow: "0 4px 20px rgba(30,60,114,0.15)", border: "1px solid rgba(212,175,55,0.22)" }}>
-      <div className="h-0.5" style={{ background: "linear-gradient(90deg,#d4af37,#f0d060,#d4af37)" }} />
-      <div className="p-4 flex items-center gap-3">
-        <audio
-          ref={audioRef}
-          src={radio.url}
-          autoPlay
-          preload="auto"
-          onPlay={() => { setIsPlaying(true); setIsBlocked(false); }}
-          onPause={() => setIsPlaying(false)}
-          onError={() => { setIsPlaying(false); setIsBlocked(true); }}
-        />
-        <div className="h-12 w-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-          style={{ background: "rgba(212,175,55,0.18)", color: "#d4af37", border: "1px solid rgba(212,175,55,0.35)" }}>
-          <Radio className="h-6 w-6" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-white font-extrabold text-sm">إذاعة القرآن الكريم</p>
-            <span className="rounded-full px-2 py-0.5 text-[10px] font-black"
-              style={{ background: isPlaying ? "rgba(34,197,94,0.18)" : "rgba(212,175,55,0.15)", color: isPlaying ? "#4ade80" : "#d4af37", border: isPlaying ? "1px solid rgba(34,197,94,0.35)" : "1px solid rgba(212,175,55,0.3)" }}>
-              {isPlaying ? "مباشر" : isLoading ? "جاري التحميل" : "جاهز"}
-            </span>
-          </div>
-          <p className="truncate text-xs mt-1" style={{ color: "rgba(255,255,255,0.62)" }}>{radio.name}</p>
-          {isBlocked && (
-            <p className="text-[11px] mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>اضغط تشغيل إذا منع المتصفح التشغيل التلقائي.</p>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={isPlaying ? pauseRadio : playRadio}
-          className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:scale-105 flex-shrink-0"
-          style={{ background: "linear-gradient(135deg,#d4af37,#b8962e)", color: "#0f2050", border: "none" }}
-          aria-label={isPlaying ? "إيقاف الإذاعة" : "تشغيل الإذاعة"}
-        >
-          {isPlaying ? <PauseCircle className="h-5 w-5" /> : <PlayCircle className="h-5 w-5" />}
-        </button>
-        <Volume2 className="h-4 w-4 hidden sm:block" style={{ color: "rgba(212,175,55,0.75)" }} />
-      </div>
-    </div>
-  );
-}
-
 function IslamicReminderTicker() {
   const items = [
     ...ISLAMIC_REMINDERS.map(r => ({ label: r.type === "quran" ? "آية" : "حديث", text: r.text + " — " + r.source })),
@@ -144,21 +27,13 @@ function IslamicReminderTicker() {
     { label: "تسبيح", text: "الله أكبر" },
     { label: "ذكر", text: "لا حول ولا قوة إلا بالله" },
     { label: "ذكر", text: "أستغفر الله العظيم" },
-    { label: "تسبيح", text: "سبحان الله وبحمده" },
-    { label: "تسبيح", text: "سبحان الله العظيم" },
-    { label: "تذكير", text: "راقب الله في عملك" },
     { label: "تذكير", text: "الأمانة قبل الإنجاز" },
     { label: "تذكير", text: "الإتقان عبادة" },
     { label: "تذكير", text: "الدقة أمانة" },
-    { label: "مقولة", text: "المراجعة تمنع الخطأ" },
-    { label: "مقولة", text: "العمل المتقن يترك أثرًا" },
-    { label: "مقولة", text: "النظام يحمي الجهد" },
-    { label: "مقولة", text: "الأمانة أساس الثقة" },
   ];
   const doubled = [...items, ...items];
   return (
-    <div className="rounded-2xl overflow-hidden h-full flex flex-col justify-center" dir="rtl"
-      style={{ background: "linear-gradient(135deg,#0f2050 0%,#1e3c72 60%,#2a5298 100%)", boxShadow: "0 4px 20px rgba(30,60,114,0.15)" }}>
+    <div className="rounded-2xl overflow-hidden h-full flex flex-col justify-center" dir="rtl" style={{ background: "linear-gradient(135deg,#0f2050 0%,#1e3c72 60%,#2a5298 100%)", boxShadow: "0 4px 20px rgba(30,60,114,0.15)" }}>
       <div className="h-0.5" style={{ background: "linear-gradient(90deg,#d4af37,#f0d060,#d4af37)" }} />
       <style>{`
         @keyframes najranTickerMove { from { transform: translateX(0); } to { transform: translateX(50%); } }
@@ -186,10 +61,7 @@ function ov(page: string) { return `/original-viewer?page=${page}`; }
 function formatLastLogin(iso: string | null | undefined) {
   if (!iso) return null;
   try {
-    return new Date(iso).toLocaleString("ar-SA", {
-      weekday: "long", year: "numeric", month: "long",
-      day: "numeric", hour: "2-digit", minute: "2-digit",
-    });
+    return new Date(iso).toLocaleString("ar-SA", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
   } catch { return iso; }
 }
 
@@ -222,12 +94,7 @@ export default function Dashboard() {
   const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
   const lastLogin = formatLastLogin((dbUser as any)?.lastLoginAt);
 
-  if (
-    dbUser &&
-    dbUser.role !== "admin" &&
-    dbUser.role !== "supervisor" &&
-    (dbUser as any).hospital === "مستشفى نجران العام الجديد"
-  ) {
+  if (dbUser && dbUser.role !== "admin" && dbUser.role !== "supervisor" && (dbUser as any).hospital === "مستشفى نجران العام الجديد") {
     window.location.replace("/original-viewer?page=najran_general.html");
     return null;
   }
@@ -236,12 +103,29 @@ export default function Dashboard() {
   const siteType = getSiteType(dbUser?.hospital);
   const allowedKeys = parseAllowedModules((dbUser as any)?.allowedModules);
   const visibleModules = filterModules(siteType, allowedKeys, role);
-
   const lastPage = (dbUser as any)?.lastPage as string | null;
   const lastPageAt = (dbUser as any)?.lastPageAt as string | null;
   const lastModule = lastPage ? ALL_MODULES.find(m => m.label === lastPage) ?? null : null;
   const isActive = isActiveNow(lastPageAt);
   const roleMeta = dbUser?.role ? roleLabel(dbUser.role) : null;
+
+  const COMPANY_LABELS: Record<string, string> = {
+    "تجمع_نجران": "تجمع نجران الصحي",
+    "بيت_العرب": "بيت العرب",
+    "سراكو": "سراكو",
+    "زهران": "زهران",
+    "إيمان": "إيمان",
+  };
+  const companyKey = (dbUser as any)?.company as string | undefined;
+  const companyLabel = companyKey ? (COMPANY_LABELS[companyKey] || companyKey) : null;
+  const hospital = (dbUser as any)?.hospital as string | undefined;
+  const infoItems = [
+    { icon: Phone, label: "الهاتف", value: (dbUser as any)?.phone },
+    { icon: Building2, label: "الشركة المقاولة", value: companyLabel },
+    { icon: Building2, label: "المستشفى / الموقع", value: hospital },
+    { icon: Briefcase, label: "الوظيفة", value: (dbUser as any)?.jobTitle },
+    { icon: Hash, label: "رقم العقد", value: (dbUser as any)?.contractNumber },
+  ].filter(i => i.value);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-8" style={{ direction: "rtl" }}>
@@ -249,152 +133,62 @@ export default function Dashboard() {
         <div className="h-1" style={{ background: "linear-gradient(90deg,#d4af37,#f0d060,#d4af37)" }} />
         <div className="p-6 flex flex-col gap-5">
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-2xl flex items-center justify-center text-2xl font-black flex-shrink-0"
-              style={{ background: "rgba(212,175,55,0.18)", border: "2px solid rgba(212,175,55,0.4)", color: "#d4af37" }}>
-              {(dbUser?.name || user?.fullName || "م").charAt(0)}
-            </div>
+            <div className="h-16 w-16 rounded-2xl flex items-center justify-center text-2xl font-black flex-shrink-0" style={{ background: "rgba(212,175,55,0.18)", border: "2px solid rgba(212,175,55,0.4)", color: "#d4af37" }}>{(dbUser?.name || user?.fullName || "م").charAt(0)}</div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl font-extrabold text-white truncate">أهلاً، {dbUser?.name || user?.fullName || "مستخدم"}</h1>
-                {isActive && (
-                  <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
-                    style={{ background: "rgba(34,197,94,0.2)", color: "#4ade80", border: "1px solid rgba(34,197,94,0.3)" }}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block" />
-                    نشط الآن
-                  </span>
-                )}
+                {isActive && <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: "rgba(34,197,94,0.2)", color: "#4ade80", border: "1px solid rgba(34,197,94,0.3)" }}><span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block" />نشط الآن</span>}
               </div>
               <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 13, marginTop: 2 }}>برنامج المستخلصات الشهرية — وحدة الصيانة العامة</p>
               {roleMeta && <p className="text-xs font-semibold mt-1" style={{ color: roleMeta.color }}>● {roleMeta.text}</p>}
             </div>
-            <img src="/logo.png" alt="" className="h-14 w-auto drop-shadow-lg flex-shrink-0 opacity-80"
-              onError={e => (e.target as HTMLImageElement).style.display = "none"} />
+            <img src="/logo.png" alt="" className="h-14 w-auto drop-shadow-lg flex-shrink-0 opacity-80" onError={e => (e.target as HTMLImageElement).style.display = "none"} />
           </div>
 
-          {(() => {
-            const COMPANY_LABELS: Record<string, string> = {
-              "تجمع_نجران": "تجمع نجران الصحي",
-              "بيت_العرب": "بيت العرب",
-              "سراكو": "سراكو",
-            };
-            const companyKey = (dbUser as any)?.company as string | undefined;
-            const companyLabel = companyKey ? (COMPANY_LABELS[companyKey] || companyKey) : null;
-            const hospital = (dbUser as any)?.hospital as string | undefined;
-            const items = [
-              { icon: Phone, label: "الهاتف", value: (dbUser as any)?.phone },
-              { icon: Building2, label: "الشركة المقاولة", value: companyLabel },
-              { icon: Building2, label: "المستشفى / الموقع", value: hospital },
-              { icon: Briefcase, label: "الوظيفة", value: (dbUser as any)?.jobTitle },
-              { icon: Hash, label: "رقم العقد", value: (dbUser as any)?.contractNumber },
-            ].filter(i => i.value);
-            return (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3" style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "1rem" }}>
-                {items.map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="flex items-start gap-2.5">
-                    <div className="mt-0.5 h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(212,175,55,0.15)" }}>
-                      <Icon className="h-3.5 w-3.5" style={{ color: "#d4af37" }} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: "0.05em" }}>{label}</div>
-                      <div className="font-semibold text-white" style={{ fontSize: 13, marginTop: 1 }}>{value}</div>
-                    </div>
-                  </div>
-                ))}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3" style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "1rem" }}>
+            {infoItems.map(({ icon: Icon, label, value }) => (
+              <div key={label} className="flex items-start gap-2.5">
+                <div className="mt-0.5 h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(212,175,55,0.15)" }}><Icon className="h-3.5 w-3.5" style={{ color: "#d4af37" }} /></div>
+                <div><div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: "0.05em" }}>{label}</div><div className="font-semibold text-white" style={{ fontSize: 13, marginTop: 1 }}>{value}</div></div>
               </div>
-            );
-          })()}
+            ))}
+          </div>
 
           {lastModule && (
-            <div className="flex items-center justify-between rounded-xl p-3 gap-3"
-              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}>
+            <div className="flex items-center justify-between rounded-xl p-3 gap-3" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}>
               <div className="flex items-center gap-3 min-w-0">
-                <div className="h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: lastModule.color }}>
-                  <lastModule.icon className="h-5 w-5 text-white" />
-                </div>
-                <div className="min-w-0">
-                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>آخر صفحة كنت عليها</p>
-                  <p className="font-bold text-white truncate" style={{ fontSize: 14 }}>{lastPage}</p>
-                </div>
+                <div className="h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: lastModule.color }}><lastModule.icon className="h-5 w-5 text-white" /></div>
+                <div className="min-w-0"><p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>آخر صفحة كنت عليها</p><p className="font-bold text-white truncate" style={{ fontSize: 14 }}>{lastPage}</p></div>
               </div>
-              <div className="flex items-center gap-3 flex-shrink-0">
-                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{relativeTime(lastPageAt)}</span>
-                <a href={ov(lastModule.file)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold text-sm no-underline transition-all hover:scale-105"
-                  style={{ background: "linear-gradient(135deg,#d4af37,#b8962e)", color: "#1e3c72" }}>
-                  <PlayCircle className="h-4 w-4" />
-                  استئناف
-                </a>
-              </div>
+              <div className="flex items-center gap-3 flex-shrink-0"><span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{relativeTime(lastPageAt)}</span><a href={ov(lastModule.file)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold text-sm no-underline transition-all hover:scale-105" style={{ background: "linear-gradient(135deg,#d4af37,#b8962e)", color: "#1e3c72" }}><PlayCircle className="h-4 w-4" />استئناف</a></div>
             </div>
           )}
 
-          {lastLogin && (
-            <div className="flex items-center gap-2" style={{ opacity: 0.5, borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "0.75rem" }}>
-              <Calendar className="h-3.5 w-3.5" style={{ color: "#d4af37" }} />
-              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>آخر تسجيل دخول: {lastLogin}</span>
-            </div>
-          )}
+          {lastLogin && <div className="flex items-center gap-2" style={{ opacity: 0.5, borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "0.75rem" }}><Calendar className="h-3.5 w-3.5" style={{ color: "#d4af37" }} /><span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>آخر تسجيل دخول: {lastLogin}</span></div>}
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[340px_minmax(0,1fr)] gap-4 items-stretch">
-        <QuranRadioWidget />
-        <IslamicReminderTicker />
-      </div>
+      <IslamicReminderTicker />
 
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: "#1e3c72" }}>
-            <Zap className="h-5 w-5" style={{ color: "#d4af37" }} />
-            وحدات النظام
-          </h2>
-          <span className="text-xs text-gray-400 flex items-center gap-1">
-            <Activity className="h-3.5 w-3.5" />
-            {visibleModules.length} وحدة متاحة
-          </span>
+          <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: "#1e3c72" }}><Zap className="h-5 w-5" style={{ color: "#d4af37" }} />وحدات النظام</h2>
+          <span className="text-xs text-gray-400 flex items-center gap-1"><Activity className="h-3.5 w-3.5" />{visibleModules.length} وحدة متاحة</span>
         </div>
-
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {visibleModules.map(m => {
             const Icon = m.icon;
             const isCurrentPage = lastPage === m.label;
             return (
-              <a key={m.key} href={ov(m.file)} className="group rounded-xl p-4 text-center transition-all duration-200 hover:-translate-y-1 no-underline flex flex-col items-center gap-3 relative overflow-hidden"
-                style={{
-                  background: isCurrentPage ? `linear-gradient(135deg,${m.color}14,${m.color}22)` : "#fff",
-                  border: isCurrentPage ? `2px solid ${m.color}55` : "1.5px solid #e8edf7",
-                  boxShadow: isCurrentPage ? `0 4px 20px ${m.color}22` : "0 2px 8px rgba(30,60,114,0.05)",
-                }}>
-                {isCurrentPage && (
-                  <div className="absolute top-2 left-2 flex items-center gap-1 rounded-full px-1.5 py-0.5" style={{ background: m.color, fontSize: 9, color: "#fff", fontWeight: 700 }}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-pulse inline-block" />
-                    آخر صفحة
-                  </div>
-                )}
-                <div className="h-12 w-12 rounded-xl flex items-center justify-center transition-all group-hover:scale-110" style={{ background: m.color, boxShadow: `0 4px 12px ${m.color}44` }}>
-                  <Icon className="h-6 w-6 text-white" />
-                </div>
+              <a key={m.key} href={ov(m.file)} className="group rounded-xl p-4 text-center transition-all duration-200 hover:-translate-y-1 no-underline flex flex-col items-center gap-3 relative overflow-hidden" style={{ background: isCurrentPage ? `linear-gradient(135deg,${m.color}14,${m.color}22)` : "#fff", border: isCurrentPage ? `2px solid ${m.color}55` : "1.5px solid #e8edf7", boxShadow: isCurrentPage ? `0 4px 20px ${m.color}22` : "0 2px 8px rgba(30,60,114,0.05)" }}>
+                {isCurrentPage && <div className="absolute top-2 left-2 flex items-center gap-1 rounded-full px-1.5 py-0.5" style={{ background: m.color, fontSize: 9, color: "#fff", fontWeight: 700 }}><span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-pulse inline-block" />آخر صفحة</div>}
+                <div className="h-12 w-12 rounded-xl flex items-center justify-center transition-all group-hover:scale-110" style={{ background: m.color, boxShadow: `0 4px 12px ${m.color}44` }}><Icon className="h-6 w-6 text-white" /></div>
                 <span className="font-bold text-sm leading-tight" style={{ color: "#1e3c72" }}>{m.label}</span>
               </a>
             );
           })}
-
-          <a href="/support" className="group rounded-xl p-4 text-center transition-all duration-200 hover:-translate-y-1 no-underline flex flex-col items-center gap-3"
-            style={{ background: "linear-gradient(135deg,#0096c7,#0077b6)", border: "1.5px solid #0077b6", boxShadow: "0 4px 15px rgba(0,150,199,0.2)" }}>
-            <div className="h-12 w-12 rounded-xl flex items-center justify-center bg-white/20">
-              <MessageSquare className="h-6 w-6 text-white" />
-            </div>
-            <span className="font-bold text-sm text-white">مذكرة دعم</span>
-          </a>
-
-          {(dbUser?.role === "admin") && (
-            <a href="/admin/users" className="group rounded-xl p-4 text-center transition-all duration-200 hover:-translate-y-1 no-underline flex flex-col items-center gap-3"
-              style={{ background: "linear-gradient(135deg,#d4af37,#b8962e)", border: "1.5px solid #b8962e", boxShadow: "0 4px 15px rgba(212,175,55,0.25)" }}>
-              <div className="h-12 w-12 rounded-xl flex items-center justify-center bg-white/20">
-                <UserPlus className="h-6 w-6 text-white" />
-              </div>
-              <span className="font-bold text-sm text-white">إدارة المستخدمين</span>
-            </a>
-          )}
+          <a href="/support" className="group rounded-xl p-4 text-center transition-all duration-200 hover:-translate-y-1 no-underline flex flex-col items-center gap-3" style={{ background: "linear-gradient(135deg,#0096c7,#0077b6)", border: "1.5px solid #0077b6", boxShadow: "0 4px 15px rgba(0,150,199,0.2)" }}><div className="h-12 w-12 rounded-xl flex items-center justify-center bg-white/20"><MessageSquare className="h-6 w-6 text-white" /></div><span className="font-bold text-sm text-white">مذكرة دعم</span></a>
+          {(dbUser?.role === "admin") && <a href="/admin/users" className="group rounded-xl p-4 text-center transition-all duration-200 hover:-translate-y-1 no-underline flex flex-col items-center gap-3" style={{ background: "linear-gradient(135deg,#d4af37,#b8962e)", border: "1.5px solid #b8962e", boxShadow: "0 4px 15px rgba(212,175,55,0.25)" }}><div className="h-12 w-12 rounded-xl flex items-center justify-center bg-white/20"><UserPlus className="h-6 w-6 text-white" /></div><span className="font-bold text-sm text-white">إدارة المستخدمين</span></a>}
         </div>
       </div>
     </div>
