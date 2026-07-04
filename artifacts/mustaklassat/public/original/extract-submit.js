@@ -693,7 +693,8 @@
     } else if (path.endsWith('achievement.html')) {
       window.initAchievementSubmitBtn();
     } else if (path.endsWith('consumables.html') && !path.includes('health_centers') && !path.includes('admin_offices')) {
-      window.initConsumablesSubmitBtn();
+      // تأخير إنشاء الزرار لحين استقرار الصفحة — يمنع الوميض (ظهور/اختفاء)
+      setTimeout(function() { window.initConsumablesSubmitBtn(); }, 1500);
     } else if (path.endsWith('health_centers_attendance.html')) {
       window.initHealthAttendanceApproveBtn();
     } else if (path.endsWith('health_centers_consumables.html')) {

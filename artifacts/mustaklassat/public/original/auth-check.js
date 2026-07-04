@@ -10,7 +10,7 @@
   var BASE = window.location.origin;
   var BUILD_V = '20260623archiveBundleRouteV1';
   var NOTIF_INTERVAL_MS = 300000;
-  var NAJRAN_BUILD_VERSION = '2026.07.04-r1';
+  var NAJRAN_BUILD_VERSION = '2026.07.04-r2';
   window.NAJRAN_BUILD_VERSION = NAJRAN_BUILD_VERSION;
 
   try { console.info('%c[Najran] النسخة: ' + NAJRAN_BUILD_VERSION, 'color:#1e3c72;font-weight:bold'); } catch (_) {}
@@ -222,7 +222,7 @@
   }
 
   if (pageFile === 'extract-archive.html') appendScript('/original/extract_archive_route_guard.js?v=20260703_extract_archive_route_v5', true);
-  if (/consumables\.html$/.test(pageFile)) appendScript('/original/consumables-submit-snapshot-guard.js?v=' + BUILD_V, true);
+  if (/consumables\.html$/.test(pageFile)) appendScript('/original/consumables-submit-snapshot-guard.js?v=20260704_consumables_guard_v4', true);
   if (pageFile === 'settings_main.html') {
     appendScript('/original/settings-backup-complete-guard.js?v=20260611d', true);
     appendScript('/original/settings_contract_fixed_patch.js?v=20260623_fixed_contract_v1', true);
