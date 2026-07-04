@@ -306,8 +306,7 @@
     const isRevision =
       (
         localStorage.getItem('najran_revision_mode') === 'true' &&
-        !!localStorage.getItem(REVISION_KEY) &&
-        !!localStorage.getItem('najran_revision_snapshot')
+        !!(localStorage.getItem(REVISION_KEY) || localStorage.getItem('najran_editing_submitted_extract_id'))
       ) || (
         localStorage.getItem('najran_editing_submitted_extract_mode') === 'true' &&
         !!localStorage.getItem('najran_editing_submitted_extract_id')

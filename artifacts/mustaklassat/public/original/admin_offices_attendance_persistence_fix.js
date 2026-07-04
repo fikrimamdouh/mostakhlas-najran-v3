@@ -51,10 +51,10 @@
 
   function isRevisionEditMode() {
     try {
+      // revision mode يتحقق بوجود المفتاحين الأساسيين فقط — snapshot/summary اختياريين
+      // (ممكن يفشلوا بسبب quota أو ترتيب تنفيذ الحراس)
       return localStorage.getItem('najran_revision_mode') === 'true' &&
-        !!localStorage.getItem('najran_revision_extract_id') &&
-        !!localStorage.getItem('najran_revision_snapshot') &&
-        !!localStorage.getItem('najran_revision_snapshot_summary');
+        !!(localStorage.getItem('najran_revision_extract_id') || localStorage.getItem('najran_editing_submitted_extract_id'));
     } catch (_) { return false; }
   }
 
