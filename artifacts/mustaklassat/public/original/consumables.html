@@ -697,6 +697,7 @@
             <button class="ab ab-print" id="print-all-btn"><i class="fas fa-print"></i> طباعة الكل</button>
             <button class="ab ab-update" id="recalculate-btn"><i class="fas fa-sync-alt"></i> تحديث الحسابات</button>
             <button class="ab ab-backup" id="backup-btn"><i class="fas fa-save"></i> نسخ احتياطي</button>
+            <button class="ab ab-archive" id="save-local-snapshot-btn" style="background:linear-gradient(135deg,#166534,#16a34a);color:#fff;border:0;border-radius:12px;padding:9px 16px;font-weight:900;cursor:pointer;font-family:inherit;" title="حفظ المستخلص الحالي محليًا في الأرشيف للاستكمال لاحقًا"><i class="fas fa-archive"></i> حفظ مستخلص محلي</button>
             <button class="ab ab-sig" id="edit-signatures-btn"><i class="fas fa-signature"></i> تعديل التواقيع</button>
             <button class="ab ab-titles" id="edit-titles-btn"><i class="fas fa-heading"></i> تعديل العناوين</button>
             <button class="ab ab-clear" id="clear-data-btn"><i class="fas fa-trash"></i> مسح البيانات</button>
@@ -1928,6 +1929,27 @@ if (!activeEditSession && (target.tagName === 'SELECT' || (target.tagName === 'I
         document.getElementById('export-all-btn').addEventListener('click', exportAllToExcel);
         document.getElementById('print-all-btn').addEventListener('click', printAllSections);
         document.getElementById('backup-btn').addEventListener('click', () => requestPermission('backup'));
+    // ─── زرار حفظ مستخلص محلي (أرشيف) ───
+    document.getElementById('save-local-snapshot-btn').addEventListener('click', function () {
+        try {
+            if (typeof window.saveCurrentSnapshot === 'function') {
+                var result = window.saveCurrentSnapshot('manual-save-consumables');
+                if (result) {
+                    var toast = document.getElementById('save-toast');
+                    if (toast) { toast.textContent = '✓ تم حفظ المستخلص محليًا في الأرشيف'; toast.classList.add('show'); setTimeout(function () { toast.classList.remove('show'); }, 2500); }
+                    else alert('✓ تم حفظ المستخلص محليًا — يمكنك استكماله لاحقًا من أرشيف المستخلصات > لقطات العمل المحلية.');
+                } else {
+                    alert('تعذر الحفظ — تأكد من وجود بيانات في الصفحة.');
+                }
+            } else {
+                alert('نظام الحفظ المحلي لم يكتمل تحميله. أعد تحميل الصفحة وحاول مرة أخرى.');
+            }
+        } catch (e) {
+            console.error('[Consumables] local snapshot save failed:', e);
+            alert('حدث خطأ أثناء الحفظ: ' + (e.message || 'غير معروف'));
+        }
+    });
+
         document.getElementById('edit-signatures-btn').addEventListener('click', () => SignatureBlock.open('consumables'));
         document.getElementById('edit-titles-btn').addEventListener('click', () => requestPermission('titles'));
         document.getElementById('clear-data-btn').addEventListener('click', () => requestPermission('clear'));
