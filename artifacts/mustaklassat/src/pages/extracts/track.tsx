@@ -6,6 +6,7 @@ import { Clock, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Building2, Ca
 type ExtractType = "labor" | "consumables" | "spare_parts" | "health_centers" | "admin_offices";
 type ExtractStatus = "submitted" | "under_review" | "approved" | "rejected" | "needs_revision";
 type AdminOfficePart = "labor" | "consumables" | null;
+type RevisionDecision = "save" | "skip" | "cancel";
 
 interface SubmittedExtract {
   id: number;
@@ -65,6 +66,15 @@ const REVISION_KEYS = {
   snapshot: "najran_revision_snapshot",
 };
 
+const LOCAL_WORK_KEYS = [
+  "attendanceData",
+  "adminOfficesAttendanceData_v1",
+  "centersAttendanceData_v2",
+  "consumablesTableData",
+  "spare_partsData",
+  "persistentExtractData",
+];
+
 const STATUS_CONFIG: Record<ExtractStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
   submitted: { label: "بانتظار المراجعة", color: "#2a5298", bg: "#eff6ff", icon: <Clock className="h-4 w-4" /> },
   under_review: { label: "قيد المراجعة", color: "#b45309", bg: "#fffbeb", icon: <Eye className="h-4 w-4" /> },
@@ -117,6 +127,121 @@ function unwrapSnapshot(raw: Record<string, unknown>) {
     if (Object.keys(parsed).length) return parsed;
   }
   return raw;
+}
+
+function localValueHasWork(raw: string | null): boolean {
+  if (!raw) return false;
+  const s = String(raw).trim();
+  if (!s || s === "{}" || s === "[]" || s === "null" || s === "0") return false;
+  try {
+    const parsed = JSON.parse(s);
+    if (Array.isArray(parsed)) return parsed.length > 0;
+    if (parsed && typeof parsed === "object") return Object.keys(parsed).some((key) => {
+      const value = (parsed as Record<string, unknown>)[key];
+      if (Array.isArray(value)) return value.length > 0;
+      if (value && typeof value === "object") return Object.keys(value as Record<string, unknown>).length > 0;
+      return String(value ?? "").trim() !== "";
+    });
+  } catch {
+    return true;
+  }
+  return true;
+}
+
+function hasOpenLocalWork(): boolean {
+  try {
+    return LOCAL_WORK_KEYS.some((key) => localValueHasWork(localStorage.getItem(key)));
+  } catch {
+    return false;
+  }
+}
+
+function collectLocalWorkSnapshot() {
+  const data: Record<string, unknown> = {};
+  try {
+    LOCAL_WORK_KEYS.forEach((key) => {
+      const raw = localStorage.getItem(key);
+      if (localValueHasWork(raw)) data[key] = parseData(raw || "{}");
+    });
+  } catch {}
+  return data;
+}
+
+function trySaveCurrentLocalWork(): boolean {
+  const saveCandidates = [
+    (window as any).saveCurrentSnapshot,
+    (window as any).saveMonthSnapshot,
+    (window as any).saveExtractSnapshot,
+  ];
+
+  for (const saveFn of saveCandidates) {
+    if (typeof saveFn !== "function") continue;
+    try {
+      const result = saveFn("before-open-revision");
+      if (result !== false) return true;
+    } catch (err) {
+      console.warn("[RevisionOpen] local save function failed", err);
+    }
+  }
+
+  try {
+    const extractData = collectLocalWorkSnapshot();
+    if (!Object.keys(extractData).length) return true;
+    const persistent = parseData(localStorage.getItem("persistentExtractData") || "{}");
+    const archiveRaw = localStorage.getItem("extractArchive") || "[]";
+    const archive = Array.isArray(JSON.parse(archiveRaw)) ? JSON.parse(archiveRaw) : [];
+    archive.unshift({
+      id: String(Date.now()),
+      source: "track-before-open-revision",
+      savedAt: new Date().toISOString(),
+      canResume: true,
+      compact: true,
+      extractType: "local_work_before_revision",
+      currentPage: location.pathname + location.search,
+      paymentNumber: (persistent as any).paymentNumber || (persistent as any).extractNumber || localStorage.getItem("paymentNumber") || localStorage.getItem("extractNumber") || "",
+      extractMonth: (persistent as any).extractMonth || localStorage.getItem("extractMonth") || "",
+      extractYear: (persistent as any).extractYear || localStorage.getItem("extractYear") || "",
+      hospitalName: localStorage.getItem("hospitalName") || "",
+      companyName: localStorage.getItem("companyName") || "",
+      label: "حفظ تلقائي قبل فتح التعديل",
+      extractData,
+    });
+    localStorage.setItem("extractArchive", JSON.stringify(archive.slice(0, 20)));
+    return true;
+  } catch (err) {
+    console.error("[RevisionOpen] fallback local save failed", err);
+    return false;
+  }
+}
+
+function askRevisionOpenDecision(): Promise<RevisionDecision> {
+  return new Promise((resolve) => {
+    const old = document.getElementById("revision-local-work-modal");
+    if (old) old.remove();
+    const overlay = document.createElement("div");
+    overlay.id = "revision-local-work-modal";
+    overlay.style.cssText = "position:fixed;inset:0;z-index:2147483647;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;direction:rtl;font-family:Tajawal,Arial,sans-serif";
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:20px;box-shadow:0 22px 70px rgba(0,0,0,.28);max-width:520px;width:calc(100% - 34px);padding:26px;border-top:7px solid #1e3c72;text-align:right">
+        <h3 style="margin:0 0 12px;color:#1e3c72;font-size:20px;font-weight:950">يوجد مستخلص مفتوح حاليًا</h3>
+        <p style="margin:0 0 18px;color:#334155;font-weight:800;line-height:1.8">قبل فتح التعديل اختر:</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button data-decision="save" style="background:linear-gradient(135deg,#166534,#16a34a);color:#fff;border:0;border-radius:12px;padding:11px 16px;font-weight:900;cursor:pointer;font-family:inherit">حفظ الحالي وفتح التعديل</button>
+          <button data-decision="skip" style="background:linear-gradient(135deg,#b45309,#ea580c);color:#fff;border:0;border-radius:12px;padding:11px 16px;font-weight:900;cursor:pointer;font-family:inherit">فتح التعديل بدون حفظ</button>
+          <button data-decision="cancel" style="background:#e5e7eb;color:#334155;border:0;border-radius:12px;padding:11px 16px;font-weight:900;cursor:pointer;font-family:inherit">إلغاء</button>
+        </div>
+      </div>`;
+    const finish = (decision: RevisionDecision) => {
+      overlay.remove();
+      resolve(decision);
+    };
+    overlay.addEventListener("click", (event) => {
+      const btn = (event.target as HTMLElement)?.closest?.("button[data-decision]") as HTMLButtonElement | null;
+      if (!btn) return;
+      finish(btn.dataset.decision as RevisionDecision);
+    });
+    document.body.appendChild(overlay);
+  });
 }
 
 function setRev(key: string, value: string) {
@@ -193,6 +318,19 @@ function ExtractCard({ extract, isAdmin, currentUserId }: { extract: SubmittedEx
       const full = await res.json();
       const data = unwrapSnapshot(parseData(full.extractData));
       if (!Object.keys(data).length) { alert("لا توجد بيانات محفوظة داخل هذا المستخلص للتعديل"); return; }
+
+      if (hasOpenLocalWork()) {
+        const decision = await askRevisionOpenDecision();
+        if (decision === "cancel") return;
+        if (decision === "save") {
+          const saved = trySaveCurrentLocalWork();
+          if (!saved) {
+            alert("تعذر حفظ المستخلص الحالي بسبب امتلاء التخزين أو خطأ في الحفظ. لم يتم فتح التعديل. يمكنك اختيار فتح التعديل بدون حفظ إذا أردت المتابعة على مسؤوليتك.");
+            return;
+          }
+        }
+      }
+
       const startedAt = new Date().toISOString();
       const snapshot = JSON.stringify(data);
       setRev(REVISION_KEYS.mode, "true");
