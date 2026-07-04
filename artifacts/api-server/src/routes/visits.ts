@@ -92,7 +92,6 @@ router.post("/", requireAuth, requireApproved, async (req: any, res) => {
     submittedByContract: user.contractNumber || null,
   }).returning();
 
-  // Notify admin
   sendVisitNewRequestEmail(ADMIN_EMAIL, {
     repName,
     siteLocation,
@@ -161,7 +160,6 @@ router.patch("/:id/status", requireAuth, requireApproved, requireVisitReviewer, 
 
   if (!updated) return res.status(404).json({ error: "Visit request not found" });
 
-  // Send email notification to user
   const [submitter] = await db.select().from(usersTable).where(eq(usersTable.id, visit.userId)).limit(1);
   if (submitter?.email) {
     if (status === "approved") {
@@ -189,7 +187,7 @@ router.patch("/:id/status", requireAuth, requireApproved, requireVisitReviewer, 
 // PATCH /api/visits/:id/signed-permit — admin upload scanned signed copy (multipart/form-data)
 const uploadMemory = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+  limits: { fileSize: 20 * 1024 * 1024 },
 });
 router.patch("/:id/signed-permit", requireAuth, requireApproved, requireVisitReviewer, uploadMemory.single("file"), async (req: any, res) => {
   const id = parseInt(req.params.id, 10);
@@ -197,11 +195,9 @@ router.patch("/:id/signed-permit", requireAuth, requireApproved, requireVisitRev
 
   let signedPermitFile: string | undefined;
   if (req.file) {
-    // Convert uploaded buffer to base64 data URL
     const mime = req.file.mimetype || "application/octet-stream";
     signedPermitFile = `data:${mime};base64,${req.file.buffer.toString("base64")}`;
   } else if (req.body?.signedPermitFile) {
-    // Fallback: accept JSON base64 if sent that way
     signedPermitFile = req.body.signedPermitFile;
   }
 
@@ -214,6 +210,20 @@ router.patch("/:id/signed-permit", requireAuth, requireApproved, requireVisitRev
   if (!updated) return res.status(404).json({ error: "Visit request not found" });
   req.log.info({ id }, "Signed permit uploaded");
   return res.json({ visit: updated });
+});
+
+// DELETE /api/visits/:id — delete one visit request from review screen
+router.delete("/:id", requireAuth, requireApproved, requireVisitReviewer, async (req: any, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+  const [existing] = await db.select({ id: visitRequestsTable.id, repName: visitRequestsTable.repName, status: visitRequestsTable.status })
+    .from(visitRequestsTable)
+    .where(eq(visitRequestsTable.id, id))
+    .limit(1);
+  if (!existing) return res.status(404).json({ error: "Visit request not found" });
+  await db.delete(visitRequestsTable).where(eq(visitRequestsTable.id, id));
+  req.log.info({ id, deletedBy: req.currentUser?.id }, "Visit request deleted");
+  return res.json({ ok: true, deleted: existing });
 });
 
 export default router;
