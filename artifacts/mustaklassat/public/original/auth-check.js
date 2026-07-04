@@ -10,7 +10,7 @@
   var BASE = window.location.origin;
   var BUILD_V = '20260623archiveBundleRouteV1';
   var NOTIF_INTERVAL_MS = 300000;
-  var NAJRAN_BUILD_VERSION = '2026.07.04-r7';
+  var NAJRAN_BUILD_VERSION = '2026.07.04-r8';
   window.NAJRAN_BUILD_VERSION = NAJRAN_BUILD_VERSION;
 
   try { console.info('%c[Najran] النسخة: ' + NAJRAN_BUILD_VERSION, 'color:#1e3c72;font-weight:bold'); } catch (_) {}
@@ -45,6 +45,7 @@
             try { jobs.push(fetch('/original/extract-snapshot.js?v=20260703_snapshot_quota_v1', { cache: 'reload' }).catch(function(){})); } catch (_) {}
             try { jobs.push(fetch('/original/submitted_extract_archive_bundle_guard.js?v=20260703_final_snapshot_v1', { cache: 'reload' }).catch(function(){})); } catch (_) {}
             try { jobs.push(fetch('/original/review-labor-final-snapshot-exact.js?v=20260704_labor_final_snapshot_exact_v1', { cache: 'reload' }).catch(function(){})); } catch (_) {}
+            try { jobs.push(fetch('/original/review-labor-legacy-official-amount.js?v=20260704_labor_legacy_official_v1', { cache: 'reload' }).catch(function(){})); } catch (_) {}
             try { jobs.push(fetch('/original/admin_offices_review_detail_patch.js?v=20260704_admin_offices_detail_v5_period_safe', { cache: 'reload' }).catch(function(){})); } catch (_) {}
             try { jobs.push(fetch(location.pathname + location.search, { cache: 'reload' }).catch(function(){})); } catch (_) {}
             Promise.all(jobs).then(done, done);
@@ -219,6 +220,7 @@
     appendScript('/original/review-print-override.js?v=' + BUILD_V, true);
     appendScript('/original/review-workflow.js?v=20260703_frozen_snapshot_v2', true);
     appendScript('/original/review-labor-final-snapshot-exact.js?v=20260704_labor_final_snapshot_exact_v1', true);
+    appendScript('/original/review-labor-legacy-official-amount.js?v=20260704_labor_legacy_official_v1', true);
     appendScript('/original/review-generic-tables.js?v=20260703_admin_preview_v3', true);
     appendScript('/original/admin_offices_review_detail_patch.js?v=20260704_admin_offices_detail_v5_period_safe', true);
     appendScript('/original/review-consumables-summary-exact.js?v=' + BUILD_V, true);
