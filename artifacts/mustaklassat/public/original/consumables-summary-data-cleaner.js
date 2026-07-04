@@ -5,7 +5,7 @@
 (function () {
   'use strict';
 
-  var CACHE_MARKER = '20260704_v14_consumables_letter_signature_bridge';
+  var CACHE_MARKER = '20260704_v15_all_consumables_letter_signature_bridge';
   try { window.__CONSUMABLES_SUMMARY_CLEANER_CACHE_MARKER = CACHE_MARKER; } catch (_) {}
 
   var sig = location.pathname + location.search;
@@ -35,7 +35,7 @@
   }
 
   function loadHospitalConsumablesRaiseLetter() {
-    loadScriptFresh('hospital-consumables-raise-letter-js', '/original/hospital_consumables_raise_letter.js?v=20260704_v14_signature_bridge');
+    loadScriptFresh('hospital-consumables-raise-letter-js', '/original/hospital_consumables_raise_letter.js?v=20260704_v15_all_signature_bridge');
     setTimeout(function () {
       loadScriptFresh('hospital-consumables-letterhead-storage-guard-js', '/original/hospital_consumables_letterhead_storage_guard_v1.js?v=20260702_v2_fallback_letterhead_key');
     }, 60);
@@ -55,12 +55,25 @@
 
   function installConsumablesLetterSignatureBridge() {
     try {
-      if (window.__HOSPITAL_CONSUMABLES_LETTER_SIGNATURE_BRIDGE_V14__) return;
-      window.__HOSPITAL_CONSUMABLES_LETTER_SIGNATURE_BRIDGE_V14__ = true;
+      if (window.__HOSPITAL_CONSUMABLES_LETTER_SIGNATURE_BRIDGE_V15__) return;
+      window.__HOSPITAL_CONSUMABLES_LETTER_SIGNATURE_BRIDGE_V15__ = true;
 
       var LETTER_SETTINGS_KEY = 'hospitalConsumablesRaiseLettersSettings_v1';
       var LEGACY_SIGNATURES_KEY = 'signatures_data_consumables_v27';
-      var DEFAULT_NOPREV_TITLES = ['الموظف المختص', 'مدير الإدارة'];
+      var LEGACY_TO_LETTER_MAP = {
+        main: ['summary', 'subcontractors', 'performance', 'water', 'sewage'],
+        noPrev: ['summary', 'subcontractors', 'performance', 'water', 'sewage'],
+        electricity: ['performance', 'summary', 'subcontractors', 'water', 'sewage'],
+        water: ['water', 'summary', 'subcontractors', 'performance', 'sewage'],
+        certificate: ['summary', 'subcontractors', 'performance', 'water', 'sewage']
+      };
+      var DEFAULT_SIGNATURE_TITLES = {
+        main: ['مدير المستشفى'],
+        noPrev: ['الموظف المختص', 'مدير الإدارة'],
+        electricity: ['مهندس الكهرباء', 'رئيس الصيانة العامة'],
+        water: ['مهندس المقاول', 'رئيس الصيانة العامة'],
+        certificate: ['مندوب المقاول', 'محاسب المستشفى', 'رئيس الصيانة العامة']
+      };
       var forceLegacySyncUntil = 0;
       var originalSetItem = localStorage.setItem.bind(localStorage);
 
@@ -84,59 +97,92 @@
           .filter(function (s) { return s.title || s.name; });
       }
 
-      function pickLegacySignatures(legacy) {
+      function pickLegacySignatures(legacy, letterKey) {
         legacy = legacy && typeof legacy === 'object' ? legacy : {};
-        var candidates = [legacy.noPrev, legacy.summary, legacy.subcontractors, legacy.performance, legacy.water, legacy.sewage];
-        for (var i = 0; i < candidates.length; i++) {
-          var sigs = compactSignatures(candidates[i]);
+        var sources = LEGACY_TO_LETTER_MAP[letterKey] || ['summary', 'subcontractors', 'performance', 'water', 'sewage'];
+        for (var i = 0; i < sources.length; i++) {
+          var sigs = compactSignatures(legacy[sources[i]]);
           if (sigs.length) return sigs;
         }
         return [];
       }
 
-      function noPrevIsBlankOrDefault(sigs) {
+      function signatureIsBlankOrDefault(letterKey, sigs) {
         sigs = Array.isArray(sigs) ? sigs : [];
         if (!sigs.length) return true;
         var hasNames = sigs.some(function (s) { return clean(s && s.name); });
         if (!hasNames) return true;
-        if (sigs.length !== DEFAULT_NOPREV_TITLES.length) return false;
+        var defaults = DEFAULT_SIGNATURE_TITLES[letterKey] || [];
+        if (!defaults.length || sigs.length !== defaults.length) return false;
         return sigs.every(function (s, i) {
-          return clean(s && s.title) === DEFAULT_NOPREV_TITLES[i] && !clean(s && s.name);
+          return clean(s && s.title) === defaults[i] && !clean(s && s.name);
         });
       }
 
       function ensureLetterShape(s) {
         s = s && typeof s === 'object' ? s : {};
         s.letters = s.letters && typeof s.letters === 'object' ? s.letters : {};
+
+        s.letters.main = s.letters.main && typeof s.letters.main === 'object' ? s.letters.main : {};
+        if (!clean(s.letters.main.title)) s.letters.main.title = 'خطاب رفع المستهلكات';
+        if (!clean(s.letters.main.recipient)) s.letters.main.recipient = 'سعادة / مساعد المدير العام للدعم المساند';
+        if (!clean(s.letters.main.recipientSuffix)) s.letters.main.recipientSuffix = 'المحترم';
+        if (!clean(s.letters.main.body)) s.letters.main.body = 'نرفق لسعادتكم المستخلص الشهري لشركة {company} والخاص ببند المستهلكات ومقاولي الباطن{placePhrase}، {period}.';
+        if (!clean(s.letters.main.closing)) s.letters.main.closing = 'لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / {company}.\nوتقبلوا تحياتنا ،،،';
+        if (!s.letters.main.showStamp) s.letters.main.showStamp = 'no';
+
         s.letters.noPrev = s.letters.noPrev && typeof s.letters.noPrev === 'object' ? s.letters.noPrev : {};
         if (!clean(s.letters.noPrev.title)) s.letters.noPrev.title = 'إقرار بعدم أسبقية الصرف';
         if (!clean(s.letters.noPrev.body)) s.letters.noPrev.body = 'تشهد إدارة / {hospital} بأن استحقاق شركة / {company} لمستخلص المستهلكات ومقاولي الباطن دفعة رقم ({paymentNo}) بمبلغ ({grand} ريال).\n\nلم يسبق صرف هذا المستخلص من قبلنا.';
         if (!clean(s.letters.noPrev.closing)) s.letters.noPrev.closing = 'مع أطيب تحياتي ،،،';
         if (!s.letters.noPrev.showDate) s.letters.noPrev.showDate = 'yes';
         if (!s.letters.noPrev.showStamp) s.letters.noPrev.showStamp = 'yes';
+
+        s.letters.electricity = s.letters.electricity && typeof s.letters.electricity === 'object' ? s.letters.electricity : {};
+        if (!clean(s.letters.electricity.title)) s.letters.electricity.title = 'محضر حصر استهلاك الكهرباء للفترة من {start} إلى {end}';
+        if (!s.letters.electricity.hoursPerDay) s.letters.electricity.hoursPerDay = 8;
+        if (!s.letters.electricity.daysCount) s.letters.electricity.daysCount = 31;
+        if (!s.letters.electricity.rate) s.letters.electricity.rate = 0.05;
+        if (!Array.isArray(s.letters.electricity.rows)) s.letters.electricity.rows = [{ place: 'مكتب مدير الصيانة', load: 'مكيف شباك', power: 2.2 }];
+        if (!s.letters.electricity.showStamp) s.letters.electricity.showStamp = 'no';
+
+        s.letters.water = s.letters.water && typeof s.letters.water === 'object' ? s.letters.water : {};
+        if (!clean(s.letters.water.title)) s.letters.water.title = 'محضر استهلاك';
+        if (!clean(s.letters.water.body)) s.letters.water.body = 'نشهد نحن الموقعين أدناه بأنه قد تم استهلاك كميات مياه الشرب الموضحة أدناه{placePhrase} عن الفترة من {start} وحتى {end}.';
+        if (!Array.isArray(s.letters.water.rows)) s.letters.water.rows = [{ item: 'توريد مياه', unit: 'م³', qty: '', notes: '' }];
+        if (!s.letters.water.showStamp) s.letters.water.showStamp = 'no';
+
+        s.letters.certificate = s.letters.certificate && typeof s.letters.certificate === 'object' ? s.letters.certificate : {};
+        if (!clean(s.letters.certificate.title)) s.letters.certificate.title = 'شهادة';
+        if (!clean(s.letters.certificate.body)) s.letters.certificate.body = 'تشهد إدارة {hospital} بأن شركة {company} قامت بتوريد جميع المستهلكات والمواد الهندسية داخل الموقع وذلك عن الفترة من {start} وحتى {end}.\n\nوهذا مشهد منا بذلك.';
+        if (!s.letters.certificate.showStamp) s.letters.certificate.showStamp = 'no';
+
         return s;
       }
 
-      function syncLegacyToNoPrev(reason, force) {
+      function syncLegacyToAllLetters(reason, force) {
         try {
           var legacy = readJson(LEGACY_SIGNATURES_KEY, {});
-          var mapped = pickLegacySignatures(legacy);
-          if (!mapped.length) return false;
-
           var settings = ensureLetterShape(readJson(LETTER_SETTINGS_KEY, {}));
-          var existing = settings.letters.noPrev.signatures || [];
-          if (!force && !noPrevIsBlankOrDefault(existing)) return false;
-
+          var changed = false;
+          Object.keys(LEGACY_TO_LETTER_MAP).forEach(function (letterKey) {
+            var mapped = pickLegacySignatures(legacy, letterKey);
+            if (!mapped.length) return;
+            var existing = settings.letters[letterKey] && settings.letters[letterKey].signatures;
+            if (!force && !signatureIsBlankOrDefault(letterKey, existing)) return;
+            settings.letters[letterKey].signatures = mapped;
+            changed = true;
+          });
+          if (!changed) return false;
           settings.version = settings.version || 'hospital-consumables-letters-v6';
-          settings.letters.noPrev.signatures = mapped;
           settings.__signatureBridge = {
             source: LEGACY_SIGNATURES_KEY,
-            target: 'letters.noPrev.signatures',
+            targets: Object.keys(LEGACY_TO_LETTER_MAP).map(function (k) { return 'letters.' + k + '.signatures'; }),
             reason: reason || 'auto',
             syncedAt: new Date().toISOString()
           };
           originalSetItem(LETTER_SETTINGS_KEY, JSON.stringify(settings));
-          console.warn('[HospitalConsumablesSignatureBridge] synced legacy signatures to noPrev:', reason || 'auto');
+          console.warn('[HospitalConsumablesSignatureBridge] synced legacy signatures to all letters:', reason || 'auto');
           return true;
         } catch (e) {
           console.warn('[HospitalConsumablesSignatureBridge] sync failed:', e);
@@ -153,7 +199,7 @@
         try {
           if (String(key) === LEGACY_SIGNATURES_KEY) {
             var force = Date.now() <= forceLegacySyncUntil;
-            setTimeout(function () { syncLegacyToNoPrev(force ? 'legacy-signature-editor-save' : 'legacy-setItem', force); }, 0);
+            setTimeout(function () { syncLegacyToAllLetters(force ? 'legacy-signature-editor-save' : 'legacy-setItem', force); }, 0);
           }
         } catch (_) {}
         return result;
@@ -168,9 +214,9 @@
       function relabelLegacySignatureButton() {
         try {
           var btn = document.getElementById('edit-signatures-btn');
-          if (!btn || btn.__hcLegacySignatureLabelV14) return;
-          btn.__hcLegacySignatureLabelV14 = true;
-          btn.title = 'هذا الزر يعدل تواقيع جداول المستهلكات فقط. تواقيع الخطابات من زر خطابات المستهلكات.';
+          if (!btn || btn.__hcLegacySignatureLabelV15) return;
+          btn.__hcLegacySignatureLabelV15 = true;
+          btn.title = 'هذا الزر يعدل تواقيع جداول المستهلكات، ويتم ربطها تلقائيًا بكل خطابات المستهلكات. التعديل التفصيلي لكل خطاب من زر خطابات المستهلكات.';
           btn.innerHTML = '<i class="fas fa-signature"></i> تواقيع جداول المستهلكات';
         } catch (_) {}
       }
@@ -178,7 +224,7 @@
       relabelLegacySignatureButton();
       setTimeout(relabelLegacySignatureButton, 500);
       setTimeout(relabelLegacySignatureButton, 1500);
-      setTimeout(function () { syncLegacyToNoPrev('boot-if-letter-signature-empty', false); }, 1200);
+      setTimeout(function () { syncLegacyToAllLetters('boot-if-letter-signatures-empty', false); }, 1200);
     } catch (e) {
       console.warn('[HospitalConsumablesSignatureBridge] install failed:', e);
     }
@@ -208,7 +254,7 @@
           e.stopPropagation();
           if (e.stopImmediatePropagation) e.stopImmediatePropagation();
         }
-        location.href = '/original/hospital_consumables_letters_settings.html?v=20260704_v14_signature_bridge&t=' + Date.now();
+        location.href = '/original/hospital_consumables_letters_settings.html?v=20260704_v15_all_signature_bridge&t=' + Date.now();
         return false;
       };
 
