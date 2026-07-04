@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearch } from "wouter";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { QuranRadioFloatingPlayer } from "@/components/QuranRadioFloatingPlayer";
 import { usePageTracking } from "@/hooks/usePageTracking";
 import { useGetMe } from "@workspace/api-client-react";
 import { Rocket, Zap, Lock, BarChart3, Globe, Workflow, ShieldOff } from "lucide-react";
@@ -28,7 +29,9 @@ function ComingSoonPage() {
         <p className="text-gray-500 text-sm mb-8 leading-relaxed">
           هذه الوحدة قيد التطوير وستتضمن ميزات متقدمة لتخصيص النظام بالكامل.
         </p>
-        <div className="grid grid-cols-2 gap-3 mb-8">
+        <div
+          className="grid grid-cols-2 gap-3 mb-8"
+        >
           {[
             { icon: Workflow, label: "إدارة سير العمل" },
             { icon: BarChart3, label: "تقارير متقدمة" },
@@ -187,6 +190,7 @@ export default function OriginalViewer() {
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "#f0f4ff" }}>
       <Sidebar dbUserOverride={dbUser} />
+      <QuranRadioFloatingPlayer />
       <main className="flex-1 overflow-hidden">{content}</main>
     </div>
   );
