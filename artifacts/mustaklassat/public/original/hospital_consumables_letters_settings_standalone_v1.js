@@ -1,8 +1,9 @@
-// Standalone Consumables Letters Settings V5
+// Standalone Consumables Letters Settings V6
 (function () {
   'use strict';
 
   var KEY = 'hospitalConsumablesRaiseLettersSettings_v1';
+  var FALLBACK_LETTERHEAD_KEY = 'hospitalConsumablesLetterheadDataUrl_v1';
   var TS_KEY = KEY + '_autosave_ts';
   var VIEW_KEY = 'hospitalConsumablesSettingsView_v1';
   var FIXED_OLD_ENTITY = 'تجمع نجران الصحي';
@@ -18,6 +19,14 @@
   function clean(v) { return String(v == null ? '' : v).replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim(); }
   function yes(v) { return v === true || v === 'yes' || v === 'true' || v === '1'; }
   function readJson(k, f) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : f; } catch (_) { return f; } }
+  function fallbackLetterhead() { try { return clean(localStorage.getItem(FALLBACK_LETTERHEAD_KEY) || ''); } catch (_) { return ''; } }
+  function mirrorLetterheadFallback(s) {
+    try {
+      var img = clean(s && s.letterheadDataUrl);
+      if (img) localStorage.setItem(FALLBACK_LETTERHEAD_KEY, img);
+      else if (!yes(s && s.letterheadEnabled)) localStorage.removeItem(FALLBACK_LETTERHEAD_KEY);
+    } catch (_) {}
+  }
   function currentHospitalName() {
     var c = readJson('persistentContractData', {});
     return clean(c.hospitalName || c.siteName || c.centerName || localStorage.getItem('hospitalName') || localStorage.getItem('currentHospital') || 'المستشفى الحالي');
@@ -25,7 +34,7 @@
 
   function defaults() {
     return {
-      version: 'standalone-consumables-settings-v5',
+      version: 'standalone-consumables-settings-v6-letterhead-bridge',
       selectedDoc: 'main',
       letterheadEnabled: 'no',
       letterheadHasPlaceData: 'yes',
@@ -52,6 +61,7 @@
   function merge(a, b) { a = a || {}; b = b || {}; Object.keys(b).forEach(function (k) { if (b[k] && typeof b[k] === 'object' && !Array.isArray(b[k])) a[k] = merge(a[k] || {}, b[k]); else a[k] = b[k]; }); return a; }
   function normalize(s) {
     s = merge(defaults(), s || {});
+    if (!clean(s.letterheadDataUrl)) s.letterheadDataUrl = fallbackLetterhead();
     if (!s.letterheadMode) s.letterheadMode = s.letterheadDataUrl ? 'full' : 'external';
     if (clean(s.letterheadDataUrl) && yes(s.letterheadEnabled) && s.letterheadMode === 'external') s.letterheadMode = 'full';
     if (!s.entityTitleMode) s.entityTitleMode = clean(s.entityTitle) && clean(s.entityTitle) !== FIXED_OLD_ENTITY ? 'manual' : 'auto';
@@ -59,7 +69,13 @@
     return s;
   }
   function read() { return normalize(readJson(KEY, {})); }
-  function save(s) { s = normalize(s); s.version = 'standalone-consumables-settings-v5'; localStorage.setItem(KEY, JSON.stringify(s)); localStorage.setItem(TS_KEY, String(Date.now())); }
+  function save(s) {
+    s = normalize(s);
+    s.version = 'standalone-consumables-settings-v6-letterhead-bridge';
+    localStorage.setItem(KEY, JSON.stringify(s));
+    mirrorLetterheadFallback(s);
+    localStorage.setItem(TS_KEY, String(Date.now()));
+  }
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[c]; }); }
   function setPath(o, p, v) { p = p.split('.'); for (var i = 0; i < p.length - 1; i++) { o[p[i]] = o[p[i]] || {}; o = o[p[i]]; } o[p[p.length - 1]] = v; }
   function field(p, l, v, t) { return '<label class="field"><span>' + esc(l) + '</span><input data-p="' + esc(p) + '" type="' + (t || 'text') + '" value="' + esc(v) + '"></label>'; }
