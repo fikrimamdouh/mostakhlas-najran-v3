@@ -6,6 +6,7 @@ import { eq, desc, and } from "drizzle-orm";
 import { sendNewExtractEmail } from "../lib/email";
 
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const NOT_FOUND_OR_FORBIDDEN = "EXTRACT_NOT_FOUND_OR_FORBIDDEN";
 
 function advanceMonthInExtractData(jsonStr: string): string {
   try {
@@ -22,18 +23,8 @@ function advanceMonthInExtractData(jsonStr: string): string {
     const nextEnd = `${nextYear}-${pad(nextMonth1)}-${pad(lastDay)}`;
     const curPayment = parseInt(data.paymentNumber || data.extractNumber || '0', 10);
     const nextPayment = isNaN(curPayment) ? 1 : curPayment + 1;
-    return JSON.stringify({
-      ...data,
-      extractMonth: MONTHS_AR[nextIdx],
-      extractYear: String(nextYear),
-      extractStart: nextStart,
-      extractEnd: nextEnd,
-      paymentNumber: String(nextPayment),
-      extractNumber: String(nextPayment),
-    });
-  } catch {
-    return jsonStr;
-  }
+    return JSON.stringify({ ...data, extractMonth: MONTHS_AR[nextIdx], extractYear: String(nextYear), extractStart: nextStart, extractEnd: nextEnd, paymentNumber: String(nextPayment), extractNumber: String(nextPayment) });
+  } catch { return jsonStr; }
 }
 
 const router = Router();
@@ -43,32 +34,21 @@ const COMPANY_LABELS: Record<string, string> = {
   "سراكو": "شركة سراكو",
 };
 
-function resolveCompanyName(user: any, fallback: string | null = null): string | null {
-  return user.company ? (COMPANY_LABELS[user.company] || user.company) : fallback;
-}
-
-function resolveHospitalName(user: any, fallback: string | null = null): string | null {
-  return user.hospital || fallback;
-}
-
-function resolveContractNumber(user: any, fallback: string | null = null): string | null {
-  return user.contractNumber || fallback;
-}
+function resolveCompanyName(user: any, fallback: string | null = null): string | null { return user.company ? (COMPANY_LABELS[user.company] || user.company) : fallback; }
+function resolveHospitalName(user: any, fallback: string | null = null): string | null { return user.hospital || fallback; }
+function resolveContractNumber(user: any, fallback: string | null = null): string | null { return user.contractNumber || fallback; }
+function staleRevisionResponse(res: any) { return res.status(404).json({ error: NOT_FOUND_OR_FORBIDDEN }); }
 
 const requireApproved = async (req: any, res: any, next: any) => {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
   if (!user) return res.status(401).json({ error: "User not registered" });
-  if (user.status !== "approved" && user.role !== "admin") {
-    return res.status(403).json({ error: "Account pending approval" });
-  }
+  if (user.status !== "approved" && user.role !== "admin") return res.status(403).json({ error: "Account pending approval" });
   req.currentUser = user;
   next();
 };
 
 const requireAdmin = async (req: any, res: any, next: any) => {
-  if (req.currentUser?.role !== "admin" && req.currentUser?.role !== "supervisor") {
-    return res.status(403).json({ error: "Admin or supervisor required" });
-  }
+  if (req.currentUser?.role !== "admin" && req.currentUser?.role !== "supervisor") return res.status(403).json({ error: "Admin or supervisor required" });
   next();
 };
 
@@ -78,44 +58,10 @@ const requireStrictAdmin = async (req: any, res: any, next: any) => {
 };
 
 const COMPANY_SITES: Record<string, { sites: string[] }> = {
-  "زهران": {
-    sites: [
-      "مستشفى يدمه العام — زهران",
-      "مستشفى حبونا العام — زهران",
-      "مستشفى بدر الجنوب العام — زهران",
-    ],
-  },
-  "إيمان": {
-    sites: [
-      "مستشفى الولادة والأطفال — إيمان",
-      "مستشفى غرب نجران للولادة والأطفال والعيادات التخصصية — إيمان",
-      "المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة — إيمان",
-    ],
-  },
-  "بيت_العرب": {
-    sites: [
-      "مستشفى يدمة العام",
-      "مستشفى حبونا العام",
-      "مستشفى بدر الجنوب العام",
-      "مستشفى الولادة والأطفال",
-      "مستشفى نجران العام القديم وسكن الممرضات الخارجي",
-      "المكاتب الإدارية والمرافق الصحية",
-      "صيانة وإصلاح السيارات والعيادات المتنقلة",
-    ],
-  },
-  "سراكو": {
-    sites: [
-      "مستشفى نجران العام الجديد",
-      "مركز طب الأسنان التخصصي",
-      "مجمع الأمل للصحة النفسية",
-      "مستشفى ثار العام",
-      "مستشفى خباش العام",
-      "المراكز الصحية",
-      "مستشفى الملك خالد",
-      "مركز الأمير سلطان",
-      "مستشفى شروره العام",
-    ],
-  },
+  "زهران": { sites: ["مستشفى يدمه العام — زهران", "مستشفى حبونا العام — زهران", "مستشفى بدر الجنوب العام — زهران"] },
+  "إيمان": { sites: ["مستشفى الولادة والأطفال — إيمان", "مستشفى غرب نجران للولادة والأطفال والعيادات التخصصية — إيمان", "المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة — إيمان"] },
+  "بيت_العرب": { sites: ["مستشفى يدمة العام", "مستشفى حبونا العام", "مستشفى بدر الجنوب العام", "مستشفى الولادة والأطفال", "مستشفى نجران العام القديم وسكن الممرضات الخارجي", "المكاتب الإدارية والمرافق الصحية", "صيانة وإصلاح السيارات والعيادات المتنقلة"] },
+  "سراكو": { sites: ["مستشفى نجران العام الجديد", "مركز طب الأسنان التخصصي", "مجمع الأمل للصحة النفسية", "مستشفى ثار العام", "مستشفى خباش العام", "المراكز الصحية", "مستشفى الملك خالد", "مركز الأمير سلطان", "مستشفى شروره العام"] },
 };
 
 router.get("/", requireAuth, requireApproved, async (req: any, res) => {
@@ -123,7 +69,6 @@ router.get("/", requireAuth, requireApproved, async (req: any, res) => {
     const role = req.currentUser.role;
     const isAdminOrSup = role === "admin" || role === "supervisor" || role === "viewer";
     const isContractSup = role === "contract_supervisor";
-
     let whereClause: any = undefined;
     if (isContractSup) {
       const companyKey = req.currentUser.contractCompany;
@@ -134,36 +79,7 @@ router.get("/", requireAuth, requireApproved, async (req: any, res) => {
     } else if (!isAdminOrSup) {
       whereClause = eq(submittedExtractsTable.userId, req.currentUser.id);
     }
-
-    const rows = await db
-      .select({
-        id: submittedExtractsTable.id,
-        extractType: submittedExtractsTable.extractType,
-        companyName: submittedExtractsTable.companyName,
-        contractNumber: submittedExtractsTable.contractNumber,
-        hospitalName: submittedExtractsTable.hospitalName,
-        periodMonth: submittedExtractsTable.periodMonth,
-        totalAmount: submittedExtractsTable.totalAmount,
-        status: submittedExtractsTable.status,
-        revisionCount: submittedExtractsTable.revisionCount,
-        revisedAt: submittedExtractsTable.revisedAt,
-        notes: submittedExtractsTable.notes,
-        adminNotes: submittedExtractsTable.adminNotes,
-        approvedBy: submittedExtractsTable.approvedBy,
-        approvedAt: submittedExtractsTable.approvedAt,
-        extractData: submittedExtractsTable.extractData,
-        createdAt: submittedExtractsTable.createdAt,
-        updatedAt: submittedExtractsTable.updatedAt,
-        submittedByName: usersTable.name,
-        submittedByEmail: usersTable.email,
-        submittedByHospital: usersTable.hospital,
-        userId: submittedExtractsTable.userId,
-      })
-      .from(submittedExtractsTable)
-      .leftJoin(usersTable, eq(submittedExtractsTable.userId, usersTable.id))
-      .where(whereClause)
-      .orderBy(desc(submittedExtractsTable.createdAt));
-
+    const rows = await db.select({ id: submittedExtractsTable.id, extractType: submittedExtractsTable.extractType, companyName: submittedExtractsTable.companyName, contractNumber: submittedExtractsTable.contractNumber, hospitalName: submittedExtractsTable.hospitalName, periodMonth: submittedExtractsTable.periodMonth, totalAmount: submittedExtractsTable.totalAmount, status: submittedExtractsTable.status, revisionCount: submittedExtractsTable.revisionCount, revisedAt: submittedExtractsTable.revisedAt, notes: submittedExtractsTable.notes, adminNotes: submittedExtractsTable.adminNotes, approvedBy: submittedExtractsTable.approvedBy, approvedAt: submittedExtractsTable.approvedAt, extractData: submittedExtractsTable.extractData, createdAt: submittedExtractsTable.createdAt, updatedAt: submittedExtractsTable.updatedAt, submittedByName: usersTable.name, submittedByEmail: usersTable.email, submittedByHospital: usersTable.hospital, userId: submittedExtractsTable.userId }).from(submittedExtractsTable).leftJoin(usersTable, eq(submittedExtractsTable.userId, usersTable.id)).where(whereClause).orderBy(desc(submittedExtractsTable.createdAt));
     return res.json({ extracts: rows, total: rows.length });
   } catch (err) {
     req.log.error({ err }, "Failed to list submitted extracts");
@@ -175,10 +91,7 @@ router.delete("/:id", requireAuth, requireApproved, requireStrictAdmin, async (r
   try {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) return res.status(400).json({ error: "Invalid ID" });
-    const [existing] = await db.select({ id: submittedExtractsTable.id, hospitalName: submittedExtractsTable.hospitalName, extractType: submittedExtractsTable.extractType, periodMonth: submittedExtractsTable.periodMonth })
-      .from(submittedExtractsTable)
-      .where(eq(submittedExtractsTable.id, id))
-      .limit(1);
+    const [existing] = await db.select({ id: submittedExtractsTable.id, hospitalName: submittedExtractsTable.hospitalName, extractType: submittedExtractsTable.extractType, periodMonth: submittedExtractsTable.periodMonth }).from(submittedExtractsTable).where(eq(submittedExtractsTable.id, id)).limit(1);
     if (!existing) return res.status(404).json({ error: "Not found" });
     await db.delete(extractRevisionsTable).where(eq(extractRevisionsTable.extractId, id)).catch(() => {});
     await db.delete(submittedExtractsTable).where(eq(submittedExtractsTable.id, id));
@@ -194,62 +107,14 @@ router.post("/", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const { extractType, periodMonth, totalAmount, notes, contractNumber, extractData } = req.body;
     if (!extractType) return res.status(400).json({ error: "extractType is required" });
-
     const user = req.currentUser;
     const companyName = resolveCompanyName(user, req.body.companyName || null);
     const hospitalName = resolveHospitalName(user, req.body.hospitalName || null);
     const resolvedContractNumber = contractNumber || user.contractNumber || null;
     const extractDataJson = extractData ? JSON.stringify(extractData) : null;
-
-    const [row] = await db.insert(submittedExtractsTable).values({
-      userId: user.id,
-      extractType,
-      companyName,
-      contractNumber: resolvedContractNumber,
-      hospitalName,
-      periodMonth: periodMonth || null,
-      totalAmount: totalAmount != null ? String(totalAmount) : null,
-      notes: notes || null,
-      status: "submitted",
-      extractData: extractDataJson,
-    }).returning();
-
-    await db.insert(extractRevisionsTable).values({
-      extractId: row.id,
-      changedBy: user.name,
-      changedByRole: user.role,
-      previousStatus: null,
-      newStatus: "submitted",
-      notes: "تقديم مستخلص جديد",
-    });
-
-    void (async () => {
-      try {
-        const admins = await db
-          .select({ email: usersTable.email })
-          .from(usersTable)
-          .where(and(eq(usersTable.role, "admin"), eq(usersTable.status, "approved")));
-        const hospitalSupervisors = hospitalName
-          ? await db
-              .select({ email: usersTable.email })
-              .from(usersTable)
-              .where(and(eq(usersTable.role, "supervisor"), eq(usersTable.supervisedHospital, hospitalName), eq(usersTable.status, "approved")))
-          : [];
-        const recipients = [...admins.map(a => a.email), ...hospitalSupervisors.map(s => s.email)].filter((e): e is string => !!e);
-        if (recipients.length > 0) {
-          await sendNewExtractEmail(recipients, {
-            submitterName: user.name,
-            submitterEmail: user.email,
-            hospitalName: hospitalName || "—",
-            extractType,
-            periodMonth,
-            totalAmount: totalAmount != null ? String(totalAmount) : null,
-            extractId: row.id,
-          });
-        }
-      } catch (_) {}
-    })();
-
+    const [row] = await db.insert(submittedExtractsTable).values({ userId: user.id, extractType, companyName, contractNumber: resolvedContractNumber, hospitalName, periodMonth: periodMonth || null, totalAmount: totalAmount != null ? String(totalAmount) : null, notes: notes || null, status: "submitted", extractData: extractDataJson }).returning();
+    await db.insert(extractRevisionsTable).values({ extractId: row.id, changedBy: user.name, changedByRole: user.role, previousStatus: null, newStatus: "submitted", notes: "تقديم مستخلص جديد" });
+    void (async () => { try { const admins = await db.select({ email: usersTable.email }).from(usersTable).where(and(eq(usersTable.role, "admin"), eq(usersTable.status, "approved"))); const hospitalSupervisors = hospitalName ? await db.select({ email: usersTable.email }).from(usersTable).where(and(eq(usersTable.role, "supervisor"), eq(usersTable.supervisedHospital, hospitalName), eq(usersTable.status, "approved"))) : []; const recipients = [...admins.map(a => a.email), ...hospitalSupervisors.map(s => s.email)].filter((e): e is string => !!e); if (recipients.length > 0) await sendNewExtractEmail(recipients, { submitterName: user.name, submitterEmail: user.email, hospitalName: hospitalName || "—", extractType, periodMonth, totalAmount: totalAmount != null ? String(totalAmount) : null, extractId: row.id }); } catch (_) {} })();
     return res.status(201).json(row);
   } catch (err) {
     req.log.error({ err }, "Failed to submit extract");
@@ -261,46 +126,18 @@ router.put("/:id", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) return res.status(400).json({ error: "Invalid ID" });
-
     const [existing] = await db.select().from(submittedExtractsTable).where(eq(submittedExtractsTable.id, id)).limit(1);
-    if (!existing) return res.status(404).json({ error: "Not found" });
-    if (existing.userId !== req.currentUser.id) return res.status(403).json({ error: "Forbidden" });
-
+    if (!existing) return staleRevisionResponse(res);
+    if (existing.userId !== req.currentUser.id) return staleRevisionResponse(res);
     const isPreReviewEdit = existing.status === "submitted";
     const isReviewerRequestedRevision = existing.status === "needs_revision" || existing.status === "rejected";
-    if (!isPreReviewEdit && !isReviewerRequestedRevision) {
-      return res.status(400).json({ error: "لا يمكن تعديل المستخلص بعد بدء المراجعة أو بعد الاعتماد" });
-    }
-
+    if (!isPreReviewEdit && !isReviewerRequestedRevision) return res.status(400).json({ error: "لا يمكن تعديل المستخلص بعد بدء المراجعة أو بعد الاعتماد" });
     const { periodMonth, totalAmount, notes, extractData } = req.body;
     const user = req.currentUser;
     const extractDataJson = extractData ? JSON.stringify(extractData) : existing.extractData;
     const nextRevisionCount = isReviewerRequestedRevision ? (existing.revisionCount ?? 0) + 1 : (existing.revisionCount ?? 0);
-
-    const [row] = await db.update(submittedExtractsTable).set({
-      companyName: resolveCompanyName(user, existing.companyName),
-      contractNumber: resolveContractNumber(user, existing.contractNumber),
-      hospitalName: resolveHospitalName(user, existing.hospitalName),
-      periodMonth: periodMonth ?? existing.periodMonth,
-      totalAmount: totalAmount != null ? String(totalAmount) : existing.totalAmount,
-      extractData: extractDataJson,
-      notes: notes ?? existing.notes,
-      status: "submitted",
-      revisionCount: nextRevisionCount,
-      revisedAt: new Date(),
-      adminNotes: isReviewerRequestedRevision ? null : existing.adminNotes,
-      updatedAt: new Date(),
-    }).where(eq(submittedExtractsTable.id, id)).returning();
-
-    await db.insert(extractRevisionsTable).values({
-      extractId: row.id,
-      changedBy: req.currentUser.name,
-      changedByRole: req.currentUser.role,
-      previousStatus: existing.status,
-      newStatus: "submitted",
-      notes: isReviewerRequestedRevision ? `تعديل رقم ${row.revisionCount}` : "تعديل قبل بدء المراجعة",
-    });
-
+    const [row] = await db.update(submittedExtractsTable).set({ companyName: resolveCompanyName(user, existing.companyName), contractNumber: resolveContractNumber(user, existing.contractNumber), hospitalName: resolveHospitalName(user, existing.hospitalName), periodMonth: periodMonth ?? existing.periodMonth, totalAmount: totalAmount != null ? String(totalAmount) : existing.totalAmount, extractData: extractDataJson, notes: notes ?? existing.notes, status: "submitted", revisionCount: nextRevisionCount, revisedAt: new Date(), adminNotes: isReviewerRequestedRevision ? null : existing.adminNotes, updatedAt: new Date() }).where(eq(submittedExtractsTable.id, id)).returning();
+    await db.insert(extractRevisionsTable).values({ extractId: row.id, changedBy: req.currentUser.name, changedByRole: req.currentUser.role, previousStatus: existing.status, newStatus: "submitted", notes: isReviewerRequestedRevision ? `تعديل رقم ${row.revisionCount}` : "تعديل قبل بدء المراجعة" });
     return res.json(row);
   } catch (err) {
     req.log.error({ err }, "Failed to resubmit extract");
@@ -310,12 +147,7 @@ router.put("/:id", requireAuth, requireApproved, async (req: any, res) => {
 
 router.get("/:id", requireAuth, requireApproved, async (req: any, res) => {
   try {
-    const [row] = await db
-      .select()
-      .from(submittedExtractsTable)
-      .leftJoin(usersTable, eq(submittedExtractsTable.userId, usersTable.id))
-      .where(eq(submittedExtractsTable.id, Number(req.params.id)))
-      .limit(1);
+    const [row] = await db.select().from(submittedExtractsTable).leftJoin(usersTable, eq(submittedExtractsTable.userId, usersTable.id)).where(eq(submittedExtractsTable.id, Number(req.params.id))).limit(1);
     if (!row) return res.status(404).json({ error: "Not found" });
     const isOwner = row.submitted_extracts.userId === req.currentUser.id;
     const isAdminOrSup = req.currentUser.role === "admin" || req.currentUser.role === "supervisor";
@@ -334,45 +166,23 @@ router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (r
     if (!validStatuses.includes(status)) return res.status(400).json({ error: "Invalid status" });
     const updates: any = { status, updatedAt: new Date() };
     if (adminNotes !== undefined) updates.adminNotes = adminNotes;
-    if (status === "approved") {
-      updates.approvedBy = req.currentUser.name;
-      updates.approvedAt = new Date();
-    }
-
+    if (status === "approved") { updates.approvedBy = req.currentUser.name; updates.approvedAt = new Date(); }
     const [existing] = await db.select().from(submittedExtractsTable).where(eq(submittedExtractsTable.id, Number(req.params.id))).limit(1);
     const [row] = await db.update(submittedExtractsTable).set(updates).where(eq(submittedExtractsTable.id, Number(req.params.id))).returning();
     if (!row) return res.status(404).json({ error: "Not found" });
-
-    await db.insert(extractRevisionsTable).values({
-      extractId: row.id,
-      changedBy: req.currentUser.name,
-      changedByRole: req.currentUser.role,
-      previousStatus: existing?.status ?? null,
-      newStatus: status,
-      notes: adminNotes || null,
-    }).catch(() => {});
-
+    await db.insert(extractRevisionsTable).values({ extractId: row.id, changedBy: req.currentUser.name, changedByRole: req.currentUser.role, previousStatus: existing?.status ?? null, newStatus: status, notes: adminNotes || null }).catch(() => {});
     if (status === "approved" && row.userId) {
       try {
-        const [storageRow] = await db.select().from(userStorageTable)
-          .where(and(eq(userStorageTable.userId, row.userId), eq(userStorageTable.storageKey, 'persistentExtractData')))
-          .limit(1);
+        const [storageRow] = await db.select().from(userStorageTable).where(and(eq(userStorageTable.userId, row.userId), eq(userStorageTable.storageKey, 'persistentExtractData'))).limit(1);
         if (storageRow?.storageValue) {
           const advanced = advanceMonthInExtractData(storageRow.storageValue);
-          await db.update(userStorageTable)
-            .set({ storageValue: advanced, updatedAt: new Date() })
-            .where(and(eq(userStorageTable.userId, row.userId), eq(userStorageTable.storageKey, 'persistentExtractData')));
+          await db.update(userStorageTable).set({ storageValue: advanced, updatedAt: new Date() }).where(and(eq(userStorageTable.userId, row.userId), eq(userStorageTable.storageKey, 'persistentExtractData')));
         }
-      } catch (advErr) {
-        req.log.warn({ advErr }, "Month advance failed (non-fatal)");
-      }
+      } catch (advErr) { req.log.warn({ advErr }, "Month advance failed (non-fatal)"); }
     }
-
-    // إشعار صاحب المستخلص بتغيير الحالة (لا يفشل الطلب أبدًا)
     try {
-      if (!row.userId) {
-        req.log?.warn?.({ extractId: row.id }, "notification skipped: extract has no userId");
-      } else if (["needs_revision", "approved", "rejected"].includes(status)) {
+      if (!row.userId) req.log?.warn?.({ extractId: row.id }, "notification skipped: extract has no userId");
+      else if (["needs_revision", "approved", "rejected"].includes(status)) {
         const period = [row.extractMonth, row.extractYear].filter(Boolean).join(" ") || row.periodMonth || "";
         const pay = row.paymentNumber || row.extractNumber || "";
         const label = period + (pay ? " — دفعة " + pay : "");
@@ -382,15 +192,9 @@ router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (r
           rejected: { type: "extract_rejected", title: "تم رفض المستخلص", body: "تم رفض مستخلص شهر " + label + (adminNotes ? " — ملاحظة المراجع: " + adminNotes : "") },
         };
         const n = map[status];
-        if (n) {
-          await createNotificationSafe({ userId: row.userId, ...n, href: "/extracts/track", createdBy: req.currentUser?.name || "reviewer" });
-          req.log?.info?.({ extractId: row.id, userId: row.userId, status }, "notification created for extract owner");
-        }
+        if (n) { await createNotificationSafe({ userId: row.userId, ...n, href: "/extracts/track", createdBy: req.currentUser?.name || "reviewer" }); req.log?.info?.({ extractId: row.id, userId: row.userId, status }, "notification created for extract owner"); }
       }
-    } catch (notifErr) {
-      req.log?.warn?.({ notifErr }, "notification create skipped (non-fatal)");
-    }
-
+    } catch (notifErr) { req.log?.warn?.({ notifErr }, "notification create skipped (non-fatal)"); }
     return res.json({ ...row, monthAdvanced: status === "approved" });
   } catch (err) {
     req.log.error({ err }, "Failed to update extract status");
@@ -401,17 +205,12 @@ router.patch("/:id/status", requireAuth, requireApproved, requireAdmin, async (r
 router.get(":id/revisions", requireAuth, requireApproved, async (req: any, res) => {
   try {
     const extractId = Number(req.params.id);
-    const [extract] = await db.select({ userId: submittedExtractsTable.userId })
-      .from(submittedExtractsTable).where(eq(submittedExtractsTable.id, extractId)).limit(1);
+    const [extract] = await db.select({ userId: submittedExtractsTable.userId }).from(submittedExtractsTable).where(eq(submittedExtractsTable.id, extractId)).limit(1);
     if (!extract) return res.status(404).json({ error: "Not found" });
     const isOwner = extract.userId === req.currentUser.id;
     const isAdminOrSup = ["admin", "supervisor", "contract_supervisor"].includes(req.currentUser.role);
     if (!isOwner && !isAdminOrSup) return res.status(403).json({ error: "Forbidden" });
-    const rows = await db
-      .select()
-      .from(extractRevisionsTable)
-      .where(eq(extractRevisionsTable.extractId, extractId))
-      .orderBy(desc(extractRevisionsTable.createdAt));
+    const rows = await db.select().from(extractRevisionsTable).where(eq(extractRevisionsTable.extractId, extractId)).orderBy(desc(extractRevisionsTable.createdAt));
     return res.json({ revisions: rows });
   } catch (err) {
     req.log.error({ err }, "Failed to get revisions");
