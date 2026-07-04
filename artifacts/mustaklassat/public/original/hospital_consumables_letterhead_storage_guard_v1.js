@@ -88,6 +88,7 @@
 
     s.version = 'hospital-consumables-letterhead-guard-v2';
     s.letterheadDataUrl = dataUrl;
+    s.letterheadDeleted = false;
     s.letterheadEnabled = 'yes';
     s.letterheadMode = 'full';
     if (!clean(s.letterheadHasPlaceData)) s.letterheadHasPlaceData = 'yes';
@@ -99,10 +100,15 @@
   }
 
   function repairSettingsFromFallback() {
-    var img = clean(localStorage.getItem(FALLBACK_IMG_KEY));
-    if (!img) return false;
     var s = readJson(KEY, {});
     if (!s || typeof s !== 'object') s = {};
+    if (s.letterheadDeleted === true) {
+      // الترويسة محذوفة قصدًا — لا استرجاع، ونظّف بقايا الfallback إن وجدت.
+      try { localStorage.removeItem(FALLBACK_IMG_KEY); localStorage.removeItem(FALLBACK_META_KEY); } catch (_) {}
+      return false;
+    }
+    var img = clean(localStorage.getItem(FALLBACK_IMG_KEY));
+    if (!img) return false;
     if (clean(s.letterheadDataUrl) === img && s.letterheadMode === 'full' && s.letterheadEnabled === 'yes') return false;
     s.letterheadDataUrl = img;
     s.letterheadEnabled = 'yes';

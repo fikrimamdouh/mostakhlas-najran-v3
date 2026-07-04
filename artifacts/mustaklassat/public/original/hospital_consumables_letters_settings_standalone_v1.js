@@ -22,6 +22,11 @@
   function fallbackLetterhead() { try { return clean(localStorage.getItem(FALLBACK_LETTERHEAD_KEY) || ''); } catch (_) { return ''; } }
   function mirrorLetterheadFallback(s) {
     try {
+      if (s && s.letterheadDeleted === true) {
+        localStorage.removeItem(FALLBACK_LETTERHEAD_KEY);
+        localStorage.removeItem('hospitalConsumablesLetterheadMeta_v1');
+        return;
+      }
       var img = clean(s && s.letterheadDataUrl);
       if (img) localStorage.setItem(FALLBACK_LETTERHEAD_KEY, img);
       else if (!yes(s && s.letterheadEnabled)) localStorage.removeItem(FALLBACK_LETTERHEAD_KEY);
@@ -61,7 +66,7 @@
   function merge(a, b) { a = a || {}; b = b || {}; Object.keys(b).forEach(function (k) { if (b[k] && typeof b[k] === 'object' && !Array.isArray(b[k])) a[k] = merge(a[k] || {}, b[k]); else a[k] = b[k]; }); return a; }
   function normalize(s) {
     s = merge(defaults(), s || {});
-    if (!clean(s.letterheadDataUrl)) s.letterheadDataUrl = fallbackLetterhead();
+    if (!clean(s.letterheadDataUrl) && s.letterheadDeleted !== true) s.letterheadDataUrl = fallbackLetterhead();
     if (!s.letterheadMode) s.letterheadMode = s.letterheadDataUrl ? 'full' : 'external';
     if (clean(s.letterheadDataUrl) && yes(s.letterheadEnabled) && s.letterheadMode === 'external') s.letterheadMode = 'full';
     if (!s.entityTitleMode) s.entityTitleMode = clean(s.entityTitle) && clean(s.entityTitle) !== FIXED_OLD_ENTITY ? 'manual' : 'auto';
@@ -181,9 +186,9 @@ if (printNow) {
 }
     document.getElementById('back').onclick = function () { readForm(); history.length > 1 ? history.back() : (location.href = '/original/consumables.html'); };
     var del = document.getElementById('deleteHead');
-    if (del) del.onclick = function () { var s = readForm(); s.letterheadDataUrl = ''; s.letterheadEnabled = 'no'; save(s); render(); };
+    if (del) del.onclick = function () { var s = readForm(); s.letterheadDataUrl = ''; s.letterheadEnabled = 'no'; s.letterheadDeleted = true; try { localStorage.removeItem(FALLBACK_LETTERHEAD_KEY); localStorage.removeItem('hospitalConsumablesLetterheadMeta_v1'); } catch (_) {} save(s); render(); };
     var hf = document.getElementById('headFile');
-    if (hf) hf.onchange = function () { var f = this.files && this.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { var s = readForm(); s.letterheadDataUrl = String(r.result || ''); s.letterheadEnabled = 'yes'; s.letterheadMode = 'full'; save(s); render(); }; r.readAsDataURL(f); };
+    if (hf) hf.onchange = function () { var f = this.files && this.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { var s = readForm(); s.letterheadDataUrl = String(r.result || ''); s.letterheadEnabled = 'yes'; s.letterheadMode = 'full'; s.letterheadDeleted = false; save(s); render(); }; r.readAsDataURL(f); };
     var addSig2 = document.getElementById('addSig');
     if (addSig2) addSig2.onclick = function () { var s = readForm(), k = s.selectedDoc || 'main'; s.letters[k].signatures = s.letters[k].signatures || []; s.letters[k].signatures.push({ title: '', name: '' }); save(s); render(); };
     var rem = document.getElementById('removeSig');

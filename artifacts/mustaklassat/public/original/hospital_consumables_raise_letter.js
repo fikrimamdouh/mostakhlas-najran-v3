@@ -160,7 +160,8 @@ const DB_VERSION = 'consumables_v27';  const DOCS = [
       const d = defaultSettings(); raw = raw || {};
       d.letterheadEnabled = raw.letterheadEnabled || d.letterheadEnabled;
       d.letterheadMode = raw.letterheadMode || (raw.letterheadDataUrl ? 'full' : d.letterheadMode);
-      d.letterheadDataUrl = raw.letterheadDataUrl || fallbackLetterheadImage() || d.letterheadDataUrl;
+      d.letterheadDeleted = raw.letterheadDeleted === true;
+      d.letterheadDataUrl = raw.letterheadDataUrl || (d.letterheadDeleted ? '' : fallbackLetterheadImage()) || (d.letterheadDeleted ? '' : d.letterheadDataUrl);
       d.letterheadHasPlaceData = raw.letterheadHasPlaceData || d.letterheadHasPlaceData;
       d.contentTop = raw.contentTop || d.contentTop;
       d.letterheadHeight = raw.letterheadHeight || d.letterheadHeight;
@@ -176,7 +177,7 @@ const DB_VERSION = 'consumables_v27';  const DOCS = [
     }
     const s = merge(defaultSettings(), raw);
     if (!s.letterheadMode) s.letterheadMode = s.letterheadDataUrl ? 'full' : 'external';
-    if (!clean(s.letterheadDataUrl)) {
+    if (!clean(s.letterheadDataUrl) && s.letterheadDeleted !== true) {
   s.letterheadDataUrl = fallbackLetterheadImage();
 }
   
@@ -191,6 +192,7 @@ const DB_VERSION = 'consumables_v27';  const DOCS = [
 }
 
 function resolvedLetterheadImage(s) {
+  if (s && s.letterheadDeleted === true) return clean((s && s.letterheadDataUrl) || '');
   return clean((s && s.letterheadDataUrl) || '') || fallbackLetterheadImage();
 }
 
@@ -428,6 +430,7 @@ function installLetterheadUpload() {
       s.letterheadDataUrl = img;
       s.letterheadEnabled = 'yes';
       s.letterheadMode = 'full';
+      s.letterheadDeleted = false;
 
       try {
         localStorage.setItem(FALLBACK_LETTERHEAD_KEY, img);
@@ -477,6 +480,7 @@ window.HospitalConsumablesRaiseLetter = {
     const s = getSettings();
     s.letterheadDataUrl = '';
     s.letterheadEnabled = 'no';
+    s.letterheadDeleted = true;
 
     try {
       localStorage.removeItem(FALLBACK_LETTERHEAD_KEY);

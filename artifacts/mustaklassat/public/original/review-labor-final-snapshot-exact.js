@@ -99,7 +99,21 @@
     var html = '<div class="rv-doc" data-labor-final-snapshot-exact="1"><header class="rv-doc-head"><div><h2>مستخلص العمالة</h2>' +
       '<p>' + esc(m.hospitalName || e.hospitalName || e.submittedByHospital || '—') + ' — ' + esc(m.companyName || e.companyName || '—') + ' — ' + esc(m.period || e.periodMonth || '—') + ' — دفعة ' + esc(m.paymentNumber || e.paymentNumber || '—') + '</p>' +
       '<small style="display:block;margin-top:6px;color:#64748b;font-weight:900">مصدر العرض: finalReviewSnapshot — ممنوع إعادة الحساب</small></div><b>' + esc(status) + '</b></header>';
-    html += '<nav class="rv-tabs"><a href="#rv-summary" class="rv-nav-card"><b>ملخص المراجعة</b><span>لقطة نهائية</span></a><a href="#rv-achievement" class="rv-nav-card"><b>شهادة الإنجاز</b><span>نفس جدول المستخدم</span></a></nav>';
+    // أقسام التفاصيل من snapshot المرفوع فقط (نفس عارضي المسار الكامل) — الإجماليات تبقى من frs بلا إعادة حساب.
+    var sections = window.__najranReviewLaborSections || null;
+    var s = snap(e);
+    var attHtml = '', perfHtml = '';
+    if (sections) {
+      try {
+        var pi = sections.periodInfo(sections.meta(e));
+        attHtml = sections.attendanceHtml(s, pi) || '';
+        perfHtml = sections.performanceHtml(s) || '';
+      } catch (err) { console.warn('[LaborFinalSnapshotExact] detail sections skipped', err); }
+    }
+    html += '<nav class="rv-tabs"><a href="#rv-summary" class="rv-nav-card"><b>ملخص المراجعة</b><span>لقطة نهائية</span></a>' +
+      (attHtml ? '<a href="#rv-attendance" class="rv-nav-card"><b>الحضور والانصراف</b><span>من snapshot المرفوع</span></a>' : '') +
+      (perfHtml ? '<a href="#rv-performance" class="rv-nav-card"><b>شهادة الأداء الشهري</b><span>من snapshot المرفوع</span></a>' : '') +
+      '<a href="#rv-achievement" class="rv-nav-card"><b>شهادة الإنجاز</b><span>نفس جدول المستخدم</span></a></nav>';
     html += '<section id="rv-summary"><h3>ملخص المراجعة</h3><div class="rv-period-note" style="background:#f0fdf4;border-color:#86efac;color:#166534"><b>✓ يتم العرض من لقطة المستخدم النهائية فقط — لا إعادة حساب من localStorage أو الحضور الخام</b></div>';
     html += '<div class="rv-main-stats">' +
       stat('نوع المستخلص', 'مستخلص العمالة', 'primary') +
@@ -108,6 +122,8 @@
       stat('قيمة الكارت / الصافي النهائي', money(final), 'ok') +
       '</div>';
     html += '<div class="rv-info-grid"><div><b>الفترة</b><span>' + esc(m.period || e.periodMonth || '—') + '</span></div><div><b>من تاريخ</b><span>' + esc(fmtDate(m.extractStart || e.extractStart)) + '</span></div><div><b>إلى تاريخ</b><span>' + esc(fmtDate(m.extractEnd || e.extractEnd)) + '</span></div><div><b>Snapshot</b><span>' + esc(frs.schema || '—') + '</span></div><div><b>noRecalculate</b><span>' + esc(frs.noRecalculate === true ? 'true' : '—') + '</span></div></div></section>';
+    if (attHtml) html += '<section id="rv-attendance" class="rv-section-break"><h3>الحضور والانصراف</h3>' + attHtml + '</section>';
+    if (perfHtml) html += '<section id="rv-performance" class="rv-section-break"><h3>شهادة الأداء الشهري</h3>' + perfHtml + '</section>';
     html += '<section id="rv-achievement" class="rv-section-break"><h3>شهادة الإنجاز</h3><div class="rv-main-stats">' +
       stat('القيمة قبل الحسميات', money(monthly), 'primary') +
       stat('إجمالي الحسميات والغرامات', money(deductions), deductions > 0 ? 'warn' : 'ok') +

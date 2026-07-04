@@ -143,7 +143,7 @@
       if (e.target.closest('[data-hc-save]')) { readModalIntoSettings(); var n = document.getElementById('hc-cons-note'); if (n) n.textContent = 'تم الحفظ.'; return; }
       if (e.target.closest('[data-hc-print]')) { readModalIntoSettings(); if (window.HospitalConsumablesRaiseLetter && window.HospitalConsumablesRaiseLetter.printSelected) window.HospitalConsumablesRaiseLetter.printSelected(); return; }
       if (e.target.closest('[data-hc-full]')) { readModalIntoSettings(); if (window.HospitalConsumablesRaiseLetter && window.HospitalConsumablesRaiseLetter.printFullExtract) window.HospitalConsumablesRaiseLetter.printFullExtract(); return; }
-      if (e.target.closest('[data-hc-delete-head]')) { var s2 = readModalIntoSettings(); s2.letterheadDataUrl = ''; s2.letterheadEnabled = 'no'; saveSettings(s2); renderModal(); return; }
+      if (e.target.closest('[data-hc-delete-head]')) { var s2 = readModalIntoSettings(); s2.letterheadDataUrl = ''; s2.letterheadEnabled = 'no'; s2.letterheadDeleted = true; try { localStorage.removeItem('hospitalConsumablesLetterheadDataUrl_v1'); localStorage.removeItem('hospitalConsumablesLetterheadMeta_v1'); } catch (_) {} saveSettings(s2); renderModal(); return; }
       if (e.target.closest('[data-hc-add-sign]')) { var s3 = readModalIntoSettings(); var k = s3.selectedDoc || 'main'; s3.letters[k].signatures = s3.letters[k].signatures || []; s3.letters[k].signatures.push({ title: '', name: '' }); saveSettings(s3); renderModal(); return; }
       if (e.target.closest('[data-hc-remove-sign]')) { var s4 = readModalIntoSettings(); var k2 = s4.selectedDoc || 'main'; if ((s4.letters[k2].signatures || []).length > 1) s4.letters[k2].signatures.pop(); saveSettings(s4); renderModal(); }
     }, true);
@@ -156,6 +156,7 @@
       r.onload = function () {
         var s = readModalIntoSettings();
         s.letterheadDataUrl = String(r.result || '');
+        s.letterheadDeleted = false;
         s.letterheadEnabled = 'yes';
         s.letterheadMode = 'full';
         saveSettings(s);
