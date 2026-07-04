@@ -16,7 +16,7 @@ function w(k,v){localStorage.setItem(k,JSON.stringify(v))}
 function loadLocalSaveButtons(){
 if(document.querySelector('script[src*="admin_offices_local_save_buttons.js"]'))return;
 const s=document.createElement('script');
-s.src='/original/admin_offices_local_save_buttons.js?v=20260704_admin_local_save_v1';
+s.src='/original/admin_offices_local_save_buttons.js?v=20260704_admin_local_save_v2_quota_safe';
 s.defer=true;
 document.head.appendChild(s);
 }
@@ -143,5 +143,5 @@ bar.appendChild(b);
 function boot(){loadLocalSaveButtons();addConsumablesButtonStyles();addButton();if(!localStorage.getItem(FLAG))apply();if(normalizeSubcontractors())setTimeout(function(){location.reload()},50)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 setTimeout(function(){loadLocalSaveButtons();addConsumablesButtonStyles();addButton()},1200);
-console.info('[Admin Offices Consumables Template Patch] installed normalized subcontractors + button polish + separated local save loader');
+console.info('[Admin Offices Consumables Template Patch] installed normalized subcontractors + button polish + separated local save loader v2');
 })();
