@@ -168,7 +168,37 @@
       blockedReviewSources: [
         'raw salary', 'deduction', 'absence', 'employee rows', 'localStorage',
         'performance recalculation', 'achievement recalculation'
-      ]
+      ],
+
+      // ─── Validation: منع الرفع لو فيه خلل مالي ───
+      validationErrors: (() => {
+        const errors = [];
+        try {
+          // 1) موظف حاضر كل أيام المستخلص ("ش" كلها) وصافيه > 0 عند الحاجة فقط
+          // (ملاحظة: هذا التحقق معقد ويعتمد على بنية أيام كل موظف — يُفعّل لاحقًا عند الطلب)
+
+          // 2) حسم الأداء في جدول الأداء ≠ حسم الأداء في شهادة الإنجاز (سماح 0.01)
+          const perfDed = Number(totals.performancePenalty || 0);
+          const achTable = table.rows || [];
+          // ابحث عن صف "غرامة الأداء" في شهادة الإنجاز
+          const perfRowInAch = achTable.find(r =>
+            r.rowType === 'line' && r.cells && r.cells.some(c =>
+              String(c).includes('الأداء') || String(c).includes('performance')
+            )
+          );
+          if (perfRowInAch && perfRowInAch.cells) {
+            // آخر خلية رقمية = القيمة
+            const achPerfVal = [...perfRowInAch.cells].reverse().find(c => !isNaN(parseFloat(String(c).replace(/,/g, ''))));
+            if (achPerfVal != null) {
+              const achPerfNum = Math.abs(parseFloat(String(achPerfVal).replace(/,/g, '')) || 0);
+              if (Math.abs(perfDed - achPerfNum) > 0.01 && perfDed > 0 && achPerfNum > 0) {
+                errors.push('حسم الأداء في جدول الأداء (' + perfDed.toFixed(2) + ') لا يساوي حسم الأداء في شهادة الإنجاز (' + achPerfNum.toFixed(2) + ')');
+              }
+            }
+          }
+        } catch (_) {}
+        return errors;
+      })()
     };
   }
 
@@ -498,6 +528,14 @@
         setLoading('جاري الرفع...');
         try {
           const finalReviewSnapshot = await finalizeLaborExtractBeforeSubmit();
+
+          // ─── Validation gate: منع الرفع لو فيه خلل مالي ───
+          if (finalReviewSnapshot && Array.isArray(finalReviewSnapshot.validationErrors) && finalReviewSnapshot.validationErrors.length > 0) {
+            alert('⚠️ لا يمكن رفع المستخلص — خلل في الأرقام:\n\n' + finalReviewSnapshot.validationErrors.join('\n') + '\n\nصحّح الخلل ثم أعد المحاولة.');
+            resetBtn('رفع مستخلص العمالة للاعتماد');
+            return;
+          }
+
           await submitExtract('labor', {
             finalReviewSnapshot,
             reviewSnapshotSchema: LABOR_FINAL_REVIEW_SCHEMA
