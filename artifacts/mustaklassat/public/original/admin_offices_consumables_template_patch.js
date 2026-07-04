@@ -13,6 +13,13 @@ titles:`print_titles_data_${DB}`
 };
 function j(k,f){try{const r=localStorage.getItem(k);return r?JSON.parse(r):f}catch(e){return f}}
 function w(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function loadLocalSaveButtons(){
+if(document.querySelector('script[src*="admin_offices_local_save_buttons.js"]'))return;
+const s=document.createElement('script');
+s.src='/original/admin_offices_local_save_buttons.js?v=20260704_admin_local_save_v1';
+s.defer=true;
+document.head.appendChild(s);
+}
 function apply(){
 w(S.summary,[
 {id:'pf_1',name:'الوقود والزيوت والمحروقات',value:1240,isEditable:true,isCustom:false},
@@ -133,8 +140,8 @@ b.innerHTML='<i class="fas fa-file-contract"></i> تطبيق نموذج مسته
 b.onclick=function(){if(confirm('سيتم تطبيق نموذج مستهلكات المكاتب مع بقاء المعادلات.')){localStorage.removeItem(FLAG);apply();location.reload()}};
 bar.appendChild(b);
 }
-function boot(){addConsumablesButtonStyles();addButton();if(!localStorage.getItem(FLAG))apply();if(normalizeSubcontractors())setTimeout(function(){location.reload()},50)}
+function boot(){loadLocalSaveButtons();addConsumablesButtonStyles();addButton();if(!localStorage.getItem(FLAG))apply();if(normalizeSubcontractors())setTimeout(function(){location.reload()},50)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
-setTimeout(function(){addConsumablesButtonStyles();addButton()},1200);
-console.info('[Admin Offices Consumables Template Patch] installed normalized subcontractors + button polish');
+setTimeout(function(){loadLocalSaveButtons();addConsumablesButtonStyles();addButton()},1200);
+console.info('[Admin Offices Consumables Template Patch] installed normalized subcontractors + button polish + separated local save loader');
 })();
