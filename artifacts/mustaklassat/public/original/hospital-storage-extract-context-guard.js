@@ -4,6 +4,7 @@ if(window.__najranHospitalStorageExtractContextGuard)return;
 window.__najranHospitalStorageExtractContextGuard=true;
 var STALE_REVISION_MESSAGE='تعذر إعادة رفع التعديل: السجل المطلوب تعديله غير موجود أو غير متاح لهذا الحساب.';
 var LOCAL_SAVE_QUOTA_MESSAGE='تعذر الحفظ المحلي بسبب امتلاء مساحة المتصفح. لم يتم رفع أو حذف أي بيانات.';
+try{console.info('[RevisionSubmitGuard] stale revision 404 modal installed v2')}catch(_){}
 function parseJSON(v){if(!v)return null;if(typeof v==='object')return v;try{return JSON.parse(String(v))}catch(_){return null}}
 function sanitize(v){return String(v||'').trim().replace(/\s+/g,'_').replace(/[^\u0600-\u06FFA-Za-z0-9_\-.]/g,'_').slice(0,140)}
 function readExtractContextKey(){var p=parseJSON(localStorage.getItem('persistentExtractData'))||{};var raw=[p.extractYear||localStorage.getItem('extractYear')||'',p.extractMonth||localStorage.getItem('extractMonth')||'',p.extractNumber||p.paymentNumber||localStorage.getItem('extractNumber')||localStorage.getItem('paymentNumber')||'',p.extractStart||localStorage.getItem('extractStart')||'',p.extractEnd||localStorage.getItem('extractEnd')||''].filter(Boolean).join('__');return sanitize(raw)}
