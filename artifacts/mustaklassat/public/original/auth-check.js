@@ -10,7 +10,7 @@
   var BASE = window.location.origin;
   var BUILD_V = '20260623archiveBundleRouteV1';
   var NOTIF_INTERVAL_MS = 300000;
-  var NAJRAN_BUILD_VERSION = '2026.07.04-r4';
+  var NAJRAN_BUILD_VERSION = '2026.07.04-r5';
   window.NAJRAN_BUILD_VERSION = NAJRAN_BUILD_VERSION;
 
   try { console.info('%c[Najran] النسخة: ' + NAJRAN_BUILD_VERSION, 'color:#1e3c72;font-weight:bold'); } catch (_) {}
