@@ -75,7 +75,7 @@ const LOCAL_WORK_KEYS = [
   "persistentExtractData",
 ];
 
-const STATUS_CONFIG: Record<ExtractStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+const STATUS_CONFIG: Record<ExtractStatus, { label: string; color: string; bg: string; icon: JSX.Element }> = {
   submitted: { label: "بانتظار المراجعة", color: "#2a5298", bg: "#eff6ff", icon: <Clock className="h-4 w-4" /> },
   under_review: { label: "قيد المراجعة", color: "#b45309", bg: "#fffbeb", icon: <Eye className="h-4 w-4" /> },
   approved: { label: "معتمد ✓", color: "#16a34a", bg: "#f0fdf4", icon: <CheckCircle className="h-4 w-4" /> },
@@ -167,7 +167,11 @@ function collectLocalWorkSnapshot() {
   return data;
 }
 
-function trySaveCurrentLocalWork(): boolean {
+function isPromiseLike(value: unknown): value is Promise<unknown> {
+  return !!value && typeof (value as Promise<unknown>).then === "function";
+}
+
+async function trySaveCurrentLocalWork(): Promise<boolean> {
   const saveCandidates = [
     (window as any).saveCurrentSnapshot,
     (window as any).saveMonthSnapshot,
@@ -178,9 +182,11 @@ function trySaveCurrentLocalWork(): boolean {
     if (typeof saveFn !== "function") continue;
     try {
       const result = saveFn("before-open-revision");
-      if (result !== false) return true;
+      const resolved = isPromiseLike(result) ? await result : result;
+      return resolved !== false;
     } catch (err) {
       console.warn("[RevisionOpen] local save function failed", err);
+      return false;
     }
   }
 
@@ -188,8 +194,8 @@ function trySaveCurrentLocalWork(): boolean {
     const extractData = collectLocalWorkSnapshot();
     if (!Object.keys(extractData).length) return true;
     const persistent = parseData(localStorage.getItem("persistentExtractData") || "{}");
-    const archiveRaw = localStorage.getItem("extractArchive") || "[]";
-    const archive = Array.isArray(JSON.parse(archiveRaw)) ? JSON.parse(archiveRaw) : [];
+    const parsedArchive = parseData(localStorage.getItem("extractArchive") || "[]");
+    const archive = Array.isArray(parsedArchive) ? parsedArchive : [];
     archive.unshift({
       id: String(Date.now()),
       source: "track-before-open-revision",
@@ -292,7 +298,12 @@ function useUpdateStatus() {
 
 function StatusBadge({ status, revisionCount }: { status: ExtractStatus; revisionCount?: number }) {
   const cfg = STATUS_CONFIG[status];
-  return <div className="flex items-center gap-2 flex-wrap"><span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold" style={{ color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.color}30` }}>{cfg.icon}{cfg.label}</span>{revisionCount > 0 && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: "#f3f4f6", color: "#6b7280", border: "1px solid #e5e7eb" }}><RotateCcw className="h-3 w-3" />مراجعة {revisionCount}</span>}</div>;
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold" style={{ color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.color}30` }}>{cfg.icon}{cfg.label}</span>
+      {revisionCount > 0 && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: "#f3f4f6", color: "#6b7280", border: "1px solid #e5e7eb" }}><RotateCcw className="h-3 w-3" />مراجعة {revisionCount}</span>}
+    </div>
+  );
 }
 
 function ExtractCard({ extract, isAdmin, currentUserId }: { extract: SubmittedExtract; isAdmin: boolean; currentUserId?: number }) {
@@ -306,7 +317,10 @@ function ExtractCard({ extract, isAdmin, currentUserId }: { extract: SubmittedEx
   const part = adminPart(extract);
   const isOwner = extract.userId === currentUserId;
 
-  const handleStatus = (status: ExtractStatus) => { updateStatus.mutate({ id: extract.id, status, adminNotes: adminNotes || undefined }); setShowNotes(false); };
+  const handleStatus = (status: ExtractStatus) => {
+    updateStatus.mutate({ id: extract.id, status, adminNotes: adminNotes || undefined });
+    setShowNotes(false);
+  };
 
   const handleRevise = async () => {
     if (isPreparingRevision) return;
@@ -323,7 +337,7 @@ function ExtractCard({ extract, isAdmin, currentUserId }: { extract: SubmittedEx
         const decision = await askRevisionOpenDecision();
         if (decision === "cancel") return;
         if (decision === "save") {
-          const saved = trySaveCurrentLocalWork();
+          const saved = await trySaveCurrentLocalWork();
           if (!saved) {
             alert("تعذر حفظ المستخلص الحالي بسبب امتلاء التخزين أو خطأ في الحفظ. لم يتم فتح التعديل. يمكنك اختيار فتح التعديل بدون حفظ إذا أردت المتابعة على مسؤوليتك.");
             return;
@@ -342,12 +356,12 @@ function ExtractCard({ extract, isAdmin, currentUserId }: { extract: SubmittedEx
       setRev(REVISION_KEYS.snapshot, snapshot);
       if (part) setRev("najran_revision_admin_office_part", part);
       Object.entries(data).forEach(([key, value]) => writeLocal(key, value));
-      if (full.companyName) localStorage.setItem("companyName", String(full.companyName));
-      if (full.contractNumber) localStorage.setItem("contractNumber", String(full.contractNumber));
-      if (full.hospitalName) localStorage.setItem("hospitalName", String(full.hospitalName));
-      if (full.periodMonth) localStorage.setItem("periodMonth", String(full.periodMonth));
+      if (full.companyName) writeLocal("companyName", String(full.companyName));
+      if (full.contractNumber) writeLocal("contractNumber", String(full.contractNumber));
+      if (full.hospitalName) writeLocal("hospitalName", String(full.hospitalName));
+      if (full.periodMonth) writeLocal("periodMonth", String(full.periodMonth));
       if (full.totalAmount != null) setRev("najran_revision_previous_total_amount", String(full.totalAmount));
-      if (part) localStorage.setItem("najran_last_submitted_admin_office_part", part);
+      if (part) writeLocal("najran_last_submitted_admin_office_part", part);
       window.location.href = targetPage;
     } catch (err) {
       console.error("Failed to start extract revision", err);
@@ -359,22 +373,58 @@ function ExtractCard({ extract, isAdmin, currentUserId }: { extract: SubmittedEx
 
   const fmt = (d: string | null) => d ? new Date(d).toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" }) : "—";
   const canEdit = isOwner && (extract.status === "submitted" || extract.status === "needs_revision" || extract.status === "rejected");
+  const status = STATUS_CONFIG[extract.status];
 
-  return <div className="bg-white rounded-2xl shadow-sm border overflow-hidden transition-all" style={{ borderColor: extract.status === "needs_revision" ? "#fed7aa" : extract.status === "rejected" ? "#fecaca" : "#e5e7eb", direction: "rtl" }}>
-    <div className="flex items-center justify-between p-5 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setExpanded(!expanded)}>
-      <div className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: extract.status === "needs_revision" ? "linear-gradient(135deg,#ea580c,#c2410c)" : "linear-gradient(135deg,#1e3c72,#2a5298)" }}><FileText className="h-5 w-5 text-white" /></div><div><p className="font-bold text-base" style={{ color: "#1e3c72" }}>{labelFor(extract)}</p><p className="text-sm text-gray-500 mt-0.5">{extract.companyName || "—"} {extract.periodMonth ? `· ${extract.periodMonth}` : ""}</p>{extract.extractType === "admin_offices" && part && <p className="text-xs mt-0.5 font-bold" style={{ color: part === "labor" ? "#2563eb" : "#7c3aed" }}>{part === "labor" ? "عمالة المكاتب" : "مستهلكات المكاتب"}</p>}{isAdmin && extract.submittedByName && <p className="text-xs text-gray-400 mt-0.5">رُفع بواسطة: {extract.submittedByName}</p>}</div></div>
-      <div className="flex items-center gap-3"><StatusBadge status={extract.status} revisionCount={extract.revisionCount} />{expanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}</div>
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border overflow-hidden transition-all" style={{ borderColor: extract.status === "needs_revision" ? "#fed7aa" : extract.status === "rejected" ? "#fecaca" : "#e5e7eb", direction: "rtl" }}>
+      <div className="flex items-center justify-between p-5 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: extract.status === "needs_revision" ? "linear-gradient(135deg,#ea580c,#c2410c)" : "linear-gradient(135deg,#1e3c72,#2a5298)" }}><FileText className="h-5 w-5 text-white" /></div>
+          <div>
+            <p className="font-bold text-base" style={{ color: "#1e3c72" }}>{labelFor(extract)}</p>
+            <p className="text-sm text-gray-500 mt-0.5">{extract.companyName || "—"} {extract.periodMonth ? `· ${extract.periodMonth}` : ""}</p>
+            {extract.extractType === "admin_offices" && part && <p className="text-xs mt-0.5 font-bold" style={{ color: part === "labor" ? "#2563eb" : "#7c3aed" }}>{part === "labor" ? "عمالة المكاتب" : "مستهلكات المكاتب"}</p>}
+            {isAdmin && extract.submittedByName && <p className="text-xs text-gray-400 mt-0.5">رُفع بواسطة: {extract.submittedByName}</p>}
+          </div>
+        </div>
+        <div className="flex items-center gap-3"><StatusBadge status={extract.status} revisionCount={extract.revisionCount} />{expanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}</div>
+      </div>
+
+      {expanded && <div className="border-t px-5 pb-5 pt-4 space-y-4" style={{ borderColor: "#f3f4f6" }}>
+        {canEdit && <div className="rounded-xl p-4 border-2 flex flex-col gap-3" style={{ background: extract.status === "submitted" ? "#eff6ff" : "#fff7ed", borderColor: extract.status === "submitted" ? "#bfdbfe" : "#fed7aa" }}>
+          <p className="font-bold text-sm" style={{ color: extract.status === "submitted" ? "#1d4ed8" : "#c2410c" }}>{extract.status === "submitted" ? "يمكنك تعديل المستخلص قبل بدء المراجعة" : "مطلوب تعديل هذا المستخلص"}</p>
+          <p className="text-xs" style={{ color: "#475569" }}>سيتم فتح صفحة: {targetPage}</p>
+          <button onClick={handleRevise} disabled={isPreparingRevision} className="self-start flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60" style={{ background: "linear-gradient(135deg,#2563eb,#1d4ed8)" }}><Pencil className="h-4 w-4" />{extract.status === "submitted" ? "تعديل المستخلص قبل المراجعة" : "تعديل وإعادة الرفع"}</button>
+        </div>}
+        {isPreparingRevision && <div className="rounded-xl p-3 text-sm font-semibold" style={{ background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" }}>جاري تحميل بيانات المستخلص القديمة للتعديل...</div>}
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { icon: <Building2 className="h-4 w-4" />, label: "الشركة", value: extract.companyName },
+            { icon: <FileText className="h-4 w-4" />, label: "رقم العقد", value: extract.contractNumber },
+            { icon: <CalendarDays className="h-4 w-4" />, label: "الفترة", value: extract.periodMonth },
+            { icon: <Banknote className="h-4 w-4" />, label: "القيمة", value: extract.totalAmount ? `${Number(extract.totalAmount).toLocaleString()} ر.س` : null },
+          ].map(({ icon, label, value }) => <div key={label} className="rounded-xl p-3" style={{ background: "#f9fafb" }}><div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">{icon}{label}</div><p className="text-sm font-semibold text-gray-700">{value || "—"}</p></div>)}
+        </div>
+
+        <div><p className="text-xs font-semibold text-gray-400 mb-2">مكونات المستخلص</p><div className="flex flex-wrap gap-2">{partsFor(extract).map(p => <span key={p} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-medium" style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}><CheckCircle className="h-3.5 w-3.5" />{p}</span>)}</div></div>
+        <div className="text-xs space-y-1" style={{ color: "#9ca3af" }}><p>تاريخ الرفع: {fmt(extract.createdAt)}</p>{extract.revisionCount > 0 && extract.revisedAt && <p className="font-medium" style={{ color: "#ea580c" }}>آخر تعديل: {fmt(extract.revisedAt)} (مراجعة رقم {extract.revisionCount})</p>}{extract.approvedAt && <p>تاريخ الاعتماد: {fmt(extract.approvedAt)}{extract.approvedBy ? ` · بواسطة: ${extract.approvedBy}` : ""}</p>}</div>
+        {extract.adminNotes && <div className="rounded-xl p-3 text-sm" style={{ background: "#fffbeb", border: "1px solid #fde68a" }}><p className="font-semibold text-amber-700 mb-1">ملاحظات المراجع:</p><p className="text-amber-800">{extract.adminNotes}</p></div>}
+
+        {isAdmin && extract.status !== "approved" && <div className="space-y-3 pt-1 border-t" style={{ borderColor: "#f3f4f6" }}>
+          <p className="text-xs font-semibold text-gray-400 pt-1">إجراءات المراجع</p>
+          {showNotes && <textarea value={adminNotes} onChange={e => setAdminNotes(e.target.value)} placeholder="ملاحظات للمستخدم (ستظهر له)..." rows={2} className="w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none" style={{ direction: "rtl" }} />}
+          <div className="flex items-center gap-2 flex-wrap">
+            {extract.status === "submitted" && <button onClick={() => handleStatus("under_review")} disabled={updateStatus.isPending} className="px-4 py-2 rounded-xl text-sm font-bold transition-opacity hover:opacity-80" style={{ background: "#fffbeb", color: "#b45309", border: "1px solid #fde68a" }}><Eye className="h-4 w-4 inline ml-1.5" />بدء المراجعة</button>}
+            <button onClick={() => setShowNotes(!showNotes)} className="px-4 py-2 rounded-xl text-sm font-bold transition-opacity hover:opacity-80" style={{ background: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb" }}>{showNotes ? "إخفاء" : "إضافة ملاحظة"}</button>
+            {extract.status !== "needs_revision" && <button onClick={() => handleStatus("needs_revision")} disabled={updateStatus.isPending} className="px-4 py-2 rounded-xl text-sm font-bold transition-opacity hover:opacity-80" style={{ background: "#fff7ed", color: "#ea580c", border: "1px solid #fed7aa" }}><Pencil className="h-4 w-4 inline ml-1.5" />طلب تعديل</button>}
+            <button onClick={() => handleStatus("approved")} disabled={updateStatus.isPending} className="px-4 py-2 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-80" style={{ background: "linear-gradient(135deg,#16a34a,#15803d)" }}><CheckCircle className="h-4 w-4 inline ml-1.5" />اعتماد</button>
+            {extract.status !== "rejected" && <button onClick={() => handleStatus("rejected")} disabled={updateStatus.isPending} className="px-4 py-2 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-80" style={{ background: "linear-gradient(135deg,#dc2626,#b91c1c)" }}><XCircle className="h-4 w-4 inline ml-1.5" />رفض</button>}
+          </div>
+        </div>}
+      </div>}
     </div>
-    {expanded && <div className="border-t px-5 pb-5 pt-4 space-y-4" style={{ borderColor: "#f3f4f6" }}>
-      {canEdit && <div className="rounded-xl p-4 border-2 flex flex-col gap-3" style={{ background: extract.status === "submitted" ? "#eff6ff" : "#fff7ed", borderColor: extract.status === "submitted" ? "#bfdbfe" : "#fed7aa" }}><p className="font-bold text-sm" style={{ color: extract.status === "submitted" ? "#1d4ed8" : "#c2410c" }}>{extract.status === "submitted" ? "يمكنك تعديل المستخلص قبل بدء المراجعة" : "مطلوب تعديل هذا المستخلص"}</p><p className="text-xs" style={{ color: "#475569" }}>سيتم فتح صفحة: {targetPage}</p><button onClick={handleRevise} className="self-start flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90" style={{ background: "linear-gradient(135deg,#2563eb,#1d4ed8)" }}><Pencil className="h-4 w-4" />{extract.status === "submitted" ? "تعديل المستخلص قبل المراجعة" : "تعديل وإعادة الرفع"}</button></div>}
-      {isPreparingRevision && <div className="rounded-xl p-3 text-sm font-semibold" style={{ background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" }}>جاري تحميل بيانات المستخلص القديمة للتعديل...</div>}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{[{ icon: <Building2 className="h-4 w-4" />, label: "الشركة", value: extract.companyName }, { icon: <FileText className="h-4 w-4" />, label: "رقم العقد", value: extract.contractNumber }, { icon: <CalendarDays className="h-4 w-4" />, label: "الفترة", value: extract.periodMonth }, { icon: <Banknote className="h-4 w-4" />, label: "القيمة", value: extract.totalAmount ? `${Number(extract.totalAmount).toLocaleString()} ر.س` : null }].map(({ icon, label, value }) => <div key={label} className="rounded-xl p-3" style={{ background: "#f9fafb" }}><div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">{icon}{label}</div><p className="text-sm font-semibold text-gray-700">{value || "—"}</p></div>)}</div>
-      <div><p className="text-xs font-semibold text-gray-400 mb-2">مكونات المستخلص</p><div className="flex flex-wrap gap-2">{partsFor(extract).map(p => <span key={p} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-medium" style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}><CheckCircle className="h-3.5 w-3.5" />{p}</span>)}</div></div>
-      <div className="text-xs space-y-1" style={{ color: "#9ca3af" }}><p>تاريخ الرفع: {fmt(extract.createdAt)}</p>{extract.revisionCount > 0 && extract.revisedAt && <p className="font-medium" style={{ color: "#ea580c" }}>آخر تعديل: {fmt(extract.revisedAt)} (مراجعة رقم {extract.revisionCount})</p>}{extract.approvedAt && <p>تاريخ الاعتماد: {fmt(extract.approvedAt)}{extract.approvedBy ? ` · بواسطة: ${extract.approvedBy}` : ""}</p>}</div>
-      {extract.adminNotes && <div className="rounded-xl p-3 text-sm" style={{ background: "#fffbeb", border: "1px solid #fde68a" }}><p className="font-semibold text-amber-700 mb-1">ملاحظات المراجع:</p><p className="text-amber-800">{extract.adminNotes}</p></div>}
-      {isAdmin && extract.status !== "approved" && <div className="space-y-3 pt-1 border-t" style={{ borderColor: "#f3f4f6" }}><p className="text-xs font-semibold text-gray-400 pt-1">إجراءات المراجع</p>{showNotes && <textarea value={adminNotes} onChange={e => setAdminNotes(e.target.value)} placeholder="ملاحظات للمستخدم (ستظهر له)..." rows={2} className="w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none" style={{ direction: "rtl" }} />}<div className="flex items-center gap-2 flex-wrap">{extract.status === "submitted" && <button onClick={() => handleStatus("under_review")} disabled={updateStatus.isPending} className="px-4 py-2 rounded-xl text-sm font-bold transition-opacity hover:opacity-80" style={{ background: "#fffbeb", color: "#b45309", border: "1px solid #fde68a" }}><Eye className="h-4 w-4 inline ml-1.5" />بدء المراجعة</button>}<button onClick={() => setShowNotes(!showNotes)} className="px-4 py-2 rounded-xl text-sm font-bold transition-opacity hover:opacity-80" style={{ background: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb" }}>{showNotes ? "إخفاء" : "إضافة ملاحظة"}</button>{extract.status !== "needs_revision" && <button onClick={() => handleStatus("needs_revision")} disabled={updateStatus.isPending} className="px-4 py-2 rounded-xl text-sm font-bold transition-opacity hover:opacity-80" style={{ background: "#fff7ed", color: "#ea580c", border: "1px solid #fed7aa" }}><Pencil className="h-4 w-4 inline ml-1.5" />طلب تعديل</button>}<button onClick={() => handleStatus("approved")} disabled={updateStatus.isPending} className="px-4 py-2 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-80" style={{ background: "linear-gradient(135deg,#16a34a,#15803d)" }}><CheckCircle className="h-4 w-4 inline ml-1.5" />اعتماد</button>{extract.status !== "rejected" && <button onClick={() => handleStatus("rejected")} disabled={updateStatus.isPending} className="px-4 py-2 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-80" style={{ background: "linear-gradient(135deg,#dc2626,#b91c1c)" }}><XCircle className="h-4 w-4 inline ml-1.5" />رفض</button>}</div></div>}
-    </div>}
-  </div>;
+  );
 }
 
 export default function ExtractsTrack() {
@@ -386,7 +436,26 @@ export default function ExtractsTrack() {
   const isAdmin = role === "admin" || role === "supervisor";
   const extracts = data?.extracts || [];
   const filtered = filter === "all" ? extracts : extracts.filter(e => e.status === filter);
-  const counts = { all: extracts.length, submitted: extracts.filter(e => e.status === "submitted").length, under_review: extracts.filter(e => e.status === "under_review").length, needs_revision: extracts.filter(e => e.status === "needs_revision").length, approved: extracts.filter(e => e.status === "approved").length, rejected: extracts.filter(e => e.status === "rejected").length };
+  const counts = {
+    all: extracts.length,
+    submitted: extracts.filter(e => e.status === "submitted").length,
+    under_review: extracts.filter(e => e.status === "under_review").length,
+    needs_revision: extracts.filter(e => e.status === "needs_revision").length,
+    approved: extracts.filter(e => e.status === "approved").length,
+    rejected: extracts.filter(e => e.status === "rejected").length,
+  };
   const needsActionCount = isAdmin ? counts.submitted : (counts.needs_revision + counts.rejected);
-  return <div className="max-w-4xl mx-auto px-4 py-8 space-y-6" style={{ direction: "rtl" }}><div className="flex items-center justify-between"><div><h1 className="text-2xl font-extrabold" style={{ color: "#1e3c72" }}>متابعة المستخلصات</h1><p className="text-sm text-gray-500 mt-1">تابع حالة المستخلصات المرفوعة للاعتماد</p></div><button onClick={() => refetch()} disabled={isRefetching} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all" style={{ background: "#eff6ff", color: "#1e3c72", border: "1px solid #bfdbfe" }}><RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />تحديث</button></div>{needsActionCount > 0 && <div className="rounded-2xl p-4 border" style={{ background: isAdmin ? "#eff6ff" : "#fff7ed", borderColor: isAdmin ? "#bfdbfe" : "#fed7aa" }}><p className="font-bold" style={{ color: isAdmin ? "#1d4ed8" : "#c2410c" }}>{isAdmin ? `${needsActionCount} مستخلص بانتظار المراجعة` : `${needsActionCount} مستخلص يحتاج إجراء منك`}</p></div>}<div className="flex gap-2 overflow-x-auto pb-2">{([["all", "الكل", counts.all], ["submitted", "بانتظار", counts.submitted], ["under_review", "قيد المراجعة", counts.under_review], ["needs_revision", "تعديل", counts.needs_revision], ["approved", "معتمد", counts.approved], ["rejected", "مرفوض", counts.rejected]] as [ExtractStatus | "all", string, number][]).map(([key, label, count]) => <button key={key} onClick={() => setFilter(key)} className="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all" style={{ background: filter === key ? "#1e3c72" : "#ffffff", color: filter === key ? "#ffffff" : "#374151", border: "1px solid #e5e7eb" }}>{label} ({count})</button>)}</div>{isLoading ? <div className="text-center py-12 text-gray-500">جاري التحميل...</div> : filtered.length === 0 ? <div className="text-center py-12 bg-white rounded-2xl border" style={{ borderColor: "#e5e7eb" }}><FileText className="h-12 w-12 mx-auto text-gray-300 mb-3" /><p className="text-gray-500">لا توجد مستخلصات</p></div> : <div className="space-y-3">{filtered.map(extract => <ExtractCard key={extract.id} extract={extract} isAdmin={isAdmin} currentUserId={dbUserId} />)}</div>}</div>;
+  const tabs: [ExtractStatus | "all", string, number][] = [["all", "الكل", counts.all], ["submitted", "بانتظار", counts.submitted], ["under_review", "قيد المراجعة", counts.under_review], ["needs_revision", "تعديل", counts.needs_revision], ["approved", "معتمد", counts.approved], ["rejected", "مرفوض", counts.rejected]];
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6" style={{ direction: "rtl" }}>
+      <div className="flex items-center justify-between">
+        <div><h1 className="text-2xl font-extrabold" style={{ color: "#1e3c72" }}>متابعة المستخلصات</h1><p className="text-sm text-gray-500 mt-1">تابع حالة المستخلصات المرفوعة للاعتماد</p></div>
+        <button onClick={() => refetch()} disabled={isRefetching} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all" style={{ background: "#eff6ff", color: "#1e3c72", border: "1px solid #bfdbfe" }}><RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />تحديث</button>
+      </div>
+      {needsActionCount > 0 && <div className="rounded-2xl p-4 border" style={{ background: isAdmin ? "#eff6ff" : "#fff7ed", borderColor: isAdmin ? "#bfdbfe" : "#fed7aa" }}><p className="font-bold" style={{ color: isAdmin ? "#1d4ed8" : "#c2410c" }}>{isAdmin ? `${needsActionCount} مستخلص بانتظار المراجعة` : `${needsActionCount} مستخلص يحتاج إجراء منك`}</p></div>}
+      <div className="flex gap-2 overflow-x-auto pb-2">{tabs.map(([key, label, count]) => <button key={key} onClick={() => setFilter(key)} className="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all" style={{ background: filter === key ? "#1e3c72" : "#ffffff", color: filter === key ? "#ffffff" : "#374151", border: "1px solid #e5e7eb" }}>{label} ({count})</button>)}</div>
+      {isLoading ? <div className="text-center py-12 text-gray-500">جاري التحميل...</div> : filtered.length === 0 ? <div className="text-center py-12 bg-white rounded-2xl border" style={{ borderColor: "#e5e7eb" }}><FileText className="h-12 w-12 mx-auto text-gray-300 mb-3" /><p className="text-gray-500">لا توجد مستخلصات</p></div> : <div className="space-y-3">{filtered.map(extract => <ExtractCard key={extract.id} extract={extract} isAdmin={isAdmin} currentUserId={dbUserId} />)}</div>}
+    </div>
+  );
 }
