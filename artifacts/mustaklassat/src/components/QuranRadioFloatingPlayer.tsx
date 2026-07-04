@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import { PauseCircle, PlayCircle, Radio, Volume2 } from "lucide-react";
 
 const RADIO_API = "https://mp3quran.net/api/v3/radios?language=ar";
@@ -6,9 +6,20 @@ const PLAYING_KEY = "najran_quran_radio_playing";
 const VOLUME_KEY = "najran_quran_radio_volume";
 const RADIO_URL_KEY = "najran_quran_radio_egypt_url";
 const RADIO_NAME_KEY = "najran_quran_radio_egypt_name";
-const DEFAULT_VOLUME = 0.55;
+const POSITION_KEY = "najran_quran_radio_position";
+const DEFAULT_VOLUME = 0.65;
+const DEFAULT_RADIO: RadioInfo = {
+  name: "إذاعة القرآن الكريم من القاهرة",
+  url: "https://stream.radiojar.com/8s5u5tpdtwzuv",
+  source: "fallback",
+};
+const BACKUP_RADIOS: RadioInfo[] = [
+  DEFAULT_RADIO,
+  { name: "إذاعة القرآن الكريم", url: "https://server03.quran.com.kw:7002/;", source: "fallback" },
+];
 
 type RadioInfo = { name: string; url: string; source: "egypt" | "fallback" };
+type Position = { left: number; top: number };
 
 declare global {
   interface Window {
@@ -32,11 +43,27 @@ function readInitialVolume() {
   return DEFAULT_VOLUME;
 }
 
+function clampPosition(pos: Position, width = 330, height = 72): Position {
+  const maxLeft = Math.max(8, window.innerWidth - width - 8);
+  const maxTop = Math.max(8, window.innerHeight - height - 8);
+  return {
+    left: Math.min(Math.max(8, pos.left), maxLeft),
+    top: Math.min(Math.max(8, pos.top), maxTop),
+  };
+}
+
+function readInitialPosition(): Position {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(POSITION_KEY) || "null");
+    if (parsed && Number.isFinite(parsed.left) && Number.isFinite(parsed.top)) return clampPosition(parsed);
+  } catch {}
+  return { left: 16, top: Math.max(90, window.innerHeight - 100) };
+}
+
 function getAudio() {
   if (!window.__NAJRAN_QURAN_RADIO_AUDIO__) {
     const audio = new Audio();
-    audio.preload = "auto";
-    audio.crossOrigin = "anonymous";
+    audio.preload = "none";
     audio.volume = readInitialVolume();
     window.__NAJRAN_QURAN_RADIO_AUDIO__ = audio;
   }
@@ -47,7 +74,7 @@ function getCachedRadio(): RadioInfo {
   const url = localStorage.getItem(RADIO_URL_KEY) || "";
   const name = localStorage.getItem(RADIO_NAME_KEY) || "إذاعة القرآن الكريم من القاهرة";
   if (url) return { name, url, source: "egypt" };
-  return { name: "إذاعة القرآن الكريم من القاهرة", url: "", source: "fallback" };
+  return DEFAULT_RADIO;
 }
 
 function pickEgyptRadio(radios: any[]): RadioInfo | null {
@@ -57,7 +84,7 @@ function pickEgyptRadio(radios: any[]): RadioInfo | null {
       url: String(r?.url || r?.radio_url || r?.stream_url || ""),
       normalized: normalizeArabic(String(r?.name || r?.title || "")),
     }))
-    .filter((r) => r.url);
+    .filter((r) => r.url && /^https?:\/\//i.test(r.url));
 
   const egypt = candidates.find((r) =>
     (r.normalized.includes("القاهره") || r.normalized.includes("مصر") || r.normalized.includes("egypt") || r.normalized.includes("cairo")) &&
@@ -65,36 +92,48 @@ function pickEgyptRadio(radios: any[]): RadioInfo | null {
   );
   if (egypt) return { name: egypt.name || "إذاعة القرآن الكريم من القاهرة", url: egypt.url, source: "egypt" };
 
-  const quran = candidates.find((r) => r.normalized.includes("قران") || r.normalized.includes("quran"));
-  if (quran) return { name: quran.name || "إذاعة القرآن الكريم", url: quran.url, source: "fallback" };
-
   return null;
 }
 
 export function QuranRadioFloatingPlayer() {
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef<{ pointerId: number; x: number; y: number; left: number; top: number; moved: boolean } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const backupIndexRef = useRef(0);
   const [radio, setRadio] = useState<RadioInfo>(() => getCachedRadio());
   const [volume, setVolume] = useState(() => readInitialVolume());
+  const [position, setPosition] = useState<Position>(() => readInitialPosition());
   const [isPlaying, setIsPlaying] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const [streamError, setStreamError] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  const wantsPlaying = useMemo(() => localStorage.getItem(PLAYING_KEY) !== "false", []);
+  const wantsPlaying = useMemo(() => localStorage.getItem(PLAYING_KEY) === "true", []);
 
   useEffect(() => {
     const audio = getAudio();
     audioRef.current = audio;
     audio.volume = volume;
-    const onPlay = () => { setIsPlaying(true); setBlocked(false); };
+    const onPlay = () => { setIsPlaying(true); setBlocked(false); setStreamError(false); };
     const onPause = () => setIsPlaying(false);
+    const onError = () => {
+      setIsPlaying(false);
+      setStreamError(true);
+      const next = BACKUP_RADIOS[backupIndexRef.current % BACKUP_RADIOS.length];
+      backupIndexRef.current += 1;
+      if (next?.url && next.url !== audio.src) {
+        setRadio(next);
+        audio.src = next.url;
+      }
+    };
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
-    audio.addEventListener("error", onPause);
+    audio.addEventListener("error", onError);
     setIsPlaying(!audio.paused);
     return () => {
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
-      audio.removeEventListener("error", onPause);
+      audio.removeEventListener("error", onError);
     };
   }, [volume]);
 
@@ -130,11 +169,25 @@ export function QuranRadioFloatingPlayer() {
     }
   }, [radio.url, volume, wantsPlaying]);
 
+  useEffect(() => {
+    const onResize = () => setPosition((p) => clampPosition(p, expanded ? 330 : 58, expanded ? 96 : 58));
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [expanded]);
+
   const play = () => {
     const audio = getAudio();
-    if (radio.url && audio.src !== radio.url) audio.src = radio.url;
+    const src = radio.url || DEFAULT_RADIO.url;
+    if (audio.src !== src) audio.src = src;
     localStorage.setItem(PLAYING_KEY, "true");
-    audio.play().then(() => { setIsPlaying(true); setBlocked(false); }).catch(() => setBlocked(true));
+    audio.load();
+    audio.play()
+      .then(() => { setIsPlaying(true); setBlocked(false); setStreamError(false); })
+      .catch((err) => {
+        console.warn("[QuranRadio] playback blocked or failed", err);
+        setBlocked(true);
+        setIsPlaying(false);
+      });
   };
 
   const pause = () => {
@@ -151,20 +204,47 @@ export function QuranRadioFloatingPlayer() {
     getAudio().volume = v;
   };
 
+  const onPointerDown = (e: PointerEvent<HTMLButtonElement>) => {
+    dragRef.current = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, left: position.left, top: position.top, moved: false };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e: PointerEvent<HTMLButtonElement>) => {
+    const d = dragRef.current;
+    if (!d || d.pointerId !== e.pointerId) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (Math.abs(dx) + Math.abs(dy) > 4) d.moved = true;
+    const next = clampPosition({ left: d.left + dx, top: d.top + dy }, expanded ? 330 : 58, expanded ? 96 : 58);
+    setPosition(next);
+  };
+
+  const onPointerUp = (e: PointerEvent<HTMLButtonElement>) => {
+    const d = dragRef.current;
+    if (!d || d.pointerId !== e.pointerId) return;
+    const moved = d.moved;
+    dragRef.current = null;
+    localStorage.setItem(POSITION_KEY, JSON.stringify(position));
+    if (!moved) setExpanded((v) => !v);
+  };
+
   return (
     <div
+      ref={boxRef}
       dir="rtl"
-      className="fixed bottom-4 left-4 z-[2147483000] rounded-2xl shadow-2xl overflow-hidden print:hidden"
-      style={{ width: expanded ? 330 : 58, background: "linear-gradient(135deg,#0f2050,#1e3c72)", border: "1px solid rgba(212,175,55,.35)" }}
+      className="fixed z-[2147483000] rounded-2xl shadow-2xl overflow-hidden print:hidden select-none"
+      style={{ left: position.left, top: position.top, width: expanded ? 330 : 58, background: "linear-gradient(135deg,#0f2050,#1e3c72)", border: "1px solid rgba(212,175,55,.35)", touchAction: "none" }}
     >
       <div style={{ height: 3, background: "linear-gradient(90deg,#d4af37,#f0d060,#d4af37)" }} />
       <div className="p-2 flex items-center gap-2">
         <button
           type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 cursor-move"
           style={{ background: "rgba(212,175,55,.18)", color: "#d4af37", border: "1px solid rgba(212,175,55,.28)" }}
-          title="إذاعة القرآن الكريم من القاهرة"
+          title="اسحب لتغيير المكان — اضغط للفتح"
         >
           <Radio className="h-5 w-5" />
         </button>
@@ -174,10 +254,10 @@ export function QuranRadioFloatingPlayer() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <p className="text-white text-xs font-black truncate">إذاعة القرآن الكريم — مصر</p>
-                <span className="text-[10px] font-black rounded-full px-2 py-0.5" style={{ color: isPlaying ? "#4ade80" : "#d4af37", background: isPlaying ? "rgba(34,197,94,.16)" : "rgba(212,175,55,.15)" }}>{isPlaying ? "مباشر" : "جاهز"}</span>
+                <span className="text-[10px] font-black rounded-full px-2 py-0.5" style={{ color: isPlaying ? "#4ade80" : "#d4af37", background: isPlaying ? "rgba(34,197,94,.16)" : "rgba(212,175,55,.15)" }}>{isPlaying ? "مباشر" : "اضغط تشغيل"}</span>
               </div>
               <p className="text-[10px] truncate mt-0.5" style={{ color: "rgba(255,255,255,.58)" }}>{radio.name}</p>
-              {blocked && <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,.55)" }}>اضغط تشغيل إذا منع المتصفح التشغيل التلقائي.</p>}
+              {(blocked || streamError) && <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,.55)" }}>الصوت يحتاج ضغطة تشغيل، ولو لم يعمل سيجرب مصدرًا احتياطيًا.</p>}
               <div className="flex items-center gap-2 mt-2">
                 <Volume2 className="h-3.5 w-3.5" style={{ color: "#d4af37" }} />
                 <input
