@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, usersTable, userStorageTable } from "@workspace/db";
-import { eq, and, inArray, or, like } from "drizzle-orm";
+import { eq, and, inArray, or, like, sql } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
@@ -142,12 +142,34 @@ router.get("/", requireAuth, async (req: any, res) => {
       ? and(eq(userStorageTable.userId, dbUser.id), keyPredicate)
       : eq(userStorageTable.userId, dbUser.id);
 
+    // فحص خفة اختياري: لو العميل يعرف آخر وقت سحب ناجح، نتحقق أولًا هل فيه
+    // أي تحديث أحدث من كده في نفس النطاق المفلتر — بدون سحب الصفوف كاملة.
+    const ifNewerThanRaw = String(req.query?.ifNewerThan || "").trim();
+    const ifNewerThan = ifNewerThanRaw ? new Date(ifNewerThanRaw) : null;
+    if (ifNewerThan && !isNaN(ifNewerThan.getTime())) {
+      const [maxRow] = await db
+        .select({ latest: sql<string | null>`max(${userStorageTable.updatedAt})` })
+        .from(userStorageTable)
+        .where(whereClause);
+      const latestUpdatedAt = maxRow?.latest ? new Date(maxRow.latest) : null;
+      if (!latestUpdatedAt || latestUpdatedAt.getTime() <= ifNewerThan.getTime()) {
+        return res.json({ unchanged: true, latestUpdatedAt: latestUpdatedAt ? latestUpdatedAt.toISOString() : null });
+      }
+    }
+
     const rows = await db.select().from(userStorageTable).where(whereClause);
     const result: Record<string, string> = {};
+    let latestUpdatedAt: Date | null = null;
     for (const row of rows) {
       result[row.storageKey] = row.storageValue;
+      if (row.updatedAt && (!latestUpdatedAt || row.updatedAt > latestUpdatedAt)) latestUpdatedAt = row.updatedAt;
     }
-    return res.json({ data: result, count: rows.length, scope: filters ? filters.scope : "all" });
+    return res.json({
+      data: result,
+      count: rows.length,
+      scope: filters ? filters.scope : "all",
+      latestUpdatedAt: latestUpdatedAt ? latestUpdatedAt.toISOString() : null,
+    });
   } catch (err) {
     req.log.error({ err }, "Failed to get user storage");
     return res.status(500).json({ error: "Internal server error" });

@@ -472,6 +472,25 @@
     return false;
   }
 
+  // خفة السحب: نتذكر آخر latestUpdatedAt معروف لكل شكل استعلام (نطاق/سياق)
+  // على حدة، ونرسله في الطلب التالي. لو السيرفر رد "unchanged"، نوفّر الدمج
+  // بالكامل لهذا المصدر — البيانات المحلية أصلًا مطابقة لآخر نسخة معروفة.
+  function pullFreshnessKey(url) { return 'najran_cloud_last_pull_at::' + url; }
+  function withIfNewerThan(url) {
+    try {
+      var last = localStorage.getItem(pullFreshnessKey(url));
+      if (!last) return url;
+      var sep = url.indexOf('?') > -1 ? '&' : '?';
+      return url + sep + 'ifNewerThan=' + encodeURIComponent(last);
+    } catch (_) { return url; }
+  }
+  function rememberFreshness(url, latestUpdatedAt) {
+    try {
+      if (latestUpdatedAt) localStorage.setItem(pullFreshnessKey(url), latestUpdatedAt);
+      else localStorage.removeItem(pullFreshnessKey(url));
+    } catch (_) {}
+  }
+
   async function pullFromCloud() {
     if (isRevisionMode() && !isSettingsMainPage()) {
       enforceRevisionEditSession();
@@ -486,13 +505,21 @@
     if (reviewOnly && hospitalName) hospitalQueryParts.push('hospital=' + encodeURIComponent(hospitalName));
     const hospitalQuery = hospitalQueryParts.length ? '?' + hospitalQueryParts.join('&') : '';
 
+    const userStorageUrl = '/storage' + (storageScope ? '?' + storageScope : '');
+    const hospitalStorageUrl = hospitalName ? ('/hospital-storage' + hospitalQuery) : null;
+
     const results = await Promise.all([
-      apiFetch('/storage' + (storageScope ? '?' + storageScope : '')),
-      hospitalName ? apiFetch('/hospital-storage' + hospitalQuery) : Promise.resolve(null)
+      apiFetch(withIfNewerThan(userStorageUrl)),
+      hospitalStorageUrl ? apiFetch(withIfNewerThan(hospitalStorageUrl)) : Promise.resolve(null)
     ]);
 
-    const userData = (results[0] && results[0].data) || {};
-    const hospitalData = (results[1] && results[1].data) || {};
+    const userUnchanged = !!(results[0] && results[0].unchanged);
+    const hospitalUnchanged = !!(results[1] && results[1].unchanged);
+    if (results[0]) rememberFreshness(userStorageUrl, results[0].latestUpdatedAt);
+    if (results[1] && hospitalStorageUrl) rememberFreshness(hospitalStorageUrl, results[1].latestUpdatedAt);
+
+    const userData = userUnchanged ? {} : ((results[0] && results[0].data) || {});
+    const hospitalData = hospitalUnchanged ? {} : ((results[1] && results[1].data) || {});
     try {
       const hospitalMeta = (results[1] && results[1].meta) || {};
       Object.keys(hospitalMeta).forEach(function (k) {
@@ -519,7 +546,7 @@
 
     Object.entries(userData).forEach(([k, v]) => mergeOne(k, v, false));
     Object.entries(hospitalData).forEach(([k, v]) => mergeOne(k, v, true));
-    console.log('[MzamanaCloud] PULL ✓' + (reviewOnly ? ' [مراجعة]' : '') + ' ' + mergedUser + ' شخصي + ' + mergedHospital + ' مشترك' + (skippedUserOperational ? ' · ' + skippedUserOperational + ' تشغيلي شخصي' : '') + (skippedByPage ? ' · ' + skippedByPage + ' خارج نطاق الصفحة' : ''));
+    console.log('[MzamanaCloud] PULL ✓' + (reviewOnly ? ' [مراجعة]' : '') + ' ' + mergedUser + ' شخصي + ' + mergedHospital + ' مشترك' + (skippedUserOperational ? ' · ' + skippedUserOperational + ' تشغيلي شخصي' : '') + (skippedByPage ? ' · ' + skippedByPage + ' خارج نطاق الصفحة' : '') + ((userUnchanged || hospitalUnchanged) ? ' · بدون تغيير: ' + [userUnchanged?'شخصي':null, hospitalUnchanged?'مشترك':null].filter(Boolean).join('+') : ''));
     try { window.dispatchEvent(new CustomEvent('najranCloudPulled', { detail: { monthChanged: false, mergedKeys: mergedKeys } })); } catch (_) {}
     try { if (typeof window.updateContractDisplayData === 'function') window.updateContractDisplayData(); } catch (_) {}
     try { if (typeof window.updateContractDataForPrint === 'function') window.updateContractDataForPrint(); } catch (_) {}

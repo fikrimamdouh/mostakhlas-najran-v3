@@ -416,6 +416,27 @@ router.get("/", requireAuth, async (req: any, res) => {
       ? and(eq(hospitalStorageTable.hospitalName, resolved.hospital), keyPredicate)
       : eq(hospitalStorageTable.hospitalName, resolved.hospital);
 
+    // فحص خفة اختياري: لو العميل يعرف آخر وقت سحب ناجح لنفس النطاق (نفس
+    // السياق/الصفحة)، نتحقق أولًا من آخر تحديث فعلي بدون سحب الصفوف كاملة.
+    const ifNewerThanRaw = String(req.query?.ifNewerThan || "").trim();
+    const ifNewerThan = ifNewerThanRaw ? new Date(ifNewerThanRaw) : null;
+    if (ifNewerThan && !isNaN(ifNewerThan.getTime())) {
+      const [maxRow] = await db
+        .select({ latest: sql<string | null>`max(${hospitalStorageTable.updatedAt})` })
+        .from(hospitalStorageTable)
+        .where(whereClause);
+      const latestUpdatedAt = maxRow?.latest ? new Date(maxRow.latest) : null;
+      if (!latestUpdatedAt || latestUpdatedAt.getTime() <= ifNewerThan.getTime()) {
+        return res.json({
+          unchanged: true,
+          latestUpdatedAt: latestUpdatedAt ? latestUpdatedAt.toISOString() : null,
+          hospital: resolved.hospital,
+          reviewOnly: resolved.reviewOnly,
+          extractContextKey: contextKey || null,
+        });
+      }
+    }
+
     const rows = await db.select().from(hospitalStorageTable).where(whereClause);
 
     const result: Record<string, string> = {};
@@ -441,6 +462,10 @@ for (const row of rows) {
 }
 
 const migratedLegacyAttendance = 0;
+let latestUpdatedAt: Date | null = null;
+for (const row of rows) {
+  if (row.updatedAt && (!latestUpdatedAt || row.updatedAt > latestUpdatedAt)) latestUpdatedAt = row.updatedAt;
+}
 
 return res.json({
   data: result,
@@ -452,6 +477,7 @@ return res.json({
   reviewOnly: resolved.reviewOnly,
   extractContextKey: contextKey || null,
   scope: filters ? filters.scope : "all",
+  latestUpdatedAt: latestUpdatedAt ? latestUpdatedAt.toISOString() : null,
 });
   } catch (err) {
     req.log.error({ err }, "Failed to get hospital storage");
