@@ -17,7 +17,7 @@
     <script src="contract_data_connector.js?v=20260705_v1_hospital_name_display_fix" defer></script>
     <script src="attendance_contract_info.js?v=20260705_v1_hospital_name_display_fix" defer></script>
     <script src="/original/contract-foundation-helper.js"></script>
-    <script src="/original/consumables-summary-data-cleaner.js?v=20260702_v13_match_labor_letterhead_behavior"></script>
+    <script src="/original/consumables-summary-data-cleaner.js?v=20260705_v14_one_time_cleanup_only"></script>
 <script src="/original/signature-style-control.js?v=20260705_v3_fix_align_labels_bug"></script>
         <script src="/original/audit-tracker.js"></script>
 
@@ -276,16 +276,14 @@
         }
         .table-header h2 { margin: 0; color: var(--primary-dark); font-size: 22px; }
         .table-header .btn-group { display: flex; gap: 10px; }
-        .table-header .btn-manage {
-            background: linear-gradient(135deg, #007bff, #6610f2);
-            color: white;
-        }
-        .table-header .btn-manage.edit-mode {
-            background: linear-gradient(135deg, #ffc107, #fd7e14);
-            color: #000;
-        }
-        .table-header .btn-add-item { background: linear-gradient(135deg, #28a745, #20c997); }
-        .table-header .btn-remove-item { background: linear-gradient(135deg, #dc3545, #c82333); }
+        /* shared-styles.css يصفّر أي تدرج لوني في كل الأزرار (!important) ثم
+           يعطي بديلًا صلبًا لقائمة محدودة من الأصناف لا تشمل هذه الأصناف —
+           فكانت تفقد لونها تمامًا وتظهر بيضاء. تأكيد الألوان هنا صراحة
+           (!important) بنفس منظومة ألوان الموقع (كحل، أخضر، أحمر، برتقالي). */
+        .table-header .btn-manage             { background: #003087 !important; color: #fff !important; }
+        .table-header .btn-manage.edit-mode   { background: #ea580c !important; color: #fff !important; }
+        .table-header .btn-add-item           { background: #16a34a !important; color: #fff !important; }
+        .table-header .btn-remove-item        { background: #dc2626 !important; color: #fff !important; }
         .table-header .edit-controls { display: none; gap: 10px; }
         .table-header .edit-controls.active { display: flex; }
 

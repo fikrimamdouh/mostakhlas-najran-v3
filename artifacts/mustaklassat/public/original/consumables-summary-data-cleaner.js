@@ -298,6 +298,12 @@
 
   function cleanSummaryData(reason) {
     try {
+      // هذا التنظيف كان مقصودًا كتصحيح لمرة واحدة لبيانات قديمة تالفة، لا
+      // كفلتر دائم. تشغيله في كل فتح صفحة كان يحذف أي بند حقيقي اسمه يشبه
+      // كلمات الإجمالي/الصافي/المستحق حتى لو لم يكن بند إجمالي فعلي — فكانت
+      // البنود "تختفي" باستمرار. الآن يعمل مرة واحدة فقط لكل جهاز.
+      if (localStorage.getItem(MARKER_KEY)) return false;
+
       var raw = localStorage.getItem(SUMMARY_KEY);
       if (!raw) return false;
 
@@ -305,7 +311,12 @@
       if (!Array.isArray(data) || !data.length) return false;
 
       var dirty = data.filter(isDirtyNormalSummaryItem);
-      if (!dirty.length) return false;
+      if (!dirty.length) {
+        // لا يوجد شيء نظّفه الآن — سجّل أنه تم الفحص فلا يعاد لاحقًا حتى
+        // لو أضاف المستخدم بندًا يشبه الاسم مستقبلًا (بند حقيقي مقصود).
+        localStorage.setItem(MARKER_KEY, JSON.stringify({ cleanedAt: new Date().toISOString(), reason: reason || 'boot', removed: [] }));
+        return false;
+      }
 
       var cleaned = data.filter(function (item) { return !isDirtyNormalSummaryItem(item); });
       localStorage.setItem(BACKUP_PREFIX + new Date().toISOString(), raw);
