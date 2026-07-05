@@ -21,7 +21,25 @@
   function sigs(d){ return Object.keys(d||{}).filter(function(k){return /^sb_(sigs|prefs)_/.test(k)||/^healthCenters_Signatures_/.test(k)||k==='signatures_data_consumables_v27';}).length; }
   function val(r,k){ return r&&(r[k]!=null?r[k]:''); }
   function stat(a,b,c){return '<div class="rv-stat '+(c||'')+'"><span>'+h(a)+'</span><b>'+h(b)+'</b></div>';}
+  function decisionSection(e){
+    return '<section id="rv-decision" class="rv-no-print"><h3>قرار المراجع</h3><textarea id="rv-notes" placeholder="اكتب الملاحظة هنا عند طلب التعديل أو الرفض. الاعتماد لا يحتاج ملاحظة.">'+h(e.adminNotes||'')+'</textarea><div class="rv-actions"><button class="rv-act review" data-rv-status="under_review">بدء المراجعة</button><button class="rv-act revision" data-rv-status="needs_revision">طلب تعديل</button><button class="rv-act approve" data-rv-status="approved">اعتماد</button><button class="rv-act reject" data-rv-status="rejected">رفض</button></div></section>';
+  }
   function getExtract(id){ try { return (allExtracts||[]).find(function(x){return String(x.id)===String(id);}); } catch(_) { return null; } }
+
+  // مستخلص المكاتب الإدارية له جزآن منفصلان تمامًا (عمالة / مستهلكات)، وكل
+  // مستخلص فعلي يحمل واحدًا منهما فقط. قبل هذا الإصلاح كان العرض يفترض دائمًا
+  // "عمالة" حتى لو المستخلص الحقيقي "مستهلكات" — فتظهر "0 مكاتب" رغم أن
+  // البيانات الحقيقية (جداول المستهلكات) موجودة لكن تحت مفاتيح مختلفة تمامًا.
+  function adminOfficesPart(e, d){
+    var part = String(e && e.adminOfficePart || '').trim();
+    if (part === 'labor' || part === 'consumables') return part;
+    var scope = String(e && e.reviewScope || d.reviewScope || '').trim();
+    var src = String(e && e.sourceModule || d.sourceModule || '').trim();
+    if (scope === 'admin_offices_consumables_only' || src === 'admin_offices_consumables') return 'consumables';
+    if (scope === 'admin_offices_labor_only' || src === 'admin_offices_attendance') return 'labor';
+    // سجلات قديمة بلا أي مؤشر: نفترض عمالة كما كان السلوك الأصلي قبل الإصلاح.
+    return 'labor';
+  }
 
   function data(e){
     var d=p(e&&e.extractData,{}), b=p(d.__submittedExtractArchiveBundle_v1,{}), t=p(b.trackedKeyCopies,{});
@@ -83,6 +101,30 @@
 
   function build(e){
     var d=data(e), bundle=p(d.__submittedExtractArchiveBundle_v1,{}), integrity=p(bundle.integrity,{});
+    var part = adminOfficesPart(e, d);
+    var meta=p(d.persistentExtractData,{}), contract=p(d.persistentContractData,{}), period=periodInfo(e,d);
+    var pay=meta.paymentNumber||meta.extractNumber||d.paymentNumber||e.paymentNumber||'—';
+    var periodLabel=e.periodMonth||[meta.extractMonth||d.extractMonth||'',meta.extractYear||d.extractYear||''].filter(Boolean).join(' ')||'—';
+    var sg=sigs(d)||Number(integrity.signatureKeysCount||0)||0;
+    var header='<header class=\"rv-doc-head\"><div><h2>مستخلص المكاتب الإدارية — '+(part==='consumables'?'مستهلكات':'عمالة')+'</h2><p>'+h(e.hospitalName||e.submittedByHospital||'—')+' — '+h(e.companyName||'—')+' — '+h(periodLabel)+' — دفعة '+h(pay)+'</p><small>الفترة المحسوبة: '+h(fmtDate(period.start))+' إلى '+h(fmtDate(period.end))+' — عدد أيام المستخلص: '+period.daysInExtract+'</small></div><b>'+h(e.status||'—')+'</b></header>';
+
+    if (part === 'consumables') {
+      // جزء المستهلكات: البيانات الحقيقية في جداول المستهلكات (نفس مفاتيح
+      // مستخلص المستهلكات العادي) — إعادة استخدام العارض الجاهز والمُختبَر
+      // بدل جدول عمالة فاضٍ لا معنى له لهذا النوع.
+      var sections = window.__najranReviewLaborSections || null;
+      var consHtml = '<div class=\"rv-empty\" style=\"padding:12px\">تعذّر تحميل عارض جداول المستهلكات (تحقق من نسخة review-workflow.js).</div>';
+      if (sections && sections.consumablesHtml && sections.snap) {
+        try { consHtml = sections.consumablesHtml(sections.snap(e)) || consHtml; }
+        catch (err) { console.warn('[AdminOfficesReviewDetailPatch] consumables render skipped', err); }
+      }
+      return '<div class=\"rv-doc\" data-admin-offices-review=\"1\">'+header+
+        '<nav class=\"rv-tabs\"><a href=\"#rv-summary\" class=\"rv-nav-card\"><b>ملخص المراجعة</b><span>بيانات المستخلص</span></a><a href=\"#rv-cons\" class=\"rv-nav-card\"><b>المستهلكات</b><span>الملخص والجداول</span></a></nav>'+
+        '<section id=\"rv-summary\"><h3>ملخص المراجعة</h3><div class=\"rv-main-stats\">'+stat('نوع المستخلص','مستهلكات المكاتب الإدارية','primary')+stat('رقم الدفعة',pay,'primary')+stat('أيام المستخلص',period.daysInExtract,'primary')+stat('قيمة الكارت',money(e.totalAmount||0),'ok')+'</div><div class=\"rv-info-grid\"><div><b>التواقيع</b><span>'+(sg?sg+' مفتاح':'غير ظاهرة')+'</span></div><div><b>مصدر المراجعة</b><span>'+h(d.__najranSourceModule||d.sourceModule||'—')+'</span></div></div></section>'+
+        '<section id=\"rv-cons\" class=\"rv-section-break\"><h3>مراجعة مستهلكات المكاتب الإدارية</h3>'+consHtml+'</section>'+
+        decisionSection(e)+'</div>';
+    }
+
     var names=p(d.adminOfficeNames_v1,{}), att=p(d.adminOfficesAttendanceData_v1||d.adminOfficesAttendanceData_v1_localBackup||d.adminOfficesLaborDataSafe_v2||d.adminOfficesAttendanceData,{});
     var perf=p(d.adminOfficePerformanceDeductions_v1||d.performanceDeductions||d.performanceData_v4||d.performanceData,{}), ach=p(d.achievementData||d.achievementTitles_v1||d.achievementItemNames,{}), off={};
     var meta=p(d.persistentExtractData,{}), contract=p(d.persistentContractData,{}), period=periodInfo(e,d);

@@ -14,6 +14,74 @@
   const LABOR_FINAL_REVIEW_SCHEMA = 'labor_final_review_snapshot_v1';
   const REVISION_PUT_ERROR = 'تعذر إعادة رفع المستخلص المعدل على نفس السجل. لم يتم إنشاء مستخلص جديد.';
 
+  const MONTH_NAMES = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+
+  // ─── شاشة إعادة رقم الدفعة والشهر/السنة عند رفض السيرفر للتكرار ───
+  // بدل alert عادي يقفل ويرجّعك تدوّر يدويًا: نافذة صغيرة تدّيك رقم دفعة
+  // جديد جاهز (القديم +1) وقائمة شهر/سنة، وتعيد الرفع تلقائيًا بالقيم
+  // الجديدة من غير خروج من الصفحة ولا إعادة أي خطوة سابقة.
+  function showDuplicateResubmitModal(retrySubmit) {
+    try {
+      const oldPayment = String(localStorage.getItem('paymentNumber') || '').trim();
+      const oldMonth = String(localStorage.getItem('extractMonth') || '').trim();
+      const oldYear = String(localStorage.getItem('extractYear') || new Date().getFullYear()).trim();
+      const suggestedPayment = (() => {
+        const n = parseInt(oldPayment.replace(/[^\d]/g, ''), 10);
+        return Number.isFinite(n) ? String(n + 1) : oldPayment;
+      })();
+
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.7);z-index:999999;display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl;';
+      const monthOptions = MONTH_NAMES.map(m => `<option value="${m}" ${m === oldMonth ? 'selected' : ''}>${m}</option>`).join('');
+      overlay.innerHTML = `
+        <div style="background:#fff;border-radius:16px;max-width:380px;width:100%;padding:22px;font-family:Tajawal,Arial,sans-serif;box-shadow:0 20px 50px rgba(0,0,0,.3);">
+          <h3 style="margin:0 0 8px;color:#123b6d;font-size:17px;">⚠️ هذا المستخلص مرفوع مسبقًا</h3>
+          <p style="margin:0 0 16px;color:#64748b;font-size:13px;line-height:1.6;">اختر رقم دفعة وشهر/سنة جديدين، وهيتم إعادة الرفع تلقائيًا بنفس البيانات.</p>
+          <label style="display:block;font-size:12px;font-weight:800;color:#334155;margin-bottom:4px;">رقم الدفعة الجديد</label>
+          <input id="dup-resubmit-payment" type="text" value="${suggestedPayment}" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid #cbd5e1;border-radius:9px;font-family:Tajawal,Arial;font-size:14px;margin-bottom:12px;">
+          <div style="display:flex;gap:10px;margin-bottom:18px;">
+            <div style="flex:1;">
+              <label style="display:block;font-size:12px;font-weight:800;color:#334155;margin-bottom:4px;">الشهر</label>
+              <select id="dup-resubmit-month" style="width:100%;box-sizing:border-box;padding:9px 8px;border:1px solid #cbd5e1;border-radius:9px;font-family:Tajawal,Arial;font-size:14px;">${monthOptions}</select>
+            </div>
+            <div style="flex:1;">
+              <label style="display:block;font-size:12px;font-weight:800;color:#334155;margin-bottom:4px;">السنة</label>
+              <input id="dup-resubmit-year" type="number" value="${oldYear}" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid #cbd5e1;border-radius:9px;font-family:Tajawal,Arial;font-size:14px;">
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button id="dup-resubmit-cancel" style="flex:1;padding:11px;border:1px solid #cbd5e1;background:#f8fafc;color:#475569;border-radius:9px;font-weight:800;cursor:pointer;font-family:Tajawal,Arial;">إلغاء</button>
+            <button id="dup-resubmit-retry" style="flex:1;padding:11px;border:0;background:linear-gradient(135deg,#1565c0,#0ea5e9);color:#fff;border-radius:9px;font-weight:800;cursor:pointer;font-family:Tajawal,Arial;">إعادة المحاولة</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+
+      overlay.querySelector('#dup-resubmit-cancel').onclick = () => overlay.remove();
+      overlay.querySelector('#dup-resubmit-retry').onclick = () => {
+        const newPayment = overlay.querySelector('#dup-resubmit-payment').value.trim();
+        const newMonth = overlay.querySelector('#dup-resubmit-month').value;
+        const newYear = overlay.querySelector('#dup-resubmit-year').value.trim();
+        if (!newPayment) { alert('اكتب رقم الدفعة'); return; }
+        try {
+          localStorage.setItem('paymentNumber', newPayment);
+          localStorage.setItem('extractNumber', newPayment);
+          localStorage.setItem('extractMonth', newMonth);
+          localStorage.setItem('extractYear', newYear);
+          const ed = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
+          ed.paymentNumber = newPayment;
+          ed.extractMonth = newMonth;
+          ed.extractYear = newYear;
+          localStorage.setItem('persistentExtractData', JSON.stringify(ed));
+        } catch (_) {}
+        overlay.remove();
+        retrySubmit();
+      };
+    } catch (err) {
+      console.warn('[DuplicateResubmit] فشل عرض شاشة إعادة المحاولة', err);
+      alert('تم رفع نفس المستخلص مسبقًا. غيّر رقم الدفعة أو الشهر ثم أعد المحاولة.');
+    }
+  }
+
   function getSession() {
     try { return JSON.parse(localStorage.getItem('najran_session') || '{}'); }
     catch { return {}; }
@@ -387,7 +455,12 @@
             }));
           } catch (_) {}
         }
-        throw new Error(dup.error || 'تم رفع نفس المستخلص مسبقًا. لم يتم إنشاء سجل مكرر.');
+        const dupErr = new Error(dup.error || 'تم رفع نفس المستخلص مسبقًا. لم يتم إنشاء سجل مكرر.');
+        if (!effectiveRevision && dup && dup.duplicate) {
+          dupErr.isDuplicate = true;
+          dupErr.existingId = dup.existingId || '';
+        }
+        throw dupErr;
       }
       // 413/400: السيرفر رفض حجم البيانات أو محتوى base64 — أظهر سبب الرفض الفعلي.
       if (res.status === 413 || res.status === 400) {
@@ -573,8 +646,13 @@
           } catch(_) {}
           window.location.href = '/extracts/track';
         } catch (e) {
-          alert('حدث خطأ: ' + e.message);
-          resetBtn('رفع مستخلص العمالة للاعتماد');
+          if (e.isDuplicate) {
+            resetBtn('رفع مستخلص العمالة للاعتماد');
+            showDuplicateResubmitModal(() => { document.getElementById('_najran_approve_btn_inner') && document.getElementById('_najran_approve_btn_inner').click(); });
+          } else {
+            alert('حدث خطأ: ' + e.message);
+            resetBtn('رفع مستخلص العمالة للاعتماد');
+          }
         }
       },
     });
@@ -600,8 +678,13 @@
           } catch(_) {}
           window.location.href = '/original/settings_main.html';
         } catch (e) {
-          alert('حدث خطأ: ' + e.message);
-          resetBtn('رفع مستخلص المستهلكات للاعتماد');
+          if (e.isDuplicate) {
+            resetBtn('رفع مستخلص المستهلكات للاعتماد');
+            showDuplicateResubmitModal(() => { document.getElementById('_najran_approve_btn_inner') && document.getElementById('_najran_approve_btn_inner').click(); });
+          } else {
+            alert('حدث خطأ: ' + e.message);
+            resetBtn('رفع مستخلص المستهلكات للاعتماد');
+          }
         }
       },
     });
@@ -629,8 +712,13 @@
           localStorage.removeItem('najran_health_attendance_done');
           window.location.href = '/extracts/track';
         } catch (e) {
-          alert('حدث خطأ: ' + e.message);
-          resetBtn('رفع مستخلص المراكز الصحية للاعتماد');
+          if (e.isDuplicate) {
+            resetBtn('رفع مستخلص المراكز الصحية للاعتماد');
+            showDuplicateResubmitModal(() => { document.getElementById('_najran_approve_btn_inner') && document.getElementById('_najran_approve_btn_inner').click(); });
+          } else {
+            alert('حدث خطأ: ' + e.message);
+            resetBtn('رفع مستخلص المراكز الصحية للاعتماد');
+          }
         }
       },
     });
@@ -647,8 +735,13 @@
           await submitExtract('spare_parts', { totalAmount: total });
           window.location.href = '/original/approval.html';
         } catch (e) {
-          alert('حدث خطأ: ' + e.message);
-          resetBtn('رفع مستخلص قطع الغيار للاعتماد');
+          if (e.isDuplicate) {
+            resetBtn('رفع مستخلص قطع الغيار للاعتماد');
+            showDuplicateResubmitModal(() => { document.getElementById('_najran_approve_btn_inner') && document.getElementById('_najran_approve_btn_inner').click(); });
+          } else {
+            alert('حدث خطأ: ' + e.message);
+            resetBtn('رفع مستخلص قطع الغيار للاعتماد');
+          }
         }
       },
     });
@@ -671,8 +764,13 @@
           } catch (_) {}
           window.location.href = '/extracts/track';
         } catch (e) {
-          alert('حدث خطأ: ' + e.message);
-          resetBtn('رفع مستخلص عمالة المكاتب للاعتماد');
+          if (e.isDuplicate) {
+            resetBtn('رفع مستخلص عمالة المكاتب للاعتماد');
+            showDuplicateResubmitModal(() => { document.getElementById('_najran_approve_btn_inner') && document.getElementById('_najran_approve_btn_inner').click(); });
+          } else {
+            alert('حدث خطأ: ' + e.message);
+            resetBtn('رفع مستخلص عمالة المكاتب للاعتماد');
+          }
         }
       },
     });
@@ -694,8 +792,13 @@
           } catch (_) {}
           window.location.href = '/extracts/track';
         } catch (e) {
-          alert('حدث خطأ: ' + e.message);
-          resetBtn('رفع مستخلص مستهلكات المكاتب للاعتماد');
+          if (e.isDuplicate) {
+            resetBtn('رفع مستخلص مستهلكات المكاتب للاعتماد');
+            showDuplicateResubmitModal(() => { document.getElementById('_najran_approve_btn_inner') && document.getElementById('_najran_approve_btn_inner').click(); });
+          } else {
+            alert('حدث خطأ: ' + e.message);
+            resetBtn('رفع مستخلص مستهلكات المكاتب للاعتماد');
+          }
         }
       },
     });

@@ -50,7 +50,7 @@
             try { jobs.push(fetch('/original/admin_offices_local_save_buttons.js?v=20260704_admin_local_save_v2_quota_safe', { cache: 'reload' }).catch(function(){})); } catch (_) {}
             try { jobs.push(fetch('/original/review-labor-final-snapshot-exact.js?v=20260705_v2_labor_details_bridge', { cache: 'reload' }).catch(function(){})); } catch (_) {}
             try { jobs.push(fetch('/original/review-labor-legacy-official-amount.js?v=20260705_cache_bust_v1', { cache: 'reload' }).catch(function(){})); } catch (_) {}
-            try { jobs.push(fetch('/original/admin_offices_review_detail_patch.js?v=20260704_admin_offices_detail_v5_period_safe', { cache: 'reload' }).catch(function(){})); } catch (_) {}
+            try { jobs.push(fetch('/original/admin_offices_review_detail_patch.js?v=20260705_v3_duplicate_resubmit_and_admin_offices_parts', { cache: 'reload' }).catch(function(){})); } catch (_) {}
             try { jobs.push(fetch(location.pathname + location.search, { cache: 'reload' }).catch(function(){})); } catch (_) {}
             Promise.all(jobs).then(done, done);
             setTimeout(done, 4000);
@@ -222,11 +222,11 @@
   if (pageFile === 'approval.html') {
     appendScript('/original/approval_revision_route_guard.js?v=20260703_approval_revision_v3', true);
     appendScript('/original/review-print-override.js?v=' + BUILD_V, true);
-    appendScript('/original/review-workflow.js?v=20260705_v2_labor_details_bridge', true);
+    appendScript('/original/review-workflow.js?v=20260705_v3_duplicate_resubmit_and_admin_offices_parts', true);
     appendScript('/original/review-labor-final-snapshot-exact.js?v=20260705_v2_labor_details_bridge', true);
     appendScript('/original/review-labor-legacy-official-amount.js?v=20260705_cache_bust_v1', true);
     appendScript('/original/review-generic-tables.js?v=20260703_admin_preview_v3', true);
-    appendScript('/original/admin_offices_review_detail_patch.js?v=20260704_admin_offices_detail_v5_period_safe', true);
+    appendScript('/original/admin_offices_review_detail_patch.js?v=20260705_v3_duplicate_resubmit_and_admin_offices_parts', true);
     appendScript('/original/review-consumables-summary-exact.js?v=' + BUILD_V, true);
   }
 
