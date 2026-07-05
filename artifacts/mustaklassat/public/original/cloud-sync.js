@@ -95,14 +95,17 @@
     return getCurrentPageFile() === 'settings_main.html';
   }
 
-  // صفحة عمالة المكاتب الإدارية: السحب التلقائي من السحابة معطّل عمدًا هنا.
+  // كل صفحات إدخال/رفع المستخلصات: السحب التلقائي من السحابة معطّل عمدًا.
   // المستخدم يشتغل محليًا بالكامل (حفظ/تصدير عادي)، والسحابة تُستخدم فقط في:
-  //  1) الرفع النهائي للاعتماد (submitAdminOffices — دفع، مش سحب، غير متأثر).
-  //  2) استعادة نسخة "طلب تعديل" — تتم عبر track.tsx بكتابة الـsnapshot مباشرة
-  //     في localStorage قبل التحويل لهذه الصفحة، بدون أي اعتماد على السحب هنا.
-  // تعطيل السحب التلقائي يمنع أن يجيب الريفريش مستخلصًا مختلفًا وسط شغل حالي.
-  function isAdminOfficesAttendancePage() {
-    return getCurrentPageFile() === 'admin_offices_attendance.html';
+  //  1) الرفع النهائي للاعتماد (دفع، مش سحب، غير متأثر بهذا التعطيل).
+  //  2) استعادة نسخة "طلب تعديل" — تتم عبر track.tsx بكتابة كل مفاتيح الـ
+  //     snapshot مباشرة في localStorage قبل التحويل لأي صفحة، لأي نوع
+  //     مستخلص (عمالة/مستهلكات/مكاتب إدارية/قطع غيار)، بدون أي اعتماد على
+  //     السحب هنا — فتعطيله هنا لا يكسر استعادة طلب التعديل إطلاقًا.
+  // استثناء وحيد: settings_main.html — صفحة إعدادات لا يوجد بها "رفع" يُحفِّز
+  // أي مزامنة بديلة، فتحتاج السحب العادي لمزامنة الإعدادات بين الأجهزة.
+  function isLocalOnlyPage() {
+    return getCurrentPageFile() !== 'settings_main.html';
   }
 
   function isRevisionMode() {
@@ -776,8 +779,8 @@
       finally { pulling = false; isApplyingCloudPull = false; }
     }
     window.najranPullFromCloud = pullSafe;
-    if (isAdminOfficesAttendancePage()) {
-      console.log('[MzamanaCloud] عمالة المكاتب الإدارية: السحب التلقائي معطّل — العمل محلي بالكامل حتى الرفع النهائي أو استعادة طلب تعديل');
+    if (isLocalOnlyPage() && !reviewOnly) {
+      console.log('[MzamanaCloud] وضع محلي بالكامل: السحب التلقائي معطّل — العمل محليًا حتى الرفع النهائي أو استعادة طلب تعديل');
     } else {
       await pullSafe();
     }
