@@ -1,6 +1,9 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import { applyThemeEarly } from "./components/layout/ThemeToggle";
+
+applyThemeEarly();
 
 import "../public/prereg-guard.js";
 import "../public/audit-light-guard.js";

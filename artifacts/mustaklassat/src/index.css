@@ -159,6 +159,12 @@
   --button-outline: rgba(255,255,255, .10);
   --badge-outline: rgba(255,255,255, .05);
 
+  /* لمسة التجديد — سطح التطبيق في الوضع الداكن */
+  --mn-app-bg: linear-gradient(135deg, #0b1220 0%, #0e1830 100%);
+  --mn-topbar-bg: rgba(19,28,49,0.85);
+  --mn-topbar-border: rgba(212,175,55,0.20);
+  --mn-topbar-text: #e8eefc;
+
   --opaque-button-border-intensity: 9; 
 
   --elevate-1: rgba(255,255,255, .04);
