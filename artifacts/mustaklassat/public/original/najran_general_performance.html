@@ -141,6 +141,15 @@ tr.total-row th, tr.total-row td {
             background: rgba(0, 0, 0, 0.55);
             z-index: 999;
         }
+        /* shared-styles.css يعرّف .overlay بغرض مختلف (طبقة شفافة فوق كل شيء
+           z-index:9999 !important، background:transparent !important) —
+           يتعارض مع استخدام هذه الصفحة (خلفية معتّمة تحت المودال z-index:1000)
+           ويمنع أي كليك من الوصول للمودال فعليًا. معرِّفا #id أقوى تحديدًا من
+           صنف .overlay فيتغلّبان عليه رغم !important في الطرفين. */
+        #overlay, #table-names-overlay {
+            z-index: 998 !important;
+            background: rgba(0, 0, 0, 0.55) !important;
+        }
         .signatures {
             display: grid;
             grid-template-columns: repeat(2, 1fr);

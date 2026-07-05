@@ -331,6 +331,16 @@
             background: rgba(0, 0, 0, 0.55);
             z-index: 999;
         }
+        /* shared-styles.css يعرّف .overlay بغرض مختلف تمامًا في صفحات أخرى
+           (طبقة شفافة فوق كل شيء لاصطياد "اضغط بره عشان تقفل" بلا تعتيم) —
+           بـ z-index:9999 !important وbackground:transparent !important.
+           هذا يتعارض مع استخدام هذه الصفحة (خلفية معتّمة تحت المودال) ويمنع
+           أي كليك من الوصول لحقول المودال فعليًا. معرِّف #id أقوى تحديدًا من
+           صنف .overlay فيتغلّب عليه رغم !important في كلا الطرفين. */
+        #item-name-overlay {
+            z-index: 998 !important;
+            background: rgba(0, 0, 0, 0.55) !important;
+        }
 
         /* تنسيق الخطوط والأسماء داخل صناديق التوقيع */
         .signature-box .signature-line {

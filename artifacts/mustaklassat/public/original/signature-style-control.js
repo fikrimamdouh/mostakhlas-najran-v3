@@ -5,7 +5,7 @@
  * الفكرة: كل محركات الخطابات (مستهلكات المستشفى، خطابات عامة، مكاتب إدارية
  * عمالة، مكاتب إدارية مستهلكات) تفتح نافذة طباعة منفصلة عبر
  * window.open('', ...) ثم win.document.write(...) وتستخدم نفس تسمية
- * الأصناف: .sig-title و .sig-name داخل خلية توقيع واحدة (الأب المباشر).
+ * الأصناف: .sig-title (أو .sig-role في محرك الخطابات العامة) و.sig-name داخل خلية توقيع واحدة (الأب المباشر).
  *
  * هذا الملف:
  *  1) يعترض window.open ليمسك نافذة الطباعة فور فتحها.
@@ -85,7 +85,7 @@
   // ضمن "طباعة الكل" مثلًا) لا يشارك إعداد "التوقيع الأول" مع "مندوب المقاول"
   // في صف مختلف، حتى لو كان كلاهما أول توقيع في صفه.
   function findSignatureRows(doc) {
-    var titles = doc.querySelectorAll('.sig-title');
+    var titles = doc.querySelectorAll('.sig-title, .sig-role');
     var rows = [];
     var rowIndex = new Map();
     var globalIndex = 0;
@@ -103,7 +103,7 @@
   }
 
   function resetInlineOverrides(cell) {
-    var title = cell.querySelector('.sig-title');
+    var title = cell.querySelector('.sig-title, .sig-role');
     var name = cell.querySelector('.sig-name');
     if (title) { title.style.fontSize = ''; title.style.fontWeight = ''; }
     if (name) { name.style.fontSize = ''; name.style.fontWeight = ''; }
@@ -125,7 +125,7 @@
         if (i >= MAX_SIGS) return;
         var cfg = settings.perSignature[i];
         if (!cfg) return;
-        var title = cell.querySelector('.sig-title');
+        var title = cell.querySelector('.sig-title, .sig-role');
         var name = cell.querySelector('.sig-name');
         if (cfg.fontSize) {
           if (title) title.style.fontSize = cfg.fontSize + 'px';
