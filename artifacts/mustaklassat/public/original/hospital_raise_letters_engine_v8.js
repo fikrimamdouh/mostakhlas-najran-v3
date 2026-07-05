@@ -60,8 +60,11 @@
 
   function baseData() {
     const c = readJson('persistentContractData', {}), e = readJson('persistentExtractData', {});
+    const rawHospital = first(c.hospitalName, c.siteName, c.centerName, localStorage.hospitalName, localStorage.currentHospital, 'المستشفى');
+    // إزالة لاحقة "— اسم الشركة" (زهران/إيمان) للطباعة فقط.
+    const hospitalForDisplay = String(rawHospital || '').replace(/\s*—\s*(زهران|إيمان)\s*$/, '').trim() || rawHospital;
     return {
-      hospital: first(c.hospitalName, c.siteName, c.centerName, localStorage.hospitalName, localStorage.currentHospital, 'المستشفى'),
+      hospital: hospitalForDisplay,
       company: first(c.companyName, c.contractorName, e.companyName, localStorage.companyName, 'الشركة'),
       contract: first(c.contractDetails, c.contractName, c.scopeName, e.contractName, 'مشروع التشغيل والصيانة غير الطبية'),
       contractNo: first(c.contractNumber, c.contractNo, c.number, e.contractNumber, localStorage.contractNumber, '—'),

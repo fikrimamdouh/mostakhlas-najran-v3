@@ -39,7 +39,9 @@ function updateContractDisplayData() {
     
     // تحديث اسم المستشفى
     for (let i = 0; i < hospitalNameElements.length; i++) {
-        hospitalNameElements[i].textContent = hospitalName;
+        hospitalNameElements[i].textContent = (typeof stripCompanySuffixForDisplay === 'function')
+            ? stripCompanySuffixForDisplay(hospitalName)
+            : hospitalName;
     }
     
     // تحديث تفاصيل العقد

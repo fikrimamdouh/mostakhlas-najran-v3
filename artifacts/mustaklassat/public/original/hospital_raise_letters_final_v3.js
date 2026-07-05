@@ -22,7 +22,7 @@
 
   loadScript(
     'hospital-raise-letters-engine-v8',
-    '/original/hospital_raise_letters_engine_v8.js?v=20260702_v21_signature_controls_and_vacant_fix'
+    '/original/hospital_raise_letters_engine_v8.js?v=20260705_v1_hospital_name_display_fix'
   );
 
   setTimeout(function(){

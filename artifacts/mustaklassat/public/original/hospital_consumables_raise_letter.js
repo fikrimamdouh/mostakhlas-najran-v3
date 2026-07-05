@@ -105,7 +105,11 @@ const DB_VERSION = 'consumables_v27';  const DOCS = [
     .map(clean)
     .find(v => v && !blocked.test(v));
 
-  return found || 'الموقع الحالي';
+  // إزالة لاحقة "— اسم الشركة" (زهران/إيمان) للطباعة/العرض فقط — لا تُلمس
+  // القيمة المخزَّنة في localStorage نفسها.
+  const stripped = String(found || '').replace(/\s*—\s*(زهران|إيمان)\s*$/, '').trim();
+
+  return stripped || found || 'الموقع الحالي';
 }
   function currentCompanyName() {
     const c = getContract();

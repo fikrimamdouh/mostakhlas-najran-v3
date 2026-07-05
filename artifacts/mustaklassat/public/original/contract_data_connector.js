@@ -2,6 +2,14 @@
  * contract_data_connector.js
  * ملف جافاسكريبت موحد لربط بيانات العقد بين صفحة الإعدادات وباقي الصفحات
  */
+
+// إزالة لاحقة "— اسم الشركة" (زهران/إيمان فقط، الموقعان الوحيدان بهذا النمط)
+// للعرض والطباعة فقط. القيمة المخزَّنة نفسها (hospitalName في localStorage
+// وقاعدة البيانات) تبقى بلا أي تغيير — تلك تُستخدم في منطق داخلي (اشتقاق
+// اسم الشركة، صلاحيات مشرف العقد) يجب أن يبقى يعمل بنفس الدقة.
+function stripCompanySuffixForDisplay(name) {
+  return String(name || '').replace(/\s*—\s*(زهران|إيمان)\s*$/, '').trim();
+}
 (function suppressHospitalLettersAchievementMissingAttendanceAlert(){
     try {
         const sig = location.pathname + location.search;
@@ -80,7 +88,7 @@ function updateContractDisplayData(fields = [
 
     // تحديث العناصر المباشرة داخل صفحات الحضور والأداء
     document.querySelectorAll('.hospitalName').forEach(el => {
-        el.textContent = mergedData.hospitalName || 'غير محدد';
+        el.textContent = stripCompanySuffixForDisplay(mergedData.hospitalName) || 'غير محدد';
     });
 
     document.querySelectorAll('.contractDetails').forEach(el => {
@@ -206,7 +214,7 @@ function forceContractDirectDisplay() {
     const directPurchaseRatio = data.directPurchaseRatio || '0';
 
     document.querySelectorAll('.hospitalName').forEach(el => {
-        el.textContent = hospitalName;
+        el.textContent = stripCompanySuffixForDisplay(hospitalName);
     });
 
     document.querySelectorAll('.companyName').forEach(el => {
