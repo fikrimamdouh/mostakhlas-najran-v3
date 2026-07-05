@@ -95,6 +95,16 @@
     return getCurrentPageFile() === 'settings_main.html';
   }
 
+  // صفحة عمالة المكاتب الإدارية: السحب التلقائي من السحابة معطّل عمدًا هنا.
+  // المستخدم يشتغل محليًا بالكامل (حفظ/تصدير عادي)، والسحابة تُستخدم فقط في:
+  //  1) الرفع النهائي للاعتماد (submitAdminOffices — دفع، مش سحب، غير متأثر).
+  //  2) استعادة نسخة "طلب تعديل" — تتم عبر track.tsx بكتابة الـsnapshot مباشرة
+  //     في localStorage قبل التحويل لهذه الصفحة، بدون أي اعتماد على السحب هنا.
+  // تعطيل السحب التلقائي يمنع أن يجيب الريفريش مستخلصًا مختلفًا وسط شغل حالي.
+  function isAdminOfficesAttendancePage() {
+    return getCurrentPageFile() === 'admin_offices_attendance.html';
+  }
+
   function isRevisionMode() {
     try {
       return localStorage.getItem('najran_revision_mode') === 'true' &&
@@ -766,7 +776,11 @@
       finally { pulling = false; isApplyingCloudPull = false; }
     }
     window.najranPullFromCloud = pullSafe;
-    await pullSafe();
+    if (isAdminOfficesAttendancePage()) {
+      console.log('[MzamanaCloud] عمالة المكاتب الإدارية: السحب التلقائي معطّل — العمل محلي بالكامل حتى الرفع النهائي أو استعادة طلب تعديل');
+    } else {
+      await pullSafe();
+    }
     showHospitalActivityNotice();
 
     if (!reviewOnly) {
