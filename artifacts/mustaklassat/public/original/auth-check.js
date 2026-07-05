@@ -46,11 +46,11 @@
             try { jobs.push(fetch('/original/hospital-storage-extract-context-guard.js?v=' + HOSPITAL_STORAGE_GUARD_V, { cache: 'reload' }).catch(function(){})); } catch (_) {}
             try { jobs.push(fetch('/original/extract-snapshot.js?v=20260703_snapshot_quota_v1', { cache: 'reload' }).catch(function(){})); } catch (_) {}
             try { jobs.push(fetch('/original/submitted_extract_archive_bundle_guard.js?v=20260705_v2_labor_details_bridge', { cache: 'reload' }).catch(function(){})); } catch (_) {}
-            try { jobs.push(fetch('/original/admin_offices_full_submit_snapshot_guard.js?v=20260705_cache_bust_v1', { cache: 'reload' }).catch(function(){})); } catch (_) {}
+            try { jobs.push(fetch('/original/admin_offices_full_submit_snapshot_guard.js?v=20260705_v4_admin_offices_duplicate_fix', { cache: 'reload' }).catch(function(){})); } catch (_) {}
             try { jobs.push(fetch('/original/admin_offices_local_save_buttons.js?v=20260704_admin_local_save_v2_quota_safe', { cache: 'reload' }).catch(function(){})); } catch (_) {}
             try { jobs.push(fetch('/original/review-labor-final-snapshot-exact.js?v=20260705_v2_labor_details_bridge', { cache: 'reload' }).catch(function(){})); } catch (_) {}
             try { jobs.push(fetch('/original/review-labor-legacy-official-amount.js?v=20260705_cache_bust_v1', { cache: 'reload' }).catch(function(){})); } catch (_) {}
-            try { jobs.push(fetch('/original/admin_offices_review_detail_patch.js?v=20260705_v3_duplicate_resubmit_and_admin_offices_parts', { cache: 'reload' }).catch(function(){})); } catch (_) {}
+            try { jobs.push(fetch('/original/admin_offices_review_detail_patch.js?v=20260705_v4_admin_offices_duplicate_fix', { cache: 'reload' }).catch(function(){})); } catch (_) {}
             try { jobs.push(fetch(location.pathname + location.search, { cache: 'reload' }).catch(function(){})); } catch (_) {}
             Promise.all(jobs).then(done, done);
             setTimeout(done, 4000);
@@ -211,7 +211,7 @@
     appendScript('/original/submitted_extract_archive_bundle_guard.js?v=20260705_v2_labor_details_bridge', true);
   }
 
-  if (isAdminOfficesPage || isAdminOfficesConsumablesPage) appendScript('/original/admin_offices_full_submit_snapshot_guard.js?v=20260705_cache_bust_v1', true);
+  if (isAdminOfficesPage || isAdminOfficesConsumablesPage) appendScript('/original/admin_offices_full_submit_snapshot_guard.js?v=20260705_v4_admin_offices_duplicate_fix', true);
   if (isAttendancePage) appendScript('/original/attendance-cloud-refresh-guard.js?v=' + BUILD_V, true);
   if (isAdminOfficesPage) {
     appendScript('/original/admin_offices_performance_logic.js?v=' + BUILD_V, true);
@@ -226,7 +226,7 @@
     appendScript('/original/review-labor-final-snapshot-exact.js?v=20260705_v2_labor_details_bridge', true);
     appendScript('/original/review-labor-legacy-official-amount.js?v=20260705_cache_bust_v1', true);
     appendScript('/original/review-generic-tables.js?v=20260703_admin_preview_v3', true);
-    appendScript('/original/admin_offices_review_detail_patch.js?v=20260705_v3_duplicate_resubmit_and_admin_offices_parts', true);
+    appendScript('/original/admin_offices_review_detail_patch.js?v=20260705_v4_admin_offices_duplicate_fix', true);
     appendScript('/original/review-consumables-summary-exact.js?v=' + BUILD_V, true);
   }
 

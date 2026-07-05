@@ -81,6 +81,9 @@
       alert('تم رفع نفس المستخلص مسبقًا. غيّر رقم الدفعة أو الشهر ثم أعد المحاولة.');
     }
   }
+  // مُصدَّرة لأن مستخلصات المكاتب الإدارية تُرفع عبر دالة منفصلة في ملف آخر
+  // (admin_offices_full_submit_snapshot_guard.js)، وليس عبر submitExtract هنا.
+  window.showDuplicateResubmitModal = showDuplicateResubmitModal;
 
   function getSession() {
     try { return JSON.parse(localStorage.getItem('najran_session') || '{}'); }
@@ -353,11 +356,12 @@
         doneLock.submittedAt &&
         now - doneLock.submittedAt < 24 * 60 * 60 * 1000
       ) {
-        alert(
-          'تم منع رفع مستخلص مكرر.\n\n' +
-          'نفس النوع/الشهر/السنة/رقم الدفعة تم رفعه بالفعل خلال آخر 24 ساعة.\n\n' +
-          'لو تريد رفع مستخلص جديد، غيّر رقم الدفعة أو الشهر من الإعدادات.'
-        );
+        // هذا حارس محلي (قبل أي اتصال بالسيرفر) — نفس مودال إعادة المحاولة
+        // المستخدم لطلب 409 من السيرفر، حتى لا يظهر alert بلا زرار فعلي.
+        showDuplicateResubmitModal(() => {
+          const btn = document.getElementById('_najran_approve_btn_inner');
+          if (btn) btn.click();
+        });
         return null;
       }
 

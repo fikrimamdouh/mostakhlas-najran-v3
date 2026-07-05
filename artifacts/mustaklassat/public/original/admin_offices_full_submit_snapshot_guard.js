@@ -187,6 +187,15 @@
   function buildLaborSnapshot() {
     var data = readLocal('adminOfficesAttendanceData_v1') || {};
     var names = readLocal('adminOfficeNames_v1') || {};
+    try {
+      console.info('[AdminOfficesFullSubmitSnapshot][diagnostic] buildLaborSnapshot at submit time', {
+        adminOfficeNames_v1_officeCount: Object.keys(names || {}).length,
+        adminOfficesAttendanceData_v1_officeCount: Object.keys(data || {}).length
+      });
+      if (!Object.keys(names || {}).length && !Object.keys(data || {}).length) {
+        console.warn('[AdminOfficesFullSubmitSnapshot][diagnostic] localStorage لا يحتوي أي مكاتب/عمالة لحظة الرفع — تحقق أن بيانات المكاتب اتحفظت في الصفحة قبل الضغط على رفع.');
+      }
+    } catch (_) {}
     var affiliations = readLocal('adminOfficeAffiliations_v1') || {};
     var officeKeys = Object.keys(names || {});
     var officeRows = {};
@@ -523,6 +532,16 @@
       });
       if (!res.ok) {
         var err = await res.json().catch(function () { return {}; });
+        if (res.status === 409 && err && err.duplicate) {
+          submitting = false;
+          if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = oldHtml || '<span>رفع مستخلص المكاتب للاعتماد</span><span style="font-size:1.2rem">←</span>'; }
+          if (typeof window.showDuplicateResubmitModal === 'function') {
+            window.showDuplicateResubmitModal(function () { submitAdminOffices(part); });
+          } else {
+            alert(err.error || 'تم رفع نفس المستخلص مسبقًا. غيّر رقم الدفعة أو الشهر ثم أعد المحاولة.');
+          }
+          return;
+        }
         throw new Error(err.error || 'تعذر رفع مستخلص المكاتب');
       }
       var result = await res.json().catch(function () { return {}; });

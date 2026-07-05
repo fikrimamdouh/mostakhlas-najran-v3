@@ -126,6 +126,23 @@
     }
 
     var names=p(d.adminOfficeNames_v1,{}), att=p(d.adminOfficesAttendanceData_v1||d.adminOfficesAttendanceData_v1_localBackup||d.adminOfficesLaborDataSafe_v2||d.adminOfficesAttendanceData,{});
+    (function laborDiagnostics() {
+      try {
+        var allKeys = Object.keys(d || {});
+        var namesRaw = d.adminOfficeNames_v1, attRaw = d.adminOfficesAttendanceData_v1;
+        console.info('[AdminOfficesReviewDetailPatch][diagnostic] extractId=' + e.id + ' part=labor', {
+          adminOfficeNames_v1_present: namesRaw != null,
+          adminOfficeNames_v1_officeCount: Object.keys(names || {}).length,
+          adminOfficesAttendanceData_v1_present: attRaw != null,
+          adminOfficesAttendanceData_v1_officeCount: Object.keys(att || {}).length,
+          allExtractDataKeysCount: allKeys.length,
+          allExtractDataKeys: allKeys
+        });
+        if (!Object.keys(names || {}).length && !Object.keys(att || {}).length) {
+          console.warn('[AdminOfficesReviewDetailPatch][diagnostic] extractData لا يحتوي أي مكاتب/عمالة على الإطلاق — البيانات لم تُحفظ أصلًا وقت الرفع (مشكلة تجميع بيانات، مش مشكلة عرض). هذا المستخلص يحتاج إعادة رفع بعد التأكد أن المتصفح محدَّث، لا إصلاح عرض.');
+        }
+      } catch (diagErr) { console.warn('[AdminOfficesReviewDetailPatch][diagnostic] فشل التشخيص', diagErr); }
+    })();
     var perf=p(d.adminOfficePerformanceDeductions_v1||d.performanceDeductions||d.performanceData_v4||d.performanceData,{}), ach=p(d.achievementData||d.achievementTitles_v1||d.achievementItemNames,{}), off={};
     var meta=p(d.persistentExtractData,{}), contract=p(d.persistentContractData,{}), period=periodInfo(e,d);
     Object.keys(names||{}).forEach(function(k){off[k]=names[k]||k;}); Object.keys(att||{}).forEach(function(k){if(!off[k])off[k]=names[k]||k;});
