@@ -116,8 +116,15 @@
     settings = settings || readSettings();
     var groups = findSignatureRows(doc);
     groups.forEach(function (g) {
-      var justify = alignToJustify(settings.containerAlign);
-      g.row.style.justifyContent = justify || '';
+      // توقيع منفرد وحيد في "صفه": لا يوجد صفّ فعلي للمحاذاة/الالتفاف حوله —
+      // أب هذا التوقيع الفعلي غالبًا حاوية محتوى الصفحة كلها (مشتركة مع
+      // الموضوع والعنوان في خطابات التوقيع الواحد)، فتطبيق justify-content
+      // أو تحويله لـ flex كان يشوّه تخطيط الصفحة كاملة بدل التوقيع فقط.
+      var isStandaloneSingle = g.cells.length === 1;
+      if (!isStandaloneSingle) {
+        var justify = alignToJustify(settings.containerAlign);
+        g.row.style.justifyContent = justify || '';
+      }
       var usesFlexBreak = false;
       g.cells.forEach(function (entry) {
         var cell = entry.cell, i = entry.globalIndex;
@@ -139,13 +146,13 @@
           if (name) name.style.fontWeight = '400';
         }
         if (cfg.gapBefore) cell.style.marginInlineStart = cfg.gapBefore + 'px';
-        if (cfg.newLine) {
+        if (cfg.newLine && !isStandaloneSingle) {
           var disp = (doc.defaultView || window).getComputedStyle(g.row).display;
           if (disp === 'grid') cell.style.gridColumn = '1 / -1';
           else usesFlexBreak = true, cell.style.flexBasis = '100%';
         }
       });
-      if (usesFlexBreak) { g.row.style.display = 'flex'; g.row.style.flexWrap = 'wrap'; }
+      if (usesFlexBreak && !isStandaloneSingle) { g.row.style.display = 'flex'; g.row.style.flexWrap = 'wrap'; }
     });
     var total = groups.reduce(function (n, g) { return n + g.cells.length; }, 0);
     return total;
@@ -269,13 +276,48 @@
     }
 
     render();
-    toggle.onclick = function () { panel.classList.toggle('open'); };
+    toggle.onclick = function () {
+      panel.classList.toggle('open');
+      if (panel.classList.contains('open')) {
+        try {
+          var firstTitle = doc.querySelector('.sig-title, .sig-role');
+          if (firstTitle) {
+            var target = firstTitle.closest('.sig-cell') || firstTitle.parentElement || firstTitle;
+            if (target.scrollIntoView) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            var prevOutline = target.style.outline, prevOffset = target.style.outlineOffset, prevTransition = target.style.transition;
+            target.style.transition = 'outline-color .25s ease';
+            target.style.outline = '3px solid #2563eb';
+            target.style.outlineOffset = '4px';
+            setTimeout(function () {
+              target.style.outline = prevOutline || '';
+              target.style.outlineOffset = prevOffset || '';
+              setTimeout(function () { target.style.transition = prevTransition || ''; }, 300);
+            }, 1400);
+          }
+        } catch (_) {}
+      }
+    };
+  }
+
+  function hasSaudiNamesRebuildPage(doc) {
+    try {
+      var titles = doc.querySelectorAll('.title');
+      for (var i = 0; i < titles.length; i++) {
+        if (String(titles[i].textContent || '').replace(/\s+/g, ' ').trim() === 'بيان أسماء السعوديين') return true;
+      }
+    } catch (_) {}
+    return false;
   }
 
   function onSignatureWindow(win) {
     try {
       var doc = win.document;
       if (!doc || !doc.body) return false;
+      // صفحة "بيان أسماء السعوديين" عندها سكربت منفصل يعيد بناء التوقيع
+      // فيها بتوقيت متأخر (hospital_raise_letters_saudi_names_last_signature_fix_v1.js)
+      // — تفاعل أداتنا معه بنفس التوقيت كان يسبب تصادمًا يظهر التنسيق على
+      // العنوان بدل التوقيع. نتركه يدير توقيعه بمفرده بلا تدخل من هنا.
+      if (hasSaudiNamesRebuildPage(doc)) return false;
       var count = applyStyles(doc, readSettings());
       if (count > 0) buildPanel(doc, count);
       return count > 0;
