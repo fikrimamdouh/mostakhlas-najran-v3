@@ -3,3 +3,8 @@ node_modules
 .firebase
 dist
 build
+
+# ملفات cache تدريجي لـTypeScript — تسبب فشل typecheck على أي clone جديد
+# (اكتُشفت أثناء مراجعة شاملة: القيم المخزَّنة كانت من قبل تعديلات schema
+# الأخيرة، فكان tsc --build يظن dist/ جاهز بينما هو فارغ فعليًا).
+lib/*/tsconfig.tsbuildinfo
