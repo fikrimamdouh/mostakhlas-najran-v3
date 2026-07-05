@@ -4732,6 +4732,9 @@ function openExtractAuditDialog() {
   }
 }
 function backupAttendanceData() {
+  // النظام الشامل الموحّد أولًا (يأخذ كل مفاتيح localStorage، شامل التواقيع
+  // والترويسة وكل شيء) — القديم تحته يبقى fallback فقط لو لم يتوفر لأي سبب.
+  if (typeof createSpecificBackup === 'function') { createSpecificBackup('full_system'); return; }
   try {
     const attendanceData = getAttendanceData();
 
@@ -4818,8 +4821,16 @@ function restoreAttendanceData(event) {
       let persistentContractDataToRestore = null;
       let persistentExtractDataToRestore = null;
 
-      // نسخة جديدة V2
-      if (restoredFile && restoredFile.__najranAttendanceBackupVersion >= 2) {
+      // النسخة الشاملة الجديدة (من نظام backup.js الموحَّد) — البيانات
+      // الفعلية داخل .data، ومُعلَّمة بوجود .manifest دائمًا. نتحقق من هذا
+      // الشكل أولًا حتى تشتغل النسخ الشاملة الجديدة هنا بلا أي مشكلة.
+      if (restoredFile && restoredFile.data && typeof restoredFile.data === 'object' && restoredFile.manifest) {
+        var _d = restoredFile.data;
+        attendanceDataToRestore = _d.attendanceData || null;
+        dynamicSignaturesToRestore = _d.dynamicSignatures || null;
+        persistentContractDataToRestore = _d.persistentContractData || null;
+        persistentExtractDataToRestore = _d.persistentExtractData || null;
+      } else if (restoredFile && restoredFile.__najranAttendanceBackupVersion >= 2) {
         attendanceDataToRestore = restoredFile.attendanceData;
         dynamicSignaturesToRestore = restoredFile.dynamicSignatures;
         persistentContractDataToRestore = restoredFile.persistentContractData;

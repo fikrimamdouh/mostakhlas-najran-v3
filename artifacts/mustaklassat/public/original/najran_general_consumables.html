@@ -750,6 +750,7 @@
   }
 
 </style>
+<script src="/original/backup.js?v=20260705_v1_unified_full_backup"></script>
 </head>
 <body>
     <div id="save-toast">تم الحفظ بنجاح!</div>
@@ -2330,6 +2331,7 @@ const removeSignature = (index) => {
         document.getElementById('backup-file-input').addEventListener('change', uploadBackup);
     };
     const downloadBackup = () => {
+        if (typeof createSpecificBackup === 'function') { createSpecificBackup('full_system'); return; }
         const allData = { subcontractors: subcontractorsData, performance: performanceData, water: waterData, sewage: sewageData, summary: summaryData, signatures: signaturesData, titles: printTitlesData };
         const blob = new Blob([JSON.stringify(allData, null, 2)], {type: 'application/json'});
         const url = URL.createObjectURL(blob);
@@ -2346,6 +2348,26 @@ const removeSignature = (index) => {
             reader.onload = function(e) {
                 try {
                     const data = JSON.parse(e.target.result);
+
+                    // النسخة الشاملة الجديدة (backup.js) — البيانات داخل .data
+                    // بأسماء المفاتيح الحقيقية مباشرة (subcontractors_data_<DB_VERSION>...).
+                    if (data && data.data && typeof data.data === 'object' && data.manifest) {
+                        const d2 = data.data;
+                        const realKey = `subcontractors_data_${DB_VERSION}`;
+                        if (d2[realKey] || d2[`performance_data_${DB_VERSION}`] || d2[`summary_data_${DB_VERSION}`]) {
+                            showConfirmationDialog("تأكيد استعادة البيانات", "سيتم استبدال جميع البيانات الحالية بالبيانات من الملف. هل أنت متأكد؟", () => {
+                                Object.keys(d2).forEach(key => {
+                                    if (key.indexOf('_' + DB_VERSION) !== -1 || key.indexOf(DB_VERSION) !== -1) {
+                                        localStorage.setItem(key, typeof d2[key] === 'string' ? d2[key] : JSON.stringify(d2[key]));
+                                    }
+                                });
+                                alert("تم استعادة البيانات بنجاح. سيتم إعادة تحميل الصفحة.");
+                                location.reload();
+                            });
+                            return;
+                        }
+                    }
+
                     showConfirmationDialog("تأكيد استعادة البيانات", "سيتم استبدال جميع البيانات الحالية بالبيانات من الملف. هل أنت متأكد؟", () => {
                         if(data.subcontractors) localStorage.setItem(`subcontractors_data_${DB_VERSION}`, JSON.stringify(data.subcontractors));
                         if(data.performance) localStorage.setItem(`performance_data_${DB_VERSION}`, JSON.stringify(data.performance));

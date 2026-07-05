@@ -2459,6 +2459,7 @@ centerData.forEach(emp => {
  * ✅ [النسخة النهائية V23 - مع مفاتيح موحدة للحفظ]
  */
 function backupData() {
+    if (typeof createSpecificBackup === 'function') { createSpecificBackup('full_system'); return; }
     try {
         const backupObject = {
             version: "4.0", // رقم إصدار جديد
@@ -2512,6 +2513,26 @@ function restoreData(event) {
     reader.onload = function(e) {
         try {
             const restored = JSON.parse(e.target.result);
+
+            // النسخة الشاملة الجديدة (backup.js) — البيانات داخل .data
+            // ومُعلَّمة بـ.manifest دائمًا. المفاتيح الحقيقية لهذه الصفحة هي
+            // adminOfficesAttendanceData_v1 / adminOfficeNames_v1 (وليست
+            // centersAttendanceData_v2 / centerNames_v3 الخاصة بالمراكز الصحية).
+            if (restored && restored.data && typeof restored.data === 'object' && restored.manifest) {
+                var d2 = restored.data;
+                if (d2.adminOfficesAttendanceData_v1 && d2.adminOfficeNames_v1) {
+                    saveAttendanceData(d2.adminOfficesAttendanceData_v1);
+                    saveCenterNames(d2.adminOfficeNames_v1);
+                    if (d2.persistentContractData) localStorage.setItem('persistentContractData', JSON.stringify(d2.persistentContractData));
+                    if (d2.persistentExtractData) localStorage.setItem('persistentExtractData', JSON.stringify(d2.persistentExtractData));
+                    if (d2.performanceData_v4) localStorage.setItem('performanceData_v4', JSON.stringify(d2.performanceData_v4));
+                    if (d2.performanceDeductions) localStorage.setItem('performanceDeductions', JSON.stringify(d2.performanceDeductions));
+                    alert("تم استعادة البيانات بنجاح! سيتم إعادة تحميل الصفحة لتطبيق كل التغييرات.");
+                    window.location.reload();
+                    return;
+                }
+            }
+
             const restoredData = restored.data;
 
             // ✅ التحقق من وجود البيانات الأساسية بالأسماء الصحيحة

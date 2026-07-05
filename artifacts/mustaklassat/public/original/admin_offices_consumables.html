@@ -377,6 +377,7 @@ select.visit-date-postponed {
 
   </style>
 <link rel="stylesheet" href="/original/shared-styles.css">
+<script src="/original/backup.js?v=20260705_v1_unified_full_backup"></script>
 </head>
 <body>
     <div id="save-toast">تم الحفظ بنجاح!</div>
@@ -1418,6 +1419,7 @@ const visitDateSelect = visitDateOptions
     }
 
     function downloadBackup() {
+        if (typeof createSpecificBackup === 'function') { createSpecificBackup('full_system'); return; }
         const allData = { 
             subcontractors: subcontractorsData, 
             performance: performanceData, 
@@ -1448,6 +1450,28 @@ const visitDateSelect = visitDateOptions
                 try {
                     const data = JSON.parse(e.target.result);
                     closeUnifiedModal(); // أغلق نافذة النسخ الاحتياطي أولاً
+
+                    // النسخة الشاملة الجديدة (backup.js) — البيانات داخل .data
+                    // بأسماء المفاتيح الحقيقية مباشرة.
+                    if (data && data.data && typeof data.data === 'object' && data.manifest) {
+                        const d2 = data.data;
+                        const hasComprehensive = Object.keys(d2).some(k => k.indexOf(DB_VERSION) !== -1);
+                        if (hasComprehensive) {
+                            setTimeout(() => {
+                                showConfirmationDialog("تأكيد استعادة البيانات", "سيتم استبدال جميع البيانات الحالية بالبيانات من الملف. هل أنت متأكد؟", () => {
+                                    Object.keys(d2).forEach(key => {
+                                        if (key.indexOf(DB_VERSION) !== -1) {
+                                            localStorage.setItem(key, typeof d2[key] === 'string' ? d2[key] : JSON.stringify(d2[key]));
+                                        }
+                                    });
+                                    alert("تم استعادة البيانات بنجاح. سيتم إعادة تحميل الصفحة.");
+                                    location.reload();
+                                });
+                            }, 100);
+                            return;
+                        }
+                    }
+
                     setTimeout(() => { // تأخير بسيط لإظهار نافذة التأكيد
                         showConfirmationDialog("تأكيد استعادة البيانات", "سيتم استبدال جميع البيانات الحالية بالبيانات من الملف. هل أنت متأكد؟", () => {
                             if(data.subcontractors) localStorage.setItem(`subcontractors_data_${DB_VERSION}`, JSON.stringify(data.subcontractors));

@@ -4,52 +4,10 @@ function showPasswordPrompt(sectionId) {
     if (prompt) prompt.style.display = 'block';
 }
 
-function openBackupRestoreModal() {
-    const modal = document.getElementById('backup-restore-modal');
-    if (modal) modal.style.display = 'flex';
-}
-
-// ✅✅✅ استبدل الدالة القديمة بهذه الدالة الكاملة ✅✅✅
-function createSpecificBackup(type) {
-    console.log(`بدء إنشاء نسخة احتياطية من نوع: ${type}`);
-    let dataToBackup = {};
-    let fileName = `backup_${type}_${new Date().toISOString().slice(0, 10)}.json`;
-
-    // 1. تجميع البيانات بناءً على النوع المطلوب
-    if (type === 'settings' || type === 'full_system') {
-        dataToBackup.persistentContractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-        dataToBackup.persistentExtractData = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
-    }
-    if (type.includes('attendance') || type === 'full_system') {
-        // هذا يجمع كل بيانات الحضور من كل الصفحات (إذا كانت موجودة)
-        // تأكد من أن المفاتيح صحيحة
-        dataToBackup.attendanceData = JSON.parse(localStorage.getItem('attendanceData') || '{}');
-        dataToBackup.healthCentersAttendanceData = JSON.parse(localStorage.getItem('healthCentersAttendanceData') || '{}');
-    }
-    if (type.includes('consumables') || type === 'full_system') {
-        // هذا يجمع بيانات المستهلكات
-        dataToBackup.mainHospitalConsumables = JSON.parse(localStorage.getItem('mainHospitalConsumables') || '{}');
-        dataToBackup.healthCentersConsumables = JSON.parse(localStorage.getItem('healthCentersConsumables') || '{}');
-    }
-    // يمكنك إضافة المزيد من الشروط هنا لأنواع أخرى
-
-    // 2. تحويل البيانات إلى نص JSON منسق
-    const jsonString = JSON.stringify(dataToBackup, null, 2);
-
-    // 3. إنشاء رابط وهمي وتنزيل الملف
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    console.log(`تم إنشاء وتنزيل الملف: ${fileName}`);
-    alert(`تم إنشاء النسخة الاحتياطية "${fileName}" بنجاح.`);
-}
+// openBackupRestoreModal و createSpecificBackup مُعرَّفتان بالفعل في backup.js
+// (المُحمَّل قبل هذا الملف على هذه الصفحة) بنسخة شاملة تأخذ كل بيانات
+// المستخدم شامل التواقيع والترويسة — أُزيلت النسختان المكرَّرتان هنا التي
+// كانت أبسط بكثير وتُلغي (تدوس فوق) النسخة الشاملة بسبب ترتيب التحميل.
 // settings_main.js
 // تحديث التاريخ والوقت
 function updateDateTime() {
@@ -664,7 +622,7 @@ function scheduleBackup() {
         const now = new Date();
         const [hours, minutes] = backupTime.split(':');
         if (now.getHours() === parseInt(hours) && now.getMinutes() === parseInt(minutes)) {
-            createBackup(['all']);
+            createSpecificBackup('full_system');
         }
     }, 60000);
 }

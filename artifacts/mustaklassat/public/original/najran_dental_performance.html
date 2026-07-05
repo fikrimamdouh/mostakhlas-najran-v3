@@ -471,6 +471,7 @@ tr.total-row th, tr.total-row td {
 
 
 <link rel="stylesheet" href="/original/shared-styles.css">
+<script src="/original/backup.js?v=20260705_v1_unified_full_backup"></script>
 </head>
 
 
@@ -2941,6 +2942,7 @@ document.addEventListener('click', function (e) {
 });
 // ===== نظام النسخ الاحتياطي الكامل =====
 function createBackup() {
+    if (typeof createSpecificBackup === 'function') { createSpecificBackup('full_system'); return; }
     const backup = {
         timestamp: new Date().toISOString(),
         performanceData: {},
@@ -3083,7 +3085,21 @@ function restoreBackup() {
             try {
                 const backup = JSON.parse(event.target.result);
 
-                // استعادة الجداول
+                // النسخة الشاملة الجديدة (backup.js) — البيانات داخل .data
+                // بأسماء المفاتيح الحقيقية مباشرة (tableData_<dept>, performanceSignatures...).
+                if (backup && backup.data && typeof backup.data === 'object' && backup.manifest) {
+                    const d2 = backup.data;
+                    let restoredAny = false;
+                    Object.keys(d2).forEach(key => {
+                        if (key.indexOf('tableData_') === 0) { localStorage.setItem(key, JSON.stringify(d2[key])); restoredAny = true; }
+                    });
+                    if (d2.performanceSignatures) { localStorage.setItem('performanceSignatures', JSON.stringify(d2.performanceSignatures)); restoredAny = true; }
+                    if (d2.performanceData != null) { localStorage.setItem('performanceData', typeof d2.performanceData === 'string' ? d2.performanceData : JSON.stringify(d2.performanceData)); restoredAny = true; }
+                    if (d2.performanceTotalDeduction != null) { localStorage.setItem('performanceTotalDeduction', typeof d2.performanceTotalDeduction === 'string' ? d2.performanceTotalDeduction : JSON.stringify(d2.performanceTotalDeduction)); restoredAny = true; }
+                    if (restoredAny) { location.reload(); showSuccessMessage('تم استعادة النسخة الاحتياطية بنجاح!'); return; }
+                }
+
+                // استعادة الجداول (الشكل القديم الخاص بهذه الصفحة)
                 Object.keys(backup.performanceData || {}).forEach(dept => {
                     localStorage.setItem(`tableData_${dept}`, JSON.stringify(backup.performanceData[dept]));
                 });

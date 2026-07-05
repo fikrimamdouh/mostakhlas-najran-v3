@@ -323,6 +323,7 @@
 
   </style>
 <link rel="stylesheet" href="/original/shared-styles.css">
+<script src="/original/backup.js?v=20260705_v1_unified_full_backup"></script>
 </head>
 <body>
 <div class="container">
@@ -614,6 +615,7 @@ function confirmClear() {
 // ── Backup ────────────────────────────────────────────────────────────────────
 function backupData() {
   saveData();
+  if (typeof createSpecificBackup === 'function') { createSpecificBackup('full_system'); return; }
   const data = localStorage.getItem(STORAGE_KEY) || '{}';
   const blob = new Blob([data], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
