@@ -10,7 +10,7 @@
   var BASE = window.location.origin;
   var BUILD_V = '20260623archiveBundleRouteV1';
   var HOSPITAL_STORAGE_GUARD_V = '20260704_stale_revision_404_modal_v2';
-  var NOTIF_INTERVAL_MS = 300000;
+  var NOTIF_INTERVAL_MS = 900000; // كان 300000 (5 دقائق) — رُفع لـ15 دقيقة بعد ما بقى التحقق الدوري خفيف (عدّاد فقط لا قائمة كاملة)
   var NAJRAN_BUILD_VERSION = '2026.07.04-r10';
   window.NAJRAN_BUILD_VERSION = NAJRAN_BUILD_VERSION;
 
@@ -297,6 +297,11 @@
 
   var NOTIF_SEEN_KEY = 'najran_notif_seen_ids';
   var NOTIF_CHECK_KEY = 'najran_notif_last_check';
+  // خفة الفحص الدوري: بصمة آخر تحديث معروفة + آخر عدد دقيق محسوب منها.
+  // لو latestUpdatedAt من endpoint العدّاد الخفيف طابق هذه البصمة، لا داعي
+  // لسحب القائمة الكاملة من /api/submitted-extracts-lite إطلاقًا.
+  var NOTIF_LAST_FINGERPRINT_KEY = 'najran_notif_last_fingerprint';
+  var NOTIF_LAST_COMPUTED_COUNT_KEY = 'najran_notif_last_computed_count';
 
   function getSeenIds() {
     try {
@@ -316,13 +321,26 @@
     localStorage.setItem(NOTIF_SEEN_KEY, JSON.stringify((markers || []).map(String)));
     localStorage.setItem(NOTIF_CHECK_KEY, String(Date.now()));
   }
-  function fetchNotifCount(callback) {
-    var s = getSession();
-    if (!s || notifFetchInProgress) return;
-    var age = Date.now() - (s.timestamp || 0);
-    var token = (s.clerkToken && age < 55000) ? s.clerkToken : null;
-    if (!token) { callback(0, []); return; }
-    notifFetchInProgress = true;
+  function getCachedNotifState() {
+    try {
+      return {
+        fingerprint: localStorage.getItem(NOTIF_LAST_FINGERPRINT_KEY) || null,
+        count: parseInt(localStorage.getItem(NOTIF_LAST_COMPUTED_COUNT_KEY) || '0', 10) || 0,
+        markers: JSON.parse(localStorage.getItem('najran_notif_last_computed_markers') || '[]')
+      };
+    } catch (_) { return { fingerprint: null, count: 0, markers: [] }; }
+  }
+  function setCachedNotifState(fingerprint, count, markers) {
+    try {
+      localStorage.setItem(NOTIF_LAST_FINGERPRINT_KEY, fingerprint || '');
+      localStorage.setItem(NOTIF_LAST_COMPUTED_COUNT_KEY, String(count || 0));
+      localStorage.setItem('najran_notif_last_computed_markers', JSON.stringify(markers || []));
+    } catch (_) {}
+  }
+
+  // المسار الكامل الأصلي — بلا أي تعديل على منطقه. يُستدعى فقط لما يثبت وجود
+  // تغيير فعلي (أو فشل endpoint العدّاد الخفيف)، بدل ما كان يُستدعى كل مرة.
+  function fetchNotifCountFull(token, s, callback) {
     fetch('/api/submitted-extracts-lite', { headers: { Authorization: 'Bearer ' + token }, credentials: 'include' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
@@ -343,6 +361,38 @@
       })
       .catch(function () { callback(0, []); })
       .finally(function () { notifFetchInProgress = false; });
+  }
+
+  // نقطة الدخول العامة — تجرب endpoint العدّاد الخفيف أولًا (بايتات قليلة جدًا،
+  // بلا أي تفاصيل مستخلصات). لو "بصمة" آخر تحديث لم تتغيّر منذ آخر فحص كامل،
+  // تُعاد النتيجة المحفوظة محليًا بلا أي سحب إضافي للقائمة الكاملة. لو تغيّرت
+  // (أو فشل endpoint العدّاد لأي سبب)، يُستدعى المسار الكامل الأصلي كما كان
+  // بالضبط — فلا يتغيّر شكل البادج ولا منطق "مقروء/غير مقروء" إطلاقًا.
+  function fetchNotifCount(callback) {
+    var s = getSession();
+    if (!s || notifFetchInProgress) return;
+    var age = Date.now() - (s.timestamp || 0);
+    var token = (s.clerkToken && age < 55000) ? s.clerkToken : null;
+    if (!token) { callback(0, []); return; }
+    notifFetchInProgress = true;
+
+    fetch('/api/notifications/count', { headers: { Authorization: 'Bearer ' + token }, credentials: 'include' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (light) {
+        if (!light) { fetchNotifCountFull(token, s, callback); return; }
+        var fingerprint = String(light.latestUpdatedAt || '') + '|' + String(light.count || 0);
+        var cached = getCachedNotifState();
+        if (cached.fingerprint && cached.fingerprint === fingerprint) {
+          notifFetchInProgress = false;
+          callback(cached.count, cached.markers);
+          return;
+        }
+        fetchNotifCountFull(token, s, function (count, markers) {
+          setCachedNotifState(fingerprint, count, markers);
+          callback(count, markers);
+        });
+      })
+      .catch(function () { fetchNotifCountFull(token, s, callback); });
   }
   function updateBell(count) {
     var badge = document.getElementById('najran-bell-badge');
@@ -373,7 +423,22 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    checkNotifications();
-    setInterval(checkNotifications, NOTIF_INTERVAL_MS);
+    // حراسة ضد تركيب أكثر من polling واحد لنفس الصفحة (لو auth-check.js حُمِّل مرتين لأي سبب)
+    if (window.__NAJRAN_NOTIF_POLL_INSTALLED__) return;
+    window.__NAJRAN_NOTIF_POLL_INSTALLED__ = true;
+
+    function checkIfVisible() {
+      if (document.hidden) return; // لا تفحص والتبويب في الخلفية — لا فائدة، استهلاك بلا داعٍ
+      checkNotifications();
+    }
+
+    checkIfVisible();
+    setInterval(checkIfVisible, NOTIF_INTERVAL_MS);
+
+    // عند رجوع التبويب للظهور بعد ما كان مخفيًا، افحص فورًا مرة واحدة
+    // (بدل انتظار الـinterval التالي اللي ممكن يبقى بعيد لـ15 دقيقة)
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) checkNotifications();
+    });
   });
 })();

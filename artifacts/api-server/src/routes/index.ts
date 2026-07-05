@@ -23,6 +23,7 @@ import visitsRouter from "./visits";
 import adminFoundationRouter from "./admin-foundation";
 import adminNotifyRouter from "./admin-notify";
 import notificationsRouter from "./notifications";
+import notificationsCountRouter from "./notifications-count";
 import adminJobPositionsRouter from "./admin-job-positions";
 import reviewerPermissionsRouter from "./reviewer-permissions";
 
@@ -53,6 +54,7 @@ router.use("/visits", visitsRouter);
 router.use("/admin/foundation", adminFoundationRouter);
 router.use("/admin/notify", adminNotifyRouter);
 router.use("/notifications", notificationsRouter);
+router.use("/notifications/count", notificationsCountRouter);
 router.use("/admin/job-positions", adminJobPositionsRouter);
 
 export default router;
