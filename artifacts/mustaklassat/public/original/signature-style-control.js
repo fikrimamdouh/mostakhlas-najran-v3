@@ -196,6 +196,7 @@
 
     var ORDINALS = ['الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر'];
     function sigLabel(i) { return 'التوقيع ' + (ORDINALS[i] || '#' + (i + 1)); }
+    var ALIGN_LABELS = [['right', 'يمين'], ['left', 'يسار'], ['center', 'توسيط'], ['distribute', 'توزيع متساوٍ']];
 
     function render() {
       var alignBtns = ALIGN_LABELS.map(function (a) {
