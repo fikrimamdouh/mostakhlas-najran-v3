@@ -1,14 +1,15 @@
 // ===================================================================
-// Settings Contract Fixed Patch — V5
+// Settings Contract Fixed Patch — V6
 // Scope: settings_main.html / original-viewer?page=settings_main.html
 // يثبت بيانات العقد المطلوبة بدون تغيير najran_session + يحمي حفظ بيانات المستخلص.
+// V6: زهران/إيمان = Manual Contract Mode: يثبت المستشفى والشركة فقط، ولا يفرض بيانات عقد ثابتة.
 // ===================================================================
 (function () {
   'use strict';
 
   if (!/settings_main\.html|original-viewer\?page=settings_main\.html/.test(location.pathname + location.search)) return;
-  if (window.__SETTINGS_CONTRACT_FIXED_PATCH_V5__) return;
-  window.__SETTINGS_CONTRACT_FIXED_PATCH_V5__ = true;
+  if (window.__SETTINGS_CONTRACT_FIXED_PATCH_V6__) return;
+  window.__SETTINGS_CONTRACT_FIXED_PATCH_V6__ = true;
 
   var OLD_NAJRAN_GENERAL = 'مستشفى نجران العام القديم';
   var OLD_NAJRAN_GENERAL_WITH_NURSES = 'مستشفى نجران العام القديم وسكن الممرضات الخارجي';
@@ -29,6 +30,11 @@
     contractDetails: CONTRACT_DETAILS
   };
 
+  var MANUAL_COMPANY_LABELS = {
+    zahran: 'شركة زهران للتشغيل والصيانة',
+    iman: 'شركة إيمان للتوكيلات والتجارة والمقاولات'
+  };
+
   var TARGET_KEYS = [
     'مستشفى الولادة والأطفال','مستشفى الولاده والاطفال',OLD_NAJRAN_GENERAL,OLD_NAJRAN_GENERAL_WITH_NURSES,NEW_NAJRAN_GENERAL_DISPLAY,
     CANONICAL_OFFICES_SITE,'المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات','المكاتب الادارية والمرافق الصحية وصيانة واصلاح السيارات',
@@ -38,11 +44,72 @@
 
   function readJson(key, fallback) { try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; } }
   function writeJson(key, value) { try { localStorage.setItem(key, JSON.stringify(value || {})); } catch (_) {} }
-  function clean(v) { return String(v || '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s+/g, ' ').trim(); }
+  function clean(v) { return String(v || '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/إيمان/g, 'ايمان').replace(/\s+/g, ' ').trim(); }
   function rawClean(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); }
   function hospitalContractKey(hospitalName) { return 'contractData__h__' + encodeURIComponent(hospitalName || ''); }
+  function manualContractKey(hospitalName) { return 'manualContractData__h__' + encodeURIComponent(hospitalName || ''); }
   function currentSession() { return readJson('najran_session', {}); }
   function currentHospital() { var s = currentSession(); var p = readJson('persistentContractData', {}); return s.hospital || p.hospitalName || localStorage.getItem('hospitalName') || ''; }
+
+  function manualCompanyType(hospitalName, companyName) {
+    var h = clean(hospitalName);
+    var c = clean(companyName);
+    if (h.indexOf('زهران') > -1 || c.indexOf('زهران') > -1) return 'zahran';
+    if (h.indexOf('ايمان') > -1 || c.indexOf('ايمان') > -1) return 'iman';
+    return '';
+  }
+  function isManualContractCompany(hospitalName, companyName) { return !!manualCompanyType(hospitalName, companyName); }
+  function resolveManualCompanyName(hospitalName, companyName) {
+    var type = manualCompanyType(hospitalName, companyName);
+    return type ? MANUAL_COMPANY_LABELS[type] : (companyName || '');
+  }
+  function mergeUsefulContractData(base, saved) {
+    base = Object.assign({}, base || {});
+    saved = saved || {};
+    var useful = false;
+    ['contractNumber','contractDetails','contractType','directPurchaseRatio','startDate','endDate','contractValue','contractStatus','notes'].forEach(function (k) {
+      if (rawClean(saved[k])) useful = true;
+    });
+    if (!useful) return base;
+    return Object.assign({}, base, saved, {
+      hospitalName: base.hospitalName || saved.hospitalName || '',
+      companyName: base.companyName || saved.companyName || ''
+    });
+  }
+  function protectManualContractData(reason, forceDom) {
+    var session = currentSession();
+    var current = readJson('persistentContractData', {});
+    var hospitalName = session.hospital || current.hospitalName || localStorage.getItem('hospitalName') || '';
+    var companyName = current.companyName || localStorage.getItem('companyName') || session.companyName || session.company || '';
+    if (!isManualContractCompany(hospitalName, companyName)) return false;
+
+    var cached = mergeUsefulContractData({}, readJson(manualContractKey(hospitalName), {}));
+    if (!cached.contractType && !cached.directPurchaseRatio) cached = mergeUsefulContractData(cached, readJson(hospitalContractKey(hospitalName), {}));
+
+    var data = mergeUsefulContractData(current, cached);
+    data.hospitalName = hospitalName || data.hospitalName || '';
+    data.companyName = resolveManualCompanyName(data.hospitalName, data.companyName || companyName);
+
+    if (data.contractType === 'شراء مباشر' || Number(data.directPurchaseRatio || 0) > 0) {
+      data._manualContractType = true;
+      data._manualDirectPurchaseRatio = true;
+    }
+    if (data._manualDirectPurchaseRatio === true && !rawClean(data.directPurchaseRatio)) data.directPurchaseRatio = '0';
+
+    writeJson('persistentContractData', data);
+    writeJson(manualContractKey(data.hospitalName), data);
+    writeJson(hospitalContractKey(data.hospitalName), data);
+    try {
+      localStorage.setItem('hospitalName', data.hospitalName || '');
+      localStorage.setItem('companyName', data.companyName || '');
+      localStorage.setItem('contractNumber', data.contractNumber || '');
+      localStorage.setItem('contractDetails', data.contractDetails || '');
+    } catch (_) {}
+    if (forceDom !== false) updateDom(data);
+    if (reason) console.info('[ManualContract] preserved Zahran/Iman contract data:', reason, { hospitalName: data.hospitalName, companyName: data.companyName, contractType: data.contractType, ratio: data.directPurchaseRatio });
+    return true;
+  }
+
   function isOldNajranGeneral(hospitalName) {
     var h = clean(hospitalName);
     return h === clean(OLD_NAJRAN_GENERAL) || h === clean(OLD_NAJRAN_GENERAL_WITH_NURSES) || h === clean('نجران العام القديم') || h === clean(NEW_NAJRAN_GENERAL_DISPLAY) || h.indexOf('نجران العام القديم') > -1;
@@ -57,6 +124,7 @@
   }
   function normalizeHospitalName(hospitalName) { return isOldOfficeSplitName(hospitalName) ? CANONICAL_OFFICES_SITE : displayHospitalName(hospitalName); }
   function isTargetHospital(hospitalName) {
+    if (isManualContractCompany(hospitalName, localStorage.getItem('companyName') || '')) return false;
     var h = clean(hospitalName);
     if (!h) return false;
     return TARGET_KEYS.some(function (k) { return clean(k) === h; }) || (h.indexOf('الولاده') > -1 && h.indexOf('الاطفال') > -1) || h.indexOf('نجران العام القديم') > -1 || h.indexOf('غرب نجران') > -1 || isOldOfficeSplitName(hospitalName);
@@ -89,7 +157,7 @@
     try {
       localStorage.setItem(SAFE_EXTRACT_TS_KEY, String(Date.now()));
       if (data.extractMonth) localStorage.setItem('extractMonth', data.extractMonth);
-      if (data.extractYear) localStorage.setItem('extractYear', data.extractYear);
+      if (data.extractYear) localStorage.setItem('extractYear', String(data.extractYear));
       if (data.paymentNumber) { localStorage.setItem('paymentNumber', data.paymentNumber); localStorage.setItem('extractNumber', data.extractNumber || data.paymentNumber); }
       if (data.extractStart) localStorage.setItem('extractStart', data.extractStart);
       if (data.extractEnd) localStorage.setItem('extractEnd', data.extractEnd);
@@ -104,7 +172,7 @@
       writeJson(EXTRACT_KEY, safe);
       try {
         if (safe.extractMonth) localStorage.setItem('extractMonth', safe.extractMonth);
-        if (safe.extractYear) localStorage.setItem('extractYear', safe.extractYear);
+        if (safe.extractYear) localStorage.setItem('extractYear', String(safe.extractYear));
         if (safe.paymentNumber) { localStorage.setItem('paymentNumber', safe.paymentNumber); localStorage.setItem('extractNumber', safe.extractNumber || safe.paymentNumber); }
         if (safe.extractStart) localStorage.setItem('extractStart', safe.extractStart);
         if (safe.extractEnd) localStorage.setItem('extractEnd', safe.extractEnd);
@@ -121,7 +189,7 @@
     return false;
   }
   function patchExtractSave() {
-    if (typeof window.saveExtractData === 'function' && !window.saveExtractData.__extractPersistenceWrappedV5) {
+    if (typeof window.saveExtractData === 'function' && !window.saveExtractData.__extractPersistenceWrappedV6) {
       var old = window.saveExtractData;
       window.saveExtractData = function () {
         mirrorExtract('before-saveExtractData');
@@ -130,7 +198,7 @@
         setTimeout(function(){ mirrorExtract('after-saveExtractData-late'); }, 800);
         return result;
       };
-      window.saveExtractData.__extractPersistenceWrappedV5 = true;
+      window.saveExtractData.__extractPersistenceWrappedV6 = true;
     }
   }
 
@@ -142,16 +210,20 @@
   }
   function setValue(id, value) { var el = document.getElementById(id); if (!el) return; if (el.type === 'checkbox') el.checked = !!value; else el.value = value || ''; }
   function updateDom(data) {
+    data = data || {};
     setValue('hospital-name', displayHospitalName(data.hospitalName || currentHospital())); setValue('contract-details', data.contractDetails || ''); setValue('company-name', data.companyName || '');
     setValue('contract-start-date', data.startDate || ''); setValue('contract-end-date', data.endDate || ''); setValue('contract-value', data.contractValue || ''); setValue('contract-type', data.contractType || 'عقد أساسي');
+    setValue('direct-purchase-ratio', data.directPurchaseRatio || '0');
     try { if (typeof window.toggleDirectPurchase === 'function') window.toggleDirectPurchase(); } catch (_) {}
   }
   function applyFixedContract(forceDom) {
+    if (protectManualContractData('applyFixedContract-skip-fixed', forceDom)) return false;
     patchMaps();
     var originalHospitalName = currentHospital();
     if (!isTargetHospital(originalHospitalName)) return false;
     var canonicalHospitalName = normalizeHospitalName(originalHospitalName);
     var data = readJson('persistentContractData', {});
+    if (isManualContractCompany(data.hospitalName || originalHospitalName, data.companyName)) return protectManualContractData('applyFixedContract-data-manual', forceDom);
     data.hospitalName = normalizeHospitalName(data.hospitalName || canonicalHospitalName);
     if (!isTargetHospital(data.hospitalName)) data.hospitalName = canonicalHospitalName;
     data.contractNumber = FIXED.contractNumber; data.companyName = FIXED.companyName; data.startDate = FIXED.startDate; data.endDate = FIXED.endDate; data.contractType = FIXED.contractType; data.contractValue = FIXED.contractValue; data.contractDetails = FIXED.contractDetails; data._autoHospitalName = data.hospitalName; data._fixedAdditionalRequestContract = true;
@@ -167,12 +239,22 @@
   }
   function wrapFunction(name) {
     var fn = window[name];
-    if (typeof fn !== 'function' || fn.__fixedAdditionalContractWrappedV5) return;
-    window[name] = function () { var result = fn.apply(this, arguments); setTimeout(function () { applyFixedContract(true); restoreExtract(name); patchExtractSave(); }, 30); return result; };
-    window[name].__fixedAdditionalContractWrappedV5 = true;
+    if (typeof fn !== 'function' || fn.__fixedAdditionalContractWrappedV6) return;
+    window[name] = function () {
+      var result = fn.apply(this, arguments);
+      setTimeout(function () {
+        protectManualContractData(name + '-after-call', true);
+        applyFixedContract(true);
+        restoreExtract(name);
+        patchExtractSave();
+      }, 30);
+      return result;
+    };
+    window[name].__fixedAdditionalContractWrappedV6 = true;
   }
   function install() {
     patchMaps();
+    protectManualContractData('install-before-fixed', true);
     restoreExtract('install');
     patchExtractSave();
     wrapFunction('autoFillFromSession'); wrapFunction('loadPersistentData'); wrapFunction('updateContractDisplayData'); wrapFunction('saveContractData'); wrapFunction('switchHospital');
@@ -181,8 +263,9 @@
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install); else install();
   setTimeout(install, 600); setTimeout(install, 1600); setTimeout(install, 3200);
-  window.addEventListener('beforeunload', function(){ mirrorExtract('beforeunload'); });
+  window.addEventListener('beforeunload', function(){ mirrorExtract('beforeunload'); protectManualContractData('beforeunload', false); });
   window.ExtractPersistence = { mirror: mirrorExtract, restore: restoreExtract, score: function(){ return { main: extractScore(readJson(EXTRACT_KEY, {})), safe: extractScore(readJson(SAFE_EXTRACT_KEY, {})), mainData: readJson(EXTRACT_KEY, {}), safeData: readJson(SAFE_EXTRACT_KEY, {}) }; } };
+  window.ManualContractProtection = { protect: protectManualContractData, isManual: isManualContractCompany, company: resolveManualCompanyName };
 
-  console.info('[Settings Contract Fixed Patch] installed v5 — display alias for West Najran + contract fixed + extract persistence protected');
+  console.info('[Settings Contract Fixed Patch] installed v6 — manual Zahran/Iman contracts protected + extract persistence protected');
 })();
