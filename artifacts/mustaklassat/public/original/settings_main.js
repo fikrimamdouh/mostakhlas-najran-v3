@@ -783,10 +783,17 @@ function openNextExtract() {
 
         var startDate, endDate;
         if (wantsFullMonth) {
-            var firstDay = new Date(nextYear, nextMonthIdx, 1);
-            var lastDay = new Date(nextYear, nextMonthIdx + 1, 0); // اليوم صفر من الشهر التالي = آخر يوم في الشهر الحالي
-            startDate = firstDay.toISOString().slice(0, 10);
-            endDate = lastDay.toISOString().slice(0, 10);
+           function formatLocalDate(d) {
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+}
+
+var firstDay = new Date(nextYear, nextMonthIdx, 1);
+var lastDay = new Date(nextYear, nextMonthIdx + 1, 0); // اليوم صفر من الشهر التالي = آخر يوم في الشهر الحالي
+startDate = formatLocalDate(firstDay);
+endDate = formatLocalDate(lastDay);
         } else {
             var startInput = prompt('تاريخ البداية (بصيغة سنة-شهر-يوم، مثال: ' + nextYear + '-' + String(nextMonthIdx + 1).padStart(2, '0') + '-01):', nextYear + '-' + String(nextMonthIdx + 1).padStart(2, '0') + '-01');
             if (startInput === null) return; // المستخدم ألغى العملية بالكامل
