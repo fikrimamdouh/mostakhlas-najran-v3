@@ -163,7 +163,7 @@ function fallbackAchievementEmployeeFinancials(emp, options = {}) {
         if (day === 'غ' || meta.isAbsence) absenceDays++;
         else deductionOnlyDays++;
     });
-
+const deduction = (absenceDays + deductionOnlyDays) * dailyRate;
       const fineConfig = typeof getAdminOfficeFineConfig === 'function'
         ? getAdminOfficeFineConfig(emp.category || 1)
         : ((typeof ABSENCE_FINES_BY_CATEGORY !== 'undefined' && (ABSENCE_FINES_BY_CATEGORY[emp.category] || ABSENCE_FINES_BY_CATEGORY[String(emp.category)] || ABSENCE_FINES_BY_CATEGORY.default)) || { saudi: 0, non_saudi: 0 });
