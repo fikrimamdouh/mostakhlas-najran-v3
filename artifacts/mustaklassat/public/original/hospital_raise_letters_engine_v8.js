@@ -769,7 +769,7 @@ function body(s, k, t, cls) {
   const l = s.layout[k];
   if (l.showBody === 'no' || !t) return '';
 
-  let text = tpl(t, s);
+  let template = String(t || '');
 
   if (k === 'noPrev' && isZahranContract()) {
     const c = ctx(s);
@@ -778,12 +778,12 @@ function body(s, k, t, cls) {
     const baseGross = num(c.gross);
     const finalGross = Math.round((baseGross + ex.tawteen - ex.transportFine + Number.EPSILON) * 100) / 100;
 
-    text = text
+    template = template
       .replace(/\{grand\}/g, money(finalGross))
       .replace(/\{grandWords\}/g, tafqeetSAR(finalGross));
   }
 
-  return '<div class="body ' + (cls || '') + '" style="font-size:' + num(l.bodyFont) + 'pt;text-align:' + esc(l.bodyAlign) + '">' + esc(text) + '</div>';
+  return '<div class="body ' + (cls || '') + '" style="font-size:' + num(l.bodyFont) + 'pt;text-align:' + esc(l.bodyAlign) + '">' + esc(tpl(template, s)) + '</div>';
 }  function table(s, k, heads, rows, amountMode) {
     const l = s.layout[k]; if (l.showTable === 'no') return '';
     const dense = /^(vacancies|vacations|absences|saudi|saudiNames)$/.test(k), tw = dense ? 171 : (num(l.tableWidth) || 158), tf = dense ? Math.min(num(l.tableFont) || 10.5, 11) : (num(l.tableFont) || 11.5);
