@@ -221,11 +221,31 @@ function calculateAdminOfficeEmployeeFinancials(emp, options = {}) {
         }
     });
 
-    const deduction = (absenceDays + deductionOnlyDays) * dailyRate;
+       const deduction = (absenceDays + deductionOnlyDays) * dailyRate;
     const fineConfig = getAdminOfficeFineConfig(emp.category || 1);
-    const absenceFine = absenceDays * (
-        isAdminOfficeSaudi(emp.nationality) ? fineConfig.saudi : fineConfig.non_saudi
-    );
+
+    let _contractDataForFine = {};
+    try {
+        _contractDataForFine = JSON.parse(localStorage.getItem('persistentContractData') || '{}') || {};
+    } catch (_) {
+        _contractDataForFine = {};
+    }
+
+    const directPurchaseAbsenceFineMode =
+        options.directPurchaseAbsenceFineMode ||
+        _contractDataForFine.directPurchaseAbsenceFineMode ||
+        localStorage.getItem('directPurchaseAbsenceFineMode') ||
+        'apply';
+
+    const skipAbsenceFine =
+        String(contractType || '').trim() === 'شراء مباشر' &&
+        directPurchaseAbsenceFineMode === 'no_apply';
+
+    const absenceFine = skipAbsenceFine
+        ? 0
+        : absenceDays * (
+            isAdminOfficeSaudi(emp.nationality) ? fineConfig.saudi : fineConfig.non_saudi
+        );
 
     const nationalityFine = parseFloat(emp.nationalityFine) || 0;
     const totalFine = absenceFine + nationalityFine;
@@ -3818,10 +3838,22 @@ function showGrandAchievementCertificate() {
                 centerTotals.monthly += adjustedSalary;
                 const dailySalary = totalDaysInMonth > 0 ? adjustedSalary / totalDaysInMonth : 0;
                 const absenceDays = (emp.days || []).filter(day => STATUS_CODES[day]?.isAbsence).length;
-                const fineConfig = ABSENCE_FINES_BY_CATEGORY[emp.category] || ABSENCE_FINES_BY_CATEGORY.default;
+                                const fineConfig = ABSENCE_FINES_BY_CATEGORY[emp.category] || ABSENCE_FINES_BY_CATEGORY.default;
                 const isSaudi = (emp.nationality || '').includes('سعودي');
+
+                const directPurchaseAbsenceFineMode =
+                    contractData.directPurchaseAbsenceFineMode ||
+                    localStorage.getItem('directPurchaseAbsenceFineMode') ||
+                    'apply';
+
+                const skipAbsenceFine =
+                    String(contractType || '').trim() === 'شراء مباشر' &&
+                    directPurchaseAbsenceFineMode === 'no_apply';
+
                 centerTotals.absenceDeduct += absenceDays * dailySalary;
-                centerTotals.absencePenalty += absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
+                centerTotals.absencePenalty += skipAbsenceFine
+                    ? 0
+                    : absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
                 centerTotals.nationPenalty += parseFloat(emp.nationalityFine) || 0;
             });
             centerTotals.perfPenalty = allPerfDeductions[centerKey] || 0;
