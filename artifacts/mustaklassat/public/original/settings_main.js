@@ -36,8 +36,24 @@ function navigateTo(page) {
 
 // إظهار/إخفاء قسم الشراء المباشر
 function toggleDirectPurchase() {
-    const contractType = document.getElementById('contract-type').value;
-    document.getElementById('direct-purchase-section').style.display = contractType === 'شراء مباشر' ? 'block' : 'none';
+    const contractType = document.getElementById('contract-type')?.value || 'عقد أساسي';
+    const isDirectPurchase = contractType === 'شراء مباشر';
+
+    const ratioSection = document.getElementById('direct-purchase-section');
+    const absenceFineSection = document.getElementById('direct-purchase-absence-fine-section');
+
+    if (ratioSection) {
+        ratioSection.style.display = isDirectPurchase ? 'block' : 'none';
+    }
+
+    if (absenceFineSection) {
+        absenceFineSection.style.display = isDirectPurchase ? 'block' : 'none';
+    }
+
+    if (!isDirectPurchase) {
+        const modeEl = document.getElementById('direct-purchase-absence-fine-mode');
+        if (modeEl) modeEl.value = 'apply';
+    }
 }
 
 // إظهار قسم معين
@@ -245,8 +261,9 @@ function saveContractData() {
             hospitalName: document.getElementById('hospital-name')?.value || '',
             contractDetails: document.getElementById('contract-details')?.value || '',
             companyName: document.getElementById('company-name')?.value || '',
-            contractType: document.getElementById('contract-type')?.value || 'عقد أساسي',
-            directPurchaseRatio: document.getElementById('direct-purchase-ratio')?.value || '0',
+           contractType: document.getElementById('contract-type')?.value || 'عقد أساسي',
+directPurchaseRatio: document.getElementById('direct-purchase-ratio')?.value || '0',
+directPurchaseAbsenceFineMode: document.getElementById('direct-purchase-absence-fine-mode')?.value || 'apply',
             startDate: document.getElementById('contract-start-date')?.value || '',
             endDate: document.getElementById('contract-end-date')?.value || '',
             contractValue: document.getElementById('contract-value')?.value || '',
@@ -431,6 +448,12 @@ if (manualCompanyName) {
     document.getElementById('company-name').value = data.companyName || '';
     document.getElementById('contract-type').value = data.contractType || 'عقد أساسي';
     document.getElementById('direct-purchase-ratio').value = data.directPurchaseRatio || '0';
+    const absenceFineModeEl = document.getElementById('direct-purchase-absence-fine-mode');
+if (absenceFineModeEl) {
+    absenceFineModeEl.value = data.directPurchaseAbsenceFineMode || 'apply';
+}
+
+toggleDirectPurchase();
     document.getElementById('contract-start-date').value = data.startDate || '';
     document.getElementById('contract-end-date').value = data.endDate || '';
     document.getElementById('contract-value').value = data.contractValue || '';
