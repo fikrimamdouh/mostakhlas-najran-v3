@@ -1071,10 +1071,31 @@ title={collapsed ? currentHospitalLabel : undefined}
                   const ks = await (window as any).caches?.keys?.();
                   if (ks) await Promise.all(ks.map((k: string) => (window as any).caches.delete(k)));
                 } catch { /* صامت */ }
-                try { await fetch("/original/auth-check.js", { cache: "reload" }); } catch { /* صامت */ }
-                try { await fetch(window.location.pathname, { cache: "reload" }); } catch { /* صامت */ }
-                window.location.reload();
-              }}
+               const stamp = Date.now();
+
+try {
+  await fetch("/original/auth-check.js?v=" + stamp, { cache: "reload" });
+} catch { /* صامت */ }
+
+try {
+  const url = new URL(window.location.href);
+  const page = url.searchParams.get("page");
+
+  if (page) {
+    await fetch("/original/" + page + "?v=" + stamp, { cache: "reload" });
+  } else {
+    await fetch(window.location.pathname + "?v=" + stamp, { cache: "reload" });
+  }
+} catch { /* صامت */ }
+
+try {
+  const url = new URL(window.location.href);
+  url.searchParams.set("refresh", String(stamp));
+  window.location.replace(url.toString());
+} catch {
+  window.location.reload();
+}
+                              }}
               className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all hover:bg-white/10"
               style={{ color: "rgba(212,175,55,0.9)" }}
               title="إعادة تحميل الصفحة للحصول على آخر تحديث — لا يمسح أي بيانات"
