@@ -4142,15 +4142,15 @@ const isSaudi = isSaudiNationality(nationality);
     const categoryCheck = normalizeAttendanceCategoryForAudit(emp && emp.category);
     const categoryForCalculation = categoryCheck.ok ? categoryCheck.normalized : '1';
 
-    const fineConfig = (
-      typeof ABSENCE_FINES_BY_CATEGORY !== 'undefined' &&
-      ABSENCE_FINES_BY_CATEGORY &&
-      ABSENCE_FINES_BY_CATEGORY[categoryForCalculation]
-    )
-      ? ABSENCE_FINES_BY_CATEGORY[categoryForCalculation]
-      : { saudi: 0, non_saudi: 0 };
+  const fineConfig = (
+  typeof ABSENCE_FINES_BY_CATEGORY !== 'undefined' &&
+  ABSENCE_FINES_BY_CATEGORY &&
+  ABSENCE_FINES_BY_CATEGORY[categoryForCalculation]
+)
+  ? ABSENCE_FINES_BY_CATEGORY[categoryForCalculation]
+  : { saudi: 0, non_saudi: 0 };
 
-    const absenceFine = absenceDays * (isSaudi ? finlet _auditContractDataForFine = {};
+let _auditContractDataForFine = {};
 try {
     _auditContractDataForFine = JSON.parse(localStorage.getItem('persistentContractData') || '{}') || {};
 } catch (_) {
@@ -4174,7 +4174,7 @@ const auditSkipAbsenceFine =
 
 const absenceFine = auditSkipAbsenceFine
     ? 0
-    : absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);eConfig.saudi : fineConfig.non_saudi);
+    : absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
     const nationalityFine = parseFloat((emp && emp.nationalityFine) || 0) || 0;
     const totalFine = absenceFine + nationalityFine;
     const netSalary = extractBaseSalary - deduction - totalFine;
