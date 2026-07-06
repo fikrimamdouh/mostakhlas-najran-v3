@@ -892,7 +892,7 @@ function signPanel(s) {
           <td style="font-weight:900">${zMoney(ex.tawteen)}</td>
           <td style="font-weight:900;text-align:right">مبلغ التعويض مقابل وظائف التوطين</td>
         </tr>
-        <tr>
+        <tr> 
           <td style="font-weight:900">${zMoney(ex.transportFine)}</td>
           <td style="font-weight:900;text-align:right">حسم غرامة مخالفة وسائل النقل${monthText}</td>
         </tr>
