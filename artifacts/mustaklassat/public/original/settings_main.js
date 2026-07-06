@@ -752,6 +752,81 @@ function deleteBackup(filename) {
 // ... (جميع الدوال الأخرى مثل updateDateTime, navigateTo, toggleDirectPurchase, showSection, validateContractData, validateUsersData, validateSystemData, validateBackupData, calculateExtractDurationDays, saveSectionData, clearSectionData, cancelSection, verifyPassword, toggleFields, closePasswordPrompt, showPasswordPrompt, saveContractData, updateContractDisplayData, collectAllData, createBackup, confirmBackup, showBackupModal, showRestoreModal, closeModal, toggleAllSections, loadBackupDetails, toggleAllRestoreSections, confirmRestore, exportSettings, importSettings, updateExportImportLog, saveUsersData, saveSystemData, clearSystemData, restoreDefaultSystemSettings, updateExtractDisplayData, updateUsersDisplayData, deleteUser, updateSystemData, updateBackupData, updateExportImportData, scheduleBackup, loadPersistentData, setupExtractDateListeners, toggleSection, updateBackupLog, loadBackupLog, deleteBackup) ...
 
 // **هنا يجب أن تكون دالة saveExtractData معرفة**
+// ── فتح مستخلص جديد بسرعة: يحسب الشهر التالي تلقائيًا، ويسأل عن نوع
+// الفترة (شهر كامل أم تواريخ مخصصة)، ثم يستدعي saveExtractData() الموجودة
+// أصلًا (بلا تكرار لمنطق زيادة رقم الدفعة أو تحذيرات عدم رفع المستخلص
+// السابق للاعتماد — كلها موجودة وتعمل بالفعل هناك). لا تعديل على أي منطق
+// حساب أو تخزين موجود.
+var __EXTRACT_MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+function openNextExtract() {
+    try {
+        var raw = localStorage.getItem('persistentExtractData');
+        var data = raw ? JSON.parse(raw) : {};
+        var curMonthName = document.getElementById('extract-month')?.value || data.extractMonth || __EXTRACT_MONTHS_AR[new Date().getMonth()];
+        var curYear = parseInt(document.getElementById('extract-year')?.value || data.extractYear || new Date().getFullYear(), 10);
+
+        var curMonthIdx = __EXTRACT_MONTHS_AR.indexOf(curMonthName);
+        if (curMonthIdx === -1) curMonthIdx = new Date().getMonth();
+
+        // الشهر التالي (مع دوران السنة عند ديسمبر → يناير)
+        var nextMonthIdx = (curMonthIdx + 1) % 12;
+        var nextYear = curMonthIdx === 11 ? curYear + 1 : curYear;
+        var nextMonthName = __EXTRACT_MONTHS_AR[nextMonthIdx];
+
+        var wantsFullMonth = confirm(
+            'سيتم فتح مستخلص جديد لشهر ' + nextMonthName + ' ' + nextYear + '.\n\n' +
+            'هل تريد فتح الشهر كاملًا؟\n\n' +
+            'اضغط "موافق" لفتح الشهر كاملًا (من أول يوم لآخر يوم تلقائيًا).\n' +
+            'اضغط "إلغاء" لتحديد تاريخ بداية ونهاية مخصصين بنفسك.'
+        );
+
+        var startDate, endDate;
+        if (wantsFullMonth) {
+            var firstDay = new Date(nextYear, nextMonthIdx, 1);
+            var lastDay = new Date(nextYear, nextMonthIdx + 1, 0); // اليوم صفر من الشهر التالي = آخر يوم في الشهر الحالي
+            startDate = firstDay.toISOString().slice(0, 10);
+            endDate = lastDay.toISOString().slice(0, 10);
+        } else {
+            var startInput = prompt('تاريخ البداية (بصيغة سنة-شهر-يوم، مثال: ' + nextYear + '-' + String(nextMonthIdx + 1).padStart(2, '0') + '-01):', nextYear + '-' + String(nextMonthIdx + 1).padStart(2, '0') + '-01');
+            if (startInput === null) return; // المستخدم ألغى العملية بالكامل
+            var endInput = prompt('تاريخ النهاية (بنفس الصيغة):', '');
+            if (endInput === null) return;
+            startDate = startInput.trim();
+            endDate = endInput.trim();
+        }
+
+        // كتابة القيم الجديدة في الحقول — saveExtractData() الموجودة أصلًا هي
+        // اللي هتتكفل بزيادة رقم الدفعة تلقائيًا (منطقها موجود بالفعل) وبكل
+        // تحذيرات عدم رفع المستخلص السابق للاعتماد، وبحفظ الـsnapshot.
+        var monthEl = document.getElementById('extract-month');
+        var yearEl = document.getElementById('extract-year');
+        var startEl = document.getElementById('extract-start');
+        var endEl = document.getElementById('extract-end');
+        if (monthEl) monthEl.value = nextMonthName;
+        if (yearEl) yearEl.value = nextYear;
+        if (startEl) startEl.value = startDate;
+        if (endEl) endEl.value = endDate;
+
+        saveExtractData();
+
+        // نفس علامة التوست الموجودة بالفعل في الصفحة (كانت بلا أي مكان يفعّلها) —
+        // نكتفي بتفعيلها هنا فقط، بلا أي تغيير على منطق عرضها.
+        try {
+            var pnAfter = document.getElementById('payment-number')?.value || '';
+            localStorage.setItem('najran_new_extract_opened', JSON.stringify({
+                paymentNumber: pnAfter, month: nextMonthName, year: nextYear
+            }));
+        } catch (_) {}
+
+        alert('تم فتح مستخلص شهر ' + nextMonthName + ' ' + nextYear + ' بنجاح. سيتم إعادة تحميل الصفحة.');
+        location.reload();
+    } catch (e) {
+        console.error('[openNextExtract] error:', e);
+        alert('حدث خطأ أثناء محاولة فتح المستخلص الجديد. لم يتم تغيير أي بيانات.');
+    }
+}
+
 function saveExtractData() {
     try {
         console.log('بدء تشغيل دالة saveExtractData');

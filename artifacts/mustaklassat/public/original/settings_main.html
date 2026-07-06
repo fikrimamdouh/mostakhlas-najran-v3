@@ -308,6 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
     <div class="buttons single-row">
 <button class="button btn-save" id="save-extract-data-btn" onclick="saveExtractData()"><i class="fas fa-save"></i> حفظ البيانات</button>
+<button class="button btn-titles" id="open-next-extract-btn" onclick="openNextExtract()" title="يحسب الشهر التالي ورقم الدفعة تلقائيًا"><i class="fas fa-forward"></i> 🆕 فتح مستخلص جديد</button>
 
         <button class="button btn-clear" onclick="clearSectionData('extract')"><i class="fas fa-trash"></i> مسح البيانات</button>
         <button class="button btn-cancel" onclick="cancelSection('extract')"><i class="fas fa-times"></i> إلغاء</button>
@@ -654,7 +655,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
     <script src="/original/extract-snapshot.js"></script>
-    <script src="settings_main.js?v=20260705_v2_unified_backup_delegation"></script> <!-- هذا الملف سيحتوي على كل شيء الآن -->
+    <script src="settings_main.js?v=20260705_v3_open_next_extract_feature"></script> <!-- هذا الملف سيحتوي على كل شيء الآن -->
 
 
     <script>
