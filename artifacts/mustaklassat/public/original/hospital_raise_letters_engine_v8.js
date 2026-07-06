@@ -860,31 +860,51 @@ function signPanel(s) {
     function amtTable(s, k) {
     const c = ctx(s);
 
-    if (k === 'labor' && isZahranContract()) {
-      const ex = zahranLaborExtras();
+  if (k === 'labor' && isZahranContract()) {
+  const ex = zahranLaborExtras();
 
-      const baseGross = num(c.gross);
-      const finalGross = Math.round((baseGross + ex.tawteen - ex.transportFine + Number.EPSILON) * 100) / 100;
+  const baseGross = num(c.gross);
+  const finalGross = Math.round((baseGross + ex.tawteen - ex.transportFine + Number.EPSILON) * 100) / 100;
 
-      const transportLabel = ex.days
-        ? 'حسم غرامة مخالفة وسائل النقل عن عدد ' + ar(ex.days) + ' يوم × ' + money(ex.dailyTransportFine) + ' ريال'
-        : 'حسم غرامة مخالفة وسائل النقل';
+  const e = readJson('persistentExtractData', {});
+  const monthText =
+    e.extractMonth && e.extractYear
+      ? ' عن(شهر ' + e.extractMonth + ' ' + e.extractYear + ' م)'
+      : '';
 
-      return table(s, k, ['البيان', 'المبلغ'], [
-        '<tr><td>صافي المستحق للمقاول</td><td>' + c.contractorNet + ' ريال</td></tr>',
-        '<tr><td>ضريبة القيمة المضافة (15%)</td><td>' + c.vat + ' ريال</td></tr>',
-        '<tr><td>مبلغ التعويض مقابل وظائف التوطين</td><td>' + money(ex.tawteen) + ' ريال</td></tr>',
-        '<tr><td>' + transportLabel + '</td><td>' + money(ex.transportFine) + ' ريال</td></tr>',
-        '<tr class="grand"><td>الإجمالي</td><td>' + money(finalGross) + ' ريال</td></tr>'
-      ], true) + '<div class="tafqeet">' + esc(tafqeetSAR(finalGross)) + '</div>';
-    }
-
-    return table(s, k, ['البيان', 'المبلغ'], [
-      '<tr><td>صافي المستحق للمقاول</td><td>' + c.contractorNet + ' ريال</td></tr>',
-      '<tr><td>ضريبة القيمة المضافة (15%)</td><td>' + c.vat + ' ريال</td></tr>',
-      '<tr class="grand"><td>إجمالي المستخلص الشهري</td><td>' + c.gross + ' ريال</td></tr>'
-    ], true) + '<div class="tafqeet">' + esc(c.dueWords) + '</div>';
+  function zMoney(v) {
+    const n = Math.round((num(v) + Number.EPSILON) * 100) / 100;
+    return Number.isInteger(n) ? String(n) : n.toFixed(2);
   }
+
+  return `
+    <table class="tbl amount-table zahran-labor-table" style="width:${num(s.layout[k].tableWidth) || 158}mm;font-size:${num(s.layout[k].tableFont) || 11.5}pt">
+      <tbody>
+        <tr>
+          <td style="width:38%;font-weight:900">${zMoney(c.contractorNet)}</td>
+          <td style="width:62%;font-weight:900;text-align:right">الصافي المستحق للمقاول</td>
+        </tr>
+        <tr>
+          <td style="font-weight:900">${zMoney(c.vat)}</td>
+          <td style="font-weight:900;text-align:right">ضريبة القيمة المضافة 15%</td>
+        </tr>
+        <tr>
+          <td style="font-weight:900">${zMoney(ex.tawteen)}</td>
+          <td style="font-weight:900;text-align:right">مبلغ التعويض مقابل وظائف التوطين</td>
+        </tr>
+        <tr>
+          <td style="font-weight:900">${zMoney(ex.transportFine)}</td>
+          <td style="font-weight:900;text-align:right">حسم غرامة مخالفة وسائل النقل${monthText}</td>
+        </tr>
+        <tr class="grand">
+          <td style="font-weight:900;font-size:14pt">${zMoney(finalGross)}</td>
+          <td style="font-weight:900;font-size:16pt;text-align:center">الإجمالي</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="tafqeet">${esc(tafqeetSAR(finalGross))}</div>
+  `;
+}
   function ibanTable(s, k) {
     const c = ctx(s), iban = formatIban(c.iban);
     if (!iban) return '';
