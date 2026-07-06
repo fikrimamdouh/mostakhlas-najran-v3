@@ -135,10 +135,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <div class="form-group" id="direct-purchase-absence-fine-section" style="display: none;">
     <label>غرامة الغياب في الشراء المباشر:</label>
-    <select id="direct-purchase-absence-fine-mode" disabled>
-        <option value="apply">تطبق غرامة الغياب</option>
-        <option value="no_apply">لا تطبق غرامة الغياب</option>
+    <select id="direct-purchase-absence-fine-mode" disabled data-force-apply="true">
+        <option value="apply" selected>تطبق غرامة الغياب</option>
     </select>
+    <small style="display:block;color:#6b7280;margin-top:4px;">
+        ثابتة حسب اعتماد العقد: يتم تطبيق غرامة الغياب في الشراء المباشر.
+    </small>
 </div>
         <div class="buttons single-row">
             <button class="button btn-save" onclick="saveContractData()"><i class="fas fa-save"></i> حفظ البيانات</button>
