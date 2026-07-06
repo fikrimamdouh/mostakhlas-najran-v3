@@ -91,7 +91,32 @@
     ].map(clean).join(' ');
     return txt.indexOf('زهران') > -1;
   }
+function isZahranLetterContext(s) {
+  const c = readJson('persistentContractData', {});
+  const e = readJson('persistentExtractData', {});
+  const session = readJson('najran_session', {});
+  const b = baseData();
 
+  const txt = [
+    s && s.hospital,
+    s && s.company,
+    s && s.contract,
+    b.hospital,
+    b.company,
+    b.contract,
+    c.hospitalName,
+    c.companyName,
+    c.contractDetails,
+    e.companyName,
+    localStorage.getItem('hospitalName'),
+    localStorage.getItem('companyName'),
+    session.hospital,
+    session.companyName,
+    session.company
+  ].map(clean).join(' ');
+
+  return txt.indexOf('زهران') > -1;
+}
   function inclusiveDays(start, end) {
     start = digits(start || '');
     end = digits(end || '');
@@ -771,7 +796,7 @@ function body(s, k, t, cls) {
 
   let text = tpl(t, s);
 
-  if (k === 'noPrev' && isZahranContract()) {
+  if (k === 'noPrev' && isZahranLetterContext(s)) {
     const c = ctx(s);
     const ex = zahranLaborExtras();
 
@@ -891,7 +916,7 @@ function body(s, k, t, cls) {
     function amtTable(s, k) {
     const c = ctx(s);
 
-    if ((k === 'labor' || k === 'noPrev') && isZahranContract()) {
+    if ((k === 'labor' || k === 'noPrev') && isZahranLetterContext(s)) {
       const ex = zahranLaborExtras();
 
       const baseGross = num(c.gross);
