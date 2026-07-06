@@ -164,14 +164,34 @@ function fallbackAchievementEmployeeFinancials(emp, options = {}) {
         else deductionOnlyDays++;
     });
 
-    const deduction = (absenceDays + deductionOnlyDays) * dailyRate;
-    const fineConfig = typeof getAdminOfficeFineConfig === 'function'
+      const fineConfig = typeof getAdminOfficeFineConfig === 'function'
         ? getAdminOfficeFineConfig(emp.category || 1)
         : ((typeof ABSENCE_FINES_BY_CATEGORY !== 'undefined' && (ABSENCE_FINES_BY_CATEGORY[emp.category] || ABSENCE_FINES_BY_CATEGORY[String(emp.category)] || ABSENCE_FINES_BY_CATEGORY.default)) || { saudi: 0, non_saudi: 0 });
+
     const isSaudi = typeof isAdminOfficeSaudi === 'function'
         ? isAdminOfficeSaudi(emp.nationality)
         : String(emp.nationality || '').replace(/\s+/g, '').includes('سعودي');
-    const absenceFine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
+
+    let _contractDataForFine = {};
+    try {
+        _contractDataForFine = JSON.parse(localStorage.getItem('persistentContractData') || '{}') || {};
+    } catch (_) {
+        _contractDataForFine = {};
+    }
+
+    const directPurchaseAbsenceFineMode =
+        options.directPurchaseAbsenceFineMode ||
+        _contractDataForFine.directPurchaseAbsenceFineMode ||
+        localStorage.getItem('directPurchaseAbsenceFineMode') ||
+        'apply';
+
+    const skipAbsenceFine =
+        String(contractType || '').trim() === 'شراء مباشر' &&
+        directPurchaseAbsenceFineMode === 'no_apply';
+
+    const absenceFine = skipAbsenceFine
+        ? 0
+        : absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
     const nationalityFine = parseFloat(emp.nationalityFine) || 0;
     const totalFine = absenceFine + nationalityFine;
     const netSalary = costForPeriod - deduction - totalFine;
@@ -195,9 +215,9 @@ function calculateAchievementValues(centerKey) {
     let laborNetTotal = 0;
 
     centerData.forEach(emp => {
-        const calc = typeof calculateAdminOfficeEmployeeFinancials === 'function'
-            ? calculateAdminOfficeEmployeeFinancials(emp, { totalDaysInMonth, daysInExtract, contractType, directPurchaseRatio })
-            : fallbackAchievementEmployeeFinancials(emp, { totalDaysInMonth, daysInExtract, contractType, directPurchaseRatio });
+               const calc = typeof calculateAdminOfficeEmployeeFinancials === 'function'
+            ? calculateAdminOfficeEmployeeFinancials(emp, { totalDaysInMonth, daysInExtract, contractType, directPurchaseRatio, directPurchaseAbsenceFineMode })
+            : fallbackAchievementEmployeeFinancials(emp, { totalDaysInMonth, daysInExtract, contractType, directPurchaseRatio, directPurchaseAbsenceFineMode });
 
         totalMonthlyValue += Number(calc.costForPeriod) || 0;
         totalAbsenceDeduction += Number(calc.deduction) || 0;
