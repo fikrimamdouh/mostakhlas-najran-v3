@@ -380,7 +380,32 @@ employee.nationality = nationality;
 
 const fineConfig = ABSENCE_FINES_BY_CATEGORY[category] || ABSENCE_FINES_BY_CATEGORY.default;
 const isSaudi = isSaudiNationality(nationality);
-const fine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
+
+let _contractDataForFine = {};
+try {
+    _contractDataForFine = JSON.parse(localStorage.getItem('persistentContractData') || '{}') || {};
+} catch (_) {
+    _contractDataForFine = {};
+}
+
+const _contractTypeForFine =
+    _contractDataForFine.contractType ||
+    localStorage.getItem('contractType') ||
+    'عقد أساسي';
+
+const directPurchaseAbsenceFineMode =
+    _contractDataForFine.directPurchaseAbsenceFineMode ||
+    localStorage.getItem('directPurchaseAbsenceFineMode') ||
+    'apply';
+
+const skipAbsenceFine =
+    String(_contractTypeForFine || '').trim() === 'شراء مباشر' &&
+    directPurchaseAbsenceFineMode === 'no_apply';
+
+const fine = skipAbsenceFine
+    ? 0
+    : absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
+
         const nationalityFine = parseFloat(employee.nationalityFine) || 0;
         const totalFine = fine + nationalityFine;
         const netSalary = extractBaseSalary - deduction - totalFine;
@@ -952,8 +977,21 @@ Object.keys(statusCounts).forEach(statusKey => {
 
                 const deduction = (absenceDays + deductionOnlyDays) * dailySalary; // <--- الآن dailySalary معرف
 
-                const fineConfig = ABSENCE_FINES_BY_CATEGORY[category] || ABSENCE_FINES_BY_CATEGORY.default;
-                const fine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
+                              const fineConfig = ABSENCE_FINES_BY_CATEGORY[category] || ABSENCE_FINES_BY_CATEGORY.default;
+
+                const directPurchaseAbsenceFineMode =
+                    contractData.directPurchaseAbsenceFineMode ||
+                    localStorage.getItem('directPurchaseAbsenceFineMode') ||
+                    'apply';
+
+                const skipAbsenceFine =
+                    String(contractType || '').trim() === 'شراء مباشر' &&
+                    directPurchaseAbsenceFineMode === 'no_apply';
+
+                const fine = skipAbsenceFine
+                    ? 0
+                    : absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
+
                 const nationalityFine = parseFloat(emp.nationalityFine) || 0;
                 const totalFine = fine + nationalityFine;
                 const netSalary = extractBaseSalary - deduction - totalFine;
@@ -2321,10 +2359,35 @@ function exportSelectedDepartmentsToExcel() {
 const fineConfig = ABSENCE_FINES_BY_CATEGORY[category] || ABSENCE_FINES_BY_CATEGORY.default;
 const nationality = normalizeNationality(emp.nationality);
 const isSaudi = isSaudiNationality(nationality);
-                    const absenceFine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
+
+let _contractDataForExportFine = {};
+try {
+    _contractDataForExportFine = JSON.parse(localStorage.getItem('persistentContractData') || '{}') || {};
+} catch (_) {
+    _contractDataForExportFine = {};
+}
+
+const _contractTypeForExportFine =
+    _contractDataForExportFine.contractType ||
+    localStorage.getItem('contractType') ||
+    'عقد أساسي';
+
+const directPurchaseAbsenceFineMode =
+    _contractDataForExportFine.directPurchaseAbsenceFineMode ||
+    localStorage.getItem('directPurchaseAbsenceFineMode') ||
+    'apply';
+
+const skipAbsenceFine =
+    String(_contractTypeForExportFine || '').trim() === 'شراء مباشر' &&
+    directPurchaseAbsenceFineMode === 'no_apply';
+
+                    const absenceFine = skipAbsenceFine
+                        ? 0
+                        : absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
+
                     const nationalityFine = parseFloat(emp.nationalityFine) || 0;
                     const totalFine = absenceFine + nationalityFine;
-                    
+
                     // التحقق من أن كل القيم أرقام صالحة
                     const netSalary = adjustedSalary - deduction - totalFine;
                     if (isNaN(netSalary) || isNaN(deduction) || isNaN(totalFine)) {
@@ -4087,7 +4150,31 @@ const isSaudi = isSaudiNationality(nationality);
       ? ABSENCE_FINES_BY_CATEGORY[categoryForCalculation]
       : { saudi: 0, non_saudi: 0 };
 
-    const absenceFine = absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);
+    const absenceFine = absenceDays * (isSaudi ? finlet _auditContractDataForFine = {};
+try {
+    _auditContractDataForFine = JSON.parse(localStorage.getItem('persistentContractData') || '{}') || {};
+} catch (_) {
+    _auditContractDataForFine = {};
+}
+
+const auditDirectPurchaseAbsenceFineMode =
+    _auditContractDataForFine.directPurchaseAbsenceFineMode ||
+    localStorage.getItem('directPurchaseAbsenceFineMode') ||
+    'apply';
+
+const auditContractType =
+    contractType ||
+    _auditContractDataForFine.contractType ||
+    localStorage.getItem('contractType') ||
+    'عقد أساسي';
+
+const auditSkipAbsenceFine =
+    String(auditContractType || '').trim() === 'شراء مباشر' &&
+    auditDirectPurchaseAbsenceFineMode === 'no_apply';
+
+const absenceFine = auditSkipAbsenceFine
+    ? 0
+    : absenceDays * (isSaudi ? fineConfig.saudi : fineConfig.non_saudi);eConfig.saudi : fineConfig.non_saudi);
     const nationalityFine = parseFloat((emp && emp.nationalityFine) || 0) || 0;
     const totalFine = absenceFine + nationalityFine;
     const netSalary = extractBaseSalary - deduction - totalFine;
