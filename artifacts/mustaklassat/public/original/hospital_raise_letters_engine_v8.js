@@ -769,7 +769,7 @@ function body(s, k, t, cls) {
   const l = s.layout[k];
   if (l.showBody === 'no' || !t) return '';
 
-  let template = String(t || '');
+  let text = tpl(t, s);
 
   if (k === 'noPrev' && isZahranContract()) {
     const c = ctx(s);
@@ -778,13 +778,26 @@ function body(s, k, t, cls) {
     const baseGross = num(c.gross);
     const finalGross = Math.round((baseGross + ex.tawteen - ex.transportFine + Number.EPSILON) * 100) / 100;
 
-    template = template
-      .replace(/\{grand\}/g, money(finalGross))
-      .replace(/\{grandWords\}/g, tafqeetSAR(finalGross));
+    function escReg(v) {
+      return String(v || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    const oldGrand = c.grand;
+    const oldGrandWords = c.grandWords;
+    const newGrand = money(finalGross);
+    const newGrandWords = tafqeetSAR(finalGross);
+
+    if (oldGrand) {
+      text = text.replace(new RegExp(escReg(oldGrand), 'g'), newGrand);
+    }
+
+    if (oldGrandWords) {
+      text = text.replace(new RegExp(escReg(oldGrandWords), 'g'), newGrandWords);
+    }
   }
 
-  return '<div class="body ' + (cls || '') + '" style="font-size:' + num(l.bodyFont) + 'pt;text-align:' + esc(l.bodyAlign) + '">' + esc(tpl(template, s)) + '</div>';
-}  function table(s, k, heads, rows, amountMode) {
+  return '<div class="body ' + (cls || '') + '" style="font-size:' + num(l.bodyFont) + 'pt;text-align:' + esc(l.bodyAlign) + '">' + esc(text) + '</div>';
+}function table(s, k, heads, rows, amountMode) {
     const l = s.layout[k]; if (l.showTable === 'no') return '';
     const dense = /^(vacancies|vacations|absences|saudi|saudiNames)$/.test(k), tw = dense ? 171 : (num(l.tableWidth) || 158), tf = dense ? Math.min(num(l.tableFont) || 10.5, 11) : (num(l.tableFont) || 11.5);
     return '<table class="tbl ' + (dense ? 'dense' : '') + (amountMode ? ' amount-table' : '') + '" style="width:' + tw + 'mm;font-size:' + tf + 'pt"><thead><tr>' + heads.map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + (rows.length ? rows.join('') : '<tr><td colspan="' + heads.length + '">لا توجد بيانات</td></tr>') + '</tbody></table>';
