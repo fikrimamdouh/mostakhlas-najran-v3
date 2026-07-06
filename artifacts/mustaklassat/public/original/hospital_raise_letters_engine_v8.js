@@ -877,28 +877,28 @@ function signPanel(s) {
         return Number.isInteger(n) ? String(n) : n.toFixed(2);
       }
 
-            return `
-        <table class="tbl amount-table zahran-labor-table" style="width:${num(s.layout[k].tableWidth) || 158}mm;font-size:${num(s.layout[k].tableFont) || 11.5}pt">
+                 return `
+        <table dir="ltr" class="tbl amount-table zahran-labor-table" style="width:${num(s.layout[k].tableWidth) || 158}mm;font-size:${num(s.layout[k].tableFont) || 11.5}pt">
           <tbody>
             <tr>
-              <td style="width:62%;font-weight:900;text-align:right">الصافي المستحق للمقاول</td>
               <td style="width:38%;font-weight:900;text-align:center">${zMoney(c.contractorNet)}</td>
+              <td dir="rtl" style="width:62%;font-weight:900;text-align:right">الصافي المستحق للمقاول</td>
             </tr>
             <tr>
-              <td style="font-weight:900;text-align:right">ضريبة القيمة المضافة 15%</td>
               <td style="font-weight:900;text-align:center">${zMoney(c.vat)}</td>
+              <td dir="rtl" style="font-weight:900;text-align:right">ضريبة القيمة المضافة 15%</td>
             </tr>
             <tr>
-              <td style="font-weight:900;text-align:right">مبلغ التعويض مقابل وظائف التوطين</td>
               <td style="font-weight:900;text-align:center">${zMoney(ex.tawteen)}</td>
+              <td dir="rtl" style="font-weight:900;text-align:right">مبلغ التعويض مقابل وظائف التوطين</td>
             </tr>
             <tr>
-              <td style="font-weight:900;text-align:right">حسم غرامة مخالفة وسائل النقل${monthText}</td>
               <td style="font-weight:900;text-align:center">${zMoney(ex.transportFine)}</td>
+              <td dir="rtl" style="font-weight:900;text-align:right">حسم غرامة مخالفة وسائل النقل${monthText}</td>
             </tr>
             <tr class="grand">
-              <td style="font-weight:900;font-size:16pt;text-align:center">الإجمالي</td>
               <td style="font-weight:900;font-size:14pt;text-align:center">${zMoney(finalGross)}</td>
+              <td dir="rtl" style="font-weight:900;font-size:16pt;text-align:center">الإجمالي</td>
             </tr>
           </tbody>
         </table>
