@@ -765,8 +765,26 @@ function signPanel(s) {
     const d = s.texts[k], l = s.layout[k], subject = tpl(first(d.subject, d.title), s);
     return '<div class="subject-wrap"><span class="subject-text">الموضوع: ' + esc(subject) + '</span></div><div class="title" style="font-size:' + num(l.titleFont) + 'pt;text-align:' + esc(l.titleAlign) + '">' + esc(tpl(d.title, s)) + '</div>' + (l.showRecipient === 'no' || !d.to ? '' : '<div class="to"><span>' + esc(tpl(d.to, s)) + '</span><span>' + esc(tpl(d.suffix, s)) + '</span></div>') + (l.showGreeting === 'no' ? '' : '<div class="g">السلام عليكم ورحمة الله وبركاته، وبعد:</div>');
   }
-  function body(s, k, t, cls) { const l = s.layout[k]; if (l.showBody === 'no' || !t) return ''; return '<div class="body ' + (cls || '') + '" style="font-size:' + num(l.bodyFont) + 'pt;text-align:' + esc(l.bodyAlign) + '">' + esc(tpl(t, s)) + '</div>'; }
-  function table(s, k, heads, rows, amountMode) {
+function body(s, k, t, cls) {
+  const l = s.layout[k];
+  if (l.showBody === 'no' || !t) return '';
+
+  let text = tpl(t, s);
+
+  if (k === 'noPrev' && isZahranContract()) {
+    const c = ctx(s);
+    const ex = zahranLaborExtras();
+
+    const baseGross = num(c.gross);
+    const finalGross = Math.round((baseGross + ex.tawteen - ex.transportFine + Number.EPSILON) * 100) / 100;
+
+    text = text
+      .replace(/\{grand\}/g, money(finalGross))
+      .replace(/\{grandWords\}/g, tafqeetSAR(finalGross));
+  }
+
+  return '<div class="body ' + (cls || '') + '" style="font-size:' + num(l.bodyFont) + 'pt;text-align:' + esc(l.bodyAlign) + '">' + esc(text) + '</div>';
+}  function table(s, k, heads, rows, amountMode) {
     const l = s.layout[k]; if (l.showTable === 'no') return '';
     const dense = /^(vacancies|vacations|absences|saudi|saudiNames)$/.test(k), tw = dense ? 171 : (num(l.tableWidth) || 158), tf = dense ? Math.min(num(l.tableFont) || 10.5, 11) : (num(l.tableFont) || 11.5);
     return '<table class="tbl ' + (dense ? 'dense' : '') + (amountMode ? ' amount-table' : '') + '" style="width:' + tw + 'mm;font-size:' + tf + 'pt"><thead><tr>' + heads.map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' + (rows.length ? rows.join('') : '<tr><td colspan="' + heads.length + '">لا توجد بيانات</td></tr>') + '</tbody></table>';
@@ -860,7 +878,7 @@ function signPanel(s) {
     function amtTable(s, k) {
     const c = ctx(s);
 
-    if (k === 'labor' && isZahranContract()) {
+    if ((k === 'labor' || k === 'noPrev') && isZahranContract()) {
       const ex = zahranLaborExtras();
 
       const baseGross = num(c.gross);
