@@ -78,11 +78,195 @@ function _buBuildManifest(data) {
         includesMonthArchive: has(/monthSnapshot_|monthly|archive/i)
     };
 }
+function _buPlainObject(v) {
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+}
 
+function _buLooksLikeLegacySectionedBackup(raw) {
+    const d = _buPlainObject(raw && raw.data);
+
+    if (!d || Object.keys(d).length === 0) return false;
+
+    const hasOldSections =
+        d.contract ||
+        d.extract ||
+        d.attendance ||
+        d.performance ||
+        d.achievement ||
+        d.consumables ||
+        d.spare_parts;
+
+    const alreadyLocalStorageShape =
+        d.persistentContractData ||
+        d.persistentExtractData ||
+        d.attendanceData ||
+        d.adminOfficesAttendanceData_v1 ||
+        d.healthCentersAttendanceData;
+
+    return !!hasOldSections && !alreadyLocalStorageShape;
+}
+
+function _buNormalizeLegacyDeptKey(key) {
+    const map = {
+        civil_works: 'civil-works',
+        patient_services: 'patient-services',
+        admin_saudi: 'admin-saudi'
+    };
+
+    return map[key] || key;
+}
+
+function _buNormalizeLegacyDays(days, fallbackLength) {
+    const len = Math.max(1, Number(fallbackLength) || 30);
+    const result = Array.isArray(days) ? days.slice(0, len) : [];
+
+    while (result.length < len) result.push('ح');
+
+    return result.map(function (d) {
+        const v = String(d || '').trim();
+        return v || 'ح';
+    });
+}
+
+function _buNormalizeLegacyEmployee(emp, daysInExtract) {
+    const e = Object.assign({}, _buPlainObject(emp));
+
+    e.jobTitle = String(e.jobTitle || '').trim() || 'غير محدد';
+    e.name = String(e.name || '').trim() || 'غير محدد';
+    e.category = String(e.category || '7').trim();
+    e.salary = Number(e.salary) || 0;
+    e.nationality = String(e.nationality || 'غير سعودي').trim();
+    e.nationalityFine = Number(e.nationalityFine) || 0;
+    e.days = _buNormalizeLegacyDays(e.days, daysInExtract);
+
+    // لا نعتمد على الحسابات القديمة نهائيًا.
+    // الصفحات الحالية ستعيد الحساب بمنطقها الجديد.
+    delete e.absenceDays;
+    delete e.attendanceDays;
+    delete e.deduction;
+    delete e.absencePenalty;
+    delete e.totalFine;
+    delete e.netSalary;
+
+    return e;
+}
+
+function _buConvertLegacySectionedBackup(raw) {
+    const src = _buPlainObject(raw && raw.data);
+    const out = {};
+
+    const contract = Object.assign({}, _buPlainObject(src.contract));
+    const extract = Object.assign({}, _buPlainObject(src.extract));
+
+    if (Object.keys(contract).length > 0) {
+        if (!contract.contractType) contract.contractType = 'عقد أساسي';
+        if (contract.directPurchaseRatio == null) contract.directPurchaseRatio = '0';
+
+        // مفتاح الميزة الجديدة.
+        // الافتراضي apply حتى لا تتغير نتائج النسخ القديمة بدون اختيار صريح.
+        if (!contract.directPurchaseAbsenceFineMode) {
+            contract.directPurchaseAbsenceFineMode = 'apply';
+        }
+
+        out.persistentContractData = contract;
+        out.hospitalName = contract.hospitalName || '';
+        out.companyName = contract.companyName || '';
+        out.contractType = contract.contractType || 'عقد أساسي';
+        out.directPurchaseRatio = String(contract.directPurchaseRatio || '0');
+        out.directPurchaseAbsenceFineMode = contract.directPurchaseAbsenceFineMode || 'apply';
+    }
+
+    if (Object.keys(extract).length > 0) {
+        if (!extract.extractCalendar) extract.extractCalendar = 'ميلادي';
+
+        // النسخ القديمة لا تحتوي رقم دفعة غالبًا.
+        // نضيف قيمة آمنة حتى لا تكسر الصفحات الجديدة.
+        if (!extract.paymentNumber && !extract.extractNumber) {
+            extract.paymentNumber = '001';
+            extract.extractNumber = '001';
+        } else if (!extract.paymentNumber) {
+            extract.paymentNumber = String(extract.extractNumber);
+        } else if (!extract.extractNumber) {
+            extract.extractNumber = String(extract.paymentNumber);
+        }
+
+        out.persistentExtractData = extract;
+        out.extractCalendar = extract.extractCalendar || 'ميلادي';
+        out.extractMonth = extract.extractMonth || '';
+        out.extractYear = extract.extractYear || '';
+        out.extractStart = extract.extractStart || '';
+        out.extractEnd = extract.extractEnd || '';
+        out.paymentNumber = String(extract.paymentNumber || '001');
+        out.extractNumber = String(extract.extractNumber || extract.paymentNumber || '001');
+    }
+
+    const daysInExtract = (function () {
+        try {
+            if (extract.extractStart && extract.extractEnd) {
+                const s = new Date(extract.extractStart);
+                const e = new Date(extract.extractEnd);
+                const n = Math.ceil((e.getTime() - s.getTime()) / 86400000) + 1;
+                if (Number.isFinite(n) && n > 0) return n;
+            }
+        } catch (_) {}
+        return 30;
+    })();
+
+    const legacyAttendance = _buPlainObject(src.attendance);
+    const attendanceData = {};
+
+    Object.keys(legacyAttendance).forEach(function (oldKey) {
+        const newKey = _buNormalizeLegacyDeptKey(oldKey);
+        const rows = Array.isArray(legacyAttendance[oldKey]) ? legacyAttendance[oldKey] : [];
+
+        attendanceData[newKey] = rows.map(function (emp) {
+            return _buNormalizeLegacyEmployee(emp, daysInExtract);
+        });
+    });
+
+    if (Object.keys(attendanceData).length > 0) {
+        out.attendanceData = attendanceData;
+    }
+
+    // أقسام قديمة اختيارية. لا نكسر لو كانت فاضية.
+    if (src.performance && typeof src.performance === 'object' && Object.keys(src.performance).length > 0) {
+        out.performanceData = src.performance;
+    }
+
+    if (src.achievement && typeof src.achievement === 'object' && Object.keys(src.achievement).length > 0) {
+        out.achievementData = src.achievement;
+    }
+
+    if (src.consumables && typeof src.consumables === 'object' && Object.keys(src.consumables).length > 0) {
+        out.mainHospitalConsumables = src.consumables;
+    }
+
+    if (src.spare_parts && typeof src.spare_parts === 'object' && Object.keys(src.spare_parts).length > 0) {
+        out.spare_partsData = src.spare_parts;
+    }
+
+    return out;
+}
 function _buNormalizeIncomingBackup(raw) {
     if (!raw || typeof raw !== 'object') throw new Error('صيغة ملف النسخة غير صالحة.');
     if (raw.tables) throw new Error('هذا ملف نسخة مركزية من الإدارة، لا يستعاد من صفحة إعدادات المستخدم. استخدم /admin/backup.');
+    if (_buLooksLikeLegacySectionedBackup(raw)) {
+        const converted = _buConvertLegacySectionedBackup(raw);
 
+        return {
+            type: 'legacy_sectioned_backup_v1',
+            scope: 'legacy-sectioned-safe-merge',
+            owner: null,
+            entityName:
+                converted.persistentContractData?.hospitalName ||
+                raw.data?.contract?.hospitalName ||
+                null,
+            timestamp: raw.timestamp || new Date().toISOString(),
+            manifest: _buBuildManifest(converted),
+            data: converted,
+            replaceMode: false
+        };
+    }
     if (raw.data && typeof raw.data === 'object') {
         return {
             type: raw.type || 'local_wrapped',
