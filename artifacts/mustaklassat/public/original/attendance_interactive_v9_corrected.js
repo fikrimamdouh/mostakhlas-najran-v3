@@ -4903,38 +4903,157 @@ function restoreAttendanceData(event) {
     try {
       const restoredFile = JSON.parse(e.target.result);
 
-      let attendanceDataToRestore = null;
-      let dynamicSignaturesToRestore = null;
-      let persistentContractDataToRestore = null;
-      let persistentExtractDataToRestore = null;
+let attendanceDataToRestore = null;
+let dynamicSignaturesToRestore = null;
+let persistentContractDataToRestore = null;
+let persistentExtractDataToRestore = null;
 
-      // النسخة الشاملة الجديدة (من نظام backup.js الموحَّد) — البيانات
-      // الفعلية داخل .data، ومُعلَّمة بوجود .manifest دائمًا. نتحقق من هذا
-      // الشكل أولًا حتى تشتغل النسخ الشاملة الجديدة هنا بلا أي مشكلة.
-      if (restoredFile && restoredFile.data && typeof restoredFile.data === 'object' && restoredFile.manifest) {
-        var _d = restoredFile.data;
-        attendanceDataToRestore = _d.attendanceData || null;
-        dynamicSignaturesToRestore = _d.dynamicSignatures || null;
-        persistentContractDataToRestore = _d.persistentContractData || null;
-        persistentExtractDataToRestore = _d.persistentExtractData || null;
-      } else if (restoredFile && restoredFile.__najranAttendanceBackupVersion >= 2) {
-        attendanceDataToRestore = restoredFile.attendanceData;
-        dynamicSignaturesToRestore = restoredFile.dynamicSignatures;
-        persistentContractDataToRestore = restoredFile.persistentContractData;
-        persistentExtractDataToRestore = restoredFile.persistentExtractData;
-      } else {
-        // دعم النسخ القديمة: الملف نفسه كان attendanceData مباشرة
-        attendanceDataToRestore = restoredFile;
-      }
+function normalizeLegacyAttendanceDeptKey(key) {
+  const map = {
+    civil_works: 'civil-works',
+    patient_services: 'patient-services',
+    admin_saudi: 'admin-saudi'
+  };
+  return map[key] || key;
+}
 
-      // تحقق من شكل الحضور
-      if (
-        !attendanceDataToRestore ||
-        typeof attendanceDataToRestore.cleaning === 'undefined' ||
-        typeof attendanceDataToRestore.electricity === 'undefined'
-      ) {
-        throw new Error('ملف النسخة غير صالح أو لا يحتوي بيانات حضور صحيحة.');
-      }
+function normalizeLegacyAttendanceEmployee(emp, daysCount) {
+  const e = Object.assign({}, emp || {});
+  const len = Math.max(1, Number(daysCount) || 30);
+
+  e.jobTitle = String(e.jobTitle || '').trim() || 'غير محدد';
+  e.name = String(e.name || '').trim() || 'غير محدد';
+  e.category = String(e.category || '7').trim();
+  e.salary = Number(e.salary) || 0;
+  e.nationality = String(e.nationality || 'غير سعودي').trim();
+  e.nationalityFine = Number(e.nationalityFine) || 0;
+
+  const oldDays = Array.isArray(e.days) ? e.days.slice(0, len) : [];
+  while (oldDays.length < len) oldDays.push('ح');
+  e.days = oldDays.map(d => String(d || '').trim() || 'ح');
+
+  // لا نعتمد على حسابات النسخة القديمة؛ النظام الحالي يعيد الحساب.
+  delete e.absenceDays;
+  delete e.attendanceDays;
+  delete e.deduction;
+  delete e.absencePenalty;
+  delete e.totalFine;
+  delete e.netSalary;
+
+  return e;
+}
+
+function getLegacyDaysCount(extractData, attendanceObj) {
+  try {
+    if (extractData && extractData.extractStart && extractData.extractEnd) {
+      const s = new Date(extractData.extractStart);
+      const e = new Date(extractData.extractEnd);
+      const n = Math.ceil((e.getTime() - s.getTime()) / 86400000) + 1;
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+  } catch (_) {}
+
+  try {
+    const firstDept = Object.values(attendanceObj || {}).find(v => Array.isArray(v) && v.length);
+    const firstEmp = firstDept && firstDept[0];
+    if (firstEmp && Array.isArray(firstEmp.days) && firstEmp.days.length) return firstEmp.days.length;
+  } catch (_) {}
+
+  return 30;
+}
+
+function convertLegacySectionedAttendanceBackup(fileObj) {
+  const src = fileObj && fileObj.data && typeof fileObj.data === 'object' ? fileObj.data : {};
+  const legacyAttendance = src.attendance && typeof src.attendance === 'object' ? src.attendance : {};
+  const legacyExtract = src.extract && typeof src.extract === 'object' ? Object.assign({}, src.extract) : {};
+  const legacyContract = src.contract && typeof src.contract === 'object' ? Object.assign({}, src.contract) : {};
+
+  const daysCount = getLegacyDaysCount(legacyExtract, legacyAttendance);
+  const convertedAttendance = {};
+
+  Object.keys(legacyAttendance).forEach(oldKey => {
+    const rows = Array.isArray(legacyAttendance[oldKey]) ? legacyAttendance[oldKey] : [];
+    convertedAttendance[normalizeLegacyAttendanceDeptKey(oldKey)] = rows.map(emp =>
+      normalizeLegacyAttendanceEmployee(emp, daysCount)
+    );
+  });
+
+  if (Object.keys(legacyContract).length > 0) {
+    if (!legacyContract.contractType) legacyContract.contractType = 'عقد أساسي';
+    if (legacyContract.directPurchaseRatio == null) legacyContract.directPurchaseRatio = '0';
+
+    // الميزة الجديدة: الافتراضي apply حتى النسخ القديمة تظل كما كانت.
+    if (!legacyContract.directPurchaseAbsenceFineMode) {
+      legacyContract.directPurchaseAbsenceFineMode = 'apply';
+    }
+  }
+
+  if (Object.keys(legacyExtract).length > 0) {
+    if (!legacyExtract.extractCalendar) legacyExtract.extractCalendar = 'ميلادي';
+
+    if (!legacyExtract.paymentNumber && !legacyExtract.extractNumber) {
+      legacyExtract.paymentNumber = '001';
+      legacyExtract.extractNumber = '001';
+    } else if (!legacyExtract.paymentNumber) {
+      legacyExtract.paymentNumber = String(legacyExtract.extractNumber);
+    } else if (!legacyExtract.extractNumber) {
+      legacyExtract.extractNumber = String(legacyExtract.paymentNumber);
+    }
+  }
+
+  return {
+    attendance: convertedAttendance,
+    contract: legacyContract,
+    extract: legacyExtract
+  };
+}
+
+// النسخة الشاملة الجديدة من backup.js
+if (restoredFile && restoredFile.data && typeof restoredFile.data === 'object' && restoredFile.manifest) {
+  var _d = restoredFile.data;
+  attendanceDataToRestore = _d.attendanceData || null;
+  dynamicSignaturesToRestore = _d.dynamicSignatures || null;
+  persistentContractDataToRestore = _d.persistentContractData || null;
+  persistentExtractDataToRestore = _d.persistentExtractData || null;
+
+// النسخة القديمة المقسمة: data.contract / data.extract / data.attendance
+} else if (
+  restoredFile &&
+  restoredFile.data &&
+  typeof restoredFile.data === 'object' &&
+  restoredFile.data.attendance &&
+  typeof restoredFile.data.attendance === 'object'
+) {
+  const converted = convertLegacySectionedAttendanceBackup(restoredFile);
+  attendanceDataToRestore = converted.attendance;
+  persistentContractDataToRestore = converted.contract;
+  persistentExtractDataToRestore = converted.extract;
+
+} else if (restoredFile && restoredFile.__najranAttendanceBackupVersion >= 2) {
+  attendanceDataToRestore = restoredFile.attendanceData;
+  dynamicSignaturesToRestore = restoredFile.dynamicSignatures;
+  persistentContractDataToRestore = restoredFile.persistentContractData;
+  persistentExtractDataToRestore = restoredFile.persistentExtractData;
+
+} else {
+  // دعم النسخ القديمة جدًا: الملف نفسه هو attendanceData مباشرة
+  attendanceDataToRestore = restoredFile;
+}
+
+// تحقق مرن من شكل الحضور
+if (
+  !attendanceDataToRestore ||
+  typeof attendanceDataToRestore !== 'object' ||
+  Array.isArray(attendanceDataToRestore) ||
+  Object.keys(attendanceDataToRestore).length === 0
+) {
+  throw new Error('ملف النسخة غير صالح أو لا يحتوي بيانات حضور صحيحة.');
+}
+
+const hasAtLeastOneDeptArray = Object.values(attendanceDataToRestore).some(v => Array.isArray(v));
+if (!hasAtLeastOneDeptArray) {
+  throw new Error('ملف النسخة لا يحتوي أقسام حضور قابلة للاستعادة.');
+}
 
       // استعادة الحضور
       saveAttendanceData(attendanceDataToRestore);
