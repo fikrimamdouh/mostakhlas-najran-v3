@@ -1195,65 +1195,167 @@ function _mergeMissingBuiltinSummary(saved, builtin) {
 
     return merged;
 }
-    let subcontractorsData = _fromStorage(`subcontractors_data_${DB_VERSION}`) || _builtinSubcontractors() || defaultSubcontractors;
-    let performanceData    = _correctPerformanceMaxScores(_fromStorage(`performance_data_${DB_VERSION}`)    || _builtinPerformance()    || defaultPerformance);
-    let waterData          = JSON.parse(localStorage.getItem(`water_supply_data_${DB_VERSION}`)) || defaultWater;
-    let sewageData         = JSON.parse(localStorage.getItem(`sewage_disposal_data_${DB_VERSION}`)) || defaultSewage;
-    let summaryData        = _mergeMissingBuiltinSummary(_fromStorage(`summary_data_${DB_VERSION}`), _builtinSummary()) || defaultSummary;
-        // إصلاح مستخدمي المستشفيات التي لا توجد لها بيانات تأسيسية محلية:
-    // نسحب بيانات التأسيسي فقط من السيرفر مرة واحدة، بدون تفعيل cloud-sync العام.
-    try {
-        var __foundationNow = _getBuiltinHospitalData();
-        var __summaryHasOnlyDefault =
-            Array.isArray(summaryData) &&
-            summaryData.filter(function (x) { return x && !x.isSubTotal; }).length <= 6;
+ function _rebuildSummaryFromPerformance(saved, builtin, performance, fallbackSummary) {
+    saved = Array.isArray(saved) ? saved : [];
+    builtin = Array.isArray(builtin) ? builtin : [];
+    performance = Array.isArray(performance) ? performance : [];
+    fallbackSummary = Array.isArray(fallbackSummary) ? fallbackSummary : [];
 
-        if (
-            !__foundationNow &&
-            __summaryHasOnlyDefault &&
-            window.ContractFoundationDB &&
-            typeof window.ContractFoundationDB.loadFromServer === 'function'
-        ) {
-            var __cd = {};
-            var __session = {};
-            try { __cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}') || {}; } catch (_) {}
-            try { __session = JSON.parse(localStorage.getItem('najran_session') || '{}') || {}; } catch (_) {}
-
-            var __hospitalForFoundation =
-                (__cd.hospitalName ||
-                 localStorage.getItem('hospitalName') ||
-                 __session.reviewActiveHospital ||
-                 __session.hospital ||
-                 '').trim();
-
-            if (__hospitalForFoundation) {
-                window.ContractFoundationDB.loadFromServer(__hospitalForFoundation).then(function (serverFoundation) {
-                    try {
-                        if (!serverFoundation || !serverFoundation.consumables || !serverFoundation.consumables.length) return;
-
-                        var builtin = _builtinSummary();
-                        var current = _fromStorage(`summary_data_${DB_VERSION}`) || summaryData || [];
-                        var healed = _mergeMissingBuiltinSummary(current, builtin);
-
-                        if (healed && Array.isArray(healed)) {
-                            summaryData = healed;
-                            if (typeof renderSummaryTable === 'function') renderSummaryTable();
-                            if (typeof updateSummaryCalculations === 'function') updateSummaryCalculations();
-
-                            console.warn('[ConsumablesSummaryHeal] server foundation loaded and merged:', {
-                                hospital: __hospitalForFoundation,
-                                items: serverFoundation.consumables.length
-                            });
-                        }
-                    } catch (e) {
-                        console.warn('[ConsumablesSummaryHeal] server foundation merge failed:', e);
-                    }
-                });
-            }
-        }
-    } catch (e) {
-        console.warn('[ConsumablesSummaryHeal] server foundation fallback failed:', e);
+    function cleanName(v) {
+        return String(v == null ? '' : v)
+            .replace(/[\u200e\u200f]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
     }
+
+    function isTotalLikeName(name) {
+        name = cleanName(name);
+        return (
+            !name ||
+            name.indexOf('اجمالي تكاليف بند المستهلكات') !== -1 ||
+            name.indexOf('إجمالي تكاليف بند المستهلكات') !== -1 ||
+            name.indexOf('تكاليف مقاولي الباطن') !== -1 ||
+            name.indexOf('تكاليف تامين بند المياه') !== -1 ||
+            name.indexOf('تكاليف تأمين بند المياه') !== -1 ||
+            name.indexOf('تكاليف التخلص من مياه الصرف الصحي') !== -1 ||
+            name.indexOf('الصافي النهائي المستحق للمقاول') !== -1 ||
+            name.indexOf('فقط وقدره') !== -1
+        );
+    }
+
+    function findValueByName(arr, name) {
+        var wanted = cleanName(name);
+        if (!wanted) return null;
+
+        var found = arr.find(function (x) {
+            return x &&
+                !x.isSubTotal &&
+                !isTotalLikeName(x.name) &&
+                cleanName(x.name) === wanted;
+        });
+
+        if (!found) return null;
+
+        var n = parseFloat(String(found.value || '').replace(/,/g, ''));
+        return Number.isFinite(n) ? n : null;
+    }
+
+    var sourceNames = performance
+        .map(function (p) { return cleanName(p && p.name); })
+        .filter(function (name, index, arr) {
+            return name && !isTotalLikeName(name) && arr.indexOf(name) === index;
+        });
+
+    if (!sourceNames.length) {
+        return _mergeMissingBuiltinSummary(saved, builtin) || fallbackSummary;
+    }
+
+    var savedMainNames = saved
+        .filter(function (x) {
+            return x && !x.isSubTotal && !x.isCustom && !isTotalLikeName(x.name);
+        })
+        .map(function (x) {
+            return cleanName(x.name);
+        })
+        .filter(Boolean);
+
+    var hasBadTotalSavedAsMain = saved.some(function (x) {
+        return x && !x.isSubTotal && isTotalLikeName(x.name);
+    });
+
+    var missingPerformanceItem = sourceNames.some(function (name) {
+        return savedMainNames.indexOf(name) === -1;
+    });
+
+    var needsRebuild =
+        hasBadTotalSavedAsMain ||
+        savedMainNames.length === 0 ||
+        missingPerformanceItem;
+
+    if (!needsRebuild) {
+        return saved;
+    }
+
+    var rebuiltMain = sourceNames.map(function (name, i) {
+        var value = findValueByName(saved, name);
+
+        if (value === null) value = findValueByName(builtin, name);
+        if (value === null) value = findValueByName(fallbackSummary, name);
+        if (value === null) value = 0;
+
+        return {
+            id: 'item_perf_' + (i + 1),
+            name: name,
+            value: value,
+            isEditable: true,
+            isCustom: false
+        };
+    });
+
+    var fixedTotals = [
+        { id: 'sm_total_1', name: 'اجمالى تكاليف بند المستهلكات', value: 0, isSubTotal: true, type: 'consumablesTotal' },
+        { id: 'sm_total_2', name: 'تكاليف مقاولي الباطن', value: 0, isSubTotal: true, type: 'subcontractorsTotal' },
+        { id: 'sm_total_3', name: 'تكاليف تامين بند المياه', value: 0, isSubTotal: true, type: 'waterTotal' },
+        { id: 'sm_total_4', name: 'تكاليف التخلص من مياه الصرف الصحي', value: 0, isSubTotal: true, type: 'sewageTotal' }
+    ];
+
+    var housingDeduction = saved.find(function (x) {
+        return x && x.id === 'sm_total_5';
+    }) || fallbackSummary.find(function (x) {
+        return x && x.id === 'sm_total_5';
+    });
+
+    var customExtras = saved.filter(function (x) {
+        return x &&
+            x.isCustom &&
+            x.id !== 'sm_total_5' &&
+            !isTotalLikeName(x.name);
+    });
+
+    var result = rebuiltMain.concat(customExtras).concat(fixedTotals);
+
+    if (housingDeduction) {
+        result.push({
+            id: 'sm_total_5',
+            name: housingDeduction.name || 'غرامة الكهرباء + الماء للسكن',
+            value: parseFloat(String(housingDeduction.value || '0').replace(/,/g, '')) || 0,
+            isEditable: true,
+            isCustom: true
+        });
+    }
+
+    try {
+        localStorage.setItem(`summary_data_${DB_VERSION}`, JSON.stringify(result));
+        console.warn('[ConsumablesSummaryHeal] summary rebuilt from performance items:', {
+            items: rebuiltMain.length,
+            reason: {
+                empty: savedMainNames.length === 0,
+                badTotalRow: hasBadTotalSavedAsMain,
+                missingItem: missingPerformanceItem
+            }
+        });
+    } catch (e) {}
+
+    return result;
+}
+    let subcontractorsData = _fromStorage(`subcontractors_data_${DB_VERSION}`) || _builtinSubcontractors() || defaultSubcontractors;
+
+let performanceData = _correctPerformanceMaxScores(
+    _fromStorage(`performance_data_${DB_VERSION}`) ||
+    _builtinPerformance() ||
+    defaultPerformance
+);
+
+let waterData  = JSON.parse(localStorage.getItem(`water_supply_data_${DB_VERSION}`)) || defaultWater;
+let sewageData = JSON.parse(localStorage.getItem(`sewage_disposal_data_${DB_VERSION}`)) || defaultSewage;
+
+let summaryData = _rebuildSummaryFromPerformance(
+    _fromStorage(`summary_data_${DB_VERSION}`),
+    _builtinSummary(),
+    performanceData,
+    defaultSummary
+);
+    
 // السطر الجديد والمحسن
 let signaturesData = (data => data && typeof data === 'object' && !Array.isArray(data) ? data : defaultSignatures)(JSON.parse(localStorage.getItem(`signatures_data_${DB_VERSION}`)));
     let printTitlesData = JSON.parse(localStorage.getItem(`print_titles_data_${DB_VERSION}`)) || defaultPrintTitles;
