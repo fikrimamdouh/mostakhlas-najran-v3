@@ -128,10 +128,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 <option value="شراء مباشر">شراء مباشر</option>
             </select>
         </div>
-        <div class="form-group" id="direct-purchase-section" style="display: none;">
-            <label>نسبة الشراء المباشر (%):</label>
-            <input type="number" id="direct-purchase-ratio" placeholder="أدخل النسبة المئوية" min="0" max="100" step="0.01" readonly>
-        </div>
+       <div class="form-group" id="direct-purchase-section" style="display: none;">
+    <label>نسبة الشراء المباشر (%):</label>
+    <input type="number" id="direct-purchase-ratio" placeholder="أدخل النسبة المئوية" min="0" max="100" step="0.01" readonly>
+</div>
+
+<div class="form-group" id="direct-purchase-absence-fine-section" style="display: none;">
+    <label>غرامة الغياب في الشراء المباشر:</label>
+    <select id="direct-purchase-absence-fine-mode" disabled>
+        <option value="apply">تطبق غرامة الغياب</option>
+        <option value="no_apply">لا تطبق غرامة الغياب</option>
+    </select>
+</div>
         <div class="buttons single-row">
             <button class="button btn-save" onclick="saveContractData()"><i class="fas fa-save"></i> حفظ البيانات</button>
             <button class="button btn-clear" onclick="clearSectionData('contract')"><i class="fas fa-trash"></i> مسح البيانات</button>
