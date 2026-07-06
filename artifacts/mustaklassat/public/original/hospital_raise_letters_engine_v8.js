@@ -74,7 +74,69 @@
       payment: first(e.paymentNumber, e.extractNumber, e.paymentNo, e.payment, localStorage.paymentNumber, '—')
     };
   }
+  function isZahranContract() {
+    const c = readJson('persistentContractData', {});
+    const e = readJson('persistentExtractData', {});
+    const s = readJson('najran_session', {});
+    const txt = [
+      c.hospitalName,
+      c.companyName,
+      c.contractDetails,
+      e.companyName,
+      localStorage.getItem('hospitalName'),
+      localStorage.getItem('companyName'),
+      s.hospital,
+      s.companyName,
+      s.company
+    ].map(clean).join(' ');
+    return txt.indexOf('زهران') > -1;
+  }
 
+  function inclusiveDays(start, end) {
+    start = digits(start || '');
+    end = digits(end || '');
+    if (!start || !end) return 0;
+
+    const s = new Date(start);
+    const e = new Date(end);
+
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0;
+
+    const d = Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
+    return d > 0 ? d : 0;
+  }
+
+  function zahranLaborExtras() {
+    const e = readJson('persistentExtractData', {});
+
+    const tawteen = 22900;
+    const dailyTransportFine = 50;
+
+    const days =
+      num(e.zahranTransportFineDays) ||
+      num(e.transportFineDays) ||
+      num(localStorage.getItem('zahranTransportFineDays')) ||
+      num(localStorage.getItem('transportFineDays')) ||
+      inclusiveDays(
+        e.extractStart || localStorage.getItem('extractStart'),
+        e.extractEnd || localStorage.getItem('extractEnd')
+      );
+
+    const transportFine =
+      num(e.zahranTransportFine) ||
+      num(e.transportFine) ||
+      num(e.transportPenalty) ||
+      num(localStorage.getItem('zahranTransportFine')) ||
+      num(localStorage.getItem('transportFine')) ||
+      Math.round((days * dailyTransportFine + Number.EPSILON) * 100) / 100;
+
+    return {
+      tawteen,
+      dailyTransportFine,
+      days,
+      transportFine
+    };
+  }
   function amount(s) {
     const e = readJson('persistentExtractData', {}), vatRate = num(s.vatRate) || 15;
     const b = baseData();
@@ -795,8 +857,28 @@ function signPanel(s) {
   '</div>';
 }
   function stamp(s, k) { const l = s.layout[k]; return l.showStamp === 'yes' ? '<div class="stamp" style="margin-top:' + num(l.stampTop) + 'mm">الختم</div>' : ''; }
-  function amtTable(s, k) {
+    function amtTable(s, k) {
     const c = ctx(s);
+
+    if (k === 'labor' && isZahranContract()) {
+      const ex = zahranLaborExtras();
+
+      const baseGross = num(c.gross);
+      const finalGross = Math.round((baseGross + ex.tawteen - ex.transportFine + Number.EPSILON) * 100) / 100;
+
+      const transportLabel = ex.days
+        ? 'حسم غرامة مخالفة وسائل النقل عن عدد ' + ar(ex.days) + ' يوم × ' + money(ex.dailyTransportFine) + ' ريال'
+        : 'حسم غرامة مخالفة وسائل النقل';
+
+      return table(s, k, ['البيان', 'المبلغ'], [
+        '<tr><td>صافي المستحق للمقاول</td><td>' + c.contractorNet + ' ريال</td></tr>',
+        '<tr><td>ضريبة القيمة المضافة (15%)</td><td>' + c.vat + ' ريال</td></tr>',
+        '<tr><td>مبلغ التعويض مقابل وظائف التوطين</td><td>' + money(ex.tawteen) + ' ريال</td></tr>',
+        '<tr><td>' + transportLabel + '</td><td>' + money(ex.transportFine) + ' ريال</td></tr>',
+        '<tr class="grand"><td>الإجمالي</td><td>' + money(finalGross) + ' ريال</td></tr>'
+      ], true) + '<div class="tafqeet">' + esc(tafqeetSAR(finalGross)) + '</div>';
+    }
+
     return table(s, k, ['البيان', 'المبلغ'], [
       '<tr><td>صافي المستحق للمقاول</td><td>' + c.contractorNet + ' ريال</td></tr>',
       '<tr><td>ضريبة القيمة المضافة (15%)</td><td>' + c.vat + ' ريال</td></tr>',
