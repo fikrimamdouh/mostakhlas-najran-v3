@@ -42,9 +42,19 @@ function isSidebar(el){if(!el||el.nodeType!==1)return false;var id=String(el.id|
 function cleanSidebars(){var a=Array.prototype.slice.call(document.querySelectorAll('body *')).filter(isSidebar);if(a.length<=1)return;a.slice(1).forEach(function(el){try{el.remove()}catch(e){}});console.warn('[HomeSidebarGuard] duplicate sidebars cleaned:',a.length-1)}
 function run(){cleanSidebars();routeLetters()}
 function insideReviewPreview(el){try{return !!(el&&el.closest&&el.closest('#rv-body,.rv-doc,[data-admin-offices-review],.rv-modal,#rv-modal,.rv-overlay'))}catch(_){return false}}
-document.addEventListener('click',function(e){if(ON_LETTERS_PAGE)return;if(insideReviewPreview(e.target))return;var t=e.target&&e.target.closest?e.target.closest('a,button,[onclick],[data-href]'):null;if(!t)return;if((t.closest&&t.closest('[data-hospital-letters-route="standalone"]'))||isLetters(t))return openLetters(e)},true);
+function parseJson(v){if(!v)return null;try{return JSON.parse(String(v))}catch(_){return null}}
+function countValue(v){if(v==null)return 0;if(typeof v==='string'){var parsed=parseJson(v);if(parsed!==null)v=parsed;else return String(v).trim()?1:0}if(Array.isArray(v))return v.length;if(typeof v==='object')return Object.keys(v).length;return v?1:0}
+function hasLocalWork(){var keys=['attendanceData','ng_attendanceData','nd_attendanceData','persistentAttendanceData','performanceData','performanceData_v4','achievementData','consumablesTableData','mainHospitalConsumables','healthCentersConsumables','admin_offices_consumables_v1.0','spare_partsData'];for(var i=0;i<keys.length;i++){if(countValue(localStorage.getItem(keys[i]))>0)return true}return false}
+function pageFile(){return(location.pathname||'').split('/').pop()||''}
+function readSession(){return parseJson(localStorage.getItem('najran_session'))||{}}
+function emptyPullKey(){var s=readSession();return 'emptyLocalFirstPulled_v2__'+encodeURIComponent(String(s.hospital||'personal'))+'__'+pageFile()}
+function isReviewOnly(){var s=readSession();return !!(s&&s.reviewOnly===true)}
+function isOperationalLocalPage(){var p=pageFile();return p&&p!=='settings_main.html'&&p!=='hospital_raise_letters.html'&&p!=='extract-archive.html'&&p!=='review_extract.html'&&p!=='approval.html'}
+function tryEmptyLocalPull(attempt){try{if(!isOperationalLocalPage())return;if(isReviewOnly())return;if(localStorage.getItem('najran_revision_mode')==='true')return;if(hasLocalWork())return;var key=emptyPullKey();if(localStorage.getItem(key)==='done')return;if(typeof window.najranPullFromCloud!=='function'){if((attempt||0)<20)setTimeout(function(){tryEmptyLocalPull((attempt||0)+1)},500);return}localStorage.setItem(key,'done');console.warn('[EmptyLocalFirstPullGuard] no local work found — pulling cloud data once');Promise.resolve(window.najranPullFromCloud()).then(function(){console.warn('[EmptyLocalFirstPullGuard] cloud pull finished — reloading page');location.reload()}).catch(function(err){localStorage.removeItem(key);console.error('[EmptyLocalFirstPullGuard] cloud pull failed',err)})}catch(e){console.warn('[EmptyLocalFirstPullGuard] failed',e)}}
+document.addEventListener('click',function(e){if(ON_LETTERS_PAGE)return;if(insideReviewPreview(e.target))return;var t=e.target&&e.target.closest?e.target.closest('a,button,[onclick],[data-href]'):null;if(!t)return;if((t.closest&&t.closest('[data-hospital-letters-route=standalone]'))||isLetters(t))return openLetters(e)},true);
 if(window.MutationObserver){new MutationObserver(run).observe(document.documentElement,{childList:true,subtree:true})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
 setTimeout(run,150);setTimeout(run,600);setTimeout(run,1500);setTimeout(run,3000);setTimeout(run,6000);
-console.warn('[HomeSidebarGuard] installed v2 sidebar cleanup + letters route (review preview excluded)');
+setTimeout(function(){tryEmptyLocalPull(0)},1500);setTimeout(function(){tryEmptyLocalPull(0)},3500);
+console.warn('[HomeSidebarGuard] installed v3 sidebar cleanup + letters route + empty local pull guard');
 })();
