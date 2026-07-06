@@ -22,7 +22,7 @@
 
   loadScript(
     'hospital-raise-letters-engine-v8',
-    '/original/hospital_raise_letters_engine_v8.js?v=20260705_v1_hospital_name_display_fix'
+    '/original/hospital_raise_letters_engine_v8.js?v=20260706_zahran_labor_extras_v1'
   );
 
   setTimeout(function(){
