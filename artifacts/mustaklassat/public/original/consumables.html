@@ -1072,14 +1072,26 @@ const defaultSignatures = {
     function _fromStorage(key) {
         try { var d = JSON.parse(localStorage.getItem(key)); return (d && d.length > 0) ? d : null; } catch(e) { return null; }
     }
-    function _getBuiltinHospitalData() {
-        try {
-            var cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-            var hn = (cd.hospitalName || '').trim();
-            if (!hn) return null;
-            return ContractFoundationDB.load(hn) || null;
-        } catch(e) { return null; }
+  function _getBuiltinHospitalData() {
+    try {
+        var cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+        var session = JSON.parse(localStorage.getItem('najran_session') || '{}');
+
+        var hn = (
+            cd.hospitalName ||
+            localStorage.getItem('hospitalName') ||
+            session.reviewActiveHospital ||
+            session.hospital ||
+            ''
+        ).trim();
+
+        if (!hn) return null;
+
+        return ContractFoundationDB.load(hn) || null;
+    } catch(e) {
+        return null;
     }
+}
     function _builtinSubcontractors() {
         var data = _getBuiltinHospitalData();
         if (!data || !data.subcontractors || !data.subcontractors.length) return null;
@@ -1134,12 +1146,60 @@ const defaultSignatures = {
             { id: 'sm_total_4', name: 'تكاليف التخلص من مياه الصرف الصحي', value: 0, isSubTotal: true, type: 'sewageTotal' },
         ]);
     }
+function _mergeMissingBuiltinSummary(saved, builtin) {
+    saved = Array.isArray(saved) ? saved : [];
+    builtin = Array.isArray(builtin) ? builtin : [];
 
+    if (!builtin.length) return saved.length ? saved : null;
+    if (!saved.length) return builtin;
+
+    function cleanName(v) {
+        return String(v == null ? '' : v)
+            .replace(/[\u200e\u200f]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    var savedNames = new Set(
+        saved
+            .filter(function(item) {
+                return item && !item.isSubTotal;
+            })
+            .map(function(item) {
+                return cleanName(item.name);
+            })
+            .filter(Boolean)
+    );
+
+    var missingMainItems = builtin.filter(function(item) {
+        return item && !item.isSubTotal && !savedNames.has(cleanName(item.name));
+    });
+
+    if (!missingMainItems.length) return saved;
+
+    var firstTotalIndex = saved.findIndex(function(item) {
+        return item && item.isSubTotal;
+    });
+
+    if (firstTotalIndex < 0) firstTotalIndex = saved.length;
+
+    var merged = saved
+        .slice(0, firstTotalIndex)
+        .concat(missingMainItems)
+        .concat(saved.slice(firstTotalIndex));
+
+    try {
+        localStorage.setItem(`summary_data_${DB_VERSION}`, JSON.stringify(merged));
+        console.warn('[ConsumablesSummaryHeal] merged missing foundation summary rows:', missingMainItems.length);
+    } catch(e) {}
+
+    return merged;
+}
     let subcontractorsData = _fromStorage(`subcontractors_data_${DB_VERSION}`) || _builtinSubcontractors() || defaultSubcontractors;
     let performanceData    = _correctPerformanceMaxScores(_fromStorage(`performance_data_${DB_VERSION}`)    || _builtinPerformance()    || defaultPerformance);
     let waterData          = JSON.parse(localStorage.getItem(`water_supply_data_${DB_VERSION}`)) || defaultWater;
     let sewageData         = JSON.parse(localStorage.getItem(`sewage_disposal_data_${DB_VERSION}`)) || defaultSewage;
-    let summaryData        = _fromStorage(`summary_data_${DB_VERSION}`)        || _builtinSummary()        || defaultSummary;
+    let summaryData        = _mergeMissingBuiltinSummary(_fromStorage(`summary_data_${DB_VERSION}`), _builtinSummary()) || defaultSummary;
 // السطر الجديد والمحسن
 let signaturesData = (data => data && typeof data === 'object' && !Array.isArray(data) ? data : defaultSignatures)(JSON.parse(localStorage.getItem(`signatures_data_${DB_VERSION}`)));
     let printTitlesData = JSON.parse(localStorage.getItem(`print_titles_data_${DB_VERSION}`)) || defaultPrintTitles;
