@@ -50,9 +50,10 @@ function toggleDirectPurchase() {
         absenceFineSection.style.display = isDirectPurchase ? 'block' : 'none';
     }
 
-    if (!isDirectPurchase) {
-        const modeEl = document.getElementById('direct-purchase-absence-fine-mode');
-        if (modeEl) modeEl.value = 'apply';
+    const modeEl = document.getElementById('direct-purchase-absence-fine-mode');
+    if (modeEl) {
+        modeEl.value = 'apply';
+        modeEl.setAttribute('disabled', 'disabled');
     }
 }
 
@@ -263,7 +264,7 @@ function saveContractData() {
             companyName: document.getElementById('company-name')?.value || '',
            contractType: document.getElementById('contract-type')?.value || 'عقد أساسي',
 directPurchaseRatio: document.getElementById('direct-purchase-ratio')?.value || '0',
-directPurchaseAbsenceFineMode: document.getElementById('direct-purchase-absence-fine-mode')?.value || 'apply',
+directPurchaseAbsenceFineMode: 'apply',
             startDate: document.getElementById('contract-start-date')?.value || '',
             endDate: document.getElementById('contract-end-date')?.value || '',
             contractValue: document.getElementById('contract-value')?.value || '',
@@ -448,10 +449,18 @@ if (manualCompanyName) {
     document.getElementById('company-name').value = data.companyName || '';
     document.getElementById('contract-type').value = data.contractType || 'عقد أساسي';
     document.getElementById('direct-purchase-ratio').value = data.directPurchaseRatio || '0';
-    const absenceFineModeEl = document.getElementById('direct-purchase-absence-fine-mode');
+const absenceFineModeEl = document.getElementById('direct-purchase-absence-fine-mode');
 if (absenceFineModeEl) {
-    absenceFineModeEl.value = data.directPurchaseAbsenceFineMode || 'apply';
+    absenceFineModeEl.value = 'apply';
+    absenceFineModeEl.setAttribute('disabled', 'disabled');
 }
+
+if (data.directPurchaseAbsenceFineMode !== 'apply') {
+    data.directPurchaseAbsenceFineMode = 'apply';
+    localStorage.setItem('persistentContractData', JSON.stringify(data));
+}
+
+localStorage.setItem('directPurchaseAbsenceFineMode', 'apply');
 
 toggleDirectPurchase();
     document.getElementById('contract-start-date').value = data.startDate || '';
