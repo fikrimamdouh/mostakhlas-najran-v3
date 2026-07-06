@@ -1,15 +1,15 @@
 // ===================================================================
-// Settings Contract Fixed Patch — V9
+// Settings Contract Fixed Patch — V10
 // Scope: settings_main.html / original-viewer?page=settings_main.html
 // يثبت بيانات العقد المطلوبة بدون تغيير najran_session + يحمي حفظ بيانات المستخلص.
-// V9: زهران/إيمان = Manual Contract Mode + تثبيت نوع العقد ونسبة الشراء المباشر + اسم عقد زهران بعد اكتمال الحفظ async.
+// V10: زهران/إيمان = Manual Contract Mode + تثبيت نوع العقد ونسبة الشراء المباشر + اسم عقد زهران بعد اكتمال الحفظ async.
 // ===================================================================
 (function () {
   'use strict';
 
   if (!/settings_main\.html|original-viewer\?page=settings_main\.html/.test(location.pathname + location.search)) return;
-  if (window.__SETTINGS_CONTRACT_FIXED_PATCH_V9__) return;
-  window.__SETTINGS_CONTRACT_FIXED_PATCH_V9__ = true;
+  if (window.__SETTINGS_CONTRACT_FIXED_PATCH_V10__) return;
+  window.__SETTINGS_CONTRACT_FIXED_PATCH_V10__ = true;
 
   var OLD_NAJRAN_GENERAL = 'مستشفى نجران العام القديم';
   var OLD_NAJRAN_GENERAL_WITH_NURSES = 'مستشفى نجران العام القديم وسكن الممرضات الخارجي';
@@ -215,7 +215,7 @@
       if (data.extractMonth) localStorage.setItem('extractMonth', data.extractMonth);
       if (data.extractYear) localStorage.setItem('extractYear', String(data.extractYear));
       if (data.paymentNumber) { localStorage.setItem('paymentNumber', data.paymentNumber); localStorage.setItem('extractNumber', data.extractNumber || data.paymentNumber); }
-      if (data.extractStart) localStorage.setItem('extractStart');
+      if (data.extractStart) localStorage.setItem('extractStart', data.extractStart);
       if (data.extractEnd) localStorage.setItem('extractEnd', data.extractEnd);
     } catch (_) {}
     if (reason) console.info('[ExtractPersistence] mirrored:', reason, data);
@@ -245,7 +245,7 @@
     return false;
   }
   function patchExtractSave() {
-    if (typeof window.saveExtractData === 'function' && !window.saveExtractData.__extractPersistenceWrappedV9) {
+    if (typeof window.saveExtractData === 'function' && !window.saveExtractData.__extractPersistenceWrappedV10) {
       var old = window.saveExtractData;
       window.saveExtractData = function () {
         mirrorExtract('before-saveExtractData');
@@ -254,7 +254,7 @@
         setTimeout(function(){ mirrorExtract('after-saveExtractData-late'); }, 800);
         return result;
       };
-      window.saveExtractData.__extractPersistenceWrappedV9 = true;
+      window.saveExtractData.__extractPersistenceWrappedV10 = true;
     }
   }
 
@@ -295,7 +295,7 @@
   }
   function wrapFunction(name) {
     var fn = window[name];
-    if (typeof fn !== 'function' || fn.__fixedAdditionalContractWrappedV9) return;
+    if (typeof fn !== 'function' || fn.__fixedAdditionalContractWrappedV10) return;
     window[name] = function () {
       var capturedManual = name === 'saveContractData' ? captureManualContractDomData() : null;
       if (capturedManual) persistManualContractData(capturedManual, name + '-before-original', false);
@@ -315,7 +315,7 @@
       }
       return result;
     };
-    window[name].__fixedAdditionalContractWrappedV9 = true;
+    window[name].__fixedAdditionalContractWrappedV10 = true;
   }
   function install() {
     patchMaps();
@@ -332,5 +332,5 @@
   window.ExtractPersistence = { mirror: mirrorExtract, restore: restoreExtract, score: function(){ return { main: extractScore(readJson(EXTRACT_KEY, {})), safe: extractScore(readJson(SAFE_EXTRACT_KEY, {})), mainData: readJson(EXTRACT_KEY, {}), safeData: readJson(SAFE_EXTRACT_KEY, {}) }; } };
   window.ManualContractProtection = { protect: protectManualContractData, isManual: isManualContractCompany, company: resolveManualCompanyName, contractDetails: resolveManualContractDetails, capture: captureManualContractDomData };
 
-  console.info('[Settings Contract Fixed Patch] installed v9 — Zahran values restored after async save completion');
+  console.info('[Settings Contract Fixed Patch] installed v10 — Zahran values restored after async save completion');
 })();
