@@ -207,7 +207,10 @@ function calculateAchievementValues(centerKey) {
     const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
     const contractType = contractData.contractType || 'عقد أساسي';
     const directPurchaseRatio = parseFloat(contractData.directPurchaseRatio) || 0;
-
+const directPurchaseAbsenceFineMode =
+    contractData.directPurchaseAbsenceFineMode ||
+    localStorage.getItem('directPurchaseAbsenceFineMode') ||
+    'apply';
     let totalMonthlyValue = 0;
     let totalAbsenceDeduction = 0;
     let totalAbsencePenalty = 0;
