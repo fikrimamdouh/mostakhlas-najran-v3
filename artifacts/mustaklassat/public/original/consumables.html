@@ -1200,6 +1200,60 @@ function _mergeMissingBuiltinSummary(saved, builtin) {
     let waterData          = JSON.parse(localStorage.getItem(`water_supply_data_${DB_VERSION}`)) || defaultWater;
     let sewageData         = JSON.parse(localStorage.getItem(`sewage_disposal_data_${DB_VERSION}`)) || defaultSewage;
     let summaryData        = _mergeMissingBuiltinSummary(_fromStorage(`summary_data_${DB_VERSION}`), _builtinSummary()) || defaultSummary;
+        // إصلاح مستخدمي المستشفيات التي لا توجد لها بيانات تأسيسية محلية:
+    // نسحب بيانات التأسيسي فقط من السيرفر مرة واحدة، بدون تفعيل cloud-sync العام.
+    try {
+        var __foundationNow = _getBuiltinHospitalData();
+        var __summaryHasOnlyDefault =
+            Array.isArray(summaryData) &&
+            summaryData.filter(function (x) { return x && !x.isSubTotal; }).length <= 6;
+
+        if (
+            !__foundationNow &&
+            __summaryHasOnlyDefault &&
+            window.ContractFoundationDB &&
+            typeof window.ContractFoundationDB.loadFromServer === 'function'
+        ) {
+            var __cd = {};
+            var __session = {};
+            try { __cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}') || {}; } catch (_) {}
+            try { __session = JSON.parse(localStorage.getItem('najran_session') || '{}') || {}; } catch (_) {}
+
+            var __hospitalForFoundation =
+                (__cd.hospitalName ||
+                 localStorage.getItem('hospitalName') ||
+                 __session.reviewActiveHospital ||
+                 __session.hospital ||
+                 '').trim();
+
+            if (__hospitalForFoundation) {
+                window.ContractFoundationDB.loadFromServer(__hospitalForFoundation).then(function (serverFoundation) {
+                    try {
+                        if (!serverFoundation || !serverFoundation.consumables || !serverFoundation.consumables.length) return;
+
+                        var builtin = _builtinSummary();
+                        var current = _fromStorage(`summary_data_${DB_VERSION}`) || summaryData || [];
+                        var healed = _mergeMissingBuiltinSummary(current, builtin);
+
+                        if (healed && Array.isArray(healed)) {
+                            summaryData = healed;
+                            if (typeof renderSummaryTable === 'function') renderSummaryTable();
+                            if (typeof updateSummaryCalculations === 'function') updateSummaryCalculations();
+
+                            console.warn('[ConsumablesSummaryHeal] server foundation loaded and merged:', {
+                                hospital: __hospitalForFoundation,
+                                items: serverFoundation.consumables.length
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('[ConsumablesSummaryHeal] server foundation merge failed:', e);
+                    }
+                });
+            }
+        }
+    } catch (e) {
+        console.warn('[ConsumablesSummaryHeal] server foundation fallback failed:', e);
+    }
 // السطر الجديد والمحسن
 let signaturesData = (data => data && typeof data === 'object' && !Array.isArray(data) ? data : defaultSignatures)(JSON.parse(localStorage.getItem(`signatures_data_${DB_VERSION}`)));
     let printTitlesData = JSON.parse(localStorage.getItem(`print_titles_data_${DB_VERSION}`)) || defaultPrintTitles;
