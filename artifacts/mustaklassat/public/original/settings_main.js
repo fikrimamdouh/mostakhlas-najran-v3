@@ -759,81 +759,318 @@ function deleteBackup(filename) {
 // حساب أو تخزين موجود.
 var __EXTRACT_MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 
-function openNextExtract() {
+function escapeExtractModalHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function showExtractActionModal(options) {
+    options = options || {};
+
+    var type = options.type || 'info';
+    var title = options.title || 'تنبيه';
+    var message = options.message || '';
+    var confirmText = options.confirmText || 'متابعة';
+    var cancelText = options.cancelText || 'إلغاء';
+    var showCancel = options.showCancel !== false;
+
+    return new Promise(function(resolve) {
+        var old = document.getElementById('extract-action-modal');
+        if (old) old.remove();
+
+        var color = '#1e3c72';
+        var bg = '#eef4ff';
+        var icon = 'i';
+
+        if (type === 'warning') {
+            color = '#b45309';
+            bg = '#fffbeb';
+            icon = '!';
+        }
+
+        if (type === 'danger') {
+            color = '#b91c1c';
+            bg = '#fef2f2';
+            icon = '×';
+        }
+
+        if (type === 'success') {
+            color = '#047857';
+            bg = '#ecfdf5';
+            icon = '✓';
+        }
+
+        var modal = document.createElement('div');
+        modal.id = 'extract-action-modal';
+        modal.style.cssText =
+            'position:fixed;' +
+            'inset:0;' +
+            'background:rgba(15,23,42,.55);' +
+            'z-index:999999;' +
+            'display:flex;' +
+            'align-items:center;' +
+            'justify-content:center;' +
+            'direction:rtl;' +
+            'font-family:Tajawal,Arial,sans-serif;';
+
+        modal.innerHTML =
+            '<div style="width:min(560px,92vw);background:#fff;border-radius:18px;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.25);border-top:6px solid ' + color + ';">' +
+                '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">' +
+                    '<div style="width:44px;height:44px;border-radius:14px;background:' + bg + ';color:' + color + ';display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;">' + icon + '</div>' +
+                    '<h2 style="margin:0;color:#0f172a;font-size:21px;line-height:1.5;">' + escapeExtractModalHtml(title) + '</h2>' +
+                '</div>' +
+                '<div style="color:#334155;font-size:15px;line-height:2;white-space:pre-line;margin:10px 0 18px;">' + escapeExtractModalHtml(message) + '</div>' +
+                '<div style="display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;">' +
+                    '<button id="extract-modal-confirm" style="background:' + color + ';color:#fff;border:none;border-radius:10px;padding:10px 22px;font-size:14px;font-weight:800;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">' + escapeExtractModalHtml(confirmText) + '</button>' +
+                    (showCancel ? '<button id="extract-modal-cancel" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;border-radius:10px;padding:10px 22px;font-size:14px;font-weight:800;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">' + escapeExtractModalHtml(cancelText) + '</button>' : '') +
+                '</div>' +
+            '</div>';
+
+        document.body.appendChild(modal);
+
+        var confirmBtn = document.getElementById('extract-modal-confirm');
+        var cancelBtn = document.getElementById('extract-modal-cancel');
+
+        confirmBtn.onclick = function() {
+            modal.remove();
+            resolve(true);
+        };
+
+        if (cancelBtn) {
+            cancelBtn.onclick = function() {
+                modal.remove();
+                resolve(false);
+            };
+        }
+    });
+}
+
+function showExtractPromptModal(options) {
+    options = options || {};
+
+    var title = options.title || 'إدخال قيمة';
+    var message = options.message || '';
+    var defaultValue = options.defaultValue || '';
+    var inputType = options.inputType || 'text';
+    var confirmText = options.confirmText || 'اعتماد';
+    var cancelText = options.cancelText || 'إلغاء';
+
+    return new Promise(function(resolve) {
+        var old = document.getElementById('extract-prompt-modal');
+        if (old) old.remove();
+
+        var modal = document.createElement('div');
+        modal.id = 'extract-prompt-modal';
+        modal.style.cssText =
+            'position:fixed;' +
+            'inset:0;' +
+            'background:rgba(15,23,42,.55);' +
+            'z-index:999999;' +
+            'display:flex;' +
+            'align-items:center;' +
+            'justify-content:center;' +
+            'direction:rtl;' +
+            'font-family:Tajawal,Arial,sans-serif;';
+
+        modal.innerHTML =
+            '<div style="width:min(520px,92vw);background:#fff;border-radius:18px;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.25);border-top:6px solid #1e3c72;">' +
+                '<h2 style="margin:0 0 10px;color:#0f172a;font-size:21px;line-height:1.5;">' + escapeExtractModalHtml(title) + '</h2>' +
+                '<div style="color:#334155;font-size:15px;line-height:2;margin-bottom:12px;">' + escapeExtractModalHtml(message) + '</div>' +
+                '<input id="extract-prompt-input" type="' + escapeExtractModalHtml(inputType) + '" value="' + escapeExtractModalHtml(defaultValue) + '" style="width:100%;box-sizing:border-box;border:1.5px solid #cbd5e1;border-radius:10px;padding:11px 12px;font-size:15px;font-family:Tajawal,Arial,sans-serif;direction:ltr;text-align:center;">' +
+                '<div style="display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;margin-top:18px;">' +
+                    '<button id="extract-prompt-confirm" style="background:#1e3c72;color:#fff;border:none;border-radius:10px;padding:10px 22px;font-size:14px;font-weight:800;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">' + escapeExtractModalHtml(confirmText) + '</button>' +
+                    '<button id="extract-prompt-cancel" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;border-radius:10px;padding:10px 22px;font-size:14px;font-weight:800;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">' + escapeExtractModalHtml(cancelText) + '</button>' +
+                '</div>' +
+            '</div>';
+
+        document.body.appendChild(modal);
+
+        var input = document.getElementById('extract-prompt-input');
+        var confirmBtn = document.getElementById('extract-prompt-confirm');
+        var cancelBtn = document.getElementById('extract-prompt-cancel');
+
+        setTimeout(function() {
+            input.focus();
+            input.select();
+        }, 50);
+
+        confirmBtn.onclick = function() {
+            var value = input.value;
+            modal.remove();
+            resolve(value);
+        };
+
+        cancelBtn.onclick = function() {
+            modal.remove();
+            resolve(null);
+        };
+
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') confirmBtn.click();
+            if (e.key === 'Escape') cancelBtn.click();
+        });
+    });
+}
+
+async function openNextExtract() {
     try {
         var raw = localStorage.getItem('persistentExtractData');
         var data = raw ? JSON.parse(raw) : {};
-        var curMonthName = document.getElementById('extract-month')?.value || data.extractMonth || __EXTRACT_MONTHS_AR[new Date().getMonth()];
-        var curYear = parseInt(document.getElementById('extract-year')?.value || data.extractYear || new Date().getFullYear(), 10);
+
+        var curMonthName =
+            document.getElementById('extract-month')?.value ||
+            data.extractMonth ||
+            __EXTRACT_MONTHS_AR[new Date().getMonth()];
+
+        var curYear = parseInt(
+            document.getElementById('extract-year')?.value ||
+            data.extractYear ||
+            new Date().getFullYear(),
+            10
+        );
 
         var curMonthIdx = __EXTRACT_MONTHS_AR.indexOf(curMonthName);
         if (curMonthIdx === -1) curMonthIdx = new Date().getMonth();
 
-        // الشهر التالي (مع دوران السنة عند ديسمبر → يناير)
         var nextMonthIdx = (curMonthIdx + 1) % 12;
         var nextYear = curMonthIdx === 11 ? curYear + 1 : curYear;
         var nextMonthName = __EXTRACT_MONTHS_AR[nextMonthIdx];
 
-        var wantsFullMonth = confirm(
-            'سيتم فتح مستخلص جديد لشهر ' + nextMonthName + ' ' + nextYear + '.\n\n' +
-            'هل تريد فتح الشهر كاملًا؟\n\n' +
-            'اضغط "موافق" لفتح الشهر كاملًا (من أول يوم لآخر يوم تلقائيًا).\n' +
-            'اضغط "إلغاء" لتحديد تاريخ بداية ونهاية مخصصين بنفسك.'
-        );
+        var wantsFullMonth = await showExtractActionModal({
+            type: 'info',
+            title: 'فتح مستخلص جديد',
+            message:
+                'سيتم تجهيز مستخلص جديد لشهر ' + nextMonthName + ' ' + nextYear + '.\n\n' +
+                'اختر طريقة تحديد الفترة.\n\n' +
+                'فتح الشهر كاملًا: من أول يوم إلى آخر يوم تلقائيًا.\n' +
+                'التحديد اليدوي: إدخال تاريخ بداية ونهاية مخصصين.',
+            confirmText: 'فتح الشهر كاملًا',
+            cancelText: 'تحديد يدوي'
+        });
 
-        var startDate, endDate;
-        if (wantsFullMonth) {
-           function formatLocalDate(d) {
-    var y = d.getFullYear();
-    var m = String(d.getMonth() + 1).padStart(2, '0');
-    var day = String(d.getDate()).padStart(2, '0');
-    return y + '-' + m + '-' + day;
-}
+        var startDate;
+        var endDate;
 
-var firstDay = new Date(nextYear, nextMonthIdx, 1);
-var lastDay = new Date(nextYear, nextMonthIdx + 1, 0); // اليوم صفر من الشهر التالي = آخر يوم في الشهر الحالي
-startDate = formatLocalDate(firstDay);
-endDate = formatLocalDate(lastDay);
-        } else {
-            var startInput = prompt('تاريخ البداية (بصيغة سنة-شهر-يوم، مثال: ' + nextYear + '-' + String(nextMonthIdx + 1).padStart(2, '0') + '-01):', nextYear + '-' + String(nextMonthIdx + 1).padStart(2, '0') + '-01');
-            if (startInput === null) return; // المستخدم ألغى العملية بالكامل
-            var endInput = prompt('تاريخ النهاية (بنفس الصيغة):', '');
-            if (endInput === null) return;
-            startDate = startInput.trim();
-            endDate = endInput.trim();
+        function formatLocalDate(d) {
+            var y = d.getFullYear();
+            var m = String(d.getMonth() + 1).padStart(2, '0');
+            var day = String(d.getDate()).padStart(2, '0');
+            return y + '-' + m + '-' + day;
         }
 
-        // كتابة القيم الجديدة في الحقول — saveExtractData() الموجودة أصلًا هي
-        // اللي هتتكفل بزيادة رقم الدفعة تلقائيًا (منطقها موجود بالفعل) وبكل
-        // تحذيرات عدم رفع المستخلص السابق للاعتماد، وبحفظ الـsnapshot.
+        var firstDay = new Date(nextYear, nextMonthIdx, 1);
+        var lastDay = new Date(nextYear, nextMonthIdx + 1, 0);
+
+        if (wantsFullMonth) {
+            startDate = formatLocalDate(firstDay);
+            endDate = formatLocalDate(lastDay);
+        } else {
+            var defaultStart = formatLocalDate(firstDay);
+            var defaultEnd = formatLocalDate(lastDay);
+
+            var startInput = await showExtractPromptModal({
+                title: 'تاريخ بداية المستخلص',
+                message: 'أدخل تاريخ بداية الفترة.',
+                defaultValue: defaultStart,
+                inputType: 'date',
+                confirmText: 'اعتماد البداية'
+            });
+
+            if (startInput === null) return;
+
+            var endInput = await showExtractPromptModal({
+                title: 'تاريخ نهاية المستخلص',
+                message: 'أدخل تاريخ نهاية الفترة.',
+                defaultValue: defaultEnd,
+                inputType: 'date',
+                confirmText: 'اعتماد النهاية'
+            });
+
+            if (endInput === null) return;
+
+            startDate = String(startInput || '').trim();
+            endDate = String(endInput || '').trim();
+
+            if (!startDate || !endDate) {
+                await showExtractActionModal({
+                    type: 'warning',
+                    title: 'تواريخ غير مكتملة',
+                    message: 'يجب إدخال تاريخ البداية وتاريخ النهاية قبل فتح المستخلص الجديد.',
+                    confirmText: 'حسنًا',
+                    showCancel: false
+                });
+                return;
+            }
+
+            if (new Date(startDate) > new Date(endDate)) {
+                await showExtractActionModal({
+                    type: 'warning',
+                    title: 'ترتيب التواريخ غير صحيح',
+                    message: 'تاريخ البداية لا يجوز أن يكون بعد تاريخ النهاية.',
+                    confirmText: 'حسنًا',
+                    showCancel: false
+                });
+                return;
+            }
+        }
+
         var monthEl = document.getElementById('extract-month');
         var yearEl = document.getElementById('extract-year');
         var startEl = document.getElementById('extract-start');
         var endEl = document.getElementById('extract-end');
+
         if (monthEl) monthEl.value = nextMonthName;
         if (yearEl) yearEl.value = nextYear;
         if (startEl) startEl.value = startDate;
         if (endEl) endEl.value = endDate;
 
-        saveExtractData();
+        if (typeof calculateExtractDurationDays === 'function') {
+            calculateExtractDurationDays();
+        }
 
-        // نفس علامة التوست الموجودة بالفعل في الصفحة (كانت بلا أي مكان يفعّلها) —
-        // نكتفي بتفعيلها هنا فقط، بلا أي تغيير على منطق عرضها.
+        if (typeof saveExtractData !== 'function') {
+            throw new Error('saveExtractData is not available');
+        }
+
+        await Promise.resolve(saveExtractData());
+
         try {
             var pnAfter = document.getElementById('payment-number')?.value || '';
             localStorage.setItem('najran_new_extract_opened', JSON.stringify({
-                paymentNumber: pnAfter, month: nextMonthName, year: nextYear
+                paymentNumber: pnAfter,
+                month: nextMonthName,
+                year: nextYear,
+                startDate: startDate,
+                endDate: endDate,
+                at: new Date().toISOString(),
+                source: 'openNextExtract'
             }));
         } catch (_) {}
 
-        alert('تم فتح مستخلص شهر ' + nextMonthName + ' ' + nextYear + ' بنجاح. سيتم إعادة تحميل الصفحة.');
-        location.reload();
+        console.log('[openNextExtract] saved through stable saveExtractData flow:', {
+            month: nextMonthName,
+            year: nextYear,
+            startDate: startDate,
+            endDate: endDate,
+            paymentNumber: document.getElementById('payment-number')?.value || ''
+        });
+
     } catch (e) {
         console.error('[openNextExtract] error:', e);
-        alert('حدث خطأ أثناء محاولة فتح المستخلص الجديد. لم يتم تغيير أي بيانات.');
+
+        showExtractActionModal({
+            type: 'danger',
+            title: 'تعذر فتح المستخلص الجديد',
+            message: 'حدث خطأ أثناء تجهيز الفترة الجديدة. لم يتم تنفيذ الانتقال. راجع Console لمعرفة السبب.',
+            confirmText: 'حسنًا',
+            showCancel: false
+        });
     }
 }
-
 function saveExtractData() {
     try {
         console.log('بدء تشغيل دالة saveExtractData');
