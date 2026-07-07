@@ -2466,13 +2466,15 @@ toggleManualLaborCostBtn.addEventListener('click', () => {
                 removeSignature(parseInt(button.dataset.index));
             }
         });
-        document.getElementById('save-titles-btn').addEventListener('click', saveTitles);
-   
+            document.getElementById('save-titles-btn').addEventListener('click', saveTitles);
 
         window.addEventListener('beforeunload', function () {
             persistSummaryDataNow('beforeunload');
         });
-    }        document.getElementById('dashboard-container').style.display = 'flex';
+    }
+
+    const showDashboard = () => {
+        document.getElementById('dashboard-container').style.display = 'flex';
         document.querySelectorAll('.table-section').forEach(s => s.classList.remove('active'));
         if(activeEditSession) endEditSession();
     };
