@@ -172,7 +172,57 @@
   function activateConsumablesPrintPreview(target){ensureInstance('consumables',instances.consumables?.options||{showStamp:true});if(!isConsumablesPrintEligible()){nativePrint();return;}document.body.classList.add('sb-consumables-print-preview');consumablesStyleDraft=readDetailedStyle();renderAll('consumables');buildConsumablesPrintStylePanel(target||'all');}
   function installFinalPrintStyle(target){const old=document.getElementById('sb-consumables-final-print-style');if(old)old.remove();const style=document.createElement('style');style.id='sb-consumables-final-print-style';let css='@media print{#sb-consumables-print-style-toggle,#sb-consumables-print-style-panel{display:none!important}';if(target&&target!=='all'){const sectionId=CONSUMABLES_SECTION_IDS[target];if(sectionId)css+='body > .container > *:not(#tables-area),#tables-area > *:not(#'+sectionId+'){display:none!important}';}else{css+='.table-section{display:block!important;page-break-after:always}.table-section:last-of-type{page-break-after:auto}';}css+='}';style.textContent=css;document.head.appendChild(style);return style;}
   function finalConsumablesPrint(target){renderAll('consumables');const st=installFinalPrintStyle(target||'all');window.__sbConsumablesFinalPrint=true;try{nativePrint();}finally{setTimeout(()=>{window.__sbConsumablesFinalPrint=false;if(st&&st.parentNode)st.parentNode.removeChild(st);},900);}}
-  function installConsumablesPrintInterceptor(){if(consumablesPrintInterceptorInstalled)return;consumablesPrintInterceptorInstalled=true;document.addEventListener('click',e=>{const btn=e.target&&e.target.closest&&e.target.closest('#print-all-btn,.btn-print[data-section]');if(!btn||!isConsumablesPrintEligible())return;const target=sectionFromPrintButton(btn);if(!target)return;window.__sbConsumablesTablePrintIntent={target,ts:Date.now()};},true);const wrapped=function(){const intent=window.__sbConsumablesTablePrintIntent;const fresh=intent&&Date.now()-Number(intent.ts||0)<2500;if(!window.__sbConsumablesFinalPrint&&fresh&&isConsumablesPrintEligible()){const target=intent.target||'all';window.__sbConsumablesTablePrintIntent=null;if(readDetailedStyle().styleApproved===true)return nativePrint();activateConsumablesPrintPreview(target);return;}return nativePrint();};try{Object.defineProperty(wrapped,'name',{value:'sbConsumablesPrintWrapper'});}catch{}global.print=wrapped;}
+  function showApprovedStyleEditButton(target) {
+  if (!isConsumablesPrintEligible()) return;
+
+  var style = document.getElementById('sb-consumables-approved-edit-style');
+  if (!style) {
+    style = document.createElement('style');
+    style.id = 'sb-consumables-approved-edit-style';
+    style.textContent =
+      '#sb-consumables-approved-edit-btn{' +
+      'position:fixed;left:18px;top:18px;z-index:999990;' +
+      'border:none;border-radius:999px;background:#334155;color:#fff;' +
+      'padding:8px 12px;font-family:Tajawal,Arial,sans-serif;' +
+      'font-weight:900;font-size:12px;box-shadow:0 6px 18px rgba(15,23,42,.25);' +
+      'cursor:pointer}' +
+      '@media print{#sb-consumables-approved-edit-btn{display:none!important}}';
+
+    document.head.appendChild(style);
+  }
+
+  var btn = document.getElementById('sb-consumables-approved-edit-btn');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.id = 'sb-consumables-approved-edit-btn';
+    btn.type = 'button';
+    btn.textContent = 'تعديل تنسيق التواقيع';
+    document.body.appendChild(btn);
+  }
+
+  btn.setAttribute('data-target', target || 'all');
+  btn.style.display = 'block';
+
+  if (!btn.__sbApprovedEditBound) {
+    btn.__sbApprovedEditBound = true;
+
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      var t = btn.getAttribute('data-target') || 'all';
+
+      try {
+        window.__sbConsumablesTablePrintIntent = null;
+      } catch (_) {}
+
+      if (window.SignatureBlock && typeof window.SignatureBlock.prepareConsumablesPrint === 'function') {
+        window.SignatureBlock.prepareConsumablesPrint(t);
+      }
+    }, true);
+  }
+}
+  function installConsumablesPrintInterceptor(){if(consumablesPrintInterceptorInstalled)return;consumablesPrintInterceptorInstalled=true;document.addEventListener('click',e=>{const btn=e.target&&e.target.closest&&e.target.closest('#print-all-btn,.btn-print[data-section]');if(!btn||!isConsumablesPrintEligible())return;const target=sectionFromPrintButton(btn);if(!target)return;window.__sbConsumablesTablePrintIntent={target,ts:Date.now()};},true);const wrapped=function(){const intent=window.__sbConsumablesTablePrintIntent;const fresh=intent&&Date.now()-Number(intent.ts||0)<2500;if(!window.__sbConsumablesFinalPrint&&fresh&&isConsumablesPrintEligible()){const target=intent.target||'all';window.__sbConsumablesTablePrintIntent=null;if(readDetailedStyle().styleApproved===true){   showApprovedStyleEditButton(target);   return nativePrint(); }activateConsumablesPrintPreview(target);return;}return nativePrint();};try{Object.defineProperty(wrapped,'name',{value:'sbConsumablesPrintWrapper'});}catch{}global.print=wrapped;}
 
   function enhanceAdminOfficeTables(){if(!/admin_offices_attendance\.html/.test(location.href))return;injectCSS();document.querySelectorAll('[id^="table-div-"]').forEach(section=>{section.classList.add('admin-office-table-enhanced');const table=section.querySelector('table[id^="table-"]');if(!table||!table.id)return;const wrapper=table.closest('.table-responsive-wrapper')||table.parentElement;if(wrapper)wrapper.classList.add('dept-table-scroll');const bar=section.querySelector('.tab-action-buttons');if(!bar)return;if(!bar.querySelector('.zoom-reset-btn')){const btn=document.createElement('button');btn.type='button';btn.className='zoom-reset-btn';btn.innerHTML='<i class="fas fa-compress-arrows-alt"></i> إعادة الحجم';btn.onclick=()=>global.resetAdminOfficeTableZoom(table.id);bar.appendChild(btn);}if(!bar.querySelector('.zoom-fullscreen-btn')){const btn=document.createElement('button');btn.type='button';btn.className='zoom-fullscreen-btn';btn.innerHTML='<i class="fas fa-expand"></i> عرض كامل';btn.onclick=()=>global.toggleAdminOfficeTableFullscreen(table.id,btn);bar.appendChild(btn);}});}
   function scheduleEnhanceAdminOfficeTables(){if(enhanceScheduled)return;enhanceScheduled=true;setTimeout(()=>{enhanceScheduled=false;enhanceAdminOfficeTables();},120);}
