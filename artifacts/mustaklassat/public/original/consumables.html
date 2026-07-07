@@ -1517,7 +1517,49 @@ let summaryData = (savedSummaryData && savedSummaryData.length)
 // السطر الجديد والمحسن
 let signaturesData = (data => data && typeof data === 'object' && !Array.isArray(data) ? data : defaultSignatures)(JSON.parse(localStorage.getItem(`signatures_data_${DB_VERSION}`)));
     let printTitlesData = JSON.parse(localStorage.getItem(`print_titles_data_${DB_VERSION}`)) || defaultPrintTitles;
+function persistSummaryDataNow(reason) {
+    try {
+        // تنظيف أي صفوف محسوبة اتسجلت غلط كبنود عادية قبل الحفظ
+        function cleanName(v) {
+            return String(v == null ? '' : v)
+                .replace(/[\u200e\u200f]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
 
+        function isBadSummaryRow(item) {
+            if (!item || typeof item !== 'object') return false;
+            if (item.isSubTotal || item.isCustom) return false;
+
+            var name = cleanName(item.name);
+
+            return (
+                name.indexOf('الصافي النهائي المستحق للمقاول') !== -1 ||
+                name.indexOf('فقط وقدره') !== -1 ||
+                name.indexOf('فقط وقدرة') !== -1 ||
+                name.indexOf('لا غير') !== -1
+            );
+        }
+
+        if (Array.isArray(summaryData)) {
+            var before = summaryData.length;
+            summaryData = summaryData.filter(function (item) {
+                return !isBadSummaryRow(item);
+            });
+
+            if (summaryData.length !== before) {
+                console.warn('[ConsumablesSummaryLock] removed bad generated rows before save:', before - summaryData.length);
+            }
+        }
+
+        localStorage.setItem(`summary_data_${DB_VERSION}`, JSON.stringify(summaryData));
+        localStorage.setItem(`summary_data_${DB_VERSION}_user_locked`, 'true');
+
+        console.warn('[ConsumablesSummaryLock] summary saved:', reason || 'manual');
+    } catch (e) {
+        console.warn('[ConsumablesSummaryLock] failed to save summary:', reason, e);
+    }
+}
     const parseNumericValue = (value) => {
         if (typeof value === 'string') return parseFloat(value.replace(/,/g, '')) || 0;
         return parseFloat(value) || 0;
@@ -2148,6 +2190,7 @@ function endEditSession() {
 
     activeEditSession = false;
     updateEditSessionUI();
+    persistSummaryDataNow('end-edit-session');
     saveAllData();
     renderAllTables(); // الآن عندما تعمل هذه الدالة، ستجد القيمة المحدثة
 }
@@ -2254,15 +2297,9 @@ document.getElementById('tables-area').addEventListener('input', (e) => {
     if (dataArray && dataArray[index]) {
     dataArray[index][field] = value;
 
-    if (tableType === 'summary' && (field === 'value' || field === 'name')) {
-        try {
-            localStorage.setItem(`summary_data_${DB_VERSION}`, JSON.stringify(summaryData));
-            localStorage.setItem(`summary_data_${DB_VERSION}_user_locked`, 'true');
-            console.warn('[ConsumablesSummaryLock] user summary edit saved immediately:', field);
-        } catch (e) {
-            console.warn('[ConsumablesSummaryLock] failed to persist user summary edit', e);
-        }
-    }
+   if (tableType === 'summary' && (field === 'value' || field === 'name')) {
+    persistSummaryDataNow('summary-input-' + field);
+}
 
     // *** هذا هو منطق الربط الهام ***
         if (tableType === 'performance' && field === 'name') {
@@ -2292,7 +2329,16 @@ document.getElementById('tables-area').addEventListener('input', (e) => {
         target.closest('.notes-section').classList.toggle('print-notes-active', target.checked);
         return;
     }
+const tableType = target.dataset.table;
+const index = parseInt(target.dataset.index);
+const field = target.dataset.field;
 
+if (tableType === 'summary' && !isNaN(index) && (field === 'value' || field === 'name')) {
+    if (summaryData[index]) {
+        summaryData[index][field] = String(target.value || '').replace(/,/g, '');
+        persistSummaryDataNow('summary-change-' + field);
+    }
+}
     // هذا الشرط يضمن أن أي تغيير في حقل رقمي أو قائمة منسدلة سيؤدي إلى حفظ وإعادة بناء كاملة
 if (!activeEditSession && (target.tagName === 'SELECT' || (target.tagName === 'INPUT' && (target.type === 'number' || target.inputMode === 'decimal')))) {
         // 1. حفظ البيانات في الخلفية (هذا يضمن أن التغيير الجديد في سعر الوحدة تم حفظه)
@@ -2421,6 +2467,7 @@ toggleManualLaborCostBtn.addEventListener('click', () => {
             }
         });
         document.getElementById('save-titles-btn').addEventListener('click', saveTitles);
+        const showDashboard = () => {
     }
 
     const showDashboard = () => {
