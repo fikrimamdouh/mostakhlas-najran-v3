@@ -4928,7 +4928,9 @@ function normalizeLegacyAttendanceDeptKey(key, rows) {
   if (oldKey === 'admin_saudi' || oldKey === 'admin-saudi') return 'admin_saudi';
 
   if (oldKey === 'patient_services' || oldKey === 'patient-services') {
-    return legacyAttendanceRowsLookLikeSecurity(rows) ? 'security' : 'patient_services';
+    return legacyAttendanceif (oldKey === 'patient_services' || oldKey === 'patient-services') {
+  return 'patient_services';
+}RowsLookLikeSecurity(rows) ? 'security' : 'patient_services';
   }
 
   return oldKey;
