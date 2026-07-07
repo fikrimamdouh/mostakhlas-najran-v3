@@ -12,6 +12,7 @@
     ['noPrev', 'عدم أسبقية صرف - مقاولين'],
     ['electricity', 'محضر استهلاك كهرباء'],
     ['water', 'محضر استهلاك مياه'],
+    ['waterCertificate', 'مشهد مياه'],
     ['certificate', 'مشهد مستهلكات']
   ];
   var LABEL = DOCS.reduce(function (m, x) { m[x[0]] = x[1]; return m; }, {});
@@ -58,6 +59,7 @@
         noPrev: { title: 'إقرار بعدم أسبقية الصرف', body: 'تشهد إدارة / {hospital} بأن استحقاق شركة / {company} لمستخلص المستهلكات ومقاولي الباطن دفعة رقم ({paymentNo}) بمبلغ ({grand} ريال).\n\nلم يسبق صرف هذا المستخلص من قبلنا.', closing: 'مع أطيب تحياتي ،،،', signatures: [{ title: 'الموظف المختص', name: '' }, { title: 'مدير الإدارة', name: '' }], showDate: 'yes', showStamp: 'yes' },
         electricity: { title: 'محضر حصر استهلاك الكهرباء للفترة من {start} إلى {end}', hoursPerDay: 8, daysCount: 31, rate: 0.05, rows: [{ place: 'مكتب مدير الصيانة', load: 'مكيف شباك', power: 2.2 }], signatures: [{ title: 'مهندس الكهرباء', name: 'م / ارسولو بالموريا أوريستيلا محمد آل سنان' }, { title: 'رئيس الصيانة العامة', name: 'م / علي' }], showStamp: 'no' },
         water: { title: 'محضر استهلاك', body: 'نشهد نحن الموقعين أدناه بأنه قد تم استهلاك كميات مياه الشرب الموضحة أدناه{placePhrase} عن الفترة من {start} وحتى {end}.', rows: [{ item: 'توريد مياه', unit: 'م³', qty: '', notes: '' }], signatures: [{ title: 'مهندس المقاول', name: 'م / جابر محمد الهمامي' }, { title: 'رئيس الصيانة العامة', name: 'م / علي محمد آل سنان' }], showStamp: 'no' },
+        waterCertificate: { title: 'مشهد مياه', body: 'تشهد إدارة {hospital} بأن شركة {company} قامت بتوريد مياه الشرب الموضحة بياناتها بمحضر الاستهلاك، وذلك عن الفترة من {start} وحتى {end}.\n\nوهذا مشهد منا بذلك.', signatures: [{ title: 'مندوب المقاول', name: '' }, { title: 'رئيس الصيانة العامة', name: '' }, { title: 'مدير المستشفى', name: '' }], showStamp: 'no' },
         certificate: { title: 'شهادة', body: 'تشهد إدارة {hospital} بأن شركة {company} قامت بتوريد جميع المستهلكات والمواد الهندسية داخل الموقع وذلك عن الفترة من {start} وحتى {end}.\n\nوهذا مشهد منا بذلك.', signatures: [{ title: 'مندوب المقاول', name: 'م / جابر محمد الهمامي محمد آل سنان' }, { title: 'محاسب المستشفى', name: 'أ / صالح حسين آل شرمه' }, { title: 'رئيس الصيانة العامة', name: 'م / علي' }], showStamp: 'no' }
       }
     };
@@ -139,6 +141,7 @@
     if (k === 'noPrev') h += yn('letters.noPrev.showDate', 'إظهار التاريخ', l.showDate || 'yes') + area('letters.noPrev.body', 'نص الإقرار', l.body || '') + area('letters.noPrev.closing', 'الخاتمة', l.closing || '') + yn('letters.noPrev.showStamp', 'إظهار الختم', l.showStamp || 'yes');
     if (k === 'electricity') h += field('letters.electricity.hoursPerDay', 'ساعات التشغيل اليومية', l.hoursPerDay || 8, 'number') + field('letters.electricity.daysCount', 'عدد الأيام', l.daysCount || 31, 'number') + field('letters.electricity.rate', 'سعر الكيلو وات / ساعة', l.rate || 0.05, 'number') + yn('letters.electricity.showStamp', 'إظهار الختم', l.showStamp || 'no');
     if (k === 'water') h += area('letters.water.body', 'نص محضر المياه', l.body || '') + yn('letters.water.showStamp', 'إظهار الختم', l.showStamp || 'no');
+    if (k === 'waterCertificate') h += area('letters.waterCertificate.body', 'نص مشهد المياه', l.body || '') + yn('letters.waterCertificate.showStamp', 'إظهار الختم', l.showStamp || 'no');
     if (k === 'certificate') h += area('letters.certificate.body', 'نص الشهادة', l.body || '') + yn('letters.certificate.showStamp', 'إظهار الختم', l.showStamp || 'no');
     h += '</div></section>';
     if (k === 'electricity') h += electricityRowsHtml(l);
@@ -178,7 +181,7 @@ if (printNow) {
     var s = readForm();
     var doc = s.selectedDoc || 'main';
 
-    var allowed = ['main', 'noPrev', 'electricity', 'water', 'certificate', 'all'];
+    var allowed = ['main', 'noPrev', 'electricity', 'water', 'waterCertificate', 'certificate', 'all'];
     if (allowed.indexOf(doc) === -1) doc = 'main';
 
     location.href = '/original/consumables.html?printConsumablesLetter=' + encodeURIComponent(doc) + '&t=' + Date.now();
