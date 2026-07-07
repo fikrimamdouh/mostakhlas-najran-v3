@@ -2469,8 +2469,10 @@ toggleManualLaborCostBtn.addEventListener('click', () => {
         document.getElementById('save-titles-btn').addEventListener('click', saveTitles);
    
 
-    const showDashboard = () => {
-        document.getElementById('dashboard-container').style.display = 'flex';
+        window.addEventListener('beforeunload', function () {
+            persistSummaryDataNow('beforeunload');
+        });
+    }        document.getElementById('dashboard-container').style.display = 'flex';
         document.querySelectorAll('.table-section').forEach(s => s.classList.remove('active'));
         if(activeEditSession) endEditSession();
     };
