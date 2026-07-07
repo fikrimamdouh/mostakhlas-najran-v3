@@ -158,12 +158,32 @@ d.resetAt = typeof p.resetAt === 'string' ? p.resetAt : null;
     return d;
   }
 
-  function writeSettings(s) {
-    try {
-      s.version = 5;
-      localStorage.setItem(KEY, JSON.stringify(s));
-    } catch (_) {}
+ function writeSettings(s) {
+  try {
+    var copy = JSON.parse(JSON.stringify(s || defaults()));
+
+    copy.version = 5;
+    copy.approved = copy.approved === true;
+    copy.savedAt = typeof copy.savedAt === 'string' ? copy.savedAt : null;
+    copy.resetAt = typeof copy.resetAt === 'string' ? copy.resetAt : null;
+
+    if (!Array.isArray(copy.perSignature)) copy.perSignature = [];
+
+    localStorage.setItem(KEY, JSON.stringify(copy));
+
+    var raw = localStorage.getItem(KEY);
+    var parsed = raw ? JSON.parse(raw) : null;
+
+    return !!(
+      parsed &&
+      parsed.version === 5 &&
+      Array.isArray(parsed.perSignature)
+    );
+  } catch (err) {
+    console.error('[SignatureStyleControl] failed to save settings', err);
+    return false;
   }
+}
 
   function normalizePoint(raw, fallback, win, maxW, maxH) {
     raw = raw && typeof raw === 'object' ? raw : {};
@@ -741,28 +761,41 @@ d.resetAt = typeof p.resetAt === 'string' ? p.resetAt : null;
         };
       });
 
-  panel.querySelector('.sig-save').onclick = function () {
+ panel.querySelector('.sig-save').onclick = function () {
   draft.approved = true;
   draft.savedAt = new Date().toISOString();
   draft.resetAt = null;
 
-  writeSettings(draft);
+  var wrote = writeSettings(draft);
   applyStyles(doc, draft);
 
   var savedOk = false;
   try {
     var saved = JSON.parse(localStorage.getItem(KEY) || '{}');
-    savedOk = saved &&
+    savedOk = !!(
+      wrote &&
+      saved &&
       saved.approved === true &&
       saved.savedAt === draft.savedAt &&
-      Array.isArray(saved.perSignature);
-  } catch (_) {}
+      Array.isArray(saved.perSignature)
+    );
+  } catch (err) {
+    console.error('[SignatureStyleControl] save verification failed', err);
+  }
 
-  panel.classList.remove('open');
+  if (savedOk) {
+    panel.classList.remove('open');
+  }
 
   toggle.textContent = savedOk
     ? 'تم حفظ واعتماد التنسيق V5'
-    : 'لم يتم الحفظ — راجع التخزين';
+    : 'لم يتم الحفظ — راجع Console';
+
+  console.info('[SignatureStyleControl] save result:', {
+    savedOk: savedOk,
+    key: KEY,
+    savedAt: draft.savedAt
+  });
 
   setTimeout(function () {
     toggle.textContent = 'تنسيق التواقيع V5 حفظ دائم';
