@@ -1,7 +1,7 @@
-// Hospital Consumables Print Polish V8
+// Hospital Consumables Print Polish V9
 // Scope: normal consumables.html only.
-// Keeps original calculations. Polishes full consumables extract print and makes subcontractors landscape.
-// Forces consumables letters A4 letterhead from main settings or fallback image key.
+// Keeps original calculations. Polishes full consumables extract print, makes subcontractors landscape,
+// forces consumables letterhead, and applies standalone signature style controls.
 (function () {
   'use strict';
 
@@ -15,8 +15,8 @@
   }
   if (pageFile !== 'consumables.html' && !/\/original\/consumables\.html(?:$|[?#])/.test(sig)) return;
   if (/admin_offices_consumables\.html|health_centers_consumables\.html|najran_general_consumables\.html/.test(pageFile)) return;
-  if (window.__HOSPITAL_CONSUMABLES_PRINT_POLISH_V8__) return;
-  window.__HOSPITAL_CONSUMABLES_PRINT_POLISH_V8__ = true;
+  if (window.__HOSPITAL_CONSUMABLES_PRINT_POLISH_V9__) return;
+  window.__HOSPITAL_CONSUMABLES_PRINT_POLISH_V9__ = true;
 
   var SETTINGS_KEY = 'hospitalConsumablesRaiseLettersSettings_v1';
   var FALLBACK_IMG_KEY = 'hospitalConsumablesLetterheadDataUrl_v1';
@@ -25,33 +25,33 @@
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[c]; }); }
   function readJson(k, f) { try { var raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : f; } catch (_) { return f; } }
   function yes(v) { return v === true || v === 'yes' || v === 'true' || v === '1'; }
-
   function settings() { return readJson(SETTINGS_KEY, {}); }
   function fallbackImage() { return clean(localStorage.getItem(FALLBACK_IMG_KEY) || ''); }
   function letterheadData(s) { return clean((s && s.letterheadDataUrl) || '') || fallbackImage(); }
+  function clamp(v, min, max, fallback) { var n = Number(v); if (!Number.isFinite(n)) n = fallback; return Math.min(max, Math.max(min, n)); }
 
   function activeHospital() {
     try {
       var cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-      return clean(cd.hospitalName || cd.siteName || cd.centerName || localStorage.getItem('hospitalName') || localStorage.getItem('currentHospital') || document.querySelector('.hospitalName')?.textContent || '');
+      return clean(cd.hospitalName || cd.siteName || cd.centerName || localStorage.getItem('hospitalName') || localStorage.getItem('currentHospital') || (document.querySelector('.hospitalName') && document.querySelector('.hospitalName').textContent) || '');
     } catch (_) {
-      return clean(document.querySelector('.hospitalName')?.textContent || '');
+      return clean((document.querySelector('.hospitalName') && document.querySelector('.hospitalName').textContent) || '');
     }
   }
 
   function activePeriod() {
     try {
       var ex = JSON.parse(localStorage.getItem('persistentExtractData') || '{}');
-      var s = clean(ex.extractStart || ex.periodStart || ex.startDate || localStorage.getItem('extractStart') || document.getElementById('extract-start-date')?.textContent || '');
-      var e = clean(ex.extractEnd || ex.periodEnd || ex.endDate || localStorage.getItem('extractEnd') || document.getElementById('extract-end-date')?.textContent || '');
+      var s = clean(ex.extractStart || ex.periodStart || ex.startDate || localStorage.getItem('extractStart') || (document.getElementById('extract-start-date') && document.getElementById('extract-start-date').textContent) || '');
+      var e = clean(ex.extractEnd || ex.periodEnd || ex.endDate || localStorage.getItem('extractEnd') || (document.getElementById('extract-end-date') && document.getElementById('extract-end-date').textContent) || '');
       if (s || e) return 'عن الفترة من ' + (s || 'غير محدد') + ' إلى ' + (e || 'غير محدد');
     } catch (_) {}
-    return clean(document.getElementById('extract-period')?.textContent || '');
+    return clean((document.getElementById('extract-period') && document.getElementById('extract-period').textContent) || '');
   }
 
   function polishCss() {
     return `
-<style id="consumables-polish-print-css-v8">
+<style id="consumables-polish-print-css-v9">
 @page consumablesPortrait { size: A4 portrait; margin: 0; }
 @page consumablesLandscape { size: A4 landscape; margin: 0; }
 .extract-page{position:relative!important;padding:14mm 12mm 18mm!important;font-family:Tajawal,Arial,sans-serif!important;}
@@ -86,9 +86,30 @@
 </style>`;
   }
 
+  function signatureCss() {
+    var s = settings();
+    var size = clamp(s.signatureFontSize, 10, 26, 15);
+    var weight = clamp(s.signatureFontWeight, 400, 900, 900);
+    var gap = clamp(s.signatureTitleNameGap, 0, 40, 14);
+    var lineHeight = clamp(s.signatureLineHeight, 1, 2.4, 1.7);
+    return '<style id="consumables-signature-style-print-css-v1">' +
+      '.sig-cell,.sig-title,.sig-name{font-size:' + size + 'px!important;font-weight:' + weight + '!important;}' +
+      '.sig-title{margin-bottom:' + gap + 'px!important;}' +
+      '.sig-line{margin-bottom:' + Math.max(0, Math.round(gap / 2)) + 'px!important;}' +
+      '.sig-name{line-height:' + lineHeight + '!important;}' +
+      '</style>';
+  }
+
   function consumablesLetterHtml(html) {
     html = String(html || '');
-    return /خطاب\s+رفع\s+المستهلكات|خطاب\s+المستهلكات|عدم\s+أسبقية\s+صرف|محضر\s+استهلاك|محضر\s+حصر\s+استهلاك|مشهد\s+مستهلكات|شهادة/.test(html) && /letter-content|letterhead-bg|hospital-consumables/i.test(html);
+    return /خطاب\s+رفع\s+المستهلكات|خطاب\s+المستهلكات|عدم\s+أسبقية\s+صرف|محضر\s+استهلاك|محضر\s+حصر\s+استهلاك|مشهد\s+مستهلكات|مشهد\s+مياه|شهادة/.test(html) && /letter-content|letterhead-bg|hospital-consumables|sig-grid/i.test(html);
+  }
+
+  function applySignatureStyle(html) {
+    html = String(html || '');
+    if (html.indexOf('sig-grid') === -1) return html;
+    if (html.indexOf('consumables-signature-style-print-css-v1') === -1) html = html.replace('</head>', signatureCss() + '</head>');
+    return html;
   }
 
   function forceConsumablesLetterhead(html) {
@@ -99,7 +120,8 @@
     var dataUrl = letterheadData(s);
     var enabled = yes(s.letterheadEnabled) || !!dataUrl;
 
-    if (html.indexOf('consumables-polish-print-css-v8') === -1) html = html.replace('</head>', polishCss() + '</head>');
+    if (html.indexOf('consumables-polish-print-css-v9') === -1 && html.indexOf('consumables-polish-print-css-v8') === -1) html = html.replace('</head>', polishCss() + '</head>');
+    html = applySignatureStyle(html);
 
     html = html.replace(/<h2>\s*وحدة\s+الصيانة\s+العامة\s*<\/h2>/g, '');
     html = html.replace(/<h2>\s*وحدة\s+الصيانه\s+العامه\s*<\/h2>/g, '');
@@ -119,14 +141,15 @@
     var period = activePeriod();
     html = String(html || '');
     html = forceConsumablesLetterhead(html);
-    if (html.indexOf('consumables-polish-print-css-v8') === -1) html = html.replace('</head>', polishCss() + '</head>');
+    if (html.indexOf('consumables-polish-print-css-v9') === -1 && html.indexOf('consumables-polish-print-css-v8') === -1) html = html.replace('</head>', polishCss() + '</head>');
     html = html.replace(/<section class="page"><div class="extract-page"><h1>([\s\S]*?)<\/h1><h2>([\s\S]*?)<\/h2>/g, function (_, title, subtitle) {
       var plainTitle = clean(title.replace(/<[^>]*>/g, ''));
       var isSub = /باطن|مقاول/i.test(plainTitle);
       var cls = isSub ? 'page landscape-page' : 'page';
+      var cleanSubtitle = clean(subtitle.replace(/<[^>]*>/g, ''));
       var brand = '<section class="' + cls + '"><div class="extract-page"><div class="print-brand">' +
         '<img src="najran_health_cluster_logo.png" alt="شعار">' +
-        '<div class="brand-center"><h1>' + title + '</h1><h2>' + esc(hospital || clean(subtitle.replace(/<[^>]*>/g, ''))) + '</h2><h3>' + esc(period || clean(subtitle.replace(/<[^>]*>/g, ''))) + '</h3></div>' +
+        '<div class="brand-center"><h1>' + title + '</h1><h2>' + esc(hospital || cleanSubtitle) + '</h2><h3>' + esc(period || cleanSubtitle) + '</h3></div>' +
         '<img src="najran_health_cluster_logo.png" alt="شعار">' +
         '</div>';
       return brand;
@@ -135,14 +158,14 @@
   }
 
   function installAnyLetterPrintInterceptor() {
-    if (window.__HOSPITAL_CONSUMABLES_ANY_LETTER_PRINT_INTERCEPTOR_V8__) return;
-    window.__HOSPITAL_CONSUMABLES_ANY_LETTER_PRINT_INTERCEPTOR_V8__ = true;
+    if (window.__HOSPITAL_CONSUMABLES_ANY_LETTER_PRINT_INTERCEPTOR_V9__) return;
+    window.__HOSPITAL_CONSUMABLES_ANY_LETTER_PRINT_INTERCEPTOR_V9__ = true;
     var oldOpen = window.open;
     window.open = function () {
       var win = oldOpen.apply(window, arguments);
       try {
-        if (win && win.document && !win.__consumablesAnyLetterPolishV8) {
-          win.__consumablesAnyLetterPolishV8 = true;
+        if (win && win.document && !win.__consumablesAnyLetterPolishV9) {
+          win.__consumablesAnyLetterPolishV9 = true;
           var oldWrite = win.document.write.bind(win.document);
           win.document.write = function (html) { return oldWrite(forceConsumablesLetterhead(html)); };
         }
@@ -152,7 +175,7 @@
   }
 
   function installFullPrintInterceptor() {
-    if (!window.HospitalConsumablesRaiseLetter || window.HospitalConsumablesRaiseLetter.__polishedV8) return false;
+    if (!window.HospitalConsumablesRaiseLetter || window.HospitalConsumablesRaiseLetter.__polishedV9) return false;
     var oldFull = window.HospitalConsumablesRaiseLetter.printFullExtract;
     if (typeof oldFull !== 'function') return false;
 
@@ -160,8 +183,8 @@
       var realOpen = window.open;
       window.open = function () {
         var win = realOpen.apply(window, arguments);
-        if (win && win.document && !win.__consumablesPolishWrappedV8) {
-          win.__consumablesPolishWrappedV8 = true;
+        if (win && win.document && !win.__consumablesPolishWrappedV9) {
+          win.__consumablesPolishWrappedV9 = true;
           var oldWrite = win.document.write.bind(win.document);
           win.document.write = function (html) { return oldWrite(transformFullHtml(html)); };
         }
@@ -172,15 +195,15 @@
     }
 
     window.HospitalConsumablesRaiseLetter.printFullExtract = polishedFullPrint;
-    window.HospitalConsumablesRaiseLetter.__polishedV8 = true;
+    window.HospitalConsumablesRaiseLetter.__polishedV9 = true;
     return true;
   }
 
   function interceptCenterFullButton() {
     var box = document.getElementById('hospital-consumables-letters-center');
     var btn = box && box.querySelector('[data-hc-action="full"]');
-    if (!btn || btn.__polishedFullPrintV8) return false;
-    btn.__polishedFullPrintV8 = true;
+    if (!btn || btn.__polishedFullPrintV9) return false;
+    btn.__polishedFullPrintV9 = true;
     btn.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -194,14 +217,14 @@
 
   function installSubcontractorsLandscape() {
     var btn = document.querySelector('.btn-print[data-section="subcontractors"]');
-    if (!btn || btn.__subLandscapeV8) return false;
-    btn.__subLandscapeV8 = true;
+    if (!btn || btn.__subLandscapeV9) return false;
+    btn.__subLandscapeV9 = true;
     btn.addEventListener('click', function () {
       document.body.classList.add('print-subcontractors-landscape');
-      var st = document.getElementById('subcontractors-landscape-v8-style');
+      var st = document.getElementById('subcontractors-landscape-v9-style');
       if (!st) {
         st = document.createElement('style');
-        st.id = 'subcontractors-landscape-v8-style';
+        st.id = 'subcontractors-landscape-v9-style';
         st.textContent = `
 @page subcontractorsLandscape { size: A4 landscape; margin: 0; }
 @media print{
@@ -234,5 +257,5 @@
   setTimeout(boot, 600);
   setTimeout(boot, 1600);
   setTimeout(boot, 3000);
-  console.info('[Hospital Consumables Print Polish] installed v8 fallback letterhead key');
+  console.info('[Hospital Consumables Print Polish] installed v9 signature controls + fallback letterhead key');
 })();
