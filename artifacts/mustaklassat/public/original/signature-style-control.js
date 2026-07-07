@@ -769,7 +769,7 @@ d.resetAt = typeof p.resetAt === 'string' ? p.resetAt : null;
   }, 1800);
 };
 
- panel.querySelector('.sig-reset').onclick = function () {
+panel.querySelector('.sig-reset').onclick = function () {
   draft = defaults();
   draft.approved = false;
   draft.resetAt = new Date().toISOString();
@@ -788,7 +788,10 @@ d.resetAt = typeof p.resetAt === 'string' ? p.resetAt : null;
   }, 1600);
 };
 
- 
+    }
+
+    render();
+
     toggle.onclick = function () {
       if (toggle.__najranWasDragged) return;
       panel.classList.toggle('open');
