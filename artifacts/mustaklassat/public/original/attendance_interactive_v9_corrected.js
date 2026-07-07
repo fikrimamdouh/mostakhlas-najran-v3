@@ -4908,13 +4908,30 @@ let dynamicSignaturesToRestore = null;
 let persistentContractDataToRestore = null;
 let persistentExtractDataToRestore = null;
 
-function normalizeLegacyAttendanceDeptKey(key) {
-  const map = {
-    civil_works: 'civil-works',
-    patient_services: 'patient-services',
-    admin_saudi: 'admin-saudi'
-  };
-  return map[key] || key;
+function legacyAttendanceRowsLookLikeSecurity(rows) {
+  const list = Array.isArray(rows) ? rows : [];
+
+  if (!list.length) return false;
+
+  const hits = list.filter(function (emp) {
+    const title = String((emp && emp.jobTitle) || '').trim();
+    return /أمن|امن|سلامة|سلامه|حارس/i.test(title);
+  }).length;
+
+  return hits > 0 && hits >= Math.ceil(list.length / 2);
+}
+
+function normalizeLegacyAttendanceDeptKey(key, rows) {
+  const oldKey = String(key || '').trim();
+
+  if (oldKey === 'civil_works' || oldKey === 'civil-works') return 'civil_works';
+  if (oldKey === 'admin_saudi' || oldKey === 'admin-saudi') return 'admin_saudi';
+
+  if (oldKey === 'patient_services' || oldKey === 'patient-services') {
+    return legacyAttendanceRowsLookLikeSecurity(rows) ? 'patient_services' : 'patient_services';
+  }
+
+  return oldKey;
 }
 
 function normalizeLegacyAttendanceEmployee(emp, daysCount) {
@@ -4971,12 +4988,15 @@ function convertLegacySectionedAttendanceBackup(fileObj) {
   const daysCount = getLegacyDaysCount(legacyExtract, legacyAttendance);
   const convertedAttendance = {};
 
-  Object.keys(legacyAttendance).forEach(oldKey => {
-    const rows = Array.isArray(legacyAttendance[oldKey]) ? legacyAttendance[oldKey] : [];
-    convertedAttendance[normalizeLegacyAttendanceDeptKey(oldKey)] = rows.map(emp =>
-      normalizeLegacyAttendanceEmployee(emp, daysCount)
-    );
-  });
+ Object.keys(legacyAttendance).forEach(oldKey => {
+  const rows = Array.isArray(legacyAttendance[oldKey]) ? legacyAttendance[oldKey] : [];
+  const newKey = normalizeLegacyAttendanceDeptKey(oldKey, rows);
+  const normalizedRows = rows.map(emp =>
+    normalizeLegacyAttendanceEmployee(emp, daysCount)
+  );
+
+  convertedAttendance[newKey] = (convertedAttendance[newKey] || []).concat(normalizedRows);
+});
 
   if (Object.keys(legacyContract).length > 0) {
     if (!legacyContract.contractType) legacyContract.contractType = 'عقد أساسي';
