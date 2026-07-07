@@ -231,7 +231,7 @@
   }
 
   if (pageFile === 'extract-archive.html') appendScript('/original/extract_archive_route_guard.js?v=20260703_extract_archive_route_v5', true);
-  if (/consumables\.html$/.test(pageFile)) appendScript('/original/consumables-submit-snapshot-guard.js?v=20260704_consumables_guard_v4', true);
+  if (/consumables\.html$/.test(pageFile)) {   appendScript('/original/signature-block.js?v=20260707_consumables_signature_block_v5', false);   appendScript('/original/consumables-submit-snapshot-guard.js?v=20260704_consumables_guard_v4', true); }
   if (pageFile === 'settings_main.html') {
     appendScript('/original/settings-backup-complete-guard.js?v=20260611d', true);
     appendScript('/original/settings_contract_fixed_patch.js?v=20260623_fixed_contract_v1', true);
