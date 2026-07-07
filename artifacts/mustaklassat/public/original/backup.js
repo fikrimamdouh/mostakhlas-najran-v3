@@ -78,13 +78,13 @@ function _buBuildManifest(data) {
         includesMonthArchive: has(/monthSnapshot_|monthly|archive/i)
     };
 }
+
 function _buPlainObject(v) {
     return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
 }
 
 function _buLooksLikeLegacySectionedBackup(raw) {
     const d = _buPlainObject(raw && raw.data);
-
     if (!d || Object.keys(d).length === 0) return false;
 
     const hasOldSections =
@@ -106,14 +106,32 @@ function _buLooksLikeLegacySectionedBackup(raw) {
     return !!hasOldSections && !alreadyLocalStorageShape;
 }
 
-function _buNormalizeLegacyDeptKey(key) {
-    const map = {
-        civil_works: 'civil-works',
-        patient_services: 'patient-services',
-        admin_saudi: 'admin-saudi'
-    };
+function _buLegacyRowsLookLikeSecurity(rows) {
+    const list = Array.isArray(rows) ? rows : [];
+    if (!list.length) return false;
 
-    return map[key] || key;
+    const hits = list.filter(function (emp) {
+        const title = String((emp && emp.jobTitle) || '').trim();
+        return /أمن|امن|سلامة|سلامه|حارس/i.test(title);
+    }).length;
+
+    return hits > 0 && hits >= Math.ceil(list.length / 2);
+}
+
+function _buNormalizeLegacyDeptKey(key, rows) {
+    const oldKey = String(key || '').trim();
+
+    // attendance_interactive_v9_corrected.js يقرأ attendanceData بمفاتيح underscore.
+    // لا نحول civil_works/admin_saudi إلى hyphen.
+    if (oldKey === 'civil_works' || oldKey === 'civil-works') return 'civil_works';
+    if (oldKey === 'admin_saudi' || oldKey === 'admin-saudi') return 'admin_saudi';
+
+    // بعض النسخ القديمة خزنت الأمن والسلامة داخل patient_services.
+    if (oldKey === 'patient_services' || oldKey === 'patient-services') {
+        return _buLegacyRowsLookLikeSecurity(rows) ? 'security' : 'patient_services';
+    }
+
+    return oldKey;
 }
 
 function _buNormalizeLegacyDays(days, fallbackLength) {
@@ -216,12 +234,14 @@ function _buConvertLegacySectionedBackup(raw) {
     const attendanceData = {};
 
     Object.keys(legacyAttendance).forEach(function (oldKey) {
-        const newKey = _buNormalizeLegacyDeptKey(oldKey);
         const rows = Array.isArray(legacyAttendance[oldKey]) ? legacyAttendance[oldKey] : [];
-
-        attendanceData[newKey] = rows.map(function (emp) {
+        const newKey = _buNormalizeLegacyDeptKey(oldKey, rows);
+        const normalizedRows = rows.map(function (emp) {
             return _buNormalizeLegacyEmployee(emp, daysInExtract);
         });
+
+        // لو أكثر من مفتاح قديم اتجمعوا تحت نفس المفتاح الجديد، لا نمسح السابق.
+        attendanceData[newKey] = (attendanceData[newKey] || []).concat(normalizedRows);
     });
 
     if (Object.keys(attendanceData).length > 0) {
@@ -247,6 +267,7 @@ function _buConvertLegacySectionedBackup(raw) {
 
     return out;
 }
+
 function _buNormalizeIncomingBackup(raw) {
     if (!raw || typeof raw !== 'object') throw new Error('صيغة ملف النسخة غير صالحة.');
     if (raw.tables) throw new Error('هذا ملف نسخة مركزية من الإدارة، لا يستعاد من صفحة إعدادات المستخدم. استخدم /admin/backup.');
@@ -384,38 +405,39 @@ function collectDataForBackup(backupType) {
     const SHARED_KEYS = ['persistentContractData', 'persistentExtractData', 'appTitles_v1', 'hospitalName', 'companyName', 'contractNumber'];
     const keyPatterns = {
         settings: [...SHARED_KEYS, 'distributionSettings', 'performanceTableNames', 'performanceSignatures_v2', 'contractData', 'contractDetails', 'contractType', 'contractStartDate', 'contractEndDate', 'contractSignatureData', 'extractMonth', 'extractYear', 'extractNumber', 'extractStart', 'extractEnd', 'extractFromDate', 'extractToDate', 'directPurchaseRatio', 'centerNames_v3', 'departmentNames', 'admin_staff', 'adminOfficeNames_v1', 'settings_main', 'settings_advanced', 'dynamicSignatures', 'contractorSignature', /^contract_foundation/, /^sb_sigs_/, /^signatures?/i],
-main_hospital_attendance: [
-    ...SHARED_KEYS,
-    'attendanceData',
-    'ng_attendanceData',
-    'nd_attendanceData',
-    'performanceTotalDeduction',
-    'finalLaborCost',
-    'grand-net-total',
-    'grand-net-total-centers',
-    'grand-net-total-admin',
-    'performanceData',
-    'performanceSignatures',
-    'performanceTableNames',
-    'achievementData',
-    'achievementTitles_v1',
-    'najran_labor_attendance_done',
-    'najran_labor_performance_done',
+        main_hospital_attendance: [
+            ...SHARED_KEYS,
+            'attendanceData',
+            'ng_attendanceData',
+            'nd_attendanceData',
+            'performanceTotalDeduction',
+            'finalLaborCost',
+            'grand-net-total',
+            'grand-net-total-centers',
+            'grand-net-total-admin',
+            'performanceData',
+            'performanceSignatures',
+            'performanceTableNames',
+            'achievementData',
+            'achievementTitles_v1',
+            'najran_labor_attendance_done',
+            'najran_labor_performance_done',
 
-    // تواقيع صفحة الحضور العادي + تفضيلات ظهور التوقيع والختم في الطباعة
-    'sb_sigs_attendance',
-    'sb_prefs_attendance',
+            // تواقيع صفحة الحضور العادي + تفضيلات ظهور التوقيع والختم في الطباعة
+            'sb_sigs_attendance',
+            'sb_prefs_attendance',
 
-    /^tableData_/,
-    /^deptCalculatedCost_/,
-    /^dept_/,
-    /^ng_/,
-    /^nd_/,
-    /attendance/i,
-    /labor/i,
-    /employee/i,
-    /staff/i
-],        main_hospital_consumables: [...SHARED_KEYS, /^main_hospital_consumables_/, /^sparePartsData_/, 'mainHospitalConsumables', 'spare_partsData', 'sparePartsTotalAmount', 'subcontractors_data_consumables_v27', 'performance_data_consumables_v27', 'water_supply_data_consumables_v27', 'sewage_disposal_data_consumables_v27', 'summary_data_consumables_v27', /^summary_data_consumables/, /^signatures_data_consumables/, /consumables/i, /subcontractors/i, /water_supply/i, /sewage/i, /laundry_supply/i],
+            /^tableData_/,
+            /^deptCalculatedCost_/,
+            /^dept_/,
+            /^ng_/,
+            /^nd_/,
+            /attendance/i,
+            /labor/i,
+            /employee/i,
+            /staff/i
+        ],
+        main_hospital_consumables: [...SHARED_KEYS, /^main_hospital_consumables_/, /^sparePartsData_/, 'mainHospitalConsumables', 'spare_partsData', 'sparePartsTotalAmount', 'subcontractors_data_consumables_v27', 'performance_data_consumables_v27', 'water_supply_data_consumables_v27', 'sewage_disposal_data_consumables_v27', 'summary_data_consumables_v27', /^summary_data_consumables/, /^signatures_data_consumables/, /consumables/i, /subcontractors/i, /water_supply/i, /sewage/i, /laundry_supply/i],
         spare_parts: [...SHARED_KEYS, 'spare_partsData', 'sparePartsTotalAmount', /^sparePartsData_/, /^spare_parts/, /spare/i, /parts/i],
         health_centers_attendance: [...SHARED_KEYS, 'centerNames_v3', 'centersAttendanceData_v2', 'healthCentersAttendanceData', 'performanceData_v4', 'performanceDeductions', 'grand-net-total', 'admin_staff', 'najran_health_attendance_done', /^table-/, /healthCenters/i],
         health_centers_consumables: [...SHARED_KEYS, 'healthCentersConsumables', 'consumables_final_v1.0', /^subcontractors_data_consumables_final_/, /^performance_data_consumables_final_/, /^water_supply_data_consumables_final_/, /^laundry_supply_data_consumables_final_/, /^sewage_disposal_data_consumables_final_/, /^summary_data_consumables_final_/, /^signatures_data_consumables_final_/, /^print_titles_data_consumables_final_/, /^notes_data_consumables_final_/],
