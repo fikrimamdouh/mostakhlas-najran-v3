@@ -1338,6 +1338,125 @@ function _mergeMissingBuiltinSummary(saved, builtin) {
 
     return result;
 }
+    function _ensureMissingSummaryItemsOnly(saved, builtin, performance, fallbackSummary) {
+    saved = Array.isArray(saved) ? saved : [];
+    builtin = Array.isArray(builtin) ? builtin : [];
+    performance = Array.isArray(performance) ? performance : [];
+    fallbackSummary = Array.isArray(fallbackSummary) ? fallbackSummary : [];
+
+    if (!saved.length) return null;
+
+    function cleanName(v) {
+        return String(v == null ? '' : v)
+            .replace(/[\u200e\u200f]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function isMainItem(item) {
+        return item &&
+            !item.isSubTotal &&
+            !item.isCustom &&
+            cleanName(item.name);
+    }
+
+    function findSourceItemByName(name) {
+        var wanted = cleanName(name);
+        var sources = [saved, builtin, fallbackSummary];
+
+        for (var s = 0; s < sources.length; s++) {
+            var found = sources[s].find(function (item) {
+                return isMainItem(item) && cleanName(item.name) === wanted;
+            });
+            if (found) return found;
+        }
+
+        return null;
+    }
+
+    var existingNames = new Set(
+        saved
+            .filter(isMainItem)
+            .map(function (item) { return cleanName(item.name); })
+            .filter(Boolean)
+    );
+
+    var existingIds = new Set(
+        saved
+            .map(function (item) { return String(item && item.id || ''); })
+            .filter(Boolean)
+    );
+
+    var required = [];
+
+    function addRequired(name, id) {
+        name = cleanName(name);
+        if (!name) return;
+        if (required.some(function (x) { return cleanName(x.name) === name; })) return;
+        required.push({ name: name, id: id || '' });
+    }
+
+    performance.forEach(function (item, i) {
+        if (item && !item.isSubTotal && !item.isCustom) {
+            addRequired(item.name, item.id || ('item_perf_' + (i + 1)));
+        }
+    });
+
+    builtin.forEach(function (item, i) {
+        if (isMainItem(item)) {
+            addRequired(item.name, item.id || ('item_builtin_' + (i + 1)));
+        }
+    });
+
+    fallbackSummary.forEach(function (item, i) {
+        if (isMainItem(item)) {
+            addRequired(item.name, item.id || ('item_default_' + (i + 1)));
+        }
+    });
+
+    var missing = required
+        .filter(function (item) {
+            return !existingNames.has(cleanName(item.name));
+        })
+        .map(function (item, i) {
+            var source = findSourceItemByName(item.name) || {};
+            var id = item.id || source.id || ('item_missing_' + Date.now() + '_' + i);
+
+            if (existingIds.has(String(id))) {
+                id = 'item_missing_' + Date.now() + '_' + i;
+            }
+
+            return {
+                id: id,
+                name: item.name,
+                value: parseFloat(String(source.value || '0').replace(/,/g, '')) || 0,
+                isEditable: true,
+                isCustom: false
+            };
+        });
+
+    if (!missing.length) return saved;
+
+    var firstTotalIndex = saved.findIndex(function (item) {
+        return item && item.isSubTotal;
+    });
+
+    if (firstTotalIndex < 0) firstTotalIndex = saved.length;
+
+    var merged = saved
+        .slice(0, firstTotalIndex)
+        .concat(missing)
+        .concat(saved.slice(firstTotalIndex));
+
+    try {
+        localStorage.setItem(`summary_data_${DB_VERSION}`, JSON.stringify(merged));
+        console.warn('[ConsumablesSummaryLock] added missing summary rows only:', missing.length);
+    } catch (e) {
+        console.warn('[ConsumablesSummaryLock] failed to save missing rows merge', e);
+    }
+
+    return merged;
+}
     let subcontractorsData = _fromStorage(`subcontractors_data_${DB_VERSION}`) || _builtinSubcontractors() || defaultSubcontractors;
 
 let performanceData = _correctPerformanceMaxScores(
@@ -1349,12 +1468,21 @@ let performanceData = _correctPerformanceMaxScores(
 let waterData  = JSON.parse(localStorage.getItem(`water_supply_data_${DB_VERSION}`)) || defaultWater;
 let sewageData = JSON.parse(localStorage.getItem(`sewage_disposal_data_${DB_VERSION}`)) || defaultSewage;
 
-let summaryData = _rebuildSummaryFromPerformance(
-    _fromStorage(`summary_data_${DB_VERSION}`),
-    _builtinSummary(),
-    performanceData,
-    defaultSummary
-);
+const savedSummaryData = _fromStorage(`summary_data_${DB_VERSION}`);
+
+let summaryData = (savedSummaryData && savedSummaryData.length)
+    ? _ensureMissingSummaryItemsOnly(
+        savedSummaryData,
+        _builtinSummary(),
+        performanceData,
+        defaultSummary
+      )
+    : _rebuildSummaryFromPerformance(
+        null,
+        _builtinSummary(),
+        performanceData,
+        defaultSummary
+      );
     
 // السطر الجديد والمحسن
 let signaturesData = (data => data && typeof data === 'object' && !Array.isArray(data) ? data : defaultSignatures)(JSON.parse(localStorage.getItem(`signatures_data_${DB_VERSION}`)));
@@ -2094,9 +2222,19 @@ document.getElementById('tables-area').addEventListener('input', (e) => {
     }
 
     if (dataArray && dataArray[index]) {
-        dataArray[index][field] = value;
+    dataArray[index][field] = value;
 
-        // *** هذا هو منطق الربط الهام ***
+    if (tableType === 'summary' && (field === 'value' || field === 'name')) {
+        try {
+            localStorage.setItem(`summary_data_${DB_VERSION}`, JSON.stringify(summaryData));
+            localStorage.setItem(`summary_data_${DB_VERSION}_user_locked`, 'true');
+            console.warn('[ConsumablesSummaryLock] user summary edit saved immediately:', field);
+        } catch (e) {
+            console.warn('[ConsumablesSummaryLock] failed to persist user summary edit', e);
+        }
+    }
+
+    // *** هذا هو منطق الربط الهام ***
         if (tableType === 'performance' && field === 'name') {
             const itemId = dataArray[index].id; 
             const summaryItem = summaryData.find(item => item.id === itemId);
