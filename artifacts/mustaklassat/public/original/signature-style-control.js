@@ -48,15 +48,18 @@
     };
   }
 
-  function defaults() {
-    return {
-      version: 5,
-      containerAlign: null,
-      rowGap: null,
-      rowTopMargin: null,
-      perSignature: []
-    };
-  }
+function defaults() {
+  return {
+    version: 5,
+    approved: false,
+    savedAt: null,
+    resetAt: null,
+    containerAlign: null,
+    rowGap: null,
+    rowTopMargin: null,
+    perSignature: []
+  };
+}
 
   function defaultTogglePos(win) {
     return { left: 16, top: 16 };
@@ -139,7 +142,9 @@
       if (!raw) return d;
       var p = JSON.parse(raw);
       if (!p || typeof p !== 'object') return d;
-
+d.approved = p.approved === true;
+d.savedAt = typeof p.savedAt === 'string' ? p.savedAt : null;
+d.resetAt = typeof p.resetAt === 'string' ? p.resetAt : null;
       d.containerAlign = safeContainerAlign(p.containerAlign);
       d.rowGap = clampInt(p.rowGap, SIGNATURE_GAP_MIN, SIGNATURE_GAP_MAX);
       d.rowTopMargin = clampInt(p.rowTopMargin, BLOCK_Y_MIN, BLOCK_Y_MAX);
@@ -736,41 +741,52 @@
         };
       });
 
-     panel.querySelector('.sig-save').onclick = function () {
+  panel.querySelector('.sig-save').onclick = function () {
   draft.approved = true;
   draft.savedAt = new Date().toISOString();
+  draft.resetAt = null;
 
   writeSettings(draft);
   applyStyles(doc, draft);
 
-  toggle.textContent = 'تم حفظ واعتماد التنسيق V5';
+  var savedOk = false;
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+    savedOk = saved &&
+      saved.approved === true &&
+      saved.savedAt === draft.savedAt &&
+      Array.isArray(saved.perSignature);
+  } catch (_) {}
+
+  panel.classList.remove('open');
+
+  toggle.textContent = savedOk
+    ? 'تم حفظ واعتماد التنسيق V5'
+    : 'لم يتم الحفظ — راجع التخزين';
+
+  setTimeout(function () {
+    toggle.textContent = 'تنسيق التواقيع V5 حفظ دائم';
+  }, 1800);
+};
+
+ panel.querySelector('.sig-reset').onclick = function () {
+  draft = defaults();
+  draft.approved = false;
+  draft.resetAt = new Date().toISOString();
+  draft.savedAt = null;
+
+  for (var k2 = 0; k2 < count; k2++) getSlot(draft, k2);
+
+  writeSettings(draft);
+  applyStyles(doc, draft);
+  render();
+
+  toggle.textContent = 'تمت استعادة الافتراضي V5';
 
   setTimeout(function () {
     toggle.textContent = 'تنسيق التواقيع V5 حفظ دائم';
   }, 1600);
 };
-
-  panel.querySelector('.sig-reset').onclick = function () {
-    draft = defaults();
-    draft.approved = false;
-    draft.resetAt = new Date().toISOString();
-
-    for (var k2 = 0; k2 < count; k2++) getSlot(draft, k2);
-
-    writeSettings(draft);
-    applyStyles(doc, draft);
-    render();
-
-    toggle.textContent = 'تمت استعادة الافتراضي V5';
-
-    setTimeout(function () {
-      toggle.textContent = 'تنسيق التواقيع V5 حفظ دائم';
-    }, 1600);
-  };
-
-    }
-
-    render();
 
  
     toggle.onclick = function () {
