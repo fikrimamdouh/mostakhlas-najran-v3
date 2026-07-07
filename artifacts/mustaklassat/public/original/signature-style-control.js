@@ -1,4 +1,4 @@
-/* signature-style-control.js — V4
+/* signature-style-control.js — V5 persistent approved save
  * الأداة الموحدة للتحكم في شكل التواقيع داخل نوافذ الطباعة.
  * لا تضيف محرك خطابات جديد ولا تتدخل في الحسابات؛ فقط تمسك نافذة الطباعة
  * وتطبق تنسيقًا محفوظًا على عناصر التوقيع الحقيقية: .sig-title/.sig-role و.sig-name.
@@ -525,7 +525,7 @@
     var toggle = doc.createElement('button');
     toggle.id = 'najran-sig-toggle';
     toggle.type = 'button';
-    toggle.textContent = 'تنسيق التواقيع';
+    toggle.textContent = 'تنسيق التواقيع V5 حفظ دائم';
     doc.body.appendChild(toggle);
     applyPoint(toggle, ui.toggle);
 
@@ -736,23 +736,43 @@
         };
       });
 
-      panel.querySelector('.sig-save').onclick = function () {
-        writeSettings(draft);
-        toggle.textContent = 'تم الحفظ';
-        setTimeout(function () { toggle.textContent = 'تنسيق التواقيع'; }, 1400);
-      };
+     panel.querySelector('.sig-save').onclick = function () {
+  draft.approved = true;
+  draft.savedAt = new Date().toISOString();
 
-      panel.querySelector('.sig-reset').onclick = function () {
-        draft = defaults();
-        for (var k2 = 0; k2 < count; k2++) getSlot(draft, k2);
-        writeSettings(draft);
-        applyStyles(doc, draft);
-        render();
-      };
+  writeSettings(draft);
+  applyStyles(doc, draft);
+
+  toggle.textContent = 'تم حفظ واعتماد التنسيق V5';
+
+  setTimeout(function () {
+    toggle.textContent = 'تنسيق التواقيع V5 حفظ دائم';
+  }, 1600);
+};
+
+  panel.querySelector('.sig-reset').onclick = function () {
+    draft = defaults();
+    draft.approved = false;
+    draft.resetAt = new Date().toISOString();
+
+    for (var k2 = 0; k2 < count; k2++) getSlot(draft, k2);
+
+    writeSettings(draft);
+    applyStyles(doc, draft);
+    render();
+
+    toggle.textContent = 'تمت استعادة الافتراضي V5';
+
+    setTimeout(function () {
+      toggle.textContent = 'تنسيق التواقيع V5 حفظ دائم';
+    }, 1600);
+  };
+
     }
 
     render();
 
+ 
     toggle.onclick = function () {
       if (toggle.__najranWasDragged) return;
       panel.classList.toggle('open');
@@ -814,4 +834,5 @@
     }
     return win;
   };
+    console.info('[SignatureStyleControl] V5 persistent approved save installed');
 })();
