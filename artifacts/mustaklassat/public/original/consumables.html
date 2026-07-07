@@ -1352,14 +1352,44 @@ function _mergeMissingBuiltinSummary(saved, builtin) {
             .replace(/\s+/g, ' ')
             .trim();
     }
+function isGeneratedSummaryFooterRow(item) {
+    if (!item || typeof item !== 'object') return false;
 
+    // لا تلمس صفوف الإجمالي الرسمية ولا البنود المخصصة
+    if (item.isSubTotal || item.isCustom) return false;
+
+    var name = cleanName(item.name);
+    if (!name) return false;
+
+    return (
+        name.indexOf('الصافي النهائي المستحق للمقاول') !== -1 ||
+        name.indexOf('فقط وقدره') !== -1 ||
+        name.indexOf('فقط وقدرة') !== -1 ||
+        name.indexOf('لا غير') !== -1
+    );
+}
     function isMainItem(item) {
         return item &&
             !item.isSubTotal &&
             !item.isCustom &&
             cleanName(item.name);
     }
+var originalSavedLength = saved.length;
 
+saved = saved.filter(function (item) {
+    return !isGeneratedSummaryFooterRow(item);
+});
+
+var removedGeneratedFooterRows = originalSavedLength - saved.length;
+
+if (removedGeneratedFooterRows > 0) {
+    try {
+        localStorage.setItem(`summary_data_${DB_VERSION}`, JSON.stringify(saved));
+        console.warn('[ConsumablesSummaryLock] removed generated footer rows saved as normal items:', removedGeneratedFooterRows);
+    } catch (e) {
+        console.warn('[ConsumablesSummaryLock] failed to remove generated footer rows', e);
+    }
+}
     function findSourceItemByName(name) {
         var wanted = cleanName(name);
         var sources = [saved, builtin, fallbackSummary];
