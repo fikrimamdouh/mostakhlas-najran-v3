@@ -275,25 +275,12 @@ function cloudFetch(path, opts) {
   }
 
   function syncSettingsToCloud() {
-    if (__cloudSyncTimer) clearTimeout(__cloudSyncTimer);
-    __cloudSyncTimer = setTimeout(function () {
-      __cloudSyncTimer = null;
-      try {
-        var raw = localStorage.getItem(KEY);
-        if (!raw) return;
-        var payload = { data: {} };
-        payload.data[KEY] = raw;
-        cloudFetch('/hospital-storage', { method: 'PUT', body: JSON.stringify(payload) })
-  .then(function (res) {
-    if (res && res.ok === true) {
-      console.info('[SignatureStyleControl] approved style synced to system storage');
-    } else {
-      console.warn('[SignatureStyleControl] cloud sync skipped/failed:', res && res.reason);
-    }
+  return Promise.resolve({
+    ok: true,
+    status: 0,
+    reason: 'LOCAL_ONLY'
   });
-      } catch (_) {}
-    }, 250);
-  }
+}
 
   function pullSettingsFromCloud() {
     cloudFetch('/hospital-storage?keys=' + encodeURIComponent(KEY)).then(function (res) {
