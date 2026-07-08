@@ -188,26 +188,82 @@ d.resetAt = typeof p.resetAt === 'string' ? p.resetAt : null;
   /* --- V7: حفظ التنسيق المعتمد في النظام (تخزين المستشفى) حتى لا يضيع أبدًا --- */
   var __cloudSyncTimer = null;
 
-  function cloudToken() {
-    try {
-      var s = JSON.parse(localStorage.getItem('najran_session') || '{}');
-      return s && s.clerkToken ? s.clerkToken : null;
-    } catch (_) { return null; }
+function cloudToken() {
+  try {
+    var s = JSON.parse(localStorage.getItem('najran_session') || '{}');
+    if (!s || !s.clerkToken) return null;
+    if (s.timestamp && Date.now() - Number(s.timestamp) > 7.5 * 60 * 60 * 1000) return null;
+    return s.clerkToken;
+  } catch (_) {
+    return null;
+  }
+}
+
+function cloudFetch(path, opts) {
+  opts = opts || {};
+  var token = cloudToken();
+
+  if (!token) {
+    return Promise.resolve({
+      ok: false,
+      status: 0,
+      reason: 'NO_VALID_TOKEN'
+    });
   }
 
-  function cloudFetch(path, opts) {
-    opts = opts || {};
-    var headers = { 'Content-Type': 'application/json' };
-    var token = cloudToken();
-    if (token) headers.Authorization = 'Bearer ' + token;
-    var merged = {};
-    for (var k in opts) { if (Object.prototype.hasOwnProperty.call(opts, k)) merged[k] = opts[k]; }
-    merged.headers = headers;
-    merged.credentials = 'include';
-    return fetch('/api' + path, merged)
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .catch(function () { return null; });
+  var headers = {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer ' + token
+  };
+
+  var merged = {};
+  for (var k in opts) {
+    if (Object.prototype.hasOwnProperty.call(opts, k)) merged[k] = opts[k];
   }
+
+  merged.headers = headers;
+  merged.credentials = 'include';
+
+  return fetch('/api' + path, merged)
+    .then(function (r) {
+      if (r.status === 401) {
+        return {
+          ok: false,
+          status: 401,
+          reason: 'UNAUTHORIZED'
+        };
+      }
+
+      if (!r.ok) {
+        return {
+          ok: false,
+          status: r.status,
+          reason: 'HTTP_' + r.status
+        };
+      }
+
+      return r.json().then(function (data) {
+        return {
+          ok: true,
+          status: r.status,
+          data: data
+        };
+      }).catch(function () {
+        return {
+          ok: true,
+          status: r.status,
+          data: null
+        };
+      });
+    })
+    .catch(function () {
+      return {
+        ok: false,
+        status: 0,
+        reason: 'FETCH_FAILED'
+      };
+    });
+}
 
   function settingsStamp(s) {
     var a = s && typeof s.savedAt === 'string' ? Date.parse(s.savedAt) : NaN;
@@ -228,9 +284,13 @@ d.resetAt = typeof p.resetAt === 'string' ? p.resetAt : null;
         var payload = { data: {} };
         payload.data[KEY] = raw;
         cloudFetch('/hospital-storage', { method: 'PUT', body: JSON.stringify(payload) })
-          .then(function (res) {
-            if (res) console.info('[SignatureStyleControl] approved style synced to system storage');
-          });
+  .then(function (res) {
+    if (res && res.ok === true) {
+      console.info('[SignatureStyleControl] approved style synced to system storage');
+    } else {
+      console.warn('[SignatureStyleControl] cloud sync skipped/failed:', res && res.reason);
+    }
+  });
       } catch (_) {}
     }, 250);
   }
