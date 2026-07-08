@@ -1489,11 +1489,13 @@ if (removedGeneratedFooterRows > 0) {
 }
     let subcontractorsData = _fromStorage(`subcontractors_data_${DB_VERSION}`) || _builtinSubcontractors() || defaultSubcontractors;
 
-let performanceData = _correctPerformanceMaxScores(
-    _fromStorage(`performance_data_${DB_VERSION}`) ||
-    _builtinPerformance() ||
-    defaultPerformance
-);
+const savedPerformanceData = _fromStorage(`performance_data_${DB_VERSION}`);
+
+let performanceData = savedPerformanceData ||
+    _correctPerformanceMaxScores(
+        _builtinPerformance() ||
+        defaultPerformance
+    );
 
 let waterData  = JSON.parse(localStorage.getItem(`water_supply_data_${DB_VERSION}`)) || defaultWater;
 let sewageData = JSON.parse(localStorage.getItem(`sewage_disposal_data_${DB_VERSION}`)) || defaultSewage;
@@ -1501,12 +1503,7 @@ let sewageData = JSON.parse(localStorage.getItem(`sewage_disposal_data_${DB_VERS
 const savedSummaryData = _fromStorage(`summary_data_${DB_VERSION}`);
 
 let summaryData = (savedSummaryData && savedSummaryData.length)
-    ? _ensureMissingSummaryItemsOnly(
-        savedSummaryData,
-        _builtinSummary(),
-        performanceData,
-        defaultSummary
-      )
+    ? savedSummaryData
     : _rebuildSummaryFromPerformance(
         null,
         _builtinSummary(),
@@ -1516,6 +1513,32 @@ let summaryData = (savedSummaryData && savedSummaryData.length)
     
 // السطر الجديد والمحسن
 let signaturesData = (data => data && typeof data === 'object' && !Array.isArray(data) ? data : defaultSignatures)(JSON.parse(localStorage.getItem(`signatures_data_${DB_VERSION}`)));
+    let consumablesAutoSaveTimer = 0;
+
+function saveConsumablesWorkNow(reason) {
+    try {
+        saveAllData();
+
+        if (typeof persistSummaryDataNow === 'function') {
+            persistSummaryDataNow(reason || 'autosave');
+        }
+
+        localStorage.setItem('consumables_last_saved_at_' + DB_VERSION, new Date().toISOString());
+        localStorage.setItem('consumables_last_save_reason_' + DB_VERSION, reason || 'autosave');
+
+        return true;
+    } catch (e) {
+        console.error('[ConsumablesAutoSave] failed:', reason, e);
+        return false;
+    }
+}
+
+function scheduleConsumablesAutoSave(reason) {
+    clearTimeout(consumablesAutoSaveTimer);
+    consumablesAutoSaveTimer = setTimeout(function () {
+        saveConsumablesWorkNow(reason || 'input');
+    }, 250);
+}
     let printTitlesData = JSON.parse(localStorage.getItem(`print_titles_data_${DB_VERSION}`)) || defaultPrintTitles;
 function persistSummaryDataNow(reason) {
     try {
@@ -2294,12 +2317,14 @@ document.getElementById('tables-area').addEventListener('input', (e) => {
         default: return;
     }
 
-    if (dataArray && dataArray[index]) {
+   if (dataArray && dataArray[index]) {
     dataArray[index][field] = value;
 
-   if (tableType === 'summary' && (field === 'value' || field === 'name')) {
-    persistSummaryDataNow('summary-input-' + field);
-}
+    scheduleConsumablesAutoSave('input-' + tableType + '-' + field);
+
+    if (tableType === 'summary' && (field === 'value' || field === 'name')) {
+        persistSummaryDataNow('summary-input-' + field);
+    }
 
     // *** هذا هو منطق الربط الهام ***
         if (tableType === 'performance' && field === 'name') {
@@ -2340,13 +2365,13 @@ if (tableType === 'summary' && !isNaN(index) && (field === 'value' || field === 
     }
 }
     // هذا الشرط يضمن أن أي تغيير في حقل رقمي أو قائمة منسدلة سيؤدي إلى حفظ وإعادة بناء كاملة
-if (!activeEditSession && (target.tagName === 'SELECT' || (target.tagName === 'INPUT' && (target.type === 'number' || target.inputMode === 'decimal')))) {
-        // 1. حفظ البيانات في الخلفية (هذا يضمن أن التغيير الجديد في سعر الوحدة تم حفظه)
-        saveAllData();
-        
-        // 2. إعادة بناء كل الجداول بالبيانات الجديدة والمحفوظة
-        renderAllTables(); 
+if (target.tagName === 'SELECT' || target.tagName === 'INPUT') {
+    saveConsumablesWorkNow('change-' + (tableType || 'unknown') + '-' + (field || 'unknown'));
+
+    if (!activeEditSession && (target.tagName === 'SELECT' || (target.tagName === 'INPUT' && (target.type === 'number' || target.inputMode === 'decimal')))) {
+        renderAllTables();
     }
+}
 });
 
 
@@ -2469,8 +2494,8 @@ toggleManualLaborCostBtn.addEventListener('click', () => {
             document.getElementById('save-titles-btn').addEventListener('click', saveTitles);
 
         window.addEventListener('beforeunload', function () {
-            persistSummaryDataNow('beforeunload');
-        });
+    saveConsumablesWorkNow('beforeunload');
+});
     }
 
     const showDashboard = () => {
