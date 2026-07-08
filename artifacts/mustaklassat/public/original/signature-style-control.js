@@ -414,13 +414,15 @@ function cloudFetch(path, opts) {
     var titles = doc.querySelectorAll('.sig-title, .sig-role');
     var rows = [];
     var rowIndex = new Map();
-    var globalIndex = 0;
+    var scopeCounters = {};
 
     for (var i = 0; i < titles.length; i++) {
       var title = titles[i];
       var holder = title.parentElement;
       if (!holder) continue;
-
+var scope = signatureScopeForElement(holder, doc);
+var localIndex = scopeCounters[scope] || 0;
+scopeCounters[scope] = localIndex + 1;
       var row = holder.parentElement || holder;
       var idx = rowIndex.get(row);
       if (idx === undefined) {
@@ -429,7 +431,7 @@ function cloudFetch(path, opts) {
 rows.push({
   row: row,
   cells: [],
-  scope: signatureScopeForElement(holder, doc)
+  scope: scope
 });      }
 
       rows[idx].cells.push({
@@ -438,9 +440,9 @@ rows.push({
         title: title,
         name: holder.querySelector('.sig-name'),
         line: findSignatureLine(holder),
-        globalIndex: globalIndex
+        globalIndex: localIndex
       });
-      globalIndex++;
+      
     }
 
     return rows;
