@@ -629,6 +629,7 @@ function showRevisionExitModal() {
         '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-start;">' +
           '<button id="najran-revision-save-exit" style="background:#166534;color:#fff;border:0;border-radius:10px;padding:11px 15px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">حفظ نسخة محلية والخروج</button>' +
           '<button id="najran-revision-exit-no-save" style="background:#991b1b;color:#fff;border:0;border-radius:10px;padding:11px 15px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">الخروج بدون حفظ</button>' +
+          '<button id="najran-revision-exit-new" style="background:#1d4ed8;color:#fff;border:0;border-radius:10px;padding:11px 15px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">مسح التعديل والبدء بمستخلص جديد</button>' +
           '<button id="najran-revision-stay" style="background:#475569;color:#fff;border:0;border-radius:10px;padding:11px 15px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">البقاء داخل التعديل</button>' +
         '</div>' +
 
@@ -649,6 +650,12 @@ function showRevisionExitModal() {
   window.top.location.href = '/extracts/track?revisionExited=1&noSave=1&v=' + Date.now();
 };
 
+    document.getElementById('najran-revision-exit-new').onclick = function () {
+      if (!confirm('سيتم إنهاء وضع التعديل الحالي (بدون رفع أي شيء للسحابة) والانتقال لإعداد مستخلص جديد.\nتعديلاتك في هذه الجلسة لن تُرفع. هل أنت متأكد؟')) return;
+      clearRevisionOnly();
+      window.top.location.href = '/original/settings_main.html?startNewExtract=1&v=' + Date.now();
+    };
+
     document.getElementById('najran-revision-stay').onclick = function () {
       modal.remove();
     };
@@ -658,14 +665,15 @@ function showRevisionExitModal() {
   }
 }
 
-// ═══ شارة وضع التعديل المعممة (Revision Mode Badge) ═══
-// تُظهر للمستخدم أنه داخل وضع تعديل، وعلى أي مستخلص يعمل، وتوفر زر الخروج/الحفظ
-// على كل الصفحات — بما فيها صفحات لا تملك زر رئيسية أصلًا مثل consumables.html.
+// ═══ شارة سياق العمل المعممة (Work Context Badge) ═══
+// تُظهر للمستخدم على كل الصفحات هل هو داخل "تعديل مستخلص محفوظ" (برتقالي — بضغطة
+// تفتح خيارات الحفظ/الخروج/البدء بجديد) أم يعمل على "مستخلص جديد/جاري" (أخضر — معلوماتي).
 function installRevisionModeBadge() {
   try {
-    if (!isActiveRevisionMode()) return;
     if (document.getElementById('najran-revision-mode-badge')) return;
     if (!document.body) return;
+
+    var isRev = isActiveRevisionMode();
 
     var typeMap = {
       labor: 'عمالة المستشفى', consumables: 'مستهلكات المستشفى', spare_parts: 'قطع الغيار',
@@ -678,19 +686,28 @@ function installRevisionModeBadge() {
     var year = localStorage.getItem('extractYear') || '';
     var period = [month, year].filter(Boolean).join(' ');
 
+    // في الوضع العادي: لا تُعرض الشارة إلا لو فيه سياق مستخلص فعلي قيد العمل
+    if (!isRev && !payment && !period) return;
+
     var badge = document.createElement('div');
     badge.id = 'najran-revision-mode-badge';
     badge.setAttribute('dir', 'rtl');
-    badge.style.cssText = 'position:fixed;bottom:18px;right:18px;z-index:2147483000;background:#b45309;color:#fff;' +
+    badge.style.cssText = 'position:fixed;bottom:18px;right:18px;z-index:2147483000;color:#fff;' +
       'padding:10px 14px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.35);font-family:inherit;font-size:13px;' +
-      'line-height:1.5;cursor:pointer;max-width:280px;user-select:none;';
+      'line-height:1.5;cursor:pointer;max-width:280px;user-select:none;background:' + (isRev ? '#b45309' : '#166534') + ';';
+
+    var title = isRev ? 'وضع تعديل مستخلص' : 'مستخلص جديد / جاري';
+    var details = (isRev ? typeLabel : '') +
+      (payment ? (isRev ? ' — ' : '') + 'دفعة ' + payment : '') +
+      (period ? ' — ' + period : '');
+    var hint = isRev ? 'اضغط للحفظ أو الخروج أو البدء بمستخلص جديد' : 'أنت تعمل على مستخلص جديد — لست في وضع تعديل';
+
     badge.innerHTML =
       '<div style="font-weight:bold;display:flex;align-items:center;gap:6px;">' +
-        '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#fde047;animation:najranRevPulse 1.6s infinite;"></span>' +
-        'وضع تعديل مستخلص</div>' +
-      '<div style="opacity:.95;margin-top:2px;">' + typeLabel +
-        (payment ? ' — دفعة ' + payment : '') + (period ? ' — ' + period : '') + '</div>' +
-      '<div style="font-size:11px;opacity:.85;margin-top:4px;">اضغط للحفظ أو الخروج من التعديل</div>';
+        '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' + (isRev ? '#fde047' : '#86efac') + ';animation:najranRevPulse 1.6s infinite;"></span>' +
+        title + '</div>' +
+      (details ? '<div style="opacity:.95;margin-top:2px;">' + details + '</div>' : '') +
+      '<div style="font-size:11px;opacity:.85;margin-top:4px;">' + hint + '</div>';
 
     var style = document.createElement('style');
     style.textContent = '@keyframes najranRevPulse{0%,100%{opacity:1}50%{opacity:.35}}' +
@@ -698,11 +715,18 @@ function installRevisionModeBadge() {
     badge.appendChild(style);
 
     badge.addEventListener('click', function () {
-      try { showRevisionExitModal(); } catch (e) { console.warn('[RevisionBadge] exit modal failed', e); }
+      if (isActiveRevisionMode()) {
+        try { showRevisionExitModal(); } catch (e) { console.warn('[RevisionBadge] exit modal failed', e); }
+      } else {
+        alert('أنت تعمل حاليًا على مستخلص جديد/جاري' +
+          (payment ? '\nرقم الدفعة: ' + payment : '') +
+          (period ? '\nالفترة: ' + period : '') +
+          '\n\nلست في وضع تعديل مستخلص محفوظ — تعديلاتك تُحفظ محليًا أولًا بأول.');
+      }
     });
 
     document.body.appendChild(badge);
-    console.warn('[RevisionBadge] revision mode badge installed:', typeLabel, payment, period);
+    console.warn('[RevisionBadge] work context badge installed:', isRev ? 'revision' : 'new', typeLabel, payment, period);
   } catch (e) {
     console.warn('[RevisionBadge] failed to install badge', e);
   }

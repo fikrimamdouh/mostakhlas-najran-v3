@@ -74,7 +74,7 @@
   })();
 
   var BASE = window.location.origin;
-  var BUILD_V = '20260708revisionApplyOnceBadgeV1';
+  var BUILD_V = '20260708revisionApplyOnceBadgeV2_dualModeNewOption';
   var HOSPITAL_STORAGE_GUARD_V = '20260704_stale_revision_404_modal_v2';
   var NOTIF_INTERVAL_MS = 900000; // كان 300000 (5 دقائق) — رُفع لـ15 دقيقة بعد ما بقى التحقق الدوري خفيف (عدّاد فقط لا قائمة كاملة)
   var NAJRAN_BUILD_VERSION = '2026.07.04-r10';
