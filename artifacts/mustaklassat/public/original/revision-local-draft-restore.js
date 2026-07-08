@@ -220,6 +220,19 @@ var extract =
 
       var snapshot = parse(rawSnapshot, null);
       if (!snapshot || typeof snapshot !== 'object') return false;
+
+      // ═══ حارس التطبيق مرة واحدة لكل جلسة تعديل (Apply-Once Guard) ═══
+      // إعادة تطبيق snapshot الرفع القديم في كل تحميل كانت تمسح كل تعديلات
+      // المستخدم (قيم وتواقيع) عند أي reload أو تنقل، وحتى بعد استعادة نسخة احتياطية.
+      var _appliedExtractId = localStorage.getItem('najran_revision_extract_id') || '';
+      var _appliedMarker = 'najran_revision_applied_once_' + _appliedExtractId;
+      try {
+        if (sessionStorage.getItem(_appliedMarker)) {
+          console.warn('[RevisionBootGuard] snapshot already applied this session — preserving user edits');
+          return true; // true = لا تُظهر صندوق المسودة ولا تمس بيانات المستخدم
+        }
+      } catch (_) {}
+
 snapshot = normalizeRevisionSnapshotSettings(snapshot);
       console.warn('[RevisionBootGuard] applying submitted extract snapshot after page load');
 
@@ -232,9 +245,17 @@ hydrateRevisionExtractSettings(snapshot);
 refreshSettingsPageAfterRevisionHydrate();
       localStorage.setItem('najran_revision_mode', 'true');
       localStorage.setItem('najran_revision_boot_lock', 'true');
+      // تسجيل التطبيق الناجح فورًا — أي استدعاء لاحق في نفس الجلسة لن يمس بيانات المستخدم
+      try { sessionStorage.setItem(_appliedMarker, String(Date.now())); } catch (_) {}
 
   setTimeout(function () {
         Object.keys(snapshot).forEach(function (key) {
+          // حماية تعديلات المستخدم: لو غيّر المستخدم قيمة المفتاح بعد التمريرة الأولى، لا تلمسه
+          try {
+            var _cur = localStorage.getItem(key);
+            var _snap = snapshot[key] == null ? null : (typeof snapshot[key] === 'string' ? snapshot[key] : JSON.stringify(snapshot[key]));
+            if (_cur !== null && _snap !== null && _cur !== _snap) return;
+          } catch (_) {}
           writeValue(key, snapshot[key]);
         });
 hydrateRevisionExtractSettings(snapshot);
@@ -637,6 +658,56 @@ function showRevisionExitModal() {
   }
 }
 
+// ═══ شارة وضع التعديل المعممة (Revision Mode Badge) ═══
+// تُظهر للمستخدم أنه داخل وضع تعديل، وعلى أي مستخلص يعمل، وتوفر زر الخروج/الحفظ
+// على كل الصفحات — بما فيها صفحات لا تملك زر رئيسية أصلًا مثل consumables.html.
+function installRevisionModeBadge() {
+  try {
+    if (!isActiveRevisionMode()) return;
+    if (document.getElementById('najran-revision-mode-badge')) return;
+    if (!document.body) return;
+
+    var typeMap = {
+      labor: 'عمالة المستشفى', consumables: 'مستهلكات المستشفى', spare_parts: 'قطع الغيار',
+      health_centers: 'المراكز الصحية', admin_offices: 'المكاتب الإدارية'
+    };
+    var t = localStorage.getItem('najran_revision_extract_type') || '';
+    var typeLabel = typeMap[t] || t || 'مستخلص';
+    var payment = localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber') || '';
+    var month = localStorage.getItem('extractMonth') || '';
+    var year = localStorage.getItem('extractYear') || '';
+    var period = [month, year].filter(Boolean).join(' ');
+
+    var badge = document.createElement('div');
+    badge.id = 'najran-revision-mode-badge';
+    badge.setAttribute('dir', 'rtl');
+    badge.style.cssText = 'position:fixed;bottom:18px;right:18px;z-index:2147483000;background:#b45309;color:#fff;' +
+      'padding:10px 14px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.35);font-family:inherit;font-size:13px;' +
+      'line-height:1.5;cursor:pointer;max-width:280px;user-select:none;';
+    badge.innerHTML =
+      '<div style="font-weight:bold;display:flex;align-items:center;gap:6px;">' +
+        '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#fde047;animation:najranRevPulse 1.6s infinite;"></span>' +
+        'وضع تعديل مستخلص</div>' +
+      '<div style="opacity:.95;margin-top:2px;">' + typeLabel +
+        (payment ? ' — دفعة ' + payment : '') + (period ? ' — ' + period : '') + '</div>' +
+      '<div style="font-size:11px;opacity:.85;margin-top:4px;">اضغط للحفظ أو الخروج من التعديل</div>';
+
+    var style = document.createElement('style');
+    style.textContent = '@keyframes najranRevPulse{0%,100%{opacity:1}50%{opacity:.35}}' +
+      '@media print{#najran-revision-mode-badge{display:none !important}}';
+    badge.appendChild(style);
+
+    badge.addEventListener('click', function () {
+      try { showRevisionExitModal(); } catch (e) { console.warn('[RevisionBadge] exit modal failed', e); }
+    });
+
+    document.body.appendChild(badge);
+    console.warn('[RevisionBadge] revision mode badge installed:', typeLabel, payment, period);
+  } catch (e) {
+    console.warn('[RevisionBadge] failed to install badge', e);
+  }
+}
+
 function installHomeAsRevisionExit() {
   try {
     if (!isActiveRevisionMode()) return;
@@ -707,14 +778,17 @@ function installHomeAsRevisionExit() {
   document.addEventListener('DOMContentLoaded', function () {
     if (!applyRevisionBootSnapshot()) show();
     installHomeAsRevisionExit();
+    installRevisionModeBadge();
   });
 } else {
   if (!applyRevisionBootSnapshot()) show();
   installHomeAsRevisionExit();
+  installRevisionModeBadge();
 }
 
 setTimeout(function () {
   if (!applyRevisionBootSnapshot()) show();
   installHomeAsRevisionExit();
+  installRevisionModeBadge();
 }, 1200);
 })();

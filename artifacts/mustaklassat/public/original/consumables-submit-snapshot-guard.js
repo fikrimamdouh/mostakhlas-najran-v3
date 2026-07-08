@@ -81,12 +81,28 @@
     ]);
   }
 
+  function countMainRows(rows) {
+    return (Array.isArray(rows) ? rows : []).filter(function (r) {
+      return r && !r.isSubTotal && !r.isCustom && !r.isSummaryTotalRow && !r.isFinalTotal && !r.isTafqeet && String(r.name || '').trim();
+    }).length;
+  }
+
   function ensureSummarySnapshot() {
-    var rows = rowsFromSummaryTable();
-    if (!rows.length) rows = existingRows();
+    var domRows = rowsFromSummaryTable();
+    var stored = existingRows();
+    var rows = domRows.length ? domRows : stored;
     if (!rows.length) rows = defaultRows();
     rows = ensureHousingDeductionRow(rows);
-    saveRows(rows);
+
+    // حماية جوهرية: ممنوع كتابة نسخة بنودها الرئيسية أقل من المخزَّنة —
+    // كشط DOM ناقص (رسمة قديمة) كان يدمّر بنود المستخدم وقيمه ويصدّر التلف للسيرفر.
+    if (countMainRows(rows) >= countMainRows(stored)) {
+      saveRows(rows);
+    } else {
+      console.warn('[ConsumablesSnapshotGuard] BLOCKED destructive overwrite — DOM mains:',
+        countMainRows(rows), '< stored mains:', countMainRows(stored));
+      rows = ensureHousingDeductionRow(stored);
+    }
     return rows;
   }
 

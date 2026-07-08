@@ -74,7 +74,7 @@
   })();
 
   var BASE = window.location.origin;
-  var BUILD_V = '20260623archiveBundleRouteV1';
+  var BUILD_V = '20260708revisionApplyOnceBadgeV1';
   var HOSPITAL_STORAGE_GUARD_V = '20260704_stale_revision_404_modal_v2';
   var NOTIF_INTERVAL_MS = 900000; // كان 300000 (5 دقائق) — رُفع لـ15 دقيقة بعد ما بقى التحقق الدوري خفيف (عدّاد فقط لا قائمة كاملة)
   var NAJRAN_BUILD_VERSION = '2026.07.04-r10';
@@ -297,7 +297,7 @@
   }
 
   if (pageFile === 'extract-archive.html') appendScript('/original/extract_archive_route_guard.js?v=20260703_extract_archive_route_v5', true);
-  if (/consumables\.html$/.test(pageFile)) {   appendScript('/original/consumables-submit-snapshot-guard.js?v=20260704_consumables_guard_v4', true); }
+  if (/consumables\.html$/.test(pageFile)) {   appendScript('/original/consumables-submit-snapshot-guard.js?v=20260708_consumables_guard_v5_nondestructive', true); }
   if (pageFile === 'settings_main.html') {
     appendScript('/original/settings-backup-complete-guard.js?v=20260611d', true);
     appendScript('/original/settings_contract_fixed_patch.js?v=20260623_fixed_contract_v1', true);
