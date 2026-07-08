@@ -122,39 +122,115 @@
 
   /* ---------------- مزامنة النظام (تخزين المستشفى) ---------------- */
   var cloudTimer = null;
-  function cloudToken() {
-    try { var s = JSON.parse(localStorage.getItem('najran_session') || '{}'); return s && s.clerkToken ? s.clerkToken : null; }
-    catch (_) { return null; }
+function cloudToken() {
+  try {
+    var s = JSON.parse(localStorage.getItem('najran_session') || '{}');
+    if (!s || !s.clerkToken) return null;
+    if (s.timestamp && Date.now() - Number(s.timestamp) > 7.5 * 60 * 60 * 1000) return null;
+    return s.clerkToken;
+  } catch (_) {
+    return null;
   }
-  function cloudFetch(path, opts) {
-    opts = opts || {};
-    var headers = { 'Content-Type': 'application/json' };
-    var token = cloudToken();
-    if (token) headers.Authorization = 'Bearer ' + token;
-    var merged = {};
-    for (var k in opts) { if (Object.prototype.hasOwnProperty.call(opts, k)) merged[k] = opts[k]; }
-    merged.headers = headers;
-    merged.credentials = 'include';
-    return fetch('/api' + path, merged)
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .catch(function () { return null; });
+}
+
+function cloudFetch(path, opts) {
+  opts = opts || {};
+  var token = cloudToken();
+
+  if (!token) {
+    return Promise.resolve({
+      ok: false,
+      status: 0,
+      reason: 'NO_VALID_TOKEN'
+    });
   }
-  function syncStyleToCloud() {
-    if (cloudTimer) clearTimeout(cloudTimer);
-    cloudTimer = setTimeout(function () {
-      cloudTimer = null;
-      try {
-        var raw = localStorage.getItem(STYLE_KEY);
-        if (!raw) return;
-        var payload = { data: {} };
-        payload.data[STYLE_KEY] = raw;
-        cloudFetch('/hospital-storage', { method: 'PUT', body: JSON.stringify(payload) })
-          .then(function (res) {
-            if (res) console.info('[SigFineControl:' + PAGE + '] style synced to system storage');
-          });
-      } catch (_) {}
-    }, 250);
+
+  var headers = {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer ' + token
+  };
+
+  var merged = {};
+  for (var k in opts) {
+    if (Object.prototype.hasOwnProperty.call(opts, k)) merged[k] = opts[k];
   }
+
+  merged.headers = headers;
+  merged.credentials = 'include';
+
+  return fetch('/api' + path, merged)
+    .then(function (r) {
+      if (r.status === 401) {
+        return {
+          ok: false,
+          status: 401,
+          reason: 'UNAUTHORIZED'
+        };
+      }
+
+      if (!r.ok) {
+        return {
+          ok: false,
+          status: r.status,
+          reason: 'HTTP_' + r.status
+        };
+      }
+
+      return r.json().then(function (data) {
+        return {
+          ok: true,
+          status: r.status,
+          data: data
+        };
+      }).catch(function () {
+        return {
+          ok: true,
+          status: r.status,
+          data: null
+        };
+      });
+    })
+    .catch(function () {
+      return {
+        ok: false,
+        status: 0,
+        reason: 'FETCH_FAILED'
+      };
+    });
+}
+function syncStyleToCloud() {
+  try {
+    var raw = localStorage.getItem(STYLE_KEY);
+    if (!raw) {
+      return Promise.resolve({
+        ok: false,
+        status: 0,
+        reason: 'NO_LOCAL_STYLE'
+      });
+    }
+
+    var payload = { data: {} };
+    payload.data[STYLE_KEY] = raw;
+
+    return cloudFetch('/hospital-storage', {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    }).then(function (res) {
+      if (res && res.ok === true) {
+        console.info('[SigFineControl:' + PAGE + '] style synced to system storage');
+      } else {
+        console.warn('[SigFineControl:' + PAGE + '] cloud sync skipped/failed:', res && res.reason);
+      }
+      return res;
+    });
+  } catch (_) {
+    return Promise.resolve({
+      ok: false,
+      status: 0,
+      reason: 'SYNC_EXCEPTION'
+    });
+  }
+}
   function pullStyleFromCloud() {
     cloudFetch('/hospital-storage?keys=' + encodeURIComponent(STYLE_KEY)).then(function (res) {
       try {
@@ -580,15 +656,34 @@
     });
   }
 
-  function saveApproved(doc, afterSave) {
-    currentDraft = normalizeStyle(currentDraft || readStyle());
-    currentDraft.styleApproved = true;
-    currentDraft.savedAt = new Date().toISOString();
-    var ok = writeStyle(currentDraft);
-    syncStyleToCloud();
-    showToast(doc, ok ? 'تم حفظ واعتماد تنسيق التواقيع في النظام بنجاح' : 'تعذر الحفظ — راجع Console', ok ? '#166534' : '#991b1b');
-    if (ok && afterSave) afterSave();
+  async function saveApproved(doc, afterSave) {
+  currentDraft = normalizeStyle(currentDraft || readStyle());
+  currentDraft.styleApproved = true;
+  currentDraft.savedAt = new Date().toISOString();
+
+  var ok = writeStyle(currentDraft);
+  var cloudResult = ok
+    ? await syncStyleToCloud()
+    : { ok: false, reason: 'LOCAL_SAVE_FAILED' };
+
+  var cloudOk = cloudResult && cloudResult.ok === true;
+
+  showToast(
+    doc,
+    ok
+      ? (cloudOk
+          ? 'تم حفظ واعتماد تنسيق التواقيع في النظام بنجاح'
+          : 'تم حفظ التنسيق محليًا فقط — تعذر الحفظ في النظام بسبب انتهاء الجلسة أو الصلاحية')
+      : 'تعذر الحفظ — راجع Console',
+    ok ? (cloudOk ? '#166534' : '#b45309') : '#991b1b'
+  );
+
+  if (!cloudOk) {
+    console.warn('[SigFineControl:' + PAGE + '] style saved locally only:', cloudResult);
   }
+
+  if (ok && afterSave) afterSave();
+}
   function resetToDefault(doc, afterReset) {
     currentDraft = defaultStyle();
     currentDraft.savedAt = new Date().toISOString();
