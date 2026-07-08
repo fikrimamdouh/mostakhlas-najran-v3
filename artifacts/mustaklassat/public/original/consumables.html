@@ -2987,14 +2987,40 @@ else res = ["", "مئة", "مئتان", "ثلاثمئة", "أربعمئة", "خ�
     const printAllSections = () => {
         const printStyle = document.createElement('style');
         printStyle.id = 'print-all-style';
+        // ملاحظة: الـ CSS العام للطباعة يفرض page-break-after:auto !important و
+        // page-break-inside:avoid !important على .table-section — لذلك كل القواعد هنا
+        // بـ !important لتتغلب عليه أثناء "طباعة الكل" فقط.
         printStyle.innerHTML = `
             @media print {
+                .container, #tables-area { display: block !important; }
+
+                /* كل جدول يبدأ في صفحة جديدة — لا يكمل في نص صفحة الجدول السابق */
                 .table-section {
                     display: block !important;
-                    page-break-after: always;
+                    break-before: page !important;
+                    page-break-before: always !important;
+                    page-break-after: auto !important;
+                    /* السماح للجدول الطويل بالامتداد لصفحة ثانية بدل انهيار التنسيق */
+                    break-inside: auto !important;
+                    page-break-inside: auto !important;
+                    margin-top: 0 !important;
                 }
-                .table-section:last-of-type {
-                    page-break-after: auto;
+                .table-section:first-of-type {
+                    break-before: auto !important;
+                    page-break-before: auto !important;
+                }
+
+                /* التواقيع كتلة واحدة لا تنشطر — تلتصق بنهاية جدولها في نفس الصفحة */
+                .table-section .signatures-display-section {
+                    break-inside: avoid !important;
+                    page-break-inside: avoid !important;
+                }
+
+                /* لو امتد الجدول لصفحة ثانية: رأس الجدول يتكرر والإجماليات لا تنشطر */
+                .table-section .data-table thead { display: table-header-group !important; }
+                .table-section .data-table tfoot {
+                    break-inside: avoid !important;
+                    page-break-inside: avoid !important;
                 }
             }
         `;
