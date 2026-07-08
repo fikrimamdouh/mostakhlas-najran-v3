@@ -7,6 +7,72 @@
 (function () {
   'use strict';
 
+  // ===================================================================
+  // Zahran/Iman Data Loss Tripwire v1 — INLINE (runs BEFORE cloud-sync)
+  // Purpose: passively record every mutation on critical keys so that
+  // when data disappears we have full evidence (stack, before/after,
+  // ctxKey vs session mismatches). Zero behavior change — logging only.
+  // Activates ONLY for Zahran/Iman users; idle no-op for everyone else.
+  // Inspect with: window.__zahranTripwireReport()  /  __zahranTripwireStatus()
+  // ===================================================================
+  (function installZahranTripwire() {
+    if (window.__ZAHRAN_TRIPWIRE_V1_INSTALLED__) return;
+    var LOG_KEY = '_zahranTripwireLog_v1';
+    var SESSION_KEY = 'najran_session';
+    var CTX_KEY = 'najran_active_hospital_context';
+    var MAX_EVENTS = 200;
+    var CRITICAL_KEYS = { 'persistentContractData':1,'persistentExtractData':1,'contractData':1,'contractDetails':1,'contractNumber':1,'hospitalName':1,'companyName':1,'attendanceData':1,'ng_attendanceData':1,'nd_attendanceData':1,'centersAttendanceData_v2':1,'healthCentersAttendanceData':1,'adminOfficesAttendanceData_v1':1,'adminOfficesFullAttendanceBundle_v1':1,'consumablesTableData':1,'mainHospitalConsumables':1,'healthCentersConsumables':1,'admin_offices_consumables_v1.0':1,'finalConsumablesCost':1,'subcontractors_data_consumables_v27':1,'performance_data_consumables_v27':1,'water_supply_data_consumables_v27':1,'sewage_disposal_data_consumables_v27':1,'summary_data_consumables_v27':1,'spare_partsData':1,'sparePartsTotalAmount':1,'performanceData':1,'performanceData_v4':1,'achievementData':1,'finalLaborCost':1,'grand-net-total':1,'dynamicSignatures':1,'contractorSignature':1,'performanceSignatures_v2':1,'settings_main':1,'settings_advanced':1 };
+    var raw = { get: Storage.prototype.getItem.bind(localStorage), set: Storage.prototype.setItem.bind(localStorage), remove: Storage.prototype.removeItem.bind(localStorage), key: Storage.prototype.key.bind(localStorage), len: function(){ return localStorage.length; } };
+    function isAffected() { try { var s = JSON.parse(raw.get(SESSION_KEY)||'{}'); var h=String(s.hospital||''), c=String(s.company||s.companyName||''); return /زهران|إيمان/.test(h) || /زهران|إيمان/.test(c); } catch(_) { return false; } }
+    if (!isAffected()) { return; } // no-op for other users
+    window.__ZAHRAN_TRIPWIRE_V1_INSTALLED__ = true;
+    try { console.warn('[ZahranTripwire] ACTIVE — recording critical-key mutations for Zahran/Iman user'); } catch(_){}
+    function cleanK(k){ return String(k||'').replace(/^(_u\d+_)+/, ''); }
+    function readLog(){ try { return JSON.parse(raw.get(LOG_KEY)||'[]')||[]; } catch(_) { return []; } }
+    function writeLog(evs){ try { if (evs.length > MAX_EVENTS) evs = evs.slice(-MAX_EVENTS); raw.set(LOG_KEY, JSON.stringify(evs)); } catch(_){} }
+    function currentHospital(){ try { return (JSON.parse(raw.get(SESSION_KEY)||'{}').hospital)||null; } catch(_) { return null; } }
+    function push(ev){ var log = readLog(); ev.ts = new Date().toISOString(); ev.hospital = currentHospital(); ev.ctxKey = raw.get(CTX_KEY); log.push(ev); writeLog(log); try { console.warn('[ZahranTripwire]', ev.type, ev.key||'', ev.reason||''); } catch(_){} }
+    function snapshotCritical(){ var out=[]; var n=raw.len(); for (var i=0;i<n;i++){ var k=raw.key(i); if(!k) continue; var ck=cleanK(k); if (CRITICAL_KEYS[ck]){ var v=raw.get(k); out.push({key:ck,size:v?v.length:0,empty:!v||v==='{}'||v==='[]'||v==='""'}); } } return out; }
+    var protoSet = Storage.prototype.setItem, protoRemove = Storage.prototype.removeItem, protoClear = Storage.prototype.clear;
+    Storage.prototype.setItem = function(key, value) {
+      try { var ck = cleanK(key); if (ck !== LOG_KEY && CRITICAL_KEYS[ck]) { var sv = String(value==null?'':value); var isEmpty = !sv || sv==='{}' || sv==='[]' || sv==='""' || sv==='null'; var oldV = raw.get(key); var oldSize = oldV ? oldV.length : 0; var newSize = sv.length; if (isEmpty && oldSize > 20) { push({ type:'SETITEM_EMPTY_OVERWRITE', key:ck, oldSize:oldSize, newSize:newSize, preview:sv.slice(0,60), stack:(new Error()).stack||'no-stack' }); } else if (oldSize > 200 && newSize < oldSize/4) { push({ type:'SETITEM_SHRUNK', key:ck, oldSize:oldSize, newSize:newSize, preview:sv.slice(0,80), stack:(new Error()).stack||'no-stack' }); } } } catch(_){}
+      return protoSet.apply(this, arguments);
+    };
+    Storage.prototype.removeItem = function(key) {
+      try { var ck = cleanK(key); if (ck !== LOG_KEY && CRITICAL_KEYS[ck]) { var oldV = raw.get(key); push({ type:'REMOVEITEM', key:ck, hadContent: !!(oldV && oldV.length>20), oldSize: oldV?oldV.length:0, stack:(new Error()).stack||'no-stack' }); } } catch(_){}
+      return protoRemove.apply(this, arguments);
+    };
+    Storage.prototype.clear = function() {
+      try { var snap = snapshotCritical(); push({ type:'CLEAR_ALL', beforeCriticalCount:snap.length, beforeCriticalKeys:snap.map(function(x){return x.key;}), stack:(new Error()).stack||'no-stack' }); } catch(_){}
+      return protoClear.apply(this, arguments);
+    };
+    var lastCtx = raw.get(CTX_KEY), lastSess = currentHospital();
+    setInterval(function() {
+      try {
+        var curCtx = raw.get(CTX_KEY), curSess = currentHospital();
+        if (curCtx !== lastCtx) { push({ type:'CTX_KEY_CHANGED', from:lastCtx, to:curCtx, sessionHospital:curSess }); lastCtx = curCtx; }
+        if (curSess !== lastSess) { push({ type:'SESSION_HOSPITAL_CHANGED', from:lastSess, to:curSess, ctxKey:curCtx }); lastSess = curSess; }
+        if (curSess && curCtx && curSess !== curCtx) {
+          var nowMin = Math.floor(Date.now()/60000);
+          if (window.__zahranMismatchLastMin !== nowMin) {
+            window.__zahranMismatchLastMin = nowMin;
+            var diff = [];
+            if (curSess.length !== curCtx.length) diff.push('lengths differ: '+curSess.length+' vs '+curCtx.length);
+            var minLen = Math.min(curSess.length, curCtx.length);
+            for (var i=0;i<minLen;i++) { if (curSess.charCodeAt(i) !== curCtx.charCodeAt(i)) { diff.push('pos '+i+': U+'+curSess.charCodeAt(i).toString(16)+' vs U+'+curCtx.charCodeAt(i).toString(16)); if (diff.length>5) break; } }
+            push({ type:'MISMATCH_SESSION_VS_CTX', sessionHospital:curSess, ctxKey:curCtx, byteDiff:diff });
+          }
+        }
+      } catch(_){}
+    }, 2000);
+    window.__zahranTripwireReport = function() { var log = readLog(); try { console.group('%c[Zahran Tripwire] '+log.length+' events', 'font-weight:bold;color:#c00'); log.forEach(function(e,i){ console.groupCollapsed((i+1)+'. ['+e.ts+'] '+e.type+(e.key?' — '+e.key:'')); console.log(e); console.groupEnd(); }); console.groupEnd(); } catch(_){} return log; };
+    window.__zahranTripwireExport = function() { return JSON.stringify(readLog(), null, 2); };
+    window.__zahranTripwireClear = function() { if (confirm('مسح سجل الرصد؟')) { raw.remove(LOG_KEY); return 'cleared'; } return 'canceled'; };
+    window.__zahranTripwireStatus = function() { var log = readLog(); var snap = snapshotCritical(); return { installed:true, user:lastSess, ctxKey:lastCtx, match:lastSess===lastCtx, totalEvents:log.length, criticalKeysPresent:snap.length, criticalKeysSummary:snap.map(function(s){return s.key+' ('+s.size+'b'+(s.empty?',empty':'')+')';}) }; };
+    push({ type:'TRIPWIRE_INSTALLED', userHospital:lastSess, ctxKey:lastCtx, match:lastSess===lastCtx, criticalPresent:snapshotCritical() });
+    try { console.info('[ZahranTripwire] Ready. Use __zahranTripwireStatus() / __zahranTripwireReport() / __zahranTripwireExport() in DevTools.'); } catch(_){}
+  })();
+
   var BASE = window.location.origin;
   var BUILD_V = '20260623archiveBundleRouteV1';
   var HOSPITAL_STORAGE_GUARD_V = '20260704_stale_revision_404_modal_v2';
