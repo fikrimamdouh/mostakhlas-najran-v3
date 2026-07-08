@@ -1510,7 +1510,51 @@ let summaryData = Array.isArray(savedSummaryData)
         performanceData,
         defaultSummary
       );
-    
+    function _isMainSummaryRow(item) {
+    return item && typeof item === 'object' && !item.isSubTotal && !item.isCustom;
+}
+
+function _safeParseArrayStorage(key) {
+    try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+        return [];
+    }
+}
+
+function ensureSummaryDataHydrated(reason) {
+    try {
+        const key = `summary_data_${DB_VERSION}`;
+        const stored = _safeParseArrayStorage(key);
+
+        const storedMainCount = stored.filter(_isMainSummaryRow).length;
+        const currentMainCount = Array.isArray(summaryData)
+            ? summaryData.filter(_isMainSummaryRow).length
+            : 0;
+
+        // الحالة الخطرة: التخزين فيه البنود، لكن المتغير الداخلي ناقص.
+        if (storedMainCount > currentMainCount) {
+            summaryData = stored;
+            console.warn('[ConsumablesSummaryHydrate] restored summaryData from localStorage:', {
+                reason: reason || 'unknown',
+                storedRows: stored.length,
+                storedMainRows: storedMainCount,
+                oldMainRows: currentMainCount
+            });
+            return true;
+        }
+
+        return false;
+    } catch (e) {
+        console.warn('[ConsumablesSummaryHydrate] failed:', reason, e);
+        return false;
+    }
+}
+
+ensureSummaryDataHydrated('boot');
 // السطر الجديد والمحسن
 let signaturesData = (data => data && typeof data === 'object' && !Array.isArray(data) ? data : defaultSignatures)(JSON.parse(localStorage.getItem(`signatures_data_${DB_VERSION}`)));
     let consumablesAutoSaveTimer = 0;
@@ -1542,6 +1586,7 @@ function scheduleConsumablesAutoSave(reason) {
     let printTitlesData = JSON.parse(localStorage.getItem(`print_titles_data_${DB_VERSION}`)) || defaultPrintTitles;
 function persistSummaryDataNow(reason) {
     try {
+                ensureSummaryDataHydrated('before-save-summary-' + (reason || 'manual'));
         // تنظيف أي صفوف محسوبة اتسجلت غلط كبنود عادية قبل الحفظ
         function cleanName(v) {
             return String(v == null ? '' : v)
@@ -1694,8 +1739,11 @@ function updatePenaltyDataSourcePanel() {
 
         // 2. حساب تكلفة المستهلكات
         let totalConsumablesValue = 0;
-        const mainItems = summaryData.filter(item => !item.isSubTotal && !item.isCustom);
-        mainItems.forEach(item => {
+ensureSummaryDataHydrated('before-render-summary');
+
+const mainItems = Array.isArray(summaryData)
+    ? summaryData.filter(item => !item.isSubTotal && !item.isCustom)
+    : [];        mainItems.forEach(item => {
             const monthlyValue = parseNumericValue(item.value);
             let valueForPeriod;
 
@@ -2099,6 +2147,8 @@ function recalculateAndUpdateUI() {
 }
 
 function renderAllTables() {
+    ensureSummaryDataHydrated('before-render-all');
+
     const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
     const contractType = contractData.contractType || 'عقد أساسي';
     const directPurchaseRatio = parseFloat(contractData.directPurchaseRatio) || 0;
