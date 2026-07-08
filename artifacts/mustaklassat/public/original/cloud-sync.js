@@ -107,7 +107,10 @@
   function isLocalOnlyPage() {
     return getCurrentPageFile() !== 'settings_main.html';
   }
-
+function shouldBlockLightAutoPush(options) {
+  options = options || {};
+  return isLocalOnlyPage() && options.includeOperational !== true;
+}
   function isRevisionMode() {
     try {
       return localStorage.getItem('najran_revision_mode') === 'true' &&
@@ -634,8 +637,12 @@
     return safe;
   }
 
-  async function pushToCloud(options) {
-    options = options || {};
+ async function pushToCloud(options) {
+  options = options || {};
+
+  if (shouldBlockLightAutoPush(options)) {
+    return { ok:true, saved:0, skipped:true, reason:'LOCAL_ONLY_NO_LIGHT_AUTO_PUSH' };
+  }
     if (isRevisionMode() && options.includeOperational !== true) {
       enforceRevisionEditSession();
       console.warn('[MzamanaCloud] REVISION MODE: تم منع Push تلقائي أثناء تعديل مستخلص قديم');
@@ -724,8 +731,12 @@
     if (status === 'done') setTimeout(function(){ if (syncIndicator) syncIndicator.textContent = '☁ مزامنة'; }, 2000);
   }
 
-  async function syncNow(options) {
-    options = options || {};
+ async function syncNow(options) {
+  options = options || {};
+
+  if (shouldBlockLightAutoPush(options)) {
+    return { ok:true, skipped:true, reason:'LOCAL_ONLY_NO_LIGHT_AUTO_PUSH' };
+  }
     if (syncInProgress) return { ok:true, skipped:true, reason:'SYNC_ALREADY_RUNNING' };
     syncInProgress = true;
     showSyncStatus('syncing');
