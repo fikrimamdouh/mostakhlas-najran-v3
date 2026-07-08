@@ -40,7 +40,7 @@ const PAGE_FILTERS: Record<string, { keys: string[]; prefixes: string[] }> = {
       "centerNames_v3", "departmentNames", "distributionSettings",
       "najran_labor_attendance_done", "najran_labor_performance_done", "najran_health_attendance_done", "najran_admin_offices_attendance_done"
     ],
-    prefixes: ["dept_", "deptCalculatedCost_", "najran_labor_", "najran_health_", "najran_admin_", "sb_sigs_", "sb_prefs_"]
+    prefixes: ["dept_", "deptCalculatedCost_", "najran_labor_", "najran_health_", "najran_admin_", "sb_sigs_", "sb_prefs_", "sb_style_prefs_"]
   },
 
   "performance.html": {
@@ -49,12 +49,12 @@ const PAGE_FILTERS: Record<string, { keys: string[]; prefixes: string[] }> = {
       "ng_performanceTotalDeduction", "nd_performanceTotalDeduction",
       "performanceSignatures", "performanceSignatures_v2", "performanceTableNames"
     ],
-    prefixes: ["performance_", "dept_", "deptCalculatedCost_", "sb_sigs_", "sb_prefs_"]
+    prefixes: ["performance_", "dept_", "deptCalculatedCost_", "sb_sigs_", "sb_prefs_", "sb_style_prefs_"]
   },
 
   "achievement.html": {
     keys: ["achievementData", "achievementTitles_v1", "achievementItemNames", "nd_dentalAchievementTotals"],
-    prefixes: ["achievement_"]
+    prefixes: ["achievement_", "sb_style_prefs_"]
   },
 
   "consumables.html": {
@@ -63,9 +63,10 @@ const PAGE_FILTERS: Record<string, { keys: string[]; prefixes: string[] }> = {
       "consumablesTitle", "consumablesPeriodFrom", "consumablesPeriodTo", "finalConsumablesCost", "penaltyValue",
       "subcontractors_data_consumables_v27", "performance_data_consumables_v27",
       "water_supply_data_consumables_v27", "sewage_disposal_data_consumables_v27",
-      "summary_data_consumables_v27"
+      "summary_data_consumables_v27",
+      "najranSignatureStyleSettings_v1"
     ],
-    prefixes: ["consumables_", "water_", "sewage_", "subcontractors_", "tableData_"]
+    prefixes: ["consumables_", "water_", "sewage_", "subcontractors_", "tableData_", "sb_style_prefs_"]
   },
 
   "spare_parts.html": {
@@ -84,12 +85,12 @@ const PAGE_FILTERS: Record<string, { keys: string[]; prefixes: string[] }> = {
   },
 
   "admin_offices_attendance.html": {
-    keys: ["adminOfficeNames_v1", "adminOfficeAffiliations_v1", "adminOfficesAttendanceData_v1", "najran_admin_offices_attendance_done"],
+    keys: ["adminOfficeNames_v1", "adminOfficeAffiliations_v1", "adminOfficesAttendanceData_v1", "najran_admin_offices_attendance_done", "najranSignatureStyleSettings_v1"],
     prefixes: ["najran_admin_", "dept_", "deptCalculatedCost_"]
   },
 
   "admin_offices_consumables.html": {
-    keys: ["admin_offices_consumables_v1.0", "finalConsumablesCost"],
+    keys: ["admin_offices_consumables_v1.0", "finalConsumablesCost", "najranSignatureStyleSettings_v1"],
     prefixes: ["consumables_", "water_", "sewage_", "subcontractors_", "tableData_"]
   }
 };

@@ -185,6 +185,87 @@ d.resetAt = typeof p.resetAt === 'string' ? p.resetAt : null;
   }
 }
 
+  /* --- V7: حفظ التنسيق المعتمد في النظام (تخزين المستشفى) حتى لا يضيع أبدًا --- */
+  var __cloudSyncTimer = null;
+
+  function cloudToken() {
+    try {
+      var s = JSON.parse(localStorage.getItem('najran_session') || '{}');
+      return s && s.clerkToken ? s.clerkToken : null;
+    } catch (_) { return null; }
+  }
+
+  function cloudFetch(path, opts) {
+    opts = opts || {};
+    var headers = { 'Content-Type': 'application/json' };
+    var token = cloudToken();
+    if (token) headers.Authorization = 'Bearer ' + token;
+    var merged = {};
+    for (var k in opts) { if (Object.prototype.hasOwnProperty.call(opts, k)) merged[k] = opts[k]; }
+    merged.headers = headers;
+    merged.credentials = 'include';
+    return fetch('/api' + path, merged)
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; });
+  }
+
+  function settingsStamp(s) {
+    var a = s && typeof s.savedAt === 'string' ? Date.parse(s.savedAt) : NaN;
+    var b = s && typeof s.resetAt === 'string' ? Date.parse(s.resetAt) : NaN;
+    var max = 0;
+    if (isFinite(a)) max = Math.max(max, a);
+    if (isFinite(b)) max = Math.max(max, b);
+    return max;
+  }
+
+  function syncSettingsToCloud() {
+    if (__cloudSyncTimer) clearTimeout(__cloudSyncTimer);
+    __cloudSyncTimer = setTimeout(function () {
+      __cloudSyncTimer = null;
+      try {
+        var raw = localStorage.getItem(KEY);
+        if (!raw) return;
+        var payload = { data: {} };
+        payload.data[KEY] = raw;
+        cloudFetch('/hospital-storage', { method: 'PUT', body: JSON.stringify(payload) })
+          .then(function (res) {
+            if (res) console.info('[SignatureStyleControl] approved style synced to system storage');
+          });
+      } catch (_) {}
+    }, 250);
+  }
+
+  function pullSettingsFromCloud() {
+    cloudFetch('/hospital-storage?keys=' + encodeURIComponent(KEY)).then(function (res) {
+      try {
+        if (!res || !res.data) return;
+        var remoteRaw = typeof res.data[KEY] === 'string' ? res.data[KEY] : null;
+        if (!remoteRaw) {
+          // لا نسخة في النظام: لو يوجد تنسيق معتمد محليًا، ارفعه للنظام (شفاء ذاتي).
+          var localRaw = localStorage.getItem(KEY);
+          if (localRaw) {
+            var lp = null;
+            try { lp = JSON.parse(localRaw); } catch (_) {}
+            if (lp && (lp.approved === true || lp.resetAt)) syncSettingsToCloud();
+          }
+          return;
+        }
+        var remote = null;
+        try { remote = JSON.parse(remoteRaw); } catch (_) { return; }
+        if (!remote || typeof remote !== 'object') return;
+        var local = readSettings();
+        var remoteStamp = settingsStamp(remote);
+        var localStamp = settingsStamp(local);
+        if (remoteStamp > localStamp) {
+          localStorage.setItem(KEY, remoteRaw);
+          console.info('[SignatureStyleControl] adopted approved style from system storage');
+        } else if (localStamp > remoteStamp && (local.approved === true || local.resetAt)) {
+          syncSettingsToCloud();
+        }
+      } catch (_) {}
+    });
+  }
+
   function normalizePoint(raw, fallback, win, maxW, maxH) {
     raw = raw && typeof raw === 'object' ? raw : {};
     fallback = fallback || { left: 16, top: 16 };
@@ -785,6 +866,7 @@ d.resetAt = typeof p.resetAt === 'string' ? p.resetAt : null;
 
   if (savedOk) {
     panel.classList.remove('open');
+    syncSettingsToCloud();
   }
 
   toggle.textContent = savedOk
@@ -811,6 +893,7 @@ panel.querySelector('.sig-reset').onclick = function () {
   for (var k2 = 0; k2 < count; k2++) getSlot(draft, k2);
 
   writeSettings(draft);
+  syncSettingsToCloud();
   applyStyles(doc, draft);
   render();
 
@@ -886,5 +969,6 @@ panel.querySelector('.sig-reset').onclick = function () {
     }
     return win;
   };
-    console.info('[SignatureStyleControl] V5 persistent approved save installed');
+  pullSettingsFromCloud();
+    console.info('[SignatureStyleControl] V7 persistent approved save (system storage) installed');
 })();
