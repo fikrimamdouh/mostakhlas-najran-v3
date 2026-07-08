@@ -575,6 +575,29 @@ function saveCurrentRevisionLocalDraftBeforeExit() {
       } catch (_) {}
     });
 
+    // ═══ استكمال جوهري: مفاتيح المستهلكات (كل الإصدارات) والتواقيع وأنماطها ═══
+    // القائمة الثابتة أعلاه كانت تفتقدها كلها — فكان "حفظ نسخة محلية" من تعديل
+    // مستهلكات لا يحفظ بيانات المستهلكات ولا التواقيع.
+    var draftPrefixes = [
+      'summary_data_', 'performance_data_', 'subcontractors_data_',
+      'water_supply_data_', 'sewage_disposal_data_', 'laundry_supply_data_',
+      'signatures_data_', 'print_titles_data_', 'notes_data_',
+      'sb_sigs_', 'sb_style_prefs_', 'najranSignatureStyle',
+      'hospitalConsumablesRaiseLettersSettings', 'dynamicSignatures', 'contractorSignature'
+    ];
+    try {
+      for (var _i = 0; _i < localStorage.length; _i++) {
+        var _k = localStorage.key(_i);
+        if (!_k) continue;
+        if (draftPrefixes.some(function (p) { return _k.indexOf(p) === 0; })) {
+          try {
+            var _v = localStorage.getItem(_k);
+            if (_v != null) data[_k] = _v;
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+
     var backup = {
       savedAt: new Date().toISOString(),
       reason: 'revision-exit-local-draft',
@@ -774,6 +797,22 @@ function installHomeAsRevisionExit() {
       e.preventDefault();
       e.stopPropagation();
 
+      showRevisionExitModal();
+    }, true);
+
+    // اعتراض التنقل للرئيسية عبر قوائم select (نمط: onchange="window.location.href=this.value")
+    // موجود في 14+ صفحة: <option value="index.html">الصفحة الرئيسية</option>
+    // stopPropagation في مرحلة الالتقاط يمنع وصول الحدث لمعالج onchange المضمّن فلا يحدث تنقل.
+    document.addEventListener('change', function (e) {
+      if (!isActiveRevisionMode()) return;
+      var sel = e.target;
+      if (!sel || String(sel.tagName || '').toUpperCase() !== 'SELECT') return;
+      var v = String(sel.value || '');
+      var isHome = v.indexOf('index.html') >= 0 || v.indexOf('dashboard') >= 0 || v === '/' || v === '/original/';
+      if (!isHome) return;
+      e.stopPropagation();
+      e.preventDefault();
+      try { sel.value = ''; } catch (_) {}
       showRevisionExitModal();
     }, true);
 
