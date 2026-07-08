@@ -1502,7 +1502,7 @@ let sewageData = JSON.parse(localStorage.getItem(`sewage_disposal_data_${DB_VERS
 
 const savedSummaryData = _fromStorage(`summary_data_${DB_VERSION}`);
 
-let summaryData = (savedSummaryData && savedSummaryData.length)
+let summaryData = Array.isArray(savedSummaryData)
     ? savedSummaryData
     : _rebuildSummaryFromPerformance(
         null,
@@ -2493,7 +2493,7 @@ toggleManualLaborCostBtn.addEventListener('click', () => {
         });
             document.getElementById('save-titles-btn').addEventListener('click', saveTitles);
 
-        window.addEventListener('beforeunload', function () {
+    window.addEventListener('beforeunload', function () {
     saveConsumablesWorkNow('beforeunload');
 });
     }
