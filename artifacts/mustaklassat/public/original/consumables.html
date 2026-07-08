@@ -1510,6 +1510,15 @@ let summaryData = Array.isArray(savedSummaryData)
         performanceData,
         defaultSummary
       );
+
+// ═══ Recovery تلقائي: استكمال البنود الرئيسية الناقصة في مصفوفة محفوظة قديمة ═══
+// snapshot قديم تالف (كُتب من DOM ناقص) يفتقد بنودًا — نضيف الناقص فقط دون مساس بالقيم المحفوظة.
+if (Array.isArray(savedSummaryData)) {
+    try {
+        const _recovered = _ensureMissingSummaryItemsOnly(summaryData, _builtinSummary(), performanceData, defaultSummary);
+        if (Array.isArray(_recovered)) summaryData = _recovered;
+    } catch (e) { console.warn('[ConsumablesSummaryRecovery] boot recovery failed:', e); }
+}
     function _isMainSummaryRow(item) {
     return item && typeof item === 'object' && !item.isSubTotal && !item.isCustom;
 }
@@ -2174,6 +2183,11 @@ function hydrateAllDataFromStorage(reason) {
         s = _fromStorage('subcontractors_data_' + DB_VERSION); if (Array.isArray(s)) subcontractorsData = s;
         try { s = JSON.parse(localStorage.getItem('water_supply_data_' + DB_VERSION) || 'null'); if (Array.isArray(s)) waterData = s; } catch (_) {}
         try { s = JSON.parse(localStorage.getItem('sewage_disposal_data_' + DB_VERSION) || 'null'); if (Array.isArray(s)) sewageData = s; } catch (_) {}
+        // Recovery: snapshot تعديل قديم ناقص البنود — استكمال الناقص فقط بلا مساس بالقيم
+        try {
+            var _rec = _ensureMissingSummaryItemsOnly(summaryData, _builtinSummary(), performanceData, defaultSummary);
+            if (Array.isArray(_rec)) summaryData = _rec;
+        } catch (_) {}
         console.warn('[ConsumablesRenderBridge] rehydrated all data from storage:', reason || 'external');
     } catch (e) { console.warn('[ConsumablesRenderBridge] hydrate failed:', e); }
 }
