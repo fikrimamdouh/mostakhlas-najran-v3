@@ -36,6 +36,51 @@ function settingsKey(doc) {
   if (!scope || scope === 'global') return BASE_KEY;
   return BASE_KEY + '__' + scope;
 }
+  function settingsKeyFromScope(scope) {
+  scope = sanitizeScope(scope || 'global');
+  if (!scope || scope === 'global') return BASE_KEY;
+  return BASE_KEY + '__' + scope;
+}
+
+function signatureScopeForElement(el, doc) {
+  try {
+    var node = el && el.closest && el.closest('[data-signature-scope]');
+    var scope = node && (
+      node.getAttribute('data-signature-scope') ||
+      (node.dataset && node.dataset.signatureScope)
+    );
+    if (scope) return sanitizeScope(scope);
+  } catch (_) {}
+
+  return signatureScope(doc || document);
+}
+
+function readSettingsByScope(scope) {
+  var d = defaults();
+  try {
+    var key = settingsKeyFromScope(scope);
+    var raw = localStorage.getItem(key);
+    if (!raw) return d;
+
+    var p = JSON.parse(raw);
+    if (!p || typeof p !== 'object') return d;
+
+    d.approved = p.approved === true;
+    d.savedAt = typeof p.savedAt === 'string' ? p.savedAt : null;
+    d.resetAt = typeof p.resetAt === 'string' ? p.resetAt : null;
+    d.containerAlign = safeContainerAlign(p.containerAlign);
+    d.rowGap = clampInt(p.rowGap, SIGNATURE_GAP_MIN, SIGNATURE_GAP_MAX);
+    d.rowTopMargin = clampInt(p.rowTopMargin, BLOCK_Y_MIN, BLOCK_Y_MAX);
+
+    if (Array.isArray(p.perSignature)) {
+      for (var i = 0; i < Math.min(p.perSignature.length, MAX_SIGS); i++) {
+        d.perSignature[i] = normalizeSlot(p.perSignature[i]);
+      }
+    }
+  } catch (_) {}
+
+  return d;
+}
   var MAX_SIGS = 24;
 
   var FONT_MIN = 6, FONT_MAX = 44;
@@ -381,8 +426,11 @@ function cloudFetch(path, opts) {
       if (idx === undefined) {
         idx = rows.length;
         rowIndex.set(row, idx);
-        rows.push({ row: row, cells: [] });
-      }
+rows.push({
+  row: row,
+  cells: [],
+  scope: signatureScopeForElement(holder, doc)
+});      }
 
       rows[idx].cells.push({
         holder: holder,
@@ -496,56 +544,66 @@ function cloudFetch(path, opts) {
     row.style.flexWrap = '';
   }
 
- function applyStyles(doc, settings) {
-    settings = settings || readSettings(doc);
-    var groups = findSignatureRows(doc);
-    var blockY = settings.rowTopMargin === null ? 0 : settings.rowTopMargin;
-    var signatureGap = settings.rowGap === null ? 0 : settings.rowGap;
-    var rowAlign = alignToJustify(settings.containerAlign);
+function applyStyles(doc, settings) {
+  var groups = findSignatureRows(doc);
 
-    groups.forEach(function (g) {
-      resetRow(g.row);
-      if (rowAlign) g.row.style.justifyContent = rowAlign;
-      if (signatureGap !== 0) {
-        g.row.style.gap = signatureGap + 'px';
-        g.row.style.columnGap = signatureGap + 'px';
+  groups.forEach(function (g) {
+    var activeSettings = settings || readSettingsByScope(g.scope);
+    var blockY = activeSettings.rowTopMargin === null ? 0 : activeSettings.rowTopMargin;
+    var signatureGap = activeSettings.rowGap === null ? 0 : activeSettings.rowGap;
+    var rowAlign = alignToJustify(activeSettings.containerAlign);
+
+    resetRow(g.row);
+
+    if (rowAlign) g.row.style.justifyContent = rowAlign;
+
+    if (signatureGap !== 0) {
+      g.row.style.gap = signatureGap + 'px';
+      g.row.style.columnGap = signatureGap + 'px';
+    }
+
+    var usesFlexBreak = false;
+
+    g.cells.forEach(function (entry) {
+      resetSignatureElements(entry);
+
+      if (entry.globalIndex >= MAX_SIGS) return;
+
+      var cfg = activeSettings.perSignature[entry.globalIndex];
+      if (!cfg) return;
+
+      var shiftX = cfg.gapBefore || 0;
+      var shiftY = blockY + (cfg.yShift || 0);
+
+      if (cfg.textAlign && entry.holder) {
+        entry.holder.style.textAlign = cfg.textAlign;
       }
 
-      var usesFlexBreak = false;
-      g.cells.forEach(function (entry) {
-        resetSignatureElements(entry);
-        if (entry.globalIndex >= MAX_SIGS) return;
-
-        var cfg = settings.perSignature[entry.globalIndex];
-        if (!cfg) return;
-
-        var shiftX = cfg.gapBefore || 0;
-        var shiftY = blockY + (cfg.yShift || 0);
-
-        if (cfg.textAlign && entry.holder) entry.holder.style.textAlign = cfg.textAlign;
-        if (cfg.newLine && g.cells.length > 1 && entry.holder) {
-          var disp = (doc.defaultView || window).getComputedStyle(g.row).display;
-          if (disp === 'grid') entry.holder.style.gridColumn = '1 / -1';
-          else {
-            usesFlexBreak = true;
-            entry.holder.style.flexBasis = '100%';
-          }
+      if (cfg.newLine && g.cells.length > 1 && entry.holder) {
+        var disp = (doc.defaultView || window).getComputedStyle(g.row).display;
+        if (disp === 'grid') {
+          entry.holder.style.gridColumn = '1 / -1';
+        } else {
+          usesFlexBreak = true;
+          entry.holder.style.flexBasis = '100%';
         }
-
-        applyToElement(entry.title, cfg, true, shiftX, shiftY);
-        applyToElement(entry.name, cfg, false, shiftX, shiftY);
-        applyLine(entry, cfg, shiftX, shiftY);
-      });
-
-      if (usesFlexBreak && g.row) {
-        g.row.style.display = 'flex';
-        g.row.style.flexWrap = 'wrap';
       }
+
+      applyToElement(entry.title, cfg, true, shiftX, shiftY);
+      applyToElement(entry.name, cfg, false, shiftX, shiftY);
+      applyLine(entry, cfg, shiftX, shiftY);
     });
 
-    return groups.reduce(function (n, g) { return n + g.cells.length; }, 0);
-  }
+    if (usesFlexBreak && g.row) {
+      g.row.style.display = 'flex';
+      g.row.style.flexWrap = 'wrap';
+    }
+  });
 
+  return groups.reduce(function (n, g) {
+    return n + g.cells.length;
+  }, 0);
+}
   function panelStyles(doc) {
     if (doc.getElementById('najran-sig-panel-style-v2')) return;
     var style = doc.createElement('style');
@@ -994,32 +1052,55 @@ applyStyles(doc, draft);
     return false;
   }
 
-  function onSignatureWindow(win) {
-    try {
-      var doc = win.document;
-      if (!doc || !doc.body) return false;
-      if (hasSaudiNamesRebuildPage(doc)) return false;
+ function onSignatureWindow(win) {
+  try {
+    var doc = win.document;
+    if (!doc || !doc.body) return false;
+    if (hasSaudiNamesRebuildPage(doc)) return false;
 
-      var count = applyStyles(doc, readSettings(doc));
-      if (count > 0) buildPanel(doc, count);
-      return count > 0;
-    } catch (_) { return false; }
+    var count = applyStyles(doc);
+
+    var scopes = {};
+    findSignatureRows(doc).forEach(function (g) {
+      scopes[g.scope || 'global'] = true;
+    });
+
+    var scopeCount = Object.keys(scopes).length;
+
+    // لو نافذة طباعة الكل فيها أكثر من خطاب، طبّق التنسيقات فقط.
+    // لا تفتح لوحة تعديل عامة حتى لا تحفظ بالغلط على scope واحد.
+    if (count > 0 && scopeCount <= 1) {
+      buildPanel(doc, count);
+    }
+
+    return count > 0;
+  } catch (_) {
+    return false;
+  }
+}
+ var nativeOpen = window.open;
+window.open = function () {
+  var win = nativeOpen.apply(window, arguments);
+
+  if (win) {
+    var attempts = 0;
+    var poll = setInterval(function () {
+      attempts++;
+      var done = false;
+
+      try {
+        done = win.closed || onSignatureWindow(win);
+      } catch (_) {}
+
+      if (done || attempts > 40) {
+        clearInterval(poll);
+      }
+    }, 150);
   }
 
-  var nativeOpen = window.open;
-  window.open = function () {
-    var win = nativeOpen.apply(window, arguments);
-    if (win) {
-      var attempts = 0;
-      var poll = setInterval(function () {
-        attempts++;
-        var done = false;
-        try { done = win.closed || onSignatureWindow(win); } catch (_) {}
-        if (done || attempts > 40) clearInterval(poll);
-      }, 150);
-    }
-    return win;
-  };
-  pullSettingsFromCloud();
-    console.info('[SignatureStyleControl] V8 scoped local signature style installed');
+  return win;
+};
+
+pullSettingsFromCloud();
+console.info('[SignatureStyleControl] V8 scoped local signature style installed');
 })();
