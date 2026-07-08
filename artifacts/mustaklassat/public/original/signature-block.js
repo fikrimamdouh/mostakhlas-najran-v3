@@ -165,17 +165,11 @@ async function apiFetchStatus(path,opts={}){
   function writeDetailedStyle(s){localStorage.setItem(CONSUMABLES_STYLE_KEY,JSON.stringify(normalizeDetailedStyle(s)));}
   function detailedStyleStamp(s){const t=s&&typeof s.savedAt==='string'?Date.parse(s.savedAt):NaN;return Number.isFinite(t)?t:0;}
 async function syncConsumablesStyleToCloud(){
-  try{
-    const raw=localStorage.getItem(CONSUMABLES_STYLE_KEY);
-    if(!raw)return{ok:false,reason:'NO_LOCAL_STYLE'};
-
-    return await apiFetchStatus('/hospital-storage',{
-      method:'PUT',
-      body:JSON.stringify({data:{[CONSUMABLES_STYLE_KEY]:raw}})
-    });
-  }catch{
-    return{ok:false,reason:'SYNC_EXCEPTION'};
-  }
+  return {
+    ok: true,
+    status: 0,
+    reason: 'LOCAL_ONLY'
+  };
 }
   function cardBorderColorValue(v){if(v==='black')return'#111827';if(v==='gray')return'#94a3b8';if(v==='navy')return'#1e3c72';return'#cbd5e1';}
   function cardBackgroundValue(v){if(v==='transparent')return'transparent';if(v==='lightgray')return'#f8fafc';return'#fff';}
