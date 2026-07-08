@@ -369,7 +369,43 @@ function buildElectricity(s) {
     ${stampHtml(l)}
   `);
 }
-function buildDoc(key, s) { if (key === 'main') return buildMain(s); if (key === 'noPrev') return buildNoPrev(s); if (key === 'electricity') return buildElectricity(s); if (key === 'water') return buildWater(s); if (key === 'certificate') return buildCertificate(s); if (key === 'waterCertificate') return buildCertificateByKey(s, 'waterCertificate'); if (key === 'all') return DOCS.map(d => buildDoc(d[0], s)).join(''); return buildMain(s); }
+function scopedLetterHtml(key, html) {
+  return `<div data-signature-scope="${esc('consumables:' + key)}">${html}</div>`;
+}
+
+function buildDoc(key, s) {
+  if (key === 'main') {
+    return scopedLetterHtml('main', buildMain(s));
+  }
+
+  if (key === 'noPrev') {
+    return scopedLetterHtml('noPrev', buildNoPrev(s));
+  }
+
+  if (key === 'electricity') {
+    return scopedLetterHtml('electricity', buildElectricity(s));
+  }
+
+  if (key === 'water') {
+    return scopedLetterHtml('water', buildWater(s));
+  }
+
+  if (key === 'certificate') {
+    return scopedLetterHtml('certificate', buildCertificate(s));
+  }
+
+  if (key === 'waterCertificate') {
+    return scopedLetterHtml('waterCertificate', buildCertificateByKey(s, 'waterCertificate'));
+  }
+
+  if (key === 'all') {
+    return DOCS.map(function (d) {
+      return buildDoc(d[0], s);
+    }).join('');
+  }
+
+  return scopedLetterHtml('main', buildMain(s));
+}
   function cellDisplayValue(cell) { const print = cell.querySelector('.cell-print-content'); const field = cell.querySelector('input,select,textarea'); return clean((print && print.textContent) || (field && field.value) || cell.textContent || ''); }
   function snapshotTable(tableId) { const table = document.getElementById(tableId); if (!table) return ''; const rows = Array.from(table.rows).map(tr => '<tr>' + Array.from(tr.cells).map(c => '<' + (c.tagName === 'TH' ? 'th' : 'td') + (c.colSpan > 1 ? ' colspan="' + c.colSpan + '"' : '') + '>' + esc(cellDisplayValue(c)) + '</' + (c.tagName === 'TH' ? 'th' : 'td') + '>').join('') + '</tr>').join(''); return '<table><tbody>' + rows + '</tbody></table>'; }
   function buildExistingConsumablesPrintPages() { const sections = [ ['subcontractors-section','subcontractors-table'], ['performance-section','performance-table'], ['water-supply-section','water-supply-table'], ['sewage-disposal-section','sewage-disposal-table'], ['summary-section','summary-table'] ]; return sections.map(x => { const sec = document.getElementById(x[0]); const title = clean(sec && sec.querySelector('.table-header h2') && sec.querySelector('.table-header h2').textContent) || x[0]; const table = snapshotTable(x[1]); if (!table) return ''; return `<section class="page"><div class="extract-page"><h1>${esc(title)}</h1><h2>${esc(extractPhrase())}</h2>${table}</div></section>`; }).join(''); }
