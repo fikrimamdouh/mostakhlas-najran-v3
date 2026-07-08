@@ -133,9 +133,16 @@ function isZahranLetterContext(s) {
 
   function zahranLaborExtras() {
     const e = readJson('persistentExtractData', {});
-
-    const tawteen = 22900;
-    const dailyTransportFine = 50;
+const s = settings();
+    const tawteen =
+  num(s.zahranTawteenCompensation) ||
+  num(e.zahranTawteenCompensation) ||
+  num(e.tawteenCompensation) ||
+  num(e.localizationCompensation) ||
+  num(localStorage.getItem('zahranTawteenCompensation')) ||
+  num(localStorage.getItem('tawteenCompensation')) ||
+  num(localStorage.getItem('localizationCompensation')) ||
+  22900;    const dailyTransportFine = 50;
 
     const days =
       num(e.zahranTransportFineDays) ||
@@ -642,7 +649,7 @@ function defaultDoc() {
     ['vacancies', 'vacations', 'absences', 'saudi', 'saudiNames'].forEach(k => { layout[k].tableWidth = 171; layout[k].tableFont = 10.5; layout[k].bodyFont = 13.5; });
     return {
       version: 'hospital-v8-compact', selected: 'final', hospital: b.hospital, company: b.company, contract: b.contract, issuer: 'إدارة ' + b.hospital,
-      sigTitle: 'مدير المستشفى', sigName: '', vatRate: 15, manualGrand: 0, requiredSaudi: 5,
+      sigTitle: 'مدير المستشفى', sigName: '', vatRate: 15, manualGrand: 0, requiredSaudi: 5, zahranTawteenCompensation: 22900,
       letterheadEnabled: false, letterheadMode: 'external', letterheadHasPlaceData: 'yes', letterheadDataUrl: '', contentTop: 52, letterheadHeight: 45,
       printScale: 100, marginTop: 14, marginRight: 20, marginBottom: 16, marginLeft: 18,
       indexStart: 1, pageCount, texts: defaultTexts(), layout
@@ -703,7 +710,7 @@ function defaultDoc() {
   function generalPanel(s) {
     const c = ctx(s);
     return '<section class="panel ' + (openPanel === 'general' ? 'open' : '') + '"><h3>الإعدادات العامة</h3><p>مصدر المبلغ الحالي: ' + esc(c.source) + '</p><div class="grid">' +
-      input('hospital', 'اسم المستشفى', s.hospital) + input('company', 'الشركة', s.company) + input('contract', 'العقد', s.contract) + input('issuer', 'الجهة المصدرة', s.issuer) + input('sigTitle', 'صفة التوقيع الافتراضية', s.sigTitle) + input('sigName', 'اسم التوقيع الافتراضي', s.sigName) + input('vatRate', 'الضريبة %', s.vatRate, 'number') + input('manualGrand', 'مبلغ يدوي شامل الضريبة', s.manualGrand, 'number') + input('requiredSaudi', 'نسبة السعودة المطلوبة %', s.requiredSaudi, 'number') +
+      input('hospital', 'اسم المستشفى', s.hospital) + input('company', 'الشركة', s.company) + input('contract', 'العقد', s.contract) + input('issuer', 'الجهة المصدرة', s.issuer) + input('sigTitle', 'صفة التوقيع الافتراضية', s.sigTitle) + input('sigName', 'اسم التوقيع الافتراضي', s.sigName) + input('vatRate', 'الضريبة %', s.vatRate, 'number') + input('manualGrand', 'مبلغ يدوي شامل الضريبة', s.manualGrand, 'number') + input('requiredSaudi', 'نسبة السعودة المطلوبة %', s.requiredSaudi, 'number') + input('zahranTawteenCompensation', 'مبلغ التعويض مقابل وظائف التوطين', s.zahranTawteenCompensation, 'number') + input('zahranTawteenCompensation', 'مبلغ التعويض مقابل وظائف التوطين', s.zahranTawteenCompensation, 'number') +
       section('هوامش ومقياس A4') + input('contentTop', 'بداية المحتوى بعد الترويسة mm', s.contentTop, 'number') + input('printScale', 'مقياس الطباعة %', s.printScale, 'number') + input('marginRight', 'الهامش الأيمن mm', s.marginRight, 'number') + input('marginLeft', 'الهامش الأيسر mm', s.marginLeft, 'number') + input('marginBottom', 'الهامش السفلي mm', s.marginBottom, 'number') + input('indexStart', 'رقم بداية الفهرس', s.indexStart, 'number') + ORDER.map(k => input('pageCount.' + k, 'عدد صفحات: ' + LABEL[k], s.pageCount[k], 'number')).join('') + '</div></section>';
   }
   function letterheadPanel(s) {
