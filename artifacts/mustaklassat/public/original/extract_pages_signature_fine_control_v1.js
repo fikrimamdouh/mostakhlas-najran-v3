@@ -199,37 +199,11 @@ function cloudFetch(path, opts) {
     });
 }
 function syncStyleToCloud() {
-  try {
-    var raw = localStorage.getItem(STYLE_KEY);
-    if (!raw) {
-      return Promise.resolve({
-        ok: false,
-        status: 0,
-        reason: 'NO_LOCAL_STYLE'
-      });
-    }
-
-    var payload = { data: {} };
-    payload.data[STYLE_KEY] = raw;
-
-    return cloudFetch('/hospital-storage', {
-      method: 'PUT',
-      body: JSON.stringify(payload)
-    }).then(function (res) {
-      if (res && res.ok === true) {
-        console.info('[SigFineControl:' + PAGE + '] style synced to system storage');
-      } else {
-        console.warn('[SigFineControl:' + PAGE + '] cloud sync skipped/failed:', res && res.reason);
-      }
-      return res;
-    });
-  } catch (_) {
-    return Promise.resolve({
-      ok: false,
-      status: 0,
-      reason: 'SYNC_EXCEPTION'
-    });
-  }
+  return Promise.resolve({
+    ok: true,
+    status: 0,
+    reason: 'LOCAL_ONLY'
+  });
 }
   function pullStyleFromCloud() {
     cloudFetch('/hospital-storage?keys=' + encodeURIComponent(STYLE_KEY)).then(function (res) {
