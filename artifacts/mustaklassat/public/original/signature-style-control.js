@@ -8,8 +8,34 @@
   if (window.__NAJRAN_SIGNATURE_STYLE_CONTROL_V2__) return;
   window.__NAJRAN_SIGNATURE_STYLE_CONTROL_V2__ = true;
 
-  var KEY = 'najranSignatureStyleSettings_v1';
-  var UI_KEY = 'najranSignatureStyleUiPosition_v1';
+var BASE_KEY = 'najranSignatureStyleSettings_v1';
+var UI_KEY = 'najranSignatureStyleUiPosition_v1';
+
+function sanitizeScope(v) {
+  return String(v || 'global')
+    .replace(/[^\w\u0600-\u06FF.-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 120) || 'global';
+}
+
+function signatureScope(doc) {
+  try {
+    var body = doc && doc.body;
+    var scope = body && (
+      body.getAttribute('data-signature-scope') ||
+      (body.dataset && body.dataset.signatureScope)
+    );
+    return sanitizeScope(scope || 'global');
+  } catch (_) {
+    return 'global';
+  }
+}
+
+function settingsKey(doc) {
+  var scope = signatureScope(doc || document);
+  if (!scope || scope === 'global') return BASE_KEY;
+  return BASE_KEY + '__' + scope;
+}
   var MAX_SIGS = 24;
 
   var FONT_MIN = 6, FONT_MAX = 44;
@@ -135,31 +161,41 @@ function defaults() {
     return out;
   }
 
-  function readSettings() {
-    var d = defaults();
-    try {
-      var raw = localStorage.getItem(KEY);
-      if (!raw) return d;
-      var p = JSON.parse(raw);
-      if (!p || typeof p !== 'object') return d;
-d.approved = p.approved === true;
-d.savedAt = typeof p.savedAt === 'string' ? p.savedAt : null;
-d.resetAt = typeof p.resetAt === 'string' ? p.resetAt : null;
-      d.containerAlign = safeContainerAlign(p.containerAlign);
-      d.rowGap = clampInt(p.rowGap, SIGNATURE_GAP_MIN, SIGNATURE_GAP_MAX);
-      d.rowTopMargin = clampInt(p.rowTopMargin, BLOCK_Y_MIN, BLOCK_Y_MAX);
-
-      if (Array.isArray(p.perSignature)) {
-        for (var i = 0; i < Math.min(p.perSignature.length, MAX_SIGS); i++) {
-          d.perSignature[i] = normalizeSlot(p.perSignature[i]);
-        }
-      }
-    } catch (_) {}
-    return d;
-  }
-
- function writeSettings(s) {
+function readSettings(doc) {
+  var d = defaults();
   try {
+    var key = settingsKey(doc || document);
+    var raw = localStorage.getItem(key);
+
+    // توافق مع الحفظ القديم: لو الخطاب الحالي ليس له حفظ مستقل،
+    // اقرأ التنسيق القديم مرة فقط كافتراضي، لكن لا تكتب عليه.
+
+
+    if (!raw) return d;
+
+    var p = JSON.parse(raw);
+    if (!p || typeof p !== 'object') return d;
+
+    d.approved = p.approved === true;
+    d.savedAt = typeof p.savedAt === 'string' ? p.savedAt : null;
+    d.resetAt = typeof p.resetAt === 'string' ? p.resetAt : null;
+    d.containerAlign = safeContainerAlign(p.containerAlign);
+    d.rowGap = clampInt(p.rowGap, SIGNATURE_GAP_MIN, SIGNATURE_GAP_MAX);
+    d.rowTopMargin = clampInt(p.rowTopMargin, BLOCK_Y_MIN, BLOCK_Y_MAX);
+
+    if (Array.isArray(p.perSignature)) {
+      for (var i = 0; i < Math.min(p.perSignature.length, MAX_SIGS); i++) {
+        d.perSignature[i] = normalizeSlot(p.perSignature[i]);
+      }
+    }
+  } catch (_) {}
+
+  return d;
+}
+
+function writeSettings(s, doc) {
+  try {
+    var key = settingsKey(doc || document);
     var copy = JSON.parse(JSON.stringify(s || defaults()));
 
     copy.version = 5;
@@ -169,9 +205,9 @@ d.resetAt = typeof p.resetAt === 'string' ? p.resetAt : null;
 
     if (!Array.isArray(copy.perSignature)) copy.perSignature = [];
 
-    localStorage.setItem(KEY, JSON.stringify(copy));
+    localStorage.setItem(key, JSON.stringify(copy));
 
-    var raw = localStorage.getItem(KEY);
+    var raw = localStorage.getItem(key);
     var parsed = raw ? JSON.parse(raw) : null;
 
     return !!(
@@ -184,9 +220,6 @@ d.resetAt = typeof p.resetAt === 'string' ? p.resetAt : null;
     return false;
   }
 }
-
-  /* --- V7: حفظ التنسيق المعتمد في النظام (تخزين المستشفى) حتى لا يضيع أبدًا --- */
-  var __cloudSyncTimer = null;
 
 function cloudToken() {
   try {
@@ -283,35 +316,8 @@ function cloudFetch(path, opts) {
 }
 
   function pullSettingsFromCloud() {
-    cloudFetch('/hospital-storage?keys=' + encodeURIComponent(KEY)).then(function (res) {
-      try {
-        if (!res || !res.data) return;
-        var remoteRaw = typeof res.data[KEY] === 'string' ? res.data[KEY] : null;
-        if (!remoteRaw) {
-          // لا نسخة في النظام: لو يوجد تنسيق معتمد محليًا، ارفعه للنظام (شفاء ذاتي).
-          var localRaw = localStorage.getItem(KEY);
-          if (localRaw) {
-            var lp = null;
-            try { lp = JSON.parse(localRaw); } catch (_) {}
-            if (lp && (lp.approved === true || lp.resetAt)) syncSettingsToCloud();
-          }
-          return;
-        }
-        var remote = null;
-        try { remote = JSON.parse(remoteRaw); } catch (_) { return; }
-        if (!remote || typeof remote !== 'object') return;
-        var local = readSettings();
-        var remoteStamp = settingsStamp(remote);
-        var localStamp = settingsStamp(local);
-        if (remoteStamp > localStamp) {
-          localStorage.setItem(KEY, remoteRaw);
-          console.info('[SignatureStyleControl] adopted approved style from system storage');
-        } else if (localStamp > remoteStamp && (local.approved === true || local.resetAt)) {
-          syncSettingsToCloud();
-        }
-      } catch (_) {}
-    });
-  }
+  return;
+}
 
   function normalizePoint(raw, fallback, win, maxW, maxH) {
     raw = raw && typeof raw === 'object' ? raw : {};
@@ -490,8 +496,8 @@ function cloudFetch(path, opts) {
     row.style.flexWrap = '';
   }
 
-  function applyStyles(doc, settings) {
-    settings = settings || readSettings();
+ function applyStyles(doc, settings) {
+    settings = settings || readSettings(doc);
     var groups = findSignatureRows(doc);
     var blockY = settings.rowTopMargin === null ? 0 : settings.rowTopMargin;
     var signatureGap = settings.rowGap === null ? 0 : settings.rowGap;
@@ -671,7 +677,7 @@ function cloudFetch(path, opts) {
     panelStyles(doc);
 
     var win = doc.defaultView || window;
-    var draft = readSettings();
+    var draft = readSettings(doc);
     var ui = readUi(win);
     for (var k = 0; k < count; k++) getSlot(draft, k);
 
@@ -894,12 +900,13 @@ function cloudFetch(path, opts) {
   draft.savedAt = new Date().toISOString();
   draft.resetAt = null;
 
-  var wrote = writeSettings(draft);
-  applyStyles(doc, draft);
+  var key = settingsKey(doc);
+var wrote = writeSettings(draft, doc);
+applyStyles(doc, draft);
 
-  var savedOk = false;
-  try {
-    var saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+var savedOk = false;
+try {
+  var saved = JSON.parse(localStorage.getItem(key) || '{}');
     savedOk = !!(
       wrote &&
       saved &&
@@ -911,18 +918,16 @@ function cloudFetch(path, opts) {
     console.error('[SignatureStyleControl] save verification failed', err);
   }
 
-  if (savedOk) {
+ if (savedOk) {
     panel.classList.remove('open');
-    syncSettingsToCloud();
-  }
-
+}
   toggle.textContent = savedOk
     ? 'تم حفظ واعتماد التنسيق V5'
     : 'لم يتم الحفظ — راجع Console';
 
   console.info('[SignatureStyleControl] save result:', {
     savedOk: savedOk,
-    key: KEY,
+    key: key,
     savedAt: draft.savedAt
   });
 
@@ -939,9 +944,8 @@ panel.querySelector('.sig-reset').onclick = function () {
 
   for (var k2 = 0; k2 < count; k2++) getSlot(draft, k2);
 
-  writeSettings(draft);
-  syncSettingsToCloud();
-  applyStyles(doc, draft);
+ writeSettings(draft, doc);
+applyStyles(doc, draft);
   render();
 
   toggle.textContent = 'تمت استعادة الافتراضي V5';
@@ -996,7 +1000,7 @@ panel.querySelector('.sig-reset').onclick = function () {
       if (!doc || !doc.body) return false;
       if (hasSaudiNamesRebuildPage(doc)) return false;
 
-      var count = applyStyles(doc, readSettings());
+      var count = applyStyles(doc, readSettings(doc));
       if (count > 0) buildPanel(doc, count);
       return count > 0;
     } catch (_) { return false; }
@@ -1017,5 +1021,5 @@ panel.querySelector('.sig-reset').onclick = function () {
     return win;
   };
   pullSettingsFromCloud();
-    console.info('[SignatureStyleControl] V7 persistent approved save (system storage) installed');
+    console.info('[SignatureStyleControl] V8 scoped local signature style installed');
 })();
