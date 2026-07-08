@@ -373,9 +373,61 @@ function buildDoc(key, s) { if (key === 'main') return buildMain(s); if (key ===
   function cellDisplayValue(cell) { const print = cell.querySelector('.cell-print-content'); const field = cell.querySelector('input,select,textarea'); return clean((print && print.textContent) || (field && field.value) || cell.textContent || ''); }
   function snapshotTable(tableId) { const table = document.getElementById(tableId); if (!table) return ''; const rows = Array.from(table.rows).map(tr => '<tr>' + Array.from(tr.cells).map(c => '<' + (c.tagName === 'TH' ? 'th' : 'td') + (c.colSpan > 1 ? ' colspan="' + c.colSpan + '"' : '') + '>' + esc(cellDisplayValue(c)) + '</' + (c.tagName === 'TH' ? 'th' : 'td') + '>').join('') + '</tr>').join(''); return '<table><tbody>' + rows + '</tbody></table>'; }
   function buildExistingConsumablesPrintPages() { const sections = [ ['subcontractors-section','subcontractors-table'], ['performance-section','performance-table'], ['water-supply-section','water-supply-table'], ['sewage-disposal-section','sewage-disposal-table'], ['summary-section','summary-table'] ]; return sections.map(x => { const sec = document.getElementById(x[0]); const title = clean(sec && sec.querySelector('.table-header h2') && sec.querySelector('.table-header h2').textContent) || x[0]; const table = snapshotTable(x[1]); if (!table) return ''; return `<section class="page"><div class="extract-page"><h1>${esc(title)}</h1><h2>${esc(extractPhrase())}</h2>${table}</div></section>`; }).join(''); }
-  function openPrintDoc(key) { const s = getSettings(); const title = key === 'all' ? 'خطابات المستهلكات' : LABELS[key]; const win = window.open('', '', 'width=1000,height=900'); if (!win) return alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.'); win.document.open(); win.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${esc(title)}</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">${printCss(s)}</head><body><div class="toolbar"><button onclick="window.print()">طباعة</button><button onclick="window.close()">إغلاق</button></div>${buildDoc(key, s)}</body></html>`); win.document.close(); }
-  function openFullConsumablesExtract() { const s = getSettings(); const win = window.open('', '', 'width=1100,height=900'); if (!win) return alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.'); win.document.open(); win.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>مستخلص المستهلكات كامل</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">${printCss(s)}</head><body><div class="toolbar"><button onclick="window.print()">طباعة</button><button onclick="window.close()">إغلاق</button></div>${buildDoc('all', s)}${buildExistingConsumablesPrintPages()}</body></html>`); win.document.close(); }
+ function openPrintDoc(key) {
+  const s = getSettings();
+  const title = key === 'all' ? 'خطابات المستهلكات' : LABELS[key];
+  const scope = 'consumables:' + key;
 
+  const win = window.open('', '', 'width=1000,height=900');
+  if (!win) return alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.');
+
+  win.document.open();
+  win.document.write(`<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>${esc(title)}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  ${printCss(s)}
+</head>
+<body data-signature-scope="${esc(scope)}">
+  <div class="toolbar">
+    <button onclick="window.print()">طباعة</button>
+    <button onclick="window.close()">إغلاق</button>
+  </div>
+  ${buildDoc(key, s)}
+</body>
+</html>`);
+  win.document.close();
+}
+
+function openFullConsumablesExtract() {
+  const s = getSettings();
+  const scope = 'consumables:fullExtract';
+
+  const win = window.open('', '', 'width=1100,height=900');
+  if (!win) return alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.');
+
+  win.document.open();
+  win.document.write(`<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>مستخلص المستهلكات كامل</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  ${printCss(s)}
+</head>
+<body data-signature-scope="${esc(scope)}">
+  <div class="toolbar">
+    <button onclick="window.print()">طباعة</button>
+    <button onclick="window.close()">إغلاق</button>
+  </div>
+  ${buildDoc('all', s)}
+  ${buildExistingConsumablesPrintPages()}
+</body>
+</html>`);
+  win.document.close();
+}
   function field(path, label, value, type) { return `<div class="field"><label>${esc(label)}</label><input type="${type || 'text'}" data-path="${esc(path)}" value="${esc(value ?? '')}"></div>`; }
   function area(path, label, value) { return `<div class="field wide"><label>${esc(label)}</label><textarea data-path="${esc(path)}">${esc(value ?? '')}</textarea></div>`; }
   function selectField(path, label, value, opts) { return `<div class="field"><label>${esc(label)}</label><select data-path="${esc(path)}">${opts.map(o => `<option value="${esc(o[0])}" ${String(value) === String(o[0]) ? 'selected' : ''}>${esc(o[1])}</option>`).join('')}</select></div>`; }
