@@ -550,6 +550,7 @@
             <a href="#header" onclick="toggleSection('header')" data-section="header">ترويسة المطبوعات</a>
             <a href="#users" onclick="toggleSection('users')" data-section="users">إعدادات المستخدمين</a>
             <a href="#custom-table" onclick="toggleSection('custom-table')" data-section="custom-table">إنشاء جدول مخصص</a>
+            <a href="#production-monitor" onclick="toggleSection('production-monitor')" data-section="production-monitor" id="tab-production-monitor" style="display:none;background:linear-gradient(135deg,#7c2d12,#991b1b) !important;color:#fef3c7 !important">🩺 مراقبة الإنتاج</a>
         </div>
 
         <div id="notifications" class="section">
@@ -772,6 +773,88 @@
                 <button onclick="createExtractLetter()">إنشاء خطاب مستخلص</button>
             </div>
             <div class="success-message" id="custom-table-save-success">تم حفظ الجدول بنجاح</div>
+        </div>
+
+        <!-- ============================================================
+             🩺 Production Monitor — Admin Only
+             Reveals only for users with session.role === 'admin'.
+             Section content stays inert (no fetch) until the tab is opened.
+             ============================================================ -->
+        <div id="production-monitor" class="section" style="display:none">
+            <h2>🩺 مراقبة الإنتاج — Production Monitor</h2>
+            <div style="background:rgba(153,27,27,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:14px;margin-bottom:16px;color:#fecaca;font-size:13px;line-height:1.7">
+                لوحة رقابة مباشرة لكل الحوادث الفنية اللى بتحصل عند المستخدمين — قبل ما يبلّغوا بيها.
+                البيانات بتيجى من <code style="color:#d4af37">/api/client-events</code> ومحصورة على المدير فقط.
+                لا نسجّل نقرات المستخدم العادية أو محتوى بياناته — بس أحداث فنية مهمة.
+            </div>
+
+            <!-- Stats cards -->
+            <div id="pm-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px">
+                <div class="pm-card" data-kind="critical" style="background:linear-gradient(135deg,#7c2d12,#991b1b);border:1px solid #f87171;border-radius:12px;padding:14px;color:#fef2f2;text-align:center">
+                    <div style="font-size:11px;opacity:0.85">🔴 Critical</div>
+                    <div id="pm-stat-critical" style="font-size:28px;font-weight:900;line-height:1.2">—</div>
+                </div>
+                <div class="pm-card" data-kind="errors" style="background:linear-gradient(135deg,#7f1d1d,#b91c1c);border:1px solid #fca5a5;border-radius:12px;padding:14px;color:#fee2e2;text-align:center">
+                    <div style="font-size:11px;opacity:0.85">❌ Errors</div>
+                    <div id="pm-stat-errors" style="font-size:28px;font-weight:900;line-height:1.2">—</div>
+                </div>
+                <div class="pm-card" data-kind="warnings" style="background:linear-gradient(135deg,#78350f,#b45309);border:1px solid #fbbf24;border-radius:12px;padding:14px;color:#fef3c7;text-align:center">
+                    <div style="font-size:11px;opacity:0.85">⚠️ Warnings</div>
+                    <div id="pm-stat-warnings" style="font-size:28px;font-weight:900;line-height:1.2">—</div>
+                </div>
+                <div class="pm-card" data-kind="users" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8);border:1px solid #93c5fd;border-radius:12px;padding:14px;color:#dbeafe;text-align:center">
+                    <div style="font-size:11px;opacity:0.85">👤 Affected users</div>
+                    <div id="pm-stat-users" style="font-size:28px;font-weight:900;line-height:1.2">—</div>
+                </div>
+                <div class="pm-card" data-kind="hospitals" style="background:linear-gradient(135deg,#064e3b,#065f46);border:1px solid #6ee7b7;border-radius:12px;padding:14px;color:#d1fae5;text-align:center">
+                    <div style="font-size:11px;opacity:0.85">🏥 Affected hospitals</div>
+                    <div id="pm-stat-hospitals" style="font-size:28px;font-weight:900;line-height:1.2">—</div>
+                </div>
+                <div class="pm-card" data-kind="total" style="background:linear-gradient(135deg,#374151,#4b5563);border:1px solid #d1d5db;border-radius:12px;padding:14px;color:#f3f4f6;text-align:center">
+                    <div style="font-size:11px;opacity:0.85">📊 Total events</div>
+                    <div id="pm-stat-total" style="font-size:28px;font-weight:900;line-height:1.2">—</div>
+                </div>
+            </div>
+
+            <!-- Filters + actions -->
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;background:rgba(30,41,59,0.55);padding:10px;border-radius:10px;border:1px solid rgba(212,175,55,0.25)">
+                <input id="pm-search" type="text" placeholder="🔍 بحث..."
+                       style="flex:1 1 180px;min-width:150px;padding:8px 10px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;font-family:Tajawal,sans-serif">
+                <select id="pm-filter-type" style="padding:8px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;min-width:150px">
+                    <option value="">كل الأنواع</option>
+                </select>
+                <select id="pm-filter-severity" style="padding:8px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#e2e8f0">
+                    <option value="">كل مستويات الخطورة</option>
+                    <option value="critical">Critical</option>
+                    <option value="error">Error</option>
+                    <option value="warning">Warning</option>
+                    <option value="info">Info</option>
+                </select>
+                <select id="pm-filter-hospital" style="padding:8px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;min-width:150px">
+                    <option value="">كل المستشفيات</option>
+                </select>
+                <select id="pm-filter-page" style="padding:8px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;min-width:130px">
+                    <option value="">كل الصفحات</option>
+                </select>
+                <select id="pm-window" style="padding:8px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#e2e8f0">
+                    <option value="1">آخر ساعة</option>
+                    <option value="6">آخر 6 ساعات</option>
+                    <option value="24" selected>آخر 24 ساعة</option>
+                    <option value="72">آخر 3 أيام</option>
+                    <option value="168">آخر أسبوع</option>
+                </select>
+                <button onclick="pmRefresh()" style="padding:8px 14px;background:linear-gradient(135deg,#d4af37,#b8941f);color:#1e293b;border:none;border-radius:8px;font-weight:800;cursor:pointer">🔄 تحديث</button>
+                <button onclick="pmClearLocalCache()" style="padding:8px 14px;background:#475569;color:#e2e8f0;border:none;border-radius:8px;font-weight:700;cursor:pointer" title="مسح طابور الأحداث المحلى لمتصفحك أنت">🗑️ مسح المحلى</button>
+            </div>
+
+            <!-- Event list -->
+            <div id="pm-list" style="max-height:600px;overflow-y:auto;background:rgba(15,23,42,0.7);border:1px solid rgba(212,175,55,0.2);border-radius:12px;padding:8px">
+                <div id="pm-list-empty" style="text-align:center;color:#94a3b8;padding:40px;font-size:14px">اضغط 🔄 تحديث لتحميل الحوادث</div>
+            </div>
+
+            <div style="margin-top:12px;padding:12px;background:rgba(30,41,59,0.5);border-radius:10px;font-size:12px;color:#94a3b8;line-height:1.7">
+                💡 <strong style="color:#d4af37">اضغط على أى حادثة</strong> لعرض التفاصيل، ثم <strong style="color:#d4af37">📋 Copy Claude Report</strong> لنسخ تقرير جاهز يبعت لكلود ماعرفتش الحل.
+            </div>
         </div>
 
         <footer>
@@ -1380,7 +1463,394 @@
             setInterval(updateDateTime, 1000);
             updateSideData();
             loadAdminEmail();
+            pmInit();
         };
+
+        // ============================================================
+        // 🩺 Production Monitor — admin dashboard logic
+        // Fetches from /api/client-events (admin only), renders stats +
+        // event list with filters + one-click Claude/Codex report copy.
+        // All calls fail-silent — never blocks the rest of the settings
+        // page from working if the endpoint is down.
+        // ============================================================
+        var __pmState = {
+            events: [],
+            summary: null,
+            selectedId: null,
+            filterType: '',
+            filterSeverity: '',
+            filterHospital: '',
+            filterPage: '',
+            search: '',
+            windowHours: 24,
+            loaded: false
+        };
+
+        function pmSession() {
+            try { return JSON.parse(localStorage.getItem('najran_session') || '{}'); } catch(_) { return {}; }
+        }
+        function pmIsAdmin() {
+            var s = pmSession();
+            return s && s.role === 'admin';
+        }
+        function pmAuthHeaders() {
+            var s = pmSession();
+            var h = {};
+            if (s.clerkToken) h['Authorization'] = 'Bearer ' + s.clerkToken;
+            return h;
+        }
+        function pmEscape(v) {
+            if (v == null) return '';
+            return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+        function pmSevColor(sev) {
+            switch ((sev || 'info').toLowerCase()) {
+                case 'critical': return { bg:'#7c2d12', border:'#f87171', text:'#fef2f2' };
+                case 'error':    return { bg:'#7f1d1d', border:'#fca5a5', text:'#fee2e2' };
+                case 'warning':  return { bg:'#78350f', border:'#fbbf24', text:'#fef3c7' };
+                default:         return { bg:'#1e3a8a', border:'#93c5fd', text:'#dbeafe' };
+            }
+        }
+        function pmFmtTime(iso) {
+            if (!iso) return '';
+            try {
+                var d = new Date(iso);
+                var now = Date.now();
+                var diff = Math.round((now - d.getTime()) / 1000);
+                if (diff < 60) return 'منذ ' + diff + ' ثانية';
+                if (diff < 3600) return 'منذ ' + Math.round(diff/60) + ' دقيقة';
+                if (diff < 86400) return 'منذ ' + Math.round(diff/3600) + ' ساعة';
+                return d.toLocaleString('ar-SA');
+            } catch(_) { return iso; }
+        }
+
+        function pmInit() {
+            // Reveal tab only for admins
+            if (!pmIsAdmin()) return;
+            var tab = document.getElementById('tab-production-monitor');
+            if (tab) tab.style.display = '';
+            // Wire filter change handlers
+            ['pm-filter-type','pm-filter-severity','pm-filter-hospital','pm-filter-page','pm-search'].forEach(function(id){
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('input', pmRenderList);
+            });
+            var winSel = document.getElementById('pm-window');
+            if (winSel) winSel.addEventListener('change', function(){ __pmState.windowHours = Number(this.value)||24; pmRefresh(); });
+        }
+
+        async function pmRefresh() {
+            if (!pmIsAdmin()) return;
+            var listEl = document.getElementById('pm-list');
+            if (listEl) listEl.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:40px">⏳ جارِ التحميل...</div>';
+            try {
+                var headers = pmAuthHeaders();
+                var winH = __pmState.windowHours;
+                var sinceIso = new Date(Date.now() - winH * 3600 * 1000).toISOString();
+
+                var sumRes = await fetch('/api/client-events/summary?windowHours=' + winH, { headers: headers, credentials: 'include' });
+                if (sumRes.status === 403) { pmShowNotAdmin(); return; }
+                if (sumRes.ok) __pmState.summary = await sumRes.json(); else __pmState.summary = null;
+
+                var evRes = await fetch('/api/client-events?limit=500&since=' + encodeURIComponent(sinceIso), { headers: headers, credentials: 'include' });
+                if (evRes.status === 403) { pmShowNotAdmin(); return; }
+                if (evRes.ok) {
+                    var body = await evRes.json();
+                    __pmState.events = Array.isArray(body.events) ? body.events : [];
+                } else {
+                    __pmState.events = [];
+                }
+                __pmState.loaded = true;
+                pmRenderStats();
+                pmPopulateFilterOptions();
+                pmRenderList();
+            } catch (err) {
+                if (listEl) listEl.innerHTML = '<div style="text-align:center;color:#f87171;padding:40px">تعذر التحميل — تحقق من الاتصال أو الصلاحيات</div>';
+            }
+        }
+
+        function pmShowNotAdmin() {
+            var listEl = document.getElementById('pm-list');
+            if (listEl) listEl.innerHTML = '<div style="text-align:center;color:#f87171;padding:40px">🔒 هذه الشاشة للأدمن فقط</div>';
+        }
+
+        function pmRenderStats() {
+            var s = __pmState.summary || {};
+            var set = function(id, v){ var el = document.getElementById(id); if (el) el.textContent = (v == null ? '—' : v); };
+            set('pm-stat-critical', s.critical || 0);
+            set('pm-stat-errors', s.errors || 0);
+            set('pm-stat-warnings', s.warnings || 0);
+            set('pm-stat-users', s.affectedUsers || 0);
+            set('pm-stat-hospitals', s.affectedHospitals || 0);
+            set('pm-stat-total', s.total || 0);
+        }
+
+        function pmPopulateFilterOptions() {
+            var typeSel = document.getElementById('pm-filter-type');
+            var hospitalSel = document.getElementById('pm-filter-hospital');
+            var pageSel = document.getElementById('pm-filter-page');
+            if (!typeSel || !hospitalSel || !pageSel) return;
+
+            var types = {}, hospitals = {}, pages = {};
+            (__pmState.events || []).forEach(function(e){
+                if (e.type) types[e.type] = (types[e.type]||0)+1;
+                if (e.hospital) hospitals[e.hospital] = (hospitals[e.hospital]||0)+1;
+                if (e.page) pages[e.page] = (pages[e.page]||0)+1;
+            });
+
+            var buildOpts = function(sel, dict, currentVal, allLabel) {
+                var current = sel.value;
+                sel.innerHTML = '<option value="">' + allLabel + '</option>' + Object.keys(dict).sort().map(function(k){
+                    return '<option value="'+pmEscape(k)+'"'+(k===current?' selected':'')+'>'+pmEscape(k)+' ('+dict[k]+')</option>';
+                }).join('');
+            };
+            buildOpts(typeSel, types, __pmState.filterType, 'كل الأنواع');
+            buildOpts(hospitalSel, hospitals, __pmState.filterHospital, 'كل المستشفيات');
+            buildOpts(pageSel, pages, __pmState.filterPage, 'كل الصفحات');
+        }
+
+        function pmFilteredEvents() {
+            var typeV = (document.getElementById('pm-filter-type')||{}).value || '';
+            var sevV = (document.getElementById('pm-filter-severity')||{}).value || '';
+            var hospV = (document.getElementById('pm-filter-hospital')||{}).value || '';
+            var pageV = (document.getElementById('pm-filter-page')||{}).value || '';
+            var qV = ((document.getElementById('pm-search')||{}).value || '').toLowerCase().trim();
+            return (__pmState.events || []).filter(function(e){
+                if (typeV && e.type !== typeV) return false;
+                if (sevV && (e.severity||'info').toLowerCase() !== sevV) return false;
+                if (hospV && e.hospital !== hospV) return false;
+                if (pageV && e.page !== pageV) return false;
+                if (qV) {
+                    var hay = ((e.type||'')+' '+(e.message||'')+' '+(e.userName||'')+' '+(e.hospital||'')+' '+(e.page||'')).toLowerCase();
+                    if (hay.indexOf(qV) === -1) return false;
+                }
+                return true;
+            });
+        }
+
+        function pmRenderList() {
+            var listEl = document.getElementById('pm-list');
+            if (!listEl) return;
+            var events = pmFilteredEvents();
+            if (!events.length) {
+                listEl.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:40px">✅ لا توجد حوادث فى هذا النطاق</div>';
+                return;
+            }
+            listEl.innerHTML = events.map(function(e){
+                var c = pmSevColor(e.severity);
+                var expanded = __pmState.selectedId === e.id;
+                var short = pmEscape((e.message || '').slice(0, 140));
+                var meta = [];
+                if (e.userName) meta.push('👤 '+pmEscape(e.userName));
+                if (e.hospital) meta.push('🏥 '+pmEscape(e.hospital));
+                if (e.page) meta.push('📄 '+pmEscape(e.page));
+                if (e.revisionMode) meta.push('🔁 revision');
+                var badge = '<span style="display:inline-block;padding:3px 10px;border-radius:6px;background:'+c.bg+';color:'+c.text+';border:1px solid '+c.border+';font-size:11px;font-weight:800">'+pmEscape(e.type||'?')+'</span>';
+                var sevBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:5px;background:rgba(0,0,0,0.35);color:'+c.border+';font-size:10px;font-weight:800;margin-inline-start:6px">'+pmEscape((e.severity||'info').toUpperCase())+'</span>';
+                return '<div class="pm-event" data-id="'+e.id+'" style="margin:6px 0;padding:10px 12px;border-radius:10px;background:rgba(30,41,59,0.65);border:1px solid rgba(212,175,55,0.15);cursor:pointer;transition:all 0.15s" '
+                    + 'onmouseover="this.style.background=\'rgba(30,41,59,0.9)\'" onmouseout="this.style.background=\'rgba(30,41,59,0.65)\'" onclick="pmToggle('+e.id+')">'
+                    + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
+                    +   '<div style="flex:1 1 auto">'+badge+sevBadge+'<span style="color:#e2e8f0;margin-inline-start:10px;font-size:13px">'+short+'</span></div>'
+                    +   '<div style="color:#94a3b8;font-size:11px">'+pmEscape(pmFmtTime(e.createdAt||e.timestamp))+'</div>'
+                    + '</div>'
+                    + '<div style="color:#94a3b8;font-size:11px;margin-top:4px">'+meta.join(' · ')+'</div>'
+                    + (expanded ? pmRenderDetails(e) : '')
+                    + '</div>';
+            }).join('');
+        }
+
+        function pmRenderDetails(e) {
+            var section = function(title, body){
+                return '<div style="margin-top:8px"><div style="color:#d4af37;font-weight:700;font-size:11px;margin-bottom:3px">'+title+'</div>'
+                     + '<pre style="margin:0;padding:8px;background:#0f172a;border-radius:6px;color:#cbd5e1;font-size:11px;line-height:1.5;white-space:pre-wrap;word-break:break-word;max-height:280px;overflow:auto;direction:ltr;text-align:left">'
+                     + pmEscape(body) + '</pre></div>';
+            };
+            var la = Array.isArray(e.lastActions) ? e.lastActions : [];
+            var lastActionsStr = la.length
+                ? la.map(function(a){ return '['+ (a.at||'') +'] '+(a.kind||'') + (a.extra ? ' '+JSON.stringify(a.extra) : ''); }).join('\n')
+                : '(empty)';
+            var cs = e.criticalState || {};
+            var csStr = 'count=' + (cs.count||0) + ' empty=' + (cs.emptyCount||0) + '\n' +
+                (Array.isArray(cs.keys) ? cs.keys.map(function(k){ return '  ' + k.key + ' size=' + k.size + (k.empty ? ' [EMPTY]' : ''); }).join('\n') : '');
+            var payload = e._payload || {};
+
+            return '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed rgba(212,175,55,0.25)" onclick="event.stopPropagation()">'
+                + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">'
+                +   '<button onclick="pmCopyClaudeReport('+e.id+')" style="padding:6px 12px;background:linear-gradient(135deg,#d4af37,#b8941f);color:#1e293b;border:none;border-radius:6px;font-weight:800;cursor:pointer;font-size:12px">📋 Copy Claude Report</button>'
+                +   '<button onclick="pmCopyCodexPrompt('+e.id+')" style="padding:6px 12px;background:linear-gradient(135deg,#059669,#047857);color:#ecfdf5;border:none;border-radius:6px;font-weight:800;cursor:pointer;font-size:12px">🤖 Copy Codex Prompt</button>'
+                +   '<button onclick="pmCopyRaw('+e.id+')" style="padding:6px 12px;background:#475569;color:#e2e8f0;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px">📄 Copy Raw JSON</button>'
+                + '</div>'
+                + section('URL', String(e.url || ''))
+                + section('Message', String(e.message || ''))
+                + (e.stack ? section('Stack Trace', String(e.stack)) : '')
+                + section('lastActions (technical)', lastActionsStr)
+                + section('criticalState (sizes only)', csStr)
+                + section('payload (sanitized)', JSON.stringify(payload, null, 2))
+                + '</div>';
+        }
+
+        function pmToggle(id) {
+            __pmState.selectedId = __pmState.selectedId === id ? null : id;
+            pmRenderList();
+        }
+
+        function pmEventById(id) {
+            for (var i = 0; i < __pmState.events.length; i++) {
+                if (__pmState.events[i].id === id) return __pmState.events[i];
+            }
+            return null;
+        }
+
+        function pmBuildClaudeReport(e) {
+            if (!e) return '';
+            var la = Array.isArray(e.lastActions) ? e.lastActions : [];
+            var laStr = la.length ? la.map(function(a){ return '  - ['+(a.at||'')+'] '+(a.kind||'')+(a.extra?' '+JSON.stringify(a.extra):''); }).join('\n') : '  (empty)';
+            var cs = e.criticalState || {};
+            var csStr = 'count=' + (cs.count||0) + ' empty=' + (cs.emptyCount||0) + '\n' +
+                (Array.isArray(cs.keys) ? cs.keys.map(function(k){ return '  ' + k.key + ' size=' + k.size + (k.empty ? ' [EMPTY]' : ''); }).join('\n') : '');
+            return [
+                'راجع هذه الحادثة كخبير إنتاج.',
+                'المطلوب فحص السبب من الكود بدون تعديل عشوائي.',
+                '',
+                'نوع الحادثة:',
+                (e.type || '?') + ' (severity=' + (e.severity || 'info') + ')',
+                '',
+                'المستخدم:',
+                (e.userName || '?') + ' <' + (e.userEmail || '?') + '> role=' + (e.role || '?') + ' userId=' + (e.userId || '?'),
+                '',
+                'المستشفى:',
+                (e.hospital || '?') + ' — الشركة: ' + (e.company || '?'),
+                '',
+                'الصفحة:',
+                (e.page || '?') + ' — URL: ' + (e.url || '?'),
+                '',
+                'Revision Mode:',
+                (e.revisionMode ? 'YES (extractId=' + (e.revisionExtractId || '?') + ')' : 'no'),
+                '',
+                'الرسالة:',
+                (e.message || '(none)'),
+                '',
+                'آخر الأحداث الفنية (technical timeline):',
+                laStr,
+                '',
+                'حالة المفاتيح الحرجة (sizes only, no content):',
+                csStr,
+                '',
+                'Stack Trace:',
+                (e.stack || '(none)'),
+                '',
+                'Sanitized payload:',
+                JSON.stringify(e._payload || {}, null, 2),
+                '',
+                'Build: ' + (e.buildVersion || '?') + ' | when: ' + (e.createdAt || e.timestamp || '?'),
+                '',
+                'المطلوب:',
+                '1. السبب المؤكد.',
+                '2. الملف والدالة المسؤولة.',
+                '3. كود التعديل (أصغر تغيير ممكن، additive).',
+                '4. اختبار قبل/بعد يثبت الإصلاح.',
+                '5. Rollback plan.',
+                '',
+                'قواعد صارمة: لا تلمس cloud-sync.js، لا تغيّر DB_VERSION، لا تمسح localStorage كحل إنتاجى.'
+            ].join('\n');
+        }
+
+        function pmBuildCodexPrompt(e) {
+            if (!e) return '';
+            return [
+                'PROJECT: mostakhlas-najran (Arabic healthcare contract management, React/Vite + Express + Neon PG)',
+                'INCIDENT TYPE: ' + (e.type || '?') + ' [severity=' + (e.severity || 'info') + ']',
+                'PAGE: ' + (e.page || '?') + ' | URL: ' + (e.url || '?'),
+                'USER: ' + (e.userName || '?') + ' (' + (e.userEmail || '?') + ') role=' + (e.role || '?'),
+                'HOSPITAL: ' + (e.hospital || '?') + ' | COMPANY: ' + (e.company || '?'),
+                'REVISION_MODE: ' + (e.revisionMode ? 'yes' : 'no') + (e.revisionExtractId ? ' extractId=' + e.revisionExtractId : ''),
+                'BUILD: ' + (e.buildVersion || '?') + ' AT ' + (e.createdAt || e.timestamp || '?'),
+                '',
+                'MESSAGE:',
+                (e.message || '(none)'),
+                '',
+                'STACK:',
+                (e.stack || '(none)'),
+                '',
+                'RECENT USER TIMELINE (technical only):',
+                (Array.isArray(e.lastActions) ? e.lastActions.map(function(a){ return '- '+(a.at||'')+' '+(a.kind||''); }).join('\n') : ''),
+                '',
+                'CRITICAL STATE (sizes only, no user data):',
+                JSON.stringify(e.criticalState || {}, null, 2),
+                '',
+                'PAYLOAD (sanitized):',
+                JSON.stringify(e._payload || {}, null, 2),
+                '',
+                'CONSTRAINTS: do not touch cloud-sync.js. All fixes must be additive with clear rollback. Prove root cause from code before proposing any change.',
+                '',
+                'DELIVERABLES: 1) confirmed root cause, 2) file+function+line, 3) smallest possible patch, 4) before/after test plan, 5) rollback command.'
+            ].join('\n');
+        }
+
+        async function pmCopyToClipboard(text, label) {
+            try {
+                await navigator.clipboard.writeText(text);
+                pmToast('✅ تم نسخ ' + label);
+            } catch(_) {
+                try {
+                    var ta = document.createElement('textarea');
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    pmToast('✅ تم نسخ ' + label);
+                } catch(_) {
+                    pmToast('⚠️ تعذر النسخ التلقائي — افتح Copy Raw JSON وانسخ يدويًا');
+                }
+            }
+        }
+
+        function pmToast(msg) {
+            var t = document.createElement('div');
+            t.textContent = msg;
+            t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#d4af37;padding:12px 20px;border-radius:10px;border:1px solid #d4af37;z-index:99999;font-family:Tajawal,sans-serif;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,0.5)';
+            document.body.appendChild(t);
+            setTimeout(function(){ t.style.transition='opacity 0.4s'; t.style.opacity='0'; setTimeout(function(){ t.remove(); }, 400); }, 2200);
+        }
+
+        function pmCopyClaudeReport(id) { pmCopyToClipboard(pmBuildClaudeReport(pmEventById(id)), 'تقرير Claude'); }
+        function pmCopyCodexPrompt(id) { pmCopyToClipboard(pmBuildCodexPrompt(pmEventById(id)), 'برومبت Codex'); }
+        function pmCopyRaw(id) { pmCopyToClipboard(JSON.stringify(pmEventById(id), null, 2), 'JSON الخام'); }
+
+        function pmClearLocalCache() {
+            if (!confirm('مسح طابور الأحداث المحلى فى متصفحك أنت؟ (لا يؤثر على الأحداث المخزنة على السيرفر)')) return;
+            try {
+                localStorage.removeItem('najran_monitor_event_queue_v1');
+                localStorage.removeItem('najran_monitor_meta_v1');
+                pmToast('✅ تم مسح الطابور المحلى');
+            } catch(_) { pmToast('⚠️ تعذر المسح'); }
+        }
+
+        // Expose for console access
+        window.pmRefresh = pmRefresh;
+        window.pmToggle = pmToggle;
+        window.pmCopyClaudeReport = pmCopyClaudeReport;
+        window.pmCopyCodexPrompt = pmCopyCodexPrompt;
+        window.pmCopyRaw = pmCopyRaw;
+        window.pmClearLocalCache = pmClearLocalCache;
+
+        // Auto-load when the Production Monitor tab is opened for the first time
+        (function watchTabOpen(){
+            var tab = null;
+            var checkInterval = setInterval(function(){
+                tab = tab || document.getElementById('tab-production-monitor');
+                if (!tab) return;
+                clearInterval(checkInterval);
+                tab.addEventListener('click', function(){
+                    setTimeout(function(){
+                        var sec = document.getElementById('production-monitor');
+                        if (sec && sec.classList.contains('active') && !__pmState.loaded) {
+                            pmRefresh();
+                        }
+                    }, 150);
+                });
+            }, 250);
+        })();
     </script>
 <script src="/original/track.js"></script>
 <script src="/original/shared-nav.js"></script>

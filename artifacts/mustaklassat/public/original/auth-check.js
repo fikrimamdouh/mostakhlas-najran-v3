@@ -249,6 +249,12 @@
   appendScript('/original/hospital-context-guard.js?v=20260611d', false);
   appendScript('/original/hospital-storage-extract-context-guard.js?v=' + HOSPITAL_STORAGE_GUARD_V, false);
 
+  // Production Incident Monitor — auto-loaded on every original/ page.
+  // Non-defer so its Storage-prototype overrides install before most other
+  // scripts run and can wrap around them. Coexists with the inline
+  // ZahranTripwire (installed above at the top of this IIFE).
+  appendScript('/original/production-client-monitor.js?v=20260709_monitor_v1_a', false);
+
   if (!isSidebarSensitivePage) appendScript('/original/home-sidebar-guard.js?v=20260703_review_exclude_v2', false);
 
   appendScript('/original/approve-button-polish.js?v=' + BUILD_V, true);

@@ -26,6 +26,7 @@ import notificationsRouter from "./notifications";
 import notificationsCountRouter from "./notifications-count";
 import adminJobPositionsRouter from "./admin-job-positions";
 import reviewerPermissionsRouter from "./reviewer-permissions";
+import clientEventsRouter from "./client-events";
 
 const router: IRouter = Router();
 
@@ -56,5 +57,6 @@ router.use("/admin/notify", adminNotifyRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/notifications/count", notificationsCountRouter);
 router.use("/admin/job-positions", adminJobPositionsRouter);
+router.use("/client-events", clientEventsRouter);
 
 export default router;
