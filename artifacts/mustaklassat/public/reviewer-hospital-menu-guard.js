@@ -27,7 +27,7 @@
   function isAdminSession(){
     var s = getSession();
     var role = String((s && s.role) || '').toLowerCase();
-    return role === 'admin' || role === 'super_admin' || role === 'administrator' || role === 'supervisor';
+    return role === 'admin' || role === 'super_admin' || role === 'administrator';
   }
 
   function ensureAdminUnrestricted(){
