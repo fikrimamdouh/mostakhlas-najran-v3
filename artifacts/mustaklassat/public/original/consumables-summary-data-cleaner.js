@@ -5,7 +5,7 @@
 (function () {
   'use strict';
 
-  var CACHE_MARKER = '20260708_v17_scoped_per_letter_print_all';
+  var CACHE_MARKER = '20260709_v18_disable_destructive_letter_signature_bridge';
   try { window.__CONSUMABLES_SUMMARY_CLEANER_CACHE_MARKER = CACHE_MARKER; } catch (_) {}
 
   var sig = location.pathname + location.search;
@@ -55,8 +55,8 @@
 
   function installConsumablesLetterSignatureBridge() {
     try {
-      if (window.__HOSPITAL_CONSUMABLES_LETTER_SIGNATURE_BRIDGE_V15__) return;
-      window.__HOSPITAL_CONSUMABLES_LETTER_SIGNATURE_BRIDGE_V15__ = true;
+      if (window.__HOSPITAL_CONSUMABLES_LETTER_SIGNATURE_BRIDGE_V18__) return;
+      window.__HOSPITAL_CONSUMABLES_LETTER_SIGNATURE_BRIDGE_V18__ = true;
 
       var LETTER_SETTINGS_KEY = 'hospitalConsumablesRaiseLettersSettings_v1';
       var LEGACY_SIGNATURES_KEY = 'signatures_data_consumables_v27';
@@ -67,15 +67,9 @@
         water: ['water', 'summary', 'subcontractors', 'performance', 'sewage'],
         certificate: ['summary', 'subcontractors', 'performance', 'water', 'sewage']
       };
-      var DEFAULT_SIGNATURE_TITLES = {
-        main: ['مدير المستشفى'],
-        noPrev: ['الموظف المختص', 'مدير الإدارة'],
-        electricity: ['مهندس الكهرباء', 'رئيس الصيانة العامة'],
-        water: ['مهندس المقاول', 'رئيس الصيانة العامة'],
-        certificate: ['مندوب المقاول', 'محاسب المستشفى', 'رئيس الصيانة العامة']
-      };
       var forceLegacySyncUntil = 0;
       var originalSetItem = localStorage.setItem.bind(localStorage);
+      var AUTO_LEGACY_TO_LETTER_SYNC_DISABLED = true;
 
       function clean(v) {
         return String(v == null ? '' : v).replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim();
@@ -110,13 +104,19 @@
       function signatureIsBlankOrDefault(letterKey, sigs) {
         sigs = Array.isArray(sigs) ? sigs : [];
         if (!sigs.length) return true;
-        var hasNames = sigs.some(function (s) { return clean(s && s.name); });
-        if (!hasNames) return true;
-        var defaults = DEFAULT_SIGNATURE_TITLES[letterKey] || [];
-        if (!defaults.length || sigs.length !== defaults.length) return false;
-        return sigs.every(function (s, i) {
-          return clean(s && s.title) === defaults[i] && !clean(s && s.name);
-        });
+        return !sigs.some(function (s) { return clean(s && s.title) || clean(s && s.name); });
+      }
+
+      function backupLetterSettingsBeforeBridge(reason) {
+        try {
+          var raw = localStorage.getItem(LETTER_SETTINGS_KEY);
+          if (!raw) return;
+          originalSetItem('hospitalConsumablesRaiseLettersSettings_before_legacy_bridge_v1', JSON.stringify({
+            backedUpAt: new Date().toISOString(),
+            reason: reason || 'signature-bridge',
+            value: raw
+          }));
+        } catch (_) {}
       }
 
       function ensureLetterShape(s) {
@@ -161,6 +161,10 @@
       }
 
       function syncLegacyToAllLetters(reason, force) {
+        if (AUTO_LEGACY_TO_LETTER_SYNC_DISABLED) {
+          console.warn('[HospitalConsumablesSignatureBridge] legacy-to-letter auto sync disabled:', reason || 'auto');
+          return false;
+        }
         try {
           var legacy = readJson(LEGACY_SIGNATURES_KEY, {});
           var settings = ensureLetterShape(readJson(LETTER_SETTINGS_KEY, {}));
@@ -169,11 +173,12 @@
             var mapped = pickLegacySignatures(legacy, letterKey);
             if (!mapped.length) return;
             var existing = settings.letters[letterKey] && settings.letters[letterKey].signatures;
-            if (!force && !signatureIsBlankOrDefault(letterKey, existing)) return;
+            if (!signatureIsBlankOrDefault(letterKey, existing)) return;
             settings.letters[letterKey].signatures = mapped;
             changed = true;
           });
           if (!changed) return false;
+          backupLetterSettingsBeforeBridge(reason || 'legacy-bridge-write');
           settings.version = settings.version || 'hospital-consumables-letters-v6';
           settings.__signatureBridge = {
             source: LEGACY_SIGNATURES_KEY,
@@ -182,7 +187,7 @@
             syncedAt: new Date().toISOString()
           };
           originalSetItem(LETTER_SETTINGS_KEY, JSON.stringify(settings));
-          console.warn('[HospitalConsumablesSignatureBridge] synced legacy signatures to all letters:', reason || 'auto');
+          console.warn('[HospitalConsumablesSignatureBridge] synced legacy signatures to blank letters only:', reason || 'auto');
           return true;
         } catch (e) {
           console.warn('[HospitalConsumablesSignatureBridge] sync failed:', e);
@@ -199,7 +204,7 @@
         try {
           if (String(key) === LEGACY_SIGNATURES_KEY) {
             var force = Date.now() <= forceLegacySyncUntil;
-            setTimeout(function () { syncLegacyToAllLetters(force ? 'legacy-signature-editor-save' : 'legacy-setItem', force); }, 0);
+            console.warn('[HospitalConsumablesSignatureBridge] legacy signature save detected; letter signatures preserved, no auto overwrite:', force ? 'legacy-signature-editor-save' : 'legacy-setItem');
           }
         } catch (_) {}
         return result;
@@ -214,9 +219,9 @@
       function relabelLegacySignatureButton() {
         try {
           var btn = document.getElementById('edit-signatures-btn');
-          if (!btn || btn.__hcLegacySignatureLabelV15) return;
-          btn.__hcLegacySignatureLabelV15 = true;
-          btn.title = 'هذا الزر يعدل تواقيع جداول المستهلكات، ويتم ربطها تلقائيًا بكل خطابات المستهلكات. التعديل التفصيلي لكل خطاب من زر خطابات المستهلكات.';
+          if (!btn || btn.__hcLegacySignatureLabelV18) return;
+          btn.__hcLegacySignatureLabelV18 = true;
+          btn.title = 'هذا الزر يعدل تواقيع جداول المستهلكات فقط. تواقيع خطابات المستهلكات مستقلة ولن يتم تغييرها تلقائيًا عند الريفريش أو حفظ تواقيع الجداول.';
           btn.innerHTML = '<i class="fas fa-signature"></i> تواقيع جداول المستهلكات';
         } catch (_) {}
       }
@@ -224,7 +229,7 @@
       relabelLegacySignatureButton();
       setTimeout(relabelLegacySignatureButton, 500);
       setTimeout(relabelLegacySignatureButton, 1500);
-      setTimeout(function () { syncLegacyToAllLetters('boot-if-letter-signatures-empty', false); }, 1200);
+      console.warn('[HospitalConsumablesSignatureBridge] boot auto-sync disabled — existing letter signatures are protected');
     } catch (e) {
       console.warn('[HospitalConsumablesSignatureBridge] install failed:', e);
     }
