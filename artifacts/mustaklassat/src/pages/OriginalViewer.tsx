@@ -109,13 +109,28 @@ export default function OriginalViewer() {
     } catch {}
   }, [dbUser]);
 
+  const injectOriginalHelpers = () => {
+    try {
+      const doc = iframeRef.current?.contentDocument;
+      if (!doc || doc.getElementById("najran-submit-flow-control-loader")) return;
+      const script = doc.createElement("script");
+      script.id = "najran-submit-flow-control-loader";
+      script.defer = true;
+      script.src = "/original/extract-submit-flow-control.js?v=20260709_submit_flow_v1";
+      doc.head.appendChild(script);
+    } catch {}
+  };
+
   const handleIframeLoad = () => {
     try {
       const win = iframeRef.current?.contentWindow;
       const loc = win?.location;
       if (!loc) return;
       const path = loc.pathname || "";
-      if (path.startsWith("/original/")) return;
+      if (path.startsWith("/original/")) {
+        injectOriginalHelpers();
+        return;
+      }
       const next = path + (loc.search || "") + (loc.hash || "");
       console.warn("[OriginalViewer] iframe tried to load SPA/non-original route; breaking out:", next);
       setFrameEscaped(true);
