@@ -21,15 +21,46 @@
   const SESSION_KEY = 'najran_session';
 
   function getSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { return null; } }
+  function saveSessionToken(token) {
+    if (!token) return;
+    try {
+      const s = getSession() || {};
+      s.clerkToken = token;
+      s.timestamp = Date.now();
+      localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+    } catch (_) {}
+  }
   function isAdminRole(role) {
     const r = String(role || '').toLowerCase().trim();
     return r === 'admin' || r === 'super_admin' || r === 'administrator';
   }
 
-  async function getFreshTokenForOriginalPages() {
-    try { if (typeof window.najranGetFreshToken === 'function') { const t = await window.najranGetFreshToken(); if (t) return t; } } catch (_) {}
-    try { if (window.parent && window.parent !== window && typeof window.parent.najranGetFreshToken === 'function') { const t = await window.parent.najranGetFreshToken(); if (t) return t; } } catch (_) {}
-    try { if (window.top && window.top !== window && typeof window.top.najranGetFreshToken === 'function') { const t = await window.top.najranGetFreshToken(); if (t) return t; } } catch (_) {}
+  async function callTokenGetter(fn, force) {
+    try {
+      if (typeof fn !== 'function') return null;
+      let t = null;
+      try { t = await fn(force ? { skipCache: true } : undefined); } catch (_) { t = await fn(); }
+      if (t) { saveSessionToken(t); return t; }
+    } catch (_) {}
+    return null;
+  }
+
+  async function getFreshTokenForOriginalPages(force) {
+    let token = null;
+    token = await callTokenGetter(window.najranGetFreshToken, force);
+    if (token) return token;
+    try {
+      if (window.parent && window.parent !== window) {
+        token = await callTokenGetter(window.parent.najranGetFreshToken, force);
+        if (token) return token;
+      }
+    } catch (_) {}
+    try {
+      if (window.top && window.top !== window) {
+        token = await callTokenGetter(window.top.najranGetFreshToken, force);
+        if (token) return token;
+      }
+    } catch (_) {}
     const session = getSession();
     return session && session.clerkToken ? session.clerkToken : null;
   }
@@ -53,7 +84,7 @@
     const session = getSession();
     if (!session || isAdminRole(session.role)) return;
 
-    const token = await getFreshTokenForOriginalPages();
+    const token = await getFreshTokenForOriginalPages(false);
     if (!token) return;
     try {
       await fetch('/api/audit', {
@@ -94,32 +125,48 @@
       init = init || {};
       const url = typeof input === 'string' ? input : (input && input.url) || '';
       const method = String(init.method || (input && input.method) || 'GET').toUpperCase();
-      const needsAuth = /\/api\/(submitted-extracts|users\/me|audit)/.test(url);
-      if (needsAuth) {
-        const token = await getFreshTokenForOriginalPages();
-        if (token) {
-          const headers = new Headers(init.headers || (input && input.headers) || {});
-          if (!headers.has('Authorization')) headers.set('Authorization', 'Bearer ' + token);
-          init = Object.assign({}, init, { headers, credentials: init.credentials || 'include' });
+      const sameOriginApi = /^\/api\//.test(url) || (function () { try { const u = new URL(url, location.origin); return u.origin === location.origin && u.pathname.indexOf('/api/') === 0; } catch (_) { return false; } })();
+      const skipAuth = /\/api\/client-events(?:$|[?#])/.test(url);
+      const needsAuth = sameOriginApi && !skipAuth;
+
+      async function withAuthHeaders(force) {
+        const next = Object.assign({}, init);
+        if (needsAuth) {
+          const token = await getFreshTokenForOriginalPages(!!force);
+          if (token) {
+            const headers = new Headers(next.headers || (input && input.headers) || {});
+            headers.set('Authorization', 'Bearer ' + token);
+            if (!headers.has('Content-Type') && method !== 'GET') headers.set('Content-Type', 'application/json');
+            next.headers = headers;
+            next.credentials = next.credentials || 'include';
+          }
         }
+        return next;
       }
+
       const action = apiActionName(method, url);
       const started = Date.now();
       let res;
-      try { res = await nativeFetch(input, init); }
-      catch (err) { if (action) log(action + ' — فشل اتصال', { method, url, error: err && err.message, durationMs: Date.now() - started }, { entityType: 'api' }); throw err; }
+      try {
+        res = await nativeFetch(input, await withAuthHeaders(false));
+        if (needsAuth && res && res.status === 401) {
+          try { res = await nativeFetch(input, await withAuthHeaders(true)); } catch (_) {}
+        }
+      }
+      catch (err) {
+        if (action) log(action + ' — فشل اتصال', { method, url, error: err && err.message, durationMs: Date.now() - started }, { entityType: 'api' });
+        throw err;
+      }
       if (action && method !== 'GET') log(action + (res.ok ? ' — نجاح' : ' — فشل'), { method, url, status: res.status, durationMs: Date.now() - started }, { entityType: 'api' });
-if (
-  res.status === 401 &&
-  /\/api\/submitted-extracts\/\d+(?:\/status)?(?:$|[?#])/.test(url) &&
-  (method === 'PUT' || method === 'PATCH')
-) {
-  try {
-    localStorage.removeItem('najran_revision_extract_id');
-  } catch (_) {}
-
-  console.warn('[NajranAuth] فشل تعديل/اعتماد المستخلص بسبب انتهاء التوكن. تم تنظيف مفتاح التعديل القديم.');
-}      return res;
+      if (
+        res.status === 401 &&
+        /\/api\/submitted-extracts\/\d+(?:\/status)?(?:$|[?#])/.test(url) &&
+        (method === 'PUT' || method === 'PATCH')
+      ) {
+        try { localStorage.removeItem('najran_revision_extract_id'); } catch (_) {}
+        console.warn('[NajranAuth] فشل تعديل/اعتماد المستخلص بسبب انتهاء التوكن. تم تنظيف مفتاح التعديل القديم.');
+      }
+      return res;
     };
   })();
 
@@ -253,5 +300,5 @@ if (
   function logExit() { const seconds = Math.max(1, Math.round((Date.now() - enteredAt) / 1000)); log('خروج صفحة', { durationSeconds: seconds }, { entityType: 'navigation', keepalive: true }); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', logEnter); else setTimeout(logEnter, 0);
   window.addEventListener('pagehide', logExit);
-  console.log('[AuditTracker] تم تفعيل مراقبة حقيقية: دخول/خروج/نقرات/تعديلات مباشرة/API');
+  console.log('[AuditTracker] تم تفعيل مراقبة حقيقية: دخول/خروج/نقرات/تعديلات مباشرة/API + fresh token retry');
 })();
