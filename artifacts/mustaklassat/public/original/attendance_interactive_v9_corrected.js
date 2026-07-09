@@ -3845,7 +3845,7 @@ function getSignatures() {
  * =====================================================================
  */
 (function () {
-  const VERSION = 'NJS_EXTRACT_AUDIT_2026_07_01_V1';
+  const VERSION = 'NJS_EXTRACT_AUDIT_2026_07_09_CONTRACT_CATEGORY_V2';
 
   if (window.NJSExtractAudit && window.NJSExtractAudit.__version === VERSION) {
     return;
@@ -3893,6 +3893,151 @@ function getSignatures() {
       .replace(/\s+/g, ' ');
   }
 
+  // ================================================================
+// فحص مطابقة الفئة الوظيفية حسب كراسة العقد
+// هذا الفحص لا يغيّر الغرامات ولا المعادلات المالية.
+// الهدف الوحيد: التأكد أن الفئة المخزنة على الموظف تطابق مسمى الوظيفة.
+// مثال: فني كهرباء يجب أن يكون فئة 4، مشرف صيانة يجب أن يكون فئة 5.
+// ================================================================
+function normalizeJobTitleForCategoryAudit(value) {
+  return String(value || '')
+    .replace(/[\u0610-\u061A\u064B-\u065F\u0670]/g, '')
+    .replace(/ـ/g, '')
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/\bفنى\b/g, 'فني')
+    .replace(/اليكتروني/g, 'الكتروني')
+    .replace(/اليكترونيات/g, 'الكترونيات')
+    .replace(/إليكتروني/g, 'الكتروني')
+    .replace(/إلكتروني/g, 'الكتروني')
+    .replace(/إطفاء/g, 'اطفاء')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+const CONTRACT_CATEGORY_JOB_TITLES = {
+  1: [
+    'مدير الموقع',
+    'مدير المشروع'
+  ],
+  2: [
+    'مساعد مدير الموقع',
+    'مساعد مدير المشروع'
+  ],
+  3: [
+    'مهندس كهرباء قوى',
+    'مهندس كهرباء',
+    'مهندس إلكترونيات',
+    'مهندس اليكترونيات',
+    'مهندس ميكانيكا',
+    'مهندس تبريد وتكييف',
+    'مهندس مدني',
+    'مهندس مدني صيانة مباني',
+    'مهندس سلامة',
+    'مشرف عام أمن',
+    'مشرف عام مغسلة'
+  ],
+  4: [
+    'فني كهرباء مولدات',
+    'فني كهرباء',
+    'فني مصاعد',
+    'فني أجهزة مراقبة وتحكم',
+    'فني سنترال وشبكات',
+    'فني إلكترونيات',
+    'فني اليكترونيات',
+    'فني أجهزة منزلية',
+    'فني آلات تصوير',
+    'فني تبريد وتكييف',
+    'فني تبريد وتكييف عام',
+    'فني مضخات',
+    'فني أجهزة إطفاء حريق',
+    'فني اجهزة اطفاء حريق',
+    'فني ميكانيكا مولدات',
+    'فنى ميكانيكا مولدات',
+    'فني غلايات',
+    'فني معدات غسيل',
+    'فني غازات طبية',
+    'فني محطات R.O.',
+    'فني محطات RO',
+    'فني محطة معالجة مياه الصرف الصحي',
+    'فنى محطة معالجة مياه الصرف الصحي',
+    'فني زراعي',
+    'فني سلامة',
+    'كيميائي',
+    'عامل زراعي',
+    'مشرف موقع'
+  ],
+  5: [
+    'مشرف صيانة',
+    'مشرف نظافة',
+    'مشرفة نظافة',
+    'مشرف مغسلة',
+    'مشرف أمن',
+    'مشرف أمن وسلامة',
+    'مشرفة أمن وسلامة',
+    'رجل أمن وسلامة',
+    'حارسة أمن وسلامة',
+    'مراقب أمن مرضى',
+    'مراقب أمن مرضي',
+    'مراقبة أمن مرضى',
+    'مراقبة أمن مرضي',
+    'مشرف سباحة',
+    'مراقب مباني',
+    'منسق حدائق',
+    'كهربائي',
+    'كهربائي سيارات',
+    'ميكانيكي',
+    'ميكانيكي سيارات',
+    'سباك',
+    'نجار',
+    'حداد',
+    'مبلط',
+    'بناء ومبلط',
+    'بناء و مبلط',
+    'لحام',
+    'دهان',
+    'منجد',
+    'خياط ومنجد',
+    'خياط و منجد',
+    'مشغل معدات مغسلة',
+    'حارس أمن',
+    'حارسة أمن'
+  ],
+  6: [
+    'عامل مساند ميكانيكي',
+    'عامل مساند ميكانيكى',
+    'عامل مساند مدني',
+    'عامل فرز غسيل',
+    'عامل مكوى',
+    'عامل جمع وتوزيع غسيل',
+    'عامل جمع و توزيع غسيل',
+    'عاملة جمع وتوزيع غسيل',
+    'عاملة جمع و توزيع غسيل',
+    'عامل تخزين ملابس'
+  ],
+  7: [
+    'عامل نظافة',
+    'عاملة نظافة',
+    'عامل تحميل وتنزيل',
+    'عامل ساحات خارجية',
+    'عاملة ترحيل'
+  ]
+};
+
+const CONTRACT_CATEGORY_BY_JOB_TITLE = {};
+Object.keys(CONTRACT_CATEGORY_JOB_TITLES).forEach(function (category) {
+  CONTRACT_CATEGORY_JOB_TITLES[category].forEach(function (title) {
+    CONTRACT_CATEGORY_BY_JOB_TITLE[normalizeJobTitleForCategoryAudit(title)] = String(category);
+  });
+});
+
+function getExpectedCategoryByJobTitle(jobTitle) {
+  const key = normalizeJobTitleForCategoryAudit(jobTitle);
+  if (!key) return null;
+  return CONTRACT_CATEGORY_BY_JOB_TITLE[key] || null;
+}
   function auditMoney(value) {
     const n = Number(value) || 0;
     return n.toLocaleString('ar-SA', {
@@ -4207,8 +4352,10 @@ const absenceFine = auditSkipAbsenceFine
       critical: [],
       warnings: [],
       info: [],
-      categoryIssues: [],
-      safeCategorySuggestions: [],
+     categoryIssues: [],
+safeCategorySuggestions: [],
+categoryContractMismatches: [],
+categoryUnknownJobs: [],
       stats: {
         totalEmployees: 0,
         totalVacantDays: 0,
@@ -4321,7 +4468,69 @@ const absenceFine = auditSkipAbsenceFine
         }
 
         const categoryCheck = financial.categoryCheck;
+const expectedCategory = getExpectedCategoryByJobTitle(jobTitle);
+const rawCategoryForContract = String((emp && emp.category) ?? '').trim() || 'فارغ';
 
+if (expectedCategory) {
+  if (!categoryCheck.ok) {
+    const issue = {
+      deptKey,
+      deptName,
+      index,
+      name: name || 'بدون اسم',
+      jobTitle: jobTitle || 'بدون وظيفة',
+      rawCategory: rawCategoryForContract,
+      expectedCategory
+    };
+
+    result.categoryContractMismatches.push(issue);
+
+    pushIssue(
+      result.critical,
+      'فئة غير رقمية حسب العقد',
+      `${deptName} — صف ${index + 1} — ${issue.name} — ${issue.jobTitle} — الفئة الحالية: "${issue.rawCategory}" — الفئة الصحيحة حسب العقد: "${expectedCategory}"`,
+      { deptKey, index, categoryContractMismatch: true }
+    );
+  } else if (categoryCheck.normalized !== expectedCategory) {
+    const issue = {
+      deptKey,
+      deptName,
+      index,
+      name: name || 'بدون اسم',
+      jobTitle: jobTitle || 'بدون وظيفة',
+      rawCategory: categoryCheck.raw || rawCategoryForContract,
+      currentCategory: categoryCheck.normalized,
+      expectedCategory
+    };
+
+    result.categoryContractMismatches.push(issue);
+
+    pushIssue(
+      result.critical,
+      'فئة لا تطابق مسمى الوظيفة حسب العقد',
+      `${deptName} — صف ${index + 1} — ${issue.name} — ${issue.jobTitle} — الفئة الحالية: "${issue.currentCategory}" — الفئة الصحيحة حسب العقد: "${expectedCategory}"`,
+      { deptKey, index, categoryContractMismatch: true }
+    );
+  }
+} else if (jobTitle) {
+  const issue = {
+    deptKey,
+    deptName,
+    index,
+    name: name || 'بدون اسم',
+    jobTitle,
+    rawCategory: rawCategoryForContract
+  };
+
+  result.categoryUnknownJobs.push(issue);
+
+  pushIssue(
+    result.warnings,
+    'مسمى وظيفة غير موجود في قاعدة فحص الفئات',
+    `${deptName} — صف ${index + 1} — ${issue.name} — ${jobTitle} — الفئة الحالية: "${rawCategoryForContract}"`,
+    { deptKey, index, categoryUnknownJob: true }
+  );
+}
         if (!categoryCheck.ok) {
           const suggestion = getSuggestedCategoryFromSameJobForAudit(jobTitle, categoryIndex);
 
@@ -4509,6 +4718,8 @@ const absenceFine = auditSkipAbsenceFine
     result.info.push({ title: 'عدد التواقيع غير المكتملة', detail: String(result.stats.incompleteSignatures) });
     result.info.push({ title: 'عدد الفئات غير الصالحة', detail: String(result.categoryIssues.length) });
     result.info.push({ title: 'فئات يمكن اقتراحها من نفس الوظيفة', detail: String(result.safeCategorySuggestions.length) });
+    result.info.push({ title: 'عدد مخالفات الفئة حسب العقد', detail: String(result.categoryContractMismatches.length) });
+result.info.push({ title: 'عدد المسميات غير الموجودة في قاعدة الفئات', detail: String(result.categoryUnknownJobs.length) });
     result.info.push({ title: 'إجمالي التكلفة المحسوبة', detail: auditMoney(result.totals.cost) });
     result.info.push({ title: 'إجمالي الحسم المحسوب', detail: auditMoney(result.totals.deduction) });
     result.info.push({ title: 'إجمالي الغرامات المحسوبة', detail: auditMoney(result.totals.fine) });
@@ -4648,7 +4859,25 @@ overlay.onclick = function(event) {
 عند استخدام زر الإصلاح المقترح، يتم الإصلاح فقط إذا وجد النظام نفس مسمى الوظيفة بفئة واحدة واضحة.
 بعد الإصلاح، يجب على المستخدم مراجعة الفئات قبل الطباعة أو الاعتماد.
 `;
-
+// ================================================================
+// زر التصحيح يغيّر category فقط.
+// لا يلمس الحضور، الراتب، الجنسية، رقم الإقامة، الاسم، أو مسمى الوظيفة.
+// لا يغيّر الغرامات أو أي معادلة مالية.
+// ================================================================
+const contractCategoryFixButton = audit.categoryContractMismatches.length > 0 ? `
+  <button onclick="NJSExtractAudit.applyContractCategoryFixes()"
+    style="
+      background:#7c2d12;
+      color:#fff;
+      border:none;
+      border-radius:10px;
+      padding:10px 16px;
+      font-weight:900;
+      cursor:pointer;
+    ">
+    تصحيح الفئات حسب العقد
+  </button>
+` : '';
     dialog.innerHTML = `
       <div style="background:linear-gradient(135deg,#1e3c72,#0f2444);color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">
         <h3 style="margin:0;font-size:18px;font-weight:900;">
@@ -4694,7 +4923,7 @@ overlay.onclick = function(event) {
   ">
   إصلاح الفئات المقترحة من نفس الوظيفة
 </button>
-
+${contractCategoryFixButton}
           <button onclick="NJSExtractAudit.open()"
             style="background:#1e3c72;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:900;cursor:pointer;">
             إعادة الفحص
@@ -4802,14 +5031,74 @@ overlay.onclick = function(event) {
 
     openAuditDialog();
   }
+function applyContractCategoryFixes() {
+  const data = getAuditAttendanceData();
+  const audit = collectExtractAuditResults();
 
-  window.NJSExtractAudit = {
-    __version: VERSION,
-    open: openAuditDialog,
-    close: closeAuditDialog,
-    collect: collectExtractAuditResults,
-    applySuggestedCategories: applySuggestedCategoriesFromSameJob
-  };
+  const fixes = audit.categoryContractMismatches.filter(item =>
+    /^[1-7]$/.test(String(item.expectedCategory || ''))
+  );
+
+  if (fixes.length === 0) {
+    alert('لا توجد فئات مؤكدة يمكن تصحيحها حسب قاعدة العقد.');
+    return;
+  }
+
+  const preview = fixes.slice(0, 20).map(item =>
+    `${item.deptName} — صف ${item.index + 1} — ${item.name} — ${item.jobTitle} — من "${item.currentCategory || item.rawCategory || 'فارغ'}" إلى "${item.expectedCategory}"`
+  ).join('\n');
+
+  const more = fixes.length > 20
+    ? `\n\n...وعدد ${fixes.length - 20} تعديل آخر`
+    : '';
+
+  if (!confirm(
+    `سيتم تصحيح ${fixes.length} فئة حسب قاعدة كراسة العقد.\n\n` +
+    preview + more +
+    `\n\nهذا التصحيح يغيّر خانة category فقط.\n` +
+    `لن يتم تعديل الاسم، الوظيفة، الجنسية، رقم الإقامة، الراتب، الحضور، أو أي معادلة مالية.`
+  )) {
+    return;
+  }
+
+  let updatedCount = 0;
+
+  fixes.forEach(item => {
+    const emp = data?.[item.deptKey]?.[item.index];
+    if (!emp) return;
+    if (!/^[1-7]$/.test(String(item.expectedCategory || ''))) return;
+
+    emp.category = String(item.expectedCategory);
+    updatedCount++;
+  });
+
+  if (!saveAttendanceDataExactForAudit(data)) {
+    return;
+  }
+
+  try {
+    if (typeof renderTables === 'function') {
+      renderTables();
+    }
+  } catch (error) {
+    console.warn('تم حفظ تصحيح الفئات حسب العقد لكن فشل تحديث الجداول:', error);
+  }
+
+  alert(
+    `تم تصحيح ${updatedCount} فئة حسب قاعدة كراسة العقد.\n\n` +
+    `راجع الفئات والإجماليات قبل الطباعة أو الاعتماد.`
+  );
+
+  openAuditDialog();
+}
+ window.NJSExtractAudit = {
+  __version: VERSION,
+  open: openAuditDialog,
+  close: closeAuditDialog,
+  collect: collectExtractAuditResults,
+  applySuggestedCategories: applySuggestedCategoriesFromSameJob,
+  applyContractCategoryFixes: applyContractCategoryFixes
+};
 })();
 function openExtractAuditDialog() {
   if (window.NJSExtractAudit && typeof window.NJSExtractAudit.open === 'function') {
