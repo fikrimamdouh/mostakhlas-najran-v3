@@ -2,8 +2,8 @@
 // Official submit-flow control: confirmation, no auto payment/month mutation, update existing, and durable submit summary.
 (function () {
   'use strict';
-  if (window.__NAJRAN_EXTRACT_SUBMIT_FLOW_CONTROL_V2__) return;
-  window.__NAJRAN_EXTRACT_SUBMIT_FLOW_CONTROL_V2__ = true;
+  if (window.__NAJRAN_EXTRACT_SUBMIT_FLOW_CONTROL_V3__) return;
+  window.__NAJRAN_EXTRACT_SUBMIT_FLOW_CONTROL_V3__ = true;
 
   var SUMMARY_KEY = 'najran_last_submitted_summary_v1';
   var WORK_CONTEXT_KEY = 'najran_work_context_v1';
@@ -29,6 +29,14 @@
       totalAmount: clean(localStorage.getItem('finalConsumablesCost') || localStorage.getItem('finalLaborCost') || e.totalCost || '')
     };
   }
+  function submitTypeFromPageAndText(text) {
+    var p = location.pathname;
+    text = clean(text);
+    if (p.indexOf('spare_parts') > -1 || /قطع الغيار/.test(text)) return 'spare_parts';
+    if (p.indexOf('health_centers') > -1 || /المراكز/.test(text)) return 'health_centers';
+    if (p.indexOf('consumables') > -1 || /مستهلكات/.test(text)) return 'consumables';
+    return 'labor';
+  }
   function typeFromButtonText(text) {
     text = clean(text);
     if (/مستهلكات/.test(text)) return 'مستخلص المستهلكات';
@@ -38,19 +46,51 @@
     if (/العمالة|الحضور/.test(text)) return 'مستخلص العمالة';
     return 'مستخلص';
   }
-  function latestDoneLock() {
+  function isEditingExisting() {
+    return !!(
+      localStorage.getItem('najran_revision_mode') === 'true' ||
+      localStorage.getItem('najran_revision_extract_id') ||
+      localStorage.getItem('najran_editing_submitted_extract_id') ||
+      localStorage.getItem('najran_editing_submitted_extract_mode') === 'true'
+    );
+  }
+  function doneLockMatches(v, type) {
+    if (!v || !v.submittedAt) return false;
+    var cd = contractData();
+    var ageOk = Date.now() - Number(v.submittedAt || 0) < 24 * 60 * 60 * 1000;
+    if (!ageOk) return false;
+    if (type && v.type && clean(v.type) !== clean(type)) return false;
+    if (v.month && clean(v.month) !== clean(cd.extractMonth)) return false;
+    if (v.year && clean(v.year) !== clean(cd.extractYear)) return false;
+    if (v.payment && clean(v.payment) !== clean(cd.paymentNumber)) return false;
+    return true;
+  }
+  function currentDoneLock(type) {
+    var cd = contractData();
+    var key = [
+      'najran_submit_done_submitted_extract',
+      type || '',
+      cd.companyName || '',
+      cd.hospitalName || localStorage.getItem('hospitalName') || '',
+      cd.extractYear || '',
+      cd.extractMonth || '',
+      cd.paymentNumber || ''
+    ].join('__');
+    var direct = safeJson(localStorage.getItem(key), null);
+    if (doneLockMatches(direct, type)) return Object.assign({ key: key }, direct);
     var best = null;
     try {
       for (var i = 0; i < localStorage.length; i++) {
         var k = localStorage.key(i);
         if (!k || k.indexOf('najran_submit_done_') !== 0) continue;
         var v = safeJson(localStorage.getItem(k), null);
-        if (!v || !v.submittedAt) continue;
-        if (!best || Number(v.submittedAt) > Number(best.submittedAt || 0)) best = Object.assign({ key: k }, v);
+        if (!doneLockMatches(v, type)) continue;
+        if (!best || Number(v.submittedAt || 0) > Number(best.submittedAt || 0)) best = Object.assign({ key: k }, v);
       }
     } catch (_) {}
     return best;
   }
+  function latestDoneLock() { return currentDoneLock('') || null; }
   function setUpdateMode(existingId) {
     existingId = clean(existingId);
     if (!existingId) return false;
@@ -70,15 +110,19 @@
       if (!summary || summary.action !== 'update') return;
       [
         'najran_revision_mode','najran_revision_extract_id','najran_revision_extract_type','najran_revision_started_at','najran_revision_source','najran_revision_snapshot','najran_revision_snapshot_summary','najran_revision_boot_lock',
-        'najran_editing_submitted_extract_id','najran_editing_submitted_extract_mode','najran_editing_submitted_extract_started_at','najran_editing_submitted_extract_mode'
+        'najran_editing_submitted_extract_id','najran_editing_submitted_extract_mode','najran_editing_submitted_extract_started_at'
       ].forEach(function (k) { try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch (_) {} });
     } catch (_) {}
   }
   function goTrack() { location.href = '/extracts/track'; }
   function goSettings() { location.href = '/original/settings_main.html'; }
-  function triggerSubmitAgain() {
+  function enableNativeSubmitBypass() {
     allowNextSubmitClick = true;
     skipConfirmUntil = Date.now() + 12000;
+    window.__NAJRAN_SKIP_NATIVE_SUBMIT_CONFIRM_UNTIL__ = skipConfirmUntil;
+  }
+  function triggerSubmitAgain() {
+    enableNativeSubmitBypass();
     setTimeout(function () {
       var btn = document.getElementById('_najran_approve_btn_inner');
       if (btn) btn.click();
@@ -117,12 +161,19 @@
   }
   function showConfirmSubmitModal(originalButton) {
     var text = clean(originalButton && originalButton.textContent || 'رفع مستخلص');
+    var type = submitTypeFromPageAndText(text);
+    if (!isEditingExisting()) {
+      var lock = currentDoneLock(type);
+      if (lock) {
+        showDuplicateChoiceModal(lock.resultId || lock.existingId || '');
+        return;
+      }
+    }
     var overlay = modalShell('najran-submit-confirm-modal', 'تأكيد رفع المستخلص', 'راجع البيانات قبل الرفع. بعد الرفع لا تكرر نفس البيانات إلا من خلال تحديث المستخلص القائم.',
       summaryBlock('') +
       '<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:9px 11px;color:#9a3412;font-weight:800;margin-bottom:12px">' +
       'نوع العملية: ' + esc(typeFromButtonText(text)) + '<br>لو تريد مستخلصًا جديدًا بعد الرفع، غيّر رقم الدفعة أو الشهر من الإعدادات أولًا.' +
       '</div>' +
-      (isAdmin() ? '<div style="margin:0 0 12px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:10px;padding:9px 11px;font-weight:800">رفع الأدمن يبقى تحت نطاق المقر الرئيسي ولا يؤثر على مواقع المستخدمين.</div>' : '') +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start">' +
       '<button data-action="submit" style="padding:10px 13px;border:0;border-radius:10px;background:#166534;color:#fff;font-weight:900;cursor:pointer;font-family:inherit">رفع الآن</button>' +
       '<button data-action="review" style="padding:10px 13px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc;color:#334155;font-weight:900;cursor:pointer;font-family:inherit">مراجعة البيانات</button>' +
@@ -136,8 +187,12 @@
       if (action === 'cancel' || action === 'review') { overlay.remove(); return; }
       if (action === 'submit') {
         overlay.remove();
-        allowNextSubmitClick = true;
-        skipConfirmUntil = Date.now() + 12000;
+        var lock = currentDoneLock(type);
+        if (!isEditingExisting() && lock) {
+          showDuplicateChoiceModal(lock.resultId || lock.existingId || '');
+          return;
+        }
+        enableNativeSubmitBypass();
         setTimeout(function () { originalButton.click(); }, 80);
       }
     });
@@ -149,7 +204,6 @@
     var overlay = modalShell('najran-submit-duplicate-choice-modal', 'هذا المستخلص مرفوع مسبقًا', 'لن يتم تغيير رقم الدفعة أو الشهر تلقائيًا. اختر الإجراء الصحيح.',
       summaryBlock(existingId) +
       '<p style="margin:0 0 12px;color:#475569">لو تريد تعديل نفس المستخلص الموجود، اختر <b>تحديث المستخلص القائم</b>. لو تريد مستخلصًا جديدًا، غيّر رقم الدفعة أو الشهر من الإعدادات أولًا.</p>' +
-      (isAdmin() ? '<div style="margin:0 0 12px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:10px;padding:9px 11px;font-weight:800">رفع الأدمن يبقى تحت نطاق المقر الرئيسي ولا يؤثر على مواقع المستخدمين.</div>' : '') +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start">' +
       '<button data-action="update" ' + (existingId ? '' : 'disabled') + ' style="padding:10px 13px;border:0;border-radius:10px;background:' + (existingId ? '#166534' : '#94a3b8') + ';color:#fff;font-weight:900;cursor:' + (existingId ? 'pointer' : 'not-allowed') + ';font-family:inherit">تحديث المستخلص القائم</button>' +
       '<button data-action="track" style="padding:10px 13px;border:0;border-radius:10px;background:#1e3c72;color:#fff;font-weight:900;cursor:pointer;font-family:inherit">الذهاب للمتابعة</button>' +
@@ -171,6 +225,19 @@
         triggerSubmitAgain();
       }
     });
+  }
+  function installNativeConfirmPatch() {
+    if (window.__NAJRAN_NATIVE_SUBMIT_CONFIRM_PATCHED__) return;
+    window.__NAJRAN_NATIVE_SUBMIT_CONFIRM_PATCHED__ = true;
+    var nativeConfirm = window.confirm;
+    window.confirm = function (msg) {
+      try {
+        var text = clean(msg || '');
+        var until = Math.max(Number(skipConfirmUntil || 0), Number(window.__NAJRAN_SKIP_NATIVE_SUBMIT_CONFIRM_UNTIL__ || 0));
+        if (Date.now() < until && (/رفع مستخلص|رفع للاعتماد|للاعتماد/.test(text))) return true;
+      } catch (_) {}
+      return nativeConfirm.apply(window, arguments);
+    };
   }
   function installSubmitConfirmCapture() {
     if (window.__NAJRAN_SUBMIT_CONFIRM_CAPTURE__) return;
@@ -277,10 +344,11 @@
     };
   }
 
+  installNativeConfirmPatch();
   installSubmitConfirmCapture();
   installDuplicateOverride();
   installDuplicateModalObserver();
   patchFetchForSubmitSummary();
-  window.NajranExtractSubmitFlowControl = { showDuplicateChoiceModal: showDuplicateChoiceModal, latestDoneLock: latestDoneLock, setUpdateMode: setUpdateMode };
-  console.info('[ExtractSubmitFlowControl] installed v2 deterministic confirm + no-auto-resubmit + durable summary');
+  window.NajranExtractSubmitFlowControl = { showDuplicateChoiceModal: showDuplicateChoiceModal, latestDoneLock: latestDoneLock, setUpdateMode: setUpdateMode, currentDoneLock: currentDoneLock };
+  console.info('[ExtractSubmitFlowControl] installed v3 confirm + duplicate precheck + no admin notice + durable summary');
 })();
