@@ -39,11 +39,11 @@ import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
 
-const MAX_EVENTS_PER_REQUEST = 50;
-const MAX_PAYLOAD_BYTES = 64 * 1024;         // 64 KB per request
-const MAX_EVENT_STRING_BYTES = 16 * 1024;    // 16 KB per single event after serialization
+const MAX_EVENTS_PER_REQUEST = 10;
+const MAX_PAYLOAD_BYTES = 24 * 1024;         // 64 KB per request
+const MAX_EVENT_STRING_BYTES = 6 * 1024;    // 16 KB per single event after serialization
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;  // 5 minutes
-const RATE_LIMIT_MAX_EVENTS = 100;           // per user per window
+const RATE_LIMIT_MAX_EVENTS = 30;           // per user per window
 
 // In-memory rate-limit cache. Keyed by userId, value = list of timestamps in
 // the current window. Cleared periodically. Sufficient for our modest volume;

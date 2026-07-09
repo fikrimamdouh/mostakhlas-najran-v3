@@ -71,8 +71,13 @@
         if (token) return token;
       }
     } catch (_) {}
+    // آخر بديل: توكن الجلسة المخزّن — لكن فقط لو حديث (توكنات Clerk تنتهي
+    // خلال ~60 ثانية). توكن قديم = طلب محكوم عليه بـ401 أحمر في Console بلا
+    // فائدة، فالأصح ألا يخرج الطلب أصلًا؛ المستدعي (authJson) يرجع فشلًا
+    // صامتًا والإشعارات تُقرأ من الكاش.
     var s = getSession();
-    return s && s.clerkToken ? s.clerkToken : null;
+    if (s && s.clerkToken && s.timestamp && (Date.now() - s.timestamp) < 55000) return s.clerkToken;
+    return null;
   }
 
   async function authJson(url, options, force) {

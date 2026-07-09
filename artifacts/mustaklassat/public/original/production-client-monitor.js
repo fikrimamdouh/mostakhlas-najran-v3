@@ -13,9 +13,9 @@
   var META_KEY = 'najran_monitor_meta_v1';
   var ENDPOINT = '/api/client-events';
   var BUILD = 'monitor_v2_20260709_circuit_breaker';
-  var MAX_QUEUE = 50;
+  var MAX_QUEUE = 20;
   var MAX_LAST_ACTIONS = 20;
-  var RATE_LIMIT_MAX = 20;
+  var RATE_LIMIT_MAX = 8;
   var RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
   var DEBOUNCE_FLUSH_MS = 2000;
   var PERIODIC_FLUSH_MS = 60 * 1000;
@@ -284,8 +284,12 @@
   async function getFreshAuthToken() {
     try { if (typeof window.najranGetFreshToken === 'function') { var t = await window.najranGetFreshToken(); if (t) return t; } } catch (_) {}
     try { if (window.parent && window.parent !== window && typeof window.parent.najranGetFreshToken === 'function') { var pt = await window.parent.najranGetFreshToken(); if (pt) return pt; } } catch (_) {}
+    // بديل أخير: توكن الجلسة فقط لو حديث (<55 ثانية) — توكن قديم = POST محكوم
+    // بـ401 أحمر بلا فائدة ويستهلك عدّاد الـ circuit breaker. لو مفيش توكن
+    // صالح، flush يرجع بهدوء والطابور محفوظ للمحاولة القادمة.
     var s = getSession();
-    return s.clerkToken || null;
+    if (s && s.clerkToken && s.timestamp && (Date.now() - s.timestamp) < 55000) return s.clerkToken;
+    return null;
   }
   function scheduleFlush() {
     if (flushTimer) return;
@@ -300,7 +304,7 @@
     var token = await getFreshAuthToken();
     if (!token) return;
     flushInFlight = true;
-    var toSend = q.slice(0, 30);
+    var toSend = q.slice(0, 10);
     fetch(ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
