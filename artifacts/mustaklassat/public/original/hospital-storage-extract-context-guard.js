@@ -22,7 +22,7 @@ function shouldAuthRetry(input){try{var raw=typeof input==='string'?input:(input
 async function withFreshAuth(input,init,force){init=Object.assign({},init||{});if(!shouldAuthRetry(input))return init;var token=await freshToken(!!force);if(!token)return init;var h=new Headers(init.headers||(input&&input.headers)||{});h.set('Authorization','Bearer '+token);init.headers=h;init.credentials=init.credentials||'include';return init}
 
 function isSubmitPage(){var p=location.pathname+location.search;return /(?:achievement|consumables|spare_parts|health_centers_consumables|admin_offices_attendance|admin_offices_consumables|najran_general_achievement|najran_dental_performance)\.html/.test(p)}
-function loadSubmitFlowControl(){try{if(!isSubmitPage())return;if(document.getElementById('najran-submit-flow-control-direct-loader'))return;var s=document.createElement('script');s.id='najran-submit-flow-control-direct-loader';s.src='/original/extract-submit-flow-control.js?v=20260709_submit_flow_v2';s.defer=false;document.head.appendChild(s);console.info('[SubmitFlowControlLoader] requested v2')}catch(e){console.warn('[SubmitFlowControlLoader] failed',e)}}
+function loadSubmitFlowControl(){try{if(!isSubmitPage())return;if(document.getElementById('najran-submit-flow-control-direct-loader'))return;var s=document.createElement('script');s.id='najran-submit-flow-control-direct-loader';s.src='/original/extract-submit-flow-control.js?v=20260709_submit_flow_v4_verified';s.defer=false;document.head.appendChild(s);console.info('[SubmitFlowControlLoader] requested v4 verified')}catch(e){console.warn('[SubmitFlowControlLoader] failed',e)}}
 
 function isAchievement(){var full=location.pathname+(location.search||'');return /achievement\.html(?:$|[?#])/.test(full)||/original-viewer\?page=achievement\.html/.test(full)}
 function isLettersMode(){return new URLSearchParams(location.search||'').get('hospitalLettersClean')==='1'}
@@ -71,5 +71,5 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 setTimeout(installHospitalLettersButton,700);setTimeout(installHospitalLettersButton,1800);
 setTimeout(loadSubmitFlowControl,300);setTimeout(loadSubmitFlowControl,1200);
 loadLetters();
-console.info('[HospitalStorageContextGuard] active + fresh token retry + submit flow loader');
+console.info('[HospitalStorageContextGuard] active + fresh token retry + submit flow loader v4');
 })();
