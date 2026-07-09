@@ -9,12 +9,12 @@
   'use strict';
 
   var BASE = window.location.origin;
-  var BUILD_V = '20260709_auth_fresh_token_v2';
+  var BUILD_V = '20260709_auth_fresh_token_v3_archive_filter';
   var HOSPITAL_STORAGE_GUARD_V = '20260709_fresh_token_retry_v2';
   var APPROVAL_REVISION_GUARD_V = '20260709_approval_revision_v4_active_mode';
   var MONITOR_V = '20260709_monitor_v1b_safe_storage';
   var NOTIF_INTERVAL_MS = 900000;
-  var NAJRAN_BUILD_VERSION = '2026.07.09-auth-r2';
+  var NAJRAN_BUILD_VERSION = '2026.07.09-auth-r3';
   window.NAJRAN_BUILD_VERSION = NAJRAN_BUILD_VERSION;
 
   try { console.info('%c[Najran] النسخة: ' + NAJRAN_BUILD_VERSION, 'color:#1e3c72;font-weight:bold'); } catch (_) {}
@@ -239,7 +239,10 @@
     appendScript('/original/review-consumables-summary-exact.js?v=' + BUILD_V, true);
   }
 
-  if (pageFile === 'extract-archive.html') appendScript('/original/extract_archive_route_guard.js?v=20260703_extract_archive_route_v5', true);
+  if (pageFile === 'extract-archive.html') {
+    appendScript('/original/extract_archive_route_guard.js?v=20260703_extract_archive_route_v5', true);
+    appendScript('/original/extract_archive_server_hospital_filter.js?v=' + BUILD_V, true);
+  }
   if (/consumables\.html$/.test(pageFile)) appendScript('/original/consumables-submit-snapshot-guard.js?v=20260708_consumables_guard_v5_nondestructive', true);
   if (pageFile === 'settings_main.html') {
     appendScript('/original/settings-backup-complete-guard.js?v=20260611d', true);
