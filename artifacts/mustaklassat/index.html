@@ -74,6 +74,15 @@
           return role === 'admin' || role === 'super_admin' || role === 'administrator';
         }
 
+        function sanitizeAdminSessionObject(s) {
+          if (!s || !isAdminRole(s.role)) return s;
+          s.reviewOnly = false;
+          s.canEditCurrentHospital = true;
+          s.canReviewCurrentHospital = false;
+          if (s.reviewActiveHospital) delete s.reviewActiveHospital;
+          return s;
+        }
+
         function clearOperationalLocalData() {
           try {
             for (var i = 0; i < OPERATIONAL_KEYS.length; i++) {
@@ -90,11 +99,19 @@
         var nativeSetItem = Storage.prototype.setItem;
         var currentSetItem = localStorage.setItem;
 
+        try {
+          var bootSession = sanitizeAdminSessionObject(parseSession(localStorage.getItem(SESSION_KEY)));
+          if (bootSession && isAdminRole(bootSession.role)) {
+            nativeSetItem.call(localStorage, SESSION_KEY, JSON.stringify(bootSession));
+          }
+        } catch (_) {}
+
         localStorage.setItem = function (key, value) {
           if (key === SESSION_KEY) {
             try {
               var oldSession = parseSession(localStorage.getItem(SESSION_KEY));
-              var newSession = parseSession(String(value));
+              var newSession = sanitizeAdminSessionObject(parseSession(String(value)));
+              if (newSession) value = JSON.stringify(newSession);
 
               var oldUserId = oldSession && oldSession.userId ? String(oldSession.userId) : '';
               var newUserId = newSession && newSession.userId ? String(newSession.userId) : '';
@@ -114,7 +131,7 @@
             } catch (_) {}
           }
 
-          return currentSetItem.apply(localStorage, arguments);
+          return currentSetItem.apply(localStorage, [key, value]);
         };
 
         localStorage.setItem.__najranSessionGuard = true;
