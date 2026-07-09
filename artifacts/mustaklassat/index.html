@@ -115,7 +115,17 @@
         localStorage.setItem.__najranNativeSetItem = nativeSetItem;
       })();
     </script>
-    <script defer src="/reviewer-permissions-guard.js"></script>
+    <script>
+      (function () {
+        'use strict';
+        var isMonitorViewer = /\/original-viewer(?:$|[?#])/.test(location.pathname) && /(?:^|[?&])page=settings_advanced\.html(?:&|$)/.test(location.search);
+        if (isMonitorViewer) return;
+        var script = document.createElement('script');
+        script.defer = true;
+        script.src = '/reviewer-permissions-guard.js';
+        document.head.appendChild(script);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
