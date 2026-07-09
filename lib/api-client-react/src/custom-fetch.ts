@@ -363,7 +363,9 @@ export async function customFetch<T = unknown>(
   }
 
   if (_authTokenGetter && !headers.has("authorization")) {
-    attachAuth(headers, await getAuthToken(false));
+    // Use a fresh Clerk token before the first request so the browser console
+    // does not show a transient 401 before the retry succeeds.
+    attachAuth(headers, await getAuthToken(true));
   }
 
   const requestInfo = { method, url: resolveUrl(input) };
