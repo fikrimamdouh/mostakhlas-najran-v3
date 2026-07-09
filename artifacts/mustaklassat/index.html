@@ -69,6 +69,11 @@
           return false;
         }
 
+        function isAdminRole(role) {
+          role = String(role || '').toLowerCase();
+          return role === 'admin' || role === 'super_admin' || role === 'administrator' || role === 'supervisor';
+        }
+
         function clearOperationalLocalData() {
           try {
             for (var i = 0; i < OPERATIONAL_KEYS.length; i++) {
@@ -100,8 +105,9 @@
               var changedUser = !!oldUserId && !!newUserId && oldUserId !== newUserId;
               var changedHospital = !!oldHospital && !!newHospital && oldHospital !== newHospital;
               var staleHospitalWithoutSession = !oldSession && !!storedHospital && !!newHospital && storedHospital.trim() !== newHospital;
+              var adminContext = isAdminRole(oldSession && oldSession.role) || isAdminRole(newSession && newSession.role);
 
-              if (changedUser || changedHospital || staleHospitalWithoutSession) {
+              if (!adminContext && (changedUser || changedHospital || staleHospitalWithoutSession)) {
                 clearOperationalLocalData();
                 console.log('[NajranSessionGuard] cleared stale operational localStorage for new user context');
               }
@@ -115,6 +121,7 @@
         localStorage.setItem.__najranNativeSetItem = nativeSetItem;
       })();
     </script>
+    <script src="/admin-unrestricted-guard.js?v=20260709_admin_unrestricted_v1"></script>
     <script>
       (function () {
         'use strict';
