@@ -71,7 +71,7 @@
 
         function isAdminRole(role) {
           role = String(role || '').toLowerCase();
-          return role === 'admin' || role === 'super_admin' || role === 'administrator' || role === 'supervisor';
+          return role === 'admin' || role === 'super_admin' || role === 'administrator';
         }
 
         function clearOperationalLocalData() {
@@ -121,7 +121,6 @@
         localStorage.setItem.__najranNativeSetItem = nativeSetItem;
       })();
     </script>
-    <script src="/admin-unrestricted-guard.js?v=20260709_admin_unrestricted_v1"></script>
     <script>
       (function () {
         'use strict';
