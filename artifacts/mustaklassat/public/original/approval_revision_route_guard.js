@@ -1,14 +1,14 @@
 // ===================================================================
-// Approval Revision Route Guard — V2
+// Approval Revision Route Guard — V4
 // Scope: approval.html
-// يعيد تعريف startRevision بحيث يفتح صفحة المراجعة الصحيحة من snapshot/sourceModule،
-// ويسترجع trackedKeyCopies المرفقة بالرفع، خصوصًا تواقيع المكاتب sb_sigs_/sb_prefs_.
+// يفتح صفحة التعديل الصحيحة من snapshot/sourceModule، ويكتب مفاتيح وضع التعديل كاملة
+// قبل التحويل حتى تظهر شارة سياق العمل كـ "تعديل مستخلص" لا "مستخلص جديد".
 // ===================================================================
 (function () {
   'use strict';
   if (!/approval\.html|review_extract\.html|original-viewer\?page=approval\.html/.test(location.pathname + location.search)) return;
-  if (window.__NAJRAN_APPROVAL_REVISION_ROUTE_GUARD_V2__) return;
-  window.__NAJRAN_APPROVAL_REVISION_ROUTE_GUARD_V2__ = true;
+  if (window.__NAJRAN_APPROVAL_REVISION_ROUTE_GUARD_V4__) return;
+  window.__NAJRAN_APPROVAL_REVISION_ROUTE_GUARD_V4__ = true;
 
   function readJson(key, fallback) { try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; } }
   function parseValue(v) { if (!v) return {}; if (typeof v === 'string') { try { return JSON.parse(v); } catch (_) { return {}; } } if (typeof v === 'object') return v; return {}; }
@@ -74,8 +74,6 @@
     return '/original/attendance.html';
   }
 
-  // V3: backup خفيف quota-safe — يستبعد الأرشيفات والنسخ الثقيلة والقيم الضخمة.
-  // فشل الـ backup بسبب الحصة لا يوقف فتح التعديل (warning فقط).
   var HEAVY_KEY_PATTERNS = [/^_u/, /extractArchive/i, /^monthSnapshot_/, /^monthSafetySnapshot_/, /backup/i, /Archive/, /PreWipeSnapshot/i, /^najran_revision_/, /^najran_submit_(lock|done)_/];
   function isHeavyBackupKey(k) { return HEAVY_KEY_PATTERNS.some(function (rx) { return rx.test(k); }); }
   function isHeavyBackupValue(v) {
@@ -117,7 +115,7 @@
       'consumablesTableData','healthCentersConsumables','mainHospitalConsumables','admin_offices_consumables_v1.0','spare_partsData','sparePartsTotalAmount',
       'approvalData','displayApprovalData','finalLaborCost','finalConsumablesCost','grand-net-total','grand-net-total-centers','grand-net-total-admin',
       'najran_labor_attendance_done','najran_labor_performance_done','najran_health_attendance_done','najran_admin_offices_attendance_done',
-      'najran_revision_mode','najran_revision_extract_id','najran_revision_snapshot','najran_revision_boot_lock','najran_revision_extract_type','najran_revision_started_at','najran_revision_source','najran_revision_previous_total_amount',
+      'najran_revision_mode','najran_revision_extract_id','najran_revision_snapshot','najran_revision_snapshot_summary','najran_revision_boot_lock','najran_revision_extract_type','najran_revision_started_at','najran_revision_source','najran_revision_previous_total_amount',
       'najran_editing_submitted_extract_id','najran_editing_submitted_extract_mode','najran_editing_submitted_extract_started_at',
       'signatures_data_consumables_v27','adminOfficesManualCleared_v1'
     ];
@@ -156,11 +154,10 @@
       var extractType = String(full.extractType || type || 'labor');
       var target = reviewPageFromSnapshot(snapshot, extractType);
 
-      backupCurrent(id); // خفيف — فشله لا يوقف الفتح
+      backupCurrent(id);
       clearOperational();
       Object.keys(snapshot).forEach(function (k) { writeValue(k, snapshot[k]); });
 
-      // V3 verify: مفتاح المستخلص + مفتاح بيانات واحد حسب النوع
       var VERIFY_DATA_KEY = extractType === 'admin_offices' ? 'adminOfficesAttendanceData_v1'
         : extractType === 'health_centers' ? 'centersAttendanceData_v2'
         : extractType === 'consumables' ? 'consumablesTableData'
@@ -181,11 +178,10 @@
       localStorage.setItem('najran_editing_submitted_extract_id', String(id));
       localStorage.setItem('najran_editing_submitted_extract_mode', 'true');
       localStorage.setItem('najran_editing_submitted_extract_started_at', new Date().toISOString());
-      // V3: metadata خفيفة فقط — لا snapshot كامل (كان يسبب QuotaExceededError).
-      // najran_revision_snapshot يبقى بقيمة خفيفة لأن سكربتات أخرى تفحص وجوده وتقرأ persistentExtractData منه.
+
       try {
         var lightSummary = JSON.stringify({
-          schema: 'revision_summary_v3',
+          schema: 'revision_summary_v4',
           extractId: String(id),
           extractType: extractType,
           keys: Object.keys(snapshot).length,
@@ -200,13 +196,17 @@
       } catch (metaErr) {
         console.warn('[ApprovalRevisionRouteGuard] optional metadata skipped:', metaErr && metaErr.name);
       }
+
+      localStorage.setItem('najran_revision_mode', 'true');
       localStorage.setItem('najran_revision_extract_id', String(id));
       localStorage.setItem('najran_revision_extract_type', extractType);
-      localStorage.setItem('najran_revision_source', 'approval_revision_route_guard_v3');
+      localStorage.setItem('najran_revision_started_at', new Date().toISOString());
+      localStorage.setItem('najran_revision_source', 'approval_revision_route_guard_v4');
 
       console.warn('[ApprovalRevisionRouteGuard] redirect', {
         id: id,
         extractType: extractType,
+        revisionMode: localStorage.getItem('najran_revision_mode'),
         target: target,
         keys: Object.keys(snapshot).length,
         sourceModule: snapshot.__najranSourceModule || snapshot.sourceModule,
@@ -227,5 +227,5 @@
   setTimeout(install, 300);
   setTimeout(install, 1000);
   setTimeout(install, 2500);
-  console.info('[ApprovalRevisionRouteGuard] installed v3 quota-safe revision restore');
+  console.info('[ApprovalRevisionRouteGuard] installed v4 quota-safe revision restore + active mode marker');
 })();
