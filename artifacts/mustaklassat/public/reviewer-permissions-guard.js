@@ -24,7 +24,7 @@
   function norm(x){ return String(x||'').trim(); }
   function sessionObj(){ try{return JSON.parse(localStorage.getItem('najran_session')||'{}');}catch(e){return{};} }
   function activeHospital(s){ return norm((s&&s.hospital)||localStorage.getItem('hospitalName')||''); }
-  function isAdminRole(s){ var r=String((s&&s.role)||'').toLowerCase(); return r==='admin'||r==='super_admin'||r==='administrator'||r==='supervisor'; }
+  function isAdminRole(s){ var r=String((s&&s.role)||'').toLowerCase(); return r==='admin'||r==='super_admin'||r==='administrator'; }
   function userHosp(u){ return uniq([].concat(u&&u.hospital?[u.hospital]:[], parse(u&&u.hospitals), u&&u.hospitalName?[u.hospitalName]:[])); }
   function allHosp(){ var a=H.slice(); usersByEmail.forEach(function(u){ a=a.concat(userHosp(u)); }); return uniq(a); }
 
