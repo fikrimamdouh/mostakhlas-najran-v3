@@ -1,9 +1,10 @@
 // extract-submit-flow-control.js
-// Official submit-flow control: confirmation, verified duplicate handling, no auto payment/month mutation, update existing, and durable submit summary.
+// Official submit-flow control: confirmation, verified duplicate handling, no auto payment/month mutation,
+// update existing when explicitly chosen, durable submit summary, and post-submit green work badge.
 (function () {
   'use strict';
-  if (window.__NAJRAN_EXTRACT_SUBMIT_FLOW_CONTROL_V4__) return;
-  window.__NAJRAN_EXTRACT_SUBMIT_FLOW_CONTROL_V4__ = true;
+  if (window.__NAJRAN_EXTRACT_SUBMIT_FLOW_CONTROL_V5__) return;
+  window.__NAJRAN_EXTRACT_SUBMIT_FLOW_CONTROL_V5__ = true;
 
   var SUMMARY_KEY = 'najran_last_submitted_summary_v1';
   var WORK_CONTEXT_KEY = 'najran_work_context_v1';
@@ -15,20 +16,25 @@
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (m) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]; }); }
   function session() { return safeJson(localStorage.getItem('najran_session'), {}) || {}; }
   function isAdmin() { var r = String(session().role || '').toLowerCase(); return r === 'admin' || r === 'super_admin' || r === 'administrator'; }
+
   function contractData() {
     var c = safeJson(localStorage.getItem('persistentContractData'), {}) || {};
     var e = safeJson(localStorage.getItem('persistentExtractData'), {}) || {};
+    var month = clean(e.extractMonth || localStorage.getItem('extractMonth') || '');
+    var year = clean(e.extractYear || localStorage.getItem('extractYear') || '');
+    var payment = clean(e.paymentNumber || e.extractNumber || localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber') || '');
     return {
       companyName: clean(localStorage.getItem('companyName') || c.companyName || c.company || ''),
       hospitalName: clean(c.hospitalName || localStorage.getItem('hospitalName') || ''),
       contractNumber: clean(c.contractNumber || localStorage.getItem('contractNumber') || localStorage.getItem('contractDetails') || ''),
-      extractMonth: clean(e.extractMonth || localStorage.getItem('extractMonth') || ''),
-      extractYear: clean(e.extractYear || localStorage.getItem('extractYear') || ''),
-      paymentNumber: clean(e.paymentNumber || e.extractNumber || localStorage.getItem('paymentNumber') || localStorage.getItem('extractNumber') || ''),
-      periodMonth: clean([e.extractMonth || localStorage.getItem('extractMonth') || '', e.extractYear || localStorage.getItem('extractYear') || ''].filter(Boolean).join(' ')),
+      extractMonth: month,
+      extractYear: year,
+      paymentNumber: payment,
+      periodMonth: clean([month, year].filter(Boolean).join(' ')),
       totalAmount: clean(localStorage.getItem('finalConsumablesCost') || localStorage.getItem('finalLaborCost') || e.totalCost || '')
     };
   }
+
   function submitTypeFromPageAndText(text) {
     var p = location.pathname;
     text = clean(text);
@@ -37,6 +43,7 @@
     if (p.indexOf('consumables') > -1 || /مستهلكات/.test(text)) return 'consumables';
     return 'labor';
   }
+
   function typeFromButtonText(text) {
     text = clean(text);
     if (/مستهلكات/.test(text)) return 'مستخلص المستهلكات';
@@ -46,6 +53,7 @@
     if (/العمالة|الحضور/.test(text)) return 'مستخلص العمالة';
     return 'مستخلص';
   }
+
   function isEditingExisting() {
     return !!(
       localStorage.getItem('najran_revision_mode') === 'true' ||
@@ -54,17 +62,18 @@
       localStorage.getItem('najran_editing_submitted_extract_mode') === 'true'
     );
   }
+
   function doneLockMatches(v, type) {
     if (!v || !v.submittedAt) return false;
     var cd = contractData();
-    var ageOk = Date.now() - Number(v.submittedAt || 0) < 24 * 60 * 60 * 1000;
-    if (!ageOk) return false;
+    if (Date.now() - Number(v.submittedAt || 0) > 24 * 60 * 60 * 1000) return false;
     if (type && v.type && clean(v.type) !== clean(type)) return false;
-    if (v.month && clean(v.month) !== clean(cd.extractMonth)) return false;
-    if (v.year && clean(v.year) !== clean(cd.extractYear)) return false;
-    if (v.payment && clean(v.payment) !== clean(cd.paymentNumber)) return false;
+    if (v.month && clean(v.month) !== cd.extractMonth) return false;
+    if (v.year && clean(v.year) !== cd.extractYear) return false;
+    if (v.payment && clean(v.payment) !== cd.paymentNumber) return false;
     return true;
   }
+
   function currentDoneLock(type) {
     var cd = contractData();
     var key = [
@@ -78,6 +87,7 @@
     ].join('__');
     var direct = safeJson(localStorage.getItem(key), null);
     if (doneLockMatches(direct, type)) return Object.assign({ key: key }, direct);
+
     var best = null;
     try {
       for (var i = 0; i < localStorage.length; i++) {
@@ -90,10 +100,10 @@
     } catch (_) {}
     return best;
   }
+
   function latestDoneLock() { return currentDoneLock('') || null; }
-  function clearDoneLock(lock) {
-    try { if (lock && lock.key) localStorage.removeItem(lock.key); } catch (_) {}
-  }
+  function clearDoneLock(lock) { try { if (lock && lock.key) localStorage.removeItem(lock.key); } catch (_) {} }
+
   function setUpdateMode(existingId) {
     existingId = clean(existingId);
     if (!existingId) return false;
@@ -108,25 +118,25 @@
       return true;
     } catch (_) { return false; }
   }
-  function clearActiveRevisionAfterSuccess(summary) {
-    try {
-      if (!summary || summary.action !== 'update') return;
-      [
-        'najran_revision_mode','najran_revision_extract_id','najran_revision_extract_type','najran_revision_started_at','najran_revision_source','najran_revision_snapshot','najran_revision_snapshot_summary','najran_revision_boot_lock',
-        'najran_editing_submitted_extract_id','najran_editing_submitted_extract_mode','najran_editing_submitted_extract_started_at'
-      ].forEach(function (k) { try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch (_) {} });
-    } catch (_) {}
+
+  function clearRevisionKeys() {
+    [
+      'najran_revision_mode','najran_revision_extract_id','najran_revision_extract_type','najran_revision_started_at','najran_revision_source','najran_revision_snapshot','najran_revision_snapshot_summary','najran_revision_boot_lock',
+      'najran_editing_submitted_extract_id','najran_editing_submitted_extract_mode','najran_editing_submitted_extract_started_at'
+    ].forEach(function (k) { try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch (_) {} });
   }
+
+  function clearActiveRevisionAfterSuccess(summary) {
+    try { if (summary && (summary.action === 'update' || summary.action === 'new')) clearRevisionKeys(); } catch (_) {}
+  }
+
   async function getFreshToken() {
-    try {
-      if (typeof window.najranGetFreshToken === 'function') return await window.najranGetFreshToken({ skipCache: true });
-    } catch (_) {}
-    try {
-      if (window.parent && window.parent !== window && typeof window.parent.najranGetFreshToken === 'function') return await window.parent.najranGetFreshToken({ skipCache: true });
-    } catch (_) {}
+    try { if (typeof window.najranGetFreshToken === 'function') return await window.najranGetFreshToken({ skipCache: true }); } catch (_) {}
+    try { if (window.parent && window.parent !== window && typeof window.parent.najranGetFreshToken === 'function') return await window.parent.najranGetFreshToken({ skipCache: true }); } catch (_) {}
     var s = session();
     return s.clerkToken || '';
   }
+
   async function apiJson(url, options) {
     options = options || {};
     var token = await getFreshToken();
@@ -138,6 +148,7 @@
     try { data = await res.clone().json(); } catch (_) {}
     return { ok: res.ok, status: res.status, data: data };
   }
+
   async function verifyExistingExtract(existingId) {
     existingId = clean(existingId);
     if (!existingId) return { exists: false, reason: 'no-id' };
@@ -145,6 +156,7 @@
     if (r.ok && r.data) return { exists: true, row: r.data };
     return { exists: false, status: r.status, reason: 'server-not-found-or-hidden' };
   }
+
   function goTrack() { location.href = '/extracts/track'; }
   function goSettings() { location.href = '/original/settings_main.html'; }
   function enableNativeSubmitBypass() {
@@ -159,6 +171,7 @@
       if (btn) btn.click();
     }, 120);
   }
+
   function removeOldDuplicateModal() {
     try {
       Array.prototype.slice.call(document.querySelectorAll('div')).forEach(function (d) {
@@ -166,6 +179,7 @@
       });
     } catch (_) {}
   }
+
   function modalShell(id, title, subtitle, bodyHtml) {
     var old = document.getElementById(id);
     if (old) old.remove();
@@ -179,6 +193,7 @@
     document.body.appendChild(overlay);
     return overlay;
   }
+
   function summaryBlock(existingId, label) {
     var cd = contractData();
     return '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:14px">' +
@@ -190,15 +205,13 @@
       (existingId ? '<br><b>' + esc(label || 'المستخلص الموجود في النظام: سجل رقم') + ':</b> ' + esc(existingId) : '') +
     '</div>';
   }
+
   function showConfirmSubmitModal(originalButton) {
     var text = clean(originalButton && originalButton.textContent || 'رفع مستخلص');
     var type = submitTypeFromPageAndText(text);
     if (!isEditingExisting()) {
       var lock = currentDoneLock(type);
-      if (lock) {
-        showDuplicateChoiceModal(lock.resultId || lock.existingId || '', lock);
-        return;
-      }
+      if (lock) { showDuplicateChoiceModal(lock.resultId || lock.existingId || '', lock); return; }
     }
     var overlay = modalShell('najran-submit-confirm-modal', 'تأكيد رفع المستخلص', 'راجع البيانات قبل الرفع. بعد الرفع لا تكرر نفس البيانات إلا من خلال تحديث المستخلص القائم.',
       summaryBlock('') +
@@ -219,15 +232,13 @@
       if (action === 'submit') {
         overlay.remove();
         var lock = currentDoneLock(type);
-        if (!isEditingExisting() && lock) {
-          showDuplicateChoiceModal(lock.resultId || lock.existingId || '', lock);
-          return;
-        }
+        if (!isEditingExisting() && lock) { showDuplicateChoiceModal(lock.resultId || lock.existingId || '', lock); return; }
         enableNativeSubmitBypass();
         setTimeout(function () { originalButton.click(); }, 80);
       }
     });
   }
+
   function showStaleLockModal(lock, existingId, verify) {
     removeOldDuplicateModal();
     var overlay = modalShell('najran-submit-stale-lock-modal', 'قفل رفع محلي قديم', 'الجهاز يتذكر محاولة رفع سابقة، لكن السجل غير ظاهر في السيرفر أو لا يمكن الوصول له من القائمة الحالية.',
@@ -250,13 +261,10 @@
       if (action === 'cancel') { overlay.remove(); return; }
       if (action === 'track') { goTrack(); return; }
       if (action === 'settings') { goSettings(); return; }
-      if (action === 'clear-retry') {
-        clearDoneLock(lock);
-        overlay.remove();
-        triggerSubmitAgain();
-      }
+      if (action === 'clear-retry') { clearDoneLock(lock); overlay.remove(); triggerSubmitAgain(); }
     });
   }
+
   async function showDuplicateChoiceModal(explicitExistingId, explicitLock) {
     removeOldDuplicateModal();
     var info = explicitLock || latestDoneLock() || {};
@@ -264,14 +272,8 @@
     if (existingId) {
       try {
         var verified = await verifyExistingExtract(existingId);
-        if (!verified.exists) {
-          showStaleLockModal(info, existingId, verified);
-          return;
-        }
-      } catch (e) {
-        showStaleLockModal(info, existingId, { status: 'verify-failed' });
-        return;
-      }
+        if (!verified.exists) { showStaleLockModal(info, existingId, verified); return; }
+      } catch (e) { showStaleLockModal(info, existingId, { status: 'verify-failed' }); return; }
     }
     var overlay = modalShell('najran-submit-duplicate-choice-modal', 'هذا المستخلص مرفوع مسبقًا', 'لن يتم تغيير رقم الدفعة أو الشهر تلقائيًا. اختر الإجراء الصحيح.',
       summaryBlock(existingId, 'المستخلص الموجود في النظام: سجل رقم') +
@@ -290,14 +292,10 @@
       if (action === 'cancel') { overlay.remove(); return; }
       if (action === 'track') { goTrack(); return; }
       if (action === 'settings') { goSettings(); return; }
-      if (action === 'update') {
-        if (!existingId) return;
-        setUpdateMode(existingId);
-        overlay.remove();
-        triggerSubmitAgain();
-      }
+      if (action === 'update') { if (!existingId) return; setUpdateMode(existingId); overlay.remove(); triggerSubmitAgain(); }
     });
   }
+
   function installNativeConfirmPatch() {
     if (window.__NAJRAN_NATIVE_SUBMIT_CONFIRM_PATCHED__) return;
     window.__NAJRAN_NATIVE_SUBMIT_CONFIRM_PATCHED__ = true;
@@ -311,6 +309,7 @@
       return nativeConfirm.apply(window, arguments);
     };
   }
+
   function installSubmitConfirmCapture() {
     if (window.__NAJRAN_SUBMIT_CONFIRM_CAPTURE__) return;
     window.__NAJRAN_SUBMIT_CONFIRM_CAPTURE__ = true;
@@ -327,11 +326,8 @@
       return false;
     }, true);
   }
-  function installDuplicateOverride() {
-    window.showDuplicateResubmitModal = function () {
-      showDuplicateChoiceModal();
-    };
-  }
+
+  function installDuplicateOverride() { window.showDuplicateResubmitModal = function () { showDuplicateChoiceModal(); }; }
   function installDuplicateModalObserver() {
     var mo = new MutationObserver(function () {
       var old = document.getElementById('dup-resubmit-retry');
@@ -340,17 +336,20 @@
     });
     try { mo.observe(document.documentElement, { childList: true, subtree: true }); } catch (_) {}
   }
+
   function buildSummary(method, url, init, row) {
     var body = safeJson(init && init.body, {}) || {};
     var u = new URL(String(url || ''), location.origin);
     var cd = contractData();
-    var id = clean((row && (row.id || row.extractId)) || u.pathname.split('/').pop() || '');
-    var action = method === 'PUT' ? 'update' : 'new';
+    var responseId = clean(row && (row.id || row.extractId) || '');
+    var urlId = clean((u.pathname.match(/\/api\/submitted-extracts\/(\d+)/) || [])[1] || '');
+    var id = responseId || urlId;
+    var action = method === 'PUT' && responseId && urlId && responseId === urlId ? 'update' : 'new';
     return {
       schema: 'najran_last_submitted_summary_v1',
       action: action,
       id: id,
-      extractType: clean(body.extractType || (row && row.extractType) || ''),
+      extractType: clean(body.extractType || (row && row.extractType) || submitTypeFromPageAndText('')),
       companyName: clean(body.companyName || (row && row.companyName) || cd.companyName || ''),
       hospitalName: clean(isAdmin() ? 'المقر الرئيسي — تجمع نجران الصحي' : (body.hospitalName || (row && row.hospitalName) || cd.hospitalName || '')),
       contractNumber: clean(body.contractNumber || (row && row.contractNumber) || cd.contractNumber || ''),
@@ -363,6 +362,106 @@
       at: new Date().toISOString()
     };
   }
+
+  function workContextMatches(ctx) {
+    if (!ctx) return false;
+    var cd = contractData();
+    var ctxPayment = clean(ctx.paymentNumber || ctx.payment || '');
+    var ctxPeriod = clean(ctx.periodMonth || [ctx.extractMonth || '', ctx.extractYear || ''].filter(Boolean).join(' '));
+    if (ctxPayment && cd.paymentNumber && ctxPayment !== cd.paymentNumber) return false;
+    if (ctxPeriod && cd.periodMonth && ctxPeriod !== cd.periodMonth) return false;
+    return true;
+  }
+
+  function buildContextFromLock(lock) {
+    if (!lock || !doneLockMatches(lock, submitTypeFromPageAndText(''))) return null;
+    var cd = contractData();
+    return {
+      mode: isAdmin() ? 'admin_submitted_locked' : 'submitted_locked',
+      extractId: clean(lock.resultId || lock.existingId || localStorage.getItem('najran_last_submitted_extract_id') || ''),
+      label: 'تم رفع المستخلص',
+      companyName: cd.companyName,
+      hospitalName: isAdmin() ? 'المقر الرئيسي — تجمع نجران الصحي' : cd.hospitalName,
+      periodMonth: cd.periodMonth,
+      extractMonth: cd.extractMonth,
+      extractYear: cd.extractYear,
+      paymentNumber: cd.paymentNumber,
+      canSubmit: false,
+      mustChangePeriodOrPayment: true,
+      at: new Date().toISOString()
+    };
+  }
+
+  function getSubmittedContext() {
+    var ctx = safeJson(localStorage.getItem(WORK_CONTEXT_KEY), null);
+    if (ctx && /submitted_locked|admin_submitted_locked|updated_locked/.test(clean(ctx.mode)) && workContextMatches(ctx)) return ctx;
+    var summary = safeJson(localStorage.getItem(SUMMARY_KEY), null);
+    if (summary && workContextMatches(summary)) {
+      return {
+        mode: summary.action === 'update' ? 'updated_locked' : (summary.isAdmin ? 'admin_submitted_locked' : 'submitted_locked'),
+        extractId: summary.id,
+        label: summary.action === 'update' ? 'تم تحديث المستخلص القائم' : 'تم رفع المستخلص',
+        companyName: summary.companyName,
+        hospitalName: summary.hospitalName,
+        periodMonth: summary.periodMonth,
+        extractMonth: summary.extractMonth,
+        extractYear: summary.extractYear,
+        paymentNumber: summary.paymentNumber,
+        canSubmit: false,
+        mustChangePeriodOrPayment: summary.action !== 'update',
+        sameExtractUpdated: summary.action === 'update',
+        at: summary.at
+      };
+    }
+    return buildContextFromLock(currentDoneLock(submitTypeFromPageAndText('')));
+  }
+
+  function installSubmittedBadge() {
+    try {
+      var ctx = getSubmittedContext();
+      if (!ctx) return;
+      var existing = document.getElementById('najran-revision-mode-badge');
+      var badge = existing || document.createElement('div');
+      badge.id = 'najran-revision-mode-badge';
+      badge.setAttribute('dir', 'rtl');
+      badge.style.cssText = 'position:fixed;bottom:18px;right:18px;z-index:2147483000;color:#fff;' +
+        'padding:10px 14px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.35);font-family:inherit;font-size:13px;' +
+        'line-height:1.5;cursor:pointer;max-width:320px;user-select:none;background:#15803d;';
+      var title = ctx.mode === 'updated_locked' ? 'تم تحديث المستخلص القائم' : 'تم رفع هذا المستخلص بنجاح';
+      var id = clean(ctx.extractId || '');
+      var details = (id ? 'رقم المستخلص: ' + id : '') +
+        (ctx.paymentNumber ? (id ? ' — ' : '') + 'دفعة ' + esc(ctx.paymentNumber) : '') +
+        (ctx.periodMonth ? ' — ' + esc(ctx.periodMonth) : '');
+      var hint = ctx.mode === 'updated_locked' ? 'لم يتم إنشاء مستخلص جديد' : 'لا ترفعه مرة أخرى بنفس البيانات — غيّر الدفعة أو الشهر لمستخلص جديد';
+      badge.innerHTML =
+        '<div style="font-weight:bold;display:flex;align-items:center;gap:6px;">' +
+          '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#bbf7d0;animation:najranRevPulse 1.6s infinite;"></span>' +
+          esc(title) + '</div>' +
+        (details ? '<div style="opacity:.95;margin-top:2px;">' + details + '</div>' : '') +
+        '<div style="font-size:11px;opacity:.9;margin-top:4px;">' + esc(hint) + '</div>';
+      badge.onclick = function () {
+        alert(title +
+          (id ? '\nرقم المستخلص: ' + id : '') +
+          (ctx.paymentNumber ? '\nرقم الدفعة: ' + ctx.paymentNumber : '') +
+          (ctx.periodMonth ? '\nالفترة: ' + ctx.periodMonth : '') +
+          '\n\n' + hint);
+      };
+      if (!existing) {
+        var style = document.createElement('style');
+        style.textContent = '@keyframes najranRevPulse{0%,100%{opacity:1}50%{opacity:.35}}@media print{#najran-revision-mode-badge{display:none!important}}';
+        badge.appendChild(style);
+        document.body.appendChild(badge);
+      }
+      console.warn('[ExtractSubmitFlowControl] submitted badge applied', ctx);
+    } catch (e) {
+      console.warn('[ExtractSubmitFlowControl] failed to apply submitted badge', e);
+    }
+  }
+
+  function scheduleSubmittedBadge() {
+    [150, 600, 1400, 2600].forEach(function (ms) { setTimeout(installSubmittedBadge, ms); });
+  }
+
   async function rememberSubmitResult(method, url, init, res) {
     try {
       var u = new URL(String(url || ''), location.origin);
@@ -383,26 +482,31 @@
       localStorage.setItem(SUMMARY_KEY, JSON.stringify(summary));
       localStorage.setItem('najran_current_extract_submitted', 'true');
       if (summary.id) localStorage.setItem('najran_last_submitted_extract_id', summary.id);
-      localStorage.setItem(WORK_CONTEXT_KEY, JSON.stringify({
+      var ctx = {
         mode: summary.action === 'update' ? 'updated_locked' : (summary.isAdmin ? 'admin_submitted_locked' : 'submitted_locked'),
         extractId: summary.id,
         label: summary.action === 'update' ? 'تم تحديث المستخلص القائم' : 'تم رفع المستخلص',
         companyName: summary.companyName,
         hospitalName: summary.hospitalName,
         periodMonth: summary.periodMonth,
+        extractMonth: summary.extractMonth,
+        extractYear: summary.extractYear,
         paymentNumber: summary.paymentNumber,
         canSubmit: false,
         mustChangePeriodOrPayment: summary.action !== 'update',
         sameExtractUpdated: summary.action === 'update',
         affectsUserSites: !summary.isAdmin,
         at: summary.at
-      }));
+      };
+      localStorage.setItem(WORK_CONTEXT_KEY, JSON.stringify(ctx));
       clearActiveRevisionAfterSuccess(summary);
+      installSubmittedBadge();
       console.warn('[ExtractSubmitFlowControl] submit summary saved', summary);
     } catch (err) {
       console.warn('[ExtractSubmitFlowControl] failed to remember submit result', err);
     }
   }
+
   function patchFetchForSubmitSummary() {
     if (window.__NAJRAN_SUBMIT_FLOW_FETCH_PATCHED__) return;
     window.__NAJRAN_SUBMIT_FLOW_FETCH_PATCHED__ = true;
@@ -421,6 +525,17 @@
   installDuplicateOverride();
   installDuplicateModalObserver();
   patchFetchForSubmitSummary();
-  window.NajranExtractSubmitFlowControl = { showDuplicateChoiceModal: showDuplicateChoiceModal, latestDoneLock: latestDoneLock, setUpdateMode: setUpdateMode, currentDoneLock: currentDoneLock, verifyExistingExtract: verifyExistingExtract, clearDoneLock: clearDoneLock };
-  console.info('[ExtractSubmitFlowControl] installed v4 verified duplicate lock + stale-lock recovery');
+  scheduleSubmittedBadge();
+
+  window.NajranExtractSubmitFlowControl = {
+    showDuplicateChoiceModal: showDuplicateChoiceModal,
+    latestDoneLock: latestDoneLock,
+    setUpdateMode: setUpdateMode,
+    currentDoneLock: currentDoneLock,
+    verifyExistingExtract: verifyExistingExtract,
+    clearDoneLock: clearDoneLock,
+    installSubmittedBadge: installSubmittedBadge,
+    getSubmittedContext: getSubmittedContext
+  };
+  console.info('[ExtractSubmitFlowControl] installed v5 submitted-state badge + verified duplicate lock');
 })();
