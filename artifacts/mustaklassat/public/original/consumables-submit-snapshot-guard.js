@@ -1,12 +1,16 @@
 /* consumables-submit-snapshot-guard.js
  * يثبت Snapshot المستهلكات ويجبر بيانات توجيه الرفع على مستهلكات قبل /api/submitted-extracts.
+ * V3:
+ * - يضيف زر الرئيسية في المستهلكات العادية فقط.
+ * - يسبق الرجوع للرئيسية بحفظ ملخص المستهلكات من DOM حتى تلتقطه اللقطة المحلية.
+ * - لا يلمس التوقيعات؛ extract-snapshot V5 يحفظ signatures_data_consumables_v27 و sb_sigs_ كما هي.
  */
 (function () {
   'use strict';
   var pageSig = location.pathname + location.search;
   if (!/\/original\/.*consumables\.html(?:$|[?#])/.test(pageSig)) return;
-  if (window.__NAJRAN_CONSUMABLES_SUBMIT_SNAPSHOT_GUARD_V2__) return;
-  window.__NAJRAN_CONSUMABLES_SUBMIT_SNAPSHOT_GUARD_V2__ = true;
+  if (window.__NAJRAN_CONSUMABLES_SUBMIT_SNAPSHOT_GUARD_V3__) return;
+  window.__NAJRAN_CONSUMABLES_SUBMIT_SNAPSHOT_GUARD_V3__ = true;
 
   var KEY = 'summary_data_consumables_v27';
   var IS_STANDARD_CONSUMABLES = /\/original\/consumables\.html(?:$|[?#])/.test(pageSig) || /[?&]page=consumables\.html(?:$|[&#])/.test(pageSig);
@@ -94,16 +98,50 @@
     if (!rows.length) rows = defaultRows();
     rows = ensureHousingDeductionRow(rows);
 
-    // حماية جوهرية: ممنوع كتابة نسخة بنودها الرئيسية أقل من المخزَّنة —
-    // كشط DOM ناقص (رسمة قديمة) كان يدمّر بنود المستخدم وقيمه ويصدّر التلف للسيرفر.
     if (countMainRows(rows) >= countMainRows(stored)) {
       saveRows(rows);
     } else {
-      console.warn('[ConsumablesSnapshotGuard] BLOCKED destructive overwrite — DOM mains:',
-        countMainRows(rows), '< stored mains:', countMainRows(stored));
+      console.warn('[ConsumablesSnapshotGuard] BLOCKED destructive overwrite — DOM mains:', countMainRows(rows), '< stored mains:', countMainRows(stored));
       rows = ensureHousingDeductionRow(stored);
     }
     return rows;
+  }
+
+  function isHomeTarget(el) {
+    if (!el) return false;
+    var target = el.closest && el.closest('a,button,[role="button"]');
+    if (!target) return false;
+    var href = target.getAttribute('href') || '';
+    var txt = (target.textContent || '').replace(/\s+/g, ' ').trim();
+    return href === '/dashboard' || href.indexOf('/dashboard') === 0 || txt.indexOf('الرئيسية') > -1;
+  }
+
+  function ensureBeforeHomeNavigation(ev) {
+    try {
+      if (!isHomeTarget(ev && ev.target)) return;
+      ensureSummarySnapshot();
+      try { localStorage.setItem('najran_consumables_home_presave_at', new Date().toISOString()); } catch (_) {}
+    } catch (e) {
+      console.warn('[ConsumablesSnapshotGuard] pre-home snapshot failed', e);
+    }
+  }
+
+  function installHomeButton() {
+    if (!IS_STANDARD_CONSUMABLES) return;
+    if (document.getElementById('najran-consumables-home-btn')) return;
+    var bar = document.querySelector('.main-action-buttons') || document.querySelector('.nav-bar') || document.querySelector('.container');
+    if (!bar) return;
+    var a = document.createElement('a');
+    a.id = 'najran-consumables-home-btn';
+    a.className = 'btn btn-home no-print';
+    a.href = '/dashboard';
+    a.innerHTML = '<i class="fas fa-home"></i><span>الرئيسية</span>';
+    a.style.cssText = 'background:linear-gradient(135deg,#1e3c72,#2a5298)!important;color:#fff!important;text-decoration:none!important;';
+    a.addEventListener('pointerdown', function () { ensureSummarySnapshot(); }, true);
+    a.addEventListener('click', function () { ensureSummarySnapshot(); }, true);
+    if (bar.classList && bar.classList.contains('main-action-buttons')) bar.insertBefore(a, bar.firstChild);
+    else bar.appendChild(a);
+    console.info('[ConsumablesSnapshotGuard] home button installed');
   }
 
   function injectIntoPayloadBody(body) {
@@ -126,10 +164,15 @@
 
   document.addEventListener('pointerdown', function (ev) { var btn = ev.target && ev.target.closest && ev.target.closest('#_najran_approve_btn_inner, #_najran_approve_btn'); if (btn) ensureSummarySnapshot(); }, true);
   document.addEventListener('click', function (ev) { var btn = ev.target && ev.target.closest && ev.target.closest('#_najran_approve_btn_inner, #_najran_approve_btn'); if (btn) ensureSummarySnapshot(); }, true);
-  document.addEventListener('DOMContentLoaded', function () { ensureSummarySnapshot(); });
+  document.addEventListener('pointerdown', ensureBeforeHomeNavigation, true);
+  document.addEventListener('click', ensureBeforeHomeNavigation, true);
+  document.addEventListener('DOMContentLoaded', function () { ensureSummarySnapshot(); installHomeButton(); });
+  setTimeout(installHomeButton, 300);
+  setTimeout(installHomeButton, 1200);
+  setTimeout(installHomeButton, 2500);
 
-  if (!window.__najranConsumablesFetchGuardV2) {
-    window.__najranConsumablesFetchGuardV2 = true;
+  if (!window.__najranConsumablesFetchGuardV3) {
+    window.__najranConsumablesFetchGuardV3 = true;
     var nativeFetch = window.fetch;
     window.fetch = function () {
       try {
@@ -146,4 +189,6 @@
   }
 
   window.najranEnsureConsumablesSummarySnapshot = ensureSummarySnapshot;
+  window.najranInstallConsumablesHomeButton = installHomeButton;
+  console.info('[ConsumablesSnapshotGuard] installed v3 home-save + summary pre-snapshot');
 })();
