@@ -85,18 +85,29 @@ function parseUserHospitals(user: any): string[] {
   }
 }
 
-function isAdminLike(role: string) {
+function isAdminRole(role: string) {
   const r = String(role || "").toLowerCase();
-  return r === "admin" || r === "viewer";
+  return r === "admin" || r === "super_admin" || r === "administrator";
 }
 
 function buildEffective(user: any, payload: ReviewPermissionPayload) {
   const hospital = String(user?.hospital || "").trim();
   const editHospitals = parseUserHospitals(user);
+
+  if (isAdminRole(user?.role)) {
+    return {
+      permissions: [],
+      reviewHospitals: [],
+      canReviewCurrentHospital: false,
+      canEditCurrentHospital: true,
+      reviewOnly: false,
+    };
+  }
+
   const reviewHospitals = safeArray(payload.reviewHospitals);
   const permissions = safeArray(payload.permissions);
   const canReviewCurrentHospital = permissions.includes("review_extract") && !!hospital && reviewHospitals.includes(hospital);
-  const canEditCurrentHospital = !isAdminLike(user?.role) && !!hospital && editHospitals.includes(hospital);
+  const canEditCurrentHospital = !!hospital && editHospitals.includes(hospital);
   return {
     permissions,
     reviewHospitals,
