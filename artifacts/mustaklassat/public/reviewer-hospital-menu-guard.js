@@ -1,10 +1,6 @@
 /* reviewer-hospital-menu-guard.js
- * يضيف مستشفيات المراجعة إلى قائمة اختيار الموقع في السايدبار بوسم "مراجعة فقط".
- * لا يغير hospital الأساسي في قاعدة البيانات.
- *
- * قاعدة حاسمة:
- * أي اختيار من قسم "مواقع المراجعة فقط" يثبت reviewOnly=true فوراً قبل إعادة تحميل الصفحة.
- * المراجع لا يدخل أبداً كوضع مشاركة/تشغيل، حتى لو كان الأدمن له صلاحية تعديل على مستشفيات أخرى.
+ * يضيف مستشفيات المراجعة إلى قائمة اختيار الموقع للمراجع فقط.
+ * الأدمن لا يدخل أبداً في reviewOnly ولا يتم مسح بياناته المحلية بسبب مواقع المراجعة.
  */
 (function(){
   'use strict';
@@ -28,32 +24,37 @@
     try { localStorage.setItem('najran_session', JSON.stringify(s || {})); } catch(e){}
   }
 
+  function isAdminSession(){
+    var s = getSession();
+    var role = String((s && s.role) || '').toLowerCase();
+    return role === 'admin' || role === 'super_admin' || role === 'administrator' || role === 'supervisor';
+  }
+
+  function ensureAdminUnrestricted(){
+    if(!isAdminSession()) return false;
+    var s = getSession();
+    var changed = false;
+    if(s.reviewOnly === true){ s.reviewOnly = false; changed = true; }
+    if(s.canEditCurrentHospital !== true){ s.canEditCurrentHospital = true; changed = true; }
+    if(s.canReviewCurrentHospital === true){ s.canReviewCurrentHospital = false; changed = true; }
+    if(s.reviewActiveHospital){ delete s.reviewActiveHospital; changed = true; }
+    if(changed){ s.timestamp = Date.now(); setSession(s); }
+    return true;
+  }
+
   function getCurrentHospital(){
     var s = getSession();
     return String(s.hospital || localStorage.getItem('hospitalName') || '').trim();
   }
 
   function getReviewHospitals(){
+    if(isAdminSession()) return [];
     var s = getSession();
     return uniq(parseArray(s.reviewHospitals));
   }
 
-  function getEditHospitals(){
-    var s = getSession();
-    var list = parseArray(s.hospitals);
-    if(s.hospital && !s.reviewOnly) list.push(String(s.hospital).trim());
-    return uniq(list);
-  }
-
-  function isReviewHospital(h){
-    return getReviewHospitals().indexOf(String(h||'').trim()) > -1;
-  }
-
-  function isEditHospital(h){
-    return getEditHospitals().indexOf(String(h||'').trim()) > -1;
-  }
-
   function clearReviewSwitchLocalCache(){
+    if(isAdminSession()) return;
     try {
       localStorage.removeItem('najran_active_hospital_context');
 
@@ -78,16 +79,12 @@
     if(!h) return;
 
     var s = getSession();
-
     s.hospital = h;
     s.reviewActiveHospital = h;
     s.canReviewCurrentHospital = true;
     s.canEditCurrentHospital = false;
-
-    // هذا الزر من قسم "مراجعة فقط"؛ إذن reviewOnly إجباري بدون حساب isEditHospital.
     s.reviewOnly = true;
     s.timestamp = Date.now();
-
     setSession(s);
 
     try { localStorage.setItem('hospitalName', h); } catch(e){}
@@ -133,6 +130,7 @@
   }
 
   function addReviewHospitalsToMenu(){
+    if(isAdminSession()) return;
     var menu = findHospitalMenu();
     if(!menu) return;
     if(menu.dataset.reviewHospitalsPatched === '1') return;
@@ -171,12 +169,12 @@
   }
 
   function tick(){
+    if(ensureAdminUnrestricted()) return;
     addReviewHospitalsToMenu();
     var s = getSession();
     var h = getCurrentHospital();
 
-    // لو الجلسة تحمل reviewActiveHospital، ثبت المراجعة حتى لو المستشفى موجودة ضمن صلاحيات تعديل الأدمن.
-    if(h && (isReviewHospital(h) || s.reviewActiveHospital === h)) {
+    if(h && (getReviewHospitals().indexOf(h) > -1 || s.reviewActiveHospital === h)) {
       if(!s.reviewOnly || s.reviewActiveHospital !== h){
         s.reviewOnly = true;
         s.canReviewCurrentHospital = true;
