@@ -1,18 +1,18 @@
 /**
  * extract_pages_signature_fine_control_v1.js
- * أداة تنسيق تواقيع الطباعة الموحدة — العمالة (attendance) والأداء (performance) والإنجاز (achievement).
- * نفس فكرة «تنسيق تواقيع جداول المستهلكات»: عند فتح الطباعة يظهر زرار تحكم كامل
- * (خطوط، كروت، مسافات، ختم، خط توقيع، تحريك كل توقيع، وترتيب كل توقيع: الأول/الثاني...).
- * الحفظ يعتمد التنسيق محليًا وفي النظام (تخزين المستشفى /hospital-storage) فلا يضيع أبدًا
- * ولا يتغير إلا إذا عدّله المستخدم بنفسه.
- * لا تلمس أي حسابات ولا محركات خطابات؛ التنسيق يُطبق عبر CSS فقط فوق التواقيع الحقيقية.
+ * أداة تنسيق تواقيع الطباعة الموحدة — العمالة والأداء والإنجاز.
+ *
+ * إصلاح مهم للأداء:
+ * - زر طباعة الكل / طباعة جدول يطبع عادي دائمًا.
+ * - وضع تعديل التنسيق لا يفتح إلا إذا ضغط المستخدم زر "تنسيق تواقيع الطباعة" أولًا.
+ * - حفظ واعتماد التنسيق يحفظ فقط ويغلق لوحة التنسيق داخل نافذة الطباعة ولا يطبع تلقائيًا.
+ * - طباعة نهائية تطبع من داخل نافذة التنسيق عند الحاجة.
  */
 (function () {
   'use strict';
   if (window.__NAJRAN_EXTRACT_SIG_FINE_CONTROL_V1__) return;
   window.__NAJRAN_EXTRACT_SIG_FINE_CONTROL_V1__ = true;
 
-  /* ---------------- تحديد الصفحة (الصفحات الرئيسية الثلاث فقط) ---------------- */
   function pageFileName() {
     try {
       var q = new URLSearchParams(location.search || '').get('page') || '';
@@ -21,6 +21,7 @@
       return (location.pathname || '').split('/').pop();
     }
   }
+
   var FILE = pageFileName();
   var PAGE = FILE === 'attendance.html' ? 'attendance'
     : FILE === 'performance.html' ? 'performance'
@@ -36,28 +37,59 @@
   var lastPrintTrigger = null;
   var currentDraft = null;
 
-  function clamp(n, min, max, fb) { n = Number(n); return isFinite(n) ? Math.max(min, Math.min(max, n)) : fb; }
-  function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function clamp(n, min, max, fb) {
+    n = Number(n);
+    return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fb;
+  }
 
-  /* ---------------- نموذج التنسيق (نفس خصائص لوحة المستهلكات + ترتيب كل توقيع) ---------------- */
+  function esc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
   function defaultStyle() {
     return {
-      version: 1,
+      version: 2,
       styleApproved: false,
       savedAt: null,
-      titleFontSize: 13, nameFontSize: 12, titleWeight: 900, nameWeight: 800,
-      titleNameGap: 6, nameLineHeight: 1.45, letterSpacing: 0, textAlign: 'center',
-      blockTop: 14, blockY: 0, gap: 12, perRow: 'auto',
-      cardWidth: 180, cardHeight: 70,
-      cardBorderVisible: false, cardBorderWidth: 1, cardBorderRadius: 10,
-      cardBorderColor: 'default', cardBackground: 'transparent', cardPadding: 6,
+      titleFontSize: 13,
+      nameFontSize: 12,
+      titleWeight: 900,
+      nameWeight: 800,
+      titleNameGap: 6,
+      nameLineHeight: 1.45,
+      letterSpacing: 0,
+      textAlign: 'center',
+      blockTop: 14,
+      blockY: 0,
+      gap: 12,
+      perRow: 'auto',
+      cardWidth: 180,
+      cardHeight: 70,
+      cardBorderVisible: false,
+      cardBorderWidth: 1,
+      cardBorderRadius: 10,
+      cardBorderColor: 'default',
+      cardBackground: 'transparent',
+      cardPadding: 6,
       textOnly: false,
-      showLine: PAGE === 'performance', lineLength: 130, lineNameGap: 5,
-      showStamp: true, stampSize: 60, stampPosition: 'center', stampGap: 8,
-      panelLeft: 18, panelTop: 66, panelCollapsed: false,
+      showLine: PAGE === 'performance',
+      lineLength: 130,
+      lineNameGap: 5,
+      showStamp: true,
+      stampSize: 60,
+      stampPosition: 'center',
+      stampGap: 8,
+      panelLeft: 18,
+      panelTop: 66,
+      panelCollapsed: false,
       perSignature: []
     };
   }
+
   function normalizePerSig(x) {
     x = x && typeof x === 'object' ? x : {};
     var ord = Number(x.order);
@@ -65,9 +97,10 @@
       x: clamp(x.x, -180, 180, 0),
       y: clamp(x.y, -160, 220, 0),
       textAlign: ['right', 'center', 'left'].indexOf(x.textAlign) > -1 ? x.textAlign : null,
-      order: isFinite(ord) && ord >= 1 && ord <= 24 ? Math.round(ord) : null
+      order: Number.isFinite(ord) && ord >= 1 && ord <= 24 ? Math.round(ord) : null
     };
   }
+
   function normalizeStyle(s) {
     var d = defaultStyle();
     s = s && typeof s === 'object' ? s : {};
@@ -107,129 +140,21 @@
     d.perSignature = Array.isArray(s.perSignature) ? s.perSignature.map(normalizePerSig) : [];
     return d;
   }
+
   function readStyle() {
     try { return normalizeStyle(JSON.parse(localStorage.getItem(STYLE_KEY) || '{}')); }
     catch (_) { return defaultStyle(); }
   }
+
   function writeStyle(s) {
-    try { localStorage.setItem(STYLE_KEY, JSON.stringify(normalizeStyle(s))); return true; }
-    catch (_) { return false; }
-  }
-  function styleStamp(s) {
-    var t = s && typeof s.savedAt === 'string' ? Date.parse(s.savedAt) : NaN;
-    return isFinite(t) ? t : 0;
-  }
-
-  /* ---------------- مزامنة النظام (تخزين المستشفى) ---------------- */
-  var cloudTimer = null;
-function cloudToken() {
-  try {
-    var s = JSON.parse(localStorage.getItem('najran_session') || '{}');
-    if (!s || !s.clerkToken) return null;
-    if (s.timestamp && Date.now() - Number(s.timestamp) > 7.5 * 60 * 60 * 1000) return null;
-    return s.clerkToken;
-  } catch (_) {
-    return null;
-  }
-}
-
-function cloudFetch(path, opts) {
-  opts = opts || {};
-  var token = cloudToken();
-
-  if (!token) {
-    return Promise.resolve({
-      ok: false,
-      status: 0,
-      reason: 'NO_VALID_TOKEN'
-    });
+    try {
+      localStorage.setItem(STYLE_KEY, JSON.stringify(normalizeStyle(s)));
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
-  var headers = {
-    'Content-Type': 'application/json',
-    Authorization: 'Bearer ' + token
-  };
-
-  var merged = {};
-  for (var k in opts) {
-    if (Object.prototype.hasOwnProperty.call(opts, k)) merged[k] = opts[k];
-  }
-
-  merged.headers = headers;
-  merged.credentials = 'include';
-
-  return fetch('/api' + path, merged)
-    .then(function (r) {
-      if (r.status === 401) {
-        return {
-          ok: false,
-          status: 401,
-          reason: 'UNAUTHORIZED'
-        };
-      }
-
-      if (!r.ok) {
-        return {
-          ok: false,
-          status: r.status,
-          reason: 'HTTP_' + r.status
-        };
-      }
-
-      return r.json().then(function (data) {
-        return {
-          ok: true,
-          status: r.status,
-          data: data
-        };
-      }).catch(function () {
-        return {
-          ok: true,
-          status: r.status,
-          data: null
-        };
-      });
-    })
-    .catch(function () {
-      return {
-        ok: false,
-        status: 0,
-        reason: 'FETCH_FAILED'
-      };
-    });
-}
-function syncStyleToCloud() {
-  return Promise.resolve({
-    ok: true,
-    status: 0,
-    reason: 'LOCAL_ONLY'
-  });
-}
-  function pullStyleFromCloud() {
-    cloudFetch('/hospital-storage?keys=' + encodeURIComponent(STYLE_KEY)).then(function (res) {
-      try {
-        if (!res || !res.data) return;
-        var remoteRaw = typeof res.data[STYLE_KEY] === 'string' ? res.data[STYLE_KEY] : null;
-        var local = readStyle();
-        if (!remoteRaw) {
-          if (styleStamp(local) > 0) syncStyleToCloud();
-          return;
-        }
-        var remote = null;
-        try { remote = normalizeStyle(JSON.parse(remoteRaw)); } catch (_) { return; }
-        if (styleStamp(remote) > styleStamp(local)) {
-          writeStyle(remote);
-          currentDraft = null;
-          applyApprovedStyleTag();
-          console.info('[SigFineControl:' + PAGE + '] adopted style from system storage');
-        } else if (styleStamp(local) > styleStamp(remote)) {
-          syncStyleToCloud();
-        }
-      } catch (_) {}
-    });
-  }
-
-  /* ---------------- التواقيع الحالية (للعدّ والتسميات) ---------------- */
   function currentSignatures() {
     try {
       if (window.SignatureBlock && typeof window.SignatureBlock.getSigs === 'function') {
@@ -240,12 +165,23 @@ function syncStyleToCloud() {
     try {
       var arr = JSON.parse(localStorage.getItem('sb_sigs_' + PAGE) || '[]');
       return Array.isArray(arr) ? arr : [];
-    } catch (_) { return []; }
+    } catch (_) {
+      return [];
+    }
   }
 
-  /* ---------------- توليد CSS ---------------- */
-  function borderColorValue(v) { if (v === 'black') return '#111827'; if (v === 'gray') return '#94a3b8'; if (v === 'navy') return '#1e3c72'; return '#cbd5e1'; }
-  function backgroundValue(v) { if (v === 'white') return '#fff'; if (v === 'lightgray') return '#f8fafc'; return 'transparent'; }
+  function borderColorValue(v) {
+    if (v === 'black') return '#111827';
+    if (v === 'gray') return '#94a3b8';
+    if (v === 'navy') return '#1e3c72';
+    return '#cbd5e1';
+  }
+
+  function backgroundValue(v) {
+    if (v === 'white') return '#fff';
+    if (v === 'lightgray') return '#f8fafc';
+    return 'transparent';
+  }
 
   function computeOrders(st, count) {
     var entries = [];
@@ -258,17 +194,70 @@ function syncStyleToCloud() {
     entries.forEach(function (e, pos) { orders[e.i] = (pos + 1) * 10; });
     return orders;
   }
+
   function stampOrder(st, count) {
     if (st.stampPosition === 'right') return 1;
     if (st.stampPosition === 'left') return 99990;
     return Math.max(1, Math.round(count / 2)) * 10 + 5;
   }
+
   function gridColumns(st) {
     if (st.perRow === 'auto') return 'repeat(auto-fit,minmax(min(100%,' + st.cardWidth + 'px),' + st.cardWidth + 'px))';
     return 'repeat(' + st.perRow + ',minmax(0,' + st.cardWidth + 'px))';
   }
 
-  /* CSS للصفحات ذات الطباعة داخل الصفحة (العمالة والإنجاز): تُطبَّق فوق كتل signature-block الحقيقية */
+  function applyStyleTagTo(doc, cssText, id) {
+    try {
+      var el = doc.getElementById(id);
+      if (!el) {
+        el = doc.createElement('style');
+        el.id = id;
+        (doc.head || doc.documentElement).appendChild(el);
+      }
+      el.textContent = cssText;
+      return el;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function childWindowCss(stRaw) {
+    var st = normalizeStyle(stRaw);
+    var count = Math.max(1, currentSignatures().length);
+    var borderW = (st.textOnly || !st.cardBorderVisible) ? 0 : st.cardBorderWidth;
+    var radius = st.textOnly ? 0 : st.cardBorderRadius;
+    var bg = st.textOnly ? 'transparent' : backgroundValue(st.cardBackground);
+    var pad = st.textOnly ? 0 : st.cardPadding;
+    var orders = computeOrders(st, count);
+    var css = [];
+    var schemes = [
+      { section: '.signatures-section', grid: '.signatures-grid', item: '.signature-item', title: '.signature-title', line: '.signature-line', name: '.signature-name', stamp: '.signatures-grid .signature-item:nth-child(' + (count + 1) + ')' },
+      { section: '.perf-all-signatures-section', grid: '.perf-all-signatures-grid', item: '.perf-all-signature-item', title: '.perf-all-signature-title', line: '.perf-all-signature-line', name: '.perf-all-signature-name', stamp: '.perf-all-stamp-item' }
+    ];
+
+    schemes.forEach(function (S) {
+      css.push(S.section + '{margin-top:' + st.blockTop + 'px!important;transform:translateY(' + st.blockY + 'px)!important;break-inside:avoid!important;page-break-inside:avoid!important}');
+      css.push(S.grid + '{display:grid!important;grid-template-columns:' + gridColumns(st) + '!important;direction:rtl!important;gap:' + st.gap + 'px!important;justify-content:center!important;align-items:stretch!important;width:100%!important}');
+      css.push(S.item + '{box-sizing:border-box!important;flex:none!important;width:' + st.cardWidth + 'px!important;max-width:100%!important;min-width:0!important;min-height:' + st.cardHeight + 'px!important;background:' + bg + '!important;border:' + borderW + 'px solid ' + borderColorValue(st.cardBorderColor) + '!important;border-radius:' + radius + 'px!important;padding:' + pad + 'px!important;display:flex!important;flex-direction:column!important;justify-content:center!important;align-items:center!important;break-inside:avoid!important;page-break-inside:avoid!important}');
+      css.push(S.title + '{font-size:' + st.titleFontSize + 'px!important;font-weight:' + st.titleWeight + '!important;letter-spacing:' + st.letterSpacing + 'px!important;line-height:1.35!important;margin:0 0 ' + st.titleNameGap + 'px!important;text-align:' + st.textAlign + '!important;width:100%!important;color:#000!important}');
+      css.push(S.line + '{display:' + (st.showLine ? 'block' : 'none') + '!important;width:' + st.lineLength + 'px!important;max-width:100%!important;height:0!important;border-bottom:1.4px solid #111827!important;border-top:0!important;margin:0 auto ' + st.lineNameGap + 'px!important}');
+      css.push(S.name + '{font-size:' + st.nameFontSize + 'px!important;font-weight:' + st.nameWeight + '!important;line-height:' + st.nameLineHeight + '!important;letter-spacing:' + st.letterSpacing + 'px!important;margin:0!important;text-align:' + st.textAlign + '!important;width:100%!important;color:#000!important}');
+      if (st.showStamp === false) {
+        css.push(S.stamp + '{display:none!important}');
+      } else {
+        css.push(S.stamp + '{order:' + stampOrder(st, count) + '!important;margin-inline:' + st.stampGap + 'px!important}');
+        css.push(S.item + ' svg{width:' + st.stampSize + 'px!important;height:' + st.stampSize + 'px!important}');
+      }
+      for (var i = 0; i < count; i++) {
+        var one = st.perSignature[i] ? normalizePerSig(st.perSignature[i]) : normalizePerSig({});
+        var nth = S.grid + ' ' + S.item + ':nth-child(' + (i + 1) + ')';
+        css.push(nth + '{transform:translate(' + one.x + 'px,' + one.y + 'px)!important;order:' + orders[i] + '!important}');
+        if (one.textAlign) css.push(nth + ' ' + S.title + ',' + nth + ' ' + S.name + '{text-align:' + one.textAlign + '!important}');
+      }
+    });
+    return css.join('\n');
+  }
+
   function inPageCss(stRaw) {
     var st = normalizeStyle(stRaw);
     var sigs = currentSignatures();
@@ -284,97 +273,22 @@ function syncStyleToCloud() {
     var css = [];
     css.push(R('.sb-grid') + '{display:grid!important;grid-template-columns:' + gridColumns(st) + '!important;direction:rtl!important;gap:' + st.gap + 'px!important;justify-content:center!important;align-items:stretch!important;margin-top:' + st.blockTop + 'px!important;transform:translateY(' + st.blockY + 'px)!important;break-inside:avoid!important;page-break-inside:avoid!important}');
     css.push(R('.sb-item') + '{box-sizing:border-box!important;width:' + st.cardWidth + 'px!important;max-width:100%!important;min-width:0!important;min-height:' + st.cardHeight + 'px!important;background:' + bg + '!important;border:' + borderW + 'px solid ' + borderColorValue(st.cardBorderColor) + '!important;border-radius:' + radius + 'px!important;padding:' + pad + 'px!important;display:flex!important;flex-direction:column!important;justify-content:center!important;break-inside:avoid!important;page-break-inside:avoid!important}');
-    var titleMB = st.showLine ? st.lineNameGap : st.titleNameGap;
-    css.push(R('.sb-item-title') + '{font-size:' + st.titleFontSize + 'px!important;font-weight:' + st.titleWeight + '!important;letter-spacing:' + st.letterSpacing + 'px!important;line-height:1.35!important;margin:0 0 ' + titleMB + 'px!important;text-align:' + st.textAlign + '!important}');
+    css.push(R('.sb-item-title') + '{font-size:' + st.titleFontSize + 'px!important;font-weight:' + st.titleWeight + '!important;letter-spacing:' + st.letterSpacing + 'px!important;line-height:1.35!important;margin:0 0 ' + st.titleNameGap + 'px!important;text-align:' + st.textAlign + '!important}');
     css.push(R('.sb-item-title') + '::after{content:"";display:' + (st.showLine ? 'block' : 'none') + ';width:' + st.lineLength + 'px;max-width:100%;height:0;border-top:1.4px solid #111827;margin:' + st.titleNameGap + 'px auto 0}');
     css.push(R('.sb-item-name') + '{font-size:' + st.nameFontSize + 'px!important;font-weight:' + st.nameWeight + '!important;line-height:' + st.nameLineHeight + '!important;letter-spacing:' + st.letterSpacing + 'px!important;margin:0!important;min-height:0!important;text-align:' + st.textAlign + '!important}');
-    if (st.showStamp === false) {
-      css.push(R('.sb-item.sb-stamp') + '{display:none!important}');
-    } else {
-      css.push(R('.sb-item.sb-stamp') + '{order:' + stampOrder(st, count) + '!important;margin-inline:' + st.stampGap + 'px!important}');
-      css.push(R('.sb-item.sb-stamp svg') + '{width:' + st.stampSize + 'px!important;height:' + st.stampSize + 'px!important}');
-      css.push(R('.sb-item.sb-stamp .sb-item-title') + '::after{display:none}');
-    }
+    if (st.showStamp === false) css.push(R('.sb-item.sb-stamp') + '{display:none!important}');
+    else css.push(R('.sb-item.sb-stamp') + '{order:' + stampOrder(st, count) + '!important;margin-inline:' + st.stampGap + 'px!important}' + R('.sb-item.sb-stamp svg') + '{width:' + st.stampSize + 'px!important;height:' + st.stampSize + 'px!important}');
     var orders = computeOrders(st, count);
     for (var i = 0; i < count; i++) {
       var one = st.perSignature[i] ? normalizePerSig(st.perSignature[i]) : normalizePerSig({});
       var nth = '.sb-item:nth-child(' + (i + 1) + '):not(.sb-stamp)';
       css.push(R(nth) + '{transform:translate(' + one.x + 'px,' + one.y + 'px)!important;order:' + orders[i] + '!important}');
-      if (one.textAlign) {
-        css.push(R(nth + ' .sb-item-title') + ',' + R(nth + ' .sb-item-name') + '{text-align:' + one.textAlign + '!important}');
-      }
+      if (one.textAlign) css.push(R(nth + ' .sb-item-title') + ',' + R(nth + ' .sb-item-name') + '{text-align:' + one.textAlign + '!important}');
     }
-    /* في وضع المعاينة (العمالة): إظهار كتل تواقيع الطباعة المخفية حتى يرى المستخدم ما سيُطبع */
     css.push('body.sbx-preview .print-signatures.sb-attendance-table-signatures{display:block!important;visibility:visible!important;opacity:1!important}');
     return css.join('\n');
   }
 
-  /* CSS لنوافذ طباعة الأداء — يغطي الطباعة المفردة (.signature-item) وطباعة الكل (.perf-all-signature-item) */
-  function childWindowCss(stRaw) {
-    var st = normalizeStyle(stRaw);
-    var count = Math.max(1, currentSignatures().length);
-    var borderW = (st.textOnly || !st.cardBorderVisible) ? 0 : st.cardBorderWidth;
-    var radius = st.textOnly ? 0 : st.cardBorderRadius;
-    var bg = st.textOnly ? 'transparent' : backgroundValue(st.cardBackground);
-    var pad = st.textOnly ? 0 : st.cardPadding;
-    var orders = computeOrders(st, count);
-    var css = [];
-    var schemes = [
-      { section: '.signatures-section', grid: '.signatures-grid', item: '.signature-item', title: '.signature-title', line: '.signature-line', name: '.signature-name', stamp: '.signatures-grid .signature-item:nth-child(' + (count + 1) + ')' },
-      { section: '.perf-all-signatures-section', grid: '.perf-all-signatures-grid', item: '.perf-all-signature-item', title: '.perf-all-signature-title', line: '.perf-all-signature-line', name: '.perf-all-signature-name', stamp: '.perf-all-stamp-item' }
-    ];
-    schemes.forEach(function (S) {
-      css.push(S.section + '{margin-top:' + st.blockTop + 'px!important;transform:translateY(' + st.blockY + 'px)!important;break-inside:avoid!important;page-break-inside:avoid!important}');
-      css.push(S.grid + '{display:grid!important;grid-template-columns:' + gridColumns(st) + '!important;direction:rtl!important;gap:' + st.gap + 'px!important;justify-content:center!important;align-items:stretch!important}');
-      css.push(S.item + '{box-sizing:border-box!important;flex:none!important;width:' + st.cardWidth + 'px!important;max-width:100%!important;min-width:0!important;min-height:' + st.cardHeight + 'px!important;background:' + bg + '!important;border:' + borderW + 'px solid ' + borderColorValue(st.cardBorderColor) + '!important;border-radius:' + radius + 'px!important;padding:' + pad + 'px!important;display:flex!important;flex-direction:column!important;justify-content:center!important;align-items:center!important;break-inside:avoid!important;page-break-inside:avoid!important}');
-      css.push(S.title + '{font-size:' + st.titleFontSize + 'px!important;font-weight:' + st.titleWeight + '!important;letter-spacing:' + st.letterSpacing + 'px!important;line-height:1.35!important;margin:0 0 ' + st.titleNameGap + 'px!important;text-align:' + st.textAlign + '!important;width:100%!important}');
-      css.push(S.line + '{display:' + (st.showLine ? 'block' : 'none') + '!important;width:' + st.lineLength + 'px!important;max-width:100%!important;height:0!important;border-bottom:1.4px solid #111827!important;border-top:0!important;margin:0 auto ' + st.lineNameGap + 'px!important}');
-      css.push(S.name + '{font-size:' + st.nameFontSize + 'px!important;font-weight:' + st.nameWeight + '!important;line-height:' + st.nameLineHeight + '!important;letter-spacing:' + st.letterSpacing + 'px!important;margin:0!important;text-align:' + st.textAlign + '!important;width:100%!important}');
-      if (st.showStamp === false) {
-        css.push(S.stamp + '{display:none!important}');
-      } else {
-        css.push(S.stamp + '{order:' + stampOrder(st, count) + '!important;margin-inline:' + st.stampGap + 'px!important}');
-        css.push(S.item + ' svg{width:' + st.stampSize + 'px!important;height:' + st.stampSize + 'px!important}');
-      }
-      for (var i = 0; i < count; i++) {
-        var one = st.perSignature[i] ? normalizePerSig(st.perSignature[i]) : normalizePerSig({});
-        var nth = S.grid + ' ' + S.item + ':nth-child(' + (i + 1) + ')';
-        css.push(nth + '{transform:translate(' + one.x + 'px,' + one.y + 'px)!important;order:' + orders[i] + '!important}');
-        if (one.textAlign) {
-          css.push(nth + ' ' + S.title + ',' + nth + ' ' + S.name + '{text-align:' + one.textAlign + '!important}');
-        }
-      }
-    });
-    return css.join('\n');
-  }
-
-  /* ---------------- تطبيق التنسيق ---------------- */
-  function applyStyleTagTo(doc, cssText, id) {
-    try {
-      var el = doc.getElementById(id);
-      if (!el) {
-        el = doc.createElement('style');
-        el.id = id;
-        (doc.head || doc.documentElement).appendChild(el);
-      }
-      el.textContent = cssText;
-      return el;
-    } catch (_) { return null; }
-  }
-  /* يطبع التنسيق المعتمد دائمًا داخل الصفحة (العمالة/الإنجاز) حتى مع Ctrl+P */
-  function applyApprovedStyleTag() {
-    if (PAGE === 'performance') return;
-    var st = currentDraft || readStyle();
-    if (!currentDraft && st.styleApproved !== true) {
-      /* بلا اعتماد صريح لا نغيّر شكل الطباعة الحالي إطلاقًا */
-      var stale = document.getElementById('sbx-style-' + PAGE);
-      if (stale) stale.textContent = '';
-      return;
-    }
-    applyStyleTagTo(document, inPageCss(st), 'sbx-style-' + PAGE);
-  }
-
-  /* ---------------- واجهة اللوحة (مشتركة بين الصفحة ونوافذ الطباعة) ---------------- */
   var PANEL_CSS = [
     '#sbx-toggle{position:fixed;left:18px;top:18px;z-index:999991;border:none;border-radius:999px;background:#7c3aed;color:#fff;padding:10px 16px;font-family:Tajawal,Arial,sans-serif;font-weight:900;font-size:13px;box-shadow:0 8px 22px rgba(124,58,237,.35);cursor:pointer}',
     '#sbx-panel{position:fixed;left:18px;top:66px;z-index:999992;width:470px;max-width:calc(100vw - 22px);max-height:82vh;background:#fff;border:2px solid #7c3aed;border-radius:14px;box-shadow:0 14px 38px rgba(15,23,42,.32);direction:rtl;font-family:Tajawal,Arial,sans-serif;color:#0f172a;overflow:auto;display:none}',
@@ -399,11 +313,13 @@ function syncStyleToCloud() {
   function rangeRow(cls, label, min, max, step, value, suffix) {
     return '<div class="sbx-row"><label>' + label + '</label><input type="range" class="' + cls + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + value + '"><span>' + value + (suffix || '') + '</span></div>';
   }
+
   function setRangeText(input, value, suffix) {
     var row = input && input.closest ? input.closest('.sbx-row') : null;
     var sp = row ? row.querySelector('span') : null;
     if (sp) sp.textContent = String(value) + (suffix || '');
   }
+
   function showToast(doc, text, bg) {
     try {
       var msg = doc.createElement('div');
@@ -413,6 +329,7 @@ function syncStyleToCloud() {
       setTimeout(function () { try { msg.remove(); } catch (_) {} }, 2200);
     } catch (_) {}
   }
+
   function makeDraggable(panel, handle, onDone) {
     if (!panel || !handle || handle.__sbxDrag) return;
     handle.__sbxDrag = true;
@@ -442,13 +359,10 @@ function syncStyleToCloud() {
     });
   }
 
-  /**
-   * بناء اللوحة داخل مستند معين.
-   * ctx: { doc, apply(), onSave(), onReset(), onFinal(), titleSuffix }
-   */
   function buildPanel(ctx) {
     var doc = ctx.doc;
     applyStyleTagTo(doc, PANEL_CSS, 'sbx-panel-css');
+
     var toggle = doc.getElementById('sbx-toggle');
     if (!toggle) {
       toggle = doc.createElement('button');
@@ -457,12 +371,14 @@ function syncStyleToCloud() {
       doc.body.appendChild(toggle);
     }
     toggle.textContent = 'تنسيق تواقيع ' + (ctx.titleSuffix || PAGE_LABELS[PAGE]);
+
     var panel = doc.getElementById('sbx-panel');
     if (!panel) {
       panel = doc.createElement('div');
       panel.id = 'sbx-panel';
       doc.body.appendChild(panel);
     }
+
     currentDraft = normalizeStyle(currentDraft || readStyle());
     var st = currentDraft;
     panel.style.left = st.panelLeft + 'px';
@@ -472,6 +388,7 @@ function syncStyleToCloud() {
     var sigs = currentSignatures();
     var count = Math.max(1, sigs.length);
     var rows = [];
+
     rows.push('<div class="sbx-group"><strong>تنسيق عام</strong>');
     rows.push(rangeRow('sbx-title-font', 'حجم خط الصفة', 6, 44, 1, st.titleFontSize, 'px'));
     rows.push(rangeRow('sbx-name-font', 'حجم خط الاسم', 6, 44, 1, st.nameFontSize, 'px'));
@@ -487,6 +404,7 @@ function syncStyleToCloud() {
     rows.push('<label class="sbx-check" style="display:block">عدد التواقيع في الصف<select class="sbx-select sbx-per-row"><option value="auto" ' + (st.perRow === 'auto' ? 'selected' : '') + '>تلقائي</option><option value="2" ' + (st.perRow === '2' ? 'selected' : '') + '>2</option><option value="3" ' + (st.perRow === '3' ? 'selected' : '') + '>3</option><option value="4" ' + (st.perRow === '4' ? 'selected' : '') + '>4</option></select></label>');
     rows.push('<label class="sbx-check" style="display:block">محاذاة النص الافتراضية<select class="sbx-select sbx-text-align"><option value="right" ' + (st.textAlign === 'right' ? 'selected' : '') + '>يمين</option><option value="center" ' + (st.textAlign === 'center' ? 'selected' : '') + '>وسط</option><option value="left" ' + (st.textAlign === 'left' ? 'selected' : '') + '>يسار</option></select></label>');
     rows.push('</div>');
+
     rows.push('<div class="sbx-group"><strong>إطار التوقيع</strong>');
     rows.push('<label class="sbx-check"><input type="checkbox" class="sbx-text-only" ' + (st.textOnly ? 'checked' : '') + '> بدون كارت — توقيع نص فقط</label>');
     rows.push('<label class="sbx-check"><input type="checkbox" class="sbx-border-visible" ' + (st.cardBorderVisible ? 'checked' : '') + '> إظهار إطار التوقيع</label>');
@@ -497,6 +415,7 @@ function syncStyleToCloud() {
     rows.push(rangeRow('sbx-card-padding', 'المسافة الداخلية داخل الكارت', 0, 30, 1, st.cardPadding, 'px'));
     rows.push(rangeRow('sbx-gap', 'المسافة بين كروت التوقيع', 0, 120, 1, st.gap, 'px'));
     rows.push('</div>');
+
     rows.push('<div class="sbx-group"><strong>خط التوقيع والختم</strong>');
     rows.push('<label class="sbx-check"><input type="checkbox" class="sbx-show-line" ' + (st.showLine ? 'checked' : '') + '> إظهار خط التوقيع</label>');
     rows.push(rangeRow('sbx-line-length', 'طول خط التوقيع', 20, 320, 1, st.lineLength, 'px'));
@@ -506,15 +425,14 @@ function syncStyleToCloud() {
     rows.push(rangeRow('sbx-stamp-gap', 'المسافة حول الختم', 0, 80, 1, st.stampGap, 'px'));
     rows.push('<label class="sbx-check" style="display:block">موضع الختم<select class="sbx-select sbx-stamp-pos"><option value="right" ' + (st.stampPosition === 'right' ? 'selected' : '') + '>يمين</option><option value="center" ' + (st.stampPosition === 'center' ? 'selected' : '') + '>وسط</option><option value="left" ' + (st.stampPosition === 'left' ? 'selected' : '') + '>يسار</option></select></label>');
     rows.push('</div>');
-    rows.push('<div class="sbx-group"><strong>التحكم في كل توقيع منفرد (المكان والترتيب)</strong>');
+
+    rows.push('<div class="sbx-group"><strong>التحكم في كل توقيع منفرد</strong>');
     for (var i = 0; i < count; i++) {
       var one = st.perSignature[i] ? normalizePerSig(st.perSignature[i]) : normalizePerSig({});
       var label = sigs[i] && sigs[i].title ? ' — ' + esc(sigs[i].title) : '';
       rows.push('<div class="sbx-group" data-sig-idx="' + i + '"><strong>التوقيع ' + (i + 1) + label + '</strong>');
       var orderOpts = '<option value="" ' + (one.order === null ? 'selected' : '') + '>حسب ترتيب الإدخال</option>';
-      for (var o = 1; o <= count; o++) {
-        orderOpts += '<option value="' + o + '" ' + (one.order === o ? 'selected' : '') + '>' + (o === 1 ? 'الأول' : o === 2 ? 'الثاني' : o === 3 ? 'الثالث' : o === 4 ? 'الرابع' : 'رقم ' + o) + '</option>';
-      }
+      for (var o = 1; o <= count; o++) orderOpts += '<option value="' + o + '" ' + (one.order === o ? 'selected' : '') + '>' + (o === 1 ? 'الأول' : o === 2 ? 'الثاني' : o === 3 ? 'الثالث' : o === 4 ? 'الرابع' : 'رقم ' + o) + '</option>';
       rows.push('<label class="sbx-check" style="display:block">ترتيب هذا التوقيع<select class="sbx-select sbx-sig-order">' + orderOpts + '</select></label>');
       rows.push(rangeRow('sbx-sig-x', 'يمين/يسار', -180, 180, 1, one.x, 'px'));
       rows.push(rangeRow('sbx-sig-y', 'رفع/تنزيل', -160, 220, 1, one.y, 'px'));
@@ -537,11 +455,17 @@ function syncStyleToCloud() {
       while (currentDraft.perSignature.length <= idx) currentDraft.perSignature.push(normalizePerSig({}));
       return currentDraft.perSignature[idx];
     }
-    function apply() { currentDraft = normalizeStyle(currentDraft); ctx.apply(); }
+
+    function apply() {
+      currentDraft = normalizeStyle(currentDraft);
+      ctx.apply();
+    }
 
     toggle.onclick = function () { panel.classList.toggle('open'); };
     makeDraggable(panel, panel.querySelector('.sbx-head'), function (left, top) {
-      currentDraft.panelLeft = left; currentDraft.panelTop = top; writeStyle(currentDraft);
+      currentDraft.panelLeft = left;
+      currentDraft.panelTop = top;
+      writeStyle(currentDraft);
     });
     panel.querySelector('.sbx-collapse').onclick = function () {
       currentDraft.panelCollapsed = !currentDraft.panelCollapsed;
@@ -549,7 +473,9 @@ function syncStyleToCloud() {
       buildPanel(ctx);
     };
     panel.querySelector('.sbx-reset-panel').onclick = function () {
-      currentDraft.panelLeft = 18; currentDraft.panelTop = 66; currentDraft.panelCollapsed = false;
+      currentDraft.panelLeft = 18;
+      currentDraft.panelTop = 66;
+      currentDraft.panelCollapsed = false;
       writeStyle(currentDraft);
       buildPanel(ctx);
     };
@@ -566,6 +492,7 @@ function syncStyleToCloud() {
         apply();
       };
     }
+
     bindRange('.sbx-title-font', 'titleFontSize', 'px');
     bindRange('.sbx-name-font', 'nameFontSize', 'px');
     bindRange('.sbx-title-weight', 'titleWeight', '');
@@ -584,6 +511,7 @@ function syncStyleToCloud() {
     bindRange('.sbx-line-gap', 'lineNameGap', 'px');
     bindRange('.sbx-stamp-size', 'stampSize', 'px');
     bindRange('.sbx-stamp-gap', 'stampGap', 'px');
+
     function bindSelect(sel, prop) {
       var el = panel.querySelector(sel);
       if (!el) return;
@@ -594,8 +522,10 @@ function syncStyleToCloud() {
     bindSelect('.sbx-border-color', 'cardBorderColor');
     bindSelect('.sbx-card-bg', 'cardBackground');
     bindSelect('.sbx-stamp-pos', 'stampPosition');
+
     var bw = panel.querySelector('.sbx-border-width');
     if (bw) bw.onchange = function () { currentDraft.cardBorderWidth = Number(bw.value); apply(); };
+
     function bindCheck(sel, prop) {
       var el = panel.querySelector(sel);
       if (!el) return;
@@ -617,7 +547,7 @@ function syncStyleToCloud() {
       if (a) a.onchange = function () { ensureSlot(idx).textAlign = a.value || null; apply(); };
       if (ord) ord.onchange = function () {
         var v = Number(ord.value);
-        ensureSlot(idx).order = isFinite(v) && v >= 1 ? Math.round(v) : null;
+        ensureSlot(idx).order = Number.isFinite(v) && v >= 1 ? Math.round(v) : null;
         apply();
       };
     });
@@ -630,44 +560,30 @@ function syncStyleToCloud() {
     });
   }
 
-  async function saveApproved(doc, afterSave) {
-  currentDraft = normalizeStyle(currentDraft || readStyle());
-  currentDraft.styleApproved = true;
-  currentDraft.savedAt = new Date().toISOString();
-
-  var ok = writeStyle(currentDraft);
-  var cloudResult = ok
-    ? await syncStyleToCloud()
-    : { ok: false, reason: 'LOCAL_SAVE_FAILED' };
-
-  var cloudOk = cloudResult && cloudResult.ok === true;
-
-  showToast(
-    doc,
-    ok
-      ? (cloudOk
-          ? 'تم حفظ واعتماد تنسيق التواقيع في النظام بنجاح'
-          : 'تم حفظ التنسيق محليًا فقط — تعذر الحفظ في النظام بسبب انتهاء الجلسة أو الصلاحية')
-      : 'تعذر الحفظ — راجع Console',
-    ok ? (cloudOk ? '#166534' : '#b45309') : '#991b1b'
-  );
-
-  if (!cloudOk) {
-    console.warn('[SigFineControl:' + PAGE + '] style saved locally only:', cloudResult);
+  function restoreChildPrintClose(win) {
+    try {
+      if (win.__sbxRealPrint) win.print = win.__sbxRealPrint;
+      if (win.__sbxRealClose) win.close = win.__sbxRealClose;
+    } catch (_) {}
   }
 
-  if (ok && afterSave) afterSave();
-}
+  function saveApproved(doc, afterSave) {
+    currentDraft = normalizeStyle(currentDraft || readStyle());
+    currentDraft.styleApproved = true;
+    currentDraft.savedAt = new Date().toISOString();
+    var ok = writeStyle(currentDraft);
+    showToast(doc, ok ? 'تم حفظ واعتماد تنسيق التواقيع' : 'تعذر الحفظ — راجع Console', ok ? '#166534' : '#991b1b');
+    if (ok && typeof afterSave === 'function') afterSave();
+  }
+
   function resetToDefault(doc, afterReset) {
     currentDraft = defaultStyle();
     currentDraft.savedAt = new Date().toISOString();
     writeStyle(currentDraft);
-    syncStyleToCloud();
     showToast(doc, 'تمت استعادة التنسيق الافتراضي', '#334155');
     if (afterReset) afterReset();
   }
 
-  /* ---------------- زرار التعديل الثابت ---------------- */
   function ensureEditFab() {
     applyStyleTagTo(document, PANEL_CSS, 'sbx-panel-css');
     var fab = document.getElementById('sbx-edit-fab');
@@ -681,7 +597,7 @@ function syncStyleToCloud() {
           editIntent = !editIntent;
           fab.classList.toggle('sbx-intent', editIntent);
           fab.textContent = editIntent ? '✔ افتح الطباعة الآن لتعديل التنسيق' : '🖋 تنسيق تواقيع الطباعة';
-          if (editIntent) showToast(document, 'اضغط أي زر طباعة الآن وستفتح نافذة الطباعة بوضع تعديل التنسيق', '#7c3aed');
+          showToast(document, editIntent ? 'اضغط زر طباعة الآن لفتح نافذة تعديل التنسيق' : 'تم إلغاء وضع تعديل التنسيق', editIntent ? '#7c3aed' : '#334155');
         } else {
           enterPreview();
         }
@@ -690,14 +606,35 @@ function syncStyleToCloud() {
     fab.textContent = '🖋 تنسيق تواقيع الطباعة';
   }
 
-  /* ---------------- وضع المعاينة داخل الصفحة (العمالة والإنجاز) ---------------- */
   function applyInPageDraft() {
     applyStyleTagTo(document, inPageCss(currentDraft || readStyle()), 'sbx-style-' + PAGE);
   }
+
+  function applyApprovedStyleTag() {
+    if (PAGE === 'performance') return;
+    var st = currentDraft || readStyle();
+    if (!currentDraft && st.styleApproved !== true) {
+      var stale = document.getElementById('sbx-style-' + PAGE);
+      if (stale) stale.textContent = '';
+      return;
+    }
+    applyStyleTagTo(document, inPageCss(st), 'sbx-style-' + PAGE);
+  }
+
   function exitPreview() {
     document.body.classList.remove('sbx-preview');
     removePanel(document);
   }
+
+  function doFinalInPagePrint() {
+    try {
+      window.__sbxFinalPassthrough = true;
+      nativePrint();
+    } finally {
+      setTimeout(function () { window.__sbxFinalPassthrough = false; }, 1500);
+    }
+  }
+
   function enterPreview() {
     currentDraft = readStyle();
     document.body.classList.add('sbx-preview');
@@ -713,9 +650,10 @@ function syncStyleToCloud() {
         });
       },
       onReset: function () {
-        resetToDefault(document, null);
-        applyInPageDraft();
-        buildPanel(ctx);
+        resetToDefault(document, function () {
+          applyInPageDraft();
+          buildPanel(ctx);
+        });
       },
       onFinal: function () {
         applyInPageDraft();
@@ -724,17 +662,7 @@ function syncStyleToCloud() {
     };
     buildPanel(ctx);
   }
-  function doFinalInPagePrint() {
-    window.__sbxFinalPassthrough = true;
-    try {
-      var t = lastPrintTrigger && lastPrintTrigger.el && document.contains(lastPrintTrigger.el) ? lastPrintTrigger.el : null;
-      if (t) { t.click(); } else { nativePrint(); }
-    } finally {
-      setTimeout(function () { window.__sbxFinalPassthrough = false; }, 1500);
-    }
-  }
 
-  /* تسجيل آخر زر طباعة ضغطه المستخدم (لإعادة تشغيل نفس مسار الصفحة عند الطباعة النهائية) */
   document.addEventListener('click', function (e) {
     var el = e.target && e.target.closest ? e.target.closest('button,[onclick],a') : null;
     if (!el) return;
@@ -743,15 +671,11 @@ function syncStyleToCloud() {
     if (/print/i.test(oc) || /طباعة/.test(txt)) lastPrintTrigger = { el: el, ts: Date.now() };
   }, true);
 
-  /* اعتراض window.print داخل الصفحة (العمالة والإنجاز فقط) */
   if (PAGE !== 'performance') {
     window.print = function () {
       if (window.__sbxFinalPassthrough) return nativePrint();
       var st = readStyle();
-      if (document.body.classList.contains('sbx-preview')) {
-        /* أثناء المعاينة لا نطبع من مسارات الصفحة الأخرى */
-        return;
-      }
+      if (document.body.classList.contains('sbx-preview')) return;
       if (st.styleApproved === true) {
         currentDraft = null;
         applyApprovedStyleTag();
@@ -761,20 +685,28 @@ function syncStyleToCloud() {
     };
   }
 
-  /* ---------------- نوافذ طباعة الأداء ---------------- */
+  function childFinalPrint(win, doc) {
+    applyStyleTagTo(doc, childWindowCss(currentDraft || readStyle()), 'sbx-style-child');
+    removePanel(doc);
+    restoreChildPrintClose(win);
+    try { win.print(); } catch (_) {}
+    setTimeout(function () { try { win.close(); } catch (_) {} }, 400);
+  }
+
   function setupChildWindow(win, wantEdit) {
     var doc;
     try { doc = win.document; } catch (_) { return; }
     if (!doc || !doc.body || win.__sbxHandled) return;
     win.__sbxHandled = true;
+
     currentDraft = wantEdit ? readStyle() : null;
     var st = currentDraft || readStyle();
     if (st.styleApproved === true || wantEdit) {
       applyStyleTagTo(doc, childWindowCss(st), 'sbx-style-child');
     }
+
     if (!wantEdit) return;
 
-    /* تعطيل الطباعة/الإغلاق التلقائي مؤقتًا حتى ينتهي المستخدم من التنسيق */
     try {
       win.__sbxRealPrint = win.print;
       win.__sbxRealClose = win.close;
@@ -785,49 +717,49 @@ function syncStyleToCloud() {
     function applyChild() {
       applyStyleTagTo(doc, childWindowCss(currentDraft || readStyle()), 'sbx-style-child');
     }
+
     var ctx = {
       doc: doc,
       titleSuffix: PAGE_LABELS[PAGE],
       apply: applyChild,
       onSave: function () {
-        saveApproved(doc, function () { applyChild(); });
+        saveApproved(doc, function () {
+          applyChild();
+          restoreChildPrintClose(win);
+          var panel = doc.getElementById('sbx-panel');
+          if (panel) panel.classList.remove('open');
+          showToast(doc, 'تم الحفظ. أغلق النافذة واطبع من زر الطباعة الأصلي أو اضغط طباعة نهائية.', '#166534');
+        });
       },
       onReset: function () {
-        resetToDefault(doc, null);
-        applyChild();
-        buildPanel(ctx);
+        resetToDefault(doc, function () {
+          applyChild();
+          buildPanel(ctx);
+        });
       },
       onFinal: function () { childFinalPrint(win, doc); }
     };
+
     buildPanel(ctx);
-    showToast(doc, 'وضع تعديل تنسيق التواقيع — اضبط ثم اضغط «حفظ واعتماد» أو «طباعة نهائية»', '#7c3aed');
-  }
-  function childFinalPrint(win, doc) {
-    applyStyleTagTo(doc, childWindowCss(currentDraft || readStyle()), 'sbx-style-child');
-    removePanel(doc);
-    try {
-      if (win.__sbxRealPrint) win.print = win.__sbxRealPrint;
-      if (win.__sbxRealClose) win.close = win.__sbxRealClose;
-    } catch (_) {}
-    try { win.print(); } catch (_) {}
-    setTimeout(function () { try { win.close(); } catch (_) {} }, 400);
+    showToast(doc, 'وضع تعديل تنسيق التواقيع — اضبط ثم اضغط حفظ واعتماد أو طباعة نهائية', '#7c3aed');
   }
 
   if (PAGE === 'performance') {
     window.open = function () {
       var win = nativeOpen.apply(window, arguments);
       if (win) {
-        var wantEdit = editIntent || readStyle().styleApproved !== true;
+        var wantEdit = editIntent === true;
         var attempts = 0;
         var poll = setInterval(function () {
           attempts++;
           var done = false;
           try {
-            if (win.closed) { done = true; }
-            else {
+            if (win.closed) {
+              done = true;
+            } else {
               var doc = win.document;
               if (doc && doc.body && doc.querySelector('.signatures-grid .signature-item, .perf-all-signatures-grid .perf-all-signature-item')) {
-                if (wantEdit && editIntent) {
+                if (wantEdit) {
                   editIntent = false;
                   var fab = document.getElementById('sbx-edit-fab');
                   if (fab) { fab.classList.remove('sbx-intent'); fab.textContent = '🖋 تنسيق تواقيع الطباعة'; }
@@ -836,7 +768,9 @@ function syncStyleToCloud() {
                 done = true;
               }
             }
-          } catch (_) { done = true; }
+          } catch (_) {
+            done = true;
+          }
           if (done || attempts > 60) clearInterval(poll);
         }, 100);
       }
@@ -844,13 +778,12 @@ function syncStyleToCloud() {
     };
   }
 
-  /* ---------------- التهيئة ---------------- */
   function init() {
     ensureEditFab();
     applyApprovedStyleTag();
-    pullStyleFromCloud();
-    console.info('[SigFineControl] installed for page: ' + PAGE);
+    console.info('[SigFineControl] installed for page: ' + PAGE + ' — performance print edit only by explicit intent');
   }
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();
