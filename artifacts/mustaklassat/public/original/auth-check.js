@@ -9,12 +9,12 @@
   'use strict';
 
   var BASE = window.location.origin;
-  var BUILD_V = '20260709_auth_fresh_token_v1';
+  var BUILD_V = '20260709_auth_fresh_token_v2';
   var HOSPITAL_STORAGE_GUARD_V = '20260709_fresh_token_retry_v2';
   var APPROVAL_REVISION_GUARD_V = '20260709_approval_revision_v4_active_mode';
   var MONITOR_V = '20260709_monitor_v1b_safe_storage';
   var NOTIF_INTERVAL_MS = 900000;
-  var NAJRAN_BUILD_VERSION = '2026.07.09-auth-r1';
+  var NAJRAN_BUILD_VERSION = '2026.07.09-auth-r2';
   window.NAJRAN_BUILD_VERSION = NAJRAN_BUILD_VERSION;
 
   try { console.info('%c[Najran] النسخة: ' + NAJRAN_BUILD_VERSION, 'color:#1e3c72;font-weight:bold'); } catch (_) {}
@@ -221,7 +221,7 @@
   }
 
   if (isAdminOfficesPage || isAdminOfficesConsumablesPage) appendScript('/original/admin_offices_full_submit_snapshot_guard.js?v=20260705_v4_admin_offices_duplicate_fix', true);
-  if (isAttendancePage) appendScript('/original/attendance-cloud-refresh-guard.js?v=' + BUILD_V, true);
+  if (isAttendancePage) appendScript('/original/attendance-cloud-refresh-guard-loader.js?v=' + BUILD_V, true);
   if (isAdminOfficesPage) {
     appendScript('/original/admin_offices_performance_logic.js?v=' + BUILD_V, true);
     appendScript('/original/admin_offices_grand_certificate_stamp_fix.js?v=20260701_stamp_v3', true);
