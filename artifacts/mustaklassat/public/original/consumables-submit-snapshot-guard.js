@@ -1,16 +1,16 @@
 /* consumables-submit-snapshot-guard.js
  * يثبت Snapshot المستهلكات ويجبر بيانات توجيه الرفع على مستهلكات قبل /api/submitted-extracts.
- * V3:
- * - يضيف زر الرئيسية في المستهلكات العادية فقط.
- * - يسبق الرجوع للرئيسية بحفظ ملخص المستهلكات من DOM حتى تلتقطه اللقطة المحلية.
+ * V4:
+ * - زر الرئيسية في المستهلكات العادية يحفظ لقطة محلية مباشرة كمسار أمان.
+ * - يستمر pre-save قبل أي خروج للرئيسية.
  * - لا يلمس التوقيعات؛ extract-snapshot V5 يحفظ signatures_data_consumables_v27 و sb_sigs_ كما هي.
  */
 (function () {
   'use strict';
   var pageSig = location.pathname + location.search;
   if (!/\/original\/.*consumables\.html(?:$|[?#])/.test(pageSig)) return;
-  if (window.__NAJRAN_CONSUMABLES_SUBMIT_SNAPSHOT_GUARD_V3__) return;
-  window.__NAJRAN_CONSUMABLES_SUBMIT_SNAPSHOT_GUARD_V3__ = true;
+  if (window.__NAJRAN_CONSUMABLES_SUBMIT_SNAPSHOT_GUARD_V4__) return;
+  window.__NAJRAN_CONSUMABLES_SUBMIT_SNAPSHOT_GUARD_V4__ = true;
 
   var KEY = 'summary_data_consumables_v27';
   var IS_STANDARD_CONSUMABLES = /\/original\/consumables\.html(?:$|[?#])/.test(pageSig) || /[?&]page=consumables\.html(?:$|[&#])/.test(pageSig);
@@ -126,6 +126,28 @@
     }
   }
 
+  function saveLocalAndGoHome(ev) {
+    if (!IS_STANDARD_CONSUMABLES) return;
+    if (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+    }
+    ensureSummarySnapshot();
+    if (typeof window.saveExtractSnapshot !== 'function') {
+      alert('تعذر الحفظ المحلي الآن: أداة اللقطات لم تكتمل بعد. أعد تحميل الصفحة وحاول مرة أخرى.');
+      return false;
+    }
+    var snap = window.saveExtractSnapshot('consumables-home-direct-save');
+    if (!snap || !snap.extractData) {
+      alert('تعذر حفظ نسخة محلية من مستخلص المستهلكات. لم يتم الخروج من الصفحة.');
+      return false;
+    }
+    alert('تم حفظ نسخة محلية من مستخلص المستهلكات.');
+    window.location.href = '/dashboard';
+    return false;
+  }
+
   function installHomeButton() {
     if (!IS_STANDARD_CONSUMABLES) return;
     if (document.getElementById('najran-consumables-home-btn')) return;
@@ -138,10 +160,10 @@
     a.innerHTML = '<i class="fas fa-home"></i><span>الرئيسية</span>';
     a.style.cssText = 'background:linear-gradient(135deg,#1e3c72,#2a5298)!important;color:#fff!important;text-decoration:none!important;';
     a.addEventListener('pointerdown', function () { ensureSummarySnapshot(); }, true);
-    a.addEventListener('click', function () { ensureSummarySnapshot(); }, true);
+    a.addEventListener('click', saveLocalAndGoHome, true);
     if (bar.classList && bar.classList.contains('main-action-buttons')) bar.insertBefore(a, bar.firstChild);
     else bar.appendChild(a);
-    console.info('[ConsumablesSnapshotGuard] home button installed');
+    console.info('[ConsumablesSnapshotGuard] home button installed v4 direct local save');
   }
 
   function injectIntoPayloadBody(body) {
@@ -171,8 +193,8 @@
   setTimeout(installHomeButton, 1200);
   setTimeout(installHomeButton, 2500);
 
-  if (!window.__najranConsumablesFetchGuardV3) {
-    window.__najranConsumablesFetchGuardV3 = true;
+  if (!window.__najranConsumablesFetchGuardV4) {
+    window.__najranConsumablesFetchGuardV4 = true;
     var nativeFetch = window.fetch;
     window.fetch = function () {
       try {
@@ -190,5 +212,6 @@
 
   window.najranEnsureConsumablesSummarySnapshot = ensureSummarySnapshot;
   window.najranInstallConsumablesHomeButton = installHomeButton;
-  console.info('[ConsumablesSnapshotGuard] installed v3 home-save + summary pre-snapshot');
+  window.najranConsumablesSaveLocalAndGoHome = saveLocalAndGoHome;
+  console.info('[ConsumablesSnapshotGuard] installed v4 direct home local-save + summary pre-snapshot');
 })();
