@@ -12,7 +12,7 @@
   var QUEUE_KEY = 'najran_monitor_event_queue_v1';
   var META_KEY = 'najran_monitor_meta_v1';
   var ENDPOINT = '/api/client-events';
-  var BUILD = 'monitor_v1b_20260709_safe_storage';
+  var BUILD = 'monitor_v2_20260709_circuit_breaker';
   var MAX_QUEUE = 50;
   var MAX_LAST_ACTIONS = 20;
   var RATE_LIMIT_MAX = 20;
@@ -261,6 +261,26 @@
 
   var flushTimer = null;
   var flushInFlight = false;
+
+  // === Circuit breaker (توفير Neon وقت الأعطال) ===
+  // فشل POST مرتين متتاليتين (شبكة أو status >= 400) → إيقاف كل محاولات
+  // الإرسال 10 دقائق. الأحداث تستمر فى التخزين المحلى (طابور الـ50) وتُرسل
+  // بعد فتح الدائرة — صفر حمل إضافى على السيرفر/القاعدة وقت ما يكونوا متعبين.
+  var CIRCUIT_FAILURE_THRESHOLD = 2;
+  var CIRCUIT_OPEN_MS = 10 * 60 * 1000;
+  var circuitConsecutiveFailures = 0;
+  var circuitOpenUntil = 0;
+  function circuitIsOpen() { return Date.now() < circuitOpenUntil; }
+  function circuitRecordFailure() {
+    circuitConsecutiveFailures++;
+    if (circuitConsecutiveFailures >= CIRCUIT_FAILURE_THRESHOLD) {
+      circuitOpenUntil = Date.now() + CIRCUIT_OPEN_MS;
+      circuitConsecutiveFailures = 0;
+      try { console.warn('[NajranMonitor] circuit open — flush paused 10min'); } catch (_) {}
+    }
+  }
+  function circuitRecordSuccess() { circuitConsecutiveFailures = 0; circuitOpenUntil = 0; }
+
   async function getFreshAuthToken() {
     try { if (typeof window.najranGetFreshToken === 'function') { var t = await window.najranGetFreshToken(); if (t) return t; } } catch (_) {}
     try { if (window.parent && window.parent !== window && typeof window.parent.najranGetFreshToken === 'function') { var pt = await window.parent.najranGetFreshToken(); if (pt) return pt; } } catch (_) {}
@@ -273,6 +293,7 @@
   }
   async function flush() {
     if (flushInFlight) return;
+    if (circuitIsOpen()) return; // الدائرة مفتوحة — تخزين محلى فقط، صفر شبكة
     if (!navigator.onLine) return;
     var q = readQueue();
     if (!q.length) return;
@@ -286,14 +307,15 @@
       credentials: 'include',
       body: JSON.stringify({ events: toSend })
     }).then(function (r) {
-      if (r && r.ok) writeQueue(readQueue().slice(toSend.length));
-    }).catch(function () {}).finally(function () { flushInFlight = false; });
+      if (r && r.ok) { circuitRecordSuccess(); writeQueue(readQueue().slice(toSend.length)); }
+      else { circuitRecordFailure(); }
+    }).catch(function () { circuitRecordFailure(); }).finally(function () { flushInFlight = false; });
   }
 
   window.__najranMonitorFlush = function () { flush(); return 'flush-attempted'; };
   window.__najranMonitorStatus = function () {
     var s = getSession(), m = loadMeta();
-    return { installed: true, build: BUILD, user: s.name || null, role: s.role || null, hospital: s.hospital || null, page: currentPage(), queueSize: readQueue().length, rateWindowUsed: (m.timestamps || []).length, rateLimitMax: RATE_LIMIT_MAX, lastActions: lastActions.slice(-5), revisionMode: !!lsGet('najran_revision_mode') };
+    return { installed: true, build: BUILD, user: s.name || null, role: s.role || null, hospital: s.hospital || null, page: currentPage(), queueSize: readQueue().length, circuitOpen: circuitIsOpen(), circuitOpenUntil: circuitOpenUntil ? new Date(circuitOpenUntil).toISOString() : null, rateWindowUsed: (m.timestamps || []).length, rateLimitMax: RATE_LIMIT_MAX, lastActions: lastActions.slice(-5), revisionMode: !!lsGet('najran_revision_mode') };
   };
   window.__najranMonitorExport = function () { return JSON.stringify(readQueue(), null, 2); };
   window.__najranMonitorLastIncident = function () { return window.__najranMonitorLastIncidentValue || null; };

@@ -49,25 +49,27 @@ const RATE_LIMIT_MAX_EVENTS = 100;           // per user per window
 // the current window. Cleared periodically. Sufficient for our modest volume;
 // if this router ever scales horizontally the per-instance limit is fine as a
 // soft throttle (final safety net is MAX_PAYLOAD_BYTES).
-const rateLimitCache: Map<number, number[]> = new Map();
+// Keyed by clerkUserId (string) so the check runs BEFORE any database query —
+// an event flood must never translate into a Neon query flood.
+const rateLimitCache: Map<string, number[]> = new Map();
 
-function checkRateLimit(userId: number): { allowed: boolean; remaining: number } {
+function checkRateLimit(key: string): { allowed: boolean; remaining: number } {
   const now = Date.now();
   const cutoff = now - RATE_LIMIT_WINDOW_MS;
-  const timestamps = (rateLimitCache.get(userId) || []).filter(t => t > cutoff);
+  const timestamps = (rateLimitCache.get(key) || []).filter(t => t > cutoff);
   if (timestamps.length >= RATE_LIMIT_MAX_EVENTS) {
-    rateLimitCache.set(userId, timestamps);
+    rateLimitCache.set(key, timestamps);
     return { allowed: false, remaining: 0 };
   }
   return { allowed: true, remaining: RATE_LIMIT_MAX_EVENTS - timestamps.length };
 }
 
-function recordRateLimitUsage(userId: number, count: number) {
+function recordRateLimitUsage(key: string, count: number) {
   const now = Date.now();
   const cutoff = now - RATE_LIMIT_WINDOW_MS;
-  const timestamps = (rateLimitCache.get(userId) || []).filter(t => t > cutoff);
+  const timestamps = (rateLimitCache.get(key) || []).filter(t => t > cutoff);
   for (let i = 0; i < count; i++) timestamps.push(now);
-  rateLimitCache.set(userId, timestamps);
+  rateLimitCache.set(key, timestamps);
 }
 
 // ==================================================================
@@ -133,20 +135,25 @@ router.post("/", requireAuth, async (req: any, res: any) => {
       events.length = MAX_EVENTS_PER_REQUEST;
     }
 
-    // Resolve user (needed for rate limit + attribution)
+    // (1) Rate limit FIRST — keyed by clerkUserId from the verified token,
+    // zero database access. Rejected floods never reach Neon.
+    const rlKey = String(req.clerkUserId || "anon");
+    const limit = checkRateLimit(rlKey);
+    if (!limit.allowed) {
+      // Silently drop — do not block the client
+      return res.json({ received: events.length, stored: 0, rateLimited: true });
+    }
+
+    // (2) User lookup only after passing the limiter — needed for attribution.
     const [user] = await db
       .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name, role: usersTable.role })
       .from(usersTable)
       .where(eq(usersTable.clerkId, req.clerkUserId))
       .limit(1);
     if (!user) {
+      // Count the attempt so unregistered floods can't loop lookups forever.
+      recordRateLimitUsage(rlKey, 1);
       return res.status(200).json({ received: events.length, stored: 0, error: "user-not-registered" });
-    }
-
-    const limit = checkRateLimit(user.id);
-    if (!limit.allowed) {
-      // Silently drop — do not block the client
-      return res.json({ received: events.length, stored: 0, rateLimited: true });
     }
 
     // Sanitize + persist
@@ -188,7 +195,7 @@ router.post("/", requireAuth, async (req: any, res: any) => {
 
     try {
       await db.insert(auditLogTable).values(rows);
-      recordRateLimitUsage(user.id, rows.length);
+      recordRateLimitUsage(rlKey, rows.length);
       return res.json({ received: events.length, stored: rows.length, remaining: limit.remaining - rows.length });
     } catch (dbErr: any) {
       // Even if DB write fails, we do not surface a failure that would make
@@ -216,7 +223,9 @@ router.get("/", requireAuth, async (req: any, res: any) => {
     return res.status(403).json({ error: "Admin only" });
   }
 
-  const limit = Math.min(Number(req.query.limit) || 100, 500);
+  // Neon transfer control: default 100, hard cap 200 (rows can carry up to
+  // 16KB details each; 500 rows per refresh was multi-MB per click).
+  const limit = Math.min(Number(req.query.limit) || 100, 200);
   const since = req.query.since ? new Date(String(req.query.since)) : null;
   const filterType = req.query.type ? String(req.query.type).toUpperCase() : null;
   const filterHospital = req.query.hospital ? String(req.query.hospital) : null;
@@ -291,7 +300,7 @@ router.get("/summary", requireAuth, async (req: any, res: any) => {
       .from(auditLogTable)
       .where(and(like(auditLogTable.action, "CLIENT_EVENT_%"), gte(auditLogTable.createdAt, cutoff)))
       .orderBy(desc(auditLogTable.createdAt))
-      .limit(2000);
+      .limit(500); // Neon transfer control: was 2000 — stats stay representative at 500
 
     const summary = {
       total: raw.length,

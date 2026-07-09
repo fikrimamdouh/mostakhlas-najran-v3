@@ -12,7 +12,7 @@
   var BUILD_V = '20260709_auth_fresh_token_v3_archive_filter';
   var HOSPITAL_STORAGE_GUARD_V = '20260709_fresh_token_retry_v2';
   var APPROVAL_REVISION_GUARD_V = '20260709_approval_revision_v4_active_mode';
-  var MONITOR_V = '20260709_monitor_v1b_safe_storage';
+  var MONITOR_V = '20260709_monitor_v2_circuit_breaker';
   var NOTIF_INTERVAL_MS = 900000;
   var NAJRAN_BUILD_VERSION = '2026.07.09-auth-r3';
   window.NAJRAN_BUILD_VERSION = NAJRAN_BUILD_VERSION;
