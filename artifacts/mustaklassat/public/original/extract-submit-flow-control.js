@@ -1,9 +1,9 @@
 // extract-submit-flow-control.js
-// Official submit-flow control: confirmation, no auto payment/month mutation, update existing, and durable submit summary.
+// Official submit-flow control: confirmation, verified duplicate handling, no auto payment/month mutation, update existing, and durable submit summary.
 (function () {
   'use strict';
-  if (window.__NAJRAN_EXTRACT_SUBMIT_FLOW_CONTROL_V3__) return;
-  window.__NAJRAN_EXTRACT_SUBMIT_FLOW_CONTROL_V3__ = true;
+  if (window.__NAJRAN_EXTRACT_SUBMIT_FLOW_CONTROL_V4__) return;
+  window.__NAJRAN_EXTRACT_SUBMIT_FLOW_CONTROL_V4__ = true;
 
   var SUMMARY_KEY = 'najran_last_submitted_summary_v1';
   var WORK_CONTEXT_KEY = 'najran_work_context_v1';
@@ -91,6 +91,9 @@
     return best;
   }
   function latestDoneLock() { return currentDoneLock('') || null; }
+  function clearDoneLock(lock) {
+    try { if (lock && lock.key) localStorage.removeItem(lock.key); } catch (_) {}
+  }
   function setUpdateMode(existingId) {
     existingId = clean(existingId);
     if (!existingId) return false;
@@ -113,6 +116,34 @@
         'najran_editing_submitted_extract_id','najran_editing_submitted_extract_mode','najran_editing_submitted_extract_started_at'
       ].forEach(function (k) { try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch (_) {} });
     } catch (_) {}
+  }
+  async function getFreshToken() {
+    try {
+      if (typeof window.najranGetFreshToken === 'function') return await window.najranGetFreshToken({ skipCache: true });
+    } catch (_) {}
+    try {
+      if (window.parent && window.parent !== window && typeof window.parent.najranGetFreshToken === 'function') return await window.parent.najranGetFreshToken({ skipCache: true });
+    } catch (_) {}
+    var s = session();
+    return s.clerkToken || '';
+  }
+  async function apiJson(url, options) {
+    options = options || {};
+    var token = await getFreshToken();
+    var headers = new Headers(options.headers || {});
+    if (token) headers.set('Authorization', 'Bearer ' + token);
+    if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+    var res = await fetch(url, Object.assign({}, options, { headers: headers, credentials: 'include' }));
+    var data = null;
+    try { data = await res.clone().json(); } catch (_) {}
+    return { ok: res.ok, status: res.status, data: data };
+  }
+  async function verifyExistingExtract(existingId) {
+    existingId = clean(existingId);
+    if (!existingId) return { exists: false, reason: 'no-id' };
+    var r = await apiJson('/api/submitted-extracts/' + encodeURIComponent(existingId), {});
+    if (r.ok && r.data) return { exists: true, row: r.data };
+    return { exists: false, status: r.status, reason: 'server-not-found-or-hidden' };
   }
   function goTrack() { location.href = '/extracts/track'; }
   function goSettings() { location.href = '/original/settings_main.html'; }
@@ -148,7 +179,7 @@
     document.body.appendChild(overlay);
     return overlay;
   }
-  function summaryBlock(existingId) {
+  function summaryBlock(existingId, label) {
     var cd = contractData();
     return '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:14px">' +
       '<b>الشركة:</b> ' + esc(cd.companyName || '—') + '<br>' +
@@ -156,7 +187,7 @@
       '<b>الفترة:</b> ' + esc(cd.periodMonth || [cd.extractMonth, cd.extractYear].filter(Boolean).join(' ') || '—') + '<br>' +
       '<b>الدفعة:</b> ' + esc(cd.paymentNumber || '—') +
       (cd.totalAmount ? '<br><b>الإجمالي:</b> ' + esc(cd.totalAmount) : '') +
-      (existingId ? '<br><b>رقم المستخلص الموجود:</b> ' + esc(existingId) : '') +
+      (existingId ? '<br><b>' + esc(label || 'المستخلص الموجود في النظام: سجل رقم') + ':</b> ' + esc(existingId) : '') +
     '</div>';
   }
   function showConfirmSubmitModal(originalButton) {
@@ -165,7 +196,7 @@
     if (!isEditingExisting()) {
       var lock = currentDoneLock(type);
       if (lock) {
-        showDuplicateChoiceModal(lock.resultId || lock.existingId || '');
+        showDuplicateChoiceModal(lock.resultId || lock.existingId || '', lock);
         return;
       }
     }
@@ -189,7 +220,7 @@
         overlay.remove();
         var lock = currentDoneLock(type);
         if (!isEditingExisting() && lock) {
-          showDuplicateChoiceModal(lock.resultId || lock.existingId || '');
+          showDuplicateChoiceModal(lock.resultId || lock.existingId || '', lock);
           return;
         }
         enableNativeSubmitBypass();
@@ -197,12 +228,53 @@
       }
     });
   }
-  function showDuplicateChoiceModal(explicitExistingId) {
+  function showStaleLockModal(lock, existingId, verify) {
     removeOldDuplicateModal();
-    var info = latestDoneLock() || {};
+    var overlay = modalShell('najran-submit-stale-lock-modal', 'قفل رفع محلي قديم', 'الجهاز يتذكر محاولة رفع سابقة، لكن السجل غير ظاهر في السيرفر أو لا يمكن الوصول له من القائمة الحالية.',
+      summaryBlock(existingId || '', 'رقم محفوظ محليًا') +
+      '<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 12px;color:#9a3412;font-weight:800;margin-bottom:12px">' +
+      'لم يتم العثور على السجل في السيرفر أثناء التحقق. هذا لا يمس بيانات الحضور أو المستخلص؛ هو قفل محلي فقط لمنع التكرار.' +
+      (verify && verify.status ? '<br>كود التحقق: ' + esc(verify.status) : '') +
+      '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start">' +
+      '<button data-action="clear-retry" style="padding:10px 13px;border:0;border-radius:10px;background:#166534;color:#fff;font-weight:900;cursor:pointer;font-family:inherit">مسح القفل المحلي فقط والمحاولة من جديد</button>' +
+      '<button data-action="track" style="padding:10px 13px;border:0;border-radius:10px;background:#1e3c72;color:#fff;font-weight:900;cursor:pointer;font-family:inherit">الذهاب للمتابعة</button>' +
+      '<button data-action="settings" style="padding:10px 13px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc;color:#334155;font-weight:900;cursor:pointer;font-family:inherit">فتح الإعدادات لتغيير الدفعة</button>' +
+      '<button data-action="cancel" style="padding:10px 13px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;color:#64748b;font-weight:900;cursor:pointer;font-family:inherit">إلغاء</button>' +
+      '</div>'
+    );
+    overlay.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest && e.target.closest('button[data-action]');
+      if (!btn) return;
+      var action = btn.getAttribute('data-action');
+      if (action === 'cancel') { overlay.remove(); return; }
+      if (action === 'track') { goTrack(); return; }
+      if (action === 'settings') { goSettings(); return; }
+      if (action === 'clear-retry') {
+        clearDoneLock(lock);
+        overlay.remove();
+        triggerSubmitAgain();
+      }
+    });
+  }
+  async function showDuplicateChoiceModal(explicitExistingId, explicitLock) {
+    removeOldDuplicateModal();
+    var info = explicitLock || latestDoneLock() || {};
     var existingId = clean(explicitExistingId || info.resultId || info.existingId || '');
+    if (existingId) {
+      try {
+        var verified = await verifyExistingExtract(existingId);
+        if (!verified.exists) {
+          showStaleLockModal(info, existingId, verified);
+          return;
+        }
+      } catch (e) {
+        showStaleLockModal(info, existingId, { status: 'verify-failed' });
+        return;
+      }
+    }
     var overlay = modalShell('najran-submit-duplicate-choice-modal', 'هذا المستخلص مرفوع مسبقًا', 'لن يتم تغيير رقم الدفعة أو الشهر تلقائيًا. اختر الإجراء الصحيح.',
-      summaryBlock(existingId) +
+      summaryBlock(existingId, 'المستخلص الموجود في النظام: سجل رقم') +
       '<p style="margin:0 0 12px;color:#475569">لو تريد تعديل نفس المستخلص الموجود، اختر <b>تحديث المستخلص القائم</b>. لو تريد مستخلصًا جديدًا، غيّر رقم الدفعة أو الشهر من الإعدادات أولًا.</p>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start">' +
       '<button data-action="update" ' + (existingId ? '' : 'disabled') + ' style="padding:10px 13px;border:0;border-radius:10px;background:' + (existingId ? '#166534' : '#94a3b8') + ';color:#fff;font-weight:900;cursor:' + (existingId ? 'pointer' : 'not-allowed') + ';font-family:inherit">تحديث المستخلص القائم</button>' +
@@ -349,6 +421,6 @@
   installDuplicateOverride();
   installDuplicateModalObserver();
   patchFetchForSubmitSummary();
-  window.NajranExtractSubmitFlowControl = { showDuplicateChoiceModal: showDuplicateChoiceModal, latestDoneLock: latestDoneLock, setUpdateMode: setUpdateMode, currentDoneLock: currentDoneLock };
-  console.info('[ExtractSubmitFlowControl] installed v3 confirm + duplicate precheck + no admin notice + durable summary');
+  window.NajranExtractSubmitFlowControl = { showDuplicateChoiceModal: showDuplicateChoiceModal, latestDoneLock: latestDoneLock, setUpdateMode: setUpdateMode, currentDoneLock: currentDoneLock, verifyExistingExtract: verifyExistingExtract, clearDoneLock: clearDoneLock };
+  console.info('[ExtractSubmitFlowControl] installed v4 verified duplicate lock + stale-lock recovery');
 })();
