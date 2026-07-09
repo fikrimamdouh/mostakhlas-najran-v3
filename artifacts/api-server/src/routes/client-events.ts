@@ -21,6 +21,12 @@
  *     type, severity, hospital, userId, page (filters)
  *   Returns: { events: [...], total }
  *
+ * DELETE /api/client-events/cleanup
+ *   Auth: requireAuth + requireAdmin
+ *   Body: { before: ISO date }
+ *   Behavior: deletes only CLIENT_EVENT_* rows older than before, then writes
+ *   a normal audit cleanup row. It does not touch the general audit history.
+ *
  * Storage strategy:
  *   Uses the existing audit_log table (userId, userEmail, userName, action,
  *   details, ipAddress, createdAt). No migration required. Details holds the
@@ -34,7 +40,7 @@
 
 import { Router } from "express";
 import { db, usersTable, auditLogTable } from "@workspace/db";
-import { eq, and, desc, gte, sql, like } from "drizzle-orm";
+import { eq, and, desc, gte, sql, like, lt } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
@@ -52,6 +58,20 @@ const RATE_LIMIT_MAX_EVENTS = 30;           // per user per window
 // Keyed by clerkUserId (string) so the check runs BEFORE any database query —
 // an event flood must never translate into a Neon query flood.
 const rateLimitCache: Map<string, number[]> = new Map();
+
+async function getAdminUserOrReject(req: any, res: any) {
+  const [user] = await db
+    .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name, role: usersTable.role })
+    .from(usersTable)
+    .where(eq(usersTable.clerkId, req.clerkUserId))
+    .limit(1);
+
+  if (!user || user.role !== "admin") {
+    res.status(403).json({ error: "Admin only" });
+    return null;
+  }
+  return user;
+}
 
 function checkRateLimit(key: string): { allowed: boolean; remaining: number } {
   const now = Date.now();
@@ -348,6 +368,64 @@ router.get("/summary", requireAuth, async (req: any, res: any) => {
   } catch (err: any) {
     req.log?.error?.({ err }, "client-events: summary failed");
     return res.status(500).json({ error: "Failed to summarize" });
+  }
+});
+
+// ==================================================================
+// DELETE /api/client-events/cleanup  (admin only)
+// ==================================================================
+router.delete("/cleanup", requireAuth, async (req: any, res: any) => {
+  try {
+    const admin = await getAdminUserOrReject(req, res);
+    if (!admin) return;
+
+    const beforeRaw = typeof req.body?.before === "string" ? req.body.before : String(req.query.before || "");
+    if (!beforeRaw) return res.status(400).json({ error: "before date required" });
+
+    const beforeDate = new Date(beforeRaw);
+    if (Number.isNaN(beforeDate.getTime())) return res.status(400).json({ error: "invalid before date" });
+
+    // Hard guard: this action is for old production incidents only. Refuse a
+    // cutoff that could wipe fresh/live incidents by mistake.
+    if (beforeDate.getTime() > Date.now() - 60 * 60 * 1000) {
+      return res.status(400).json({ error: "cleanup cutoff must be at least 1 hour old" });
+    }
+
+    const whereClause = and(
+      like(auditLogTable.action, "CLIENT_EVENT_%"),
+      lt(auditLogTable.createdAt, beforeDate)
+    );
+
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(auditLogTable)
+      .where(whereClause);
+
+    await db.delete(auditLogTable).where(whereClause);
+
+    const ip =
+      String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
+      req.socket?.remoteAddress ||
+      null;
+
+    await db.insert(auditLogTable).values({
+      userId: admin.id,
+      userEmail: admin.email,
+      userName: admin.name,
+      action: "تنظيف حوادث مراقبة الإنتاج",
+      details: JSON.stringify({
+        details: `تم حذف ${Number(count)} حادثة إنتاج قديمة قبل ${beforeDate.toISOString()}`,
+        before: beforeDate.toISOString(),
+        deletedCount: Number(count),
+        scope: "CLIENT_EVENT_ONLY",
+      }),
+      ipAddress: ip,
+    });
+
+    return res.json({ deleted: Number(count), before: beforeDate.toISOString(), scope: "CLIENT_EVENT_ONLY" });
+  } catch (err: any) {
+    req.log?.error?.({ err }, "client-events: cleanup failed");
+    return res.status(500).json({ error: "Failed to cleanup production incidents" });
   }
 });
 
