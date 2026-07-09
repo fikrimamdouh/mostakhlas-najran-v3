@@ -6,7 +6,7 @@ export type ErrorType<T = unknown> = ApiError<T>;
 
 export type BodyType<T> = T;
 
-export type AuthTokenGetter = () => Promise<string | null> | string | null;
+export type AuthTokenGetter = (options?: { skipCache?: boolean }) => Promise<string | null> | string | null;
 
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
@@ -322,6 +322,19 @@ async function parseSuccessBody(
   }
 }
 
+async function getAuthToken(force = false): Promise<string | null> {
+  if (!_authTokenGetter) return null;
+  try {
+    return (await _authTokenGetter(force ? { skipCache: true } : undefined)) || null;
+  } catch {
+    try { return (await _authTokenGetter()) || null; } catch { return null; }
+  }
+}
+
+function attachAuth(headers: Headers, token: string | null) {
+  if (token) headers.set("authorization", `Bearer ${token}`);
+}
+
 export async function customFetch<T = unknown>(
   input: RequestInfo | URL,
   options: CustomFetchOptions = {},
@@ -349,18 +362,19 @@ export async function customFetch<T = unknown>(
     headers.set("accept", DEFAULT_JSON_ACCEPT);
   }
 
-  // Attach bearer token when an auth getter is configured and no
-  // Authorization header has been explicitly provided.
   if (_authTokenGetter && !headers.has("authorization")) {
-    const token = await _authTokenGetter();
-    if (token) {
-      headers.set("authorization", `Bearer ${token}`);
-    }
+    attachAuth(headers, await getAuthToken(false));
   }
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  let response = await fetch(input, { ...init, method, headers });
+
+  if (response.status === 401 && _authTokenGetter) {
+    const retryHeaders = mergeHeaders(headers);
+    attachAuth(retryHeaders, await getAuthToken(true));
+    response = await fetch(input, { ...init, method, headers: retryHeaders });
+  }
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
