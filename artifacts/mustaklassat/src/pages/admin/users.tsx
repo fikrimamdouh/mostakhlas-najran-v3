@@ -15,6 +15,32 @@ import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 import { ALL_MODULES, ASSIGNABLE_MODULES } from "@/lib/modules";
 
+type TokenGetter = ReturnType<typeof useAuth>["getToken"];
+
+async function fetchWithFreshToken(getToken: TokenGetter, input: RequestInfo | URL, init: RequestInit = {}) {
+  const build = (token: string | null) => ({
+    ...init,
+    headers: {
+      ...(init.headers || {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  let token = await getToken();
+  let res = await fetch(input, build(token));
+
+  if (res.status === 401) {
+    try {
+      token = await getToken({ skipCache: true } as any);
+      res = await fetch(input, build(token));
+    } catch {
+      // keep original 401 response
+    }
+  }
+
+  return res;
+}
+
 // ── نافذة تأكيد حذف مستخدم واحد ─────────────────────────────────────────────
 function DeleteUserModal({ user, onClose, onConfirm, isPending }: {
   user: { name: string; email: string };
@@ -235,28 +261,29 @@ function ModulePermissionsModal({ user, onClose, onSave }: {
         <div className="p-5 border-b flex items-center justify-between" style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)", color: "#fff" }}>
           <div>
             <h3 className="text-lg font-bold flex items-center gap-2">
-              <LayoutGrid className="h-5 w-5" style={{ color: "#d4af37" }} />
-              صلاحيات الوحدات — {user.name}
+              <LayoutGrid className="h-5 w-5" />
+              صلاحيات الوحدات
             </h3>
-            <p className="text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.7)" }}>
-              اختر الوحدات التي يراها هذا المستخدم في الداشبورد
-            </p>
+            <p className="text-sm opacity-80 mt-1">المستخدم: {user.name}</p>
           </div>
-          <button onClick={onClose} className="text-white/70 hover:text-white text-2xl leading-none">×</button>
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/20">
+            <X className="h-5 w-5" />
+          </Button>
         </div>
 
-        {/* All toggle */}
-        <div className="px-5 py-3 border-b flex items-center gap-3" style={{ background: "#f8faff" }}>
-          <label className="flex items-center gap-2 cursor-pointer select-none">
+        {/* All modules toggle */}
+        <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
+          <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
               checked={allSelected}
-              onChange={() => setSelected(allSelected ? ASSIGNABLE_MODULES.map(m => m.key) : null)}
-              className="h-4 w-4 accent-blue-600"
+              onChange={(e) => setSelected(e.target.checked ? null : ASSIGNABLE_MODULES.map(m => m.key))}
+              className="h-5 w-5 accent-blue-600"
             />
-            <span className="font-semibold text-sm" style={{ color: "#1e3c72" }}>
-              {allSelected ? "✅ جميع الوحدات مسموح بها (افتراضي)" : "السماح بجميع الوحدات"}
-            </span>
+            <div>
+              <div className="font-bold" style={{ color: "#1e3c72" }}>جميع الوحدات</div>
+              <div className="text-xs text-gray-500">السماح للمستخدم بالوصول لكل الصفحات المتاحة</div>
+            </div>
           </label>
           {!allSelected && (
             <span className="text-xs text-gray-500">
@@ -328,10 +355,9 @@ export default function AdminUsers() {
 
   const resetExtracts = useMutation({
     mutationFn: async () => {
-      const token = await getToken();
-      const res = await fetch("/api/admin/reset-extracts", {
+      const res = await fetchWithFreshToken(getToken, "/api/admin/reset-extracts", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ confirmation: "حذف المستخلصات" }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "فشل"); }
@@ -346,10 +372,9 @@ export default function AdminUsers() {
 
   const resetSystem = useMutation({
     mutationFn: async () => {
-      const token = await getToken();
-      const res = await fetch("/api/admin/reset-system", {
+      const res = await fetchWithFreshToken(getToken, "/api/admin/reset-system", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ confirmation: "تأكيد التهيئة الكاملة" }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "فشل"); }
@@ -391,10 +416,9 @@ export default function AdminUsers() {
 
   const changeRole = useMutation({
     mutationFn: async ({ userId, role, contractCompany }: { userId: number; role: string; contractCompany?: string }) => {
-      const token = await getToken();
-      const res = await fetch(`/api/users/${userId}/role`, {
+      const res = await fetchWithFreshToken(getToken, `/api/users/${userId}/role`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role, contractCompany }),
       });
       if (!res.ok) throw new Error("failed");
@@ -409,11 +433,10 @@ export default function AdminUsers() {
 
   const toggleActive = useMutation({
     mutationFn: async ({ userId, activate }: { userId: number; activate: boolean }) => {
-      const token = await getToken();
       const endpoint = activate ? "activate" : "deactivate";
-      const res = await fetch(`/api/users/${userId}/${endpoint}`, {
+      const res = await fetchWithFreshToken(getToken, `/api/users/${userId}/${endpoint}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) throw new Error("failed");
       return res.json();
@@ -441,13 +464,15 @@ export default function AdminUsers() {
 
   const saveModules = useMutation({
     mutationFn: async ({ userId, modules }: { userId: number; modules: string[] | null }) => {
-      const token = await getToken();
-      const res = await fetch(`/api/users/${userId}/modules`, {
+      const res = await fetchWithFreshToken(getToken, `/api/users/${userId}/modules`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ modules }),
       });
-      if (!res.ok) throw new Error("failed");
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || "failed");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -455,7 +480,7 @@ export default function AdminUsers() {
       queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
       setModulesUser(null);
     },
-    onError: () => toast({ title: "خطأ", description: "فشل حفظ الصلاحيات", variant: "destructive" }),
+    onError: (e: any) => toast({ title: "خطأ", description: e.message || "فشل حفظ الصلاحيات", variant: "destructive" }),
   });
 
   const users = (data?.users || []).filter(u => {
@@ -549,224 +574,207 @@ export default function AdminUsers() {
             className="gap-2 bg-red-700 hover:bg-red-800 text-white border-0"
             onClick={() => setShowReset(true)}
           >
-            <Trash2 className="h-4 w-4" />
+            <AlertTriangle className="h-4 w-4" />
             تهيئة النظام
           </Button>
         </div>
       </div>
 
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input
+          placeholder="بحث بالاسم أو البريد..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="pr-10 bg-white"
+        />
+      </div>
+
       {/* Tabs */}
-      <div className="flex gap-1 rounded-xl p-1" style={{ background: "#f0f2f8" }}>
+      <div className="flex flex-wrap gap-2">
         {tabs.map(t => {
           const Icon = t.icon;
+          const active = tab === t.key;
           return (
-            <button
+            <Button
               key={t.key}
+              variant={active ? "default" : "outline"}
               onClick={() => setTab(t.key)}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all",
-                tab === t.key
-                  ? "bg-white shadow-sm text-[#1e3c72] font-bold"
-                  : "text-gray-500 hover:text-gray-700"
-              )}
+              className="gap-2"
+              style={active ? { background: "linear-gradient(135deg,#1e3c72,#2a5298)", color: "#fff" } : {}}
             >
               <Icon className="h-4 w-4" />
               {t.label}
-            </button>
+            </Button>
           );
         })}
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
-        <Input
-          placeholder="بحث بالاسم أو البريد الإلكتروني..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="pr-9"
-        />
-      </div>
-
       {/* Table */}
-      <div className="rounded-xl border overflow-hidden shadow-sm" style={{ borderColor: "#e8edf7" }}>
-        <Table>
-          <TableHeader>
-            <TableRow style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)" }}>
-              <TableHead className="font-bold text-right text-white">الاسم</TableHead>
-              <TableHead className="font-bold text-right text-white">البريد</TableHead>
-              <TableHead className="font-bold text-right text-white">الصلاحية</TableHead>
-              <TableHead className="font-bold text-right text-white">الحالة</TableHead>
-              <TableHead className="font-bold text-right text-white">آخر دخول</TableHead>
-              <TableHead className="font-bold text-right text-white">تسجيل</TableHead>
-              <TableHead className="font-bold text-center text-white">الوحدات</TableHead>
-              <TableHead className="font-bold text-center text-white">الإجراءات</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow><TableCell colSpan={8} className="h-24 text-center text-gray-400">جاري التحميل...</TableCell></TableRow>
-            ) : users.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="h-24 text-center text-gray-400">لا يوجد مستخدمون</TableCell></TableRow>
-            ) : (
-              users.map((user, i) => {
-                let allowedCount: string;
-                try {
-                  const mods = (user as any).allowedModules;
-                  allowedCount = mods ? `${JSON.parse(mods).length}/${ASSIGNABLE_MODULES.length}` : "الكل";
-                } catch { allowedCount = "الكل"; }
-
-                return (
-                  <TableRow key={user.id} className={i % 2 === 0 ? "bg-white" : "bg-gray-50/50"} style={{ borderBottom: "1px solid #f0f2f8" }}>
-                    <TableCell className="font-semibold text-gray-800">{user.name}</TableCell>
-                    <TableCell className="text-gray-500 text-sm">{user.email}</TableCell>
-
-                    {/* Role */}
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {user.role === "admin"
-                          ? <Badge className="bg-[#1e3c72] text-white gap-1"><Shield className="h-3 w-3" />مدير النظام</Badge>
-                          : user.role === "supervisor"
-                          ? <Badge className="bg-amber-600 text-white gap-1"><Shield className="h-3 w-3" />مدير مستخلصات</Badge>
-                          : user.role === "contract_supervisor"
-                          ? <Badge className="bg-teal-600 text-white gap-1"><Shield className="h-3 w-3" />مشرف عقد</Badge>
-                          : user.role === "viewer"
-                          ? <Badge className="bg-purple-600 text-white gap-1"><Eye className="h-3 w-3" />مراقب</Badge>
-                          : <Badge variant="outline" className="gap-1"><User className="h-3 w-3" />مستخدم</Badge>
-                        }
-                        {me?.id !== user.id && (
-                          <div className="flex items-center gap-1 flex-wrap">
-                            <select
-                              value={user.role}
-                              disabled={changeRole.isPending}
-                              onChange={e => {
-                                const newRole = e.target.value;
-                                if (newRole === "contract_supervisor") {
-                                  setContractCompanyFor(prev => ({ ...prev, [user.id]: prev[user.id] || "بيت_العرب" }));
-                                } else {
-                                  changeRole.mutate({ userId: user.id, role: newRole });
-                                }
-                              }}
-                              className="text-xs border border-gray-200 rounded px-1 py-0.5 text-gray-600 bg-white cursor-pointer hover:border-blue-400"
-                            >
-                              <option value="user">مستخدم</option>
-                              <option value="viewer">مراقب</option>
-                              <option value="supervisor">مدير مستخلصات</option>
-                              <option value="contract_supervisor">مشرف عقد</option>
-                              <option value="admin">مدير النظام</option>
-                            </select>
-                            {(user.role === "contract_supervisor" || contractCompanyFor[user.id]) && (
-                              <div className="flex items-center gap-1">
-                                <select
-                                  value={contractCompanyFor[user.id] ?? (user as any).contractCompany ?? "بيت_العرب"}
-                                  disabled={changeRole.isPending}
-                                  onChange={e => setContractCompanyFor(prev => ({ ...prev, [user.id]: e.target.value }))}
-                                  className="text-xs border border-amber-300 rounded px-1 py-0.5 text-amber-700 bg-amber-50 cursor-pointer"
-                                >
-                                  <option value="بيت_العرب">بيت العرب</option>
-                                  <option value="سراكو">سراكو</option>
-                                  <option value="زهران">زهران</option>
-                                  <option value="إيمان">إيمان</option>
-                                </select>
-                                <Button
-                                  size="sm"
-                                  className="h-5 text-xs px-2 bg-amber-600 hover:bg-amber-700 text-white"
-                                  disabled={changeRole.isPending}
-                                  onClick={() => changeRole.mutate({
-                                    userId: user.id,
-                                    role: "contract_supervisor",
-                                    contractCompany: contractCompanyFor[user.id] ?? (user as any).contractCompany ?? "بيت_العرب",
-                                  })}
-                                >
-                                  حفظ
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        )}
+      <div className="bg-white rounded-2xl shadow-lg border overflow-hidden">
+        {isLoading ? (
+          <div className="p-12 text-center text-gray-500">جاري التحميل...</div>
+        ) : users.length === 0 ? (
+          <div className="p-12 text-center text-gray-500">لا يوجد مستخدمون</div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50">
+                <TableHead className="text-right">المستخدم</TableHead>
+                <TableHead className="text-right">الشركة/المستشفى</TableHead>
+                <TableHead className="text-right">الصلاحية</TableHead>
+                <TableHead className="text-right">الوحدات</TableHead>
+                <TableHead className="text-right">الحالة</TableHead>
+                <TableHead className="text-right">آخر دخول</TableHead>
+                <TableHead className="text-right">الإجراءات</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map(user => (
+                <TableRow key={user.id} className="hover:bg-gray-50">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)" }}>
+                        <User className="h-5 w-5 text-white" />
                       </div>
-                    </TableCell>
-
-                    {/* Status */}
-                    <TableCell>
-                      <Badge variant="outline" className={
-                        user.status === "approved" ? "text-green-600 border-green-300 bg-green-50" :
-                        user.status === "rejected" ? "text-red-600 border-red-300 bg-red-50" :
-                        "text-amber-600 border-amber-300 bg-amber-50"
-                      }>
-                        {user.status === "approved" ? "✓ مقبول" :
-                         user.status === "rejected" ? "✗ مرفوض" : "⏳ معلق"}
-                      </Badge>
-                    </TableCell>
-
-                    <TableCell className="text-gray-400 text-xs">{formatLastLogin((user as any).lastLoginAt)}</TableCell>
-                    <TableCell className="text-gray-400 text-xs">{formatDate(user.createdAt)}</TableCell>
-
-                    {/* Modules button */}
-                    <TableCell className="text-center">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setModulesUser(user)}
-                        className="h-7 px-2 text-xs gap-1 text-blue-700 border-blue-200 hover:bg-blue-50"
+                      <div>
+                        <div className="font-bold" style={{ color: "#1e3c72" }}>{user.name}</div>
+                        <div className="text-sm text-gray-500">{user.email}</div>
+                        {user.phone && <div className="text-xs text-gray-400">{user.phone}</div>}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      {user.company && <div className="font-medium">{user.company}</div>}
+                      {user.hospital && <div className="text-gray-500 text-xs">{user.hospital}</div>}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-2">
+                      <select
+                        className="text-sm border rounded-lg px-2 py-1 bg-white min-w-[130px]"
+                        value={user.role}
+                        disabled={changeRole.isPending || user.id === me?.id}
+                        onChange={(e) => {
+                          const role = e.target.value;
+                          changeRole.mutate({ userId: user.id, role, contractCompany: role === "contract_supervisor" ? contractCompanyFor[user.id] : undefined });
+                        }}
                       >
-                        <LayoutGrid className="h-3 w-3" />
-                        {allowedCount}
-                      </Button>
-                    </TableCell>
-
-                    {/* Actions */}
-                    <TableCell>
-                      <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                        {user.status === "pending" && (
-                          <>
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white h-7 px-2 text-xs gap-1"
-                              onClick={() => approveUser({ userId: user.id.toString() })}
-                              disabled={isApproving || isRejecting}>
-                              <Check className="h-3 w-3" /> موافقة
-                            </Button>
-                            <Button size="sm" variant="destructive" className="h-7 px-2 text-xs gap-1"
-                              onClick={() => rejectUser({ userId: user.id.toString() })}
-                              disabled={isApproving || isRejecting}>
-                              <X className="h-3 w-3" /> رفض
-                            </Button>
-                          </>
-                        )}
-                        {user.status === "approved" && me?.id !== user.id && (
-                          <Button size="sm" variant="outline" className="h-7 px-2 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50"
-                            onClick={() => toggleActive.mutate({ userId: user.id, activate: false })}
-                            disabled={toggleActive.isPending}>
-                            <UserX className="h-3 w-3" /> تعطيل
-                          </Button>
-                        )}
-                        {user.status === "rejected" && (
-                          <Button size="sm" variant="outline" className="h-7 px-2 text-xs gap-1 text-green-600 border-green-200 hover:bg-green-50"
-                            onClick={() => toggleActive.mutate({ userId: user.id, activate: true })}
-                            disabled={toggleActive.isPending}>
-                            <UserCheck className="h-3 w-3" /> تفعيل
-                          </Button>
-                        )}
-                        {/* زر الحذف النهائي — لجميع المستخدمين ما عدا المدير الحالي */}
-                        {me?.id !== user.id && (
+                        <option value="user">مستخدم</option>
+                        <option value="viewer">مراقب</option>
+                        <option value="contract_supervisor">مشرف عقد</option>
+                        <option value="supervisor">مدير مستخلصات</option>
+                        <option value="admin">مدير النظام</option>
+                      </select>
+                      {user.role === "contract_supervisor" && (
+                        <select
+                          className="text-xs border rounded-lg px-2 py-1 bg-white block min-w-[130px]"
+                          value={contractCompanyFor[user.id] ?? user.contractCompany ?? "بيت_العرب"}
+                          onChange={(e) => {
+                            const company = e.target.value;
+                            setContractCompanyFor(prev => ({ ...prev, [user.id]: company }));
+                            changeRole.mutate({ userId: user.id, role: "contract_supervisor", contractCompany: company });
+                          }}
+                        >
+                          <option value="بيت_العرب">بيت العرب</option>
+                          <option value="سراكو">سراكو</option>
+                        </select>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1 text-xs"
+                      onClick={() => setModulesUser(user)}
+                    >
+                      <LayoutGrid className="h-3 w-3" />
+                      {user.allowedModules ? "مخصصة" : "الكل"}
+                    </Button>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-2">
+                      <Badge className={cn(
+                        "w-fit",
+                        user.status === "approved" && "bg-green-100 text-green-700 hover:bg-green-100",
+                        user.status === "pending" && "bg-amber-100 text-amber-700 hover:bg-amber-100",
+                        user.status === "rejected" && "bg-red-100 text-red-700 hover:bg-red-100",
+                        user.status === "deleted" && "bg-gray-100 text-gray-500 hover:bg-gray-100"
+                      )}>
+                        {user.status === "approved" ? "معتمد" : user.status === "pending" ? "في الانتظار" : user.status === "rejected" ? "مرفوض" : "محذوف"}
+                      </Badge>
+                      {user.status === "approved" && (
+                        <Button
+                          size="sm"
+                          variant={user.status === "approved" ? "outline" : "default"}
+                          className="text-xs h-7"
+                          onClick={() => toggleActive.mutate({ userId: user.id, activate: false })}
+                        >
+                          تعطيل
+                        </Button>
+                      )}
+                      {user.status === "rejected" && (
+                        <Button
+                          size="sm"
+                          className="text-xs h-7 bg-green-600 hover:bg-green-700"
+                          onClick={() => toggleActive.mutate({ userId: user.id, activate: true })}
+                        >
+                          تفعيل
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm text-gray-500">
+                    {formatLastLogin(user.lastLoginAt)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2 flex-wrap">
+                      {user.status === "pending" && (
+                        <>
                           <Button
                             size="sm"
-                            variant="ghost"
-                            className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                            title="حذف نهائي"
-                            onClick={() => setDeleteTarget({ id: user.id, name: user.name ?? "", email: user.email })}
-                            disabled={isDeleting}
+                            onClick={() => approveUser({ userId: user.id.toString() })}
+                            disabled={isApproving}
+                            className="bg-green-600 hover:bg-green-700 text-white gap-1"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Check className="h-4 w-4" /> موافقة
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => rejectUser({ userId: user.id.toString() })}
+                            disabled={isRejecting}
+                            className="gap-1"
+                          >
+                            <X className="h-4 w-4" /> رفض
+                          </Button>
+                        </>
+                      )}
+                      <Link href={`/admin/users/${user.id}`}>
+                        <Button size="sm" variant="outline" className="gap-1">
+                          <Eye className="h-4 w-4" /> عرض
+                        </Button>
+                      </Link>
+                      {user.id !== me?.id && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1 border-red-200 text-red-700 hover:bg-red-50"
+                          onClick={() => setDeleteTarget({ id: user.id, name: user.name, email: user.email })}
+                        >
+                          <Trash2 className="h-4 w-4" /> حذف
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
     </div>
   );
