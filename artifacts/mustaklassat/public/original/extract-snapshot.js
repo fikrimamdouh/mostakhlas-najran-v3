@@ -1,16 +1,16 @@
 /**
  * extract-snapshot.js
- * Local extract snapshots with quota-safe archive writes.
- * V4:
- * - Keeps one latest snapshot for the same draft key.
- * - Prunes old local copies before archive writes.
- * - Falls back to compact operational snapshots when localStorage is near quota.
- * - Never blocks the user just because old local archive data is too large.
+ * Scoped local extract snapshots.
+ * V5:
+ * - Saves only the keys that belong to the current extract type.
+ * - Determines extract type from the current page first, not from stale localStorage keys.
+ * - Prevents labor local snapshots from carrying admin offices data.
+ * - Keeps the existing public API: getExtractArchive / setExtractArchive / saveExtractSnapshot / resumeExtractSnapshot / deleteExtractSnapshot / checkDuplicateExtract.
  */
 (function () {
   'use strict';
-  if (window.__NAJRAN_EXTRACT_SNAPSHOT_V4__) return;
-  window.__NAJRAN_EXTRACT_SNAPSHOT_V4__ = true;
+  if (window.__NAJRAN_EXTRACT_SNAPSHOT_V5__) return;
+  window.__NAJRAN_EXTRACT_SNAPSHOT_V5__ = true;
 
   var ARCHIVE_KEY = 'extractArchive';
   var LAST_LIGHT_KEY = 'najran_last_local_snapshot_light_v1';
@@ -31,33 +31,68 @@
     admin_offices: '/original/admin_offices_attendance.html'
   };
 
-  var OPERATIONAL_EXACT_KEYS = [
-    'attendanceData', 'ng_attendanceData', 'nd_attendanceData',
-    'centersAttendanceData_v2', 'healthCentersAttendanceData', 'adminOfficesAttendanceData_v1',
-    'adminOfficesAttendanceData_v1_localBackup', 'adminOfficesAttendanceData_v1_lastGood',
-    'adminOfficesLaborDataSafe_v2', 'adminOfficeNames_v1', 'adminOfficeAffiliations_v1',
-    'persistentExtractData', 'persistentContractData', 'extractMonth', 'extractYear', 'extractStart', 'extractEnd',
+  var COMMON_EXACT_KEYS = [
+    'persistentExtractData', 'persistentContractData',
+    'extractMonth', 'extractYear', 'extractStart', 'extractEnd',
     'extractFromDate', 'extractToDate', 'paymentNumber', 'extractNumber', 'periodMonth',
-    'performanceData', 'performanceData_v4', 'performanceDeductions', 'performanceTotalDeduction', 'performanceTotalDue',
-    'adminOfficePerformanceDeductions_v1', 'achievementData', 'achievementTitles_v1', 'achievementItemNames',
-    'consumablesTableData', 'healthCentersConsumables', 'mainHospitalConsumables', 'admin_offices_consumables_v1.0',
-    'spare_partsData', 'sparePartsTotalAmount', 'approvalData', 'displayApprovalData',
-    'finalLaborCost', 'finalConsumablesCost', 'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin',
     'companyName', 'contractNumber', 'contractDetails', 'hospitalName',
-    'najran_labor_attendance_done', 'najran_labor_performance_done', 'najran_health_attendance_done', 'najran_admin_offices_attendance_done',
-    'najran_local_draft_resume_id', 'najran_local_draft_resumed_at'
+    'approvalData', 'displayApprovalData',
+    'najran_local_draft_resume_id', 'najran_local_draft_resumed_at',
+    'najran_work_context_v1', 'najran_last_submitted_summary_v1', 'najran_last_submitted_extract_id', 'najran_current_extract_submitted'
   ];
 
-  var OPERATIONAL_PREFIXES = [
-    'deptCalculatedCost_', 'dept_', 'tableData_', 'achievement_', 'consumables_', 'spare_',
-    'water_', 'sewage_', 'subcontractors_', 'najran_labor_', 'najran_health_', 'najran_admin_',
-    'adminOffice', 'adminOffices', 'admin_offices_',
-    'adminOfficePerformanceItems_', 'adminOfficesPerformanceData_', 'adminOfficesPerformanceDeductions_',
-    'adminOfficeAttendance_'
-  ];
-
-  var SIGNATURE_EXACT_KEYS = ['signatures_data_consumables_v27'];
-  var SIGNATURE_PREFIXES = ['sb_sigs_', 'sb_prefs_', 'healthCenters_Signatures_'];
+  var TYPE_RULES = {
+    labor: {
+      exact: [
+        'attendanceData', 'ng_attendanceData', 'nd_attendanceData',
+        'performanceData', 'performanceData_v4', 'performanceDeductions', 'performanceTotalDeduction', 'performanceTotalDue',
+        'achievementData', 'achievementTitles_v1', 'achievementItemNames',
+        'finalLaborCost', 'grand-net-total',
+        'najran_labor_attendance_done', 'najran_labor_performance_done'
+      ],
+      prefixes: ['deptCalculatedCost_', 'dept_', 'tableData_', 'achievement_', 'sb_sigs_', 'sb_prefs_'],
+      blockPrefixes: ['adminOffice', 'adminOffices', 'admin_offices_', 'adminOfficePerformanceItems_', 'adminOfficesPerformanceData_', 'adminOfficesPerformanceDeductions_', 'adminOfficeAttendance_', 'najran_admin_', 'healthCenters_', 'healthCenters', 'centersAttendance', 'najran_health_'],
+      blockExact: ['adminOfficesAttendanceData_v1', 'adminOfficesAttendanceData_v1_localBackup', 'adminOfficesAttendanceData_v1_lastGood', 'adminOfficesLaborDataSafe_v2', 'adminOfficeNames_v1', 'adminOfficeAffiliations_v1', 'admin_offices_consumables_v1.0', 'adminOfficePerformanceDeductions_v1', 'grand-net-total-admin', 'healthCentersAttendanceData', 'centersAttendanceData_v2', 'healthCentersConsumables', 'healthCentersConsumablesSummary', 'grand-net-total-centers']
+    },
+    consumables: {
+      exact: [
+        'consumablesTableData', 'mainHospitalConsumables', 'summary_data_consumables_v27', 'signatures_data_consumables_v27',
+        'finalConsumablesCost', 'grand-net-total',
+        'subcontractors_data_consumables_v27', 'performance_data_consumables_v27', 'water_supply_data_consumables_v27', 'sewage_disposal_data_consumables_v27'
+      ],
+      prefixes: ['consumables_', 'water_', 'sewage_', 'subcontractors_', 'sb_sigs_', 'sb_prefs_'],
+      blockPrefixes: ['adminOffice', 'adminOffices', 'admin_offices_', 'najran_admin_', 'healthCenters_', 'healthCenters', 'centersAttendance', 'najran_health_'],
+      blockExact: ['adminOfficesAttendanceData_v1', 'admin_offices_consumables_v1.0', 'healthCentersAttendanceData', 'centersAttendanceData_v2', 'healthCentersConsumables', 'healthCentersConsumablesSummary']
+    },
+    spare_parts: {
+      exact: ['spare_partsData', 'sparePartsTotalAmount', 'grand-net-total'],
+      prefixes: ['spare_', 'sb_sigs_', 'sb_prefs_'],
+      blockPrefixes: ['adminOffice', 'adminOffices', 'admin_offices_', 'najran_admin_', 'healthCenters_', 'healthCenters', 'centersAttendance', 'najran_health_'],
+      blockExact: ['adminOfficesAttendanceData_v1', 'admin_offices_consumables_v1.0', 'healthCentersAttendanceData', 'centersAttendanceData_v2', 'healthCentersConsumables']
+    },
+    health_centers: {
+      exact: [
+        'healthCentersAttendanceData', 'centersAttendanceData_v2', 'healthCentersConsumables', 'healthCentersConsumablesSummary',
+        'grand-net-total-centers', 'finalLaborCost', 'finalConsumablesCost',
+        'najran_health_attendance_done'
+      ],
+      prefixes: ['healthCenters_', 'healthCenters', 'centersAttendance', 'najran_health_', 'sb_sigs_', 'sb_prefs_'],
+      blockPrefixes: ['adminOffice', 'adminOffices', 'admin_offices_', 'najran_admin_'],
+      blockExact: ['adminOfficesAttendanceData_v1', 'adminOfficesAttendanceData_v1_localBackup', 'adminOfficesAttendanceData_v1_lastGood', 'adminOfficeNames_v1', 'adminOfficeAffiliations_v1', 'admin_offices_consumables_v1.0', 'grand-net-total-admin']
+    },
+    admin_offices: {
+      exact: [
+        'adminOfficesAttendanceData_v1', 'adminOfficesAttendanceData_v1_localBackup', 'adminOfficesAttendanceData_v1_lastGood',
+        'adminOfficesLaborDataSafe_v2', 'adminOfficeNames_v1', 'adminOfficeAffiliations_v1',
+        'adminOfficePerformanceDeductions_v1', 'admin_offices_consumables_v1.0',
+        'grand-net-total-admin', 'finalLaborCost', 'finalConsumablesCost',
+        'najran_admin_offices_attendance_done'
+      ],
+      prefixes: ['adminOffice', 'adminOffices', 'admin_offices_', 'adminOfficePerformanceItems_', 'adminOfficesPerformanceData_', 'adminOfficesPerformanceDeductions_', 'adminOfficeAttendance_', 'najran_admin_', 'sb_sigs_', 'sb_prefs_'],
+      blockPrefixes: ['healthCenters_', 'healthCenters', 'centersAttendance', 'najran_health_'],
+      blockExact: ['attendanceData', 'ng_attendanceData', 'nd_attendanceData', 'healthCentersAttendanceData', 'centersAttendanceData_v2', 'healthCentersConsumables', 'grand-net-total-centers']
+    }
+  };
 
   var SNAPSHOT_SKIP_PREFIXES = [
     'najran_session', '__clerk', 'clerk_', 'loglevel', 'amplitude', 'chakra', 'persist:', '_u'
@@ -107,44 +142,21 @@
 
   function startsWithAny(key, prefixes) {
     key = String(key || '');
-    return prefixes.some(function (prefix) { return key.indexOf(prefix) === 0; });
-  }
-
-  function isOperationalSignatureKey(key) {
-    key = String(key || '');
-    return SIGNATURE_EXACT_KEYS.indexOf(key) > -1 || startsWithAny(key, SIGNATURE_PREFIXES);
-  }
-
-  function isOperationalKey(key) {
-    key = String(key || '');
-    return OPERATIONAL_EXACT_KEYS.indexOf(key) > -1 || startsWithAny(key, OPERATIONAL_PREFIXES) || isOperationalSignatureKey(key);
+    return (prefixes || []).some(function (prefix) { return key.indexOf(prefix) === 0; });
   }
 
   function isHeavyValue(raw) {
     var s = String(raw == null ? '' : raw);
     if (!s) return false;
-    if (s.length > MAX_VALUE_CHARS && s.indexOf('adminOfficesAttendanceData') === -1) return true;
+    if (s.length > MAX_VALUE_CHARS) return true;
     if (s.indexOf('data:image') > -1) return true;
     if (s.indexOf(';base64,') > -1) return true;
     if (s.indexOf('base64') > -1 && s.length > 20000) return true;
     return false;
   }
 
-  function countMatchingKeys(obj, predicate) {
-    var total = 0;
-    try {
-      Object.keys(obj || {}).forEach(function (key) { if (predicate(key)) total++; });
-    } catch (_) {}
-    return total;
-  }
-
   function safeSet(key, value) {
-    try {
-      localStorage.setItem(key, stringify(value));
-      return true;
-    } catch (_) {
-      return false;
-    }
+    try { localStorage.setItem(key, stringify(value)); return true; } catch (_) { return false; }
   }
 
   function getStorageUsage() {
@@ -159,25 +171,127 @@
     return total;
   }
 
-  function pruneKeysByPattern(pattern, keep) {
-    var removed = 0;
-    var list = [];
+  function inferExtractType() {
+    var file = ((window.location.pathname || '').split('/').pop() || '').toLowerCase();
+    if (file === 'attendance.html' || file === 'performance.html' || file === 'achievement.html') return 'labor';
+    if (file.indexOf('admin_offices') > -1) return 'admin_offices';
+    if (file.indexOf('health_centers') > -1) return 'health_centers';
+    if (file.indexOf('spare_parts') > -1) return 'spare_parts';
+    if (file.indexOf('consumables') > -1) return 'consumables';
+    if (file.indexOf('najran_general_attendance') > -1 || file.indexOf('najran_general_performance') > -1 || file.indexOf('najran_general_achievement') > -1) return 'labor';
+    if (file.indexOf('najran_dental_attendance') > -1 || file.indexOf('najran_dental_performance') > -1) return 'labor';
+
+    // Fallback only when page cannot identify the module. Never let stale admin keys override labor pages.
+    if (readJson('spare_partsData', null) || localStorage.getItem('sparePartsTotalAmount')) return 'spare_parts';
+    if (readJson('consumablesTableData', null) || readJson('mainHospitalConsumables', null)) return 'consumables';
+    if (readJson('healthCentersAttendanceData', null) || readJson('healthCentersConsumables', null)) return 'health_centers';
+    if (readJson('adminOfficesAttendanceData_v1', null) || readJson('admin_offices_consumables_v1.0', null)) return 'admin_offices';
+    return 'labor';
+  }
+
+  function isAllowedForType(key, type) {
+    key = String(key || '');
+    if (!key || SNAPSHOT_SKIP_KEYS[key]) return false;
+    if (SNAPSHOT_SKIP_PREFIXES.some(function (p) { return key.indexOf(p) === 0; })) return false;
+
+    var rule = TYPE_RULES[type] || TYPE_RULES.labor;
+    if ((rule.blockExact || []).indexOf(key) > -1) return false;
+    if (startsWithAny(key, rule.blockPrefixes || [])) return false;
+
+    if (COMMON_EXACT_KEYS.indexOf(key) > -1) return true;
+    if ((rule.exact || []).indexOf(key) > -1) return true;
+    if (startsWithAny(key, rule.prefixes || [])) return true;
+    return false;
+  }
+
+  function isOperationalSignatureKey(key) {
+    key = String(key || '');
+    return key === 'signatures_data_consumables_v27' || startsWithAny(key, ['sb_sigs_', 'sb_prefs_', 'healthCenters_Signatures_']);
+  }
+
+  function countMatchingKeys(obj, predicate) {
+    var total = 0;
+    try { Object.keys(obj || {}).forEach(function (key) { if (predicate(key)) total++; }); } catch (_) {}
+    return total;
+  }
+
+  function captureSnapshot(compactMode, extractType) {
+    var snapshot = {};
+    var type = extractType || inferExtractType();
     try {
       for (var i = 0; i < localStorage.length; i++) {
         var key = localStorage.key(i);
-        if (key && pattern.test(key)) {
-          var raw = '';
-          try { raw = localStorage.getItem(key) || ''; } catch (_) {}
-          list.push({ key: key, size: raw.length });
-        }
+        if (!isAllowedForType(key, type)) continue;
+        var raw = localStorage.getItem(key);
+        if (raw == null) continue;
+        if (isHeavyValue(raw)) continue;
+        snapshot[key] = parseStorageValue(raw);
       }
-      list.sort(function (a, b) { return a.key.localeCompare(b.key); });
-      while (list.length > keep) {
-        localStorage.removeItem(list.shift().key);
-        removed++;
+    } catch (e) {
+      console.warn('extract-snapshot: scoped capture error', e);
+    }
+    return snapshot;
+  }
+
+  function scopedOperationalKeys(type) {
+    var keys = [];
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (isAllowedForType(key, type)) keys.push(key);
       }
     } catch (_) {}
+    return keys;
+  }
+
+  function allKnownOperationalKey(key) {
+    key = String(key || '');
+    if (!key) return false;
+    if (COMMON_EXACT_KEYS.indexOf(key) > -1) return true;
+    return Object.keys(TYPE_RULES).some(function (type) {
+      var rule = TYPE_RULES[type] || {};
+      return (rule.exact || []).indexOf(key) > -1 || startsWithAny(key, rule.prefixes || []);
+    });
+  }
+
+  function clearOperationalKeysBeforeLocalResume() {
+    var removed = 0;
+    try {
+      for (var i = localStorage.length - 1; i >= 0; i--) {
+        var key = localStorage.key(i);
+        if (!key) continue;
+        if (allKnownOperationalKey(key)) {
+          localStorage.removeItem(key);
+          removed++;
+        }
+      }
+      localStorage.removeItem('adminOfficesManualCleared_v1');
+    } catch (e) {
+      console.warn('extract-snapshot: clear operational keys error', e);
+    }
     return removed;
+  }
+
+  function writeSnapshotToLocalStorage(snapshot) {
+    var report = { written: 0, failed: 0, failedKeys: [], prunedKeys: 0 };
+    Object.keys(snapshot || {}).forEach(function (key) {
+      if (safeSet(key, snapshot[key])) report.written++;
+      else { report.failed++; report.failedKeys.push(key); }
+    });
+    return report;
+  }
+
+  function normalizeDraftPart(value) { return clean(value).toLowerCase(); }
+  function makeDraftKey(parts) {
+    return [
+      normalizeDraftPart(parts.extractType), normalizeDraftPart(parts.hospitalName), normalizeDraftPart(parts.companyName),
+      normalizeDraftPart(parts.contractDetails), normalizeDraftPart(parts.paymentNumber), normalizeDraftPart(parts.extractMonth), normalizeDraftPart(parts.extractYear)
+    ].join('|');
+  }
+
+  function pageForType(type, currentPage) {
+    if (currentPage && currentPage.indexOf('/original/') === 0) return currentPage;
+    return TYPE_PAGE[type] || '/original/attendance.html';
   }
 
   function compactArchive(archive, limit) {
@@ -196,9 +310,6 @@
   function pruneOldLocalCopiesForSpace() {
     var removed = 0;
     try {
-      removed += pruneKeysByPattern(/^monthSafetySnapshot_\d+$/, 1);
-      removed += pruneKeysByPattern(/^monthSnapshot_/, 2);
-      removed += pruneKeysByPattern(/^najran_last_local_snapshot/, 1);
       ['hrl_snapshot_v1', 'adminOfficesPreWipeSnapshot_v1', 'najran_revision_previous_local_backup'].forEach(function (key) {
         try { if (localStorage.getItem(key) != null) { localStorage.removeItem(key); removed++; } } catch (_) {}
       });
@@ -213,138 +324,13 @@
     return removed;
   }
 
-  function shouldCaptureKey(key, compactMode) {
-    key = String(key || '');
-    if (!key) return false;
-    if (SNAPSHOT_SKIP_KEYS[key]) return false;
-    if (SNAPSHOT_SKIP_PREFIXES.some(function (p) { return key.indexOf(p) === 0; })) return false;
-    if (compactMode) return isOperationalKey(key);
-    return true;
-  }
-
-  function captureSnapshot(compactMode) {
-    var snapshot = {};
-    try {
-      for (var i = 0; i < localStorage.length; i++) {
-        var key = localStorage.key(i);
-        if (!shouldCaptureKey(key, compactMode)) continue;
-        var raw = localStorage.getItem(key);
-        if (raw == null) continue;
-        if (isHeavyValue(raw) && !isOperationalKey(key)) continue;
-        snapshot[key] = parseStorageValue(raw);
-      }
-    } catch (e) {
-      console.warn('extract-snapshot: capture error', e);
-    }
-    return snapshot;
-  }
-
-  function clearOperationalKeysBeforeLocalResume() {
-    var removed = 0;
-    try {
-      OPERATIONAL_EXACT_KEYS.forEach(function (key) {
-        if (localStorage.getItem(key) !== null) removed++;
-        localStorage.removeItem(key);
-      });
-      for (var i = localStorage.length - 1; i >= 0; i--) {
-        var key = localStorage.key(i);
-        if (!key) continue;
-        if (isOperationalKey(key)) {
-          localStorage.removeItem(key);
-          removed++;
-        }
-      }
-      localStorage.removeItem('adminOfficesManualCleared_v1');
-    } catch (e) {
-      console.warn('extract-snapshot: clear operational keys error', e);
-    }
-    return removed;
-  }
-
-  function writeSnapshotToLocalStorage(snapshot) {
-    var report = { written: 0, failed: 0, failedKeys: [], prunedKeys: 0 };
-    Object.keys(snapshot || {}).forEach(function (key) {
-      if (safeSet(key, snapshot[key])) report.written++;
-      else { report.failed++; report.failedKeys.push(key); }
-    });
-    if (report.failed > 0) {
-      report.prunedKeys = pruneOldLocalCopiesForSpace();
-      var retry = report.failedKeys.slice();
-      report.failed = 0;
-      report.failedKeys = [];
-      retry.forEach(function (key) {
-        if (safeSet(key, snapshot[key])) report.written++;
-        else { report.failed++; report.failedKeys.push(key); }
-      });
-    }
-    return report;
-  }
-
-  function markResumeTransaction(snap, clearCount, writeReport) {
-    try {
-      localStorage.setItem('najran_local_resume_transaction_id', String(snap.id));
-      localStorage.setItem('najran_local_resume_signature_policy', 'clear-operational-signatures-then-restore-snapshot');
-      localStorage.setItem('najran_local_resume_signature_keys_count', String(countMatchingKeys(snap.extractData, isOperationalSignatureKey)));
-      localStorage.setItem('najran_local_resume_written_keys_count', String(writeReport.written || 0));
-      localStorage.setItem('najran_local_resume_failed_keys_count', String(writeReport.failed || 0));
-      localStorage.setItem('najran_local_resume_cleared_keys_count', String(clearCount || 0));
-    } catch (_) {}
-  }
-
-  function normalizeDraftPart(value) {
-    return clean(value).toLowerCase();
-  }
-
-  function makeDraftKey(parts) {
-    return [
-      normalizeDraftPart(parts.extractType),
-      normalizeDraftPart(parts.hospitalName),
-      normalizeDraftPart(parts.companyName),
-      normalizeDraftPart(parts.contractDetails),
-      normalizeDraftPart(parts.paymentNumber),
-      normalizeDraftPart(parts.extractMonth),
-      normalizeDraftPart(parts.extractYear)
-    ].join('|');
-  }
-
-  function inferExtractType() {
-    var path = (window.location.pathname || '').toLowerCase();
-    if (path.indexOf('health_centers') > -1) return 'health_centers';
-    if (path.indexOf('admin_offices') > -1) return 'admin_offices';
-    if (path.indexOf('spare_parts') > -1) return 'spare_parts';
-    if (path.indexOf('consumables') > -1) return 'consumables';
-    if (readJson('healthCentersAttendanceData', null) || readJson('healthCentersConsumables', null)) return 'health_centers';
-    if (readJson('adminOfficesAttendanceData_v1', null) || readJson('admin_offices_consumables_v1.0', null)) return 'admin_offices';
-    if (readJson('spare_partsData', null) || localStorage.getItem('sparePartsTotalAmount')) return 'spare_parts';
-    if (readJson('consumablesTableData', null) || readJson('mainHospitalConsumables', null)) return 'consumables';
-    return 'labor';
-  }
-
-  function pageForType(type, currentPage) {
-    if (currentPage && currentPage.indexOf('/original/') === 0) return currentPage;
-    return TYPE_PAGE[type] || '/original/attendance.html';
-  }
-
   function hasMeaningfulLocalWork() {
-    var keys = [
-      'attendanceData', 'ng_attendanceData', 'nd_attendanceData',
-      'healthCentersAttendanceData', 'centersAttendanceData_v2', 'adminOfficesAttendanceData_v1',
-      'achievementData', 'consumablesTableData', 'healthCentersConsumables', 'mainHospitalConsumables',
-      'admin_offices_consumables_v1.0', 'spare_partsData', 'sparePartsTotalAmount'
-    ];
+    var type = inferExtractType();
     try {
-      for (var i = 0; i < keys.length; i++) {
-        var raw = localStorage.getItem(keys[i]);
-        if (raw && raw !== '{}' && raw !== '[]' && raw !== '0') return true;
-      }
-      for (var j = 0; j < localStorage.length; j++) {
-        var key = localStorage.key(j);
-        if (!key || !isOperationalSignatureKey(key)) continue;
-        var val = localStorage.getItem(key);
-        if (val && val !== '{}' && val !== '[]' && val !== '""') return true;
-      }
-      return ['najran_labor_attendance_done', 'najran_labor_performance_done', 'najran_health_attendance_done', 'najran_admin_offices_attendance_done']
-        .some(function (key) { return localStorage.getItem(key) === '1'; });
+      return scopedOperationalKeys(type).some(function (key) {
+        var raw = localStorage.getItem(key);
+        return raw && raw !== '{}' && raw !== '[]' && raw !== '0' && raw !== '""';
+      });
     } catch (_) { return false; }
   }
 
@@ -357,12 +343,14 @@
       var year = extractData.extractYear || localStorage.getItem('extractYear') || '';
       var hospital = contractData.hospitalName || localStorage.getItem('hospitalName') || '';
       var company = contractData.companyName || localStorage.getItem('companyName') || '';
-      var parts = [];
+      var type = inferExtractType();
+      var typeName = ({ labor: 'عمالة', consumables: 'مستهلكات', spare_parts: 'قطع غيار', health_centers: 'مراكز صحية', admin_offices: 'مكاتب إدارية' })[type] || type;
+      var parts = ['النوع: ' + typeName];
       if (payment) parts.push('رقم الدفعة: ' + payment);
       if (month || year) parts.push('الفترة: ' + [month, year].filter(Boolean).join(' '));
       if (hospital) parts.push('الموقع: ' + hospital);
       if (company) parts.push('الشركة: ' + company);
-      return parts.join(' — ') || 'مستخلص محلي مفتوح حاليًا';
+      return parts.join(' — ');
     } catch (_) { return 'مستخلص محلي مفتوح حاليًا'; }
   }
 
@@ -377,9 +365,8 @@
       overlay.style.cssText = 'position:fixed;inset:0;z-index:10000000;background:rgba(15,23,42,.62);display:flex;align-items:center;justify-content:center;direction:rtl;font-family:Tajawal,Arial,sans-serif;';
       overlay.innerHTML =
         '<div style="width:min(620px,94vw);background:#fff;border-radius:22px;padding:24px;box-shadow:0 28px 80px rgba(0,0,0,.32);border-top:7px solid #b45309;text-align:right;">' +
-        '<div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:14px;"><div style="width:52px;height:52px;border-radius:17px;background:#fff7ed;color:#b45309;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;">!</div>' +
-        '<div style="flex:1;"><h2 style="margin:0;color:#92400e;font-size:22px;font-weight:900;">' + (options.title || 'يوجد مستخلص محلي غير محفوظ') + '</h2>' +
-        '<p style="margin:8px 0 0;color:#475569;font-size:14px;line-height:1.9;">' + (options.message || 'قبل الانتقال، احفظ المستخلص الحالي محليًا حتى لا يتم استبدال البيانات الموجودة على هذا الجهاز.') + '</p></div></div>' +
+        '<h2 style="margin:0;color:#92400e;font-size:22px;font-weight:900;">' + (options.title || 'يوجد مستخلص محلي غير محفوظ') + '</h2>' +
+        '<p style="margin:8px 0 0;color:#475569;font-size:14px;line-height:1.9;">' + (options.message || 'قبل الانتقال، احفظ المستخلص الحالي محليًا حتى لا يتم استبدال البيانات الموجودة على هذا الجهاز.') + '</p>' +
         '<div style="background:#fffbeb;border:1px solid #fde68a;color:#78350f;border-radius:14px;padding:12px 14px;font-size:13px;line-height:1.9;margin:14px 0;"><b>البيانات الحالية:</b><br>' + getCurrentLocalWorkLabel() + '</div>' +
         '<div style="display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;margin-top:16px;">' +
         '<button id="najran-local-protection-primary" style="background:linear-gradient(135deg,#15803d,#16a34a)!important;color:white;border:0;border-radius:12px;padding:12px 18px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">' + (options.primaryText || 'حفظ محليًا ثم المتابعة') + '</button>' +
@@ -404,20 +391,16 @@
   window.setExtractArchive = function (archive) {
     archive = compactArchive(archive || [], MAX_SNAPSHOTS);
     if (safeSet(ARCHIVE_KEY, archive)) return true;
-    var removed = pruneOldLocalCopiesForSpace();
+    pruneOldLocalCopiesForSpace();
     archive = compactArchive(archive, MAX_SNAPSHOTS_AFTER_QUOTA);
-    if (safeSet(ARCHIVE_KEY, archive)) {
-      console.warn('extract-snapshot: archive saved after quota prune', { removed: removed, kept: archive.length });
-      return true;
-    }
-    return false;
+    return safeSet(ARCHIVE_KEY, archive);
   };
 
   function buildSnapshot(source, compactMode) {
+    var extractType = inferExtractType();
     var extractData = readJson('persistentExtractData', {});
     var contractData = readJson('persistentContractData', {});
-    var fullSnapshot = captureSnapshot(!!compactMode);
-    var extractType = inferExtractType();
+    var fullSnapshot = captureSnapshot(!!compactMode, extractType);
     var currentPage = window.location.pathname || pageForType(extractType);
     var paymentNumber = extractData.paymentNumber || localStorage.getItem('paymentNumber') || '';
     var extractMonth = extractData.extractMonth || localStorage.getItem('extractMonth') || '';
@@ -463,6 +446,7 @@
       source: source || 'manual',
       canResume: true,
       compact: !!compactMode,
+      scoped: true,
       extractType: extractType,
       currentPage: currentPage,
       extractData: fullSnapshot,
@@ -482,7 +466,7 @@
       totalNetAmount: totalNetAmount,
       departments: departments,
       signatureKeysCount: countMatchingKeys(fullSnapshot, isOperationalSignatureKey),
-      operationalKeysCount: countMatchingKeys(fullSnapshot, isOperationalKey),
+      operationalKeysCount: Object.keys(fullSnapshot || {}).length,
       storageUsageAtSave: getStorageUsage()
     };
   }
@@ -518,16 +502,16 @@
       snap = buildSnapshot(source, false);
       var existing = archive.find(function (s) { return s && s.draftKey === snap.draftKey && s.id; });
       if (existing && existing.id) snap.id = String(existing.id);
-
       if (window.setExtractArchive(replaceSameDraft(archive, snap))) {
         try {
           localStorage.setItem('najran_last_local_snapshot_key', snap.draftKey);
           localStorage.setItem('najran_last_local_snapshot_replaced', '1');
+          localStorage.setItem('najran_last_local_snapshot_type', snap.extractType);
         } catch (_) {}
+        console.info('extract-snapshot: scoped snapshot saved', { id: snap.id, type: snap.extractType, keys: Object.keys(snap.extractData || {}).length });
         return snap;
       }
-
-      console.warn('extract-snapshot: full archive write failed; retry compact snapshot');
+      console.warn('extract-snapshot: full scoped archive write failed; retry compact snapshot');
       pruneOldLocalCopiesForSpace();
       snap = buildSnapshot(source, true);
       if (existing && existing.id) snap.id = String(existing.id);
@@ -535,9 +519,7 @@
         try { localStorage.setItem(LAST_LIGHT_KEY, JSON.stringify(snap)); } catch (_) {}
         return snap;
       }
-
       try { localStorage.setItem(LAST_LIGHT_KEY, JSON.stringify({ id: snap.id, draftKey: snap.draftKey, savedAt: snap.savedAt, source: source, extractType: snap.extractType, currentPage: snap.currentPage, paymentNumber: snap.paymentNumber, extractMonth: snap.extractMonth, extractYear: snap.extractYear, hospitalName: snap.hospitalName, companyName: snap.companyName, totalEmployees: snap.totalEmployees, totalNetAmount: snap.totalNetAmount, compactFailed: true })); } catch (_) {}
-      console.warn('extract-snapshot: local archive quota still full; metadata fallback saved only');
       return snap;
     } catch (e) {
       console.warn('extract-snapshot: save error', e);
@@ -574,23 +556,30 @@
 
       var clearCount = clearOperationalKeysBeforeLocalResume();
       var writeReport = writeSnapshotToLocalStorage(snap.extractData);
-      markResumeTransaction(snap, clearCount, writeReport);
+      try {
+        localStorage.setItem('najran_local_resume_transaction_id', String(snap.id));
+        localStorage.setItem('najran_local_resume_signature_policy', 'scoped-clear-then-restore-snapshot');
+        localStorage.setItem('najran_local_resume_signature_keys_count', String(countMatchingKeys(snap.extractData, isOperationalSignatureKey)));
+        localStorage.setItem('najran_local_resume_written_keys_count', String(writeReport.written || 0));
+        localStorage.setItem('najran_local_resume_failed_keys_count', String(writeReport.failed || 0));
+        localStorage.setItem('najran_local_resume_cleared_keys_count', String(clearCount || 0));
+      } catch (_) {}
       if (writeReport.failed > 0) {
         console.warn('extract-snapshot: resume partial write failure', writeReport);
         alert('تم استكمال اللقطة جزئيًا، لكن بعض المفاتيح الثانوية لم تُحفظ بسبب مساحة المتصفح. البيانات الأساسية محفوظة.');
         return false;
       }
 
-      ['najran_revision_extract_id','najran_revision_mode','najran_revision_extract_type','najran_revision_started_at','najran_revision_boot_lock','najran_revision_source','najran_revision_snapshot','najran_revision_previous_total_amount','adminOfficesManualCleared_v1'].forEach(function (key) {
-        try { localStorage.removeItem(key); } catch (_) {}
-      });
+      [
+        'najran_revision_extract_id','najran_revision_mode','najran_revision_extract_type','najran_revision_started_at','najran_revision_boot_lock','najran_revision_source','najran_revision_snapshot','najran_revision_previous_total_amount','adminOfficesManualCleared_v1'
+      ].forEach(function (key) { try { localStorage.removeItem(key); } catch (_) {} });
 
       try {
         localStorage.setItem('najran_local_draft_resume_id', String(snap.id));
         localStorage.setItem('najran_local_draft_resumed_at', new Date().toISOString());
       } catch (_) {}
 
-      console.info('extract-snapshot: local resume transaction', { id: snap.id, type: snap.extractType, cleared: clearCount, written: writeReport.written, signatureKeys: countMatchingKeys(snap.extractData, isOperationalSignatureKey) });
+      console.info('extract-snapshot: scoped local resume transaction', { id: snap.id, type: snap.extractType, cleared: clearCount, written: writeReport.written, keys: Object.keys(snap.extractData || {}).length });
       window.location.href = pageForType(snap.extractType || inferExtractType(), snap.currentPage);
       return true;
     } catch (e) {
@@ -734,17 +723,7 @@
     }, true);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () {
-      installArchiveRenderPatch();
-      installLocalSaveOnHomeExit();
-    });
-  } else {
-    installArchiveRenderPatch();
-    installLocalSaveOnHomeExit();
-
-  // ─── حفظ تلقائي دوري للمستهلكات وقطع الغيار (مفيهمش mirror مستمر زي المكاتب/العمالة) ───
-  (function installPeriodicAutoSave() {
+  function installPeriodicAutoSave() {
     var file = (window.location.pathname || '').split('/').pop() || '';
     var autoSavePages = {
       'consumables.html': ['consumablesTableData', 'summary_data_consumables_v27', 'finalConsumablesCost', 'subcontractors_data_consumables_v27', 'performance_data_consumables_v27', 'water_supply_data_consumables_v27', 'sewage_disposal_data_consumables_v27'],
@@ -764,16 +743,29 @@
         var h = computeHash();
         if (h === lastHash || h === '') return;
         lastHash = h;
-        if (typeof window.saveCurrentSnapshot === 'function') window.saveCurrentSnapshot('auto-save');
-        else if (typeof saveSnapshot === 'function') saveSnapshot('auto-save');
+        if (typeof window.saveExtractSnapshot === 'function') window.saveExtractSnapshot('auto-save');
       } catch (_) {}
     }
     lastHash = computeHash();
-    setInterval(autoSave, 30000); // كل 30 ثانية لو اتغيرت البيانات
+    setInterval(autoSave, 30000);
     window.addEventListener('beforeunload', autoSave);
     console.info('[Najran Extract Snapshot] periodic auto-save installed for', file);
-  })();
   }
 
-  console.info('[Najran Extract Snapshot] installed v4 quota-safe local resume');
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      installArchiveRenderPatch();
+      installLocalSaveOnHomeExit();
+      installPeriodicAutoSave();
+    });
+  } else {
+    installArchiveRenderPatch();
+    installLocalSaveOnHomeExit();
+    installPeriodicAutoSave();
+  }
+
+  window.najranInferLocalSnapshotType = inferExtractType;
+  window.najranCaptureScopedSnapshot = function () { return captureSnapshot(false, inferExtractType()); };
+
+  console.info('[Najran Extract Snapshot] installed v5 scoped local resume');
 })();
