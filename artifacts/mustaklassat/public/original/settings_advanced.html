@@ -57,7 +57,9 @@
   async function token(){
     try{ if(typeof window.najranGetFreshToken==='function'){var t=await window.najranGetFreshToken(); if(t)return t;} }catch(_){ }
     try{ if(window.parent&&window.parent!==window&&typeof window.parent.najranGetFreshToken==='function'){var pt=await window.parent.najranGetFreshToken(); if(pt)return pt;} }catch(_){ }
-    return session().clerkToken||'';
+    // توكن الجلسة فقط لو حديث (<55 ثانية) — توكن قديم = 401 حمراء بلا فائدة
+    var s=session(); if(s&&s.clerkToken&&s.timestamp&&(Date.now()-s.timestamp)<55000)return s.clerkToken;
+    return '';
   }
   async function headers(){var t=await token(); return t?{Authorization:'Bearer '+t}:{} }
   function set(id,v){var e=qs(id); if(e)e.textContent=v==null?'—':v}
@@ -76,7 +78,12 @@
     try{var wh=Number(qs('f-window').value)||24; var h=await headers(); var sum=await fetch('/api/client-events/summary?windowHours='+wh,{headers:h,credentials:'include'}); if(sum.status===403)throw new Error('403 admin only'); var sj=sum.ok?await sum.json():{}; set('s-critical',sj.critical||0);set('s-errors',sj.errors||0);set('s-warnings',sj.warnings||0);set('s-users',sj.affectedUsers||0);set('s-hospitals',sj.affectedHospitals||0);set('s-total',sj.total||0); var since=encodeURIComponent(new Date(Date.now()-wh*3600*1000).toISOString()); var res=await fetch('/api/client-events?limit=500&since='+since,{headers:h,credentials:'include'}); if(res.status===403)throw new Error('403 admin only'); var body=res.ok?await res.json():{events:[]}; events=Array.isArray(body.events)?body.events:[]; fillFilters(); pmRender();}catch(err){list.className='empty';list.innerHTML='تعذر تحميل الحوادث: '+esc(err.message||err);}
   }
   window.pmSendTest=function(){try{if(window.__najranReportIncident)window.__najranReportIncident('MANUAL_INCIDENT',{message:'اختبار يدوي من صفحة مراقبة الإنتاج',reason:'manual dashboard test'}); setTimeout(pmRefresh,2500)}catch(_){} }
-  window.addEventListener('load',function(){pmRefresh()});
+  // on-demand بالكامل: لا تحميل تلقائي عند فتح الصفحة — زر "تحديث" فقط.
+  // (كان window load يستدعي pmRefresh تلقائيًا = طلبان لـ Neon عند كل فتح.)
+  window.addEventListener('load',function(){
+    if(!isAdmin()){qs('app').innerHTML='<div class="denied"><h2>غير مصرح</h2><p>هذه الشاشة للأدمن فقط.</p></div>';return}
+    var list=qs('list'); if(list){list.className='empty'; list.innerHTML='اضغط "تحديث" لتحميل الحوادث.';}
+  });
 })();
 </script>
 </body>

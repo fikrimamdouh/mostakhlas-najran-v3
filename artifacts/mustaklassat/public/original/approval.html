@@ -577,10 +577,33 @@ function fmt(d) {
   return new Date(d).toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' });
 }
 
+// ── Fresh token helper ───────────────────────────────────────────────────
+// توكنات Clerk تنتهي خلال ~60 ثانية. الاستخدام المباشر لـ session.clerkToken
+// كان يخرج طلبات بتوكن ميت → 401 حمراء في Console + استهلاك بلا فائدة.
+// الترتيب: getter المحلي ثم الأب ثم الأعلى، وأخيرًا توكن الجلسة فقط لو حديث
+// (<55 ثانية). غير ذلك null = الطلب لا يخرج أصلًا.
+async function getApprovalFreshToken() {
+  async function tryGetter(fn) {
+    try {
+      if (typeof fn !== 'function') return null;
+      let t = null;
+      try { t = await fn({ skipCache: true }); } catch (_) { t = await fn(); }
+      return t || null;
+    } catch (_) { return null; }
+  }
+  let token = await tryGetter(window.najranGetFreshToken);
+  if (token) return token;
+  try { if (window.parent && window.parent !== window) { token = await tryGetter(window.parent.najranGetFreshToken); if (token) return token; } } catch (_) {}
+  try { if (window.top && window.top !== window) { token = await tryGetter(window.top.najranGetFreshToken); if (token) return token; } } catch (_) {}
+  const s = getSession();
+  if (s && s.clerkToken && s.timestamp && (Date.now() - s.timestamp) < 55000) return s.clerkToken;
+  return null;
+}
+window.getApprovalFreshToken = getApprovalFreshToken;
+
 // ── Load ─────────────────────────────────────────────────────────────────
 async function loadExtracts() {
-  const session = getSession();
-  const token = session.clerkToken;
+  const token = await getApprovalFreshToken();
   if (!token) {
     window.location.href = '/sign-in';
     return;
@@ -833,8 +856,7 @@ function toggleNote(id) {
 }
 
 async function updateStatus(id, status) {
-  const session = getSession();
-  const token = session.clerkToken;
+  const token = await getApprovalFreshToken();
   if (!token) return;
 
   const notesEl = document.getElementById('notes-' + id);
@@ -871,12 +893,7 @@ async function updateStatus(id, status) {
 }
 
 async function startRevision(id, type) {
-  const session = (() => {
-    try { return JSON.parse(localStorage.getItem('najran_session') || '{}') || {}; }
-    catch (_) { return {}; }
-  })();
-
-  const token = session.clerkToken;
+  const token = await getApprovalFreshToken();
   if (!token) {
     alert('الجلسة منتهية. سجل دخول مرة أخرى.');
     return;
@@ -1141,7 +1158,9 @@ function closePreviewDirect() {
 
 // ── Init ─────────────────────────────────────────────────────────────────
 loadExtracts();
-setInterval(loadExtracts, 60000);
+// توفير Neon + منع 401: كان setInterval(loadExtracts, 60000) يسحب القائمة
+// الكاملة كل دقيقة طوال فتح الصفحة — وبتوكن قديم بعد أول دقيقة.
+// التحديث الآن: مرة عند الفتح + زر "↻ تحديث" اليدوي الموجود أعلى الصفحة.
 </script>
 </body>
 </html>

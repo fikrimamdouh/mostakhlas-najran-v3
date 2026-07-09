@@ -141,9 +141,28 @@
     try { localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value)); } catch (_) {}
   }
 
-  async function guardedStartRevision(id, type) {
+  async function getGuardFreshToken() {
+    async function tryGetter(fn) {
+      try {
+        if (typeof fn !== 'function') return null;
+        var t = null;
+        try { t = await fn({ skipCache: true }); } catch (_) { t = await fn(); }
+        return t || null;
+      } catch (_) { return null; }
+    }
+    // صفحة الاعتماد تعرّف helper موحّد — استخدمه أولًا لو موجود
+    try { if (typeof window.getApprovalFreshToken === 'function') { var at = await window.getApprovalFreshToken(); if (at) return at; } } catch (_) {}
+    var token = await tryGetter(window.najranGetFreshToken);
+    if (token) return token;
+    try { if (window.parent && window.parent !== window) { token = await tryGetter(window.parent.najranGetFreshToken); if (token) return token; } } catch (_) {}
+    try { if (window.top && window.top !== window) { token = await tryGetter(window.top.najranGetFreshToken); if (token) return token; } } catch (_) {}
     var session = readJson('najran_session', {});
-    var token = session.clerkToken || '';
+    if (session && session.clerkToken && session.timestamp && (Date.now() - session.timestamp) < 55000) return session.clerkToken;
+    return null;
+  }
+
+  async function guardedStartRevision(id, type) {
+    var token = await getGuardFreshToken();
     if (!token) return alert('الجلسة منتهية. سجل دخول مرة أخرى.');
     try {
       var res = await fetch('/api/submitted-extracts/' + id, { headers: { Authorization: 'Bearer ' + token }, credentials: 'include' });
