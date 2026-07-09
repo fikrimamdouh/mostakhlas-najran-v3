@@ -1,10 +1,10 @@
 // extract-submit-flow-control.js
 // Official submit-flow control: confirmation, verified duplicate handling, no auto payment/month mutation,
-// update existing when explicitly chosen, durable submit summary, and post-submit green work badge.
+// update existing when explicitly chosen, durable submit summary, post-submit green work badge, and local-save from confirm.
 (function () {
   'use strict';
-  if (window.__NAJRAN_EXTRACT_SUBMIT_FLOW_CONTROL_V5__) return;
-  window.__NAJRAN_EXTRACT_SUBMIT_FLOW_CONTROL_V5__ = true;
+  if (window.__NAJRAN_EXTRACT_SUBMIT_FLOW_CONTROL_V6__) return;
+  window.__NAJRAN_EXTRACT_SUBMIT_FLOW_CONTROL_V6__ = true;
 
   var SUMMARY_KEY = 'najran_last_submitted_summary_v1';
   var WORK_CONTEXT_KEY = 'najran_work_context_v1';
@@ -206,6 +206,34 @@
     '</div>';
   }
 
+  function saveLocalSnapshotFromConfirm(type) {
+    try {
+      if (type === 'consumables' && typeof window.najranEnsureConsumablesSummarySnapshot === 'function') {
+        try { window.najranEnsureConsumablesSummarySnapshot(); } catch (_) {}
+      }
+      if (typeof window.saveExtractSnapshot !== 'function') {
+        alert('تعذر الحفظ المحلي الآن: أداة الحفظ المحلي لم تكتمل بعد. أعد تحميل الصفحة وحاول مرة أخرى.');
+        return false;
+      }
+      var snap = window.saveExtractSnapshot('submit-confirm-local-save');
+      if (!snap || !snap.extractData) {
+        alert('تعذر حفظ نسخة محلية من هذا المستخلص. لم يتم رفع أي بيانات.');
+        return false;
+      }
+      try {
+        localStorage.setItem('najran_last_submit_confirm_local_save_id', String(snap.id || ''));
+        localStorage.setItem('najran_last_submit_confirm_local_save_at', new Date().toISOString());
+        localStorage.setItem('najran_last_submit_confirm_local_save_type', String(type || ''));
+      } catch (_) {}
+      alert('تم حفظ نسخة محلية من هذا المستخلص. لم يتم رفع أي بيانات.');
+      return true;
+    } catch (e) {
+      console.warn('[ExtractSubmitFlowControl] local save from confirm failed', e);
+      alert('تعذر الحفظ المحلي من نافذة الرفع. لم يتم رفع أي بيانات.');
+      return false;
+    }
+  }
+
   function showConfirmSubmitModal(originalButton) {
     var text = clean(originalButton && originalButton.textContent || 'رفع مستخلص');
     var type = submitTypeFromPageAndText(text);
@@ -220,6 +248,7 @@
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start">' +
       '<button data-action="submit" style="padding:10px 13px;border:0;border-radius:10px;background:#166534;color:#fff;font-weight:900;cursor:pointer;font-family:inherit">رفع الآن</button>' +
+      '<button data-action="local-save" style="padding:10px 13px;border:0;border-radius:10px;background:#0f766e;color:#fff;font-weight:900;cursor:pointer;font-family:inherit">حفظ محلي</button>' +
       '<button data-action="review" style="padding:10px 13px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc;color:#334155;font-weight:900;cursor:pointer;font-family:inherit">مراجعة البيانات</button>' +
       '<button data-action="cancel" style="padding:10px 13px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;color:#64748b;font-weight:900;cursor:pointer;font-family:inherit">إلغاء</button>' +
       '</div>'
@@ -229,6 +258,10 @@
       if (!btn) return;
       var action = btn.getAttribute('data-action');
       if (action === 'cancel' || action === 'review') { overlay.remove(); return; }
+      if (action === 'local-save') {
+        if (saveLocalSnapshotFromConfirm(type)) overlay.remove();
+        return;
+      }
       if (action === 'submit') {
         overlay.remove();
         var lock = currentDoneLock(type);
@@ -535,7 +568,8 @@
     verifyExistingExtract: verifyExistingExtract,
     clearDoneLock: clearDoneLock,
     installSubmittedBadge: installSubmittedBadge,
-    getSubmittedContext: getSubmittedContext
+    getSubmittedContext: getSubmittedContext,
+    saveLocalSnapshotFromConfirm: saveLocalSnapshotFromConfirm
   };
-  console.info('[ExtractSubmitFlowControl] installed v5 submitted-state badge + verified duplicate lock');
+  console.info('[ExtractSubmitFlowControl] installed v6 submitted-state badge + local save + verified duplicate lock');
 })();
