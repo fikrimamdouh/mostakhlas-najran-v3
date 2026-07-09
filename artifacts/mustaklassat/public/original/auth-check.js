@@ -3,130 +3,21 @@
  * يتحقق من تسجيل الدخول قبل عرض صفحات النظام الأصلي
  * + تحميل الحراس العامة
  * + دعم original-viewer?page=...
+ * + fresh token support for original-page notification/API polling
  */
 (function () {
   'use strict';
 
-  // ===================================================================
-  // Zahran/Iman Data Loss Tripwire v1 — INLINE (runs BEFORE cloud-sync)
-  // Purpose: passively record every mutation on critical keys so that
-  // when data disappears we have full evidence (stack, before/after,
-  // ctxKey vs session mismatches). Zero behavior change — logging only.
-  // Activates ONLY for Zahran/Iman users; idle no-op for everyone else.
-  // Inspect with: window.__zahranTripwireReport()  /  __zahranTripwireStatus()
-  // ===================================================================
-  (function installZahranTripwire() {
-    if (window.__ZAHRAN_TRIPWIRE_V1_INSTALLED__) return;
-    var LOG_KEY = '_zahranTripwireLog_v1';
-    var SESSION_KEY = 'najran_session';
-    var CTX_KEY = 'najran_active_hospital_context';
-    var MAX_EVENTS = 200;
-    var CRITICAL_KEYS = { 'persistentContractData':1,'persistentExtractData':1,'contractData':1,'contractDetails':1,'contractNumber':1,'hospitalName':1,'companyName':1,'attendanceData':1,'ng_attendanceData':1,'nd_attendanceData':1,'centersAttendanceData_v2':1,'healthCentersAttendanceData':1,'adminOfficesAttendanceData_v1':1,'adminOfficesFullAttendanceBundle_v1':1,'consumablesTableData':1,'mainHospitalConsumables':1,'healthCentersConsumables':1,'admin_offices_consumables_v1.0':1,'finalConsumablesCost':1,'subcontractors_data_consumables_v27':1,'performance_data_consumables_v27':1,'water_supply_data_consumables_v27':1,'sewage_disposal_data_consumables_v27':1,'summary_data_consumables_v27':1,'spare_partsData':1,'sparePartsTotalAmount':1,'performanceData':1,'performanceData_v4':1,'achievementData':1,'finalLaborCost':1,'grand-net-total':1,'dynamicSignatures':1,'contractorSignature':1,'performanceSignatures_v2':1,'settings_main':1,'settings_advanced':1 };
-    var raw = { get: Storage.prototype.getItem.bind(localStorage), set: Storage.prototype.setItem.bind(localStorage), remove: Storage.prototype.removeItem.bind(localStorage), key: Storage.prototype.key.bind(localStorage), len: function(){ return localStorage.length; } };
-    function isAffected() { try { var s = JSON.parse(raw.get(SESSION_KEY)||'{}'); var h=String(s.hospital||''), c=String(s.company||s.companyName||''); return /زهران|إيمان/.test(h) || /زهران|إيمان/.test(c); } catch(_) { return false; } }
-    if (!isAffected()) { return; } // no-op for other users
-    window.__ZAHRAN_TRIPWIRE_V1_INSTALLED__ = true;
-    try { console.warn('[ZahranTripwire] ACTIVE — recording critical-key mutations for Zahran/Iman user'); } catch(_){}
-    function cleanK(k){ return String(k||'').replace(/^(_u\d+_)+/, ''); }
-    function readLog(){ try { return JSON.parse(raw.get(LOG_KEY)||'[]')||[]; } catch(_) { return []; } }
-    function writeLog(evs){ try { if (evs.length > MAX_EVENTS) evs = evs.slice(-MAX_EVENTS); raw.set(LOG_KEY, JSON.stringify(evs)); } catch(_){} }
-    function currentHospital(){ try { return (JSON.parse(raw.get(SESSION_KEY)||'{}').hospital)||null; } catch(_) { return null; } }
-    function push(ev){ var log = readLog(); ev.ts = new Date().toISOString(); ev.hospital = currentHospital(); ev.ctxKey = raw.get(CTX_KEY); log.push(ev); writeLog(log); try { console.warn('[ZahranTripwire]', ev.type, ev.key||'', ev.reason||''); } catch(_){} }
-    function snapshotCritical(){ var out=[]; var n=raw.len(); for (var i=0;i<n;i++){ var k=raw.key(i); if(!k) continue; var ck=cleanK(k); if (CRITICAL_KEYS[ck]){ var v=raw.get(k); out.push({key:ck,size:v?v.length:0,empty:!v||v==='{}'||v==='[]'||v==='""'}); } } return out; }
-    var protoSet = Storage.prototype.setItem, protoRemove = Storage.prototype.removeItem, protoClear = Storage.prototype.clear;
-    Storage.prototype.setItem = function(key, value) {
-      try { var ck = cleanK(key); if (ck !== LOG_KEY && CRITICAL_KEYS[ck]) { var sv = String(value==null?'':value); var isEmpty = !sv || sv==='{}' || sv==='[]' || sv==='""' || sv==='null'; var oldV = raw.get(key); var oldSize = oldV ? oldV.length : 0; var newSize = sv.length; if (isEmpty && oldSize > 20) { push({ type:'SETITEM_EMPTY_OVERWRITE', key:ck, oldSize:oldSize, newSize:newSize, preview:sv.slice(0,60), stack:(new Error()).stack||'no-stack' }); } else if (oldSize > 200 && newSize < oldSize/4) { push({ type:'SETITEM_SHRUNK', key:ck, oldSize:oldSize, newSize:newSize, preview:sv.slice(0,80), stack:(new Error()).stack||'no-stack' }); } } } catch(_){}
-      return protoSet.apply(this, arguments);
-    };
-    Storage.prototype.removeItem = function(key) {
-      try { var ck = cleanK(key); if (ck !== LOG_KEY && CRITICAL_KEYS[ck]) { var oldV = raw.get(key); push({ type:'REMOVEITEM', key:ck, hadContent: !!(oldV && oldV.length>20), oldSize: oldV?oldV.length:0, stack:(new Error()).stack||'no-stack' }); } } catch(_){}
-      return protoRemove.apply(this, arguments);
-    };
-    Storage.prototype.clear = function() {
-      try { var snap = snapshotCritical(); push({ type:'CLEAR_ALL', beforeCriticalCount:snap.length, beforeCriticalKeys:snap.map(function(x){return x.key;}), stack:(new Error()).stack||'no-stack' }); } catch(_){}
-      return protoClear.apply(this, arguments);
-    };
-    var lastCtx = raw.get(CTX_KEY), lastSess = currentHospital();
-    setInterval(function() {
-      try {
-        var curCtx = raw.get(CTX_KEY), curSess = currentHospital();
-        if (curCtx !== lastCtx) { push({ type:'CTX_KEY_CHANGED', from:lastCtx, to:curCtx, sessionHospital:curSess }); lastCtx = curCtx; }
-        if (curSess !== lastSess) { push({ type:'SESSION_HOSPITAL_CHANGED', from:lastSess, to:curSess, ctxKey:curCtx }); lastSess = curSess; }
-        if (curSess && curCtx && curSess !== curCtx) {
-          var nowMin = Math.floor(Date.now()/60000);
-          if (window.__zahranMismatchLastMin !== nowMin) {
-            window.__zahranMismatchLastMin = nowMin;
-            var diff = [];
-            if (curSess.length !== curCtx.length) diff.push('lengths differ: '+curSess.length+' vs '+curCtx.length);
-            var minLen = Math.min(curSess.length, curCtx.length);
-            for (var i=0;i<minLen;i++) { if (curSess.charCodeAt(i) !== curCtx.charCodeAt(i)) { diff.push('pos '+i+': U+'+curSess.charCodeAt(i).toString(16)+' vs U+'+curCtx.charCodeAt(i).toString(16)); if (diff.length>5) break; } }
-            push({ type:'MISMATCH_SESSION_VS_CTX', sessionHospital:curSess, ctxKey:curCtx, byteDiff:diff });
-          }
-        }
-      } catch(_){}
-    }, 2000);
-    window.__zahranTripwireReport = function() { var log = readLog(); try { console.group('%c[Zahran Tripwire] '+log.length+' events', 'font-weight:bold;color:#c00'); log.forEach(function(e,i){ console.groupCollapsed((i+1)+'. ['+e.ts+'] '+e.type+(e.key?' — '+e.key:'')); console.log(e); console.groupEnd(); }); console.groupEnd(); } catch(_){} return log; };
-    window.__zahranTripwireExport = function() { return JSON.stringify(readLog(), null, 2); };
-    window.__zahranTripwireClear = function() { if (confirm('مسح سجل الرصد؟')) { raw.remove(LOG_KEY); return 'cleared'; } return 'canceled'; };
-    window.__zahranTripwireStatus = function() { var log = readLog(); var snap = snapshotCritical(); return { installed:true, user:lastSess, ctxKey:lastCtx, match:lastSess===lastCtx, totalEvents:log.length, criticalKeysPresent:snap.length, criticalKeysSummary:snap.map(function(s){return s.key+' ('+s.size+'b'+(s.empty?',empty':'')+')';}) }; };
-    push({ type:'TRIPWIRE_INSTALLED', userHospital:lastSess, ctxKey:lastCtx, match:lastSess===lastCtx, criticalPresent:snapshotCritical() });
-    try { console.info('[ZahranTripwire] Ready. Use __zahranTripwireStatus() / __zahranTripwireReport() / __zahranTripwireExport() in DevTools.'); } catch(_){}
-  })();
-
   var BASE = window.location.origin;
-  var BUILD_V = '20260708revisionV3_selectHomeIntercept_draftKeysComplete';
-  var HOSPITAL_STORAGE_GUARD_V = '20260704_stale_revision_404_modal_v2';
-  var NOTIF_INTERVAL_MS = 900000; // كان 300000 (5 دقائق) — رُفع لـ15 دقيقة بعد ما بقى التحقق الدوري خفيف (عدّاد فقط لا قائمة كاملة)
-  var NAJRAN_BUILD_VERSION = '2026.07.04-r10';
+  var BUILD_V = '20260709_auth_fresh_token_v1';
+  var HOSPITAL_STORAGE_GUARD_V = '20260709_fresh_token_retry_v2';
+  var APPROVAL_REVISION_GUARD_V = '20260709_approval_revision_v4_active_mode';
+  var MONITOR_V = '20260709_monitor_v1b_safe_storage';
+  var NOTIF_INTERVAL_MS = 900000;
+  var NAJRAN_BUILD_VERSION = '2026.07.09-auth-r1';
   window.NAJRAN_BUILD_VERSION = NAJRAN_BUILD_VERSION;
 
   try { console.info('%c[Najran] النسخة: ' + NAJRAN_BUILD_VERSION, 'color:#1e3c72;font-weight:bold'); } catch (_) {}
-
-  (function versionUpdateBanner() {
-    try {
-      var KEY = 'najran_runtime_version';
-      var stored = localStorage.getItem(KEY);
-      if (!stored) { localStorage.setItem(KEY, NAJRAN_BUILD_VERSION); return; }
-      if (stored === NAJRAN_BUILD_VERSION) return;
-      localStorage.setItem(KEY, NAJRAN_BUILD_VERSION);
-      var hasOpenWork = !!(localStorage.getItem('attendanceData') || localStorage.getItem('adminOfficesAttendanceData_v1') || localStorage.getItem('centersAttendanceData_v2') || localStorage.getItem('consumablesTableData'));
-      var show = function () {
-        if (document.getElementById('najran-update-banner')) return;
-        var bar = document.createElement('div');
-        bar.id = 'najran-update-banner';
-        bar.setAttribute('dir', 'rtl');
-        bar.style.cssText = 'position:fixed;top:0;right:0;left:0;z-index:2147483600;background:linear-gradient(90deg,#0f2050,#1e3c72);color:#fff;padding:9px 14px;display:flex;gap:10px;align-items:center;justify-content:center;font-family:Tajawal,Arial,sans-serif;font-weight:800;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,.25)';
-        bar.innerHTML = '<span style="color:#d4af37">⬆</span><span>' +
-          (hasOpenWork ? 'يوجد تحديث جديد. احفظ عملك أولًا ثم حدّث الصفحة.' : 'يوجد تحديث جديد للنظام — اضغط لتحديث الصفحة') +
-          '</span><button id="najran-update-reload" style="border:0;border-radius:8px;padding:5px 14px;background:#d4af37;color:#0f2050;font-family:inherit;font-weight:900;cursor:pointer">تحديث</button>' +
-          '<button id="najran-update-dismiss" style="border:0;border-radius:8px;padding:5px 10px;background:rgba(255,255,255,.15);color:#fff;font-family:inherit;font-weight:800;cursor:pointer">لاحقًا</button>';
-        document.body.appendChild(bar);
-        document.getElementById('najran-update-reload').onclick = function () {
-          try { if (typeof window.saveMonthSnapshot === 'function') window.saveMonthSnapshot(); } catch (_) {}
-          var done = function () { try { location.reload(); } catch (_) { location.href = location.href; } };
-          try {
-            var jobs = [];
-            try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister().catch(function(){}); })); })); } catch (_) {}
-            try { if (window.caches && caches.keys) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })); } catch (_) {}
-            try { jobs.push(fetch('/original/auth-check.js', { cache: 'reload' }).catch(function(){})); } catch (_) {}
-            try { jobs.push(fetch('/original/hospital-storage-extract-context-guard.js?v=' + HOSPITAL_STORAGE_GUARD_V, { cache: 'reload' }).catch(function(){})); } catch (_) {}
-            try { jobs.push(fetch('/original/extract-snapshot.js?v=20260703_snapshot_quota_v1', { cache: 'reload' }).catch(function(){})); } catch (_) {}
-            try { jobs.push(fetch('/original/submitted_extract_archive_bundle_guard.js?v=20260705_v2_labor_details_bridge', { cache: 'reload' }).catch(function(){})); } catch (_) {}
-            try { jobs.push(fetch('/original/admin_offices_full_submit_snapshot_guard.js?v=20260705_v4_admin_offices_duplicate_fix', { cache: 'reload' }).catch(function(){})); } catch (_) {}
-            try { jobs.push(fetch('/original/admin_offices_local_save_buttons.js?v=20260704_admin_local_save_v2_quota_safe', { cache: 'reload' }).catch(function(){})); } catch (_) {}
-            try { jobs.push(fetch('/original/review-labor-final-snapshot-exact.js?v=20260705_v2_labor_details_bridge', { cache: 'reload' }).catch(function(){})); } catch (_) {}
-            try { jobs.push(fetch('/original/review-labor-legacy-official-amount.js?v=20260705_cache_bust_v1', { cache: 'reload' }).catch(function(){})); } catch (_) {}
-            try { jobs.push(fetch('/original/admin_offices_review_detail_patch.js?v=20260705_v4_admin_offices_duplicate_fix', { cache: 'reload' }).catch(function(){})); } catch (_) {}
-            try { jobs.push(fetch(location.pathname + location.search, { cache: 'reload' }).catch(function(){})); } catch (_) {}
-            Promise.all(jobs).then(done, done);
-            setTimeout(done, 4000);
-          } catch (_) { done(); }
-        };
-        document.getElementById('najran-update-dismiss').onclick = function () { bar.remove(); };
-      };
-      if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
-    } catch (_) {}
-  })();
 
   var notifFetchInProgress = false;
 
@@ -135,13 +26,67 @@
       var raw = localStorage.getItem('najran_session');
       if (!raw) return null;
       var s = JSON.parse(raw);
-      if (!s || !s.timestamp) return null;
-      if (Date.now() - s.timestamp > 8 * 60 * 60 * 1000) {
+      if (!s) return null;
+      if (s.timestamp && Date.now() - s.timestamp > 8 * 60 * 60 * 1000) {
         localStorage.removeItem('najran_session');
         return null;
       }
       return s;
     } catch (_) { return null; }
+  }
+
+  function saveSessionToken(token) {
+    if (!token) return;
+    try {
+      var s = getSession() || {};
+      s.clerkToken = token;
+      s.timestamp = Date.now();
+      localStorage.setItem('najran_session', JSON.stringify(s));
+    } catch (_) {}
+  }
+
+  async function callTokenGetter(fn, force) {
+    try {
+      if (typeof fn !== 'function') return null;
+      var token = null;
+      try { token = await fn(force ? { skipCache: true } : undefined); }
+      catch (_) { token = await fn(); }
+      if (token) saveSessionToken(token);
+      return token || null;
+    } catch (_) { return null; }
+  }
+
+  async function getFreshToken(force) {
+    var token = await callTokenGetter(window.najranGetFreshToken, !!force);
+    if (token) return token;
+    try {
+      if (window.parent && window.parent !== window) {
+        token = await callTokenGetter(window.parent.najranGetFreshToken, !!force);
+        if (token) return token;
+      }
+    } catch (_) {}
+    try {
+      if (window.top && window.top !== window) {
+        token = await callTokenGetter(window.top.najranGetFreshToken, !!force);
+        if (token) return token;
+      }
+    } catch (_) {}
+    var s = getSession();
+    return s && s.clerkToken ? s.clerkToken : null;
+  }
+
+  async function authJson(url, options, force) {
+    options = options || {};
+    var token = await getFreshToken(!!force);
+    if (!token) return { ok: false, status: 0, data: null };
+    var headers = new Headers(options.headers || {});
+    headers.set('Authorization', 'Bearer ' + token);
+    if (options.method && options.method !== 'GET' && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+    var res = await fetch(url, Object.assign({}, options, { headers: headers, credentials: 'include' }));
+    if (res.status === 401 && !force) return authJson(url, options, true);
+    var data = null;
+    try { data = res.ok ? await res.json() : null; } catch (_) { data = null; }
+    return { ok: res.ok, status: res.status, data: data };
   }
 
   var session = getSession();
@@ -218,9 +163,7 @@
         '<a class="btn" href="/dashboard">العودة للرئيسية</a></div></body></html>'
       ].join(''));
       document.close();
-    } catch (_) {
-      window.location.replace(BASE + '/dashboard');
-    }
+    } catch (_) { window.location.replace(BASE + '/dashboard'); }
   }
 
   if (!isOriginalPageAllowed()) {
@@ -248,13 +191,7 @@
 
   appendScript('/original/hospital-context-guard.js?v=20260611d', false);
   appendScript('/original/hospital-storage-extract-context-guard.js?v=' + HOSPITAL_STORAGE_GUARD_V, false);
-
-  // Production Incident Monitor — auto-loaded on every original/ page.
-  // Non-defer so its Storage-prototype overrides install before most other
-  // scripts run and can wrap around them. Coexists with the inline
-  // ZahranTripwire (installed above at the top of this IIFE).
-  appendScript('/original/production-client-monitor.js?v=20260709_monitor_v1_a', false);
-
+  appendScript('/original/production-client-monitor.js?v=' + MONITOR_V, false);
   if (!isSidebarSensitivePage) appendScript('/original/home-sidebar-guard.js?v=20260703_review_exclude_v2', false);
 
   appendScript('/original/approve-button-polish.js?v=' + BUILD_V, true);
@@ -292,7 +229,7 @@
   if (isAttendancePage || isAdminOfficesPage) appendScript('/original/special-absence-no-deduction.js?v=' + BUILD_V, true);
 
   if (pageFile === 'approval.html') {
-    appendScript('/original/approval_revision_route_guard.js?v=20260703_approval_revision_v3', true);
+    appendScript('/original/approval_revision_route_guard.js?v=' + APPROVAL_REVISION_GUARD_V, true);
     appendScript('/original/review-print-override.js?v=' + BUILD_V, true);
     appendScript('/original/review-workflow.js?v=20260705_v3_duplicate_resubmit_and_admin_offices_parts', true);
     appendScript('/original/review-labor-final-snapshot-exact.js?v=20260705_v2_labor_details_bridge', true);
@@ -303,7 +240,7 @@
   }
 
   if (pageFile === 'extract-archive.html') appendScript('/original/extract_archive_route_guard.js?v=20260703_extract_archive_route_v5', true);
-  if (/consumables\.html$/.test(pageFile)) {   appendScript('/original/consumables-submit-snapshot-guard.js?v=20260708_consumables_guard_v5_nondestructive', true); }
+  if (/consumables\.html$/.test(pageFile)) appendScript('/original/consumables-submit-snapshot-guard.js?v=20260708_consumables_guard_v5_nondestructive', true);
   if (pageFile === 'settings_main.html') {
     appendScript('/original/settings-backup-complete-guard.js?v=20260611d', true);
     appendScript('/original/settings_contract_fixed_patch.js?v=20260623_fixed_contract_v1', true);
@@ -369,9 +306,6 @@
 
   var NOTIF_SEEN_KEY = 'najran_notif_seen_ids';
   var NOTIF_CHECK_KEY = 'najran_notif_last_check';
-  // خفة الفحص الدوري: بصمة آخر تحديث معروفة + آخر عدد دقيق محسوب منها.
-  // لو latestUpdatedAt من endpoint العدّاد الخفيف طابق هذه البصمة، لا داعي
-  // لسحب القائمة الكاملة من /api/submitted-extracts-lite إطلاقًا.
   var NOTIF_LAST_FINGERPRINT_KEY = 'najran_notif_last_fingerprint';
   var NOTIF_LAST_COMPUTED_COUNT_KEY = 'najran_notif_last_computed_count';
 
@@ -410,62 +344,54 @@
     } catch (_) {}
   }
 
-  // المسار الكامل الأصلي — بلا أي تعديل على منطقه. يُستدعى فقط لما يثبت وجود
-  // تغيير فعلي (أو فشل endpoint العدّاد الخفيف)، بدل ما كان يُستدعى كل مرة.
-  function fetchNotifCountFull(token, s, callback) {
-    fetch('/api/submitted-extracts-lite', { headers: { Authorization: 'Bearer ' + token }, credentials: 'include' })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (data) {
-        if (!data || !data.extracts) { callback(0, []); return; }
-        var role = s.role || 'user';
-        var seenIds = getSeenIds();
-        var unseen = [];
-        if (role === 'admin' || role === 'supervisor') {
-          unseen = data.extracts.filter(function (e) { return e.status === 'submitted' && !isNotifSeen(seenIds, e); });
-        } else {
-          var lastCheck = parseInt(localStorage.getItem(NOTIF_CHECK_KEY) || '0') || (Date.now() - 7 * 24 * 3600 * 1000);
-          unseen = data.extracts.filter(function (e) {
-            var changed = new Date(e.updatedAt || e.revisedAt || e.approvedAt || e.createdAt).getTime();
-            return changed > lastCheck && (e.status === 'approved' || e.status === 'needs_revision' || e.status === 'rejected') && !isNotifSeen(seenIds, e);
-          });
-        }
-        callback(unseen.length, data.extracts.map(getNotifMarker).filter(Boolean));
-      })
-      .catch(function () { callback(0, []); })
-      .finally(function () { notifFetchInProgress = false; });
+  async function fetchNotifCountFull(s, callback) {
+    try {
+      var full = await authJson('/api/submitted-extracts-lite', {}, false);
+      if (!full.ok || !full.data || !full.data.extracts) { callback(0, []); return; }
+      var data = full.data;
+      var role = s.role || 'user';
+      var seenIds = getSeenIds();
+      var unseen = [];
+      if (role === 'admin' || role === 'supervisor') {
+        unseen = data.extracts.filter(function (e) { return e.status === 'submitted' && !isNotifSeen(seenIds, e); });
+      } else {
+        var lastCheck = parseInt(localStorage.getItem(NOTIF_CHECK_KEY) || '0') || (Date.now() - 7 * 24 * 3600 * 1000);
+        unseen = data.extracts.filter(function (e) {
+          var changed = new Date(e.updatedAt || e.revisedAt || e.approvedAt || e.createdAt).getTime();
+          return changed > lastCheck && (e.status === 'approved' || e.status === 'needs_revision' || e.status === 'rejected') && !isNotifSeen(seenIds, e);
+        });
+      }
+      callback(unseen.length, data.extracts.map(getNotifMarker).filter(Boolean));
+    } catch (_) {
+      callback(0, []);
+    } finally {
+      notifFetchInProgress = false;
+    }
   }
 
-  // نقطة الدخول العامة — تجرب endpoint العدّاد الخفيف أولًا (بايتات قليلة جدًا،
-  // بلا أي تفاصيل مستخلصات). لو "بصمة" آخر تحديث لم تتغيّر منذ آخر فحص كامل،
-  // تُعاد النتيجة المحفوظة محليًا بلا أي سحب إضافي للقائمة الكاملة. لو تغيّرت
-  // (أو فشل endpoint العدّاد لأي سبب)، يُستدعى المسار الكامل الأصلي كما كان
-  // بالضبط — فلا يتغيّر شكل البادج ولا منطق "مقروء/غير مقروء" إطلاقًا.
-  function fetchNotifCount(callback) {
+  async function fetchNotifCount(callback) {
     var s = getSession();
     if (!s || notifFetchInProgress) return;
-    var age = Date.now() - (s.timestamp || 0);
-    var token = (s.clerkToken && age < 55000) ? s.clerkToken : null;
-    if (!token) { callback(0, []); return; }
     notifFetchInProgress = true;
-
-    fetch('/api/notifications/count', { headers: { Authorization: 'Bearer ' + token }, credentials: 'include' })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (light) {
-        if (!light) { fetchNotifCountFull(token, s, callback); return; }
-        var fingerprint = String(light.latestUpdatedAt || '') + '|' + String(light.count || 0);
-        var cached = getCachedNotifState();
-        if (cached.fingerprint && cached.fingerprint === fingerprint) {
-          notifFetchInProgress = false;
-          callback(cached.count, cached.markers);
-          return;
-        }
-        fetchNotifCountFull(token, s, function (count, markers) {
-          setCachedNotifState(fingerprint, count, markers);
-          callback(count, markers);
-        });
-      })
-      .catch(function () { fetchNotifCountFull(token, s, callback); });
+    try {
+      var light = await authJson('/api/notifications/count', {}, false);
+      if (!light.ok || !light.data) { fetchNotifCountFull(s, callback); return; }
+      var fingerprint = String(light.data.latestUpdatedAt || '') + '|' + String(light.data.count || 0);
+      var cached = getCachedNotifState();
+      if (cached.fingerprint && cached.fingerprint === fingerprint) {
+        notifFetchInProgress = false;
+        callback(cached.count, cached.markers);
+        return;
+      }
+      fetchNotifCountFull(s, function (count, markers) {
+        setCachedNotifState(fingerprint, count, markers);
+        callback(count, markers);
+      });
+    } catch (_) {
+      fetchNotifCountFull(s, callback);
+    }
   }
+
   function updateBell(count) {
     var badge = document.getElementById('najran-bell-badge');
     var btn = document.getElementById('najran-bell-btn');
@@ -479,6 +405,7 @@
       btn.style.animation = '';
     }
   }
+
   function checkNotifications() {
     fetchNotifCount(function (count, allIds) {
       updateBell(count);
@@ -495,20 +422,14 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    // حراسة ضد تركيب أكثر من polling واحد لنفس الصفحة (لو auth-check.js حُمِّل مرتين لأي سبب)
     if (window.__NAJRAN_NOTIF_POLL_INSTALLED__) return;
     window.__NAJRAN_NOTIF_POLL_INSTALLED__ = true;
-
     function checkIfVisible() {
-      if (document.hidden) return; // لا تفحص والتبويب في الخلفية — لا فائدة، استهلاك بلا داعٍ
+      if (document.hidden) return;
       checkNotifications();
     }
-
     checkIfVisible();
     setInterval(checkIfVisible, NOTIF_INTERVAL_MS);
-
-    // عند رجوع التبويب للظهور بعد ما كان مخفيًا، افحص فورًا مرة واحدة
-    // (بدل انتظار الـinterval التالي اللي ممكن يبقى بعيد لـ15 دقيقة)
     document.addEventListener('visibilitychange', function () {
       if (!document.hidden) checkNotifications();
     });
