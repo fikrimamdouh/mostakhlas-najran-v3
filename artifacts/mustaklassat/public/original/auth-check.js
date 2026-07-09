@@ -372,26 +372,108 @@
     }
   }
 
-  async function fetchNotifCount(callback) {
+  // === توفير Neon (Network Transfer) ===
+  // 1) كاش زمني: لو آخر فحص شبكي ناجح أقرب من TTL الدور الحالي، تُعاد النتيجة
+  //    المخزّنة محليًا بلا أي fetch. TTL المستخدم العادي 60 دقيقة؛
+  //    admin/supervisor 15 دقيقة.
+  // 2) قفل بين التبويبات: najran_notif_fetch_lock (TTL 60 ثانية) — لو عدة
+  //    تبويبات مفتوحة، تبويب واحد فقط يعمل fetch والباقي يقرأ الكاش.
+  // 3) قمع الـ fallback: فشل العدّاد الخفيف لا يستدعي القائمة الكاملة تلقائيًا؛
+  //    نعرض آخر count مخزّن، والـ fallback الكامل مسموح مرة واحدة فقط كل 30
+  //    دقيقة — حتى لا يتضاعف الحمل بالضبط وقت ما تكون قاعدة البيانات متعبة.
+  // force=true (صفحة المراجعة عند الفتح) يتخطى الكاش الزمني فقط، لا القفل ولا القمع.
+  var NOTIF_LAST_FETCH_AT_KEY = 'najran_notif_last_fetch_at';
+  var NOTIF_FETCH_LOCK_KEY = 'najran_notif_fetch_lock';
+  var NOTIF_LAST_FULL_FALLBACK_AT_KEY = 'najran_notif_last_full_fallback_at';
+  var NOTIF_LOCK_TTL_MS = 60 * 1000;
+  var NOTIF_FULL_FALLBACK_MIN_GAP_MS = 30 * 60 * 1000;
+
+  function notifRoleTtlMs() {
+    var role = String((getSession() || {}).role || 'user').toLowerCase();
+    if (role === 'admin' || role === 'supervisor') return 15 * 60 * 1000;
+    return 60 * 60 * 1000;
+  }
+  function notifCacheFresh() {
+    var last = parseInt(localStorage.getItem(NOTIF_LAST_FETCH_AT_KEY) || '0', 10) || 0;
+    return (Date.now() - last) < notifRoleTtlMs();
+  }
+  function notifAcquireLock() {
+    try {
+      var now = Date.now();
+      var lock = parseInt(localStorage.getItem(NOTIF_FETCH_LOCK_KEY) || '0', 10) || 0;
+      if (lock && (now - lock) < NOTIF_LOCK_TTL_MS) return false;
+      localStorage.setItem(NOTIF_FETCH_LOCK_KEY, String(now));
+      return true;
+    } catch (_) { return true; }
+  }
+  function notifReleaseLock() {
+    try { localStorage.removeItem(NOTIF_FETCH_LOCK_KEY); } catch (_) {}
+  }
+  function notifFullFallbackAllowed() {
+    var last = parseInt(localStorage.getItem(NOTIF_LAST_FULL_FALLBACK_AT_KEY) || '0', 10) || 0;
+    return (Date.now() - last) > NOTIF_FULL_FALLBACK_MIN_GAP_MS;
+  }
+  function notifMarkFullFallback() {
+    try { localStorage.setItem(NOTIF_LAST_FULL_FALLBACK_AT_KEY, String(Date.now())); } catch (_) {}
+  }
+  function notifMarkFetched() {
+    try { localStorage.setItem(NOTIF_LAST_FETCH_AT_KEY, String(Date.now())); } catch (_) {}
+  }
+  function notifServeFromCache(callback) {
+    var cached = getCachedNotifState();
+    callback(cached.count, cached.markers);
+  }
+
+  async function fetchNotifCount(callback, force) {
     var s = getSession();
     if (!s || notifFetchInProgress) return;
+
+    // (1) كاش زمني — بلا شبكة إلا لو force
+    if (!force && notifCacheFresh()) { notifServeFromCache(callback); return; }
+
+    // (2) قفل بين التبويبات
+    if (!notifAcquireLock()) { notifServeFromCache(callback); return; }
+
     notifFetchInProgress = true;
+    var wrapped = function (count, markers) {
+      notifMarkFetched();
+      notifReleaseLock();
+      callback(count, markers);
+    };
     try {
       var light = await authJson('/api/notifications/count', {}, false);
-      if (!light.ok || !light.data) { fetchNotifCountFull(s, callback); return; }
+      if (!light.ok || !light.data) {
+        // (3) قمع الـ fallback — فشل العدّاد لا يستدعي القائمة الكاملة إلا نادرًا
+        if (notifFullFallbackAllowed()) {
+          notifMarkFullFallback();
+          fetchNotifCountFull(s, wrapped);
+        } else {
+          notifFetchInProgress = false;
+          notifReleaseLock();
+          notifServeFromCache(callback);
+        }
+        return;
+      }
       var fingerprint = String(light.data.latestUpdatedAt || '') + '|' + String(light.data.count || 0);
       var cached = getCachedNotifState();
       if (cached.fingerprint && cached.fingerprint === fingerprint) {
         notifFetchInProgress = false;
-        callback(cached.count, cached.markers);
+        wrapped(cached.count, cached.markers);
         return;
       }
       fetchNotifCountFull(s, function (count, markers) {
         setCachedNotifState(fingerprint, count, markers);
-        callback(count, markers);
+        wrapped(count, markers);
       });
     } catch (_) {
-      fetchNotifCountFull(s, callback);
+      if (notifFullFallbackAllowed()) {
+        notifMarkFullFallback();
+        fetchNotifCountFull(s, wrapped);
+      } else {
+        notifFetchInProgress = false;
+        notifReleaseLock();
+        notifServeFromCache(callback);
+      }
     }
   }
 
@@ -409,32 +491,66 @@
     }
   }
 
-  function checkNotifications() {
+  function attachBellClick(allIds) {
+    var btn = document.getElementById('najran-bell-btn');
+    if (!btn) return;
+    btn.onclick = function () {
+      markAllSeen(allIds || []);
+      updateBell(0);
+      var role = String((getSession() || {}).role || 'user').toLowerCase();
+      window.location.href = (role === 'admin' || role === 'supervisor') ? '/original/approval.html' : '/extracts/track';
+    };
+  }
+
+  function checkNotifications(force) {
     fetchNotifCount(function (count, allIds) {
       updateBell(count);
-      var btn = document.getElementById('najran-bell-btn');
-      if (btn) {
-        btn.onclick = function () {
-          markAllSeen(allIds || []);
-          updateBell(0);
-          var role = String((getSession() || {}).role || 'user').toLowerCase();
-          window.location.href = (role === 'admin' || role === 'supervisor') ? '/original/approval.html' : '/extracts/track';
-        };
-      }
-    });
+      attachBellClick(allIds);
+    }, force);
   }
 
   document.addEventListener('DOMContentLoaded', function () {
     if (window.__NAJRAN_NOTIF_POLL_INSTALLED__) return;
     window.__NAJRAN_NOTIF_POLL_INSTALLED__ = true;
+
+    // === تصنيف الصفحة (توفير Neon) ===
+    // صفحات التشغيل اليومي: البادج من الكاش فقط — لا fetch تلقائي إطلاقًا،
+    // لأن المستخدم بيتنقل بينها عشرات المرات وكل تنقّل كان = ضربة قاعدة بيانات.
+    // صفحة المراجعة (approval): فحص فوري force عند الفتح.
+    // باقي الصفحات: فحص عادي يمر على الكاش الزمني (TTL حسب الدور).
+    var OPERATIONAL_PAGES = {
+      'attendance.html': 1, 'performance.html': 1, 'achievement.html': 1,
+      'consumables.html': 1, 'spare_parts.html': 1,
+      'najran_general.html': 1, 'najran_general_performance.html': 1, 'najran_general_achievement.html': 1,
+      'najran_dental_attendance.html': 1, 'najran_dental_performance.html': 1,
+      'admin_offices_attendance.html': 1, 'admin_offices_consumables.html': 1,
+      'health_centers_attendance.html': 1
+    };
+    var REVIEW_PAGES = { 'approval.html': 1 };
+    var isOperationalPage = !!OPERATIONAL_PAGES[pageFile];
+    var isReviewPage = !!REVIEW_PAGES[pageFile];
+
+    function serveCachedBadge() {
+      var cached = getCachedNotifState();
+      updateBell(cached.count);
+      attachBellClick(cached.markers);
+    }
+
     function checkIfVisible() {
       if (document.hidden) return;
-      checkNotifications();
+      if (isOperationalPage) { serveCachedBadge(); return; }
+      checkNotifications(isReviewPage);
     }
+
     checkIfVisible();
-    setInterval(checkIfVisible, NOTIF_INTERVAL_MS);
+    // صفحات التشغيل: بلا interval نهائيًا. غيرها: interval موجود لكن الكاش
+    // الزمني يمنع أي fetch فعلي زائد.
+    if (!isOperationalPage) setInterval(checkIfVisible, NOTIF_INTERVAL_MS);
+
     document.addEventListener('visibilitychange', function () {
-      if (!document.hidden) checkNotifications();
+      if (document.hidden) return;
+      if (isOperationalPage) { serveCachedBadge(); return; }
+      checkNotifications(false);
     });
   });
 })();

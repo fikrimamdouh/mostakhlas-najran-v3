@@ -103,6 +103,10 @@ export default function ViewerDashboard() {
       return Array.isArray(data) ? data : (data.extracts ?? []);
     },
     enabled: !!me,
+    // توفير Neon: staleTime يمنع إعادة السحب عند كل mount سريع؛ زر التحديث
+    // اليدوي (refetch) يعمل كما هو.
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const filtered = useMemo(() => extracts.filter(e => {

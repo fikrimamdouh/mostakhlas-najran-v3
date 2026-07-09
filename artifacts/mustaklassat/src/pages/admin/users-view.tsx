@@ -87,8 +87,10 @@ export default function UsersView() {
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
-    staleTime: 0,
-    refetchInterval: 30 * 1000,
+    // توفير Neon: كان refetchInterval: 30 ثانية + staleTime: 0 — أي 120 طلب/ساعة
+    // لبيانات شبه ثابتة. التحديث الآن: عند الفتح أو بزر Refresh الموجود.
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   function openEdit(u: UserRow) {

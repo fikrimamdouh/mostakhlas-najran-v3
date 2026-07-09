@@ -96,6 +96,9 @@ export default function ExtractsStats() {
       return Array.isArray(data) ? data : (data.extracts ?? []);
     },
     enabled: !!me,
+    // توفير Neon: التحديث عند الفتح أو بزر Refresh فقط.
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const hospitals = useMemo(() => [...new Set(extracts.map(e => e.hospitalName || "غير محدد"))].sort(), [extracts]);

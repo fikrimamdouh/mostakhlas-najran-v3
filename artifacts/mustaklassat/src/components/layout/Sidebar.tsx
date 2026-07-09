@@ -108,12 +108,13 @@ function useNotifications(isAdmin: boolean, pendingUsersCount: number, getToken:
   const [serverNotifs, setServerNotifs] = useState<ServerNotif[]>([]);
   const lastFetchRef = useRef(0);
 
-  // تحميل خفيف: عند الفتح + عند focus + كل 5 دقائق كحد أقصى — ممنوع polling سريع
+  // تحميل خفيف: عند الفتح + عند focus (مع throttle) + كل 10 دقائق كحد أقصى.
+  // توفير Neon: كان 5 دقائق — رُفع لـ10 مع نفس الـ throttle على الـ focus.
   useEffect(() => {
     let cancelled = false;
     async function load(force?: boolean) {
       const now = Date.now();
-      if (!force && now - lastFetchRef.current < 5 * 60_000) return;
+      if (!force && now - lastFetchRef.current < 10 * 60_000) return;
       lastFetchRef.current = now;
       try {
         const token = await getToken();
@@ -126,7 +127,7 @@ function useNotifications(isAdmin: boolean, pendingUsersCount: number, getToken:
     load(true);
     const onFocus = () => load();
     window.addEventListener("focus", onFocus);
-    const t = setInterval(() => load(), 5 * 60_000);
+    const t = setInterval(() => load(), 10 * 60_000);
     return () => { cancelled = true; window.removeEventListener("focus", onFocus); clearInterval(t); };
   }, [getToken]);
 
@@ -178,7 +179,11 @@ export function Sidebar(_props: { dbUserOverride?: any } = {}) {
   const [location] = useLocation();
   const { user } = useUser();
   const { signOut } = useClerk();
-  const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"], refetchInterval: 60_000 } });
+  // توفير Neon: كان refetchInterval: 60_000 يضرب /api/users/me كل دقيقة على كل
+  // صفحة React مفتوحة — وهو ما كان يمنع قاعدة البيانات من الدخول في وضع السكون
+  // (auto-suspend) نهائيًا. بيانات المستخدم شبه ثابتة؛ staleTime 10 دقائق يكفي،
+  // وأي تعديل صلاحيات يظهر عند أول تنقّل/فتح بعد انتهاء المدة.
+  const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"], staleTime: 10 * 60 * 1000, refetchOnWindowFocus: false } });
   const [now, setNow] = useState(new Date());
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem(COLLAPSE_KEY) === "true"; } catch { return false; }
@@ -595,7 +600,8 @@ const siteType = getSiteType(currentHospital || dbUser?.hospital);
 
   const { data: usersData } = useListUsers(
     { status: "pending" },
-    { query: { queryKey: ["/api/users", "pending"], enabled: isAdmin, refetchInterval: 60000 } }
+    // توفير Neon: من كل 60 ثانية إلى كل 5 دقائق — عدّاد المستخدمين المعلّقين لا يحتاج أكثر.
+    { query: { queryKey: ["/api/users", "pending"], enabled: isAdmin, refetchInterval: 5 * 60 * 1000, staleTime: 5 * 60 * 1000 } }
   );
   const pendingUsersCount = isAdmin ? (usersData?.users?.length ?? 0) : 0;
   const { notifications, unread, markRead, markAllRead } = useNotifications(isAdmin, pendingUsersCount, getToken);

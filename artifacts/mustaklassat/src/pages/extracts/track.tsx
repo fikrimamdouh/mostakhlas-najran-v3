@@ -363,7 +363,11 @@ function useSubmittedExtracts() {
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json();
     },
-    refetchInterval: 300000,
+    // توفير Neon: كان refetchInterval: 300000 يسحب القائمة الكاملة كل 5 دقائق
+    // طوال فترة فتح الصفحة. التحديث الآن: عند الفتح، أو زر التحديث اليدوي
+    // الموجود أصلًا، أو بعد أي إجراء (invalidateQueries يعمل كما هو).
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
 
