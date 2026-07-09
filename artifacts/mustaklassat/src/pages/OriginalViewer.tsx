@@ -4,63 +4,8 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { QuranRadioFloatingPlayer } from "@/components/QuranRadioFloatingPlayer";
 import { usePageTracking } from "@/hooks/usePageTracking";
 import { useGetMe } from "@workspace/api-client-react";
-import { Rocket, Zap, Lock, BarChart3, Globe, Workflow, ShieldOff } from "lucide-react";
+import { Lock, ShieldOff } from "lucide-react";
 import { getModuleKey, parseAllowedModules, isModuleAllowed } from "@/lib/modules";
-
-function ComingSoonPage() {
-  return (
-    <div
-      className="flex flex-col items-center justify-center h-full p-8 text-center"
-      style={{ direction: "rtl", background: "linear-gradient(135deg, #f0f4ff 0%, #e8edf5 100%)" }}
-    >
-      <div
-        className="rounded-3xl p-10 max-w-lg w-full shadow-xl"
-        style={{ background: "#fff", border: "1px solid #e8edf7" }}
-      >
-        <div
-          className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"
-          style={{ background: "linear-gradient(135deg, #1e3c72, #2a5298)" }}
-        >
-          <Rocket className="h-10 w-10 text-white" />
-        </div>
-        <h1 className="text-2xl font-extrabold mb-2" style={{ color: "#1e3c72" }}>
-          قريبًا — الإعدادات المتقدمة
-        </h1>
-        <p className="text-gray-500 text-sm mb-8 leading-relaxed">
-          هذه الوحدة قيد التطوير وستتضمن ميزات متقدمة لتخصيص النظام بالكامل.
-        </p>
-        <div
-          className="grid grid-cols-2 gap-3 mb-8"
-        >
-          {[
-            { icon: Workflow, label: "إدارة سير العمل" },
-            { icon: BarChart3, label: "تقارير متقدمة" },
-            { icon: Globe, label: "إعدادات النظام" },
-            { icon: Lock, label: "صلاحيات متقدمة" },
-          ].map(f => (
-            <div
-              key={f.label}
-              className="flex items-center gap-2.5 rounded-xl p-3 text-right"
-              style={{ background: "#f8f9fe", border: "1px solid #eef0f8" }}
-            >
-              <div className="p-2 rounded-lg flex-shrink-0" style={{ background: "rgba(30,60,114,0.07)" }}>
-                <f.icon className="h-4 w-4" style={{ color: "#1e3c72" }} />
-              </div>
-              <span className="text-sm font-medium text-gray-700">{f.label}</span>
-            </div>
-          ))}
-        </div>
-        <div
-          className="flex items-center gap-2 justify-center py-2 px-4 rounded-full text-sm font-medium"
-          style={{ background: "rgba(212,175,55,0.12)", color: "#b8962e" }}
-        >
-          <Zap className="h-3.5 w-3.5" />
-          <span>جاري العمل على هذه الميزات حاليًا</span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function UnauthorizedPage() {
   return (
@@ -106,7 +51,6 @@ export default function OriginalViewer() {
 
   const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
 
-  // إعادة توجيه حدث تغيير الموقع من النافذة الأم إلى الـ iframe
   useEffect(() => {
     const handler = (e: Event) => {
       const hospital = (e as CustomEvent<{ hospital: string }>).detail?.hospital;
@@ -122,7 +66,6 @@ export default function OriginalViewer() {
     return () => window.removeEventListener('najranHospitalChanged', handler);
   }, []);
 
-  // Inject hospital name from user profile into localStorage so HTML print headers auto-fill
   useEffect(() => {
     const hospital = (dbUser as any)?.hospital as string | undefined;
     if (!hospital) return;
@@ -155,10 +98,6 @@ export default function OriginalViewer() {
     } catch {}
   };
 
-  // Check if this page is blocked by coming soon
-  const isComingSoon = page === "settings_advanced.html";
-
-  // Determine if user is allowed to view this page (permissions check)
   const role = dbUser?.role ?? "user";
   const allowedModuleKeys = parseAllowedModules((dbUser as any)?.allowedModules);
   const moduleKey = getModuleKey(page);
@@ -181,8 +120,6 @@ export default function OriginalViewer() {
         جاري فتح الصفحة في المسار الصحيح...
       </div>
     );
-  } else if (isComingSoon) {
-    content = <ComingSoonPage />;
   } else if (!isAllowed && dbUser) {
     content = <UnauthorizedPage />;
   }
