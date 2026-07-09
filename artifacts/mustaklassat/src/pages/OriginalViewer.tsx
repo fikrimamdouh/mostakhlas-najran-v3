@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearch } from "wouter";
+import { useAuth } from "@clerk/react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { QuranRadioFloatingPlayer } from "@/components/QuranRadioFloatingPlayer";
 import { usePageTracking } from "@/hooks/usePageTracking";
@@ -27,7 +28,7 @@ function UnauthorizedPage() {
           غير مصرح بالوصول
         </h1>
         <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-          ليس لديك صلاحية الوصول إلى هذه الوحدة. إذا كنت تعتقد أن هذا خطأ، تواصل مع مدير النظام.
+          ليست لديك صلاحية الوصول إلى هذه الوحدة. إذا كنت تعتقد أن هذا خطأ، تواصل مع مدير النظام.
         </p>
         <div
           className="flex items-center gap-2 justify-center py-2 px-4 rounded-full text-sm font-medium"
@@ -48,8 +49,32 @@ export default function OriginalViewer() {
   const page = params.get("page") || "index.html";
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [frameEscaped, setFrameEscaped] = useState(false);
+  const { getToken } = useAuth();
 
   const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
+
+  useEffect(() => {
+    const saveSessionToken = (token: string | null) => {
+      if (!token) return;
+      try {
+        const raw = localStorage.getItem("najran_session");
+        const session = raw ? JSON.parse(raw) : {};
+        session.clerkToken = token;
+        session.timestamp = Date.now();
+        localStorage.setItem("najran_session", JSON.stringify(session));
+      } catch {}
+    };
+
+    (window as any).najranGetFreshToken = async (options?: { skipCache?: boolean }) => {
+      const token = await getToken(options?.skipCache ? ({ skipCache: true } as any) : undefined);
+      saveSessionToken(token);
+      return token;
+    };
+
+    return () => {
+      try { delete (window as any).najranGetFreshToken; } catch {}
+    };
+  }, [getToken]);
 
   useEffect(() => {
     const handler = (e: Event) => {
