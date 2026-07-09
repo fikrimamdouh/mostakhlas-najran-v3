@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>مراقبة الإنتاج - مشاكل النظام</title>
   <script src="/original/user-storage-proxy.js?v=20260705_cache_bust_v1"></script>
-  <script src="/original/auth-check.js?v=20260709_monitor_only_v2"></script>
+  <script src="/original/production-client-monitor.js?v=20260709_monitor_v1b_safe_storage"></script>
   <style>
     *{box-sizing:border-box} body{margin:0;min-height:100vh;font-family:Tajawal,Arial,sans-serif;background:#eef3fb;color:#0f172a} .wrap{max-width:1500px;margin:0 auto;padding:18px} .head{background:linear-gradient(135deg,#0f2f5f,#1e3c72);color:#fff;border-radius:18px;padding:18px 22px;box-shadow:0 16px 45px rgba(15,23,42,.16);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.head h1{margin:0;font-size:25px;font-weight:900}.head p{margin:6px 0 0;color:#dbeafe;font-size:13px}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:0;border-radius:10px;padding:10px 14px;font-family:inherit;font-weight:900;cursor:pointer;background:#e2e8f0;color:#0f172a}.btn.primary{background:#d4af37;color:#1e293b}.btn.danger{background:#991b1b;color:#fff}.btn.green{background:#047857;color:#fff}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}.card{border-radius:16px;padding:15px;color:#fff;box-shadow:0 10px 24px rgba(15,23,42,.13)}.card .label{font-size:12px;opacity:.85}.card .num{font-size:32px;font-weight:950;margin-top:5px}.critical{background:linear-gradient(135deg,#7c2d12,#991b1b)}.errors{background:linear-gradient(135deg,#7f1d1d,#dc2626)}.warnings{background:linear-gradient(135deg,#92400e,#d97706)}.users{background:linear-gradient(135deg,#1e3a8a,#2563eb)}.hospitals{background:linear-gradient(135deg,#134e4a,#0f766e)}.total{background:linear-gradient(135deg,#334155,#64748b)}.panel{background:#fff;border:1px solid #dbe3ef;border-radius:18px;padding:14px;box-shadow:0 12px 35px rgba(15,23,42,.08)}.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:9px;margin-bottom:12px}.filters input,.filters select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;font-family:inherit;background:#fff}.event{background:#f8fafc;border:1px solid #dbe3ef;border-right:6px solid #94a3b8;border-radius:14px;padding:12px;margin:9px 0;cursor:pointer}.event.critical{border-right-color:#dc2626;background:#fff7ed}.event.error{border-right-color:#ef4444;background:#fef2f2}.event.warning{border-right-color:#d97706;background:#fffbeb}.event.info{border-right-color:#2563eb;background:#eff6ff}.ev-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.badge{display:inline-block;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:900;background:#0f172a;color:#fff}.meta{font-size:12px;color:#64748b;margin-top:6px}.msg{font-size:13px;color:#334155;margin-top:5px;line-height:1.6}.details{margin-top:10px;border-top:1px dashed #cbd5e1;padding-top:10px}.details pre{direction:ltr;text-align:left;white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;border-radius:10px;padding:10px;max-height:300px;overflow:auto;font-size:11px}.empty{text-align:center;color:#64748b;padding:42px}.denied{max-width:560px;margin:90px auto;background:#fff;border:1px solid #fecaca;border-radius:18px;padding:24px;text-align:center;color:#991b1b;box-shadow:0 15px 40px rgba(15,23,42,.12)} @media(max-width:700px){.wrap{padding:10px}.head h1{font-size:20px}}
   </style>
@@ -37,7 +37,7 @@
       <div class="filters">
         <select id="f-window" onchange="pmRefresh()"><option value="24">آخر 24 ساعة</option><option value="48">آخر 48 ساعة</option><option value="168">آخر 7 أيام</option></select>
         <select id="f-type" oninput="pmRender()"><option value="">كل الأنواع</option></select>
-        <select id="f-sev" oninput="pmRender"><option value="">كل الخطورات</option><option value="critical">Critical</option><option value="error">Error</option><option value="warning">Warning</option><option value="info">Info</option></select>
+        <select id="f-sev" oninput="pmRender()"><option value="">كل الخطورات</option><option value="critical">Critical</option><option value="error">Error</option><option value="warning">Warning</option><option value="info">Info</option></select>
         <select id="f-hospital" oninput="pmRender()"><option value="">كل المواقع</option></select>
         <select id="f-page" oninput="pmRender()"><option value="">كل الصفحات</option></select>
         <input id="f-search" placeholder="بحث في النوع / المستخدم / الموقع / الرسالة" oninput="pmRender()">
@@ -55,11 +55,11 @@
   function session(){try{return JSON.parse(localStorage.getItem('najran_session')||'{}')}catch(_){return {}}}
   function isAdmin(){return String(session().role||'').toLowerCase()==='admin'}
   async function token(){
-    try{ if(typeof window.najranGetFreshToken==='function'){var t=await window.najranGetFreshToken(); if(t)return t;} }catch(_){}
-    try{ if(window.parent&&window.parent!==window&&typeof window.parent.najranGetFreshToken==='function'){var pt=await window.parent.najranGetFreshToken(); if(pt)return pt;} }catch(_){}
+    try{ if(typeof window.najranGetFreshToken==='function'){var t=await window.najranGetFreshToken(); if(t)return t;} }catch(_){ }
+    try{ if(window.parent&&window.parent!==window&&typeof window.parent.najranGetFreshToken==='function'){var pt=await window.parent.najranGetFreshToken(); if(pt)return pt;} }catch(_){ }
     return session().clerkToken||'';
   }
-  async function headers(){var t=await token(); return t?{Authorization:'Bearer '+t}:{}}
+  async function headers(){var t=await token(); return t?{Authorization:'Bearer '+t}:{} }
   function set(id,v){var e=qs(id); if(e)e.textContent=v==null?'—':v}
   function sevClass(s){s=String(s||'info').toLowerCase(); return s==='critical'||s==='error'||s==='warning'?s:'info'}
   function fmt(d){try{return new Date(d).toLocaleString('ar-SA')}catch(_){return d||''}}
@@ -75,7 +75,7 @@
     var list=qs('list'); list.className='empty'; list.innerHTML='جاري التحميل...';
     try{var wh=Number(qs('f-window').value)||24; var h=await headers(); var sum=await fetch('/api/client-events/summary?windowHours='+wh,{headers:h,credentials:'include'}); if(sum.status===403)throw new Error('403 admin only'); var sj=sum.ok?await sum.json():{}; set('s-critical',sj.critical||0);set('s-errors',sj.errors||0);set('s-warnings',sj.warnings||0);set('s-users',sj.affectedUsers||0);set('s-hospitals',sj.affectedHospitals||0);set('s-total',sj.total||0); var since=encodeURIComponent(new Date(Date.now()-wh*3600*1000).toISOString()); var res=await fetch('/api/client-events?limit=500&since='+since,{headers:h,credentials:'include'}); if(res.status===403)throw new Error('403 admin only'); var body=res.ok?await res.json():{events:[]}; events=Array.isArray(body.events)?body.events:[]; fillFilters(); pmRender();}catch(err){list.className='empty';list.innerHTML='تعذر تحميل الحوادث: '+esc(err.message||err);}
   }
-  window.pmSendTest=function(){try{if(window.__najranReportIncident)window.__najranReportIncident('MANUAL_INCIDENT',{message:'اختبار يدوي من صفحة مراقبة الإنتاج',reason:'manual dashboard test'}); setTimeout(pmRefresh,2500)}catch(_){}}
+  window.pmSendTest=function(){try{if(window.__najranReportIncident)window.__najranReportIncident('MANUAL_INCIDENT',{message:'اختبار يدوي من صفحة مراقبة الإنتاج',reason:'manual dashboard test'}); setTimeout(pmRefresh,2500)}catch(_){} }
   window.addEventListener('load',function(){pmRefresh()});
 })();
 </script>
