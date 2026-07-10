@@ -1,0 +1,46 @@
+name: Bump consumables cleaner loader once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/bump-consumables-cleaner-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  bump-loader:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Replace only the stale loader URL
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('artifacts/mustaklassat/public/original/consumables.html')
+          old = '/original/consumables-summary-data-cleaner.js?v=20260708_v17_scoped_per_letter_print_all'
+          new = '/original/consumables-summary-data-cleaner.js?v=20260710_v19_v11_loader_chain'
+
+          text = path.read_text(encoding='utf-8')
+          count = text.count(old)
+          if count != 1:
+              raise SystemExit(f'Expected exactly one stale loader URL, found {count}')
+
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+      - name: Remove one-time workflow and commit
+        shell: bash
+        run: |
+          rm -f .github/workflows/bump-consumables-cleaner-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/mustaklassat/public/original/consumables.html .github/workflows/bump-consumables-cleaner-once.yml
+          git commit -m "Bump consumables cleaner loader cache to V19"
+          git push origin HEAD:main
