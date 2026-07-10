@@ -5,198 +5,120 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>مراقبة الإنتاج - مشاكل النظام</title>
   <script src="/original/user-storage-proxy.js?v=20260705_cache_bust_v1"></script>
-  <script src="/original/production-client-monitor.js?v=20260709_monitor_v2_circuit_breaker"></script>
   <style>
     *{box-sizing:border-box}
     body{margin:0;min-height:100vh;font-family:Tajawal,Arial,sans-serif;background:#eef3fb;color:#0f172a}
     .wrap{max-width:1500px;margin:0 auto;padding:18px}
     .head{background:linear-gradient(135deg,#0f2f5f,#1e3c72);color:#fff;border-radius:18px;padding:18px 22px;box-shadow:0 16px 45px rgba(15,23,42,.16);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-    .head h1{margin:0;font-size:25px;font-weight:900}
-    .head p{margin:6px 0 0;color:#dbeafe;font-size:13px}
-    .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .btn{border:0;border-radius:10px;padding:10px 14px;font-family:inherit;font-weight:900;cursor:pointer;background:#e2e8f0;color:#0f172a}
-    .btn.primary{background:#d4af37;color:#1e293b}
-    .btn.danger{background:#991b1b;color:#fff}
-    .btn.green{background:#047857;color:#fff}
-    .btn.dark{background:#0f172a;color:#fff}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
-    .card{border-radius:16px;padding:15px;color:#fff;box-shadow:0 10px 24px rgba(15,23,42,.13)}
-    .card .label{font-size:12px;opacity:.85}
-    .card .num{font-size:32px;font-weight:950;margin-top:5px}
-    .critical{background:linear-gradient(135deg,#7c2d12,#991b1b)}
-    .errors{background:linear-gradient(135deg,#7f1d1d,#dc2626)}
-    .warnings{background:linear-gradient(135deg,#92400e,#d97706)}
-    .users{background:linear-gradient(135deg,#1e3a8a,#2563eb)}
-    .hospitals{background:linear-gradient(135deg,#134e4a,#0f766e)}
-    .total{background:linear-gradient(135deg,#334155,#64748b)}
-    .panel{background:#fff;border:1px solid #dbe3ef;border-radius:18px;padding:14px;box-shadow:0 12px 35px rgba(15,23,42,.08)}
-    .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:9px;margin-bottom:12px}
-    .filters input,.filters select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;font-family:inherit;background:#fff}
-    .hint{font-size:12px;color:#64748b;margin:-3px 2px 12px;line-height:1.6}
-    .report{display:none;background:#f8fafc;border:1px solid #cbd5e1;border-radius:16px;padding:12px;margin:12px 0;overflow:auto}
-    .report.show{display:block}
-    .report h2{margin:0 0 8px;font-size:18px;color:#0f172a}
-    .report .report-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
-    .report table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;min-width:920px}
-    .report th,.report td{border:1px solid #e2e8f0;padding:9px;text-align:right;font-size:12px;vertical-align:top}
-    .report th{background:#0f172a;color:#fff;font-weight:900}
-    .mini{border:0;border-radius:8px;padding:7px 10px;font-family:inherit;font-weight:900;cursor:pointer;background:#e2e8f0;color:#0f172a;margin:2px}
-    .mini.primary{background:#d4af37;color:#1e293b}
-    .event{background:#f8fafc;border:1px solid #dbe3ef;border-right:6px solid #94a3b8;border-radius:14px;padding:12px;margin:9px 0;cursor:pointer}
-    .event.critical{border-right-color:#dc2626;background:#fff7ed}
-    .event.error{border-right-color:#ef4444;background:#fef2f2}
-    .event.warning{border-right-color:#d97706;background:#fffbeb}
-    .event.info{border-right-color:#2563eb;background:#eff6ff}
-    .ev-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-    .badge{display:inline-block;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:900;background:#0f172a;color:#fff}
-    .meta{font-size:12px;color:#64748b;margin-top:6px}
-    .msg{font-size:13px;color:#334155;margin-top:5px;line-height:1.6}
-    .details{margin-top:10px;border-top:1px dashed #cbd5e1;padding-top:10px}
-    .details pre{direction:ltr;text-align:left;white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;border-radius:10px;padding:10px;max-height:300px;overflow:auto;font-size:11px}
-    .empty{text-align:center;color:#64748b;padding:42px}
-    .denied{max-width:560px;margin:90px auto;background:#fff;border:1px solid #fecaca;border-radius:18px;padding:24px;text-align:center;color:#991b1b;box-shadow:0 15px 40px rgba(15,23,42,.12)}
+    .head h1{margin:0;font-size:25px;font-weight:900}.head p{margin:6px 0 0;color:#dbeafe;font-size:13px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.btn{border:0;border-radius:10px;padding:10px 14px;font-family:inherit;font-weight:900;cursor:pointer;background:#e2e8f0;color:#0f172a}.btn.primary{background:#d4af37;color:#1e293b}.btn.danger{background:#991b1b;color:#fff}.btn.green{background:#047857;color:#fff}.btn.dark{background:#0f172a;color:#fff}
+    .session-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0;padding:10px 13px;border-radius:13px;background:#fff;border:1px solid #dbe3ef;box-shadow:0 7px 18px rgba(15,23,42,.06);font-size:12px;font-weight:800}.net-count{color:#1d4ed8}.range-note{display:none;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:9px;padding:6px 10px}.range-note.show{display:inline-block}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}.card{border-radius:16px;padding:15px;color:#fff;box-shadow:0 10px 24px rgba(15,23,42,.13)}.card .label{font-size:12px;opacity:.85}.card .num{font-size:32px;font-weight:950;margin-top:5px}.critical{background:linear-gradient(135deg,#7c2d12,#991b1b)}.errors{background:linear-gradient(135deg,#7f1d1d,#dc2626)}.warnings{background:linear-gradient(135deg,#92400e,#d97706)}.users{background:linear-gradient(135deg,#1e3a8a,#2563eb)}.hospitals{background:linear-gradient(135deg,#134e4a,#0f766e)}.total{background:linear-gradient(135deg,#334155,#64748b)}
+    .panel{background:#fff;border:1px solid #dbe3ef;border-radius:18px;padding:14px;box-shadow:0 12px 35px rgba(15,23,42,.08)}.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:9px;margin-bottom:12px}.filters input,.filters select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;font-family:inherit;background:#fff}.hint{font-size:12px;color:#64748b;margin:-3px 2px 12px;line-height:1.7}
+    .report{display:none;background:#f8fafc;border:1px solid #cbd5e1;border-radius:16px;padding:12px;margin:12px 0;overflow:auto}.report.show{display:block}.report h2{margin:0 0 8px;font-size:18px}.report-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}.report table{width:100%;border-collapse:collapse;background:#fff;min-width:920px}.report th,.report td{border:1px solid #e2e8f0;padding:9px;text-align:right;font-size:12px;vertical-align:top}.report th{background:#0f172a;color:#fff}
+    .mini{border:0;border-radius:8px;padding:7px 10px;font-family:inherit;font-weight:900;cursor:pointer;background:#e2e8f0;color:#0f172a;margin:2px}.mini.primary{background:#d4af37}.event{background:#f8fafc;border:1px solid #dbe3ef;border-right:6px solid #94a3b8;border-radius:14px;padding:12px;margin:9px 0;cursor:pointer}.event.critical{border-right-color:#dc2626;background:#fff7ed}.event.error{border-right-color:#ef4444;background:#fef2f2}.event.warning{border-right-color:#d97706;background:#fffbeb}.event.info{border-right-color:#2563eb;background:#eff6ff}.ev-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.badge{display:inline-block;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:900;background:#0f172a;color:#fff}.meta{font-size:12px;color:#64748b;margin-top:6px}.msg{font-size:13px;color:#334155;margin-top:5px;line-height:1.6}.details{margin-top:10px;border-top:1px dashed #cbd5e1;padding-top:10px}.details pre{direction:ltr;text-align:left;white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#dbeafe;border-radius:10px;padding:10px;max-height:300px;overflow:auto;font-size:11px}.empty{text-align:center;color:#64748b;padding:42px}.denied{max-width:560px;margin:90px auto;background:#fff;border:1px solid #fecaca;border-radius:18px;padding:24px;text-align:center;color:#991b1b;box-shadow:0 15px 40px rgba(15,23,42,.12)}
     @media(max-width:700px){.wrap{padding:10px}.head h1{font-size:20px}}
   </style>
 </head>
 <body>
-  <div class="wrap" id="app">
-    <div class="head">
-      <div>
-        <h1>مراقبة الإنتاج — مشاكل النظام</h1>
-        <p>صفحة مخصصة للحوادث الفنية فقط. لا توجد إعدادات قديمة أو أدوات تجريبية هنا.</p>
-      </div>
-      <div class="actions">
-        <button class="btn primary" onclick="pmRefresh()">تحديث</button>
-        <button class="btn dark" onclick="pmUsersReport()">كشف المستخدمين</button>
-        <button class="btn" onclick="pmCopyUsersReport()">نسخ الكشف</button>
-        <button class="btn danger" onclick="pmCleanupOld()">مسح القديم</button>
-        <button class="btn green" onclick="pmSendTest()">اختبار يدوي</button>
-        <button class="btn" onclick="window.location.href='/dashboard'">الرجوع للرئيسية</button>
-      </div>
-    </div>
-
-    <div class="grid">
-      <div class="card critical"><div class="label">Critical</div><div class="num" id="s-critical">—</div></div>
-      <div class="card errors"><div class="label">Errors</div><div class="num" id="s-errors">—</div></div>
-      <div class="card warnings"><div class="label">Warnings</div><div class="num" id="s-warnings">—</div></div>
-      <div class="card users"><div class="label">المستخدمون المتأثرون</div><div class="num" id="s-users">—</div></div>
-      <div class="card hospitals"><div class="label">المواقع المتأثرة</div><div class="num" id="s-hospitals">—</div></div>
-      <div class="card total"><div class="label">إجمالي الحوادث</div><div class="num" id="s-total">—</div></div>
-    </div>
-
-    <div class="panel">
-      <div class="filters">
-        <select id="f-window" onchange="pmRefresh()"><option value="24">آخر 24 ساعة</option><option value="48">آخر 48 ساعة</option><option value="168">آخر 7 أيام</option></select>
-        <select id="f-type" oninput="pmRender()"><option value="">كل الأنواع</option></select>
-        <select id="f-sev" oninput="pmRender()"><option value="">كل الخطورات</option><option value="critical">Critical</option><option value="error">Error</option><option value="warning">Warning</option><option value="info">Info</option></select>
-        <select id="f-hospital" oninput="pmRender()"><option value="">كل المواقع</option></select>
-        <select id="f-page" oninput="pmRender()"><option value="">كل الصفحات</option></select>
-        <input id="f-search" placeholder="بحث في النوع / المستخدم / الموقع / الرسالة" oninput="pmRender()">
-      </div>
-      <div class="hint">زر مسح القديم يحذف فقط حوادث مراقبة الإنتاج الأقدم من نطاق العرض المختار. لا يحذف سجل الرقابة العام. كشف المستخدمين يعتمد على الحوادث المحملة حاليًا والفلاتر المختارة.</div>
-      <div id="user-report" class="report"></div>
-      <div id="list" class="empty">اضغط تحديث لتحميل الحوادث.</div>
+<div class="wrap" id="app">
+  <div class="head">
+    <div><h1>مراقبة الإنتاج — مشاكل النظام</h1><p>التحميل والتحليل يدويان بالكامل. فتح الصفحة لا يسحب ولا يرسل أي بيانات.</p></div>
+    <div class="actions">
+      <button class="btn primary" onclick="pmRefresh()">تحديث</button>
+      <button class="btn dark" onclick="pmUsersReport()">كشف المستخدمين</button>
+      <button class="btn" onclick="pmCopyUsersReport()">نسخ الكشف</button>
+      <button class="btn danger" onclick="pmCleanupOld()">مسح القديم</button>
+      <button class="btn green" onclick="pmSendTest()">اختبار يدوي</button>
+      <button class="btn" onclick="window.location.href='/dashboard'">الرجوع للرئيسية</button>
     </div>
   </div>
 
+  <div class="session-bar">
+    <span class="net-count">طلبات الشبكة في هذه الجلسة: <b id="network-count">0</b></span>
+    <span id="last-load">لم يتم تحميل حوادث بعد.</span>
+    <span id="range-note" class="range-note">تم تغيير النطاق — اضغط تحديث لتطبيقه.</span>
+  </div>
+
+  <div class="grid">
+    <div class="card critical"><div class="label">Critical</div><div class="num" id="s-critical">—</div></div>
+    <div class="card errors"><div class="label">Errors</div><div class="num" id="s-errors">—</div></div>
+    <div class="card warnings"><div class="label">Warnings</div><div class="num" id="s-warnings">—</div></div>
+    <div class="card users"><div class="label">المستخدمون المتأثرون</div><div class="num" id="s-users">—</div></div>
+    <div class="card hospitals"><div class="label">المواقع المتأثرة</div><div class="num" id="s-hospitals">—</div></div>
+    <div class="card total"><div class="label">إجمالي الحوادث</div><div class="num" id="s-total">—</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="filters">
+      <select id="f-window" onchange="pmRangeChanged()"><option value="24">آخر 24 ساعة</option><option value="48">آخر 48 ساعة</option><option value="168">آخر 7 أيام</option></select>
+      <select id="f-type" oninput="pmRender()"><option value="">كل الأنواع</option></select>
+      <select id="f-sev" oninput="pmRender()"><option value="">كل الخطورات</option><option value="critical">Critical</option><option value="error">Error</option><option value="warning">Warning</option><option value="info">Info</option></select>
+      <select id="f-hospital" oninput="pmRender()"><option value="">كل المواقع</option></select>
+      <select id="f-page" oninput="pmRender()"><option value="">كل الصفحات</option></select>
+      <input id="f-search" placeholder="بحث في النوع / المستخدم / الموقع / الرسالة" oninput="pmRender()">
+    </div>
+    <div class="hint">لا توجد مزامنة أو تحديثات خلفية. زر تحديث ينفذ طلبين فقط: الملخص وقائمة الحوادث. الفلاتر والتقارير والنسخ تعمل على البيانات المحملة في ذاكرة الصفحة دون طلبات إضافية.</div>
+    <div id="user-report" class="report"></div>
+    <div id="list" class="empty">اضغط تحديث لتحميل الحوادث.</div>
+  </div>
+</div>
 <script>
 (function(){
   'use strict';
-  var events=[]; var selectedId=null; var lastUsersReport=[];
+  var events=[], selectedId=null, lastUsersReport=[], networkCount=0;
   function qs(id){return document.getElementById(id)}
   function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
   function session(){try{return JSON.parse(localStorage.getItem('najran_session')||'{}')}catch(_){return {}}}
   function isAdmin(){return String(session().role||'').toLowerCase()==='admin'}
   async function token(){
-    try{ if(typeof window.najranGetFreshToken==='function'){var t=await window.najranGetFreshToken(); if(t)return t;} }catch(_){ }
-    try{ if(window.parent&&window.parent!==window&&typeof window.parent.najranGetFreshToken==='function'){var pt=await window.parent.najranGetFreshToken(); if(pt)return pt;} }catch(_){ }
-    // توكن الجلسة فقط لو حديث (<55 ثانية) — توكن قديم = 401 حمراء بلا فائدة
-    var s=session(); if(s&&s.clerkToken&&s.timestamp&&(Date.now()-s.timestamp)<55000)return s.clerkToken;
-    return '';
+    try{if(typeof window.najranGetFreshToken==='function'){var t=await window.najranGetFreshToken();if(t)return t}}catch(_){}
+    try{if(window.parent&&window.parent!==window&&typeof window.parent.najranGetFreshToken==='function'){var pt=await window.parent.najranGetFreshToken();if(pt)return pt}}catch(_){}
+    try{if(window.top&&window.top!==window&&typeof window.top.najranGetFreshToken==='function'){var tt=await window.top.najranGetFreshToken();if(tt)return tt}}catch(_){}
+    var s=session();if(s&&s.clerkToken&&s.timestamp&&(Date.now()-Number(s.timestamp))<55000)return s.clerkToken;return '';
   }
-  async function headers(){var t=await token(); return t?{Authorization:'Bearer '+t}:{} }
-  function set(id,v){var e=qs(id); if(e)e.textContent=v==null?'—':v}
-  function sevClass(s){s=String(s||'info').toLowerCase(); return s==='critical'||s==='error'||s==='warning'?s:'info'}
+  async function headers(){var t=await token();return t?{Authorization:'Bearer '+t}:{}}
+  function countRequest(){networkCount++;qs('network-count').textContent=networkCount}
+  async function manualFetch(url,opts){countRequest();return fetch(url,opts)}
+  function set(id,v){var e=qs(id);if(e)e.textContent=v==null?'—':v}
+  function sevClass(s){s=String(s||'info').toLowerCase();return s==='critical'||s==='error'||s==='warning'?s:'info'}
   function fmt(d){try{return new Date(d).toLocaleString('ar-SA')}catch(_){return d||''}}
-  function selectedWindowText(){var el=qs('f-window'); if(!el)return 'النطاق الحالي'; return el.options[el.selectedIndex] ? el.options[el.selectedIndex].text : 'النطاق الحالي'}
-  function options(id,vals,label){var el=qs(id); if(!el)return; var cur=el.value; el.innerHTML='<option value="">'+label+'</option>'+Object.keys(vals).sort().map(function(k){return '<option value="'+esc(k)+'" '+(k===cur?'selected':'')+'>'+esc(k)+' ('+vals[k]+')</option>'}).join('')}
-  function fillFilters(){var t={},h={},p={}; events.forEach(function(e){if(e.type)t[e.type]=(t[e.type]||0)+1;if(e.hospital)h[e.hospital]=(h[e.hospital]||0)+1;if(e.page)p[e.page]=(p[e.page]||0)+1}); options('f-type',t,'كل الأنواع'); options('f-hospital',h,'كل المواقع'); options('f-page',p,'كل الصفحات')}
-  function filtered(){var type=qs('f-type').value, sev=qs('f-sev').value, hosp=qs('f-hospital').value, page=qs('f-page').value, q=qs('f-search').value.toLowerCase().trim(); return events.filter(function(e){if(type&&e.type!==type)return false;if(sev&&String(e.severity||'info').toLowerCase()!==sev)return false;if(hosp&&e.hospital!==hosp)return false;if(page&&e.page!==page)return false;if(q){var hay=[e.type,e.severity,e.message,e.userName,e.userEmail,e.hospital,e.page].join(' ').toLowerCase(); if(hay.indexOf(q)===-1)return false;} return true})}
+  function selectedWindowText(){var el=qs('f-window');return el&&el.options[el.selectedIndex]?el.options[el.selectedIndex].text:'النطاق الحالي'}
+  function options(id,vals,label){var el=qs(id);if(!el)return;var cur=el.value;el.innerHTML='<option value="">'+label+'</option>'+Object.keys(vals).sort().map(function(k){return '<option value="'+esc(k)+'" '+(k===cur?'selected':'')+'>'+esc(k)+' ('+vals[k]+')</option>'}).join('')}
+  function fillFilters(){var t={},h={},p={};events.forEach(function(e){if(e.type)t[e.type]=(t[e.type]||0)+1;if(e.hospital)h[e.hospital]=(h[e.hospital]||0)+1;if(e.page)p[e.page]=(p[e.page]||0)+1});options('f-type',t,'كل الأنواع');options('f-hospital',h,'كل المواقع');options('f-page',p,'كل الصفحات')}
+  function filtered(){var type=qs('f-type').value,sev=qs('f-sev').value,hosp=qs('f-hospital').value,page=qs('f-page').value,q=qs('f-search').value.toLowerCase().trim();return events.filter(function(e){if(type&&e.type!==type)return false;if(sev&&String(e.severity||'info').toLowerCase()!==sev)return false;if(hosp&&e.hospital!==hosp)return false;if(page&&e.page!==page)return false;if(q&&[e.type,e.severity,e.message,e.userName,e.userEmail,e.hospital,e.page].join(' ').toLowerCase().indexOf(q)===-1)return false;return true})}
   function userKey(e){return String(e.userId||e.userEmail||e.userName||'غير محدد')}
   function userName(e){return e.userName||e.userEmail||('User #'+(e.userId||'غير محدد'))}
-  function uniqueText(set){return Array.from(set).filter(Boolean).slice(0,8).join('، ')}
-  function buildUsersReport(){
-    var map={};
-    filtered().forEach(function(e){
-      var k=userKey(e), sev=String(e.severity||'info').toLowerCase();
-      if(!map[k])map[k]={key:k,name:userName(e),email:e.userEmail||'',userId:e.userId||'',total:0,critical:0,error:0,warning:0,info:0,hospitals:new Set(),pages:new Set(),types:new Set(),latestAt:null,latestMsg:''};
-      var r=map[k]; r.total++;
-      if(sev==='critical')r.critical++; else if(sev==='error')r.error++; else if(sev==='warning')r.warning++; else r.info++;
-      if(e.hospital)r.hospitals.add(String(e.hospital));
-      if(e.page)r.pages.add(String(e.page));
-      if(e.type)r.types.add(String(e.type));
-      var d=e.createdAt||e.timestamp; var ts=d?new Date(d).getTime():0;
-      if(!r.latestAt||ts>new Date(r.latestAt).getTime()){r.latestAt=d||null;r.latestMsg=e.message||'';}
-    });
-    return Object.keys(map).map(function(k){return map[k]}).sort(function(a,b){return b.total-a.total || b.critical-a.critical || b.error-a.error});
-  }
-  window.pmRender=function(){var list=qs('list'); var arr=filtered(); if(!arr.length){list.className='empty';list.innerHTML='لا توجد حوادث في هذا النطاق.';return} list.className=''; list.innerHTML=arr.map(function(e){var c=sevClass(e.severity), open=selectedId===e.id; var raw=JSON.stringify(e,null,2); return '<div class="event '+c+'" onclick="pmToggle('+Number(e.id||0)+')"><div class="ev-top"><div><span class="badge">'+esc(e.type||'?')+'</span> <span class="badge">'+esc(String(e.severity||'info').toUpperCase())+'</span></div><div class="meta">'+esc(fmt(e.createdAt||e.timestamp))+'</div></div><div class="meta">'+[e.userName||e.userEmail,e.hospital,e.page].filter(Boolean).map(esc).join(' · ')+'</div><div class="msg">'+esc(e.message||'')+'</div>'+(open?'<div class="details" onclick="event.stopPropagation()"><button class="btn primary" onclick="pmCopyClaude('+Number(e.id||0)+')">Copy Claude Report</button> <button class="btn" onclick="pmCopyRaw('+Number(e.id||0)+')">Copy Raw JSON</button><pre>'+esc(raw)+'</pre></div>':'')+'</div>'}).join('')}
-  window.pmToggle=function(id){selectedId=selectedId===id?null:id; pmRender()}
-  window.pmCopyRaw=function(id){var e=events.find(function(x){return Number(x.id)===Number(id)}); if(!e)return; navigator.clipboard.writeText(JSON.stringify(e,null,2));}
-  window.pmCopyClaude=function(id){var e=events.find(function(x){return Number(x.id)===Number(id)}); if(!e)return; var txt='راجع حادثة Production في نظام المستخلصات. لا تعدل قبل Impact Analysis. لا تلمس cloud-sync.js إلا بدليل قاطع. لا تغير مفاتيح localStorage.\n\nEVENT:\n'+JSON.stringify(e,null,2); navigator.clipboard.writeText(txt);}
-  window.pmUsersReport=function(){
-    var box=qs('user-report');
-    lastUsersReport=buildUsersReport();
-    if(!lastUsersReport.length){box.className='report show';box.innerHTML='<h2>كشف المستخدمين</h2><div class="empty">لا توجد بيانات مستخدمين في الحوادث المحملة.</div>';return}
-    box.className='report show';
-    box.innerHTML='<h2>كشف المستخدمين — '+esc(selectedWindowText())+'</h2><div class="report-actions"><button class="btn primary" onclick="pmCopyUsersReport()">نسخ الكشف</button><button class="btn" onclick="pmCloseUsersReport()">إغلاق الكشف</button></div><table><thead><tr><th>المستخدم</th><th>الإيميل</th><th>الإجمالي</th><th>Critical</th><th>Error</th><th>Warning</th><th>Info</th><th>المواقع</th><th>الصفحات</th><th>آخر حادثة</th><th>إجراء</th></tr></thead><tbody>'+lastUsersReport.map(function(r,i){return '<tr><td>'+esc(r.name)+'</td><td>'+esc(r.email||'-')+'</td><td>'+r.total+'</td><td>'+r.critical+'</td><td>'+r.error+'</td><td>'+r.warning+'</td><td>'+r.info+'</td><td>'+esc(uniqueText(r.hospitals)||'-')+'</td><td>'+esc(uniqueText(r.pages)||'-')+'</td><td>'+esc(fmt(r.latestAt))+'<br>'+esc(String(r.latestMsg||'').slice(0,120))+'</td><td><button class="mini primary" onclick="pmFilterUser('+i+')">عرض حوادثه</button><button class="mini" onclick="pmCopyOneUser('+i+')">نسخ</button></td></tr>'}).join('')+'</tbody></table>';
-  }
-  window.pmCloseUsersReport=function(){var box=qs('user-report'); if(box){box.className='report';box.innerHTML='';}}
-  window.pmFilterUser=function(i){var r=lastUsersReport[i]; if(!r)return; qs('f-search').value=r.email||r.name||r.key; pmRender();}
-  function usersReportText(rows){
-    rows=rows&&rows.length?rows:lastUsersReport;
-    if(!rows||!rows.length)return 'لا توجد بيانات مستخدمين.';
-    var lines=['كشف مستخدمي مراقبة الإنتاج — '+selectedWindowText(),'عدد المستخدمين: '+rows.length,''];
-    rows.forEach(function(r,idx){
-      lines.push((idx+1)+') '+r.name+(r.email?' — '+r.email:''));
-      lines.push('   الإجمالي: '+r.total+' | Critical: '+r.critical+' | Error: '+r.error+' | Warning: '+r.warning+' | Info: '+r.info);
-      lines.push('   المواقع: '+(uniqueText(r.hospitals)||'-'));
-      lines.push('   الصفحات: '+(uniqueText(r.pages)||'-'));
-      lines.push('   آخر حادثة: '+fmt(r.latestAt)+' — '+String(r.latestMsg||'').slice(0,220));
-      lines.push('');
-    });
-    return lines.join('\n');
-  }
-  window.pmCopyUsersReport=function(){if(!lastUsersReport.length)lastUsersReport=buildUsersReport(); navigator.clipboard.writeText(usersReportText(lastUsersReport));}
-  window.pmCopyOneUser=function(i){var r=lastUsersReport[i]; if(!r)return; navigator.clipboard.writeText(usersReportText([r]));}
+  function uniqueText(s){return Array.from(s).filter(Boolean).slice(0,8).join('، ')}
+  function buildUsersReport(){var map={};filtered().forEach(function(e){var k=userKey(e),sev=String(e.severity||'info').toLowerCase();if(!map[k])map[k]={key:k,name:userName(e),email:e.userEmail||'',total:0,critical:0,error:0,warning:0,info:0,hospitals:new Set(),pages:new Set(),latestAt:null,latestMsg:''};var r=map[k];r.total++;if(sev==='critical')r.critical++;else if(sev==='error')r.error++;else if(sev==='warning')r.warning++;else r.info++;if(e.hospital)r.hospitals.add(String(e.hospital));if(e.page)r.pages.add(String(e.page));var d=e.createdAt||e.timestamp,ts=d?new Date(d).getTime():0;if(!r.latestAt||ts>new Date(r.latestAt).getTime()){r.latestAt=d||null;r.latestMsg=e.message||''}});return Object.keys(map).map(function(k){return map[k]}).sort(function(a,b){return b.total-a.total||b.critical-a.critical||b.error-a.error})}
+
+  window.pmRangeChanged=function(){qs('range-note').classList.add('show')};
+  window.pmRender=function(){var list=qs('list'),arr=filtered();if(!arr.length){list.className='empty';list.innerHTML=events.length?'لا توجد حوادث مطابقة للفلاتر الحالية.':'اضغط تحديث لتحميل الحوادث.';return}list.className='';list.innerHTML=arr.map(function(e){var c=sevClass(e.severity),open=selectedId===e.id,raw=JSON.stringify(e,null,2);return '<div class="event '+c+'" onclick="pmToggle('+Number(e.id||0)+')"><div class="ev-top"><div><span class="badge">'+esc(e.type||'?')+'</span> <span class="badge">'+esc(String(e.severity||'info').toUpperCase())+'</span></div><div class="meta">'+esc(fmt(e.createdAt||e.timestamp))+'</div></div><div class="meta">'+[e.userName||e.userEmail,e.hospital,e.page].filter(Boolean).map(esc).join(' · ')+'</div><div class="msg">'+esc(e.message||'')+'</div>'+(open?'<div class="details" onclick="event.stopPropagation()"><button class="btn primary" onclick="pmCopyClaude('+Number(e.id||0)+')">نسخ تقرير المراجعة</button> <button class="btn" onclick="pmCopyRaw('+Number(e.id||0)+')">نسخ JSON</button><pre>'+esc(raw)+'</pre></div>':'')+'</div>'}).join('')};
+  window.pmToggle=function(id){selectedId=selectedId===id?null:id;pmRender()};
+  window.pmCopyRaw=function(id){var e=events.find(function(x){return Number(x.id)===Number(id)});if(e)navigator.clipboard.writeText(JSON.stringify(e,null,2))};
+  window.pmCopyClaude=function(id){var e=events.find(function(x){return Number(x.id)===Number(id)});if(!e)return;navigator.clipboard.writeText('راجع حادثة Production في نظام المستخلصات. لا تعدل قبل Impact Analysis. لا تغير مفاتيح localStorage.\n\nEVENT:\n'+JSON.stringify(e,null,2))};
+  window.pmUsersReport=function(){var box=qs('user-report');lastUsersReport=buildUsersReport();box.className='report show';if(!lastUsersReport.length){box.innerHTML='<h2>كشف المستخدمين</h2><div class="empty">لا توجد بيانات مستخدمين في الحوادث المحملة.</div>';return}box.innerHTML='<h2>كشف المستخدمين — '+esc(selectedWindowText())+'</h2><div class="report-actions"><button class="btn primary" onclick="pmCopyUsersReport()">نسخ الكشف</button><button class="btn" onclick="pmCloseUsersReport()">إغلاق</button></div><table><thead><tr><th>المستخدم</th><th>الإيميل</th><th>الإجمالي</th><th>Critical</th><th>Error</th><th>Warning</th><th>Info</th><th>المواقع</th><th>الصفحات</th><th>آخر حادثة</th></tr></thead><tbody>'+lastUsersReport.map(function(r){return '<tr><td>'+esc(r.name)+'</td><td>'+esc(r.email||'-')+'</td><td>'+r.total+'</td><td>'+r.critical+'</td><td>'+r.error+'</td><td>'+r.warning+'</td><td>'+r.info+'</td><td>'+esc(uniqueText(r.hospitals)||'-')+'</td><td>'+esc(uniqueText(r.pages)||'-')+'</td><td>'+esc(fmt(r.latestAt))+'<br>'+esc(String(r.latestMsg||'').slice(0,120))+'</td></tr>'}).join('')+'</tbody></table>'};
+  window.pmCloseUsersReport=function(){var b=qs('user-report');b.className='report';b.innerHTML=''};
+  function usersReportText(rows){if(!rows||!rows.length)return 'لا توجد بيانات مستخدمين.';var lines=['كشف مستخدمي مراقبة الإنتاج — '+selectedWindowText(),'عدد المستخدمين: '+rows.length,''];rows.forEach(function(r,i){lines.push((i+1)+') '+r.name+(r.email?' — '+r.email:''));lines.push('   الإجمالي: '+r.total+' | Critical: '+r.critical+' | Error: '+r.error+' | Warning: '+r.warning+' | Info: '+r.info);lines.push('   المواقع: '+(uniqueText(r.hospitals)||'-'));lines.push('   الصفحات: '+(uniqueText(r.pages)||'-'));lines.push('   آخر حادثة: '+fmt(r.latestAt)+' — '+String(r.latestMsg||'').slice(0,220));lines.push('')});return lines.join('\n')}
+  window.pmCopyUsersReport=function(){if(!lastUsersReport.length)lastUsersReport=buildUsersReport();navigator.clipboard.writeText(usersReportText(lastUsersReport))};
+
   window.pmRefresh=async function(){
     if(!isAdmin()){qs('app').innerHTML='<div class="denied"><h2>غير مصرح</h2><p>هذه الشاشة للأدمن فقط.</p></div>';return}
-    var list=qs('list'); list.className='empty'; list.innerHTML='جاري التحميل...';
-    try{var wh=Number(qs('f-window').value)||24; var h=await headers(); var sum=await fetch('/api/client-events/summary?windowHours='+wh,{headers:h,credentials:'include'}); if(sum.status===403)throw new Error('403 admin only'); var sj=sum.ok?await sum.json():{}; set('s-critical',sj.critical||0);set('s-errors',sj.errors||0);set('s-warnings',sj.warnings||0);set('s-users',sj.affectedUsers||0);set('s-hospitals',sj.affectedHospitals||0);set('s-total',sj.total||0); var since=encodeURIComponent(new Date(Date.now()-wh*3600*1000).toISOString()); var res=await fetch('/api/client-events?limit=500&since='+since,{headers:h,credentials:'include'}); if(res.status===403)throw new Error('403 admin only'); var body=res.ok?await res.json():{events:[]}; events=Array.isArray(body.events)?body.events:[]; fillFilters(); pmCloseUsersReport(); pmRender();}catch(err){list.className='empty';list.innerHTML='تعذر تحميل الحوادث: '+esc(err.message||err);}
-  }
+    var list=qs('list');list.className='empty';list.innerHTML='جاري التحميل...';
+    try{var wh=Number(qs('f-window').value)||24,h=await headers();if(!h.Authorization)throw new Error('تعذر الحصول على جلسة صالحة');var sum=await manualFetch('/api/client-events/summary?windowHours='+wh,{headers:h,credentials:'include'});if(sum.status===403)throw new Error('403 admin only');var sj=sum.ok?await sum.json():{};set('s-critical',sj.critical||0);set('s-errors',sj.errors||0);set('s-warnings',sj.warnings||0);set('s-users',sj.affectedUsers||0);set('s-hospitals',sj.affectedHospitals||0);set('s-total',sj.total||0);var since=encodeURIComponent(new Date(Date.now()-wh*3600000).toISOString());var res=await manualFetch('/api/client-events?limit=200&since='+since,{headers:h,credentials:'include'});if(res.status===403)throw new Error('403 admin only');var body=res.ok?await res.json():{events:[]};events=Array.isArray(body.events)?body.events:[];fillFilters();pmCloseUsersReport();pmRender();qs('range-note').classList.remove('show');qs('last-load').textContent='آخر تحميل: '+fmt(new Date().toISOString())+' — '+events.length+' حادثة';}catch(err){list.className='empty';list.innerHTML='تعذر تحميل الحوادث: '+esc(err.message||err)}};
+
   window.pmCleanupOld=async function(){
-    if(!isAdmin()){qs('app').innerHTML='<div class="denied"><h2>غير مصرح</h2><p>هذه الشاشة للأدمن فقط.</p></div>';return}
-    var wh=Number(qs('f-window').value)||24;
-    var before=new Date(Date.now()-wh*3600*1000).toISOString();
-    var label=selectedWindowText();
-    if(!confirm('سيتم حذف حوادث مراقبة الإنتاج الأقدم من '+label+' فقط.\nلن يتم حذف سجل الرقابة العام.\nتأكيد المسح؟'))return;
-    var list=qs('list'); list.className='empty'; list.innerHTML='جاري مسح الحوادث القديمة...';
-    try{
-      var h=await headers(); h['Content-Type']='application/json';
-      var res=await fetch('/api/client-events/cleanup',{method:'DELETE',headers:h,credentials:'include',body:JSON.stringify({before:before})});
-      var body={}; try{body=await res.json()}catch(_){body={}}
-      if(!res.ok)throw new Error(body.error||('HTTP '+res.status));
-      list.className='empty'; list.innerHTML='تم حذف '+Number(body.deleted||0)+' حادثة قديمة قبل '+esc(fmt(body.before||before))+'.';
-      setTimeout(pmRefresh,700);
-    }catch(err){list.className='empty';list.innerHTML='فشل مسح القديم: '+esc(err.message||err);}
-  }
-  window.pmSendTest=function(){try{if(window.__najranReportIncident)window.__najranReportIncident('MANUAL_INCIDENT',{message:'اختبار يدوي من صفحة مراقبة الإنتاج',reason:'manual dashboard test'}); setTimeout(pmRefresh,2500)}catch(_){} }
-  // on-demand بالكامل: لا تحميل تلقائي عند فتح الصفحة — زر "تحديث" فقط.
-  // (كان window load يستدعي pmRefresh تلقائيًا = طلبان لـ Neon عند كل فتح.)
-  window.addEventListener('load',function(){
-    if(!isAdmin()){qs('app').innerHTML='<div class="denied"><h2>غير مصرح</h2><p>هذه الشاشة للأدمن فقط.</p></div>';return}
-    var list=qs('list'); if(list){list.className='empty'; list.innerHTML='اضغط "تحديث" لتحميل الحوادث.';}
-  });
+    if(!isAdmin())return;var wh=Number(qs('f-window').value)||24,before=new Date(Date.now()-wh*3600000).toISOString();if(!confirm('سيتم حذف حوادث مراقبة الإنتاج الأقدم من '+selectedWindowText()+' فقط.\nلن يتم حذف سجل الرقابة العام.\nتأكيد المسح؟'))return;
+    var list=qs('list');list.className='empty';list.innerHTML='جاري مسح الحوادث القديمة...';
+    try{var h=await headers();if(!h.Authorization)throw new Error('تعذر الحصول على جلسة صالحة');h['Content-Type']='application/json';var res=await manualFetch('/api/client-events/cleanup',{method:'DELETE',headers:h,credentials:'include',body:JSON.stringify({before:before})});var body={};try{body=await res.json()}catch(_){}if(!res.ok)throw new Error(body.error||('HTTP '+res.status));list.innerHTML='تم حذف '+Number(body.deleted||0)+' حادثة قديمة. اضغط تحديث عند الحاجة لإعادة تحميل القائمة.';}catch(err){list.innerHTML='فشل مسح القديم: '+esc(err.message||err)}};
+
+  window.pmSendTest=async function(){
+    if(!isAdmin())return;if(!confirm('إرسال حادثة اختبار واحدة الآن؟'))return;
+    var list=qs('list');list.className='empty';list.innerHTML='جاري إرسال الاختبار اليدوي...';
+    try{var h=await headers();if(!h.Authorization)throw new Error('تعذر الحصول على جلسة صالحة');h['Content-Type']='application/json';var s=session();var ev={type:'MANUAL_INCIDENT',severity:'warning',page:'settings_advanced',url:location.href,userId:s.userId||s.id||null,userName:s.name||s.userName||null,userEmail:s.email||null,role:s.role||null,hospital:s.hospital||null,company:s.company||s.companyName||null,message:'اختبار يدوي من صفحة مراقبة الإنتاج',timestamp:new Date().toISOString(),_payload:{reason:'manual dashboard test'}};var res=await manualFetch('/api/client-events',{method:'POST',headers:h,credentials:'include',body:JSON.stringify({events:[ev]})});var body=await res.json().catch(function(){return{}});if(!res.ok)throw new Error(body.error||('HTTP '+res.status));list.innerHTML='تم إرسال حادثة الاختبار يدويًا. اضغط تحديث لعرضها.';}catch(err){list.innerHTML='فشل الاختبار اليدوي: '+esc(err.message||err)}};
+
+  // لا يوجد أي تحميل أو إرسال عند فتح الصفحة. التحقق المحلي من الصلاحية فقط.
+  if(!isAdmin()){qs('app').innerHTML='<div class="denied"><h2>غير مصرح</h2><p>هذه الشاشة للأدمن فقط.</p></div>'}
 })();
 </script>
 </body>
