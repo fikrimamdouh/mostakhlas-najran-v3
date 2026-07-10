@@ -50,6 +50,12 @@
     'healthCentersData', 'reviewExtractData', 'requestVisitData',
     'finalLaborCost', 'performanceTotalDeduction', 'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin',
     'performanceSignatures', 'performanceSignatures_v2', 'performanceTableNames',
+    // مفاتيح التوقيعات التي كانت محلية فقط — إضافتها بالاسم (وليس عبر
+    // OPERATIONAL_PREFIXES عمدًا: حتى لا تدخل مسار مسح تبديل المستشفى، وحتى
+    // تبقى في auto-sync الذي لا يعمل إلا عند تعديل فعلي = صفر أثر على Neon).
+    'signatures_data_consumables_v27', 'hospitalConsumablesRaiseLettersSettings_v1',
+    'projectManagerSignature', 'operationsAssistantSignature', 'maintenanceHeadSignature',
+    'finalLetterSignatureName', 'finalLetterSignatureTitle', 'sb_style_prefs_consumables_v1',
     'najran_labor_attendance_done', 'najran_labor_performance_done', 'najran_health_attendance_done', 'najran_admin_offices_attendance_done',
     'adminOfficeNames_v1', 'adminOfficeAffiliations_v1',
     'adminOfficesFullAttendanceBundle_v1', 'adminOfficesFullAttendanceBundle_v1_ts',
@@ -80,7 +86,11 @@
     'adminOfficesFullAttendanceBundle_v1',
     'performanceData', 'performanceData_v4', 'performanceDeductions', 'achievementData',
     'consumablesTableData', 'healthCentersConsumables', 'mainHospitalConsumables',
-    'admin_offices_consumables_v1.0', 'spare_partsData'
+    'admin_offices_consumables_v1.0', 'spare_partsData',
+    // حماية التوقيعات من الكتابة الفارغة فوق محتوى موجود — الحارس
+    // isUnsafeEmptyOverwrite القائم يتكفل بالباقي بلا أي طلبات إضافية.
+    'dynamicSignatures', 'contractorSignature', 'performanceSignatures', 'performanceSignatures_v2',
+    'signatures_data_consumables_v27', 'hospitalConsumablesRaiseLettersSettings_v1'
   ]);
 
   function normalizeKey(key) {

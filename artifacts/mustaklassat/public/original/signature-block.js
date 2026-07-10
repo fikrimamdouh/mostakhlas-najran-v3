@@ -112,20 +112,39 @@
   function clone(obj){return JSON.parse(JSON.stringify(obj));}
   function clamp(n,min,max,fallback){n=Number(n);return Number.isFinite(n)?Math.max(min,Math.min(max,n)):fallback;}
   function getToken(){
+  // (متروكة للتوافق) — القراءة المتزامنة القديمة. المسار الفعلي أصبح getFreshToken.
   try{
     const s=JSON.parse(localStorage.getItem(SESSION_KEY)||'{}');
     if(!s||!s.clerkToken)return null;
-    if(s.timestamp&&Date.now()-Number(s.timestamp)>7.5*60*60*1000)return null;
+    // توكنات Clerk تنتهي خلال ~60 ثانية — النافذة القديمة (7.5 ساعة) كانت تعني
+    // أن السحب والحفظ يفشلان 401 بصمت طوال اليوم، فتختفي التواقيع على أي جهاز آخر.
+    if(s.timestamp&&Date.now()-Number(s.timestamp)>55000)return null;
     return s.clerkToken;
   }catch{
     return null;
   }
 }
 
+async function getFreshToken(){
+  async function tryGetter(fn){
+    try{
+      if(typeof fn!=='function')return null;
+      let t=null;
+      try{t=await fn({skipCache:true});}catch(_){t=await fn();}
+      return t||null;
+    }catch(_){return null;}
+  }
+  let token=await tryGetter(window.najranGetFreshToken);
+  if(token)return token;
+  try{if(window.parent&&window.parent!==window){token=await tryGetter(window.parent.najranGetFreshToken);if(token)return token;}}catch(_){}
+  try{if(window.top&&window.top!==window){token=await tryGetter(window.top.najranGetFreshToken);if(token)return token;}}catch(_){}
+  return getToken();
+}
 async function apiFetch(path,opts={}){
-  const token=getToken();
+  const token=await getFreshToken();
+  if(!token)return null; // بلا توكن صالح: لا يخرج طلب محكوم عليه بـ401
   const headers={'Content-Type':'application/json',...(opts.headers||{})};
-  if(token)headers.Authorization='Bearer '+token;
+  headers.Authorization='Bearer '+token;
   try{
     const r=await fetch('/api'+path,{...opts,headers,credentials:'include'});
     if(r.status===401){
@@ -202,7 +221,14 @@ async function syncConsumablesStyleToCloud(){
   function renderAll(pageKey){const inst=instances[pageKey];if(!inst)return;if(pageKey==='attendance')ensureAttendanceSignatureContainers();if(pageKey==='consumables'){renderConsumablesSeparated(pageKey);return;}const prefs=normalizePrefs(inst.prefs||{});const html=prefs.includeSigs===false?'':buildHTML(inst.sigs,inst.options.showStamp!==false&&prefs.includeStamp!==false,prefs);const main=document.getElementById('sb-container-'+pageKey)||(pageKey.startsWith('admin_offices_')?document.getElementById('sb-container-admin_offices'):null);if(main)main.innerHTML=html;document.querySelectorAll('[data-sb-page="'+pageKey+'"]').forEach(el=>{el.innerHTML=html;});setTimeout(()=>applyPrintClasses(pageKey),0);}
   function installPrintHooks(){if(printHooksInstalled)return;printHooksInstalled=true;global.addEventListener('beforeprint',()=>Object.keys(instances).forEach(k=>renderAll(k)));}
   function installStorageHook(){if(storageHookInstalled)return;storageHookInstalled=true;const originalSetItem=localStorage.setItem.bind(localStorage);localStorage.setItem=function(key,value){if(key===CONSUMABLES_LEGACY_SIGNATURES_KEY&&consumablesLegacyOverride){value=JSON.stringify(consumablesLegacyOverride);}originalSetItem(key,value);if(key===CONSUMABLES_LEGACY_SIGNATURES_KEY&&instances.consumables){setTimeout(()=>renderAll('consumables'),0);}if(key===CONSUMABLES_STYLE_KEY&&instances.consumables){consumablesStyleDraft=null;setTimeout(()=>renderAll('consumables'),0);}if(key&&String(key).startsWith(PREFIX)&&instances[String(key).replace(PREFIX,'')]){setTimeout(()=>renderAll(String(key).replace(PREFIX,'')),0);}if(key&&String(key).startsWith(PREFS_PFX)&&instances[String(key).replace(PREFS_PFX,'')]){instances[String(key).replace(PREFS_PFX,'')].prefs=loadPrefs(String(key).replace(PREFS_PFX,''));setTimeout(()=>renderAll(String(key).replace(PREFS_PFX,'')),0);}};global.addEventListener('storage',e=>{if(e.key===CONSUMABLES_LEGACY_SIGNATURES_KEY&&instances.consumables)renderAll('consumables');if(e.key===CONSUMABLES_STYLE_KEY&&instances.consumables){consumablesStyleDraft=null;renderAll('consumables');}});}
-  async function pullCloud(pageKey){const data=await apiFetch('/hospital-storage');if(!data?.data||!instances[pageKey])return;const raw=data.data[PREFIX+pageKey];if(raw){try{const sigs=JSON.parse(raw);instances[pageKey].sigs=Array.isArray(sigs)?sigs:[];localStorage.setItem(PREFIX+pageKey,JSON.stringify(instances[pageKey].sigs));}catch{}}const rawPrefs=data.data[PREFS_PFX+pageKey];if(rawPrefs){try{const prefs=normalizePrefs(JSON.parse(rawPrefs));instances[pageKey].prefs=prefs;localStorage.setItem(PREFS_PFX+pageKey,JSON.stringify(prefs));}catch{}}if(pageKey==='consumables'){const rawStyle=data.data[CONSUMABLES_STYLE_KEY];if(rawStyle){try{const remoteStyle=normalizeDetailedStyle(JSON.parse(rawStyle));const localStyle=readDetailedStyle();if(detailedStyleStamp(remoteStyle)>detailedStyleStamp(localStyle)){localStorage.setItem(CONSUMABLES_STYLE_KEY,JSON.stringify(remoteStyle));consumablesStyleDraft=null;}}catch{}}}renderAll(pageKey);}
+  async function pullCloud(pageKey){const data=await apiFetch('/hospital-storage');if(!data?.data||!instances[pageKey])return;const raw=data.data[PREFIX+pageKey];if(raw){try{const sigs=JSON.parse(raw);const remoteSigs=Array.isArray(sigs)?sigs:[];
+// حارس ضد الكسح الفارغ: لو السحابة رجعت قائمة فاضية والمحلي فيه تواقيع
+// حقيقية، نحتفظ بالمحلي ولا نستبدله — حفظة فاضية واحدة من أي زميل كانت
+// تمسح تواقيع كل أجهزة المستشفى عند أول فتح. (مقايضة موثقة: المسح المتعمد
+// على جهاز لا ينتشر تلقائيًا للأجهزة الأخرى — الحفاظ على البيانات أولى.)
+const localSigs=instances[pageKey].sigs||[];
+if(remoteSigs.length===0&&localSigs.length>0){console.warn('[SignatureBlock] cloud returned empty sigs for',pageKey,'— keeping',localSigs.length,'local signatures');}
+else{instances[pageKey].sigs=remoteSigs;localStorage.setItem(PREFIX+pageKey,JSON.stringify(instances[pageKey].sigs));}}catch{}}const rawPrefs=data.data[PREFS_PFX+pageKey];if(rawPrefs){try{const prefs=normalizePrefs(JSON.parse(rawPrefs));instances[pageKey].prefs=prefs;localStorage.setItem(PREFS_PFX+pageKey,JSON.stringify(prefs));}catch{}}if(pageKey==='consumables'){const rawStyle=data.data[CONSUMABLES_STYLE_KEY];if(rawStyle){try{const remoteStyle=normalizeDetailedStyle(JSON.parse(rawStyle));const localStyle=readDetailedStyle();if(detailedStyleStamp(remoteStyle)>detailedStyleStamp(localStyle)){localStorage.setItem(CONSUMABLES_STYLE_KEY,JSON.stringify(remoteStyle));consumablesStyleDraft=null;}}catch{}}}renderAll(pageKey);}
 
   function activeConsumablesSections(target){if(target&&target!=='all'){const id=CONSUMABLES_SECTION_IDS[target];return id&&document.getElementById(id)?[target]:[];}return Object.keys(CONSUMABLES_SECTION_IDS).filter(k=>document.getElementById(CONSUMABLES_SECTION_IDS[k]));}
   function maxSignaturesForTarget(target){const data=readLegacyConsumables();const keys=activeConsumablesSections(target);return Math.max(1,...keys.map(k=>Array.isArray(data[k])?data[k].length:0));}
