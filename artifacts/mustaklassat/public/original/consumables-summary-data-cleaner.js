@@ -49,7 +49,7 @@
       loadScriptFresh('hospital-consumables-settings-deeplink-js', '/original/hospital_consumables_settings_deeplink_v1.js?v=20260702_v3_consumables_a4_letterhead_print');
     }, 140);
     setTimeout(function () {
-      loadScriptFresh('hospital-consumables-print-polish-js', '/original/hospital_consumables_print_polish_v6.js?v=20260702_v9_fallback_letterhead_print');
+      loadScriptFresh('hospital-consumables-print-polish-js', '/original/hospital_consumables_print_polish_v6.js?v=20260710_v11_signature_copy_print_fix');
     }, 200);
   }
 
