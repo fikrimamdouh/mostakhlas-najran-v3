@@ -435,8 +435,6 @@ const handleSwitchReviewHospital = (h: string) => {
     const clearPrefixes = [
       "deptCalculatedCost_",
       "dept_",
-      "sb_sigs_",
-      "sb_prefs_",
       "tableData_",
       "achievement_",
       "consumables_",
@@ -459,7 +457,6 @@ const handleSwitchReviewHospital = (h: string) => {
       "contractType",
       "contractStartDate",
       "contractEndDate",
-      "contractSignatureData",
       "extractMonth",
       "extractYear",
       "extractNumber",
@@ -512,8 +509,6 @@ const handleSwitchReviewHospital = (h: string) => {
       "hospitalActivityStatus",
       "hospitalActivityStatus_v2",
       "admin_staff",
-      "dynamicSignatures",
-      "contractorSignature",
       "appTitles_v1",
       "healthCentersData",
       "reviewExtractData",
@@ -525,8 +520,6 @@ const handleSwitchReviewHospital = (h: string) => {
       "grand-net-total",
       "grand-net-total-centers",
       "grand-net-total-admin",
-      "performanceSignatures",
-      "performanceSignatures_v2",
       "performanceTableNames",
       "adminOfficeNames_v1",
       "adminOfficeAffiliations_v1",
@@ -537,9 +530,23 @@ const handleSwitchReviewHospital = (h: string) => {
       if (!keepKeys.has(key)) localStorage.removeItem(key);
     });
 
+    // القاعدة المطلقة: لا توقيع يُمسح أبدًا — حتى داخل كنس البادئات (بما فيها
+    // "_u" الذي يمسح كل التخزين المعزول). أي مفتاح توقيعات يُستثنى من المسح.
+    const isSignatureKey = (raw: string) => {
+      const nk = raw.replace(/^(_u\d+_)+/, "");
+      if (nk.startsWith("sb_sigs_") || nk.startsWith("sb_prefs_") || nk.startsWith("healthCenters_Signatures_")) return true;
+      return [
+        "dynamicSignatures", "contractorSignature", "contractSignatureData",
+        "performanceSignatures", "performanceSignatures_v2",
+        "signatures_data_consumables_v27", "hospitalConsumablesRaiseLettersSettings_v1",
+        "projectManagerSignature", "operationsAssistantSignature", "maintenanceHeadSignature",
+        "finalLetterSignatureName", "finalLetterSignatureTitle", "sb_style_prefs_consumables_v1",
+      ].includes(nk);
+    };
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
       if (!key || keepKeys.has(key)) continue;
+      if (isSignatureKey(key)) continue;
       if (clearPrefixes.some(prefix => key.startsWith(prefix))) {
         localStorage.removeItem(key);
       }

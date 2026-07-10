@@ -45,6 +45,7 @@
     labor: {
       exact: [
         'attendanceData', 'ng_attendanceData', 'nd_attendanceData',
+        'dynamicSignatures', 'contractorSignature', 'performanceSignatures', 'performanceSignatures_v2',
         'performanceData', 'performanceData_v4', 'performanceDeductions', 'performanceTotalDeduction', 'performanceTotalDue',
         'achievementData', 'achievementTitles_v1', 'achievementItemNames',
         'finalLaborCost', 'grand-net-total',
@@ -57,6 +58,7 @@
     consumables: {
       exact: [
         'consumablesTableData', 'mainHospitalConsumables', 'summary_data_consumables_v27', 'signatures_data_consumables_v27',
+        'hospitalConsumablesRaiseLettersSettings_v1', 'projectManagerSignature', 'operationsAssistantSignature', 'maintenanceHeadSignature',
         'finalConsumablesCost', 'grand-net-total',
         'subcontractors_data_consumables_v27', 'performance_data_consumables_v27', 'water_supply_data_consumables_v27', 'sewage_disposal_data_consumables_v27'
       ],
@@ -261,6 +263,10 @@
         var key = localStorage.key(i);
         if (!key) continue;
         if (allKnownOperationalKey(key)) {
+          // القاعدة المطلقة: لا توقيع يُمسح — التوقيعات تُستثنى من تنظيف ما قبل
+          // الاستكمال؛ كتابة اللقطة بعدها تضع توقيعاتها التاريخية فوقها إن وُجدت
+          // (محتوى فوق محتوى)، وإلا تبقى توقيعات الموقع الحالية.
+          if (isOperationalSignatureKey(key)) continue;
           localStorage.removeItem(key);
           removed++;
         }

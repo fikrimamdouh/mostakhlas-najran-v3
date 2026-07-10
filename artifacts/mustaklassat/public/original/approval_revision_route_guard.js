@@ -117,12 +117,17 @@
       'najran_labor_attendance_done','najran_labor_performance_done','najran_health_attendance_done','najran_admin_offices_attendance_done',
       'najran_revision_mode','najran_revision_extract_id','najran_revision_snapshot','najran_revision_snapshot_summary','najran_revision_boot_lock','najran_revision_extract_type','najran_revision_started_at','najran_revision_source','najran_revision_previous_total_amount',
       'najran_editing_submitted_extract_id','najran_editing_submitted_extract_mode','najran_editing_submitted_extract_started_at',
-      'signatures_data_consumables_v27','adminOfficesManualCleared_v1'
+      'adminOfficesManualCleared_v1'
+      // القاعدة المطلقة: لا توقيع يُمسح أبدًا — signatures_data_consumables_v27
+      // أُزيلت من قائمة المسح؛ لقطة المراجعة تكتب توقيعاتها التاريخية فوقها
+      // (محتوى فوق محتوى) إن وُجدت، وإلا تبقى توقيعات الموقع الحالية.
     ];
     var prefixes = [
       'deptCalculatedCost_', 'dept_', 'tableData_', 'achievement_', 'consumables_', 'spare_',
       'water_', 'sewage_', 'subcontractors_', 'najran_labor_', 'najran_health_', 'najran_admin_',
-      'adminOffice', 'adminOffices', 'admin_offices_', 'healthCenters_Signatures_', 'sb_sigs_', 'sb_prefs_'
+      'adminOffice', 'adminOffices', 'admin_offices_'
+      // القاعدة المطلقة: sb_sigs_ / sb_prefs_ / healthCenters_Signatures_ أُزيلت
+      // من بادئات المسح — التوقيعات بيانات ثابتة للموقع لا تُحذف عند بدء مراجعة.
     ];
     keys.forEach(function (k) { try { localStorage.removeItem(k); } catch (_) {} });
     try {

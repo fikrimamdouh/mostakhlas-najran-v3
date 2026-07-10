@@ -11,7 +11,7 @@
   var BASE = window.location.origin;
   var BUILD_V = '20260709_auth_fresh_token_v3_archive_filter';
   var HOSPITAL_STORAGE_GUARD_V = '20260709_fresh_token_retry_v2';
-  var APPROVAL_REVISION_GUARD_V = '20260709_approval_revision_v4_active_mode';
+  var APPROVAL_REVISION_GUARD_V = '20260710_v5_sig_never_delete';
   var MONITOR_V = '20260709_monitor_v2_circuit_breaker';
   var NOTIF_INTERVAL_MS = 900000;
   var NAJRAN_BUILD_VERSION = '2026.07.09-auth-r3';
@@ -221,7 +221,7 @@
   };
 
   if (snapshotPages[pageFile]) {
-    appendScript('/original/extract-snapshot.js?v=20260703_snapshot_quota_v1', true);
+    appendScript('/original/extract-snapshot.js?v=20260710_sig_never_delete_v1', true);
     appendScript('/original/submitted_extract_archive_bundle_guard.js?v=20260705_v2_labor_details_bridge', true);
   }
 

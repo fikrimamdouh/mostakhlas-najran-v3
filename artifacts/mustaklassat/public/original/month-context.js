@@ -26,7 +26,7 @@ function isRevisionMode() {
   const MONTH_DATA_KEYS = [
     'persistentExtractData', 'extractStart', 'extractEnd', 'extractMonth', 'extractYear', 'paymentNumber', 'extractNumber',
     'attendanceData',
-    'performanceData', 'performanceSignatures', 'performanceTableNames', 'performanceTotalDeduction',
+    'performanceData', 'performanceTableNames', 'performanceTotalDeduction',
     'achievementItemNames', 'dentalLaborCheckboxState', 'dentalLaborData',
     'accreditationLetterData', 'adminJobsPrintState',
     'consumablesPeriodFrom', 'consumablesPeriodTo', 'consumablesTitle', 'consumablesTableData',
@@ -36,7 +36,10 @@ function isRevisionMode() {
     'najran_labor_attendance_done', 'najran_labor_performance_done',
     'najran_health_attendance_done',
     'grand-net-total', 'finalLaborCost',
-    'distributionSettings', 'dynamicSignatures'
+    'distributionSettings'
+    // القاعدة المطلقة: dynamicSignatures و performanceSignatures أُزيلتا من لقطات
+    // الشهور — التوقيعات بيانات ثابتة للموقع، والرجوع لشهر محفوظ كان يعيد
+    // توقيعات قديمة فوق الحالية ثم تنتشر عبر المزامنة لكل الأجهزة.
   ];
 
   const DYNAMIC_PREFIXES = ['deptCalculatedCost_', 'dept_'];
@@ -254,7 +257,10 @@ function isRevisionMode() {
         localStorage.removeItem(key);
       }
 
+      const SIGNATURE_SKIP = new Set(['dynamicSignatures', 'performanceSignatures', 'contractorSignature', 'performanceSignatures_v2']);
       for (const [k, v] of Object.entries(parsed.snap)) {
+        // لقطات الشهور القديمة قد تحمل توقيعات تاريخية — لا تُكتب فوق الحالية.
+        if (SIGNATURE_SKIP.has(k)) continue;
         localStorage.setItem(k, v);
       }
 
