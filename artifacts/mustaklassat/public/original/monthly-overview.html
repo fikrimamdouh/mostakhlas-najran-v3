@@ -231,12 +231,35 @@ function showToast(msg, cls = '') {
   setTimeout(() => t.className = 'toast', 2500);
 }
 
+// ── Fresh token helper ───────────────────────────────────────────────────
+// توكنات Clerk تنتهي خلال ~60 ثانية. الاستخدام المباشر لـ session.clerkToken
+// كان يخرج طلبات بتوكن ميت → 401 حمراء + استهلاك بلا فائدة.
+// الترتيب: getter المحلي ثم الأب ثم الأعلى، وأخيرًا توكن الجلسة فقط لو حديث
+// (<55 ثانية). غير ذلك null = الطلب لا يخرج أصلًا.
+async function getMonthlyOverviewFreshToken() {
+  async function tryGetter(fn) {
+    try {
+      if (typeof fn !== 'function') return null;
+      let t = null;
+      try { t = await fn({ skipCache: true }); } catch (_) { t = await fn(); }
+      return t || null;
+    } catch (_) { return null; }
+  }
+  let token = await tryGetter(window.najranGetFreshToken);
+  if (token) return token;
+  try { if (window.parent && window.parent !== window) { token = await tryGetter(window.parent.najranGetFreshToken); if (token) return token; } } catch (_) {}
+  try { if (window.top && window.top !== window) { token = await tryGetter(window.top.najranGetFreshToken); if (token) return token; } } catch (_) {}
+  const s = getSession();
+  if (s && s.clerkToken && s.timestamp && (Date.now() - s.timestamp) < 55000) return s.clerkToken;
+  return null;
+}
+
 async function loadData() {
-  const session = getSession();
-  if (!session.clerkToken) { window.location.href = '/sign-in'; return; }
+  const token = await getMonthlyOverviewFreshToken();
+  if (!token) { window.location.href = '/sign-in'; return; }
   try {
     const res = await fetch('/api/submitted-extracts', {
-      headers: { Authorization: `Bearer ${session.clerkToken}` }
+      headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error();
     const data = await res.json();
@@ -471,12 +494,12 @@ function goToExtract(id) {
 }
 
 async function exportCsv() {
-  const session = getSession();
-  if (!session.clerkToken) { showToast('يجب تسجيل الدخول أولاً', 'error'); return; }
+  const token = await getMonthlyOverviewFreshToken();
+  if (!token) { showToast('يجب تسجيل الدخول أولاً', 'error'); return; }
   try {
     showToast('جاري تحضير الملف...', '');
     const res = await fetch('/api/export/submitted-extracts', {
-      headers: { Authorization: `Bearer ${session.clerkToken}` }
+      headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error('Export failed');
     const blob = await res.blob();
@@ -493,7 +516,9 @@ async function exportCsv() {
 }
 
 loadData();
-setInterval(loadData, 90000);
+// توفير Neon + منع 401: كان هنا polling كل 90 ثانية يسحب القائمة الكاملة
+// طوال فتح الصفحة — وبتوكن قديم بعد أول دقيقة.
+// التحديث الآن: مرة عند الفتح + زر "↻ تحديث" اليدوي.
 </script>
 </body>
 </html>
