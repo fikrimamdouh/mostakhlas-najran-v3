@@ -22,6 +22,21 @@
 
   var STYLE_KEY = 'sb_style_prefs_achievement_v1';
   var PRINT_STYLE_ID = 'najran-achievement-screen-only-print-guard';
+  var PRINT_HIDE_CSS = [
+    '@media print {',
+    '  #najran-revision-mode-badge,',
+    '  #najran-revision-exit-modal,',
+    '  [data-najran-work-context-badge="true"] {',
+    '    display: none !important;',
+    '    visibility: hidden !important;',
+    '    opacity: 0 !important;',
+    '    position: absolute !important;',
+    '    width: 0 !important;',
+    '    height: 0 !important;',
+    '    overflow: hidden !important;',
+    '  }',
+    '}'
+  ].join('\n');
 
   function readApprovedStyle() {
     try {
@@ -40,21 +55,9 @@
       (document.head || document.documentElement).appendChild(style);
     }
 
-    style.textContent = [
-      '@media print {',
-      '  #najran-revision-mode-badge,',
-      '  #najran-revision-exit-modal,',
-      '  [data-najran-work-context-badge="true"] {',
-      '    display: none !important;',
-      '    visibility: hidden !important;',
-      '    opacity: 0 !important;',
-      '    position: absolute !important;',
-      '    width: 0 !important;',
-      '    height: 0 !important;',
-      '    overflow: hidden !important;',
-      '  }',
-      '}'
-    ].join('\n');
+    if (style.textContent !== PRINT_HIDE_CSS) {
+      style.textContent = PRINT_HIDE_CSS;
+    }
   }
 
   function markStatusBadgeScreenOnly() {
