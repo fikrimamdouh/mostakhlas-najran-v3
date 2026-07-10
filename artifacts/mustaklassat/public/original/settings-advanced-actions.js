@@ -1,0 +1,28 @@
+'use strict';
+async function refresh(){
+  if(!admin())return deny();
+  var box=q('events-list'),btn=q('btn-refresh');btn.disabled=true;box.className='empty';box.textContent='جاري التحميل...';
+  try{
+    var wh=Number(q('f-window').value)||24,h=await authHeaders();if(!h.Authorization)throw Error('تعذر الحصول على جلسة صالحة');
+    var since=encodeURIComponent(new Date(Date.now()-wh*3600000).toISOString()),res=await manualFetch('/api/client-events?limit=200&since='+since,{headers:h,credentials:'include'});
+    if(res.status===403)throw Error('403 admin only');if(!res.ok)throw Error('HTTP '+res.status);var body=await res.json();
+    var oldIds=new Set(events.map(function(e){return String(e.id)}));previousIds=baselineReady?oldIds:new Set();events=Array.isArray(body.events)?body.events:[];rebuild();baselineReady=true;loadedAt=new Date().toISOString();closeReport();render();q('range-note').classList.remove('show');var cap=events.length===200;q('coverage-note').textContent=cap?'تم تحميل الحد الأقصى: آخر 200 حادثة فقط — ضيّق المدة لتحليل أدق.':'';q('coverage-note').classList.toggle('show',cap);q('last-load').textContent='آخر تحميل: '+fmt(loadedAt)+' — '+events.length+' حادثة — طلب شبكة واحد'
+  }catch(e){box.className='empty';box.textContent='تعذر تحميل الحوادث: '+String(e.message||e)}finally{btn.disabled=false}
+}
+async function cleanup(){
+  if(!admin())return;var wh=Number(q('f-window').value)||24,before=new Date(Date.now()-wh*3600000).toISOString();if(!confirm('سيتم حذف الحوادث الأقدم من '+windowText()+' فقط. تأكيد؟'))return;
+  try{var h=await authHeaders();if(!h.Authorization)throw Error('جلسة غير صالحة');h['Content-Type']='application/json';var r=await manualFetch('/api/client-events/cleanup',{method:'DELETE',headers:h,credentials:'include',body:JSON.stringify({before:before})}),b=await r.json().catch(function(){return{}});if(!r.ok)throw Error(b.error||('HTTP '+r.status));q('events-list').textContent='تم حذف '+Number(b.deleted||0)+' حادثة. اضغط تحديث لإعادة تحميل القائمة.'}catch(e){q('events-list').textContent='فشل المسح: '+String(e.message||e)}
+}
+async function sendTest(){
+  if(!admin()||!confirm('إرسال حادثة اختبار واحدة الآن؟'))return;
+  try{var h=await authHeaders();if(!h.Authorization)throw Error('جلسة غير صالحة');h['Content-Type']='application/json';var s=sess(),ev={type:'MANUAL_INCIDENT',severity:'info',page:'settings_advanced',url:location.href,userId:s.userId||s.id||null,userName:s.name||s.userName||null,userEmail:s.email||null,role:s.role||null,hospital:s.hospital||null,company:s.company||s.companyName||null,message:'اختبار يدوي من صفحة مراقبة الإنتاج',timestamp:new Date().toISOString(),buildVersion:'settings_advanced_terminal_v3_20260710',_payload:{reason:'manual dashboard test'}},r=await manualFetch('/api/client-events',{method:'POST',headers:h,credentials:'include',body:JSON.stringify({events:[ev]})});if(!r.ok)throw Error('HTTP '+r.status);q('events-list').textContent='تم إرسال حادثة الاختبار. اضغط تحديث لعرضها.'}catch(e){q('events-list').textContent='فشل الاختبار: '+String(e.message||e)}
+}
+function resetFilters(){['f-category','f-type','f-sev','f-status','f-hospital','f-page','f-user','f-build'].forEach(function(id){q(id).value=''});q('f-sort').value='priority';q('f-search').value='';['f-repeat','f-multi-user','f-data-loss','f-today','f-unknown','f-tests'].forEach(function(id){q(id).checked=false});render()}
+function bind(){
+  q('btn-refresh').addEventListener('click',refresh);q('btn-reset-filters').addEventListener('click',resetFilters);q('btn-users').addEventListener('click',usersReport);q('btn-hospitals').addEventListener('click',hospitalsReport);q('btn-builds').addEventListener('click',buildsReport);q('btn-copy-users').addEventListener('click',function(){navigator.clipboard.writeText(usersText())});q('btn-copy-exec').addEventListener('click',copyExecutive);q('btn-export-csv').addEventListener('click',exportCSV);q('btn-export-json').addEventListener('click',exportJSON);q('btn-cleanup').addEventListener('click',cleanup);q('btn-test').addEventListener('click',sendTest);q('btn-back').addEventListener('click',function(){location.href='/dashboard'});
+  ['f-category','f-type','f-sev','f-status','f-hospital','f-page','f-user','f-build','f-sort','f-search','f-repeat','f-multi-user','f-data-loss','f-today','f-unknown','f-tests'].forEach(function(id){q(id).addEventListener(id==='f-search'?'input':'change',render)});
+  q('f-window').addEventListener('change',function(){q('range-note').classList.add('show')});
+  document.addEventListener('click',function(ev){var b=ev.target.closest('[data-group]');if(b){ev.preventDefault();ev.stopPropagation();var i=Number(b.dataset.group);if(b.classList.contains('js-group-open'))openGroup(i);else if(b.classList.contains('js-group-copy')&&groups[i])navigator.clipboard.writeText(groupText(groups[i]));else if(b.classList.contains('js-group-prompt')&&groups[i])navigator.clipboard.writeText(promptText(groups[i]));return}var c=ev.target.closest('[data-event]');if(c){ev.preventDefault();ev.stopPropagation();var j=Number(c.dataset.event),e=enriched[j];if(c.classList.contains('js-event-copy')){if(e)navigator.clipboard.writeText(JSON.stringify(e,null,2))}else{selectedEvent=selectedEvent===j?-1:j;render()}return}if(ev.target&&ev.target.id==='btn-close-report')closeReport()})
+}
+function deny(){q('app').innerHTML='<div class="denied"><h2>غير مصرح</h2><p>هذه الشاشة للأدمن فقط.</p></div>'}
+if(!admin())deny();else bind();
