@@ -6,6 +6,7 @@
 <title>مراقبة الإنتاج - مشاكل النظام</title>
 <script src="/original/user-storage-proxy.js?v=20260705_cache_bust_v1"></script>
 <link rel="stylesheet" href="/original/settings-advanced-terminal.css?v=20260710_v2">
+<link rel="stylesheet" href="/original/settings-advanced-connections.css?v=20260710_v1">
 </head>
 <body>
 <div class="wrap" id="app">
@@ -16,6 +17,7 @@
     </div>
     <div class="actions">
       <button class="btn primary" id="btn-refresh">تحديث السوق</button>
+      <button class="btn connection" id="btn-connections">فحص ربط المستخدمين</button>
       <button class="btn dark" id="btn-users">المستخدمون</button>
       <button class="btn blue" id="btn-hospitals">المواقع</button>
       <button class="btn" id="btn-builds">الإصدارات</button>
@@ -32,6 +34,13 @@
     <span class="net-count"><i class="status-dot"></i> NETWORK CALLS <b id="network-count">0</b></span><span class="terminal-note">MODE <b>ON-DEMAND</b></span><span class="terminal-note">AUTO POLL <b>OFF</b></span>
     <span id="last-load">لم يتم تحميل حوادث بعد.</span>
     <span id="range-note" class="range-note">تم تغيير النطاق — اضغط تحديث لتطبيقه.</span><span id="coverage-note" class="range-note"></span>
+  </div>
+  <div id="connection-panel" class="panel connection-panel">
+    <div class="panel-title"><h2>حالة ربط المستخدمين</h2><span class="panel-code">USER LINK STATUS</span></div>
+    <div class="connection-note">الفحص لا يعمل تلقائيًا. اضغط «فحص ربط المستخدمين» لتحميل قائمة المستخدمين وآخر سجلات المراقبة. اللمبة الخضراء تعني أن هذا المستخدم أرسل سجل مراقبة خلال آخر 24 ساعة، وليست إثباتًا أنه متصل في نفس اللحظة.</div>
+    <div id="connection-last-check" class="connection-note">لم يتم تنفيذ فحص بعد.</div>
+    <div id="connection-summary" class="connection-summary"></div>
+    <div id="connection-grid" class="connection-grid"><div class="empty">اضغط زر فحص ربط المستخدمين.</div></div>
   </div>
   <div class="grid">
     <div class="card critical"><div class="label">Critical</div><div class="num" id="s-critical">—</div></div>
@@ -71,5 +80,6 @@
 <script src="/original/settings-advanced-render-b.js?v=20260710_v1"></script>
 <script src="/original/settings-advanced-reports.js?v=20260710_v1"></script>
 <script src="/original/settings-advanced-actions.js?v=20260710_v1"></script>
+<script src="/original/settings-advanced-connections.js?v=20260710_v1"></script>
 </body>
 </html>
