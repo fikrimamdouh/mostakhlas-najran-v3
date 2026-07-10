@@ -112,12 +112,23 @@ export default function OriginalViewer() {
   const injectOriginalHelpers = () => {
     try {
       const doc = iframeRef.current?.contentDocument;
-      if (!doc || doc.getElementById("najran-submit-flow-control-loader")) return;
-      const script = doc.createElement("script");
-      script.id = "najran-submit-flow-control-loader";
-      script.defer = true;
-      script.src = "/original/extract-submit-flow-control.js?v=20260709_submit_flow_v1";
-      doc.head.appendChild(script);
+      if (!doc) return;
+
+      if (!doc.getElementById("najran-submit-flow-control-loader")) {
+        const script = doc.createElement("script");
+        script.id = "najran-submit-flow-control-loader";
+        script.defer = true;
+        script.src = "/original/extract-submit-flow-control.js?v=20260709_submit_flow_v1";
+        doc.head.appendChild(script);
+      }
+
+      if (page === "achievement.html" && !doc.getElementById("najran-achievement-print-signature-once-loader")) {
+        const achievementGuard = doc.createElement("script");
+        achievementGuard.id = "najran-achievement-print-signature-once-loader";
+        achievementGuard.defer = true;
+        achievementGuard.src = "/original/achievement_print_signature_once_guard.js?v=20260710_v1";
+        doc.head.appendChild(achievementGuard);
+      }
     } catch {}
   };
 
