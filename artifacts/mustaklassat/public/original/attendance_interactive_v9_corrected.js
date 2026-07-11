@@ -3845,7 +3845,7 @@ function getSignatures() {
  * =====================================================================
  */
 (function () {
-  const VERSION = 'NJS_EXTRACT_AUDIT_2026_07_09_CONTRACT_CATEGORY_V2';
+  const VERSION = 'NJS_EXTRACT_AUDIT_2026_07_11_NATIONALITY_FINE_V3';
 
   if (window.NJSExtractAudit && window.NJSExtractAudit.__version === VERSION) {
     return;
@@ -4336,7 +4336,14 @@ const absenceFine = auditSkipAbsenceFine
       attendanceDays,
       absenceDays,
       deductionOnlyDays,
-      categoryCheck
+      categoryCheck,
+      // تفاصيل معدل الغرامة — لقسم مراجعة غرامات الغياب حسب الجنسية
+      isSaudi,
+      categoryForCalculation,
+      fineRateSaudi: fineConfig.saudi,
+      fineRateNonSaudi: fineConfig.non_saudi,
+      appliedFineRate: auditSkipAbsenceFine ? 0 : (isSaudi ? fineConfig.saudi : fineConfig.non_saudi),
+      skipAbsenceFine: auditSkipAbsenceFine
     };
   }
 
@@ -4356,6 +4363,7 @@ const absenceFine = auditSkipAbsenceFine
 safeCategorySuggestions: [],
 categoryContractMismatches: [],
 categoryUnknownJobs: [],
+nationalityFineReview: [],
       stats: {
         totalEmployees: 0,
         totalVacantDays: 0,
@@ -4571,6 +4579,43 @@ if (expectedCategory) {
             `${deptName} — صف ${index + 1} — ${name || 'بدون اسم'}: الفئة "${categoryCheck.raw}" تُقرأ كـ "${categoryCheck.normalized}".`,
             { deptKey, index }
           );
+        }
+
+        // ============================================================
+        // مراجعة غرامة الغياب حسب الجنسية:
+        // كل موظف عليه أيام "غ" يدخل جدول المراجعة بمعدله المطبق فعليًا،
+        // حتى يكتشف المستخدم فورًا أي جنسية مسجلة خطأ (سعودي↔غير سعودي)
+        // ويصححها بضغطة واحدة بدل تعديل الخانة يدويًا في الجدول.
+        // ============================================================
+        if (financial.absenceDays > 0 && !financial.skipAbsenceFine) {
+          const nationalityRaw = String((emp && emp.nationality) || '').trim();
+          const isBlankNationality = !nationalityRaw || /^(غير محدد|—|-|null|undefined)$/i.test(nationalityRaw);
+          const ratesDiffer = financial.fineRateSaudi !== financial.fineRateNonSaudi;
+
+          result.nationalityFineReview.push({
+            deptKey,
+            deptName,
+            index,
+            name: name || 'بدون اسم',
+            category: financial.categoryForCalculation,
+            nationalityRaw: nationalityRaw || 'فارغ',
+            treatedAsSaudi: financial.isSaudi,
+            appliedFineRate: financial.appliedFineRate,
+            otherRate: financial.isSaudi ? financial.fineRateNonSaudi : financial.fineRateSaudi,
+            ratesDiffer,
+            absenceDays: financial.absenceDays,
+            absenceFine: financial.absenceFine,
+            flagged: isBlankNationality && ratesDiffer
+          });
+
+          if (isBlankNationality && ratesDiffer) {
+            pushIssue(
+              result.warnings,
+              'موظف عليه غياب وجنسيته غير مسجلة',
+              `${deptName} — صف ${index + 1} — ${name || 'بدون اسم'} — فئة ${financial.categoryForCalculation}: الجنسية فارغة وتُعامل كغير سعودي (${financial.appliedFineRate} ريال/يوم بدل ${financial.fineRateSaudi} للسعودي). أكّد الجنسية من قسم مراجعة الغرامات.`,
+              { deptKey, index, nationalityFineReview: true }
+            );
+          }
         }
 
         if (!Array.isArray(emp && emp.days)) {
@@ -4789,6 +4834,115 @@ result.info.push({ title: 'عدد المسميات غير الموجودة في 
     `;
   }
 
+  // ================================================================
+  // قسم مراجعة غرامات الغياب حسب الجنسية
+  // جدول واحد مضغوط: كل موظف عليه "غ" بمعدله المطبق، وزر تبديل فوري
+  // للجنسية عند الخطأ — يعيد الحساب والحفظ ويحدّث الفحص تلقائيًا.
+  // ================================================================
+  function renderNationalityFineSection(audit) {
+    const rows = (audit.nationalityFineReview || []).slice().sort((a, b) => {
+      if (a.flagged !== b.flagged) return a.flagged ? -1 : 1;
+      if (a.treatedAsSaudi !== b.treatedAsSaudi) return a.treatedAsSaudi ? -1 : 1;
+      return b.absenceFine - a.absenceFine;
+    });
+
+    const flaggedCount = rows.filter(r => r.flagged).length;
+    const isOpen = flaggedCount > 0 ? 'open' : '';
+
+    if (rows.length === 0) {
+      return `
+        <details style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px;margin-bottom:10px;">
+          <summary style="cursor:pointer;font-weight:900;color:#0e7490;font-size:15px;">مراجعة غرامات الغياب حسب الجنسية (0)</summary>
+          <div style="color:#64748b;font-weight:700;margin-top:10px;">لا يوجد موظفون عليهم أيام غياب في هذا المستخلص.</div>
+        </details>
+      `;
+    }
+
+    const body = rows.map(r => {
+      const target = r.treatedAsSaudi ? 'غير سعودي' : 'سعودي';
+      const natColor = r.flagged ? '#b45309' : (r.treatedAsSaudi ? '#166534' : '#334155');
+      const natLabel = r.flagged ? (auditEscapeHtml(r.nationalityRaw) + ' ⚠') : auditEscapeHtml(r.nationalityRaw);
+      const toggleBtn = r.ratesDiffer
+        ? `<button onclick="NJSExtractAudit.setEmployeeNationality('${auditEscapeHtml(r.deptKey)}', ${r.index}, '${target}')"
+             style="background:#0e7490;color:#fff;border:none;border-radius:8px;padding:5px 10px;font-weight:800;cursor:pointer;font-size:12px;font-family:Tajawal,Arial,sans-serif;">
+             تحويل إلى ${target}
+           </button>`
+        : `<span style="color:#94a3b8;font-size:12px;font-weight:700;">المعدل واحد للفئة</span>`;
+
+      return `
+        <tr style="${r.flagged ? 'background:#fffbeb;' : ''}">
+          <td style="border:1px solid #e5e7eb;padding:6px 8px;">${auditEscapeHtml(r.deptName)}</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 8px;font-weight:800;">${auditEscapeHtml(r.name)}</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 8px;text-align:center;">${auditEscapeHtml(r.category)}</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 8px;text-align:center;color:${natColor};font-weight:800;">${natLabel}</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 8px;text-align:center;">${r.absenceDays}</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 8px;text-align:center;">${r.appliedFineRate}</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 8px;text-align:center;font-weight:800;">${r.absenceFine.toFixed(2)}</td>
+          <td style="border:1px solid #e5e7eb;padding:6px 8px;text-align:center;">${toggleBtn}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <details ${isOpen} style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px;margin-bottom:10px;">
+        <summary style="cursor:pointer;font-weight:900;color:#0e7490;font-size:15px;">
+          مراجعة غرامات الغياب حسب الجنسية (${rows.length})${flaggedCount ? ` — ${flaggedCount} تحتاج تأكيد` : ''}
+        </summary>
+        <div style="margin-top:10px;max-height:360px;overflow:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr style="background:#f1f5f9;">
+                <th style="border:1px solid #e5e7eb;padding:6px 8px;">القسم</th>
+                <th style="border:1px solid #e5e7eb;padding:6px 8px;">الموظف</th>
+                <th style="border:1px solid #e5e7eb;padding:6px 8px;">الفئة</th>
+                <th style="border:1px solid #e5e7eb;padding:6px 8px;">الجنسية المسجلة</th>
+                <th style="border:1px solid #e5e7eb;padding:6px 8px;">أيام غ</th>
+                <th style="border:1px solid #e5e7eb;padding:6px 8px;">ريال/يوم</th>
+                <th style="border:1px solid #e5e7eb;padding:6px 8px;">غرامة الغياب</th>
+                <th style="border:1px solid #e5e7eb;padding:6px 8px;">إجراء</th>
+              </tr>
+            </thead>
+            <tbody>${body}</tbody>
+          </table>
+        </div>
+      </details>
+    `;
+  }
+
+  function setEmployeeNationalityFromAudit(deptKey, index, targetNationality) {
+    if (targetNationality !== 'سعودي' && targetNationality !== 'غير سعودي') return;
+
+    const data = getAuditAttendanceData();
+    const emp = data?.[deptKey]?.[index];
+    if (!emp) {
+      alert('تعذر الوصول لبيانات الموظف. أعد الفحص وحاول مجددًا.');
+      return;
+    }
+
+    const currentRaw = String(emp.nationality || '').trim() || 'فارغ';
+    if (!confirm(
+      `تأكيد تغيير الجنسية:\n\n` +
+      `الموظف: ${String(emp.name || 'بدون اسم')}\n` +
+      `من: "${currentRaw}"\n` +
+      `إلى: "${targetNationality}"\n\n` +
+      `سيُعاد حساب غرامة الغياب تلقائيًا حسب المعدل الصحيح. لا يتغير أي شيء آخر.`
+    )) {
+      return;
+    }
+
+    emp.nationality = targetNationality;
+
+    if (!saveAttendanceDataExactForAudit(data)) return;
+
+    try {
+      if (typeof renderTables === 'function') renderTables();
+    } catch (error) {
+      console.warn('تم حفظ الجنسية لكن فشل تحديث الجداول:', error);
+    }
+
+    openAuditDialog();
+  }
+
   function closeAuditDialog() {
     const dialog = document.getElementById('extract-audit-dialog');
     const overlay = document.getElementById('extract-audit-overlay');
@@ -4852,13 +5006,6 @@ overlay.onclick = function(event) {
       ? `يوجد ${audit.critical.length} خطأ حرج يجب مراجعته قبل الطباعة أو الاعتماد`
       : 'لا توجد أخطاء حرجة ظاهرة';
 
-    const categoryNotice = `
-تنبيه مهم للفئات:
-القيم الحرفية مثل "س" لا يتم تحويلها تلقائيًا إلى فئة رقمية.
-نفس الرمز قد يخص مهن مختلفة وفئات مختلفة حسب العقد أو ملف المناصب.
-عند استخدام زر الإصلاح المقترح، يتم الإصلاح فقط إذا وجد النظام نفس مسمى الوظيفة بفئة واحدة واضحة.
-بعد الإصلاح، يجب على المستخدم مراجعة الفئات قبل الطباعة أو الاعتماد.
-`;
 // ================================================================
 // زر التصحيح يغيّر category فقط.
 // لا يلمس الحضور، الراتب، الجنسية، رقم الإقامة، الاسم، أو مسمى الوظيفة.
@@ -4891,12 +5038,7 @@ const contractCategoryFixButton = audit.categoryContractMismatches.length > 0 ? 
 
         <div style="background:#fff;border:2px solid ${statusColor};border-radius:14px;padding:14px;margin-bottom:12px;">
           <div style="font-size:16px;font-weight:900;color:${statusColor};">${auditEscapeHtml(statusText)}</div>
-        </div>
-<div style="background:#ecfeff;border:1px solid #67e8f9;color:#164e63;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-weight:800;line-height:1.8;">
-  هذا الفحص لا يعتمد المستخلص ولا يغير البيانات تلقائيًا. أي إصلاح للفئات هو اقتراح مساعد ويجب مراجعته قبل الطباعة أو الاعتماد.
-</div>
-        <div style="background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;border-radius:12px;padding:12px;margin-bottom:12px;white-space:pre-line;line-height:1.8;font-weight:800;">
-          ${auditEscapeHtml(categoryNotice)}
+          <div style="font-size:12.5px;color:#64748b;font-weight:700;margin-top:6px;">الفحص للقراءة فقط — أي إصلاح يتم بزر مخصص وبعد تأكيدك، ويغيّر الخانة المذكورة فقط دون المساس بالحسابات الأخرى.</div>
         </div>
 
 <div style="
@@ -4935,6 +5077,7 @@ ${contractCategoryFixButton}
           </button>
         </div>
 
+        ${renderNationalityFineSection(audit)}
         ${renderAuditSection('أخطاء حرجة', audit.critical, '#991b1b', 'لا توجد أخطاء حرجة.', true)}
         ${renderAuditSection('تحذيرات', audit.warnings, '#b45309', 'لا توجد تحذيرات.', audit.critical.length === 0)}
         ${renderAuditSection('معلومات', audit.info, '#1e3c72', 'لا توجد معلومات.', false)}
@@ -5097,7 +5240,8 @@ function applyContractCategoryFixes() {
   close: closeAuditDialog,
   collect: collectExtractAuditResults,
   applySuggestedCategories: applySuggestedCategoriesFromSameJob,
-  applyContractCategoryFixes: applyContractCategoryFixes
+  applyContractCategoryFixes: applyContractCategoryFixes,
+  setEmployeeNationality: setEmployeeNationalityFromAudit
 };
 })();
 function openExtractAuditDialog() {
