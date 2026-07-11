@@ -894,6 +894,10 @@ if (firstHeaderRow) {
 
 // 3. تجهيز جسم الجدول والمتغيرات للحسابات
 tableBody.innerHTML = '';
+// الصفوف تُبنى في fragment خارج الشاشة ثم تُلحق دفعة واحدة.
+// قبل ذلك كان كل صف يُلحق بجدول حيّ ومعه select لكل يوم من أيام الشهر
+// (موظف واحد = ~30 select)، فيجبر المتصفح على إعادة حساب التخطيط آلاف المرات.
+const rowsFragment = document.createDocumentFragment();
 let deptTotalCost = 0;
 let deptTotalDeduction = 0;
 let deptTotalFine = 0;
@@ -1111,8 +1115,11 @@ allSpecialStatusesInDept.forEach(status => {
                 const nationalitySelect = createNationalitySelect(nationality, dept.key, index);
                 nationalityCell.appendChild(nationalitySelect);
 
-                tableBody.appendChild(row);
+                rowsFragment.appendChild(row);
             });
+
+            // إلحاق كل صفوف القسم دفعة واحدة — عملية DOM واحدة بدل عملية لكل صف
+            tableBody.appendChild(rowsFragment);
 
             if (firstHeaderRow && usedSpecialStatuses.size > 0 && !firstHeaderRow.hasAttribute('data-special-headers-added')) {
                 const existingHeaders = firstHeaderRow.querySelectorAll('.status-header');
@@ -3845,7 +3852,7 @@ function getSignatures() {
  * =====================================================================
  */
 (function () {
-  const VERSION = 'NJS_EXTRACT_AUDIT_2026_07_11_NATIONALITY_FINE_V3';
+  const VERSION = 'NJS_EXTRACT_AUDIT_2026_07_11_FINE_VERDICT_V4';
 
   if (window.NJSExtractAudit && window.NJSExtractAudit.__version === VERSION) {
     return;
@@ -4364,6 +4371,7 @@ safeCategorySuggestions: [],
 categoryContractMismatches: [],
 categoryUnknownJobs: [],
 nationalityFineReview: [],
+fineMismatches: [],
       stats: {
         totalEmployees: 0,
         totalVacantDays: 0,
@@ -4618,6 +4626,30 @@ if (expectedCategory) {
           }
         }
 
+        // ============================================================
+        // مطابقة الغرامة المسجلة في المستخلص مع الغرامة الصحيحة:
+        // لو الجنسية اتعدلت بعد ما الغرامة اتحسبت (أو العكس)، الرقم
+        // المخزن على الموظف يفضل قديم. هنا نكشف كل موظف غرامته المسجلة
+        // لا تساوي (أيام غ × المعدل الصحيح لجنسيته وفئته) — وزر واحد
+        // في أعلى الفحص يحدّثها كلها دفعة واحدة.
+        // ============================================================
+        {
+          const storedFine = parseFloat(emp && emp.absencePenalty);
+          if (Number.isFinite(storedFine) && Math.abs(storedFine - financial.absenceFine) > 0.01) {
+            result.fineMismatches.push({
+              deptKey,
+              deptName,
+              index,
+              name: name || 'بدون اسم',
+              category: financial.categoryForCalculation,
+              nationalityRaw: String((emp && emp.nationality) || '').trim() || 'فارغ',
+              absenceDays: financial.absenceDays,
+              storedFine,
+              correctFine: financial.absenceFine
+            });
+          }
+        }
+
         if (!Array.isArray(emp && emp.days)) {
           pushIssue(
             result.critical,
@@ -4835,6 +4867,70 @@ result.info.push({ title: 'عدد المسميات غير الموجودة في 
   }
 
   // ================================================================
+  // رسائل داخل شاشة الفحص — لا نوافذ متصفح (alert/confirm) إطلاقًا
+  // ================================================================
+  function auditHost() {
+    return document.getElementById('extract-audit-dialog') || document.body;
+  }
+
+  function auditToast(message, type) {
+    const colors = {
+      success: { bg: '#f0fdf4', border: '#16a34a', text: '#166534', icon: '✓' },
+      error:   { bg: '#fef2f2', border: '#dc2626', text: '#991b1b', icon: '✕' },
+      info:    { bg: '#eff6ff', border: '#1e3c72', text: '#1e3c72', icon: 'ℹ' }
+    };
+    const c = colors[type] || colors.info;
+    const host = auditHost();
+    const old = document.getElementById('njs-audit-toast');
+    if (old) old.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'njs-audit-toast';
+    toast.style.cssText = `
+      position:absolute;top:64px;left:50%;transform:translateX(-50%);
+      z-index:2147483647;background:${c.bg};border:1.5px solid ${c.border};color:${c.text};
+      border-radius:12px;padding:11px 18px;font-weight:800;font-size:14px;
+      font-family:Tajawal,Arial,sans-serif;direction:rtl;max-width:88%;
+      box-shadow:0 10px 30px rgba(15,23,42,.22);display:flex;align-items:center;gap:9px;
+    `;
+    if (host === document.body) { toast.style.position = 'fixed'; toast.style.top = '24px'; }
+    toast.innerHTML = `<span style="font-size:17px;">${c.icon}</span><span>${auditEscapeHtml(message)}</span>`;
+    host.appendChild(toast);
+    setTimeout(() => { if (toast.parentElement) toast.remove(); }, 4200);
+  }
+
+  function auditConfirm(opts, onYes) {
+    const host = auditHost();
+    const old = document.getElementById('njs-audit-confirm');
+    if (old) old.remove();
+
+    const wrap = document.createElement('div');
+    wrap.id = 'njs-audit-confirm';
+    wrap.style.cssText = `
+      position:absolute;inset:0;z-index:2147483647;background:rgba(15,23,42,.55);
+      display:flex;align-items:center;justify-content:center;direction:rtl;
+      font-family:Tajawal,Arial,sans-serif;border-radius:18px;
+    `;
+    if (host === document.body) { wrap.style.position = 'fixed'; wrap.style.borderRadius = '0'; }
+
+    const yesColor = opts.yesColor || '#166534';
+    wrap.innerHTML = `
+      <div style="width:min(560px,92%);background:#fff;border-radius:16px;padding:20px;box-shadow:0 22px 60px rgba(0,0,0,.35);border-top:5px solid ${yesColor};text-align:right;">
+        <div style="font-size:17px;font-weight:900;color:#0f172a;margin-bottom:10px;">${auditEscapeHtml(opts.title || 'تأكيد')}</div>
+        <div style="font-size:13.5px;color:#334155;line-height:2;max-height:260px;overflow:auto;margin-bottom:14px;">${opts.bodyHtml || ''}</div>
+        <div style="display:flex;gap:10px;justify-content:flex-start;">
+          <button id="njs-audit-confirm-yes" style="background:${yesColor};color:#fff;border:none;border-radius:10px;padding:10px 20px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">${auditEscapeHtml(opts.yesLabel || 'تأكيد')}</button>
+          <button id="njs-audit-confirm-no" style="background:#64748b;color:#fff;border:none;border-radius:10px;padding:10px 20px;font-weight:900;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">إلغاء</button>
+        </div>
+      </div>
+    `;
+    wrap.addEventListener('click', e => e.stopPropagation());
+    host.appendChild(wrap);
+    document.getElementById('njs-audit-confirm-no').onclick = () => wrap.remove();
+    document.getElementById('njs-audit-confirm-yes').onclick = () => { wrap.remove(); try { onYes(); } catch (e) { console.error(e); } };
+  }
+
+  // ================================================================
   // قسم مراجعة غرامات الغياب حسب الجنسية
   // جدول واحد مضغوط: كل موظف عليه "غ" بمعدله المطبق، وزر تبديل فوري
   // للجنسية عند الخطأ — يعيد الحساب والحفظ ويحدّث الفحص تلقائيًا.
@@ -4909,38 +5005,124 @@ result.info.push({ title: 'عدد المسميات غير الموجودة في 
     `;
   }
 
+  // ================================================================
+  // لافتة الحكم الفوري على الغرامات + التحديث الجماعي
+  // ================================================================
+  function renderFineVerdictBanner(audit) {
+    const mismatches = audit.fineMismatches || [];
+
+    if (mismatches.length === 0) {
+      return `
+        <div style="background:#f0fdf4;border:1.5px solid #16a34a;border-radius:14px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:20px;">✓</span>
+          <span style="font-weight:900;color:#166534;font-size:15px;">غرامات الغياب متطابقة مع الجنسيات والفئات — تمام.</span>
+        </div>
+      `;
+    }
+
+    const totalDiff = mismatches.reduce((s, m) => s + (m.correctFine - m.storedFine), 0);
+    return `
+      <div style="background:#fffbeb;border:1.5px solid #d97706;border-radius:14px;padding:14px 16px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;">
+          <div style="font-weight:900;color:#92400e;font-size:15px;">
+            ⚠ عندك ${mismatches.length} موظف غرامة غيابه المسجلة لا تطابق جنسيته وفئته الحالية
+            <span style="font-weight:800;font-size:13px;color:#b45309;">(فرق إجمالي ${totalDiff >= 0 ? '+' : ''}${totalDiff.toFixed(2)} ريال)</span>
+          </div>
+          <button onclick="NJSExtractAudit.applyFineRecalcByNationality()"
+            style="background:#d97706;color:#fff;border:none;border-radius:10px;padding:9px 18px;font-weight:900;cursor:pointer;font-size:14px;font-family:Tajawal,Arial,sans-serif;">
+            تحديث الغرامات في المستخلص
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  function applyFineRecalcByNationality() {
+    const audit = collectExtractAuditResults();
+    const mismatches = audit.fineMismatches || [];
+
+    if (mismatches.length === 0) {
+      auditToast('غرامات الغياب متطابقة بالفعل — لا يوجد ما يُحدَّث.', 'success');
+      return;
+    }
+
+    const preview = mismatches.slice(0, 6).map(m =>
+      `<div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;">
+        <b>${auditEscapeHtml(m.name)}</b> — ${auditEscapeHtml(m.deptName)} — جنسية: ${auditEscapeHtml(m.nationalityRaw)} — فئة ${auditEscapeHtml(m.category)}<br>
+        الغرامة المسجلة: <b style="color:#991b1b;">${m.storedFine.toFixed(2)}</b> ← الصحيحة: <b style="color:#166534;">${m.correctFine.toFixed(2)}</b>
+      </div>`
+    ).join('') + (mismatches.length > 6 ? `<div style="padding-top:6px;color:#64748b;font-weight:800;">و ${mismatches.length - 6} موظف آخر...</div>` : '');
+
+    auditConfirm({
+      title: `تحديث غرامات ${mismatches.length} موظف حسب الجنسية والفئة`,
+      bodyHtml: preview + '<div style="margin-top:10px;color:#334155;font-weight:800;">سيتم إعادة حساب غرامة الغياب وإجمالي الغرامة والصافي لهؤلاء فقط. لا يتغير أي شيء آخر.</div>',
+      yesLabel: 'حدّث الغرامات الآن',
+      yesColor: '#d97706'
+    }, function () {
+      const data = getAuditAttendanceData();
+      const period = getAuditPeriod();
+      let contractType = 'عقد أساسي';
+      let directPurchaseRatio = 0;
+      try {
+        const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
+        contractType = contractData.contractType || localStorage.getItem('contractType') || 'عقد أساسي';
+        directPurchaseRatio = parseFloat(contractData.directPurchaseRatio || localStorage.getItem('directPurchaseRatio') || 0) || 0;
+      } catch (_) {}
+
+      let updated = 0;
+      mismatches.forEach(function (m) {
+        const emp = data?.[m.deptKey]?.[m.index];
+        if (!emp) return;
+        const financial = computeEmployeeFinancialsForAudit(emp, period.daysInMonth, period.totalDaysInMonth, contractType, directPurchaseRatio);
+        emp.absencePenalty = financial.absenceFine;
+        emp.totalFine = financial.totalFine;
+        emp.netSalary = financial.netSalary;
+        updated++;
+      });
+
+      if (!saveAttendanceDataExactForAudit(data)) return;
+
+      try { if (typeof renderTables === 'function') renderTables(); }
+      catch (error) { console.warn('تم تحديث الغرامات لكن فشل تحديث الجداول:', error); }
+
+      openAuditDialog();
+      auditToast(`تم تحديث غرامات ${updated} موظف حسب الجنسية والفئة — الأرقام الآن متطابقة.`, 'success');
+    });
+  }
+
   function setEmployeeNationalityFromAudit(deptKey, index, targetNationality) {
     if (targetNationality !== 'سعودي' && targetNationality !== 'غير سعودي') return;
 
     const data = getAuditAttendanceData();
     const emp = data?.[deptKey]?.[index];
     if (!emp) {
-      alert('تعذر الوصول لبيانات الموظف. أعد الفحص وحاول مجددًا.');
+      auditToast('تعذر الوصول لبيانات الموظف. أعد الفحص وحاول مجددًا.', 'error');
       return;
     }
 
     const currentRaw = String(emp.nationality || '').trim() || 'فارغ';
-    if (!confirm(
-      `تأكيد تغيير الجنسية:\n\n` +
-      `الموظف: ${String(emp.name || 'بدون اسم')}\n` +
-      `من: "${currentRaw}"\n` +
-      `إلى: "${targetNationality}"\n\n` +
-      `سيُعاد حساب غرامة الغياب تلقائيًا حسب المعدل الصحيح. لا يتغير أي شيء آخر.`
-    )) {
-      return;
-    }
+    auditConfirm({
+      title: 'تأكيد تغيير الجنسية',
+      bodyHtml:
+        `<div>الموظف: <b>${auditEscapeHtml(String(emp.name || 'بدون اسم'))}</b></div>` +
+        `<div>من: <b style="color:#991b1b;">"${auditEscapeHtml(currentRaw)}"</b> إلى: <b style="color:#166534;">"${auditEscapeHtml(targetNationality)}"</b></div>` +
+        `<div style="margin-top:8px;color:#334155;">سيُعاد حساب غرامة الغياب تلقائيًا حسب المعدل الصحيح. لا يتغير أي شيء آخر.</div>`,
+      yesLabel: 'غيّر الجنسية',
+      yesColor: '#0e7490'
+    }, function () {
+      emp.nationality = targetNationality;
 
-    emp.nationality = targetNationality;
+      if (!saveAttendanceDataExactForAudit(data)) return;
 
-    if (!saveAttendanceDataExactForAudit(data)) return;
+      try {
+        if (typeof renderTables === 'function') renderTables();
+      } catch (error) {
+        console.warn('تم حفظ الجنسية لكن فشل تحديث الجداول:', error);
+      }
 
-    try {
-      if (typeof renderTables === 'function') renderTables();
-    } catch (error) {
-      console.warn('تم حفظ الجنسية لكن فشل تحديث الجداول:', error);
-    }
-
-    openAuditDialog();
+      openAuditDialog();
+      auditToast(`تم تحويل ${String(emp.name || 'الموظف')} إلى "${targetNationality}" وإعادة حساب الغرامة.`, 'success');
+    });
   }
 
   function closeAuditDialog() {
@@ -5040,6 +5222,7 @@ const contractCategoryFixButton = audit.categoryContractMismatches.length > 0 ? 
           <div style="font-size:16px;font-weight:900;color:${statusColor};">${auditEscapeHtml(statusText)}</div>
           <div style="font-size:12.5px;color:#64748b;font-weight:700;margin-top:6px;">الفحص للقراءة فقط — أي إصلاح يتم بزر مخصص وبعد تأكيدك، ويغيّر الخانة المذكورة فقط دون المساس بالحسابات الأخرى.</div>
         </div>
+        ${renderFineVerdictBanner(audit)}
 
 <div style="
   position:sticky;
@@ -5107,7 +5290,7 @@ ${contractCategoryFixButton}
       return true;
     } catch (error) {
       console.error('فشل الحفظ الدقيق من فحص المستخلص:', error);
-      alert('فشل حفظ الفئات المقترحة. راجع الكونسول.');
+      auditToast('فشل حفظ التعديل — غالبًا مساحة التخزين ممتلئة. لم يتغير أي شيء.', 'error');
       return false;
     }
   }
@@ -5122,36 +5305,77 @@ ${contractCategoryFixButton}
     );
 
     if (safeSuggestions.length === 0) {
-      alert('لا توجد فئات يمكن اقتراحها بأمان من نفس مسمى الوظيفة.');
+      auditToast('لا توجد فئات يمكن اقتراحها بأمان من نفس مسمى الوظيفة.', 'info');
       return;
     }
 
-    const preview = safeSuggestions.slice(0, 20).map(item =>
-      `${item.deptName} — صف ${item.index + 1} — ${item.name} — ${item.jobTitle} — من "${item.rawCategory}" إلى "${item.suggestedCategory}"`
-    ).join('\n');
+    const preview = safeSuggestions.slice(0, 12).map(item =>
+      `<div style="padding:3px 0;border-bottom:1px dashed #e2e8f0;">${auditEscapeHtml(item.deptName)} — ${auditEscapeHtml(item.name)} — ${auditEscapeHtml(item.jobTitle)}: "${auditEscapeHtml(item.rawCategory)}" ← <b style="color:#166534;">"${auditEscapeHtml(item.suggestedCategory)}"</b></div>`
+    ).join('') + (safeSuggestions.length > 12 ? `<div style="padding-top:6px;color:#64748b;font-weight:800;">و ${safeSuggestions.length - 12} آخر...</div>` : '');
 
-    const more = safeSuggestions.length > 20
-      ? `\n\n...وعدد ${safeSuggestions.length - 20} آخر`
-      : '';
+    auditConfirm({
+      title: `إصلاح ${safeSuggestions.length} فئة من نفس مسمى الوظيفة`,
+      bodyHtml: preview + '<div style="margin-top:8px;color:#7c2d12;font-weight:800;">اقتراح آلي — راجع الفئات بعد الإصلاح، فنفس الوظيفة قد تختلف فئتها حسب العقد أو الموقع. لن تُعدَّل أي وظيفة لها أكثر من فئة.</div>',
+      yesLabel: 'أصلح الفئات',
+      yesColor: '#0e7490'
+    }, function () {
+      let updatedCount = 0;
 
-    if (!confirm(
-      `سيتم إصلاح ${safeSuggestions.length} فئة بناءً على نفس مسمى الوظيفة فقط.\n\n` +
-      preview + more +
-      `\n\nتنبيه مهم:\n` +
-      `هذا اقتراح آلي بناءً على تطابق مسمى الوظيفة داخل نفس بيانات الحضور.\n` +
-      `يجب على المستخدم مراجعة الفئات بعد الإصلاح، لأن نفس الوظيفة قد تختلف فئتها حسب العقد أو الموقع أو ملف المناصب.\n\n` +
-      `لن يتم تعديل أي وظيفة لها أكثر من فئة أو ليس لها مرجع.`
-    )) {
-      return;
-    }
+      safeSuggestions.forEach(item => {
+        const emp = data?.[item.deptKey]?.[item.index];
+        if (!emp) return;
 
+        emp.category = item.suggestedCategory;
+        updatedCount++;
+      });
+
+      if (!saveAttendanceDataExactForAudit(data)) {
+        return;
+      }
+
+      try {
+        if (typeof renderTables === 'function') {
+          renderTables();
+        }
+      } catch (error) {
+        console.warn('تم حفظ الفئات لكن فشل تحديث الجداول:', error);
+      }
+
+      openAuditDialog();
+      auditToast(`تم إصلاح ${updatedCount} فئة من نفس مسمى الوظيفة — راجعها قبل الطباعة أو الاعتماد.`, 'success');
+    });
+  }
+function applyContractCategoryFixes() {
+  const data = getAuditAttendanceData();
+  const audit = collectExtractAuditResults();
+
+  const fixes = audit.categoryContractMismatches.filter(item =>
+    /^[1-7]$/.test(String(item.expectedCategory || ''))
+  );
+
+  if (fixes.length === 0) {
+    auditToast('لا توجد فئات مؤكدة يمكن تصحيحها حسب قاعدة العقد.', 'info');
+    return;
+  }
+
+  const preview = fixes.slice(0, 12).map(item =>
+    `<div style="padding:3px 0;border-bottom:1px dashed #e2e8f0;">${auditEscapeHtml(item.deptName)} — ${auditEscapeHtml(item.name)} — ${auditEscapeHtml(item.jobTitle)}: "${auditEscapeHtml(item.currentCategory || item.rawCategory || 'فارغ')}" ← <b style="color:#166534;">"${auditEscapeHtml(item.expectedCategory)}"</b></div>`
+  ).join('') + (fixes.length > 12 ? `<div style="padding-top:6px;color:#64748b;font-weight:800;">و ${fixes.length - 12} تعديل آخر...</div>` : '');
+
+  auditConfirm({
+    title: `تصحيح ${fixes.length} فئة حسب قاعدة كراسة العقد`,
+    bodyHtml: preview + '<div style="margin-top:8px;color:#334155;font-weight:800;">يغيّر خانة الفئة فقط — لا يمس الاسم أو الوظيفة أو الجنسية أو الراتب أو الحضور أو أي معادلة مالية.</div>',
+    yesLabel: 'صحّح الفئات',
+    yesColor: '#0e7490'
+  }, function () {
     let updatedCount = 0;
 
-    safeSuggestions.forEach(item => {
+    fixes.forEach(item => {
       const emp = data?.[item.deptKey]?.[item.index];
       if (!emp) return;
+      if (!/^[1-7]$/.test(String(item.expectedCategory || ''))) return;
 
-      emp.category = item.suggestedCategory;
+      emp.category = String(item.expectedCategory);
       updatedCount++;
     });
 
@@ -5164,76 +5388,82 @@ ${contractCategoryFixButton}
         renderTables();
       }
     } catch (error) {
-      console.warn('تم حفظ الفئات لكن فشل تحديث الجداول:', error);
+      console.warn('تم حفظ تصحيح الفئات حسب العقد لكن فشل تحديث الجداول:', error);
     }
-
-    alert(
-      `تم إصلاح ${updatedCount} فئة بناءً على نفس مسمى الوظيفة.\n\n` +
-      `مطلوب مراجعة الفئات التي تم تعديلها قبل الطباعة أو الاعتماد، لأن الإصلاح اقتراح مساعد وليس اعتمادًا نهائيًا.`
-    );
 
     openAuditDialog();
-  }
-function applyContractCategoryFixes() {
-  const data = getAuditAttendanceData();
-  const audit = collectExtractAuditResults();
-
-  const fixes = audit.categoryContractMismatches.filter(item =>
-    /^[1-7]$/.test(String(item.expectedCategory || ''))
-  );
-
-  if (fixes.length === 0) {
-    alert('لا توجد فئات مؤكدة يمكن تصحيحها حسب قاعدة العقد.');
-    return;
-  }
-
-  const preview = fixes.slice(0, 20).map(item =>
-    `${item.deptName} — صف ${item.index + 1} — ${item.name} — ${item.jobTitle} — من "${item.currentCategory || item.rawCategory || 'فارغ'}" إلى "${item.expectedCategory}"`
-  ).join('\n');
-
-  const more = fixes.length > 20
-    ? `\n\n...وعدد ${fixes.length - 20} تعديل آخر`
-    : '';
-
-  if (!confirm(
-    `سيتم تصحيح ${fixes.length} فئة حسب قاعدة كراسة العقد.\n\n` +
-    preview + more +
-    `\n\nهذا التصحيح يغيّر خانة category فقط.\n` +
-    `لن يتم تعديل الاسم، الوظيفة، الجنسية، رقم الإقامة، الراتب، الحضور، أو أي معادلة مالية.`
-  )) {
-    return;
-  }
-
-  let updatedCount = 0;
-
-  fixes.forEach(item => {
-    const emp = data?.[item.deptKey]?.[item.index];
-    if (!emp) return;
-    if (!/^[1-7]$/.test(String(item.expectedCategory || ''))) return;
-
-    emp.category = String(item.expectedCategory);
-    updatedCount++;
+    auditToast(`تم تصحيح ${updatedCount} فئة حسب قاعدة كراسة العقد — راجع الإجماليات قبل الاعتماد.`, 'success');
   });
-
-  if (!saveAttendanceDataExactForAudit(data)) {
-    return;
-  }
-
-  try {
-    if (typeof renderTables === 'function') {
-      renderTables();
-    }
-  } catch (error) {
-    console.warn('تم حفظ تصحيح الفئات حسب العقد لكن فشل تحديث الجداول:', error);
-  }
-
-  alert(
-    `تم تصحيح ${updatedCount} فئة حسب قاعدة كراسة العقد.\n\n` +
-    `راجع الفئات والإجماليات قبل الطباعة أو الاعتماد.`
-  );
-
-  openAuditDialog();
 }
+  // ================================================================
+  // رسالة الترحيب عند فتح الحضور والانصراف
+  // تظهر مرة واحدة أو دائمًا حسب اختيار المستخدم (خانة "عدم الإظهار")
+  // ================================================================
+  const WELCOME_HIDE_KEY = 'najran_attendance_welcome_hidden_v1';
+
+  function showAttendanceWelcome() {
+    try {
+      if (localStorage.getItem(WELCOME_HIDE_KEY) === '1') return;
+      if (!document.querySelector('.ab-audit')) return; // تظهر فقط في صفحة الحضور الرئيسية
+      if (document.getElementById('njs-attendance-welcome')) return;
+
+      const wrap = document.createElement('div');
+      wrap.id = 'njs-attendance-welcome';
+      wrap.style.cssText = `
+        position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.6);
+        display:flex;align-items:center;justify-content:center;direction:rtl;
+        font-family:Tajawal,Arial,sans-serif;backdrop-filter:blur(2px);
+      `;
+      wrap.innerHTML = `
+        <div style="width:min(520px,92%);background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 25px 70px rgba(0,0,0,.4);animation:njsWelcomeIn .35s ease;">
+          <div style="background:linear-gradient(135deg,#1e3c72 0%,#0e7490 100%);padding:22px 24px;position:relative;">
+            <button id="njs-welcome-x" title="إغلاق" style="position:absolute;top:12px;left:12px;background:rgba(255,255,255,.18);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:16px;font-weight:900;cursor:pointer;line-height:1;">✕</button>
+            <div style="color:#fff;font-size:20px;font-weight:900;">أهلًا بك في الحضور والانصراف</div>
+            <div style="color:#bae6fd;font-size:13px;font-weight:700;margin-top:4px;">نسأل الله لك يومًا مباركًا وعملًا ميسّرًا</div>
+          </div>
+          <div style="padding:20px 24px;">
+            <div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:12px;padding:12px 14px;color:#134e4a;font-weight:800;font-size:14.5px;text-align:center;line-height:2;">
+              لا تنسَ ذكر الله ﴿أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ﴾
+            </div>
+            <div style="margin-top:14px;color:#334155;font-weight:700;font-size:13.5px;line-height:2;">
+              بعد الانتهاء من إدخال الحضور والانصراف، اضغط زر
+              <b style="color:#0e7490;">«فحص المستخلص»</b>
+              لمراجعة أي أخطاء إدخال محتملة — الفئات، الغرامات حسب الجنسية، والتواقيع — قبل الطباعة أو الاعتماد.
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;margin-top:16px;color:#64748b;font-weight:700;font-size:12.5px;cursor:pointer;user-select:none;">
+              <input type="checkbox" id="njs-welcome-dont-show" style="width:16px;height:16px;accent-color:#0e7490;cursor:pointer;">
+              عدم إظهار هذه الرسالة مرة أخرى
+            </label>
+            <button id="njs-welcome-start" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#1e3c72,#0e7490);color:#fff;border:none;border-radius:12px;padding:12px;font-weight:900;font-size:15px;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">
+              ابدأ العمل على بركة الله
+            </button>
+          </div>
+        </div>
+        <style>@keyframes njsWelcomeIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}</style>
+      `;
+      document.body.appendChild(wrap);
+
+      const close = function () {
+        try {
+          if (document.getElementById('njs-welcome-dont-show').checked) {
+            localStorage.setItem(WELCOME_HIDE_KEY, '1');
+          }
+        } catch (_) {}
+        wrap.remove();
+      };
+      document.getElementById('njs-welcome-x').onclick = close;
+      document.getElementById('njs-welcome-start').onclick = close;
+    } catch (e) {
+      console.warn('welcome message error:', e);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { setTimeout(showAttendanceWelcome, 700); });
+  } else {
+    setTimeout(showAttendanceWelcome, 700);
+  }
+
  window.NJSExtractAudit = {
   __version: VERSION,
   open: openAuditDialog,
@@ -5241,7 +5471,8 @@ function applyContractCategoryFixes() {
   collect: collectExtractAuditResults,
   applySuggestedCategories: applySuggestedCategoriesFromSameJob,
   applyContractCategoryFixes: applyContractCategoryFixes,
-  setEmployeeNationality: setEmployeeNationalityFromAudit
+  setEmployeeNationality: setEmployeeNationalityFromAudit,
+  applyFineRecalcByNationality: applyFineRecalcByNationality
 };
 })();
 function openExtractAuditDialog() {
