@@ -263,8 +263,32 @@ function isRevisionMode() {
     try { return new Date(value).toLocaleString('ar-SA', { hour12: true }); } catch (_) { return String(value); }
   }
 
+  function captureAttendancePreWipeSnapshot(reason, activeKeys) {
+    var snapshot = {}, total = 0, maxValueBytes = 300 * 1024;
+    try {
+      var active = activeKeys || getActiveAttendanceKeys();
+      Object.keys(localStorage).forEach(function(k) {
+        var lk = String(k || '').toLowerCase();
+        var relevant = active.indexOf(k) >= 0 || lk.indexOf('attendancedata') >= 0 || lk.indexOf('attendance') >= 0 || lk.indexOf('monthsnapshot') >= 0;
+        if (!relevant) return;
+        var value = localStorage.getItem(k);
+        if (value == null) return;
+        if (value.length > maxValueBytes) throw new Error('attendance snapshot key exceeds 300KB: ' + k);
+        total += value.length;
+        snapshot[k] = value;
+      });
+      localStorage.setItem('najran_att_prewipe_v1', JSON.stringify({ createdAt: new Date().toISOString(), reason: reason || '', data: snapshot }));
+      console.warn('[AttendanceCloudGuard] PRE-WIPE SNAPSHOT captured: ' + Object.keys(snapshot).length + ' keys, ' + Math.round(total / 1024) + 'KB');
+      return true;
+    } catch (err) {
+      console.error('[AttendanceCloudGuard] PRE-WIPE SNAPSHOT failed — clear blocked:', err && err.message);
+      return false;
+    }
+  }
+
   function clearLocalAttendanceState(reason, activeKeys) {
     var removed = [];
+    if (!captureAttendancePreWipeSnapshot(reason, activeKeys)) return false;
     try {
       (activeKeys || getActiveAttendanceKeys()).forEach(function(k) {
         if (localStorage.getItem(k) != null) removed.push(k);
@@ -279,6 +303,7 @@ function isRevisionMode() {
       });
     } catch (_) {}
     console.warn('[AttendanceCloudGuard] تم تفريغ الحضور المحلي: ' + (reason || '') + ' — removed=' + removed.length);
+    return true;
   }
 
  function forceLocalAttendanceDirtyAndSync(activeKeys, reason) {
