@@ -1,6 +1,21 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<!-- njs-preload-v1 -->
+    <!-- حراس يحقنها auth-check.js في كل صفحة — تُنزَّل مبكرًا بالتوازي بدل انتظار تنفيذه -->
+    <link rel="preload" as="script" href="/original/hospital-context-guard.js?v=20260611d">
+    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260709_fresh_token_retry_v2">
+    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260709_monitor_v2_circuit_breaker">
+    <link rel="preload" as="script" href="/original/approve-button-polish.js?v=20260709_auth_fresh_token_v3_archive_filter">
+    <link rel="preload" as="script" href="/original/revision-local-draft-restore.js?v=20260709_auth_fresh_token_v3_archive_filter">
+    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260709_auth_fresh_token_v3_archive_filter">
+    <!-- تنزيل متوازٍ لكل سكريبتات الصفحة من أول لحظة.
+         ترتيب التنفيذ لا يتغير إطلاقًا — هذا تلميح تنزيل فقط. -->
+    <link rel="preload" as="script" href="/original/auth-check.js">
+    <link rel="preload" as="script" href="/original/cloud-sync.js?v=20260711_v6_draft_bundle">
+    <link rel="preload" as="script" href="/original/shared-nav.js?v=20260711_static_v1">
+    <link rel="preload" as="script" href="/original/track.js?v=20260711_static_v1">
+
     <script src="/original/auth-check.js"></script>
     <script src="/original/cloud-sync.js?v=20260711_v6_draft_bundle"></script>
     <meta charset="UTF-8">

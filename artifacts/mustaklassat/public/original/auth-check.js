@@ -10,6 +10,11 @@
 
   var BASE = window.location.origin;
   var BUILD_V = '20260709_auth_fresh_token_v3_archive_filter';
+  // ⚠ تنبيه صيانة: الحراس الستة التي تُحقن بلا شرط أدناه (hospital-context-guard,
+  // hospital-storage-extract-context-guard, production-client-monitor, approve-button-polish,
+  // revision-local-draft-restore, revision-session-guard) لها <link rel="preload"> في كل صفحة HTML.
+  // عند تغيير أي نسخة ?v= هنا يجب تحديث الـpreload المقابل في الـHTML، وإلا نزّل المتصفح الملف مرتين.
+  // للبحث السريع:  grep -rn 'rel="preload"' artifacts/mustaklassat/public/original/*.html
   var HOSPITAL_STORAGE_GUARD_V = '20260709_fresh_token_retry_v2';
   var APPROVAL_REVISION_GUARD_V = '20260711_backup_fail_closed_v1';
   var MONITOR_V = '20260709_monitor_v2_circuit_breaker';
