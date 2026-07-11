@@ -10,15 +10,6 @@
   },
   "headers": [
     {
-      "source": "/original/auth-check.js",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, must-revalidate"
-        }
-      ]
-    },
-    {
       "source": "/api/:path*",
       "headers": [
         {
@@ -41,7 +32,7 @@
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=3600, stale-while-revalidate=86400"
+          "value": "public, max-age=2592000, immutable"
         }
       ]
     },
@@ -50,7 +41,7 @@
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=3600, stale-while-revalidate=86400"
+          "value": "public, max-age=2592000, immutable"
         }
       ]
     },
@@ -69,6 +60,15 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/original/auth-check.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
         }
       ]
     }

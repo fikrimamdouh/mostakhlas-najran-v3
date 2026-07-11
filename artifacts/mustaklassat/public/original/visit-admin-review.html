@@ -43,7 +43,7 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
   </div>
 </div>
 <div class="modal-overlay" id="detail-modal"><div class="modal-box"><div class="modal-header"><h2 id="modal-title"><i class="fas fa-folder-open"></i> تفاصيل طلب الزيارة</h2><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div class="detail-grid" id="modal-details"></div><div id="modal-photo-box"></div><div class="permit-section" id="permit-section" style="display:none"><h3><i class="fas fa-file-contract" style="color:var(--go)"></i> التصريح</h3><div class="permit-tabs"><button class="permit-tab active-tab" onclick="switchPermitTab('electronic',this)"><i class="fas fa-file-pdf"></i> إلكتروني (PDF)</button><button class="permit-tab" onclick="switchPermitTab('manual',this)"><i class="fas fa-signature"></i> نسخة موقعة يدوياً</button></div><div class="permit-panel active" id="panel-electronic"><button class="btn-dl-pdf" id="btn-pdf-modal" onclick="genPDF(currentVisitId)"><i class="fas fa-download"></i> تحميل التصريح الإلكتروني للطباعة والتوقيع</button></div><div class="permit-panel" id="panel-manual"><div id="signed-content"></div></div></div><div class="action-box" id="modal-action-box"></div></div><div class="modal-footer"><span class="modal-msg" id="modal-msg"></span><span style="font-size:12px;color:#94a3b8" id="modal-meta"></span></div></div></div>
-<script src="/original/shared-nav.js"></script>
+<script src="/original/shared-nav.js?v=20260711_static_v1"></script>
 <script>
 (function(){
   var session={};try{session=JSON.parse(localStorage.getItem('najran_session')||'{}')}catch(e){}

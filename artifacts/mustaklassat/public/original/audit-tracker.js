@@ -11,9 +11,9 @@
 (function () {
   'use strict';
 
-  if (!document.querySelector('script[src="/original/audit-diff-enhancer.js"]')) {
+  if (!document.querySelector('script[src^="/original/audit-diff-enhancer.js"]')) {
     const diffScript = document.createElement('script');
-    diffScript.src = '/original/audit-diff-enhancer.js';
+    diffScript.src = '/original/audit-diff-enhancer.js?v=20260711_static_v1';
     diffScript.defer = true;
     document.head.appendChild(diffScript);
   }

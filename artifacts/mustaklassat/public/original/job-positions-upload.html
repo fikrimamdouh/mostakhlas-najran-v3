@@ -22,7 +22,7 @@
   <div class="card"><div class="card-head"><i class="fas fa-hospital"></i> المستشفيات المحفوظة</div><div class="card-body" style="padding:0" id="savedListBody"><div class="empty-state"><i class="fas fa-folder-open"></i> جاري التحميل...</div></div></div>
 </div>
 <footer>© 2025 تجمع نجران الصحي — وحدة الصيانة العامة</footer>
-<script src="/original/job-positions-helper.js"></script>
+<script src="/original/job-positions-helper.js?v=20260711_static_v1"></script>
 <script>
 let parsedRows=[];
 const WORKSHOP_NAME='الورش (صيانة وإصلاح السيارات)';
@@ -78,6 +78,6 @@ async function downloadHospitalTemplate(hospitalName){if(typeof XLSX==='undefine
 function showAlert(msg,type){const el=document.getElementById('uploadAlert');el.textContent=msg;el.className=`alert alert-${type}`;el.style.display='block';if(type==='success')setTimeout(()=>{el.style.display='none';},5000);}
 patchWorkshopsDept();renderSavedList();
 </script>
-<script src="/original/shared-nav.js"></script>
+<script src="/original/shared-nav.js?v=20260711_static_v1"></script>
 </body>
 </html>
