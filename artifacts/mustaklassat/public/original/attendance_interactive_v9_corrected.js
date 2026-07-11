@@ -2766,6 +2766,12 @@ if (grandTotalSection) {
     // إظهار تواقيع الطباعة وتحديثها
     const printSignatures = document.querySelectorAll('.print-signatures');
     printSignatures.forEach(sig => sig.style.display = 'block');
+    // SignatureBlock هو مصدر التواقيع — يُعاد رسم شبكات الطباعة منه مباشرة قبل الطباعة
+    try {
+        if (typeof SignatureBlock !== 'undefined' && typeof SignatureBlock.rerender === 'function') {
+            SignatureBlock.rerender('attendance');
+        }
+    } catch (_) {}
     if (typeof updatePrintSignatures === 'function') {
         updatePrintSignatures();
     }
@@ -3761,6 +3767,15 @@ function deleteSignatureField(deleteButton) {
 
 function updatePrintSignatures() {
     try {
+        // ⚠ التواقيع يديرها SignatureBlock (يحفظ في sb_sigs_attendance ويملأ
+        // شبكات الطباعة بنفسه). هذه الدالة من النظام القديم وتقرأ من
+        // dynamicSignatures ثم تكتب فوق تلك الشبكات — فكانت تمسح التواقيع
+        // الصحيحة لحظة الطباعة: تظهر على الشاشة ولا تُطبع.
+        // عند وجود SignatureBlock نتركه هو المرجع ولا نلمس شيئًا.
+        if (typeof SignatureBlock !== 'undefined' && SignatureBlock) {
+            return;
+        }
+
         // 1. جلب مصفوفة التواقيع من المصدر الصحيح (النظام الديناميكي)
         const signatures = getSignatures(); 
 
@@ -5441,7 +5456,7 @@ function applyContractCategoryFixes() {
               <input type="checkbox" id="njs-welcome-dont-show" style="width:16px;height:16px;accent-color:#0e7490;cursor:pointer;">
               عدم إظهار هذه الرسالة مرة أخرى
             </label>
-            <button id="njs-welcome-start" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#1e3c72,#0e7490);color:#fff;border:none;border-radius:12px;padding:12px;font-weight:900;font-size:15px;cursor:pointer;font-family:Tajawal,Arial,sans-serif;">
+            <button id="njs-welcome-start" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#d4af37,#b8912c);color:#1a1a1a;border:none;border-radius:12px;padding:13px;font-weight:900;font-size:15px;cursor:pointer;font-family:Tajawal,Arial,sans-serif;box-shadow:0 4px 14px rgba(212,175,55,.35);letter-spacing:.3px;">
               ابدأ العمل على بركة الله
             </button>
           </div>
