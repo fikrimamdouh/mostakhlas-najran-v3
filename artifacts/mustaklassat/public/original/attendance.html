@@ -20,7 +20,7 @@
     <link rel="preload" as="script" href="/original/audit-tracker.js?v=20260711_static_v1">
     <link rel="preload" as="script" href="/original/backup.js?v=20260705_v1_unified_full_backup">
     <link rel="preload" as="script" href="/original/extract-snapshot.js?v=20260711_static_v1">
-    <link rel="preload" as="script" href="/original/signature-block.js?v=20260707_v1_consumables_style_cloud_sync">
+    <link rel="preload" as="script" href="/original/signature-block.js?v=20260711_observer_scoped_v1">
     <link rel="preload" as="script" href="/original/extract_pages_signature_fine_control_v1.js?v=20260707_v1_universal_signature_fine_control">
     <link rel="preload" as="script" href="attendance_interactive_v9_corrected.js?v=20260711_interaction_perf_v3">
     <link rel="preload" as="script" href="/original/job-positions-helper.js?v=20260711_static_v1">
@@ -28,41 +28,12 @@
     <link rel="preload" as="script" href="/original/track.js?v=20260711_static_v1">
     <link rel="preload" as="script" href="/original/shared-nav.js?v=20260711_static_v1">
 
-    <script>
-(function () {
-  var SAFE_ATTENDANCE_GUARD_SRC = '/original/attendance-cloud-refresh-guard.js?v=20260618safe4';
-
-  function shouldRewriteAttendanceGuard(node) {
-    try {
-      if (!node || String(node.tagName || '').toLowerCase() !== 'script') return false;
-      var src = node.getAttribute('src') || node.src || '';
-      return src.indexOf('attendance-cloud-refresh-guard.js') !== -1;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  function rewriteAttendanceGuard(node) {
-    try {
-      if (shouldRewriteAttendanceGuard(node)) {
-        node.setAttribute('src', SAFE_ATTENDANCE_GUARD_SRC);
-        console.warn('[AttendanceHotfix] تم تحويل تحميل attendance-cloud-refresh-guard إلى النسخة الآمنة');
-      }
-    } catch (_) {}
-    return node;
-  }
-
-  var originalAppendChild = Node.prototype.appendChild;
-  Node.prototype.appendChild = function (node) {
-    return originalAppendChild.call(this, rewriteAttendanceGuard(node));
-  };
-
-  var originalInsertBefore = Node.prototype.insertBefore;
-  Node.prototype.insertBefore = function (node, ref) {
-    return originalInsertBefore.call(this, rewriteAttendanceGuard(node), ref);
-  };
-})();
-</script>
+    <!-- أُزيل [AttendanceHotfix]: كان يستبدل Node.prototype.appendChild/insertBefore
+         ليعترض تحميل attendance-cloud-refresh-guard.js ويعيد توجيهه لنسخة قديمة.
+         الحارس الآن يُحمَّل حصريًا عبر attendance-cloud-refresh-guard-loader.js بـ import()،
+         فلا يمر بـ appendChild أصلًا — والاعتراض لم يكن يُفعَّل أبدًا (اسم الـloader لا يطابق نمطه)،
+         بينما كان كل عنصر يُدرج في الصفحة (آلاف عند رسم الجداول) يدفع تكلفته.
+         وكان خطرًا كامنًا: لو فُعِّل لثبّت نسخة حارس قديمة تحت كاش الـ30 يومًا. -->
 <script src="/original/user-storage-proxy.js?v=20260705_cache_bust_v1"></script>
     <script src="/original/auth-check.js"></script>
     <script src="/original/cloud-sync.js?v=20260711_v6_draft_bundle"></script>
@@ -1922,7 +1893,7 @@ window.navigateTo = function (url) {
     </footer>
 
     <script src="/original/extract-snapshot.js?v=20260711_static_v1"></script>
-    <script src="/original/signature-block.js?v=20260707_v1_consumables_style_cloud_sync"></script>
+    <script src="/original/signature-block.js?v=20260711_observer_scoped_v1"></script>
     <script src="/original/extract_pages_signature_fine_control_v1.js?v=20260707_v1_universal_signature_fine_control"></script>
     <script src="attendance_interactive_v9_corrected.js?v=20260711_interaction_perf_v3"></script>
     <script>
