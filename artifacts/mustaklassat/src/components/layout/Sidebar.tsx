@@ -540,7 +540,7 @@ const handleSwitchReviewHospital = (h: string) => {
         "performanceSignatures", "performanceSignatures_v2",
         "signatures_data_consumables_v27", "hospitalConsumablesRaiseLettersSettings_v1",
         "projectManagerSignature", "operationsAssistantSignature", "maintenanceHeadSignature",
-        "finalLetterSignatureName", "finalLetterSignatureTitle", "sb_style_prefs_consumables_v1",
+        "finalLetterSignatureName", "finalLetterSignatureTitle", "sb_style_prefs_consumables_v1", "achievementSignatures_v3",
       ].includes(nk);
     };
     for (let i = localStorage.length - 1; i >= 0; i--) {
