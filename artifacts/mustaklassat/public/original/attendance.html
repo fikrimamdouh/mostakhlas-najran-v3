@@ -22,7 +22,7 @@
     <link rel="preload" as="script" href="/original/extract-snapshot.js?v=20260711_static_v1">
     <link rel="preload" as="script" href="/original/signature-block.js?v=20260707_v1_consumables_style_cloud_sync">
     <link rel="preload" as="script" href="/original/extract_pages_signature_fine_control_v1.js?v=20260707_v1_universal_signature_fine_control">
-    <link rel="preload" as="script" href="attendance_interactive_v9_corrected.js?v=20260711_fine_verdict_welcome_v2">
+    <link rel="preload" as="script" href="attendance_interactive_v9_corrected.js?v=20260711_interaction_perf_v3">
     <link rel="preload" as="script" href="/original/job-positions-helper.js?v=20260711_static_v1">
     <link rel="preload" as="script" href="/original/extract-submit.js?v=20260705_v5_local_24h_guard_fix">
     <link rel="preload" as="script" href="/original/track.js?v=20260711_static_v1">
@@ -1924,7 +1924,7 @@ window.navigateTo = function (url) {
     <script src="/original/extract-snapshot.js?v=20260711_static_v1"></script>
     <script src="/original/signature-block.js?v=20260707_v1_consumables_style_cloud_sync"></script>
     <script src="/original/extract_pages_signature_fine_control_v1.js?v=20260707_v1_universal_signature_fine_control"></script>
-    <script src="attendance_interactive_v9_corrected.js?v=20260711_fine_verdict_welcome_v2"></script>
+    <script src="attendance_interactive_v9_corrected.js?v=20260711_interaction_perf_v3"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             updateContractDisplayData();
@@ -2609,9 +2609,18 @@ function _confirmTemplateUpdate() {
     return '';
   }
 
+  var _lastHospital = null;
+  var _lastApplied  = null;
+
   function applyRename() {
     var hospital  = getHospital();
     var targetName = (hospital === EXCLUDED) ? OLD_NAME : NEW_NAME;
+
+    // لا شيء تغيّر منذ آخر مرة → لا مسح ولا كتابة تخزين.
+    // قبل هذا كان كل تعديل في الصفحة (كل حرف، كل خانة حضور) يُعيد
+    // مسح كل h3 وoption ويكتب في localStorage عبر MutationObserver.
+    if (hospital === _lastHospital && targetName === _lastApplied) return;
+
     var replaceFrom = (hospital === EXCLUDED) ? NEW_NAME : OLD_NAME;
 
     /* 1. عناوين H3 */
@@ -2643,6 +2652,9 @@ function _confirmTemplateUpdate() {
         localStorage.setItem('departmentNames', JSON.stringify(dn));
       }
     } catch (e) {}
+
+    _lastHospital = hospital;
+    _lastApplied  = targetName;
   }
 
   /* تطبيق فور اكتمال DOM */
@@ -2652,7 +2664,10 @@ function _confirmTemplateUpdate() {
     applyRename();
   }
 
-  /* مراقبة أي محتوى ديناميكي (نوافذ، فلاتر، PDF…) */
+  /* مراقبة المحتوى الديناميكي (نوافذ، فلاتر…) — لكن لفترة الاستقرار فقط.
+     اسم المستشفى لا يتغيّر أثناء الجلسة، فلا معنى لمراقبة كل تعديل في الصفحة
+     إلى الأبد: كان كل حرف يُكتب وكل خانة حضور تُغيَّر تُشغّل مسحًا كاملًا
+     لكل h3 وoption + قراءة/كتابة localStorage. */
   document.addEventListener('DOMContentLoaded', function () {
     var busy = false;
     var observer = new MutationObserver(function () {
@@ -2661,6 +2676,12 @@ function _confirmTemplateUpdate() {
       requestAnimationFrame(function () { applyRename(); busy = false; });
     });
     observer.observe(document.body, { childList: true, subtree: true });
+
+    // بعد استقرار الرسم: تطبيق أخير ثم فصل المراقب نهائيًا
+    setTimeout(function () {
+      try { observer.disconnect(); } catch (_) {}
+      applyRename();
+    }, 4000);
   });
 })();
 </script>

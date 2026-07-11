@@ -1381,15 +1381,22 @@ function saveAttendanceData(data) {
     localStorage.setItem('attendanceData', JSON.stringify(data));
 
     try {
-      var totalRows = 0;
-      Object.keys(data || {}).forEach(function (k) {
-        if (Array.isArray(data[k])) totalRows += data[k].length;
-      });
+      // العلم نادرًا ما يكون مضبوطًا. الفحص الرخيص أولًا يوفّر — في كل ضغطة خانة —
+      // دورة كاملة على كل الأقسام + عمليتَي مسح تخزين + طباعة كونسول.
+      var clearFlag = sessionStorage.getItem('najran_new_extract_clear_attendance_once')
+                   || localStorage.getItem('najran_new_extract_clear_attendance_once');
 
-      if (totalRows > 0) {
-        sessionStorage.removeItem('najran_new_extract_clear_attendance_once');
-        localStorage.removeItem('najran_new_extract_clear_attendance_once');
-        console.warn('[AttendanceSave] تم إنهاء وضع مسح المستخلص الجديد بعد حفظ عمالة جديدة');
+      if (clearFlag) {
+        var totalRows = 0;
+        Object.keys(data || {}).forEach(function (k) {
+          if (Array.isArray(data[k])) totalRows += data[k].length;
+        });
+
+        if (totalRows > 0) {
+          sessionStorage.removeItem('najran_new_extract_clear_attendance_once');
+          localStorage.removeItem('najran_new_extract_clear_attendance_once');
+          console.warn('[AttendanceSave] تم إنهاء وضع مسح المستخلص الجديد بعد حفظ عمالة جديدة');
+        }
       }
     } catch (_) {}
 
