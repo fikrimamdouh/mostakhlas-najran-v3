@@ -348,9 +348,9 @@ function shouldBlockLightAutoPush(options) {
       'adminOfficesLaborDataSafe_v2', 'adminOfficesLaborDataSafe_v2_ts', 'adminOfficesLaborNamesSafe_v2', 'adminOfficesLaborAffiliationsSafe_v2',
       'najranExtractDataSafe_v1', 'najranExtractDataSafe_v1_ts', 'adminOfficesFullAttendanceBundle_v1', 'adminOfficesFullAttendanceBundle_v1_ts'
     ]);
-    const clearPrefixes = ['deptCalculatedCost_', 'dept_', 'sb_sigs_', 'sb_prefs_', 'tableData_', 'achievement_', 'consumables_', 'spare_', 'water_', 'sewage_', 'subcontractors_', 'najran_labor_', 'najran_health_', 'najran_admin_', 'monthSnapshot_', '_u'];
+    const clearPrefixes = ['deptCalculatedCost_', 'dept_', 'tableData_', 'achievement_', 'consumables_', 'spare_', 'water_', 'sewage_', 'subcontractors_', 'najran_labor_', 'najran_health_', 'najran_admin_', 'monthSnapshot_', '_u'];
     const clearKeys = [
-      'persistentContractData','persistentExtractData','contractData','contractDetails','contractType','contractStartDate','contractEndDate','contractSignatureData',
+      'persistentContractData','persistentExtractData','contractData','contractDetails','contractType','contractStartDate','contractEndDate',
       'extractMonth','extractYear','extractNumber','extractStart','extractEnd','extractFromDate','extractToDate','paymentNumber',
       'attendanceData','centersAttendanceData_v2','healthCentersAttendanceData','adminOfficesAttendanceData_v1',
       'ng_attendanceData','ng_departmentNames','ng_distributionSettings','ng_finalLaborCost','ng_performanceTotalDeduction',
@@ -360,14 +360,19 @@ function shouldBlockLightAutoPush(options) {
       'spare_partsData','sparePartsTotalAmount','approvalData','displayApprovalData',
       'performanceData','performanceData_v4','performanceDeductions','achievementData','achievementTitles_v1','achievementItemNames',
       'centerNames_v3','departmentNames','distributionSettings','hospitalActivityStatus','hospitalActivityStatus_v2',
-      'admin_staff','dynamicSignatures','contractorSignature','appTitles_v1','healthCentersData','reviewExtractData','requestVisitData',
+      'admin_staff','appTitles_v1','healthCentersData','reviewExtractData','requestVisitData',
       'settings_main','settings_advanced','finalLaborCost','performanceTotalDeduction','grand-net-total','grand-net-total-centers','grand-net-total-admin',
-      'performanceSignatures','performanceSignatures_v2','performanceTableNames','adminOfficeNames_v1','adminOfficeAffiliations_v1','contract_foundation_data'
+      'performanceTableNames','adminOfficeNames_v1','adminOfficeAffiliations_v1','contract_foundation_data'
     ];
-    clearKeys.forEach(key => { if (!keepKeys.has(key)) localStorage.removeItem(key); });
+    const isSignatureKey = raw => {
+      const nk = String(raw).replace(/^(?:_u\d+_)+/, '');
+      if (nk.startsWith('sb_sigs_') || nk.startsWith('sb_prefs_') || nk.startsWith('healthCenters_Signatures_')) return true;
+      return ['dynamicSignatures', 'contractorSignature', 'contractSignatureData', 'performanceSignatures', 'performanceSignatures_v2', 'signatures_data_consumables_v27', 'hospitalConsumablesRaiseLettersSettings_v1', 'projectManagerSignature', 'operationsAssistantSignature', 'maintenanceHeadSignature', 'finalLetterSignatureName', 'finalLetterSignatureTitle', 'sb_style_prefs_consumables_v1', 'achievementSignatures_v3'].includes(nk);
+    };
+    clearKeys.forEach(key => { if (!keepKeys.has(key) && !isSignatureKey(key)) localStorage.removeItem(key); });
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
-      if (!key || keepKeys.has(key)) continue;
+      if (!key || keepKeys.has(key) || isSignatureKey(key)) continue;
       if (clearPrefixes.some(p => key.indexOf(p) === 0)) localStorage.removeItem(key);
     }
     DIRTY_KEYS.clear();
