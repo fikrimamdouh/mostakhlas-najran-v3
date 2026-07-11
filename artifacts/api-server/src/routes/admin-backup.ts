@@ -1,9 +1,9 @@
 import { Router } from "express";
 import {
-  db, usersTable, submittedExtractsTable, userStorageTable,
+  db, usersTable, submittedExtractsTable, userStorageTable, hospitalStorageTable,
   auditLogTable, extractRevisionsTable, scheduledBackupsTable,
 } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
 import { runScheduledBackup } from "../lib/backup-scheduler";
 
@@ -23,10 +23,11 @@ const requireAdmin = async (req: any, res: any, next: any) => {
  */
 router.get("/full", requireAuth, requireAdmin, async (req: any, res: any) => {
   try {
-    const [users, extracts, storage, auditLogs, revisions] = await Promise.all([
+    const [users, extracts, storage, hospitalStorage, auditLogs, revisions] = await Promise.all([
       db.select().from(usersTable),
       db.select().from(submittedExtractsTable),
       db.select().from(userStorageTable),
+      db.select().from(hospitalStorageTable),
       db.select().from(auditLogTable),
       db.select().from(extractRevisionsTable),
     ]);
@@ -34,18 +35,19 @@ router.get("/full", requireAuth, requireAdmin, async (req: any, res: any) => {
     const now = new Date();
     const backup = {
       meta: {
-        version: "2.0",
+        version: "2.1",
         exportedAt: now.toISOString(),
         exportedBy: req.currentUser.email,
         counts: {
           users: users.length,
           extracts: extracts.length,
           storageKeys: storage.length,
+          hospitalStorageKeys: hospitalStorage.length,
           auditLogs: auditLogs.length,
           revisions: revisions.length,
         },
       },
-      tables: { users, extracts, storage, auditLogs, revisions },
+      tables: { users, extracts, storage, hospitalStorage, auditLogs, revisions },
     };
 
     req.log.info({ adminId: req.currentUser.id, counts: backup.meta.counts }, "Full system backup exported");
@@ -140,8 +142,8 @@ router.post("/restore", requireAuth, requireAdmin, async (req: any, res: any) =>
       return res.status(400).json({ error: "هيكل النسخة الاحتياطية غير مكتمل — يجب أن يحتوي على meta وtables" });
     }
 
-    if (!meta.version || !["1.0", "2.0"].includes(meta.version)) {
-      return res.status(400).json({ error: `إصدار النسخة غير متوافق: ${meta.version}. الإصدارات المدعومة: 1.0, 2.0` });
+    if (!meta.version || !["1.0", "2.0", "2.1"].includes(meta.version)) {
+      return res.status(400).json({ error: `إصدار النسخة غير متوافق: ${meta.version}. الإصدارات المدعومة: 1.0, 2.0, 2.1` });
     }
 
     const requiredTables = ["users", "extracts", "storage"];
@@ -154,6 +156,7 @@ router.post("/restore", requireAuth, requireAdmin, async (req: any, res: any) =>
       users: { restored: 0, skipped: 0, errors: [] },
       extracts: { restored: 0, skipped: 0, errors: [] },
       storage: { restored: 0, skipped: 0, errors: [] },
+      hospitalStorage: { restored: 0, skipped: 0, errors: [] },
     };
 
     const adminClerkId = req.clerkUserId;
@@ -247,6 +250,43 @@ router.post("/restore", requireAuth, requireAdmin, async (req: any, res: any) =>
         }
       } catch (e: any) {
         report.storage.errors.push(`storage#${storageData.userId}/${storageData.storageKey}: ${e.message}`);
+      }
+    }
+
+    // استعادة بيانات المستشفيات المشتركة (hospital_storage) — نسخ 2.1 فقط.
+    // upsert بنفس مفتاح (hospitalName, storageKey) المستخدم في hospital-storage.ts:
+    // الموجود يُحدَّث فقط إذا كانت النسخة المستعادة أحدث؛ لا حذف لأي صف.
+    for (const hs of (tables.hospitalStorage || [])) {
+      try {
+        if (!hs.hospitalName || !hs.storageKey) { report.hospitalStorage.skipped++; continue; }
+        const restoredUpdatedAt = hs.updatedAt ? new Date(hs.updatedAt) : new Date(0);
+        const existing = await db.select({ id: hospitalStorageTable.id, updatedAt: hospitalStorageTable.updatedAt })
+          .from(hospitalStorageTable)
+          .where(and(eq(hospitalStorageTable.hospitalName, hs.hospitalName), eq(hospitalStorageTable.storageKey, hs.storageKey)))
+          .limit(1);
+        if (existing.length > 0) {
+          const currentUpdatedAt = existing[0].updatedAt ? new Date(existing[0].updatedAt as any) : new Date(0);
+          if (currentUpdatedAt >= restoredUpdatedAt) { report.hospitalStorage.skipped++; continue; }
+        }
+        await db.insert(hospitalStorageTable)
+          .values({
+            hospitalName: hs.hospitalName,
+            storageKey: hs.storageKey,
+            storageValue: hs.storageValue ?? "",
+            updatedAt: restoredUpdatedAt,
+            updatedByUserId: hs.updatedByUserId ?? null,
+          })
+          .onConflictDoUpdate({
+            target: [hospitalStorageTable.hospitalName, hospitalStorageTable.storageKey],
+            set: {
+              storageValue: hs.storageValue ?? "",
+              updatedAt: restoredUpdatedAt,
+              updatedByUserId: hs.updatedByUserId ?? null,
+            },
+          });
+        report.hospitalStorage.restored++;
+      } catch (e: any) {
+        report.hospitalStorage.errors.push(`hospital#${hs.hospitalName}/${hs.storageKey}: ${e.message}`);
       }
     }
 

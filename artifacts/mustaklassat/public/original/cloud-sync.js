@@ -287,8 +287,8 @@ function shouldBlockLightAutoPush(options) {
       s.reviewOnly = true;
       s.timestamp = Date.now();
       localStorage.setItem(SESSION_KEY, JSON.stringify(s));
-      localStorage.removeItem('najran_active_hospital_context');
       clearOperationalKeysForHospitalSwitch('review-force');
+      localStorage.removeItem('najran_active_hospital_context');
       sessionStorage.clear();
       console.warn('[MzamanaCloud] REVIEW ONLY: تم فرض وضع المراجعة قبل التهيئة للمستشفى «' + hospital + '»');
       return true;
@@ -335,6 +335,65 @@ function shouldBlockLightAutoPush(options) {
     } catch (_) {}
   }
 
+  // ===== حِزم مسودات التشغيل (منع ضياع الشغل عند التبديل/المراجعة) =====
+  // قبل أي مسح تبديل: تُلتقط نسخة من كل مفتاح سيُمسح، مربوطة بـ(المستشفى المُغادَر + المستخدم).
+  // عند عودة نفس المستخدم لنفس المستشفى في جلسة تحرير: تُستعاد مرة واحدة ثم تُستهلك.
+  const DRAFT_BUNDLE_PREFIX = 'najran_hosp_bundle::';
+  const DRAFT_BUNDLE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+  const DRAFT_BUNDLE_MAX_VALUE = 300 * 1024;
+  const DRAFT_BUNDLE_MAX_TOTAL = 2.5 * 1024 * 1024;
+
+  function isDraftBundleKey(key) {
+    return String(key || '').indexOf(DRAFT_BUNDLE_PREFIX) === 0 || normalizeKey(key).indexOf(DRAFT_BUNDLE_PREFIX) === 0;
+  }
+
+  function saveDraftBundle(fromHospital, data, skippedLarge, reason) {
+    if (!fromHospital || !Object.keys(data).length) return;
+    try {
+      const s = getSession();
+      const safeWrite = _origSetItem || localStorage.setItem.bind(localStorage);
+      safeWrite(DRAFT_BUNDLE_PREFIX + fromHospital, JSON.stringify({
+        userId: (s && s.userId) || '',
+        fromHospital: fromHospital,
+        savedAt: Date.now(),
+        reason: reason || '',
+        skippedLarge: skippedLarge || [],
+        data: data
+      }));
+      console.warn('[MzamanaCloud] DRAFT BUNDLE saved for «' + fromHospital + '»: ' + Object.keys(data).length + ' keys' + (skippedLarge && skippedLarge.length ? ' — skipped large: ' + skippedLarge.join(', ') : ''));
+    } catch (e) {
+      console.error('[MzamanaCloud] DRAFT BUNDLE save FAILED for «' + fromHospital + '» — الشغل المحلي المفقود بهذا التبديل غير قابل للاسترجاع تلقائيًا:', e && e.message);
+    }
+  }
+
+  function restoreDraftBundleIfMatching(toHospital) {
+    try {
+      if (!toHospital || isReviewOnlySession() || isRevisionMode()) return;
+      const bundleKey = DRAFT_BUNDLE_PREFIX + toHospital;
+      const raw = localStorage.getItem(bundleKey);
+      if (!raw) return;
+      const bundle = JSON.parse(raw);
+      const s = getSession();
+      const sameUser = String((s && s.userId) || '') === String((bundle && bundle.userId) || '');
+      const fresh = bundle && bundle.savedAt && (Date.now() - bundle.savedAt) < DRAFT_BUNDLE_TTL_MS;
+      if (!sameUser || !fresh || !bundle.data) {
+        localStorage.removeItem(bundleKey);
+        if (!fresh) console.warn('[MzamanaCloud] DRAFT BUNDLE expired for «' + toHospital + '» — discarded');
+        return;
+      }
+      const safeWrite = _origSetItem || localStorage.setItem.bind(localStorage);
+      let restored = 0;
+      Object.keys(bundle.data).forEach(function (k) {
+        try { safeWrite(k, bundle.data[k]); restored++; } catch (_) {}
+      });
+      localStorage.removeItem(bundleKey); // استهلاك لمرة واحدة
+      console.warn('[MzamanaCloud] DRAFT BUNDLE restored for «' + toHospital + '»: ' + restored + ' keys (one-shot)');
+      try { window.dispatchEvent(new CustomEvent('najranDraftBundleRestored', { detail: { hospital: toHospital, keys: restored } })); } catch (_) {}
+    } catch (e) {
+      console.error('[MzamanaCloud] DRAFT BUNDLE restore failed:', e && e.message);
+    }
+  }
+
   function clearOperationalKeysForHospitalSwitch(reason) {
     if (isRevisionMode()) {
       console.warn('[MzamanaCloud] REVISION MODE: تم منع تنظيف السياق أثناء تعديل مستخلص محفوظ');
@@ -369,12 +428,28 @@ function shouldBlockLightAutoPush(options) {
       if (nk.startsWith('sb_sigs_') || nk.startsWith('sb_prefs_') || nk.startsWith('healthCenters_Signatures_')) return true;
       return ['dynamicSignatures', 'contractorSignature', 'contractSignatureData', 'performanceSignatures', 'performanceSignatures_v2', 'signatures_data_consumables_v27', 'hospitalConsumablesRaiseLettersSettings_v1', 'projectManagerSignature', 'operationsAssistantSignature', 'maintenanceHeadSignature', 'finalLetterSignatureName', 'finalLetterSignatureTitle', 'sb_style_prefs_consumables_v1', 'achievementSignatures_v3'].includes(nk);
     };
-    clearKeys.forEach(key => { if (!keepKeys.has(key) && !isSignatureKey(key)) localStorage.removeItem(key); });
+    const departedHospital = (function () {
+      try { return String(localStorage.getItem('najran_active_hospital_context') || '').trim(); } catch (_) { return ''; }
+    })();
+    const bundleData = {}; const bundleSkipped = []; let bundleTotal = 0;
+    function recordForBundle(key) {
+      try {
+        const v = localStorage.getItem(key);
+        if (v == null) return;
+        if (v.length > DRAFT_BUNDLE_MAX_VALUE || bundleTotal + v.length > DRAFT_BUNDLE_MAX_TOTAL) {
+          bundleSkipped.push(key + ' (' + Math.round(v.length / 1024) + 'KB)');
+          return;
+        }
+        bundleData[key] = v; bundleTotal += v.length;
+      } catch (_) {}
+    }
+    clearKeys.forEach(key => { if (!keepKeys.has(key) && !isSignatureKey(key)) { recordForBundle(key); localStorage.removeItem(key); } });
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
-      if (!key || keepKeys.has(key) || isSignatureKey(key)) continue;
-      if (clearPrefixes.some(p => key.indexOf(p) === 0)) localStorage.removeItem(key);
+      if (!key || keepKeys.has(key) || isSignatureKey(key) || isDraftBundleKey(key)) continue;
+      if (clearPrefixes.some(p => key.indexOf(p) === 0)) { recordForBundle(key); localStorage.removeItem(key); }
     }
+    saveDraftBundle(departedHospital, bundleData, bundleSkipped, reason);
     DIRTY_KEYS.clear();
   }
 
@@ -396,7 +471,10 @@ function shouldBlockLightAutoPush(options) {
       console.warn('[MzamanaCloud] تنظيف السياق: «' + hospitalName + '»' + (reviewOnly ? ' [مراجعة — يتنظف دايماً]' : ' [تبديل مستشفى]'));
       clearOperationalKeysForHospitalSwitch(reviewOnly ? 'review-force' : 'hospital-switch');
     }
-    if (!reviewOnly) localStorage.setItem(ctxKey, hospitalName);
+    if (!reviewOnly) {
+      restoreDraftBundleIfMatching(hospitalName);
+      localStorage.setItem(ctxKey, hospitalName);
+    }
   }
 
   async function getFreshToken() {
@@ -572,7 +650,8 @@ function shouldBlockLightAutoPush(options) {
       if (fromHospital && PERSONAL_KEYS.has(nk)) return;
       if (!fromHospital && hospitalName && !PERSONAL_KEYS.has(nk)) { skippedUserOperational++; return; }
       if (!shouldMergePulledKeyForCurrentPage(nk)) { skippedByPage++; return; }
-      try { safeWrite(nk, value); fromHospital ? mergedHospital++ : mergedUser++; mergedKeys.push(nk); } catch (_) {}
+      try { safeWrite(nk, value); fromHospital ? mergedHospital++ : mergedUser++; mergedKeys.push(nk); }
+      catch (e) { console.error('[MzamanaCloud] PULL WRITE FAILED — لم يُحفظ المفتاح محليًا (غالبًا مساحة التخزين ممتلئة): ' + nk, e && e.message); }
     }
 
     Object.entries(userData).forEach(([k, v]) => mergeOne(k, v, false));

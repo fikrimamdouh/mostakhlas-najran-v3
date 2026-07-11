@@ -1,5 +1,5 @@
 import {
-  db, usersTable, submittedExtractsTable, userStorageTable,
+  db, usersTable, submittedExtractsTable, userStorageTable, hospitalStorageTable,
   auditLogTable, extractRevisionsTable, scheduledBackupsTable, systemSettingsTable,
 } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
@@ -21,10 +21,11 @@ export async function runScheduledBackup(triggeredBy: "scheduler" | "manual" = "
   try {
     logger.info("Auto-backup: starting...");
 
-    const [users, extracts, storage, auditLogs, revisions] = await Promise.all([
+    const [users, extracts, storage, hospitalStorage, auditLogs, revisions] = await Promise.all([
       db.select().from(usersTable),
       db.select().from(submittedExtractsTable),
       db.select().from(userStorageTable),
+      db.select().from(hospitalStorageTable),
       db.select().from(auditLogTable),
       db.select().from(extractRevisionsTable),
     ]);
@@ -33,18 +34,19 @@ export async function runScheduledBackup(triggeredBy: "scheduler" | "manual" = "
       users: users.length,
       extracts: extracts.length,
       storageKeys: storage.length,
+      hospitalStorageKeys: hospitalStorage.length,
       auditLogs: auditLogs.length,
       revisions: revisions.length,
     };
 
     const backup = {
       meta: {
-        version: "2.0",
+        version: "2.1",
         exportedAt: new Date().toISOString(),
         exportedBy: "auto-scheduler",
         counts,
       },
-      tables: { users, extracts, storage, auditLogs, revisions },
+      tables: { users, extracts, storage, hospitalStorage, auditLogs, revisions },
     };
 
     const backupJson = JSON.stringify(backup);

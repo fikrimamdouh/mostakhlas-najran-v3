@@ -14,6 +14,7 @@ import submittedExtractsLiteRouter from "./submitted-extracts-lite";
 import adminRouter from "./admin";
 import adminBackupSafeRouter from "./admin-backup-safe";
 import adminBackupRouter from "./admin-backup";
+import cronRouter from "./cron";
 import hospitalStorageRouter from "./hospital-storage";
 import adminSettingsRouter from "./admin-settings";
 import exportRouter from "./export";
@@ -31,6 +32,7 @@ import clientEventsRouter from "./client-events";
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use("/cron", cronRouter);
 router.use("/users", authRouter);
 router.use("/users", usersProfileEditRouter);
 router.use("/users", usersRouter);
