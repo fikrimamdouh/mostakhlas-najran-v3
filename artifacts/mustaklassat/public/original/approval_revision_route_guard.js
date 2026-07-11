@@ -178,7 +178,9 @@
       var extractType = String(full.extractType || type || 'labor');
       var target = reviewPageFromSnapshot(snapshot, extractType);
 
-      backupCurrent(id);
+      if (!backupCurrent(id)) {
+        return alert('تعذر إنشاء نسخة أمان قبل التعديل. لم يتم مسح أي بيانات.');
+      }
       clearOperational();
       Object.keys(snapshot).forEach(function (k) { writeValue(k, snapshot[k]); });
 
