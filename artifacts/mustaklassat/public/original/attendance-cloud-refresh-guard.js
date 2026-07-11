@@ -264,7 +264,7 @@ function isRevisionMode() {
   }
 
   function captureAttendancePreWipeSnapshot(reason, activeKeys) {
-    var snapshot = {}, total = 0, maxValueBytes = 300 * 1024;
+    var snapshot = {}, skippedLarge = [], total = 0, maxValueBytes = 300 * 1024;
     try {
       var active = activeKeys || getActiveAttendanceKeys();
       Object.keys(localStorage).forEach(function(k) {
@@ -273,12 +273,18 @@ function isRevisionMode() {
         if (!relevant) return;
         var value = localStorage.getItem(k);
         if (value == null) return;
-        if (value.length > maxValueBytes) throw new Error('attendance snapshot key exceeds 300KB: ' + k);
+        if (value.length > maxValueBytes) {
+          // مفتاح أساسي ضخم = خطر فقد حقيقي → يمنع المسح.
+          // مفتاح مساعد ضخم (لقطات شهور قديمة) = يُتخطى ويُسجل اسمه، ولا يعطّل المسح للأبد.
+          if (active.indexOf(k) >= 0) throw new Error('core attendance key exceeds 300KB: ' + k);
+          skippedLarge.push(k + ' (' + Math.round(value.length / 1024) + 'KB)');
+          return;
+        }
         total += value.length;
         snapshot[k] = value;
       });
-      localStorage.setItem('najran_att_prewipe_v1', JSON.stringify({ createdAt: new Date().toISOString(), reason: reason || '', data: snapshot }));
-      console.warn('[AttendanceCloudGuard] PRE-WIPE SNAPSHOT captured: ' + Object.keys(snapshot).length + ' keys, ' + Math.round(total / 1024) + 'KB');
+      localStorage.setItem('najran_att_prewipe_v1', JSON.stringify({ createdAt: new Date().toISOString(), reason: reason || '', skippedLarge: skippedLarge, data: snapshot }));
+      console.warn('[AttendanceCloudGuard] PRE-WIPE SNAPSHOT captured: ' + Object.keys(snapshot).length + ' keys, ' + Math.round(total / 1024) + 'KB' + (skippedLarge.length ? ' — skipped large: ' + skippedLarge.join(', ') : ''));
       return true;
     } catch (err) {
       console.error('[AttendanceCloudGuard] PRE-WIPE SNAPSHOT failed — clear blocked:', err && err.message);
@@ -646,7 +652,11 @@ var token = await getToken();
 
       if (remoteRows <= 0) {
         if (isReviewOnlySession()) {
-          clearLocalAttendanceState('reviewOnly-no-cloud-attendance', activeKeys);
+          if (clearLocalAttendanceState('reviewOnly-no-cloud-attendance', activeKeys) === false) {
+            console.error('[AttendanceCloudGuard] REVIEW ONLY: تعذر أخذ لقطة أمان — لم يُفرّغ الحضور المحلي، والبيانات المعروضة قد تخص موقعًا سابقًا');
+            try { alert('تنبيه: تعذر أخذ نسخة أمان قبل تفريغ الحضور، فلم يُمسح شيء. البيانات المعروضة قد تخص موقعًا سابقًا — لا تعتمد عليها في المراجعة.'); } catch (_) {}
+            return;
+          }
           console.warn('[AttendanceCloudGuard] REVIEW ONLY: لا توجد نسخة حضور سحابية لهذه المستشفى — تم تفريغ الحضور المحلي لمنع خلط المستشفيات — keys=' + activeKeys.join(','));
           setTimeout(function(){ renderAgain('review-empty-cloud'); }, 50);
           setTimeout(function(){ renderAgain('review-empty-cloud'); }, 500);
