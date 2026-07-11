@@ -350,7 +350,7 @@ function shouldBlockLightAutoPush(options) {
     ]);
     const clearPrefixes = ['deptCalculatedCost_', 'dept_', 'sb_sigs_', 'sb_prefs_', 'tableData_', 'achievement_', 'consumables_', 'spare_', 'water_', 'sewage_', 'subcontractors_', 'najran_labor_', 'najran_health_', 'najran_admin_', 'monthSnapshot_', '_u'];
     const clearKeys = [
-      'persistentContractData','persistentExtractData','contractData','contractDetails','contractType','contractStartDate','contractEndDate','contractSignatureData',
+      'persistentContractData','persistentExtractData','contractData','contractDetails','contractType','contractStartDate','contractEndDate',
       'extractMonth','extractYear','extractNumber','extractStart','extractEnd','extractFromDate','extractToDate','paymentNumber',
       'attendanceData','centersAttendanceData_v2','healthCentersAttendanceData','adminOfficesAttendanceData_v1',
       'ng_attendanceData','ng_departmentNames','ng_distributionSettings','ng_finalLaborCost','ng_performanceTotalDeduction',
@@ -360,14 +360,28 @@ function shouldBlockLightAutoPush(options) {
       'spare_partsData','sparePartsTotalAmount','approvalData','displayApprovalData',
       'performanceData','performanceData_v4','performanceDeductions','achievementData','achievementTitles_v1','achievementItemNames',
       'centerNames_v3','departmentNames','distributionSettings','hospitalActivityStatus','hospitalActivityStatus_v2',
-      'admin_staff','dynamicSignatures','contractorSignature','appTitles_v1','healthCentersData','reviewExtractData','requestVisitData',
+      'admin_staff','appTitles_v1','healthCentersData','reviewExtractData','requestVisitData',
       'settings_main','settings_advanced','finalLaborCost','performanceTotalDeduction','grand-net-total','grand-net-total-centers','grand-net-total-admin',
-      'performanceSignatures','performanceSignatures_v2','performanceTableNames','adminOfficeNames_v1','adminOfficeAffiliations_v1','contract_foundation_data'
+      'performanceTableNames','adminOfficeNames_v1','adminOfficeAffiliations_v1','contract_foundation_data'
     ];
-    clearKeys.forEach(key => { if (!keepKeys.has(key)) localStorage.removeItem(key); });
+    // القاعدة المطلقة: لا توقيع يُمسح أبدًا — نفس استثناء Sidebar حرفيًا،
+    // يشمل بادئات sb_sigs_/sb_prefs_ وكنس "_u" الذي يمسح التخزين المعزول.
+    const isSignatureKey = (raw) => {
+      const nk = String(raw).replace(/^(_u\d+_)+/, '');
+      if (nk.indexOf('sb_sigs_') === 0 || nk.indexOf('sb_prefs_') === 0 || nk.indexOf('healthCenters_Signatures_') === 0) return true;
+      return [
+        'dynamicSignatures', 'contractorSignature', 'contractSignatureData',
+        'performanceSignatures', 'performanceSignatures_v2', 'achievementSignatures_v3',
+        'signatures_data_consumables_v27', 'hospitalConsumablesRaiseLettersSettings_v1',
+        'projectManagerSignature', 'operationsAssistantSignature', 'maintenanceHeadSignature',
+        'finalLetterSignatureName', 'finalLetterSignatureTitle', 'sb_style_prefs_consumables_v1'
+      ].indexOf(nk) !== -1;
+    };
+    clearKeys.forEach(key => { if (!keepKeys.has(key) && !isSignatureKey(key)) localStorage.removeItem(key); });
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
       if (!key || keepKeys.has(key)) continue;
+      if (isSignatureKey(key)) continue;
       if (clearPrefixes.some(p => key.indexOf(p) === 0)) localStorage.removeItem(key);
     }
     DIRTY_KEYS.clear();

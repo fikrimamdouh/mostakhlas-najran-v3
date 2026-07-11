@@ -178,7 +178,9 @@
       var extractType = String(full.extractType || type || 'labor');
       var target = reviewPageFromSnapshot(snapshot, extractType);
 
-      backupCurrent(id);
+      if (!backupCurrent(id)) {
+        return alert('تعذر حفظ نسخة احتياطية محلية قبل بدء التعديل (غالبًا مساحة التخزين ممتلئة). لم يتم فتح التعديل ولم يُمسح أي شيء. حرر مساحة وحاول مجددًا.');
+      }
       clearOperational();
       Object.keys(snapshot).forEach(function (k) { writeValue(k, snapshot[k]); });
 

@@ -537,7 +537,7 @@ const handleSwitchReviewHospital = (h: string) => {
       if (nk.startsWith("sb_sigs_") || nk.startsWith("sb_prefs_") || nk.startsWith("healthCenters_Signatures_")) return true;
       return [
         "dynamicSignatures", "contractorSignature", "contractSignatureData",
-        "performanceSignatures", "performanceSignatures_v2",
+        "performanceSignatures", "performanceSignatures_v2", "achievementSignatures_v3",
         "signatures_data_consumables_v27", "hospitalConsumablesRaiseLettersSettings_v1",
         "projectManagerSignature", "operationsAssistantSignature", "maintenanceHeadSignature",
         "finalLetterSignatureName", "finalLetterSignatureTitle", "sb_style_prefs_consumables_v1",

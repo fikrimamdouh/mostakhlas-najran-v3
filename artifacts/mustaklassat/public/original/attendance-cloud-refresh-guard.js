@@ -263,8 +263,30 @@ function isRevisionMode() {
     try { return new Date(value).toLocaleString('ar-SA', { hour12: true }); } catch (_) { return String(value); }
   }
 
+  var ATT_PRE_WIPE_SNAP_KEY = 'najran_att_prewipe_v1';
+  function captureAttendancePreWipeSnapshot(reason, activeKeys) {
+    // لقطة قبل المسح — قابلة للاسترجاع يدويًا؛ لا تغيّر سلوك المسح نفسه
+    try {
+      var snap = { capturedAt: new Date().toISOString(), reason: reason || '', data: {} };
+      var names = (activeKeys || getActiveAttendanceKeys() || []).slice();
+      Object.keys(localStorage).forEach(function (k) {
+        if (!k || k === ATT_PRE_WIPE_SNAP_KEY) return;
+        var lk = String(k).toLowerCase();
+        if (names.indexOf(k) >= 0 || lk.indexOf('attendance') >= 0 || lk.indexOf('monthsnapshot') >= 0) {
+          var v = localStorage.getItem(k);
+          if (v != null && v.length < 300 * 1024) snap.data[k] = v;
+        }
+      });
+      if (Object.keys(snap.data).length) {
+        localStorage.setItem(ATT_PRE_WIPE_SNAP_KEY, JSON.stringify(snap));
+        console.warn('[AttendanceCloudGuard] PRE-WIPE SNAPSHOT captured (' + (reason || '') + '): ' + Object.keys(snap.data).length + ' keys');
+      }
+    } catch (_) {}
+  }
+
   function clearLocalAttendanceState(reason, activeKeys) {
     var removed = [];
+    captureAttendancePreWipeSnapshot(reason, activeKeys);
     try {
       (activeKeys || getActiveAttendanceKeys()).forEach(function(k) {
         if (localStorage.getItem(k) != null) removed.push(k);
