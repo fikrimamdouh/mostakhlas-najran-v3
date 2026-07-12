@@ -1261,10 +1261,17 @@ function updateGrandTotals(count, cost, deduction, fine) {
         </div>
       </div>
       <div class="total-card total-deductions">
-        <div class="card-icon"><i class="fas fa-arrow-down"></i></div>
+        <div class="card-icon"><i class="fas fa-minus-circle"></i></div>
         <div class="card-content">
-          <span class="label">إجمالي الحسميات والغرامات</span>
-          <span class="value">${totalFines.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</span>
+          <span class="label">إجمالي الحسميات</span>
+          <span class="value">${deduction.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</span>
+        </div>
+      </div>
+      <div class="total-card total-fines">
+        <div class="card-icon"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="card-content">
+          <span class="label">إجمالي الغرامات</span>
+          <span class="value">${fine.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' })}</span>
         </div>
       </div>
       <div class="total-card total-net">
