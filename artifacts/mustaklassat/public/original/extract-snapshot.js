@@ -387,7 +387,7 @@
     });
   }
 
-  function showLocalProtectionNotice(message, type) {
+  function showLocalProtectionNotice(message, type, detail) {
     var old = document.getElementById('najran-local-protection-notice');
     if (old) old.remove();
     var notice = document.createElement('div');
@@ -396,13 +396,29 @@
     var success = type !== 'error';
     notice.style.cssText =
       'position:fixed;left:50%;top:24px;transform:translateX(-50%);z-index:10000001;' +
-      'min-width:min(430px,90vw);max-width:90vw;padding:14px 18px;border-radius:14px;' +
-      'background:' + (success ? '#166534' : '#991b1b') + ';color:#fff;' +
-      'font-family:Tajawal,Arial,sans-serif;font-size:14px;font-weight:900;text-align:center;' +
-      'box-shadow:0 12px 34px rgba(15,23,42,.3);direction:rtl;';
-    notice.textContent = message;
+      'width:min(520px,92vw);padding:15px 18px;border-radius:16px;' +
+      'background:' + (success ? 'linear-gradient(135deg,#166534,#15803d)' : 'linear-gradient(135deg,#991b1b,#b91c1c)') + ';color:#fff;' +
+      'font-family:Tajawal,Arial,sans-serif;box-shadow:0 16px 40px rgba(15,23,42,.32);direction:rtl;' +
+      'display:flex;align-items:center;gap:13px;border:1px solid rgba(255,255,255,.18);';
+    var icon = document.createElement('div');
+    icon.style.cssText = 'width:42px;height:42px;flex:0 0 42px;border-radius:13px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:900;';
+    icon.textContent = success ? '✓' : '!';
+    var content = document.createElement('div');
+    content.style.cssText = 'min-width:0;text-align:right;';
+    var title = document.createElement('div');
+    title.style.cssText = 'font-size:15px;font-weight:900;line-height:1.5;';
+    title.textContent = message;
+    content.appendChild(title);
+    if (detail) {
+      var sub = document.createElement('div');
+      sub.style.cssText = 'margin-top:3px;font-size:12px;font-weight:700;line-height:1.7;color:rgba(255,255,255,.88);';
+      sub.textContent = detail;
+      content.appendChild(sub);
+    }
+    notice.appendChild(icon);
+    notice.appendChild(content);
     document.body.appendChild(notice);
-    setTimeout(function () { if (notice.parentNode) notice.remove(); }, 2200);
+    setTimeout(function () { if (notice.parentNode) notice.remove(); }, 2600);
   }
 
   window.getExtractArchive = function () {
@@ -743,7 +759,11 @@
             showLocalProtectionNotice('تعذر حفظ المستخلص محليًا، لذلك بقيت في الصفحة لحماية بياناتك.', 'error');
             return;
           }
-          showLocalProtectionNotice('تم الحفظ محليًا بنجاح — جارٍ الرجوع للرئيسية.', 'success');
+          showLocalProtectionNotice(
+            'تم حفظ المستخلص محليًا بنجاح',
+            'success',
+            'يمكنك استكمال العمل لاحقًا من: أرشيف المستخلصات ← لقطات العمل المحلية'
+          );
           setTimeout(function () {
             window.location.href = href || '/dashboard';
           }, 650);
