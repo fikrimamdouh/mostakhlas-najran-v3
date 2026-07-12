@@ -387,6 +387,24 @@
     });
   }
 
+  function showLocalProtectionNotice(message, type) {
+    var old = document.getElementById('najran-local-protection-notice');
+    if (old) old.remove();
+    var notice = document.createElement('div');
+    notice.id = 'najran-local-protection-notice';
+    notice.className = 'no-print';
+    var success = type !== 'error';
+    notice.style.cssText =
+      'position:fixed;left:50%;top:24px;transform:translateX(-50%);z-index:10000001;' +
+      'min-width:min(430px,90vw);max-width:90vw;padding:14px 18px;border-radius:14px;' +
+      'background:' + (success ? '#166534' : '#991b1b') + ';color:#fff;' +
+      'font-family:Tajawal,Arial,sans-serif;font-size:14px;font-weight:900;text-align:center;' +
+      'box-shadow:0 12px 34px rgba(15,23,42,.3);direction:rtl;';
+    notice.textContent = message;
+    document.body.appendChild(notice);
+    setTimeout(function () { if (notice.parentNode) notice.remove(); }, 2200);
+  }
+
   window.getExtractArchive = function () {
     try {
       var parsed = JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '[]');
@@ -721,9 +739,14 @@
       }).then(function (action) {
         if (action === 'primary') {
           var snap = window.saveExtractSnapshot('home-exit-save');
-          if (!snap) { alert('تعذر حفظ المستخلص الحالي محليًا. لم يتم الخروج من الصفحة.'); return; }
-          alert('تم حفظ آخر نسخة من هذا المستخلص محليًا. يمكنك استكمالها لاحقًا من أرشيف المستخلصات > لقطات العمل المحلية.');
-          window.location.href = href || '/dashboard';
+          if (!snap) {
+            showLocalProtectionNotice('تعذر حفظ المستخلص محليًا، لذلك بقيت في الصفحة لحماية بياناتك.', 'error');
+            return;
+          }
+          showLocalProtectionNotice('تم الحفظ محليًا بنجاح — جارٍ الرجوع للرئيسية.', 'success');
+          setTimeout(function () {
+            window.location.href = href || '/dashboard';
+          }, 650);
         }
       });
     }, true);
