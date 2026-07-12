@@ -158,7 +158,10 @@
       }
 
       var collapse = head.querySelector('.sbx-printall-collapse');
-      if (collapse) collapse.textContent = panel.classList.contains('collapsed') ? 'فتح' : 'طي';
+      if (collapse) {
+        var collapseLabel = panel.classList.contains('collapsed') ? 'فتح' : 'طي';
+        if (collapse.textContent !== collapseLabel) collapse.textContent = collapseLabel;
+      }
 
       if (!doc.__sbxPrintAllToolbarObserver) {
         doc.__sbxPrintAllToolbarObserver = new child.MutationObserver(function () {
