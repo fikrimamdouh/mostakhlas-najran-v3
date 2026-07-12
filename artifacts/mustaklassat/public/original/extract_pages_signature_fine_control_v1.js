@@ -129,8 +129,14 @@
         actions.className = 'sbx-printall-actions';
         actions.innerHTML =
           '<button type="button" class="sbx-printall-save" title="حفظ واعتماد التنسيق">حفظ</button>' +
-          '<button type="button" class="sbx-printall-default" title="استعادة إعدادات التنسيق الافتراضية">الافتراضي</button>' +
-          '<button type="button" class="sbx-printall-collapse" title="طي أو فتح لوحة التنسيق">طي</button>';
+          '<button type="button" class="sbx-printall-default" title="استعادة إعدادات التنسيق الافتراضية">الافتراضي</button>';
+
+        var nativeCollapse = head.querySelector('.sbx-collapse');
+        if (nativeCollapse) {
+          nativeCollapse.classList.add('sbx-printall-collapse');
+          nativeCollapse.title = 'طي أو فتح لوحة التنسيق';
+          actions.appendChild(nativeCollapse);
+        }
         head.appendChild(actions);
 
         actions.querySelector('.sbx-printall-save').onclick = function (event) {
@@ -144,14 +150,6 @@
           event.preventDefault();
           event.stopPropagation();
           var target = panel.querySelector('.sbx-reset');
-          if (target) target.click();
-          setTimeout(function () { enhancePanel(child, doc); }, 0);
-        };
-
-        actions.querySelector('.sbx-printall-collapse').onclick = function (event) {
-          event.preventDefault();
-          event.stopPropagation();
-          var target = panel.querySelector('.sbx-collapse');
           if (target) target.click();
           setTimeout(function () { enhancePanel(child, doc); }, 0);
         };
