@@ -226,7 +226,7 @@
   };
 
   if (snapshotPages[pageFile]) {
-    appendScript('/original/extract-snapshot.js?v=20260710_sig_never_delete_v1', true);
+    appendScript('/original/extract-snapshot.js?v=20260712_professional_home_save_notice_v1', true);
     appendScript('/original/submitted_extract_archive_bundle_guard.js?v=20260705_v2_labor_details_bridge', true);
   }
 
