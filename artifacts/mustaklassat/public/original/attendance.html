@@ -2622,6 +2622,18 @@ function _confirmTemplateUpdate() {
 
       const getTable = function() { return deptCard.querySelector('table'); };
       const getScroll = function() { return deptCard.querySelector('.dept-table-scroll'); };
+
+      // داخل العرض الكامل: عجلة الماوس فوق الجدول تحرك البطاقة رأسيًا،
+      // بينما يظل السحب الأفقي داخل الجدول متاحًا كما هو.
+      const fullscreenScroll = getScroll();
+      if (fullscreenScroll && !fullscreenScroll.__deptFullscreenWheelBound) {
+        fullscreenScroll.__deptFullscreenWheelBound = true;
+        fullscreenScroll.addEventListener('wheel', function(event) {
+          if (!deptCard.classList.contains('dept-fullscreen') || !event.deltaY) return;
+          deptCard.scrollTop += event.deltaY;
+          event.preventDefault();
+        }, { passive: false });
+      }
       const getZoom = function() {
         const value = Number(deptCard.dataset.fullscreenZoom || 1);
         return Number.isFinite(value) ? Math.max(0.45, Math.min(1.6, value)) : 1;
