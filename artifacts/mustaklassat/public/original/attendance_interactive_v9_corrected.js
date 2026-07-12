@@ -205,8 +205,9 @@ function createAttendanceSelect(currentStatus, departmentKey, employeeIndex, day
   const updateSelectColor = () => {
     const selectedStatus = statuses.find(status => status.code === select.value);
     if (!selectedStatus) return;
-    select.style.backgroundColor = selectedStatus.selectBg;
-    select.style.color = selectedStatus.selectText;
+    // ألوان الخيارات تظهر عند فتح القائمة فقط؛ الخلية تبقى بنفس مظهر الجدول.
+    select.style.backgroundColor = 'transparent';
+    select.style.color = '#111111';
   };
 
   updateSelectColor();
