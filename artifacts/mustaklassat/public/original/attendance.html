@@ -837,6 +837,9 @@
     border: none !important;
     width: 100vw !important;
     height: 100vh !important;
+    max-height: 100vh !important;
+    overflow-y: scroll !important;
+    overscroll-behavior: contain !important;
   }
   .department-table.dept-fullscreen h3 {
     position: sticky !important;
@@ -2623,16 +2626,16 @@ function _confirmTemplateUpdate() {
       const getTable = function() { return deptCard.querySelector('table'); };
       const getScroll = function() { return deptCard.querySelector('.dept-table-scroll'); };
 
-      // داخل العرض الكامل: عجلة الماوس فوق الجدول تحرك البطاقة رأسيًا،
-      // بينما يظل السحب الأفقي داخل الجدول متاحًا كما هو.
-      const fullscreenScroll = getScroll();
-      if (fullscreenScroll && !fullscreenScroll.__deptFullscreenWheelBound) {
-        fullscreenScroll.__deptFullscreenWheelBound = true;
-        fullscreenScroll.addEventListener('wheel', function(event) {
+      // التمرير الرأسي يلتقط من كامل العرض، لا من منطقة الجدول فقط.
+      // لذلك تعمل عجلة الماوس فوق الجدول والعنوان والتواقيع والمساحات الفارغة.
+      if (!deptCard.__deptFullscreenWheelBound) {
+        deptCard.__deptFullscreenWheelBound = true;
+        deptCard.addEventListener('wheel', function(event) {
           if (!deptCard.classList.contains('dept-fullscreen') || !event.deltaY) return;
-          deptCard.scrollTop += event.deltaY;
+          const multiplier = event.deltaMode === 1 ? 18 : 1;
+          deptCard.scrollBy({ top: event.deltaY * multiplier, behavior: 'auto' });
           event.preventDefault();
-        }, { passive: false });
+        }, { passive: false, capture: true });
       }
       const getZoom = function() {
         const value = Number(deptCard.dataset.fullscreenZoom || 1);
