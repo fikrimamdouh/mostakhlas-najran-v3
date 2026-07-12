@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useSearch } from "wouter";
 import { useAuth } from "@clerk/react";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -114,12 +114,23 @@ export default function OriginalViewer() {
       const doc = iframeRef.current?.contentDocument;
       if (!doc) return;
 
-      if (!doc.getElementById("najran-submit-flow-control-loader")) {
+      const injectSubmitFlowControl = () => {
+        if (doc.getElementById("najran-submit-flow-control-loader")) return;
         const script = doc.createElement("script");
         script.id = "najran-submit-flow-control-loader";
-        script.defer = true;
         script.src = "/original/extract-submit-flow-control.js?v=20260709_submit_flow_v1";
         doc.head.appendChild(script);
+      };
+
+      if (!doc.getElementById("najran-phase1-submit-safety-loader")) {
+        const safety = doc.createElement("script");
+        safety.id = "najran-phase1-submit-safety-loader";
+        safety.src = "/original/extract-submit-phase1-safety.js?v=20260712_phase1_submit_safety_v2";
+        safety.onload = injectSubmitFlowControl;
+        safety.onerror = injectSubmitFlowControl;
+        doc.head.appendChild(safety);
+      } else {
+        injectSubmitFlowControl();
       }
 
       if (page === "achievement.html" && !doc.getElementById("najran-achievement-print-signature-once-loader")) {
