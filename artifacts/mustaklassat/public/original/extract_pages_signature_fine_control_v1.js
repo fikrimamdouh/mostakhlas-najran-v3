@@ -302,7 +302,7 @@
     '.sbx-row{display:grid;grid-template-columns:138px 1fr 56px;align-items:center;gap:8px;margin:5px 0;font-size:12px;color:#475569}.sbx-row input[type=range]{width:100%}.sbx-row span{font-weight:900;color:#6d28d9;text-align:left}',
     '.sbx-select{width:100%;padding:7px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-weight:800}',
     '.sbx-check{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:#475569;margin:6px 0}',
-    '.sbx-save{background:#6d28d9!important;color:#fff!important;border-color:#6d28d9!important}',
+    '.sbx-save{background:#15803d!important;color:#fff!important;border-color:#15803d!important}',
     '.sbx-final{background:#166534!important;color:#fff!important;border-color:#166534!important}',
     '.sbx-reset{background:#fef2f2!important;color:#991b1b!important;border-color:#fecaca!important}',
     '#sbx-edit-fab{position:fixed;left:14px;bottom:14px;z-index:999990;border:none;border-radius:999px;background:#334155;color:#fff;padding:8px 14px;font-family:Tajawal,Arial,sans-serif;font-weight:900;font-size:12px;box-shadow:0 6px 18px rgba(15,23,42,.28);cursor:pointer}',
