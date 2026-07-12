@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearch } from "wouter";
 import { useAuth } from "@clerk/react";
 import { Sidebar } from "@/components/layout/Sidebar";
