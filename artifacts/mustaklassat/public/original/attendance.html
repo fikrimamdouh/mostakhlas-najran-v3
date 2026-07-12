@@ -929,6 +929,26 @@
   /* ══ تصحيح: الـ stepper يكون sticky من top:0 ══ */
   #njs-stepper { position: sticky !important; top: 0 !important; z-index: 100 !important; }
 
+  /* ══════════════════════════════════════════════════════════════
+     عزل الرسم — سبب تجمّد التمرير
+     كل خلية يوم هي <select> حقيقي بـ7 <option>، أي أن 100 موظف
+     يعني ~21,000 عنصر موزّعة على 8 أقسام. بلا عزل، كان المتصفح
+     يعيد تخطيط ورسم كل الأقسام مع كل إطار تمرير — حتى البعيدة
+     تمامًا عن الشاشة.
+     content-visibility:auto يجعله يتخطى ما هو خارج الشاشة،
+     و contain-intrinsic-size يحجز ارتفاعًا تقديريًا فيبقى شريط
+     التمرير دقيقًا ولا تقفز الصفحة.
+     شاشة فقط — الطباعة لا تتأثر (القاعدة داخل @media screen).
+     ══════════════════════════════════════════════════════════════ */
+  .department-table {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 900px;
+  }
+  /* في وضع ملء الشاشة يجب أن يُرسم القسم دائمًا */
+  .department-table.dept-fullscreen {
+    content-visibility: visible;
+  }
+
 } /* end @media screen */
 </style>
 <script src="/original/backup.js?v=20260705_v1_unified_full_backup"></script>
