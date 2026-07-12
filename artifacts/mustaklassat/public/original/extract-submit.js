@@ -646,11 +646,59 @@
     });
   };
 
+  function showPerformanceApprovalConfirm() {
+    return new Promise(function(resolve) {
+      var old = document.getElementById('_najran_performance_approve_modal');
+      if (old) old.remove();
+      var overlay = document.createElement('div');
+      overlay.id = '_najran_performance_approve_modal';
+      overlay.className = 'no-print';
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:10000000;background:rgba(15,23,42,.68);display:flex;align-items:center;justify-content:center;padding:18px;direction:rtl;font-family:Tajawal,Arial,sans-serif;backdrop-filter:blur(3px);';
+      var modalStyle = document.createElement('style');
+      modalStyle.textContent =
+        '#_najran_performance_approve_modal button{appearance:none!important;-webkit-appearance:none!important;opacity:1!important;}' +
+        '#_najran_performance_approve_yes{background:#2563eb!important;background-image:linear-gradient(135deg,#2563eb,#1d4ed8)!important;color:#fff!important;border:0!important;}' +
+        '#_najran_performance_approve_no{background:#475569!important;background-image:none!important;color:#fff!important;border:0!important;}';
+      overlay.appendChild(modalStyle);
+      overlay.insertAdjacentHTML('beforeend',
+        '<div role="dialog" aria-modal="true" aria-labelledby="_najran_performance_approve_title" style="width:min(520px,94vw);background:#fff;border-radius:22px;padding:26px;box-shadow:0 28px 80px rgba(0,0,0,.34);border-top:7px solid #2563eb;text-align:right;">' +
+          '<div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">' +
+            '<div style="width:52px;height:52px;border-radius:16px;background:#dbeafe;color:#1d4ed8;display:flex;align-items:center;justify-content:center;font-size:27px;font-weight:900;">✓</div>' +
+            '<div><h2 id="_najran_performance_approve_title" style="margin:0;color:#0f172a;font-size:21px;font-weight:900;">تأكيد اعتماد جداول الأداء</h2>' +
+            '<p style="margin:5px 0 0;color:#64748b;font-size:13px;">سيتم حفظ الجداول الحالية قبل الانتقال</p></div>' +
+          '</div>' +
+          '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:14px 16px;color:#334155;font-size:14px;line-height:1.9;margin:16px 0;">بعد الاعتماد ستنتقل إلى <b>شهادة الإنجاز</b>. راجع جداول الأداء والتواقيع قبل المتابعة.</div>' +
+          '<div style="display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;">' +
+            '<button id="_najran_performance_approve_yes" type="button" style="background:#2563eb!important;color:#fff!important;border:0!important;border-radius:12px;padding:12px 22px;font-family:inherit;font-size:14px;font-weight:900;cursor:pointer;box-shadow:0 7px 18px rgba(37,99,235,.25);">حفظ واعتماد والانتقال</button>' +
+            '<button id="_najran_performance_approve_no" type="button" style="background:#475569!important;color:#fff!important;border:0!important;border-radius:12px;padding:12px 20px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;">العودة للمراجعة</button>' +
+          '</div>' +
+        '</div>');
+      function close(answer) {
+        document.removeEventListener('keydown', onKey, true);
+        overlay.remove();
+        resolve(answer);
+      }
+      function onKey(event) {
+        if (event.key === 'Escape') close(false);
+        if (event.key === 'Enter') close(true);
+      }
+      document.body.appendChild(overlay);
+      document.addEventListener('keydown', onKey, true);
+      overlay.addEventListener('click', function(event) { if (event.target === overlay) close(false); });
+      document.getElementById('_najran_performance_approve_yes').onclick = function() { close(true); };
+      document.getElementById('_najran_performance_approve_no').onclick = function() { close(false); };
+      setTimeout(function() {
+        var yes = document.getElementById('_najran_performance_approve_yes');
+        if (yes) yes.focus();
+      }, 0);
+    });
+  }
+
   window.initPerformanceApproveBtn = function () {
     createApproveBtn({
       label: 'اعتماد جداول الأداء',
-      onClick: () => {
-        if (!confirm('هل تريد اعتماد جداول الأداء والانتقال لشهادة الإنجاز؟')) return;
+      onClick: async () => {
+        if (!(await showPerformanceApprovalConfirm())) return;
         try {
           const performanceTables = ['cleaning','electricity','agriculture','civil','mechanics','laundry','security','new_section_8'];
           performanceTables.forEach(tableId => {
