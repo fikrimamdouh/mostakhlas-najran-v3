@@ -3553,7 +3553,17 @@ function saveSignatures() {
 
 // 8. دالة تحديث عرض التواقيع في الصفحة الرئيسية
 function updateSignaturesOnPage() {
+    // SignatureBlock is the single owner of the performance signatures grid.
+    // Keep the legacy renderer only as a fallback for deployments that do not
+    // load the unified system; otherwise it would repaint performanceSignatures_v2
+    // over the current sb_sigs_performance values after page startup.
+    if (window.SignatureBlock && typeof window.SignatureBlock.rerender === 'function') {
+        window.SignatureBlock.rerender('performance');
+        return;
+    }
+
     const grid = document.querySelector('.signatures-grid');
+    if (!grid) return;
     grid.innerHTML = ''; // مسح التواقيع القديمة
     const signatures = JSON.parse(localStorage.getItem(SIGNATURE_STORAGE_KEY) || '[]');
 
@@ -4178,5 +4188,4 @@ document.addEventListener('DOMContentLoaded', applyDisplaySettings);
 <script>SignatureBlock.init('performance', { showStamp: true });</script>
 </body>
 </html>
-
 
