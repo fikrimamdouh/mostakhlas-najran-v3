@@ -22,7 +22,7 @@
     <link rel="preload" as="script" href="/original/extract-snapshot.js?v=20260711_static_v1">
     <link rel="preload" as="script" href="/original/signature-block.js?v=20260711_observer_scoped_v1">
     <link rel="preload" as="script" href="/original/extract_pages_signature_fine_control_v1.js?v=20260712_no_final_print_btn_v2">
-    <link rel="preload" as="script" href="attendance_interactive_v9_corrected.js?v=20260712_fullscreen_controls_fix_v1">
+    <link rel="preload" as="script" href="attendance_interactive_v9_corrected.js?v=20260712_fullscreen_and_signature_engine_fix_v1">
     <link rel="preload" as="script" href="/original/job-positions-helper.js?v=20260711_static_v1">
     <link rel="preload" as="script" href="/original/extract-submit.js?v=20260705_v5_local_24h_guard_fix">
     <link rel="preload" as="script" href="/original/track.js?v=20260711_static_v1">
@@ -894,7 +894,7 @@
     padding: 0 12px 20px !important;
   }
   .department-table.dept-fullscreen table {
-    zoom: 1 !important;
+    zoom: var(--dept-fullscreen-zoom, 1) !important;
     font-size: 13.5px !important;
   }
 
@@ -1951,7 +1951,7 @@ window.navigateTo = function (url) {
     <script src="/original/extract-snapshot.js?v=20260711_static_v1"></script>
     <script src="/original/signature-block.js?v=20260711_observer_scoped_v1"></script>
     <script src="/original/extract_pages_signature_fine_control_v1.js?v=20260712_no_final_print_btn_v2"></script>
-    <script src="attendance_interactive_v9_corrected.js?v=20260712_fullscreen_controls_fix_v1"></script>
+    <script src="attendance_interactive_v9_corrected.js?v=20260712_fullscreen_and_signature_engine_fix_v1"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             updateContractDisplayData();
@@ -2555,6 +2555,8 @@ function _confirmTemplateUpdate() {
         if (isFs) {
           // ── إغلاق ملء الشاشة ─────────────────────────────
           deptCard.classList.remove('dept-fullscreen');
+          deptCard.style.removeProperty('--dept-fullscreen-zoom');
+          delete deptCard.dataset.fullscreenZoom;
           fsBtn.innerHTML = '<i class="fas fa-expand"></i> عرض كامل';
           // إزالة الخلفية الداكنة
           var bd = document.getElementById('_dept_fs_backdrop');
@@ -2586,6 +2588,7 @@ function _confirmTemplateUpdate() {
           bd2.onclick = function() { fsBtn.click(); };
           document.body.appendChild(bd2);
           document.body.style.overflow = 'hidden';
+          setZoom(1);
           deptCard.scrollTop = 0;
         }
       };
@@ -2620,16 +2623,15 @@ function _confirmTemplateUpdate() {
       const getTable = function() { return deptCard.querySelector('table'); };
       const getScroll = function() { return deptCard.querySelector('.dept-table-scroll'); };
       const getZoom = function() {
-        const table = getTable();
-        const value = table ? Number(table.dataset.fullscreenZoom || table.style.zoom || 1) : 1;
+        const value = Number(deptCard.dataset.fullscreenZoom || 1);
         return Number.isFinite(value) ? Math.max(0.45, Math.min(1.6, value)) : 1;
       };
       const setZoom = function(value) {
         const table = getTable();
         if (!table) return;
         const zoom = Math.max(0.45, Math.min(1.6, Math.round(Number(value) * 100) / 100));
-        table.style.zoom = String(zoom);
-        table.dataset.fullscreenZoom = String(zoom);
+        deptCard.dataset.fullscreenZoom = String(zoom);
+        deptCard.style.setProperty('--dept-fullscreen-zoom', String(zoom));
         zoomValue.textContent = Math.round(zoom * 100) + '%';
       };
       const syncZoom = function() { setZoom(getZoom()); };
