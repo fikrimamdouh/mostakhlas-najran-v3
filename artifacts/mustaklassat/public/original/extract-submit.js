@@ -570,11 +570,55 @@
     if (btn) { btn.innerHTML = `<span>${label}</span><span style="font-size:1.2rem">←</span>`; btn.disabled = false; btn.style.opacity = '1'; }
   }
 
+  function showAttendanceApprovalConfirm() {
+    return new Promise(function(resolve) {
+      var old = document.getElementById('_najran_attendance_approve_modal');
+      if (old) old.remove();
+
+      var overlay = document.createElement('div');
+      overlay.id = '_najran_attendance_approve_modal';
+      overlay.className = 'no-print';
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:10000000;background:rgba(15,23,42,.68);display:flex;align-items:center;justify-content:center;padding:18px;direction:rtl;font-family:Tajawal,Arial,sans-serif;backdrop-filter:blur(3px);';
+      overlay.innerHTML =
+        '<div role="dialog" aria-modal="true" aria-labelledby="_najran_attendance_approve_title" style="width:min(520px,94vw);background:#fff;border-radius:22px;padding:26px;box-shadow:0 28px 80px rgba(0,0,0,.34);border-top:7px solid #16a34a;text-align:right;">' +
+          '<div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">' +
+            '<div style="width:52px;height:52px;border-radius:16px;background:#dcfce7;color:#15803d;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;">✓</div>' +
+            '<div><h2 id="_najran_attendance_approve_title" style="margin:0;color:#0f172a;font-size:21px;font-weight:900;">تأكيد اعتماد الحضور والانصراف</h2>' +
+            '<p style="margin:5px 0 0;color:#64748b;font-size:13px;">سيتم حفظ البيانات الحالية قبل الانتقال</p></div>' +
+          '</div>' +
+          '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:14px 16px;color:#334155;font-size:14px;line-height:1.9;margin:16px 0;">بعد الاعتماد ستنتقل إلى <b>جداول الأداء</b>. راجع بيانات الحضور والغرامات والحسميات قبل المتابعة.</div>' +
+          '<div style="display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;">' +
+            '<button id="_najran_attendance_approve_yes" type="button" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:0;border-radius:12px;padding:12px 22px;font-family:inherit;font-size:14px;font-weight:900;cursor:pointer;box-shadow:0 7px 18px rgba(22,163,74,.25);">حفظ واعتماد والانتقال</button>' +
+            '<button id="_najran_attendance_approve_no" type="button" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:12px;padding:12px 20px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;">العودة للمراجعة</button>' +
+          '</div>' +
+        '</div>';
+
+      function close(answer) {
+        document.removeEventListener('keydown', onKey, true);
+        overlay.remove();
+        resolve(answer);
+      }
+      function onKey(event) {
+        if (event.key === 'Escape') close(false);
+        if (event.key === 'Enter') close(true);
+      }
+      document.body.appendChild(overlay);
+      document.addEventListener('keydown', onKey, true);
+      overlay.addEventListener('click', function(event) { if (event.target === overlay) close(false); });
+      document.getElementById('_najran_attendance_approve_yes').onclick = function() { close(true); };
+      document.getElementById('_najran_attendance_approve_no').onclick = function() { close(false); };
+      setTimeout(function() {
+        var yes = document.getElementById('_najran_attendance_approve_yes');
+        if (yes) yes.focus();
+      }, 0);
+    });
+  }
+
   window.initAttendanceApproveBtn = function () {
     createApproveBtn({
       label: 'اعتماد الحضور والانصراف',
-      onClick: () => {
-        if (!confirm('هل تريد اعتماد بيانات الحضور والانصراف والانتقال لجداول الأداء؟')) return;
+      onClick: async () => {
+        if (!(await showAttendanceApprovalConfirm())) return;
         try {
           if (typeof renderTables === 'function') renderTables();
           if (typeof getAttendanceData === 'function' && typeof saveAttendanceData === 'function') {
