@@ -2507,6 +2507,9 @@ function _confirmTemplateUpdate() {
       wrapper.className = 'dept-table-scroll';
       table.parentNode.insertBefore(wrapper, table);
       wrapper.appendChild(table);
+      // الشريط كان تحت جدول العمالة؛ ننقله لأعلى ليبقى متاحًا مهما كبر الجدول.
+      const zoomBar = card.querySelector('.zoom-buttons');
+      if (zoomBar) card.insertBefore(zoomBar, wrapper);
     });
 
     // ── 2. زر "إعادة الحجم" لكل مجموعة أزرار zoom ───────────
