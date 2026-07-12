@@ -172,16 +172,17 @@ function createCategorySelect(currentCategory, departmentKey, employeeIndex) {
 }
 
 function createAttendanceSelect(currentStatus, departmentKey, employeeIndex, dayIndex) {
+  // نفس منطق ألوان قائمة الفئات: اللون يظهر داخل القائمة وعند اختيار الحالة.
   const statuses = [
-    { code: 'ح', name: 'حاضر' },
-    { code: 'غ', name: 'غائب' },
-    { code: 'ج', name: 'إجازة' },
-    { code: 'ش', name: 'شاغرة' },
-    { code: 'ت', name: 'تحت الإجراء' },
-    { code: 'ب', name: 'بداية العقد' },
-    { code: 'ن', name: 'نهاية العقد' },
+    { code: 'ح', name: 'حاضر', color: '#16a34a' },
+    { code: 'غ', name: 'غائب', color: '#dc2626' },
+    { code: 'ج', name: 'إجازة', color: '#d97706' },
+    { code: 'ش', name: 'شاغرة', color: '#0891b2' },
+    { code: 'ت', name: 'تحت الإجراء', color: '#64748b' },
+    { code: 'ب', name: 'بداية العقد', color: '#7c3aed' },
+    { code: 'ن', name: 'نهاية العقد', color: '#ea580c' }
   ];
-  
+
   const select = document.createElement('select');
   select.style.width = '100%';
   select.style.border = 'none';
@@ -189,21 +190,32 @@ function createAttendanceSelect(currentStatus, departmentKey, employeeIndex, day
   select.style.fontSize = '13px';
   select.style.fontWeight = '700';
   select.style.textAlign = 'center';
-  select.style.color = '#111111';
-  select.style.backgroundColor = 'transparent';
-  
+  select.style.cursor = 'pointer';
+
   statuses.forEach(status => {
     const option = document.createElement('option');
     option.value = status.code;
     option.textContent = status.code;
     option.selected = status.code === currentStatus;
+    option.style.backgroundColor = status.color;
+    option.style.color = '#ffffff';
     select.appendChild(option);
   });
-  
+
+  const updateSelectColor = () => {
+    const selectedStatus = statuses.find(status => status.code === select.value);
+    if (!selectedStatus) return;
+    select.style.backgroundColor = selectedStatus.color;
+    select.style.color = '#ffffff';
+  };
+
+  updateSelectColor();
+
   select.onchange = function() {
     updateEmployeeAttendance(departmentKey, employeeIndex, dayIndex, this.value);
+    updateSelectColor();
   };
-  
+
   return select;
 }
 
@@ -2772,6 +2784,76 @@ function printSelectedDepartments() {
   preparePrint(selectedDepartments, includeGrandTotalSignatures);
   closePrintDialog();
 }
+function getAttendanceSignaturePrintStyleCss() {
+  // نافذة الطباعة مستقلة؛ نقرأ فقط التنسيق المعتمد ونحصره داخل التواقيع.
+  try {
+    const raw = JSON.parse(localStorage.getItem('sb_style_prefs_attendance_v1') || '{}');
+    if (!raw || raw.styleApproved !== true) return '';
+
+    const clamp = (value, min, max, fallback) => {
+      const number = Number(value);
+      return Number.isFinite(number) ? Math.max(min, Math.min(max, number)) : fallback;
+    };
+    const choice = (value, allowed, fallback) => allowed.includes(value) ? value : fallback;
+    const titleFontSize = clamp(raw.titleFontSize, 6, 44, 13);
+    const nameFontSize = clamp(raw.nameFontSize, 6, 44, 12);
+    const titleWeight = clamp(raw.titleWeight, 100, 900, 900);
+    const nameWeight = clamp(raw.nameWeight, 100, 900, 800);
+    const titleNameGap = clamp(raw.titleNameGap, -40, 140, 6);
+    const nameLineHeight = clamp(raw.nameLineHeight, 0.8, 3, 1.45);
+    const letterSpacing = clamp(raw.letterSpacing, -2, 8, 0);
+    const textAlign = choice(raw.textAlign, ['right', 'center', 'left'], 'center');
+    const blockTop = clamp(raw.blockTop, 0, 120, 14);
+    const blockY = clamp(raw.blockY, -180, 280, 0);
+    const gap = clamp(raw.gap, 0, 120, 12);
+    const cardWidth = clamp(raw.cardWidth, 120, 340, 180);
+    const cardHeight = clamp(raw.cardHeight, 40, 200, 70);
+    const cardPadding = clamp(raw.cardPadding, 0, 30, 6);
+    const cardBorderWidth = raw.textOnly || raw.cardBorderVisible !== true
+      ? 0
+      : clamp(raw.cardBorderWidth, 0, 3, 1);
+    const cardBorderRadius = raw.textOnly ? 0 : clamp(raw.cardBorderRadius, 0, 20, 10);
+    const cardBackground = raw.textOnly ? 'transparent'
+      : ({ white: '#ffffff', lightgray: '#f1f5f9' }[raw.cardBackground] || 'transparent');
+    const cardBorderColor = ({ black: '#111827', gray: '#94a3b8', navy: '#1e3c72' }[raw.cardBorderColor] || '#cbd5e1');
+    const showLine = raw.showLine === true;
+    const lineLength = clamp(raw.lineLength, 20, 320, 130);
+    const lineNameGap = clamp(raw.lineNameGap, -30, 80, 5);
+    const perRow = choice(String(raw.perRow), ['auto', '2', '3', '4'], 'auto');
+    const columns = perRow === 'auto'
+      ? 'repeat(auto-fit,minmax(' + cardWidth + 'px,1fr))'
+      : 'repeat(' + perRow + ',' + cardWidth + 'px)';
+
+    const css = [
+      '.signatures-block{margin-top:' + blockTop + 'px!important;transform:translateY(' + blockY + 'px)!important;}',
+      '.signatures-grid{display:grid!important;grid-template-columns:' + columns + '!important;direction:rtl!important;gap:' + gap + 'px!important;justify-content:center!important;align-items:stretch!important;width:100%!important;}',
+      '.signature-item{box-sizing:border-box!important;min-width:0!important;width:' + cardWidth + 'px!important;max-width:100%!important;min-height:' + cardHeight + 'px!important;margin:0!important;padding:' + cardPadding + 'px!important;background:' + cardBackground + '!important;border:' + cardBorderWidth + 'px solid ' + cardBorderColor + '!important;border-radius:' + cardBorderRadius + 'px!important;display:flex!important;flex-direction:column!important;justify-content:center!important;text-align:' + textAlign + '!important;page-break-inside:avoid!important;}',
+      '.signature-role{font-size:' + titleFontSize + 'px!important;font-weight:' + titleWeight + '!important;letter-spacing:' + letterSpacing + 'px!important;line-height:1.35!important;margin:0 0 ' + titleNameGap + 'px!important;text-align:' + textAlign + '!important;color:#000!important;}',
+      '.signature-line{display:' + (showLine ? 'block' : 'none') + '!important;width:' + lineLength + 'px!important;max-width:100%!important;height:0!important;border-bottom:1.4px solid #111827!important;margin:0 auto ' + lineNameGap + 'px!important;}',
+      '.signature-name{font-size:' + nameFontSize + 'px!important;font-weight:' + nameWeight + '!important;line-height:' + nameLineHeight + '!important;letter-spacing:' + letterSpacing + 'px!important;margin:0!important;text-align:' + textAlign + '!important;color:#000!important;}'
+    ];
+    if (raw.showStamp === false) css.push('.signature-item.signature-stamp{display:none!important;}');
+
+    if (Array.isArray(raw.perSignature)) {
+      raw.perSignature.forEach((item, index) => {
+        if (!item || typeof item !== 'object') return;
+        const x = clamp(item.x, -180, 180, 0);
+        const y = clamp(item.y, -160, 220, 0);
+        const order = Number.isFinite(Number(item.order)) && Number(item.order) >= 1
+          ? Math.round(Number(item.order))
+          : index + 1;
+        const individualAlign = choice(item.textAlign, ['right', 'center', 'left'], '');
+        const nth = '.signatures-grid .signature-item:nth-child(' + (index + 1) + ')';
+        css.push(nth + '{transform:translate(' + x + 'px,' + y + 'px)!important;order:' + order + '!important;}');
+        if (individualAlign) css.push(nth + ' .signature-role,' + nth + ' .signature-name{text-align:' + individualAlign + '!important;}');
+      });
+    }
+    return css.join('\\n');
+  } catch (_) {
+    return '';
+  }
+}
+
 function preparePrint(selectedDepartments = null, includeGrandTotalSignatures = false) {  // حفظ snapshot تلقائي عند كل طباعة
   if (typeof window.saveExtractSnapshot === 'function') {
     window.saveExtractSnapshot('print');
@@ -2814,6 +2896,7 @@ function preparePrint(selectedDepartments = null, includeGrandTotalSignatures = 
       .signature-line { border-bottom: 2px solid #222; height: 38px; margin: 8px 0 4px 0; }
       .signature-role { font-size: 13px; font-weight: bold; color: #222; }
       .signature-name { font-size: 11px; color: #888; }
+      ${getAttendanceSignaturePrintStyleCss()}
       @media print {
   body { zoom: 50%; }
   table { page-break-inside: auto !important; }
@@ -2930,7 +3013,7 @@ function buildAttendanceTableSignaturesHTML() {
 
     if (prefs.includeStamp) {
       html += `
-        <div class="signature-item">
+        <div class="signature-item signature-stamp">
           <div class="signature-role">الختم</div>
           <div class="signature-line"></div>
           <div class="signature-name"></div>
