@@ -579,6 +579,13 @@
       overlay.id = '_najran_attendance_approve_modal';
       overlay.className = 'no-print';
       overlay.style.cssText = 'position:fixed;inset:0;z-index:10000000;background:rgba(15,23,42,.68);display:flex;align-items:center;justify-content:center;padding:18px;direction:rtl;font-family:Tajawal,Arial,sans-serif;backdrop-filter:blur(3px);';
+      // قاعدة تصميم: كل زر إجراء داخل نافذة النظام له لون صريح لا يمكن أن تلغيه تنسيقات الصفحة.
+      var modalStyle = document.createElement('style');
+      modalStyle.textContent =
+        '#_najran_attendance_approve_modal button{appearance:none!important;-webkit-appearance:none!important;opacity:1!important;}' +
+        '#_najran_attendance_approve_yes{background:#16a34a!important;background-image:linear-gradient(135deg,#16a34a,#15803d)!important;color:#fff!important;border:0!important;}' +
+        '#_najran_attendance_approve_no{background:#475569!important;background-image:none!important;color:#fff!important;border:0!important;}';
+      overlay.appendChild(modalStyle);
       overlay.innerHTML =
         '<div role="dialog" aria-modal="true" aria-labelledby="_najran_attendance_approve_title" style="width:min(520px,94vw);background:#fff;border-radius:22px;padding:26px;box-shadow:0 28px 80px rgba(0,0,0,.34);border-top:7px solid #16a34a;text-align:right;">' +
           '<div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">' +
@@ -588,8 +595,8 @@
           '</div>' +
           '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:14px 16px;color:#334155;font-size:14px;line-height:1.9;margin:16px 0;">بعد الاعتماد ستنتقل إلى <b>جداول الأداء</b>. راجع بيانات الحضور والغرامات والحسميات قبل المتابعة.</div>' +
           '<div style="display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;">' +
-            '<button id="_najran_attendance_approve_yes" type="button" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:0;border-radius:12px;padding:12px 22px;font-family:inherit;font-size:14px;font-weight:900;cursor:pointer;box-shadow:0 7px 18px rgba(22,163,74,.25);">حفظ واعتماد والانتقال</button>' +
-            '<button id="_najran_attendance_approve_no" type="button" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:12px;padding:12px 20px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;">العودة للمراجعة</button>' +
+            '<button id="_najran_attendance_approve_yes" type="button" style="background:linear-gradient(135deg,#16a34a,#15803d)!important;color:#fff!important;border:0!important;border-radius:12px;padding:12px 22px;font-family:inherit;font-size:14px;font-weight:900;cursor:pointer;box-shadow:0 7px 18px rgba(22,163,74,.25);">حفظ واعتماد والانتقال</button>' +
+            '<button id="_najran_attendance_approve_no" type="button" style="background:#475569!important;color:#fff!important;border:0!important;border-radius:12px;padding:12px 20px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;">العودة للمراجعة</button>' +
           '</div>' +
         '</div>';
 
