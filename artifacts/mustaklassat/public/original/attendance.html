@@ -824,23 +824,22 @@
 
   /* ══ وضع ملء الشاشة — يجب أن يأتي بعد .department-table ليأخذ الأولوية ══ */
   .department-table.dept-fullscreen {
-    position: fixed !important;
-    inset: 0 !important;
-    z-index: 9998 !important;
-    background: #f1f5f9 !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    border-radius: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    box-shadow: none !important;
-    border: none !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    overflow-y: scroll !important;
-    overscroll-behavior: contain !important;
-  }
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9998 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: #f1f5f9 !important;
+  overflow: hidden !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+}
   .department-table.dept-fullscreen h3 {
     position: sticky !important;
     top: 0 !important;
@@ -892,10 +891,13 @@
     padding: 10px 20px !important;
     font-size: 13px !important;
   }
-  .department-table.dept-fullscreen .dept-table-scroll {
-    overflow-x: auto !important;
-    padding: 0 12px 20px !important;
-  }
+ .department-table.dept-fullscreen .dept-table-scroll {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: auto !important;
+  padding: 0 12px 20px !important;
+  -webkit-overflow-scrolling: touch !important;
+}
   .department-table.dept-fullscreen table {
     zoom: var(--dept-fullscreen-zoom, 1) !important;
     font-size: 13.5px !important;
