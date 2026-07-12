@@ -2844,7 +2844,7 @@ function getLegacyAttendanceSignaturePrintStyleCss() {
       if (Number.isFinite(Number(raw.signatureLineLength))) css.push(line + '{width:' + clamp(raw.signatureLineLength, 20, 320, 120) + 'px!important;max-width:100%!important;}');
       if (Number.isFinite(Number(raw.signatureLineGap))) css.push(name + '{margin-top:' + clamp(raw.signatureLineGap, -30, 80, 6) + 'px!important;}');
     });
-    return css.join('\\n');
+    return css.join('\n');
   } catch (_) {
     return '';
   }
@@ -2928,7 +2928,7 @@ function getAttendanceSignaturePrintStyleCss() {
         if (individualAlign) css.push(nth + ' .signature-role,' + nth + ' .signature-name{text-align:' + individualAlign + '!important;}');
       });
     }
-    return css.join('\\n');
+    return css.join('\n');
   } catch (_) {
     return '';
   }
