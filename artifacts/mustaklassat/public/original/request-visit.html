@@ -1,493 +1,85 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<!-- njs-preload-v1 -->
-    <!-- حراس يحقنها auth-check.js في كل صفحة — تُنزَّل مبكرًا بالتوازي بدل انتظار تنفيذه -->
-    <link rel="preload" as="script" href="/original/hospital-context-guard.js?v=20260611d">
-    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260709_fresh_token_retry_v2">
-    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260709_monitor_v2_circuit_breaker">
-    <link rel="preload" as="script" href="/original/approve-button-polish.js?v=20260709_auth_fresh_token_v3_archive_filter">
-    <link rel="preload" as="script" href="/original/revision-local-draft-restore.js?v=20260709_auth_fresh_token_v3_archive_filter">
-    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260709_auth_fresh_token_v3_archive_filter">
-    <!-- تنزيل متوازٍ لكل سكريبتات الصفحة من أول لحظة.
-         ترتيب التنفيذ لا يتغير إطلاقًا — هذا تلميح تنزيل فقط. -->
-    <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260705_cache_bust_v1">
-    <link rel="preload" as="script" href="/original/auth-check.js">
-    <link rel="preload" as="script" href="/original/cloud-sync.js?v=20260711_v6_draft_bundle">
-    <link rel="preload" as="script" href="/original/shared-nav.js?v=20260711_static_v1">
-
-<script src="/original/user-storage-proxy.js?v=20260705_cache_bust_v1"></script>
-<script src="/original/auth-check.js"></script>
-<script src="/original/cloud-sync.js?v=20260711_v6_draft_bundle"></script>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>بوابة تسجيل ومتابعة الزيارات</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script>
-(function(){
-  try {
-    var s = JSON.parse(Storage.prototype.getItem.call(localStorage,'najran_session')||'{}');
-    if (s.role === 'admin' || s.role === 'supervisor') {
-      window.location.replace('visit-admin-review.html');
-    }
-  } catch(e) {}
-})();
-</script>
-
-<nav class="nav-bar" style="display:none">
-  <select id="navigation">
-    <option value="#">-- اختر صفحة --</option>
-    <option value="index.html">الصفحة الرئيسية</option>
-    <option value="attendance.html">الحضور والانصراف</option>
-    <option value="performance.html">شهادة الأداء</option>
-    <option value="achievement.html">شهادة الإنجاز</option>
-    <option value="consumables.html">مستخلص المستهلكات</option>
-    <option value="spare_parts.html">مستخلص قطع الغيار</option>
-    <option value="approval.html">✅ متابعة المستخلصات</option>
-    <option value="contract-foundation-upload.html">📋 تأسيس العقد</option>
-    <option value="admin-dashboard.html">🛡️ لوحة الأدمن</option>
-    <option value="extract-archive.html">🗂️ أرشيف المستخلصات</option>
-  </select>
-</nav>
-
-<style>
-:root { --pr:#1e3c72; --sc:#2a5298; --go:#d4af37; --glass:rgba(255,255,255,.97); }
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr),var(--sc));min-height:100vh;display:flex;flex-direction:column;}
-.main-container{width:95%;max-width:1100px;background:var(--glass);border-radius:20px;box-shadow:0 20px 50px rgba(0,0,0,.2);padding:36px 46px;margin:28px auto 60px;}
-.form-header{text-align:center;margin-bottom:28px;}
-.form-header img{width:78px;margin-bottom:12px;}
-.form-header h2{font-size:24px;color:var(--pr);margin:0;}
-.form-header p{font-size:14px;color:#555;margin-top:6px;}
-
-/* Section titles */
-.section-title{font-size:16px;font-weight:800;color:var(--pr);margin:28px 0 14px;display:flex;align-items:center;gap:8px;border-bottom:2px solid var(--go);padding-bottom:8px;}
-.section-title i{color:var(--go);}
-
-/* Shared fields grid */
-.shared-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 26px;}
-.input-group{position:relative;}
-.input-group.full{grid-column:1/-1;}
-.input-group label{font-weight:700;display:block;margin-bottom:7px;color:#333;font-size:13.5px;}
-.input-group input,.input-group select{width:100%;padding:11px 13px;font-size:14px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:'Tajawal',sans-serif;background:#f8fafc;transition:border .2s;}
-.input-group input:focus,.input-group select:focus{border-color:var(--sc);outline:none;box-shadow:0 0 0 3px rgba(42,82,152,.08);background:#fff;}
-.input-group input.auto-filled{background:#f0fdf4;border-color:#86efac;color:#15803d;}
-.auto-badge{font-size:11px;color:#15803d;background:#f0fdf4;border:1px solid #86efac;border-radius:5px;padding:1px 6px;margin-right:6px;font-weight:600;}
-.info-banner{background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:11px;padding:11px 16px;margin-bottom:20px;font-size:13px;color:#1e40af;display:flex;align-items:center;gap:10px;}
-
-/* Visitors */
-.visitors-wrap{display:flex;flex-direction:column;gap:14px;}
-.visitor-card{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:14px;padding:18px 20px;position:relative;transition:border .2s;}
-.visitor-card:hover{border-color:#bfdbfe;}
-.visitor-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
-.visitor-num{font-size:13px;font-weight:800;color:var(--pr);background:#eff6ff;border:1px solid #bfdbfe;padding:3px 12px;border-radius:20px;}
-.btn-remove-visitor{background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:2px 6px;border-radius:6px;transition:background .15s;line-height:1;}
-.btn-remove-visitor:hover{background:#fef2f2;}
-.visitor-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 18px;}
-.visitor-grid .full{grid-column:1/-1;}
-.btn-add-visitor{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:11px;background:linear-gradient(135deg,var(--pr),var(--sc));color:#fff;border:none;font-family:'Tajawal',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;transition:opacity .15s;}
-.btn-add-visitor:hover{opacity:.88;}
-
-/* Submit */
-.btn-submit{width:100%;padding:15px;margin-top:22px;background:linear-gradient(135deg,#1565c0,#0ea5e9);color:#fff;border-radius:12px;font-size:17px;font-weight:800;border:none;cursor:pointer;font-family:'Tajawal',sans-serif;transition:opacity .2s;}
-.btn-submit:hover{opacity:.91;}
-.btn-submit:disabled{opacity:.6;cursor:not-allowed;}
-#status-message{text-align:center;margin-top:16px;font-weight:700;padding:12px 20px;border-radius:10px;display:none;font-size:14px;}
-#status-message.success{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;}
-#status-message.error{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;}
-.spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-left:6px;}
-@keyframes spin{to{transform:rotate(360deg);}}
-
-/* My requests table */
-.requests-index{margin-top:36px;border-top:2px solid var(--go);padding-top:28px;}
-.index-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
-.index-header h3{color:var(--pr);font-size:19px;font-weight:800;}
-.search-box{position:relative;}
-.search-box input{padding:9px 34px 9px 13px;border-radius:20px;border:1.5px solid #e2e8f0;font-family:'Tajawal',sans-serif;font-size:13px;width:220px;background:#f8fafc;}
-.search-box input:focus{outline:none;border-color:var(--sc);background:#fff;}
-.search-box i{position:absolute;top:50%;right:11px;transform:translateY(-50%);color:#aaa;}
-.table-wrap{overflow-x:auto;}
-.req-table{width:100%;border-collapse:collapse;font-size:13px;}
-.req-table th,.req-table td{padding:11px 12px;text-align:right;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
-.req-table thead th{background:#f8fafc;color:#475569;font-weight:700;font-size:12px;}
-.req-table tbody tr:hover{background:#fafbff;}
-.status-badge{font-weight:700;padding:4px 10px;border-radius:20px;font-size:12px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
-.status-badge::before{content:'';width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.status-pending{background:#fffbeb;color:#b45309;border:1px solid #fde68a;}.status-pending::before{background:#f59e0b;}
-.status-approved{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;}.status-approved::before{background:#16a34a;}
-.status-rejected{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;}.status-rejected::before{background:#ef4444;}
-.btn-dl{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;font-size:12px;border-radius:7px;border:none;cursor:pointer;font-family:'Tajawal',sans-serif;font-weight:700;transition:opacity .15s;text-decoration:none;margin-top:4px;}
-.btn-dl-pdf{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;}
-.btn-dl-signed{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;}
-.btn-dl:hover{opacity:.85;}
-.serial-badge{font-size:11px;color:#1e3c72;font-weight:800;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:2px 7px;display:inline-block;margin-bottom:3px;}
-.empty-row{text-align:center;color:#94a3b8;padding:30px 0!important;}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>بوابة تسجيل ومتابعة الزيارات</title>
+  <link rel="preload" as="script" href="/original/auth-check.js">
+  <script src="/original/auth-check.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{--navy:#173b6d;--blue:#2464a8;--gold:#c7a438;--bg:#eef3f8;--line:#dce5ef;--green:#14804a;--red:#b42318;--orange:#b54708;--muted:#66758a}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#173b6d,#2464a8);min-height:100vh;font-family:Tajawal,Arial,sans-serif;color:#172033}.shell{width:min(1180px,95%);margin:28px auto 60px;background:#fff;border-radius:21px;box-shadow:0 24px 65px rgba(0,0,0,.22);padding:30px}.header{text-align:center;border-bottom:2px solid var(--gold);padding-bottom:18px;margin-bottom:20px}.header img{width:78px}.header h1{font-size:24px;color:var(--navy);margin:8px 0 3px}.header p{color:var(--muted);margin:0;font-size:13px}.notice{padding:12px 14px;border-radius:11px;background:#eef6ff;border:1px solid #bad5ef;color:#245b92;font-size:13px;margin-bottom:15px}.warn{background:#fff6e7;border-color:#eed09b;color:#83520b}.error{background:#fff0ef;border-color:#efb8b3;color:#9f2d25}.section-title{font-size:17px;font-weight:800;color:var(--navy);display:flex;gap:8px;align-items:center;margin:24px 0 13px}.grid{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:14px 20px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}.field label{font-size:12px;color:#44546a;font-weight:800}.field input,.field select,.field textarea{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;background:#fbfdff;outline:none}.field input:focus,.field select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(36,100,168,.08);background:#fff}.field input[readonly]{background:#eef7f1;color:#16794a}.auto{font-size:10px;background:#e8f7ef;color:#14804a;border-radius:999px;padding:2px 7px}.visitors{display:flex;flex-direction:column;gap:13px}.visitor{border:1px solid var(--line);border-radius:14px;padding:16px;background:#f9fbfd}.visitor-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.visitor-title{font-weight:800;color:var(--navy)}.visitor-grid{display:grid;grid-template-columns:repeat(3,minmax(170px,1fr));gap:12px}.visitor-grid .full{grid-column:1/-1}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}.btn{border:0;border-radius:10px;padding:10px 15px;font:inherit;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px}.btn:disabled{opacity:.55;cursor:not-allowed}.primary{background:var(--navy);color:#fff}.success{background:var(--green);color:#fff}.danger{background:var(--red);color:#fff}.secondary{background:#eaf1f8;color:var(--navy);border:1px solid #cad8e7}.submit{width:100%;padding:14px;font-size:16px;margin-top:18px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px}.table{width:100%;border-collapse:collapse;min-width:900px;font-size:12.5px}.table th,.table td{padding:10px 11px;border-bottom:1px solid #edf1f5;text-align:right}.table th{background:#f4f7fa;color:#475467;font-size:11.5px}.badge{display:inline-flex;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:800}.b-green{background:#e8f7ef;color:var(--green)}.b-orange{background:#fff2e3;color:var(--orange)}.b-red{background:#fdecea;color:var(--red)}.b-gray{background:#eef1f5;color:#596579}.muted{color:var(--muted)}.search{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}.search input{border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:inherit}.toast{position:fixed;left:22px;bottom:22px;z-index:9999;max-width:420px;padding:13px 16px;border-radius:11px;color:#fff;font-weight:800;display:none;box-shadow:0 15px 40px rgba(0,0,0,.2)}.toast.ok{background:var(--green)}.toast.err{background:var(--red)}.empty{text-align:center;padding:25px;color:#8a96a7}@media(max-width:750px){.shell{padding:18px}.grid,.visitor-grid{grid-template-columns:1fr}.field.full,.visitor-grid .full{grid-column:1}.header h1{font-size:20px}}
+  </style>
 </head>
 <body>
-
-<div class="main-container">
-  <div class="form-header">
-    <img src="/original/najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي">
-    <h2>بوابة تسجيل ومتابعة الزيارات</h2>
-    <p>يُملأ الموقع والمقاول تلقائياً — أضف اسم الزائر وبياناته فقط</p>
-  </div>
-
-  <div class="info-banner" id="autofill-banner" style="display:none">
-    <i class="fas fa-magic"></i>
-    <span id="autofill-text">تم ملء بيانات الموقع والمقاول تلقائياً من إعدادات العقد.</span>
-  </div>
+<div class="shell">
+  <div class="header"><img src="/original/najran_health_cluster_logo.png" alt="الشعار"><h1>بوابة تسجيل ومتابعة زيارات مقاولي الباطن</h1><p>اختيار الأنظمة والشركات المعتمدة حسب الموقع</p></div>
+  <div id="catalog-message" class="notice">جارٍ تحميل إعدادات الموقع...</div>
 
   <form id="visit-form">
-    <!-- Shared fields -->
-    <div class="section-title"><i class="fas fa-info-circle"></i> معلومات الزيارة المشتركة</div>
-    <div class="shared-grid">
-      <div class="input-group">
-        <label for="f_site"><i class="fas fa-map-marker-alt"></i> الموقع / المنشأة <span class="auto-badge" id="site-badge" style="display:none">تلقائي</span></label>
-        <input type="text" id="f_site" placeholder="اسم المستشفى / المنشأة" required>
-      </div>
-      <div class="input-group">
-        <label for="f_main"><i class="fas fa-hard-hat"></i> مقاول الصيانة <span class="auto-badge" id="main-badge" style="display:none">تلقائي</span></label>
-        <input type="text" id="f_main" placeholder="اسم المقاول الرئيسي" required>
-      </div>
-      <div class="input-group">
-        <label for="f_system"><i class="fas fa-tools"></i> النظام المراد زيارته</label>
-        <input type="text" id="f_system" list="systems-list" placeholder="اختر من القائمة أو اكتب..." required autocomplete="off">
-        <datalist id="systems-list"></datalist>
-      </div>
-      <div class="input-group">
-        <label for="f_sub"><i class="fas fa-building"></i> مقاول الباطن</label>
-        <input type="text" id="f_sub" placeholder="اسم شركة مقاول الباطن" required>
-      </div>
-      <div class="input-group">
-        <label for="f_date"><i class="fas fa-calendar-alt"></i> تاريخ الزيارة</label>
-        <input type="date" id="f_date" required>
-      </div>
+    <div class="section-title"><i class="fas fa-location-dot"></i> معلومات الزيارة</div>
+    <div class="grid">
+      <div class="field"><label>الموقع / المنشأة <span class="auto">تلقائي</span></label><input id="site" readonly required></div>
+      <div class="field"><label>مقاول الصيانة الرئيسي <span class="auto">تلقائي</span></label><input id="main-contractor" readonly required></div>
+      <div class="field"><label>النظام المراد زيارته</label><select id="system-select" required></select><input id="system-manual" class="hidden" placeholder="اكتب اسم النظام"></div>
+      <div class="field"><label>شركة مقاول الباطن</label><select id="contractor-select" required></select><input id="contractor-manual" class="hidden" placeholder="اكتب اسم شركة مقاول الباطن"></div>
+      <div class="field"><label>تاريخ الزيارة</label><input type="date" id="visit-date" required></div>
     </div>
 
-    <!-- Visitors -->
     <div class="section-title"><i class="fas fa-users"></i> الزوار</div>
-    <div class="visitors-wrap" id="visitors-wrap"></div>
-    <button type="button" class="btn-add-visitor" onclick="addVisitor()">
-      <i class="fas fa-user-plus"></i> أضف زائراً آخر
-    </button>
-
-    <button type="submit" class="btn-submit" id="submit-btn">
-      <i class="fas fa-paper-plane"></i> إرسال الطلب
-    </button>
+    <div id="visitors" class="visitors"></div>
+    <div class="actions"><button class="btn secondary" type="button" onclick="addVisitor()"><i class="fas fa-user-plus"></i> إضافة زائر آخر</button></div>
+    <button class="btn success submit" id="submit-btn" type="submit"><i class="fas fa-paper-plane"></i> إرسال طلب الزيارة</button>
   </form>
-  <div id="status-message"></div>
 
-  <!-- My requests -->
-  <div class="requests-index">
-    <div class="index-header">
-      <h3><i class="fas fa-list-alt" style="color:var(--go)"></i> طلباتي السابقة</h3>
-      <div class="search-box">
-        <input type="text" id="search-input" placeholder="بحث...">
-        <i class="fas fa-search"></i>
-      </div>
-    </div>
-    <div class="table-wrap">
-      <table class="req-table">
-        <thead>
-          <tr>
-            <th>اسم الزائر</th><th>الموقع</th><th>النظام</th>
-            <th>مقاول الباطن</th><th>تاريخ الزيارة</th><th>الحالة</th><th>التصريح</th>
-          </tr>
-        </thead>
-        <tbody id="req-tbody">
-          <tr><td colspan="7" class="empty-row"><i class="fas fa-circle-notch fa-spin"></i> جارٍ التحميل...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+  <div class="section-title"><i class="fas fa-clock-rotate-left"></i> طلباتي السابقة</div>
+  <div class="search"><input id="search" placeholder="بحث في الطلبات"><button class="btn secondary" onclick="loadVisits()" type="button"><i class="fas fa-rotate"></i> تحديث</button></div>
+  <div class="table-wrap"><table class="table"><thead><tr><th>الزائر</th><th>النظام</th><th>الشركة</th><th>تاريخ الزيارة</th><th>الحالة</th><th>رقم الصادر</th><th>التصريح</th></tr></thead><tbody id="visits-body"></tbody></table></div>
 </div>
-
-<script src="/original/shared-nav.js?v=20260711_static_v1"></script>
+<div class="toast" id="toast"></div>
 <script>
-(function() {
-  var session = {};
-  try { session = JSON.parse(localStorage.getItem('najran_session') || '{}'); } catch(e) {}
-  var token = session.clerkToken || '';
-  var allVisits = [];
-  var visitSettings = { stamp: null, signature: null, managerName: 'م. محمد عباس المكرمي' };
-  var visitorCount = 0;
+(function(){
+  'use strict';
+  var state={catalog:{systems:[],contractors:[],approvals:[],representatives:[],representativeSystems:[]},visits:[],settings:{},visitorSeq:0,configured:false};
+  function session(){try{return JSON.parse(localStorage.getItem('najran_session')||'{}')}catch(e){return{}}}
+  async function token(force){try{if(typeof window.najranGetFreshToken==='function'){var t=await window.najranGetFreshToken(force?{skipCache:true}:undefined);if(t)return t}}catch(e){}return session().clerkToken||''}
+  async function api(url,opt,retry){opt=opt||{};var t=await token(!!retry),h=new Headers(opt.headers||{});h.set('Authorization','Bearer '+t);if(opt.body&&!(opt.body instanceof FormData)&&!h.has('Content-Type'))h.set('Content-Type','application/json');var r=await fetch(url,Object.assign({},opt,{headers:h}));if(r.status===401&&!retry)return api(url,opt,true);var d=null;try{d=await r.json()}catch(e){}if(!r.ok)throw new Error((d&&d.error)||'فشل الاتصال بالنظام');return d}
+  function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+  function toast(msg,type){var e=document.getElementById('toast');e.textContent=msg;e.className='toast '+(type||'ok');e.style.display='block';clearTimeout(e._t);e._t=setTimeout(function(){e.style.display='none'},5000)}
+  function fmt(v){if(!v)return'—';try{return new Date(v).toLocaleDateString('ar-SA')}catch(e){return v}}
+  function status(v){var m={approved:['موافق عليه','b-green'],pending:['قيد المراجعة','b-orange'],rejected:['مرفوض','b-red']},x=m[v]||[v,'b-gray'];return'<span class="badge '+x[1]+'">'+x[0]+'</span>'}
+  function currentSystemId(){return Number(document.getElementById('system-select').value)||null}
+  function currentContractorId(){return Number(document.getElementById('contractor-select').value)||null}
+  function contractorById(id){return state.catalog.contractors.find(function(x){return Number(x.id)===Number(id)})}
+  function systemById(id){return state.catalog.systems.find(function(x){return Number(x.id)===Number(id)})}
+  function repById(id){return state.catalog.representatives.find(function(x){return Number(x.id)===Number(id)})}
 
-  /* ── Auto-fill from persistentContractData ── */
-  (function autoFill() {
-    try {
-      var cd = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-      var hosp = cd.hospitalName || localStorage.getItem('hospitalName') || '';
-      var comp = cd.companyName  || localStorage.getItem('companyName')  || '';
-      var elSite = document.getElementById('f_site');
-      var elMain = document.getElementById('f_main');
-      var filled = false;
-      if (hosp && elSite) { elSite.value = hosp; elSite.readOnly = true; elSite.classList.add('auto-filled'); document.getElementById('site-badge').style.display = ''; filled = true; }
-      if (comp && elMain) { elMain.value = comp; elMain.readOnly = true; elMain.classList.add('auto-filled'); document.getElementById('main-badge').style.display = ''; filled = true; }
-      if (filled) {
-        document.getElementById('autofill-banner').style.display = '';
-        document.getElementById('autofill-text').textContent = 'تم ملء البيانات تلقائياً: ' + (hosp || '—') + ' — ' + (comp || '—');
-      }
-    } catch(e) {}
-    /* Default visit date = today */
-    var dEl = document.getElementById('f_date');
-    if (dEl && !dEl.value) dEl.value = new Date().toISOString().slice(0, 10);
-  })();
+  function initializeContext(){var s=session(),cd={};try{cd=JSON.parse(localStorage.getItem('persistentContractData')||'{}')}catch(e){}var site=cd.hospitalName||localStorage.getItem('hospitalName')||s.hospital||'',main=cd.companyName||localStorage.getItem('companyName')||s.company||'';document.getElementById('site').value=site;document.getElementById('main-contractor').value=main;document.getElementById('visit-date').value=new Date().toISOString().slice(0,10)}
 
-  /* ── Populate system datalist from consumables subcontractors ── */
-  (function buildSystemsList() {
-    try {
-      var raw = localStorage.getItem('subcontractors_data_consumables_v27');
-      if (!raw) return;
-      var data = JSON.parse(raw);
-      if (!Array.isArray(data) || !data.length) return;
-      var dl = document.getElementById('systems-list');
-      data.forEach(function(s) {
-        if (s && s.name) {
-          var opt = document.createElement('option');
-          opt.value = s.name;
-          dl.appendChild(opt);
-        }
-      });
-    } catch(e) {}
-  })();
+  async function loadCatalog(){var site=document.getElementById('site').value.trim(),msg=document.getElementById('catalog-message');try{var d=await api('/api/visits/catalog?site='+encodeURIComponent(site));state.catalog=d;state.configured=d.approvals&&d.approvals.length>0;if(state.configured){msg.className='notice';msg.textContent='تم تحميل الأنظمة والشركات المعتمدة للموقع. لا يمكن إرسال شركة غير معتمدة.';document.getElementById('system-select').classList.remove('hidden');document.getElementById('contractor-select').classList.remove('hidden');document.getElementById('system-manual').classList.add('hidden');document.getElementById('contractor-manual').classList.add('hidden');document.getElementById('system-select').required=true;document.getElementById('contractor-select').required=true;document.getElementById('system-manual').required=false;document.getElementById('contractor-manual').required=false;populateSystems()}else{msg.className='notice warn';msg.textContent='لم تُجهز اعتمادات هذا الموقع بعد. تم تفعيل الإدخال اليدوي مؤقتاً حتى تستكمل الإدارة الإعدادات.';document.getElementById('system-select').classList.add('hidden');document.getElementById('contractor-select').classList.add('hidden');document.getElementById('system-manual').classList.remove('hidden');document.getElementById('contractor-manual').classList.remove('hidden');document.getElementById('system-select').required=false;document.getElementById('contractor-select').required=false;document.getElementById('system-manual').required=true;document.getElementById('contractor-manual').required=true}refreshVisitorRepLists()}catch(e){msg.className='notice error';msg.textContent=e.message;toast(e.message,'err')}}
+  function populateSystems(){var ids=[...new Set(state.catalog.approvals.map(function(a){return a.systemId}))],items=state.catalog.systems.filter(function(s){return ids.includes(s.id)});var el=document.getElementById('system-select');el.innerHTML='<option value="">اختر النظام</option>'+items.map(function(x){return'<option value="'+x.id+'">'+esc(x.name)+'</option>'}).join('');populateContractors()}
+  function populateContractors(){var systemId=currentSystemId(),ids=state.catalog.approvals.filter(function(a){return Number(a.systemId)===systemId}).map(function(a){return a.contractorId}),items=state.catalog.contractors.filter(function(c){return ids.includes(c.id)}),el=document.getElementById('contractor-select');el.innerHTML='<option value="">اختر شركة مقاول الباطن</option>'+items.map(function(x){return'<option value="'+x.id+'">'+esc(x.name)+(x.documentStatus==='not_uploaded'?' — المستند لم يرفع':'')+'</option>'}).join('');refreshVisitorRepLists()}
+  function validReps(){var contractorId=currentContractorId(),systemId=currentSystemId();return state.catalog.representatives.filter(function(r){if(Number(r.contractorId)!==contractorId)return false;var links=state.catalog.representativeSystems.filter(function(x){return Number(x.representativeId)===Number(r.id)});return!links.length||links.some(function(x){return Number(x.systemId)===systemId})})}
 
-  /* ── Visitor management ── */
-  window.addVisitor = function() {
-    visitorCount++;
-    var n = visitorCount;
-    var card = document.createElement('div');
-    card.className = 'visitor-card';
-    card.id = 'visitor-' + n;
-    card.innerHTML =
-      '<div class="visitor-card-header">' +
-        '<span class="visitor-num"><i class="fas fa-user"></i> زائر ' + n + '</span>' +
-        (n > 1 ? '<button type="button" class="btn-remove-visitor" onclick="removeVisitor(' + n + ')" title="حذف">×</button>' : '') +
-      '</div>' +
-      '<div class="visitor-grid">' +
-        '<div class="input-group"><label>الاسم الكامل</label><input type="text" id="vn_' + n + '" placeholder="اسم الزائر" required></div>' +
-        '<div class="input-group"><label>رقم الهوية / الإقامة</label><input type="text" id="vi_' + n + '" placeholder="رقم الهوية" required></div>' +
-        '<div class="input-group"><label>رقم الجوال</label><input type="tel" id="vm_' + n + '" placeholder="05xxxxxxxx" required></div>' +
-        '<div class="input-group full"><label><i class="fas fa-camera"></i> صورة الهوية <span style="color:#94a3b8;font-weight:400">(اختياري)</span></label><input type="file" id="vp_' + n + '" accept="image/*"></div>' +
-      '</div>';
-    document.getElementById('visitors-wrap').appendChild(card);
-    updateVisitorNumbers();
-  };
+  window.addVisitor=function(){state.visitorSeq++;var id=state.visitorSeq,card=document.createElement('div');card.className='visitor';card.dataset.id=id;card.innerHTML='<div class="visitor-head"><div class="visitor-title"><i class="fas fa-user"></i> زائر</div>'+(document.querySelectorAll('.visitor').length?'<button type="button" class="btn danger" onclick="removeVisitor('+id+')">حذف</button>':'')+'</div><div class="visitor-grid"><div class="field full rep-choice-wrap"><label>اختيار مندوب مسجل (اختياري)</label><select class="rep-choice" onchange="selectRep('+id+',this.value)"><option value="">إدخال مندوب جديد</option></select></div><div class="field"><label>الاسم الكامل</label><input class="rep-name" required></div><div class="field"><label>رقم الهوية / الإقامة</label><input class="rep-id" inputmode="numeric" maxlength="10" required></div><div class="field"><label>رقم الجوال</label><input class="rep-mobile" required></div><div class="field full"><label>صورة الهوية / الإقامة <span class="muted">اختياري للمندوب الجديد — صورة أو PDF بحد أقصى 3MB</span></label><input class="rep-photo" type="file" accept="image/*,application/pdf"></div></div>';document.getElementById('visitors').appendChild(card);refreshVisitorRepLists();renumberVisitors()}
+  window.removeVisitor=function(id){var c=document.querySelector('.visitor[data-id="'+id+'"]');if(c)c.remove();renumberVisitors()}
+  function renumberVisitors(){document.querySelectorAll('.visitor').forEach(function(c,i){c.querySelector('.visitor-title').innerHTML='<i class="fas fa-user"></i> زائر '+(i+1)})}
+  function refreshVisitorRepLists(){var reps=state.configured?validReps():[];document.querySelectorAll('.rep-choice').forEach(function(sel){var old=sel.value;sel.innerHTML='<option value="">إدخال مندوب جديد</option>'+reps.map(function(r){return'<option value="'+r.id+'">'+esc(r.fullName)+(r.hasIqama?' — إقامة مرفقة':' — يحتاج استكمال الإقامة')+'</option>'}).join('');if(reps.some(function(r){return String(r.id)===old}))sel.value=old})}
+  window.selectRep=function(cardId,repId){var card=document.querySelector('.visitor[data-id="'+cardId+'"]'),r=repById(repId),fields=[card.querySelector('.rep-name'),card.querySelector('.rep-id'),card.querySelector('.rep-mobile')],photo=card.querySelector('.rep-photo');if(r){fields[0].value=r.fullName;fields[1].value=r.nationalId;fields[2].value=r.mobile||'';fields.forEach(function(x){x.readOnly=true});photo.disabled=true}else{fields.forEach(function(x){x.value='';x.readOnly=false});photo.disabled=false}}
 
-  window.removeVisitor = function(n) {
-    var card = document.getElementById('visitor-' + n);
-    if (card) card.remove();
-    updateVisitorNumbers();
-  };
+  async function fileToData(file){if(!file)return null;if(file.size>3*1024*1024)throw new Error('حجم مرفق الإقامة أكبر من 3MB');return await new Promise(function(resolve,reject){var rd=new FileReader();rd.onload=function(){resolve(rd.result)};rd.onerror=function(){reject(new Error('تعذر قراءة المرفق'))};rd.readAsDataURL(file)})}
+  document.getElementById('visit-form').addEventListener('submit',async function(e){e.preventDefault();var cards=[...document.querySelectorAll('.visitor')];if(!cards.length){toast('أضف زائراً واحداً على الأقل','err');return}var systemId=state.configured?currentSystemId():null,contractorId=state.configured?currentContractorId():null,systemName=state.configured?(systemById(systemId)||{}).name:document.getElementById('system-manual').value.trim(),contractorName=state.configured?(contractorById(contractorId)||{}).name:document.getElementById('contractor-manual').value.trim();if(!systemName||!contractorName){toast('اختر النظام والشركة','err');return}var btn=document.getElementById('submit-btn');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> جارٍ الإرسال';var ok=0,fail=[];for(var i=0;i<cards.length;i++){var card=cards[i],choice=card.querySelector('.rep-choice').value,photo=null;try{photo=await fileToData(card.querySelector('.rep-photo').files[0]);var body={repName:card.querySelector('.rep-name').value.trim(),repId:card.querySelector('.rep-id').value.trim(),repMobile:card.querySelector('.rep-mobile').value.trim(),siteLocation:document.getElementById('site').value,mainContractor:document.getElementById('main-contractor').value,systemName:systemName,subContractor:contractorName,visitDate:document.getElementById('visit-date').value,repIdPhoto:photo,systemId:systemId,contractorId:contractorId,representativeId:choice||null};await api('/api/visits',{method:'POST',body:JSON.stringify(body)});ok++}catch(x){fail.push('زائر '+(i+1)+': '+x.message)}}btn.disabled=false;btn.innerHTML='<i class="fas fa-paper-plane"></i> إرسال طلب الزيارة';if(ok){toast('تم إرسال '+ok+' طلب بنجاح','ok');document.getElementById('visitors').innerHTML='';state.visitorSeq=0;addVisitor();await loadVisits()}if(fail.length)toast(fail.join(' | '),'err')});
 
-  function updateVisitorNumbers() {
-    var cards = document.querySelectorAll('.visitor-card');
-    cards.forEach(function(card, i) {
-      var badge = card.querySelector('.visitor-num');
-      if (badge) badge.innerHTML = '<i class="fas fa-user"></i> زائر ' + (i + 1);
-    });
-  }
+  window.loadVisits=async function(){try{var d=await api('/api/visits');state.visits=d.visits||[];renderVisits()}catch(e){document.getElementById('visits-body').innerHTML='<tr><td colspan="7" class="empty">تعذر تحميل الطلبات</td></tr>';toast(e.message,'err')}}
+  function renderVisits(){var q=(document.getElementById('search').value||'').toLowerCase(),rows=state.visits.filter(function(v){return!q||[v.repName,v.systemName,v.subContractor,v.repId,v.serialNumber].join(' ').toLowerCase().includes(q)});document.getElementById('visits-body').innerHTML=rows.length?rows.map(function(v){var action=v.status==='approved'?'<button class="btn primary" onclick="printPermit('+v.id+')">طباعة إلكترونية</button>'+(v.signedPermitFile?'<a class="btn secondary" href="'+esc(v.signedPermitFile)+'" download="تصريح-زيارة-'+esc(v.serialNumber||v.id)+'">نسخة موقعة</a>':''):'—';return'<tr><td><strong>'+esc(v.repName)+'</strong><br><span class="muted">'+esc(v.repId)+'</span></td><td>'+esc(v.systemName)+'</td><td>'+esc(v.subContractor)+'</td><td>'+fmt(v.visitDate)+'</td><td>'+status(v.status)+(v.adminNotes?'<br><span class="muted">'+esc(v.adminNotes)+'</span>':'')+'</td><td>'+esc(v.serialNumber||'—')+'</td><td>'+action+'</td></tr>'}).join(''):'<tr><td colspan="7" class="empty">لا توجد طلبات</td></tr>'}
+  document.getElementById('search').addEventListener('input',renderVisits);document.getElementById('system-select').addEventListener('change',populateContractors);document.getElementById('contractor-select').addEventListener('change',refreshVisitorRepLists);
 
-  /* Init with one visitor */
-  addVisitor();
+  window.printPermit=function(id){var v=state.visits.find(function(x){return Number(x.id)===Number(id)});if(!v)return;var year=v.approvedAt?new Date(v.approvedAt).getFullYear():new Date().getFullYear(),approved=v.approvedAt?fmt(v.approvedAt):'—',w=window.open('','_blank','width=900,height=1000');if(!w){toast('المتصفح منع نافذة الطباعة','err');return}var rows=[['الاسم',v.repName],['الموقع',v.siteLocation],['تاريخ الزيارة',fmt(v.visitDate)],['النظام',v.systemName],['رقم الهوية (الإقامة)',v.repId],['رقم الجوال',v.repMobile],['مقاول الصيانة',v.mainContractor],['مقاول الباطن',v.subContractor]];w.document.write('<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>تصريح زيارة</title><style>@page{size:A4;margin:12mm}body{font-family:Arial,Tahoma,sans-serif}.head{display:flex;gap:18px;align-items:center;border-bottom:3px solid #173b6d;padding-bottom:14px}.head img{width:75px}.head h1{font-size:22px;color:#173b6d;margin:0}.tbl{width:100%;border-collapse:collapse;margin:20px 0}.tbl td{border:1px solid #aaa;padding:10px}.tbl td:first-child{background:#f1f5f9;font-weight:bold;width:32%}.text{line-height:2;background:#eef6ff;border:1px solid #bad3ea;padding:14px;border-radius:10px}.sign{display:flex;justify-content:space-between;align-items:flex-end;border:1px solid #bbb;border-radius:10px;padding:18px;margin-top:24px}.stamp{width:120px;height:120px;border:2px dashed #aaa;border-radius:50%;display:flex;align-items:center;justify-content:center}.foot{font-size:11px;color:#666;margin-top:16px}</style></head><body><div class="head"><img src="/original/najran_health_cluster_logo.png"><div><div>تجمع نجران الصحي — إدارة الصيانة</div><h1>موافقة زيارة مقاولي الباطن</h1><div>رقم الصادر: <b>'+esc(v.serialNumber||'—')+' / '+year+'</b></div></div></div><table class="tbl">'+rows.map(function(r){return'<tr><td>'+esc(r[0])+'</td><td>'+esc(r[1]||'—')+'</td></tr>'}).join('')+'</table><div class="text">توافق إدارة الصيانة بتجمع نجران الصحي بقيام مندوب مقاول الباطن الموضح اسمه وبياناته بعالية لزيارة الموقع لتنفيذ أعمال الصيانة الوقائية للنظام حسب شروط ومواصفات العقد.<br>وعلى ذلك جرى التوقيع،،،</div><div class="sign"><div><b>مدير إدارة الصيانة</b><p>الاسم: '+esc(state.settings.managerName||'م. محمد عباس المكرمي')+'</p><p>التاريخ: '+approved+' م</p><div style="margin-top:35px;border-top:1px solid #222;width:170px">التوقيع</div></div><div class="stamp">الختم</div></div><div class="foot">تم التحقق من بيانات الهوية/الإقامة إلكترونياً.</div><script>window.onload=function(){window.print()}<\/script></body></html>');w.document.close()}
 
-  /* ── Form submit ── */
-  document.getElementById('visit-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    var btn = document.getElementById('submit-btn');
-    btn.disabled = true;
-
-    var shared = {
-      siteLocation:   document.getElementById('f_site').value,
-      systemName:     document.getElementById('f_system').value,
-      mainContractor: document.getElementById('f_main').value,
-      subContractor:  document.getElementById('f_sub').value,
-      visitDate:      document.getElementById('f_date').value,
-    };
-
-    var cards = document.querySelectorAll('.visitor-card');
-    if (!cards.length) { showMsg('أضف زائراً واحداً على الأقل', 'error'); btn.disabled = false; return; }
-
-    /* Collect visitors */
-    var visitors = [];
-    for (var i = 0; i < cards.length; i++) {
-      var id = cards[i].id.replace('visitor-', '');
-      var nameEl   = document.getElementById('vn_' + id);
-      var idEl     = document.getElementById('vi_' + id);
-      var mobEl    = document.getElementById('vm_' + id);
-      var photoEl  = document.getElementById('vp_' + id);
-      if (!nameEl || !idEl || !mobEl) continue;
-      var photoData = null;
-      if (photoEl && photoEl.files[0]) {
-        photoData = await new Promise(function(resolve) {
-          var reader = new FileReader();
-          reader.onload = function(ev) { resolve(ev.target.result); };
-          reader.readAsDataURL(photoEl.files[0]);
-        });
-      }
-      visitors.push({ repName: nameEl.value, repId: idEl.value, repMobile: mobEl.value, repIdPhoto: photoData });
-    }
-
-    btn.innerHTML = '<span class="spinner"></span> جارٍ الإرسال (' + visitors.length + ' زائر)...';
-
-    var successCount = 0;
-    var failCount = 0;
-
-    for (var vi = 0; vi < visitors.length; vi++) {
-      var body = Object.assign({}, shared, visitors[vi]);
-      try {
-        var res = await fetch('/api/visits', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify(body)
-        });
-        if (!res.ok) { failCount++; } else { successCount++; }
-      } catch(err) { failCount++; }
-    }
-
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الطلب';
-
-    if (successCount > 0 && failCount === 0) {
-      showMsg('تم إرسال ' + successCount + ' طلب بنجاح ✓ — سيتم مراجعتهم قريباً', 'success');
-      /* Reset visitors */
-      document.getElementById('visitors-wrap').innerHTML = '';
-      visitorCount = 0;
-      addVisitor();
-      document.getElementById('f_sub').value = '';
-      document.getElementById('f_system').value = '';
-    } else if (successCount > 0) {
-      showMsg('نجح ' + successCount + ' طلب وفشل ' + failCount, 'error');
-    } else {
-      showMsg('فشل إرسال الطلبات، تحقق من اتصالك', 'error');
-    }
-    await loadVisits();
-  });
-
-  /* ── Load settings ── */
-  async function loadSettings() {
-    try {
-      var r = await fetch('/api/visits/settings', { headers: { 'Authorization': 'Bearer ' + token } });
-      if (r.ok) visitSettings = await r.json();
-    } catch(e) {}
-  }
-
-  /* ── Load my visits ── */
-  async function loadVisits() {
-    var tbody = document.getElementById('req-tbody');
-    try {
-      var r = await fetch('/api/visits', { headers: { 'Authorization': 'Bearer ' + token } });
-      if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" class="empty-row">غير مصرح</td></tr>'; return; }
-      var data = await r.json();
-      allVisits = data.visits || [];
-      renderVisits();
-    } catch(e) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty-row"><i class="fas fa-exclamation-triangle" style="color:#f59e0b"></i> تعذر التحميل</td></tr>';
-    }
-  }
-
-  function renderVisits() {
-    var q = (document.getElementById('search-input').value || '').toLowerCase().trim();
-    var data = allVisits.filter(function(v) {
-      return !q || Object.values(v).some(function(x){ return x && String(x).toLowerCase().includes(q); });
-    });
-    var tbody = document.getElementById('req-tbody');
-    if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-row"><i class="fas fa-inbox" style="font-size:20px;color:#cbd5e1"></i><br>لا توجد طلبات</td></tr>'; return; }
-    tbody.innerHTML = data.map(function(v) {
-      var sc = v.status === 'approved' ? 'status-approved' : v.status === 'rejected' ? 'status-rejected' : 'status-pending';
-      var st = v.status === 'approved' ? 'موافق عليه' : v.status === 'rejected' ? 'مرفوض' : 'قيد المراجعة';
-      var dt = v.visitDate ? new Date(v.visitDate).toLocaleDateString('ar-SA') : '—';
-      var actions = '';
-      if (v.status === 'approved') {
-        var yr = v.approvedAt ? new Date(v.approvedAt).getFullYear() : new Date().getFullYear();
-        var serial = v.serialNumber ? '<div class="serial-badge"><i class="fas fa-hashtag"></i> ' + esc(v.serialNumber) + '/' + yr + '</div>' : '';
-        actions = serial +
-          '<button class="btn-dl btn-dl-pdf" onclick="genPDF(' + v.id + ')"><i class="fas fa-file-pdf"></i> تحميل إلكتروني</button>';
-        if (v.signedPermitFile) {
-          actions += '<br><a class="btn-dl btn-dl-signed" href="' + v.signedPermitFile + '" download="تصريح-موقع-' + esc(v.serialNumber||v.id) + '"><i class="fas fa-signature"></i> نسخة موقعة يدوياً</a>';
-        }
-      } else if (v.status === 'rejected' && v.adminNotes) {
-        actions = '<small style="color:#b91c1c;font-size:11px"><i class="fas fa-info-circle"></i> ' + esc(v.adminNotes) + '</small>';
-      }
-      return '<tr>' +
-        '<td><strong>' + esc(v.repName) + '</strong><br><small style="color:#94a3b8">' + esc(v.repId) + '</small></td>' +
-        '<td>' + esc(v.siteLocation) + '</td>' +
-        '<td>' + esc(v.systemName) + '</td>' +
-        '<td>' + esc(v.subContractor) + '</td>' +
-        '<td>' + dt + '</td>' +
-        '<td><span class="status-badge ' + sc + '">' + st + '</span></td>' +
-        '<td>' + (actions || '—') + '</td>' +
-      '</tr>';
-    }).join('');
-  }
-
-  /* ── PDF generator ── */
-  window.genPDF = async function(id) {
-    var v = allVisits.find(function(x){ return x.id === id; });
-    if (!v) return;
-    var btn = document.querySelector('[onclick="genPDF(' + id + ')"]');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ...'; }
-    var year = v.approvedAt ? new Date(v.approvedAt).getFullYear() : new Date().getFullYear();
-    var approvedDate = v.approvedAt ? new Date(v.approvedAt).toLocaleDateString('ar-SA') : '—';
-    var visitDt = v.visitDate ? new Date(v.visitDate).toLocaleDateString('ar-SA') : '—';
-    var rows = [
-      ['الاسم', esc(v.repName)], ['المستشفى / المنشأة', esc(v.submittedByHospital || '—')],
-      ['الموقع', esc(v.siteLocation)], ['تاريخ الزيارة', visitDt], ['النظام', esc(v.systemName)],
-      ['رقم الهوية (الإقامة)', esc(v.repId)], ['رقم الجوال', esc(v.repMobile)],
-      ['مقاول الصيانة', esc(v.mainContractor)], ['مقاول الباطن', esc(v.subContractor)],
-    ];
-    var stampHtml = visitSettings.stamp ? '<img src="'+visitSettings.stamp+'" style="max-width:110px;max-height:110px;object-fit:contain;">' : '<div style="width:110px;height:110px;border:2px dashed #ccc;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:#aaa;">الختم</div>';
-    var sigHtml = visitSettings.signature ? '<img src="'+visitSettings.signature+'" style="max-width:150px;max-height:70px;object-fit:contain;">' : '<div style="width:150px;height:2px;background:#333;margin-top:40px;"></div>';
-    var idPhotoHtml = v.repIdPhoto ? '<div style="margin-top:24px;border:1.5px solid #d1d5db;border-radius:10px;overflow:hidden;"><div style="background:#f1f5f9;padding:9px 14px;font-weight:800;font-size:13px;border-bottom:1px solid #d1d5db;color:#1e3c72;">صورة الهوية / الإقامة</div><div style="padding:16px;text-align:center;"><img src="'+v.repIdPhoto+'" style="max-width:320px;max-height:220px;border-radius:6px;"></div></div>' : '';
-    var tmpl = document.createElement('div');
-    tmpl.style.cssText = 'position:fixed;left:-9999px;top:0;width:790px;min-height:200px;background:#fff;padding:44px 48px;font-family:Tajawal,sans-serif;direction:rtl;color:#1a1a1a;';
-    tmpl.innerHTML =
-      '<div style="display:flex;align-items:center;gap:18px;border-bottom:3px solid #1e3c72;padding-bottom:16px;margin-bottom:20px;">' +
-        '<img src="/original/najran_health_cluster_logo.png" style="width:70px;height:70px;object-fit:contain;">' +
-        '<div><div style="font-size:11px;color:#64748b;margin-bottom:4px;">تجمع نجران الصحي — وحدة الصيانة العامة</div>' +
-        '<h2 style="font-size:20px;color:#1e3c72;margin:0 0 4px;font-weight:800;">موافقة زيارة مقاولي الباطن</h2>' +
-        '<div style="font-size:13px;color:#475569;">رقم الصادر: <strong>' + (v.serialNumber || '—') + ' / ' + year + '</strong></div></div>' +
-      '</div>' +
-      '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;">' +
-      rows.map(function(r){ return '<tr><td style="border:1px solid #d1d5db;padding:9px 12px;font-weight:700;background:#f8fafc;width:32%;font-size:13px;">' + r[0] + '</td><td style="border:1px solid #d1d5db;padding:9px 12px;font-size:13px;">' + r[1] + '</td></tr>'; }).join('') +
-      '</table>' +
-      '<div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:22px;line-height:2;font-size:13px;text-align:justify;">توافق إدارة الصيانة بتجمع نجران الصحي بقيام مندوب مقاول الباطن الموضح اسمه وبياناته بعالية لزيارة الموقع لتنفيذ أعمال الصيانة الوقائية للنظام حسب شروط ومواصفات العقد.<br>وعلى ذلك جرى التوقيع ،،،</div>' +
-      '<div style="display:flex;justify-content:space-between;align-items:flex-end;border:1.5px solid #d1d5db;border-radius:10px;padding:16px 20px;">' +
-        '<div><p style="font-weight:800;font-size:14px;color:#1e3c72;margin-bottom:6px;">مدير إدارة الصيانة</p>' +
-        '<p style="font-size:13px;margin-bottom:4px;">الاسم: ' + esc(visitSettings.managerName || 'م. محمد عباس المكرمي') + '</p>' +
-        '<p style="font-size:13px;margin-bottom:12px;">التاريخ: ' + approvedDate + ' م</p>' + sigHtml + '</div>' +
-        stampHtml + '</div>' + idPhotoHtml;
-    document.body.appendChild(tmpl);
-    try {
-      var canvas = await html2canvas(tmpl, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', logging: false });
-      document.body.removeChild(tmpl);
-      var imgData = canvas.toDataURL('image/png');
-      var pdf = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      var pageW = pdf.internal.pageSize.getWidth(), pageH = pdf.internal.pageSize.getHeight(), margin = 10;
-      var imgW = pageW - margin*2, imgH = (canvas.height * imgW) / canvas.width;
-      if (imgH <= pageH - margin*2) { pdf.addImage(imgData, 'PNG', margin, margin, imgW, imgH); }
-      else { var sc = (pageH-margin*2)/imgH; pdf.addImage(imgData, 'PNG', margin, margin, imgW*sc, pageH-margin*2); }
-      pdf.save('تصريح-زيارة-' + (v.serialNumber || v.id) + '.pdf');
-    } catch(e) {
-      if (document.body.contains(tmpl)) document.body.removeChild(tmpl);
-      showMsg('حدث خطأ في توليد الملف', 'error');
-    } finally {
-      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf"></i> تحميل إلكتروني'; }
-    }
-  };
-
-  function showMsg(txt, type) {
-    var el = document.getElementById('status-message');
-    el.textContent = txt; el.className = type; el.style.display = 'block';
-    setTimeout(function(){ el.style.display = 'none'; }, 7000);
-  }
-  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-  document.getElementById('search-input').addEventListener('input', renderVisits);
-  Promise.all([loadSettings(), loadVisits()]);
+  async function init(){initializeContext();addVisitor();try{var r=await Promise.all([loadCatalog(),api('/api/visits/settings')]);state.settings=r[1]||{}}catch(e){}await loadVisits()}
+  init();
 })();
 </script>
 </body>
