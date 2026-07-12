@@ -305,7 +305,7 @@
     '.sbx-save{background:#15803d!important;color:#fff!important;border-color:#15803d!important}',
     '.sbx-final{background:#166534!important;color:#fff!important;border-color:#166534!important}',
     '.sbx-reset{background:#fef2f2!important;color:#991b1b!important;border-color:#fecaca!important}',
-    '#sbx-edit-fab{position:fixed;left:14px;bottom:14px;z-index:999990;border:none;border-radius:999px;background:#334155;color:#fff;padding:8px 14px;font-family:Tajawal,Arial,sans-serif;font-weight:900;font-size:12px;box-shadow:0 6px 18px rgba(15,23,42,.28);cursor:pointer}',
+    '#sbx-edit-fab{position:fixed;left:14px;bottom:92px;z-index:999990;border:none;border-radius:999px;background:#334155;color:#fff;padding:8px 14px;font-family:Tajawal,Arial,sans-serif;font-weight:900;font-size:12px;box-shadow:0 6px 18px rgba(15,23,42,.28);cursor:pointer}',
     '#sbx-edit-fab.sbx-intent{background:#7c3aed}',
     '@media print{#sbx-toggle,#sbx-panel,#sbx-edit-fab{display:none!important}}'
   ].join('\n');
