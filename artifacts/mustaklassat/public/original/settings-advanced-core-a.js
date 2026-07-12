@@ -27,6 +27,7 @@ function windowText(){var e=q('f-window');return e&&e.options[e.selectedIndex]?e
 function hasMissing(e){return !e.userId&&!e.userEmail&&!e.userName||!e.page||!e.type||!e.severity}
 function isManualTest(e){var p=e&&e._payload||{};return norm(e&&e.type)==='manual_incident'||norm(p.reason)==='manual dashboard test'}
 function isTelemetryNetworkFailure(e){var p=e&&e._payload||{},url=String(p.url||'');return norm(e&&e.type)==='api_failure'&&/^\/api\/(?:audit|users\/me\/activity)(?:$|[?#])/.test(url)}
+function isExpectedPasswordInputError(e){var s=norm([e&&e.type,e&&e.message,e&&e.page,JSON.stringify(e&&e._payload||{})].join(' '));return norm(e&&e.type)==='js_error'&&/invalidcharactererror/.test(s)&&/btoa/.test(s)&&/latin1|latin-1/.test(s)}
 
 function category(e){
   if(isManualTest(e))return'اختبار يدوي';
@@ -61,7 +62,7 @@ function recommendation(g){
 }
 
 function rebuild(){
-  enriched=events.map(function(e,i){
+  enriched=events.filter(function(e){return !isExpectedPasswordInputError(e)}).map(function(e,i){
     var x=Object.assign({},e);
     x._index=i;x._category=category(e);x._manual=isManualTest(e);x._loss=x._manual?false:dataLoss(e);x._user=userKey(e);x._fp=fingerprint(e);x._time=time(e);x._missing=hasMissing(e);x._new=baselineReady&&!previousIds.has(String(e.id));
     return x
