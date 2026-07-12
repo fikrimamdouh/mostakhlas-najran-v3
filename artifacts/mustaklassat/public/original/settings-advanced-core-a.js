@@ -17,7 +17,7 @@ async function authHeaders(){var t=await fresh();return t?{Authorization:'Bearer
 function manualFetch(url,o){networkCount++;q('network-count').textContent=networkCount;return fetch(url,o)}
 function set(id,v){var e=q(id);if(e)e.textContent=v==null?'—':v}
 function norm(v){return String(v||'').toLowerCase().replace(/\s+/g,' ').trim()}
-function time(e){var n=new Date(e.createdAt||e.timestamp||0).getTime();return isFinite(n)?n:0}
+function time(e){var n=new Date(e.timestamp||e.createdAt||0).getTime();return isFinite(n)?n:0}
 function fmt(v){try{return new Date(v).toLocaleString('ar-SA')}catch(_){return String(v||'')}}
 function userKey(e){return String(e.userId||e.userEmail||e.userName||'غير محدد')}
 function userName(e){return e.userName||e.userEmail||('User #'+(e.userId||'غير محدد'))}
@@ -26,9 +26,11 @@ function severityClass(s){s=norm(s);return ['critical','error','warning'].includ
 function windowText(){var e=q('f-window');return e&&e.options[e.selectedIndex]?e.options[e.selectedIndex].text:'النطاق الحالي'}
 function hasMissing(e){return !e.userId&&!e.userEmail&&!e.userName||!e.page||!e.type||!e.severity}
 function isManualTest(e){var p=e&&e._payload||{};return norm(e&&e.type)==='manual_incident'||norm(p.reason)==='manual dashboard test'}
+function isTelemetryNetworkFailure(e){var p=e&&e._payload||{},url=String(p.url||'');return norm(e&&e.type)==='api_failure'&&/^\/api\/(?:audit|users\/me\/activity)(?:$|[?#])/.test(url)}
 
 function category(e){
   if(isManualTest(e))return'اختبار يدوي';
+  if(isTelemetryNetworkFailure(e))return'اتصال وخدمات مراقبة';
   var s=norm([e.type,e.message,e.page,JSON.stringify(e._payload||{})].join(' '));
   if(/signature|توقيع|sb_sigs|dynamicsignatures/.test(s))return'توقيعات';
   if(/storage_empty|storage_shrunk|storage_removed|storage_cleared|data.loss|فقد|اختف|overwrite|restore_overwritten/.test(s))return'فقد بيانات';
@@ -49,6 +51,7 @@ function fingerprint(e){var base=[norm(e.type||'unknown'),norm(e.page||'unknown'
 function recommendation(g){
   if(g.manual)return'سجل اختبار مقصود للتحقق من مسار المراقبة؛ لا يعامل كعطل إنتاجي.';
   if(g.loss)return'راجع مسار الحفظ والمسح والاستعادة قبل أي تعديل؛ احفظ القيم قبل وبعد الحدث.';
+  if(g.category==='اتصال وخدمات مراقبة')return'فشل شبكي في تسجيل النشاط أو التدقيق؛ لا ينسب إلى الصفحة التشغيلية إلا إذا ظهر معه فشل API أعمال.';
   if(g.category==='توقيعات')return'قارن مفتاح التوقيع قبل وبعد الريفريش أو فتح المستخلص، وحدد الكاتب والماسح.';
   if(g.category==='تسجيل دخول وتوكن')return'تحقق من fresh-token ثم أعد الطلب مرة واحدة فقط عند 401.';
   if(g.category==='رفع ومزامنة')return'افصل نجاح الحفظ المحلي عن نجاح الرفع، ولا تعرض نجاحًا قبل استجابة API.';
@@ -71,8 +74,9 @@ function rebuild(){
     var rank={critical:0,error:1,warning:2,info:3};if((rank[norm(e.severity)]??3)<(rank[g.severity]??3))g.severity=norm(e.severity)
   });
   groups=Object.values(m).map(function(g){
-    var repeated=g.events.length>1,multi=g.users.size>1,multiHosp=g.hospitals.size>1,loss=g.events.some(function(e){return e._loss}),age=Date.now()-g.last;
+    var repeated=g.events.length>1,multi=g.users.size>1,multiHosp=g.hospitals.size>1,loss=g.events.some(function(e){return e._loss}),age=Date.now()-g.last,telemetryOnly=g.events.every(isTelemetryNetworkFailure);
     if(g.manual)g.status='معلومات تشغيلية';
+    else if(telemetryOnly)g.status=g.events.length>3?'يحتاج متابعة':'معلومات تشغيلية';
     else if(g.severity==='critical'||loss||(repeated&&(multi||multiHosp)))g.status='يحتاج تدخل';
     else if(g.severity==='error'||multi)g.status='يحتاج متابعة';
     else if(repeated&&age>72*3600000)g.status='متكرر معروف';
