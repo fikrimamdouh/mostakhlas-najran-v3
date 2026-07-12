@@ -174,13 +174,13 @@ function createCategorySelect(currentCategory, departmentKey, employeeIndex) {
 function createAttendanceSelect(currentStatus, departmentKey, employeeIndex, dayIndex) {
   // نفس منطق ألوان قائمة الفئات: اللون يظهر داخل القائمة وعند اختيار الحالة.
   const statuses = [
-    { code: 'ح', name: 'حاضر', color: '#16a34a' },
-    { code: 'غ', name: 'غائب', color: '#dc2626' },
-    { code: 'ج', name: 'إجازة', color: '#d97706' },
-    { code: 'ش', name: 'شاغرة', color: '#0891b2' },
-    { code: 'ت', name: 'تحت الإجراء', color: '#64748b' },
-    { code: 'ب', name: 'بداية العقد', color: '#7c3aed' },
-    { code: 'ن', name: 'نهاية العقد', color: '#ea580c' }
+    { code: 'ح', name: 'حاضر', color: '#16a34a', selectBg: '#dcfce7', selectText: '#166534' },
+    { code: 'غ', name: 'غائب', color: '#dc2626', selectBg: '#fee2e2', selectText: '#991b1b' },
+    { code: 'ج', name: 'إجازة', color: '#d97706', selectBg: '#fef3c7', selectText: '#92400e' },
+    { code: 'ش', name: 'شاغرة', color: '#0891b2', selectBg: '#cffafe', selectText: '#155e75' },
+    { code: 'ت', name: 'تحت الإجراء', color: '#64748b', selectBg: '#e2e8f0', selectText: '#334155' },
+    { code: 'ب', name: 'بداية العقد', color: '#7c3aed', selectBg: '#ede9fe', selectText: '#5b21b6' },
+    { code: 'ن', name: 'نهاية العقد', color: '#ea580c', selectBg: '#ffedd5', selectText: '#9a3412' }
   ];
 
   const select = document.createElement('select');
@@ -205,8 +205,8 @@ function createAttendanceSelect(currentStatus, departmentKey, employeeIndex, day
   const updateSelectColor = () => {
     const selectedStatus = statuses.find(status => status.code === select.value);
     if (!selectedStatus) return;
-    select.style.backgroundColor = selectedStatus.color;
-    select.style.color = '#ffffff';
+    select.style.backgroundColor = selectedStatus.selectBg;
+    select.style.color = selectedStatus.selectText;
   };
 
   updateSelectColor();
@@ -2784,8 +2784,68 @@ function printSelectedDepartments() {
   preparePrint(selectedDepartments, includeGrandTotalSignatures);
   closePrintDialog();
 }
+function getLegacyAttendanceSignaturePrintStyleCss() {
+  // تنسيق V5 هو المصدر الفعلي للبطاقات الظاهرة في صفحة الحضور.
+  try {
+    const keys = ['najranSignatureStyleSettings_v1__attendance', 'najranSignatureStyleSettings_v1'];
+    let settings = null;
+    let newest = -1;
+    keys.forEach(key => {
+      const value = JSON.parse(localStorage.getItem(key) || 'null');
+      if (!value || value.approved !== true) return;
+      const stamp = Date.parse(value.savedAt || '') || 0;
+      if (stamp >= newest) { settings = value; newest = stamp; }
+    });
+    if (!settings) return '';
+
+    const clamp = (value, min, max, fallback) => {
+      const number = Number(value);
+      return Number.isFinite(number) ? Math.max(min, Math.min(max, number)) : fallback;
+    };
+    const justify = { right: 'flex-end', center: 'center', left: 'flex-start', distribute: 'space-between' }[settings.containerAlign];
+    const rowGap = clamp(settings.rowGap, -80, 180, 0);
+    const rowTop = clamp(settings.rowTopMargin, -180, 280, 0);
+    const css = [];
+    if (justify) css.push('.signatures-grid{justify-content:' + justify + '!important;}');
+    if (rowGap !== 0) css.push('.signatures-grid{gap:' + rowGap + 'px!important;}');
+    if (rowTop !== 0) css.push('.signatures-block{transform:translateY(' + rowTop + 'px)!important;}');
+
+    (Array.isArray(settings.perSignature) ? settings.perSignature : []).forEach((raw, index) => {
+      if (!raw || typeof raw !== 'object') return;
+      const item = '.signatures-grid .signature-item:nth-child(' + (index + 1) + ')';
+      const title = item + ' .signature-role';
+      const name = item + ' .signature-name';
+      const line = item + ' .signature-line';
+      const x = clamp(raw.gapBefore, -180, 180, 0);
+      const y = clamp(raw.yShift, -160, 220, 0);
+      if (x !== 0 || y !== 0) css.push(item + '{transform:translate(' + x + 'px,' + y + 'px)!important;}');
+      if (raw.newLine === true) css.push(item + '{flex-basis:100%!important;}');
+      if (Number.isFinite(Number(raw.titleFontSize))) css.push(title + '{font-size:' + clamp(raw.titleFontSize, 6, 44, 15) + 'px!important;}');
+      if (Number.isFinite(Number(raw.nameFontSize))) css.push(name + '{font-size:' + clamp(raw.nameFontSize, 6, 44, 15) + 'px!important;}');
+      if (Number.isFinite(Number(raw.titleWeight))) css.push(title + '{font-weight:' + clamp(raw.titleWeight, 100, 900, 900) + '!important;}');
+      if (Number.isFinite(Number(raw.nameWeight))) css.push(name + '{font-weight:' + clamp(raw.nameWeight, 100, 900, 900) + '!important;}');
+      if (Number.isFinite(Number(raw.titleNameGap))) css.push(title + '{margin-bottom:' + clamp(raw.titleNameGap, -40, 140, 14) + 'px!important;}');
+      if (Number.isFinite(Number(raw.lineHeight))) css.push(name + '{line-height:' + clamp(raw.lineHeight, 0.8, 3, 1.7) + '!important;}');
+      if (Number.isFinite(Number(raw.letterSpacing))) css.push(title + ',' + name + '{letter-spacing:' + clamp(raw.letterSpacing, -2, 8, 0) + 'px!important;}');
+      if (['right', 'center', 'left'].includes(raw.textAlign)) {
+        css.push(item + ',' + title + ',' + name + '{text-align:' + raw.textAlign + '!important;}');
+        css.push(line + '{margin-inline-start:' + (raw.textAlign === 'left' ? '0' : 'auto') + '!important;margin-inline-end:' + (raw.textAlign === 'right' ? '0' : 'auto') + '!important;}');
+      }
+      if (raw.signatureLineVisible === 'hide') css.push(line + '{display:none!important;}');
+      if (raw.signatureLineVisible === 'show') css.push(line + '{display:block!important;}');
+      if (Number.isFinite(Number(raw.signatureLineLength))) css.push(line + '{width:' + clamp(raw.signatureLineLength, 20, 320, 120) + 'px!important;max-width:100%!important;}');
+      if (Number.isFinite(Number(raw.signatureLineGap))) css.push(name + '{margin-top:' + clamp(raw.signatureLineGap, -30, 80, 6) + 'px!important;}');
+    });
+    return css.join('\\n');
+  } catch (_) {
+    return '';
+  }
+}
+
 function getAttendanceSignaturePrintStyleCss() {
-  // نافذة الطباعة مستقلة؛ نقرأ فقط التنسيق المعتمد ونحصره داخل التواقيع.
+  const legacyCss = getLegacyAttendanceSignaturePrintStyleCss();
+  if (legacyCss) return legacyCss;
+  // توافق مع لوحة التنسيق الأحدث إن كانت هي المستخدمة.
   try {
     const raw = JSON.parse(localStorage.getItem('sb_style_prefs_attendance_v1') || '{}');
     if (!raw || raw.styleApproved !== true) return '';
