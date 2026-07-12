@@ -327,11 +327,14 @@
         color: #000 !important;
     }
 
+    /* هذه الحاوية هي الأب لشبكة SignatureBlock (.sb-grid) التي تحمل تنسيق
+       المستخدم (المحاذاة، الحجم، عرض العنصر، الختم) من زر "تنسيق التواقيع".
+       كانت تفرض هنا grid بعمودين + gap ثابت بـ!important، فتدهس ذلك التنسيق
+       في الطباعة وحدها — فيظهر صحيحًا على الشاشة ويُطبع بتخطيط آخر.
+       الآن: نُظهر الحاوية فقط ونترك التخطيط لـ.sb-grid كما على الشاشة تمامًا. */
     .print-signatures-grid {
-        display: grid !important;
+        display: block !important;
         visibility: visible !important;
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 20px !important;
         margin: 15px 0 !important;
     }
 
