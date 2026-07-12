@@ -2,11 +2,11 @@
 (function () {
   'use strict';
 
-  if (window.__NAJRAN_EXTRACT_SUBMIT_PHASE1_LOADER__) return;
-  window.__NAJRAN_EXTRACT_SUBMIT_PHASE1_LOADER__ = true;
+  if (window.__NAJRAN_EXTRACT_SUBMIT_PHASE1_LOADER_V2__) return;
+  window.__NAJRAN_EXTRACT_SUBMIT_PHASE1_LOADER_V2__ = true;
 
-  var BASE_SRC = '/original/extract-submit-base-20260712.js?v=20260712_phase1_submit_safety_v1';
-  var GUARD_SRC = '/original/extract-submit-phase1-safety.js?v=20260712_phase1_submit_safety_v1';
+  var BASE_SRC = '/original/extract-submit-base-20260712.js?v=20260712_phase1_submit_safety_v2';
+  var GUARD_SRC = '/original/extract-submit-phase1-safety.js?v=20260712_phase1_submit_safety_v2';
 
   function appendSequentially() {
     var head = document.head || document.documentElement;
@@ -25,8 +25,6 @@
     head.appendChild(base);
   }
 
-  // Static original pages load this file while HTML is still being parsed.
-  // document.write preserves the exact synchronous order expected by later scripts.
   if (document.readyState === 'loading' && document.currentScript) {
     document.write('<script src="' + BASE_SRC + '"><\/script>');
     document.write('<script src="' + GUARD_SRC + '"><\/script>');
