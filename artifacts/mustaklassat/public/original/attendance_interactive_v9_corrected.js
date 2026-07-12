@@ -2851,12 +2851,24 @@ function getLegacyAttendanceSignaturePrintStyleCss() {
 }
 
 function getAttendanceSignaturePrintStyleCss() {
-  const legacyCss = getLegacyAttendanceSignaturePrintStyleCss();
-  if (legacyCss) return legacyCss;
-  // توافق مع لوحة التنسيق الأحدث إن كانت هي المستخدمة.
+  // نختار آخر تنسيق معتمد فعليًا بين لوحة V5 ولوحة الحفظ الخضراء.
+  let raw = null;
+  let fineStamp = 0;
+  let legacyStamp = 0;
   try {
-    const raw = JSON.parse(localStorage.getItem('sb_style_prefs_attendance_v1') || '{}');
-    if (!raw || raw.styleApproved !== true) return '';
+    raw = JSON.parse(localStorage.getItem('sb_style_prefs_attendance_v1') || '{}');
+    fineStamp = raw && raw.styleApproved === true ? (Date.parse(raw.savedAt || '') || 0) : 0;
+    ['najranSignatureStyleSettings_v1__attendance', 'najranSignatureStyleSettings_v1'].forEach(key => {
+      const legacy = JSON.parse(localStorage.getItem(key) || 'null');
+      if (legacy && legacy.approved === true) legacyStamp = Math.max(legacyStamp, Date.parse(legacy.savedAt || '') || 0);
+    });
+  } catch (_) {}
+
+  const legacyCss = getLegacyAttendanceSignaturePrintStyleCss();
+  if (legacyCss && legacyStamp > fineStamp) return legacyCss;
+  // لوحة الحفظ الخضراء هي المصدر الأحدث أو المصدر الوحيد.
+  try {
+    if (!raw || raw.styleApproved !== true) return legacyCss || '';
 
     const clamp = (value, min, max, fallback) => {
       const number = Number(value);
