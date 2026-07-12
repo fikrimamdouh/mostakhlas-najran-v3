@@ -447,7 +447,6 @@
       '<button type="button" class="sbx-reset-panel">إعادة مكان اللوحة</button>' +
       '<button type="button" class="sbx-save">حفظ واعتماد التنسيق</button>' +
       '<button type="button" class="sbx-reset">استعادة الافتراضي</button>' +
-      '<button type="button" class="sbx-final">طباعة نهائية</button>' +
       '</div>' + rows.join('') + '</div>';
     panel.classList.add('open');
 
@@ -481,7 +480,10 @@
     };
     panel.querySelector('.sbx-save').onclick = function () { ctx.onSave(); };
     panel.querySelector('.sbx-reset').onclick = function () { ctx.onReset(); };
-    panel.querySelector('.sbx-final').onclick = function () { ctx.onFinal(); };
+    // زر "طباعة نهائية" أُزيل من اللوحة (الطباعة من زر الطباعة في الشريط).
+    // الربط يبقى محميًا لأن العنصر لم يعد موجودًا.
+    var finalBtn = panel.querySelector('.sbx-final');
+    if (finalBtn) finalBtn.onclick = function () { ctx.onFinal(); };
 
     function bindRange(sel, prop, suffix) {
       var input = panel.querySelector(sel);
