@@ -15,6 +15,7 @@
     "@clerk/shared": "^4.9.0",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
+    "adm-zip": "^0.5.17",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
     "drizzle-orm": "catalog:",
@@ -26,6 +27,7 @@
     "resend": "^6.12.2"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
