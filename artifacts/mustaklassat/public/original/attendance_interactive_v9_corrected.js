@@ -2724,73 +2724,10 @@ const departments = [
     openDialog('print-dialog');
 }
 
-// الدالة رقم 2: دالة مساعدة لتحديد كل الخيارات أو إلغائها
-function toggleAllDepartmentsPrint(isChecked) {
-    document.querySelectorAll('.print-dept-checkbox').forEach(checkbox => {
-        checkbox.checked = isChecked;
-    });
-}
-
-// الدالة رقم 3: تجهز الصفحة وتطبع الأقسام المحددة
-function printSelectedDepartments() {
-    const selectedDepartments = Array.from(document.querySelectorAll('.print-dept-checkbox:checked')).map(cb => cb.value);
-
-    if (selectedDepartments.length === 0) {
-        alert('الرجاء اختيار قسم واحد على الأقل للطباعة.');
-        return;
-    }
-
-    closeDialog('print-dialog');
-
-    // إظهار وإخفاء الجداول حسب التحديد
-    document.querySelectorAll('.department-table').forEach(tableDiv => {
-        const tableId = tableDiv.querySelector('table').id;
-        const deptKey = tableId.replace('-table', '').replace(/-/g, '_');
-        if (selectedDepartments.includes(deptKey)) {
-            tableDiv.style.display = 'block';
-        } else {
-            tableDiv.style.display = 'none';
-        }
-    });
-
-    // إخفاء العناصر غير المرغوب فيها
-    const elementsToHide = document.querySelectorAll('.action-buttons, .zoom-buttons, .nav-bar, .no-print, .dialog, #particles-js-bg, footer, .signatures-display-section');
-    elementsToHide.forEach(el => el.style.display = 'none');
-// --- الإضافة المطلوبة لطباعة الإجمالي العام ---
-const grandTotalSection = document.querySelector('.grand-total');
-if (grandTotalSection) {
-    grandTotalSection.style.display = 'block';
-}
-// --- نهاية الإضافة ---
-
-    // إظهار تواقيع الطباعة وتحديثها
-    const printSignatures = document.querySelectorAll('.print-signatures');
-    printSignatures.forEach(sig => sig.style.display = 'block');
-    // SignatureBlock هو مصدر التواقيع — يُعاد رسم شبكات الطباعة منه مباشرة قبل الطباعة
-    try {
-        if (typeof SignatureBlock !== 'undefined' && typeof SignatureBlock.rerender === 'function') {
-            SignatureBlock.rerender('attendance');
-        }
-    } catch (_) {}
-    if (typeof updatePrintSignatures === 'function') {
-        updatePrintSignatures();
-    }
-
-
-    // الطباعة
-    window.print();
-if (grandTotalSection) {
-    grandTotalSection.style.display = 'block';
-}
-
-    // إعادة كل شيء لطبيعته بعد الطباعة
-    setTimeout(() => {
-        elementsToHide.forEach(el => el.style.display = '');
-        printSignatures.forEach(sig => sig.style.display = 'none');
-        document.querySelectorAll('.department-table').forEach(tableDiv => tableDiv.style.display = 'block');
-    }, 1000);
-}
-
+// ملاحظة: الدالتان toggleAllDepartmentsPrint و printSelectedDepartments كانتا معرّفتين مرتين في هذا الملف.
+// النسخة القديمة (window.print + .print-signatures) كانت كودًا ميتًا لا يُنفَّذ أبدًا لأن آخر تعريف بنفس
+// الاسم في نفس الـ scope هو ما ينفَّذ فعليًا عند النداء. تم حذفها؛ النسخة الفعلية (تحت) هي التي تعمل
+// دائمًا عبر preparePrint() و buildAttendanceTableSignaturesHTML() المرتبطة بـ SignatureBlock مباشرة.
 function toggleAllDepartmentsPrint(isChecked) {
   const checkboxes = document.querySelectorAll(
     '#print-dialog input[type="checkbox"]:not(#select-all-print):not(#print-grand-total-signatures)'
