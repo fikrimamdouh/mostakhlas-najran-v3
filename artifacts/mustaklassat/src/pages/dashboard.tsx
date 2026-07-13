@@ -83,6 +83,13 @@ function isActiveNow(iso: string | null | undefined): boolean {
   return Date.now() - new Date(iso).getTime() < 5 * 60 * 1000;
 }
 
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "صباح الخير";
+  if (h < 17) return "طاب يومك";
+  return "مساء الخير";
+}
+
 function roleLabel(role: string) {
   if (role === "admin") return { text: "مدير النظام", color: "#d4af37" };
   if (role === "supervisor") return { text: "مدير مستخلصات", color: "#f59e0b" };
@@ -136,7 +143,7 @@ export default function Dashboard() {
             <div className="h-16 w-16 rounded-2xl flex items-center justify-center text-2xl font-black flex-shrink-0" style={{ background: "rgba(212,175,55,0.18)", border: "2px solid rgba(212,175,55,0.4)", color: "#d4af37" }}>{(dbUser?.name || user?.fullName || "م").charAt(0)}</div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl font-extrabold text-white truncate">أهلاً، {dbUser?.name || user?.fullName || "مستخدم"}</h1>
+                <h1 className="text-2xl font-extrabold text-white truncate">{greeting()}، {dbUser?.name || user?.fullName || "مستخدم"}</h1>
                 {isActive && <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: "rgba(34,197,94,0.2)", color: "#4ade80", border: "1px solid rgba(34,197,94,0.3)" }}><span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block" />نشط الآن</span>}
               </div>
               <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 13, marginTop: 2 }}>برنامج المستخلصات الشهرية — وحدة الصيانة العامة</p>
@@ -170,25 +177,40 @@ export default function Dashboard() {
 
       <IslamicReminderTicker />
 
-      <div>
+      <div className="najran-modules rounded-2xl p-4 md:p-5" style={{ background: "linear-gradient(180deg,#f7f9fd 0%,#eef2fa 100%)", border: "1px solid #e8edf7" }}>
+        <style>{`
+          @keyframes najranCardIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+          .najran-card { animation: najranCardIn 320ms ease-out both; }
+          .najran-card:hover, .najran-card:focus-visible {
+            transform: translateY(-4px);
+            border-color: var(--m-color) !important;
+            box-shadow: 0 10px 24px -6px rgba(30,60,114,0.28) !important;
+            box-shadow: 0 10px 24px -6px color-mix(in srgb, var(--m-color) 42%, transparent) !important;
+          }
+          .najran-card:focus-visible { outline: 2px solid var(--m-color); outline-offset: 2px; }
+          @media (prefers-reduced-motion: reduce) {
+            .najran-card { animation: none !important; }
+            .najran-card:hover, .najran-card:focus-visible { transform: none; }
+          }
+        `}</style>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: "#1e3c72" }}><Zap className="h-5 w-5" style={{ color: "#d4af37" }} />وحدات النظام</h2>
           <span className="text-xs text-gray-400 flex items-center gap-1"><Activity className="h-3.5 w-3.5" />{visibleModules.length} وحدة متاحة</span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {visibleModules.map(m => {
+          {visibleModules.map((m, i) => {
             const Icon = m.icon;
             const isCurrentPage = lastPage === m.label;
             return (
-              <a key={m.key} href={ov(m.file)} className="group rounded-xl p-4 text-center transition-all duration-200 hover:-translate-y-1 no-underline flex flex-col items-center gap-3 relative overflow-hidden" style={{ background: isCurrentPage ? `linear-gradient(135deg,${m.color}14,${m.color}22)` : "#fff", border: isCurrentPage ? `2px solid ${m.color}55` : "1.5px solid #e8edf7", boxShadow: isCurrentPage ? `0 4px 20px ${m.color}22` : "0 2px 8px rgba(30,60,114,0.05)" }}>
+              <a key={m.key} href={ov(m.file)} className="najran-card group rounded-xl p-4 text-center transition-all duration-200 no-underline flex flex-col items-center gap-3 relative overflow-hidden" style={{ ["--m-color" as any]: m.color, animationDelay: `${Math.min(i, 6) * 40}ms`, background: isCurrentPage ? `linear-gradient(135deg,${m.color}14,${m.color}22)` : "#fff", border: isCurrentPage ? `2px solid ${m.color}55` : "1.5px solid #e8edf7", boxShadow: isCurrentPage ? `0 4px 20px ${m.color}22` : "0 2px 8px rgba(30,60,114,0.05)" }}>
                 {isCurrentPage && <div className="absolute top-2 left-2 flex items-center gap-1 rounded-full px-1.5 py-0.5" style={{ background: m.color, fontSize: 9, color: "#fff", fontWeight: 700 }}><span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-pulse inline-block" />آخر صفحة</div>}
                 <div className="h-12 w-12 rounded-xl flex items-center justify-center transition-all group-hover:scale-110" style={{ background: m.color, boxShadow: `0 4px 12px ${m.color}44` }}><Icon className="h-6 w-6 text-white" /></div>
                 <span className="font-bold text-sm leading-tight" style={{ color: "#1e3c72" }}>{m.label}</span>
               </a>
             );
           })}
-          <a href="/support" className="group rounded-xl p-4 text-center transition-all duration-200 hover:-translate-y-1 no-underline flex flex-col items-center gap-3" style={{ background: "linear-gradient(135deg,#0096c7,#0077b6)", border: "1.5px solid #0077b6", boxShadow: "0 4px 15px rgba(0,150,199,0.2)" }}><div className="h-12 w-12 rounded-xl flex items-center justify-center bg-white/20"><MessageSquare className="h-6 w-6 text-white" /></div><span className="font-bold text-sm text-white">مذكرة دعم</span></a>
-          {(dbUser?.role === "admin") && <a href="/admin/users" className="group rounded-xl p-4 text-center transition-all duration-200 hover:-translate-y-1 no-underline flex flex-col items-center gap-3" style={{ background: "linear-gradient(135deg,#d4af37,#b8962e)", border: "1.5px solid #b8962e", boxShadow: "0 4px 15px rgba(212,175,55,0.25)" }}><div className="h-12 w-12 rounded-xl flex items-center justify-center bg-white/20"><UserPlus className="h-6 w-6 text-white" /></div><span className="font-bold text-sm text-white">إدارة المستخدمين</span></a>}
+          <a href="/support" className="najran-card group rounded-xl p-4 text-center transition-all duration-200 no-underline flex flex-col items-center gap-3" style={{ ["--m-color" as any]: "#0077b6", animationDelay: `${Math.min(visibleModules.length, 6) * 40}ms`, background: "linear-gradient(135deg,#0096c7,#0077b6)", border: "1.5px solid #0077b6", boxShadow: "0 4px 15px rgba(0,150,199,0.2)" }}><div className="h-12 w-12 rounded-xl flex items-center justify-center bg-white/20"><MessageSquare className="h-6 w-6 text-white" /></div><span className="font-bold text-sm text-white">مذكرة دعم</span></a>
+          {(dbUser?.role === "admin") && <a href="/admin/users" className="najran-card group rounded-xl p-4 text-center transition-all duration-200 no-underline flex flex-col items-center gap-3" style={{ ["--m-color" as any]: "#b8962e", animationDelay: `${Math.min(visibleModules.length + 1, 6) * 40}ms`, background: "linear-gradient(135deg,#d4af37,#b8962e)", border: "1.5px solid #b8962e", boxShadow: "0 4px 15px rgba(212,175,55,0.25)" }}><div className="h-12 w-12 rounded-xl flex items-center justify-center bg-white/20"><UserPlus className="h-6 w-6 text-white" /></div><span className="font-bold text-sm text-white">إدارة المستخدمين</span></a>}
         </div>
       </div>
     </div>
