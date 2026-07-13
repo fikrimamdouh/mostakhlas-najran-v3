@@ -256,13 +256,77 @@
     });
   }
 
-  function clearOperationalKeysBeforeLocalResume() {
+  function isSupportedExtractType(type) {
+    return !!type && Object.prototype.hasOwnProperty.call(TYPE_RULES, String(type));
+  }
+
+  // خريطة يقينية: اسم الملف الكامل ← النوع. مطابقة تامة فقط، بلا بحث جزئي.
+  // ملاحظة حرجة: admin_offices_consumables.html و health_centers_consumables.html
+  // تحتوي كلمة "consumables" — أي مطابقة جزئية كانت ستصنّفها خطأً كمستهلكات
+  // وتمسح بيانات نوع آخر. لذلك المطابقة بالاسم الكامل حصرًا.
+  var PAGE_TYPE_EXACT = {
+    'attendance.html': 'labor',
+    'performance.html': 'labor',
+    'achievement.html': 'labor',
+    'najran_general_attendance.html': 'labor',
+    'najran_general_performance.html': 'labor',
+    'najran_general_achievement.html': 'labor',
+    'najran_dental_attendance.html': 'labor',
+    'najran_dental_performance.html': 'labor',
+    'najran_dental_achievement.html': 'labor',
+    'consumables.html': 'consumables',
+    'najran_general_consumables.html': 'consumables',
+    'spare_parts.html': 'spare_parts',
+    'health_centers_attendance.html': 'health_centers',
+    'health_centers_consumables.html': 'health_centers',
+    'health_centers.html': 'health_centers',
+    'admin_offices_attendance.html': 'admin_offices',
+    'admin_offices_consumables.html': 'admin_offices'
+  };
+
+  // مطابقة تامة لاسم الملف. تُرجع '' إذا لم يوجد تطابق يقيني.
+  function typeFromPageField(page) {
+    if (!page) return '';
+    var file = String(page).split('?')[0].split('#')[0].split('/').pop().toLowerCase();
+    var mapped = Object.prototype.hasOwnProperty.call(PAGE_TYPE_EXACT, file) ? PAGE_TYPE_EXACT[file] : '';
+    return isSupportedExtractType(mapped) ? mapped : '';
+  }
+
+  // النوع يُقرأ من اللقطة نفسها فقط. ممنوع الاعتماد على الصفحة المفتوحة حاليًا.
+  // ممنوع استخدام (currentPage || sourcePage) لأنها تُخفي التعارض:
+  // الحقلان يُفحصان كلٌّ على حدة، وأي اختلاف بينهما = «نوع غير محدد».
+  // يُرجع '' إذا تعذّر التحديد اليقيني — ولا يُخمَّن إطلاقًا.
+  function resolveSnapshotType(snap) {
+    if (!snap) return '';
+    // 1) المصدر الأول والرسمي.
+    if (isSupportedExtractType(snap.extractType)) return snap.extractType;
+
+    // 2) فحص مستقل لكل حقل صفحة.
+    var fromCurrent = typeFromPageField(snap.currentPage);
+    var fromSource  = typeFromPageField(snap.sourcePage);
+
+    // 5) تعارض صريح بين الحقلين → غير محدد، وتُمنع الاستعادة بلا مسح.
+    if (fromCurrent && fromSource && fromCurrent !== fromSource) {
+      console.warn('extract-snapshot: snapshot page conflict', { id: snap.id, currentPage: snap.currentPage, sourcePage: snap.sourcePage, fromCurrent: fromCurrent, fromSource: fromSource });
+      return '';
+    }
+    // 3) متطابقان → نستخدمه. 4) أحدهما معروف والآخر لا → نستخدم المعروف.
+    return fromCurrent || fromSource || '';
+  }
+  window.resolveSnapshotType = resolveSnapshotType;
+
+  function clearOperationalKeysBeforeLocalResume(restoreType) {
+    // حارس أمان: لا نمسح أبدًا بنوع مخمّن. النوع يأتي من اللقطة نفسها فقط.
+    if (!isSupportedExtractType(restoreType)) return -1;
     var removed = 0;
     try {
       for (var i = localStorage.length - 1; i >= 0; i--) {
         var key = localStorage.key(i);
         if (!key) continue;
-        if (allKnownOperationalKey(key)) {
+        // المسح مقصور على مفاتيح نوع اللقطة المستعادة فقط — نفس الفلتر
+        // المستخدم في captureSnapshot. مفاتيح الأنواع الأخرى (مسودات قائمة)
+        // لا تُمس، لأن اللقطة لن تعيد كتابتها.
+        if (isAllowedForType(key, restoreType)) {
           // القاعدة المطلقة: لا توقيع يُمسح — التوقيعات تُستثنى من تنظيف ما قبل
           // الاستكمال؛ كتابة اللقطة بعدها تضع توقيعاتها التاريخية فوقها إن وُجدت
           // (محتوى فوق محتوى)، وإلا تبقى توقيعات الموقع الحالية.
@@ -571,9 +635,9 @@
     options = options || {};
     try {
       var snap = window.getExtractArchive().find(function (s) { return String(s.id) === String(id); });
-      if (!snap) { alert('لم يتم العثور على اللقطة المحلية.'); return false; }
+      if (!snap) { showLocalProtectionNotice('لم يتم العثور على اللقطة المحلية', 'error'); return false; }
       if (!snap.extractData || typeof snap.extractData !== 'object') {
-        alert('هذه اللقطة لا تحتوي بيانات تشغيلية كافية للاستكمال.');
+        showLocalProtectionNotice('هذه اللقطة لا تحتوي بيانات تشغيلية كافية للاستكمال', 'error');
         return false;
       }
 
@@ -587,26 +651,43 @@
         }).then(function (action) {
           if (action === 'primary') {
             var saved = window.saveExtractSnapshot('before-resume-local-snapshot');
-            if (!saved) { alert('تعذر حفظ المستخلص الحالي محليًا. لم يتم استكمال اللقطة الأخرى.'); return; }
+            if (!saved) { showLocalProtectionNotice('تعذر حفظ المستخلص الحالي محليًا', 'error', 'لم يتم استكمال اللقطة الأخرى.'); return; }
             window.resumeExtractSnapshot(id, { skipProtection: true });
           }
         });
         return false;
       }
 
-      var clearCount = clearOperationalKeysBeforeLocalResume();
-      var writeReport = writeSnapshotToLocalStorage(snap.extractData);
+      // النوع يُحسم من اللقطة (extractType ثم currentPage اليقينية). بلا تخمين.
+      var resolvedType = resolveSnapshotType(snap);
+      if (!isSupportedExtractType(resolvedType)) {
+        console.warn('extract-snapshot: resume blocked, undetermined type', { id: snap.id, extractType: snap.extractType, currentPage: snap.currentPage });
+        showLocalProtectionNotice('نوع المستخلص غير محدد', 'error', 'تم إيقاف الاستعادة حفاظًا على بياناتك الحالية. لم يتم حذف أي بيانات.');
+        return false;
+      }
+
+      var clearCount = clearOperationalKeysBeforeLocalResume(resolvedType);
+      if (clearCount < 0) {
+        showLocalProtectionNotice('نوع المستخلص غير محدد', 'error', 'تم إيقاف الاستعادة حفاظًا على بياناتك الحالية. لم يتم حذف أي بيانات.');
+        return false;
+      }
+      // فلترة البيانات المستعادة على نوع اللقطة المحسوم فقط.
+      var scopedData = {};
+      Object.keys(snap.extractData || {}).forEach(function (key) {
+        if (isAllowedForType(key, resolvedType)) scopedData[key] = snap.extractData[key];
+      });
+      var writeReport = writeSnapshotToLocalStorage(scopedData);
       try {
         localStorage.setItem('najran_local_resume_transaction_id', String(snap.id));
         localStorage.setItem('najran_local_resume_signature_policy', 'scoped-clear-then-restore-snapshot');
-        localStorage.setItem('najran_local_resume_signature_keys_count', String(countMatchingKeys(snap.extractData, isOperationalSignatureKey)));
+        localStorage.setItem('najran_local_resume_signature_keys_count', String(countMatchingKeys(scopedData, isOperationalSignatureKey)));
         localStorage.setItem('najran_local_resume_written_keys_count', String(writeReport.written || 0));
         localStorage.setItem('najran_local_resume_failed_keys_count', String(writeReport.failed || 0));
         localStorage.setItem('najran_local_resume_cleared_keys_count', String(clearCount || 0));
       } catch (_) {}
       if (writeReport.failed > 0) {
         console.warn('extract-snapshot: resume partial write failure', writeReport);
-        alert('تم استكمال اللقطة جزئيًا، لكن بعض المفاتيح الثانوية لم تُحفظ بسبب مساحة المتصفح. البيانات الأساسية محفوظة.');
+        showLocalProtectionNotice('تم استكمال اللقطة جزئيًا', 'error', 'بعض المفاتيح الثانوية لم تُحفظ بسبب مساحة المتصفح. البيانات الأساسية محفوظة.');
         return false;
       }
 
@@ -619,12 +700,16 @@
         localStorage.setItem('najran_local_draft_resumed_at', new Date().toISOString());
       } catch (_) {}
 
-      console.info('extract-snapshot: scoped local resume transaction', { id: snap.id, type: snap.extractType, cleared: clearCount, written: writeReport.written, keys: Object.keys(snap.extractData || {}).length });
-      window.location.href = pageForType(snap.extractType || inferExtractType(), snap.currentPage);
+      console.info('extract-snapshot: scoped local resume transaction', { id: snap.id, type: resolvedType, cleared: clearCount, written: writeReport.written, keys: Object.keys(scopedData).length });
+      // صفحة الوجهة: لا نثق في currentPage إلا إذا كانت فعليًا صفحة تخص النوع المحسوم.
+      // (pageForType تقبل أي مسار /original/ كما هو — وهذا يُرسل المستخدم لصفحة خاطئة
+      //  حين يكون النوع محسومًا من sourcePage بينما currentPage غير معروفة.)
+      var targetPage = (typeFromPageField(snap.currentPage) === resolvedType) ? snap.currentPage : '';
+      window.location.href = pageForType(resolvedType, targetPage);
       return true;
     } catch (e) {
       console.warn('extract-snapshot: resume error', e);
-      alert('تعذر استكمال اللقطة المحلية.');
+      showLocalProtectionNotice('تعذر استكمال اللقطة المحلية', 'error');
       return false;
     }
   };
