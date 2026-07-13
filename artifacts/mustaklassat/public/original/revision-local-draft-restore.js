@@ -8,6 +8,103 @@
   function parse(raw, fallback) {
     try { return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; }
   }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+
+  function showNajranSystemDialog(options) {
+    options = options || {};
+    return new Promise(function (resolve) {
+      var old = document.getElementById('najran-system-dialog');
+      if (old && typeof old.__najranResolve === 'function') old.__najranResolve(false);
+      else if (old) old.remove();
+
+      var kind = options.kind || 'info';
+      var palette = {
+        info: { accent: '#166534', soft: '#f0fdf4', border: '#bbf7d0', icon: 'i', label: 'معلومة من النظام' },
+        success: { accent: '#15803d', soft: '#f0fdf4', border: '#86efac', icon: '✓', label: 'تم بنجاح' },
+        warning: { accent: '#b45309', soft: '#fffbeb', border: '#fde68a', icon: '!', label: 'تنبيه' },
+        danger: { accent: '#b91c1c', soft: '#fef2f2', border: '#fecaca', icon: '!', label: 'تأكيد مطلوب' }
+      }[kind] || null;
+      if (!palette) palette = { accent: '#166534', soft: '#f0fdf4', border: '#bbf7d0', icon: 'i', label: 'معلومة من النظام' };
+
+      var details = Array.isArray(options.details) ? options.details.filter(function (item) {
+        return item && item.value != null && String(item.value).trim() !== '';
+      }) : [];
+      var detailsHtml = details.length ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:16px 0;">' +
+        details.map(function (item) {
+          return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:13px;padding:11px 13px;">' +
+            '<span style="display:block;color:#64748b;font-size:11px;font-weight:800;margin-bottom:4px;">' + escapeHtml(item.label || '') + '</span>' +
+            '<b style="display:block;color:#0f172a;font-size:14px;overflow-wrap:anywhere;">' + escapeHtml(item.value) + '</b></div>';
+        }).join('') + '</div>' : '';
+
+      var overlay = document.createElement('div');
+      overlay.id = 'najran-system-dialog';
+      overlay.className = 'no-print';
+      overlay.setAttribute('dir', 'rtl');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:rgba(15,23,42,.66);' +
+        'display:flex;align-items:center;justify-content:center;padding:18px;font-family:Tajawal,Arial,sans-serif;' +
+        'backdrop-filter:blur(4px);animation:najranSystemFade .16s ease-out;';
+      overlay.innerHTML =
+        '<style>@keyframes najranSystemFade{from{opacity:0}to{opacity:1}}' +
+        '@keyframes najranSystemPop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}' +
+        '@media print{#najran-system-dialog{display:none!important}}</style>' +
+        '<div role="dialog" aria-modal="true" aria-labelledby="najran-system-dialog-title" style="width:min(560px,95vw);' +
+          'background:#fff;border-radius:22px;box-shadow:0 28px 90px rgba(0,0,0,.35);overflow:hidden;' +
+          'border:1px solid ' + palette.border + ';animation:najranSystemPop .2s ease-out;">' +
+          '<div style="height:6px;background:' + palette.accent + ';"></div>' +
+          '<div style="padding:24px;">' +
+            '<div style="display:flex;align-items:flex-start;gap:14px;">' +
+              '<div aria-hidden="true" style="width:44px;height:44px;flex:0 0 44px;border-radius:14px;background:' + palette.soft + ';' +
+                'border:1px solid ' + palette.border + ';color:' + palette.accent + ';display:flex;align-items:center;justify-content:center;' +
+                'font-size:22px;font-weight:1000;">' + palette.icon + '</div>' +
+              '<div style="min-width:0;flex:1;">' +
+                '<span style="display:block;color:' + palette.accent + ';font-size:11px;font-weight:900;margin-bottom:5px;">' + escapeHtml(options.eyebrow || palette.label) + '</span>' +
+                '<h2 id="najran-system-dialog-title" style="margin:0;color:#0f172a;font-size:21px;line-height:1.45;font-weight:900;">' + escapeHtml(options.title || 'رسالة من النظام') + '</h2>' +
+              '</div>' +
+            '</div>' +
+            (options.message ? '<div style="white-space:pre-line;color:#475569;font-size:14px;line-height:1.9;margin-top:15px;">' + escapeHtml(options.message) + '</div>' : '') +
+            detailsHtml +
+            (options.note ? '<div style="background:' + palette.soft + ';border:1px solid ' + palette.border + ';border-radius:13px;' +
+              'padding:11px 13px;color:' + palette.accent + ';font-size:12px;font-weight:800;line-height:1.8;margin-top:14px;">' + escapeHtml(options.note) + '</div>' : '') +
+            '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;">' +
+              '<button id="najran-system-dialog-confirm" type="button" style="background:' + palette.accent + ';color:#fff;border:0;border-radius:12px;' +
+                'padding:11px 19px;font-family:inherit;font-size:13px;font-weight:900;cursor:pointer;box-shadow:0 7px 18px ' + palette.accent + '33;">' + escapeHtml(options.confirmText || 'حسنًا') + '</button>' +
+              (options.hideCancel ? '' : '<button id="najran-system-dialog-cancel" type="button" style="background:#f8fafc;color:#475569;border:1px solid #cbd5e1;' +
+                'border-radius:12px;padding:11px 17px;font-family:inherit;font-size:13px;font-weight:900;cursor:pointer;">' + escapeHtml(options.cancelText || 'إلغاء') + '</button>') +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      var finished = false;
+      function finish(answer) {
+        if (finished) return;
+        finished = true;
+        document.removeEventListener('keydown', onKeyDown, true);
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        resolve(answer);
+      }
+      function onKeyDown(event) {
+        if (event.key === 'Escape') finish(false);
+      }
+      overlay.__najranResolve = finish;
+      document.body.appendChild(overlay);
+      document.addEventListener('keydown', onKeyDown, true);
+      document.getElementById('najran-system-dialog-confirm').onclick = function () { finish(true); };
+      var cancel = document.getElementById('najran-system-dialog-cancel');
+      if (cancel) cancel.onclick = function () { finish(false); };
+      overlay.addEventListener('click', function (event) {
+        if (event.target === overlay && options.dismissOnBackdrop !== false) finish(false);
+      });
+      document.getElementById('najran-system-dialog-confirm').focus();
+    });
+  }
+
+  window.NajranSystemDialog = showNajranSystemDialog;
+
   function writeValue(key, value) {
     if (value == null) return;
     try {
@@ -413,7 +510,7 @@ refreshSettingsPageAfterRevisionHydrate();
     box.style.cssText = 'position:fixed;top:18px;left:18px;z-index:1000000;max-width:520px;background:#fff7ed;border:1px solid #fed7aa;border-right:6px solid #ea580c;border-radius:16px;box-shadow:0 18px 45px rgba(15,23,42,.22);padding:15px 16px;direction:rtl;font-family:Tajawal,Arial,sans-serif;color:#7c2d12;line-height:1.8;';
     box.innerHTML =
       '<div style="font-weight:900;color:#9a3412;font-size:15px;margin-bottom:4px;">توجد مسودة محلية محفوظة</div>' +
-      '<div style="font-size:13px;margin-bottom:10px;">' + labelOf(backup) + '</div>' +
+      '<div style="font-size:13px;margin-bottom:10px;">' + escapeHtml(labelOf(backup)) + '</div>' +
       '<div style="font-size:12px;color:#9a3412;margin-bottom:12px;">تم حفظها قبل فتح مستخلص آخر للتعديل. يمكن استعادتها الآن أو تركها محفوظة.</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
         '<button id="najran-restore-local-draft" style="background:#16a34a;color:#fff;border:0;border-radius:10px;padding:9px 13px;font-weight:900;cursor:pointer;">استعادة المسودة</button>' +
@@ -423,8 +520,16 @@ refreshSettingsPageAfterRevisionHydrate();
     document.body.appendChild(box);
     document.getElementById('najran-restore-local-draft').onclick = restore;
     document.getElementById('najran-hide-local-draft').onclick = function () { box.remove(); };
-    document.getElementById('najran-discard-local-draft').onclick = function () {
-      if (confirm('سيتم حذف المسودة المحلية المحفوظة من هذا الجهاز. هل تريد المتابعة؟')) discard();
+    document.getElementById('najran-discard-local-draft').onclick = async function () {
+      var accepted = await showNajranSystemDialog({
+        kind: 'danger',
+        title: 'حذف المسودة المحلية؟',
+        message: 'سيتم حذف المسودة المحفوظة من هذا الجهاز فقط، ولن يمكن استعادتها بعد ذلك.',
+        confirmText: 'حذف المسودة',
+        cancelText: 'الاحتفاظ بها',
+        dismissOnBackdrop: false
+      });
+      if (accepted) discard();
     };
   }
 function isActiveRevisionMode() {
@@ -642,7 +747,7 @@ function showRevisionExitModal() {
 
         '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;' +
           'color:#334155;font-size:14px;line-height:1.9;margin-bottom:14px;">' +
-          label +
+          escapeHtml(label) +
         '</div>' +
 
         '<p style="margin:0 0 14px;color:#475569;font-size:14px;line-height:1.9;">' +
@@ -673,8 +778,17 @@ function showRevisionExitModal() {
   window.top.location.href = '/extracts/track?revisionExited=1&noSave=1&v=' + Date.now();
 };
 
-    document.getElementById('najran-revision-exit-new').onclick = function () {
-      if (!confirm('سيتم إنهاء وضع التعديل الحالي (بدون رفع أي شيء للسحابة) والانتقال لإعداد مستخلص جديد.\nتعديلاتك في هذه الجلسة لن تُرفع. هل أنت متأكد؟')) return;
+    document.getElementById('najran-revision-exit-new').onclick = async function () {
+      var accepted = await showNajranSystemDialog({
+        kind: 'warning',
+        title: 'بدء مستخلص جديد؟',
+        message: 'سيتم إنهاء وضع التعديل الحالي والانتقال لإعداد مستخلص جديد. تعديلات هذه الجلسة لن تُرفع إلى السحابة.',
+        note: 'لن يتم حذف المستخلص المحفوظ الأصلي.',
+        confirmText: 'إنهاء التعديل والبدء بجديد',
+        cancelText: 'العودة للتعديل',
+        dismissOnBackdrop: false
+      });
+      if (!accepted) return;
       clearRevisionOnly();
       window.top.location.href = '/original/settings_main.html?startNewExtract=1&v=' + Date.now();
     };
@@ -728,9 +842,9 @@ function installRevisionModeBadge() {
     badge.innerHTML =
       '<div style="font-weight:bold;display:flex;align-items:center;gap:6px;">' +
         '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' + (isRev ? '#fde047' : '#86efac') + ';animation:najranRevPulse 1.6s infinite;"></span>' +
-        title + '</div>' +
-      (details ? '<div style="opacity:.95;margin-top:2px;">' + details + '</div>' : '') +
-      '<div style="font-size:11px;opacity:.85;margin-top:4px;">' + hint + '</div>';
+        escapeHtml(title) + '</div>' +
+      (details ? '<div style="opacity:.95;margin-top:2px;">' + escapeHtml(details) + '</div>' : '') +
+      '<div style="font-size:11px;opacity:.85;margin-top:4px;">' + escapeHtml(hint) + '</div>';
 
     var style = document.createElement('style');
     style.textContent = '@keyframes najranRevPulse{0%,100%{opacity:1}50%{opacity:.35}}' +
@@ -741,10 +855,19 @@ function installRevisionModeBadge() {
       if (isActiveRevisionMode()) {
         try { showRevisionExitModal(); } catch (e) { console.warn('[RevisionBadge] exit modal failed', e); }
       } else {
-        alert('أنت تعمل حاليًا على مستخلص جديد/جاري' +
-          (payment ? '\nرقم الدفعة: ' + payment : '') +
-          (period ? '\nالفترة: ' + period : '') +
-          '\n\nلست في وضع تعديل مستخلص محفوظ — تعديلاتك تُحفظ محليًا أولًا بأول.');
+        showNajranSystemDialog({
+          kind: 'info',
+          eyebrow: 'حالة العمل الحالية',
+          title: 'أنت تعمل على مستخلص جديد / جاري',
+          message: 'هذا المستخلص غير مرتبط بسجل محفوظ في وضع التعديل.',
+          details: [
+            { label: 'رقم الدفعة', value: payment || 'غير محدد' },
+            { label: 'الفترة', value: period || 'غير محددة' }
+          ],
+          note: 'الحفظ المحلي التلقائي نشط — تعديلاتك تُحفظ أولًا بأول على هذا الجهاز.',
+          confirmText: 'متابعة العمل',
+          hideCancel: true
+        });
       }
     });
 

@@ -18,6 +18,7 @@
   var HOSPITAL_STORAGE_GUARD_V = '20260709_fresh_token_retry_v2';
   var APPROVAL_REVISION_GUARD_V = '20260711_backup_fail_closed_v1';
   var MONITOR_V = '20260709_monitor_v2_circuit_breaker';
+  var REVISION_DRAFT_V = '20260713_system_dialogs_v1';
   var NOTIF_INTERVAL_MS = 900000;
   var NAJRAN_BUILD_VERSION = '2026.07.09-auth-r3';
   window.NAJRAN_BUILD_VERSION = NAJRAN_BUILD_VERSION;
@@ -205,7 +206,7 @@
   if (!isSidebarSensitivePage) appendScript('/original/home-sidebar-guard.js?v=20260703_review_exclude_v2', false);
 
   appendScript('/original/approve-button-polish.js?v=' + BUILD_V, true);
-  appendScript('/original/revision-local-draft-restore.js?v=' + BUILD_V, true);
+  appendScript('/original/revision-local-draft-restore.js?v=' + REVISION_DRAFT_V, true);
   appendScript('/original/revision-session-guard.js?v=' + BUILD_V, true);
 
   var snapshotPages = {
