@@ -285,24 +285,98 @@ useEffect(() => {
     cancelled = true;
   };
 }, [dbUser?.id, getToken]);
+
+  const operationalExactKeys = new Set([
+    "attendanceData", "centersAttendanceData_v2", "healthCentersAttendanceData", "adminOfficesAttendanceData_v1",
+    "adminOfficesFullAttendanceBundle_v1", "ng_attendanceData", "ng_departmentNames", "ng_distributionSettings",
+    "ng_finalLaborCost", "ng_performanceTotalDeduction", "nd_attendanceData", "nd_departmentNames",
+    "nd_distributionSettings", "nd_finalLaborCost", "nd_performanceTotalDeduction", "nd_dentalAchievementTotals",
+    "consumablesTableData", "healthCentersConsumables", "mainHospitalConsumables", "admin_offices_consumables_v1.0",
+    "finalConsumablesCost", "subcontractors_data_consumables_v27", "performance_data_consumables_v27",
+    "water_supply_data_consumables_v27", "sewage_disposal_data_consumables_v27", "summary_data_consumables_v27",
+    "spare_partsData", "sparePartsTotalAmount", "approvalData", "displayApprovalData", "performanceData",
+    "performanceData_v4", "performanceDeductions", "achievementData", "achievementTitles_v1",
+    "achievementItemNames", "finalLaborCost", "performanceTotalDeduction", "grand-net-total",
+    "grand-net-total-centers", "grand-net-total-admin", "najran_labor_attendance_done",
+    "najran_labor_performance_done", "najran_health_attendance_done", "najran_admin_offices_attendance_done",
+  ]);
+  const operationalPrefixes = [
+    "deptCalculatedCost_", "dept_", "tableData_", "achievement_", "consumables_", "spare_",
+    "water_", "sewage_", "subcontractors_", "najran_labor_", "najran_health_", "najran_admin_",
+    "monthSnapshot_", "adminOfficeAttendance_",
+  ];
+
+  function hasOperationalLocalWork() {
+    for (let i = 0; i < localStorage.length; i++) {
+      const storedKey = localStorage.key(i);
+      if (!storedKey) continue;
+      const key = storedKey.replace(/^(_u\d+_)+/, "");
+      if (!operationalExactKeys.has(key) && !operationalPrefixes.some(prefix => key.startsWith(prefix))) continue;
+      const value = localStorage.getItem(storedKey);
+      if (value !== null && !["", "[]", "{}", "null"].includes(value.trim())) return true;
+    }
+    return false;
+  }
+
+  async function confirmCurrentWorkSavedBeforeHospitalSwitch() {
+    const revisionActive =
+      localStorage.getItem("najran_revision_mode") === "true" &&
+      !!localStorage.getItem("najran_revision_extract_id") &&
+      !!localStorage.getItem("najran_revision_snapshot");
+    if (revisionActive) throw new Error("REVISION_ACTIVE");
+
+    const syncFn = (window as any).najranSyncNow;
+    if (typeof syncFn !== "function") {
+      if (hasOperationalLocalWork()) throw new Error("SYNC_HELPER_UNAVAILABLE");
+      return;
+    }
+
+    const syncResult = await Promise.race([
+      syncFn(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("SYNC_TIMEOUT")), 20_000)
+      ),
+    ]) as any;
+
+    if (
+      !syncResult ||
+      syncResult.ok !== true ||
+      syncResult.conflict === true ||
+      syncResult.reason === "SYNC_ALREADY_RUNNING"
+    ) {
+      throw new Error("SYNC_NOT_CONFIRMED");
+    }
+  }
+
+  async function showHospitalSwitchBlocked(error: unknown) {
+    const revisionActive = error instanceof Error && error.message === "REVISION_ACTIVE";
+    await window.NajranDialogs.alert(
+      revisionActive
+        ? "أنت تعمل الآن على تعديل مستخلص محفوظ. احفظ أو أنهِ التعديل أولًا قبل الانتقال إلى جهة أخرى.\n\nلم يتم تغيير أو مسح أي بيانات."
+        : "تعذر تأكيد حفظ العمل الحالي، لذلك تم إلغاء الانتقال لحماية بياناتك.\n\nلم يتم مسح أو تغيير أي بيانات. حاول مرة أخرى بعد فتح إحدى صفحات المستخلص والتأكد من الاتصال."
+    );
+  }
+
   const handleSwitchHospital = async (h: string) => {
 if ((h === currentHospital && !currentIsReviewOnly) || switchingHospital) return;
     setSwitchingHospital(h);
     setShowHospitalMenu(false);
 
-    queryClient.setQueryData(["/api/users/me"], (old: any) => old ? { ...old, hospital: h } : old);
-
     try {
+      await confirmCurrentWorkSavedBeforeHospitalSwitch();
+      queryClient.setQueryData(["/api/users/me"], (old: any) => old ? { ...old, hospital: h } : old);
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10_000);
       const token = await getToken();
-      await fetch("/api/users/me/hospital", {
+      const response = await fetch("/api/users/me/hospital", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ hospital: h }),
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
+      if (!response.ok) throw new Error("HOSPITAL_PATCH_FAILED");
       try {
         const raw = localStorage.getItem("najran_session");
         if (raw) {
@@ -318,19 +392,23 @@ localStorage.setItem("najran_session", JSON.stringify(sess));
       } catch {}
 try { window.dispatchEvent(new CustomEvent("najranHospitalChanged", { detail: { hospital: h, reviewOnly: false } })); } catch {}
       queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
-    } catch {
+    } catch (error) {
+      console.error("[hospital-switch] تعذر تبديل الجهة بأمان:", error);
       queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
+      await showHospitalSwitchBlocked(error);
     } finally {
       setSwitchingHospital(null);
     }
   };
-const handleSwitchReviewHospital = (h: string) => {
+const handleSwitchReviewHospital = async (h: string) => {
   if (switchingHospital) return;
 
   setSwitchingHospital(h);
   setShowHospitalMenu(false);
 
   try {
+    await confirmCurrentWorkSavedBeforeHospitalSwitch();
+
     const raw = localStorage.getItem("najran_session");
     const sess = raw ? JSON.parse(raw) : {};
 
@@ -347,147 +425,21 @@ const handleSwitchReviewHospital = (h: string) => {
       h,
     ]);
 
-    const keepKeys = new Set([
-      "najran_session",
-      "hospitalName",
-      "companyName",
-      "contractNumber",
-      "sidebar_collapsed",
-      "najran_read_notifications",
-    ]);
-
-    const clearPrefixes = [
-      "deptCalculatedCost_",
-      "dept_",
-      "tableData_",
-      "achievement_",
-      "consumables_",
-      "spare_",
-      "water_",
-      "sewage_",
-      "subcontractors_",
-      "najran_labor_",
-      "najran_health_",
-      "najran_admin_",
-      "monthSnapshot_",
-      "_u",
-    ];
-
-    const clearKeys = [
-      "persistentContractData",
-      "persistentExtractData",
-      "contractData",
-      "contractDetails",
-      "contractType",
-      "contractStartDate",
-      "contractEndDate",
-      "extractMonth",
-      "extractYear",
-      "extractNumber",
-      "extractStart",
-      "extractEnd",
-      "extractFromDate",
-      "extractToDate",
-      "paymentNumber",
-      "attendanceData",
-      "centersAttendanceData_v2",
-      "healthCentersAttendanceData",
-      "adminOfficesAttendanceData_v1",
-      "ng_attendanceData",
-      "ng_departmentNames",
-      "ng_distributionSettings",
-      "ng_finalLaborCost",
-      "ng_performanceTotalDeduction",
-      "nd_attendanceData",
-      "nd_departmentNames",
-      "nd_distributionSettings",
-      "nd_finalLaborCost",
-      "nd_performanceTotalDeduction",
-      "nd_dentalAchievementTotals",
-      "consumablesTableData",
-      "healthCentersConsumables",
-      "mainHospitalConsumables",
-      "admin_offices_consumables_v1.0",
-      "consumablesTitle",
-      "consumablesPeriodFrom",
-      "consumablesPeriodTo",
-      "finalConsumablesCost",
-      "subcontractors_data_consumables_v27",
-      "performance_data_consumables_v27",
-      "water_supply_data_consumables_v27",
-      "sewage_disposal_data_consumables_v27",
-      "summary_data_consumables_v27",
-      "spare_partsData",
-      "sparePartsTotalAmount",
-      "approvalData",
-      "displayApprovalData",
-      "performanceData",
-      "performanceData_v4",
-      "performanceDeductions",
-      "achievementData",
-      "achievementTitles_v1",
-      "achievementItemNames",
-      "centerNames_v3",
-      "departmentNames",
-      "distributionSettings",
-      "hospitalActivityStatus",
-      "hospitalActivityStatus_v2",
-      "admin_staff",
-      "appTitles_v1",
-      "healthCentersData",
-      "reviewExtractData",
-      "requestVisitData",
-      "settings_main",
-      "settings_advanced",
-      "finalLaborCost",
-      "performanceTotalDeduction",
-      "grand-net-total",
-      "grand-net-total-centers",
-      "grand-net-total-admin",
-      "performanceTableNames",
-      "adminOfficeNames_v1",
-      "adminOfficeAffiliations_v1",
-      "contract_foundation_data",
-    ];
-
-    clearKeys.forEach(key => {
-      if (!keepKeys.has(key)) localStorage.removeItem(key);
-    });
-
-    // القاعدة المطلقة: لا توقيع يُمسح أبدًا — حتى داخل كنس البادئات (بما فيها
-    // "_u" الذي يمسح كل التخزين المعزول). أي مفتاح توقيعات يُستثنى من المسح.
-    const isSignatureKey = (raw: string) => {
-      const nk = raw.replace(/^(_u\d+_)+/, "");
-      if (nk.startsWith("sb_sigs_") || nk.startsWith("sb_prefs_") || nk.startsWith("healthCenters_Signatures_")) return true;
-      return [
-        "dynamicSignatures", "contractorSignature", "contractSignatureData",
-        "performanceSignatures", "performanceSignatures_v2",
-        "signatures_data_consumables_v27", "hospitalConsumablesRaiseLettersSettings_v1",
-        "projectManagerSignature", "operationsAssistantSignature", "maintenanceHeadSignature",
-        "finalLetterSignatureName", "finalLetterSignatureTitle", "sb_style_prefs_consumables_v1", "achievementSignatures_v3",
-      ].includes(nk);
-    };
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const key = localStorage.key(i);
-      if (!key || keepKeys.has(key)) continue;
-      if (isSignatureKey(key)) continue;
-      if (clearPrefixes.some(prefix => key.startsWith(prefix))) {
-        localStorage.removeItem(key);
-      }
-    }
-
     localStorage.setItem("najran_session", JSON.stringify(sess));
     localStorage.setItem("hospitalName", h);
     setActiveHospital(h);
-  } catch {}
+    try {
+      window.dispatchEvent(new CustomEvent("najranHospitalChanged", {
+        detail: { hospital: h, reviewOnly: true },
+      }));
+    } catch {}
 
-  try {
-    window.dispatchEvent(new CustomEvent("najranHospitalChanged", {
-      detail: { hospital: h, reviewOnly: true },
-    }));
-  } catch {}
-
-  setTimeout(() => window.location.reload(), 120);
+    setTimeout(() => window.location.reload(), 120);
+  } catch (error) {
+    console.error("[review-switch] تعذر تأكيد الحفظ قبل التبديل:", error);
+    setSwitchingHospital(null);
+    await showHospitalSwitchBlocked(error);
+  }
 };
   const isAdmin = dbUser?.role === "admin";
   const isSupervisor = dbUser?.role === "supervisor";

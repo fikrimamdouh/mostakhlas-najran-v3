@@ -757,7 +757,19 @@ function shouldBlockLightAutoPush(options) {
     let skippedAdminAttendance = 0;
     let skippedOperationalAuto = 0;
 
-    const keysToSync = Array.from(DIRTY_KEYS).filter(function(k){
+    // الرفع الصريح قبل تسجيل الخروج أو تبديل جهة المراجعة يجب أن يشمل العمل
+    // الموجود فعليًا حتى لو أُعيد تحميل الصفحة وفُقدت قائمة DIRTY_KEYS المؤقتة.
+    // الرفع التلقائي الخفيف يظل كما هو ولا يمر على المفاتيح التشغيلية.
+    const candidateKeys = new Set(DIRTY_KEYS);
+    if (includeOperational) {
+      for (let i = 0; i < localStorage.length; i++) {
+        const storedKey = localStorage.key(i);
+        const normalizedKey = normalizeKey(storedKey);
+        if (storedKey && shouldSyncKey(normalizedKey)) candidateKeys.add(normalizedKey);
+      }
+    }
+
+    const keysToSync = Array.from(candidateKeys).filter(function(k){
       if (!k || !shouldSyncKey(k)) return false;
       if (!includeOperational && isOperationalKey(k)) { skippedOperationalAuto++; return false; }
       return true;

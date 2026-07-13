@@ -56,20 +56,8 @@
   function clearReviewSwitchLocalCache(){
     if(isAdminSession()) return;
     try {
-      localStorage.removeItem('najran_active_hospital_context');
-
-      Object.keys(localStorage).forEach(function(k){
-        var lk = String(k || '').toLowerCase();
-        if(
-          lk.indexOf('attendance') >= 0 ||
-          lk.indexOf('attendancedata') >= 0 ||
-          lk.indexOf('monthsnapshot') >= 0 ||
-          lk.indexOf('hospitalactivitystatus') >= 0
-        ){
-          localStorage.removeItem(k);
-        }
-      });
-
+      // لا نمسح أي عمل دائم هنا. cloud-sync يتولى فصل سياق المستشفى بعد
+      // حفظ مؤكد، ويحتاج najran_active_hospital_context لمعرفة الجهة السابقة.
       sessionStorage.clear();
     } catch(e) {}
   }

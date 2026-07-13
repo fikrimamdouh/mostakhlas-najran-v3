@@ -118,16 +118,16 @@
               var newUserId = newSession && newSession.userId ? String(newSession.userId) : '';
               var oldHospital = oldSession && oldSession.hospital ? String(oldSession.hospital).trim() : '';
               var newHospital = newSession && newSession.hospital ? String(newSession.hospital).trim() : '';
-              var storedHospital = localStorage.getItem('hospitalName') || '';
 
               var changedUser = !!oldUserId && !!newUserId && oldUserId !== newUserId;
               var changedHospital = !!oldHospital && !!newHospital && oldHospital !== newHospital;
-              var staleHospitalWithoutSession = !oldSession && !!storedHospital && !!newHospital && storedHospital.trim() !== newHospital;
               var adminContext = isAdminRole(oldSession && oldSession.role) || isAdminRole(newSession && newSession.role);
 
-              if (!adminContext && (changedUser || changedHospital || staleHospitalWithoutSession)) {
+              if (!adminContext && changedUser) {
                 clearOperationalLocalData();
                 console.log('[NajranSessionGuard] cleared stale operational localStorage for new user context');
+              } else if (!adminContext && changedHospital) {
+                console.log('[NajranSessionGuard] hospital changed — preserved local work until verified sync/context handoff');
               }
             } catch (_) {}
           }

@@ -82,6 +82,37 @@ test('persistent browser storage can only be cleared by the reviewed explicit re
   assert.match(read('artifacts/mustaklassat/src/pages/admin/users.tsx'), /confirmation: "تأكيد التهيئة الكاملة"/);
 });
 
+test('hospital switching never changes context before a verified complete save', () => {
+  const sidebar = read('artifacts/mustaklassat/src/components/layout/Sidebar.tsx');
+  const switchStart = sidebar.indexOf('const handleSwitchReviewHospital');
+  const switchEnd = sidebar.indexOf('const isAdmin =', switchStart);
+  const reviewSwitch = sidebar.slice(switchStart, switchEnd);
+
+  assert.ok(switchStart > -1 && switchEnd > switchStart, 'review switch handler must exist');
+  assert.match(sidebar, /confirmCurrentWorkSavedBeforeHospitalSwitch/);
+  assert.match(sidebar, /najranSyncNow/);
+  assert.match(sidebar, /REVISION_ACTIVE/);
+  assert.match(sidebar, /syncResult\.ok !== true/);
+  assert.match(sidebar, /syncResult\.conflict === true/);
+  assert.match(sidebar, /syncResult\.reason === "SYNC_ALREADY_RUNNING"/);
+  assert.ok(
+    reviewSwitch.indexOf('await confirmCurrentWorkSavedBeforeHospitalSwitch()') < reviewSwitch.indexOf('sess.hospital = h'),
+    'review context must only change after save confirmation'
+  );
+  assert.doesNotMatch(reviewSwitch, /localStorage\.removeItem/);
+
+  const cloudSync = read('artifacts/mustaklassat/public/original/cloud-sync.js');
+  assert.match(cloudSync, /if \(includeOperational\) \{[\s\S]*localStorage\.length[\s\S]*shouldSyncKey\(normalizedKey\)/);
+
+  const appBoot = read('artifacts/mustaklassat/index.html');
+  assert.doesNotMatch(appBoot, /changedUser \|\| changedHospital/);
+  assert.match(appBoot, /hospital changed — preserved local work until verified sync\/context handoff/);
+
+  const legacyReviewSwitch = read('artifacts/mustaklassat/public/reviewer-hospital-menu-guard.js');
+  assert.doesNotMatch(legacyReviewSwitch, /localStorage\.removeItem\('najran_active_hospital_context'\)/);
+  assert.doesNotMatch(legacyReviewSwitch, /indexOf\('attendance'\)/);
+});
+
 test('every mutating API route requires verified authentication', () => {
   const failures = [];
   const routeFiles = walk(path.join(repoDir, 'artifacts/api-server/src/routes'), (file) => file.endsWith('.ts'));
