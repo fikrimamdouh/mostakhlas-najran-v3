@@ -1,0 +1,46 @@
+{
+  "modulePages": [
+    "achievement.html",
+    "admin_offices_attendance.html",
+    "admin_offices_consumables.html",
+    "approval.html",
+    "attendance.html",
+    "consumables.html",
+    "extract-archive.html",
+    "health_centers_attendance.html",
+    "health_centers_consumables.html",
+    "monthly-overview.html",
+    "najran_general.html",
+    "performance.html",
+    "request-visit.html",
+    "review_extract.html",
+    "settings_advanced.html",
+    "settings_main.html",
+    "spare_parts.html",
+    "visit-admin-review.html"
+  ],
+  "auxiliaryPages": [
+    "display-approval.html",
+    "final-extract-book.html",
+    "final-extract-official.html",
+    "health_centers.html",
+    "hospital_consumables_letters_settings.html",
+    "hospital_raise_letters.html",
+    "index.html",
+    "labor_statement.html",
+    "najran_dental_achievement.html",
+    "najran_dental_attendance.html",
+    "najran_dental_performance.html",
+    "najran_general_achievement.html",
+    "najran_general_attendance.html",
+    "najran_general_consumables.html",
+    "najran_general_performance.html",
+    "register.html"
+  ],
+  "adminOnlyPages": [
+    "admin-dashboard.html",
+    "contract-foundation-upload.html",
+    "job-positions-upload.html",
+    "visit-admin-settings.html"
+  ]
+}

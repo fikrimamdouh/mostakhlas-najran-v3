@@ -6,7 +6,15 @@ import { QuranRadioFloatingPlayer } from "@/components/QuranRadioFloatingPlayer"
 import { usePageTracking } from "@/hooks/usePageTracking";
 import { useGetMe } from "@workspace/api-client-react";
 import { Lock, ShieldOff } from "lucide-react";
-import { getModuleKey, parseAllowedModules, isModuleAllowed } from "@/lib/modules";
+import { ALL_MODULES, parseAllowedModules, isModuleAllowed } from "@/lib/modules";
+import originalPages from "@/config/original-pages.json";
+
+const KNOWN_ORIGINAL_PAGES = new Set([
+  ...originalPages.modulePages,
+  ...originalPages.auxiliaryPages,
+  ...originalPages.adminOnlyPages,
+]);
+const ADMIN_ONLY_ORIGINAL_PAGES = new Set(originalPages.adminOnlyPages);
 
 function UnauthorizedPage() {
   return (
@@ -46,7 +54,8 @@ export default function OriginalViewer() {
   usePageTracking();
   const search = useSearch();
   const params = new URLSearchParams(search);
-  const page = params.get("page") || "index.html";
+  const requestedPage = params.get("page") || "index.html";
+  const page = KNOWN_ORIGINAL_PAGES.has(requestedPage) ? requestedPage : null;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [frameEscaped, setFrameEscaped] = useState(false);
   const { getToken } = useAuth();
@@ -151,10 +160,13 @@ export default function OriginalViewer() {
 
   const role = dbUser?.role ?? "user";
   const allowedModuleKeys = parseAllowedModules((dbUser as any)?.allowedModules);
-  const moduleKey = getModuleKey(page);
-  const isAllowed = isModuleAllowed(moduleKey, allowedModuleKeys, role);
+  const module = page ? ALL_MODULES.find((candidate) => candidate.file === page) : null;
+  const moduleAllowed = module ? isModuleAllowed(module.key, allowedModuleKeys, role) : true;
+  const isAllowed = !!page
+    && moduleAllowed
+    && (!ADMIN_ONLY_ORIGINAL_PAGES.has(page) || role === "admin");
 
-  let content = (
+  let content = isAllowed ? (
     <iframe
       key={page}
       ref={iframeRef}
@@ -163,7 +175,7 @@ export default function OriginalViewer() {
       title={page}
       onLoad={handleIframeLoad}
     />
-  );
+  ) : <UnauthorizedPage />;
 
   if (frameEscaped) {
     content = (
@@ -171,8 +183,6 @@ export default function OriginalViewer() {
         جاري فتح الصفحة في المسار الصحيح...
       </div>
     );
-  } else if (!isAllowed && dbUser) {
-    content = <UnauthorizedPage />;
   }
 
   return (

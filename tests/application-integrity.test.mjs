@@ -126,3 +126,22 @@ test('production deployment allows the same-origin extract viewer while blocking
   assert.equal(globalHeaders['X-Content-Type-Options'], 'nosniff');
   assert.equal(globalHeaders['Referrer-Policy'], 'strict-origin-when-cross-origin');
 });
+
+test('the authenticated app fails closed and the original viewer accepts only shipped pages', () => {
+  const appSource = read('artifacts/mustaklassat/src/App.tsx');
+  const originalViewer = read('artifacts/mustaklassat/src/pages/OriginalViewer.tsx');
+  const pagePolicy = JSON.parse(read('artifacts/mustaklassat/src/config/original-pages.json'));
+  const shippedPages = fs.readdirSync(originalDir).filter((file) => file.endsWith('.html')).sort();
+  const allowedPages = [
+    ...pagePolicy.modulePages,
+    ...pagePolicy.auxiliaryPages,
+    ...pagePolicy.adminOnlyPages,
+  ].sort();
+
+  assert.deepEqual(allowedPages, shippedPages);
+  assert.equal(new Set(allowedPages).size, allowedPages.length, 'original page policy must not contain duplicates');
+  assert.match(appSource, /if \(\(error && !isNotFound\) \|\| syncState === "error" \|\| !dbUser\) return <AccessCheckFailedPage \/>/);
+  assert.match(appSource, /if \(dbUser\?\.status !== "approved"\) return <AccessCheckFailedPage \/>/);
+  assert.match(originalViewer, /KNOWN_ORIGINAL_PAGES\.has\(requestedPage\)/);
+  assert.match(originalViewer, /ADMIN_ONLY_ORIGINAL_PAGES\.has\(page\) \|\| role === "admin"/);
+});

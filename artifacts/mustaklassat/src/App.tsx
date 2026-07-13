@@ -292,6 +292,10 @@ function RejectedPage() {
   return <div className="flex min-h-screen flex-col items-center justify-center p-4 text-center" style={{ background: "linear-gradient(135deg,#1e3c72 0%,#2a5298 100%)" }}><div className="bg-white rounded-2xl p-10 shadow-xl max-w-md w-full"><h2 className="text-2xl font-bold mb-3 text-red-600">تم رفض حسابك</h2><p className="text-gray-600 mb-6">للاستفسار، تواصل مع مدير النظام.</p><button onClick={() => signOut()} className="w-full py-3 rounded-xl font-bold border-2 border-red-200 text-red-600 hover:bg-red-50">تسجيل الخروج</button></div></div>;
 }
 
+function AccessCheckFailedPage() {
+  return <div className="flex min-h-screen flex-col items-center justify-center p-4 text-center" style={{ background: "linear-gradient(135deg,#1e3c72 0%,#2a5298 100%)", direction: "rtl" }}><div className="bg-white rounded-2xl p-10 shadow-xl max-w-md w-full"><div className="text-5xl mb-4">⚠️</div><h2 className="text-2xl font-bold mb-3" style={{ color: "#1e3c72" }}>تعذّر التحقق من صلاحية الحساب</h2><p className="text-gray-600 mb-6">لم يفتح النظام البيانات قبل التأكد من الحساب. تحقق من الاتصال ثم أعد المحاولة.</p><button onClick={() => window.location.reload()} className="w-full py-3 rounded-xl font-bold text-white" style={{ background: "linear-gradient(135deg,#1e3c72,#2a5298)" }}>إعادة المحاولة</button></div></div>;
+}
+
 function PendingPage() {
   const { signOut } = useClerk();
   return <div className="flex min-h-[100dvh] flex-col items-center justify-center p-4 text-center" style={{ background: "linear-gradient(135deg,#1e3c72 0%,#2a5298 100%)", direction: "rtl" }}><div className="bg-white rounded-2xl p-10 shadow-2xl max-w-md w-full"><img src="/logo.png" alt="" className="h-14 w-auto mx-auto mb-4 drop-shadow" onError={e => ((e.target as HTMLImageElement).style.display = "none")} /><div className="text-5xl mb-4">⏳</div><h2 className="text-2xl font-bold mb-3" style={{ color: "#1e3c72" }}>حسابك قيد المراجعة</h2><p className="text-gray-600 mb-2">تم تسجيل طلبك بنجاح وإبلاغ مدير النظام.</p><p className="text-gray-500 text-sm mb-8">سيصلك إشعار على بريدك الإلكتروني عند الموافقة على حسابك.</p><button onClick={() => signOut()} className="w-full py-3 rounded-xl font-bold text-sm border-2 hover:bg-gray-50 transition-colors" style={{ borderColor: "#1e3c72", color: "#1e3c72" }}>تسجيل الخروج</button></div></div>;
@@ -457,9 +461,11 @@ const companyName = companyCode ? companyLabelMap[companyCode] || companyCode : 
     return () => { clearInterval(interval); try { delete (window as any).najranGetFreshToken; } catch {} };
   }, [dbUser, getToken]);
 
-  if (!isClerkLoaded || (!!user?.id && !hasToken) || isDbLoading || syncState === "syncing") return <div className="flex h-screen items-center justify-center flex-col gap-3" style={{ background: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)" }}><img src="/logo.png" alt="" className="h-16 w-auto opacity-80" onError={e => ((e.target as HTMLImageElement).style.display = "none")} /><p className="text-white text-lg font-medium">جاري التحميل...</p></div>;
+  if (!isClerkLoaded || (!!user?.id && !hasToken) || isDbLoading || syncState === "syncing" || (isNotFound && syncState === "idle")) return <div className="flex h-screen items-center justify-center flex-col gap-3" style={{ background: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)" }}><img src="/logo.png" alt="" className="h-16 w-auto opacity-80" onError={e => ((e.target as HTMLImageElement).style.display = "none")} /><p className="text-white text-lg font-medium">جاري التحميل...</p></div>;
+  if ((error && !isNotFound) || syncState === "error" || !dbUser) return <AccessCheckFailedPage />;
   if (dbUser?.status === "pending") return <PendingPage />;
   if (dbUser?.status === "rejected") return <RejectedPage />;
+  if (dbUser?.status !== "approved") return <AccessCheckFailedPage />;
   if (showPicker && effectiveHospitals.length > 1) return <HospitalPickerScreen hospitals={effectiveHospitals} currentHospital={dbUser?.hospital ?? null} onPick={handleHospitalPick} />;
   return <>{children}</>;
 }
