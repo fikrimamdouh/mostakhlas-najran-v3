@@ -181,12 +181,14 @@
   }
 
   function scopeSnapshotForModule(snapshot, moduleName) {
-    if (moduleName !== 'labor_attendance') return { snapshot: snapshot || {}, removed: [] };
     var scoped = {};
     var removed = [];
+    var exact = exactKeysFor(moduleName);
+    var prefixes = prefixListFor(moduleName);
     Object.keys(snapshot || {}).forEach(function (key) {
-      if (isForeignToNormalLabor(key)) removed.push(key);
-      else scoped[key] = snapshot[key];
+      var allowed = exact.indexOf(key) > -1 || prefixes.some(function (prefix) { return key.indexOf(prefix) === 0; });
+      if (allowed && !(moduleName === 'labor_attendance' && isForeignToNormalLabor(key))) scoped[key] = snapshot[key];
+      else removed.push(key);
     });
     return { snapshot: scoped, removed: removed };
   }
@@ -234,6 +236,16 @@
 
     try {
       var pg = String((typeof location !== 'undefined' && location.pathname) || '');
+      var pageMatch = pg.match(/(?:^|\/)([^/]+)\.html$/);
+      var pageModule = pageMatch && {
+        consumables: 'consumables',
+        spare_parts: 'spare_parts',
+        health_centers_attendance: 'health_centers_attendance',
+        health_centers_consumables: 'health_centers_consumables',
+        admin_offices_attendance: 'admin_offices_attendance',
+        admin_offices_consumables: 'admin_offices_consumables'
+      }[pageMatch[1]];
+      if (pageModule) return pageModule;
       var onLaborFlowPage = /(?:^|\/)(achievement|attendance|performance|approval)\.html$/.test(pg);
       if (onLaborFlowPage && String(payload.extractType || '') === 'labor') return 'labor_attendance';
     } catch (_) {}
@@ -279,8 +291,7 @@
   function exactKeysFor(moduleName) {
     var common = [
       'persistentExtractData', 'persistentContractData', 'companyName', 'contractNumber', 'hospitalName',
-      'extractMonth', 'extractYear', 'extractStart', 'extractEnd', 'paymentNumber', 'extractNumber', 'periodMonth',
-      'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin', FINAL_SNAPSHOT_STORAGE_KEY
+      'extractMonth', 'extractYear', 'extractStart', 'extractEnd', 'paymentNumber', 'extractNumber', 'periodMonth'
     ];
 
     var adminLabor = [
@@ -296,7 +307,8 @@
       'admin_offices_consumables_subcontractors_v1', 'adminOfficesConsumablesVisitLogic_v1', 'signatures_data_consumables_v27'
     ];
 
-    var health = ['healthCentersAttendanceData', 'centersAttendanceData_v2', 'healthCentersConsumables', 'grand-net-total-centers', 'najran_health_attendance_done'];
+    var healthAttendance = ['healthCentersAttendanceData', 'centersAttendanceData_v2', 'grand-net-total-centers', 'finalLaborCost', 'najran_health_attendance_done'];
+    var healthConsumables = ['healthCentersConsumables', 'healthCentersConsumablesSummary', 'grand-net-total-centers', 'finalConsumablesCost'];
     var normal = [
       'attendanceData', 'ng_attendanceData', 'nd_attendanceData', 'departmentNames', 'distributionSettings',
       'performanceData', 'performanceData_v4', 'performanceDeductions', 'performanceTotalDeduction', 'performanceTotalDue', 'performanceTableNames',
@@ -305,31 +317,42 @@
       'dynamicSignatures', 'performanceSignatures', 'performanceSignatures_v2', 'achievementSignatures_v3',
       'sb_style_prefs_attendance_v1', 'najranSignatureStyleSettings_v1', 'najranSignatureStyleSettings_v1__attendance',
       'najranSignatureStyleSettings_v1__performance', 'najranSignatureStyleSettings_v1__achievement',
-      'najran_labor_attendance_done', 'najran_labor_performance_done'
+      'najran_labor_attendance_done', 'najran_labor_performance_done', 'grand-net-total', FINAL_SNAPSHOT_STORAGE_KEY
     ];
-    var consumables = ['consumablesTableData', 'mainHospitalConsumables', 'finalConsumablesCost', 'signatures_data_consumables_v27'];
-    var spare = ['spare_partsData', 'sparePartsTotalAmount'];
+    var consumables = [
+      'consumablesTableData', 'mainHospitalConsumables', 'summary_data_consumables_v27',
+      'subcontractors_data_consumables_v27', 'performance_data_consumables_v27',
+      'water_supply_data_consumables_v27', 'sewage_disposal_data_consumables_v27',
+      'signatures_data_consumables_v27', 'hospitalConsumablesRaiseLettersSettings_v1',
+      'projectManagerSignature', 'operationsAssistantSignature', 'maintenanceHeadSignature',
+      'finalConsumablesCost', 'grand-net-total'
+    ];
+    var spare = ['spare_partsData', 'sparePartsTotalAmount', 'grand-net-total'];
 
     if (moduleName === 'admin_offices_attendance') return common.concat(adminLabor);
     if (moduleName === 'admin_offices_consumables') return common.concat(adminConsumables);
-    if (moduleName.indexOf('health_centers') === 0) return common.concat(health);
+    if (moduleName === 'health_centers_attendance') return common.concat(healthAttendance);
+    if (moduleName === 'health_centers_consumables') return common.concat(healthConsumables);
     if (moduleName === 'consumables') return common.concat(consumables);
     if (moduleName === 'spare_parts') return common.concat(spare);
     return common.concat(normal);
   }
 
   function prefixListFor(moduleName) {
-    var signaturePrefixes = ['sb_sigs_', 'sb_prefs_', 'healthCenters_Signatures_'];
-    var common = signaturePrefixes.concat(['dept_', 'deptCalculatedCost_', 'tableData_', 'achievement_']);
+    var laborSignatures = ['sb_sigs_', 'sb_prefs_'];
+    var common = laborSignatures.concat(['dept_', 'deptCalculatedCost_', 'tableData_', 'achievement_']);
     if (moduleName === 'admin_offices_attendance') {
-      return common.concat([
-        'adminOffice', 'adminOffices', 'admin_offices_', 'healthCenters_Signatures_attendance',
+      return ['healthCenters_Signatures_attendance', 'healthCenters_Signatures_performance', 'healthCenters_Signatures_achievement'].concat([
+        'adminOfficesAttendance', 'adminOfficesLabor', 'adminOfficeNames_', 'adminOfficeAffiliations_',
         'healthCenters_Signatures_performance', 'healthCenters_Signatures_achievement',
         'performance', 'achievement', 'najran_admin_offices_'
       ]);
     }
-    if (moduleName === 'admin_offices_consumables') return signaturePrefixes.concat(['adminOffice', 'adminOffices', 'admin_offices_', 'consumables_', 'subcontractors_', 'najran_admin_offices_']);
-    if (moduleName.indexOf('health_centers') === 0) return signaturePrefixes.concat(['healthCenters', 'health_centers', 'najran_health_', 'consumables_']);
+    if (moduleName === 'admin_offices_consumables') return ['admin_offices_consumables_', 'adminOfficesConsumables', 'consumables_', 'subcontractors_', 'najran_admin_offices_consumables_'];
+    if (moduleName === 'health_centers_attendance') return ['healthCenters_Signatures_attendance', 'healthCenters_Signatures_performance', 'healthCenters_Signatures_achievement', 'centersAttendance', 'najran_health_attendance_'];
+    if (moduleName === 'health_centers_consumables') return ['healthCentersConsumables', 'healthCenters_Signatures_consumables', 'consumables_', 'najran_health_consumables_'];
+    if (moduleName === 'consumables') return ['consumables_', 'subcontractors_', 'water_', 'sewage_'];
+    if (moduleName === 'spare_parts') return ['spare_'];
     return common.concat(['najran_labor_', 'ng_', 'nd_']);
   }
 
@@ -513,6 +536,18 @@
     };
   }
 
+  function sectionBundleIntegrity(moduleName, snapshot) {
+    var required = {
+      consumables: ['consumablesTableData', 'mainHospitalConsumables', 'summary_data_consumables_v27'],
+      spare_parts: ['spare_partsData'],
+      health_centers_attendance: ['healthCentersAttendanceData', 'centersAttendanceData_v2'],
+      health_centers_consumables: ['healthCentersConsumables'],
+      admin_offices_attendance: ['adminOfficesAttendanceData_v1', 'adminOfficesAttendanceData_v1_localBackup', 'adminOfficesLaborDataSafe_v2'],
+      admin_offices_consumables: ['admin_offices_consumables_v1.0']
+    }[moduleName] || [];
+    return { complete: required.length === 0 || hasAny(snapshot || {}, required), required: required };
+  }
+
   function createLaborFinalReviewSnapshot() {
     try {
       safeRun('renderTables');
@@ -659,6 +694,11 @@
       snapshot.__laborCompleteBundle_v1 = completeness;
       if (!completeness.complete) {
         throw new Error('تم إيقاف رفع مستخلص العمالة لأن الحزمة غير مكتملة: ' + completeness.missing.join('، ') + '. لم تُحذف الخطوات ولم يُقفل الشهر.');
+      }
+    } else {
+      var sectionCompleteness = sectionBundleIntegrity(moduleName, snapshot);
+      if (!sectionCompleteness.complete) {
+        throw new Error('تم إيقاف رفع المستخلص لأن بيانات القسم الأساسية غير موجودة. لم تُرسل حزمة ناقصة ولم يُقفل الشهر.');
       }
     }
 

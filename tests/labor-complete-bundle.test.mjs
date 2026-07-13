@@ -23,7 +23,7 @@ function json(value) {
   return JSON.stringify(value);
 }
 
-function createGuard(storageValues, finalReviewSnapshot) {
+function createGuard(storageValues, finalReviewSnapshot, pathname = '/original/achievement.html') {
   const localStorage = new StorageMock(storageValues);
   const sessionStorage = new StorageMock();
   let originalFetchCalls = 0;
@@ -32,7 +32,7 @@ function createGuard(storageValues, finalReviewSnapshot) {
     document: { querySelector: () => null, getElementById: () => null },
     isFinite,
     localStorage,
-    location: { pathname: '/original/achievement.html', search: '' },
+    location: { pathname, search: '' },
     Promise,
     sessionStorage,
     setTimeout,
@@ -200,4 +200,86 @@ test('server transport validates UTF-8 bytes and does not echo the large snapsho
   assert.match(scopeSource, /Buffer\.byteLength\(extractDataJson, "utf8"\)/);
   assert.match(routeSource, /savedExtractMutationResponse\(row\)/);
   assert.match(routeSource, /extractData: storedExtractDataForResponse/);
+});
+
+test('consumables upload contains only its complete section and signatures', () => {
+  const storage = {
+    summary_data_consumables_v27: json([{ item: 'منظف اختبار', total: 120 }]),
+    subcontractors_data_consumables_v27: json([{ name: 'مقاول اختبار', amount: 20 }]),
+    performance_data_consumables_v27: json([{ title: 'أداء اختبار', amount: 10 }]),
+    water_supply_data_consumables_v27: json([{ amount: 5 }]),
+    sewage_disposal_data_consumables_v27: json([{ amount: 3 }]),
+    signatures_data_consumables_v27: json([{ title: 'المشرف', name: 'توقيع مستهلكات' }]),
+    finalConsumablesCost: '158',
+    attendanceData: json({ cleaning: [{ name: 'لا يدخل المستهلكات' }] }),
+    tableData_cleaning: json({ rows: [{ activity: 'لا يدخل المستهلكات' }] }),
+    spare_partsData: json({ rows: [{ item: 'لا يدخل المستهلكات' }] }),
+  };
+  const guard = createGuard(storage, null, '/original/consumables.html');
+  const enriched = guard.enrichPayload({
+    extractType: 'consumables',
+    extractData: Object.fromEntries(Object.entries(storage).map(([key, value]) => [key, JSON.parse(value)])),
+  });
+
+  assert.deepEqual(enriched.extractData.summary_data_consumables_v27, [{ item: 'منظف اختبار', total: 120 }]);
+  assert.deepEqual(enriched.extractData.signatures_data_consumables_v27, [{ title: 'المشرف', name: 'توقيع مستهلكات' }]);
+  assert.equal(enriched.extractData.attendanceData, undefined);
+  assert.equal(enriched.extractData.tableData_cleaning, undefined);
+  assert.equal(enriched.extractData.spare_partsData, undefined);
+  assert.equal(enriched.extractData.__submittedExtractArchiveBundle_v1.sourceModule, 'consumables');
+});
+
+test('spare-parts upload remains independent from labor and consumables', () => {
+  const storage = {
+    spare_partsData: json({ rows: [{ item: 'قطعة اختبار', amount: 250 }], totalAmount: 250 }),
+    sparePartsTotalAmount: '250',
+    attendanceData: json({ cleaning: [{ name: 'لا يدخل قطع الغيار' }] }),
+    summary_data_consumables_v27: json([{ item: 'لا يدخل قطع الغيار' }]),
+    signatures_data_consumables_v27: json([{ name: 'لا يدخل قطع الغيار' }]),
+  };
+  const guard = createGuard(storage, null, '/original/spare_parts.html');
+  const enriched = guard.enrichPayload({
+    extractType: 'spare_parts',
+    extractData: Object.fromEntries(Object.entries(storage).map(([key, value]) => [key, JSON.parse(value)])),
+  });
+
+  assert.deepEqual(enriched.extractData.spare_partsData, { rows: [{ item: 'قطعة اختبار', amount: 250 }], totalAmount: 250 });
+  assert.equal(enriched.extractData.sparePartsTotalAmount, 250);
+  assert.equal(enriched.extractData.attendanceData, undefined);
+  assert.equal(enriched.extractData.summary_data_consumables_v27, undefined);
+  assert.equal(enriched.extractData.signatures_data_consumables_v27, undefined);
+  assert.equal(enriched.extractData.__submittedExtractArchiveBundle_v1.sourceModule, 'spare_parts');
+});
+
+test('blocks an empty consumables or spare-parts upload before network submission', () => {
+  const consumablesGuard = createGuard({}, null, '/original/consumables.html');
+  assert.throws(
+    () => consumablesGuard.enrichPayload({ extractType: 'consumables', extractData: {} }),
+    /بيانات القسم الأساسية غير موجودة/,
+  );
+
+  const spareGuard = createGuard({}, null, '/original/spare_parts.html');
+  assert.throws(
+    () => spareGuard.enrichPayload({ extractType: 'spare_parts', extractData: {} }),
+    /بيانات القسم الأساسية غير موجودة/,
+  );
+});
+
+test('health-center attendance upload cannot carry health consumables or admin-office data', () => {
+  const storage = {
+    centersAttendanceData_v2: json({ centerA: [{ name: 'عامل مركز' }] }),
+    healthCenters_Signatures_attendance: json([{ name: 'توقيع مركز' }]),
+    healthCentersConsumables: json([{ item: 'لا يدخل حضور المراكز' }]),
+    adminOfficesAttendanceData_v1: json({ officeA: [{ name: 'لا يدخل المراكز' }] }),
+  };
+  const guard = createGuard(storage, null, '/original/health_centers_attendance.html');
+  const enriched = guard.enrichPayload({
+    extractType: 'health_centers',
+    extractData: Object.fromEntries(Object.entries(storage).map(([key, value]) => [key, JSON.parse(value)])),
+  });
+
+  assert.deepEqual(enriched.extractData.centersAttendanceData_v2, { centerA: [{ name: 'عامل مركز' }] });
+  assert.equal(enriched.extractData.healthCentersConsumables, undefined);
+  assert.equal(enriched.extractData.adminOfficesAttendanceData_v1, undefined);
+  assert.equal(enriched.extractData.__submittedExtractArchiveBundle_v1.sourceModule, 'health_centers_attendance');
 });

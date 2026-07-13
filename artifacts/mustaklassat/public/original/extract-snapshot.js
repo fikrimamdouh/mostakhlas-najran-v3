@@ -226,7 +226,9 @@
         if (!isAllowedForType(key, type)) continue;
         var raw = localStorage.getItem(key);
         if (raw == null) continue;
-        if (isHeavyValue(raw)) continue;
+        // اللقطة المحلية يجب أن تكون كاملة: لا نتجاهل جدول حضور كبيرًا ولا
+        // توقيعًا مصورًا. إذا لم تتسع مساحة المتصفح يفشل حفظ الأرشيف بوضوح
+        // بدل تسجيل نجاح للّقطة وهي ناقصة.
         snapshot[key] = parseStorageValue(raw);
       }
     } catch (e) {
@@ -624,10 +626,11 @@
         return snap;
       }
       try { localStorage.setItem(LAST_LIGHT_KEY, JSON.stringify({ id: snap.id, draftKey: snap.draftKey, savedAt: snap.savedAt, source: source, extractType: snap.extractType, currentPage: snap.currentPage, paymentNumber: snap.paymentNumber, extractMonth: snap.extractMonth, extractYear: snap.extractYear, hospitalName: snap.hospitalName, companyName: snap.companyName, totalEmployees: snap.totalEmployees, totalNetAmount: snap.totalNetAmount, compactFailed: true })); } catch (_) {}
-      return snap;
+      console.error('extract-snapshot: complete local archive write failed; save not confirmed');
+      return null;
     } catch (e) {
       console.warn('extract-snapshot: save error', e);
-      return snap;
+      return null;
     }
   };
 

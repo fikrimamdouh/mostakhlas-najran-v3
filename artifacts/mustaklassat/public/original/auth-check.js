@@ -229,8 +229,8 @@
   };
 
   if (snapshotPages[pageFile]) {
-    appendScript('/original/extract-snapshot.js?v=20260712_professional_home_save_notice_v1', true);
-    appendScript('/original/submitted_extract_archive_bundle_guard.js?v=20260713_labor_complete_bundle_v1', true);
+    appendScript('/original/extract-snapshot.js?v=20260713_complete_local_snapshot_v1', true);
+    appendScript('/original/submitted_extract_archive_bundle_guard.js?v=20260713_scoped_complete_bundles_v1', true);
   }
 
   if (isAdminOfficesPage || isAdminOfficesConsumablesPage) appendScript('/original/admin_offices_full_submit_snapshot_guard.js?v=20260713_all_native_dialogs_v1', true);
