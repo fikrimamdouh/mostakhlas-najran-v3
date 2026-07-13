@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useListUsers, useApproveUser, useRejectUser, getListUsersQueryKey, useGetMe, useDeleteUser } from "@workspace/api-client-react";
+import type { UserProfile } from "@workspace/api-client-react";
 import { useAuth } from "@clerk/react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,6 +17,12 @@ import { Link } from "wouter";
 import { ALL_MODULES, ASSIGNABLE_MODULES } from "@/lib/modules";
 
 type TokenGetter = ReturnType<typeof useAuth>["getToken"];
+type AdminUserProfile = Omit<UserProfile, "name" | "email" | "status"> & {
+  name: string;
+  email: string;
+  status: UserProfile["status"] | "deleted";
+  allowedModules?: string | null;
+};
 
 async function fetchWithFreshToken(getToken: TokenGetter, input: RequestInfo | URL, init: RequestInit = {}) {
   const build = (token: string | null) => ({
@@ -483,13 +490,14 @@ export default function AdminUsers() {
     onError: (e: any) => toast({ title: "خطأ", description: e.message || "فشل حفظ الصلاحيات", variant: "destructive" }),
   });
 
-  const users = (data?.users || []).filter(u => {
+  const allUsers = (data?.users || []) as AdminUserProfile[];
+  const users = allUsers.filter(u => {
     if (!search) return true;
     const s = search.toLowerCase();
     return (u.name ?? "").toLowerCase().includes(s) || u.email.toLowerCase().includes(s);
   });
 
-  const pendingCount = (data?.users || []).filter(u => u.status === "pending").length;
+  const pendingCount = allUsers.filter(u => u.status === "pending").length;
 
   const tabs: { key: TabType; label: string; icon: any }[] = [
     { key: "pending", label: "في الانتظار", icon: Clock },
@@ -728,7 +736,7 @@ export default function AdminUsers() {
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-gray-500">
-                    {formatLastLogin(user.lastLoginAt)}
+                    {formatLastLogin(user.lastLoginAt ?? null)}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2 flex-wrap">

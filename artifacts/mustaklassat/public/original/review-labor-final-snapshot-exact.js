@@ -23,8 +23,13 @@
     var n = Number(String(v == null ? 0 : v).replace(/,/g, '').replace(/[^0-9.\-]/g, ''));
     return isFinite(n) ? n : 0;
   }
+  function optionalNum(v) {
+    if (v == null || String(v).trim() === '') return null;
+    var n = Number(String(v).replace(/,/g, '').replace(/[^0-9.\-]/g, ''));
+    return isFinite(n) ? n : null;
+  }
   function money(v) {
-    return Number(v || 0).toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
+    return Number(v == null ? 0 : v).toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' });
   }
   function clean(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); }
   function token() {
@@ -80,17 +85,37 @@
       for (var i = 0; i < longest; i++) headers.push('عمود ' + (i + 1));
     }
     var body = rows.map(function (r) {
-      var cells = Array.isArray(r.cells) ? r.cells : headers.map(function (h) { return r[h] || ''; });
+      var cells = Array.isArray(r.cells) ? r.cells : headers.map(function (h) { return r[h] == null ? '' : r[h]; });
       var cls = r.rowType === 'total' ? ' class="total"' : r.rowType === 'tafqeet' ? ' class="tafq-row"' : '';
-      return '<tr' + cls + '>' + headers.map(function (_, i) { return '<td>' + esc(cells[i] || '') + '</td>'; }).join('') + '</tr>';
+      return '<tr' + cls + '>' + headers.map(function (_, i) { return '<td>' + esc(cells[i] == null ? '' : cells[i]) + '</td>'; }).join('') + '</tr>';
     }).join('');
     return '<div class="rv-block rv-print-block"><div class="rv-block-title"><h4>شهادة الإنجاز المحفوظة وقت الرفع</h4><span>Snapshot نهائي مغلق</span></div>' +
       '<div class="rv-scroll"><table class="rv-table generic"><thead><tr>' + headers.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' + body + '</tbody></table></div></div>';
   }
+  function signatureGroup(title, list) {
+    list = Array.isArray(list) ? list : [];
+    var cards = list.map(function (item) {
+      item = item && typeof item === 'object' ? item : { name: item };
+      var role = clean(item.title || item.role || item.position || item.label || 'توقيع');
+      var name = clean(item.name || item.signer || item.value || '—');
+      return '<div class="rv-stat primary"><span>' + esc(role) + '</span><b style="font-size:16px">' + esc(name) + '</b></div>';
+    }).join('');
+    if (!cards) cards = '<div class="rv-empty">لم تكن هناك توقيعات مسجلة لهذا القسم وقت الرفع.</div>';
+    return '<div class="rv-block rv-print-block"><div class="rv-block-title"><h4>' + esc(title) + '</h4><span>' + list.length + ' توقيع</span></div><div class="rv-main-stats" style="padding:16px">' + cards + '</div></div>';
+  }
+  function signaturesFromFinal(frs) {
+    var signatures = parse(frs && frs.signatures, {});
+    return signatureGroup('توقيعات الحضور والانصراف', signatures.attendance) +
+      signatureGroup('توقيعات جداول الأداء', signatures.performance) +
+      signatureGroup('توقيعات شهادة الإنجاز', signatures.achievement);
+  }
   function renderExact(e, frs) {
     var m = frs.meta || {};
     var totals = frs.achievementTotals || {};
-    var final = num(frs.finalAmount && frs.finalAmount.value) || num(totals.netMonthly) || num(e.totalAmount);
+    var frozenFinal = optionalNum(frs.finalAmount && frs.finalAmount.value);
+    var totalsFinal = optionalNum(totals.netMonthly);
+    var extractFinal = optionalNum(e.totalAmount);
+    var final = frozenFinal !== null ? frozenFinal : totalsFinal !== null ? totalsFinal : extractFinal !== null ? extractFinal : 0;
     var monthly = num(totals.monthlyValue);
     var deductions = num(totals.absenceDeduction) + num(totals.absencePenalty) + num(totals.performancePenalty) + num(totals.nationalityPenalty);
     var days = daysCount(m.extractStart || e.extractStart, m.extractEnd || e.extractEnd);
@@ -142,7 +167,8 @@
     html += '<nav class="rv-tabs"><a href="#rv-summary" class="rv-nav-card"><b>ملخص المراجعة</b><span>لقطة نهائية</span></a>' +
       (attHtml ? '<a href="#rv-attendance" class="rv-nav-card"><b>الحضور والانصراف</b><span>من snapshot المرفوع</span></a>' : '') +
       (perfHtml ? '<a href="#rv-performance" class="rv-nav-card"><b>شهادة الأداء الشهري</b><span>من snapshot المرفوع</span></a>' : '') +
-      '<a href="#rv-achievement" class="rv-nav-card"><b>شهادة الإنجاز</b><span>نفس جدول المستخدم</span></a></nav>';
+      '<a href="#rv-achievement" class="rv-nav-card"><b>شهادة الإنجاز</b><span>نفس جدول المستخدم</span></a>' +
+      '<a href="#rv-signatures" class="rv-nav-card"><b>التوقيعات</b><span>محفوظة وقت الرفع</span></a></nav>';
     html += '<section id="rv-summary"><h3>ملخص المراجعة</h3><div class="rv-period-note" style="background:#f0fdf4;border-color:#86efac;color:#166534"><b>✓ يتم العرض من لقطة المستخدم النهائية فقط — لا إعادة حساب من localStorage أو الحضور الخام</b></div>';
     html += '<div class="rv-main-stats">' +
       stat('نوع المستخلص', 'مستخلص العمالة', 'primary') +
@@ -158,7 +184,9 @@
       stat('إجمالي الحسميات والغرامات', money(deductions), deductions > 0 ? 'warn' : 'ok') +
       stat('الصافي النهائي', money(final), 'ok') +
       stat('مصدر الصافي', (frs.finalAmount && frs.finalAmount.source) || 'finalReviewSnapshot', 'primary') +
-      '</div>' + rowsFromFinal(frs) + '</section>' + actionButtons(e) + '</div>';
+      '</div>' + rowsFromFinal(frs) + '</section>' +
+      '<section id="rv-signatures" class="rv-section-break"><h3>التوقيعات المحفوظة وقت الرفع</h3>' + signaturesFromFinal(frs) + '</section>' +
+      actionButtons(e) + '</div>';
     return html;
   }
   async function findExtract(id) {

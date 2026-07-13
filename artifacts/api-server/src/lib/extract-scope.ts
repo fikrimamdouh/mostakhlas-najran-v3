@@ -153,18 +153,21 @@ export function buildIdempotencyKey(input: {
 }
 
 // ─── حد حجم payload ومنع base64 داخل extractData ────────────────────────────
-export const EXTRACT_DATA_MAX_CHARS = 4 * 1024 * 1024; // 4MB نص JSON
+// Vercel Functions حدها 4.5MB للطلب والرد؛ نترك هامشًا لبيانات السجل والرؤوس.
+// الحزمة تُقبل كاملة أو تُرفض كاملة، ولا يُحذف منها جدول لتجاوز الحد.
+export const EXTRACT_DATA_MAX_BYTES = 4 * 1024 * 1024;
 
 const DATA_URI_RE = /data:(?:image|application|audio|video)\/[a-z0-9.+-]*;base64,/i;
 const LONG_BASE64_RE = /;base64,[A-Za-z0-9+/=\s]{2000,}/;
 
 export function validateExtractDataPayload(extractDataJson: string | null): { ok: true } | { ok: false; status: number; error: string } {
   if (extractDataJson == null) return { ok: true };
-  if (extractDataJson.length > EXTRACT_DATA_MAX_CHARS) {
+  const payloadBytes = Buffer.byteLength(extractDataJson, "utf8");
+  if (payloadBytes > EXTRACT_DATA_MAX_BYTES) {
     return {
       ok: false,
       status: 413,
-      error: `حجم بيانات المستخلص كبير جدًا (${Math.round(extractDataJson.length / 1024)}KB). الحد الأقصى ${Math.round(EXTRACT_DATA_MAX_CHARS / 1024)}KB. أزل الصور/الترويسات من البيانات وأعد المحاولة.`,
+      error: `حجم بيانات المستخلص الكامل كبير جدًا (${Math.round(payloadBytes / 1024)}KB). الحد الآمن ${Math.round(EXTRACT_DATA_MAX_BYTES / 1024)}KB. لم يتم حفظ نسخة ناقصة.`,
     };
   }
   if (DATA_URI_RE.test(extractDataJson) || LONG_BASE64_RE.test(extractDataJson)) {

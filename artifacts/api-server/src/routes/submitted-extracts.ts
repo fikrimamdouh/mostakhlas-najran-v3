@@ -13,6 +13,17 @@ import {
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 const NOT_FOUND_OR_FORBIDDEN = "EXTRACT_NOT_FOUND_OR_FORBIDDEN";
 
+function savedExtractMutationResponse(row: any) {
+  if (!row || typeof row !== "object") return row;
+  const { extractData: _extractData, ...withoutLargeSnapshot } = row;
+  return withoutLargeSnapshot;
+}
+
+function storedExtractDataForResponse(raw: unknown) {
+  if (typeof raw !== "string") return raw;
+  try { return JSON.parse(raw); } catch { return raw; }
+}
+
 function advanceMonthInExtractData(jsonStr: string): string {
   try {
     const data = JSON.parse(jsonStr);
@@ -150,7 +161,7 @@ router.post("/", requireAuth, requireApproved, async (req: any, res) => {
     }
     await db.insert(extractRevisionsTable).values({ extractId: row.id, changedBy: user.name, changedByRole: user.role, previousStatus: null, newStatus: "submitted", notes: "تقديم مستخلص جديد" });
     void (async () => { try { const admins = await db.select({ email: usersTable.email }).from(usersTable).where(and(eq(usersTable.role, "admin"), eq(usersTable.status, "approved"))); const hospitalSupervisors = hospitalName ? await db.select({ email: usersTable.email }).from(usersTable).where(and(eq(usersTable.role, "supervisor"), eq(usersTable.supervisedHospital, hospitalName), eq(usersTable.status, "approved"))) : []; const recipients = [...admins.map(a => a.email), ...hospitalSupervisors.map(s => s.email)].filter((e): e is string => !!e); if (recipients.length > 0) await sendNewExtractEmail(recipients, { submitterName: user.name, submitterEmail: user.email, hospitalName: hospitalName || "—", extractType, periodMonth, totalAmount: totalAmount != null ? String(totalAmount) : null, extractId: row.id }); } catch (_) {} })();
-    return res.status(201).json(row);
+    return res.status(201).json(savedExtractMutationResponse(row));
   } catch (err) {
     req.log.error({ err }, "Failed to submit extract");
     return res.status(500).json({ error: "Internal server error" });
@@ -199,7 +210,7 @@ router.put("/:id", requireAuth, requireApproved, async (req: any, res) => {
       throw updateErr;
     }
     await db.insert(extractRevisionsTable).values({ extractId: row.id, changedBy: req.currentUser.name, changedByRole: req.currentUser.role, previousStatus: existing.status, newStatus: "submitted", notes: isReviewerRequestedRevision ? `تعديل رقم ${row.revisionCount}` : "تعديل قبل بدء المراجعة" });
-    return res.json(row);
+    return res.json(savedExtractMutationResponse(row));
   } catch (err) {
     req.log.error({ err }, "Failed to resubmit extract");
     return res.status(500).json({ error: "Internal server error" });
@@ -212,7 +223,12 @@ router.get("/:id", requireAuth, requireApproved, async (req: any, res) => {
     if (!row) return res.status(404).json({ error: "Not found" });
     // نفس منطق القائمة تمامًا (helper واحد): مالك / admin / supervisor / viewer / contract_supervisor ضمن مواقع شركته.
     if (!canReadExtract(req.currentUser, row.submitted_extracts, row.users?.hospital)) return res.status(403).json({ error: "Forbidden" });
-    return res.json({ ...row.submitted_extracts, submittedByName: row.users?.name, submittedByEmail: row.users?.email });
+    return res.json({
+      ...row.submitted_extracts,
+      extractData: storedExtractDataForResponse(row.submitted_extracts.extractData),
+      submittedByName: row.users?.name,
+      submittedByEmail: row.users?.email,
+    });
   } catch (err) {
     req.log.error({ err }, "Failed to get submitted extract");
     return res.status(500).json({ error: "Internal server error" });

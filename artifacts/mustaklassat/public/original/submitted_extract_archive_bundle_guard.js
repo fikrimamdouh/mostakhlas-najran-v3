@@ -1,27 +1,20 @@
 // ===================================================================
-// Submitted Extract Archive Bundle Guard — V4 final labor review snapshot
+// Submitted Extract Archive Bundle Guard — V5 complete labor bundle
 // Scope: original work pages before POST/PUT /api/submitted-extracts
-// - keeps submit payload slim
-// - persists a final display-only labor review snapshot inside extractData
-// - blocks raw recalculation sources from being re-added when final snapshot exists
+// - keeps every scoped labor table and textual setting in one all-or-nothing bundle
+// - persists a final display-only labor review snapshot and its signatures
+// - blocks partial upload when attendance, performance, achievement, or metadata is missing
 // ===================================================================
 (function () {
   'use strict';
-  if (window.__NAJRAN_SUBMITTED_EXTRACT_ARCHIVE_BUNDLE_GUARD_V4__) return;
-  window.__NAJRAN_SUBMITTED_EXTRACT_ARCHIVE_BUNDLE_GUARD_V4__ = true;
+  if (window.__NAJRAN_SUBMITTED_EXTRACT_ARCHIVE_BUNDLE_GUARD_V5__) return;
+  window.__NAJRAN_SUBMITTED_EXTRACT_ARCHIVE_BUNDLE_GUARD_V5__ = true;
 
-  var MAX_VALUE_CHARS = 300 * 1024;
+  // Vercel Functions تقبل 4.5MB للطلب؛ نترك هامشًا للـheaders وبيانات السجل.
+  var MAX_BUNDLE_BYTES = 4 * 1024 * 1024;
   var WARN_PAYLOAD_CHARS = 850 * 1024;
   var FINAL_LABOR_REVIEW_SCHEMA = 'labor_final_review_snapshot_v1';
   var FINAL_SNAPSHOT_STORAGE_KEY = 'najran_labor_final_review_snapshot_v1';
-  var RAW_REVIEW_KEYS = [
-    'attendanceData', 'ng_attendanceData', 'nd_attendanceData',
-    'performanceData', 'performanceData_v4', 'performanceDeductions',
-    'performanceTotalDeduction', 'performanceTotalDue',
-    'achievementData', 'achievementTitles_v1', 'achievementItemNames',
-    'najran_labor_attendance_done', 'najran_labor_performance_done'
-  ];
-
   function parseMaybeJson(value, fallback) {
     if (value == null) return fallback;
     if (typeof value === 'object') return value;
@@ -76,6 +69,17 @@
     }
   }
 
+  function valueUtf8Size(value) {
+    var serialized = '';
+    try { serialized = typeof value === 'string' ? value : JSON.stringify(value); }
+    catch (_) { serialized = String(value == null ? '' : value); }
+    try {
+      if (typeof TextEncoder === 'function') return new TextEncoder().encode(serialized).length;
+    } catch (_) {}
+    try { return unescape(encodeURIComponent(serialized)).length; }
+    catch (_) { return serialized.length * 3; }
+  }
+
   function isHeavyKey(key) {
     key = String(key || '');
     if (!key) return true;
@@ -98,7 +102,6 @@
     try { s = typeof value === 'string' ? value : JSON.stringify(value); }
     catch (_) { s = String(value == null ? '' : value); }
     if (!s) return false;
-    if (s.length > MAX_VALUE_CHARS) return true;
     if (s.indexOf('data:image') > -1) return true;
     if (s.indexOf(';base64,') > -1) return true;
     if (s.indexOf('base64') > -1 && s.length > 20000) return true;
@@ -139,7 +142,7 @@
     var cleaned = stripBase64Deep(parsed);
     var out = wasString ? JSON.stringify(cleaned) : cleaned;
     var s = wasString ? out : JSON.stringify(out);
-    if (!s || s.length > MAX_VALUE_CHARS) return null;
+    if (!s) return null;
     if (s.indexOf(';base64,') > -1 || s.indexOf('data:image') > -1) return null;
     return out;
   }
@@ -167,6 +170,27 @@
     return cleanSnap;
   }
 
+  function isForeignToNormalLabor(key) {
+    var k = String(key || '').toLowerCase();
+    return k.indexOf('consumable') > -1 || k.indexOf('consumables') > -1 ||
+      k.indexOf('spare_parts') > -1 || k.indexOf('spare_') === 0 ||
+      k.indexOf('subcontractors_') === 0 || k.indexOf('water_') === 0 || k.indexOf('sewage_') === 0 ||
+      k.indexOf('adminoffice') === 0 || k.indexOf('admin_offices_') === 0 ||
+      k.indexOf('healthcenters') === 0 || k.indexOf('health_centers_') === 0 ||
+      k === 'centersattendancedata_v2';
+  }
+
+  function scopeSnapshotForModule(snapshot, moduleName) {
+    if (moduleName !== 'labor_attendance') return { snapshot: snapshot || {}, removed: [] };
+    var scoped = {};
+    var removed = [];
+    Object.keys(snapshot || {}).forEach(function (key) {
+      if (isForeignToNormalLabor(key)) removed.push(key);
+      else scoped[key] = snapshot[key];
+    });
+    return { snapshot: scoped, removed: removed };
+  }
+
   function hasKey(snapshot, key) {
     return snapshot && Object.prototype.hasOwnProperty.call(snapshot, key) && isMeaningful(snapshot[key]);
   }
@@ -188,7 +212,7 @@
     snapshot = snapshot || {};
     // كان يحذف attendanceData/performanceData/achievementData والبادئات dept_/performance_/achievement_
     // عند وجود finalReviewSnapshot، فيفقد المراجع تفاصيل الحضور والأقسام والأداء.
-    // الآن تبقى التفاصيل الخام (نصية ومحدودة الحجم بـMAX_VALUE_CHARS) — وإعادة الحساب
+    // الآن تبقى التفاصيل الخام النصية كاملة، مع حد واحد للحزمة كلها — وإعادة الحساب
     // تبقى ممنوعة عبر displayOnly/noRecalculate داخل finalReviewSnapshot نفسه.
     return snapshot;
   }
@@ -256,8 +280,7 @@
     var common = [
       'persistentExtractData', 'persistentContractData', 'companyName', 'contractNumber', 'hospitalName',
       'extractMonth', 'extractYear', 'extractStart', 'extractEnd', 'paymentNumber', 'extractNumber', 'periodMonth',
-      'finalLaborCost', 'finalConsumablesCost', 'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin',
-      'signatures_data_consumables_v27', FINAL_SNAPSHOT_STORAGE_KEY
+      'grand-net-total', 'grand-net-total-centers', 'grand-net-total-admin', FINAL_SNAPSHOT_STORAGE_KEY
     ];
 
     var adminLabor = [
@@ -265,17 +288,26 @@
       'adminOfficesLaborDataSafe_v2', 'adminOfficesAttendanceData', 'adminOfficeNames_v1', 'adminOfficeAffiliations_v1',
       'adminOfficesRaiseLettersSettings_v1', 'adminOfficesLetterScopedSettings_v1', 'adminOfficesAbsenceVacationNotes_v1',
       'adminOfficePerformanceDeductions_v1', 'performanceDeductions', 'performanceData_v4', 'achievementData',
-      'achievementTitles_v1', 'achievementItemNames', 'najran_admin_offices_attendance_done'
+      'achievementTitles_v1', 'achievementItemNames', 'finalLaborCost', 'najran_admin_offices_attendance_done'
     ];
 
     var adminConsumables = [
       'admin_offices_consumables_v1.0', 'adminOfficesConsumablesRaiseLetterSettings_v1', 'finalConsumablesCost',
-      'admin_offices_consumables_subcontractors_v1', 'adminOfficesConsumablesVisitLogic_v1'
+      'admin_offices_consumables_subcontractors_v1', 'adminOfficesConsumablesVisitLogic_v1', 'signatures_data_consumables_v27'
     ];
 
     var health = ['healthCentersAttendanceData', 'centersAttendanceData_v2', 'healthCentersConsumables', 'grand-net-total-centers', 'najran_health_attendance_done'];
-    var normal = ['attendanceData', 'ng_attendanceData', 'nd_attendanceData', 'performanceData', 'performanceData_v4', 'performanceDeductions', 'achievementData', 'achievementTitles_v1', 'achievementItemNames', 'najran_labor_attendance_done', 'najran_labor_performance_done'];
-    var consumables = ['consumablesTableData', 'mainHospitalConsumables', 'finalConsumablesCost'];
+    var normal = [
+      'attendanceData', 'ng_attendanceData', 'nd_attendanceData', 'departmentNames', 'distributionSettings',
+      'performanceData', 'performanceData_v4', 'performanceDeductions', 'performanceTotalDeduction', 'performanceTotalDue', 'performanceTableNames',
+      'achievementData', 'achievementTitles_v1', 'achievementItemNames', 'accreditationLetterData', 'taxInvoiceData',
+      'dentalLaborCheckboxState', 'dentalLaborData', 'finalLaborCost',
+      'dynamicSignatures', 'performanceSignatures', 'performanceSignatures_v2', 'achievementSignatures_v3',
+      'sb_style_prefs_attendance_v1', 'najranSignatureStyleSettings_v1', 'najranSignatureStyleSettings_v1__attendance',
+      'najranSignatureStyleSettings_v1__performance', 'najranSignatureStyleSettings_v1__achievement',
+      'najran_labor_attendance_done', 'najran_labor_performance_done'
+    ];
+    var consumables = ['consumablesTableData', 'mainHospitalConsumables', 'finalConsumablesCost', 'signatures_data_consumables_v27'];
     var spare = ['spare_partsData', 'sparePartsTotalAmount'];
 
     if (moduleName === 'admin_offices_attendance') return common.concat(adminLabor);
@@ -298,7 +330,7 @@
     }
     if (moduleName === 'admin_offices_consumables') return signaturePrefixes.concat(['adminOffice', 'adminOffices', 'admin_offices_', 'consumables_', 'subcontractors_', 'najran_admin_offices_']);
     if (moduleName.indexOf('health_centers') === 0) return signaturePrefixes.concat(['healthCenters', 'health_centers', 'najran_health_', 'consumables_']);
-    return common.concat(['consumables_', 'spare_', 'najran_labor_']);
+    return common.concat(['najran_labor_', 'ng_', 'nd_']);
   }
 
   function collectTrackedKeyCopies(moduleName) {
@@ -337,7 +369,10 @@
     var adminData = src.adminOfficesAttendanceData_v1 || src.adminOfficesAttendanceData_v1_localBackup || src.adminOfficesLaborDataSafe_v2 || {};
     var healthData = src.healthCentersAttendanceData || src.centersAttendanceData_v2 || {};
     var laborData = src.attendanceData || src.ng_attendanceData || src.nd_attendanceData || {};
-    var signatureKeys = Object.keys(src).filter(function (key) { return /^sb_(sigs|prefs)_/.test(key) || /^healthCenters_Signatures_/.test(key) || key === 'signatures_data_consumables_v27'; });
+    var signatureKeys = Object.keys(src).filter(function (key) {
+      return /^sb_(sigs|prefs)_/.test(key) || /^healthCenters_Signatures_/.test(key) ||
+        ['dynamicSignatures', 'performanceSignatures', 'performanceSignatures_v2', 'achievementSignatures_v3', 'signatures_data_consumables_v27'].indexOf(key) > -1;
+    });
     var final = isFinalReviewSnapshot(snapshot);
 
     return {
@@ -350,7 +385,7 @@
       adminOfficesLettersSettings: !!src.adminOfficesRaiseLettersSettings_v1,
       adminOfficesScopedLettersSettings: !!src.adminOfficesLetterScopedSettings_v1,
       healthCentersEmployees: countRows(healthData),
-      normalLaborEmployees: final ? 0 : countRows(laborData),
+      normalLaborEmployees: countRows(laborData),
       hasAchievement: final || hasAny(src, ['achievementData', 'achievementTitles_v1']),
       hasConsumables: hasAny(src, ['admin_offices_consumables_v1.0', 'healthCentersConsumables', 'consumablesTableData', 'mainHospitalConsumables']),
       signatureKeysCount: signatureKeys.length,
@@ -365,19 +400,20 @@
     } catch (_) { return ''; }
   }
 
-  function numberFromText(value) {
-    var raw = String(value == null ? '' : value)
+  function optionalNumberFromText(value) {
+    if (value == null || clean(value) === '') return null;
+    var raw = String(value)
       .replace(/[٠-٩]/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'.indexOf(d); })
       .replace(/[۰-۹]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d); })
       .replace(/,/g, '')
       .replace(/[^0-9.\-]/g, '');
     var n = parseFloat(raw);
-    return isFinite(n) ? n : 0;
+    return isFinite(n) ? n : null;
   }
 
   function moneyText(value) {
-    var n = Number(value || 0);
-    return n ? n.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' }) : '—';
+    var n = Number(value == null ? 0 : value);
+    return isFinite(n) ? n.toLocaleString('ar-SA', { style: 'currency', currency: 'SAR' }) : '—';
   }
 
   function safeRun(name) {
@@ -414,6 +450,69 @@
     return { headers: headers, rows: rows };
   }
 
+  function readSignatureArray(keys) {
+    for (var i = 0; i < keys.length; i++) {
+      var value = readStorageJson(keys[i], null);
+      if (Array.isArray(value)) return value;
+    }
+    return [];
+  }
+
+  function collectLaborSignaturesSnapshot() {
+    return {
+      attendance: readSignatureArray(['sb_sigs_attendance', 'dynamicSignatures']),
+      performance: readSignatureArray(['sb_sigs_performance', 'performanceSignatures_v2', 'performanceSignatures']),
+      achievement: readSignatureArray(['sb_sigs_achievement', 'achievementSignatures_v3']),
+      preferences: {
+        attendance: readStorageJson('sb_prefs_attendance', {}),
+        performance: readStorageJson('sb_prefs_performance', {}),
+        achievement: readStorageJson('sb_prefs_achievement', {})
+      },
+      styles: {
+        attendance: readStorageJson('sb_style_prefs_attendance_v1', readStorageJson('najranSignatureStyleSettings_v1__attendance', {})),
+        performance: readStorageJson('najranSignatureStyleSettings_v1__performance', {}),
+        achievement: readStorageJson('najranSignatureStyleSettings_v1__achievement', {})
+      }
+    };
+  }
+
+  function laborBundleIntegrity(payload, snapshot) {
+    snapshot = snapshot || {};
+    var finalSnapshot = parseMaybeJson(snapshot.finalReviewSnapshot, {});
+    var attendanceRows = countRows(snapshot.attendanceData) + countRows(snapshot.ng_attendanceData) + countRows(snapshot.nd_attendanceData);
+    var performanceKeys = Object.keys(snapshot).filter(function (key) {
+      return key.indexOf('tableData_') === 0 && isMeaningful(snapshot[key]);
+    });
+    var hasPerformance = performanceKeys.length > 0 || hasAny(snapshot, ['performanceData', 'performanceData_v4', 'performanceDeductions']);
+    var achievementRows = Array.isArray(finalSnapshot.displayRows)
+      ? finalSnapshot.displayRows.length
+      : finalSnapshot.table && Array.isArray(finalSnapshot.table.rows)
+        ? finalSnapshot.table.rows.length
+        : 0;
+    var signatures = parseMaybeJson(finalSnapshot.signatures, {});
+    var missing = [];
+    if (!attendanceRows) missing.push('جداول الحضور والانصراف وصفوف العمال');
+    if (!hasPerformance) missing.push('جداول الأداء المحفوظة');
+    if (!achievementRows) missing.push('شهادة الإنجاز النهائية');
+    if (!clean(payload && payload.hospitalName)) missing.push('اسم المستشفى');
+    if (!clean(payload && payload.companyName)) missing.push('اسم الشركة');
+    if (!clean(payload && payload.extractMonth) || !clean(payload && payload.extractYear)) missing.push('الشهر والسنة');
+    if (!clean(payload && (payload.paymentNumber || payload.extractNumber))) missing.push('رقم الدفعة');
+    return {
+      schema: 'labor_complete_bundle_v1',
+      complete: missing.length === 0,
+      missing: missing,
+      attendanceRows: attendanceRows,
+      performanceTableKeys: performanceKeys,
+      achievementRows: achievementRows,
+      signatures: {
+        attendance: Array.isArray(signatures.attendance) ? signatures.attendance.length : 0,
+        performance: Array.isArray(signatures.performance) ? signatures.performance.length : 0,
+        achievement: Array.isArray(signatures.achievement) ? signatures.achievement.length : 0
+      }
+    };
+  }
+
   function createLaborFinalReviewSnapshot() {
     try {
       safeRun('renderTables');
@@ -426,7 +525,10 @@
       var table = captureAchievementRows();
       var totalRow = table.rows.filter(function (r) { return r.rowType === 'total'; }).pop() || null;
       var totalCell = totalRow && totalRow.cells ? totalRow.cells[totalRow.cells.length - 1] : '';
-      var finalAmount = Number(totals.netMonthly || 0) || numberFromText(localStorage.getItem('finalLaborCost') || '') || numberFromText(totalCell);
+      var hasNetMonthly = Object.prototype.hasOwnProperty.call(totals, 'netMonthly') && isFinite(Number(totals.netMonthly));
+      var storedLaborTotal = optionalNumberFromText(localStorage.getItem('finalLaborCost'));
+      var displayedTotal = optionalNumberFromText(totalCell);
+      var finalAmount = hasNetMonthly ? Number(totals.netMonthly) : storedLaborTotal !== null ? storedLaborTotal : displayedTotal !== null ? displayedTotal : 0;
 
       var meta = {
         paymentNumber: text('#extract-payment-number') || storedExtract.paymentNumber || localStorage.getItem('paymentNumber') || '',
@@ -450,20 +552,21 @@
         noRecalculate: true,
         meta: meta,
         finalAmount: {
-          value: Math.round((Number(finalAmount || 0) + Number.EPSILON) * 100) / 100,
+          value: Math.round((Number(finalAmount == null ? 0 : finalAmount) + Number.EPSILON) * 100) / 100,
           text: moneyText(finalAmount),
-          source: Number(totals.netMonthly || 0) ? 'achievement_totals' : 'display_table_or_finalLaborCost'
+          source: hasNetMonthly ? 'achievement_totals' : 'display_table_or_finalLaborCost'
         },
         achievementTotals: {
-          monthlyValue: Number(totals.monthlyValue || 0),
-          absenceDeduction: Number(totals.absenceDeduction || 0),
-          absencePenalty: Number(totals.absencePenalty || 0),
-          performancePenalty: Number(totals.performancePenalty || 0),
-          nationalityPenalty: Number(totals.nationalityPenalty || 0),
-          netMonthly: Number(finalAmount || 0)
+          monthlyValue: Number(totals.monthlyValue == null ? 0 : totals.monthlyValue),
+          absenceDeduction: Number(totals.absenceDeduction == null ? 0 : totals.absenceDeduction),
+          absencePenalty: Number(totals.absencePenalty == null ? 0 : totals.absencePenalty),
+          performancePenalty: Number(totals.performancePenalty == null ? 0 : totals.performancePenalty),
+          nationalityPenalty: Number(totals.nationalityPenalty == null ? 0 : totals.nationalityPenalty),
+          netMonthly: Number(finalAmount == null ? 0 : finalAmount)
         },
         table: table,
         displayRows: table.rows,
+        signatures: collectLaborSignaturesSnapshot(),
         blockedReviewSources: [
           'attendanceData', 'ng_attendanceData', 'nd_attendanceData',
           'performanceData', 'performanceData_v4', 'performanceDeductions',
@@ -502,12 +605,18 @@
     snapshot = sanitizeSnapshot(snapshot);
 
     var moduleName = detectSourceModule(payload, snapshot);
+    var scoped = scopeSnapshotForModule(snapshot, moduleName);
+    snapshot = scoped.snapshot;
     var finalSnapshot = null;
 
     if (shouldCreateFinalLaborSnapshot(payload, moduleName)) {
-      finalSnapshot = (typeof window.finalizeLaborExtractBeforeSubmit === 'function')
-        ? window.finalizeLaborExtractBeforeSubmit()
-        : createLaborFinalReviewSnapshot();
+      finalSnapshot = parseMaybeJson(snapshot.finalReviewSnapshot, null);
+      if (!finalSnapshot || finalSnapshot.schema !== FINAL_LABOR_REVIEW_SCHEMA) {
+        finalSnapshot = (typeof window.finalizeLaborExtractBeforeSubmit === 'function')
+          ? window.finalizeLaborExtractBeforeSubmit()
+          : createLaborFinalReviewSnapshot();
+      }
+      if (finalSnapshot && typeof finalSnapshot.then === 'function') finalSnapshot = null;
       if (!finalSnapshot) finalSnapshot = parseMaybeJson(localStorage.getItem(FINAL_SNAPSHOT_STORAGE_KEY), null);
       if (finalSnapshot && finalSnapshot.schema === FINAL_LABOR_REVIEW_SCHEMA) {
         snapshot.finalReviewSnapshot = finalSnapshot;
@@ -520,7 +629,7 @@
         snapshot.reviewSnapshotSchema = FINAL_LABOR_REVIEW_SCHEMA;
         snapshot.achievementData = finalSnapshot.displayRows || [];
         var amount = Number(finalSnapshot.finalAmount && finalSnapshot.finalAmount.value);
-        if (isFinite(amount) && amount > 0) payload.totalAmount = amount;
+        if (isFinite(amount)) payload.totalAmount = amount;
       }
     }
 
@@ -544,6 +653,15 @@
 
     snapshot = sanitizeSnapshot(snapshot);
 
+    if (moduleName === 'labor_attendance') {
+      var completeness = laborBundleIntegrity(payload, snapshot);
+      completeness.excludedForeignKeys = scoped.removed;
+      snapshot.__laborCompleteBundle_v1 = completeness;
+      if (!completeness.complete) {
+        throw new Error('تم إيقاف رفع مستخلص العمالة لأن الحزمة غير مكتملة: ' + completeness.missing.join('، ') + '. لم تُحذف الخطوات ولم يُقفل الشهر.');
+      }
+    }
+
     snapshot.__najranSourceModule = moduleName;
     snapshot.__najranReviewPage = reviewPage;
     snapshot.sourceModule = snapshot.sourceModule || moduleName;
@@ -551,7 +669,7 @@
 
     var integrity = makeIntegrity(moduleName, snapshot, keyCopies);
     snapshot.__submittedExtractArchiveBundle_v1 = {
-      version: 4,
+      version: 5,
       createdAt: new Date().toISOString(),
       extractType: String(payload.extractType || ''),
       sourceModule: moduleName,
@@ -573,8 +691,12 @@
     payload.reviewPage = payload.reviewPage || reviewPage;
 
     var finalSize = valueSize(payload);
-    console.log('[SubmittedExtractArchiveBundle] payload size', { before: originalSize, after: finalSize, module: moduleName, finalReviewSnapshot: isFinalReviewSnapshot(snapshot) });
+    var finalBytes = valueUtf8Size(payload);
+    console.log('[SubmittedExtractArchiveBundle] payload size', { before: originalSize, after: finalSize, bytes: finalBytes, module: moduleName, finalReviewSnapshot: isFinalReviewSnapshot(snapshot) });
     if (finalSize > WARN_PAYLOAD_CHARS) console.warn('[SubmittedExtractArchiveBundle] payload still large after cleanup:', finalSize);
+    if (finalBytes > MAX_BUNDLE_BYTES) {
+      throw new Error('تم إيقاف الرفع لأن حجم حزمة المستخلص الكامل أكبر من حد النقل الآمن 4MB. لم يتم حذف أي جدول ولم تُرسل نسخة ناقصة.');
+    }
     return payload;
   }
 
@@ -646,9 +768,10 @@
   }
 
   function patchFetch() {
-    if (window.fetch.__najranSubmittedArchiveBundleWrappedV4) return;
+    if (window.fetch.__najranSubmittedArchiveBundleWrappedV5) return;
     var originalFetch = window.fetch;
     window.fetch = function (input, init) {
+      var parsedPayload = null;
       try {
         if (shouldPatchFetch(input, init || {})) {
           var nextInit = Object.assign({}, init || {});
@@ -657,6 +780,7 @@
             // لا نعيد بناء Request body غير المقروء. أغلب الرفع عندنا يستخدم fetch(url,{body}).
           } else if (typeof body === 'string' && body.trim().charAt(0) === '{') {
             var payload = JSON.parse(body);
+            parsedPayload = payload;
             saveLocalSnapshotBeforeSubmit();
             payload = enrichPayload(payload);
             nextInit.body = JSON.stringify(payload);
@@ -673,11 +797,13 @@
           }
         }
       } catch (e) {
-        console.warn('[SubmittedExtractArchiveBundle] enrich failed; submit continues', e);
+        clearSubmitLock(parsedPayload || {}, 'bundle-validation-error');
+        console.error('[SubmittedExtractArchiveBundle] enrich failed; submit blocked to prevent partial upload', e);
+        return Promise.reject(e);
       }
       return originalFetch.apply(this, arguments);
     };
-    window.fetch.__najranSubmittedArchiveBundleWrappedV4 = true;
+    window.fetch.__najranSubmittedArchiveBundleWrappedV5 = true;
   }
 
   patchFetch();
@@ -690,5 +816,5 @@
     createLaborFinalReviewSnapshot: createLaborFinalReviewSnapshot
   };
 
-  console.info('[SubmittedExtractArchiveBundle] installed v4 final labor review snapshot');
+  console.info('[SubmittedExtractArchiveBundle] installed v5 complete labor bundle');
 })();

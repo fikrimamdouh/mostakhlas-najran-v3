@@ -227,7 +227,7 @@
 
   if (snapshotPages[pageFile]) {
     appendScript('/original/extract-snapshot.js?v=20260712_professional_home_save_notice_v1', true);
-    appendScript('/original/submitted_extract_archive_bundle_guard.js?v=20260705_v2_labor_details_bridge', true);
+    appendScript('/original/submitted_extract_archive_bundle_guard.js?v=20260713_labor_complete_bundle_v1', true);
   }
 
   if (isAdminOfficesPage || isAdminOfficesConsumablesPage) appendScript('/original/admin_offices_full_submit_snapshot_guard.js?v=20260705_v4_admin_offices_duplicate_fix', true);
@@ -242,7 +242,7 @@
     appendScript('/original/approval_revision_route_guard.js?v=' + APPROVAL_REVISION_GUARD_V, true);
     appendScript('/original/review-print-override.js?v=' + BUILD_V, true);
     appendScript('/original/review-workflow.js?v=20260705_v3_duplicate_resubmit_and_admin_offices_parts', true);
-    appendScript('/original/review-labor-final-snapshot-exact.js?v=20260705_v2_labor_details_bridge', true);
+    appendScript('/original/review-labor-final-snapshot-exact.js?v=20260713_labor_complete_bundle_v1', true);
     appendScript('/original/review-labor-legacy-official-amount.js?v=20260705_cache_bust_v1', true);
     appendScript('/original/review-generic-tables.js?v=20260703_admin_preview_v3', true);
     appendScript('/original/admin_offices_review_detail_patch.js?v=20260705_v4_admin_offices_duplicate_fix', true);
