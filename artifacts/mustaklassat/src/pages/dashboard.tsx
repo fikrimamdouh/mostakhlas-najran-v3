@@ -1,7 +1,7 @@
 import { useGetMe } from "@workspace/api-client-react";
 import { useUser } from "@clerk/react";
 import { Phone, Briefcase, Hash, Calendar, MessageSquare, PlayCircle, Activity, Zap, UserPlus, Building2 } from "lucide-react";
-import { ALL_MODULES, getModuleHref, getSiteType, parseAllowedModules, filterModules } from "@/lib/modules";
+import { ALL_MODULES, getSiteType, parseAllowedModules, filterModules } from "@/lib/modules";
 
 const ISLAMIC_REMINDERS = [
   { type: "quran", text: "إِنَّ اللَّهَ يَأْمُرُكُمْ أَن تُؤَدُّوا الْأَمَانَاتِ إِلَىٰ أَهْلِهَا", source: "سورة النساء — الآية ٥٨" },
@@ -17,6 +17,8 @@ const ISLAMIC_REMINDERS = [
   { type: "quran", text: "إِنَّ اللَّهَ لَا يُضِيعُ أَجْرَ الْمُحْسِنِينَ", source: "سورة التوبة — الآية ١٢٠" },
   { type: "hadith", text: "الدِّينُ النَّصِيحَةُ… لِلَّهِ وَلِكِتَابِهِ وَلِرَسُولِهِ وَلِأَئِمَّةِ الْمُسْلِمِينَ وَعَامَّتِهِمْ", source: "رواه مسلم" },
 ];
+
+function ov(page: string) { return `/original-viewer?page=${page}`; }
 
 function IslamicReminderTicker() {
   const items = [
@@ -165,7 +167,7 @@ export default function Dashboard() {
                 <div className="h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: lastModule.color }}><lastModule.icon className="h-5 w-5 text-white" /></div>
                 <div className="min-w-0"><p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>آخر صفحة كنت عليها</p><p className="font-bold text-white truncate" style={{ fontSize: 14 }}>{lastPage}</p></div>
               </div>
-              <div className="flex items-center gap-3 flex-shrink-0"><span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{relativeTime(lastPageAt)}</span><a href={getModuleHref(lastModule.file)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold text-sm no-underline transition-all hover:scale-105" style={{ background: "linear-gradient(135deg,#d4af37,#b8962e)", color: "#1e3c72" }}><PlayCircle className="h-4 w-4" />استئناف</a></div>
+              <div className="flex items-center gap-3 flex-shrink-0"><span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{relativeTime(lastPageAt)}</span><a href={ov(lastModule.file)} className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold text-sm no-underline transition-all hover:scale-105" style={{ background: "linear-gradient(135deg,#d4af37,#b8962e)", color: "#1e3c72" }}><PlayCircle className="h-4 w-4" />استئناف</a></div>
             </div>
           )}
 
@@ -200,7 +202,7 @@ export default function Dashboard() {
             const Icon = m.icon;
             const isCurrentPage = lastPage === m.label;
             return (
-              <a key={m.key} href={getModuleHref(m.file)} className="najran-card group rounded-xl p-4 text-center transition-all duration-200 no-underline flex flex-col items-center gap-3 relative overflow-hidden" style={{ ["--m-color" as any]: m.color, animationDelay: `${Math.min(i, 6) * 40}ms`, background: isCurrentPage ? `linear-gradient(135deg,${m.color}14,${m.color}22)` : "#fff", border: isCurrentPage ? `2px solid ${m.color}55` : "1.5px solid #e8edf7", boxShadow: isCurrentPage ? `0 4px 20px ${m.color}22` : "0 2px 8px rgba(30,60,114,0.05)" }}>
+              <a key={m.key} href={ov(m.file)} className="najran-card group rounded-xl p-4 text-center transition-all duration-200 no-underline flex flex-col items-center gap-3 relative overflow-hidden" style={{ ["--m-color" as any]: m.color, animationDelay: `${Math.min(i, 6) * 40}ms`, background: isCurrentPage ? `linear-gradient(135deg,${m.color}14,${m.color}22)` : "#fff", border: isCurrentPage ? `2px solid ${m.color}55` : "1.5px solid #e8edf7", boxShadow: isCurrentPage ? `0 4px 20px ${m.color}22` : "0 2px 8px rgba(30,60,114,0.05)" }}>
                 {isCurrentPage && <div className="absolute top-2 left-2 flex items-center gap-1 rounded-full px-1.5 py-0.5" style={{ background: m.color, fontSize: 9, color: "#fff", fontWeight: 700 }}><span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-pulse inline-block" />آخر صفحة</div>}
                 <div className="h-12 w-12 rounded-xl flex items-center justify-center transition-all group-hover:scale-110" style={{ background: m.color, boxShadow: `0 4px 12px ${m.color}44` }}><Icon className="h-6 w-6 text-white" /></div>
                 <span className="font-bold text-sm leading-tight" style={{ color: "#1e3c72" }}>{m.label}</span>

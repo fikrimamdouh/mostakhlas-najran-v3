@@ -15,6 +15,7 @@ const KNOWN_ORIGINAL_PAGES = new Set([
   ...originalPages.adminOnlyPages,
 ]);
 const ADMIN_ONLY_ORIGINAL_PAGES = new Set(originalPages.adminOnlyPages);
+const FRAME_POLICY_CACHE_VERSION = "20260713_self_v2";
 
 function UnauthorizedPage() {
   return (
@@ -165,12 +166,15 @@ export default function OriginalViewer() {
   const isAllowed = !!page
     && moduleAllowed
     && (!ADMIN_ONLY_ORIGINAL_PAGES.has(page) || role === "admin");
+  const frameSrc = page
+    ? `/original/${page}?framePolicy=${FRAME_POLICY_CACHE_VERSION}`
+    : undefined;
 
   let content = isAllowed ? (
     <iframe
       key={page}
       ref={iframeRef}
-      src={`/original/${page}`}
+      src={frameSrc}
       className="w-full h-full border-0 block"
       title={page}
       onLoad={handleIframeLoad}

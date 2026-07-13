@@ -93,21 +93,6 @@ export function isModuleAllowed(moduleKey: string, allowedModuleKeys: string[] |
 
 export const ASSIGNABLE_MODULES = ALL_MODULES.filter(m => !m.adminOnly);
 
-const DIRECT_ORIGINAL_PAGES = new Set([
-  "settings_main.html",
-  "settings_advanced.html",
-]);
-
-/**
- * Settings are intentionally opened as top-level authenticated legacy pages.
- * They must not depend on iframe policy or a stale cached frame response.
- */
-export function getModuleHref(file: string): string {
-  return DIRECT_ORIGINAL_PAGES.has(file)
-    ? `/original/${file}`
-    : `/original-viewer?page=${file}`;
-}
-
 export function filterModules(siteType: SiteType, allowedModuleKeys: string[] | null, role: string, company?: string | null): ModuleDef[] {
   const isAdmin = role === "admin";
   const isSupervisor = role === "supervisor";

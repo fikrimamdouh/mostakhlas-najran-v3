@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
-import { getModuleHref, getSiteType, parseAllowedModules, filterModules, VISIT_MODULE_KEYS } from "@/lib/modules";
+import { getSiteType, parseAllowedModules, filterModules, VISIT_MODULE_KEYS } from "@/lib/modules";
 import { useNotifications } from "@/hooks/useNotifications";
 
 const ARABIC_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
@@ -667,7 +667,7 @@ const siteType = getSiteType(currentHospital || dbUser?.hospital);
 
   const ModuleItem = ({ m }: { m: any }) => {
     const isActive = isModuleActive(m.file);
-    const href = getModuleHref(m.file);
+    const href = `/original-viewer?page=${m.file}`;
     return (
       <Link key={m.key} href={href}>
         <div

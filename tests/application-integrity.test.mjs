@@ -178,23 +178,25 @@ test('production deployment allows the same-origin extract viewer while blocking
   const globalHeaders = Object.fromEntries(
     config.headers.find(({ source }) => source === '/(.*)').headers.map(({ key, value }) => [key, value]),
   );
-  assert.match(originalViewer, /<iframe[\s\S]*?src=\{`\/original\/\$\{page\}`\}/);
+  assert.match(originalViewer, /<iframe[\s\S]*?src=\{frameSrc\}/);
   assert.equal(globalHeaders['Content-Security-Policy'], "frame-ancestors 'self'");
   assert.equal(globalHeaders['X-Frame-Options'], 'SAMEORIGIN');
   assert.equal(globalHeaders['X-Content-Type-Options'], 'nosniff');
   assert.equal(globalHeaders['Referrer-Policy'], 'strict-origin-when-cross-origin');
 });
 
-test('settings pages bypass iframe navigation while retaining original-page authorization', () => {
-  const modules = read('artifacts/mustaklassat/src/lib/modules.ts');
+test('settings pages use a cache-busted same-origin frame with live token renewal', () => {
   const sidebar = read('artifacts/mustaklassat/src/components/layout/Sidebar.tsx');
   const dashboard = read('artifacts/mustaklassat/src/pages/dashboard.tsx');
+  const originalViewer = read('artifacts/mustaklassat/src/pages/OriginalViewer.tsx');
   const authCheck = read('artifacts/mustaklassat/public/original/auth-check.js');
 
-  assert.match(modules, /DIRECT_ORIGINAL_PAGES = new Set\(\[\s*"settings_main\.html",\s*"settings_advanced\.html"/);
-  assert.match(modules, /DIRECT_ORIGINAL_PAGES\.has\(file\)[\s\S]*?`\/original\/\$\{file\}`/);
-  assert.match(sidebar, /const href = getModuleHref\(m\.file\)/);
-  assert.match(dashboard, /href=\{getModuleHref\(m\.file\)\}/);
+  assert.match(sidebar, /const href = `\/original-viewer\?page=\$\{m\.file\}`/);
+  assert.match(dashboard, /function ov\(page: string\) \{ return `\/original-viewer\?page=\$\{page\}`; \}/);
+  assert.match(originalViewer, /FRAME_POLICY_CACHE_VERSION = "20260713_self_v2"/);
+  assert.match(originalViewer, /`\/original\/\$\{page\}\?framePolicy=\$\{FRAME_POLICY_CACHE_VERSION\}`/);
+  assert.match(originalViewer, /najranGetFreshToken/);
+  assert.match(originalViewer, /getToken\(options\?\.skipCache/);
   assert.match(authCheck, /'settings_main\.html': 'settings_main'/);
   assert.match(authCheck, /'settings_advanced\.html': 'settings_advanced'/);
   assert.match(authCheck, /if \(!isOriginalPageAllowed\(\)\)/);
