@@ -28,6 +28,30 @@ function hasMissing(e){return !e.userId&&!e.userEmail&&!e.userName||!e.page||!e.
 function isManualTest(e){var p=e&&e._payload||{};return norm(e&&e.type)==='manual_incident'||norm(p.reason)==='manual dashboard test'}
 function isTelemetryNetworkFailure(e){var p=e&&e._payload||{},url=String(p.url||'');return norm(e&&e.type)==='api_failure'&&/^\/api\/(?:audit|users\/me\/activity)(?:$|[?#])/.test(url)}
 function isExpectedPasswordInputError(e){var s=norm([e&&e.type,e&&e.message,e&&e.page,JSON.stringify(e&&e._payload||{})].join(' '));return norm(e&&e.type)==='js_error'&&/invalidcharactererror/.test(s)&&/btoa/.test(s)&&/latin1|latin-1/.test(s)}
+function pageLoadDelayMs(e){
+  try{
+    var eventTime=time(e),actions=Array.isArray(e&&e.lastActions)?e.lastActions:[];
+    for(var i=actions.length-1;i>=0;i--){
+      if(actions[i]&&actions[i].kind==='page-loaded'){
+        var loaded=new Date(actions[i].at||0).getTime();
+        if(isFinite(eventTime)&&isFinite(loaded))return eventTime-loaded;
+      }
+    }
+  }catch(_){}
+  return Infinity
+}
+function isKnownMonitorFalsePositive(e){
+  var type=norm(e&&e.type),p=e&&e._payload||{},delay=pageLoadDelayMs(e);
+  if((type==='consumables_summary_dom_mismatch'||type==='render_tables_missing')&&norm(e&&e.page)==='consumables'&&delay>=0&&delay<=15000){
+    if(type==='render_tables_missing')return true;
+    return Number(p.storageMainRows||0)>0&&Number(p.domRows||0)===0&&p.renderTablesExists===false&&p.renderAllTablesExists===false;
+  }
+  if(type==='storage_cleared'){
+    var stack=String(p.stack||e&&e.stack||'');
+    return stack.indexOf('forceReviewOnlyBeforeInit')>-1&&stack.indexOf('cloud-sync.js')>-1;
+  }
+  return false
+}
 
 function category(e){
   if(isManualTest(e))return'اختبار يدوي';
@@ -62,7 +86,7 @@ function recommendation(g){
 }
 
 function rebuild(){
-  enriched=events.filter(function(e){return !isExpectedPasswordInputError(e)}).map(function(e,i){
+  enriched=events.filter(function(e){return !isExpectedPasswordInputError(e)&&!isKnownMonitorFalsePositive(e)}).map(function(e,i){
     var x=Object.assign({},e);
     x._index=i;x._category=category(e);x._manual=isManualTest(e);x._loss=x._manual?false:dataLoss(e);x._user=userKey(e);x._fp=fingerprint(e);x._time=time(e);x._missing=hasMissing(e);x._new=baselineReady&&!previousIds.has(String(e.id));
     return x
