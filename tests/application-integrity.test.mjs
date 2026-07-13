@@ -113,14 +113,16 @@ test('detailed health data and cross-origin access remain restricted', () => {
   assert.doesNotMatch(appSource, /replit\.app|repl\.co/);
 });
 
-test('production deployment enforces frozen installs and browser security headers', () => {
+test('production deployment allows the same-origin extract viewer while blocking external framing', () => {
   const config = JSON.parse(read('vercel.json'));
+  const originalViewer = read('artifacts/mustaklassat/src/pages/OriginalViewer.tsx');
   assert.equal(config.installCommand, 'pnpm install --frozen-lockfile');
   const globalHeaders = Object.fromEntries(
     config.headers.find(({ source }) => source === '/(.*)').headers.map(({ key, value }) => [key, value]),
   );
-  assert.equal(globalHeaders['Content-Security-Policy'], "frame-ancestors 'none'");
-  assert.equal(globalHeaders['X-Frame-Options'], 'DENY');
+  assert.match(originalViewer, /<iframe[\s\S]*?src=\{`\/original\/\$\{page\}`\}/);
+  assert.equal(globalHeaders['Content-Security-Policy'], "frame-ancestors 'self'");
+  assert.equal(globalHeaders['X-Frame-Options'], 'SAMEORIGIN');
   assert.equal(globalHeaders['X-Content-Type-Options'], 'nosniff');
   assert.equal(globalHeaders['Referrer-Policy'], 'strict-origin-when-cross-origin');
 });
