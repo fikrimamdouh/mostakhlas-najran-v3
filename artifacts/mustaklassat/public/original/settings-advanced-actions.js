@@ -9,6 +9,14 @@ async function refresh(){
     var oldIds=new Set(events.map(function(e){return String(e.id)}));previousIds=baselineReady?oldIds:new Set();events=Array.isArray(body.events)?body.events:[];rebuild();baselineReady=true;loadedAt=new Date().toISOString();closeReport();render();q('range-note').classList.remove('show');var cap=events.length===200;q('coverage-note').textContent=cap?'تم تحميل الحد الأقصى: آخر 200 حادثة فقط — ضيّق المدة لتحليل أدق.':'';q('coverage-note').classList.toggle('show',cap);q('last-load').textContent='آخر تحميل: '+fmt(loadedAt)+' — '+events.length+' حادثة — طلب شبكة واحد'
   }catch(e){box.className='empty';box.textContent='تعذر تحميل الحوادث: '+String(e.message||e)}finally{btn.disabled=false}
 }
+function ensureCleanupControls(){
+  var btn=q('btn-cleanup');if(!btn)return;
+  btn.textContent='حذف المشاكل القديمة';
+  if(q('cleanup-age'))return;
+  var select=document.createElement('select');select.id='cleanup-age';select.title='اختر عمر المشاكل التي سيتم حذفها';select.style.cssText='min-width:175px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-weight:800;background:#fff;color:#172033';
+  select.innerHTML='<option value="1">أقدم من ساعة</option><option value="24" selected>أقدم من 24 ساعة</option><option value="48">أقدم من 48 ساعة</option><option value="168">أقدم من 7 أيام</option><option value="720">أقدم من 30 يومًا</option>';
+  btn.parentNode.insertBefore(select,btn)
+}
 async function cleanup(){
   if(!admin())return;
   var select=q('cleanup-age'),hours=Number(select&&select.value)||24,label=select&&select.options[select.selectedIndex]?select.options[select.selectedIndex].text:('أقدم من '+hours+' ساعة');
@@ -29,6 +37,7 @@ async function sendTest(){
 }
 function resetFilters(){['f-category','f-type','f-sev','f-status','f-hospital','f-page','f-user','f-build'].forEach(function(id){q(id).value=''});q('f-sort').value='priority';q('f-search').value='';['f-repeat','f-multi-user','f-data-loss','f-today','f-unknown','f-tests'].forEach(function(id){q(id).checked=false});render()}
 function bind(){
+  ensureCleanupControls();
   q('btn-refresh').addEventListener('click',refresh);q('btn-reset-filters').addEventListener('click',resetFilters);q('btn-users').addEventListener('click',usersReport);q('btn-hospitals').addEventListener('click',hospitalsReport);q('btn-builds').addEventListener('click',buildsReport);q('btn-copy-users').addEventListener('click',function(){navigator.clipboard.writeText(usersText())});q('btn-copy-exec').addEventListener('click',copyExecutive);q('btn-export-csv').addEventListener('click',exportCSV);q('btn-export-json').addEventListener('click',exportJSON);q('btn-cleanup').addEventListener('click',cleanup);q('btn-test').addEventListener('click',sendTest);q('btn-back').addEventListener('click',function(){location.href='/dashboard'});
   ['f-category','f-type','f-sev','f-status','f-hospital','f-page','f-user','f-build','f-sort','f-search','f-repeat','f-multi-user','f-data-loss','f-today','f-unknown','f-tests'].forEach(function(id){q(id).addEventListener(id==='f-search'?'input':'change',render)});
   q('f-window').addEventListener('change',function(){q('range-note').classList.add('show')});
