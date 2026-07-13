@@ -96,7 +96,11 @@ router.post("/purge-deleted-users", requireAuth, requireAdmin, async (req: any, 
     }
     await db.delete(submittedExtractsTable).where(inArray(submittedExtractsTable.userId, ids));
     await db.delete(userStorageTable).where(inArray(userStorageTable.userId, ids));
-    await db.delete(visitRequestsTable).where(inArray(visitRequestsTable.userId, ids));
+    // Visits are operational records: detach deleted users but never delete
+    // the visit, permit, documents, or audit trail.
+    await db.update(visitRequestsTable)
+      .set({ userId: null, updatedAt: new Date() })
+      .where(inArray(visitRequestsTable.userId, ids));
 
     await db.update(hospitalStorageTable)
       .set({ updatedByUserId: null })
@@ -113,7 +117,8 @@ router.post("/purge-deleted-users", requireAuth, requireAdmin, async (req: any, 
       deletedUsers: ids.length,
       deletedUserStorage: storageRows.length,
       deletedExtracts: extractRows.length,
-      deletedVisits: visitRows.length,
+      deletedVisits: 0,
+      preservedVisits: visitRows.length,
       users: deletedUsers,
     });
   } catch (err: any) {
@@ -141,10 +146,8 @@ router.post("/reset-extracts", requireAuth, requireAdmin, async (req: any, res: 
   await tryDelete("submitted_extracts", () => db.delete(submittedExtractsTable));
   await tryDelete("extracts",           () => db.delete(extractsTable));
   await tryDelete("projects",           () => db.delete(projectsTable));
-  await tryDelete("visit_requests",     () => db.delete(visitRequestsTable));
-
-  req.log.info({ adminId: req.currentUser.id, skipped: errors }, "Extracts + visits reset performed");
-  return res.json({ ok: true, message: "تم مسح المستخلصات والمشاريع وطلبات الزيارة بنجاح", skipped: errors });
+  req.log.info({ adminId: req.currentUser.id, skipped: errors }, "Extracts reset performed; visits preserved");
+  return res.json({ ok: true, message: "تم مسح المستخلصات والمشاريع مع الحفاظ على جميع الزيارات", skipped: errors });
 });
 
 router.post("/reset-system", requireAuth, requireAdmin, async (req: any, res: any) => {
@@ -166,7 +169,8 @@ router.post("/reset-system", requireAuth, requireAdmin, async (req: any, res: an
   await tryDelete("extracts", () => db.delete(extractsTable));
   await tryDelete("projects", () => db.delete(projectsTable));
   await tryDelete("scheduled_backups", () => db.execute(`DELETE FROM scheduled_backups`));
-  await tryDelete("visit_requests", () => db.execute(`DELETE FROM visit_requests`));
+  // Preserve every visit and detach users that the full reset removes.
+  await db.update(visitRequestsTable).set({ userId: null, updatedAt: new Date() }).where(ne(visitRequestsTable.userId, req.currentUser.id));
 
   try {
     await db.delete(usersTable).where(ne(usersTable.id, req.currentUser.id));

@@ -1,4 +1,5 @@
-import { pgTable, text, serial, integer, numeric, timestamp, date, uniqueIndex, json, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, numeric, timestamp, date, uniqueIndex, index, json, boolean, customType } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -164,7 +165,9 @@ export type AuditLog = typeof auditLogTable.$inferSelect;
 // Visit requests — submitted by users, reviewed by admin
 export const visitRequestsTable = pgTable("visit_requests", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => usersTable.id),
+  // Nullable so a visit remains an immutable operational record if its creator
+  // is later deactivated or purged. Existing rows remain fully compatible.
+  userId: integer("user_id").references(() => usersTable.id, { onDelete: "set null" }),
   repName: text("rep_name").notNull(),
   siteLocation: text("site_location").notNull(),
   repId: text("rep_id").notNull(),
@@ -174,7 +177,7 @@ export const visitRequestsTable = pgTable("visit_requests", {
   mainContractor: text("main_contractor").notNull(),
   subContractor: text("sub_contractor").notNull(),
   repIdPhoto: text("rep_id_photo"),
-  status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
+  status: text("status", { enum: ["pending", "approved", "rejected", "cancelled"] }).notNull().default("pending"),
   adminNotes: text("admin_notes"),
   submittedByName: text("submitted_by_name"),
   submittedByHospital: text("submitted_by_hospital"),
@@ -182,13 +185,182 @@ export const visitRequestsTable = pgTable("visit_requests", {
   serialNumber: text("serial_number"),
   approvedAt: timestamp("approved_at"),
   signedPermitFile: text("signed_permit_file"),
+  cancelledAt: timestamp("cancelled_at"),
+  cancelledReason: text("cancelled_reason"),
+  reissuedFromVisitId: integer("reissued_from_visit_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (t) => [
+  // Legacy rows may already contain duplicate four-digit numbers. New permits
+  // use the global atomic sequence below; a normal lookup index preserves a
+  // safe schema push without rewriting historical records.
+  index("visit_requests_serial_number_idx").on(t.serialNumber),
+  // New numbers have a distinct year-sequence shape, so they can receive a
+  // database uniqueness backstop without rejecting duplicate legacy 4-digit
+  // permit numbers that may already exist.
+  uniqueIndex("visit_requests_atomic_serial_unique").on(t.serialNumber).where(sql`${t.serialNumber} ~ '^[0-9]{4}-[0-9]{6}$'`),
+  index("visit_requests_status_date_idx").on(t.status, t.visitDate),
+]);
 
 export const insertVisitRequestSchema = createInsertSchema(visitRequestsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertVisitRequest = z.infer<typeof insertVisitRequestSchema>;
 export type VisitRequest = typeof visitRequestsTable.$inferSelect;
+
+// ── Central subcontractor visit-management catalogue ────────────────────────
+// All catalogue rows are soft-disabled. Operational visits and document
+// history are never hard-deleted by the visit APIs.
+export const visitSystemsTable = pgTable("visit_systems", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  code: text("code"),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdByUserId: integer("created_by_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+}, (t) => [uniqueIndex("visit_systems_name_unique").on(t.name)]);
+
+export const visitContractorsTable = pgTable("visit_contractors", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  registrationNumber: text("registration_number"),
+  contactName: text("contact_name"),
+  contactMobile: text("contact_mobile"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdByUserId: integer("created_by_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+}, (t) => [uniqueIndex("visit_contractors_name_unique").on(t.name)]);
+
+export const visitQualificationsTable = pgTable("visit_qualifications", {
+  id: serial("id").primaryKey(),
+  contractorId: integer("contractor_id").notNull().references(() => visitContractorsTable.id),
+  systemId: integer("system_id").notNull().references(() => visitSystemsTable.id),
+  validFrom: date("valid_from").notNull(),
+  validUntil: date("valid_until").notNull(),
+  status: text("status", { enum: ["active", "disabled", "expired"] }).notNull().default("active"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("visit_qualifications_contractor_system_unique").on(t.contractorId, t.systemId),
+  index("visit_qualifications_validity_idx").on(t.status, t.validUntil),
+]);
+
+export const visitSiteApprovalsTable = pgTable("visit_site_approvals", {
+  id: serial("id").primaryKey(),
+  siteName: text("site_name").notNull(),
+  systemId: integer("system_id").notNull().references(() => visitSystemsTable.id),
+  contractorId: integer("contractor_id").notNull().references(() => visitContractorsTable.id),
+  validFrom: date("valid_from").notNull(),
+  validUntil: date("valid_until").notNull(),
+  status: text("status", { enum: ["active", "disabled", "expired"] }).notNull().default("active"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("visit_site_approvals_scope_unique").on(t.siteName, t.systemId, t.contractorId),
+  index("visit_site_approvals_validity_idx").on(t.siteName, t.status, t.validUntil),
+]);
+
+export const visitRepresentativesTable = pgTable("visit_representatives", {
+  id: serial("id").primaryKey(),
+  contractorId: integer("contractor_id").notNull().references(() => visitContractorsTable.id),
+  fullName: text("full_name").notNull(),
+  identityNumber: text("identity_number").notNull(),
+  mobile: text("mobile").notNull(),
+  residenceExpiresAt: date("residence_expires_at"),
+  noResidenceException: boolean("no_residence_exception").notNull().default(false),
+  exceptionReason: text("exception_reason"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("visit_representatives_identity_unique").on(t.identityNumber),
+  index("visit_representatives_contractor_idx").on(t.contractorId, t.isActive),
+]);
+
+export const visitRepresentativeSystemsTable = pgTable("visit_representative_systems", {
+  id: serial("id").primaryKey(),
+  representativeId: integer("representative_id").notNull().references(() => visitRepresentativesTable.id),
+  systemId: integer("system_id").notNull().references(() => visitSystemsTable.id),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("visit_representative_systems_unique").on(t.representativeId, t.systemId),
+]);
+
+export const visitRequestMetadataTable = pgTable("visit_request_metadata", {
+  id: serial("id").primaryKey(),
+  visitId: integer("visit_id").notNull().references(() => visitRequestsTable.id).unique(),
+  systemId: integer("system_id").references(() => visitSystemsTable.id),
+  contractorId: integer("contractor_id").references(() => visitContractorsTable.id),
+  representativeId: integer("representative_id").references(() => visitRepresentativesTable.id),
+  siteApprovalId: integer("site_approval_id").references(() => visitSiteApprovalsTable.id),
+  qualificationId: integer("qualification_id").references(() => visitQualificationsTable.id),
+  purpose: text("purpose"),
+  startsAt: timestamp("starts_at"),
+  endsAt: timestamp("ends_at"),
+  snapshotJson: text("snapshot_json"),
+  linkedAt: timestamp("linked_at"),
+  linkedByUserId: integer("linked_by_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const visitDocumentsTable = pgTable("visit_documents", {
+  id: serial("id").primaryKey(),
+  ownerType: text("owner_type", { enum: ["visit", "representative", "contractor", "qualification", "site_approval"] }).notNull(),
+  ownerId: integer("owner_id").notNull(),
+  documentType: text("document_type").notNull(),
+  originalName: text("original_name").notNull(),
+  mimeType: text("mime_type").notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  sha256: text("sha256").notNull(),
+  status: text("status", { enum: ["active", "disabled", "replaced"] }).notNull().default("active"),
+  replacedByDocumentId: integer("replaced_by_document_id"),
+  uploadedByUserId: integer("uploaded_by_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  disabledAt: timestamp("disabled_at"),
+}, (t) => [
+  uniqueIndex("visit_documents_content_unique").on(t.ownerType, t.ownerId, t.documentType, t.sha256),
+  index("visit_documents_owner_idx").on(t.ownerType, t.ownerId, t.status),
+]);
+
+const bytea = customType<{ data: Buffer }>({ dataType() { return "bytea"; } });
+
+export const visitDocumentContentsTable = pgTable("visit_document_contents", {
+  documentId: integer("document_id").primaryKey().references(() => visitDocumentsTable.id),
+  content: bytea("content").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const visitNumberSequencesTable = pgTable("visit_number_sequences", {
+  id: serial("id").primaryKey(),
+  scopeKey: text("scope_key").notNull().unique(),
+  lastValue: integer("last_value").notNull().default(0),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const visitPermitTokensTable = pgTable("visit_permit_tokens", {
+  id: serial("id").primaryKey(),
+  visitId: integer("visit_id").notNull().references(() => visitRequestsTable.id),
+  tokenHash: text("token_hash").notNull().unique(),
+  tokenCiphertext: text("token_ciphertext").notNull(),
+  status: text("status", { enum: ["active", "disabled"] }).notNull().default("active"),
+  issuedAt: timestamp("issued_at").notNull().defaultNow(),
+  disabledAt: timestamp("disabled_at"),
+  lastScannedAt: timestamp("last_scanned_at"),
+  scanCount: integer("scan_count").notNull().default(0),
+}, (t) => [
+  uniqueIndex("visit_permit_tokens_one_active_per_visit").on(t.visitId).where(sql`${t.status} = 'active'`),
+  index("visit_permit_tokens_visit_idx").on(t.visitId, t.status),
+]);
+
+export type VisitSystem = typeof visitSystemsTable.$inferSelect;
+export type VisitContractor = typeof visitContractorsTable.$inferSelect;
+export type VisitRepresentative = typeof visitRepresentativesTable.$inferSelect;
+export type VisitRequestMetadata = typeof visitRequestMetadataTable.$inferSelect;
 
 // Scheduled automatic backups — saved daily by the server scheduler
 export const scheduledBackupsTable = pgTable("scheduled_backups", {

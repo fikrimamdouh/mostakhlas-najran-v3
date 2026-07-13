@@ -547,7 +547,14 @@
                         <i class="fas fa-id-badge service-icon"></i>
                         <h3 class="service-title">زيارة مقاول الباطن</h3>
                     </a>
+                    <a id="cluster-visit-center-card" href="cluster-subcontractor-visits.html" class="service-card" style="display:none">
+                        <i class="fas fa-qrcode service-icon"></i>
+                        <h3 class="service-title">مركز إدارة زيارات مقاولي الباطن</h3>
+                    </a>
                 </div>
+                <script>
+                (function(){try{var s=JSON.parse(localStorage.getItem('najran_session')||'{}');var m=Array.isArray(s.allowedModules)?s.allowedModules:JSON.parse(s.allowedModules||'[]');if(Array.isArray(m)&&m.includes('cluster_visit_management'))document.getElementById('cluster-visit-center-card').style.display='';}catch(_){}})();
+                </script>
             </section>
         </div>
     </main>

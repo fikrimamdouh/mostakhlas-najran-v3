@@ -33,7 +33,7 @@ test('active application contains no direct browser alert, confirm, or prompt ca
 
 test('all original pages load the unified dialog before page scripts', () => {
   const htmlFiles = fs.readdirSync(originalDir).filter((name) => name.endsWith('.html'));
-  assert.equal(htmlFiles.length, 38);
+  assert.equal(htmlFiles.length, 39);
   for (const name of htmlFiles) {
     const source = fs.readFileSync(path.join(originalDir, name), 'utf8');
     const matches = source.match(new RegExp(`/original/system-dialogs\\.js\\?v=${dialogVersion}`, 'g')) || [];

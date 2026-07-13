@@ -161,7 +161,7 @@ export default function OriginalViewer() {
 
   const role = dbUser?.role ?? "user";
   const allowedModuleKeys = parseAllowedModules((dbUser as any)?.allowedModules);
-  const module = page ? ALL_MODULES.find((candidate) => candidate.file === page) : null;
+  const module = page ? ALL_MODULES.find((candidate) => candidate.file === page || (page === "visit-admin-review.html" && candidate.key === "cluster_visit_management")) : null;
   const moduleAllowed = module ? isModuleAllowed(module.key, allowedModuleKeys, role) : true;
   const isAllowed = !!page
     && moduleAllowed

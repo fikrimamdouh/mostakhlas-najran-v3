@@ -17,13 +17,14 @@ export interface ModuleDef {
   explicitOnly?: boolean;
 }
 
-export const VISIT_MODULE_KEYS = ["request-visit", "visit_review"];
+export const CLUSTER_VISIT_MODULE_KEY = "cluster_visit_management";
+export const VISIT_MODULE_KEYS = ["request-visit", CLUSTER_VISIT_MODULE_KEY];
 export const COMMON_SITE_MODULE_KEYS = ["settings_main", "approval"];
 
 export const ALL_MODULES: ModuleDef[] = [
   { key: "najran_general",              file: "najran_general.html",             label: "مستشفى نجران العام الجديد وطب الأسنان", emoji: "🏥", icon: Building2, color: "#1e3c72", types: ["najran_general"] },
   { key: "approval",                   file: "approval.html",                   label: "اعتماد المستخلص",           emoji: "✅",  icon: CheckSquare, color: "#15803d", types: ["hospital", "health_centers", "admin_offices", "najran_general"] },
-  { key: "visit_review",               file: "visit-admin-review.html",         label: "مراجعة زيارات مقاولي الباطن", emoji: "🪪", icon: BadgeCheck, color: "#1e3c72", types: ["hospital"], explicitOnly: true },
+  { key: CLUSTER_VISIT_MODULE_KEY,      file: "cluster-subcontractor-visits.html", label: "مركز إدارة زيارات مقاولي الباطن", emoji: "🪪", icon: BadgeCheck, color: "#1e3c72", types: ["hospital", "health_centers", "admin_offices", "najran_general"], explicitOnly: true },
   { key: "settings_main",              file: "settings_main.html",              label: "الإعدادات الرئيسية",         emoji: "⚙️",  icon: Settings, color: "#2a5298", types: ["hospital", "health_centers", "admin_offices", "najran_general"] },
   { key: "settings_advanced",          file: "settings_advanced.html",          label: "الإعدادات المتقدمة",         emoji: "🔧",  icon: SlidersHorizontal, color: "#1e3c72", types: ["hospital", "health_centers", "admin_offices"] },
   { key: "attendance",                 file: "attendance.html",                 label: "الحضور والانصراف",           emoji: "📋",  icon: Clock, color: "#0077b6", types: ["hospital"] },
@@ -47,7 +48,8 @@ export function getModuleKey(filename: string): string {
     "monthly-overview.html": "monthly_overview",
     "extract-archive.html": "extract_archive",
     "request-visit.html": "request-visit",
-    "visit-admin-review.html": "visit_review",
+    "visit-admin-review.html": CLUSTER_VISIT_MODULE_KEY,
+    "cluster-subcontractor-visits.html": CLUSTER_VISIT_MODULE_KEY,
   };
   return map[file] || file.replace(".html", "");
 }
@@ -86,6 +88,8 @@ export function getCompanySiteTypes(company: string | null | undefined): SiteTyp
 }
 
 export function isModuleAllowed(moduleKey: string, allowedModuleKeys: string[] | null, role: string): boolean {
+  // Database-only permission. Role/admin email never grants this module.
+  if (moduleKey === CLUSTER_VISIT_MODULE_KEY) return allowedModuleKeys !== null && allowedModuleKeys.includes(CLUSTER_VISIT_MODULE_KEY);
   if (role === "admin" || role === "supervisor") return true;
   if (allowedModuleKeys === null) return !VISIT_MODULE_KEYS.includes(moduleKey);
   return allowedModuleKeys.includes(moduleKey);
@@ -114,6 +118,10 @@ export function filterModules(siteType: SiteType, allowedModuleKeys: string[] | 
   } else {
     byType = ALL_MODULES.filter(m => !m.adminOnly && m.types.includes(siteType));
   }
+
+  // This module is never implied by a privileged role or by null (= normal
+  // defaults). It must be present explicitly in users.allowed_modules.
+  byType = byType.filter(m => m.key !== CLUSTER_VISIT_MODULE_KEY || allowedModuleKeys?.includes(CLUSTER_VISIT_MODULE_KEY));
 
   if (isAdmin || isSupervisor) return byType;
 

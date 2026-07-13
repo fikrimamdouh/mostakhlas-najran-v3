@@ -137,7 +137,8 @@
       'consumables.html': 'consumables',
       'spare_parts.html': 'spare_parts',
       'request-visit.html': 'request-visit',
-      'visit-admin-review.html': 'visit_review',
+      'visit-admin-review.html': 'cluster_visit_management',
+      'cluster-subcontractor-visits.html': 'cluster_visit_management',
       'health_centers_attendance.html': 'health_centers_attendance',
       'health_centers_consumables.html': 'health_centers_consumables',
       'admin_offices_attendance.html': 'admin_offices_attendance',
@@ -152,11 +153,12 @@
 
   function isOriginalPageAllowed() {
     var role = String(session.role || 'user').toLowerCase();
-    if (role === 'admin' || role === 'supervisor') return true;
     var moduleKey = moduleKeyFromPage(getOriginalPageFile());
     if (!moduleKey) return true;
-    var explicitOnly = { 'request-visit': true, 'visit_review': true };
+    var explicitOnly = { 'request-visit': true, 'cluster_visit_management': true };
     var allowed = parseAllowedModules(session.allowedModules);
+    if (moduleKey === 'cluster_visit_management') return allowed !== null && allowed.indexOf(moduleKey) > -1;
+    if (role === 'admin' || role === 'supervisor') return true;
     if (allowed === null) return !explicitOnly[moduleKey];
     return allowed.indexOf(moduleKey) > -1;
   }

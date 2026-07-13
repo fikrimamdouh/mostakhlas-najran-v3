@@ -27,17 +27,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script>
-(function(){
-  try {
-    var s = JSON.parse(Storage.prototype.getItem.call(localStorage,'najran_session')||'{}');
-    if (s.role === 'admin' || s.role === 'supervisor') {
-      window.location.replace('visit-admin-review.html');
-    }
-  } catch(e) {}
-})();
-</script>
-
 <nav class="nav-bar" style="display:none">
   <select id="navigation">
     <option value="#">-- اختر صفحة --</option>
@@ -156,16 +145,19 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
       </div>
       <div class="input-group">
         <label for="f_system"><i class="fas fa-tools"></i> النظام المراد زيارته</label>
-        <input type="text" id="f_system" list="systems-list" placeholder="اختر من القائمة أو اكتب..." required autocomplete="off">
-        <datalist id="systems-list"></datalist>
+        <select id="f_system" required><option value="">اختر النظام من الكتالوج المركزي</option></select>
       </div>
       <div class="input-group">
         <label for="f_sub"><i class="fas fa-building"></i> مقاول الباطن</label>
-        <input type="text" id="f_sub" placeholder="اسم شركة مقاول الباطن" required>
+        <select id="f_sub" required><option value="">اختر الشركة المؤهلة</option></select>
       </div>
       <div class="input-group">
         <label for="f_date"><i class="fas fa-calendar-alt"></i> تاريخ الزيارة</label>
         <input type="date" id="f_date" required>
+      </div>
+      <div class="input-group full">
+        <label for="f_purpose"><i class="fas fa-clipboard-list"></i> الغرض من الزيارة</label>
+        <input type="text" id="f_purpose" maxlength="500" placeholder="وصف الأعمال المطلوب تنفيذها أثناء الزيارة" required>
       </div>
     </div>
 
@@ -208,6 +200,7 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
 </div>
 
 <script src="/original/shared-nav.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/visit-permit-print.js?v=20260713_visit_center_qr_v1"></script>
 <script>
 (function() {
   var session = {};
@@ -216,6 +209,7 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
   var allVisits = [];
   var visitSettings = { stamp: null, signature: null, managerName: 'م. محمد عباس المكرمي' };
   var visitorCount = 0;
+  var catalog = { systems: [], contractors: [], qualifications: [], siteApprovals: [], representatives: [], representativeSystems: [] };
 
   /* ── Auto-fill from persistentContractData ── */
   (function autoFill() {
@@ -238,23 +232,31 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
     if (dEl && !dEl.value) dEl.value = new Date().toISOString().slice(0, 10);
   })();
 
-  /* ── Populate system datalist from consumables subcontractors ── */
-  (function buildSystemsList() {
+  async function loadCatalog() {
     try {
-      var raw = localStorage.getItem('subcontractors_data_consumables_v27');
-      if (!raw) return;
-      var data = JSON.parse(raw);
-      if (!Array.isArray(data) || !data.length) return;
-      var dl = document.getElementById('systems-list');
-      data.forEach(function(s) {
-        if (s && s.name) {
-          var opt = document.createElement('option');
-          opt.value = s.name;
-          dl.appendChild(opt);
-        }
+      var r = await fetch('/api/visits/catalog', { headers: { Authorization: 'Bearer ' + token } });
+      var body = await r.json().catch(function(){ return {}; });
+      if (!r.ok) throw new Error(body.error || 'تعذر تحميل كتالوج الزيارات');
+      catalog = body;
+      document.getElementById('f_system').innerHTML = '<option value="">اختر النظام من الكتالوج المركزي</option>' + catalog.systems.filter(function(x){return x.isActive;}).map(function(x){return '<option value="'+x.id+'">'+esc(x.name)+'</option>';}).join('');
+      document.getElementById('f_sub').innerHTML = '<option value="">اختر الشركة المؤهلة</option>' + catalog.contractors.filter(function(x){return x.isActive;}).map(function(x){return '<option value="'+x.id+'">'+esc(x.name)+'</option>';}).join('');
+      refreshRepresentativeOptions();
+    } catch (e) { showMsg(e.message || 'تعذر تحميل كتالوج الزيارات', 'error'); }
+  }
+
+  function refreshRepresentativeOptions() {
+    var contractorId = Number(document.getElementById('f_sub').value || 0);
+    var systemId = Number(document.getElementById('f_system').value || 0);
+    document.querySelectorAll('.representative-select').forEach(function(select){
+      var current = select.value;
+      var allowed = catalog.representatives.filter(function(rep){
+        if (!rep.isActive || rep.contractorId !== contractorId) return false;
+        return catalog.representativeSystems.some(function(link){ return link.isActive && link.representativeId === rep.id && link.systemId === systemId; });
       });
-    } catch(e) {}
-  })();
+      select.innerHTML = '<option value="">اختر المندوب المسجل</option>' + allowed.map(function(rep){ return '<option value="'+rep.id+'">'+esc(rep.fullName)+' — '+esc(rep.identityMasked)+'</option>'; }).join('');
+      if (allowed.some(function(rep){return String(rep.id) === current;})) select.value = current;
+    });
+  }
 
   /* ── Visitor management ── */
   window.addVisitor = function() {
@@ -269,12 +271,10 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
         (n > 1 ? '<button type="button" class="btn-remove-visitor" onclick="removeVisitor(' + n + ')" title="حذف">×</button>' : '') +
       '</div>' +
       '<div class="visitor-grid">' +
-        '<div class="input-group"><label>الاسم الكامل</label><input type="text" id="vn_' + n + '" placeholder="اسم الزائر" required></div>' +
-        '<div class="input-group"><label>رقم الهوية / الإقامة</label><input type="text" id="vi_' + n + '" placeholder="رقم الهوية" required></div>' +
-        '<div class="input-group"><label>رقم الجوال</label><input type="tel" id="vm_' + n + '" placeholder="05xxxxxxxx" required></div>' +
-        '<div class="input-group full"><label><i class="fas fa-camera"></i> صورة الهوية <span style="color:#94a3b8;font-weight:400">(اختياري)</span></label><input type="file" id="vp_' + n + '" accept="image/*"></div>' +
+        '<div class="input-group full"><label>المندوب المسجل لدى الشركة والنظام</label><select class="representative-select" id="vr_' + n + '" required><option value="">اختر الشركة والنظام أولاً</option></select></div>' +
       '</div>';
     document.getElementById('visitors-wrap').appendChild(card);
+    refreshRepresentativeOptions();
     updateVisitorNumbers();
   };
 
@@ -303,11 +303,19 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
 
     var shared = {
       siteLocation:   document.getElementById('f_site').value,
-      systemName:     document.getElementById('f_system').value,
+      systemId:       Number(document.getElementById('f_system').value),
       mainContractor: document.getElementById('f_main').value,
-      subContractor:  document.getElementById('f_sub').value,
+      contractorId:   Number(document.getElementById('f_sub').value),
       visitDate:      document.getElementById('f_date').value,
+      purpose:        document.getElementById('f_purpose').value,
     };
+    var dayStart = new Date(shared.visitDate + 'T08:00:00');
+    var dayEnd = new Date(shared.visitDate + 'T17:00:00');
+    shared.startsAt = dayStart.toISOString(); shared.endsAt = dayEnd.toISOString();
+    var approval = catalog.siteApprovals.find(function(x){ return x.status === 'active' && x.siteName === shared.siteLocation && x.systemId === shared.systemId && x.contractorId === shared.contractorId; });
+    var qualification = catalog.qualifications.find(function(x){ return x.status === 'active' && x.systemId === shared.systemId && x.contractorId === shared.contractorId; });
+    if (!approval || !qualification) { showMsg('لا يوجد اعتماد موقع وتأهيل ساريان للشركة والنظام المحددين', 'error'); btn.disabled = false; return; }
+    shared.siteApprovalId = approval.id; shared.qualificationId = qualification.id;
 
     var cards = document.querySelectorAll('.visitor-card');
     if (!cards.length) { showMsg('أضف زائراً واحداً على الأقل', 'error'); btn.disabled = false; return; }
@@ -316,20 +324,9 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
     var visitors = [];
     for (var i = 0; i < cards.length; i++) {
       var id = cards[i].id.replace('visitor-', '');
-      var nameEl   = document.getElementById('vn_' + id);
-      var idEl     = document.getElementById('vi_' + id);
-      var mobEl    = document.getElementById('vm_' + id);
-      var photoEl  = document.getElementById('vp_' + id);
-      if (!nameEl || !idEl || !mobEl) continue;
-      var photoData = null;
-      if (photoEl && photoEl.files[0]) {
-        photoData = await new Promise(function(resolve) {
-          var reader = new FileReader();
-          reader.onload = function(ev) { resolve(ev.target.result); };
-          reader.readAsDataURL(photoEl.files[0]);
-        });
-      }
-      visitors.push({ repName: nameEl.value, repId: idEl.value, repMobile: mobEl.value, repIdPhoto: photoData });
+      var representativeEl = document.getElementById('vr_' + id);
+      if (!representativeEl || !representativeEl.value) continue;
+      visitors.push({ representativeId: Number(representativeEl.value) });
     }
 
     btn.innerHTML = '<span class="spinner"></span> جارٍ الإرسال (' + visitors.length + ' زائر)...';
@@ -358,8 +355,7 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
       document.getElementById('visitors-wrap').innerHTML = '';
       visitorCount = 0;
       addVisitor();
-      document.getElementById('f_sub').value = '';
-      document.getElementById('f_system').value = '';
+      document.getElementById('f_purpose').value = '';
     } else if (successCount > 0) {
       showMsg('نجح ' + successCount + ' طلب وفشل ' + failCount, 'error');
     } else {
@@ -407,14 +403,15 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
         var serial = v.serialNumber ? '<div class="serial-badge"><i class="fas fa-hashtag"></i> ' + esc(v.serialNumber) + '/' + yr + '</div>' : '';
         actions = serial +
           '<button class="btn-dl btn-dl-pdf" onclick="genPDF(' + v.id + ')"><i class="fas fa-file-pdf"></i> تحميل إلكتروني</button>';
-        if (v.signedPermitFile) {
-          actions += '<br><a class="btn-dl btn-dl-signed" href="' + v.signedPermitFile + '" download="تصريح-موقع-' + esc(v.serialNumber||v.id) + '"><i class="fas fa-signature"></i> نسخة موقعة يدوياً</a>';
-        }
+        if (v.hasSignedPermit) actions += '<button class="btn-dl btn-dl-signed" onclick="downloadSignedPermit(' + v.id + ',\'' + esc(v.serialNumber || v.id) + '\')"><i class="fas fa-signature"></i> نسخة موقعة</button>';
+        actions += '<button class="btn-dl" style="background:#1e3c72;color:#fff" onclick="NajranVisitPermit.preview(' + v.id + ').catch(NajranVisitPermit.showError)"><i class="fas fa-eye"></i> معاينة</button>';
+      } else if (v.status === 'pending') {
+        actions = '<button class="btn-dl" style="background:#b45309;color:#fff" onclick="NajranVisitPermit.preview(' + v.id + ').catch(NajranVisitPermit.showError)"><i class="fas fa-eye"></i> معاينة مسودة</button>';
       } else if (v.status === 'rejected' && v.adminNotes) {
         actions = '<small style="color:#b91c1c;font-size:11px"><i class="fas fa-info-circle"></i> ' + esc(v.adminNotes) + '</small>';
       }
       return '<tr>' +
-        '<td><strong>' + esc(v.repName) + '</strong><br><small style="color:#94a3b8">' + esc(v.repId) + '</small></td>' +
+        '<td><strong>' + esc(v.repName) + '</strong><br><small style="color:#94a3b8">' + esc(v.repIdMasked) + '</small></td>' +
         '<td>' + esc(v.siteLocation) + '</td>' +
         '<td>' + esc(v.systemName) + '</td>' +
         '<td>' + esc(v.subContractor) + '</td>' +
@@ -427,57 +424,19 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
 
   /* ── PDF generator ── */
   window.genPDF = async function(id) {
-    var v = allVisits.find(function(x){ return x.id === id; });
-    if (!v) return;
-    var btn = document.querySelector('[onclick="genPDF(' + id + ')"]');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ...'; }
-    var year = v.approvedAt ? new Date(v.approvedAt).getFullYear() : new Date().getFullYear();
-    var approvedDate = v.approvedAt ? new Date(v.approvedAt).toLocaleDateString('ar-SA') : '—';
-    var visitDt = v.visitDate ? new Date(v.visitDate).toLocaleDateString('ar-SA') : '—';
-    var rows = [
-      ['الاسم', esc(v.repName)], ['المستشفى / المنشأة', esc(v.submittedByHospital || '—')],
-      ['الموقع', esc(v.siteLocation)], ['تاريخ الزيارة', visitDt], ['النظام', esc(v.systemName)],
-      ['رقم الهوية (الإقامة)', esc(v.repId)], ['رقم الجوال', esc(v.repMobile)],
-      ['مقاول الصيانة', esc(v.mainContractor)], ['مقاول الباطن', esc(v.subContractor)],
-    ];
-    var stampHtml = visitSettings.stamp ? '<img src="'+visitSettings.stamp+'" style="max-width:110px;max-height:110px;object-fit:contain;">' : '<div style="width:110px;height:110px;border:2px dashed #ccc;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:#aaa;">الختم</div>';
-    var sigHtml = visitSettings.signature ? '<img src="'+visitSettings.signature+'" style="max-width:150px;max-height:70px;object-fit:contain;">' : '<div style="width:150px;height:2px;background:#333;margin-top:40px;"></div>';
-    var idPhotoHtml = v.repIdPhoto ? '<div style="margin-top:24px;border:1.5px solid #d1d5db;border-radius:10px;overflow:hidden;"><div style="background:#f1f5f9;padding:9px 14px;font-weight:800;font-size:13px;border-bottom:1px solid #d1d5db;color:#1e3c72;">صورة الهوية / الإقامة</div><div style="padding:16px;text-align:center;"><img src="'+v.repIdPhoto+'" style="max-width:320px;max-height:220px;border-radius:6px;"></div></div>' : '';
-    var tmpl = document.createElement('div');
-    tmpl.style.cssText = 'position:fixed;left:-9999px;top:0;width:790px;min-height:200px;background:#fff;padding:44px 48px;font-family:Tajawal,sans-serif;direction:rtl;color:#1a1a1a;';
-    tmpl.innerHTML =
-      '<div style="display:flex;align-items:center;gap:18px;border-bottom:3px solid #1e3c72;padding-bottom:16px;margin-bottom:20px;">' +
-        '<img src="/original/najran_health_cluster_logo.png" style="width:70px;height:70px;object-fit:contain;">' +
-        '<div><div style="font-size:11px;color:#64748b;margin-bottom:4px;">تجمع نجران الصحي — وحدة الصيانة العامة</div>' +
-        '<h2 style="font-size:20px;color:#1e3c72;margin:0 0 4px;font-weight:800;">موافقة زيارة مقاولي الباطن</h2>' +
-        '<div style="font-size:13px;color:#475569;">رقم الصادر: <strong>' + (v.serialNumber || '—') + ' / ' + year + '</strong></div></div>' +
-      '</div>' +
-      '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;">' +
-      rows.map(function(r){ return '<tr><td style="border:1px solid #d1d5db;padding:9px 12px;font-weight:700;background:#f8fafc;width:32%;font-size:13px;">' + r[0] + '</td><td style="border:1px solid #d1d5db;padding:9px 12px;font-size:13px;">' + r[1] + '</td></tr>'; }).join('') +
-      '</table>' +
-      '<div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:22px;line-height:2;font-size:13px;text-align:justify;">توافق إدارة الصيانة بتجمع نجران الصحي بقيام مندوب مقاول الباطن الموضح اسمه وبياناته بعالية لزيارة الموقع لتنفيذ أعمال الصيانة الوقائية للنظام حسب شروط ومواصفات العقد.<br>وعلى ذلك جرى التوقيع ،،،</div>' +
-      '<div style="display:flex;justify-content:space-between;align-items:flex-end;border:1.5px solid #d1d5db;border-radius:10px;padding:16px 20px;">' +
-        '<div><p style="font-weight:800;font-size:14px;color:#1e3c72;margin-bottom:6px;">مدير إدارة الصيانة</p>' +
-        '<p style="font-size:13px;margin-bottom:4px;">الاسم: ' + esc(visitSettings.managerName || 'م. محمد عباس المكرمي') + '</p>' +
-        '<p style="font-size:13px;margin-bottom:12px;">التاريخ: ' + approvedDate + ' م</p>' + sigHtml + '</div>' +
-        stampHtml + '</div>' + idPhotoHtml;
-    document.body.appendChild(tmpl);
+    return window.NajranVisitPermit.print(id).catch(window.NajranVisitPermit.showError);
+  };
+
+  window.downloadSignedPermit = async function(id, serial) {
     try {
-      var canvas = await html2canvas(tmpl, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', logging: false });
-      document.body.removeChild(tmpl);
-      var imgData = canvas.toDataURL('image/png');
-      var pdf = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      var pageW = pdf.internal.pageSize.getWidth(), pageH = pdf.internal.pageSize.getHeight(), margin = 10;
-      var imgW = pageW - margin*2, imgH = (canvas.height * imgW) / canvas.width;
-      if (imgH <= pageH - margin*2) { pdf.addImage(imgData, 'PNG', margin, margin, imgW, imgH); }
-      else { var sc = (pageH-margin*2)/imgH; pdf.addImage(imgData, 'PNG', margin, margin, imgW*sc, pageH-margin*2); }
-      pdf.save('تصريح-زيارة-' + (v.serialNumber || v.id) + '.pdf');
-    } catch(e) {
-      if (document.body.contains(tmpl)) document.body.removeChild(tmpl);
-      showMsg('حدث خطأ في توليد الملف', 'error');
-    } finally {
-      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf"></i> تحميل إلكتروني'; }
-    }
+      var currentToken = token;
+      var getter = window.parent && window.parent.najranGetFreshToken;
+      if (typeof getter === 'function') currentToken = await getter({ skipCache: true }) || currentToken;
+      var response = await fetch('/api/visits/' + id + '/signed-permit', { headers: { Authorization: 'Bearer ' + currentToken } });
+      if (!response.ok) { var errorBody = await response.json().catch(function(){return {};}); throw new Error(errorBody.error || 'تعذر تنزيل النسخة الموقعة'); }
+      var blob = await response.blob(), url = URL.createObjectURL(blob), link = document.createElement('a');
+      link.href = url; link.download = 'تصريح-زيارة-موقع-' + serial; link.click(); setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    } catch (error) { showMsg(error.message || 'تعذر تنزيل النسخة الموقعة', 'error'); }
   };
 
   function showMsg(txt, type) {
@@ -488,7 +447,9 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
   function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
   document.getElementById('search-input').addEventListener('input', renderVisits);
-  Promise.all([loadSettings(), loadVisits()]);
+  document.getElementById('f_system').addEventListener('change', refreshRepresentativeOptions);
+  document.getElementById('f_sub').addEventListener('change', refreshRepresentativeOptions);
+  Promise.all([loadSettings(), loadVisits(), loadCatalog()]);
 })();
 </script>
 </body>
