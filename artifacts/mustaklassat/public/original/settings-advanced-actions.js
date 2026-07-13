@@ -10,8 +10,18 @@ async function refresh(){
   }catch(e){box.className='empty';box.textContent='تعذر تحميل الحوادث: '+String(e.message||e)}finally{btn.disabled=false}
 }
 async function cleanup(){
-  if(!admin())return;var wh=Number(q('f-window').value)||24,before=new Date(Date.now()-wh*3600000).toISOString();if(!confirm('سيتم حذف الحوادث الأقدم من '+windowText()+' فقط. تأكيد؟'))return;
-  try{var h=await authHeaders();if(!h.Authorization)throw Error('جلسة غير صالحة');h['Content-Type']='application/json';var r=await manualFetch('/api/client-events/cleanup',{method:'DELETE',headers:h,credentials:'include',body:JSON.stringify({before:before})}),b=await r.json().catch(function(){return{}});if(!r.ok)throw Error(b.error||('HTTP '+r.status));q('events-list').textContent='تم حذف '+Number(b.deleted||0)+' حادثة. اضغط تحديث لإعادة تحميل القائمة.'}catch(e){q('events-list').textContent='فشل المسح: '+String(e.message||e)}
+  if(!admin())return;
+  var select=q('cleanup-age'),hours=Number(select&&select.value)||24,label=select&&select.options[select.selectedIndex]?select.options[select.selectedIndex].text:('أقدم من '+hours+' ساعة');
+  var before=new Date(Date.now()-hours*3600000).toISOString();
+  if(!confirm('سيتم حذف حوادث مراقبة الإنتاج '+label+' فقط. لن يتم حذف سجل التدقيق العام أو بيانات المستخلصات. تأكيد؟'))return;
+  var btn=q('btn-cleanup'),oldText=btn.textContent;btn.disabled=true;btn.textContent='جاري حذف القديم...';
+  try{
+    var h=await authHeaders();if(!h.Authorization)throw Error('جلسة غير صالحة');h['Content-Type']='application/json';
+    var r=await manualFetch('/api/client-events/cleanup',{method:'DELETE',headers:h,credentials:'include',body:JSON.stringify({before:before})}),b=await r.json().catch(function(){return{}});
+    if(!r.ok)throw Error(b.error||('HTTP '+r.status));
+    await refresh();
+    q('coverage-note').textContent='تم حذف '+Number(b.deleted||0)+' حادثة قديمة بنجاح — '+label+'.';q('coverage-note').classList.add('show')
+  }catch(e){q('events-list').className='empty';q('events-list').textContent='فشل حذف المشاكل القديمة: '+String(e.message||e)}finally{btn.disabled=false;btn.textContent=oldText}
 }
 async function sendTest(){
   if(!admin()||!confirm('إرسال حادثة اختبار واحدة الآن؟'))return;
