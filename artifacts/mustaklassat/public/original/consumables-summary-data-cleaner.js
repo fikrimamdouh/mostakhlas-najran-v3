@@ -35,7 +35,7 @@
   }
 
   function loadHospitalConsumablesRaiseLetter() {
-    loadScriptFresh('hospital-consumables-raise-letter-js', '/original/hospital_consumables_raise_letter.js?v=20260708_v17_scoped_per_letter_print_all');
+    loadScriptFresh('hospital-consumables-raise-letter-js', '/original/hospital_consumables_raise_letter.js?v=20260713_cert_pages_letterhead_order_v1');
     setTimeout(function () {
       loadScriptFresh('hospital-consumables-letterhead-storage-guard-js', '/original/hospital_consumables_letterhead_storage_guard_v1.js?v=20260705_cache_bust_v1');
     }, 60);
@@ -49,7 +49,7 @@
       loadScriptFresh('hospital-consumables-settings-deeplink-js', '/original/hospital_consumables_settings_deeplink_v1.js?v=20260702_v3_consumables_a4_letterhead_print');
     }, 140);
     setTimeout(function () {
-      loadScriptFresh('hospital-consumables-print-polish-js', '/original/hospital_consumables_print_polish_v6.js?v=20260710_v11_signature_copy_print_fix');
+      loadScriptFresh('hospital-consumables-print-polish-js', '/original/hospital_consumables_print_polish_v6.js?v=20260713_cert_pages_letterhead_order_v1');
     }, 200);
   }
 

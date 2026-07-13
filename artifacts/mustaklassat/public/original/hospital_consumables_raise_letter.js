@@ -407,7 +407,31 @@ function buildDoc(key, s) {
   return scopedLetterHtml('main', buildMain(s));
 }
   function cellDisplayValue(cell) { const print = cell.querySelector('.cell-print-content'); const field = cell.querySelector('input,select,textarea'); return clean((print && print.textContent) || (field && field.value) || cell.textContent || ''); }
-  function snapshotTable(tableId) { const table = document.getElementById(tableId); if (!table) return ''; const rows = Array.from(table.rows).map(tr => '<tr>' + Array.from(tr.cells).map(c => '<' + (c.tagName === 'TH' ? 'th' : 'td') + (c.colSpan > 1 ? ' colspan="' + c.colSpan + '"' : '') + '>' + esc(cellDisplayValue(c)) + '</' + (c.tagName === 'TH' ? 'th' : 'td') + '>').join('') + '</tr>').join(''); return '<table><tbody>' + rows + '</tbody></table>'; }
+  function snapshotTable(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return '';
+    const rowHtml = tr => '<tr>' + Array.from(tr.cells).map(c => {
+      const tag = c.tagName === 'TH' ? 'th' : 'td';
+      const cs = c.colSpan > 1 ? ' colspan="' + c.colSpan + '"' : '';
+      return '<' + tag + cs + '>' + esc(cellDisplayValue(c)) + '</' + tag + '>';
+    }).join('') + '</tr>';
+    // الحفاظ على thead/tbody/tfoot كما هي: تسطيحها داخل tbody واحد يمنع
+    // المتصفح من تكرار ترويسة الأعمدة عند انقسام الجدول على أكثر من صفحة،
+    // ويُلصق صف الإجمالي بما بعده.
+    const part = (sel, tag) => {
+      const rows = Array.from(table.querySelectorAll(':scope > ' + sel + ' > tr')).map(rowHtml).join('');
+      return rows ? '<' + tag + '>' + rows + '</' + tag + '>' : '';
+    };
+    const head = part('thead', 'thead');
+    const foot = part('tfoot', 'tfoot');
+    let body = part('tbody', 'tbody');
+    if (!body) {
+      const loose = Array.from(table.children).filter(el => el.tagName === 'TR').map(rowHtml).join('');
+      body = loose ? '<tbody>' + loose + '</tbody>' : '';
+    }
+    if (!head && !body && !foot) return '';
+    return '<table>' + head + body + foot + '</table>';
+  }
   function buildExistingConsumablesPrintPages() { const sections = [ ['subcontractors-section','subcontractors-table'], ['performance-section','performance-table'], ['water-supply-section','water-supply-table'], ['sewage-disposal-section','sewage-disposal-table'], ['summary-section','summary-table'] ]; return sections.map(x => { const sec = document.getElementById(x[0]); const title = clean(sec && sec.querySelector('.table-header h2') && sec.querySelector('.table-header h2').textContent) || x[0]; const table = snapshotTable(x[1]); if (!table) return ''; return `<section class="page"><div class="extract-page"><h1>${esc(title)}</h1><h2>${esc(extractPhrase())}</h2>${table}</div></section>`; }).join(''); }
  function openPrintDoc(key) {
   const s = getSettings();
