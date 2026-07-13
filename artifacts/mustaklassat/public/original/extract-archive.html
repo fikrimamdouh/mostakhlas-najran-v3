@@ -13,7 +13,7 @@
          ترتيب التنفيذ لا يتغير إطلاقًا — هذا تلميح تنزيل فقط. -->
     <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260705_cache_bust_v1">
     <link rel="preload" as="script" href="/original/auth-check.js">
-    <link rel="preload" as="script" href="/original/extract-snapshot.js?v=20260711_static_v1">
+    <link rel="preload" as="script" href="/original/extract-snapshot.js?v=20260713_scoped_resume_type_resolver_v2">
     <link rel="preload" as="script" href="/original/track.js?v=20260711_static_v1">
     <link rel="preload" as="script" href="/original/shared-nav.js?v=20260711_static_v1">
 
@@ -470,7 +470,7 @@
   </div>
 </div>
 
-<script src="/original/extract-snapshot.js?v=20260711_static_v1"></script>
+<script src="/original/extract-snapshot.js?v=20260713_scoped_resume_type_resolver_v2"></script>
 <script src="/original/track.js?v=20260711_static_v1"></script>
 <script src="/original/shared-nav.js?v=20260711_static_v1"></script>
 <script>
@@ -943,6 +943,23 @@ async function loadServerData() {
     });
   }
 
+  /* ── Local snapshot type badge (النوع مقروء من اللقطة نفسها، بلا تخمين) ── */
+  var LOCAL_TYPE_STYLE = {
+    labor:          { label: 'مستخلص العمالة',    bg: '#eff6ff', color: '#1d4ed8' },
+    consumables:    { label: 'مستخلص المستهلكات', bg: '#f0fdf4', color: '#15803d' },
+    spare_parts:    { label: 'قطع الغيار',         bg: '#fff7ed', color: '#c2410c' },
+    health_centers: { label: 'المراكز الصحية',     bg: '#fdf4ff', color: '#a21caf' },
+    admin_offices:  { label: 'المكاتب الإدارية',   bg: '#fffbeb', color: '#b45309' }
+  };
+  function localTypeStyle(type) {
+    return LOCAL_TYPE_STYLE[type] || { label: 'نوع غير محدد', bg: '#f8fafc', color: '#64748b' };
+  }
+  // نفس مُحدِّد النوع المستخدم في الاستعادة — مصدر واحد للحقيقة، بلا تخمين.
+  function snapTypeStyle(snap) {
+    var t = (typeof window.resolveSnapshotType === 'function') ? window.resolveSnapshotType(snap) : (snap && snap.extractType);
+    return localTypeStyle(t);
+  }
+
   /* ── Render stats ── */
   function renderStats(archive, srvCount) {
     const total    = archive.length;
@@ -1012,7 +1029,8 @@ async function loadServerData() {
         <div class="arc-card" id="card-${snap.id}">
           <div class="arc-card-header">
             <div>
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+                <span class="arc-badge arc-type-badge" data-type-badge="${snapTypeStyle(snap).label}" style="background:${snapTypeStyle(snap).bg};color:${snapTypeStyle(snap).color};border:1px solid ${snapTypeStyle(snap).color}55;font-weight:800;">${snapTypeStyle(snap).label}</span>
                 <span class="arc-badge">دفعة ${snap.paymentNumber || '—'}</span>
                 <span class="arc-source-badge ${sourceCls(snap.source)}">${sourceLabel(snap.source)}</span>
               </div>
