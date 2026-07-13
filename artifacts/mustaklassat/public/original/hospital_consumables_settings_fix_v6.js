@@ -32,7 +32,7 @@
   function clean(v) { return String(v == null ? '' : v).replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim(); }
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[c]; }); }
   function readJson(k, f) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : f; } catch (_) { return f; } }
-  function writeJson(k, v) { try { localStorage.setItem(k, JSON.stringify(v || {})); } catch (_) { alert('تعذر حفظ إعدادات خطابات المستهلكات. صغّر صورة الترويسة إذا كانت كبيرة.'); } }
+  function writeJson(k, v) { try { localStorage.setItem(k, JSON.stringify(v || {})); } catch (_) { void window.NajranDialogs.alert('تعذر حفظ إعدادات خطابات المستهلكات. صغّر صورة الترويسة إذا كانت كبيرة.'); } }
   function setPath(obj, path, value) { var p = path.split('.'); for (var i = 0; i < p.length - 1; i++) { obj[p[i]] = obj[p[i]] || {}; obj = obj[p[i]]; } obj[p[p.length - 1]] = value; }
   function field(path, label, value, type) { return '<div class="hc-field"><label>' + esc(label) + '</label><input type="' + (type || 'text') + '" data-hc-path="' + esc(path) + '" value="' + esc(value) + '"></div>'; }
   function area(path, label, value) { return '<div class="hc-field wide"><label>' + esc(label) + '</label><textarea data-hc-path="' + esc(path) + '">' + esc(value) + '</textarea></div>'; }

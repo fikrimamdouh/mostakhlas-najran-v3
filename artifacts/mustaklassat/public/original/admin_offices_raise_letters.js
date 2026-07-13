@@ -27,7 +27,7 @@ function loadScript(id,src,onload){
   return s;
 }
 function loadCleanSignatures(){
-  loadScript('admin-offices-raise-letters-clean-signatures-v4','/original/admin_offices_raise_letters_clean_signatures_v1.js?v=20260701_clean_signatures_sticky_v5');
+  loadScript('admin-offices-raise-letters-clean-signatures-v4','/original/admin_offices_raise_letters_clean_signatures_v1.js?v=20260713_all_native_dialogs_v1');
 }
 function loadIbanAutosave(){
   loadScript('admin-offices-raise-letters-iban-autosave-v1','/original/admin_offices_raise_letters_iban_autosave_v1.js?v=20260702_v1_iban_autosave');
@@ -38,8 +38,8 @@ function loadCleanScreen(){
   document.documentElement.classList.remove('admin-raise-clean-booting');
   var boot=document.getElementById('admin-raise-clean-boot-shell');
   if(boot)boot.remove();
-loadScript('admin-offices-raise-letters-print-fallbacks-v1','/original/admin_offices_raise_letters_print_fallbacks_v1.js?v=20260701_admin_raise_fallback_v4');
-  loadScript('admin-offices-raise-letters-clean-v1','/original/admin_offices_raise_letters_clean_v1.js?v=20260701_clean_screen_signatures_v3',function(){
+loadScript('admin-offices-raise-letters-print-fallbacks-v1','/original/admin_offices_raise_letters_print_fallbacks_v1.js?v=20260713_all_native_dialogs_v1');
+  loadScript('admin-offices-raise-letters-clean-v1','/original/admin_offices_raise_letters_clean_v1.js?v=20260713_all_native_dialogs_v1',function(){
     console.info('[Admin Offices Raise Letters] clean screen loaded');
     loadCleanSignatures();
     loadIbanAutosave();

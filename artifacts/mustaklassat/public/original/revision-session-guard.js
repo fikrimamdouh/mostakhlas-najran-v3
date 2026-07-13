@@ -94,7 +94,7 @@
     var backup = parse(localStorage.getItem('najran_revision_previous_local_backup'), null);
 
     if (!backup || !backup.data || typeof backup.data !== 'object') {
-      alert('لا توجد نسخة محلية محفوظة للرجوع إليها.');
+      void window.NajranDialogs.alert('لا توجد نسخة محلية محفوظة للرجوع إليها.');
       return;
     }
 
@@ -162,8 +162,8 @@
       window.location.href = revisionTargetPage() + '?continueRevision=1&v=' + Date.now();
     };
 
-    document.getElementById('najran-start-new-extract').onclick = function () {
-      if (!confirm('سيتم الخروج من وضع تعديل المستخلص الحالي. أي رفع بعد ذلك سيُنشئ مستخلصًا جديدًا. هل تريد المتابعة؟')) return;
+    document.getElementById('najran-start-new-extract').onclick = async function () {
+      if (!await window.NajranDialogs.confirm('سيتم الخروج من وضع تعديل المستخلص الحالي. أي رفع بعد ذلك سيُنشئ مستخلصًا جديدًا. هل تريد المتابعة؟')) return;
       clearRevisionMode();
       window.location.href = '/original/settings_main.html?newExtract=1&v=' + Date.now();
     };

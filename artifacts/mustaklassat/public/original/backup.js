@@ -368,7 +368,7 @@ function createSpecificBackup(backupType) {
     try {
         const backupObject = collectDataForBackup(backupType);
         if (Object.keys(backupObject.data.data).length === 0) {
-            alert(`لا توجد بيانات لإنشاء نسخة احتياطية من نوع "${getSectionName(backupType)}".`);
+            void window.NajranDialogs.alert(`لا توجد بيانات لإنشاء نسخة احتياطية من نوع "${getSectionName(backupType)}".`);
             return;
         }
         const blob = new Blob([JSON.stringify(backupObject.data, null, 2)], { type: 'application/json' });
@@ -382,10 +382,10 @@ function createSpecificBackup(backupType) {
         URL.revokeObjectURL(url);
         const mf = backupObject.data.manifest || {};
         addLogEntry('إنشاء نسخة محلية', getSectionName(backupType), 'نجاح');
-        alert(`تم إنشاء النسخة المحلية بنجاح.\nالملف: "${backupObject.filename}"\nعدد المفاتيح: ${mf.totalKeys || Object.keys(backupObject.data.data).length}`);
+        void window.NajranDialogs.alert(`تم إنشاء النسخة المحلية بنجاح.\nالملف: "${backupObject.filename}"\nعدد المفاتيح: ${mf.totalKeys || Object.keys(backupObject.data.data).length}`);
     } catch (error) {
         console.error(`خطأ في إنشاء النسخة (${backupType}):`, error);
-        alert('حدث خطأ أثناء إنشاء النسخة الاحتياطية المحلية.');
+        void window.NajranDialogs.alert('حدث خطأ أثناء إنشاء النسخة الاحتياطية المحلية.');
         addLogEntry('إنشاء نسخة محلية', getSectionName(backupType), 'فشل');
     }
 }
@@ -458,20 +458,20 @@ function collectDataForBackup(backupType) {
 function confirmRestore() {
     const fileInput = document.getElementById('restore-file-input');
     if (!fileInput || !fileInput.files || !fileInput.files.length) {
-        alert('يرجى اختيار ملف نسخة احتياطية أولاً.');
+        void window.NajranDialogs.alert('يرجى اختيار ملف نسخة احتياطية أولاً.');
         return;
     }
     const file = fileInput.files[0];
     const reader = new FileReader();
-    reader.onload = function(event) {
+    reader.onload = async function(event) {
         try {
             const raw = JSON.parse(event.target.result);
             const normalized = _buNormalizeIncomingBackup(raw);
             if (normalized.owner && !_buSameOwner(normalized.owner)) {
-                alert('تم إيقاف الاستعادة: هذه النسخة تخص مستخدمًا آخر.');
+                void window.NajranDialogs.alert('تم إيقاف الاستعادة: هذه النسخة تخص مستخدمًا آخر.');
                 return;
             }
-            if (!normalized.owner && !confirm('هذا ملف نسخة قديم/مسطح لا يحتوي على هوية المستخدم. سيتم دمجه بدون مسح البيانات الأخرى. هل تريد المتابعة؟')) return;
+            if (!normalized.owner && !await window.NajranDialogs.confirm('هذا ملف نسخة قديم/مسطح لا يحتوي على هوية المستخدم. سيتم دمجه بدون مسح البيانات الأخرى. هل تريد المتابعة؟')) return;
 
             const mf = normalized.manifest || _buBuildManifest(normalized.data || {});
             const modeText = normalized.replaceMode ? 'استبدال كامل للبيانات المحلية غير المحمية' : 'دمج آمن بدون مسح بيانات غير موجودة في الملف';
@@ -487,7 +487,7 @@ function confirmRestore() {
                 `الإعدادات/التواقيع: ${mf.includesSettings ? 'نعم' : 'لا'}`,
                 'سيتم الحفاظ على جلسة الدخول الحالية. هل تريد المتابعة؟'
             ].join('\n');
-            if (!confirm(msg)) return;
+            if (!await window.NajranDialogs.confirm(msg)) return;
 
             const keep = _buKeepAuthOnly();
             const backupData = normalized.data || {};
@@ -503,11 +503,11 @@ function confirmRestore() {
             });
             _buRestoreKeep(keep);
             addLogEntry('استعادة نسخة محلية', file.name, 'نجاح');
-            alert('تمت استعادة بيانات المستخدم محليًا. سيتم إعادة تحميل الصفحة الآن.');
+            void window.NajranDialogs.alert('تمت استعادة بيانات المستخدم محليًا. سيتم إعادة تحميل الصفحة الآن.');
             setTimeout(() => window.location.reload(), 1000);
         } catch (error) {
             console.error('فشل الاستعادة:', error);
-            alert(`فشل استعادة الملف: ${error.message}`);
+            void window.NajranDialogs.alert(`فشل استعادة الملف: ${error.message}`);
             addLogEntry('استعادة نسخة محلية', file.name, 'فشل');
         }
     };

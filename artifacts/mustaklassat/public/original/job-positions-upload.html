@@ -1,25 +1,26 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script src="/original/system-dialogs.js?v=20260713_all_native_dialogs_v1"></script>
 <!-- njs-preload-v1 -->
     <!-- حراس يحقنها auth-check.js في كل صفحة — تُنزَّل مبكرًا بالتوازي بدل انتظار تنفيذه -->
     <link rel="preload" as="script" href="/original/hospital-context-guard.js?v=20260611d">
-    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260709_fresh_token_retry_v2">
-    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260709_monitor_v2_circuit_breaker">
+    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/approve-button-polish.js?v=20260709_auth_fresh_token_v3_archive_filter">
     <link rel="preload" as="script" href="/original/revision-local-draft-restore.js?v=20260713_system_dialogs_v1">
-    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260709_auth_fresh_token_v3_archive_filter">
+    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260713_all_native_dialogs_v1">
     <!-- تنزيل متوازٍ لكل سكريبتات الصفحة من أول لحظة.
          ترتيب التنفيذ لا يتغير إطلاقًا — هذا تلميح تنزيل فقط. -->
-    <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260705_cache_bust_v1">
-    <link rel="preload" as="script" href="/original/auth-check.js">
-    <link rel="preload" as="script" href="/original/cloud-sync.js?v=20260711_v6_draft_bundle">
+    <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/auth-check.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/cloud-sync.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/job-positions-helper.js?v=20260711_static_v1">
-    <link rel="preload" as="script" href="/original/shared-nav.js?v=20260711_static_v1">
+    <link rel="preload" as="script" href="/original/shared-nav.js?v=20260713_all_native_dialogs_v1">
 
-<script src="/original/user-storage-proxy.js?v=20260705_cache_bust_v1"></script>
-<script src="/original/auth-check.js"></script>
-<script src="/original/cloud-sync.js?v=20260711_v6_draft_bundle"></script>
+<script src="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/auth-check.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/cloud-sync.js?v=20260713_all_native_dialogs_v1"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>رفع مناصب الوظائف — تجمع نجران الصحي</title>
@@ -89,11 +90,11 @@ function resetUpload(){parsedRows=[];document.getElementById('fileInput').value=
 async function seedWorkshopPositions(){try{patchWorkshopsDept();let rec=await JobPositionsDB.load(WORKSHOP_NAME);if(rec&&rec.rows&&rec.rows.length)return rec;try{await JobPositionsDB.save(WORKSHOP_NAME,WORKSHOP_ROWS);}catch(_){}return await JobPositionsDB.load(WORKSHOP_NAME)||{hospitalName:WORKSHOP_NAME,rows:WORKSHOP_ROWS,savedAt:new Date().toISOString()};}catch(_){return{hospitalName:WORKSHOP_NAME,rows:WORKSHOP_ROWS,savedAt:new Date().toISOString()};}}
 async function renderSavedList(){const container=document.getElementById('savedListBody');container.innerHTML='<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> جاري التحميل من السيرفر...</div>';try{patchWorkshopsDept();const workshopRec=await seedWorkshopPositions();let all=await JobPositionsDB.loadAll();if(!Array.isArray(all))all=[];if(workshopRec&&!all.some(r=>r.hospitalName===WORKSHOP_NAME)){all.unshift({hospitalName:WORKSHOP_NAME,rows:workshopRec.rows||WORKSHOP_ROWS,savedAt:workshopRec.savedAt,count:(workshopRec.rows||WORKSHOP_ROWS).length,totalCost:(workshopRec.rows||WORKSHOP_ROWS).reduce((s,r)=>s+(+r.salary||0),0)});}if(!all.length){container.innerHTML='<div class="empty-state"><i class="fas fa-folder-open"></i><p>لا توجد مستشفيات محفوظة بعد</p></div>';return;}container.innerHTML=all.map(rec=>{const count=rec.count!=null?rec.count:(rec.rows?rec.rows.length:0);const cost=rec.totalCost!=null?rec.totalCost:(rec.rows?rec.rows.reduce((s,r)=>s+(+r.salary||0),0):0);const date=rec.savedAt?new Date(rec.savedAt).toLocaleDateString('ar-SA'):'';const safe=rec.hospitalName.replace(/'/g,"\\'");return`<div class="hospital-item"><div><div class="h-name"><i class="fas fa-hospital-alt" style="color:#1e3c72;margin-left:6px"></i>${rec.hospitalName}</div><div class="h-meta">${count} منصب | ${cost.toLocaleString('ar-SA')} ﷼</div><div class="h-meta" style="margin-top:2px"><i class="fas fa-cloud" style="color:#16a34a;margin-left:4px"></i>محفوظ على النظام &nbsp;|&nbsp; <i class="fas fa-clock" style="margin-left:4px"></i>آخر تحديث: ${date}</div></div><div class="h-actions"><button class="btn btn-primary btn-sm" onclick="downloadHospitalTemplate('${safe}')"><i class="fas fa-file-download"></i> تنزيل التامبلت</button><button class="btn btn-warning btn-sm" onclick="viewHospital('${safe}')"><i class="fas fa-eye"></i> عرض</button><button class="btn btn-danger btn-sm" onclick="deleteHospital('${safe}')"><i class="fas fa-trash"></i> حذف</button></div></div>`;}).join('');}catch(err){container.innerHTML=`<div class="empty-state" style="color:#dc2626"><i class="fas fa-exclamation-circle"></i><p>خطأ: ${err.message}</p></div>`;}}
 async function viewHospital(name){const rec=await JobPositionsDB.load(name)||((name===WORKSHOP_NAME)?{rows:WORKSHOP_ROWS}:null);if(!rec)return;const rows=rec.rows||[];document.getElementById('viewModal')?.remove();const modal=document.createElement('div');modal.id='viewModal';modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';modal.innerHTML=`<div style="background:#fff;border-radius:14px;max-width:960px;width:100%;max-height:85vh;overflow:auto;padding:28px;direction:rtl"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 style="color:#1e3c72;font-size:1.1rem">مناصب وظائف: ${name} (${rows.length} منصب)</h2><button onclick="document.getElementById('viewModal').remove()" style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:6px 16px;cursor:pointer;font-size:.9rem">✕ إغلاق</button></div><table><thead><tr><th>#</th><th>القسم</th><th>مسمى الوظيفة</th><th>التكلفة الشهرية</th><th>الفئة</th><th>الجنسية</th><th>الاسم</th><th>الهوية</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${DEPT_LABELS[r.dept]||r.dept}</td><td>${r.jobTitle||'—'}</td><td>${(+r.salary||0).toLocaleString('ar-SA')} ﷼</td><td>${r.category||1}</td><td>${r.nationality||'—'}</td><td>${r.name||''}</td><td>${r.iqamaId||''}</td></tr>`).join('')}</tbody></table></div>`;document.body.appendChild(modal);modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});}
-async function deleteHospital(name){if(name===WORKSHOP_NAME){alert('الورش مناصب نظامية افتراضية. يمكن تعديلها بتنزيل التامبلت ثم رفعه مرة أخرى بعد إضافة التكلفة.');return;}if(!confirm(`هل تريد حذف مناصب "${name}"؟ لا يمكن التراجع.`))return;await JobPositionsDB.remove(name);renderSavedList();}
-async function downloadHospitalTemplate(hospitalName){if(typeof XLSX==='undefined'){alert('مكتبة Excel غير محملة، يرجى تحديث الصفحة');return;}let rec=await JobPositionsDB.load(hospitalName);if((!rec||!rec.rows||!rec.rows.length)&&hospitalName===WORKSHOP_NAME)rec={rows:WORKSHOP_ROWS};if(!rec||!rec.rows||!rec.rows.length){alert('لا توجد مناصب محفوظة لـ "'+hospitalName+'"');return;}const headers=['اسم المستشفى','اسم الموظف','رقم الهوية / الإقامة','القسم','مسمى الوظيفة','التكلفة الشهرية','الفئة','الجنسية'];const rows=rec.rows.map(r=>[hospitalName,r.name||'',r.iqamaId||'',DEPT_LABELS[r.dept]||r.dept,r.jobTitle||'',r.salary||0,r.category||'1',r.nationality||'غير سعودي']);const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);ws['!cols']=[{wch:32},{wch:28},{wch:22},{wch:18},{wch:32},{wch:18},{wch:8},{wch:15}];XLSX.utils.book_append_sheet(wb,ws,hospitalName.substring(0,31));XLSX.writeFile(wb,'تامبلت-'+hospitalName+'.xlsx');}
+async function deleteHospital(name){if(name===WORKSHOP_NAME){void window.NajranDialogs.alert('الورش مناصب نظامية افتراضية. يمكن تعديلها بتنزيل التامبلت ثم رفعه مرة أخرى بعد إضافة التكلفة.');return;}if(!await window.NajranDialogs.confirm(`هل تريد حذف مناصب "${name}"؟ لا يمكن التراجع.`))return;await JobPositionsDB.remove(name);renderSavedList();}
+async function downloadHospitalTemplate(hospitalName){if(typeof XLSX==='undefined'){void window.NajranDialogs.alert('مكتبة Excel غير محملة، يرجى تحديث الصفحة');return;}let rec=await JobPositionsDB.load(hospitalName);if((!rec||!rec.rows||!rec.rows.length)&&hospitalName===WORKSHOP_NAME)rec={rows:WORKSHOP_ROWS};if(!rec||!rec.rows||!rec.rows.length){void window.NajranDialogs.alert('لا توجد مناصب محفوظة لـ "'+hospitalName+'"');return;}const headers=['اسم المستشفى','اسم الموظف','رقم الهوية / الإقامة','القسم','مسمى الوظيفة','التكلفة الشهرية','الفئة','الجنسية'];const rows=rec.rows.map(r=>[hospitalName,r.name||'',r.iqamaId||'',DEPT_LABELS[r.dept]||r.dept,r.jobTitle||'',r.salary||0,r.category||'1',r.nationality||'غير سعودي']);const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);ws['!cols']=[{wch:32},{wch:28},{wch:22},{wch:18},{wch:32},{wch:18},{wch:8},{wch:15}];XLSX.utils.book_append_sheet(wb,ws,hospitalName.substring(0,31));XLSX.writeFile(wb,'تامبلت-'+hospitalName+'.xlsx');}
 function showAlert(msg,type){const el=document.getElementById('uploadAlert');el.textContent=msg;el.className=`alert alert-${type}`;el.style.display='block';if(type==='success')setTimeout(()=>{el.style.display='none';},5000);}
 patchWorkshopsDept();renderSavedList();
 </script>
-<script src="/original/shared-nav.js?v=20260711_static_v1"></script>
+<script src="/original/shared-nav.js?v=20260713_all_native_dialogs_v1"></script>
 </body>
 </html>

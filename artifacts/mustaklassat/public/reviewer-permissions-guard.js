@@ -153,7 +153,7 @@
       var e=rowEmail(tr), u=usersByEmail.get(e); if(!u)return;
       var cs=Array.prototype.slice.call(tr.children||[]), rc=cs.find(function(td){ var x=td.textContent||''; return x.indexOf('مستخدم')>-1||x.indexOf('مدير')>-1||x.indexOf('مشرف')>-1||x.indexOf('مراقب')>-1; })||cs[2];
       if(!rc||rc.querySelector('[data-review-permissions-btn="1"]'))return;
-      var b=document.createElement('button'); b.type='button'; b.dataset.reviewPermissionsBtn='1'; b.className='najran-review-row-btn'; b.textContent='مراجعة'; b.onclick=function(){ openModal(u).catch(function(er){ if(!er.silent)alert(er.message||'فشل فتح صلاحية المراجعة'); }); };
+      var b=document.createElement('button'); b.type='button'; b.dataset.reviewPermissionsBtn='1'; b.className='najran-review-row-btn'; b.textContent='مراجعة'; b.onclick=function(){ openModal(u).catch(function(er){ if(!er.silent)void window.NajranDialogs.alert(er.message||'فشل فتح صلاحية المراجعة'); }); };
       rc.appendChild(b); btnState(b,u);
     });
   }

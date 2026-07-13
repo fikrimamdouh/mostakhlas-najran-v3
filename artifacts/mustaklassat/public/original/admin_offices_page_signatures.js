@@ -58,7 +58,7 @@
     var overlay = document.getElementById('sb-overlay');
     if (overlay && overlay.classList.contains('open')) { overlay.classList.remove('open'); document.body.style.overflow = ''; return; }
     forceFreshSignatureBlockIfNeeded().then(function () {
-      if (!window.SignatureBlock || typeof window.SignatureBlock.open !== 'function') return alert('نظام التواقيع لم يكتمل تحميله بعد. أعد تحميل الصفحة.');
+      if (!window.SignatureBlock || typeof window.SignatureBlock.open !== 'function') return void window.NajranDialogs.alert('نظام التواقيع لم يكتمل تحميله بعد. أعد تحميل الصفحة.');
       window.SignatureBlock.open(pageKey);
     });
   }

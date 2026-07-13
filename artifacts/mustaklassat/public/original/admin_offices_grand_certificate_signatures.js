@@ -46,7 +46,7 @@
       window.SignatureBlock.open(GRAND_KEY);
       return;
     }
-    alert('نظام التواقيع لم يكتمل تحميله بعد. أعد تحميل الصفحة.');
+    void window.NajranDialogs.alert('نظام التواقيع لم يكتمل تحميله بعد. أعد تحميل الصفحة.');
   }
 
   function buildGrandSignaturesHTML() {
@@ -69,7 +69,7 @@
       </div>
     `).join('');
 
-return `<section class="sign grand-signatures" data-source="admin_offices_grand_certificate_signatures.js" style="outline:3px solid blue;">
+return `<section class="sign grand-signatures" data-source="admin_offices_grand_certificate_signatures.js?v=20260713_all_native_dialogs_v1" style="outline:3px solid blue;">
   <div style="font-size:12px;color:blue;font-weight:900;text-align:center;margin-bottom:6px">
     SOURCE: admin_offices_grand_certificate_signatures.js
   </div>

@@ -258,15 +258,15 @@
     document.querySelectorAll('#aob-employee-results .aob-employee-check').forEach(cb => { cb.checked = !!checked; });
   }
 
-  function applyBulkAttendanceClean() {
+  async function applyBulkAttendanceClean() {
     const start = parseInt(document.getElementById('aob-start-day')?.value || '0', 10);
     const end = parseInt(document.getElementById('aob-end-day')?.value || '0', 10);
     const newStatus = document.getElementById('aob-status')?.value || 'ح';
     const selected = Array.from(document.querySelectorAll('.aob-employee-check:checked')).map(cb => cb.value);
 
-    if (!selected.length) return alert('اختر موظفًا واحدًا على الأقل.');
-    if (start > end) return alert('مدى الأيام غير صحيح. يوم البداية أكبر من يوم النهاية.');
-    if (!statusCodes()[newStatus]) return alert('حالة الحضور غير صحيحة.');
+    if (!selected.length) return void window.NajranDialogs.alert('اختر موظفًا واحدًا على الأقل.');
+    if (start > end) return void window.NajranDialogs.alert('مدى الأيام غير صحيح. يوم البداية أكبر من يوم النهاية.');
+    if (!statusCodes()[newStatus]) return void window.NajranDialogs.alert('حالة الحضور غير صحيحة.');
 
     const previewNames = selected.map(token => {
       const [centerKey, rawIdx] = token.split('::');
@@ -274,7 +274,7 @@
       return emp ? `- ${emp.name || 'بدون اسم'}` : '';
     }).filter(Boolean).slice(0, 10).join('\n');
 
-    if (!confirm(`سيتم تطبيق الحالة "${newStatus}" على ${selected.length} اختيار خلال الأيام ${start + 1} إلى ${end + 1}.\n\n${previewNames}${selected.length > 10 ? '\n...' : ''}\n\nهل تريد الاستمرار؟`)) return;
+    if (!await window.NajranDialogs.confirm(`سيتم تطبيق الحالة "${newStatus}" على ${selected.length} اختيار خلال الأيام ${start + 1} إلى ${end + 1}.\n\n${previewNames}${selected.length > 10 ? '\n...' : ''}\n\nهل تريد الاستمرار؟`)) return;
 
     const data = getData();
     const count = getPeriod().daysInExtract;
@@ -307,7 +307,7 @@
     }
 
     if (typeof window.closeDialog === 'function') window.closeDialog('management-dialog');
-    alert(`تم تطبيق التعديل الجماعي بنجاح.\n\nعدد الموظفين المتأثرين: ${affected}\nعدد المكاتب المتأثرة: ${touchedCenters.size}`);
+    void window.NajranDialogs.alert(`تم تطبيق التعديل الجماعي بنجاح.\n\nعدد الموظفين المتأثرين: ${affected}\nعدد المكاتب المتأثرة: ${touchedCenters.size}`);
   }
 
   function injectCss() {

@@ -420,7 +420,7 @@ function grandSignaturesHtml() {
   function showPolishedGrandCertificate() {
     installCalculationOverrides();
     const win = window.open('', '', 'width=1400,height=900');
-    if (!win) return alert('المتصفح منع نافذة الشهادة. اسمح بالنوافذ المنبثقة.');
+    if (!win) return void window.NajranDialogs.alert('المتصفح منع نافذة الشهادة. اسمح بالنوافذ المنبثقة.');
     win.document.open();
     win.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>الشهادة الإجمالية للمكاتب الإدارية</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">${certCss()}</head><body>${buildCertificateHtml()}</body></html>`);
     win.document.close();

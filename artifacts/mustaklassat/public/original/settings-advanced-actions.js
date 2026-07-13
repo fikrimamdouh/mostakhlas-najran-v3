@@ -21,7 +21,7 @@ async function cleanup(){
   if(!admin())return;
   var select=q('cleanup-age'),hours=Number(select&&select.value)||24,label=select&&select.options[select.selectedIndex]?select.options[select.selectedIndex].text:('أقدم من '+hours+' ساعة');
   var before=new Date(Date.now()-hours*3600000).toISOString();
-  if(!confirm('سيتم حذف حوادث مراقبة الإنتاج '+label+' فقط. لن يتم حذف سجل التدقيق العام أو بيانات المستخلصات. تأكيد؟'))return;
+  if(!await window.NajranDialogs.confirm('سيتم حذف حوادث مراقبة الإنتاج '+label+' فقط. لن يتم حذف سجل التدقيق العام أو بيانات المستخلصات. تأكيد؟'))return;
   var btn=q('btn-cleanup'),oldText=btn.textContent;btn.disabled=true;btn.textContent='جاري حذف القديم...';
   try{
     var h=await authHeaders();if(!h.Authorization)throw Error('جلسة غير صالحة');h['Content-Type']='application/json';
@@ -32,7 +32,7 @@ async function cleanup(){
   }catch(e){q('events-list').className='empty';q('events-list').textContent='فشل حذف المشاكل القديمة: '+String(e.message||e)}finally{btn.disabled=false;btn.textContent=oldText}
 }
 async function sendTest(){
-  if(!admin()||!confirm('إرسال حادثة اختبار واحدة الآن؟'))return;
+  if(!admin()||!await window.NajranDialogs.confirm('إرسال حادثة اختبار واحدة الآن؟'))return;
   try{var h=await authHeaders();if(!h.Authorization)throw Error('جلسة غير صالحة');h['Content-Type']='application/json';var s=sess(),ev={type:'MANUAL_INCIDENT',severity:'info',page:'settings_advanced',url:location.href,userId:s.userId||s.id||null,userName:s.name||s.userName||null,userEmail:s.email||null,role:s.role||null,hospital:s.hospital||null,company:s.company||s.companyName||null,message:'اختبار يدوي من صفحة مراقبة الإنتاج',timestamp:new Date().toISOString(),buildVersion:'settings_advanced_terminal_v3_20260710',_payload:{reason:'manual dashboard test'}},r=await manualFetch('/api/client-events',{method:'POST',headers:h,credentials:'include',body:JSON.stringify({events:[ev]})});if(!r.ok)throw Error('HTTP '+r.status);q('events-list').textContent='تم إرسال حادثة الاختبار. اضغط تحديث لعرضها.'}catch(e){q('events-list').textContent='فشل الاختبار: '+String(e.message||e)}
 }
 function resetFilters(){['f-category','f-type','f-sev','f-status','f-hospital','f-page','f-user','f-build'].forEach(function(id){q(id).value=''});q('f-sort').value='priority';q('f-search').value='';['f-repeat','f-multi-user','f-data-loss','f-today','f-unknown','f-tests'].forEach(function(id){q(id).checked=false});render()}

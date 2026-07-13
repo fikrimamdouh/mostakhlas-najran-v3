@@ -100,13 +100,13 @@
   }
 
   function loadCurrentCoreModules() {
-    loadScriptOnce('admin-offices-bulk-status-grid-print-fix', '/original/admin_offices_bulk_status_grid_print_fix.js?v=20260624_bulk_grid_v3', '[Admin Offices Bulk Grid V3]');
+    loadScriptOnce('admin-offices-bulk-status-grid-print-fix', '/original/admin_offices_bulk_status_grid_print_fix.js?v=20260713_all_native_dialogs_v1', '[Admin Offices Bulk Grid V3]');
     // ممنوع تحميل admin_offices_site_print_performance_fit.js هنا؛ الطباعة أصبحت موحدة من admin_offices_print_all_complete_patch.js.
   }
 
   function loadExtraDocsOnlyWhenOverlayExists() {
     if (!document.getElementById('raise-letters-overlay')) return;
-    loadScriptOnce('admin-offices-extra-docs-script', '/original/admin_offices_raise_letters_extra_docs.js?v=20260701_extra_docs_final_raise_v11', '[Admin Offices Extra Docs]');
+    loadScriptOnce('admin-offices-extra-docs-script', '/original/admin_offices_raise_letters_extra_docs.js?v=20260713_all_native_dialogs_v1', '[Admin Offices Extra Docs]');
   }
 
   function callSaveDialogSilently() {
@@ -163,10 +163,10 @@
         try {
           if (typeof window.AdminOfficesExtraDocs.printEditableStatement === 'function') window.AdminOfficesExtraDocs.printEditableStatement(type);
           else if (typeof window.AdminOfficesExtraDocs.openEditableStatement === 'function') window.AdminOfficesExtraDocs.openEditableStatement(type);
-          else alert('لم يتم تحميل دالة البيان بعد. أغلق خطابات الرفع وافتحها مرة أخرى.');
+          else void window.NajranDialogs.alert('لم يتم تحميل دالة البيان بعد. أغلق خطابات الرفع وافتحها مرة أخرى.');
         } catch (err) {
           console.error('[Admin Offices Extra Docs] statement button failed:', err);
-          alert('تعذر فتح البيان. راجع Console.');
+          void window.NajranDialogs.alert('تعذر فتح البيان. راجع Console.');
         }
       };
     };

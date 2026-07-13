@@ -16,7 +16,7 @@
   function statusName(x){return ({submitted:'مرسل',under_review:'تحت المراجعة',approved:'معتمد',rejected:'مرفوض',needs_revision:'يحتاج تعديل'})[x]||x||'—'}
   async function purgeOldUsers(){
     var phrase='حذف المستخدمين المحذوفين';
-    var v=prompt('تنظيف نهائي للحسابات التجريبية المحذوفة. اكتب: '+phrase);
+    var v=await window.NajranDialogs.prompt('تنظيف نهائي للحسابات التجريبية المحذوفة. اكتب: '+phrase);
     if(v!==phrase)return;
     try{
       var r=await fetch('/api/admin/purge-deleted-users',{method:'POST',credentials:'include',headers:jsonHeaders(),body:JSON.stringify({confirmation:phrase})});

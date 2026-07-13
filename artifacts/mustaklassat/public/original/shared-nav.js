@@ -301,10 +301,10 @@
 
   window.adminOfficeOpenAttendanceWindow = function(tableId) {
     const table = document.getElementById(tableId);
-    if (!table) return alert('لم يتم العثور على جدول الحضور.');
+    if (!table) return void window.NajranDialogs.alert('لم يتم العثور على جدول الحضور.');
 
     const section = table.closest('[id^="table-div-"], .department-table') || table.parentElement;
-    if (!section) return alert('لم يتم العثور على محتوى الجدول.');
+    if (!section) return void window.NajranDialogs.alert('لم يتم العثور على محتوى الجدول.');
 
     const clone = section.cloneNode(true);
     cleanWindowClone(clone);
@@ -313,7 +313,7 @@
     const title = document.getElementById('center-main-title')?.outerHTML || '';
 
     const w = window.open('', '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
-    if (!w) return alert('المتصفح منع فتح النافذة. اسمح بالـ popups لهذا الموقع.');
+    if (!w) return void window.NajranDialogs.alert('المتصفح منع فتح النافذة. اسمح بالـ popups لهذا الموقع.');
 
     w.document.open();
     w.document.write(`
@@ -610,7 +610,7 @@
     const status = document.getElementById('import-status-area');
 
     if (!status) {
-      return alert('تمت قراءة الملف. لم يتم العثور على منطقة عرض المقارنة.');
+      return void window.NajranDialogs.alert('تمت قراءة الملف. لم يتم العثور على منطقة عرض المقارنة.');
     }
 
     status.innerHTML = `
@@ -659,8 +659,8 @@
     const file = document.getElementById('excel-file-input')?.files?.[0];
     const status = document.getElementById('import-status-area');
 
-    if (!centerKey) return alert('اختر المكتب/المرفق أولاً.');
-    if (!file) return alert('اختر ملف Excel أولاً.');
+    if (!centerKey) return void window.NajranDialogs.alert('اختر المكتب/المرفق أولاً.');
+    if (!file) return void window.NajranDialogs.alert('اختر ملف Excel أولاً.');
 
     if (status) {
       status.innerHTML = '<div class="admin-import-compare"><h4><i class="fas fa-spinner fa-spin"></i> جاري قراءة الملف...</h4></div>';
@@ -683,7 +683,7 @@
           </div>
         `;
       } else {
-        alert(err.message);
+        void window.NajranDialogs.alert(err.message);
       }
     }
   };
@@ -691,7 +691,7 @@
   window.adminOfficeImportReplace = function() {
     const p = window.__adminOfficePendingImport;
 
-    if (!p) return alert('لا توجد عملية استيراد معلقة.');
+    if (!p) return void window.NajranDialogs.alert('لا توجد عملية استيراد معلقة.');
 
     const all = getData();
     all[p.centerKey] = p.employees;
@@ -701,13 +701,13 @@
     window.__adminOfficePendingImport = null;
     renderAfterChange(p.centerKey);
 
-    alert('تم الاستبدال: تم تحميل ' + p.employees.length + ' صف.');
+    void window.NajranDialogs.alert('تم الاستبدال: تم تحميل ' + p.employees.length + ' صف.');
   };
 
   window.adminOfficeImportUpdate = function() {
     const p = window.__adminOfficePendingImport;
 
-    if (!p) return alert('لا توجد عملية استيراد معلقة.');
+    if (!p) return void window.NajranDialogs.alert('لا توجد عملية استيراد معلقة.');
 
     const all = getData();
 
@@ -737,7 +737,7 @@
     window.__adminOfficePendingImport = null;
     renderAfterChange(p.centerKey);
 
-    alert('تم التحديث: أُضيف ' + added + ' صف، وتجاهل ' + dup + ' مكرر.');
+    void window.NajranDialogs.alert('تم التحديث: أُضيف ' + added + ' صف، وتجاهل ' + dup + ' مكرر.');
   };
 
   window.adminOfficeImportCancel = function() {
@@ -754,7 +754,7 @@
     const dst = document.getElementById('excel-file-input');
 
     if (!src || !src.files.length) {
-      return alert('اختر ملف Excel أولاً.');
+      return void window.NajranDialogs.alert('اختر ملف Excel أولاً.');
     }
 
     try {
@@ -762,7 +762,7 @@
       dt.items.add(src.files[0]);
       dst.files = dt.files;
     } catch (_) {
-      return alert('ارفع الملف في خانة التامبليت بالأعلى.');
+      return void window.NajranDialogs.alert('ارفع الملف في خانة التامبليت بالأعلى.');
     }
 
     window.handleSingleFileImport();

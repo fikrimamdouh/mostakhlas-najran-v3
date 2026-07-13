@@ -10,7 +10,7 @@
 
   function exportToExcel(tableId = 'cleaning-table') {
     const table = document.getElementById(tableId);
-    if (!table) return alert('لم يتم العثور على الجدول');
+    if (!table) return void window.NajranDialogs.alert('لم يتم العثور على الجدول');
     const wb = XLSX.utils.table_to_book(table);
     XLSX.writeFile(wb, 'attendance.xlsx');
   }

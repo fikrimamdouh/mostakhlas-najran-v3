@@ -582,18 +582,18 @@
     if (overlay) overlay.classList.remove('open');
     document.body.style.overflow = '';
   };
-  window.najranReviewAction = function (id, status) {
+  window.najranReviewAction = async function (id, status) {
     const e = getGlobalExtractById(id);
     const notesBox = document.getElementById('nr-action-notes');
     const note = notesBox ? notesBox.value.trim() : '';
     if ((status === 'needs_revision' || status === 'rejected') && !note) {
-      alert('اكتب الملاحظة أولاً حتى يعرف المستخدم سبب الإرجاع');
+      void window.NajranDialogs.alert('اكتب الملاحظة أولاً حتى يعرف المستخدم سبب الإرجاع');
       if (notesBox) notesBox.focus();
       return;
     }
-    if (status === 'approved' && !confirm('اعتماد المستخلص بعد المراجعة؟')) return;
-    if (status === 'needs_revision' && !confirm('إرجاع المستخلص للمستخدم بطلب تعديل؟')) return;
-    if (status === 'rejected' && !confirm('رفض المستخلص؟')) return;
+    if (status === 'approved' && !await window.NajranDialogs.confirm('اعتماد المستخلص بعد المراجعة؟')) return;
+    if (status === 'needs_revision' && !await window.NajranDialogs.confirm('إرجاع المستخلص للمستخدم بطلب تعديل؟')) return;
+    if (status === 'rejected' && !await window.NajranDialogs.confirm('رفض المستخلص؟')) return;
     let hidden = document.getElementById('notes-' + id);
     if (!hidden) {
       hidden = document.createElement('textarea');
@@ -606,12 +606,12 @@
       window.closeNajranReviewDetails();
       updateStatus(id, status);
     } else {
-      alert('تعذر تنفيذ الإجراء الآن');
+      void window.NajranDialogs.alert('تعذر تنفيذ الإجراء الآن');
     }
   };
   window.openNajranReviewDetails = function (id) {
     const e = getGlobalExtractById(id);
-    if (!e) return alert('تعذر العثور على بيانات المستخلص في الصفحة');
+    if (!e) return void window.NajranDialogs.alert('تعذر العثور على بيانات المستخلص في الصفحة');
     const snapshot = snapshotOf(e);
     const meta = metaOf(e);
     const defs = defsForType(e.extractType);

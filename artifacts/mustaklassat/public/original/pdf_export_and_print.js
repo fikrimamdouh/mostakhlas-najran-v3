@@ -5,7 +5,7 @@ function preparePrint() {
     // إنشاء نسخة من الصفحة للطباعة
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-        alert('يرجى السماح بالنوافذ المنبثقة لتمكين الطباعة');
+        void window.NajranDialogs.alert('يرجى السماح بالنوافذ المنبثقة لتمكين الطباعة');
         return;
     }
     

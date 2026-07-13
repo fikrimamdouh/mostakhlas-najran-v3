@@ -35,12 +35,12 @@
   }
 
   function loadHospitalConsumablesRaiseLetter() {
-    loadScriptFresh('hospital-consumables-raise-letter-js', '/original/hospital_consumables_raise_letter.js?v=20260713_cert_pages_letterhead_order_v1');
+    loadScriptFresh('hospital-consumables-raise-letter-js', '/original/hospital_consumables_raise_letter.js?v=20260713_all_native_dialogs_v1');
     setTimeout(function () {
-      loadScriptFresh('hospital-consumables-letterhead-storage-guard-js', '/original/hospital_consumables_letterhead_storage_guard_v1.js?v=20260705_cache_bust_v1');
+      loadScriptFresh('hospital-consumables-letterhead-storage-guard-js', '/original/hospital_consumables_letterhead_storage_guard_v1.js?v=20260713_all_native_dialogs_v1');
     }, 60);
     setTimeout(function () {
-      loadScriptFresh('hospital-consumables-settings-fix-js', '/original/hospital_consumables_settings_fix_v6.js?v=20260705_cache_bust_v1');
+      loadScriptFresh('hospital-consumables-settings-fix-js', '/original/hospital_consumables_settings_fix_v6.js?v=20260713_all_native_dialogs_v1');
     }, 80);
     setTimeout(function () {
       loadScriptFresh('hospital-consumables-settings-route-guard-js', '/original/hospital_consumables_settings_route_guard_v7.js?v=20260702_v11_fallback_letterhead_route');

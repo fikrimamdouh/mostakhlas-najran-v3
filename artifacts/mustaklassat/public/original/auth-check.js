@@ -19,6 +19,7 @@
   var APPROVAL_REVISION_GUARD_V = '20260711_backup_fail_closed_v1';
   var MONITOR_V = '20260709_monitor_v2_circuit_breaker';
   var REVISION_DRAFT_V = '20260713_system_dialogs_v1';
+  var SYSTEM_DIALOGS_V = '20260713_all_native_dialogs_v1';
   var NOTIF_INTERVAL_MS = 900000;
   var NAJRAN_BUILD_VERSION = '2026.07.09-auth-r3';
   window.NAJRAN_BUILD_VERSION = NAJRAN_BUILD_VERSION;
@@ -200,14 +201,15 @@
 
   console.info('[AuthCheck] original page resolved:', pageFile);
 
+  appendScript('/original/system-dialogs.js?v=' + SYSTEM_DIALOGS_V, false);
   appendScript('/original/hospital-context-guard.js?v=20260611d', false);
-  appendScript('/original/hospital-storage-extract-context-guard.js?v=' + HOSPITAL_STORAGE_GUARD_V, false);
-  appendScript('/original/production-client-monitor.js?v=' + MONITOR_V, false);
+  appendScript('/original/hospital-storage-extract-context-guard.js?v=' + SYSTEM_DIALOGS_V, false);
+  appendScript('/original/production-client-monitor.js?v=' + SYSTEM_DIALOGS_V, false);
   if (!isSidebarSensitivePage) appendScript('/original/home-sidebar-guard.js?v=20260703_review_exclude_v2', false);
 
   appendScript('/original/approve-button-polish.js?v=' + BUILD_V, true);
   appendScript('/original/revision-local-draft-restore.js?v=' + REVISION_DRAFT_V, true);
-  appendScript('/original/revision-session-guard.js?v=' + BUILD_V, true);
+  appendScript('/original/revision-session-guard.js?v=' + SYSTEM_DIALOGS_V, true);
 
   var snapshotPages = {
     'attendance.html': true,
@@ -231,32 +233,32 @@
     appendScript('/original/submitted_extract_archive_bundle_guard.js?v=20260713_labor_complete_bundle_v1', true);
   }
 
-  if (isAdminOfficesPage || isAdminOfficesConsumablesPage) appendScript('/original/admin_offices_full_submit_snapshot_guard.js?v=20260705_v4_admin_offices_duplicate_fix', true);
-  if (isAttendancePage) appendScript('/original/attendance-cloud-refresh-guard-loader.js?v=' + BUILD_V, true);
+  if (isAdminOfficesPage || isAdminOfficesConsumablesPage) appendScript('/original/admin_offices_full_submit_snapshot_guard.js?v=20260713_all_native_dialogs_v1', true);
+  if (isAttendancePage) appendScript('/original/attendance-cloud-refresh-guard-loader.js?v=' + SYSTEM_DIALOGS_V, true);
   if (isAdminOfficesPage) {
-    appendScript('/original/admin_offices_performance_logic.js?v=' + BUILD_V, true);
-    appendScript('/original/admin_offices_grand_certificate_stamp_fix.js?v=20260701_stamp_v3', true);
+    appendScript('/original/admin_offices_performance_logic.js?v=' + SYSTEM_DIALOGS_V, true);
+    appendScript('/original/admin_offices_grand_certificate_stamp_fix.js?v=20260713_all_native_dialogs_v1', true);
   }
   if (isAttendancePage || isAdminOfficesPage) appendScript('/original/special-absence-no-deduction.js?v=' + BUILD_V, true);
 
   if (pageFile === 'approval.html') {
-    appendScript('/original/approval_revision_route_guard.js?v=' + APPROVAL_REVISION_GUARD_V, true);
-    appendScript('/original/review-print-override.js?v=' + BUILD_V, true);
-    appendScript('/original/review-workflow.js?v=20260705_v3_duplicate_resubmit_and_admin_offices_parts', true);
+    appendScript('/original/approval_revision_route_guard.js?v=' + SYSTEM_DIALOGS_V, true);
+    appendScript('/original/review-print-override.js?v=' + SYSTEM_DIALOGS_V, true);
+    appendScript('/original/review-workflow.js?v=20260713_all_native_dialogs_v1', true);
     appendScript('/original/review-labor-final-snapshot-exact.js?v=20260713_labor_complete_bundle_v1', true);
     appendScript('/original/review-labor-legacy-official-amount.js?v=20260705_cache_bust_v1', true);
     appendScript('/original/review-generic-tables.js?v=20260703_admin_preview_v3', true);
-    appendScript('/original/admin_offices_review_detail_patch.js?v=20260705_v4_admin_offices_duplicate_fix', true);
+    appendScript('/original/admin_offices_review_detail_patch.js?v=20260713_all_native_dialogs_v1', true);
     appendScript('/original/review-consumables-summary-exact.js?v=' + BUILD_V, true);
   }
 
   if (pageFile === 'extract-archive.html') {
-    appendScript('/original/extract_archive_route_guard.js?v=20260703_extract_archive_route_v5', true);
+    appendScript('/original/extract_archive_route_guard.js?v=20260713_all_native_dialogs_v1', true);
     appendScript('/original/extract_archive_server_hospital_filter.js?v=' + BUILD_V, true);
   }
-  if (/consumables\.html$/.test(pageFile)) appendScript('/original/consumables-submit-snapshot-guard.js?v=20260708_consumables_guard_v5_nondestructive', true);
+  if (/consumables\.html$/.test(pageFile)) appendScript('/original/consumables-submit-snapshot-guard.js?v=20260713_all_native_dialogs_v1', true);
   if (pageFile === 'settings_main.html') {
-    appendScript('/original/settings-backup-complete-guard.js?v=20260611d', true);
+    appendScript('/original/settings-backup-complete-guard.js?v=20260713_all_native_dialogs_v1', true);
     appendScript('/original/settings_contract_fixed_patch.js?v=20260623_fixed_contract_v1', true);
   }
 

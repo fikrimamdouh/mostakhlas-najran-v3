@@ -538,7 +538,7 @@
           if (typeof window.showDuplicateResubmitModal === 'function') {
             window.showDuplicateResubmitModal(function () { submitAdminOffices(part); });
           } else {
-            alert(err.error || 'تم رفع نفس المستخلص مسبقًا. غيّر رقم الدفعة أو الشهر ثم أعد المحاولة.');
+            void window.NajranDialogs.alert(err.error || 'تم رفع نفس المستخلص مسبقًا. غيّر رقم الدفعة أو الشهر ثم أعد المحاولة.');
           }
           return;
         }
@@ -557,7 +557,7 @@
       } catch (_) {}
       window.location.href = '/extracts/track';
     } catch (e) {
-      alert('حدث خطأ: ' + (e && e.message ? e.message : e));
+      void window.NajranDialogs.alert('حدث خطأ: ' + (e && e.message ? e.message : e));
       submitting = false;
       if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = oldHtml || '<span>رفع مستخلص المكاتب للاعتماد</span><span style="font-size:1.2rem">←</span>'; }
     }
@@ -570,7 +570,7 @@
     return /رفع\s+مستخلص\s+(عمالة|مستهلكات)\s+المكاتب/.test(text) || /جاري\s+رفع\s+مستخلص\s+(عمالة|مستهلكات)\s+المكاتب/.test(text);
   }
 
-  document.addEventListener('click', function (e) {
+  document.addEventListener('click', async function (e) {
     if (!isAdminOfficesSubmitButton(e.target)) return;
     e.preventDefault();
     e.stopImmediatePropagation();
@@ -579,7 +579,7 @@
     var msg = part === 'consumables'
       ? 'هل تريد رفع مستخلص مستهلكات المكاتب الإدارية للاعتماد؟\n\nسيتم تصنيفه كمستخلص مكاتب إدارية حتى تظهر المراجعة الصحيحة.'
       : 'هل تريد رفع مستخلص عمالة المكاتب الإدارية للاعتماد؟\n\nسيتم تصنيفه كمستخلص مكاتب إدارية حتى تظهر كل المكاتب في المراجعة.';
-    if (!confirm(msg)) return false;
+    if (!await window.NajranDialogs.confirm(msg)) return false;
     submitAdminOffices(part);
     return false;
   }, true);

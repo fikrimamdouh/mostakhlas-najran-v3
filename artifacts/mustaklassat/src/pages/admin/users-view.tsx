@@ -108,7 +108,7 @@ export default function UsersView() {
   async function saveEdit() {
     if (!editUser) return;
     if (!editForm.name.trim()) {
-      alert("الاسم لا يمكن أن يكون فارغاً");
+      void window.NajranDialogs.alert("الاسم لا يمكن أن يكون فارغاً");
       return;
     }
     setSavingEdit(true);
@@ -133,7 +133,7 @@ export default function UsersView() {
       setEditUser(null);
       await refetch();
     } catch {
-      alert("فشل حفظ تعديل بيانات المستخدم");
+      void window.NajranDialogs.alert("فشل حفظ تعديل بيانات المستخدم");
     } finally {
       setSavingEdit(false);
     }

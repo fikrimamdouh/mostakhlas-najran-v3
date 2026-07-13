@@ -235,7 +235,7 @@
   window.saveAdminOfficesLocalSnapshot = saveAdminOfficesLocalSnapshot;
 
   function showSaved(snap) {
-    if (!snap) { alert('تعذر الحفظ المحلي. امسح لقطات قديمة من أرشيف المستخلصات أو جرّب بعد تحديث الصفحة.'); return; }
+    if (!snap) { void window.NajranDialogs.alert('تعذر الحفظ المحلي. امسح لقطات قديمة من أرشيف المستخلصات أو جرّب بعد تحديث الصفحة.'); return; }
     var old = document.getElementById('admin-offices-local-save-ok');
     if (old) old.remove();
     var ov = document.createElement('div');

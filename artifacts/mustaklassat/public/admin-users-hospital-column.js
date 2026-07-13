@@ -209,10 +209,10 @@
     btn.style.cursor = 'pointer';
 
     btn.addEventListener('click', async function () {
-      var next = prompt('اكتب اسم المستخدم الصحيح:', currentName || '');
+      var next = await window.NajranDialogs.prompt('اكتب اسم المستخدم الصحيح:', currentName || '');
       if (next == null) return;
       next = String(next).trim();
-      if (!next) return alert('الاسم لا يجوز أن يكون فارغًا');
+      if (!next) return void window.NajranDialogs.alert('الاسم لا يجوز أن يكون فارغًا');
       if (next === currentName) return;
       try {
         btn.disabled = true;
@@ -222,7 +222,7 @@
         btn.textContent = 'تم';
         setTimeout(function () { btn.textContent = 'تعديل'; btn.disabled = false; }, 900);
       } catch (e) {
-        alert(e.message || 'فشل تعديل الاسم');
+        void window.NajranDialogs.alert(e.message || 'فشل تعديل الاسم');
         btn.textContent = 'تعديل';
         btn.disabled = false;
       }

@@ -179,7 +179,7 @@
   function printSelected() {
     if (isPrinting) return;
     const keys = selectedKeys(), opts = { a:checked('print-opt-attendance'), p:checked('print-opt-performance'), h:checked('print-opt-achievement'), l:checked('print-opt-site-raise-letter') };
-    if (!keys.length || (!opts.a && !opts.p && !opts.h && !opts.l)) return alert('اختر مكتب/مرفق وتقرير واحد على الأقل.');
+    if (!keys.length || (!opts.a && !opts.p && !opts.h && !opts.l)) return void window.NajranDialogs.alert('اختر مكتب/مرفق وتقرير واحد على الأقل.');
     isPrinting = true;
     const btn = document.getElementById('admin-print-start-btn');
     if (btn) { btn.disabled = true; btn.textContent = 'جاري تجهيز الطباعة...'; }
@@ -203,7 +203,7 @@
         setTimeout(() => { try { w.focus(); w.print(); } finally { setTimeout(done, 1200); } }, 500);
       } catch (e) {
         finishPrint();
-        alert('تعذر تجهيز الطباعة. راجع Console.');
+        void window.NajranDialogs.alert('تعذر تجهيز الطباعة. راجع Console.');
         console.error('[Admin Offices Print All] print failed', e);
       }
     }, 30);
@@ -212,7 +212,7 @@
   function preparePrint() {
     const key = currentKey();
     const w = window.open('', '_blank', 'width=1200,height=900');
-    if (!w) return alert('المتصفح منع فتح نافذة الطباعة.');
+    if (!w) return void window.NajranDialogs.alert('المتصفح منع فتح نافذة الطباعة.');
     w.document.open();
     w.document.write(`<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>طباعة الحضور</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">${printCss()}</head><body>${attendancePage(key)}</body></html>`);
     w.document.close();
@@ -222,7 +222,7 @@
   function printCurrentPerformanceOnly() {
     if (isPrinting) return;
     const key = currentKey();
-    if (!key) return alert('لم يتم تحديد المكتب/المرفق الحالي.');
+    if (!key) return void window.NajranDialogs.alert('لم يتم تحديد المكتب/المرفق الحالي.');
     isPrinting = true;
     try {
       const w = window.open('', 'admin_offices_performance_print', 'width=1000,height=900');
@@ -237,7 +237,7 @@
       setTimeout(() => { try { w.focus(); w.print(); } finally { setTimeout(done, 1200); } }, 500);
     } catch (e) {
       isPrinting = false;
-      alert('تعذر طباعة جدول تقييم الأداء. راجع Console.');
+      void window.NajranDialogs.alert('تعذر طباعة جدول تقييم الأداء. راجع Console.');
       console.error('[Admin Offices Performance Print] failed', e);
     }
   }

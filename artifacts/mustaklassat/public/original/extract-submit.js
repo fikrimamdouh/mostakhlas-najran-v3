@@ -392,7 +392,7 @@
       if (type === 'labor') {
         await showLaborSubmitDialog({ kind: 'error', title: 'انتهت الجلسة', message: 'يرجى تسجيل الدخول مجددًا قبل رفع مستخلص العمالة.' });
       } else {
-        alert('انتهت جلستك — يرجى تسجيل الدخول مجدداً');
+        void window.NajranDialogs.alert('انتهت جلستك — يرجى تسجيل الدخول مجدداً');
       }
       window.location.href = '/sign-in';
       return null;
@@ -450,7 +450,7 @@
         if (type === 'labor') {
           await showLaborSubmitDialog({ kind: 'error', title: 'الرفع جارٍ بالفعل', message: 'انتظر نتيجة المحاولة الحالية، ولا تضغط زر الرفع مرة أخرى.' });
         } else {
-          alert('جاري رفع نفس المستخلص بالفعل. لا تضغط الرفع مرة أخرى.');
+          void window.NajranDialogs.alert('جاري رفع نفس المستخلص بالفعل. لا تضغط الرفع مرة أخرى.');
         }
         return null;
       }
@@ -517,7 +517,7 @@
           if (type === 'labor') {
             await showLaborSubmitDialog({ kind: 'error', title: 'تم إيقاف تعديل مستخلص العمالة', message: revisionMessage });
           } else {
-            alert(revisionMessage);
+            void window.NajranDialogs.alert(revisionMessage);
           }
           try { sessionStorage.removeItem(submitLockKey); } catch (_) {}
           return null;
@@ -526,7 +526,7 @@
         if (type === 'labor') {
           await showLaborSubmitDialog({ kind: 'error', title: 'تم إيقاف رفع مستخلص العمالة', message: 'تعذر التحقق من بيانات المستخلص القديم.' });
         } else {
-          alert('تعذر التحقق من بيانات المستخلص القديم. تم إيقاف الرفع للحماية.');
+          void window.NajranDialogs.alert('تعذر التحقق من بيانات المستخلص القديم. تم إيقاف الرفع للحماية.');
         }
         try { sessionStorage.removeItem(submitLockKey); } catch (_) {}
         return null;
@@ -925,7 +925,7 @@
     createApproveBtn({
       label: 'رفع مستخلص المستهلكات للاعتماد',
       onClick: async () => {
-        if (!confirm('هل تريد رفع مستخلص المستهلكات للاعتماد؟')) return;
+        if (!await window.NajranDialogs.confirm('هل تريد رفع مستخلص المستهلكات للاعتماد؟')) return;
         setLoading('جاري الرفع...');
         try {
           await submitExtract('consumables');
@@ -945,7 +945,7 @@
             resetBtn('رفع مستخلص المستهلكات للاعتماد');
             showDuplicateResubmitModal(() => { document.getElementById('_najran_approve_btn_inner') && document.getElementById('_najran_approve_btn_inner').click(); });
           } else {
-            alert('حدث خطأ: ' + e.message);
+            void window.NajranDialogs.alert('حدث خطأ: ' + e.message);
             resetBtn('رفع مستخلص المستهلكات للاعتماد');
           }
         }
@@ -956,8 +956,8 @@
   window.initHealthAttendanceApproveBtn = function () {
     createApproveBtn({
       label: 'اعتماد عمالة المراكز — التالي: المستهلكات',
-      onClick: () => {
-        if (!confirm('هل تريد اعتماد بيانات عمالة المراكز والانتقال لمستهلكاتها؟')) return;
+      onClick: async () => {
+        if (!await window.NajranDialogs.confirm('هل تريد اعتماد بيانات عمالة المراكز والانتقال لمستهلكاتها؟')) return;
         localStorage.setItem('najran_health_attendance_done', '1');
         window.location.href = '/original/health_centers_consumables.html';
       },
@@ -968,7 +968,7 @@
     createApproveBtn({
       label: 'رفع مستخلص المراكز الصحية للاعتماد',
       onClick: async () => {
-        if (!confirm('هل تريد رفع مستخلص المراكز الصحية كاملاً للاعتماد؟\n\nسيشمل المستخلص:\n✓ عمالة المراكز\n✓ مستهلكات المراكز')) return;
+        if (!await window.NajranDialogs.confirm('هل تريد رفع مستخلص المراكز الصحية كاملاً للاعتماد؟\n\nسيشمل المستخلص:\n✓ عمالة المراكز\n✓ مستهلكات المراكز')) return;
         setLoading('جاري الرفع...');
         try {
           await submitExtract('health_centers');
@@ -979,7 +979,7 @@
             resetBtn('رفع مستخلص المراكز الصحية للاعتماد');
             showDuplicateResubmitModal(() => { document.getElementById('_najran_approve_btn_inner') && document.getElementById('_najran_approve_btn_inner').click(); });
           } else {
-            alert('حدث خطأ: ' + e.message);
+            void window.NajranDialogs.alert('حدث خطأ: ' + e.message);
             resetBtn('رفع مستخلص المراكز الصحية للاعتماد');
           }
         }
@@ -991,7 +991,7 @@
     createApproveBtn({
       label: 'رفع مستخلص قطع الغيار للاعتماد',
       onClick: async () => {
-        if (!confirm('هل تريد رفع مستخلص قطع الغيار للاعتماد؟')) return;
+        if (!await window.NajranDialogs.confirm('هل تريد رفع مستخلص قطع الغيار للاعتماد؟')) return;
         setLoading('جاري الرفع...');
         try {
           const total = parseFloat(localStorage.getItem('sparePartsTotalAmount') || '0') || 0;
@@ -1002,7 +1002,7 @@
             resetBtn('رفع مستخلص قطع الغيار للاعتماد');
             showDuplicateResubmitModal(() => { document.getElementById('_najran_approve_btn_inner') && document.getElementById('_najran_approve_btn_inner').click(); });
           } else {
-            alert('حدث خطأ: ' + e.message);
+            void window.NajranDialogs.alert('حدث خطأ: ' + e.message);
             resetBtn('رفع مستخلص قطع الغيار للاعتماد');
           }
         }
@@ -1051,7 +1051,7 @@
     createApproveBtn({
       label: 'رفع مستخلص مستهلكات المكاتب للاعتماد',
       onClick: async () => {
-        if (!confirm('هل تريد رفع مستخلص مستهلكات المكاتب الإدارية للاعتماد؟\n\nسيشمل المستخلص المستهلكات فقط، ولن يرتبط باعتماد العمالة.')) return;
+        if (!await window.NajranDialogs.confirm('هل تريد رفع مستخلص مستهلكات المكاتب الإدارية للاعتماد؟\n\nسيشمل المستخلص المستهلكات فقط، ولن يرتبط باعتماد العمالة.')) return;
         setLoading('جاري رفع مستخلص مستهلكات المكاتب...');
         try {
           const consumablesTotal = parseFloat(localStorage.getItem('finalConsumablesCost') || '0') || 0;
@@ -1067,7 +1067,7 @@
             resetBtn('رفع مستخلص مستهلكات المكاتب للاعتماد');
             showDuplicateResubmitModal(() => { document.getElementById('_najran_approve_btn_inner') && document.getElementById('_najran_approve_btn_inner').click(); });
           } else {
-            alert('حدث خطأ: ' + e.message);
+            void window.NajranDialogs.alert('حدث خطأ: ' + e.message);
             resetBtn('رفع مستخلص مستهلكات المكاتب للاعتماد');
           }
         }

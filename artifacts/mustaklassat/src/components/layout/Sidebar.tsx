@@ -652,7 +652,7 @@ const siteType = getSiteType(currentHospital || dbUser?.hospital);
   } catch (error) {
     console.error("فشل رفع البيانات قبل تسجيل الخروج:", error);
 
-    const proceed = window.confirm(
+    const proceed = await window.NajranDialogs.confirm(
       "تعذر تأكيد الرفع السحابي الآن، لكن البيانات محفوظة محليًا داخل المتصفح.\n\nهل تريد تسجيل الخروج على أي حال؟"
     );
 

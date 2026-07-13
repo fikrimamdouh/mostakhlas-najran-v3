@@ -69,7 +69,7 @@
     } catch (_) {}
     var s = document.createElement('script');
     s.id = 'admin-offices-print-all-complete-fallback-v3';
-    s.src = '/original/admin_offices_print_all_complete_patch.js?v=20260630_print_fallback_v3';
+    s.src = '/original/admin_offices_print_all_complete_patch.js?v=20260713_all_native_dialogs_v1';
     s.defer = false;
     s.onload = function () { console.info('[Admin Offices Clean Button Routes] print patch fallback loaded'); };
     s.onerror = function () { console.warn('[Admin Offices Clean Button Routes] failed to load print patch fallback'); };
@@ -94,7 +94,7 @@
       }
       if (waited >= 2600) {
         clearInterval(timer);
-        alert('دالة الطباعة لم تكتمل بعد. أعد تحميل الصفحة Ctrl+F5 ثم جرّب مرة واحدة.');
+        void window.NajranDialogs.alert('دالة الطباعة لم تكتمل بعد. أعد تحميل الصفحة Ctrl+F5 ثم جرّب مرة واحدة.');
       }
     }, 100);
   }
@@ -157,7 +157,7 @@
 
     var dlg = document.getElementById('management-dialog');
     var overlay = document.getElementById('dialog-overlay');
-    if (!dlg) return alert('تعذر فتح نافذة الطباعة: عنصر management-dialog غير موجود.');
+    if (!dlg) return void window.NajranDialogs.alert('تعذر فتح نافذة الطباعة: عنصر management-dialog غير موجود.');
     if (overlay) overlay.style.display = 'block';
     dlg.className = 'dialog admin-print-clean-dialog';
     dlg.innerHTML = content;
@@ -171,7 +171,7 @@
     if (typeof window.openAdminOfficesBulkAttendanceDialog === 'function') {
       return window.openAdminOfficesBulkAttendanceDialog();
     }
-    alert('دالة التعديل الجماعي غير محملة بعد. أعد فتح الصفحة ثم جرّب مرة أخرى.');
+    void window.NajranDialogs.alert('دالة التعديل الجماعي غير محملة بعد. أعد فتح الصفحة ثم جرّب مرة أخرى.');
   }
 
   function openExcelCleanDialog() {
@@ -181,7 +181,7 @@
     if (typeof window.openImportDialog === 'function') {
       return window.openImportDialog();
     }
-    alert('دالة Excel غير محملة بعد.');
+    void window.NajranDialogs.alert('دالة Excel غير محملة بعد.');
   }
 
   function patchButton(btn, fn, flag) {

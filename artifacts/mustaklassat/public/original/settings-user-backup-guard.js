@@ -75,24 +75,24 @@
     window.confirmRestore = function () {
       var fileInput = document.getElementById('restore-file-input');
       if (!fileInput || !fileInput.files || !fileInput.files.length) {
-        alert('يرجى اختيار ملف نسخة احتياطية أولاً.');
+        void window.NajranDialogs.alert('يرجى اختيار ملف نسخة احتياطية أولاً.');
         return;
       }
       var file = fileInput.files[0];
       var reader = new FileReader();
-      reader.onload = function (event) {
+      reader.onload = async function (event) {
         try {
           var wrapper = JSON.parse(event.target.result);
           if (!wrapper || !wrapper.data || !wrapper.timestamp) throw new Error('صيغة ملف النسخة الاحتياطية غير صحيحة أو قديمة.');
           if (wrapper.owner && !sameOwner(wrapper.owner)) {
-            alert('تم إيقاف الاستعادة: هذه النسخة تخص مستخدمًا آخر.');
+            void window.NajranDialogs.alert('تم إيقاف الاستعادة: هذه النسخة تخص مستخدمًا آخر.');
             return;
           }
           if (!wrapper.owner) {
-            var okOld = confirm('هذا ملف نسخة قديم لا يحتوي على هوية المستخدم. سيتم استعادته على مسؤوليتك لنفس المتصفح فقط. هل تريد المتابعة؟');
+            var okOld = await window.NajranDialogs.confirm('هذا ملف نسخة قديم لا يحتوي على هوية المستخدم. سيتم استعادته على مسؤوليتك لنفس المتصفح فقط. هل تريد المتابعة؟');
             if (!okOld) return;
           }
-          var ok = confirm('سيتم استعادة نسخة محلية لهذا المستخدم فقط، مع الحفاظ على جلسة الدخول الحالية. هل تريد المتابعة؟');
+          var ok = await window.NajranDialogs.confirm('سيتم استعادة نسخة محلية لهذا المستخدم فقط، مع الحفاظ على جلسة الدخول الحالية. هل تريد المتابعة؟');
           if (!ok) return;
 
           var keep = keepBeforeRestore();
@@ -109,10 +109,10 @@
           restoreKeep(keep);
 
           if (typeof window.addLogEntry === 'function') window.addLogEntry('استعادة نسخة محلية', file.name, 'نجاح');
-          alert('تمت استعادة بيانات هذا المستخدم محليًا. سيتم إعادة تحميل الصفحة الآن.');
+          void window.NajranDialogs.alert('تمت استعادة بيانات هذا المستخدم محليًا. سيتم إعادة تحميل الصفحة الآن.');
           setTimeout(function () { location.reload(); }, 1000);
         } catch (e) {
-          alert('فشل استعادة الملف: ' + (e && e.message ? e.message : e));
+          void window.NajranDialogs.alert('فشل استعادة الملف: ' + (e && e.message ? e.message : e));
           if (typeof window.addLogEntry === 'function') window.addLogEntry('استعادة نسخة محلية', file.name, 'فشل');
         }
       };

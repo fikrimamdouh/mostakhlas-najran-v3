@@ -323,7 +323,7 @@ function grandLaborTotal() {
   function table(headers, rows) { return `<table class="rl-table"><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`; }
   function printHtml(title, bodyHtml) {
     const w = window.open('', '_blank', 'width=1200,height=900');
-    if (!w) return alert('المتصفح منع فتح نافذة الطباعة.');
+    if (!w) return void window.NajranDialogs.alert('المتصفح منع فتح نافذة الطباعة.');
     w.document.open();
     w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${esc(title)}</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">${css()}</head><body>${bodyHtml}<script>setTimeout(function(){window.focus();window.print();},700)<\/script></body></html>`);
     w.document.close();

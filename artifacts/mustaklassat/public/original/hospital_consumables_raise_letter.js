@@ -35,7 +35,7 @@ const DB_VERSION = 'consumables_v27';  const DOCS = [
   const LABELS = DOCS.reduce((m, x) => (m[x[0]] = x[1], m), {});
 
   function readJson(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (_) { return fallback; } }
-  function writeJson(key, value) { try { localStorage.setItem(key, JSON.stringify(value || {})); } catch (_) { alert('تعذر حفظ إعدادات خطابات المستهلكات. صغّر صورة الترويسة إذا كانت كبيرة.'); } }
+  function writeJson(key, value) { try { localStorage.setItem(key, JSON.stringify(value || {})); } catch (_) { void window.NajranDialogs.alert('تعذر حفظ إعدادات خطابات المستهلكات. صغّر صورة الترويسة إذا كانت كبيرة.'); } }
   function esc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function clean(v) { return String(v ?? '').replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim(); }
   function yes(v) { return v === true || v === 'yes' || v === 'true' || v === '1'; }
@@ -439,7 +439,7 @@ function buildDoc(key, s) {
   const scope = 'consumables:' + key;
 
   const win = window.open('', '', 'width=1000,height=900');
-  if (!win) return alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.');
+  if (!win) return void window.NajranDialogs.alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.');
 
   win.document.open();
   win.document.write(`<!doctype html>
@@ -466,7 +466,7 @@ function openFullConsumablesExtract() {
   const scope = 'consumables:fullExtract';
 
   const win = window.open('', '', 'width=1100,height=900');
-  if (!win) return alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.');
+  if (!win) return void window.NajranDialogs.alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.');
 
   win.document.open();
   win.document.write(`<!doctype html>
@@ -769,7 +769,7 @@ window.HospitalConsumablesRaiseLetter = {
     if (rows.length) {
       s.letters.water.rows = rows;
     } else {
-      alert('لم أجد صفوف مياه في جدول توريد المياه فقط. استخدم الإضافة اليدوية.');
+      void window.NajranDialogs.alert('لم أجد صفوف مياه في جدول توريد المياه فقط. استخدم الإضافة اليدوية.');
     }
 
     setSettings(s);

@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script src="/original/user-storage-proxy.js?v=20260705_cache_bust_v1"></script>
-  <script src="/original/auth-check.js"></script>
+<script src="/original/system-dialogs.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1"></script>
+  <script src="/original/auth-check.js?v=20260713_all_native_dialogs_v1"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>متابعة المستخلصات — تجمع نجران الصحي</title>
@@ -895,7 +896,7 @@ async function updateStatus(id, status) {
 async function startRevision(id, type) {
   const token = await getApprovalFreshToken();
   if (!token) {
-    alert('الجلسة منتهية. سجل دخول مرة أخرى.');
+    void window.NajranDialogs.alert('الجلسة منتهية. سجل دخول مرة أخرى.');
     return;
   }
 
@@ -908,7 +909,7 @@ async function startRevision(id, type) {
     });
 
     if (!res.ok) {
-      alert('تعذر تحميل بيانات المستخلص للتعديل');
+      void window.NajranDialogs.alert('تعذر تحميل بيانات المستخلص للتعديل');
       return;
     }
 
@@ -944,7 +945,7 @@ async function startRevision(id, type) {
     const snapshot = normalizeSnapshot(full.extractData);
 
     if (!snapshot || Object.keys(snapshot).length === 0) {
-      alert('لا توجد بيانات محفوظة داخل هذا المستخلص للتعديل');
+      void window.NajranDialogs.alert('لا توجد بيانات محفوظة داخل هذا المستخلص للتعديل');
       return;
     }
 
@@ -1038,7 +1039,7 @@ async function startRevision(id, type) {
 
   } catch (err) {
     console.error('[ApprovalRevision] failed', err);
-    alert('حدث خطأ أثناء تجهيز المستخلص للتعديل');
+    void window.NajranDialogs.alert('حدث خطأ أثناء تجهيز المستخلص للتعديل');
   }
 }
 

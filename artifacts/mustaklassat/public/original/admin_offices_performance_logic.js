@@ -213,13 +213,13 @@
   }
 
   function openAdminOfficePerformanceItemsDialog(centerKey) {
-    alert('بنود المكاتب منفصلة عن المراكز الصحية. التعديل اليدوي للبنود يؤجل بعد تثبيت الفصل النهائي.');
+    void window.NajranDialogs.alert('بنود المكاتب منفصلة عن المراكز الصحية. التعديل اليدوي للبنود يؤجل بعد تثبيت الفصل النهائي.');
   }
 
   function printAdminOfficePerformanceCertificate(centerKey) { window.print(); }
 
   function exportAdminOfficePerformanceToExcel(centerKey) {
-    if (typeof XLSX === 'undefined') { alert('مكتبة Excel غير محملة.'); return; }
+    if (typeof XLSX === 'undefined') { void window.NajranDialogs.alert('مكتبة Excel غير محملة.'); return; }
     const items = getAdminOfficePerformanceItems(centerKey);
     const rows = isWorkshop(centerKey) ? [['القسم','البند','الدرجة القصوى','التقدير']] : [['م','أنشطة القسم','الدرجة القصوى','التقدير']];
     let max = 0, score = 0;

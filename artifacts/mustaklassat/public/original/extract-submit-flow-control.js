@@ -212,12 +212,12 @@
         try { window.najranEnsureConsumablesSummarySnapshot(); } catch (_) {}
       }
       if (typeof window.saveExtractSnapshot !== 'function') {
-        alert('تعذر الحفظ المحلي الآن: أداة الحفظ المحلي لم تكتمل بعد. أعد تحميل الصفحة وحاول مرة أخرى.');
+        void window.NajranDialogs.alert('تعذر الحفظ المحلي الآن: أداة الحفظ المحلي لم تكتمل بعد. أعد تحميل الصفحة وحاول مرة أخرى.');
         return false;
       }
       var snap = window.saveExtractSnapshot('submit-confirm-local-save');
       if (!snap || !snap.extractData) {
-        alert('تعذر حفظ نسخة محلية من هذا المستخلص. لم يتم رفع أي بيانات.');
+        void window.NajranDialogs.alert('تعذر حفظ نسخة محلية من هذا المستخلص. لم يتم رفع أي بيانات.');
         return false;
       }
       try {
@@ -225,11 +225,11 @@
         localStorage.setItem('najran_last_submit_confirm_local_save_at', new Date().toISOString());
         localStorage.setItem('najran_last_submit_confirm_local_save_type', String(type || ''));
       } catch (_) {}
-      alert('تم حفظ نسخة محلية من هذا المستخلص. لم يتم رفع أي بيانات.');
+      void window.NajranDialogs.alert('تم حفظ نسخة محلية من هذا المستخلص. لم يتم رفع أي بيانات.');
       return true;
     } catch (e) {
       console.warn('[ExtractSubmitFlowControl] local save from confirm failed', e);
-      alert('تعذر الحفظ المحلي من نافذة الرفع. لم يتم رفع أي بيانات.');
+      void window.NajranDialogs.alert('تعذر الحفظ المحلي من نافذة الرفع. لم يتم رفع أي بيانات.');
       return false;
     }
   }
@@ -473,11 +473,21 @@
         (details ? '<div style="opacity:.95;margin-top:2px;">' + details + '</div>' : '') +
         '<div style="font-size:11px;opacity:.9;margin-top:4px;">' + esc(hint) + '</div>';
       badge.onclick = function () {
-        alert(title +
-          (id ? '\nرقم المستخلص: ' + id : '') +
-          (ctx.paymentNumber ? '\nرقم الدفعة: ' + ctx.paymentNumber : '') +
-          (ctx.periodMonth ? '\nالفترة: ' + ctx.periodMonth : '') +
-          '\n\n' + hint);
+        void window.NajranDialogs.alert({
+          kind: 'success',
+          eyebrow: 'حالة رفع المستخلص',
+          title: title,
+          message: ctx.mode === 'updated_locked'
+            ? 'تم حفظ التعديلات على نفس المستخلص، ولم يتم إنشاء سجل جديد.'
+            : 'تم اعتماد عملية الرفع وحفظ المستخلص في النظام.',
+          details: [
+            { label: 'رقم المستخلص', value: id || 'غير محدد' },
+            { label: 'رقم الدفعة', value: ctx.paymentNumber || 'غير محدد' },
+            { label: 'الفترة', value: ctx.periodMonth || 'غير محددة' }
+          ],
+          note: hint,
+          confirmText: 'متابعة العمل'
+        });
       };
       if (!existing) {
         var style = document.createElement('style');

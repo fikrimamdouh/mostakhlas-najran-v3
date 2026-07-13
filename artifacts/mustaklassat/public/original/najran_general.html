@@ -1,26 +1,27 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script src="/original/system-dialogs.js?v=20260713_all_native_dialogs_v1"></script>
 <!-- njs-preload-v1 -->
     <!-- حراس يحقنها auth-check.js في كل صفحة — تُنزَّل مبكرًا بالتوازي بدل انتظار تنفيذه -->
     <link rel="preload" as="script" href="/original/hospital-context-guard.js?v=20260611d">
-    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260709_fresh_token_retry_v2">
-    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260709_monitor_v2_circuit_breaker">
+    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/approve-button-polish.js?v=20260709_auth_fresh_token_v3_archive_filter">
     <link rel="preload" as="script" href="/original/revision-local-draft-restore.js?v=20260713_system_dialogs_v1">
-    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260709_auth_fresh_token_v3_archive_filter">
+    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260713_all_native_dialogs_v1">
     <!-- تنزيل متوازٍ لكل سكريبتات الصفحة من أول لحظة.
          ترتيب التنفيذ لا يتغير إطلاقًا — هذا تلميح تنزيل فقط. -->
-    <link rel="preload" as="script" href="/original/auth-check.js">
-    <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260705_cache_bust_v1">
-    <link rel="preload" as="script" href="/original/cloud-sync.js?v=20260711_v6_draft_bundle">
+    <link rel="preload" as="script" href="/original/auth-check.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/cloud-sync.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/audit-tracker.js?v=20260711_static_v1">
-    <link rel="preload" as="script" href="/original/track.js?v=20260711_static_v1">
+    <link rel="preload" as="script" href="/original/track.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/najran_data_init.js?v=20260711_static_v1">
 
-    <script src="/original/auth-check.js"></script>
-    <script src="/original/user-storage-proxy.js?v=20260705_cache_bust_v1"></script>
-    <script src="/original/cloud-sync.js?v=20260711_v6_draft_bundle"></script>
+    <script src="/original/auth-check.js?v=20260713_all_native_dialogs_v1"></script>
+    <script src="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1"></script>
+    <script src="/original/cloud-sync.js?v=20260713_all_native_dialogs_v1"></script>
         <script src="/original/audit-tracker.js?v=20260711_static_v1"></script>
 
     <meta charset="UTF-8">
@@ -384,7 +385,7 @@
 
             <!-- ── Excel Init ── -->
             <div class="excel-box">
-                <button onclick="alert('✅ تم تحميل بيانات الحضور مسبقاً\nالبيانات محفوظة في المتصفح — لا حاجة لإعادة الاستيراد.')" class="excel-btn">
+                <button onclick="void window.NajranDialogs.alert('✅ تم تحميل بيانات الحضور مسبقاً\nالبيانات محفوظة في المتصفح — لا حاجة لإعادة الاستيراد.')" class="excel-btn">
                     <i class="fas fa-file-excel" style="color:#4ade80;font-size:18px;"></i>
                     تحميل بيانات Excel — 276 موظف مستشفى + 25 أسنان
                 </button>
@@ -402,7 +403,7 @@
         </div>
     </div>
 
-    <script src="/original/track.js?v=20260711_static_v1"></script>
+    <script src="/original/track.js?v=20260713_all_native_dialogs_v1"></script>
     <script src="/original/najran_data_init.js?v=20260711_static_v1"></script>
     <script>
     (function() {
@@ -413,16 +414,16 @@
         } catch(e) {}
     })();
 
-    function initNajranExcelData() {
+    async function initNajranExcelData() {
         var alreadyLoaded = !!localStorage.getItem('ng_attendanceData');
         if (alreadyLoaded) {
-            if (!confirm('⚠️ البيانات محملة مسبقاً!\n\nإعادة التهيئة ستمسح جميع التعديلات التي أجريتها على الحضور والانصراف وتعيد البيانات للقيم الأصلية من ملف Excel.\n\nهل تريد الاستمرار؟')) return;
+            if (!await window.NajranDialogs.confirm('⚠️ البيانات محملة مسبقاً!\n\nإعادة التهيئة ستمسح جميع التعديلات التي أجريتها على الحضور والانصراف وتعيد البيانات للقيم الأصلية من ملف Excel.\n\nهل تريد الاستمرار؟')) return;
         }
         try {
             var result = window.initAllNajranData();
-            alert('✅ تم تحميل البيانات بنجاح!\n\n• مستشفى نجران العام: ' + result.hospital + ' موظف\n• مركز طب الأسنان: ' + result.dental + ' موظف\n\nيمكنك الآن فتح صفحات الحضور والانصراف للمراجعة والطباعة.');
+            void window.NajranDialogs.alert('✅ تم تحميل البيانات بنجاح!\n\n• مستشفى نجران العام: ' + result.hospital + ' موظف\n• مركز طب الأسنان: ' + result.dental + ' موظف\n\nيمكنك الآن فتح صفحات الحضور والانصراف للمراجعة والطباعة.');
         } catch(e) {
-            alert('خطأ في تحميل البيانات: ' + e.message);
+            void window.NajranDialogs.alert('خطأ في تحميل البيانات: ' + e.message);
         }
     }
     </script>

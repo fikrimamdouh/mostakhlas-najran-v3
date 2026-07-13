@@ -1016,7 +1016,7 @@ function exportToPdf() {
     document.body.appendChild(link);
     
     // تنبيه المستخدم
-    alert('جاري تحضير ملف PDF للتحميل...');
+    void window.NajranDialogs.alert('جاري تحضير ملف PDF للتحميل...');
     
     // محاكاة النقر على الرابط
     setTimeout(() => {
@@ -1097,7 +1097,7 @@ function exportToExcel() {
     document.body.appendChild(link);
     
     // تنبيه المستخدم
-    alert('جاري تحضير ملف Excel للتحميل...');
+    void window.NajranDialogs.alert('جاري تحضير ملف Excel للتحميل...');
     
     // محاكاة النقر على الرابط
     setTimeout(() => {
@@ -1105,6 +1105,6 @@ function exportToExcel() {
         document.body.removeChild(link);
         
         // عرض رسالة للمستخدم
-        alert('تم تصدير البيانات بنجاح!');
+        void window.NajranDialogs.alert('تم تصدير البيانات بنجاح!');
     }, 1000);
 }

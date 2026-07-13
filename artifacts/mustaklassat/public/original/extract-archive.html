@@ -1,24 +1,25 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script src="/original/system-dialogs.js?v=20260713_all_native_dialogs_v1"></script>
 <!-- njs-preload-v1 -->
     <!-- حراس يحقنها auth-check.js في كل صفحة — تُنزَّل مبكرًا بالتوازي بدل انتظار تنفيذه -->
     <link rel="preload" as="script" href="/original/hospital-context-guard.js?v=20260611d">
-    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260709_fresh_token_retry_v2">
-    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260709_monitor_v2_circuit_breaker">
+    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/approve-button-polish.js?v=20260709_auth_fresh_token_v3_archive_filter">
     <link rel="preload" as="script" href="/original/revision-local-draft-restore.js?v=20260713_system_dialogs_v1">
-    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260709_auth_fresh_token_v3_archive_filter">
+    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260713_all_native_dialogs_v1">
     <!-- تنزيل متوازٍ لكل سكريبتات الصفحة من أول لحظة.
          ترتيب التنفيذ لا يتغير إطلاقًا — هذا تلميح تنزيل فقط. -->
-    <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260705_cache_bust_v1">
-    <link rel="preload" as="script" href="/original/auth-check.js">
+    <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/auth-check.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/extract-snapshot.js?v=20260713_scoped_resume_type_resolver_v2">
-    <link rel="preload" as="script" href="/original/track.js?v=20260711_static_v1">
-    <link rel="preload" as="script" href="/original/shared-nav.js?v=20260711_static_v1">
+    <link rel="preload" as="script" href="/original/track.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/shared-nav.js?v=20260713_all_native_dialogs_v1">
 
-<script src="/original/user-storage-proxy.js?v=20260705_cache_bust_v1"></script>
-  <script src="/original/auth-check.js"></script>
+<script src="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1"></script>
+  <script src="/original/auth-check.js?v=20260713_all_native_dialogs_v1"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>أرشيف المستخلصات المحفوظة</title>
@@ -471,8 +472,8 @@
 </div>
 
 <script src="/original/extract-snapshot.js?v=20260713_scoped_resume_type_resolver_v2"></script>
-<script src="/original/track.js?v=20260711_static_v1"></script>
-<script src="/original/shared-nav.js?v=20260711_static_v1"></script>
+<script src="/original/track.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/shared-nav.js?v=20260713_all_native_dialogs_v1"></script>
 <script>
   /* ════════════════════════════════════════════
      IndexedDB — Signed PDF Storage
@@ -563,7 +564,7 @@
   function onPdfChosen(input) {
     var file = input.files[0];
     if (!file) return;
-    if (file.type !== 'application/pdf') { alert('الرجاء اختيار ملف PDF فقط'); input.value = ''; return; }
+    if (file.type !== 'application/pdf') { void window.NajranDialogs.alert('الرجاء اختيار ملف PDF فقط'); input.value = ''; return; }
     _chosenFile = file;
     document.getElementById('chosen-name-display').textContent = '✅ ' + file.name + ' (' + fmtFileSize(file.size) + ')';
     document.getElementById('btn-confirm-upload').disabled = false;
@@ -601,9 +602,9 @@
         btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> حفظ في الأرشيف';
         if (currentTab === 'pdf') renderPdfs();
         updatePdfStats();
-        alert('✅ تم حفظ النسخة الموقّعة في الأرشيف بنجاح!');
+        void window.NajranDialogs.alert('✅ تم حفظ النسخة الموقّعة في الأرشيف بنجاح!');
       }).catch(function(err) {
-        alert('خطأ في الحفظ: ' + err.message);
+        void window.NajranDialogs.alert('خطأ في الحفظ: ' + err.message);
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> حفظ في الأرشيف';
       });
@@ -702,10 +703,10 @@
   function viewPdf(id) {
     idbGetAll().then(function(all) {
       var r = all.find(function(x) { return x.id === id; });
-      if (!r || !r.pdfData) { alert('الملف غير موجود'); return; }
+      if (!r || !r.pdfData) { void window.NajranDialogs.alert('الملف غير موجود'); return; }
       var win = window.open('', '_blank');
       win.document.write(
-        '<!DOCTYPE html><html><head><script src="/original/user-storage-proxy.js?v=20260705_cache_bust_v1"><\/script><meta charset="UTF-8"><title>' + (r.fileName||'PDF') + '</title>' +
+        '<!DOCTYPE html><html><head><script src="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1"><\/script><meta charset="UTF-8"><title>' + (r.fileName||'PDF') + '</title>' +
         '<style>body,html{margin:0;padding:0;height:100%;background:#1a1a2e;}' +
         'iframe{width:100%;height:100%;border:none;}</style></head>' +
         '<body><iframe src="' + r.pdfData + '"></iframe></body></html>'
@@ -717,7 +718,7 @@
   function downloadPdf(id) {
     idbGetAll().then(function(all) {
       var r = all.find(function(x) { return x.id === id; });
-      if (!r || !r.pdfData) { alert('الملف غير موجود'); return; }
+      if (!r || !r.pdfData) { void window.NajranDialogs.alert('الملف غير موجود'); return; }
       var a = document.createElement('a');
       a.href = r.pdfData;
       a.download = r.fileName || ('مستخلص_دفعة_' + r.paymentNumber + '.pdf');
@@ -725,13 +726,13 @@
     });
   }
 
-  function deletePdf(id) {
-    if (!confirm('هل تريد حذف هذا الملف من الأرشيف؟')) return;
+  async function deletePdf(id) {
+    if (!await window.NajranDialogs.confirm('هل تريد حذف هذا الملف من الأرشيف؟')) return;
     idbDelete(id).then(function() { renderPdfs(); });
   }
 
-  function clearAllPdfs() {
-    if (!confirm('هل تريد حذف جميع النسخ الموقّعة؟\nلا يمكن التراجع عن هذا الإجراء.')) return;
+  async function clearAllPdfs() {
+    if (!await window.NajranDialogs.confirm('هل تريد حذف جميع النسخ الموقّعة؟\nلا يمكن التراجع عن هذا الإجراء.')) return;
     idbClear().then(function() { renderPdfs(); });
   }
 
@@ -1078,15 +1079,15 @@ async function loadServerData() {
   }
 
   /* ── Delete single ── */
-  function deleteSnap(id) {
-    if (!confirm('هل تريد حذف هذا السجل من الأرشيف؟')) return;
+  async function deleteSnap(id) {
+    if (!await window.NajranDialogs.confirm('هل تريد حذف هذا السجل من الأرشيف؟')) return;
     window.deleteExtractSnapshot(id);
     renderArchive();
   }
 
   /* ── Clear all ── */
-  function clearAllArchive() {
-    if (!confirm('هل تريد حذف جميع سجلات الأرشيف؟\nلا يمكن التراجع عن هذا الإجراء.')) return;
+  async function clearAllArchive() {
+    if (!await window.NajranDialogs.confirm('هل تريد حذف جميع سجلات الأرشيف؟\nلا يمكن التراجع عن هذا الإجراء.')) return;
     localStorage.removeItem('extractArchive');
     renderArchive();
   }
@@ -1115,7 +1116,7 @@ async function loadServerData() {
 
     const pw = window.open('', '_blank', 'width=900,height=700');
     pw.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head>
-<script src="/original/user-storage-proxy.js?v=20260705_cache_bust_v1"><\/script>
+<script src="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1"><\/script>
       <meta charset="UTF-8">
       <title>بطاقة مستخلص — دفعة ${snap.paymentNumber}</title>
       <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">
@@ -1196,7 +1197,7 @@ async function loadServerData() {
     var session = {};
     try { session = JSON.parse(localStorage.getItem('najran_session') || '{}'); } catch {}
     var token = session.clerkToken || '';
-    if (!token) { alert('يجب تسجيل الدخول أولاً'); return; }
+    if (!token) { void window.NajranDialogs.alert('يجب تسجيل الدخول أولاً'); return; }
     try {
       var res = await fetch('/api/export/submitted-extracts', {
         headers: { 'Authorization': 'Bearer ' + token }
@@ -1210,7 +1211,7 @@ async function loadServerData() {
       document.body.appendChild(a); a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch { alert('تعذر التصدير — تحقق من الاتصال'); }
+    } catch { void window.NajranDialogs.alert('تعذر التصدير — تحقق من الاتصال'); }
   }
 
   /* ── Init ── */

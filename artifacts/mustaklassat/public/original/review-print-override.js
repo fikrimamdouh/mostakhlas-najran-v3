@@ -146,7 +146,7 @@
     var filename = safeFileName(info.title + ' - ' + (info.hospital || 'بدون مستشفى') + ' - دفعة ' + info.pay + ' - ' + dateStr);
     var meta = '<div class="rv-print-meta">' + info.title + (info.hospital ? ' — ' + info.hospital : '') + ' — دفعة ' + info.pay + ' — تاريخ الطباعة: ' + dateStr + (info.period ? ' — الفترة:' + info.period : '') + '</div>';
     var w = window.open('', '_blank', 'width=1800,height=1100');
-    if (!w) { alert('المتصفح منع فتح نافذة الطباعة. اسمح بالنافذة المنبثقة ثم حاول مرة أخرى.'); return; }
+    if (!w) { void window.NajranDialogs.alert('المتصفح منع فتح نافذة الطباعة. اسمح بالنافذة المنبثقة ثم حاول مرة أخرى.'); return; }
     w.document.open();
     w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>' + filename + '</title><style>' + baseStyleText().replace(/<\/style/gi, '') + '</style></head><body><div class="rv-print-root">' + docHtml + meta + '</div><script>window.onload=function(){document.title=' + JSON.stringify(filename) + ';setTimeout(function(){window.focus();window.print();},650)};<\/script></body></html>');
     w.document.close();

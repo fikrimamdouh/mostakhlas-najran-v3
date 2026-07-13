@@ -799,7 +799,7 @@ function renderAttendanceTable(centerKey) {
 function printTabContent(elementId) {
     const contentToPrint = document.getElementById(elementId);
     if (!contentToPrint) {
-        alert("خطأ: لم يتم العثور على المحتوى للطباعة.");
+        void window.NajranDialogs.alert("خطأ: لم يتم العثور على المحتوى للطباعة.");
         return;
     }
 
@@ -1150,7 +1150,7 @@ function toggleAllCheckboxes(source, containerId) {
 function exportSelectedToExcel() {
     const selectedKeys = Array.from(document.querySelectorAll('#export-checkboxes input:checked')).map(cb => cb.value).filter(v => v);
     if (selectedKeys.length === 0) {
-        alert("الرجاء اختيار مركز واحد على الأقل.");
+        void window.NajranDialogs.alert("الرجاء اختيار مركز واحد على الأقل.");
         return;
     }
     const wb = XLSX.utils.book_new();
@@ -1298,7 +1298,7 @@ function printSelected() {
     };
 
     if (selectedKeys.length === 0 || (!printOptions.attendance && !printOptions.performance && !printOptions.achievement)) {
-        alert("الرجاء اختيار مركز وتقرير واحد على الأقل للطباعة.");
+        void window.NajranDialogs.alert("الرجاء اختيار مركز وتقرير واحد على الأقل للطباعة.");
         return;
     }
     closeDialog('management-dialog');
@@ -1545,17 +1545,17 @@ function backupData() {
         showSuccessMessage("تم إنشاء نسخة احتياطية شاملة بنجاح!");
     } catch (error) {
         console.error("فشل في إنشاء النسخة الاحتياطية:", error);
-        alert("حدث خطأ أثناء محاولة إنشاء النسخة الاحتياطية.");
+        void window.NajranDialogs.alert("حدث خطأ أثناء محاولة إنشاء النسخة الاحتياطية.");
     }
 }
 
 /**
  * ✅ [النسخة النهائية V23 - مع مفاتيح موحدة للاستعادة]
  */
-function restoreData(event) {
+async function restoreData(event) {
     const file = event.target.files[0];
     if (!file) return;
-    if (!confirm("هل أنت متأكد؟ سيتم استبدال جميع البيانات الحالية ببيانات الملف.")) {
+    if (!await window.NajranDialogs.confirm("هل أنت متأكد؟ سيتم استبدال جميع البيانات الحالية ببيانات الملف.")) {
         event.target.value = '';
         return;
     }
@@ -1575,7 +1575,7 @@ function restoreData(event) {
                     if (d2.persistentExtractData) localStorage.setItem('persistentExtractData', JSON.stringify(d2.persistentExtractData));
                     if (d2.performanceData_v4) localStorage.setItem('performanceData_v4', JSON.stringify(d2.performanceData_v4));
                     if (d2.performanceDeductions) localStorage.setItem('performanceDeductions', JSON.stringify(d2.performanceDeductions));
-                    alert("تم استعادة البيانات بنجاح! سيتم إعادة تحميل الصفحة لتطبيق كل التغييرات.");
+                    void window.NajranDialogs.alert("تم استعادة البيانات بنجاح! سيتم إعادة تحميل الصفحة لتطبيق كل التغييرات.");
                     window.location.reload();
                     return;
                 }
@@ -1600,13 +1600,13 @@ function restoreData(event) {
                 if (restoredData.performanceData_v4) localStorage.setItem('performanceData_v4', JSON.stringify(restoredData.performanceData_v4));
                 if (restoredData.performanceDeductions) localStorage.setItem('performanceDeductions', JSON.stringify(restoredData.performanceDeductions));
 
-                alert("تم استعادة البيانات بنجاح! سيتم إعادة تحميل الصفحة لتطبيق كل التغييرات.");
+                void window.NajranDialogs.alert("تم استعادة البيانات بنجاح! سيتم إعادة تحميل الصفحة لتطبيق كل التغييرات.");
                 window.location.reload();
             } else {
                 throw new Error("ملف النسخ الاحتياطي غير صالح أو لا يحتوي على البيانات المطلوبة (centersAttendanceData_v2, centerNames_v3).");
             }
         } catch (error) {
-            alert(`فشل في استعادة البيانات: ${error.message}`);
+            void window.NajranDialogs.alert(`فشل في استعادة البيانات: ${error.message}`);
         } finally {
             event.target.value = '';
         }
@@ -1841,13 +1841,13 @@ function showSuccessMessage(message) {
     }, 3000);
 }
 
-function clearAllData() {
-    const password = prompt("لمسح جميع البيانات، يرجى إدخال كلمة المرور:");
+async function clearAllData() {
+    const password = await window.NajranDialogs.prompt("لمسح جميع البيانات، يرجى إدخال كلمة المرور:");
     if (password !== PASSWORD) {
-        if (password !== null) alert("كلمة المرور غير صحيحة.");
+        if (password !== null) void window.NajranDialogs.alert("كلمة المرور غير صحيحة.");
         return;
     }
-    if (confirm("تحذير: هل أنت متأكد من رغبتك في مسح جميع بيانات الموظفين، المراكز، والتواقيع؟ لا يمكن التراجع عن هذا الإجراء.")) {
+    if (await window.NajranDialogs.confirm("تحذير: هل أنت متأكد من رغبتك في مسح جميع بيانات الموظفين، المراكز، والتواقيع؟ لا يمكن التراجع عن هذا الإجراء.")) {
         localStorage.removeItem('centersAttendanceData_v2');
         localStorage.removeItem('centerNames_v3');
         localStorage.removeItem('performanceData_v4');
@@ -1855,7 +1855,7 @@ function clearAllData() {
         localStorage.removeItem('healthCenters_Signatures_attendance_v1');
         localStorage.removeItem('healthCenters_Signatures_performance_v1');
         localStorage.removeItem('healthCenters_Signatures_achievement_v1');
-        alert("تم مسح جميع البيانات بنجاح. سيتم إعادة تحميل الصفحة.");
+        void window.NajranDialogs.alert("تم مسح جميع البيانات بنجاح. سيتم إعادة تحميل الصفحة.");
         window.location.reload();
     }
 }
@@ -2059,7 +2059,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function preparePrint() {
     const originalTabContent = document.getElementById('attendance-tab');
     if (!originalTabContent) {
-        alert("خطأ: لم يتم العثور على محتوى التبويب للطباعة.");
+        void window.NajranDialogs.alert("خطأ: لم يتم العثور على محتوى التبويب للطباعة.");
         return;
     }
 
@@ -2394,7 +2394,7 @@ const originalIndex = allData[centerKey].findIndex(originalEmp => originalEmp.iq
 
 function showAddEmployeeForm() {
     if (!activeCenterKeyForManagement) {
-        alert("الرجاء اختيار مركز أولاً!");
+        void window.NajranDialogs.alert("الرجاء اختيار مركز أولاً!");
         return;
     }
     const centerName = getCenterNames()[activeCenterKeyForManagement];
@@ -2473,14 +2473,14 @@ function addEmployeeFromForm() {
     };
 
     if (!newEmployee.name || !newEmployee.jobTitle || !newEmployee.iqamaId) {
-        alert("الرجاء ملء جميع الحقول الأساسية (الاسم، الوظيفة، رقم الإقامة).");
+        void window.NajranDialogs.alert("الرجاء ملء جميع الحقول الأساسية (الاسم، الوظيفة، رقم الإقامة).");
         return;
     }
 
     const allData = getAttendanceData();
     for (const key in allData) {
         if (allData[key].some(emp => emp.iqamaId === newEmployee.iqamaId)) {
-            alert(`خطأ: موظف برقم الإقامة هذا موجود بالفعل.`);
+            void window.NajranDialogs.alert(`خطأ: موظف برقم الإقامة هذا موجود بالفعل.`);
             return;
         }
     }
@@ -2506,7 +2506,7 @@ function saveEmployeeChanges(centerKey, empIndex) {
     employee.nationality = document.getElementById('emp-nationality').value;
 
     if (!employee.name || !employee.jobTitle || !employee.iqamaId) {
-        alert("الرجاء ملء جميع الحقول الأساسية.");
+        void window.NajranDialogs.alert("الرجاء ملء جميع الحقول الأساسية.");
         return;
     }
 
@@ -2516,9 +2516,9 @@ function saveEmployeeChanges(centerKey, empIndex) {
     displayEmployeesForCenter(centerKey);
 }
 
-function confirmDeleteEmployee(centerKey, empIndex) {
+async function confirmDeleteEmployee(centerKey, empIndex) {
     const employeeName = getAttendanceData()[centerKey][empIndex].name;
-    if (confirm(`هل أنت متأكد من حذف الموظف "${employeeName}"؟ لا يمكن التراجع عن هذا الإجراء.`)) {
+    if (await window.NajranDialogs.confirm(`هل أنت متأكد من حذف الموظف "${employeeName}"؟ لا يمكن التراجع عن هذا الإجراء.`)) {
         let data = getAttendanceData();
         data[centerKey].splice(empIndex, 1);
         saveAttendanceData(data);
@@ -2583,13 +2583,13 @@ function openBulkAttendanceForm(centerKey, empIndex = null) {
  * @param {string} centerKey
  * @param {number|null} empIndex
  */
-function applyBulkAttendance(centerKey, empIndex) {
+async function applyBulkAttendance(centerKey, empIndex) {
     const newStatus = document.getElementById('bulk-status-select').value;
     const startDay = parseInt(document.getElementById('bulk-day-start').value);
     const endDay = parseInt(document.getElementById('bulk-day-end').value);
 
     if (isNaN(startDay) || isNaN(endDay) || startDay > endDay || startDay < 1) {
-        alert("الرجاء إدخال نطاق أيام صحيح.");
+        void window.NajranDialogs.alert("الرجاء إدخال نطاق أيام صحيح.");
         return;
     }
 
@@ -2597,7 +2597,7 @@ function applyBulkAttendance(centerKey, empIndex) {
     const employee = empIndex !== null ? data[centerKey][empIndex] : null;
     const targetDescription = employee ? `الموظف "${employee.name}"` : `جميع موظفي مركز "${getCenterNames()[centerKey]}"`;
     
-    if (confirm(`هل أنت متأكد من تغيير حالة ${targetDescription} إلى "${STATUS_CODES[newStatus].name}" من يوم ${startDay} إلى يوم ${endDay}؟`)) {
+    if (await window.NajranDialogs.confirm(`هل أنت متأكد من تغيير حالة ${targetDescription} إلى "${STATUS_CODES[newStatus].name}" من يوم ${startDay} إلى يوم ${endDay}؟`)) {
         
         const startIndex = startDay - 1;
         const endIndex = endDay - 1;
@@ -2680,10 +2680,10 @@ function saveAllCenterNames() {
     renderCenterIcons();
 }
 
-function confirmDeleteCenter(centerKey) {
+async function confirmDeleteCenter(centerKey) {
     const names = getCenterNames();
     const centerName = names[centerKey];
-    if (confirm(`تحذير: هل أنت متأكد من حذف مركز "${centerName}"؟\n\nسيتم حذف المركز وجميع الموظفين المسجلين فيه بشكل نهائي. لا يمكن التراجع عن هذا الإجراء.`)) {
+    if (await window.NajranDialogs.confirm(`تحذير: هل أنت متأكد من حذف مركز "${centerName}"؟\n\nسيتم حذف المركز وجميع الموظفين المسجلين فيه بشكل نهائي. لا يمكن التراجع عن هذا الإجراء.`)) {
         delete names[centerKey];
         let data = getAttendanceData();
         delete data[centerKey];
@@ -2738,13 +2738,13 @@ function showAddNewCenterFormInPlace() {
 }
 
 // ✅ [تعديل بسيط]: تعديل دالة تأكيد الإضافة لتقبل متغير العودة
-function confirmAddNewCenter(andReturn = false) {
+async function confirmAddNewCenter(andReturn = false) {
     const newName = document.getElementById('new-center-name').value.trim();
     if (!newName) {
-        alert("الرجاء إدخال اسم للمركز الجديد.");
+        void window.NajranDialogs.alert("الرجاء إدخال اسم للمركز الجديد.");
         return;
     }
-    if (!confirm(`هل أنت متأكد من إضافة "${newName}" إلى القائمة؟`)) {
+    if (!await window.NajranDialogs.confirm(`هل أنت متأكد من إضافة "${newName}" إلى القائمة؟`)) {
         return;
     }
     const names = getCenterNames();
@@ -2965,7 +2965,7 @@ function printGrandCertificate() {
     const printableContainer = document.getElementById('printable-grand-certificate');
 
     if (!mainPageHeader || !printableContainer) {
-        alert("خطأ: لم يتم العثور على الهيدر الرئيسي أو حاوية الشهادة للطباعة.");
+        void window.NajranDialogs.alert("خطأ: لم يتم العثور على الهيدر الرئيسي أو حاوية الشهادة للطباعة.");
         return;
     }
 
@@ -2974,7 +2974,7 @@ function printGrandCertificate() {
     const signaturesToPrint = printableContainer.querySelector('.signatures-display-section')?.cloneNode(true);
 
     if (!tableToPrint || !headerToPrint) {
-        alert("خطأ: لم يتم العثور على كل مكونات الشهادة (العنوان والجدول).");
+        void window.NajranDialogs.alert("خطأ: لم يتم العثور على كل مكونات الشهادة (العنوان والجدول).");
         return;
     }
 

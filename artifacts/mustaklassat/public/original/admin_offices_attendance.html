@@ -1,51 +1,52 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script src="/original/system-dialogs.js?v=20260713_all_native_dialogs_v1"></script>
 <!-- njs-preload-v1 -->
     <!-- حراس يحقنها auth-check.js في كل صفحة — تُنزَّل مبكرًا بالتوازي بدل انتظار تنفيذه -->
     <link rel="preload" as="script" href="/original/hospital-context-guard.js?v=20260611d">
-    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260709_fresh_token_retry_v2">
-    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260709_monitor_v2_circuit_breaker">
+    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/approve-button-polish.js?v=20260709_auth_fresh_token_v3_archive_filter">
     <link rel="preload" as="script" href="/original/revision-local-draft-restore.js?v=20260713_system_dialogs_v1">
-    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260709_auth_fresh_token_v3_archive_filter">
+    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260713_all_native_dialogs_v1">
     <!-- تنزيل متوازٍ لكل سكريبتات الصفحة من أول لحظة.
          ترتيب التنفيذ لا يتغير إطلاقًا — هذا تلميح تنزيل فقط. -->
-    <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260705_cache_bust_v1">
-    <link rel="preload" as="script" href="/original/auth-check.js?v=20260712_internal_local_save_notices_v1">
-    <link rel="preload" as="script" href="/original/cloud-sync.js?v=20260711_v6_draft_bundle">
-    <link rel="preload" as="script" href="contract_data_connector.js?v=20260705_v1_hospital_name_display_fix">
-    <link rel="preload" as="script" href="/original/month-context.js?v=20260710_sig_never_delete_v1">
+    <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/auth-check.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/cloud-sync.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="contract_data_connector.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/month-context.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/extract-stepper.js?v=20260711_static_v1">
-    <link rel="preload" as="script" href="/original/backup.js?v=20260705_v1_unified_full_backup">
-    <link rel="preload" as="script" href="/original/admin_offices_attendance.js?v=20260705_v3_restore_compat">
-    <link rel="preload" as="script" href="/original/performance_logic.js?v=20260622_workshop_grouped_v3">
-    <link rel="preload" as="script" href="/original/achievement_logic.js?v=20260622_site_v2">
-    <link rel="preload" as="script" href="/original/admin_offices_attendance_patch.js?v=20260623_positions_all_v5">
-    <link rel="preload" as="script" href="/original/admin_offices_attendance_persistence_fix.js?v=20260703_v9_unified_backup">
-    <link rel="preload" as="script" href="/original/admin_offices_employee_delete_index_fix.js?v=20260630_transfer_v1">
-    <link rel="preload" as="script" href="/original/extract-submit.js?v=20260705_v5_local_24h_guard_fix">
-    <link rel="preload" as="script" href="/original/track.js?v=20260630_restore_support_v1">
-    <link rel="preload" as="script" href="/original/admin_offices_local_save_buttons.js?v=20260704_admin_local_save_v2_quota_safe">
+    <link rel="preload" as="script" href="/original/backup.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/admin_offices_attendance.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/performance_logic.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/achievement_logic.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/admin_offices_attendance_patch.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/admin_offices_attendance_persistence_fix.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/admin_offices_employee_delete_index_fix.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/extract-submit.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/track.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/admin_offices_local_save_buttons.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/signature-block.js?v=20260711_observer_scoped_v1">
-    <link rel="preload" as="script" href="/original/admin_offices_page_signatures.js?v=20260703_controls_separated_v9">
-    <link rel="preload" as="script" href="/original/admin_offices_signatures_unify_v1.js?v=20260703_unify_sigs_v4">
-    <link rel="preload" as="script" href="/original/admin_offices_grand_certificate_polish.js?v=20260703_dedup_v5">
-    <link rel="preload" as="script" href="/original/admin_offices_raise_letters.js?v=20260623_raise_letters_clean_v1">
+    <link rel="preload" as="script" href="/original/admin_offices_page_signatures.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/admin_offices_signatures_unify_v1.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/admin_offices_grand_certificate_polish.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/admin_offices_raise_letters.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/signature-style-control.js?v=20260707_v7_cloud_persistent_save">
     <link rel="preload" as="script" href="/original/admin_offices_raise_letters_autofill.js?v=20260622_raise_letters_autofill_v1">
-    <link rel="preload" as="script" href="/original/admin_offices_raise_letters_signature_labels.js?v=20260630_restore_support_v1">
-    <link rel="preload" as="script" href="/original/admin_offices_letter_scoped_settings.js?v=20260703_nationality_import_v2">
-    <link rel="preload" as="script" href="/original/admin_offices_raise_letters_ui_fix.js?v=20260701_raise_letters_ui_fix_v5">
-    <link rel="preload" as="script" href="/original/admin_offices_raise_letters_tab_mode.js?v=20260624_raise_letters_tab_v4_no_duplicate">
+    <link rel="preload" as="script" href="/original/admin_offices_raise_letters_signature_labels.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/admin_offices_letter_scoped_settings.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/admin_offices_raise_letters_ui_fix.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/admin_offices_raise_letters_tab_mode.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/admin_offices_print_all_letters_patch.js?v=20260624_print_letters_safe_v3">
-    <link rel="preload" as="script" href="/original/admin_offices_print_all_complete_patch.js?v=20260624_complete_print_safe_v3">
-    <link rel="preload" as="script" href="/original/admin_offices_excel_import_clean_v1.js?v=20260630_excel_clean_v2">
-    <link rel="preload" as="script" href="/original/admin_offices_full_excel_visibility_guard.js?v=20260630_excel_guard_v2">
+    <link rel="preload" as="script" href="/original/admin_offices_print_all_complete_patch.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/admin_offices_excel_import_clean_v1.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/admin_offices_full_excel_visibility_guard.js?v=20260713_all_native_dialogs_v1">
 
-<script src="/original/user-storage-proxy.js?v=20260705_cache_bust_v1"></script>
-    <script src="/original/auth-check.js?v=20260712_internal_local_save_notices_v1"></script>
-    <script src="/original/cloud-sync.js?v=20260711_v6_draft_bundle"></script>
+<script src="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1"></script>
+    <script src="/original/auth-check.js?v=20260713_all_native_dialogs_v1"></script>
+    <script src="/original/cloud-sync.js?v=20260713_all_native_dialogs_v1"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>مستخلص العمالة للمكاتب الإدارية والمرافق الصحية</title>
@@ -56,11 +57,11 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="attendance_contract_info.css">
     <link rel="stylesheet" href="health_centers_styles.css">
-    <script src="contract_data_connector.js?v=20260705_v1_hospital_name_display_fix"></script>
-    <script src="/original/month-context.js?v=20260710_sig_never_delete_v1"></script>
+    <script src="contract_data_connector.js?v=20260713_all_native_dialogs_v1"></script>
+    <script src="/original/month-context.js?v=20260713_all_native_dialogs_v1"></script>
     <script src="/original/extract-stepper.js?v=20260711_static_v1"></script>
     <link rel="stylesheet" href="/original/shared-styles.css?v=20260711_static_v1">
-<script src="/original/backup.js?v=20260705_v1_unified_full_backup"></script>
+<script src="/original/backup.js?v=20260713_all_native_dialogs_v1"></script>
 </head>
 <body>
     <div id="particles-js-bg"></div>
@@ -166,32 +167,32 @@
     </div>
     <div id="dialog-overlay" class="overlay" style="display: none;"></div><div id="management-dialog" class="dialog" style="display: none;"></div><div id="form-dialog" class="dialog" style="display: none;"></div><div id="signature-dialog" class="dialog wide-dialog" style="display: none;"></div>
     <footer><p>© 2025 فرع وزارة الصحة بمنطقة نجران - المكاتب الإدارية والمرافق الصحية</p></footer>
-<script src="/original/admin_offices_attendance.js?v=20260705_v3_restore_compat"></script>
-<script src="/original/performance_logic.js?v=20260622_workshop_grouped_v3"></script>
-<script src="/original/achievement_logic.js?v=20260622_site_v2"></script>
-<script src="/original/admin_offices_attendance_patch.js?v=20260623_positions_all_v5"></script>
-<script src="/original/admin_offices_attendance_persistence_fix.js?v=20260703_v9_unified_backup"></script>
-<script src="/original/admin_offices_employee_delete_index_fix.js?v=20260630_transfer_v1"></script>
+<script src="/original/admin_offices_attendance.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/performance_logic.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/achievement_logic.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/admin_offices_attendance_patch.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/admin_offices_attendance_persistence_fix.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/admin_offices_employee_delete_index_fix.js?v=20260713_all_native_dialogs_v1"></script>
 <script>(function(){'use strict';window.adminOfficesLoadWorkshopData=function(){console.info('[Admin Offices Workshop Seed] disabled — no hardcoded workshop data');};})();</script>
-<script src="/original/extract-submit.js?v=20260705_v5_local_24h_guard_fix"></script>
-<script src="/original/track.js?v=20260630_restore_support_v1"></script>
-<script src="/original/admin_offices_local_save_buttons.js?v=20260704_admin_local_save_v2_quota_safe"></script>
+<script src="/original/extract-submit.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/track.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/admin_offices_local_save_buttons.js?v=20260713_all_native_dialogs_v1"></script>
 <script src="/original/signature-block.js?v=20260711_observer_scoped_v1"></script>
 <script>if(window.SignatureBlock&&typeof window.SignatureBlock.init==='function'){window.SignatureBlock.init('admin_offices',{showStamp:true});}</script>
 <style id="hide-fullscreen-btn-admin-offices">.zoom-fullscreen-btn.zoom-fullscreen-btn.zoom-fullscreen-btn{display:none!important;}</style>
-<script src="/original/admin_offices_page_signatures.js?v=20260703_controls_separated_v9"></script>
-<script src="/original/admin_offices_signatures_unify_v1.js?v=20260703_unify_sigs_v4"></script>
-<script src="/original/admin_offices_grand_certificate_polish.js?v=20260703_dedup_v5"></script>
-<script src="/original/admin_offices_raise_letters.js?v=20260623_raise_letters_clean_v1"></script>
+<script src="/original/admin_offices_page_signatures.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/admin_offices_signatures_unify_v1.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/admin_offices_grand_certificate_polish.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/admin_offices_raise_letters.js?v=20260713_all_native_dialogs_v1"></script>
 <script src="/original/signature-style-control.js?v=20260707_v7_cloud_persistent_save"></script>
 <script src="/original/admin_offices_raise_letters_autofill.js?v=20260622_raise_letters_autofill_v1"></script>
-<script src="/original/admin_offices_raise_letters_signature_labels.js?v=20260630_restore_support_v1"></script>
-<script src="/original/admin_offices_letter_scoped_settings.js?v=20260703_nationality_import_v2"></script>
-<script src="/original/admin_offices_raise_letters_ui_fix.js?v=20260701_raise_letters_ui_fix_v5"></script>
-<script src="/original/admin_offices_raise_letters_tab_mode.js?v=20260624_raise_letters_tab_v4_no_duplicate"></script>
+<script src="/original/admin_offices_raise_letters_signature_labels.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/admin_offices_letter_scoped_settings.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/admin_offices_raise_letters_ui_fix.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/admin_offices_raise_letters_tab_mode.js?v=20260713_all_native_dialogs_v1"></script>
 <script src="/original/admin_offices_print_all_letters_patch.js?v=20260624_print_letters_safe_v3"></script>
-<script src="/original/admin_offices_print_all_complete_patch.js?v=20260624_complete_print_safe_v3"></script>
-<script src="/original/admin_offices_excel_import_clean_v1.js?v=20260630_excel_clean_v2"></script>
-<script src="/original/admin_offices_full_excel_visibility_guard.js?v=20260630_excel_guard_v2"></script>
+<script src="/original/admin_offices_print_all_complete_patch.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/admin_offices_excel_import_clean_v1.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/admin_offices_full_excel_visibility_guard.js?v=20260713_all_native_dialogs_v1"></script>
 </body>
 </html>

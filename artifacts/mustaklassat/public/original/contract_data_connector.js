@@ -158,7 +158,7 @@ function saveToLocalStorage(key, data) {
         localStorage.setItem(key, JSON.stringify(data));
     } catch (error) {
         console.error(`Error saving to localStorage: ${key}`, error);
-        alert('حدث خطأ أثناء حفظ البيانات!');
+        void window.NajranDialogs.alert('حدث خطأ أثناء حفظ البيانات!');
     }
 }
 

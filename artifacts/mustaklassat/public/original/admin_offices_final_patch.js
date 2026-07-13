@@ -181,7 +181,7 @@
     btn.innerHTML = '<i class="fas fa-calendar-check"></i> تعديل جماعي للحضور';
     btn.onclick = function () {
       const key = window.activeCenterKeyForManagement;
-      if (!key) return alert('اختر الموقع أولاً من القائمة.');
+      if (!key) return void window.NajranDialogs.alert('اختر الموقع أولاً من القائمة.');
       if (typeof window.openBulkAttendanceForm === 'function') return window.openBulkAttendanceForm(key, null);
       openBulkAttendanceFallback(key, null);
     };
@@ -201,19 +201,19 @@
   window.openBulkAttendanceForm = window.openBulkAttendanceForm || openBulkAttendanceFallback;
 
   const oldApplyBulk = window.applyBulkAttendance;
-  window.applyBulkAttendance = function applyBulkAttendanceFinal(centerKey, empIndex) {
+  window.applyBulkAttendance = async function applyBulkAttendanceFinal(centerKey, empIndex) {
     const newStatus = document.getElementById('bulk-status-select')?.value || 'ح';
     const startDay = parseInt(document.getElementById('bulk-day-start')?.value, 10);
     const endDay = parseInt(document.getElementById('bulk-day-end')?.value, 10);
-    if (isNaN(startDay) || isNaN(endDay) || startDay > endDay || startDay < 1) return alert('الرجاء إدخال نطاق أيام صحيح.');
+    if (isNaN(startDay) || isNaN(endDay) || startDay > endDay || startDay < 1) return void window.NajranDialogs.alert('الرجاء إدخال نطاق أيام صحيح.');
 
     const data = getData();
     if (!Array.isArray(data[centerKey])) data[centerKey] = [];
     const rows = empIndex !== null && empIndex !== undefined ? [data[centerKey][empIndex]].filter(Boolean) : data[centerKey];
-    if (!rows.length) return alert('لا توجد عمالة لتعديل حضورها.');
+    if (!rows.length) return void window.NajranDialogs.alert('لا توجد عمالة لتعديل حضورها.');
     const site = getNames()[centerKey] || centerKey;
     const desc = empIndex !== null && empIndex !== undefined ? `الموظف "${rows[0].name}"` : `جميع موظفي موقع "${site}"`;
-    if (!confirm(`هل تريد تغيير حالة ${desc} إلى "${STATUS[newStatus]?.name || newStatus}" من يوم ${startDay} إلى يوم ${endDay}؟`)) return;
+    if (!await window.NajranDialogs.confirm(`هل تريد تغيير حالة ${desc} إلى "${STATUS[newStatus]?.name || newStatus}" من يوم ${startDay} إلى يوم ${endDay}؟`)) return;
 
     rows.forEach(emp => {
       if (!Array.isArray(emp.days)) emp.days = [];
@@ -262,7 +262,7 @@
 
   function printPages(pages, title) {
     const win = window.open('', '', 'width=1280,height=900');
-    if (!win) return alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.');
+    if (!win) return void window.NajranDialogs.alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.');
     win.document.open();
     win.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${esc(title || 'طباعة')}</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">${printCss()}</head><body>${pages.join('')}</body></html>`);
     win.document.close();
@@ -271,7 +271,7 @@
 
   window.printAdminOfficeTableClean = function printAdminOfficeTableClean(centerKey) {
     if (!centerKey) centerKey = detectCurrentCenterKey();
-    if (!centerKey) return alert('لم يتم تحديد الموقع للطباعة.');
+    if (!centerKey) return void window.NajranDialogs.alert('لم يتم تحديد الموقع للطباعة.');
     printPages([buildAttendancePage(centerKey)], 'طباعة جدول الموقع');
   };
 
@@ -341,7 +341,7 @@
 
   function printPagesWithCss(html, css, title) {
     const win = window.open('', '', 'width=1000,height=900');
-    if (!win) return alert('المتصفح منع نافذة الطباعة.');
+    if (!win) return void window.NajranDialogs.alert('المتصفح منع نافذة الطباعة.');
     win.document.open();
     win.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${esc(title)}</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">${css}</head><body>${html}</body></html>`);
     win.document.close();

@@ -48,7 +48,7 @@
   function runImport(mode) {
     var api = window.AdminOfficesFullExcelImport;
     if (!api || typeof api.import !== 'function') {
-      alert('دالة الاستيراد الشامل غير محملة بعد. أعد فتح الصفحة ثم جرّب مرة أخرى.');
+      void window.NajranDialogs.alert('دالة الاستيراد الشامل غير محملة بعد. أعد فتح الصفحة ثم جرّب مرة أخرى.');
       return;
     }
     return api.import(mode);
@@ -58,7 +58,7 @@
     ensureCss();
     var overlay = document.getElementById('dialog-overlay');
     var dlg = document.getElementById('management-dialog');
-    if (!dlg) return alert('تعذر فتح نافذة Excel: عنصر management-dialog غير موجود.');
+    if (!dlg) return void window.NajranDialogs.alert('تعذر فتح نافذة Excel: عنصر management-dialog غير موجود.');
 
     if (overlay) overlay.style.display = 'block';
     dlg.className = 'dialog admin-excel-clean-dialog';
@@ -108,7 +108,7 @@
     if (document.getElementById('admin-offices-clean-button-routes-v1')) return;
     var s = document.createElement('script');
     s.id = 'admin-offices-clean-button-routes-v1';
-    s.src = '/original/admin_offices_clean_button_routes_v1.js?v=20260630_clean_routes_v3';
+    s.src = '/original/admin_offices_clean_button_routes_v1.js?v=20260713_all_native_dialogs_v1';
     s.onerror = function () { console.error('[Admin Offices Clean Button Routes] failed to load'); };
     document.head.appendChild(s);
   }

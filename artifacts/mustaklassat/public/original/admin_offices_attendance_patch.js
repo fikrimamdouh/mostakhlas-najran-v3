@@ -106,7 +106,7 @@ function isAdminOfficesPositionsSetupDone() {
 function showAdminOfficesPositionsAlreadyLoadedMessage() {
     const status = getAdminOfficesPositionsSetupStatus();
     const loadedAt = status.loadedAt ? new Date(status.loadedAt).toLocaleString('ar-SA') : 'غير محدد';
-    alert(
+    void window.NajranDialogs.alert(
         'تم تحميل المناصب في مرحلة تجهيز العقد.' +
         '\n\nتاريخ التحميل: ' + loadedAt +
         (status.loadedBy ? '\nبواسطة: ' + status.loadedBy : '') +
@@ -542,9 +542,9 @@ span {
 
     function printCurrentAttendanceTable() {
         const centerKey = detectCurrentCenterKey();
-        if (!centerKey) return alert('لم يتم تحديد المكتب الحالي للطباعة. افتح المكتب مرة أخرى ثم اطبع.');
+        if (!centerKey) return void window.NajranDialogs.alert('لم يتم تحديد المكتب الحالي للطباعة. افتح المكتب مرة أخرى ثم اطبع.');
         const tableContainer = document.getElementById(`table-div-${centerKey}`);
-        if (!tableContainer) return alert('لم يتم العثور على جدول الحضور الخاص بالمكتب الحالي.');
+        if (!tableContainer) return void window.NajranDialogs.alert('لم يتم العثور على جدول الحضور الخاص بالمكتب الحالي.');
         const contentClone = tableContainer.cloneNode(true);
         cleanInteractiveFields(contentClone);
         contentClone.innerHTML = contentClone.innerHTML.replace(/بمركز صحي /g, 'بالمكتب/المرفق: ').replace(/لمركز:/g, 'للمكتب/المرفق:');
@@ -780,7 +780,7 @@ function signatureHtml(type, centerKey, cls = 'signatures-grid') {
             performance: !!document.getElementById('print-opt-performance')?.checked,
             achievement: !!document.getElementById('print-opt-achievement')?.checked,
         };
-        if (selectedKeys.length === 0 || (!printOptions.attendance && !printOptions.performance && !printOptions.achievement)) return alert('الرجاء اختيار مكتب/مرفق وتقرير واحد على الأقل للطباعة.');
+        if (selectedKeys.length === 0 || (!printOptions.attendance && !printOptions.performance && !printOptions.achievement)) return void window.NajranDialogs.alert('الرجاء اختيار مكتب/مرفق وتقرير واحد على الأقل للطباعة.');
         if (typeof closeDialog === 'function') closeDialog('management-dialog');
         const pages = [];
         selectedKeys.forEach(centerKey => {
@@ -859,23 +859,23 @@ function signatureHtml(type, centerKey, cls = 'signatures-grid') {
         const officeName = names[centerKey] || centerKey;
         const rec = await loadSavedJobPositions(officeName);
         const rows = positionRowsForOffice(centerKey, officeName, rec);
-        if (!rows.length) return alert('لا توجد مناصب محفوظة لـ "' + officeName + '".');
+        if (!rows.length) return void window.NajranDialogs.alert('لا توجد مناصب محفوظة لـ "' + officeName + '".');
 
         const allData = getAttendanceDataSafe();
         const currentCount = Array.isArray(allData[centerKey]) ? allData[centerKey].length : 0;
         const summary = 'وُجدت ' + rows.length + ' منصب وظيفي لـ "' + officeName + '".';
         if (currentCount > 0) {
-            const ok = confirm(summary + '\n\n⚠️ يوجد بيانات حالية في هذا المكتب/المرفق.\nاضغط "موافق" للاستبدال الكامل.\nاضغط "إلغاء" لإلغاء العملية.');
+            const ok = await window.NajranDialogs.confirm(summary + '\n\n⚠️ يوجد بيانات حالية في هذا المكتب/المرفق.\nاضغط "موافق" للاستبدال الكامل.\nاضغط "إلغاء" لإلغاء العملية.');
             if (!ok) return;
         } else {
-            const ok = confirm(summary + '\n\nهل تريد تحميلها؟');
+            const ok = await window.NajranDialogs.confirm(summary + '\n\nهل تريد تحميلها؟');
             if (!ok) return;
         }
 
         allData[centerKey] = rows.map(employeeFromPosition);
         saveAttendanceDataSafe(allData);
         rerenderAdminOffices(centerKey);
-        alert('✅ تم تحميل ' + rows.length + ' منصب بنجاح.\nأدخل أسماء الموظفين وأرقام الهويات في جدول المكتب.');
+        void window.NajranDialogs.alert('✅ تم تحميل ' + rows.length + ' منصب بنجاح.\nأدخل أسماء الموظفين وأرقام الهويات في جدول المكتب.');
         if (typeof closeDialog === 'function') closeDialog('management-dialog');
     }
 async function loadPositionsIntoAllOffices() {
@@ -900,7 +900,7 @@ async function loadPositionsIntoAllOffices() {
             : '') +
         '\n\nهل تريد المتابعة؟';
 
-    if (!confirm(confirmMessage)) return;
+    if (!await window.NajranDialogs.confirm(confirmMessage)) return;
 
     let loadedOffices = 0;
     let loadedEmployees = 0;
@@ -929,7 +929,7 @@ async function loadPositionsIntoAllOffices() {
     }
 
     if (loadedOffices === 0) {
-        alert('لم يتم تحميل أي مناصب. لا توجد مناصب محفوظة للمكاتب/المرافق.');
+        void window.NajranDialogs.alert('لم يتم تحميل أي مناصب. لا توجد مناصب محفوظة للمكاتب/المرافق.');
         return;
     }
 
@@ -949,7 +949,7 @@ async function loadPositionsIntoAllOffices() {
         try { closeDialog('management-dialog'); } catch (_) {}
     }
 
-    alert(
+    void window.NajranDialogs.alert(
         '✅ تم تحميل المناصب لكل المكاتب.' +
         '\n\nعدد المكاتب المحملة: ' + loadedOffices +
         '\nعدد الوظائف المحملة: ' + loadedEmployees +
@@ -1019,14 +1019,14 @@ async function loadPositionsIntoAllOffices() {
     `;
 
     if (typeof openDialog === 'function') openDialog(content, 'management-dialog', false);
-    else alert('نظام النوافذ غير جاهز. أعد تحميل الصفحة.');
+    else void window.NajranDialogs.alert('نظام النوافذ غير جاهز. أعد تحميل الصفحة.');
 };
 window.confirmLoadAllAdminOfficePositions = function confirmLoadAllAdminOfficePositions() {
     loadPositionsIntoAllOffices();
 };
     window.confirmLoadAdminOfficePositions = function confirmLoadAdminOfficePositions() {
         const centerKey = document.getElementById('admin-office-load-center')?.value;
-        if (!centerKey) return alert('اختر المكتب/المرفق أولاً.');
+        if (!centerKey) return void window.NajranDialogs.alert('اختر المكتب/المرفق أولاً.');
         loadPositionsIntoOffice(centerKey);
     };
 
@@ -1119,7 +1119,7 @@ window.confirmLoadAllAdminOfficePositions = function confirmLoadAllAdminOfficePo
         const centerKey = document.getElementById('center-select-import')?.value;
         const fileInput = document.getElementById('excel-file-input');
         const statusArea = document.getElementById('import-status-area');
-        if (!centerKey) return alert('اختر المكتب/المرفق أولاً.');
+        if (!centerKey) return void window.NajranDialogs.alert('اختر المكتب/المرفق أولاً.');
         if (!fileInput || !fileInput.files.length) {
             if (statusArea) statusArea.innerHTML = `<p class="status-error">الرجاء اختيار ملف أولاً.</p>`;
             return;
@@ -1178,7 +1178,7 @@ dlg.style.display = 'block';
         saveAttendanceDataSafe(allData);
 window.closeAdminOfficeImportModeDialog();        closeDialog('management-dialog');
         rerenderAdminOffices(centerKey);
-        alert('✅ تم الاستبدال بنجاح!\nتمت إضافة ' + employees.length + ' موظف' + (skipped ? '\nصفوف فارغة: ' + skipped : ''));
+        void window.NajranDialogs.alert('✅ تم الاستبدال بنجاح!\nتمت إضافة ' + employees.length + ' موظف' + (skipped ? '\nصفوف فارغة: ' + skipped : ''));
         pendingAdminOfficeImport = { centerKey: null, employees: [], skipped: 0 };
     };
 
@@ -1199,7 +1199,7 @@ window.closeAdminOfficeImportModeDialog();        closeDialog('management-dialog
         window.closeAdminOfficeImportModeDialog();
         closeDialog('management-dialog');
         rerenderAdminOffices(centerKey);
-        alert('✅ تم التحديث!\nأُضيف: ' + added + ' موظف جديد' + (dup ? '\nتجاهل مكرر: ' + dup : '') + (skipped ? '\nصفوف فارغة: ' + skipped : ''));
+        void window.NajranDialogs.alert('✅ تم التحديث!\nأُضيف: ' + added + ' موظف جديد' + (dup ? '\nتجاهل مكرر: ' + dup : '') + (skipped ? '\nصفوف فارغة: ' + skipped : ''));
         pendingAdminOfficeImport = { centerKey: null, employees: [], skipped: 0 };
     };
 

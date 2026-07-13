@@ -325,7 +325,7 @@ function exportAchievementToPDF(centerKey) {
 }
 
 function exportAchievementToExcel(centerKey) {
-    if (typeof XLSX === 'undefined') { alert('مكتبة Excel غير محملة.'); return; }
+    if (typeof XLSX === 'undefined') { void window.NajranDialogs.alert('مكتبة Excel غير محملة.'); return; }
     const table = document.getElementById(`ach-table-${centerKey}`);
     if (!table) return;
     const wb = XLSX.utils.book_new();

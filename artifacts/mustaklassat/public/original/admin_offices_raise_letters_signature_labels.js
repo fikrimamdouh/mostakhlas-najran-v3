@@ -278,7 +278,7 @@
     if (!btn) return;
     btn.onclick = function () {
       if (typeof window.openAdminOfficesGrandCertificateSignatures === 'function') window.openAdminOfficesGrandCertificateSignatures();
-      else alert('نظام تواقيع الشهادة الإجمالية لم يكتمل تحميله بعد.');
+      else void window.NajranDialogs.alert('نظام تواقيع الشهادة الإجمالية لم يكتمل تحميله بعد.');
     };
   }
 
@@ -385,7 +385,7 @@ function ensureSignatureSettingsShell(panel) {
       content.appendChild(card);
       card.querySelector('#rl-open-grand-signatures').onclick = function () {
         if (typeof window.openAdminOfficesGrandCertificateSignatures === 'function') window.openAdminOfficesGrandCertificateSignatures();
-        else alert('نظام تواقيع الشهادة الإجمالية لم يكتمل تحميله بعد.');
+        else void window.NajranDialogs.alert('نظام تواقيع الشهادة الإجمالية لم يكتمل تحميله بعد.');
       };
     }
 

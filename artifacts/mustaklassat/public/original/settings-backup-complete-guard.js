@@ -68,7 +68,7 @@
     var pack={type:'user_hospital_complete',scope:'local-user-browser-complete',owner:owner(),entityName:h,timestamp:new Date().toISOString(),manifest:manifest(data),data:data};
     download(pack,'نسخة_محلية_شاملة_للمستخدم_'+String(h).replace(/\s/g,'_')+'_'+ts+'.json');
     try{if(typeof addLogEntry==='function')addLogEntry('إنشاء نسخة محلية','محلية_شاملة_للمستخدم','نجاح');}catch(_){}
-    alert('تم إنشاء نسخة شاملة كاملة.\nعدد المفاتيح: '+pack.manifest.totalKeys+'\nالمستهلكات: '+(pack.manifest.includesConsumables?'نعم':'لا')+'\nقطع الغيار: '+(pack.manifest.includesSpareParts?'نعم':'لا'));
+    void window.NajranDialogs.alert('تم إنشاء نسخة شاملة كاملة.\nعدد المفاتيح: '+pack.manifest.totalKeys+'\nالمستهلكات: '+(pack.manifest.includesConsumables?'نعم':'لا')+'\nقطع الغيار: '+(pack.manifest.includesSpareParts?'نعم':'لا'));
   }
   function installBackupOverride(){
     window.createSpecificBackup=function(type){
@@ -81,7 +81,7 @@
       var h=contractHospital(),ts=new Date().toISOString().slice(0,10);
       var pack={type:type,scope:'local-user-browser-section',owner:owner(),entityName:h,timestamp:new Date().toISOString(),manifest:manifest(wanted),data:wanted};
       download(pack,'نسخة_محلية_'+(type||'section')+'_'+String(h).replace(/\s/g,'_')+'_'+ts+'.json');
-      alert('تم إنشاء النسخة.\nعدد المفاتيح: '+pack.manifest.totalKeys);
+      void window.NajranDialogs.alert('تم إنشاء النسخة.\nعدد المفاتيح: '+pack.manifest.totalKeys);
     };
   }
   function renderSmart(normalized){
@@ -96,14 +96,14 @@
     html+='</div><details style="margin-top:12px"><summary style="cursor:pointer;font-weight:700;color:#1e3c72">عرض كل المفاتيح</summary><div style="max-height:180px;overflow:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px;margin-top:8px;font-size:11px;direction:ltr;text-align:left">'+Object.keys(normalized.data).map(function(k){return '<div>'+k+'</div>';}).join('')+'</div></details>';
     body.innerHTML=html;
   }
-  function restoreSelected(normalized,dry){
+  async function restoreSelected(normalized,dry){
     var checked=Array.from(document.querySelectorAll('.smart-group:checked')).map(function(x){return x.value;});
     var keys=Object.keys(normalized.data).filter(function(k){return checked.indexOf(groupOf(k))>=0;});
-    if(dry){alert('معاينة فقط\nسيتم استعادة '+keys.length+' مفتاح.');return;}
-    if(!keys.length){alert('لم يتم اختيار أي بيانات.');return;}
-    if(!confirm('سيتم دمج '+keys.length+' مفتاح مع بيانات المستخدم الحالية. هل تريد المتابعة؟'))return;
+    if(dry){void window.NajranDialogs.alert('معاينة فقط\nسيتم استعادة '+keys.length+' مفتاح.');return;}
+    if(!keys.length){void window.NajranDialogs.alert('لم يتم اختيار أي بيانات.');return;}
+    if(!await window.NajranDialogs.confirm('سيتم دمج '+keys.length+' مفتاح مع بيانات المستخدم الحالية. هل تريد المتابعة؟'))return;
     keys.forEach(function(k){if(!isProtectedKey(k)){var v=normalized.data[k];localStorage.setItem(k,typeof v==='object'?JSON.stringify(v):String(v));}});
-    alert('تم الاستيراد الذكي بنجاح. سيتم إعادة تحميل الصفحة.');
+    void window.NajranDialogs.alert('تم الاستيراد الذكي بنجاح. سيتم إعادة تحميل الصفحة.');
     setTimeout(function(){location.reload();},700);
   }
   var smartData=null;
@@ -115,7 +115,7 @@
       file.addEventListener('change',function(){
         var f=file.files&&file.files[0]; if(!f)return;
         var r=new FileReader();
-        r.onload=function(){try{smartData=normalize(JSON.parse(String(r.result||'{}')));renderSmart(smartData);var modal=document.getElementById('smart-import-modal');if(modal)modal.style.display='block';}catch(e){alert('فشل قراءة الملف: '+e.message);}};
+        r.onload=function(){try{smartData=normalize(JSON.parse(String(r.result||'{}')));renderSmart(smartData);var modal=document.getElementById('smart-import-modal');if(modal)modal.style.display='block';}catch(e){void window.NajranDialogs.alert('فشل قراءة الملف: '+e.message);}};
         r.readAsText(f);
       });
     }
@@ -125,9 +125,9 @@
   }
   function installRestoreOverride(){
     window.confirmRestore=function(){
-      var input=document.getElementById('restore-file-input');if(!input||!input.files||!input.files.length){alert('يرجى اختيار ملف نسخة احتياطية أولاً.');return;}
+      var input=document.getElementById('restore-file-input');if(!input||!input.files||!input.files.length){void window.NajranDialogs.alert('يرجى اختيار ملف نسخة احتياطية أولاً.');return;}
       var f=input.files[0],r=new FileReader();
-      r.onload=function(){try{var n=normalize(JSON.parse(String(r.result||'{}')));renderSmart(n);smartData=n;var modal=document.getElementById('smart-import-modal');if(modal)modal.style.display='block';else restoreSelected(n,false);}catch(e){alert('فشل استعادة الملف: '+e.message);}};
+      r.onload=function(){try{var n=normalize(JSON.parse(String(r.result||'{}')));renderSmart(n);smartData=n;var modal=document.getElementById('smart-import-modal');if(modal)modal.style.display='block';else restoreSelected(n,false);}catch(e){void window.NajranDialogs.alert('فشل استعادة الملف: '+e.message);}};
       r.readAsText(f);
     };
   }

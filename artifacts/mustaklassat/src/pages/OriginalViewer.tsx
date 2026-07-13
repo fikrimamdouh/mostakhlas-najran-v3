@@ -118,7 +118,7 @@ export default function OriginalViewer() {
         const script = doc.createElement("script");
         script.id = "najran-submit-flow-control-loader";
         script.defer = true;
-        script.src = "/original/extract-submit-flow-control.js?v=20260709_submit_flow_v1";
+        script.src = "/original/extract-submit-flow-control.js?v=20260713_all_native_dialogs_v1";
         doc.head.appendChild(script);
       }
 

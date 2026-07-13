@@ -800,7 +800,7 @@ function shouldBlockLightAutoPush(options) {
       console.warn('[MzamanaCloud] ⚠ 409 CONFLICT — لم يتم استبدال بيانات الجهاز الآخر. المفاتيح:', conflictKeys.join(', '));
       const msg = results[1].message ||
         'تم تعديل بيانات هذا المستشفى من جهاز آخر بعد آخر تحميل لديك.\n\nلم يتم حفظ تعديلاتك حتى لا تستبدل عمل زميلك، وبياناتك المحلية محفوظة كما هي.\n\nحدّث الصفحة لسحب أحدث نسخة ثم أعد الحفظ.';
-      try { if (includeOperational) alert(msg); } catch (_) {}
+      try { if (includeOperational) void window.NajranDialogs.alert(msg); } catch (_) {}
       showSyncStatus('error');
       return { ok: false, conflict: true, conflicts: results[1].conflicts || [], reason: 'HOSPITAL_STORAGE_CONFLICT_409' };
     }

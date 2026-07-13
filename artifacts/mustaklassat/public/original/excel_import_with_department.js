@@ -6,7 +6,7 @@ function importExcelWithDepartment() {
     const file = fileInput.files[0];
     
     if (!file) {
-        alert('الرجاء اختيار ملف إكسل أولاً');
+        void window.NajranDialogs.alert('الرجاء اختيار ملف إكسل أولاً');
         return;
     }
     
@@ -20,7 +20,7 @@ function processExcelFile(departmentId) {
     const file = fileInput.files[0];
     
     if (!file) {
-        alert('الرجاء اختيار ملف إكسل أولاً');
+        void window.NajranDialogs.alert('الرجاء اختيار ملف إكسل أولاً');
         return;
     }
     
@@ -62,7 +62,7 @@ function processExcelFile(departmentId) {
             
             // التحقق من وجود الأعمدة المطلوبة
             if (jobTitleIndex === -1 || categoryIndex === -1 || employeeNameIndex === -1 || monthlyCostIndex === -1) {
-                alert('لم يتم العثور على جميع الأعمدة المطلوبة في ملف الإكسل. الأعمدة المطلوبة هي: مسمى الوظيفة، الفئة، اسم شاغل الوظيفة، التكلفة الشهرية');
+                void window.NajranDialogs.alert('لم يتم العثور على جميع الأعمدة المطلوبة في ملف الإكسل. الأعمدة المطلوبة هي: مسمى الوظيفة، الفئة، اسم شاغل الوظيفة، التكلفة الشهرية');
                 return;
             }
             
@@ -94,23 +94,23 @@ function processExcelFile(departmentId) {
             // إضافة الموظفين إلى القسم المحدد
             if (employees.length > 0) {
                 addEmployeesToDepartment(departmentId, employees);
-                alert(`تم استيراد ${employees.length} موظف بنجاح إلى قسم ${getDepartmentName(departmentId)}`);
+                void window.NajranDialogs.alert(`تم استيراد ${employees.length} موظف بنجاح إلى قسم ${getDepartmentName(departmentId)}`);
                 closeDialog('select-department-dialog');
                 closeDialog('upload-excel-dialog');
                 
                 // تحديث عرض الجداول
                 fetchAttendanceData();
             } else {
-                alert('لم يتم العثور على بيانات صالحة في ملف الإكسل');
+                void window.NajranDialogs.alert('لم يتم العثور على بيانات صالحة في ملف الإكسل');
             }
         } catch (error) {
             console.error('خطأ في معالجة ملف الإكسل:', error);
-            alert('حدث خطأ أثناء معالجة ملف الإكسل. الرجاء التأكد من صحة الملف وتنسيقه.');
+            void window.NajranDialogs.alert('حدث خطأ أثناء معالجة ملف الإكسل. الرجاء التأكد من صحة الملف وتنسيقه.');
         }
     };
     
     reader.onerror = function() {
-        alert('حدث خطأ أثناء قراءة الملف');
+        void window.NajranDialogs.alert('حدث خطأ أثناء قراءة الملف');
     };
     
     reader.readAsArrayBuffer(file);

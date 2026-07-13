@@ -541,7 +541,7 @@ function importExcelWithDepartment() {
   const fileInput = document.getElementById('excel-file-input');
   const file = fileInput?.files?.[0];
   if (!file) {
-    alert('الرجاء اختيار ملف إكسل أولاً');
+    void window.NajranDialogs.alert('الرجاء اختيار ملف إكسل أولاً');
     return;
   }
   openDialog('select-department-dialog');
@@ -554,10 +554,10 @@ function replaceEmployeesInDepartment(departmentKey, newEmployees) {
         allData[departmentKey] = newEmployees;
         saveAttendanceData(allData);
         renderTables();
-        alert(`✅ تم استبدال بيانات القسم بـ ${newEmployees.length} موظف.`);
+        void window.NajranDialogs.alert(`✅ تم استبدال بيانات القسم بـ ${newEmployees.length} موظف.`);
     } catch (error) {
         console.error('خطأ في استبدال الموظفين:', error);
-        alert('حدث خطأ أثناء الاستبدال');
+        void window.NajranDialogs.alert('حدث خطأ أثناء الاستبدال');
     }
 }
 
@@ -638,7 +638,7 @@ async function processExcelFile(departmentId) {
     const fileInput = document.getElementById('excel-file-input');
     const file = fileInput?.files?.[0];
     if (!file) {
-        alert('الرجاء اختيار ملف إكسل أولاً');
+        void window.NajranDialogs.alert('الرجاء اختيار ملف إكسل أولاً');
         return;
     }
 
@@ -657,7 +657,7 @@ async function processExcelFile(departmentId) {
         if (employeesWithoutIqama.length > 0) {
             const names = employeesWithoutIqama.map(e => e.name).join('، ');
             const msg = `تحذير: ${employeesWithoutIqama.length} موظف بدون رقم إقامة:\n\n(${names})\n\nهل تريد استيراد الآخرين فقط؟`;
-            if (!confirm(msg)) {
+            if (!await window.NajranDialogs.confirm(msg)) {
                 if (statusArea) statusArea.innerHTML = `<p class="status-skipped">تم إلغاء العملية.</p>`;
                 fileInput.value = '';
                 return;
@@ -669,7 +669,7 @@ async function processExcelFile(departmentId) {
 
     } catch (error) {
         if (statusArea) statusArea.innerHTML = `<p class="status-error">✗ فشل استيراد الملف: ${error.message}</p>`;
-        else alert(`فشل استيراد الملف: ${error.message}`);
+        else void window.NajranDialogs.alert(`فشل استيراد الملف: ${error.message}`);
     }
 }
 
@@ -1422,7 +1422,7 @@ function saveAttendanceData(data) {
 
   } catch (error) {
     console.error('خطأ في حفظ بيانات الحضور:', error);
-    alert('حدث خطأ أثناء حفظ البيانات');
+    void window.NajranDialogs.alert('حدث خطأ أثناء حفظ البيانات');
   }
 }
 
@@ -1474,11 +1474,11 @@ function addEmployeesToDepartment(departmentKey, newEmployees) {
         if (skippedCount > 0) {
             alertMessage += `\n\n- تم تجاهل ${skippedCount} موظف (تكرار):${skippedInfo}`;
         }
-        alert(alertMessage);
+        void window.NajranDialogs.alert(alertMessage);
 
     } catch (error) {
         console.error('خطأ في إضافة الموظفين:', error);
-        alert('حدث خطأ أثناء إضافة الموظفين');
+        void window.NajranDialogs.alert('حدث خطأ أثناء إضافة الموظفين');
     }
 }
 
@@ -1672,8 +1672,8 @@ function displaySignaturesOnPage() {
     container.innerHTML = htmlContent;
 }
 
-function deleteEmployee(departmentKey, employeeIndex) {
-  if (confirm('هل أنت متأكد من رغبتك في حذف هذا الموظف؟ لا يمكن التراجع عن هذه العملية.')) {
+async function deleteEmployee(departmentKey, employeeIndex) {
+  if (await window.NajranDialogs.confirm('هل أنت متأكد من رغبتك في حذف هذا الموظف؟ لا يمكن التراجع عن هذه العملية.')) {
     try {
       const data = getAttendanceData();
       if (data[departmentKey] && data[departmentKey][employeeIndex]) {
@@ -1681,39 +1681,39 @@ function deleteEmployee(departmentKey, employeeIndex) {
         data[departmentKey].splice(employeeIndex, 1);
         saveAttendanceData(data);
         renderTables();
-        alert('تم حذف الموظف بنجاح');
+        void window.NajranDialogs.alert('تم حذف الموظف بنجاح');
       }
     } catch (error) {
       console.error('خطأ في حذف الموظف:', error);
-      alert('حدث خطأ أثناء حذف الموظف');
+      void window.NajranDialogs.alert('حدث خطأ أثناء حذف الموظف');
     }
   }
 }
 
-function editEmployee(departmentKey, employeeIndex) {
+async function editEmployee(departmentKey, employeeIndex) {
   try {
     const data = getAttendanceData();
     const employee = data[departmentKey]?.[employeeIndex];
     
     if (!employee) {
-      alert('لم يتم العثور على الموظف');
+      void window.NajranDialogs.alert('لم يتم العثور على الموظف');
       return;
     }
 
     // إنشاء نافذة تعديل بسيطة
-    const newJobTitle = prompt('مسمى الوظيفة:', employee.jobTitle || '');
+    const newJobTitle = await window.NajranDialogs.prompt('مسمى الوظيفة:', employee.jobTitle || '');
     if (newJobTitle === null) return; // المستخدم ألغى العملية
 
-    const newName = prompt('اسم الموظف:', employee.name || '');
+    const newName = await window.NajranDialogs.prompt('اسم الموظف:', employee.name || '');
     if (newName === null) return;
 
-    const newSalary = prompt('الراتب الشهري:', employee.salary || '0');
+    const newSalary = await window.NajranDialogs.prompt('الراتب الشهري:', employee.salary || '0');
     if (newSalary === null) return;
 
-    const newCategory = prompt('الفئة (1-7):', employee.category || '1');
+    const newCategory = await window.NajranDialogs.prompt('الفئة (1-7):', employee.category || '1');
     if (newCategory === null) return;
 
-    const newNationality = prompt('الجنسية:', normalizeNationality(employee.nationality));
+    const newNationality = await window.NajranDialogs.prompt('الجنسية:', normalizeNationality(employee.nationality));
     if (newNationality === null) return;
 
     // التحقق من صحة البيانات
@@ -1721,12 +1721,12 @@ function editEmployee(departmentKey, employeeIndex) {
     const category = newCategory.toString();
     
     if (isNaN(salary) || salary < 0) {
-      alert('الرجاء إدخال راتب صحيح');
+      void window.NajranDialogs.alert('الرجاء إدخال راتب صحيح');
       return;
     }
 
     if (!['1', '2', '3', '4', '5', '6', '7'].includes(category)) {
-      alert('الرجاء إدخال فئة صحيحة (1-7)');
+      void window.NajranDialogs.alert('الرجاء إدخال فئة صحيحة (1-7)');
       return;
     }
 
@@ -1740,11 +1740,11 @@ function editEmployee(departmentKey, employeeIndex) {
     // حفظ البيانات وإعادة عرض الجداول
     saveAttendanceData(data);
     renderTables();
-    alert('تم تعديل بيانات الموظف بنجاح');
+    void window.NajranDialogs.alert('تم تعديل بيانات الموظف بنجاح');
 
   } catch (error) {
     console.error('خطأ في تعديل الموظف:', error);
-    alert('حدث خطأ أثناء تعديل الموظف');
+    void window.NajranDialogs.alert('حدث خطأ أثناء تعديل الموظف');
   }
 }
 
@@ -1755,7 +1755,7 @@ function editEmployeeAdvanced(departmentKey, employeeIndex) {
     const employee = data[departmentKey]?.[employeeIndex];
     
     if (!employee) {
-      alert('لم يتم العثور على الموظف');
+      void window.NajranDialogs.alert('لم يتم العثور على الموظف');
       return;
     }
 
@@ -1805,7 +1805,7 @@ function editEmployeeAdvanced(departmentKey, employeeIndex) {
 
   } catch (error) {
     console.error('خطأ في فتح نافذة التعديل:', error);
-    alert('حدث خطأ أثناء فتح نافذة التعديل');
+    void window.NajranDialogs.alert('حدث خطأ أثناء فتح نافذة التعديل');
   }
 }
 
@@ -1815,7 +1815,7 @@ function saveEmployeeEdit(departmentKey, employeeIndex) {
     const employee = data[departmentKey]?.[employeeIndex];
     
     if (!employee) {
-      alert('لم يتم العثور على الموظف');
+      void window.NajranDialogs.alert('لم يتم العثور على الموظف');
       return;
     }
 
@@ -1828,12 +1828,12 @@ function saveEmployeeEdit(departmentKey, employeeIndex) {
 
     // التحقق من صحة البيانات
     if (!newJobTitle || !newName) {
-      alert('الرجاء إدخال مسمى الوظيفة واسم الموظف');
+      void window.NajranDialogs.alert('الرجاء إدخال مسمى الوظيفة واسم الموظف');
       return;
     }
 
     if (isNaN(newSalary) || newSalary < 0) {
-      alert('الرجاء إدخال راتب صحيح');
+      void window.NajranDialogs.alert('الرجاء إدخال راتب صحيح');
       return;
     }
 
@@ -1850,11 +1850,11 @@ employee.category = normalizeAttendanceCategory(newCategory);    employee.nation
     // إغلاق النافذة
     cancelEmployeeEdit();
     
-    alert('تم تعديل بيانات الموظف بنجاح');
+    void window.NajranDialogs.alert('تم تعديل بيانات الموظف بنجاح');
 
   } catch (error) {
     console.error('خطأ في حفظ تعديل الموظف:', error);
-    alert('حدث خطأ أثناء حفظ التعديلات');
+    void window.NajranDialogs.alert('حدث خطأ أثناء حفظ التعديلات');
   }
 }
 
@@ -1868,13 +1868,13 @@ function cancelEmployeeEdit() {
 
 let nationalityFineEditMode = false; // متغير لتتبع حالة التعديل
 
-function openNationalityFineEditor() {
+async function openNationalityFineEditor() {
   // طلب كلمة المرور
-  const password = prompt('أدخل كلمة المرور للوصول إلى تعديل غرامة الجنسية:');
+  const password = await window.NajranDialogs.prompt('أدخل كلمة المرور للوصول إلى تعديل غرامة الجنسية:');
   
   if (password !== 'admin123') {
     if (password !== null) { // إذا لم يضغط المستخدم إلغاء
-      alert('كلمة المرور غير صحيحة');
+      void window.NajranDialogs.alert('كلمة المرور غير صحيحة');
     }
     return;
   }
@@ -1954,7 +1954,7 @@ function updateNationalityFineFromTable(departmentKey, employeeIndex, newValue) 
     const employee = data[departmentKey]?.[employeeIndex];
     
     if (!employee) {
-      alert('لم يتم العثور على الموظف');
+      void window.NajranDialogs.alert('لم يتم العثور على الموظف');
       return;
     }
 
@@ -1976,7 +1976,7 @@ function updateNationalityFineFromTable(departmentKey, employeeIndex, newValue) 
     
   } catch (error) {
     console.error('خطأ في تحديث غرامة الجنسية:', error);
-    alert('حدث خطأ أثناء تحديث غرامة الجنسية');
+    void window.NajranDialogs.alert('حدث خطأ أثناء تحديث غرامة الجنسية');
   }
 }
 
@@ -2024,7 +2024,7 @@ function updateSingleNationalityFine(departmentKey, employeeIndex, newValue) {
     const employee = data[departmentKey]?.[employeeIndex];
     
     if (!employee) {
-      alert('لم يتم العثور على الموظف');
+      void window.NajranDialogs.alert('لم يتم العثور على الموظف');
       return;
     }
 
@@ -2038,7 +2038,7 @@ function updateSingleNationalityFine(departmentKey, employeeIndex, newValue) {
     
   } catch (error) {
     console.error('خطأ في تحديث غرامة الجنسية:', error);
-    alert('حدث خطأ أثناء تحديث غرامة الجنسية');
+    void window.NajranDialogs.alert('حدث خطأ أثناء تحديث غرامة الجنسية');
   }
 }
 
@@ -2072,7 +2072,7 @@ function saveAllNationalityFines() {
     
   } catch (error) {
     console.error('خطأ في حفظ غرامات الجنسية:', error);
-    alert('حدث خطأ أثناء حفظ التعديلات');
+    void window.NajranDialogs.alert('حدث خطأ أثناء حفظ التعديلات');
   }
 }
 
@@ -2189,7 +2189,7 @@ function exportSelectedDepartmentsToPDF() {
   });
 
   if (selectedDepartments.length === 0) {
-    alert('الرجاء اختيار قسم واحد على الأقل');
+    void window.NajranDialogs.alert('الرجاء اختيار قسم واحد على الأقل');
     return;
   }
 
@@ -2234,7 +2234,7 @@ function exportSelectedDepartmentsToPDF() {
       showSuccessMessage('تم تصدير PDF بنجاح');
     });
   } else {
-    alert('مكتبة تصدير PDF غير متوفرة');
+    void window.NajranDialogs.alert('مكتبة تصدير PDF غير متوفرة');
     // إعادة إظهار الأقسام المخفية
     hiddenDepartments.forEach(dept => {
       dept.style.display = 'block';
@@ -2334,7 +2334,7 @@ function exportSelectedDepartmentsToExcel() {
     const selectedDepartments = Array.from(document.querySelectorAll('#excel-export-dialog input[type="checkbox"]:checked')).map(cb => cb.value);
 
     if (selectedDepartments.length === 0) {
-        alert('الرجاء اختيار قسم واحد على الأقل');
+        void window.NajranDialogs.alert('الرجاء اختيار قسم واحد على الأقل');
         return;
     }
 
@@ -2460,12 +2460,12 @@ const skipAbsenceFine =
             XLSX.writeFile(workbook, fileName);
             showSuccessMessage('تم تصدير Excel بنجاح');
         } else {
-            alert('لم يتم العثور على بيانات لتصديرها في الأقسام المحددة.');
+            void window.NajranDialogs.alert('لم يتم العثور على بيانات لتصديرها في الأقسام المحددة.');
         }
         
     } catch (error) {
         console.error('خطأ في تصدير Excel:', error);
-        alert('حدث خطأ أثناء تصدير Excel. راجع الكونسول لمزيد من التفاصيل.');
+        void window.NajranDialogs.alert('حدث خطأ أثناء تصدير Excel. راجع الكونسول لمزيد من التفاصيل.');
     } finally {
         closeExcelExportDialog();
     }
@@ -2509,12 +2509,12 @@ function exportToExcel(tableId = 'cleaning-table') {
   try {
     const table = document.getElementById(tableId);
     if (!table) {
-      alert('لم يتم العثور على الجدول');
+      void window.NajranDialogs.alert('لم يتم العثور على الجدول');
       return;
     }
     
     if (typeof XLSX === 'undefined') {
-      alert('مكتبة Excel غير متوفرة');
+      void window.NajranDialogs.alert('مكتبة Excel غير متوفرة');
       return;
     }
     
@@ -2543,7 +2543,7 @@ function exportToExcel(tableId = 'cleaning-table') {
     console.log('تم تصدير Excel بالحالات الكاملة');
   } catch (error) {
     console.error('خطأ في تصدير Excel:', error);
-    alert('حدث خطأ أثناء تصدير الملف');
+    void window.NajranDialogs.alert('حدث خطأ أثناء تصدير الملف');
   }
 }
 
@@ -2565,16 +2565,16 @@ function zoomOutTable(tableId) {
   }
 }
 
-function clearData() {
-  const password = prompt('أدخل كلمة المرور لمسح البيانات:');
+async function clearData() {
+  const password = await window.NajranDialogs.prompt('أدخل كلمة المرور لمسح البيانات:');
   if (password !== 'admin123') {
     if (password !== null) {
-      alert('كلمة المرور غير صحيحة');
+      void window.NajranDialogs.alert('كلمة المرور غير صحيحة');
     }
     return;
   }
 
-  if (confirm('هل أنت متأكد من رغبتك في مسح جميع بيانات الحضور والغياب؟ لا يمكن التراجع عن هذه العملية.')) {
+  if (await window.NajranDialogs.confirm('هل أنت متأكد من رغبتك في مسح جميع بيانات الحضور والغياب؟ لا يمكن التراجع عن هذه العملية.')) {
     try {
       [
         'attendanceData',
@@ -2608,11 +2608,11 @@ function clearData() {
       } catch (_) {}
 
       console.warn('[AttendanceClear] NEW EXTRACT flag set before clearing attendance');
-      alert('تم مسح بيانات الحضور. سيتم إعادة تحميل الصفحة بدون استرجاع العمالة القديمة من السحابة.');
+      void window.NajranDialogs.alert('تم مسح بيانات الحضور. سيتم إعادة تحميل الصفحة بدون استرجاع العمالة القديمة من السحابة.');
       window.location.reload();
     } catch (error) {
       console.error('خطأ في مسح البيانات:', error);
-      alert('حدث خطأ أثناء مسح البيانات');
+      void window.NajranDialogs.alert('حدث خطأ أثناء مسح البيانات');
     }
   }
 }
@@ -2629,7 +2629,7 @@ function addEmployee() {
     const iqamaId = (document.getElementById('add-employee-iqama')?.value || '').trim();
 
     if (!jobTitle || !name || !iqamaId) {
-      alert('الرجاء إدخال مسمى الوظيفة واسم الموظف ورقم الإقامة');
+      void window.NajranDialogs.alert('الرجاء إدخال مسمى الوظيفة واسم الموظف ورقم الإقامة');
       return;
     }
 
@@ -2649,10 +2649,10 @@ function addEmployee() {
     closeDialog('add-employee-dialog');
     renderTables();
     document.getElementById('add-employee-form').reset();
-    alert('تم إضافة الموظف بنجاح');
+    void window.NajranDialogs.alert('تم إضافة الموظف بنجاح');
   } catch (error) {
     console.error('خطأ في إضافة الموظف:', error);
-    alert('حدث خطأ أثناء إضافة الموظف');
+    void window.NajranDialogs.alert('حدث خطأ أثناء إضافة الموظف');
   }
 }
 
@@ -2781,7 +2781,7 @@ function printSelectedDepartments() {
   });
 
   if (selectedDepartments.length === 0) {
-    alert('الرجاء اختيار قسم واحد على الأقل');
+    void window.NajranDialogs.alert('الرجاء اختيار قسم واحد على الأقل');
     return;
   }
 
@@ -3303,7 +3303,7 @@ function saveUpdateSignatures() {
     showSuccessMessage('تم تحديث التواقيع بنجاح');
   } catch (error) {
     console.error('خطأ في حفظ التواقيع:', error);
-    alert('حدث خطأ أثناء حفظ التواقيع');
+    void window.NajranDialogs.alert('حدث خطأ أثناء حفظ التواقيع');
     // في حالة الخطأ، نضمن إغلاق النافذة والـ overlay
     closeDialog('update-signatures-dialog');
   }
@@ -3368,10 +3368,10 @@ function closeDialog(dialogId) {
 
 
 // --- دالة "تعديل التواقيع" المحدثة ---
-function openSignatureEditDialog() {
-    const password = prompt('أدخل كلمة المرور لتعديل التواقيع:');
+async function openSignatureEditDialog() {
+    const password = await window.NajranDialogs.prompt('أدخل كلمة المرور لتعديل التواقيع:');
     if (password !== PASSWORD) {
-        if (password !== null) alert('كلمة المرور غير صحيحة');
+        if (password !== null) void window.NajranDialogs.alert('كلمة المرور غير صحيحة');
         return;
     }
 
@@ -3527,8 +3527,8 @@ function addSignatureField() {
  * يحذف حقل التوقيع من واجهة التعديل.
  * @param {HTMLElement} deleteButton - زر الحذف الذي تم النقر عليه.
  */
-function deleteSignatureField(deleteButton) {
-    if (confirm('هل أنت متأكد من رغبتك في حذف هذا التوقيع؟')) {
+async function deleteSignatureField(deleteButton) {
+    if (await window.NajranDialogs.confirm('هل أنت متأكد من رغبتك في حذف هذا التوقيع؟')) {
         // يحذف العنصر الأب للزر، وهو 'signature-edit-item'
         deleteButton.parentElement.remove();
     }
@@ -3559,8 +3559,8 @@ function addSignatureField() {
  * يحذف توقيعاً من الواجهة (مؤقتاً قبل الحفظ).
  * @param {number} index - فهرس التوقيع المراد حذفه.
  */
-function deleteSignature(index) {
-    if (confirm('هل أنت متأكد من رغبتك في حذف هذا التوقيع؟')) {
+async function deleteSignature(index) {
+    if (await window.NajranDialogs.confirm('هل أنت متأكد من رغبتك في حذف هذا التوقيع؟')) {
         // هذه الدالة ستحذف فقط من العرض الحالي، الحفظ الفعلي يتم في saveSignatures
         const items = document.querySelectorAll('.signature-edit-item');
         if (items[index]) {
@@ -3856,8 +3856,8 @@ function addSignatureField() {
 /**
  * (مُصححة) تحذف حقل التوقيع من واجهة التعديل.
  */
-function deleteSignatureField(deleteButton) {
-    if (confirm('هل أنت متأكد من رغبتك في حذف هذا التوقيع؟')) {
+async function deleteSignatureField(deleteButton) {
+    if (await window.NajranDialogs.confirm('هل أنت متأكد من رغبتك في حذف هذا التوقيع؟')) {
         deleteButton.parentElement.remove();
     }
 }
@@ -5601,10 +5601,10 @@ function openExtractAuditDialog() {
   if (window.NJSExtractAudit && typeof window.NJSExtractAudit.open === 'function') {
     window.NJSExtractAudit.open();
   } else {
-    alert('نظام فحص المستخلص غير محمل. حدّث الصفحة ثم حاول مرة أخرى.');
+    void window.NajranDialogs.alert('نظام فحص المستخلص غير محمل. حدّث الصفحة ثم حاول مرة أخرى.');
   }
 }
-function backupAttendanceData() {
+async function backupAttendanceData() {
   // النظام الشامل الموحّد أولًا (يأخذ كل مفاتيح localStorage، شامل التواقيع
   // والترويسة وكل شيء) — القديم تحته يبقى fallback فقط لو لم يتوفر لأي سبب.
   if (typeof createSpecificBackup === 'function') { createSpecificBackup('full_system'); return; }
@@ -5634,7 +5634,7 @@ dynamicSignatures: (typeof getSignatures === 'function')
       !backupPayload.attendanceData ||
       Object.values(backupPayload.attendanceData).every(v => Array.isArray(v) && v.length === 0)
     ) {
-      if (!confirm('لا توجد عمالة واضحة في الحضور. هل تريد تنزيل النسخة الاحتياطية رغم ذلك؟')) {
+      if (!await window.NajranDialogs.confirm('لا توجد عمالة واضحة في الحضور. هل تريد تنزيل النسخة الاحتياطية رغم ذلك؟')) {
         return;
       }
     }
@@ -5661,7 +5661,7 @@ dynamicSignatures: (typeof getSignatures === 'function')
 
   } catch (error) {
     console.error('حدث خطأ أثناء إنشاء النسخة الاحتياطية الكاملة:', error);
-    alert('فشل إنشاء النسخة الاحتياطية. راجع الكونسول.');
+    void window.NajranDialogs.alert('فشل إنشاء النسخة الاحتياطية. راجع الكونسول.');
   }
 }
 
@@ -5671,11 +5671,11 @@ dynamicSignatures: (typeof getSignatures === 'function')
  *  يدعم النسخ القديمة والجديدة
  * =================================================
  */
-function restoreAttendanceData(event) {
+async function restoreAttendanceData(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  if (!confirm(
+  if (!await window.NajranDialogs.confirm(
     'هل أنت متأكد من استعادة النسخة الاحتياطية؟\n' +
     'سيتم استبدال بيانات الحضور الحالية، وسيتم استعادة التواقيع الموجودة داخل الملف إن وجدت.'
   )) {
@@ -5902,19 +5902,19 @@ if (!hasAtLeastOneDeptArray) {
         if (typeof renderTables === 'function') renderTables();
       } catch (_) {}
 
-      alert('تم استعادة الحضور والتواقيع بنجاح. سيتم إعادة تحميل الصفحة الآن.');
+      void window.NajranDialogs.alert('تم استعادة الحضور والتواقيع بنجاح. سيتم إعادة تحميل الصفحة الآن.');
       window.location.reload();
 
     } catch (error) {
       console.error('حدث خطأ أثناء استعادة النسخة الاحتياطية:', error);
-      alert('فشل استعادة الملف: ' + error.message);
+      void window.NajranDialogs.alert('فشل استعادة الملف: ' + error.message);
     } finally {
       event.target.value = '';
     }
   };
 
   reader.onerror = function() {
-    alert('فشلت قراءة ملف النسخة الاحتياطية.');
+    void window.NajranDialogs.alert('فشلت قراءة ملف النسخة الاحتياطية.');
     event.target.value = '';
   };
 
@@ -6475,13 +6475,13 @@ function updateBulkSelectionSummary() {
     }
 }
 
-function applyBulkAttendance() {
+async function applyBulkAttendance() {
     const selectedCheckboxes = Array.from(
         document.querySelectorAll('#bulk-employee-checkboxes .employee-checkbox:checked')
     );
 
     if (selectedCheckboxes.length === 0) {
-        alert('اختر موظفًا واحدًا على الأقل.');
+        void window.NajranDialogs.alert('اختر موظفًا واحدًا على الأقل.');
         return;
     }
 
@@ -6490,12 +6490,12 @@ function applyBulkAttendance() {
     const endIndex = parseInt(document.getElementById('bulk-end-day')?.value, 10);
 
     if (!newStatus || !STATUS_CODES[newStatus]) {
-        alert('اختر حالة صحيحة.');
+        void window.NajranDialogs.alert('اختر حالة صحيحة.');
         return;
     }
 
     if (Number.isNaN(startIndex) || Number.isNaN(endIndex) || startIndex > endIndex) {
-        alert('خطأ في الفترة: يوم البداية يجب أن يكون قبل أو نفس يوم النهاية.');
+        void window.NajranDialogs.alert('خطأ في الفترة: يوم البداية يجب أن يكون قبل أو نفس يوم النهاية.');
         return;
     }
 
@@ -6508,13 +6508,13 @@ function applyBulkAttendance() {
     })).filter(ref => ref.deptKey && !Number.isNaN(ref.index));
 
     if (refs.length === 0) {
-        alert('لم يتم العثور على موظفين صالحين للتعديل.');
+        void window.NajranDialogs.alert('لم يتم العثور على موظفين صالحين للتعديل.');
         return;
     }
 
     const statusName = STATUS_CODES[newStatus].name;
 
-    if (!confirm(`سيتم تطبيق الحالة "${statusName}" على ${refs.length} موظف من يوم ${startDayText} إلى يوم ${endDayText}.\n\nالتطبيق سيكون على الموظفين المحددين فقط.`)) {
+    if (!await window.NajranDialogs.confirm(`سيتم تطبيق الحالة "${statusName}" على ${refs.length} موظف من يوم ${startDayText} إلى يوم ${endDayText}.\n\nالتطبيق سيكون على الموظفين المحددين فقط.`)) {
         return;
     }
 
@@ -6819,7 +6819,7 @@ function saveTableNames() {
             populateCentersSidebar();
             showSuccessMessage('تم حفظ أسماء الأقسام بنجاح');
         } else {
-            alert('لم يتم إجراء أي تغييرات.');
+            void window.NajranDialogs.alert('لم يتم إجراء أي تغييرات.');
         }
     } catch (error) {
         console.error('خطأ في حفظ أسماء الجداول:', error);
@@ -6829,8 +6829,8 @@ function saveTableNames() {
 /**
  * تستعيد الأسماء الافتراضية للأقسام.
  */
-function resetTableNames() {
-    if (confirm('هل أنت متأكد من رغبتك في استعادة الأسماء الافتراضية لجميع الأقسام؟')) {
+async function resetTableNames() {
+    if (await window.NajranDialogs.confirm('هل أنت متأكد من رغبتك في استعادة الأسماء الافتراضية لجميع الأقسام؟')) {
         localStorage.removeItem('departmentNames');
         renderTables();
         populateCentersSidebar();
@@ -6842,9 +6842,9 @@ function resetTableNames() {
 /**
  * تحذف موظفًا من داخل لوحة الإدارة.
  */
-function confirmDeleteEmployeeFromMgmt(deptKey, employeeIndex) {
+async function confirmDeleteEmployeeFromMgmt(deptKey, employeeIndex) {
     const employeeName = getAttendanceData()[deptKey][employeeIndex].name;
-    if (confirm(`هل أنت متأكد من حذف الموظف "${employeeName}"؟ لا يمكن التراجع عن هذا الإجراء.`)) {
+    if (await window.NajranDialogs.confirm(`هل أنت متأكد من حذف الموظف "${employeeName}"؟ لا يمكن التراجع عن هذا الإجراء.`)) {
         const data = getAttendanceData();
         data[deptKey].splice(employeeIndex, 1);
         saveAttendanceData(data);
@@ -6859,7 +6859,7 @@ function confirmDeleteEmployeeFromMgmt(deptKey, employeeIndex) {
  */
 function showAddEmployeeFormForCenter() {
     const deptKey = window.activeCenterKey;
-    if (!deptKey) { alert("الرجاء تحديد قسم أولاً من القائمة الجانبية."); return; }
+    if (!deptKey) { void window.NajranDialogs.alert("الرجاء تحديد قسم أولاً من القائمة الجانبية."); return; }
     const contentArea = document.getElementById('management-content-area');
     const title = document.getElementById('content-title');
     const deptName = getDepartmentName(deptKey);
@@ -6891,7 +6891,7 @@ function addEmployeeFromManagement() {
         days: Array(getExtractPeriodDetails().daysInMonth).fill('ح')
     };
     if (!newEmployee.jobTitle || !newEmployee.name || !newEmployee.iqamaId) {
-        alert("الرجاء ملء جميع الحقول: المسمى الوظيفي، الاسم، ورقم الإقامة.");
+        void window.NajranDialogs.alert("الرجاء ملء جميع الحقول: المسمى الوظيفي، الاسم، ورقم الإقامة.");
         return;
     }
     addEmployeesToDepartment(deptKey, [newEmployee]);
@@ -6932,11 +6932,11 @@ function saveEmployeeChanges(deptKey, index) {
         for (let i = 0; i < arr.length; i++) {
             if (dk === deptKey && i === index) continue; // نفس الموظف
             if (newIqama && (arr[i].iqamaId || '').trim() === newIqama) {
-                alert(`⚠️ رقم الإقامة (${newIqama}) مكرر — موجود عند الموظف "${arr[i].name}" في قسم "${getDepartmentName(dk)}".`);
+                void window.NajranDialogs.alert(`⚠️ رقم الإقامة (${newIqama}) مكرر — موجود عند الموظف "${arr[i].name}" في قسم "${getDepartmentName(dk)}".`);
                 return;
             }
             if (newName && (arr[i].name || '').trim().toLowerCase() === newName.toLowerCase()) {
-                alert(`⚠️ الاسم "${newName}" مكرر — موجود بالفعل في قسم "${getDepartmentName(dk)}".`);
+                void window.NajranDialogs.alert(`⚠️ الاسم "${newName}" مكرر — موجود بالفعل في قسم "${getDepartmentName(dk)}".`);
                 return;
             }
         }

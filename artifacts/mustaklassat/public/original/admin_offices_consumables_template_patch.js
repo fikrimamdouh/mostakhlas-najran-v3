@@ -14,9 +14,9 @@ titles:`print_titles_data_${DB}`
 function j(k,f){try{const r=localStorage.getItem(k);return r?JSON.parse(r):f}catch(e){return f}}
 function w(k,v){localStorage.setItem(k,JSON.stringify(v))}
 function loadLocalSaveButtons(){
-if(document.querySelector('script[src*="admin_offices_local_save_buttons.js"]'))return;
+if(document.querySelector('script[src*="admin_offices_local_save_buttons.js?v=20260713_all_native_dialogs_v1"]'))return;
 const s=document.createElement('script');
-s.src='/original/admin_offices_local_save_buttons.js?v=20260704_admin_local_save_v2_quota_safe';
+s.src='/original/admin_offices_local_save_buttons.js?v=20260713_all_native_dialogs_v1';
 s.defer=true;
 document.head.appendChild(s);
 }
@@ -137,7 +137,7 @@ if(!bar||document.getElementById('apply-consumables-office-template-btn'))return
 const b=document.createElement('button');
 b.type='button';b.id='apply-consumables-office-template-btn';b.className='btn btn-titles no-print ab ab-titles';
 b.innerHTML='<i class="fas fa-file-contract"></i> تطبيق نموذج مستهلكات المكاتب';
-b.onclick=function(){if(confirm('سيتم تطبيق نموذج مستهلكات المكاتب مع بقاء المعادلات.')){localStorage.removeItem(FLAG);apply();location.reload()}};
+b.onclick=async function(){if(await window.NajranDialogs.confirm('سيتم تطبيق نموذج مستهلكات المكاتب مع بقاء المعادلات.')){localStorage.removeItem(FLAG);apply();location.reload()}};
 bar.appendChild(b);
 }
 function boot(){loadLocalSaveButtons();addConsumablesButtonStyles();addButton();if(!localStorage.getItem(FLAG))apply();if(normalizeSubcontractors())setTimeout(function(){location.reload()},50)}

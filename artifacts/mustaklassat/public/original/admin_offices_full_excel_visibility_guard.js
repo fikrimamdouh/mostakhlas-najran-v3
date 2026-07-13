@@ -322,19 +322,19 @@
     var officeName = names[centerKey] || centerKey;
     var rec = await loadSaved(officeName);
     var rows = rowsFor(centerKey, officeName, rec);
-    if (!rows.length) return alert('لا توجد مناصب محفوظة لـ "' + officeName + '".');
+    if (!rows.length) return void window.NajranDialogs.alert('لا توجد مناصب محفوظة لـ "' + officeName + '".');
 
     var all = getData();
     var oldRows = Array.isArray(all[centerKey]) ? all[centerKey] : [];
     var msg = 'وُجدت ' + rows.length + ' سجل منصب/موظف لـ "' + officeName + '".';
     if (oldRows.length) msg += '\n\nتوجد بيانات حالية بعدد ' + oldRows.length + '.\nموافق = تحديث/استبدال المكتب المحدد مع الحفاظ على أيام الحضور للموظفين المطابقين.';
     else msg += '\n\nهل تريد تحميلها؟';
-    if (!confirm(msg)) return;
+    if (!await window.NajranDialogs.confirm(msg)) return;
 
     all[centerKey] = mode === 'update' || oldRows.length ? mergeEmployees(oldRows, rows) : rows.map(function (r) { return employeeFrom(r, {}); });
     saveData(all);
     rerender(centerKey);
-    alert('✅ تم تحميل/تحديث ' + all[centerKey].length + ' سجل في "' + officeName + '".');
+    void window.NajranDialogs.alert('✅ تم تحميل/تحديث ' + all[centerKey].length + ' سجل في "' + officeName + '".');
     try { if (typeof window.closeDialog === 'function') window.closeDialog('management-dialog'); } catch (_) {}
   }
 
@@ -355,14 +355,14 @@
         '\nعدد السجلات السابق: ' + (st.employeesCount || 0) +
         '\n\nموافق = تحديث كل الأقسام من ملف المناصب المحفوظ، بدون تكرار، مع الحفاظ على أيام الحضور للموظفين المطابقين.' +
         '\nإلغاء = عدم تنفيذ أي شيء.';
-      if (!confirm(msg)) return;
+      if (!await window.NajranDialogs.confirm(msg)) return;
       mode = 'update';
     } else {
       msg = 'سيتم تحميل المناصب لكل المكاتب والمرافق دفعة واحدة.' +
         '\n\nعدد المكاتب/المرافق: ' + keys.length +
         (currentCount ? '\n\nتحذير: توجد بيانات حالية بعدد ' + currentCount + '. سيتم تحديثها بدون تكرار وحفظ أيام الحضور للموظفين المطابقين.' : '') +
         '\n\nهل تريد المتابعة؟';
-      if (!confirm(msg)) return;
+      if (!await window.NajranDialogs.confirm(msg)) return;
       mode = currentCount ? 'update' : 'replace';
     }
 
@@ -391,13 +391,13 @@
       }
     }
 
-    if (!loadedOffices) return alert('لم يتم تحميل أي مناصب. لا توجد مناصب محفوظة للمكاتب/المرافق.');
+    if (!loadedOffices) return void window.NajranDialogs.alert('لم يتم تحميل أي مناصب. لا توجد مناصب محفوظة للمكاتب/المرافق.');
 
     saveData(all);
     saveStatus({ mode: mode, officesCount: loadedOffices, employeesCount: loadedEmployees, emptyOffices: emptyOffices, failedOffices: failed });
     rerender();
     try { if (typeof window.closeDialog === 'function') window.closeDialog('management-dialog'); } catch (_) {}
-    alert('✅ تم ' + (mode === 'update' ? 'تحديث' : 'تحميل') + ' المناصب لكل الأقسام.' +
+    void window.NajranDialogs.alert('✅ تم ' + (mode === 'update' ? 'تحديث' : 'تحميل') + ' المناصب لكل الأقسام.' +
       '\n\nعدد الأقسام: ' + loadedOffices +
       '\nعدد السجلات الحالية بعد العملية: ' + loadedEmployees +
       (emptyOffices ? '\nأقسام بلا مناصب محفوظة: ' + emptyOffices : '') +
@@ -436,7 +436,7 @@
       '</div><div class="dialog-footer"><button class="btn btn-secondary" onclick="closeDialog(\'management-dialog\')">إلغاء</button><button class="btn btn-success" onclick="window.confirmLoadAdminOfficePositions()"><i class="fas fa-check"></i> تحميل / تحديث المكتب المحدد</button></div>';
 
     if (typeof window.openDialog === 'function') window.openDialog(content, 'management-dialog', false);
-    else alert('نظام النوافذ غير جاهز. أعد تحميل الصفحة.');
+    else void window.NajranDialogs.alert('نظام النوافذ غير جاهز. أعد تحميل الصفحة.');
   }
 
   function install() {
@@ -444,7 +444,7 @@
     window.confirmLoadAllAdminOfficePositions = function () { loadAll('replace'); };
     window.confirmLoadAdminOfficePositions = function () {
       var centerKey = document.getElementById('admin-office-load-center') && document.getElementById('admin-office-load-center').value;
-      if (!centerKey) return alert('اختر المكتب/المرفق أولاً.');
+      if (!centerKey) return void window.NajranDialogs.alert('اختر المكتب/المرفق أولاً.');
       return loadOne(centerKey, 'update');
     };
   }

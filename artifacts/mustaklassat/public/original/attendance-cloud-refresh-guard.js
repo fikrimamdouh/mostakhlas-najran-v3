@@ -316,7 +316,7 @@ function isRevisionMode() {
   console.warn('[AttendanceCloudGuard] SAFE STOP: تم منع رفع النسخة المحلية تلقائياً — ' + (reason || ''));
 }
 
-  function shouldReplaceLocalAttendance(localRows, remoteRows, meta, keys) {
+  async function shouldReplaceLocalAttendance(localRows, remoteRows, meta, keys) {
     var msg =
       'يوجد اختلاف بين بيانات الحضور المحلية والنسخة السحابية.\n\n' +
       'المفاتيح: ' + (keys || []).join(', ') + '\n' +
@@ -325,7 +325,7 @@ function isRevisionMode() {
       'آخر تعديل على السحابة: ' + (meta.userName || 'مستخدم آخر') + '\n' +
       (meta.updatedAt ? ('الوقت: ' + formatDateTime(meta.updatedAt) + '\n') : '') +
 '\nموافق = تنزيل النسخة السحابية واستبدال المحلي\nإلغاء = الاحتفاظ بالوضع الحالي فقط بدون رفع المحلي للسحابة';   
-    return confirm(msg);
+    return await window.NajranDialogs.confirm(msg);
   }
 
   function renderAgain(reason) {
@@ -654,7 +654,7 @@ var token = await getToken();
         if (isReviewOnlySession()) {
           if (clearLocalAttendanceState('reviewOnly-no-cloud-attendance', activeKeys) === false) {
             console.error('[AttendanceCloudGuard] REVIEW ONLY: تعذر أخذ لقطة أمان — لم يُفرّغ الحضور المحلي، والبيانات المعروضة قد تخص موقعًا سابقًا');
-            try { alert('تنبيه: تعذر أخذ نسخة أمان قبل تفريغ الحضور، فلم يُمسح شيء. البيانات المعروضة قد تخص موقعًا سابقًا — لا تعتمد عليها في المراجعة.'); } catch (_) {}
+            try { void window.NajranDialogs.alert('تنبيه: تعذر أخذ نسخة أمان قبل تفريغ الحضور، فلم يُمسح شيء. البيانات المعروضة قد تخص موقعًا سابقًا — لا تعتمد عليها في المراجعة.'); } catch (_) {}
             return;
           }
           console.warn('[AttendanceCloudGuard] REVIEW ONLY: لا توجد نسخة حضور سحابية لهذه المستشفى — تم تفريغ الحضور المحلي لمنع خلط المستشفيات — keys=' + activeKeys.join(','));
@@ -699,7 +699,7 @@ return;
 }
 
       if (localRows > 0 && !sameAttendanceSnapshot(data, activeKeys)) {
-        var replace = shouldReplaceLocalAttendance(localRows, remoteRows, meta, activeKeys);
+        var replace = await shouldReplaceLocalAttendance(localRows, remoteRows, meta, activeKeys);
 
        if (!replace) {
   localWinsUntilSynced = false;

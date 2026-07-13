@@ -1,30 +1,31 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script src="/original/system-dialogs.js?v=20260713_all_native_dialogs_v1"></script>
 <!-- njs-preload-v1 -->
     <!-- حراس يحقنها auth-check.js في كل صفحة — تُنزَّل مبكرًا بالتوازي بدل انتظار تنفيذه -->
     <link rel="preload" as="script" href="/original/hospital-context-guard.js?v=20260611d">
-    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260709_fresh_token_retry_v2">
-    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260709_monitor_v2_circuit_breaker">
+    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/approve-button-polish.js?v=20260709_auth_fresh_token_v3_archive_filter">
     <link rel="preload" as="script" href="/original/revision-local-draft-restore.js?v=20260713_system_dialogs_v1">
-    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260709_auth_fresh_token_v3_archive_filter">
+    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260713_all_native_dialogs_v1">
     <!-- تنزيل متوازٍ لكل سكريبتات الصفحة من أول لحظة.
          ترتيب التنفيذ لا يتغير إطلاقًا — هذا تلميح تنزيل فقط. -->
-    <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260705_cache_bust_v1">
-    <link rel="preload" as="script" href="/original/auth-check.js">
-    <link rel="preload" as="script" href="/original/cloud-sync.js?v=20260711_v6_draft_bundle">
-    <link rel="preload" as="script" href="contract_data_connector.js?v=20260705_v1_hospital_name_display_fix">
+    <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/auth-check.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/cloud-sync.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="contract_data_connector.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="attendance_contract_info.js?v=20260705_v1_hospital_name_display_fix">
     <link rel="preload" as="script" href="/original/contract-foundation-helper.js?v=20260711_static_v1">
     <link rel="preload" as="script" href="/original/audit-tracker.js?v=20260711_static_v1">
-    <link rel="preload" as="script" href="/original/backup.js?v=20260705_v1_unified_full_backup">
-    <link rel="preload" as="script" href="/original/extract-submit.js?v=20260705_v5_local_24h_guard_fix">
-    <link rel="preload" as="script" href="/original/track.js?v=20260711_static_v1">
+    <link rel="preload" as="script" href="/original/backup.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/extract-submit.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/track.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/signature-block.js?v=20260711_observer_scoped_v1">
     <link rel="preload" as="script" href="/original/hub-nav.js?v=20260711_static_v1">
 
-<script src="/original/user-storage-proxy.js?v=20260705_cache_bust_v1"></script>
+<script src="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1"></script>
 <script>
 /* ── Hospital namespace patch ── */
 (function(){
@@ -43,8 +44,8 @@
   }catch(_){}
 })();
 </script>
-    <script src="/original/auth-check.js"></script>
-    <script src="/original/cloud-sync.js?v=20260711_v6_draft_bundle"></script>
+    <script src="/original/auth-check.js?v=20260713_all_native_dialogs_v1"></script>
+    <script src="/original/cloud-sync.js?v=20260713_all_native_dialogs_v1"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مستخلص المستهلكات — مستشفى نجران العام الجديد</title>
@@ -55,7 +56,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-    <script src="contract_data_connector.js?v=20260705_v1_hospital_name_display_fix" defer></script>
+    <script src="contract_data_connector.js?v=20260713_all_native_dialogs_v1" defer></script>
     <script src="attendance_contract_info.js?v=20260705_v1_hospital_name_display_fix" defer></script>
     <script src="/original/contract-foundation-helper.js?v=20260711_static_v1"></script>
     <script src="/original/audit-tracker.js?v=20260711_static_v1"></script>
@@ -773,7 +774,7 @@
   }
 
 </style>
-<script src="/original/backup.js?v=20260705_v1_unified_full_backup"></script>
+<script src="/original/backup.js?v=20260713_all_native_dialogs_v1"></script>
 </head>
 <body>
     <div id="save-toast">تم الحفظ بنجاح!</div>
@@ -2159,7 +2160,7 @@ const addItem = (tableType) => {
 
   const removeItem = (tableType) => {
     if (selectedRow.table !== tableType || selectedRow.index === -1) {
-        alert("يرجى تحديد صف لحذفه أولاً.");
+        void window.NajranDialogs.alert("يرجى تحديد صف لحذفه أولاً.");
         return;
     }
     
@@ -2197,7 +2198,7 @@ const addItem = (tableType) => {
             if (tableType === 'summary') {
                 const itemToRemove = dataArray[indexToRemove];
                 if (!itemToRemove.isCustom) {
-                    alert("لا يمكن حذف هذا البند الأساسي من هنا.");
+                    void window.NajranDialogs.alert("لا يمكن حذف هذا البند الأساسي من هنا.");
                     return;
                 }
             }
@@ -2384,7 +2385,7 @@ const removeSignature = (index) => {
                                         localStorage.setItem(key, typeof d2[key] === 'string' ? d2[key] : JSON.stringify(d2[key]));
                                     }
                                 });
-                                alert("تم استعادة البيانات بنجاح. سيتم إعادة تحميل الصفحة.");
+                                void window.NajranDialogs.alert("تم استعادة البيانات بنجاح. سيتم إعادة تحميل الصفحة.");
                                 location.reload();
                             });
                             return;
@@ -2399,10 +2400,10 @@ const removeSignature = (index) => {
                         if(data.summary) localStorage.setItem(`summary_data_${DB_VERSION}`, JSON.stringify(data.summary));
                         if(data.signatures) localStorage.setItem(`signatures_data_${DB_VERSION}`, JSON.stringify(data.signatures));
                         if(data.titles) localStorage.setItem(`print_titles_data_${DB_VERSION}`, JSON.stringify(data.titles));
-                        alert("تم استعادة البيانات بنجاح. سيتم إعادة تحميل الصفحة.");
+                        void window.NajranDialogs.alert("تم استعادة البيانات بنجاح. سيتم إعادة تحميل الصفحة.");
                         location.reload();
                     });
-                } catch (err) { alert("ملف غير صالح أو تالف."); }
+                } catch (err) { void window.NajranDialogs.alert("ملف غير صالح أو تالف."); }
             };
             reader.readAsText(file);
         }
@@ -2606,7 +2607,7 @@ function handleExcelImport(event) {
             }
 
             if (headerRowIndex === -1) {
-                alert("لم يتم العثور على صف العناوين المطلوب في ملف الإكسل. يرجى التأكد من وجود الأعمدة: 'العقد', 'تكلفة الزيارة حسب العقد', 'عدد الزيارات السنوية/طوال فترة العقد' في صف واحد.");
+                void window.NajranDialogs.alert("لم يتم العثور على صف العناوين المطلوب في ملف الإكسل. يرجى التأكد من وجود الأعمدة: 'العقد', 'تكلفة الزيارة حسب العقد', 'عدد الزيارات السنوية/طوال فترة العقد' في صف واحد.");
                 console.error("فشل: لم يتم العثور على صف العناوين.");
                 return;
             }
@@ -2616,7 +2617,7 @@ function handleExcelImport(event) {
             const visitsIndex = headers.findIndex(h => h.includes('عدد الزيارات'));
 
             if (contractIndex === -1 || costIndex === -1 || visitsIndex === -1) {
-                alert("خطأ في تحديد الأعمدة بعد العثور على صف العناوين. يرجى التأكد من أن أسماء الأعمدة مطابقة تماماً: 'العقد', 'تكلفة الزيارة حسب العقد', 'عدد الزيارات السنوية/طوال فترة العقد'.");
+                void window.NajranDialogs.alert("خطأ في تحديد الأعمدة بعد العثور على صف العناوين. يرجى التأكد من أن أسماء الأعمدة مطابقة تماماً: 'العقد', 'تكلفة الزيارة حسب العقد', 'عدد الزيارات السنوية/طوال فترة العقد'.");
                 console.error("فشل: لم يتم تحديد جميع الأعمدة المطلوبة.", {contractIndex, costIndex, visitsIndex});
                 return;
             }
@@ -2679,18 +2680,18 @@ function handleExcelImport(event) {
             }
 
             if (addedItems > 0) {
-                alert(`تم استبدال البيانات بنجاح!\nتم مسح جميع البيانات السابقة وإضافة ${addedItems} بند جديد من ملف الإكسل.`);
+                void window.NajranDialogs.alert(`تم استبدال البيانات بنجاح!\nتم مسح جميع البيانات السابقة وإضافة ${addedItems} بند جديد من ملف الإكسل.`);
                 saveAllData();
                 renderAllTables();
                 console.log("--- انتهى التشخيص بنجاح ---");
             } else {
-                alert("لم يتم العثور على بيانات صالحة في ملف الإكسل بعد صف العناوين.");
+                void window.NajranDialogs.alert("لم يتم العثور على بيانات صالحة في ملف الإكسل بعد صف العناوين.");
                 console.error("فشل: لم يتم إضافة أي بنود.");
             }
 
         } catch (error) {
             console.error("خطأ فادح أثناء معالجة الملف:", error);
-            alert("حدث خطأ فادح أثناء معالجة الملف. يرجى التأكد من أن الملف ليس تالفاً أو محمي بكلمة مرور.");
+            void window.NajranDialogs.alert("حدث خطأ فادح أثناء معالجة الملف. يرجى التأكد من أن الملف ليس تالفاً أو محمي بكلمة مرور.");
         } finally {
             event.target.value = "";
             console.log("--- نهاية عملية الاستيراد ---");
@@ -2710,8 +2711,8 @@ document.getElementById('signature-certificate-select')?.addEventListener('chang
 });
 
 </script>
-<script src="/original/extract-submit.js?v=20260705_v5_local_24h_guard_fix"></script>
-<script src="/original/track.js?v=20260711_static_v1"></script>
+<script src="/original/extract-submit.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/track.js?v=20260713_all_native_dialogs_v1"></script>
 
 <script src="/original/signature-block.js?v=20260711_observer_scoped_v1"></script>
 <script>SignatureBlock.init('consumables', { showStamp: true });</script>
@@ -2728,9 +2729,9 @@ document.getElementById('signature-certificate-select')?.addEventListener('chang
     } catch { return null; }
   }
 
-  function noFoundationAlert(hospitalName) {
+  async function noFoundationAlert(hospitalName) {
     const url = location.pathname.replace('consumables.html', 'contract-foundation-upload.html');
-    if (confirm(
+    if (await window.NajranDialogs.confirm(
       'لا توجد بيانات تأسيسي محفوظة لـ "' + hospitalName + '".\n\n' +
       'هل تريد الانتقال إلى صفحة رفع التأسيسي الآن؟'
     )) {
@@ -2739,10 +2740,10 @@ document.getElementById('signature-certificate-select')?.addEventListener('chang
   }
 
   // ── تحميل عقود الباطن من التأسيسي ──
-  window.loadSubcontractorsFromFoundation = function() {
+  window.loadSubcontractorsFromFoundation = async function() {
     const hospitalName = getHospitalName();
     if (!hospitalName) {
-      alert('يرجى تعيين اسم المستشفى في إعدادات العقد أولاً');
+      void window.NajranDialogs.alert('يرجى تعيين اسم المستشفى في إعدادات العقد أولاً');
       return;
     }
     const data = ContractFoundationDB.load(hospitalName);
@@ -2751,7 +2752,7 @@ document.getElementById('signature-certificate-select')?.addEventListener('chang
       return;
     }
     const sc = data.subcontractors;
-    if (!confirm(
+    if (!await window.NajranDialogs.confirm(
       'سيتم استبدال قائمة عقود الباطن الحالية بـ ' + sc.length + ' عقد من التأسيسي:\n\n' +
       sc.slice(0, 5).map((s, i) => (i + 1) + '. ' + s.name).join('\n') +
       (sc.length > 5 ? '\n...' : '') +
@@ -2772,15 +2773,15 @@ document.getElementById('signature-certificate-select')?.addEventListener('chang
     });
 
     localStorage.setItem('subcontractors_data_' + DB_VERSION, JSON.stringify(newData));
-    alert('✅ تم تحميل ' + newData.length + ' عقد باطن بنجاح — ستُحدَّث الصفحة الآن.');
+    void window.NajranDialogs.alert('✅ تم تحميل ' + newData.length + ' عقد باطن بنجاح — ستُحدَّث الصفحة الآن.');
     location.reload();
   };
 
   // ── تحميل بنود المستهلكات من التأسيسي ──
-  window.loadConsumablesFromFoundation = function() {
+  window.loadConsumablesFromFoundation = async function() {
     const hospitalName = getHospitalName();
     if (!hospitalName) {
-      alert('يرجى تعيين اسم المستشفى في إعدادات العقد أولاً');
+      void window.NajranDialogs.alert('يرجى تعيين اسم المستشفى في إعدادات العقد أولاً');
       return;
     }
     const data = ContractFoundationDB.load(hospitalName);
@@ -2789,7 +2790,7 @@ document.getElementById('signature-certificate-select')?.addEventListener('chang
       return;
     }
     const co = data.consumables;
-    if (!confirm(
+    if (!await window.NajranDialogs.confirm(
       'سيتم استبدال بنود المستهلكات في جدول الملخص بـ ' + co.length + ' بند من التأسيسي:\n\n' +
       co.slice(0, 5).map((c, i) => (i + 1) + '. ' + c.name + ' — ' + Number(c.monthlyCost).toLocaleString('ar-SA') + ' ر.س').join('\n') +
       (co.length > 5 ? '\n...' : '') +
@@ -2828,7 +2829,7 @@ document.getElementById('signature-certificate-select')?.addEventListener('chang
     });
     localStorage.setItem('performance_data_' + DB_VERSION, JSON.stringify(perfData));
 
-    alert('✅ تم تحميل ' + co.length + ' بند مستهلكات بنجاح — ستُحدَّث الصفحة الآن.');
+    void window.NajranDialogs.alert('✅ تم تحميل ' + co.length + ' بند مستهلكات بنجاح — ستُحدَّث الصفحة الآن.');
     location.reload();
   };
 
@@ -2928,9 +2929,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.body.appendChild(overlay);
                     overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
                     setTimeout(function() { if (overlay.parentNode) overlay.remove(); }, 8000);
-                } else { alert('تعذر الحفظ — تأكد من وجود بيانات.'); }
-            } else { alert('اضغط "تحديث النظام" من القائمة الجانبية ثم حاول مرة أخرى.'); }
-        } catch (e) { alert('خطأ: ' + (e.message || '')); }
+                } else { void window.NajranDialogs.alert('تعذر الحفظ — تأكد من وجود بيانات.'); }
+            } else { void window.NajranDialogs.alert('اضغط "تحديث النظام" من القائمة الجانبية ثم حاول مرة أخرى.'); }
+        } catch (e) { void window.NajranDialogs.alert('خطأ: ' + (e.message || '')); }
     });
 });
 </script>

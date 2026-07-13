@@ -1,32 +1,33 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script src="/original/system-dialogs.js?v=20260713_all_native_dialogs_v1"></script>
 <!-- njs-preload-v1 -->
     <!-- حراس يحقنها auth-check.js في كل صفحة — تُنزَّل مبكرًا بالتوازي بدل انتظار تنفيذه -->
     <link rel="preload" as="script" href="/original/hospital-context-guard.js?v=20260611d">
-    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260709_fresh_token_retry_v2">
-    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260709_monitor_v2_circuit_breaker">
+    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/approve-button-polish.js?v=20260709_auth_fresh_token_v3_archive_filter">
     <link rel="preload" as="script" href="/original/revision-local-draft-restore.js?v=20260713_system_dialogs_v1">
-    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260709_auth_fresh_token_v3_archive_filter">
+    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260713_all_native_dialogs_v1">
     <!-- تنزيل متوازٍ لكل سكريبتات الصفحة من أول لحظة.
          ترتيب التنفيذ لا يتغير إطلاقًا — هذا تلميح تنزيل فقط. -->
-    <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260705_cache_bust_v1">
-    <link rel="preload" as="script" href="/original/auth-check.js?v=20260712_internal_local_save_notices_v1">
-    <link rel="preload" as="script" href="/original/cloud-sync.js?v=20260711_v6_draft_bundle">
-    <link rel="preload" as="script" href="contract_data_connector.js?v=20260705_v1_hospital_name_display_fix">
-    <link rel="preload" as="script" href="/original/month-context.js?v=20260710_sig_never_delete_v1">
+    <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/auth-check.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/cloud-sync.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="contract_data_connector.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/month-context.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/extract-stepper.js?v=20260711_static_v1">
     <link rel="preload" as="script" href="/original/audit-tracker.js?v=20260711_static_v1">
-    <link rel="preload" as="script" href="/original/backup.js?v=20260705_v1_unified_full_backup">
+    <link rel="preload" as="script" href="/original/backup.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/extract-snapshot.js?v=20260713_scoped_resume_type_resolver_v2">
     <link rel="preload" as="script" href="/original/signature-block.js?v=20260712_signature_save_button_v1">
     <link rel="preload" as="script" href="/original/extract_pages_signature_fine_control_v1.js?v=20260712_signature_button_above_approval_v1">
-    <link rel="preload" as="script" href="attendance_interactive_v9_corrected.js?v=20260712_signature_css_parse_fix_v1">
+    <link rel="preload" as="script" href="attendance_interactive_v9_corrected.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/job-positions-helper.js?v=20260711_static_v1">
-    <link rel="preload" as="script" href="/original/extract-submit.js?v=20260713_labor_complete_bundle_v1">
-    <link rel="preload" as="script" href="/original/track.js?v=20260711_static_v1">
-    <link rel="preload" as="script" href="/original/shared-nav.js?v=20260711_static_v1">
+    <link rel="preload" as="script" href="/original/extract-submit.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/track.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/shared-nav.js?v=20260713_all_native_dialogs_v1">
 
     <!-- أُزيل [AttendanceHotfix]: كان يستبدل Node.prototype.appendChild/insertBefore
          ليعترض تحميل attendance-cloud-refresh-guard.js ويعيد توجيهه لنسخة قديمة.
@@ -34,9 +35,9 @@
          فلا يمر بـ appendChild أصلًا — والاعتراض لم يكن يُفعَّل أبدًا (اسم الـloader لا يطابق نمطه)،
          بينما كان كل عنصر يُدرج في الصفحة (آلاف عند رسم الجداول) يدفع تكلفته.
          وكان خطرًا كامنًا: لو فُعِّل لثبّت نسخة حارس قديمة تحت كاش الـ30 يومًا. -->
-<script src="/original/user-storage-proxy.js?v=20260705_cache_bust_v1"></script>
-    <script src="/original/auth-check.js?v=20260712_internal_local_save_notices_v1"></script>
-    <script src="/original/cloud-sync.js?v=20260711_v6_draft_bundle"></script>
+<script src="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1"></script>
+    <script src="/original/auth-check.js?v=20260713_all_native_dialogs_v1"></script>
+    <script src="/original/cloud-sync.js?v=20260713_all_native_dialogs_v1"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <meta charset="UTF-8">
@@ -57,8 +58,8 @@
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="attendance_contract_info.css">
-    <script src="contract_data_connector.js?v=20260705_v1_hospital_name_display_fix"></script>
-    <script src="/original/month-context.js?v=20260710_sig_never_delete_v1"></script>
+    <script src="contract_data_connector.js?v=20260713_all_native_dialogs_v1"></script>
+    <script src="/original/month-context.js?v=20260713_all_native_dialogs_v1"></script>
     <script src="/original/extract-stepper.js?v=20260711_static_v1"></script>
         <script src="/original/audit-tracker.js?v=20260711_static_v1"></script>
 
@@ -989,7 +990,7 @@
 
 } /* end @media screen */
 </style>
-<script src="/original/backup.js?v=20260705_v1_unified_full_backup"></script>
+<script src="/original/backup.js?v=20260713_all_native_dialogs_v1"></script>
 </head>
 
 <body>
@@ -1956,7 +1957,7 @@ window.navigateTo = function (url) {
     <script src="/original/extract-snapshot.js?v=20260713_scoped_resume_type_resolver_v2"></script>
     <script src="/original/signature-block.js?v=20260712_signature_save_button_v1"></script>
     <script src="/original/extract_pages_signature_fine_control_v1.js?v=20260712_signature_button_above_approval_v1"></script>
-    <script src="attendance_interactive_v9_corrected.js?v=20260712_signature_css_parse_fix_v1"></script>
+    <script src="attendance_interactive_v9_corrected.js?v=20260713_all_native_dialogs_v1"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             updateContractDisplayData();
@@ -2014,7 +2015,7 @@ if (typeof particlesJS !== 'undefined') {
             if (typeof html2pdf !== 'undefined') {
                 html2pdf().set(opt).from(element).save();
             } else {
-                alert('مكتبة تصدير PDF غير متوفرة');
+                void window.NajranDialogs.alert('مكتبة تصدير PDF غير متوفرة');
             }
             closeDialog('export-pdf-dialog');
         }
@@ -2058,22 +2059,22 @@ async function loadJobPositionsFromTemplate() {
     || document.querySelector('.hospitalName')?.textContent?.trim()
     || '';
   if (!hospitalName || hospitalName === '—' || hospitalName === 'غير محدد') {
-    alert('يرجى تعيين اسم المستشفى في الإعدادات أولاً');
+    void window.NajranDialogs.alert('يرجى تعيين اسم المستشفى في الإعدادات أولاً');
     return;
   }
   if (typeof JobPositionsDB === 'undefined') {
-    alert('مكتبة المناصب غير محملة، يرجى تحديث الصفحة');
+    void window.NajranDialogs.alert('مكتبة المناصب غير محملة، يرجى تحديث الصفحة');
     return;
   }
   const record = await JobPositionsDB.load(hospitalName);
   if (!record || !record.rows || !record.rows.length) {
-    alert('لا توجد مناصب محفوظة لـ "' + hospitalName + '".\n\nيمكن رفعها من: الإعدادات ← رفع مناصب الوظائف');
+    void window.NajranDialogs.alert('لا توجد مناصب محفوظة لـ "' + hospitalName + '".\n\nيمكن رفعها من: الإعدادات ← رفع مناصب الوظائف');
     return;
   }
 
   // ── تحقق من تطابق اسم المستشفى في السجل ────────────────────────────────
   if (record.hospitalName && record.hospitalName !== hospitalName) {
-    if (!confirm(
+    if (!await window.NajranDialogs.confirm(
       '⚠️ تنبيه: المناصب المحفوظة تخص "' + record.hospitalName + '"\n' +
       'وأنت حالياً في "' + hospitalName + '".\n\n' +
       'هل تريد تحميلها رغم ذلك؟'
@@ -2097,7 +2098,7 @@ async function loadJobPositionsFromTemplate() {
   const hasExisting = Object.values(currentData).some(arr => Array.isArray(arr) && arr.length > 0);
   var replaceMode = true;
   if (hasExisting) {
-    const choice = confirm(
+    const choice = await window.NajranDialogs.confirm(
       'وُجدت ' + rows.length + ' منصب وظيفي لـ "' + hospitalName + '":\n\n' + summary +
       '\n\n⚠️ يوجد بيانات حالية في الجداول.\n' +
       'اضغط "موافق" للاستبدال الكامل (تُمسح البيانات الحالية).\n' +
@@ -2106,7 +2107,7 @@ async function loadJobPositionsFromTemplate() {
     if (!choice) return;
     replaceMode = true;
   } else {
-    if (!confirm('وُجدت ' + rows.length + ' منصب وظيفي لـ "' + hospitalName + '":\n\n' + summary + '\n\nهل تريد تحميلها؟')) return;
+    if (!await window.NajranDialogs.confirm('وُجدت ' + rows.length + ' منصب وظيفي لـ "' + hospitalName + '":\n\n' + summary + '\n\nهل تريد تحميلها؟')) return;
     replaceMode = false;
   }
 
@@ -2135,24 +2136,24 @@ nationalityFine: 0,
     });
     saveAttendanceData(allData);
     renderTables();
-    alert('✅ تم تحميل ' + added + ' منصب بنجاح.\nأدخل أسماء الموظفين وأرقام الهويات في الجداول أدناه.');
+    void window.NajranDialogs.alert('✅ تم تحميل ' + added + ' منصب بنجاح.\nأدخل أسماء الموظفين وأرقام الهويات في الجداول أدناه.');
   } catch (err) {
-    alert('خطأ في تحميل المناصب: ' + err.message);
+    void window.NajranDialogs.alert('خطأ في تحميل المناصب: ' + err.message);
   }
 }
 
 // ======= تنزيل التامبلت بالوظائف =======
 function downloadPositionsTemplate() {
-  if (typeof XLSX === 'undefined') { alert('مكتبة Excel غير محملة، يرجى تحديث الصفحة'); return; }
-  if (typeof JobPositionsDB === 'undefined') { alert('مكتبة المناصب غير محملة، يرجى تحديث الصفحة'); return; }
+  if (typeof XLSX === 'undefined') { void window.NajranDialogs.alert('مكتبة Excel غير محملة، يرجى تحديث الصفحة'); return; }
+  if (typeof JobPositionsDB === 'undefined') { void window.NajranDialogs.alert('مكتبة المناصب غير محملة، يرجى تحديث الصفحة'); return; }
   const hospitalName = document.querySelector('.hospitalName')?.textContent?.trim();
   if (!hospitalName || hospitalName === '—' || hospitalName === 'غير محدد') {
-    alert('يرجى تعيين اسم المستشفى في الإعدادات أولاً، ثم حاول مرة أخرى.');
+    void window.NajranDialogs.alert('يرجى تعيين اسم المستشفى في الإعدادات أولاً، ثم حاول مرة أخرى.');
     return;
   }
   JobPositionsDB.load(hospitalName).then(function(rec) {
     if (!rec || !rec.rows || !rec.rows.length) {
-      alert('لا توجد مناصب محفوظة لـ "' + hospitalName + '".\n\nيرجى رفعها أولاً من:\nالإعدادات ← رفع مناصب الوظائف');
+      void window.NajranDialogs.alert('لا توجد مناصب محفوظة لـ "' + hospitalName + '".\n\nيرجى رفعها أولاً من:\nالإعدادات ← رفع مناصب الوظائف');
       return;
     }
     const deptLabels = {
@@ -2180,7 +2181,7 @@ function downloadPositionsTemplate() {
     XLSX.writeFile(wb, 'تامبلت-' + hospitalName + '.xlsx');
     closeDialog('upload-excel-dialog');
   }).catch(function(err) {
-    alert('خطأ: ' + err.message);
+    void window.NajranDialogs.alert('خطأ: ' + err.message);
   });
 }
 
@@ -2228,8 +2229,8 @@ var _pendingTemplateUnknown = [];
 
 function importPositionsTemplate() {
   var file = document.getElementById('template-file-input').files[0];
-  if (!file) { alert('يرجى اختيار الملف أولاً'); return; }
-  if (typeof XLSX === 'undefined') { alert('مكتبة Excel غير محملة، يرجى تحديث الصفحة'); return; }
+  if (!file) { void window.NajranDialogs.alert('يرجى اختيار الملف أولاً'); return; }
+  if (typeof XLSX === 'undefined') { void window.NajranDialogs.alert('مكتبة Excel غير محملة، يرجى تحديث الصفحة'); return; }
 
   var reader = new FileReader();
   reader.onload = function(e) {
@@ -2351,7 +2352,7 @@ var nat = (typeof normalizeNationality === 'function')
           ? '\n\nأقسام غير معروفة في الملف:\n• ' + unknownDepts.join('\n• ')
           + '\n\nالأسماء المتوقعة: نظافة، كهرباء، زراعة، الأعمال المدنية، ميكانيكا، مغسلة، خدمات المرضى، الوظائف الإدارية'
           : '\n\nتحقق من أن الملف يحتوي عمود "القسم" أو اسم شيت يطابق اسم القسم';
-        alert('⚠️ لم يُعثر على بيانات صالحة!\n' + msg);
+        void window.NajranDialogs.alert('⚠️ لم يُعثر على بيانات صالحة!\n' + msg);
         return;
       }
 
@@ -2363,7 +2364,7 @@ var nat = (typeof normalizeNationality === 'function')
       _showTemplateImportModeDialog(totalFound);
 
     } catch(err) {
-      alert('خطأ في قراءة الملف: ' + err.message);
+      void window.NajranDialogs.alert('خطأ في قراءة الملف: ' + err.message);
     }
   };
   reader.readAsBinaryString(file);
@@ -2452,7 +2453,7 @@ function _confirmTemplateReplace() {
   renderTables();
   var msg = '✅ تم الاستبدال بنجاح!\nتمت إضافة ' + totalAdded + ' موظف';
   if (_pendingTemplateSkipped) msg += '\n(تجاهل ' + _pendingTemplateSkipped + ' صف فارغ)';
-  alert(msg);
+  void window.NajranDialogs.alert(msg);
   _pendingTemplateData = {}; _pendingTemplateSkipped = 0; _pendingTemplateUnknown = [];
 }
 
@@ -2491,13 +2492,13 @@ function _confirmTemplateUpdate() {
   var msg = '✅ تم التحديث!\nأُضيف: ' + totalAdded + ' موظف جديد';
   if (totalDup) msg += '\nتجاهل مكرر: ' + totalDup;
   if (_pendingTemplateSkipped) msg += '\nصفوف فارغة: ' + _pendingTemplateSkipped;
-  alert(msg);
+  void window.NajranDialogs.alert(msg);
   _pendingTemplateData = {}; _pendingTemplateSkipped = 0; _pendingTemplateUnknown = [];
 }
 </script>
-<script src="/original/extract-submit.js?v=20260713_labor_complete_bundle_v1"></script>
-<script src="/original/track.js?v=20260711_static_v1"></script>
-<script src="/original/shared-nav.js?v=20260711_static_v1"></script>
+<script src="/original/extract-submit.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/track.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/shared-nav.js?v=20260713_all_native_dialogs_v1"></script>
 
 <!-- ╔══════════════════════════════════════════════════════════╗
      ║  تحسينات الشاشة فقط — لا تتعلق بالطباعة أو المعادلات  ║

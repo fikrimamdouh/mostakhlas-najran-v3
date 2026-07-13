@@ -422,10 +422,10 @@ function ExtractCard({ extract, isAdmin, currentUserId }: { extract: SubmittedEx
     try {
       const token = await getToken();
       const res = await fetch(`/api/submitted-extracts/${extract.id}`, { headers: token ? { Authorization: `Bearer ${token}` } : {}, credentials: "include" });
-      if (!res.ok) { alert("تعذر تحميل بيانات المستخلص للتعديل"); return; }
+      if (!res.ok) { void window.NajranDialogs.alert("تعذر تحميل بيانات المستخلص للتعديل"); return; }
       const full = await res.json();
       const data = unwrapSnapshot(parseData(full.extractData));
-      if (!Object.keys(data).length) { alert("لا توجد بيانات محفوظة داخل هذا المستخلص للتعديل"); return; }
+      if (!Object.keys(data).length) { void window.NajranDialogs.alert("لا توجد بيانات محفوظة داخل هذا المستخلص للتعديل"); return; }
 
       if (hasOpenLocalWork()) {
         const decision = await askRevisionOpenDecision();
@@ -433,7 +433,7 @@ function ExtractCard({ extract, isAdmin, currentUserId }: { extract: SubmittedEx
         if (decision === "save") {
           const saved = await trySaveCurrentLocalWork();
           if (!saved) {
-            alert("تعذر حفظ المستخلص الحالي بسبب امتلاء التخزين أو خطأ في الحفظ. لم يتم فتح التعديل. يمكنك اختيار فتح التعديل بدون حفظ إذا أردت المتابعة على مسؤوليتك.");
+            void window.NajranDialogs.alert("تعذر حفظ المستخلص الحالي بسبب امتلاء التخزين أو خطأ في الحفظ. لم يتم فتح التعديل. يمكنك اختيار فتح التعديل بدون حفظ إذا أردت المتابعة على مسؤوليتك.");
             return;
           }
         }
@@ -443,7 +443,7 @@ function ExtractCard({ extract, isAdmin, currentUserId }: { extract: SubmittedEx
       const integrity = verifySnapshotIntegrity(full, data);
       if (!integrity.ok) {
         console.error("[RevisionOpen] snapshot integrity failed:", integrity.failures);
-        alert(
+        void window.NajranDialogs.alert(
           "تم إيقاف فتح التعديل لحماية المستخلص.\n\n" +
           "البيانات المحفوظة داخل هذا المستخلص ناقصة أو لا تطابق سجله:\n• " +
           integrity.failures.join("\n• ") +
@@ -477,7 +477,7 @@ function ExtractCard({ extract, isAdmin, currentUserId }: { extract: SubmittedEx
       if (writeFailures > 0) {
         // فشل جزئي (غالبًا امتلاء التخزين) → تراجع كامل عن وضع التعديل ولا تحويل.
         clearRevisionKeys();
-        alert(
+        void window.NajranDialogs.alert(
           "تعذر تجهيز المستخلص للتعديل: فشلت كتابة " + writeFailures + " من مفاتيح البيانات محليًا (غالبًا بسبب امتلاء تخزين المتصفح).\n\n" +
           "لم يتم فتح صفحة التعديل حتى لا تعمل على بيانات ناقصة.\n" +
           "نظّف بيانات المتصفح لهذا الموقع أو احفظ عملك الحالي وأعد المحاولة."
@@ -487,7 +487,7 @@ function ExtractCard({ extract, isAdmin, currentUserId }: { extract: SubmittedEx
       window.location.href = targetPage;
     } catch (err) {
       console.error("Failed to start extract revision", err);
-      alert("حدث خطأ أثناء تجهيز المستخلص للتعديل");
+      void window.NajranDialogs.alert("حدث خطأ أثناء تجهيز المستخلص للتعديل");
     } finally {
       setIsPreparingRevision(false);
     }

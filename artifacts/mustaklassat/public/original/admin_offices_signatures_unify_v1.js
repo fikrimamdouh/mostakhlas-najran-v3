@@ -185,7 +185,7 @@
     }
   }
   function openSelectedSourceSignature() {
-    if (!(window.SignatureBlock && typeof window.SignatureBlock.open === 'function')) return alert('نظام التواقيع لم يكتمل تحميله بعد. أعد تحميل الصفحة.');
+    if (!(window.SignatureBlock && typeof window.SignatureBlock.open === 'function')) return void window.NajranDialogs.alert('نظام التواقيع لم يكتمل تحميله بعد. أعد تحميل الصفحة.');
     var srcEl = document.getElementById('unify-source');
     var src = srcEl ? srcEl.value : currentCenterKey();
     var firstType = selectedTypes()[0] || TYPES.find(function (t) { return t.id === currentVisibleType(); }) || TYPES[0];
@@ -196,8 +196,8 @@
   function openDialog() {
     var names = getNames();
     var officeKeys = Object.keys(names);
-    if (!officeKeys.length) return alert('لا توجد مكاتب معرفة بعد.');
-    if (!(window.SignatureBlock && typeof window.SignatureBlock.getSigs === 'function')) return alert('نظام التواقيع لم يكتمل تحميله بعد. أعد تحميل الصفحة.');
+    if (!officeKeys.length) return void window.NajranDialogs.alert('لا توجد مكاتب معرفة بعد.');
+    if (!(window.SignatureBlock && typeof window.SignatureBlock.getSigs === 'function')) return void window.NajranDialogs.alert('نظام التواقيع لم يكتمل تحميله بعد. أعد تحميل الصفحة.');
     ensureCss();
     closeDialog();
     var defaultSource = currentCenterKey();
@@ -241,24 +241,24 @@
     var names = getNames();
     var src = document.getElementById('unify-source').value;
     var checkedTypes = selectedTypes();
-    if (!checkedTypes.length) return alert('اختر نوع صفحة واحد على الأقل.');
+    if (!checkedTypes.length) return void window.NajranDialogs.alert('اختر نوع صفحة واحد على الأقل.');
     var scopeAll = document.getElementById('unify-scope-all').checked;
     var targets;
     if (scopeAll) targets = Object.keys(names).filter(function (k) { return k !== src; });
     else {
       var single = document.getElementById('unify-single-office').value;
-      if (!single) return alert('اختر المكتب الهدف.');
-      if (single === src) return alert('المكتب الهدف هو نفسه المصدر — اختر مكتبًا مختلفًا.');
+      if (!single) return void window.NajranDialogs.alert('اختر المكتب الهدف.');
+      if (single === src) return void window.NajranDialogs.alert('المكتب الهدف هو نفسه المصدر — اختر مكتبًا مختلفًا.');
       targets = [single];
     }
-    if (!targets.length) return alert('لا توجد مكاتب هدف.');
+    if (!targets.length) return void window.NajranDialogs.alert('لا توجد مكاتب هدف.');
     var sources = {}, emptyTypes = [];
     checkedTypes.forEach(function (t) {
       var s = readSourceSigs(src, t.id);
       sources[t.id] = s;
       if (!s.sigs.length) emptyTypes.push(t.label);
     });
-    if (emptyTypes.length && !confirm('مكتب المصدر ليس لديه توقيعات محفوظة في: ' + emptyTypes.join('، ') + '.\nالاستمرار سيجعل المكاتب الهدف بدون توقيعات لهذه الأنواع. متابعة؟')) return;
+    if (emptyTypes.length && !await window.NajranDialogs.confirm('مكتب المصدر ليس لديه توقيعات محفوظة في: ' + emptyTypes.join('، ') + '.\nالاستمرار سيجعل المكاتب الهدف بدون توقيعات لهذه الأنواع. متابعة؟')) return;
     var payload = {}, written = 0;
     targets.forEach(function (target) {
       checkedTypes.forEach(function (t) {
@@ -274,7 +274,7 @@
     });
     var ok = await pushToHospitalStorage(payload);
     try { if (window.AdminOfficesPageSignatures && typeof window.AdminOfficesPageSignatures.refresh === 'function') window.AdminOfficesPageSignatures.refresh(); } catch (_) {}
-    alert(ok ? '✓ تم توحيد التواقيع (' + written + ' مجموعة) ومزامنتها سحابيًا.' : 'تم توحيد التواقيع محليًا (' + written + ' مجموعة). المزامنة السحابية لم تكتمل الآن.');
+    void window.NajranDialogs.alert(ok ? '✓ تم توحيد التواقيع (' + written + ' مجموعة) ومزامنتها سحابيًا.' : 'تم توحيد التواقيع محليًا (' + written + ' مجموعة). المزامنة السحابية لم تكتمل الآن.');
     closeDialog();
   }
 
@@ -376,15 +376,15 @@
     a.click();
     setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 500);
   }
-  function exportAdminOfficesFullBackup() {
+  async function exportAdminOfficesFullBackup() {
     try {
       var backup = buildFullBackupObject('manual-export');
-      if (!backup.summary.employees && !confirm('النسخة لا تحتوي على موظفين. متابعة تنزيل نسخة فارغة؟')) return;
+      if (!backup.summary.employees && !await window.NajranDialogs.confirm('النسخة لا تحتوي على موظفين. متابعة تنزيل نسخة فارغة؟')) return;
       downloadJson(backup, 'admin-offices-full-backup-' + nowStamp() + '.json');
       try { if (typeof window.showSuccessMessage === 'function') window.showSuccessMessage('تم إنشاء نسخة مكاتب كاملة.'); } catch (_) {}
     } catch (e) {
       console.error('[Admin Offices Integrity] backup failed', e);
-      alert('فشل إنشاء نسخة المكاتب: ' + (e && e.message ? e.message : e));
+      void window.NajranDialogs.alert('فشل إنشاء نسخة المكاتب: ' + (e && e.message ? e.message : e));
     }
   }
   function addMapValue(map, key, value) { if (key && value !== undefined && value !== null) map[key] = typeof value === 'string' ? value : JSON.stringify(value); }
@@ -444,27 +444,27 @@
     var file = event && event.target && event.target.files ? event.target.files[0] : null;
     if (!file) return;
     var reader = new FileReader();
-    reader.onload = function () {
+    reader.onload = async function () {
       try {
         var parsed = JSON.parse(String(reader.result || '{}'));
         var map = normalizeBackupToLocalMap(parsed);
         var hasData = !!(map.adminOfficesAttendanceData_v1 || map.adminOfficeNames_v1 || Object.keys(map).some(isRelevantAdminOfficeKey));
         if (!hasData) throw new Error('ملف النسخة لا يحتوي على بيانات مكاتب قابلة للاستعادة.');
-        if (!confirm('سيتم استبدال بيانات المكاتب الحالية بالنسخة المختارة. سيتم حفظ Safety Backup داخلي قبل الاستبدال. متابعة؟')) return;
+        if (!await window.NajranDialogs.confirm('سيتم استبدال بيانات المكاتب الحالية بالنسخة المختارة. سيتم حفظ Safety Backup داخلي قبل الاستبدال. متابعة؟')) return;
         try { writeJson(BEFORE_RESTORE_KEY, buildFullBackupObject('before-restore-safety')); } catch (_) {}
         clearCurrentAdminOfficeKeys();
         Object.keys(map).forEach(function (key) { writeRaw(key, map[key]); });
         afterRestoreDerivations();
-        alert('تم استعادة نسخة المكاتب كاملة. سيتم إعادة تحميل الصفحة الآن.');
+        void window.NajranDialogs.alert('تم استعادة نسخة المكاتب كاملة. سيتم إعادة تحميل الصفحة الآن.');
         location.reload();
       } catch (e) {
         console.error('[Admin Offices Integrity] restore failed', e);
-        alert('فشل في استعادة البيانات: ' + (e && e.message ? e.message : e));
+        void window.NajranDialogs.alert('فشل في استعادة البيانات: ' + (e && e.message ? e.message : e));
       } finally {
         try { event.target.value = ''; } catch (_) {}
       }
     };
-    reader.onerror = function () { alert('فشل قراءة ملف النسخة.'); };
+    reader.onerror = function () { void window.NajranDialogs.alert('فشل قراءة ملف النسخة.'); };
     reader.readAsText(file, 'utf-8');
   }
 

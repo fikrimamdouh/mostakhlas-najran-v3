@@ -49,7 +49,7 @@
     var data = read();
     document.querySelectorAll('#admin-letter-scoped-form [data-letter-setting]').forEach(function(el){ data[el.getAttribute('data-letter-setting')] = el.value || ''; });
     write(data);
-    if (!silent) alert('تم حفظ إعدادات الخطاب المحدد.');
+    if (!silent) void window.NajranDialogs.alert('تم حفظ إعدادات الخطاب المحدد.');
   }
   function copyGeneral(){
     var scope = document.getElementById('admin-letter-scope-select') && document.getElementById('admin-letter-scope-select').value || 'laborLetter';
@@ -322,7 +322,7 @@
   async function importFullWorkbook(mode){
     var input = document.getElementById('admin-offices-full-excel-input');
     var status = document.getElementById('admin-offices-full-import-status');
-    if (!input || !input.files || !input.files.length) return alert('اختر ملف Excel شامل أولاً.');
+    if (!input || !input.files || !input.files.length) return void window.NajranDialogs.alert('اختر ملف Excel شامل أولاً.');
     mode = mode === 'update' ? 'update' : 'replace';
     if (status) status.innerHTML = '<div style="color:#0369a1;font-weight:900">جاري قراءة الملف الشامل...</div>';
     try {
@@ -330,13 +330,13 @@
       var keys = Object.keys(result.parsed || {});
       if (!keys.length) {
         if (status) status.innerHTML = '<div style="color:#b91c1c;font-weight:900">لم يتم مطابقة أي Sheet مع أسماء المكاتب.</div>';
-        return alert('لم يتم مطابقة أي Sheet مع أسماء المكاتب. تأكد أن أسماء الصفحات هي نفس أسماء التامبلت المنزل من النظام.');
+        return void window.NajranDialogs.alert('لم يتم مطابقة أي Sheet مع أسماء المكاتب. تأكد أن أسماء الصفحات هي نفس أسماء التامبلت المنزل من النظام.');
       }
 
       var totalRows = keys.reduce(function(sum, k){ return sum + result.parsed[k].length; }, 0);
       var actionText = mode === 'replace' ? 'استبدال بيانات الأقسام المطابقة بالكامل' : 'تحديث الأقسام المطابقة مع الحفاظ على الموجود';
       var msg = actionText + '\n\nعدد الصفحات المطابقة: ' + keys.length + '\nعدد الموظفين في الملف: ' + totalRows + (result.unmatched.length ? '\nصفحات غير مطابقة: ' + result.unmatched.join('، ') : '') + '\n\nهل تريد المتابعة؟';
-      if (!confirm(msg)) return;
+      if (!await window.NajranDialogs.confirm(msg)) return;
 
       var all = bestData();
       var replaced = 0, added = 0, updated = 0;
@@ -362,11 +362,11 @@
         : 'تم التحديث الشامل.\nالأقسام المطابقة: ' + keys.length + '\nالمضافون: ' + added + '\nالمحدثون: ' + updated;
       if (result.unmatched.length) summary += '\nصفحات غير مطابقة تم تجاهلها: ' + result.unmatched.length;
       if (status) status.innerHTML = '<div style="color:#166534;font-weight:900;line-height:1.8">' + esc(summary).replace(/\n/g,'<br>') + '</div>';
-      alert('✅ ' + summary);
+      void window.NajranDialogs.alert('✅ ' + summary);
     } catch(err) {
       console.error('[Admin Offices Full Excel Import] failed:', err);
       if (status) status.innerHTML = '<div style="color:#b91c1c;font-weight:900">فشل الاستيراد: ' + esc(err.message || err) + '</div>';
-      alert('فشل استيراد الملف الشامل. راجع Console.');
+      void window.NajranDialogs.alert('فشل استيراد الملف الشامل. راجع Console.');
     }
   }
 

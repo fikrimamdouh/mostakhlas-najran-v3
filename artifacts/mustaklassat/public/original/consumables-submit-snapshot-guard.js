@@ -135,15 +135,15 @@
     }
     ensureSummarySnapshot();
     if (typeof window.saveExtractSnapshot !== 'function') {
-      alert('تعذر الحفظ المحلي الآن: أداة اللقطات لم تكتمل بعد. أعد تحميل الصفحة وحاول مرة أخرى.');
+      void window.NajranDialogs.alert('تعذر الحفظ المحلي الآن: أداة اللقطات لم تكتمل بعد. أعد تحميل الصفحة وحاول مرة أخرى.');
       return false;
     }
     var snap = window.saveExtractSnapshot('consumables-home-direct-save');
     if (!snap || !snap.extractData) {
-      alert('تعذر حفظ نسخة محلية من مستخلص المستهلكات. لم يتم الخروج من الصفحة.');
+      void window.NajranDialogs.alert('تعذر حفظ نسخة محلية من مستخلص المستهلكات. لم يتم الخروج من الصفحة.');
       return false;
     }
-    alert('تم حفظ نسخة محلية من مستخلص المستهلكات.');
+    void window.NajranDialogs.alert('تم حفظ نسخة محلية من مستخلص المستهلكات.');
     window.location.href = '/dashboard';
     return false;
   }

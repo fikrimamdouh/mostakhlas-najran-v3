@@ -236,7 +236,7 @@
       btn.type = 'button';
       btn.onclick = function () {
         if (typeof window.openAdminOfficesGrandCertificateSignatures === 'function') window.openAdminOfficesGrandCertificateSignatures();
-        else alert('نافذة تواقيع الشهادة الإجمالية غير محملة في هذه الشاشة. افتح الشهادة الإجمالية من صفحة المكاتب لتعديلها.');
+        else void window.NajranDialogs.alert('نافذة تواقيع الشهادة الإجمالية غير محملة في هذه الشاشة. افتح الشهادة الإجمالية من صفحة المكاتب لتعديلها.');
       };
       msg.appendChild(btn);
       state.preview.appendChild(msg);

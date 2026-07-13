@@ -1,32 +1,33 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script src="/original/system-dialogs.js?v=20260713_all_native_dialogs_v1"></script>
 <!-- njs-preload-v1 -->
     <!-- حراس يحقنها auth-check.js في كل صفحة — تُنزَّل مبكرًا بالتوازي بدل انتظار تنفيذه -->
     <link rel="preload" as="script" href="/original/hospital-context-guard.js?v=20260611d">
-    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260709_fresh_token_retry_v2">
-    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260709_monitor_v2_circuit_breaker">
+    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/approve-button-polish.js?v=20260709_auth_fresh_token_v3_archive_filter">
     <link rel="preload" as="script" href="/original/revision-local-draft-restore.js?v=20260713_system_dialogs_v1">
-    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260709_auth_fresh_token_v3_archive_filter">
+    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260713_all_native_dialogs_v1">
     <!-- تنزيل متوازٍ لكل سكريبتات الصفحة من أول لحظة.
          ترتيب التنفيذ لا يتغير إطلاقًا — هذا تلميح تنزيل فقط. -->
-    <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260705_cache_bust_v1">
-    <link rel="preload" as="script" href="/original/auth-check.js?v=20260712_internal_local_save_notices_v1">
-    <link rel="preload" as="script" href="/original/cloud-sync.js?v=20260711_v6_draft_bundle">
-    <link rel="preload" as="script" href="contract_data_connector.js?v=20260705_v1_hospital_name_display_fix">
+    <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/auth-check.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/cloud-sync.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="contract_data_connector.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="attendance_contract_info.js?v=20260705_v1_hospital_name_display_fix">
-    <link rel="preload" as="script" href="/original/month-context.js?v=20260710_sig_never_delete_v1">
+    <link rel="preload" as="script" href="/original/month-context.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/extract-stepper.js?v=20260711_static_v1">
     <link rel="preload" as="script" href="/original/audit-tracker.js?v=20260711_static_v1">
-    <link rel="preload" as="script" href="/original/backup.js?v=20260705_v1_unified_full_backup">
-    <link rel="preload" as="script" href="/original/extract-submit.js?v=20260705_v5_local_24h_guard_fix">
-    <link rel="preload" as="script" href="/original/track.js?v=20260711_static_v1">
-    <link rel="preload" as="script" href="/original/shared-nav.js?v=20260711_static_v1">
+    <link rel="preload" as="script" href="/original/backup.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/extract-submit.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/track.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/shared-nav.js?v=20260713_all_native_dialogs_v1">
 
-<script src="/original/user-storage-proxy.js?v=20260705_cache_bust_v1"></script>
-    <script src="/original/auth-check.js?v=20260712_internal_local_save_notices_v1"></script>
-    <script src="/original/cloud-sync.js?v=20260711_v6_draft_bundle"></script>
+<script src="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1"></script>
+    <script src="/original/auth-check.js?v=20260713_all_native_dialogs_v1"></script>
+    <script src="/original/cloud-sync.js?v=20260713_all_native_dialogs_v1"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مستخلص مستهلكات المراكز الصحية — تجمع نجران الصحي</title>
@@ -38,9 +39,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js" defer></script>
     
     <!-- Scripts to connect contract and centers data -->
-    <script src="contract_data_connector.js?v=20260705_v1_hospital_name_display_fix" defer></script>
+    <script src="contract_data_connector.js?v=20260713_all_native_dialogs_v1" defer></script>
     <script src="attendance_contract_info.js?v=20260705_v1_hospital_name_display_fix" defer></script>
-    <script src="/original/month-context.js?v=20260710_sig_never_delete_v1"></script>
+    <script src="/original/month-context.js?v=20260713_all_native_dialogs_v1"></script>
     <script src="/original/extract-stepper.js?v=20260711_static_v1"></script>
     <script src="/original/audit-tracker.js?v=20260711_static_v1"></script>
 
@@ -371,7 +372,7 @@
 
   </style>
 <link rel="stylesheet" href="/original/shared-styles.css?v=20260711_static_v1">
-<script src="/original/backup.js?v=20260705_v1_unified_full_backup"></script>
+<script src="/original/backup.js?v=20260713_all_native_dialogs_v1"></script>
 </head>
 <body>
     <div id="save-toast">تم الحفظ بنجاح!</div>
@@ -1384,7 +1385,7 @@ const dueVisitCost = (item.visitDate || '').includes("خلال هذا الشهر
                                             localStorage.setItem(key, typeof d2[key] === 'string' ? d2[key] : JSON.stringify(d2[key]));
                                         }
                                     });
-                                    alert("تم استعادة البيانات بنجاح. سيتم إعادة تحميل الصفحة.");
+                                    void window.NajranDialogs.alert("تم استعادة البيانات بنجاح. سيتم إعادة تحميل الصفحة.");
                                     location.reload();
                                 });
                             }, 100);
@@ -1402,11 +1403,11 @@ const dueVisitCost = (item.visitDate || '').includes("خلال هذا الشهر
                             if(data.summary) localStorage.setItem(`summary_data_${DB_VERSION}`, JSON.stringify(data.summary));
                             if(data.signatures) localStorage.setItem(`signatures_data_${DB_VERSION}`, JSON.stringify(data.signatures));
                             if(data.titles) localStorage.setItem(`print_titles_data_${DB_VERSION}`, JSON.stringify(data.titles));
-                            alert("تم استعادة البيانات بنجاح. سيتم إعادة تحميل الصفحة.");
+                            void window.NajranDialogs.alert("تم استعادة البيانات بنجاح. سيتم إعادة تحميل الصفحة.");
                             location.reload();
                         });
                     }, 100);
-                } catch (err) { alert("ملف غير صالح أو تالف."); }
+                } catch (err) { void window.NajranDialogs.alert("ملف غير صالح أو تالف."); }
             };
             reader.readAsText(file);
         }
@@ -1482,7 +1483,7 @@ const dueVisitCost = (item.visitDate || '').includes("خلال هذا الشهر
 
       function removeItem(tableType) {
         if (selectedRow.table !== tableType || selectedRow.index === -1) {
-            alert("يرجى تحديد صف لحذفه أولاً.");
+            void window.NajranDialogs.alert("يرجى تحديد صف لحذفه أولاً.");
             return;
         }
 
@@ -1492,7 +1493,7 @@ const dueVisitCost = (item.visitDate || '').includes("خلال هذا الشهر
             const itemToRemove = summaryData[selectedRow.index];
             // نمنع حذف أي بند أساسي (غير مخصص)
             if (itemToRemove && !itemToRemove.isCustom) {
-                alert("لا يمكن حذف البنود الأساسية من جدول الملخص.");
+                void window.NajranDialogs.alert("لا يمكن حذف البنود الأساسية من جدول الملخص.");
                 return;
             }
         }
@@ -1773,7 +1774,7 @@ function printSingleTable(sectionId) {
 
     const sectionElement = document.getElementById(sectionId);
     if (!sectionElement) {
-        alert(`خطأ: لم يتم العثور على قسم الطباعة بالمعرف: ${sectionId}`);
+        void window.NajranDialogs.alert(`خطأ: لم يتم العثور على قسم الطباعة بالمعرف: ${sectionId}`);
         window.printingInProgress = false;
         return;
     }
@@ -1781,7 +1782,7 @@ function printSingleTable(sectionId) {
     const sectionKey = sectionId.replace('-section', '').replace('-supply', '').replace('-disposal', '');
     const win = window.open('', '_blank', 'width=1200,height=800');
     if (!win) {
-        alert('يرجى السماح بفتح النوافذ المنبثقة (pop-ups) في إعدادات المتصفح لإتمام الطباعة. اذهب إلى إعدادات المتصفح > الخصوصية والأمان > النوافذ المنبثقة وإعادة التوجيه، ثم اسمح بالنوافذ المنبثقة لهذا الموقع.');
+        void window.NajranDialogs.alert('يرجى السماح بفتح النوافذ المنبثقة (pop-ups) في إعدادات المتصفح لإتمام الطباعة. اذهب إلى إعدادات المتصفح > الخصوصية والأمان > النوافذ المنبثقة وإعادة التوجيه، ثم اسمح بالنوافذ المنبثقة لهذا الموقع.');
         window.printingInProgress = false;
         return;
     }
@@ -1899,7 +1900,7 @@ function printAllSections() {
 
     const win = window.open('', '_blank', 'width=1200,height=800');
     if (!win) {
-        alert('يرجى السماح بفتح النوافذ المنبثقة (pop-ups) في إعدادات المتصفح لإتمام الطباعة. اذهب إلى إعدادات المتصفح > الخصوصية والأمان > النوافذ المنبثقة وإعادة التوجيه، ثم اسمح بالنوافذ المنبثقة لهذا الموقع.');
+        void window.NajranDialogs.alert('يرجى السماح بفتح النوافذ المنبثقة (pop-ups) في إعدادات المتصفح لإتمام الطباعة. اذهب إلى إعدادات المتصفح > الخصوصية والأمان > النوافذ المنبثقة وإعادة التوجيه، ثم اسمح بالنوافذ المنبثقة لهذا الموقع.');
         window.printingInProgress = false;
         return;
     }
@@ -2179,9 +2180,9 @@ function autoGrowTextarea(textarea) {
 });
 </script>
 
-<script src="/original/extract-submit.js?v=20260705_v5_local_24h_guard_fix"></script>
-<script src="/original/track.js?v=20260711_static_v1"></script>
-<script src="/original/shared-nav.js?v=20260711_static_v1"></script>
+<script src="/original/extract-submit.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/track.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/shared-nav.js?v=20260713_all_native_dialogs_v1"></script>
 </body>
 </html>
 

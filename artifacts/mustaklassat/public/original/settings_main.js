@@ -159,15 +159,15 @@ function saveSectionData(sectionId, data, successMessageId) {
         toggleFields(sectionId, false);
     } catch (error) {
         console.error(`Error saving ${sectionId} data:`, error);
-        alert('حدث خطأ أثناء حفظ البيانات!');
+        void window.NajranDialogs.alert('حدث خطأ أثناء حفظ البيانات!');
     }
 }
 
 // مسح بيانات قسم
 // ✅✅✅ ضع هذه الدالة الجديدة مكان القديمة ✅✅✅
-function clearSectionData(sectionId) {
+async function clearSectionData(sectionId) {
     // تأكيد من المستخدم قبل الحذف
-    if (!confirm(`هل أنت متأكد من مسح بيانات "${sectionId}"؟ لا يمكن التراجع عن هذا الإجراء.`)) {
+    if (!await window.NajranDialogs.confirm(`هل أنت متأكد من مسح بيانات "${sectionId}"؟ لا يمكن التراجع عن هذا الإجراء.`)) {
         return;
     }
 
@@ -182,7 +182,7 @@ function clearSectionData(sectionId) {
         updateExtractDisplayData();
     }
     
-    alert(`تم مسح بيانات "${sectionId}" بنجاح.`);
+    void window.NajranDialogs.alert(`تم مسح بيانات "${sectionId}" بنجاح.`);
 }
 
 // إلغاء تعديلات قسم
@@ -200,7 +200,7 @@ function verifyPassword(sectionId) {
         toggleFields(sectionId, true);
         closePasswordPrompt(sectionId);
     } else {
-        alert('كلمة المرور غير صحيحة!');
+        void window.NajranDialogs.alert('كلمة المرور غير صحيحة!');
     }
 }
 
@@ -336,7 +336,7 @@ if (defaultCompanyForHospital && newData.companyName && newData.companyName !== 
         // التحقق من صحة البيانات
         const validationError = validateContractData(newData);
         if (validationError) {
-            alert(validationError);
+            void window.NajranDialogs.alert(validationError);
             return;
         }
 
@@ -370,10 +370,10 @@ if (defaultCompanyForHospital && newData.companyName && newData.companyName !== 
         // 6. إغلاق وضع التعديل بعد نجاح الحفظ
         saveSectionData('contract', finalData, 'contract-save-success');
 
-        alert('تم حفظ البيانات ورفعها بنجاح.');
+        void window.NajranDialogs.alert('تم حفظ البيانات ورفعها بنجاح.');
     } catch (error) {
         console.error('فشل حفظ/رفع بيانات العقد:', error);
-        alert('تم الحفظ محليًا، لكن فشل الرفع السحابي. لا تغادر الصفحة قبل إعادة المحاولة.');
+        void window.NajranDialogs.alert('تم الحفظ محليًا، لكن فشل الرفع السحابي. لا تغادر الصفحة قبل إعادة المحاولة.');
     }
 };
         // التعامل مع ملف الختم
@@ -392,7 +392,7 @@ if (defaultCompanyForHospital && newData.companyName && newData.companyName !== 
 
     } catch (error) {
         console.error("خطأ فادح في saveContractData:", error);
-        alert("حدث خطأ أثناء محاولة حفظ البيانات. راجع الـ console.");
+        void window.NajranDialogs.alert("حدث خطأ أثناء محاولة حفظ البيانات. راجع الـ console.");
     }
 }
 
@@ -769,8 +769,8 @@ function loadBackupLog() {
 }
 
 // حذف نسخة احتياطية
-function deleteBackup(filename) {
-    if (!confirm('هل أنت متأكد من حذف هذا السجل؟')) return;
+async function deleteBackup(filename) {
+    if (!await window.NajranDialogs.confirm('هل أنت متأكد من حذف هذا السجل؟')) return;
     let backupLog = JSON.parse(localStorage.getItem('backupLog') || '[]');
     backupLog = backupLog.filter(entry => entry.filename !== filename);
     localStorage.setItem('backupLog', JSON.stringify(backupLog));
@@ -1103,7 +1103,7 @@ async function openNextExtract() {
         });
     }
 }
-function saveExtractData() {
+async function saveExtractData() {
     try {
         console.log('بدء تشغيل دالة saveExtractData');
         const newMonth = document.getElementById('extract-month')?.value || '';
@@ -1122,19 +1122,19 @@ function saveExtractData() {
             const _laborLocked      = localStorage.getItem('najran_labor_locked_' + prevKey);
             const _consumablesLocked = localStorage.getItem('najran_consumables_locked_' + prevKey);
             if (!_laborLocked && !_consumablesLocked) {
-                if (!confirm('⚠️ تنبيه: لم يتم رفع مستخلص العمالة ولا مستخلص المستهلكات للاعتماد بعد.\n\nهل تريد الانتقال لشهر جديد على أي حال؟')) {
+                if (!await window.NajranDialogs.confirm('⚠️ تنبيه: لم يتم رفع مستخلص العمالة ولا مستخلص المستهلكات للاعتماد بعد.\n\nهل تريد الانتقال لشهر جديد على أي حال؟')) {
                     document.getElementById('extract-month').value = prevMonth;
                     document.getElementById('extract-year').value  = prevYear;
                     return;
                 }
             } else if (!_laborLocked) {
-                if (!confirm('⚠️ تنبيه: لم يتم رفع مستخلص العمالة للاعتماد بعد.\n\nهل تريد الانتقال لشهر جديد على أي حال؟')) {
+                if (!await window.NajranDialogs.confirm('⚠️ تنبيه: لم يتم رفع مستخلص العمالة للاعتماد بعد.\n\nهل تريد الانتقال لشهر جديد على أي حال؟')) {
                     document.getElementById('extract-month').value = prevMonth;
                     document.getElementById('extract-year').value  = prevYear;
                     return;
                 }
             } else if (!_consumablesLocked) {
-                if (!confirm('⚠️ تنبيه: لم يتم رفع مستخلص المستهلكات للاعتماد بعد.\n\nهل تريد الانتقال لشهر جديد على أي حال؟')) {
+                if (!await window.NajranDialogs.confirm('⚠️ تنبيه: لم يتم رفع مستخلص المستهلكات للاعتماد بعد.\n\nهل تريد الانتقال لشهر جديد على أي حال؟')) {
                     document.getElementById('extract-month').value = prevMonth;
                     document.getElementById('extract-year').value  = prevYear;
                     return;
@@ -1186,7 +1186,7 @@ function saveExtractData() {
         const validationError = validateExtractData(data);
         if (validationError) {
             console.error('خطأ التحقق:', validationError);
-            alert(validationError);
+            void window.NajranDialogs.alert(validationError);
             return;
         }
 
@@ -1195,7 +1195,7 @@ function saveExtractData() {
             var dup = window.checkDuplicateExtract(data.paymentNumber, data.extractMonth, data.extractYear);
             if (dup) {
                 var dupDate = new Date(dup.savedAt).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
-                var proceed = window.confirm(
+                var proceed = await window.NajranDialogs.confirm(
                     'تحذير: يوجد مستخلص محفوظ بالفعل بنفس البيانات\n\n' +
                     'رقم الدفعة: ' + data.paymentNumber + '\n' +
                     'الشهر: ' + data.extractMonth + ' ' + data.extractYear + '\n' +
@@ -1253,7 +1253,7 @@ function saveExtractData() {
         console.log('تم حفظ البيانات بنجاح!');
     } catch (error) {
         console.error('خطأ في حفظ بيانات المستخلص:', error);
-        alert('حدث خطأ أثناء حفظ بيانات المستخلص! تحقق من وحدة التحكم لمزيد من التفاصيل.');
+        void window.NajranDialogs.alert('حدث خطأ أثناء حفظ بيانات المستخلص! تحقق من وحدة التحكم لمزيد من التفاصيل.');
     }
 }
 
@@ -1302,15 +1302,15 @@ function switchMonthAndReload(monthKey) {
     setTimeout(() => { if (el) el.style.background = ''; }, 800);
 }
 
-function deleteMonthSnapshot(monthKey) {
-    if (!confirm(`حذف بيانات ${monthKey.replace('_', ' ')}؟`)) return;
+async function deleteMonthSnapshot(monthKey) {
+    if (!await window.NajranDialogs.confirm(`حذف بيانات ${monthKey.replace('_', ' ')}؟`)) return;
     localStorage.removeItem('monthSnapshot_' + monthKey);
     renderMonthsArchive();
 }
 
 function saveCurrentMonthManually() {
     const key = window.getCurrentMonthKey ? window.getCurrentMonthKey() : null;
-    if (!key) { alert('حدد الشهر والسنة أولاً'); return; }
+    if (!key) { void window.NajranDialogs.alert('حدد الشهر والسنة أولاً'); return; }
     window.saveMonthSnapshot(key);
     renderMonthsArchive();
     const btn = document.getElementById('btn-save-month-snap');
@@ -2040,7 +2040,7 @@ function openBackupOptionsMenu() {
         modal.style.display = 'block'; // أو 'flex' إذا كنت تستخدم flexbox لإظهار النافذة
     } else {
         console.error("خطأ: لم يتم العثور على نافذة خيارات النسخ الاحتياطي (backup-options-modal).");
-        alert("خطأ في تحميل واجهة النسخ الاحتياطي.");
+        void window.NajranDialogs.alert("خطأ في تحميل واجهة النسخ الاحتياطي.");
     }
 }
 

@@ -35,9 +35,9 @@ function approve() {
 }
 
 // دالة إرجاع
-function returnExtract() {
+async function returnExtract() {
     const dept = getCurrentDepartment();
-    const note = prompt('أدخل سبب الإرجاع:');
+    const note = await window.NajranDialogs.prompt('أدخل سبب الإرجاع:');
     if (dept && note) {
         const returnLog = JSON.parse(localStorage.getItem('returnLog')) || [];
         const now = new Date().toLocaleString('ar-SA');

@@ -146,13 +146,13 @@
     compressImage(file).then(function (dataUrl) {
       try {
         saveLetterhead(dataUrl);
-        alert('تم حفظ الترويسة وضبطها كصورة A4 كاملة.');
+        void window.NajranDialogs.alert('تم حفظ الترويسة وضبطها كصورة A4 كاملة.');
         refreshUi();
       } catch (err) {
-        alert('فشل حفظ الترويسة. الصورة ما زالت كبيرة؛ صغّرها ثم ارفعها مرة أخرى.');
+        void window.NajranDialogs.alert('فشل حفظ الترويسة. الصورة ما زالت كبيرة؛ صغّرها ثم ارفعها مرة أخرى.');
       }
     }).catch(function () {
-      alert('تعذر تجهيز صورة الترويسة. جرّب صورة JPG أصغر.');
+      void window.NajranDialogs.alert('تعذر تجهيز صورة الترويسة. جرّب صورة JPG أصغر.');
     });
   }
 

@@ -173,7 +173,7 @@
     const rows = Array.isArray(data[centerKey]) ? data[centerKey] : [];
     const employee = rows[empIndex];
     if (!employee) {
-      alert('تعذر تحديد الموظف المطلوب تعديله. أعد فتح شاشة الإدارة وحاول مرة أخرى.');
+      void window.NajranDialogs.alert('تعذر تحديد الموظف المطلوب تعديله. أعد فتح شاشة الإدارة وحاول مرة أخرى.');
       return;
     }
     const content = `
@@ -191,7 +191,7 @@
 
   window.addEmployeeFromForm = function addEmployeeFromFormPatched() {
     const centerKey = window.activeCenterKeyForManagement || (typeof activeCenterKeyForManagement !== 'undefined' ? activeCenterKeyForManagement : '');
-    if (!centerKey) return alert('الرجاء اختيار موقع أولاً.');
+    if (!centerKey) return void window.NajranDialogs.alert('الرجاء اختيار موقع أولاً.');
     const name = clean(document.getElementById('emp-name')?.value);
     const jobTitle = clean(document.getElementById('emp-job')?.value);
     const iqamaId = clean(document.getElementById('emp-iqama')?.value);
@@ -199,13 +199,13 @@
     const category = document.getElementById('emp-category')?.value || '7';
     const nationality = document.getElementById('emp-nationality')?.value || 'سعودي';
     const nationalityFine = parseFloat(document.getElementById('emp-nationality-fine')?.value) || 0;
-    if (!name || !jobTitle) return alert('الرجاء ملء الاسم والمسمى الوظيفي. رقم الإقامة اختياري.');
+    if (!name || !jobTitle) return void window.NajranDialogs.alert('الرجاء ملء الاسم والمسمى الوظيفي. رقم الإقامة اختياري.');
 
     const data = getData();
     if (iqamaId) {
       for (const officeKey in data) {
         const rows = Array.isArray(data[officeKey]) ? data[officeKey] : [];
-        if (rows.some(emp => clean(emp && emp.iqamaId) === iqamaId)) return alert('خطأ: رقم الإقامة مسجل بالفعل لموظف آخر.');
+        if (rows.some(emp => clean(emp && emp.iqamaId) === iqamaId)) return void window.NajranDialogs.alert('خطأ: رقم الإقامة مسجل بالفعل لموظف آخر.');
       }
     }
     if (!Array.isArray(data[centerKey])) data[centerKey] = [];
@@ -221,7 +221,7 @@
     const data = getData();
     const rows = Array.isArray(data[centerKey]) ? data[centerKey] : [];
     const employee = rows[empIndex];
-    if (!employee) return alert('تعذر تحديد الموظف المطلوب تعديله. أعد فتح شاشة الإدارة وحاول مرة أخرى.');
+    if (!employee) return void window.NajranDialogs.alert('تعذر تحديد الموظف المطلوب تعديله. أعد فتح شاشة الإدارة وحاول مرة أخرى.');
 
     const name = clean(document.getElementById('emp-name')?.value);
     const jobTitle = clean(document.getElementById('emp-job')?.value);
@@ -231,7 +231,7 @@
     const nationality = document.getElementById('emp-nationality')?.value || employee.nationality || 'سعودي';
     const nationalityFine = parseFloat(document.getElementById('emp-nationality-fine')?.value);
 
-    if (!name || !jobTitle) return alert('الرجاء ملء الاسم والمسمى الوظيفي. رقم الإقامة اختياري.');
+    if (!name || !jobTitle) return void window.NajranDialogs.alert('الرجاء ملء الاسم والمسمى الوظيفي. رقم الإقامة اختياري.');
 
     if (iqamaId) {
       for (const officeKey in data) {
@@ -239,7 +239,7 @@
         for (let i = 0; i < officeRows.length; i++) {
           if (officeKey === centerKey && i === empIndex) continue;
           if (clean(officeRows[i]?.iqamaId) && clean(officeRows[i]?.iqamaId) === iqamaId) {
-            return alert('خطأ: رقم الإقامة مسجل بالفعل لموظف آخر.');
+            return void window.NajranDialogs.alert('خطأ: رقم الإقامة مسجل بالفعل لموظف آخر.');
           }
         }
       }
@@ -273,9 +273,9 @@
     const rows = Array.isArray(data[centerKey]) ? data[centerKey] : [];
     const employee = rows[empIndex];
     const names = getNames();
-    if (!employee) return alert('تعذر تحديد الموظف المطلوب نقله. أعد فتح شاشة الإدارة وحاول مرة أخرى.');
+    if (!employee) return void window.NajranDialogs.alert('تعذر تحديد الموظف المطلوب نقله. أعد فتح شاشة الإدارة وحاول مرة أخرى.');
     const targetOptions = sortedCenterKeys(names).filter(key => key !== centerKey).map(key => `<option value="${esc(key)}">${esc(names[key] || key)}</option>`).join('');
-    if (!targetOptions) return alert('لا يوجد موقع آخر متاح لنقل الموظف إليه.');
+    if (!targetOptions) return void window.NajranDialogs.alert('لا يوجد موقع آخر متاح لنقل الموظف إليه.');
     closeTransferDialog();
     const overlay = document.createElement('div');
     overlay.id = 'admin-office-transfer-overlay';
@@ -308,16 +308,16 @@
 
   window.closeTransferEmployeeDialog = closeTransferDialog;
 
-  window.confirmTransferEmployee = function confirmTransferEmployee(centerKey, empIndex) {
+  window.confirmTransferEmployee = async function confirmTransferEmployee(centerKey, empIndex) {
     const targetKey = document.getElementById('admin-office-transfer-target')?.value;
     const data = getData();
     const sourceRows = Array.isArray(data[centerKey]) ? data[centerKey] : [];
     const employee = sourceRows[empIndex];
     const names = getNames();
-    if (!targetKey || targetKey === centerKey) return alert('اختر موقعًا مختلفًا للنقل.');
-    if (!employee) { closeTransferDialog(); return alert('تعذر تحديد الموظف المطلوب نقله.'); }
+    if (!targetKey || targetKey === centerKey) return void window.NajranDialogs.alert('اختر موقعًا مختلفًا للنقل.');
+    if (!employee) { closeTransferDialog(); return void window.NajranDialogs.alert('تعذر تحديد الموظف المطلوب نقله.'); }
     const employeeName = employee.name || 'بدون اسم';
-    if (!confirm(`تأكيد نقل الموظف "${employeeName}" من "${names[centerKey] || centerKey}" إلى "${names[targetKey] || targetKey}"؟`)) return;
+    if (!await window.NajranDialogs.confirm(`تأكيد نقل الموظف "${employeeName}" من "${names[centerKey] || centerKey}" إلى "${names[targetKey] || targetKey}"؟`)) return;
     const movedEmployee = sourceRows.splice(empIndex, 1)[0];
     if (!Array.isArray(data[targetKey])) data[targetKey] = [];
     data[targetKey].push(movedEmployee);
@@ -328,13 +328,13 @@
     refreshAfterChange(centerKey);
   };
 
-  window.confirmDeleteEmployee = function confirmDeleteEmployeePatched(centerKey, empIndex) {
+  window.confirmDeleteEmployee = async function confirmDeleteEmployeePatched(centerKey, empIndex) {
     const data = getData();
     const rows = Array.isArray(data[centerKey]) ? data[centerKey] : [];
     const employee = rows[empIndex];
-    if (!employee) return alert('تعذر تحديد الموظف المطلوب حذفه. أعد فتح شاشة الإدارة وحاول مرة أخرى.');
+    if (!employee) return void window.NajranDialogs.alert('تعذر تحديد الموظف المطلوب حذفه. أعد فتح شاشة الإدارة وحاول مرة أخرى.');
     const employeeName = employee.name || 'بدون اسم';
-    if (!confirm(`هل أنت متأكد من حذف الموظف "${employeeName}"؟ لا يمكن التراجع عن هذا الإجراء.`)) return;
+    if (!await window.NajranDialogs.confirm(`هل أنت متأكد من حذف الموظف "${employeeName}"؟ لا يمكن التراجع عن هذا الإجراء.`)) return;
     rows.splice(empIndex, 1);
     data[centerKey] = rows;
     saveData(data);

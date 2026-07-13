@@ -168,18 +168,18 @@
 
   async function guardedStartRevision(id, type) {
     var token = await getGuardFreshToken();
-    if (!token) return alert('الجلسة منتهية. سجل دخول مرة أخرى.');
+    if (!token) return void window.NajranDialogs.alert('الجلسة منتهية. سجل دخول مرة أخرى.');
     try {
       var res = await fetch('/api/submitted-extracts/' + id, { headers: { Authorization: 'Bearer ' + token }, credentials: 'include' });
-      if (!res.ok) return alert('تعذر تحميل بيانات المستخلص للتعديل');
+      if (!res.ok) return void window.NajranDialogs.alert('تعذر تحميل بيانات المستخلص للتعديل');
       var full = await res.json();
       var snapshot = normalizeSnapshot(full.extractData);
-      if (!snapshot || Object.keys(snapshot).length === 0) return alert('لا توجد بيانات محفوظة داخل هذا المستخلص للتعديل');
+      if (!snapshot || Object.keys(snapshot).length === 0) return void window.NajranDialogs.alert('لا توجد بيانات محفوظة داخل هذا المستخلص للتعديل');
       var extractType = String(full.extractType || type || 'labor');
       var target = reviewPageFromSnapshot(snapshot, extractType);
 
       if (!backupCurrent(id)) {
-        return alert('تعذر إنشاء نسخة أمان قبل التعديل. لم يتم مسح أي بيانات.');
+        return void window.NajranDialogs.alert('تعذر إنشاء نسخة أمان قبل التعديل. لم يتم مسح أي بيانات.');
       }
       clearOperational();
       Object.keys(snapshot).forEach(function (k) { writeValue(k, snapshot[k]); });
@@ -190,10 +190,10 @@
         : extractType === 'spare_parts' ? 'spare_partsData'
         : 'attendanceData';
       if (snapshot.persistentExtractData != null && localStorage.getItem('persistentExtractData') == null) {
-        return alert('فشل التحقق بعد الاسترجاع (persistentExtractData). لم يتم فتح التعديل.');
+        return void window.NajranDialogs.alert('فشل التحقق بعد الاسترجاع (persistentExtractData). لم يتم فتح التعديل.');
       }
       if (snapshot[VERIFY_DATA_KEY] != null && localStorage.getItem(VERIFY_DATA_KEY) == null) {
-        return alert('فشل التحقق بعد الاسترجاع (' + VERIFY_DATA_KEY + '). لم يتم فتح التعديل.');
+        return void window.NajranDialogs.alert('فشل التحقق بعد الاسترجاع (' + VERIFY_DATA_KEY + '). لم يتم فتح التعديل.');
       }
 
       if (full.companyName) localStorage.setItem('companyName', String(full.companyName));
@@ -241,7 +241,7 @@
       window.location.href = target;
     } catch (err) {
       console.error('[ApprovalRevisionRouteGuard] failed', err);
-      alert('حدث خطأ أثناء تجهيز المستخلص للتعديل');
+      void window.NajranDialogs.alert('حدث خطأ أثناء تجهيز المستخلص للتعديل');
     }
   }
 

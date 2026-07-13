@@ -22,7 +22,7 @@
 
   loadScript(
     'hospital-raise-letters-engine-v8',
-    '/original/hospital_raise_letters_engine_v8.js?v=20260708_v11_zahran_tawteen_transport_toggle'
+    '/original/hospital_raise_letters_engine_v8.js?v=20260713_all_native_dialogs_v1'
   );
 
   setTimeout(function(){

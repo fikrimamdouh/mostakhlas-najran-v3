@@ -323,7 +323,7 @@
   };
   window.__najranMonitorExport = function () { return JSON.stringify(readQueue(), null, 2); };
   window.__najranMonitorLastIncident = function () { return window.__najranMonitorLastIncidentValue || null; };
-  window.__najranMonitorClearLocal = function () { if (!confirm('مسح طابور الأحداث المحلى؟')) return 'canceled'; lsRemove(QUEUE_KEY); return 'cleared'; };
+  window.__najranMonitorClearLocal = async function () { if (!await window.NajranDialogs.confirm('مسح طابور الأحداث المحلى؟')) return 'canceled'; lsRemove(QUEUE_KEY); return 'cleared'; };
 
   window.addEventListener('error', function (ev) {
     try { enqueue('JS_ERROR', { message: (ev.message || (ev.error && ev.error.message) || 'error').slice(0, 500), stack: ev.error && ev.error.stack ? String(ev.error.stack).slice(0, 4000) : '', source: ev.filename ? String(ev.filename).slice(0, 200) : '', lineno: ev.lineno || 0, colno: ev.colno || 0 }); } catch (_) {}

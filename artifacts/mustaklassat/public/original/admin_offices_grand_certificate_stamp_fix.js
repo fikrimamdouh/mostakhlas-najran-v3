@@ -12,7 +12,7 @@
 
   const GRAND_KEY = 'admin_offices_grand_certificate';
   const STYLE_ID = 'admin-offices-grand-cert-stamp-fix-style';
-  const FINAL_ENGINE_SRC = '/original/admin_offices_grand_certificate_polish.js?v=20260701_fixed_static_sigs_v5';
+  const FINAL_ENGINE_SRC = '/original/admin_offices_grand_certificate_polish.js?v=20260713_all_native_dialogs_v1';
 
   const FIX_STYLE = `
     <style id="${STYLE_ID}">

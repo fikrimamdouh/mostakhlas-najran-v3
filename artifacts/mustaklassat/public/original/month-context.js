@@ -215,7 +215,7 @@ function isRevisionMode() {
       return true;
     } catch (e) {
       console.error('[MonthCtx] safety snapshot failed:', e);
-      alert('تعذر حفظ نسخة أمان قبل تبديل الشهر/الدفعة. تم إيقاف العملية لحماية البيانات.');
+      void window.NajranDialogs.alert('تعذر حفظ نسخة أمان قبل تبديل الشهر/الدفعة. تم إيقاف العملية لحماية البيانات.');
       return false;
     }
   }
@@ -296,7 +296,7 @@ function isRevisionMode() {
     const currentKey = getCurrentMonthKey();
 
     if (currentKey && !window.saveMonthSnapshot(currentKey)) {
-      alert('تعذر حفظ نسخة من الفترة الحالية. تم إيقاف التبديل لحماية البيانات.');
+      void window.NajranDialogs.alert('تعذر حفظ نسخة من الفترة الحالية. تم إيقاف التبديل لحماية البيانات.');
       return false;
     }
 
@@ -689,7 +689,7 @@ function getAttendancePageAfterExtractSave() {
                 (oldPayment && currentPayment && currentPayment !== oldPayment)
               )
             ) {
-              alert(
+              void window.NajranDialogs.alert(
                 'لا يمكن تغيير شهر أو سنة أو رقم دفعة مستخلص مرفوع أثناء التعديل.\n\n' +
                 'المستخلص الأصلي: ' + oldMonth + ' ' + oldYear + ' — دفعة ' + (oldPayment || '-') + '\n' +
                 'البيانات الحالية: ' + newMonth + ' ' + newYear + ' — دفعة ' + (currentPayment || '-') + '\n\n' +
@@ -739,7 +739,7 @@ const consumablesLocked =
             const laborStatus = laborLocked ? 'تم اعتماده' : 'لم يتم اعتماده';
             const consumablesStatus = consumablesLocked ? 'تم اعتماده' : 'لم يتم اعتماده';
 
-            const proceed = confirm(
+            const proceed = await window.NajranDialogs.confirm(
               'تنبيه: أنت تقوم بتغيير فترة المستخلص.\n\n' +
               'الفترة السابقة: ' + prevMonth + ' ' + prevYear + ' — دفعة ' + (prevData.paymentNumber || '-') + '\n' +
               'الفترة الجديدة: ' + newMonth + ' ' + newYear + '\n\n' +
@@ -798,7 +798,7 @@ const consumablesLocked =
           const validationError = (typeof validateExtractData === 'function') ? validateExtractData(data) : null;
           if (validationError) {
             console.error('خطأ التحقق:', validationError);
-            alert(validationError);
+            void window.NajranDialogs.alert(validationError);
             return;
           }
 
@@ -806,7 +806,7 @@ const consumablesLocked =
             const dup = window.checkDuplicateExtract(data.paymentNumber, data.extractMonth, data.extractYear);
             if (dup) {
               const dupDate = new Date(dup.savedAt).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
-              const proceedDup = window.confirm(
+              const proceedDup = await window.NajranDialogs.confirm(
                 'تحذير: يوجد مستخلص محفوظ بالفعل بنفس البيانات\n\n' +
                 'رقم الدفعة: ' + data.paymentNumber + '\n' +
                 'الشهر: ' + data.extractMonth + ' ' + data.extractYear + '\n' +
@@ -863,7 +863,7 @@ const consumablesLocked =
           console.log('تم حفظ البيانات ورفعها بنجاح!');
         } catch (error) {
           console.error('خطأ في حفظ بيانات المستخلص:', error);
-          alert('حدث خطأ أثناء حفظ بيانات المستخلص أو رفعها! تحقق من وحدة التحكم لمزيد من التفاصيل.');
+          void window.NajranDialogs.alert('حدث خطأ أثناء حفظ بيانات المستخلص أو رفعها! تحقق من وحدة التحكم لمزيد من التفاصيل.');
         }
       };
 

@@ -1,39 +1,40 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<script src="/original/system-dialogs.js?v=20260713_all_native_dialogs_v1"></script>
 <!-- njs-preload-v1 -->
     <!-- حراس يحقنها auth-check.js في كل صفحة — تُنزَّل مبكرًا بالتوازي بدل انتظار تنفيذه -->
     <link rel="preload" as="script" href="/original/hospital-context-guard.js?v=20260611d">
-    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260709_fresh_token_retry_v2">
-    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260709_monitor_v2_circuit_breaker">
+    <link rel="preload" as="script" href="/original/hospital-storage-extract-context-guard.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/production-client-monitor.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/approve-button-polish.js?v=20260709_auth_fresh_token_v3_archive_filter">
     <link rel="preload" as="script" href="/original/revision-local-draft-restore.js?v=20260713_system_dialogs_v1">
-    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260709_auth_fresh_token_v3_archive_filter">
+    <link rel="preload" as="script" href="/original/revision-session-guard.js?v=20260713_all_native_dialogs_v1">
     <!-- تنزيل متوازٍ لكل سكريبتات الصفحة من أول لحظة.
          ترتيب التنفيذ لا يتغير إطلاقًا — هذا تلميح تنزيل فقط. -->
-    <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260705_cache_bust_v1">
-    <link rel="preload" as="script" href="/original/auth-check.js">
-    <link rel="preload" as="script" href="/original/backup.js?v=20260705_v1_unified_full_backup">
-    <link rel="preload" as="script" href="/original/cloud-sync.js?v=20260711_v6_draft_bundle">
-    <link rel="preload" as="script" href="contract_data_connector.js?v=20260705_v1_hospital_name_display_fix">
-    <link rel="preload" as="script" href="/original/month-context.js?v=20260710_sig_never_delete_v1">
+    <link rel="preload" as="script" href="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/auth-check.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/backup.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/cloud-sync.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="contract_data_connector.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/month-context.js?v=20260713_all_native_dialogs_v1">
     <link rel="preload" as="script" href="/original/extract-snapshot.js?v=20260713_scoped_resume_type_resolver_v2">
-    <link rel="preload" as="script" href="settings_main.js?v=20260706_v1_open_next_extract_modal_flow">
-    <link rel="preload" as="script" href="/original/track.js?v=20260711_static_v1">
-    <link rel="preload" as="script" href="/original/shared-nav.js?v=20260711_static_v1">
+    <link rel="preload" as="script" href="settings_main.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/track.js?v=20260713_all_native_dialogs_v1">
+    <link rel="preload" as="script" href="/original/shared-nav.js?v=20260713_all_native_dialogs_v1">
 
-<script src="/original/user-storage-proxy.js?v=20260705_cache_bust_v1"></script>
-    <script src="/original/auth-check.js"></script>
-    <script src="/original/backup.js?v=20260705_v1_unified_full_backup"></script>
-    <script src="/original/cloud-sync.js?v=20260711_v6_draft_bundle"></script>
+<script src="/original/user-storage-proxy.js?v=20260713_all_native_dialogs_v1"></script>
+    <script src="/original/auth-check.js?v=20260713_all_native_dialogs_v1"></script>
+    <script src="/original/backup.js?v=20260713_all_native_dialogs_v1"></script>
+    <script src="/original/cloud-sync.js?v=20260713_all_native_dialogs_v1"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>إعدادات النظام - الرئيسية</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="settings_main.css">
 <!-- <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script> -->
-    <script src="contract_data_connector.js?v=20260705_v1_hospital_name_display_fix"></script>
-    <script src="/original/month-context.js?v=20260710_sig_never_delete_v1"></script>
+    <script src="contract_data_connector.js?v=20260713_all_native_dialogs_v1"></script>
+    <script src="/original/month-context.js?v=20260713_all_native_dialogs_v1"></script>
     <script>
 
      /*
@@ -686,7 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
     <script src="/original/extract-snapshot.js?v=20260713_scoped_resume_type_resolver_v2"></script>
-    <script src="settings_main.js?v=20260706_v1_open_next_extract_modal_flow"></script> <!-- هذا الملف سيحتوي على كل شيء الآن -->
+    <script src="settings_main.js?v=20260713_all_native_dialogs_v1"></script> <!-- هذا الملف سيحتوي على كل شيء الآن -->
 
 
     <script>
@@ -835,7 +836,7 @@ const extractData = JSON.parse(localStorage.getItem('persistentExtractData'));
     });
 
     dryRunBtn.addEventListener('click', () => {
-        if (!dataToRestore) { alert('يرجى رفع ملف أولاً.'); return; }
+        if (!dataToRestore) { void window.NajranDialogs.alert('يرجى رفع ملف أولاً.'); return; }
         
         // ✅ --- بداية الإصلاح: المعاينة الذكية --- ✅
         let previewText = "🔍 معاينة محتويات الملف:\n\n";
@@ -867,11 +868,11 @@ const extractData = JSON.parse(localStorage.getItem('persistentExtractData'));
         if (!foundData) {
             previewText += "لم يتم العثور على بيانات قابلة للمعاينة في هذا الملف.";
         }
-        alert(previewText);
+        void window.NajranDialogs.alert(previewText);
         // ✅ --- نهاية الإصلاح --- ✅
     });
 
-    restoreBtn.addEventListener('click', () => {
+    restoreBtn.addEventListener('click', async () => {
         if (!dataToRestore) return;
 
         const selectedKeys = [];
@@ -879,8 +880,8 @@ const extractData = JSON.parse(localStorage.getItem('persistentExtractData'));
             selectedKeys.push(chk.dataset.key);
         });
 
-        if (selectedKeys.length === 0) { alert('يرجى تحديد جزء واحد على الأقل للاستعادة.'); return; }
-        if (!confirm('هل أنت متأكد أنك تريد استعادة الأجزاء المحددة؟')) return;
+        if (selectedKeys.length === 0) { void window.NajranDialogs.alert('يرجى تحديد جزء واحد على الأقل للاستعادة.'); return; }
+        if (!await window.NajranDialogs.confirm('هل أنت متأكد أنك تريد استعادة الأجزاء المحددة؟')) return;
 
         selectedKeys.forEach(key => {
             if (dataToRestore[key]) {
@@ -896,7 +897,7 @@ const extractData = JSON.parse(localStorage.getItem('persistentExtractData'));
             addLogEntry('استعادة ذكية', `الأجزاء: ${selectedKeys.join(', ')}`, 'نجاح');
         }
 
-        alert('✅ تمت الاستعادة والتفعيل والربط بنجاح!');
+        void window.NajranDialogs.alert('✅ تمت الاستعادة والتفعيل والربط بنجاح!');
         modal.style.display = 'none';
     });
 
@@ -914,8 +915,8 @@ const extractData = JSON.parse(localStorage.getItem('persistentExtractData'));
 </script>
 
 
-<script src="/original/track.js?v=20260711_static_v1"></script>
-<script src="/original/shared-nav.js?v=20260711_static_v1"></script>
+<script src="/original/track.js?v=20260713_all_native_dialogs_v1"></script>
+<script src="/original/shared-nav.js?v=20260713_all_native_dialogs_v1"></script>
 
 <script>
 // ── توست فتح مستخلص جديد تلقائياً ──────────────────────────────

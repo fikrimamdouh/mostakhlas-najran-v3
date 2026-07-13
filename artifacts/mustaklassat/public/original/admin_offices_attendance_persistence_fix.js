@@ -448,7 +448,7 @@
       return payload.summary;
     } catch (err) {
       console.error('[Admin Offices Persistence] full backup download failed:', err);
-      alert('فشل تنزيل النسخة الاحتياطية الكاملة للمكاتب');
+      void window.NajranDialogs.alert('فشل تنزيل النسخة الاحتياطية الكاملة للمكاتب');
       return null;
     }
   }
@@ -492,13 +492,13 @@
             try {
               var payload = JSON.parse(String(e2.target.result || '{}'));
               var r = restoreAdminOfficesFullBackupFromObject(payload);
-              alert('✓ تم الاسترجاع محليًا: ' + r.attendance.offices + ' مكتب / ' + r.attendance.rows + ' صف / ' + r.attendance.named + ' اسم.');
+              void window.NajranDialogs.alert('✓ تم الاسترجاع محليًا: ' + r.attendance.offices + ' مكتب / ' + r.attendance.rows + ' صف / ' + r.attendance.named + ' اسم.');
             } catch (err) {
               console.error('[Admin Offices Persistence] restore failed:', err);
-              alert('فشل الاسترجاع: ' + (err && err.message ? err.message : 'ملف غير صالح'));
+              void window.NajranDialogs.alert('فشل الاسترجاع: ' + (err && err.message ? err.message : 'ملف غير صالح'));
             }
           };
-          reader.onerror = function () { alert('تعذر قراءة الملف.'); };
+          reader.onerror = function () { void window.NajranDialogs.alert('تعذر قراءة الملف.'); };
           reader.readAsText(file, 'utf-8');
         };
       }

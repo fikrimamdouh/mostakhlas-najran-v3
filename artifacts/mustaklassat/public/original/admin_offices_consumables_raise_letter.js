@@ -129,7 +129,7 @@
   }
   function openPrintDoc(title, bodyHtml) {
     const win = window.open('', '', 'width=1000,height=900');
-    if (!win) return alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.');
+    if (!win) return void window.NajranDialogs.alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.');
     win.document.open();
     win.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${esc(title)}</title><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">${printCss()}</head><body><div class="toolbar"><button onclick="window.print()">طباعة</button><button onclick="window.close()">إغلاق</button></div>${bodyHtml}</body></html>`);
     win.document.close();
@@ -142,7 +142,7 @@
   function generateConsumablesRaiseLetter() {
     const s = getSettings();
     const net = currentConsumablesNet();
-    if (net <= 0) return alert('لم يتم العثور على صافي مستهلكات صالح داخل مستخلص المستهلكات الحالي.');
+    if (net <= 0) return void window.NajranDialogs.alert('لم يتم العثور على صافي مستهلكات صالح داخل مستخلص المستهلكات الحالي.');
     const vat = net * num(s.vatRate) / 100;
     const grand = net + vat;
     const body = `<section class="page">${headerHtml(s)}${toHtml(s)}<div class="salam">السلام عليكم ورحمة الله وبركاته، وبعد:</div><div class="body-text">نرفق لسعادتكم المستخلص الشهري لشركة ${esc(companyName())} والخاص ببند المستهلكات ومقاولي الباطن لمواقع ${esc(s.scopeName)}، ${extractPhrase()}.</div><table class="amount-table"><tbody><tr><td>صافي مستحقات المستهلكات ومقاولي الباطن عن مدة المستخلص</td><td>${moneySAR(net)}</td></tr><tr><td>ضريبة القيمة المضافة ${money(s.vatRate)}%</td><td>${moneySAR(vat)}</td></tr><tr class="grand"><td>الإجمالي</td><td>${moneySAR(grand)}</td></tr></tbody></table><div class="tafqeet">${esc(tafqeetSAR(grand))}</div><div class="closing">لذا نأمل بعد الاطلاع إحالته إلى جهة الاختصاص لتدقيقه واستكمال إجراءات صرف مستحقات المقاول / ${esc(companyName())}.<br>وتقبلوا تحياتنا ،،،</div>${signatureHtml(s)}${footerHtml(s)}</section>`;

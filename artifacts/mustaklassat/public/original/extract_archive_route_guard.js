@@ -176,22 +176,22 @@
       var snap = findSnap(id);
       if (!snap) return original.apply(this, arguments);
       if (String(localStorage.getItem('najran_local_draft_resume_id') || '') === String(id)) {
-        alert('هذا المستخلص مفتوح بالفعل.');
+        void window.NajranDialogs.alert('هذا المستخلص مفتوح بالفعل.');
         return true;
       }
       if (!hasMeaningfulLocalWork()) return original.call(this, id, { skipProtection: true, __openSelectedInternal: true });
-      showOpenSelectedModal(snap).then(function (action) {
+      showOpenSelectedModal(snap).then(async function (action) {
         if (action === 'save') {
           var saved = typeof window.saveExtractSnapshot === 'function' ? window.saveExtractSnapshot('before-open-selected-local-snapshot') : null;
           if (!saved) {
-            alert('تعذر حفظ المستخلص الحالي محليًا. لم يتم فتح المستخلص المختار، ولم يتم مسح أي بيانات.');
+            void window.NajranDialogs.alert('تعذر حفظ المستخلص الحالي محليًا. لم يتم فتح المستخلص المختار، ولم يتم مسح أي بيانات.');
             return;
           }
           original.call(window, id, { skipProtection: true, __openSelectedInternal: true });
           return;
         }
         if (action === 'force') {
-          if (!confirm('سيتم استبدال المستخلص المفتوح حاليًا بدون حفظ نسخة منه. هل أنت متأكد؟')) return;
+          if (!await window.NajranDialogs.confirm('سيتم استبدال المستخلص المفتوح حاليًا بدون حفظ نسخة منه. هل أنت متأكد؟')) return;
           original.call(window, id, { skipProtection: true, __openSelectedInternal: true });
         }
       });

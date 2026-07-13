@@ -30,7 +30,7 @@
   function esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c])); }
   function clean(v) { return String(v ?? '').replace(/[\u200e\u200f]/g, '').replace(/\s+/g, ' ').trim(); }
   function readJson(k, f) { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : f; } catch (_) { return f; } }
-  function writeJson(k, v) { try { localStorage.setItem(k, JSON.stringify(v || {})); return true; } catch (_) { alert('تعذر حفظ إعدادات خطابات الرفع. صغّر صورة الترويسة إذا كانت كبيرة.'); return false; } }
+  function writeJson(k, v) { try { localStorage.setItem(k, JSON.stringify(v || {})); return true; } catch (_) { void window.NajranDialogs.alert('تعذر حفظ إعدادات خطابات الرفع. صغّر صورة الترويسة إذا كانت كبيرة.'); return false; } }
   function yes(v) { return v === true || v === 'yes' || v === 'true' || v === '1'; }
   function digits(v) { const ar = '٠١٢٣٤٥٦٧٨٩', fa = '۰۱۲۳۴۵۶۷۸۹'; return String(v ?? '').replace(/[٠-٩]/g, d => ar.indexOf(d)).replace(/[۰-۹]/g, d => fa.indexOf(d)); }
   function num(v) { const n = Number(digits(v).replace(/[٬, ريال﷼\s]/g, '')); return Number.isFinite(n) ? n : 0; }
@@ -779,7 +779,7 @@ function signPanel(s) {
     if (dh) dh.onclick = () => { const s = readUi(); s.letterheadDataUrl = ''; save(s); mount(); };
     root.querySelector('#exportSettings').onclick = () => { const blob = new Blob([JSON.stringify(readUi(), null, 2)], { type: 'application/json' }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'hospitalRaiseLettersSettings_v8.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 500); };
     root.querySelector('#importBtn').onclick = () => root.querySelector('#importFile').click();
-    root.querySelector('#importFile').onchange = function () { const f = this.files && this.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { try { save(merge(defaults(), JSON.parse(String(r.result || '{}')))); openPanel = ''; mount(); } catch (_) { alert('ملف الإعدادات غير صالح'); } }; r.readAsText(f); };
+    root.querySelector('#importFile').onchange = function () { const f = this.files && this.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { try { save(merge(defaults(), JSON.parse(String(r.result || '{}')))); openPanel = ''; mount(); } catch (_) { void window.NajranDialogs.alert('ملف الإعدادات غير صالح'); } }; r.readAsText(f); };
   }
   function mount() {
     const s = settings();
@@ -1035,7 +1035,7 @@ html += table(s, k, ['عدد الوظائف', 'عدد السعوديين', 'ال
   function printDoc(k, s) {
     const key = k === 'selected' ? (s.selected || 'final') : (k === 'packet' ? 'packet' : k);
     const win = window.open('', '', 'width=1000,height=900');
-    if (!win) return alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.');
+    if (!win) return void window.NajranDialogs.alert('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة.');
     win.document.open();
     win.document.write(renderDocument(key, s, true));
     win.document.close();

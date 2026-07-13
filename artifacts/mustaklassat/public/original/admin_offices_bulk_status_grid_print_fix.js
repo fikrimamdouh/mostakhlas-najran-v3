@@ -160,9 +160,9 @@
     const end = parseInt(document.getElementById('aob-end-day')?.value || '0', 10);
     const status = document.getElementById('aob-status')?.value || 'ح';
     const selected = Array.from(document.querySelectorAll('.aob-employee-check:checked')).map(cb => cb.value);
-    if (!selected.length) return alert('اختر موظفًا واحدًا على الأقل.');
-    if (start > end) return alert('مدى الأيام غير صحيح.');
-    if (!statusEntries().some(s => s.code === status)) return alert('حالة الحضور غير صحيحة.');
+    if (!selected.length) return void window.NajranDialogs.alert('اختر موظفًا واحدًا على الأقل.');
+    if (start > end) return void window.NajranDialogs.alert('مدى الأيام غير صحيح.');
+    if (!statusEntries().some(s => s.code === status)) return void window.NajranDialogs.alert('حالة الحضور غير صحيحة.');
     const data = getData(), p = getPeriod(), touched = new Set();
     let affected = 0;
     selected.forEach(token => {
@@ -181,7 +181,7 @@
     try { if (typeof window.calculateAndDisplayGrandTotal === 'function') window.calculateAndDisplayGrandTotal(); } catch (_) {}
     try { const active = activeCenterKey(); if (active && touched.has(active) && typeof window.showCenterDetails === 'function') window.showCenterDetails(active); } catch (_) {}
     try { if (typeof window.closeDialog === 'function') window.closeDialog('management-dialog'); } catch (_) {}
-    alert(`تم تطبيق التعديل الجماعي بنجاح.\n\nعدد الموظفين المتأثرين: ${affected}\nعدد المكاتب المتأثرة: ${touched.size}`);
+    void window.NajranDialogs.alert(`تم تطبيق التعديل الجماعي بنجاح.\n\nعدد الموظفين المتأثرين: ${affected}\nعدد المكاتب المتأثرة: ${touched.size}`);
   }
 
   function openBulkDialog() {
