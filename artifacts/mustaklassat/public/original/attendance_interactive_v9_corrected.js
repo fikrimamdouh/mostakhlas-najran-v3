@@ -2323,13 +2323,6 @@ function closeExcelExportDialog() {
   if (dialog) dialog.remove();
   if (overlay) overlay.remove();
 }
-function toggleAllDepartmentsExcel(selectAllCheckbox) {
-  const checkboxes = document.querySelectorAll('#excel-export-dialog input[type="checkbox"]:not(#select-all-excel)');
-  checkboxes.forEach(checkbox => {
-    checkbox.checked = selectAllCheckbox.checked;
-  });
-}
-
 function exportSelectedDepartmentsToExcel() {
     const selectedDepartments = Array.from(document.querySelectorAll('#excel-export-dialog input[type="checkbox"]:checked')).map(cb => cb.value);
 

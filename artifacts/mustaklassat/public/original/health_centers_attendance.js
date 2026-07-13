@@ -2666,20 +2666,6 @@ function showCenterNameManagement() {
     `;
 }
 
-function saveAllCenterNames() {
-    const inputs = document.querySelectorAll('#center-name-editor-area .center-name-input');
-    let names = getCenterNames();
-    inputs.forEach(input => {
-        names[input.dataset.key] = input.value.trim();
-    });
-    saveCenterNames(names);
-    showSuccessMessage("تم حفظ أسماء المراكز بنجاح.");
-    closeDialog('form-dialog');
-    // Refresh the main management interface to show new names
-    populateCentersSidebar();
-    renderCenterIcons();
-}
-
 async function confirmDeleteCenter(centerKey) {
     const names = getCenterNames();
     const centerName = names[centerKey];

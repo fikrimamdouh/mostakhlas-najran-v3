@@ -1,4 +1,4 @@
-import { Component, useEffect, useRef, useState } from "react";
+import { Component, lazy, Suspense, useEffect, useRef, useState } from "react";
 import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser, useAuth } from "@clerk/react";
 import { shadcn } from "@clerk/themes";
 import { arSA } from "@clerk/localizations";
@@ -9,28 +9,28 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useGetMe, setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
  
-import Home from "@/pages/home";
-import Dashboard from "@/pages/dashboard";
-import NotFound from "@/pages/not-found";
-import Support from "@/pages/support";
-import ExtractsList from "@/pages/extracts/index";
-import NewExtract from "@/pages/extracts/new";
-import ExtractDetail from "@/pages/extracts/detail";
-import ProjectsList from "@/pages/projects/index";
-import NewProject from "@/pages/projects/new";
-import AdminUsers from "@/pages/admin/users";
-import AuditLog from "@/pages/admin/audit";
-import UsersView from "@/pages/admin/users-view";
-import ContractSupervisorPage from "@/pages/admin/contract-supervisor";
-import AdminBackup from "@/pages/admin/backup";
-import ExtractsStats from "@/pages/admin/stats";
-import HospitalsAdmin from "@/pages/admin/hospitals";
-import AdminNotifications from "@/pages/admin/notifications";
-import ViewerDashboard from "@/pages/viewer/dashboard";
-import Settings from "@/pages/settings";
-import OriginalViewer from "@/pages/OriginalViewer";
-import ExtractsTrack from "@/pages/extracts/track";
-import ContactsRegistry from "@/pages/contacts";
+const Home = lazy(() => import("@/pages/home"));
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+const Support = lazy(() => import("@/pages/support"));
+const ExtractsList = lazy(() => import("@/pages/extracts/index"));
+const NewExtract = lazy(() => import("@/pages/extracts/new"));
+const ExtractDetail = lazy(() => import("@/pages/extracts/detail"));
+const ProjectsList = lazy(() => import("@/pages/projects/index"));
+const NewProject = lazy(() => import("@/pages/projects/new"));
+const AdminUsers = lazy(() => import("@/pages/admin/users"));
+const AuditLog = lazy(() => import("@/pages/admin/audit"));
+const UsersView = lazy(() => import("@/pages/admin/users-view"));
+const ContractSupervisorPage = lazy(() => import("@/pages/admin/contract-supervisor"));
+const AdminBackup = lazy(() => import("@/pages/admin/backup"));
+const ExtractsStats = lazy(() => import("@/pages/admin/stats"));
+const HospitalsAdmin = lazy(() => import("@/pages/admin/hospitals"));
+const AdminNotifications = lazy(() => import("@/pages/admin/notifications"));
+const ViewerDashboard = lazy(() => import("@/pages/viewer/dashboard"));
+const Settings = lazy(() => import("@/pages/settings"));
+const OriginalViewer = lazy(() => import("@/pages/OriginalViewer"));
+const ExtractsTrack = lazy(() => import("@/pages/extracts/track"));
+const ContactsRegistry = lazy(() => import("@/pages/contacts"));
 
 const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
 if (apiUrl) setBaseUrl(apiUrl);
@@ -507,6 +507,10 @@ function ClerkLoadingGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function RouteLoading() {
+  return <div className="flex h-screen items-center justify-center flex-col gap-3" style={{ background: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)" }}><img src="/logo.png" alt="" className="h-16 w-auto opacity-80" onError={e => ((e.target as HTMLImageElement).style.display = "none")} /><p className="text-white text-lg font-medium">جاري تحميل الصفحة...</p></div>;
+}
+
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
   return (
@@ -516,32 +520,34 @@ function ClerkProviderWithRoutes() {
           <GlobalClerkBadgeHider />
           <ClerkTokenSyncer />
           <ClerkQueryClientCacheInvalidator />
-          <Switch>
-            <Route path="/" component={HomeRedirect} />
-            <Route path="/sign-in/*?" component={SignInPage} />
-            <Route path="/sign-up/*?" component={SignUpPage} />
-            <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
-            <Route path="/support" component={() => <ProtectedRoute component={Support} />} />
-            <Route path="/extracts" component={() => <ProtectedRoute component={ExtractsList} />} />
-            <Route path="/extracts/new" component={() => <ProtectedRoute component={NewExtract} />} />
-            <Route path="/extracts/track" component={() => <ProtectedRoute component={ExtractsTrack} />} />
-            <Route path="/extracts/:id" component={() => <ProtectedRoute component={ExtractDetail} />} />
-            <Route path="/projects" component={() => <ProtectedRoute component={ProjectsList} />} />
-            <Route path="/projects/new" component={() => <ProtectedRoute component={NewProject} />} />
-            <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsers} adminOnly />} />
-            <Route path="/admin/audit" component={() => <ProtectedRoute component={AuditLog} adminOnly />} />
-            <Route path="/admin/users-view" component={() => <ProtectedRoute component={UsersView} adminOnly />} />
-            <Route path="/admin/backup" component={() => <ProtectedRoute component={AdminBackup} adminOnly />} />
-            <Route path="/admin/hospitals" component={() => <ProtectedRoute component={HospitalsAdmin} adminOnly />} />
-            <Route path="/admin/extracts-stats" component={() => <ProtectedRoute component={ExtractsStats} adminOnly />} />
-            <Route path="/admin/notifications" component={() => <ProtectedRoute component={AdminNotifications} adminOnly />} />
-            <Route path="/contract-supervisor" component={() => <ProtectedRoute component={ContractSupervisorPage} roles={["contract_supervisor", "supervisor"]} />} />
-            <Route path="/viewer" component={() => <ProtectedRoute component={ViewerDashboard} roles={["viewer", "supervisor"]} />} />
-            <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
-            <Route path="/contacts" component={() => <ProtectedRoute component={ContactsRegistry} />} />
-            <Route path="/original-viewer" component={() => <Show when="signed-in" fallback={<Redirect to="/sign-in" />}><AuthGuard><OriginalViewer /></AuthGuard></Show>} />
-            <Route component={NotFound} />
-          </Switch>
+          <Suspense fallback={<RouteLoading />}>
+            <Switch>
+              <Route path="/" component={HomeRedirect} />
+              <Route path="/sign-in/*?" component={SignInPage} />
+              <Route path="/sign-up/*?" component={SignUpPage} />
+              <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
+              <Route path="/support" component={() => <ProtectedRoute component={Support} />} />
+              <Route path="/extracts" component={() => <ProtectedRoute component={ExtractsList} />} />
+              <Route path="/extracts/new" component={() => <ProtectedRoute component={NewExtract} />} />
+              <Route path="/extracts/track" component={() => <ProtectedRoute component={ExtractsTrack} />} />
+              <Route path="/extracts/:id" component={() => <ProtectedRoute component={ExtractDetail} />} />
+              <Route path="/projects" component={() => <ProtectedRoute component={ProjectsList} />} />
+              <Route path="/projects/new" component={() => <ProtectedRoute component={NewProject} />} />
+              <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsers} adminOnly />} />
+              <Route path="/admin/audit" component={() => <ProtectedRoute component={AuditLog} adminOnly />} />
+              <Route path="/admin/users-view" component={() => <ProtectedRoute component={UsersView} adminOnly />} />
+              <Route path="/admin/backup" component={() => <ProtectedRoute component={AdminBackup} adminOnly />} />
+              <Route path="/admin/hospitals" component={() => <ProtectedRoute component={HospitalsAdmin} adminOnly />} />
+              <Route path="/admin/extracts-stats" component={() => <ProtectedRoute component={ExtractsStats} adminOnly />} />
+              <Route path="/admin/notifications" component={() => <ProtectedRoute component={AdminNotifications} adminOnly />} />
+              <Route path="/contract-supervisor" component={() => <ProtectedRoute component={ContractSupervisorPage} roles={["contract_supervisor", "supervisor"]} />} />
+              <Route path="/viewer" component={() => <ProtectedRoute component={ViewerDashboard} roles={["viewer", "supervisor"]} />} />
+              <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
+              <Route path="/contacts" component={() => <ProtectedRoute component={ContactsRegistry} />} />
+              <Route path="/original-viewer" component={() => <Show when="signed-in" fallback={<Redirect to="/sign-in" />}><AuthGuard><OriginalViewer /></AuthGuard></Show>} />
+              <Route component={NotFound} />
+            </Switch>
+          </Suspense>
         </ClerkLoadingGuard>
       </QueryClientProvider>
     </ClerkProvider>

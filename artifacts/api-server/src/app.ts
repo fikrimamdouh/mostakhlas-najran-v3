@@ -44,8 +44,6 @@ app.use(cors({
     if (process.env.NODE_ENV !== "production") return callback(null, true);
     const allowed = [PRODUCTION_ORIGIN, ...extraOrigins];
     if (!origin || allowed.includes(origin)) return callback(null, true);
-    // also allow replit.app preview domains in production for admin access
-    if (/\.replit\.app$/.test(origin) || /\.repl\.co$/.test(origin)) return callback(null, true);
     const err = new Error(`CORS: origin not allowed: ${origin}`) as Error & { status?: number };
     err.status = 403;
     callback(err);

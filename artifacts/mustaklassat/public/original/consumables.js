@@ -46,53 +46,6 @@ function updateDateTime() {
     }
 }
 
-// دالة جلب بيانات العقد من التخزين المحلي
-function getContractData() {
-    const extractStart = localStorage.getItem('extractStart');
-    const extractEnd = localStorage.getItem('extractEnd');
-    const storedData = localStorage.getItem('contractData');
-    
-    // البيانات الافتراضية للعقد
-    let contractData = {
-        hospitalName: 'مستشفي شرورة العام',
-        contractDetails: 'عقد الصيانة والنظافة والتشغيل غير الطبي',
-        companyName: 'شركة سراكو',
-        contractType: 'عقد أساسي',
-        contractNumber: '',
-        projectName: '',
-        extractNumber: '',
-        startDate: extractStart || '2025-05-18',
-        endDate: extractEnd || '2025-05-31',
-        directPurchaseRatio: 0
-    };
-    
-    // دمج البيانات المخزنة مع البيانات الافتراضية
-    if (storedData) {
-        try {
-            const parsedData = JSON.parse(storedData);
-            contractData = {
-                ...contractData,
-                ...parsedData,
-                startDate: extractStart || parsedData.startDate || '2025-05-18',
-                endDate: extractEnd || parsedData.endDate || '2025-05-31'
-            };
-        } catch (e) {
-            console.error('خطأ في تحليل بيانات العقد:', e);
-        }
-    }
-    
-    // تصحيح إضافي لو التواريخ فارغة
-    if (!contractData.startDate || contractData.startDate === '') {
-        contractData.startDate = '2025-05-18';
-    }
-    if (!contractData.endDate || contractData.endDate === '') {
-        contractData.endDate = '2025-05-31';
-    }
-    
-    console.log('بيانات العقد:', contractData);
-    return contractData;
-}
-
 // دالة عرض بيانات العقد في الصفحة
 function fetchContractData() {
     const contractData = getContractData();

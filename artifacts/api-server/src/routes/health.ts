@@ -1,5 +1,7 @@
 import { Router, type IRouter } from "express";
-import { pool } from "@workspace/db";
+import { db, pool, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { requireAuth } from "../middleware/requireAuth";
 
 const router: IRouter = Router();
 
@@ -7,7 +9,19 @@ router.get("/healthz", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-router.get("/healthz/full", async (_req, res) => {
+async function requireAdmin(req: any, res: any, next: any) {
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+    if (!user || user.role !== "admin") return res.status(403).json({ error: "Admin only" });
+    req.currentUser = user;
+    next();
+  } catch (err) {
+    req.log.error({ err }, "Health admin check failed");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+router.get("/healthz/full", requireAuth, requireAdmin, async (_req, res) => {
   const dbUrl = process.env.DATABASE_URL ?? "";
   let dbHost = "NOT_SET";
   try { dbHost = dbUrl ? new URL(dbUrl).hostname : "NOT_SET"; } catch {}

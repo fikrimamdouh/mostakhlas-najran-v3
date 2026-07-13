@@ -51,6 +51,23 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("@clerk")) return "auth-vendor";
+          if (
+            id.includes("/react/") ||
+            id.includes("/react-dom/") ||
+            id.includes("/scheduler/") ||
+            id.includes("/wouter/") ||
+            id.includes("@tanstack/react-query") ||
+            id.includes("@tanstack/query-core")
+          ) return "react-vendor";
+          return undefined;
+        },
+      },
+    },
   },
   server: {
     port,

@@ -12,6 +12,13 @@ export default function Support() {
   const { user } = useUser();
   const { getToken } = useAuth();
   const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
+  const [form, setForm] = useState({
+    subject: "",
+    message: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
 
   // Access control — admin/supervisor أو من لديه صلاحية support
   const role = dbUser?.role ?? "";
@@ -32,19 +39,9 @@ export default function Support() {
     );
   }
 
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    subject: "",
-    message: "",
-  });
-  const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState("");
-
-  // Pre-fill from user data
-  const displayName = form.name || dbUser?.name || user?.fullName || "";
-  const displayEmail = form.email || dbUser?.email || user?.primaryEmailAddress?.emailAddress || "";
+  // هوية المُرسل للعرض فقط؛ الخادم يعتمد هوية المستخدم المسجّل ولا يثق في قيم النموذج.
+  const displayName = dbUser?.name || user?.fullName || "";
+  const displayEmail = dbUser?.email || user?.primaryEmailAddress?.emailAddress || "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,8 +60,6 @@ export default function Support() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          name: displayName || form.name,
-          email: displayEmail || form.email,
           subject: form.subject,
           message: form.message,
         }),
@@ -134,10 +129,9 @@ export default function Support() {
               </label>
               <Input
                 value={displayName}
-                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 placeholder="الاسم الكامل"
                 required
-                disabled={!!dbUser?.name}
+                readOnly
               />
             </div>
 
@@ -149,10 +143,9 @@ export default function Support() {
               <Input
                 type="email"
                 value={displayEmail}
-                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                 placeholder="your@email.com"
                 required
-                disabled={!!dbUser?.email}
+                readOnly
               />
             </div>
           </div>
