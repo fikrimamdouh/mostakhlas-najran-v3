@@ -9,12 +9,13 @@ import { Router } from "express";
 import { db, usersTable, hospitalStorageTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
+import { findCurrentUser } from "../lib/current-user";
 
 const router = Router();
 const JOB_KEY = "job_positions_data";
 
 const requireAdmin = async (req: any, res: any, next: any) => {
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+  const user = await findCurrentUser(req);
   if (!user || user.role !== "admin") return res.status(403).json({ error: "Admin only" });
   req.currentUser = user;
   next();
@@ -62,7 +63,7 @@ router.post("/", requireAuth, requireAdmin, async (req: any, res: any) => {
 // GET /api/admin/job-positions?hospital=<name>
 router.get("/", requireAuth, async (req: any, res: any) => {
   try {
-    const [dbUser] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+    const dbUser = await findCurrentUser(req);
     if (!dbUser || dbUser.status !== "approved") return res.status(403).json({ error: "Forbidden" });
 
     // اقرأ query param أولاً لجميع الأدوار — المناصب ليست بيانات سرية
@@ -110,7 +111,7 @@ router.get("/", requireAuth, async (req: any, res: any) => {
 // GET /api/admin/job-positions/list
 router.get("/list", requireAuth, async (req: any, res: any) => {
   try {
-    const [dbUser] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+    const dbUser = await findCurrentUser(req);
     if (!dbUser || dbUser.role !== "admin") return res.status(403).json({ error: "Admin only" });
 
     const rows = await db.select().from(hospitalStorageTable)

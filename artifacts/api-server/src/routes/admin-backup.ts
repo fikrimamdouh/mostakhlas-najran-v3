@@ -5,12 +5,13 @@ import {
 } from "@workspace/db";
 import { eq, desc, and } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
+import { findCurrentUser } from "../lib/current-user";
 import { runScheduledBackup } from "../lib/backup-scheduler";
 
 const router = Router();
 
 const requireAdmin = async (req: any, res: any, next: any) => {
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+  const user = await findCurrentUser(req);
   if (!user || user.role !== "admin") return res.status(403).json({ error: "Admin only" });
   req.currentUser = user;
   next();
@@ -398,4 +399,3 @@ router.get("/scheduled/list", requireAuth, requireAdmin, async (req: any, res: a
 });
 
 export default router;
-

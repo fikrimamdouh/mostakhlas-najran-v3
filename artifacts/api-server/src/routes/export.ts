@@ -1,12 +1,14 @@
 import { Router } from "express";
 import { db, usersTable, submittedExtractsTable } from "@workspace/db";
 import { requireAuth } from "../middleware/requireAuth";
+import { findCurrentUser } from "../lib/current-user";
+import { companySitesFor } from "../lib/extract-scope";
 import { eq, desc, and, inArray } from "drizzle-orm";
 
 const router = Router();
 
 const requireApproved = async (req: any, res: any, next: any) => {
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+  const user = await findCurrentUser(req);
   if (!user) return res.status(401).json({ error: "User not registered" });
   if (user.status !== "approved" && user.role !== "admin") return res.status(403).json({ error: "Account pending" });
   req.currentUser = user;
@@ -44,16 +46,9 @@ router.get("/submitted-extracts", requireAuth, requireApproved, async (req: any,
     const role = req.currentUser.role;
     const isAdminOrSup = role === "admin" || role === "supervisor";
 
-    const COMPANY_SITES: Record<string, string[]> = {
-      "بيت_العرب": ["مستشفى يدمة العام","مستشفى حبونا العام","مستشفى بدر الجنوب العام","مستشفى الولادة والأطفال","مستشفى نجران العام القديم وسكن الممرضات الخارجي","المكاتب الإدارية والمرافق الصحية","صيانة وإصلاح السيارات والعيادات المتنقلة"],
-      "سراكو": ["مستشفى نجران العام الجديد","مركز طب الأسنان التخصصي","مجمع الأمل للصحة النفسية","مستشفى ثار العام","مستشفى خباش العام","المراكز الصحية","مستشفى الملك خالد","مركز الأمير سلطان","مستشفى شروره العام"],
-      "زهران": ["مستشفى يدمه العام — زهران","مستشفى حبونا العام — زهران","مستشفى بدر الجنوب العام — زهران"],
-      "إيمان": ["مستشفى الولادة والأطفال — إيمان","مستشفى غرب نجران للولادة والأطفال والعيادات التخصصية — إيمان","المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة — إيمان"],
-    };
-
     let whereClause: any = undefined;
     if (role === "contract_supervisor") {
-      const companySites = req.currentUser.contractCompany ? (COMPANY_SITES[req.currentUser.contractCompany] ?? []) : [];
+      const companySites = companySitesFor(req.currentUser);
       if (companySites.length === 0) {
         const rows: any[] = [];
         return sendCsv(res, rows);

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, usersTable, submittedExtractsTable, systemSettingsTable } from "@workspace/db";
 import { requireAuth } from "../middleware/requireAuth";
+import { findCurrentUser } from "../lib/current-user";
 import { eq, and, inArray } from "drizzle-orm";
 import { Resend } from "resend";
 import { logger } from "../lib/logger";
@@ -10,7 +11,7 @@ const router = Router();
 const ADMIN_EMAIL_FALLBACK = "rorofikri@gmail.com";
 
 const requireAdmin = async (req: any, res: any, next: any) => {
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+  const user = await findCurrentUser(req);
   if (!user || (user.role !== "admin" && user.role !== "supervisor")) return res.status(403).json({ error: "Admin only" });
   req.currentUser = user;
   next();

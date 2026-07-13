@@ -2,13 +2,14 @@ import { Router } from "express";
 import { db, usersTable, auditLogTable, systemSettingsTable } from "@workspace/db";
 import { eq, desc, sql, lt, inArray, and } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
+import { findCurrentUser } from "../lib/current-user";
 
 const router = Router();
 const ADMIN_ROLES = ["admin", "super_admin", "administrator"];
 
 const requireAdminOrSupervisor = async (req: any, res: any, next: any) => {
   try {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+    const user = await findCurrentUser(req);
     if (!user || !["admin", "supervisor"].includes(user.role)) return res.status(403).json({ error: "Forbidden" });
     req.currentUser = user;
     next();
@@ -20,7 +21,7 @@ const requireAdminOrSupervisor = async (req: any, res: any, next: any) => {
 
 const requireAdmin = async (req: any, res: any, next: any) => {
   try {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+    const user = await findCurrentUser(req);
     if (!user || user.role !== "admin") return res.status(403).json({ error: "Forbidden" });
     req.currentUser = user;
     next();
@@ -138,7 +139,7 @@ router.delete("/cleanup", requireAuth, requireAdmin, async (req: any, res) => {
 
 router.post("/", requireAuth, async (req: any, res) => {
   try {
-    const [dbUser] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+    const dbUser = await findCurrentUser(req);
     if (!dbUser) return res.status(404).json({ error: "User not found" });
 
     const role = String(dbUser.role || "").toLowerCase().trim();

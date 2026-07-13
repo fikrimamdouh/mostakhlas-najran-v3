@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, pool, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
+import { findCurrentUser } from "../lib/current-user";
 
 const router: IRouter = Router();
 
@@ -11,7 +12,7 @@ router.get("/healthz", (_req, res) => {
 
 async function requireAdmin(req: any, res: any, next: any) {
   try {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+    const user = await findCurrentUser(req);
     if (!user || user.role !== "admin") return res.status(403).json({ error: "Admin only" });
     req.currentUser = user;
     next();

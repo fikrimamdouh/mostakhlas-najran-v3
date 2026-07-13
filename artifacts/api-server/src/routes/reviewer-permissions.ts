@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, usersTable, systemSettingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
+import { findCurrentUser } from "../lib/current-user";
 import { logAudit } from "./audit";
 
 const router = Router();
@@ -59,7 +60,7 @@ async function writePayload(userId: number, payload: ReviewPermissionPayload, up
 }
 
 async function getCurrentUser(req: any) {
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+  const user = await findCurrentUser(req);
   return user;
 }
 

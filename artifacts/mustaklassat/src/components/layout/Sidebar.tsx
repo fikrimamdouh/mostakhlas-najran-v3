@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
-import { getSiteType, parseAllowedModules, filterModules, VISIT_MODULE_KEYS } from "@/lib/modules";
+import { getModuleHref, getSiteType, parseAllowedModules, filterModules, VISIT_MODULE_KEYS } from "@/lib/modules";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const ARABIC_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 const ARABIC_MONTHS = [
@@ -66,7 +67,6 @@ const roleBg = (role: string) => {
 };
 
 const COLLAPSE_KEY = "sidebar_collapsed";
-const READ_NOTIFS_KEY = "najran_read_notifications";
 function normalizeHospitalList(input: any): string[] {
   let arr: any[] = [];
 
@@ -99,82 +99,6 @@ function readActiveHospitalFromStorage(): string {
     return "";
   }
 }
-type ServerNotif = { id: number; type: string; title: string; body: string; href: string | null; isRead: boolean; createdAt: string };
-
-function useNotifications(isAdmin: boolean, pendingUsersCount: number, getToken: () => Promise<string | null>) {
-  const [readIds, setReadIds] = useState<Set<string>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem(READ_NOTIFS_KEY) || "[]")); } catch { return new Set(); }
-  });
-  const [serverNotifs, setServerNotifs] = useState<ServerNotif[]>([]);
-  const lastFetchRef = useRef(0);
-
-  // تحميل خفيف: عند الفتح + عند focus (مع throttle) + كل 10 دقائق كحد أقصى.
-  // توفير Neon: كان 5 دقائق — رُفع لـ10 مع نفس الـ throttle على الـ focus.
-  useEffect(() => {
-    let cancelled = false;
-    async function load(force?: boolean) {
-      const now = Date.now();
-      if (!force && now - lastFetchRef.current < 10 * 60_000) return;
-      lastFetchRef.current = now;
-      try {
-        const token = await getToken();
-        const res = await fetch("/api/notifications", { headers: token ? { Authorization: `Bearer ${token}` } : {}, credentials: "include" });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && Array.isArray(data.notifications)) setServerNotifs(data.notifications);
-      } catch { /* صامت */ }
-    }
-    load(true);
-    const onFocus = () => load();
-    window.addEventListener("focus", onFocus);
-    const t = setInterval(() => load(), 10 * 60_000);
-    return () => { cancelled = true; window.removeEventListener("focus", onFocus); clearInterval(t); };
-  }, [getToken]);
-
-  const localNotifs = isAdmin && pendingUsersCount > 0
-    ? [{ id: "pending_users", type: "warning" as const, title: "مستخدمون بانتظار الموافقة", body: `يوجد ${pendingUsersCount} مستخدم بانتظار موافقتك`, href: "/admin/users", time: "" }]
-    : [];
-
-  const notifications = [
-    ...serverNotifs.map(n => ({
-      id: `srv_${n.id}`, type: (n.type === "extract_approved" ? "success" : n.type === "extract_rejected" || n.type === "warning" ? "warning" : "info") as any,
-      title: n.title, body: n.body, href: n.href || "", time: n.createdAt ? new Date(n.createdAt).toLocaleString("ar-EG", { dateStyle: "short", timeStyle: "short" }) : "",
-      _srvId: n.id, _srvRead: n.isRead,
-    })),
-    ...localNotifs,
-  ];
-
-  const unread = notifications.filter(n => (n as any)._srvId ? !(n as any)._srvRead : !readIds.has(n.id));
-
-  function markLocal(id: string) {
-    setReadIds(prev => {
-      const next = new Set(prev); next.add(id);
-      try { localStorage.setItem(READ_NOTIFS_KEY, JSON.stringify([...next])); } catch {}
-      return next;
-    });
-  }
-  async function patchRead(path: string) {
-    try {
-      const token = await getToken();
-      await fetch(path, { method: "PATCH", headers: token ? { Authorization: `Bearer ${token}` } : {}, credentials: "include" });
-    } catch { /* صامت */ }
-  }
-  function markRead(id: string) {
-    const srv = notifications.find(n => n.id === id) as any;
-    if (srv?._srvId) {
-      setServerNotifs(prev => prev.map(n => (n.id === srv._srvId ? { ...n, isRead: true } : n)));
-      patchRead(`/api/notifications/${srv._srvId}/read`);
-    } else markLocal(id);
-  }
-  function markAllRead() {
-    setServerNotifs(prev => prev.map(n => ({ ...n, isRead: true })));
-    patchRead("/api/notifications/read-all");
-    notifications.forEach(n => { if (!(n as any)._srvId) markLocal(n.id); });
-  }
-
-  return { notifications, unread, markRead, markAllRead };
-}
-
 export function Sidebar(_props: { dbUserOverride?: any } = {}) {
   const [location] = useLocation();
   const { user } = useUser();
@@ -743,7 +667,7 @@ const siteType = getSiteType(currentHospital || dbUser?.hospital);
 
   const ModuleItem = ({ m }: { m: any }) => {
     const isActive = isModuleActive(m.file);
-    const href = `/original-viewer?page=${m.file}`;
+    const href = getModuleHref(m.file);
     return (
       <Link key={m.key} href={href}>
         <div

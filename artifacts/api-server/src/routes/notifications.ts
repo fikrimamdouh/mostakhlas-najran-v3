@@ -2,9 +2,10 @@ import { Router } from "express";
 import { db, usersTable, notificationsTable } from "@workspace/db";
 import { and, eq, desc, inArray, sql } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
+import { findCurrentUser } from "../lib/current-user";
 
 const requireApproved = async (req: any, res: any, next: any) => {
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+  const user = await findCurrentUser(req);
   if (!user) return res.status(401).json({ error: "User not registered" });
   if (user.status !== "approved" && user.role !== "admin") {
     return res.status(403).json({ error: "Account pending approval" });

@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { db, usersTable, systemSettingsTable } from "@workspace/db";
 import { requireAuth } from "../middleware/requireAuth";
+import { findCurrentUser } from "../lib/current-user";
 import { eq } from "drizzle-orm";
 
 const router = Router();
 
 const requireAdmin = async (req: any, res: any, next: any) => {
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+  const user = await findCurrentUser(req);
   if (!user || user.role !== "admin") return res.status(403).json({ error: "Admin only" });
   (req as any).currentUser = user;
   next();

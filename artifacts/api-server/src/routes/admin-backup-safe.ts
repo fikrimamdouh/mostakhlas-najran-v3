@@ -15,13 +15,14 @@ import {
 } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
+import { findCurrentUser } from "../lib/current-user";
 
 const router = Router();
 
 type Report = Record<string, { restored: number; skipped: number; errors: string[] }>;
 
 const requireAdmin = async (req: any, res: any, next: any) => {
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, req.clerkUserId)).limit(1);
+  const user = await findCurrentUser(req);
   if (!user || user.role !== "admin") return res.status(403).json({ error: "Admin only" });
   req.currentUser = user;
   next();

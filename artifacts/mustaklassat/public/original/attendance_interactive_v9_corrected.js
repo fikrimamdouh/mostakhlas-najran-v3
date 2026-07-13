@@ -1631,46 +1631,6 @@ function updateDateTime() {
  * @function displaySignaturesOnPage
  * @description تقرأ التواقيع المحفوظة من localStorage وتعرضها في قسم العرض الدائم.
  */
-function displaySignaturesOnPage() {
-    // 1. تحديد الحاوية التي سنضع فيها التواقيع
-    const container = document.querySelector('.signatures-display-section .signatures-grid');
-    if (!container) {
-        console.error('خطأ: لم يتم العثور على حاوية عرض التواقيع (.signatures-grid)');
-        return; // الخروج من الدالة إذا لم نجد الحاوية
-    }
-
-    // 2. تعريف التواقيع التي نريد عرضها ومفاتيحها في localStorage
-    const signaturesToDisplay = [
-        { keyName: 'projectManagerName', keyTitle: 'projectManagerTitle', defaultTitle: 'مدير المشروع' },
-        { keyName: 'maintenanceHeadName', keyTitle: 'maintenanceHeadTitle', defaultTitle: 'رئيس قسم الصيانة' },
-        { keyName: 'hospitalManagerName', keyTitle: 'hospitalManagerTitle', defaultTitle: 'مدير المستشفى' },
-        { keyName: 'contractorRepresentativeName', keyTitle: 'contractorRepresentativeTitle', defaultTitle: 'مندوب المقاول' }
-    ];
-
-    let htmlContent = ''; // سنقوم ببناء كود الـ HTML هنا
-
-    // 3. جلب البيانات المحفوظة من localStorage
-    const contractData = JSON.parse(localStorage.getItem('persistentContractData') || '{}');
-
-    // 4. المرور على كل توقيع لإنشاء كود العرض الخاص به
-    signaturesToDisplay.forEach(sig => {
-        // الحصول على الاسم والمسمى الوظيفي من البيانات المحفوظة، أو استخدام قيمة افتراضية
-        const name = contractData[sig.keyName] || '..............................'; // نص افتراضي أنيق
-        const title = contractData[sig.keyTitle] || sig.defaultTitle;
-
-        // بناء كود HTML لكل توقيع باستخدام التنسيقات الجديدة
-        htmlContent += `
-            <div class="signature-item-display">
-                <div class="title">${title}:</div>
-                <div class="line"></div>
-                <div class="name">${name}</div>
-            </div>
-        `;
-    });
-
-    // 5. وضع المحتوى المكتمل داخل الحاوية في الصفحة
-    container.innerHTML = htmlContent;
-}
 
 async function deleteEmployee(departmentKey, employeeIndex) {
   if (await window.NajranDialogs.confirm('هل أنت متأكد من رغبتك في حذف هذا الموظف؟ لا يمكن التراجع عن هذه العملية.')) {
@@ -2084,33 +2044,6 @@ function closeNationalityFineEditor() {
   if (overlay) overlay.remove();
 }
 
-function showSuccessMessage(message) {
-  // إنشاء رسالة نجاح مؤقتة
-  const successMsg = document.createElement('div');
-  successMsg.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: #28a745;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    z-index: 1001;
-    font-size: 14px;
-    max-width: 300px;
-  `;
-  successMsg.textContent = message;
-  
-  document.body.appendChild(successMsg);
-  
-  // إزالة الرسالة بعد 3 ثوان
-  setTimeout(() => {
-    if (successMsg.parentNode) {
-      successMsg.parentNode.removeChild(successMsg);
-    }
-  }, 3000);
-}
 
 
 
@@ -2467,36 +2400,7 @@ const skipAbsenceFine =
 
 // ===== 1. الدوال الأساسية المطلوبة للأزرار =====
 
-function openDialog(id) {
-  const dialog = document.getElementById(id);
-  if (dialog) {
-    dialog.style.display = 'flex';
-  } else {
-    console.warn('Dialog ID not found:', id);
-  }
-}
 
-function closeDialog(id) {
-  const dialog = document.getElementById(id);
-  if (dialog) {
-    dialog.remove(); // إزالة النافذة المنبثقة من الـ DOM
-  }
-
-  // محاولة إزالة الـ overlay المرتبط بالنافذة
-  const overlayId = id.replace('-dialog', '-overlay'); 
-  const overlay = document.getElementById(overlayId);
-  if (overlay) {
-    overlay.remove(); // إزالة الـ overlay من الـ DOM
-  }
-
-  // في حال وجود أي overlays أخرى لم يتم إزالتها بشكل صحيح (كإجراء احتياطي)
-  const genericOverlays = document.querySelectorAll('[id$="-overlay"]'); 
-  genericOverlays.forEach(ov => {
-      if (ov.id !== 'particles-js-bg') { 
-          ov.remove();
-      }
-  });
-}
 
 function exportToExcel(tableId = 'cleaning-table') {
   try {
@@ -3338,19 +3242,7 @@ function showSuccessMessage(message) {
 
 // --- 1. الدوال الرئيسية لفتح وإغلاق النوافذ (تأكد من وجودها) ---
 
-function openDialog(dialogId) {
-    const dialog = document.getElementById(dialogId);
-    const overlay = document.getElementById(dialogId.replace('-dialog', '-overlay'));
-    if (dialog) dialog.style.display = 'flex'; // Use flex for modern dialogs
-    if (overlay) overlay.style.display = 'block';
-}
 
-function closeDialog(dialogId) {
-    const dialog = document.getElementById(dialogId);
-    const overlay = document.getElementById(dialogId.replace('-dialog', '-overlay'));
-    if (dialog) dialog.style.display = 'none';
-    if (overlay) overlay.style.display = 'none';
-}
 
 
 // دالة فتح النافذة
@@ -3361,66 +3253,9 @@ function closeDialog(dialogId) {
 
 
 // --- دالة "تعديل التواقيع" المحدثة ---
-async function openSignatureEditDialog() {
-    const password = await window.NajranDialogs.prompt('أدخل كلمة المرور لتعديل التواقيع:');
-    if (password !== PASSWORD) {
-        if (password !== null) void window.NajranDialogs.alert('كلمة المرور غير صحيحة');
-        return;
-    }
-
-    let dialog = document.getElementById('signature-edit-dialog');
-    if (!dialog) {
-        dialog = document.createElement('div');
-        dialog.id = 'signature-edit-dialog';
-        dialog.className = 'dialog wide-dialog';
-        document.body.appendChild(dialog);
-    }
-
-    dialog.innerHTML = `
-        <div class="dialog-header">
-            <h3><i class="fas fa-signature"></i> تعديل التواقيع المعتمدة</h3>
-            <span class="close" onclick="closeDialog('signature-edit-dialog')">×</span>
-        </div>
-        <div class="dialog-body" id="signature-fields-container">
-            <!-- حقول التواقيع الديناميكية ستظهر هنا -->
-        </div>
-        <div class="dialog-footer">
-            <button class="btn-primary" onclick="addSignatureField()"><i class="fas fa-plus"></i> إضافة توقيع</button>
-            <button class="btn-success" onclick="saveSignatures()"><i class="fas fa-save"></i> حفظ التواقيع</button>
-        </div>
-    `;
-    
-    openDialog('signature-edit-dialog');
-    populateSignatureFields(); // دالة ملء الحقول
-}
 
 // تأكد من وجود هذه الدوال المساعدة أيضاً
-function populateSignatureFields() {
-    const container = document.getElementById('signature-fields-container');
-    if (!container) return;
-    container.innerHTML = '';
-    const signatures = getSignatures(); // دالة جلب التواقيع
-    signatures.forEach(sig => {
-        container.innerHTML += `
-            <div class="form-group signature-edit-item" style="display:flex; gap:10px; align-items:center;">
-                <input type="text" class="sig-title-input" value="${sig.title}" placeholder="المسمى الوظيفي" style="flex:1;">
-                <input type="text" class="sig-name-input" value="${sig.name}" placeholder="الاسم" style="flex:2;">
-                <button class="btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
-            </div>
-        `;
-    });
-}
 
-function addSignatureField() {
-    const container = document.getElementById('signature-fields-container');
-    container.innerHTML += `
-        <div class="form-group signature-edit-item" style="display:flex; gap:10px; align-items:center;">
-            <input type="text" class="sig-title-input" value="" placeholder="المسمى الوظيفي" style="flex:1;">
-            <input type="text" class="sig-name-input" value="" placeholder="الاسم" style="flex:2;">
-            <button class="btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
-        </div>
-    `;
-}
 
 // دالة إغلاق النافذة
 function closeSignatureEditDialog() {
@@ -3429,21 +3264,6 @@ function closeSignatureEditDialog() {
 }
 
 // دالة التحقق من كلمة المرور (مع تعديل بسيط لإظهار الخطأ)
-function verifySignaturePassword() {
-    const input = document.getElementById('signature-password-input').value;
-    const errorEl = document.getElementById('signature-password-error');
-    const PASSWORD = "admin123"; // تأكد من أن هذا الباسورد معرف
-
-    if (input === PASSWORD) {
-        document.getElementById('signature-password-section').style.display = 'none';
-        document.getElementById('signature-edit-content').style.display = 'block';
-        errorEl.style.display = 'none';
-        populateSignatureFields(); // دالتك الحالية لملء الحقول
-    } else {
-        errorEl.textContent = 'الباسورد غير صحيح';
-        errorEl.style.display = 'block'; // إظهار رسالة الخطأ
-    }
-}
 
 /**
  * =================================================
@@ -3454,99 +3274,11 @@ function verifySignaturePassword() {
 /**
  * (الدالة الرئيسية) تملأ نافذة تعديل التواقيع بالحقول الديناميكية.
  */
-function populateSignatureFields() {
-    const container = document.getElementById('signature-fields-container');
-    if (!container) return;
-    container.innerHTML = ''; // مسح المحتوى القديم
-
-    // إنشاء حاوية مخصصة فقط لحقول التواقيع
-    const fieldsWrapper = document.createElement('div');
-    fieldsWrapper.id = 'signature-fields-wrapper';
-    container.appendChild(fieldsWrapper);
-
-    const signatures = getSignatures();
-
-    signatures.forEach((sig, index) => {
-        const fieldDiv = document.createElement('div');
-        fieldDiv.className = 'signature-edit-item';
-        fieldDiv.innerHTML = `
-            <div class="form-group">
-                <label>مسمى التوقيع:</label>
-                <input type="text" class="sig-title-input" value="${sig.title}" placeholder="مثال: مدير المستشفى">
-            </div>
-            <div class="form-group">
-                <label>اسم صاحب التوقيع:</label>
-                <input type="text" class="sig-name-input" value="${sig.name}" placeholder="أدخل الاسم هنا">
-            </div>
-            <button class="btn btn-danger" onclick="deleteSignatureField(this)"><i class="fas fa-trash"></i> حذف</button>
-        `;
-        fieldsWrapper.appendChild(fieldDiv); // الإضافة إلى الحاوية الداخلية
-    });
-
-    // إضافة زر "إضافة توقيع جديد" خارج حاوية الحقول
-    const addButtonContainer = document.createElement('div');
-    addButtonContainer.style.marginTop = '20px';
-    addButtonContainer.innerHTML = `
-        <button class="btn btn-primary" onclick="addSignatureField()">
-            <i class="fas fa-plus"></i> إضافة توقيع جديد
-        </button>
-    `;
-    container.appendChild(addButtonContainer);
-}
-function addSignatureField() {
-    // استهداف الحاوية الداخلية مباشرة
-    const fieldsWrapper = document.getElementById('signature-fields-wrapper');
-    if (!fieldsWrapper) return;
-
-    const fieldDiv = document.createElement('div');
-    fieldDiv.className = 'signature-edit-item';
-    fieldDiv.innerHTML = `
-        <div class="form-group">
-            <label>مسمى التوقيع:</label>
-            <input type="text" class="sig-title-input" value="" placeholder="مثال: مدير الشؤون المالية">
-        </div>
-        <div class="form-group">
-            <label>اسم صاحب التوقيع:</label>
-            <input type="text" class="sig-name-input" value="" placeholder="أدخل الاسم هنا">
-        </div>
-        <button class="btn btn-danger" onclick="deleteSignatureField(this)"><i class="fas fa-trash"></i> حذف</button>
-    `;
-
-    // إضافة الحقل الجديد إلى نهاية قائمة الحقول
-    fieldsWrapper.appendChild(fieldDiv);
-}
 
 /**
  * يحذف حقل التوقيع من واجهة التعديل.
  * @param {HTMLElement} deleteButton - زر الحذف الذي تم النقر عليه.
  */
-async function deleteSignatureField(deleteButton) {
-    if (await window.NajranDialogs.confirm('هل أنت متأكد من رغبتك في حذف هذا التوقيع؟')) {
-        // يحذف العنصر الأب للزر، وهو 'signature-edit-item'
-        deleteButton.parentElement.remove();
-    }
-}
-function addSignatureField() {
-    const container = document.getElementById('signature-fields-container');
-    const addButton = container.querySelector('.btn-primary'); // العثور على زر الإضافة
-
-    const fieldDiv = document.createElement('div');
-    fieldDiv.className = 'signature-edit-item';
-    fieldDiv.innerHTML = `
-        <div class="form-group">
-            <label>مسمى التوقيع:</label>
-            <input type="text" class="sig-title-input" value="" placeholder="مثال: مدير الشؤون المالية">
-        </div>
-        <div class="form-group">
-            <label>اسم صاحب التوقيع:</label>
-            <input type="text" class="sig-name-input" value="" placeholder="أدخل الاسم هنا">
-        </div>
-        <button class="btn btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i> حذف</button>
-    `;
-
-    // إدراج الحقل الجديد قبل زر "إضافة"
-    container.insertBefore(fieldDiv, addButton);
-}
 
 /**
  * يحذف توقيعاً من الواجهة (مؤقتاً قبل الحفظ).
@@ -3760,26 +3492,6 @@ function verifySignaturePassword() {
  * إذا لم تجدها، تنشئ مصفوفة افتراضية وتحفظها.
  * @returns {Array} مصفوفة من كائنات التواقيع.
  */
-function getSignatures() {
-    try {
-        const storedSignatures = localStorage.getItem('dynamicSignatures');
-        if (storedSignatures) {
-            return JSON.parse(storedSignatures);
-        } else {
-            const defaultSignatures = [
-                { title: 'مدير المشروع', name: '' },
-                { title: 'رئيس قسم الصيانة', name: '' },
-                { title: 'مدير المستشفى', name: '' },
-                { title: 'مندوب المقاول', name: '' }
-            ];
-            localStorage.setItem('dynamicSignatures', JSON.stringify(defaultSignatures));
-            return defaultSignatures;
-        }
-    } catch (error) {
-        console.error("خطأ في قراءة التواقيع من localStorage:", error);
-        return [];
-    }
-}
 
 // --- 2. دوال نافذة تعديل التواقيع ---
 
@@ -5920,100 +5632,13 @@ if (!hasAtLeastOneDeptArray) {
 
 // --- 1. نظام إدارة الموظفين (مع إصلاح كلمة المرور) ---
 
-function openEmployeeManagement() {
-    // هذه الدالة الآن تفتح نافذة كلمة المرور فقط
-    let dialog = document.getElementById('password-dialog');
-    if (!dialog) {
-        dialog = document.createElement('div');
-        dialog.id = 'password-dialog';
-        dialog.className = 'dialog';
-        document.body.appendChild(dialog);
-    }
-    dialog.innerHTML = `
-        <div class="dialog-header">
-            <h3><i class="fas fa-lock"></i> الوصول إلى لوحة الإدارة</h3>
-            <span class="close" onclick="closeDialog('password-dialog')">×</span>
-        </div>
-        <div class="dialog-body">
-            <p class="info-text">للوصول إلى هذه الإعدادات، يرجى إدخال كلمة المرور.</p>
-            <div class="form-group">
-                <label for="management-password-input">كلمة المرور:</label>
-                <input type="password" id="management-password-input" placeholder="••••••••" onkeypress="if(event.key==='Enter') verifyManagementPassword()">
-            </div>
-            <p id="password-error-message" style="display:none; color: #dc3545; text-align:center;"></p>
-        </div>
-        <div class="dialog-footer">
-            <button class="btn-success" onclick="verifyManagementPassword()"><i class="fas fa-check-circle"></i> تأكيد الدخول</button>
-        </div>
-    `;
-    openDialog('password-dialog');
-}
 
 /* ================================================================ */
 /* ✅ 1. دالة التحقق من كلمة المرور المُصححة (ضعها مكان القديمة) ✅ */
 /* ================================================================ */
-function verifyManagementPassword() {
-    const input = document.getElementById('management-password-input').value;
-    const errorMsg = document.getElementById('password-error-message');
-    
-    if (input === PASSWORD) {
-        // عند نجاح كلمة المرور:
-        // 1. أغلق نافذة كلمة المرور
-        closeDialog('password-dialog');
-        
-        // 2. استدع الدالة الجديدة والمُحسّنة لفتح واجهة الإدارة
-        openEmployeeManagementInterface(); 
-    } else {
-        // في حالة فشل كلمة المرور
-        errorMsg.textContent = "كلمة المرور غير صحيحة.";
-        errorMsg.style.display = 'block';
-    }
-}
 /* ================================================================ */
 /* ✅ 2. أضف هذه الدالة الجديدة لفتح واجهة الإدارة ✅ */
 /* ================================================================ */
-function openEmployeeManagementInterface() {
-    let dialog = document.getElementById('management-dialog');
-    if (!dialog) {
-        dialog = document.createElement('div');
-        dialog.id = 'management-dialog';
-        dialog.className = 'dialog';
-        document.body.appendChild(dialog);
-    }
-    
-    dialog.innerHTML = `
-        <div class="dialog-header">
-            <h3><i class="fas fa-users-cog"></i> لوحة إدارة الموظفين والأقسام</h3>
-            <span class="close" onclick="closeDialog('management-dialog')">×</span>
-        </div>
-        <div class="dialog-body">
-            <div class="management-container">
-                <div class="management-sidebar">
-                    <h4><i class="fas fa-building"></i> الأقسام</h4>
-                    <div id="centers-list-sidebar"></div>
-                </div>
-                <div class="management-content">
-                    <div id="management-header">
-                        <h3 id="content-title">اختر قسماً من القائمة</h3>
-                        <button id="add-employee-btn" class="btn-success" style="display:none;" onclick="showAddEmployeeFormForCenter()">
-                            <i class="fas fa-plus"></i> إضافة موظف
-                        </button>
-                    </div>
-                    <div id="management-content-area">
-                        <p style="text-align:center; color:#888; margin-top:50px;">سيتم عرض الموظفين هنا.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="dialog-footer">
-            <button class="btn-secondary" onclick="closeDialog('management-dialog')">إغلاق</button>
-        </div>
-    `;
-
-    dialog.classList.add('wide-dialog');
-    openDialog('management-dialog');
-    populateCentersSidebar(); // هذه الدالة يجب أن تكون موجودة لديك من قبل
-}
 
 function showFullManagementInterface() {
     // هذه الدالة الآن تفتح الواجهة الرئيسية للإدارة

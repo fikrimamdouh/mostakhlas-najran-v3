@@ -1,6 +1,6 @@
 {
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/mustaklassat run build && pnpm --filter @workspace/db run push-force",
+  "buildCommand": "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/mustaklassat run build",
   "outputDirectory": "artifacts/mustaklassat/dist/public",
   "framework": null,
   "functions": {
