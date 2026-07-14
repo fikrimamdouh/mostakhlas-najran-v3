@@ -42,6 +42,7 @@ test('security helpers enforce exact permissions, masking, validation, magic byt
   assert.equal(visitSecurity.isValidSaudiMobile('123'), false);
   assert.equal(visitSecurity.parseIsoDate('2026-02-30'), null);
   assert.ok(visitSecurity.parseIsoDate('2026-02-28'));
+  assert.ok(visitSecurity.validateVisitWindow('2026-07-14', null).startsAt);
   const openEnded = visitSecurity.validateVisitWindow('2026-07-15T08:00:00.000Z', null);
   assert.equal(openEnded.endsAt, null);
   assert.deepEqual(visitSecurity.detectVisitFile(Buffer.from('%PDF-1.7\n')), { mimeType: 'application/pdf', extension: 'pdf' });
@@ -163,21 +164,29 @@ test('direct issue uses the maintenance-contractor site catalogue and permits an
   assert.match(route, /الموقع المحدد لا يتبع مقاول الصيانة المختار/);
   assert.match(route, /endsAtProvided: !!window\.endsAt/);
   assert.match(center, /تاريخ نهاية الزيارة \(اختياري\)/);
-  assert.match(centerJs, /body\.endsAt = dateOnlyIso\(body\.endsAt, true\)/);
-  assert.match(centerJs, /dateOnlyIso\(body\.startsAt, false\)/);
+  assert.match(centerJs, /body\.startsAt = startDay/);
+  assert.match(centerJs, /body\.endsAt = endDay \? endDay \+ 'T23:59:59\.999Z' : null/);
+  assert.match(centerJs, /اختر تاريخ الزيارة من حقل التاريخ/);
 });
 
-test('direct issue can complete a company, site approval and representative without leaving the screen', () => {
+test('direct issue requires site approval but makes qualification optional at this stage', () => {
   for (const id of ['direct-add-contractor', 'direct-complete-approval', 'direct-add-representative']) assert.match(center, new RegExp(`id="${id}"`));
+  assert.match(center, /التأهيل فيمكن تأجيله لهذه المرحلة/);
   assert.match(centerJs, /\/management\/direct-setup/);
   assert.match(centerJs, /\/management\/direct-representative/);
+  assert.match(centerJs, /body\.qualificationId = qualification \? qualification\.id : null/);
+  assert.match(centerJs, /if \(!approval\).*استكمل اعتماد الموقع/);
   assert.match(centerJs, /approvedPersonnel/);
   const setup = route.match(/router\.post\("\/management\/direct-setup"[\s\S]*?\n}\);/);
   assert.ok(setup);
   assert.match(setup[0], /db\.transaction/);
-  assert.match(setup[0], /visitQualificationsTable/);
+  assert.match(setup[0], /includeQualification/);
+  assert.match(setup[0], /if \(includeQualification\)/);
   assert.match(setup[0], /visitSiteApprovalsTable/);
   assert.match(setup[0], /await audit/);
+  assert.match(route, /if \(!systemId \|\| !contractorId \|\| !representativeId \|\| !siteApprovalId\) return res\.status\(400\)/);
+  assert.match(route, /approveVisit\(tx, visit\.id, req\.currentUser, \{ qualificationOptional: true \}\)/);
+  assert.match(route, /qualificationDeferred: !qualificationId/);
   const representative = route.match(/router\.post\("\/management\/direct-representative"[\s\S]*?\n}\);/);
   assert.ok(representative);
   assert.match(representative[0], /visitRepresentativeSystemsTable/);
@@ -231,7 +240,7 @@ test('direct issue filters companies by system and falls back when no links exis
   assert.match(centerJs, /Object\.keys\(allowed\)\.length > 0/);
   assert.match(centerJs, /row\.isActive && \(!hasLinkedContractors \|\| !!allowed\[row\.id\]\)/);
   assert.match(centerJs, /متاحة للاستكمال/);
-  assert.match(center, /بعد اختيار النظام تظهر الشركات المرتبطة به/);
+  assert.match(center, /اعتماد الموقع مطلوب للإصدار/);
   assert.match(centerJs, /أكمل اعتماد الموقع للشركة والنظام/);
 });
 
@@ -280,6 +289,9 @@ test('legacy Word representatives import previews masked data then confirms comp
   assert.match(center, /id="legacy-representatives-form"/);
   assert.match(center, /multiple required/);
   assert.match(center, /id="direct-saved-representative"/);
+  assert.match(center, /id="direct-representative-search"/);
+  assert.match(centerJs, /refreshSavedRepresentativeOptions/);
+  assert.match(centerJs, /direct-representative-search'\)\.addEventListener\('input'/);
   assert.match(centerJs, /applySavedRepresentative/);
   assert.match(centerJs, /identityMasked/);
 });

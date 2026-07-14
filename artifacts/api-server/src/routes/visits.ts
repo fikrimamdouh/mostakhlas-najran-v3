@@ -564,9 +564,14 @@ async function nextPermitNumber(executor: AnyDb, visit: any): Promise<string> {
   return `${year}-${String(sequence.lastValue).padStart(6, "0")}`;
 }
 
-async function validateCentralContext(executor: AnyDb, context: VisitContext): Promise<string | null> {
+type CentralValidationOptions = { qualificationOptional?: boolean };
+
+async function validateCentralContext(executor: AnyDb, context: VisitContext, options: CentralValidationOptions = {}): Promise<string | null> {
   const { visit, metadata, system, contractor, representative, siteApproval, qualification } = context;
-  if (!metadata?.systemId || !metadata?.contractorId || !metadata?.representativeId || !metadata?.siteApprovalId || !metadata?.qualificationId) {
+  if (!metadata?.systemId || !metadata?.contractorId || !metadata?.representativeId || !metadata?.siteApprovalId) {
+    return "يجب ربط الطلب بالنظام والشركة والمندوب واعتماد الموقع قبل الاعتماد";
+  }
+  if (!options.qualificationOptional && !metadata?.qualificationId) {
     return "يجب ربط الطلب بالنظام والشركة والمندوب واعتماد الموقع والتأهيل قبل الاعتماد";
   }
   if (!system?.isActive) return "النظام المحدد معطل";
@@ -578,7 +583,7 @@ async function validateCentralContext(executor: AnyDb, context: VisitContext): P
   if (siteApproval?.siteName !== visit.siteLocation || siteApproval?.systemId !== system.id || siteApproval?.contractorId !== contractor.id || siteApproval?.status !== "active" || !isDateWithin(visitDay, siteApproval?.validFrom, siteApproval?.validUntil)) {
     return "الموقع غير معتمد لهذا النظام والشركة في تاريخ الزيارة";
   }
-  if (qualification?.contractorId !== contractor.id || qualification?.systemId !== system.id || qualification?.status !== "active" || !isDateWithin(visitDay, qualification?.validFrom, qualification?.validUntil)) {
+  if (metadata.qualificationId && (qualification?.contractorId !== contractor.id || qualification?.systemId !== system.id || qualification?.status !== "active" || !isDateWithin(visitDay, qualification?.validFrom, qualification?.validUntil))) {
     return "تأهيل الشركة للنظام غير ساري في تاريخ الزيارة";
   }
   const [repSystem] = await executor.select({ id: visitRepresentativeSystemsTable.id })
@@ -600,11 +605,11 @@ async function validateCentralContext(executor: AnyDb, context: VisitContext): P
   return null;
 }
 
-async function approveVisit(executor: AnyDb, visitId: number, user: any): Promise<VisitContext> {
+async function approveVisit(executor: AnyDb, visitId: number, user: any, options: CentralValidationOptions = {}): Promise<VisitContext> {
   let context = await getVisitContext(executor, visitId);
   if (!context) throw new Error("VISIT_NOT_FOUND");
   if (context.visit.status === "cancelled") throw new Error("VISIT_CANCELLED");
-  const validationError = await validateCentralContext(executor, context);
+  const validationError = await validateCentralContext(executor, context, options);
   if (validationError) throw new Error(`VALIDATION:${validationError}`);
   const serialNumber = context.visit.serialNumber || await nextPermitNumber(executor, context.visit);
   const approvedAt = context.visit.approvedAt || new Date();
@@ -924,7 +929,7 @@ router.post("/management/direct-issue", requireAuth, requireApproved, requireClu
   const window = validateVisitWindow(req.body.startsAt, req.body.endsAt);
   if (!maintenance) return res.status(400).json({ error: "اختر مقاول الصيانة: بيت العرب أو سراكو" });
   if (!siteName || !(maintenance.sites as readonly string[]).includes(siteName)) return res.status(400).json({ error: "الموقع المحدد لا يتبع مقاول الصيانة المختار" });
-  if (!systemId || !contractorId || !representativeId || !siteApprovalId || !qualificationId) return res.status(400).json({ error: "بيانات الإصدار المباشر المركزية مطلوبة" });
+  if (!systemId || !contractorId || !representativeId || !siteApprovalId) return res.status(400).json({ error: "النظام والشركة والمندوب واعتماد الموقع مطلوبة للإصدار المباشر" });
   if ("error" in window) return res.status(400).json({ error: window.error });
   const [systemRows, contractorRows, representativeRows, approvalRows] = await Promise.all([
     db.select().from(visitSystemsTable).where(eq(visitSystemsTable.id, systemId)).limit(1),
@@ -954,9 +959,9 @@ router.post("/management/direct-issue", requireAuth, requireApproved, requireClu
       }).returning();
       await tx.insert(visitRequestMetadataTable).values({ visitId: visit.id, systemId, contractorId, representativeId, siteApprovalId, qualificationId, purpose, startsAt: window.startsAt, endsAt: window.endsAt, linkedAt: new Date(), linkedByUserId: req.currentUser.id });
       await ensurePermitToken(tx, visit.id);
-      return approveVisit(tx, visit.id, req.currentUser);
+      return approveVisit(tx, visit.id, req.currentUser, { qualificationOptional: true });
     });
-    await audit(req, "إصدار مباشر لتصريح زيارة", { visitId: context.visit.id, serialNumber: context.visit.serialNumber, maintenanceContractor: maintenance.name, siteLocation: context.visit.siteLocation, endsAtProvided: !!window.endsAt });
+    await audit(req, "إصدار مباشر لتصريح زيارة", { visitId: context.visit.id, serialNumber: context.visit.serialNumber, maintenanceContractor: maintenance.name, siteLocation: context.visit.siteLocation, qualificationId: qualificationId || null, qualificationDeferred: !qualificationId, endsAtProvided: !!window.endsAt });
     return res.status(201).json({ visit: sanitizeVisit(context.visit, context.metadata) });
   } catch (err: any) {
     if (String(err?.message).startsWith("VALIDATION:")) return res.status(400).json({ error: String(err.message).slice(11) });
@@ -1207,13 +1212,14 @@ router.patch("/management/contractors/:id", requireAuth, requireApproved, requir
 
 router.post("/management/direct-setup", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
   const systemId = numberId(req.body.systemId), existingContractorId = numberId(req.body.contractorId);
+  const includeQualification = req.body.includeQualification === true;
   const maintenance = maintenanceContractor(req.body.maintenanceContractorKey);
   const siteName = cleanText(req.body.siteName, 200);
   const dates = validDateRange(req.body.validFrom, req.body.validUntil);
   const companyName = canonicalContractorName(req.body.companyName);
   const contactMobile = cleanText(req.body.contactMobile, 30);
   if (!maintenance || !siteName || !(maintenance.sites as readonly string[]).includes(siteName)) return res.status(400).json({ error: "اختر مقاول الصيانة والموقع الصحيحين أولًا" });
-  if (!systemId || !dates) return res.status(400).json({ error: "النظام وبداية ونهاية التأهيل الصحيحة مطلوبة" });
+  if (!systemId || !dates) return res.status(400).json({ error: "النظام وبداية ونهاية اعتماد الموقع الصحيحة مطلوبة" });
   if (!existingContractorId && !isFullCompanyName(companyName)) return res.status(400).json({ error: "اكتب الاسم الرسمي الكامل ويبدأ بكلمة شركة أو مؤسسة أو مصنع" });
   if (contactMobile && !isValidSaudiMobile(contactMobile)) return res.status(400).json({ error: "رقم جوال الشركة غير صالح" });
   try {
@@ -1233,17 +1239,20 @@ router.post("/management/direct-setup", requireAuth, requireApproved, requireClu
           createdByUserId: req.currentUser.id,
         }).returning();
       }
-      const [qualification] = await tx.insert(visitQualificationsTable).values({
-        contractorId: contractor.id,
-        systemId,
-        validFrom: dates.validFrom,
-        validUntil: dates.validUntil,
-        status: "active",
-        notes: cleanText(req.body.notes, 1_000) || "استكمال يدوي من الإصدار المباشر",
-      }).onConflictDoUpdate({
-        target: [visitQualificationsTable.contractorId, visitQualificationsTable.systemId],
-        set: { validFrom: dates.validFrom, validUntil: dates.validUntil, status: "active", notes: cleanText(req.body.notes, 1_000) || "استكمال يدوي من الإصدار المباشر", updatedAt: new Date() },
-      }).returning();
+      let qualification: any = null;
+      if (includeQualification) {
+        [qualification] = await tx.insert(visitQualificationsTable).values({
+          contractorId: contractor.id,
+          systemId,
+          validFrom: dates.validFrom,
+          validUntil: dates.validUntil,
+          status: "active",
+          notes: cleanText(req.body.notes, 1_000) || "استكمال يدوي اختياري من الإصدار المباشر",
+        }).onConflictDoUpdate({
+          target: [visitQualificationsTable.contractorId, visitQualificationsTable.systemId],
+          set: { validFrom: dates.validFrom, validUntil: dates.validUntil, status: "active", notes: cleanText(req.body.notes, 1_000) || "استكمال يدوي اختياري من الإصدار المباشر", updatedAt: new Date() },
+        }).returning();
+      }
       const [siteApproval] = await tx.insert(visitSiteApprovalsTable).values({
         siteName,
         contractorId: contractor.id,
@@ -1258,10 +1267,11 @@ router.post("/management/direct-setup", requireAuth, requireApproved, requireClu
       }).returning();
       return { contractor, qualification, siteApproval, system };
     });
-    await audit(req, existingContractorId ? "استكمال تأهيل واعتماد موقع من الإصدار المباشر" : "إضافة شركة وتأهيلها من الإصدار المباشر", {
+    await audit(req, existingContractorId ? "استكمال اعتماد موقع من الإصدار المباشر" : "إضافة شركة واعتماد موقعها من الإصدار المباشر", {
       contractorId: result.contractor.id,
       systemId,
       siteName,
+      qualificationIncluded: includeQualification,
       validFrom: dates.validFrom,
       validUntil: dates.validUntil,
     });
@@ -1275,7 +1285,7 @@ router.post("/management/direct-setup", requireAuth, requireApproved, requireClu
     if (err?.message === "CONTRACTOR_NOT_FOUND") return res.status(404).json({ error: "الشركة غير موجودة أو معطلة" });
     if (err?.code === "23505" || String(err?.message).includes("unique")) return res.status(409).json({ error: "اسم الشركة مستخدم من قبل؛ اخترها ثم استكمل اعتماد الموقع" });
     req.log.error({ err }, "Direct visit catalogue setup failed");
-    return res.status(500).json({ error: "تعذر استكمال الشركة والتأهيل واعتماد الموقع" });
+    return res.status(500).json({ error: "تعذر استكمال الشركة واعتماد الموقع" });
   }
 });
 
@@ -1706,7 +1716,7 @@ router.post("/:id/reissue", requireAuth, requireApproved, requireClusterVisitMan
         linkedByUserId: req.currentUser.id,
       });
       await ensurePermitToken(tx, copy.id);
-      return approveVisit(tx, copy.id, req.currentUser);
+      return approveVisit(tx, copy.id, req.currentUser, { qualificationOptional: !original.metadata.qualificationId });
     });
     await audit(req, "إعادة إصدار تصريح زيارة", { originalVisitId: originalId, newVisitId: context.visit.id, newSerialNumber: context.visit.serialNumber });
     return res.status(201).json({ visit: sanitizeVisit(context.visit, context.metadata), originalVisitId: originalId });

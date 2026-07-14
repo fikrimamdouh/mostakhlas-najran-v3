@@ -230,6 +230,21 @@
     refreshDirectRepresentatives();
   }
 
+  function refreshSavedRepresentativeOptions(query, selectedId) {
+    var select = document.getElementById('direct-saved-representative');
+    var needle = String(query || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('ar');
+    var rows = (state.data.representatives || []).filter(function (row) {
+      if (!row.isActive) return false;
+      var contractor = state.data.contractors.find(function (item) { return item.id === row.contractorId; });
+      var searchable = [row.fullName, entityName(contractor), row.identityMasked, row.mobileMasked].join(' ').toLocaleLowerCase('ar');
+      return !needle || searchable.indexOf(needle) !== -1;
+    }).sort(function (a, b) { return a.fullName.localeCompare(b.fullName, 'ar'); });
+    select.innerHTML = '<option value="">' + (needle ? 'اختر من نتائج البحث' : 'اختر اسم المندوب') + '</option>' + rows.map(function (row) {
+      var contractor = state.data.contractors.find(function (item) { return item.id === row.contractorId; });
+      return '<option value="' + row.id + '"' + (String(row.id) === String(selectedId || '') ? ' selected' : '') + '>' + esc(row.fullName + ' — ' + entityName(contractor) + ' — ' + row.identityMasked) + '</option>';
+    }).join('');
+  }
+
   function populateForms() {
     var d = state.data;
     var systems = uniqueNamedRows(d.systems.filter(function (x) { return x.isActive; })), contractors = uniqueNamedRows(d.contractors.filter(function (x) { return x.isActive; }));
@@ -238,8 +253,7 @@
     var maintenanceSelect = document.querySelector('#direct-form [name="maintenanceContractorKey"]'), maintenanceCurrent = maintenanceSelect.value;
     maintenanceSelect.innerHTML = '<option value="">اختر مقاول الصيانة</option>' + (d.maintenanceContractors || []).map(function (row) { return '<option value="' + esc(row.key) + '"' + (row.key === maintenanceCurrent ? ' selected' : '') + '>' + esc(row.name) + '</option>'; }).join('');
     var savedRepresentativeSelect = document.getElementById('direct-saved-representative'), savedRepresentativeCurrent = savedRepresentativeSelect.value;
-    var savedRepresentatives = (d.representatives || []).filter(function (row) { return row.isActive; }).sort(function (a, b) { return a.fullName.localeCompare(b.fullName, 'ar'); });
-    savedRepresentativeSelect.innerHTML = '<option value="">اختر اسم المندوب</option>' + savedRepresentatives.map(function (row) { var contractor = d.contractors.find(function (item) { return item.id === row.contractorId; }); return '<option value="' + row.id + '"' + (String(row.id) === savedRepresentativeCurrent ? ' selected' : '') + '>' + esc(row.fullName + ' — ' + entityName(contractor) + ' — ' + row.identityMasked) + '</option>'; }).join('');
+    refreshSavedRepresentativeOptions(document.getElementById('direct-representative-search').value, savedRepresentativeCurrent);
     var allSites = allMaintenanceSites(), approvalSite = document.getElementById('approval-site'), targetSite = document.querySelector('#copy-form [name="targetSite"]');
     approvalSite.innerHTML = siteOptions(allSites, approvalSite.value);
     targetSite.innerHTML = siteOptions(allSites, targetSite.value);
@@ -403,7 +417,7 @@
     var node = document.getElementById('direct-representative-summary');
     if (!node || !state.data) return;
     var representative = state.data.representatives.find(function (row) { return row.id === representativeId; });
-    if (!representative) { node.textContent = 'اختر اسمًا محفوظًا لعرض الشركة والبيانات المخفية وتعبئتها تلقائيًا.'; return; }
+    if (!representative) { node.textContent = 'ابحث ثم اختر اسمًا محفوظًا لعرض الشركة والبيانات المخفية وتعبئتها تلقائيًا.'; return; }
     var contractor = state.data.contractors.find(function (row) { return row.id === representative.contractorId; });
     var systems = state.data.representativeSystems.filter(function (link) { return link.representativeId === representative.id && link.isActive; }).map(function (link) { var system = state.data.systems.find(function (row) { return row.id === link.systemId; }); return entityName(system); }).filter(Boolean);
     node.textContent = 'الشركة: ' + entityName(contractor) + ' — الهوية/الإقامة: ' + representative.identityMasked + ' — الجوال: ' + representative.mobileMasked + (systems.length ? ' — الأنظمة: ' + systems.join('، ') : ' — يحتاج ربط نظام');
@@ -442,11 +456,11 @@
     var checks = [
       { ok: !!selection.maintenanceContractorKey && !!selection.siteName, text: selection.siteName ? 'الموقع: ' + selection.siteName : 'اختر مقاول الصيانة والموقع' },
       { ok: !!systemId, text: systemId ? 'تم اختيار النظام' : 'اختر نظام مقاول الباطن' },
-      { ok: !!contractorId && !!qualification, text: !contractorId ? 'اختر شركة مقاول الباطن' : qualification ? 'تأهيل الشركة ساري' : 'أكمل تأهيل الشركة' },
+      { ok: !!contractorId, className: !contractorId ? 'missing' : qualification ? 'ready' : 'info', text: !contractorId ? 'اختر شركة مقاول الباطن' : qualification ? 'تأهيل الشركة ساري' : 'التأهيل اختياري ويمكن استكماله لاحقًا' },
       { ok: !!approval, text: approval ? 'اعتماد الموقع ساري' : 'أكمل اعتماد الموقع للشركة والنظام' },
       { ok: !!representative && !!linked, text: representative && linked ? 'المندوب مرتبط بالنظام' : 'اختر أو أضف مندوبًا مرتبطًا' },
     ];
-    node.innerHTML = checks.map(function (item) { return '<div class="readiness-item ' + (item.ok ? 'ready' : 'missing') + '">' + (item.ok ? '✓ ' : '• ') + esc(item.text) + '</div>'; }).join('') + '<div class="readiness-item ' + residenceClass + '">' + esc(residenceText) + '</div>';
+    node.innerHTML = checks.map(function (item) { var className = item.className || (item.ok ? 'ready' : 'missing'); return '<div class="readiness-item ' + className + '">' + (className === 'ready' ? '✓ ' : '• ') + esc(item.text) + '</div>'; }).join('') + '<div class="readiness-item ' + residenceClass + '">' + esc(residenceText) + '</div>';
   }
 
   function directSelection() {
@@ -465,6 +479,8 @@
     form.elements.contractorId.value = String(contractorId || selection.contractorId || '');
     refreshDirectRepresentatives();
     form.elements.representativeId.value = String(representativeId || selection.representativeId || '');
+    document.getElementById('direct-representative-search').value = '';
+    refreshSavedRepresentativeOptions('', representativeId || selection.representativeId || '');
     document.getElementById('direct-saved-representative').value = String(representativeId || selection.representativeId || '');
     renderDirectRepresentativeSummary(Number(representativeId || selection.representativeId || 0));
     form.elements.startsAt.value = selection.startsAt || localDateValue();
@@ -476,18 +492,18 @@
   function openDirectSetup(createCompany) {
     var selection = directSelection(), systemId = Number(selection.systemId || 0), contractorId = Number(selection.contractorId || 0);
     if (!selection.maintenanceContractorKey || !selection.siteName || !systemId) { toast('اختر مقاول الصيانة والمستشفى والنظام أولًا', false); return; }
-    if (!createCompany && !contractorId) { toast('اختر الشركة التي تريد استكمال تأهيلها واعتماد موقعها', false); return; }
+    if (!createCompany && !contractorId) { toast('اختر الشركة التي تريد اعتمادها للموقع', false); return; }
     var qualification = state.data.qualifications.find(function (row) { return row.contractorId === contractorId && row.systemId === systemId; });
     var approval = state.data.siteApprovals.find(function (row) { return row.contractorId === contractorId && row.systemId === systemId && row.siteName === selection.siteName; });
-    var validFrom = (qualification && qualification.validFrom) || (approval && approval.validFrom) || selection.startsAt || localDateValue();
+    var validFrom = (approval && approval.validFrom) || (qualification && qualification.validFrom) || selection.startsAt || localDateValue();
     var untilDate = new Date(validFrom + 'T00:00:00'); untilDate.setFullYear(untilDate.getFullYear() + 1);
-    var validUntil = (qualification && qualification.validUntil) || (approval && approval.validUntil) || localDateValue(untilDate);
-    var companyFields = createCompany ? '<div class="field full"><label>الاسم الرسمي الكامل للشركة</label><input name="companyName" placeholder="شركة / مؤسسة / مصنع ..." required></div><div class="field"><label>رقم السجل (اختياري)</label><input name="registrationNumber"></div><div class="field"><label>اسم مسؤول التواصل (اختياري)</label><input name="contactName"></div><div class="field"><label>جوال الشركة (اختياري)</label><input name="contactMobile" inputmode="numeric" placeholder="05xxxxxxxx"></div>' : '<div class="field full"><div class="note">سيتم تحديث تأهيل «' + esc(entityName(state.data.contractors.find(function (row) { return row.id === contractorId; }))) + '» واعتمادها لهذا المستشفى والنظام.</div></div>';
-    modal(createCompany ? 'إضافة شركة واعتمادها للإصدار' : 'استكمال التأهيل واعتماد الموقع', '<form id="direct-setup-form" class="form-grid">' + companyFields + '<div class="field"><label>بداية التأهيل والاعتماد</label><input type="date" name="validFrom" value="' + esc(validFrom) + '" required></div><div class="field"><label>نهاية التأهيل والاعتماد</label><input type="date" name="validUntil" value="' + esc(validUntil) + '" required></div><div class="field full"><label>ملاحظات / مرجع الاعتماد (اختياري)</label><textarea name="notes"></textarea></div><div class="field full"><div class="note">اعتماد الموقع غير مستخرج من شهادة التأهيل؛ راجع الموقع والتواريخ قبل الحفظ.</div></div></form>', [{ label: createCompany ? 'إضافة الشركة وحفظ الاعتماد' : 'حفظ التأهيل والاعتماد', className: 'btn-green', action: async function (button) {
+    var validUntil = (approval && approval.validUntil) || (qualification && qualification.validUntil) || localDateValue(untilDate);
+    var companyFields = createCompany ? '<div class="field full"><label>الاسم الرسمي الكامل للشركة</label><input name="companyName" placeholder="شركة / مؤسسة / مصنع ..." required></div><div class="field"><label>رقم السجل (اختياري)</label><input name="registrationNumber"></div><div class="field"><label>اسم مسؤول التواصل (اختياري)</label><input name="contactName"></div><div class="field"><label>جوال الشركة (اختياري)</label><input name="contactMobile" inputmode="numeric" placeholder="05xxxxxxxx"></div>' : '<div class="field full"><div class="note">سيتم حفظ اعتماد موقع «' + esc(entityName(state.data.contractors.find(function (row) { return row.id === contractorId; }))) + '» لهذا المستشفى والنظام.</div></div>';
+    modal(createCompany ? 'إضافة شركة واعتماد موقعها' : 'استكمال اعتماد الموقع', '<form id="direct-setup-form" class="form-grid">' + companyFields + '<div class="field"><label>بداية اعتماد الموقع</label><input type="date" name="validFrom" value="' + esc(validFrom) + '" required></div><div class="field"><label>نهاية اعتماد الموقع</label><input type="date" name="validUntil" value="' + esc(validUntil) + '" required></div><div class="field full"><label class="check-chip"><input type="checkbox" name="includeQualification"' + (qualification ? ' checked' : '') + '> حفظ أو تحديث تأهيل الشركة أيضًا (اختياري)</label></div><div class="field full"><label>ملاحظات / مرجع الاعتماد (اختياري)</label><textarea name="notes"></textarea></div><div class="field full"><div class="note">اعتماد الموقع مطلوب للإصدار. التأهيل اختياري في هذه المرحلة ويمكن إضافته لاحقًا من تبويب الشركات والتأهيلات.</div></div></form>', [{ label: createCompany ? 'إضافة الشركة وحفظ اعتماد الموقع' : 'حفظ اعتماد الموقع', className: 'btn-green', action: async function (button) {
       var form = document.getElementById('direct-setup-form'); if (!form.reportValidity()) return;
-      var body = formObject(form); body.systemId = systemId; body.contractorId = createCompany ? null : contractorId; body.maintenanceContractorKey = selection.maintenanceContractorKey; body.siteName = selection.siteName;
+      var body = formObject(form); body.systemId = systemId; body.contractorId = createCompany ? null : contractorId; body.maintenanceContractorKey = selection.maintenanceContractorKey; body.siteName = selection.siteName; body.includeQualification = form.elements.includeQualification.checked;
       button.disabled = true;
-      try { var result = await api('/management/direct-setup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); closeModal(); await loadBootstrap(); restoreDirectSelection(selection, result.contractor.id); toast(createCompany ? 'تمت إضافة الشركة وتأهيلها واعتماد الموقع' : 'تم حفظ التأهيل واعتماد الموقع', true); }
+      try { var result = await api('/management/direct-setup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); closeModal(); await loadBootstrap(); restoreDirectSelection(selection, result.contractor.id); toast(createCompany ? 'تمت إضافة الشركة وحفظ اعتماد الموقع' : 'تم حفظ اعتماد الموقع' + (body.includeQualification ? ' والتأهيل' : ''), true); }
       catch (e) { toast(e.message, false); button.disabled = false; }
     } }]);
   }
@@ -531,6 +547,7 @@
   document.getElementById('direct-add-contractor').addEventListener('click', function () { openDirectSetup(true); });
   document.getElementById('direct-complete-approval').addEventListener('click', function () { openDirectSetup(false); });
   document.getElementById('direct-add-representative').addEventListener('click', openDirectRepresentative);
+  document.getElementById('direct-representative-search').addEventListener('input', function () { refreshSavedRepresentativeOptions(this.value, document.getElementById('direct-saved-representative').value); });
   document.getElementById('direct-saved-representative').addEventListener('change', function () { applySavedRepresentative(Number(this.value || 0)); });
   document.querySelector('#direct-form [name="maintenanceContractorKey"]').addEventListener('change', refreshDirectSites);
   document.querySelector('#direct-form [name="siteName"]').addEventListener('change', renderDirectReadiness);
@@ -540,9 +557,13 @@
   document.querySelector('#direct-form [name="startsAt"]').addEventListener('change', renderDirectReadiness);
   document.getElementById('direct-form').addEventListener('change', function () { setTimeout(saveUiState, 0); });
   document.getElementById('direct-form').addEventListener('submit', async function (event) {
-    event.preventDefault(); var body = formObject(this); body.systemId = Number(body.systemId); body.contractorId = Number(body.contractorId); body.representativeId = Number(body.representativeId); body.startsAt = dateOnlyIso(body.startsAt, false); body.endsAt = dateOnlyIso(body.endsAt, true);
+    event.preventDefault();
+    var startDay = localDateValue(this.elements.startsAt.value), endDay = this.elements.endsAt.value ? localDateValue(this.elements.endsAt.value) : '';
+    if (!startDay) { toast('اختر تاريخ الزيارة من حقل التاريخ', false); this.elements.startsAt.focus(); return; }
+    if (endDay && endDay < startDay) { toast('تاريخ نهاية الزيارة لا يمكن أن يسبق تاريخ الزيارة', false); this.elements.endsAt.focus(); return; }
+    var body = formObject(this); body.systemId = Number(body.systemId); body.contractorId = Number(body.contractorId); body.representativeId = Number(body.representativeId); body.startsAt = startDay; body.endsAt = endDay ? endDay + 'T23:59:59.999Z' : null;
     var visitDay = localDateValue(body.startsAt); var approval = state.data.siteApprovals.find(function (x) { return x.siteName === body.siteName && x.systemId === body.systemId && x.contractorId === body.contractorId && activeForVisitDate(x, visitDay); }); var qualification = state.data.qualifications.find(function (x) { return x.systemId === body.systemId && x.contractorId === body.contractorId && activeForVisitDate(x, visitDay); });
-    if (!approval || !qualification) { toast('استكمل التأهيل واعتماد الموقع من الزر الموجود بجوار الشركة', false); return; } body.siteApprovalId = approval.id; body.qualificationId = qualification.id;
+    if (!approval) { toast('استكمل اعتماد الموقع من الزر الموجود بجوار الشركة', false); return; } body.siteApprovalId = approval.id; body.qualificationId = qualification ? qualification.id : null;
     try { var result = await api('/management/direct-issue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); toast('تم إصدار التصريح رقم ' + result.visit.serialNumber, true); await loadBootstrap(); window.NajranVisitPermit.preview(result.visit.id).catch(window.NajranVisitPermit.showError); } catch (e) { toast(e.message, false); }
   });
 
