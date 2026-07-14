@@ -461,6 +461,53 @@ function sanitizeVisit(visit: any, metadata?: any | null) {
   };
 }
 
+type PermitRepresentative = {
+  id: number | null;
+  fullName: string;
+  identityNumber: string;
+  mobile: string;
+  noResidenceException: boolean;
+  exceptionReason: string | null;
+};
+
+function parsedVisitSnapshot(metadata: any | null): any | null {
+  try {
+    const parsed = JSON.parse(String(metadata?.snapshotJson || "null"));
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function permitRepresentatives(visit: any, metadata: any | null, representative: any | null): PermitRepresentative[] {
+  const snapshot = parsedVisitSnapshot(metadata);
+  const rows = Array.isArray(snapshot?.representatives) ? snapshot.representatives.slice(0, 4).map((row: any) => ({
+    id: numberId(row?.id),
+    fullName: cleanText(row?.fullName, 200),
+    identityNumber: cleanText(row?.identityNumber, 40),
+    mobile: cleanText(row?.mobile, 30),
+    noResidenceException: row?.noResidenceException === true,
+    exceptionReason: row?.noResidenceException === true ? cleanText(row?.exceptionReason, 1_000) || null : null,
+  })).filter((row: PermitRepresentative) => row.fullName && /^\d{10}$/.test(row.identityNumber) && isValidSaudiMobile(row.mobile)) : [];
+  if (rows.length) return rows;
+  const fallback = {
+    id: numberId(representative?.id || metadata?.representativeId),
+    fullName: cleanText(representative?.fullName || visit?.repName, 200),
+    identityNumber: cleanText(representative?.identityNumber || visit?.repId, 40),
+    mobile: cleanText(representative?.mobile || visit?.repMobile, 30),
+    noResidenceException: representative?.noResidenceException === true,
+    exceptionReason: representative?.noResidenceException === true ? cleanText(representative?.exceptionReason, 1_000) || null : null,
+  };
+  return fallback.fullName && fallback.identityNumber && fallback.mobile ? [fallback] : [];
+}
+
+function representativeIdsFromMetadata(metadata: any | null): number[] {
+  const snapshot = parsedVisitSnapshot(metadata);
+  const ids = Array.isArray(snapshot?.representatives) ? snapshot.representatives.map((row: any) => numberId(row?.id)).filter(Boolean) as number[] : [];
+  const fallback = numberId(metadata?.representativeId);
+  return [...new Set(ids.length ? ids : (fallback ? [fallback] : []))].slice(0, 4);
+}
+
 async function getSetting(key: string, executor: AnyDb = db): Promise<string | null> {
   const [row] = await executor.select().from(systemSettingsTable).where(eq(systemSettingsTable.key, key)).limit(1);
   return row?.value ?? null;
@@ -495,8 +542,9 @@ async function getVisitContext(executor: AnyDb, visitId: number): Promise<VisitC
 
 function snapshotFor(context: VisitContext) {
   const { visit, metadata, system, contractor, representative, siteApproval, qualification } = context;
+  const representatives = permitRepresentatives(visit, metadata, representative);
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     capturedAt: new Date().toISOString(),
     purpose: metadata?.purpose || "",
     visit: {
@@ -516,7 +564,9 @@ function snapshotFor(context: VisitContext) {
       representativeId: representative?.id || null,
       siteApprovalId: siteApproval?.id || null,
       qualificationId: qualification?.id || null,
+      representativeIds: representatives.map((row) => row.id).filter(Boolean),
     },
+    representatives,
     verification: {
       representativeActive: representative?.isActive === true,
       residenceException: representative?.noResidenceException === true,
@@ -558,7 +608,7 @@ async function nextPermitNumber(executor: AnyDb, visit: any): Promise<string> {
     })
     .returning({ lastValue: visitNumberSequencesTable.lastValue });
   if (!sequence) throw new Error("SERIAL_SEQUENCE_NOT_RETURNED");
-  return `${year}-${String(sequence.lastValue).padStart(6, "0")}`;
+  return `NHC-NJ-VIS-${year}-${String(sequence.lastValue).padStart(6, "0")}`;
 }
 
 type CentralValidationOptions = { qualificationOptional?: boolean };
@@ -635,7 +685,7 @@ function isResidenceVerified(representative: any | null, _visit: any): boolean {
 
 async function hasActiveVisitDocuments(visitId: number, metadata: any | null): Promise<boolean> {
   const scopes: any[] = [and(eq(visitDocumentsTable.ownerType, "visit"), eq(visitDocumentsTable.ownerId, visitId))];
-  if (metadata?.representativeId) scopes.push(and(eq(visitDocumentsTable.ownerType, "representative"), eq(visitDocumentsTable.ownerId, metadata.representativeId)));
+  for (const representativeId of representativeIdsFromMetadata(metadata)) scopes.push(and(eq(visitDocumentsTable.ownerType, "representative"), eq(visitDocumentsTable.ownerId, representativeId)));
   if (metadata?.contractorId) scopes.push(and(eq(visitDocumentsTable.ownerType, "contractor"), eq(visitDocumentsTable.ownerId, metadata.contractorId)));
   if (metadata?.qualificationId) scopes.push(and(eq(visitDocumentsTable.ownerType, "qualification"), eq(visitDocumentsTable.ownerId, metadata.qualificationId)));
   if (metadata?.siteApprovalId) scopes.push(and(eq(visitDocumentsTable.ownerType, "site_approval"), eq(visitDocumentsTable.ownerId, metadata.siteApprovalId)));
@@ -914,24 +964,33 @@ router.post("/", requireAuth, requireApproved, async (req: any, res) => {
 });
 
 router.post("/management/direct-issue", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
-  const systemId = numberId(req.body.systemId), contractorId = numberId(req.body.contractorId), representativeId = numberId(req.body.representativeId), siteApprovalId = numberId(req.body.siteApprovalId), qualificationId = numberId(req.body.qualificationId);
+  const systemId = numberId(req.body.systemId), contractorId = numberId(req.body.contractorId), siteApprovalId = numberId(req.body.siteApprovalId), qualificationId = numberId(req.body.qualificationId);
+  const representativeIds = [...new Set((Array.isArray(req.body.representativeIds) ? req.body.representativeIds : [req.body.representativeId]).map(numberId).filter(Boolean))] as number[];
+  const representativeId = representativeIds[0] || null;
   const purpose = DEFAULT_VISIT_PURPOSE;
   const maintenance = maintenanceContractor(req.body.maintenanceContractorKey);
   const siteName = cleanText(req.body.siteName, 200);
   const window = validateVisitWindow(req.body.startsAt, req.body.endsAt);
   if (!maintenance) return res.status(400).json({ error: "اختر مقاول الصيانة: بيت العرب أو سراكو" });
   if (!siteName || !(maintenance.sites as readonly string[]).includes(siteName)) return res.status(400).json({ error: "الموقع المحدد لا يتبع مقاول الصيانة المختار" });
-  if (!systemId || !contractorId || !representativeId || !siteApprovalId) return res.status(400).json({ error: "النظام والشركة والمندوب واعتماد الموقع مطلوبة للإصدار المباشر" });
+  if (!systemId || !contractorId || !representativeId || !siteApprovalId) return res.status(400).json({ error: "النظام والشركة ومندوب واحد على الأقل واعتماد الموقع مطلوبة للإصدار المباشر" });
+  if (representativeIds.length > 4) return res.status(400).json({ error: "يمكن اختيار أربعة مناديب كحد أقصى للتصريح الواحد" });
   if ("error" in window) return res.status(400).json({ error: window.error });
-  const [systemRows, contractorRows, representativeRows, approvalRows] = await Promise.all([
+  const [systemRows, contractorRows, representativeRows, approvalRows, representativeSystemRows] = await Promise.all([
     db.select().from(visitSystemsTable).where(eq(visitSystemsTable.id, systemId)).limit(1),
     db.select().from(visitContractorsTable).where(eq(visitContractorsTable.id, contractorId)).limit(1),
-    db.select().from(visitRepresentativesTable).where(eq(visitRepresentativesTable.id, representativeId)).limit(1),
+    db.select().from(visitRepresentativesTable).where(inArray(visitRepresentativesTable.id, representativeIds)),
     db.select().from(visitSiteApprovalsTable).where(eq(visitSiteApprovalsTable.id, siteApprovalId)).limit(1),
+    db.select().from(visitRepresentativeSystemsTable).where(and(inArray(visitRepresentativeSystemsTable.representativeId, representativeIds), eq(visitRepresentativeSystemsTable.systemId, systemId), eq(visitRepresentativeSystemsTable.isActive, true))),
   ]);
-  const system = systemRows[0], contractor = contractorRows[0], representative = representativeRows[0], approval = approvalRows[0];
-  if (!system || !contractor || !representative || !approval) return res.status(400).json({ error: "أحد مراجع الإصدار المباشر غير موجود" });
+  const system = systemRows[0], contractor = contractorRows[0], representatives = representativeIds.map((id) => representativeRows.find((row) => row.id === id)).filter(Boolean) as any[], representative = representatives[0], approval = approvalRows[0];
+  if (!system || !contractor || representatives.length !== representativeIds.length || !representative || !approval) return res.status(400).json({ error: "أحد مراجع الإصدار المباشر غير موجود" });
+  if (representatives.some((row) => !row.isActive || row.contractorId !== contractorId)) return res.status(400).json({ error: "كل المناديب المختارين يجب أن يكونوا نشطين ومسجلين في نفس شركة مقاول الباطن" });
+  const linkedRepresentativeIds = new Set(representativeSystemRows.map((row) => row.representativeId));
+  if (representativeIds.some((id) => !linkedRepresentativeIds.has(id))) return res.status(400).json({ error: "كل المندوبين المختارين يجب ربطهم بالنظام المحدد" });
+  if (representatives.some((row) => row.noResidenceException && !cleanText(row.exceptionReason, 1_000))) return res.status(400).json({ error: "سبب الاستثناء بدون إقامة مطلوب لكل مندوب مستثنى" });
   if (approval.siteName !== siteName) return res.status(400).json({ error: "اعتماد الموقع لا يطابق الموقع المحدد" });
+  const representativeSnapshot = representatives.map((row) => ({ id: row.id, fullName: row.fullName, identityNumber: row.identityNumber, mobile: row.mobile, noResidenceException: row.noResidenceException === true, exceptionReason: row.noResidenceException ? row.exceptionReason : null }));
   try {
     const context = await db.transaction(async (tx) => {
       const [visit] = await tx.insert(visitRequestsTable).values({
@@ -949,11 +1008,11 @@ router.post("/management/direct-issue", requireAuth, requireApproved, requireClu
         submittedByHospital: approval.siteName,
         submittedByContract: cleanText(req.body.contractNumber, 100) || null,
       }).returning();
-      await tx.insert(visitRequestMetadataTable).values({ visitId: visit.id, systemId, contractorId, representativeId, siteApprovalId, qualificationId, purpose, startsAt: window.startsAt, endsAt: window.endsAt, linkedAt: new Date(), linkedByUserId: req.currentUser.id });
+      await tx.insert(visitRequestMetadataTable).values({ visitId: visit.id, systemId, contractorId, representativeId, siteApprovalId, qualificationId, purpose, startsAt: window.startsAt, endsAt: window.endsAt, snapshotJson: JSON.stringify({ schemaVersion: 2, representatives: representativeSnapshot }), linkedAt: new Date(), linkedByUserId: req.currentUser.id });
       await ensurePermitToken(tx, visit.id);
       return approveVisit(tx, visit.id, req.currentUser, { qualificationOptional: true });
     });
-    await audit(req, "إصدار مباشر لتصريح زيارة", { visitId: context.visit.id, serialNumber: context.visit.serialNumber, maintenanceContractor: maintenance.name, siteLocation: context.visit.siteLocation, qualificationId: qualificationId || null, qualificationDeferred: !qualificationId, endsAtProvided: !!window.endsAt });
+    await audit(req, "إصدار مباشر لتصريح زيارة", { visitId: context.visit.id, serialNumber: context.visit.serialNumber, maintenanceContractor: maintenance.name, siteLocation: context.visit.siteLocation, representativeIds, representativeCount: representativeIds.length, qualificationId: qualificationId || null, qualificationDeferred: !qualificationId, endsAtProvided: !!window.endsAt });
     return res.status(201).json({ visit: sanitizeVisit(context.visit, context.metadata) });
   } catch (err: any) {
     if (String(err?.message).startsWith("VALIDATION:")) return res.status(400).json({ error: String(err.message).slice(11) });
@@ -981,6 +1040,7 @@ router.get("/:id", requireAuth, requireApproved, async (req: any, res) => {
     : [];
   return res.json({
     visit: sanitizeVisit(context.visit, context.metadata),
+    representatives: permitRepresentatives(context.visit, context.metadata, context.representative),
     central: {
       system: context.system ? { id: context.system.id, name: context.system.name } : null,
       contractor: context.contractor ? { id: context.contractor.id, name: context.contractor.name } : null,
@@ -1200,6 +1260,24 @@ router.patch("/management/contractors/:id", requireAuth, requireApproved, requir
   if (!row) return res.status(404).json({ error: "الشركة غير موجودة" });
   await audit(req, "تعديل شركة مقاول باطن", { contractorId: id, isActive: row.isActive });
   return res.json({ contractor: row });
+});
+
+router.delete("/management/contractors/:id", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
+  const id = numberId(req.params.id); if (!id) return res.status(400).json({ error: "رقم الشركة غير صالح" });
+  const [contractor] = await db.select().from(visitContractorsTable).where(eq(visitContractorsTable.id, id)).limit(1);
+  if (!contractor) return res.status(404).json({ error: "الشركة غير موجودة" });
+  const references = await Promise.all([
+    db.select({ id: visitQualificationsTable.id }).from(visitQualificationsTable).where(eq(visitQualificationsTable.contractorId, id)).limit(1),
+    db.select({ id: visitSiteApprovalsTable.id }).from(visitSiteApprovalsTable).where(eq(visitSiteApprovalsTable.contractorId, id)).limit(1),
+    db.select({ id: visitRepresentativesTable.id }).from(visitRepresentativesTable).where(eq(visitRepresentativesTable.contractorId, id)).limit(1),
+    db.select({ id: visitRequestMetadataTable.id }).from(visitRequestMetadataTable).where(eq(visitRequestMetadataTable.contractorId, id)).limit(1),
+    db.select({ id: visitRequestsTable.id }).from(visitRequestsTable).where(eq(visitRequestsTable.subContractor, contractor.name)).limit(1),
+    db.select({ id: visitDocumentsTable.id }).from(visitDocumentsTable).where(and(eq(visitDocumentsTable.ownerType, "contractor"), eq(visitDocumentsTable.ownerId, id))).limit(1),
+  ]);
+  if (references.some((rows) => rows.length)) return res.status(409).json({ error: "لا يمكن حذف الشركة لأنها مرتبطة ببيانات محفوظة؛ استخدم التعطيل للحفاظ على السجل", code: "CONTRACTOR_IN_USE" });
+  await db.delete(visitContractorsTable).where(eq(visitContractorsTable.id, id));
+  await audit(req, "حذف شركة مقاول باطن غير مستخدمة", { contractorId: id, name: contractor.name });
+  return res.json({ contractorId: id, deleted: true });
 });
 
 router.post("/management/direct-setup", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
@@ -1492,6 +1570,20 @@ router.patch("/management/qualifications/:id", requireAuth, requireApproved, req
   return res.json({ qualification: row });
 });
 
+router.delete("/management/qualifications/:id", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
+  const id = numberId(req.params.id); if (!id) return res.status(400).json({ error: "رقم التأهيل غير صالح" });
+  const [qualification] = await db.select().from(visitQualificationsTable).where(eq(visitQualificationsTable.id, id)).limit(1);
+  if (!qualification) return res.status(404).json({ error: "التأهيل غير موجود" });
+  const [visitReference, documentReference] = await Promise.all([
+    db.select({ id: visitRequestMetadataTable.id }).from(visitRequestMetadataTable).where(eq(visitRequestMetadataTable.qualificationId, id)).limit(1),
+    db.select({ id: visitDocumentsTable.id }).from(visitDocumentsTable).where(and(eq(visitDocumentsTable.ownerType, "qualification"), eq(visitDocumentsTable.ownerId, id))).limit(1),
+  ]);
+  if (visitReference.length || documentReference.length) return res.status(409).json({ error: "لا يمكن حذف التأهيل لأنه مرتبط بزيارة أو وثيقة؛ استخدم التعطيل للحفاظ على السجل", code: "QUALIFICATION_IN_USE" });
+  await db.delete(visitQualificationsTable).where(eq(visitQualificationsTable.id, id));
+  await audit(req, "حذف تأهيل غير مستخدم", { qualificationId: id, contractorId: qualification.contractorId, systemId: qualification.systemId });
+  return res.json({ qualificationId: id, deleted: true });
+});
+
 router.post("/management/site-approvals", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
   const siteName = cleanText(req.body.siteName, 200), contractorId = numberId(req.body.contractorId), systemId = numberId(req.body.systemId);
   const validFrom = dayString(req.body.validFrom), validUntil = dayString(req.body.validUntil);
@@ -1546,6 +1638,26 @@ router.patch("/management/representatives/:id", requireAuth, requireApproved, re
   if (!row) return res.status(404).json({ error: "المندوب غير موجود" });
   await audit(req, "تعديل مندوب مقاول باطن", { representativeId: id, isActive: row.isActive, noResidenceException: row.noResidenceException, exceptionReason: row.noResidenceException ? row.exceptionReason : null });
   return res.json({ representative: { ...row, identityNumber: undefined, identityMasked: maskIdentity(row.identityNumber) } });
+});
+
+router.delete("/management/representatives/:id", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
+  const id = numberId(req.params.id); if (!id) return res.status(400).json({ error: "رقم المندوب غير صالح" });
+  const [representative] = await db.select().from(visitRepresentativesTable).where(eq(visitRepresentativesTable.id, id)).limit(1);
+  if (!representative) return res.status(404).json({ error: "المندوب غير موجود" });
+  const [metadataReference, legacyReference, documentReference, snapshotReferences] = await Promise.all([
+    db.select({ id: visitRequestMetadataTable.id }).from(visitRequestMetadataTable).where(eq(visitRequestMetadataTable.representativeId, id)).limit(1),
+    db.select({ id: visitRequestsTable.id }).from(visitRequestsTable).where(eq(visitRequestsTable.repId, representative.identityNumber)).limit(1),
+    db.select({ id: visitDocumentsTable.id }).from(visitDocumentsTable).where(and(eq(visitDocumentsTable.ownerType, "representative"), eq(visitDocumentsTable.ownerId, id))).limit(1),
+    db.select({ id: visitRequestMetadataTable.id, snapshotJson: visitRequestMetadataTable.snapshotJson }).from(visitRequestMetadataTable),
+  ]);
+  const secondarySnapshotReference = snapshotReferences.some((row) => representativeIdsFromMetadata(row).includes(id));
+  if (metadataReference.length || legacyReference.length || documentReference.length || secondarySnapshotReference) return res.status(409).json({ error: "لا يمكن حذف المندوب لأنه مرتبط بزيارة أو وثيقة؛ استخدم التعطيل للحفاظ على السجل", code: "REPRESENTATIVE_IN_USE" });
+  await db.transaction(async (tx) => {
+    await tx.delete(visitRepresentativeSystemsTable).where(eq(visitRepresentativeSystemsTable.representativeId, id));
+    await tx.delete(visitRepresentativesTable).where(eq(visitRepresentativesTable.id, id));
+  });
+  await audit(req, "حذف مندوب غير مستخدم", { representativeId: id, contractorId: representative.contractorId, fullName: representative.fullName });
+  return res.json({ representativeId: id, deleted: true });
 });
 
 router.put("/management/representatives/:id/systems", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
@@ -1698,6 +1810,7 @@ router.post("/:id/reissue", requireAuth, requireApproved, requireClusterVisitMan
         purpose,
         startsAt: window.startsAt,
         endsAt: window.endsAt,
+        snapshotJson: original.metadata.snapshotJson,
         linkedAt: new Date(),
         linkedByUserId: req.currentUser.id,
       });
@@ -1877,8 +1990,7 @@ router.get("/:id/permit", requireAuth, requireApproved, async (req: any, res) =>
   try {
     const qr = await db.transaction((tx) => ensurePermitToken(tx, id));
     const token = decryptPermitToken(qr.tokenCiphertext);
-    const origin = `${req.protocol}://${req.get("host")}`;
-    const qrDataUrl = await QRCode.toDataURL(`${origin}/original-viewer?page=cluster-subcontractor-visits.html&visitQr=${encodeURIComponent(token)}&download=1`, { errorCorrectionLevel: "M", margin: 1, width: 220 });
+    const qrDataUrl = await QRCode.toDataURL(`NHC-NJ-VISIT:${token}`, { errorCorrectionLevel: "M", margin: 1, width: 220 });
     const [stamp, signature, signerName, signerTitle, legacyManagerName, documentsVerified] = await Promise.all([
       getSetting("visit_stamp"),
       getSetting("visit_signature"),
@@ -1892,6 +2004,9 @@ router.get("/:id/permit", requireAuth, requireApproved, async (req: any, res) =>
       permit: {
         ...sanitizeVisit(context.visit, context.metadata),
         repIdMasked: maskIdentity(context.visit.repId),
+        repId: context.visit.repId,
+        repMobile: context.visit.repMobile,
+        representatives: permitRepresentatives(context.visit, context.metadata, context.representative),
         representativeName: context.representative?.fullName || context.visit.repName,
         residenceVerified: isResidenceVerified(context.representative, context.visit),
         documentsVerified,
@@ -1934,6 +2049,7 @@ async function verifyToken(req: any, token: string) {
   await db.update(visitPermitTokensTable).set({ lastScannedAt: new Date(), scanCount: sql`${visitPermitTokensTable.scanCount} + 1` }).where(eq(visitPermitTokensTable.id, row.qr.id));
   const full = hasClusterVisitManagement(req.currentUser);
   const documentsVerified = full ? await hasActiveVisitDocuments(row.visit.id, row.metadata) : undefined;
+  const representatives = full ? permitRepresentatives(row.visit, row.metadata, row.representative) : undefined;
   return {
     full,
     visit: {
@@ -1942,6 +2058,7 @@ async function verifyToken(req: any, token: string) {
       status: visitEffectiveStatus(row.visit, row.metadata),
       visitorName: full ? row.visit.repName : shortenVisitorName(row.visit.repName),
       repIdMasked: full ? maskIdentity(row.visit.repId) : undefined,
+      representatives,
       company: full ? canonicalContractorName(row.visit.subContractor) : undefined,
       system: full ? canonicalSystemName(row.visit.systemName) : undefined,
       site: row.visit.siteLocation,
@@ -1991,7 +2108,8 @@ router.get("/qr/manual", requireAuth, requireApproved, async (req: any, res) => 
   if (!row) return res.status(404).json({ error: "رقم التصريح غير موجود" });
   const full = hasClusterVisitManagement(req.currentUser);
   const documentsVerified = full ? await hasActiveVisitDocuments(row.visit.id, row.metadata) : undefined;
-  return res.json({ full, visit: { id: full ? row.visit.id : undefined, serialNumber: row.visit.serialNumber, status: visitEffectiveStatus(row.visit, row.metadata), visitorName: full ? row.visit.repName : shortenVisitorName(row.visit.repName), repIdMasked: full ? maskIdentity(row.visit.repId) : undefined, company: full ? canonicalContractorName(row.visit.subContractor) : undefined, system: full ? canonicalSystemName(row.visit.systemName) : undefined, site: row.visit.siteLocation, visitDate: row.visit.visitDate, startsAt: full ? row.metadata?.startsAt : undefined, endsAt: full ? row.metadata?.endsAt : undefined, representativeName: full ? row.representative?.fullName || row.visit.repName : undefined, residenceVerified: full ? isResidenceVerified(row.representative, row.visit) : undefined, documentsVerified, cancellationReason: full ? row.visit.cancelledReason : undefined, exceptionReason: full && row.representative?.noResidenceException ? row.representative.exceptionReason : undefined, canOpenFull: full, hasSignedPermit: full ? !!row.visit.signedPermitFile : undefined } });
+  const representatives = full ? permitRepresentatives(row.visit, row.metadata, row.representative) : undefined;
+  return res.json({ full, visit: { id: full ? row.visit.id : undefined, serialNumber: row.visit.serialNumber, status: visitEffectiveStatus(row.visit, row.metadata), visitorName: full ? row.visit.repName : shortenVisitorName(row.visit.repName), repIdMasked: full ? maskIdentity(row.visit.repId) : undefined, representatives, company: full ? canonicalContractorName(row.visit.subContractor) : undefined, system: full ? canonicalSystemName(row.visit.systemName) : undefined, site: row.visit.siteLocation, visitDate: row.visit.visitDate, startsAt: full ? row.metadata?.startsAt : undefined, endsAt: full ? row.metadata?.endsAt : undefined, representativeName: full ? row.representative?.fullName || row.visit.repName : undefined, residenceVerified: full ? isResidenceVerified(row.representative, row.visit) : undefined, documentsVerified, cancellationReason: full ? row.visit.cancelledReason : undefined, exceptionReason: full && row.representative?.noResidenceException ? row.representative.exceptionReason : undefined, canOpenFull: full, hasSignedPermit: full ? !!row.visit.signedPermitFile : undefined } });
 });
 
 export default router;

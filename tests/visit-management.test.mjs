@@ -82,6 +82,7 @@ test('permit numbers use one atomic database upsert and have a uniqueness backst
   assert.match(schema, /visit_number_sequences[\s\S]*scopeKey: text\("scope_key"\)\.notNull\(\)\.unique\(\)/);
   assert.match(schema, /visit_requests_atomic_serial_unique/);
   assert.match(schema, /visit_number_sequences/);
+  assert.match(route, /NHC-NJ-VIS-\$\{year\}-\$\{String\(sequence\.lastValue\)\.padStart\(6, "0"\)\}/);
 });
 
 test('reissue creates a new visit, metadata and QR without updating the original visit', () => {
@@ -90,6 +91,7 @@ test('reissue creates a new visit, metadata and QR without updating the original
   assert.match(block[0], /insert\(visitRequestsTable\)/);
   assert.match(block[0], /reissuedFromVisitId: originalId/);
   assert.match(block[0], /insert\(visitRequestMetadataTable\)/);
+  assert.match(block[0], /snapshotJson: original\.metadata\.snapshotJson/);
   assert.match(block[0], /ensurePermitToken\(tx, copy\.id\)/);
   assert.doesNotMatch(block[0], /update\(visitRequestsTable\)[\s\S]*originalId/);
 });
@@ -115,7 +117,8 @@ test('QR uses random tokens, stores hash plus ciphertext, rate limits scans and 
   const qrPayload = route.match(/QRCode\.toDataURL\(([\s\S]*?), \{ errorCorrectionLevel/);
   assert.ok(qrPayload);
   assert.doesNotMatch(qrPayload[1], /repId|repName|identity|mobile|visitId/);
-  assert.match(qrPayload[1], /original-viewer\?page=cluster-subcontractor-visits\.html&visitQr=/);
+  assert.match(qrPayload[1], /NHC-NJ-VISIT:/);
+  assert.doesNotMatch(qrPayload[1], /https?:|original-viewer|download=1/);
 });
 
 test('approved certificate catalogue uses full display names and seeds the supplied qualification dates', () => {
@@ -272,6 +275,45 @@ test('direct issue can select an existing company representative and add an idem
   assert.match(centerJs, /لن تُلغى روابط المندوب السابقة/);
 });
 
+test('direct issue accepts one to four representatives from the same company and system and snapshots all of them', () => {
+  const directIssue = route.match(/router\.post\("\/management\/direct-issue"[\s\S]*?\n}\);/);
+  assert.ok(directIssue);
+  assert.match(directIssue[0], /representativeIds/);
+  assert.match(directIssue[0], /representativeIds\.length > 4/);
+  assert.match(directIssue[0], /row\.contractorId !== contractorId/);
+  assert.match(directIssue[0], /linkedRepresentativeIds/);
+  assert.match(directIssue[0], /representativeSnapshot/);
+  assert.match(directIssue[0], /snapshotJson: JSON\.stringify\(\{ schemaVersion: 2, representatives: representativeSnapshot \}\)/);
+  assert.match(center, /id="direct-representative-options"/);
+  assert.match(centerJs, /selectedDirectRepresentativeIds/);
+  assert.match(centerJs, /body\.representativeIds = selectedDirectRepresentativeIds\(\)/);
+  assert.match(centerJs, /يمكن اختيار أربعة مناديب كحد أقصى/);
+});
+
+test('unused companies, qualifications and representatives can be deleted safely while used records require disable', () => {
+  for (const entity of ['contractors', 'qualifications', 'representatives']) {
+    const block = route.match(new RegExp(`router\\.delete\\("/management/${entity}/:id"[\\s\\S]*?\\n}\\);`));
+    assert.ok(block, `safe delete route for ${entity}`);
+    assert.match(block[0], /requireClusterVisitManagement/);
+    assert.match(block[0], /status\(409\)/);
+    assert.match(block[0], /استخدم التعطيل/);
+    assert.match(block[0], /await audit/);
+  }
+  assert.match(route, /secondarySnapshotReference/);
+  assert.match(centerJs, /data-delete-contractor/);
+  assert.match(centerJs, /data-delete-qualification/);
+  assert.match(centerJs, /data-delete-rep/);
+  assert.match(centerJs, /openSafeDelete/);
+  assert.doesNotMatch(centerJs, /\bconfirm\s*\(/);
+});
+
+test('representative screen can create and immediately select a missing company', () => {
+  assert.match(center, /id="rep-add-contractor"/);
+  assert.match(centerJs, /openStandaloneContractor/);
+  assert.match(centerJs, /\/management\/contractors/);
+  assert.match(centerJs, /تم حفظ الشركة واختيارها للمندوب/);
+});
+
 test('legacy Word representatives import previews masked data then confirms company, representative and system links atomically', () => {
   assert.match(route, /legacy-representatives\/preview/);
   assert.match(route, /legacy-representatives\/confirm/);
@@ -312,7 +354,12 @@ test('printing reuses one shared permit layout, includes QR and verification tex
   assert.match(printJs, /data-role="permit-stamp"/);
   assert.match(printJs, /data-role="permit-qr"/);
   assert.match(printJs, /مسودة/);
-  assert.doesNotMatch(printJs, /\['الموقع',/);
+  assert.match(printJs, /\['الموقع',/);
+  assert.match(printJs, /v\.representatives/);
+  assert.match(printJs, /representative\.identityNumber/);
+  assert.match(printJs, /representative\.mobile/);
+  assert.match(printJs, /اسم المندوب/);
+  assert.match(printJs, /رمز تحقق داخلي/);
   assert.doesNotMatch(printJs, /\['وقت بداية الزيارة',/);
   assert.doesNotMatch(printJs, /\['وقت نهاية الزيارة',/);
   assert.doesNotMatch(printJs, /\['الغرض من الزيارة',/);
@@ -339,8 +386,23 @@ test('camera scanner supports BarcodeDetector, jsQR fallback, camera switching a
   assert.match(centerJs, /facingMode: \{ ideal: 'environment' \}/);
   assert.match(centerJs, /getTracks\(\)\.forEach/);
   assert.match(centerJs, /\/qr\/manual\?serialNumber=/);
+  assert.match(centerJs, /\^NHC-NJ-VISIT:/);
+  assert.match(center, /QR رمز تحقق داخلي لا يفتح موقعًا/);
   assert.match(center, /id="camera-select"/);
   assert.match(center, /id="camera-rescan"/);
+});
+
+test('full identity and mobile are limited to authorized permit, detail and scan responses while listings stay masked', () => {
+  const bootstrapBlock = route.match(/router\.get\("\/management\/bootstrap"[\s\S]*?\n}\);/);
+  assert.ok(bootstrapBlock);
+  assert.match(bootstrapBlock[0], /identityMasked: maskIdentity\(identityNumber\)/);
+  assert.match(bootstrapBlock[0], /mobileMasked:/);
+  const permitBlock = route.match(/router\.get\("\/:id\/permit"[\s\S]*?\n}\);/);
+  assert.ok(permitBlock);
+  assert.match(permitBlock[0], /permitRepresentatives/);
+  assert.match(route, /const representatives = full \? permitRepresentatives/);
+  assert.match(centerJs, /representative\.identityNumber/);
+  assert.match(centerJs, /representative\.mobile/);
 });
 
 test('new visit browser scripts are syntactically valid and do not use native dialogs', () => {
