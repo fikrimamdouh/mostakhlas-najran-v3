@@ -19,7 +19,7 @@ test('archive cleanup reads all visits and requires explicit manual selection', 
   assert.match(cleanup, /تحديد الظاهر/);
   assert.match(cleanup, /تنظيف المحدد/);
   assert.match(cleanup, /selectedIds\.length/);
-  assert.match(cleanup, /\/' \+ visit\.id \+ '\/archive'/);
+  assert.match(cleanup, /'\/' \+ visit\.id \+ '\/archive'/);
   assert.match(cleanup, /method: 'PATCH'/);
   assert.match(cleanup, /لا يحذف السجل أو رقم التصريح أو المرفقات والتوقيعات/);
   assert.doesNotMatch(cleanup, /\/permanent/);
