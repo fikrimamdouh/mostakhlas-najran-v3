@@ -1,8 +1,7 @@
 (function () {
   'use strict';
 
-  var CONFIRMATION_TEXT = 'تنظيف التجارب';
-  var TEST_REASON_PATTERN = /تجريب/u;
+  var CONFIRMATION_TEXT = 'تنظيف المحدد';
 
   function esc(value) {
     return String(value == null ? '' : value)
@@ -52,7 +51,7 @@
     node.textContent = message;
     node.className = 'toast show ' + (ok ? 'ok' : 'err');
     clearTimeout(node._cleanupTimer);
-    node._cleanupTimer = setTimeout(function () { node.className = 'toast'; }, 6000);
+    node._cleanupTimer = setTimeout(function () { node.className = 'toast'; }, 6500);
   }
 
   function showModal(title, html, buttons) {
@@ -80,56 +79,54 @@
     document.body.style.overflow = '';
   }
 
-  function isExplicitTestVisit(visit) {
-    var reason = String(visit.archiveReason || visit.cancelledReason || '');
-    return !!visit.archivedAt && visit.status === 'cancelled' && TEST_REASON_PATTERN.test(reason);
+  function statusText(visit) {
+    return ({ pending: 'بانتظار الاعتماد', approved: 'معتمدة', rejected: 'مرفوضة', cancelled: 'ملغاة' })[visit.status] || visit.status || '—';
   }
 
-  function isProtectedVisit(visit) {
-    return !!visit.hasSignedPermit || !!(visit.facilityApproval && visit.facilityApproval.status === 'approved');
+  function visitDateText(value) {
+    if (!value) return '—';
+    try { return new Date(String(value).slice(0, 10) + 'T12:00:00').toLocaleDateString('ar-SA'); }
+    catch (_) { return String(value); }
   }
 
-  async function loadArchivedVisits() {
+  async function loadAllVisits() {
     var visits = [], page = 1, pages = 1;
     do {
-      var body = await api('/management/archive?visibility=archived&status=cancelled&page=' + page + '&limit=100');
+      var body = await api('/management/archive?visibility=all&page=' + page + '&limit=100');
       visits = visits.concat(Array.isArray(body.visits) ? body.visits : []);
-      pages = Math.max(1, Math.min(100, Number(body.pages || 1)));
+      pages = Math.max(1, Math.min(200, Number(body.pages || 1)));
       page += 1;
     } while (page <= pages);
     return visits;
   }
 
-  async function deleteTestVisits(visits, progressNode) {
-    var pending = visits.slice().sort(function (a, b) { return Number(b.id) - Number(a.id); });
-    var deleted = [], failed = [], pass = 0, progressMade = true;
-    while (pending.length && progressMade && pass < visits.length + 1) {
-      pass += 1;
-      progressMade = false;
-      var deferred = [];
-      for (var i = 0; i < pending.length; i++) {
-        var visit = pending[i];
-        if (progressNode) progressNode.textContent = 'جارٍ تنظيف ' + (deleted.length + 1) + ' من ' + visits.length + ': ' + (visit.serialNumber || ('زيارة ' + visit.id));
-        try {
-          await api('/' + visit.id + '/permanent', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              confirmation: 'DELETE:' + (visit.serialNumber || ('VISIT-' + visit.id)),
-              reason: 'تنظيف الزيارات التجريبية قبل التشغيل الفعلي'
-            })
-          });
-          deleted.push(visit);
-          progressMade = true;
-        } catch (error) {
-          if (/المعاد إصداره|مرتبط بهذه الزيارة/.test(error.message)) deferred.push(visit);
-          else failed.push({ visit: visit, message: error.message });
-        }
-      }
-      pending = deferred;
-    }
-    pending.forEach(function (visit) { failed.push({ visit: visit, message: 'مرتبطة بزيارة معاد إصدارها لم تُحذف' }); });
-    return { deleted: deleted, failed: failed };
+  function visitRow(visit) {
+    var protectedLabels = [];
+    if (visit.hasSignedPermit) protectedLabels.push('له تصريح موقّع');
+    if (visit.facilityApproval && visit.facilityApproval.status === 'approved') protectedLabels.push('اعتمدته المنشأة');
+    if (visit.archivedAt) protectedLabels.push('منظف من العرض بالفعل');
+    var searchable = [visit.serialNumber, visit.repName, visit.subContractor, visit.systemName, visit.siteLocation, statusText(visit), visitDateText(visit.visitDate)].join(' ').toLocaleLowerCase('ar');
+    return '<label class="card" data-clean-row data-search="' + esc(searchable) + '" style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:11px;align-items:start;cursor:pointer;margin-bottom:8px">' +
+      '<input type="checkbox" data-clean-visit value="' + visit.id + '" style="width:18px;height:18px;margin-top:4px">' +
+      '<span><strong>' + esc(visit.serialNumber || ('زيارة ' + visit.id)) + ' — ' + esc(visit.repName || '—') + '</strong>' +
+      '<small style="display:block;color:#64748b;margin-top:3px">' + esc(visit.siteLocation || '—') + ' — ' + esc(visit.systemName || '—') + ' — ' + esc(visit.subContractor || '—') + '</small>' +
+      '<small style="display:block;color:#475569;margin-top:3px">' + esc(statusText(visit)) + ' — ' + esc(visitDateText(visit.visitDate)) + (protectedLabels.length ? ' — ' + esc(protectedLabels.join('، ')) : '') + '</small></span></label>';
+  }
+
+  function filterRows() {
+    var input = document.getElementById('archive-clean-search');
+    var query = String(input && input.value || '').toLocaleLowerCase('ar').trim();
+    document.querySelectorAll('[data-clean-row]').forEach(function (row) {
+      row.style.display = !query || String(row.dataset.search || '').indexOf(query) !== -1 ? 'grid' : 'none';
+    });
+  }
+
+  function setVisibleSelection(checked) {
+    document.querySelectorAll('[data-clean-row]').forEach(function (row) {
+      if (row.style.display === 'none') return;
+      var checkbox = row.querySelector('[data-clean-visit]');
+      if (checkbox) checkbox.checked = checked;
+    });
   }
 
   function refreshArchive() {
@@ -139,39 +136,67 @@
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   }
 
+  async function archiveSelected(visits, progressNode) {
+    var archived = 0, alreadyArchived = 0, failed = [];
+    for (var i = 0; i < visits.length; i++) {
+      var visit = visits[i];
+      if (progressNode) progressNode.textContent = 'جارٍ تنظيف ' + (i + 1) + ' من ' + visits.length + ': ' + (visit.serialNumber || ('زيارة ' + visit.id));
+      if (visit.archivedAt) {
+        alreadyArchived += 1;
+        continue;
+      }
+      try {
+        await api('/' + visit.id + '/archive', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: 'تنظيف يدوي محدد من أرشيف الزيارات قبل التشغيل الفعلي' })
+        });
+        archived += 1;
+      } catch (error) {
+        failed.push({ visit: visit, message: error.message });
+      }
+    }
+    return { archived: archived, alreadyArchived: alreadyArchived, failed: failed };
+  }
+
   async function openCleanup() {
     var trigger = document.getElementById('archive-clean-tests');
     if (trigger) trigger.disabled = true;
     try {
-      var archived = await loadArchivedVisits();
-      var explicitTests = archived.filter(isExplicitTestVisit);
-      var eligible = explicitTests.filter(function (visit) { return !isProtectedVisit(visit); });
-      var protectedVisits = explicitTests.filter(isProtectedVisit);
-      if (!eligible.length) {
-        showModal('تنظيف الزيارات التجريبية', '<div class="note">لا توجد زيارات تجريبية مؤرشفة قابلة للتنظيف. الزيارات الحقيقية، والزيارات المعتمدة من المنشأة، وأي زيارة لها تصريح موقّع لا يتم حذفها.</div>' + (protectedVisits.length ? '<div class="note" style="margin-top:10px;background:#fff7ed;color:#9a3412;border-color:#fed7aa">تم استبعاد ' + protectedVisits.length + ' زيارة محمية.</div>' : ''), []);
+      var visits = await loadAllVisits();
+      if (!visits.length) {
+        showModal('تنظيف زيارات محددة', '<div class="note">لا توجد زيارات في الأرشيف.</div>', []);
         return;
       }
-      var sample = eligible.slice(0, 12).map(function (visit) { return '<li>' + esc(visit.serialNumber || ('زيارة ' + visit.id)) + ' — ' + esc(visit.repName || '') + '</li>'; }).join('');
-      showModal('تنظيف الزيارات التجريبية',
-        '<div class="note" style="background:#fff7ed;color:#9a3412;border-color:#fed7aa"><strong>سيتم حذف ' + eligible.length + ' زيارة تجريبية مؤرشفة نهائيًا.</strong><br>لن تُحذف أي زيارة حقيقية، أو زيارة معتمدة من المنشأة، أو زيارة لها تصريح موقّع. كل حذف يمر عبر الحماية الحالية ويُسجل في سجل التدقيق.</div>' +
-        '<ul style="max-height:190px;overflow:auto;line-height:1.8;margin:12px 0">' + sample + (eligible.length > 12 ? '<li>و' + (eligible.length - 12) + ' زيارة أخرى</li>' : '') + '</ul>' +
-        (protectedVisits.length ? '<div class="note" style="margin-bottom:12px">تم استبعاد ' + protectedVisits.length + ' زيارة محمية من التنظيف.</div>' : '') +
-        '<div class="field"><label>اكتب «' + CONFIRMATION_TEXT + '» للتأكيد</label><input id="archive-clean-confirmation" autocomplete="off"></div><div id="archive-clean-progress" class="note" style="display:none;margin-top:12px"></div>',
-        [{ label: 'تنظيف الزيارات التجريبية', className: 'btn-red', action: async function (button) {
+
+      showModal('تنظيف زيارات محددة',
+        '<div class="note" style="background:#fff7ed;color:#9a3412;border-color:#fed7aa"><strong>اختر الزيارات بنفسك.</strong><br>التنظيف يلغي الزيارة المحددة ويخفيها من العرض، لكنه لا يحذف السجل أو رقم التصريح أو المرفقات والتوقيعات من قاعدة البيانات.</div>' +
+        '<div class="toolbar" style="margin-top:12px"><input id="archive-clean-search" type="search" placeholder="ابحث بالرقم أو الاسم أو الموقع أو النظام" style="flex:1;min-width:260px"><button type="button" class="btn btn-primary" id="archive-clean-select-visible">تحديد الظاهر</button><button type="button" class="btn btn-light" id="archive-clean-clear">إلغاء التحديد</button></div>' +
+        '<div id="archive-clean-list" style="max-height:430px;overflow:auto;padding:2px">' + visits.map(visitRow).join('') + '</div>' +
+        '<div class="field" style="margin-top:12px"><label>اكتب «' + CONFIRMATION_TEXT + '» للتأكيد</label><input id="archive-clean-confirmation" autocomplete="off"></div>' +
+        '<div id="archive-clean-progress" class="note" style="display:none;margin-top:12px"></div>',
+        [{ label: 'تنظيف الزيارات المحددة من العرض', className: 'btn-red', action: async function (button) {
           var confirmation = document.getElementById('archive-clean-confirmation');
           if (!confirmation || confirmation.value.trim() !== CONFIRMATION_TEXT) { toast('اكتب نص التأكيد كما هو ظاهر', false); return; }
+          var selectedIds = Array.from(document.querySelectorAll('[data-clean-visit]:checked')).map(function (node) { return Number(node.value); }).filter(Boolean);
+          if (!selectedIds.length) { toast('حدد زيارة واحدة على الأقل', false); return; }
+          var selected = visits.filter(function (visit) { return selectedIds.indexOf(Number(visit.id)) !== -1; });
           button.disabled = true;
           confirmation.disabled = true;
           var progress = document.getElementById('archive-clean-progress');
           progress.style.display = 'block';
-          var result = await deleteTestVisits(eligible, progress);
-          progress.innerHTML = 'تم حذف <strong>' + result.deleted.length + '</strong> زيارة تجريبية.' + (result.failed.length ? ' تعذر حذف <strong>' + result.failed.length + '</strong> زيارة مرتبطة أو محمية.' : ' لم تُمس أي زيارة أخرى.');
+          var result = await archiveSelected(selected, progress);
+          progress.innerHTML = 'تم تنظيف <strong>' + result.archived + '</strong> زيارة من العرض.' + (result.alreadyArchived ? ' وكان <strong>' + result.alreadyArchived + '</strong> محددًا منظفًا بالفعل.' : '') + (result.failed.length ? ' وتعذر تنظيف <strong>' + result.failed.length + '</strong> زيارة.' : ' لم تُحذف أي بيانات نهائيًا.');
           refreshArchive();
-          toast(result.failed.length ? 'تم التنظيف مع استبعاد الزيارات المرتبطة' : 'تم تنظيف الزيارات التجريبية المؤرشفة', result.failed.length === 0);
+          toast(result.failed.length ? 'تم التنظيف مع وجود زيارات لم تتغير' : 'تم تنظيف الزيارات المحددة من العرض', result.failed.length === 0);
           button.textContent = 'تم التنفيذ';
-          setTimeout(closeModal, 1400);
+          setTimeout(closeModal, 1700);
         } }]
       );
+
+      document.getElementById('archive-clean-search')?.addEventListener('input', filterRows);
+      document.getElementById('archive-clean-select-visible')?.addEventListener('click', function () { setVisibleSelection(true); });
+      document.getElementById('archive-clean-clear')?.addEventListener('click', function () { document.querySelectorAll('[data-clean-visit]').forEach(function (node) { node.checked = false; }); });
     } catch (error) {
       toast(error.message, false);
     } finally {
@@ -180,16 +205,18 @@
   }
 
   function ensureCleanupButton() {
-    var existing = document.getElementById('archive-clean-tests');
-    if (existing) return existing;
+    var button = document.getElementById('archive-clean-tests');
     var title = document.querySelector('[data-panel="archive"] .panel-title');
-    if (!title) return null;
-    var button = document.createElement('button');
-    button.type = 'button';
-    button.id = 'archive-clean-tests';
-    button.className = 'btn btn-red';
-    button.innerHTML = '<i class="fas fa-broom"></i> تنظيف الزيارات التجريبية';
-    title.appendChild(button);
+    if (!button && title) {
+      button = document.createElement('button');
+      button.type = 'button';
+      button.id = 'archive-clean-tests';
+      button.className = 'btn btn-red';
+      title.appendChild(button);
+    }
+    if (button) button.innerHTML = '<i class="fas fa-broom"></i> تنظيف زيارات محددة';
+    var note = document.querySelector('[data-panel="archive"] .note');
+    if (note) note.textContent = 'زر التنظيف يقرأ كل الزيارات ويعرضها للاختيار اليدوي. الزيارات المحددة تُلغى وتُخفى من العرض فقط مع الاحتفاظ بالسجل ورقم التصريح والمرفقات والتوقيعات.';
     return button;
   }
 
