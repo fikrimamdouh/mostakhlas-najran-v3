@@ -1050,8 +1050,10 @@ router.post("/management/direct-issue", requireAuth, requireApproved, requireClu
   if (representatives.some((row) => row.noResidenceException && !cleanText(row.exceptionReason, 1_000))) return res.status(400).json({ error: "سبب الاستثناء بدون إقامة مطلوب لكل مندوب مستثنى" });
   if (approval.siteName !== siteName) return res.status(400).json({ error: "اعتماد الموقع لا يطابق الموقع المحدد" });
   const representativeSnapshot = representatives.map((row) => ({ id: row.id, fullName: row.fullName, identityNumber: row.identityNumber, mobile: row.mobile, noResidenceException: row.noResidenceException === true, exceptionReason: row.noResidenceException ? row.exceptionReason : null }));
+  let context: VisitContext;
+  let issueStage = "إنشاء سجل الزيارة";
   try {
-    const context = await db.transaction(async (tx) => {
+    context = await db.transaction(async (tx) => {
       const [visit] = await tx.insert(visitRequestsTable).values({
         userId: req.currentUser.id,
         repName: representative.fullName,
@@ -1067,17 +1069,32 @@ router.post("/management/direct-issue", requireAuth, requireApproved, requireClu
         submittedByHospital: approval.siteName,
         submittedByContract: cleanText(req.body.contractNumber, 100) || null,
       }).returning();
+      issueStage = "ربط بيانات الزيارة";
       await tx.insert(visitRequestMetadataTable).values({ visitId: visit.id, systemId, contractorId, representativeId, siteApprovalId, qualificationId, purpose, startsAt: window.startsAt, endsAt: window.endsAt, snapshotJson: JSON.stringify({ schemaVersion: 2, representatives: representativeSnapshot }), linkedAt: new Date(), linkedByUserId: req.currentUser.id });
-      await ensurePermitToken(tx, visit.id);
+      // approveVisit creates the active QR token in the same transaction. Do
+      // not create it twice; this also keeps the failure stage unambiguous.
+      issueStage = "اعتماد الزيارة وإنشاء رقم التصريح وQR";
       return approveVisit(tx, visit.id, req.currentUser, { qualificationOptional: true });
     });
-    await audit(req, "إصدار مباشر لتصريح زيارة", { visitId: context.visit.id, serialNumber: context.visit.serialNumber, maintenanceContractor: maintenance.name, siteLocation: context.visit.siteLocation, representativeIds, representativeCount: representativeIds.length, qualificationId: qualificationId || null, qualificationDeferred: !qualificationId, endsAtProvided: !!window.endsAt });
-    return res.status(201).json({ visit: sanitizeVisit(context.visit, context.metadata) });
   } catch (err: any) {
     if (String(err?.message).startsWith("VALIDATION:")) return res.status(400).json({ error: String(err.message).slice(11) });
-    req.log.error({ err }, "Direct visit issue failed");
-    return res.status(500).json({ error: "تعذر الإصدار المباشر" });
+    if (err?.message === "VISIT_QR_SECRET_OR_CLERK_SECRET_KEY_REQUIRED") {
+      req.log.error({ err, issueStage }, "Direct visit issue failed: QR secret missing");
+      return res.status(503).json({ error: "مفتاح QR غير مهيأ على الخادم؛ أضف VISIT_QR_SECRET إلى بيئة النشر", code: "VISIT_QR_SECRET_MISSING" });
+    }
+    req.log.error({ err, issueStage, dbCode: databaseErrorCode(err) }, "Direct visit issue failed");
+    return respondVisitMutationError(req, res, err, `تعذر الإصدار أثناء: ${issueStage}`);
   }
+
+  // The permit has already committed successfully at this point. Audit-log
+  // availability must not turn that success into a misleading 500 response
+  // and tempt the operator to issue the same visit again.
+  try {
+    await audit(req, "إصدار مباشر لتصريح زيارة", { visitId: context.visit.id, serialNumber: context.visit.serialNumber, maintenanceContractor: maintenance.name, siteLocation: context.visit.siteLocation, representativeIds, representativeCount: representativeIds.length, qualificationId: qualificationId || null, qualificationDeferred: !qualificationId, endsAtProvided: !!window.endsAt });
+  } catch (err) {
+    req.log.error({ err, visitId: context.visit.id }, "Direct visit issued but audit logging failed");
+  }
+  return res.status(201).json({ visit: sanitizeVisit(context.visit, context.metadata) });
 });
 
 // ── Facility/site approval workflow ────────────────────────────────────────
