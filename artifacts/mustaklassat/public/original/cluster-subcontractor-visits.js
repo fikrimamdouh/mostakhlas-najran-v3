@@ -2,6 +2,7 @@
   'use strict';
 
   var state = { data: null, settings: null, archivePage: 1, archivePages: 1, stream: null, scanLoop: 0, scanning: false, barcodeDetector: null, qrDeepLinkHandled: false };
+  var UI_STATE_KEY = 'najran_visit_center_ui_state_v1';
 
   function esc(value) { return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function formObject(form) { var out = {}; new FormData(form).forEach(function (value, key) { out[key] = typeof value === 'string' ? value.trim() : value; }); return out; }
@@ -13,6 +14,33 @@
   function statusLabel(status) { return ({ active: 'سارية', expired: 'منتهية', cancelled: 'ملغاة', rejected: 'مرفوضة', pending: 'بانتظار الاعتماد', approved: 'معتمدة' })[status] || status || '—'; }
   function badge(status) { return '<span class="badge badge-' + esc(status) + '">' + esc(statusLabel(status)) + '</span>'; }
   function optionRows(rows, label, selected) { return '<option value="">اختر</option>' + (rows || []).map(function (row) { return '<option value="' + row.id + '"' + (String(row.id) === String(selected || '') ? ' selected' : '') + '>' + esc(label(row)) + '</option>'; }).join(''); }
+
+  function savedUiState() {
+    try {
+      var value = JSON.parse(sessionStorage.getItem(UI_STATE_KEY) || 'null');
+      return value && Date.now() - Number(value.savedAt || 0) < 12 * 60 * 60 * 1000 ? value : null;
+    } catch (_) { return null; }
+  }
+
+  function saveUiState() {
+    try {
+      var activeTab = document.querySelector('.tab.active'), form = document.getElementById('direct-form');
+      sessionStorage.setItem(UI_STATE_KEY, JSON.stringify({
+        savedAt: Date.now(),
+        tab: activeTab ? activeTab.dataset.tab : 'summary',
+        direct: form ? directSelection() : null,
+      }));
+    } catch (_) {}
+  }
+
+  function activateTab(tabName, loadData) {
+    var button = document.querySelector('[data-tab="' + tabName + '"]');
+    if (!button) return;
+    document.querySelectorAll('.tab').forEach(function (node) { node.classList.toggle('active', node === button); });
+    document.querySelectorAll('.panel').forEach(function (node) { node.classList.toggle('active', node.dataset.panel === tabName); });
+    if (tabName === 'archive' && loadData !== false) loadArchive(1);
+    if (tabName !== 'scan') stopCamera();
+  }
 
   function clearCachedToken() {
     try {
@@ -53,6 +81,7 @@
     var response = await fetch('/api/visits' + path, Object.assign({}, options, { headers: headers, credentials: 'same-origin', cache: 'no-store' }));
     var body = await response.json().catch(function () { return {}; });
     if (response.status === 401) {
+      saveUiState();
       clearCachedToken();
       if (!retried) return api(path, options, true);
       var sessionError = new Error('انتهت صلاحية جلسة الدخول؛ اضغط «تجديد الجلسة» ثم أعد المحاولة'); sessionError.status = 401; sessionError.code = body.code || 'AUTH_TOKEN_INVALID'; throw sessionError;
@@ -62,6 +91,7 @@
   }
 
   async function renewSession() {
+    saveUiState();
     clearCachedToken();
     await freshToken(true);
     return loadBootstrap();
@@ -88,10 +118,8 @@
 
   document.getElementById('tabs').addEventListener('click', function (event) {
     var button = event.target.closest('[data-tab]'); if (!button) return;
-    document.querySelectorAll('.tab').forEach(function (node) { node.classList.toggle('active', node === button); });
-    document.querySelectorAll('.panel').forEach(function (node) { node.classList.toggle('active', node.dataset.panel === button.dataset.tab); });
-    if (button.dataset.tab === 'archive') loadArchive(1);
-    if (button.dataset.tab !== 'scan') stopCamera();
+    activateTab(button.dataset.tab);
+    saveUiState();
   });
 
   async function loadBootstrap() {
@@ -100,6 +128,10 @@
       state.data = responses[0];
       state.settings = responses[1];
       renderAll();
+      var saved = savedUiState();
+      if (saved?.direct) restoreDirectSelection(saved.direct);
+      if (saved?.tab) activateTab(saved.tab);
+      if (saved) saveUiState();
       await handleQrDeepLink();
       return true;
     } catch (error) {
@@ -410,6 +442,8 @@
     renderDirectRepresentativeSummary(Number(representativeId || selection.representativeId || 0));
     form.elements.startsAt.value = selection.startsAt || localDateValue();
     form.elements.endsAt.value = selection.endsAt || '';
+    renderDirectReadiness();
+    saveUiState();
   }
 
   function openDirectSetup(createCompany) {
@@ -435,16 +469,33 @@
     var selection = directSelection(), contractorId = Number(selection.contractorId || 0), systemId = Number(selection.systemId || 0);
     if (!contractorId || !systemId) { toast('اختر النظام والشركة أولًا', false); return; }
     var selectedSystem = state.data.systems.find(function (row) { return row.id === systemId; });
+    var existingRepresentatives = state.data.representatives.filter(function (row) { return row.isActive && row.contractorId === contractorId; }).sort(function (a, b) { return a.fullName.localeCompare(b.fullName, 'ar'); });
+    var existingOptions = '<option value="">اختر مندوبًا مسجلًا</option>' + existingRepresentatives.map(function (row) {
+      var linked = state.data.representativeSystems.some(function (link) { return link.representativeId === row.id && link.systemId === systemId && link.isActive; });
+      return '<option value="' + row.id + '">' + esc(row.fullName + ' — ' + row.identityMasked + (linked ? ' — مرتبط بالفعل' : ' — سيتم ربطه بالنظام')) + '</option>';
+    }).join('');
     var suggestions = (state.data.approvedPersonnel || []).filter(function (row) { return row.contractorId === contractorId && (row.systemId === systemId || (selectedSystem && row.systemName === entityName(selectedSystem))); });
     var suggestionOptions = '<option value="">اكتب الاسم يدويًا</option>' + suggestions.map(function (row, index) { return '<option value="' + index + '">' + esc(row.fullName + ' — ' + row.sourceCertificate) + '</option>'; }).join('');
-    modal('إضافة مندوب وربطه بالنظام', '<form id="direct-representative-form" class="form-grid"><div class="field full"><label>اسم مقترح من شهادات التأهيل</label><select id="approved-personnel-suggestion">' + suggestionOptions + '</select><small style="color:#64748b">الاقتراحات من الخطابات المرفقة وتحتاج مراجعة الاسم واستكمال بياناته يدويًا.</small></div><div class="field full"><label>اسم المندوب الكامل</label><input name="fullName" required></div><div class="field"><label>رقم الهوية / الإقامة (10 أرقام)</label><input name="identityNumber" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" required></div><div class="field"><label>رقم الجوال السعودي</label><input name="mobile" inputmode="numeric" placeholder="05xxxxxxxx" required></div><div class="field"><label>انتهاء الإقامة (اختياري)</label><input type="date" name="residenceExpiresAt"></div><div class="field"><label class="check-chip"><input type="checkbox" name="noResidenceException"> استثناء بدون إقامة</label></div><div class="field full"><label>سبب الاستثناء</label><textarea name="exceptionReason" disabled></textarea></div><div class="field full"><div class="note">يمكن ترك تاريخ الانتهاء فارغًا. لا تُحفظ صور الكاميرا ولا تظهر الهوية كاملة في القوائم أو الطباعة.</div></div></form>', [{ label: 'حفظ المندوب واختياره', className: 'btn-green', action: async function (button) {
+    var existingSection = existingRepresentatives.length ? '<div class="card" style="margin-bottom:14px"><h3>اختيار مندوب مسجل للشركة</h3><div class="field"><label>المندوب المسجل</label><select id="existing-direct-representative">' + existingOptions + '</select><small style="color:#64748b">سيضاف ربط النظام فقط، ولن تُلغى روابط المندوب السابقة.</small></div></div>' : '<div class="note" style="margin-bottom:14px">لا يوجد مندوب مسجل لهذه الشركة حاليًا؛ يمكنك إضافة مندوب جديد أدناه.</div>';
+    var buttons = [];
+    if (existingRepresentatives.length) buttons.push({ label: 'اختيار وربط المندوب المسجل', className: 'btn-primary', action: async function (button) {
+      var representativeId = Number(document.getElementById('existing-direct-representative').value || 0);
+      if (!representativeId) { toast('اختر مندوبًا مسجلًا أولًا', false); return; }
+      button.disabled = true;
+      try {
+        var result = await api('/management/direct-representative-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ representativeId: representativeId, contractorId: contractorId, systemId: systemId }) });
+        closeModal(); await loadBootstrap(); restoreDirectSelection(selection, contractorId, result.representative.id); toast('تم اختيار المندوب المسجل وربطه بالنظام', true);
+      } catch (e) { toast(e.message, false); button.disabled = false; }
+    } });
+    buttons.push({ label: 'حفظ مندوب جديد واختياره', className: 'btn-green', action: async function (button) {
       var form = document.getElementById('direct-representative-form'); if (!form.reportValidity()) return;
       var body = formObject(form); body.contractorId = contractorId; body.systemId = systemId; body.noResidenceException = form.elements.noResidenceException.checked;
       if (body.noResidenceException && !body.exceptionReason) { toast('سبب الاستثناء بدون إقامة مطلوب', false); return; }
       button.disabled = true;
       try { var result = await api('/management/direct-representative', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); closeModal(); await loadBootstrap(); restoreDirectSelection(selection, contractorId, result.representative.id); toast(result.reusedExisting ? 'تم تحديث المندوب الموجود وربطه بالنظام واختياره' : 'تم حفظ المندوب وربطه بالنظام واختياره', true); }
       catch (e) { toast(e.message, false); button.disabled = false; }
-    } }]);
+    } });
+    modal('اختيار مندوب مسجل أو إضافة جديد', existingSection + '<div class="card"><h3>إضافة مندوب جديد</h3><form id="direct-representative-form" class="form-grid"><div class="field full"><label>اسم مقترح من شهادات التأهيل</label><select id="approved-personnel-suggestion">' + suggestionOptions + '</select><small style="color:#64748b">الاقتراحات من الخطابات المرفقة وتحتاج مراجعة الاسم واستكمال بياناته يدويًا.</small></div><div class="field full"><label>اسم المندوب الكامل</label><input name="fullName" required></div><div class="field"><label>رقم الهوية / الإقامة (10 أرقام)</label><input name="identityNumber" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" required></div><div class="field"><label>رقم الجوال السعودي</label><input name="mobile" inputmode="numeric" placeholder="05xxxxxxxx" required></div><div class="field"><label>انتهاء الإقامة (اختياري)</label><input type="date" name="residenceExpiresAt"></div><div class="field"><label class="check-chip"><input type="checkbox" name="noResidenceException"> استثناء بدون إقامة</label></div><div class="field full"><label>سبب الاستثناء</label><textarea name="exceptionReason" disabled></textarea></div><div class="field full"><div class="note">يمكن ترك تاريخ الانتهاء فارغًا. لا تُحفظ صور الكاميرا ولا تظهر الهوية كاملة في القوائم أو الطباعة.</div></div></form></div>', buttons);
     var suggestion = document.getElementById('approved-personnel-suggestion'), form = document.getElementById('direct-representative-form');
     suggestion.addEventListener('change', function () { if (this.value !== '') form.elements.fullName.value = suggestions[Number(this.value)].fullName; });
     form.elements.noResidenceException.addEventListener('change', function () { form.elements.residenceExpiresAt.disabled = this.checked; form.elements.exceptionReason.required = this.checked; form.elements.exceptionReason.disabled = !this.checked; if (!this.checked) form.elements.exceptionReason.value = ''; });
@@ -460,6 +511,7 @@
   document.querySelector('#direct-form [name="systemId"]').addEventListener('change', refreshDirectContractors);
   document.querySelector('#direct-form [name="representativeId"]').addEventListener('change', function () { var representativeId = Number(this.value || 0); document.getElementById('direct-saved-representative').value = String(representativeId || ''); renderDirectRepresentativeSummary(representativeId); renderDirectReadiness(); });
   document.querySelector('#direct-form [name="startsAt"]').addEventListener('change', renderDirectReadiness);
+  document.getElementById('direct-form').addEventListener('change', function () { setTimeout(saveUiState, 0); });
   document.getElementById('direct-form').addEventListener('submit', async function (event) {
     event.preventDefault(); var body = formObject(this); body.systemId = Number(body.systemId); body.contractorId = Number(body.contractorId); body.representativeId = Number(body.representativeId); body.startsAt = dateOnlyIso(body.startsAt, false); body.endsAt = dateOnlyIso(body.endsAt, true);
     var visitDay = localDateValue(body.startsAt); var approval = state.data.siteApprovals.find(function (x) { return x.siteName === body.siteName && x.systemId === body.systemId && x.contractorId === body.contractorId && activeForVisitDate(x, visitDay); }); var qualification = state.data.qualifications.find(function (x) { return x.systemId === body.systemId && x.contractorId === body.contractorId && activeForVisitDate(x, visitDay); });
@@ -498,6 +550,6 @@
   document.getElementById('camera-start').addEventListener('click', startCamera); document.getElementById('camera-stop').addEventListener('click', stopCamera); document.getElementById('camera-rescan').addEventListener('click', function(){scanMessage('جاهز للمسح مرة أخرى',true);startCamera();}); document.getElementById('camera-select').addEventListener('change', function(){if(state.stream)startCamera();});
   document.getElementById('manual-scan-form').addEventListener('submit', async function(event){event.preventDefault();try{var body=await api('/qr/manual?serialNumber='+encodeURIComponent(this.elements.serialNumber.value.trim()));showScanResult(body);}catch(e){scanMessage(e.message,false);}});
 
-  window.addEventListener('beforeunload', stopCamera);
+  window.addEventListener('beforeunload', function () { saveUiState(); stopCamera(); });
   loadBootstrap();
 })();

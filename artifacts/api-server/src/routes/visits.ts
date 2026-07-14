@@ -53,6 +53,7 @@ const DEFAULT_VISIT_SIGNER_TITLE = "مشرف وحدة الصيانة العام�
 const DEFAULT_VISIT_SIGNER_NAME = "م. محمد عباس المكرمي";
 const DEFAULT_VISIT_PURPOSE = "زيارة دورية لأنظمة المستشفى";
 const MAX_VISIT_PRINT_ASSET_BYTES = 2 * 1024 * 1024;
+const APPROVED_CATALOG_SOURCE = "مستورد من كتالوج مقاولي الباطن المعتمدين";
 const MAINTENANCE_CONTRACTORS = [
   {
     key: "بيت_العرب",
@@ -84,22 +85,23 @@ const MAINTENANCE_CONTRACTORS = [
 ] as const;
 
 const SYSTEM_CANONICAL_NAMES = [
-  { name: "صيانة ونظافة مجارى الهواء والدكتات (زيارة واحدة مدة العقد)", aliases: ["تنظيف مجاري الهواء", "صيانة ونظافة مجاري الهواء والدكتات (زيارة واحدة مدة العقد)"] },
-  { name: "صيانة انظمة التكيف والتبريد وانظمة التهوية وملحقاتها", aliases: ["التكييف والتبريد", "صيانة أنظمة التكييف والتبريد وأنظمة التهوية وملحقاتها"] },
+  { name: "تعقيم ونظافة مجاري الهواء والدكتات", aliases: ["تنظيف مجاري الهواء", "صيانة ونظافة مجارى الهواء والدكتات (زيارة واحدة مدة العقد)", "صيانة ونظافة مجاري الهواء والدكتات (زيارة واحدة مدة العقد)"] },
+  { name: "صيانة أنظمة التكييف والتبريد وأنظمة التهوية", aliases: ["التكييف والتبريد", "صيانة انظمة التكيف والتبريد وانظمة التهوية وملحقاتها", "صيانة أنظمة التكييف والتبريد وأنظمة التهوية وملحقاتها"] },
   { name: "صيانة المصاعد الكهربائية", aliases: ["المصاعد", "المصاعد الكهربائية"] },
-  { name: "صيانة واصلاح نظام اطفاء الحريق", aliases: ["إطفاء الحريق", "اطفاء الحريق", "صيانة وإصلاح نظام إطفاء الحريق"] },
-  { name: "صيانة واصلاح نظام انذار الحريق", aliases: ["إنذار الحريق", "انذار الحريق", "صيانة وإصلاح نظام إنذار الحريق"] },
-  { name: "صيانة واصلاح السنترالات والنداء الالى والاذاعة الداخلية والساعة المركزية واستدعاء الممرضات", aliases: ["السنترال والنداء واستدعاء الممرضات"] },
-  { name: "صيانة محطات التوليد الكهربائية (مولدات الطوارى) ولوحات التحكم والتشغيل والـ ATS", aliases: ["المولدات الكهربائية وأنظمة التحويل الآلي (ATS)", "المولدات الكهربائية وATS"] },
+  { name: "صيانة وإصلاح نظام إطفاء الحريق", aliases: ["إطفاء الحريق", "اطفاء الحريق", "صيانة واصلاح نظام اطفاء الحريق"] },
+  { name: "صيانة وإصلاح نظام إنذار الحريق", aliases: ["إنذار الحريق", "انذار الحريق", "صيانة واصلاح نظام انذار الحريق"] },
+  { name: "صيانة السنترالات والنداء الآلي والإذاعة الداخلية والساعة المركزية واستدعاء الممرضات", aliases: ["السنترال والنداء واستدعاء الممرضات", "صيانة واصلاح السنترالات والنداء الالى والاذاعة الداخلية والساعة المركزية واستدعاء الممرضات"] },
+  { name: "صيانة محطات التوليد الكهربائية ولوحات التحكم والتشغيل و(ATS)", aliases: ["المولدات الكهربائية وأنظمة التحويل الآلي (ATS)", "المولدات الكهربائية وATS", "صيانة محطات التوليد الكهربائية (مولدات الطوارى) ولوحات التحكم والتشغيل والـ ATS"] },
   { name: "صيانة شبكة الغازات الطبية وملحقاتها وخزانات الغاز", aliases: ["الغازات الطبية"] },
-  { name: "صيانة معدات المغسلة", aliases: ["المغاسل", "معدات المغسلة"] },
+  { name: "صيانة الـ (UPS)", aliases: ["UPS", "أنظمة مزودات الطاقة غير المنقطعة (UPS)", "صيانة جهاز UPS"] },
   { name: "صيانة محولات الكهرباء والقواطع الكهربائية وكامل اللوحات الكهربائية", aliases: ["المحولات واللوحات والقواطع الكهربائية"] },
+  { name: "صيانة معدات المغسلة", aliases: ["المغاسل", "معدات المغسلة"] },
   { name: "صيانة محطات تحلية مياه الشرب وملحقاتها", aliases: ["محطات تحلية المياه", "محطات تحلية مياه الشرب"] },
-  { name: "صيانة جهاز UPS", aliases: ["UPS", "أنظمة مزودات الطاقة غير المنقطعة (UPS)"] },
-  { name: "صيانة نظم المراقبات الامنية", aliases: ["نظام كاميرات المراقبة الأمنية (CCTV)", "كاميرات المراقبة الأمنية CCTV", "نظم المراقبات الأمنية"] },
+  { name: "صيانة محطة معالجة مياه الصرف الصحي", aliases: ["محطات معالجة مياه الصرف الصحي", "صيانة محطة معالجة مياه الصرف الصحى"] },
+  { name: "مكافحة الحشرات والقوارض والآفات البيئية", aliases: ["مكافحة الحشرات", "مكافحة الحشرات والقوارض والافات البيئية"] },
   { name: "صيانة ثلاجة الموتى", aliases: ["ثلاجة الموتى"] },
-  { name: "مكافحة الحشرات والقوارض والافات البيئية", aliases: ["مكافحة الحشرات", "مكافحة الحشرات والقوارض والآفات البيئية"] },
-  { name: "صيانة محطة معالجة مياه الصرف الصحى", aliases: ["محطات معالجة مياه الصرف الصحي", "صيانة محطة معالجة مياه الصرف الصحي"] },
+  { name: "صيانة نظم المراقبات الأمنية", aliases: ["نظام كاميرات المراقبة الأمنية (CCTV)", "كاميرات المراقبة الأمنية CCTV", "نظم المراقبات الأمنية", "صيانة نظم المراقبات الامنية"] },
+  { name: "عمرات المولدات", aliases: [] },
 ] as const;
 
 const CONTRACTOR_CANONICAL_NAMES = [
@@ -134,22 +136,23 @@ const CONTRACTOR_CANONICAL_NAMES = [
 // unit. Names shown to users are canonical and complete; aliases are retained
 // only to attach existing database rows and historical visits without loss.
 const APPROVED_SUBCONTRACTOR_CATALOG = [
-  { system: "صيانة ونظافة مجارى الهواء والدكتات (زيارة واحدة مدة العقد)", contractors: ["كيان التزويد", "مصداقية وطن", "شركة آراك الخليج", "بريق الجليد"] },
-  { system: "صيانة انظمة التكيف والتبريد وانظمة التهوية وملحقاتها", contractors: ["إلهامات الحديثة", "شركة رياح النواة", "شركة وتين", "مصداقية الوطن", "شركة أهالينا", "شنان الخليج"] },
+  { system: "تعقيم ونظافة مجاري الهواء والدكتات", contractors: ["كيان التزويد", "مصداقية وطن", "شركة آراك الخليج", "بريق الجليد"] },
+  { system: "صيانة أنظمة التكييف والتبريد وأنظمة التهوية", contractors: ["إلهامات الحديثة", "شركة رياح النواة", "شركة وتين", "مصداقية الوطن", "شركة أهالينا", "شنان الخليج"] },
   { system: "صيانة المصاعد الكهربائية", contractors: [] },
-  { system: "صيانة واصلاح نظام اطفاء الحريق", contractors: ["مؤسسة أجهزة الإطفاء لأجهزة السلامة", "شركة الركن السليم للسلامة", "الشركة العربية للتشغيل والصيانة", "شركة دائرة التحكم", "شركة إيكوفا للمقاولات", "مؤسسة أفق الحجاز المحدودة", "مؤسسة نبراس حنين لأنظمة السلامة", "شركة قمم شار للمقاولات", "شركة المفردون للمقاولات", "شركة النسر الفضي للمقاولات"] },
-  { system: "صيانة واصلاح نظام انذار الحريق", contractors: ["شركة النسر الفضي للمقاولات", "مؤسسة أشواق الجنوب", "مؤسسة أجهزة الإطفاء لأجهزة السلامة", "شركة السامي للأمن والسلامة", "شركة الركن السليم للسلامة", "شركة دائرة التحكم", "شركة إيكوفا للمقاولات", "مؤسسة أفق الحجاز المحدودة", "شركة المفردون للمقاولات", "مؤسسة نبراس حنين لأنظمة السلامة", "شركة قمم شار للمقاولات"] },
-  { system: "صيانة واصلاح السنترالات والنداء الالى والاذاعة الداخلية والساعة المركزية واستدعاء الممرضات", contractors: ["دار المبتكر", "سايت تكنولوجي", "مؤسسة أشواق الجنوب", "شركة إيكوفا", "نبراس حنين"] },
-  { system: "صيانة محطات التوليد الكهربائية (مولدات الطوارى) ولوحات التحكم والتشغيل والـ ATS", contractors: ["سبق التقنية", "الصدارة", "سايت تكنولوجي", "صفوف الريادة", "شركة النسر الفضي للمقاولات", "شركة الأمان الحديثة للطاقة", "المرافق"] },
+  { system: "صيانة وإصلاح نظام إطفاء الحريق", contractors: ["مؤسسة أجهزة الإطفاء لأجهزة السلامة", "شركة الركن السليم للسلامة", "الشركة العربية للتشغيل والصيانة", "شركة دائرة التحكم", "شركة إيكوفا للمقاولات", "مؤسسة أفق الحجاز المحدودة", "مؤسسة نبراس حنين لأنظمة السلامة", "شركة قمم شار للمقاولات", "شركة المفردون للمقاولات", "شركة النسر الفضي للمقاولات"] },
+  { system: "صيانة وإصلاح نظام إنذار الحريق", contractors: ["شركة النسر الفضي للمقاولات", "مؤسسة أشواق الجنوب", "مؤسسة أجهزة الإطفاء لأجهزة السلامة", "شركة السامي للأمن والسلامة", "شركة الركن السليم للسلامة", "شركة دائرة التحكم", "شركة إيكوفا للمقاولات", "مؤسسة أفق الحجاز المحدودة", "شركة المفردون للمقاولات", "مؤسسة نبراس حنين لأنظمة السلامة", "شركة قمم شار للمقاولات"] },
+  { system: "صيانة السنترالات والنداء الآلي والإذاعة الداخلية والساعة المركزية واستدعاء الممرضات", contractors: ["دار المبتكر", "سايت تكنولوجي", "مؤسسة أشواق الجنوب", "شركة إيكوفا", "نبراس حنين"] },
+  { system: "صيانة محطات التوليد الكهربائية ولوحات التحكم والتشغيل و(ATS)", contractors: ["سبق التقنية", "الصدارة", "سايت تكنولوجي", "صفوف الريادة", "شركة النسر الفضي للمقاولات", "شركة الأمان الحديثة للطاقة", "المرافق"] },
   { system: "صيانة شبكة الغازات الطبية وملحقاتها وخزانات الغاز", contractors: ["النظم الاحترافية", "شركة ماس", "سيسنبر العالمية", "أهالينا", "دريجر", "شركة مودرن تشالنجر"] },
-  { system: "صيانة معدات المغسلة", contractors: ["مصنع الجعيدي"] },
+  { system: "صيانة الـ (UPS)", contractors: ["الصدارة", "رواد الأمانة", "سايت تكنولوجي", "شركة النسر الفضي للمقاولات", "شركة إيكوفا للمقاولات", "شركة الأمان الحديثة للطاقة", "المرافق"] },
   { system: "صيانة محولات الكهرباء والقواطع الكهربائية وكامل اللوحات الكهربائية", contractors: ["الصدارة", "سبق التقنية", "سايت تكنولوجي", "صفوف الريادة", "المرافق", "شركة الأمان الحديثة للطاقة", "شركة النسر الفضي للمقاولات"] },
+  { system: "صيانة معدات المغسلة", contractors: ["مصنع الجعيدي"] },
   { system: "صيانة محطات تحلية مياه الشرب وملحقاتها", contractors: ["أسس التطوير للمقاولات", "تبرا العالمية"] },
-  { system: "صيانة جهاز UPS", contractors: ["الصدارة", "رواد الأمانة", "سايت تكنولوجي", "شركة النسر الفضي للمقاولات", "شركة إيكوفا للمقاولات", "شركة الأمان الحديثة للطاقة", "المرافق"] },
-  { system: "صيانة نظم المراقبات الامنية", contractors: ["سايت تكنولوجي", "الأفق المتميزة", "مؤسسة أشواق الجنوب", "دروع الأمنية", "مؤسسة نبراس حنين لأنظمة السلامة"] },
+  { system: "صيانة محطة معالجة مياه الصرف الصحي", contractors: ["أسس التطوير للمقاولات"] },
+  { system: "مكافحة الحشرات والقوارض والآفات البيئية", contractors: ["مستقبل الأوطان للتشغيل", "شركة تراب كيل", "مؤسسة ماسة الحشرات", "شركة الإيوان الطبية", "مؤسسة التألق البيئي", "شركة حنين للمقاولات", "مكسل", "سادن", "رسيل الشرق", "درة الفتاك"] },
   { system: "صيانة ثلاجة الموتى", contractors: ["شركة رياح النواة", "شنان الخليج"] },
-  { system: "مكافحة الحشرات والقوارض والافات البيئية", contractors: ["مستقبل الأوطان للتشغيل", "شركة تراب كيل", "مؤسسة ماسة الحشرات", "شركة الإيوان الطبية", "مؤسسة التألق البيئي", "شركة حنين للمقاولات", "مكسل", "سادن", "رسيل الشرق", "درة الفتاك"] },
-  { system: "صيانة محطة معالجة مياه الصرف الصحى", contractors: ["أسس التطوير للمقاولات"] },
+  { system: "صيانة نظم المراقبات الأمنية", contractors: ["سايت تكنولوجي", "الأفق المتميزة", "مؤسسة أشواق الجنوب", "دروع الأمنية", "مؤسسة نبراس حنين لأنظمة السلامة"] },
+  { system: "عمرات المولدات", contractors: [] },
 ] as const;
 
 // These names and validity dates are transcribed from the supplied Ministry of
@@ -1022,18 +1025,28 @@ async function seedVisitCatalogFromLegacyRequests(req: any) {
 
 async function seedApprovedSubcontractorCatalog(req: any) {
   const [existingSystems, existingContractors] = await Promise.all([
-    db.select({ id: visitSystemsTable.id, name: visitSystemsTable.name }).from(visitSystemsTable),
+    db.select({ id: visitSystemsTable.id, name: visitSystemsTable.name, description: visitSystemsTable.description, isActive: visitSystemsTable.isActive }).from(visitSystemsTable),
     db.select({ id: visitContractorsTable.id, name: visitContractorsTable.name }).from(visitContractorsTable),
   ]);
   const systemKeys = new Set(existingSystems.map((row) => catalogNameKey(canonicalSystemName(row.name))));
+  const officialSystemKeys = new Set(APPROVED_SUBCONTRACTOR_CATALOG.map((row) => catalogNameKey(canonicalSystemName(row.system))));
   const contractorKeys = new Set(existingContractors.map((row) => catalogNameKey(canonicalContractorName(row.name))));
   const inserted = await db.transaction(async (tx) => {
     let systems = 0;
+    let systemsDisabled = 0;
     let contractors = 0;
+    for (const existing of existingSystems) {
+      const isOutdatedCatalogSystem = existing.isActive
+        && existing.description === APPROVED_CATALOG_SOURCE
+        && !officialSystemKeys.has(catalogNameKey(canonicalSystemName(existing.name)));
+      if (!isOutdatedCatalogSystem) continue;
+      await tx.update(visitSystemsTable).set({ isActive: false, updatedAt: new Date() }).where(eq(visitSystemsTable.id, existing.id));
+      systemsDisabled += 1;
+    }
     for (const catalog of APPROVED_SUBCONTRACTOR_CATALOG) {
       const systemKey = catalogNameKey(canonicalSystemName(catalog.system));
       if (!systemKeys.has(systemKey)) {
-        const rows = await tx.insert(visitSystemsTable).values({ name: canonicalSystemName(catalog.system), description: "مستورد من كتالوج مقاولي الباطن المعتمدين", createdByUserId: req.currentUser.id }).onConflictDoNothing().returning({ id: visitSystemsTable.id });
+        const rows = await tx.insert(visitSystemsTable).values({ name: canonicalSystemName(catalog.system), description: APPROVED_CATALOG_SOURCE, createdByUserId: req.currentUser.id }).onConflictDoNothing().returning({ id: visitSystemsTable.id });
         if (rows.length) { systems += 1; systemKeys.add(systemKey); }
       }
       for (const name of catalog.contractors) {
@@ -1043,9 +1056,9 @@ async function seedApprovedSubcontractorCatalog(req: any) {
         if (rows.length) { contractors += 1; contractorKeys.add(contractorKey); }
       }
     }
-    return { systems, contractors };
+    return { systems, systemsDisabled, contractors };
   });
-  if (inserted.systems || inserted.contractors) await audit(req, "مزامنة أسماء مقاولي الباطن المعتمدين", inserted);
+  if (inserted.systems || inserted.systemsDisabled || inserted.contractors) await audit(req, "مزامنة أسماء مقاولي الباطن المعتمدين", inserted);
   return inserted;
 }
 
@@ -1417,6 +1430,48 @@ router.post("/management/direct-representative", requireAuth, requireApproved, r
     if (err?.message === "CENTRAL_REFERENCE_NOT_FOUND") return res.status(404).json({ error: "الشركة أو النظام غير موجود أو معطل" });
     if (err?.message === "IDENTITY_BELONGS_TO_OTHER_CONTRACTOR") return res.status(409).json({ error: "رقم الهوية أو الإقامة مرتبط بشركة أخرى؛ افتح المندوب الموجود وراجع الشركة", code: "REPRESENTATIVE_CONTRACTOR_MISMATCH" });
     return respondVisitMutationError(req, res, err, "تعذر حفظ المندوب وربطه بالنظام؛ حدّث الصفحة ثم أعد المحاولة", "رقم الهوية أو الإقامة مسجل من قبل");
+  }
+});
+
+router.post("/management/direct-representative-link", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
+  const representativeId = numberId(req.body.representativeId), contractorId = numberId(req.body.contractorId), systemId = numberId(req.body.systemId);
+  if (!representativeId || !contractorId || !systemId) return res.status(400).json({ error: "اختر المندوب المسجل والشركة والنظام" });
+  try {
+    const representative = await db.transaction(async (tx) => {
+      const [[row], [system]] = await Promise.all([
+        tx.select().from(visitRepresentativesTable).where(and(
+          eq(visitRepresentativesTable.id, representativeId),
+          eq(visitRepresentativesTable.contractorId, contractorId),
+          eq(visitRepresentativesTable.isActive, true),
+        )).limit(1),
+        tx.select({ id: visitSystemsTable.id }).from(visitSystemsTable).where(and(eq(visitSystemsTable.id, systemId), eq(visitSystemsTable.isActive, true))).limit(1),
+      ]);
+      if (!row) throw new Error("REPRESENTATIVE_NOT_IN_CONTRACTOR");
+      if (!system) throw new Error("SYSTEM_NOT_FOUND");
+      await tx.insert(visitRepresentativeSystemsTable).values({ representativeId, systemId, isActive: true })
+        .onConflictDoUpdate({
+          target: [visitRepresentativeSystemsTable.representativeId, visitRepresentativeSystemsTable.systemId],
+          set: { isActive: true },
+        });
+      return row;
+    });
+    await audit(req, "ربط مندوب مسجل بنظام من الإصدار المباشر", { representativeId, contractorId, systemId });
+    return res.json({
+      representative: {
+        id: representative.id,
+        contractorId: representative.contractorId,
+        fullName: representative.fullName,
+        identityMasked: maskIdentity(representative.identityNumber),
+        residenceExpiresAt: representative.residenceExpiresAt,
+        noResidenceException: representative.noResidenceException,
+        isActive: representative.isActive,
+      },
+      linked: true,
+    });
+  } catch (err: any) {
+    if (err?.message === "REPRESENTATIVE_NOT_IN_CONTRACTOR") return res.status(409).json({ error: "المندوب غير مسجل ضمن الشركة المختارة؛ حدّث الصفحة وأعد الاختيار" });
+    if (err?.message === "SYSTEM_NOT_FOUND") return res.status(404).json({ error: "النظام غير موجود أو معطل" });
+    return respondVisitMutationError(req, res, err, "تعذر ربط المندوب المسجل بالنظام؛ حدّث الصفحة ثم أعد المحاولة");
   }
 });
 

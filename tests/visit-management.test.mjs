@@ -117,21 +117,34 @@ test('QR uses random tokens, stores hash plus ciphertext, rate limits scans and 
 
 test('approved certificate catalogue uses full display names and seeds the supplied qualification dates', () => {
   assert.match(route, /APPROVED_SUBCONTRACTOR_CATALOG/);
-  for (const system of [
-    'صيانة ونظافة مجارى الهواء والدكتات \\(زيارة واحدة مدة العقد\\)',
-    'صيانة انظمة التكيف والتبريد وانظمة التهوية وملحقاتها',
+  const officialSystems = [
+    'تعقيم ونظافة مجاري الهواء والدكتات',
+    'صيانة أنظمة التكييف والتبريد وأنظمة التهوية',
     'صيانة المصاعد الكهربائية',
-    'صيانة واصلاح نظام اطفاء الحريق',
-    'صيانة واصلاح نظام انذار الحريق',
-    'صيانة محطات التوليد الكهربائية',
-    'صيانة جهاز UPS',
-    'صيانة نظم المراقبات الامنية',
-    'صيانة محطة معالجة مياه الصرف الصحى',
-  ]) assert.match(route, new RegExp(system));
+    'صيانة وإصلاح نظام إطفاء الحريق',
+    'صيانة وإصلاح نظام إنذار الحريق',
+    'صيانة السنترالات والنداء الآلي والإذاعة الداخلية والساعة المركزية واستدعاء الممرضات',
+    'صيانة محطات التوليد الكهربائية ولوحات التحكم والتشغيل و(ATS)',
+    'صيانة شبكة الغازات الطبية وملحقاتها وخزانات الغاز',
+    'صيانة الـ (UPS)',
+    'صيانة محولات الكهرباء والقواطع الكهربائية وكامل اللوحات الكهربائية',
+    'صيانة معدات المغسلة',
+    'صيانة محطات تحلية مياه الشرب وملحقاتها',
+    'صيانة محطة معالجة مياه الصرف الصحي',
+    'مكافحة الحشرات والقوارض والآفات البيئية',
+    'صيانة ثلاجة الموتى',
+    'صيانة نظم المراقبات الأمنية',
+    'عمرات المولدات',
+  ];
+  for (const system of officialSystems) assert.match(route, new RegExp(system.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   for (const contractor of ['مؤسسة أفق الحجاز المحدودة', 'شركة المفردون للمقاولات', 'شركة دائرة التحكم', 'مؤسسة نبراس حنين لأنظمة السلامة', 'شركة إيكوفا للمقاولات']) assert.match(route, new RegExp(contractor));
   const catalogBlock = route.match(/const APPROVED_SUBCONTRACTOR_CATALOG[\s\S]*?\] as const;/);
   assert.ok(catalogBlock);
+  assert.deepEqual([...catalogBlock[0].matchAll(/\{ system: "([^"]+)"/g)].map((match) => match[1]), officialSystems);
   assert.doesNotMatch(catalogBlock[0], /validFrom|validUntil/);
+  assert.match(route, /isOutdatedCatalogSystem/);
+  assert.match(route, /systemsDisabled/);
+  assert.match(route, /set\(\{ isActive: false, updatedAt: new Date\(\) \}\)/);
   const certificateBlock = route.match(/const QUALIFICATION_CERTIFICATES[\s\S]*?\] as const;/);
   assert.ok(certificateBlock);
   assert.match(certificateBlock[0], /MOH-MAIN-2026-023/);
@@ -215,6 +228,28 @@ test('direct issue control shows readiness and keeps every active company availa
   assert.match(centerJs, /يحتاج استكمال التأهيل/);
   assert.match(centerJs, /state\.data\.contractors[^\n]*row\.isActive/);
   assert.match(centerJs, /أكمل اعتماد الموقع للشركة والنظام/);
+});
+
+test('session renewal preserves direct-issue progress and the active center tab', () => {
+  assert.match(centerJs, /UI_STATE_KEY/);
+  assert.match(centerJs, /sessionStorage\.setItem\(UI_STATE_KEY/);
+  assert.match(centerJs, /saveUiState\(\);\s*clearCachedToken\(\)/);
+  assert.match(centerJs, /restoreDirectSelection\(saved\.direct\)/);
+  assert.match(centerJs, /activateTab\(saved\.tab\)/);
+  assert.match(center, /#najran-revision-mode-badge\{display:none!important\}/);
+});
+
+test('direct issue can select an existing company representative and add an idempotent system link', () => {
+  const linkRoute = route.match(/router\.post\("\/management\/direct-representative-link"[\s\S]*?\n}\);/);
+  assert.ok(linkRoute);
+  assert.match(linkRoute[0], /visitRepresentativesTable\.contractorId/);
+  assert.match(linkRoute[0], /visitRepresentativeSystemsTable/);
+  assert.match(linkRoute[0], /onConflictDoUpdate/);
+  assert.match(linkRoute[0], /await audit/);
+  assert.doesNotMatch(linkRoute[0], /identityNumber:\s*representative\.identityNumber/);
+  assert.match(centerJs, /اختيار مندوب مسجل أو إضافة جديد/);
+  assert.match(centerJs, /\/management\/direct-representative-link/);
+  assert.match(centerJs, /لن تُلغى روابط المندوب السابقة/);
 });
 
 test('legacy Word representatives import previews masked data then confirms company, representative and system links atomically', () => {
