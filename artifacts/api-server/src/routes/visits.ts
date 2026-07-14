@@ -58,6 +58,7 @@ const DEFAULT_VISIT_PURPOSE = "زيارة دورية لأنظمة المستشف
 const FACILITY_VISIT_APPROVAL_MODULE = "facility_visit_approval";
 const MAX_VISIT_PRINT_ASSET_BYTES = 2 * 1024 * 1024;
 const APPROVED_CATALOG_SOURCE = "مستورد من كتالوج مقاولي الباطن المعتمدين";
+const APPROVED_CATALOG_SEEDED_SETTING = "visit_approved_catalog_seeded_v1";
 const MAINTENANCE_CONTRACTORS = [
   {
     key: "بيت_العرب",
@@ -1351,9 +1352,10 @@ async function seedVisitCatalogFromLegacyRequests(req: any) {
 }
 
 async function seedApprovedSubcontractorCatalog(req: any) {
-  const [existingSystems, existingContractors] = await Promise.all([
+  const [existingSystems, existingContractors, seededBefore] = await Promise.all([
     db.select({ id: visitSystemsTable.id, name: visitSystemsTable.name, description: visitSystemsTable.description, isActive: visitSystemsTable.isActive }).from(visitSystemsTable),
     db.select({ id: visitContractorsTable.id, name: visitContractorsTable.name }).from(visitContractorsTable),
+    getSetting(APPROVED_CATALOG_SEEDED_SETTING),
   ]);
   const systemKeys = new Set(existingSystems.map((row) => catalogNameKey(canonicalSystemName(row.name))));
   const officialSystemKeys = new Set(APPROVED_SUBCONTRACTOR_CATALOG.map((row) => catalogNameKey(canonicalSystemName(row.system))));
@@ -1372,19 +1374,20 @@ async function seedApprovedSubcontractorCatalog(req: any) {
     }
     for (const catalog of APPROVED_SUBCONTRACTOR_CATALOG) {
       const systemKey = catalogNameKey(canonicalSystemName(catalog.system));
-      if (!systemKeys.has(systemKey)) {
+      if (seededBefore !== "1" && !systemKeys.has(systemKey)) {
         const rows = await tx.insert(visitSystemsTable).values({ name: canonicalSystemName(catalog.system), description: APPROVED_CATALOG_SOURCE, createdByUserId: req.currentUser.id }).onConflictDoNothing().returning({ id: visitSystemsTable.id });
         if (rows.length) { systems += 1; systemKeys.add(systemKey); }
       }
       for (const name of catalog.contractors) {
         const contractorKey = catalogNameKey(canonicalContractorName(name));
-        if (contractorKeys.has(contractorKey)) continue;
+        if (seededBefore === "1" || contractorKeys.has(contractorKey)) continue;
         const rows = await tx.insert(visitContractorsTable).values({ name: canonicalContractorName(name), createdByUserId: req.currentUser.id }).onConflictDoNothing().returning({ id: visitContractorsTable.id });
         if (rows.length) { contractors += 1; contractorKeys.add(contractorKey); }
       }
     }
     return { systems, systemsDisabled, contractors };
   });
+  if (seededBefore !== "1") await setSetting(APPROVED_CATALOG_SEEDED_SETTING, "1", req.currentUser.email || "visit-center");
   if (inserted.systems || inserted.systemsDisabled || inserted.contractors) await audit(req, "مزامنة أسماء مقاولي الباطن المعتمدين", inserted);
   return inserted;
 }
@@ -1522,10 +1525,32 @@ router.post("/management/systems", requireAuth, requireApproved, requireClusterV
 
 router.patch("/management/systems/:id", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
   const id = numberId(req.params.id); if (!id) return res.status(400).json({ error: "رقم غير صالح" });
-  const [row] = await db.update(visitSystemsTable).set({ name: cleanText(req.body.name, 200) || undefined, code: req.body.code === undefined ? undefined : cleanText(req.body.code, 80) || null, description: req.body.description === undefined ? undefined : cleanText(req.body.description, 1_000) || null, isActive: req.body.isActive === undefined ? undefined : !!req.body.isActive, updatedAt: new Date() }).where(eq(visitSystemsTable.id, id)).returning();
-  if (!row) return res.status(404).json({ error: "النظام غير موجود" });
-  await audit(req, "تعديل نظام زيارات", { systemId: id, isActive: row.isActive });
-  return res.json({ system: row });
+  if (req.body.name !== undefined && !cleanText(req.body.name, 200)) return res.status(400).json({ error: "اسم النظام مطلوب" });
+  try {
+    const [row] = await db.update(visitSystemsTable).set({ name: req.body.name === undefined ? undefined : cleanText(req.body.name, 200), code: req.body.code === undefined ? undefined : cleanText(req.body.code, 80) || null, description: req.body.description === undefined ? undefined : cleanText(req.body.description, 1_000) || null, isActive: req.body.isActive === undefined ? undefined : !!req.body.isActive, updatedAt: new Date() }).where(eq(visitSystemsTable.id, id)).returning();
+    if (!row) return res.status(404).json({ error: "النظام غير موجود" });
+    await audit(req, "تعديل نظام زيارات", { systemId: id, name: row.name, isActive: row.isActive });
+    return res.json({ system: row });
+  } catch (err) {
+    return respondVisitMutationError(req, res, err, "تعذر تعديل النظام", "اسم النظام مستخدم من قبل");
+  }
+});
+
+router.delete("/management/systems/:id", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
+  const id = numberId(req.params.id); if (!id) return res.status(400).json({ error: "رقم النظام غير صالح" });
+  const [system] = await db.select().from(visitSystemsTable).where(eq(visitSystemsTable.id, id)).limit(1);
+  if (!system) return res.status(404).json({ error: "النظام غير موجود" });
+  const references = await Promise.all([
+    db.select({ id: visitQualificationsTable.id }).from(visitQualificationsTable).where(eq(visitQualificationsTable.systemId, id)).limit(1),
+    db.select({ id: visitSiteApprovalsTable.id }).from(visitSiteApprovalsTable).where(eq(visitSiteApprovalsTable.systemId, id)).limit(1),
+    db.select({ id: visitRepresentativeSystemsTable.id }).from(visitRepresentativeSystemsTable).where(eq(visitRepresentativeSystemsTable.systemId, id)).limit(1),
+    db.select({ id: visitRequestMetadataTable.id }).from(visitRequestMetadataTable).where(eq(visitRequestMetadataTable.systemId, id)).limit(1),
+    db.select({ id: visitRequestsTable.id }).from(visitRequestsTable).where(eq(visitRequestsTable.systemName, system.name)).limit(1),
+  ]);
+  if (references.some((rows) => rows.length)) return res.status(409).json({ error: "لا يمكن حذف النظام لأنه مرتبط ببيانات محفوظة؛ استخدم التعطيل للحفاظ على السجل", code: "SYSTEM_IN_USE" });
+  await db.delete(visitSystemsTable).where(eq(visitSystemsTable.id, id));
+  await audit(req, "حذف نظام زيارات غير مستخدم", { systemId: id, name: system.name });
+  return res.json({ systemId: id, deleted: true });
 });
 
 router.post("/management/contractors", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
@@ -1883,12 +1908,37 @@ router.post("/management/site-approvals", requireAuth, requireApproved, requireC
 
 router.patch("/management/site-approvals/:id", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
   const id = numberId(req.params.id); if (!id) return res.status(400).json({ error: "رقم غير صالح" });
-  const status = cleanText(req.body.status, 20);
+  const [existing] = await db.select().from(visitSiteApprovalsTable).where(eq(visitSiteApprovalsTable.id, id)).limit(1);
+  if (!existing) return res.status(404).json({ error: "اعتماد الموقع غير موجود" });
+  const siteName = req.body.siteName === undefined ? existing.siteName : cleanText(req.body.siteName, 200);
+  const contractorId = req.body.contractorId === undefined ? existing.contractorId : numberId(req.body.contractorId);
+  const systemId = req.body.systemId === undefined ? existing.systemId : numberId(req.body.systemId);
+  const validFrom = req.body.validFrom === undefined ? existing.validFrom : dayString(req.body.validFrom);
+  const validUntil = req.body.validUntil === undefined ? existing.validUntil : dayString(req.body.validUntil);
+  const status = req.body.status === undefined ? existing.status : cleanText(req.body.status, 20);
+  if (!siteName || !contractorId || !systemId || !validFrom || !validUntil || validUntil < validFrom) return res.status(400).json({ error: "بيانات اعتماد الموقع وتواريخه غير صالحة" });
   if (!new Set(["active", "disabled", "expired"]).has(status)) return res.status(400).json({ error: "حالة اعتماد الموقع غير صالحة" });
-  const [row] = await db.update(visitSiteApprovalsTable).set({ status: status as any, notes: req.body.notes === undefined ? undefined : cleanText(req.body.notes, 1_000) || null, updatedAt: new Date() }).where(eq(visitSiteApprovalsTable.id, id)).returning();
-  if (!row) return res.status(404).json({ error: "اعتماد الموقع غير موجود" });
-  await audit(req, "تعديل اعتماد موقع", { siteApprovalId: id, status: row.status });
-  return res.json({ siteApproval: row });
+  try {
+    const [row] = await db.update(visitSiteApprovalsTable).set({ siteName, contractorId, systemId, validFrom, validUntil, status: status as any, notes: req.body.notes === undefined ? existing.notes : cleanText(req.body.notes, 1_000) || null, updatedAt: new Date() }).where(eq(visitSiteApprovalsTable.id, id)).returning();
+    await audit(req, "تعديل اعتماد موقع", { siteApprovalId: id, siteName, contractorId, systemId, validFrom, validUntil, status: row.status });
+    return res.json({ siteApproval: row });
+  } catch (err) {
+    return respondVisitMutationError(req, res, err, "تعذر تعديل اعتماد الموقع", "يوجد اعتماد آخر لنفس الموقع والنظام والشركة");
+  }
+});
+
+router.delete("/management/site-approvals/:id", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
+  const id = numberId(req.params.id); if (!id) return res.status(400).json({ error: "رقم اعتماد الموقع غير صالح" });
+  const [approval] = await db.select().from(visitSiteApprovalsTable).where(eq(visitSiteApprovalsTable.id, id)).limit(1);
+  if (!approval) return res.status(404).json({ error: "اعتماد الموقع غير موجود" });
+  const [visitReference, documentReference] = await Promise.all([
+    db.select({ id: visitRequestMetadataTable.id }).from(visitRequestMetadataTable).where(eq(visitRequestMetadataTable.siteApprovalId, id)).limit(1),
+    db.select({ id: visitDocumentsTable.id }).from(visitDocumentsTable).where(and(eq(visitDocumentsTable.ownerType, "site_approval"), eq(visitDocumentsTable.ownerId, id))).limit(1),
+  ]);
+  if (visitReference.length || documentReference.length) return res.status(409).json({ error: "لا يمكن حذف اعتماد الموقع لأنه مرتبط بزيارة أو وثيقة؛ استخدم التعطيل للحفاظ على السجل", code: "SITE_APPROVAL_IN_USE" });
+  await db.delete(visitSiteApprovalsTable).where(eq(visitSiteApprovalsTable.id, id));
+  await audit(req, "حذف اعتماد موقع غير مستخدم", { siteApprovalId: id, siteName: approval.siteName, contractorId: approval.contractorId, systemId: approval.systemId });
+  return res.json({ siteApprovalId: id, deleted: true });
 });
 
 router.post("/management/representatives", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {

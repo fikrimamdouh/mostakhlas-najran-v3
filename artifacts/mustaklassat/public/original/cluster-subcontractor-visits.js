@@ -299,11 +299,11 @@
 
   function renderCatalogLists() {
     var d = state.data;
-    document.getElementById('systems-list').innerHTML = d.systems.map(function (x) { return '<div class="alert-row" style="background:#f8fafc;border-color:#e2e8f0;color:#334155"><span>' + esc(entityName(x)) + '</span><button class="btn ' + (x.isActive ? 'btn-red' : 'btn-green') + '" data-toggle-system="' + x.id + '" data-active="' + x.isActive + '">' + (x.isActive ? 'إزالة من القوائم' : 'استعادة') + '</button></div>'; }).join('');
+    document.getElementById('systems-list').innerHTML = d.systems.map(function (x) { return '<div class="alert-row" style="background:#f8fafc;border-color:#e2e8f0;color:#334155"><span><strong>' + esc(entityName(x)) + '</strong>' + (x.code ? '<small style="display:block">' + esc(x.code) + '</small>' : '') + '</span><span class="actions" style="margin-top:0"><button class="btn btn-light" data-edit-system="' + x.id + '">تعديل</button><button class="btn ' + (x.isActive ? 'btn-red' : 'btn-green') + '" data-toggle-system="' + x.id + '" data-active="' + x.isActive + '">' + (x.isActive ? 'تعطيل' : 'استعادة') + '</button><button class="btn btn-light" data-delete-system="' + x.id + '">حذف</button></span></div>'; }).join('');
     document.getElementById('contractors-list').innerHTML = d.contractors.map(function (x) { return '<div class="alert-row" style="background:#f8fafc;border-color:#e2e8f0;color:#334155"><span>' + esc(entityName(x)) + '</span><span class="actions" style="margin-top:0"><button class="btn ' + (x.isActive ? 'btn-red' : 'btn-green') + '" data-toggle-contractor="' + x.id + '" data-active="' + x.isActive + '">' + (x.isActive ? 'تعطيل' : 'تفعيل') + '</button><button class="btn btn-light" data-delete-contractor="' + x.id + '">حذف</button></span></div>'; }).join('');
     document.getElementById('site-approvals-list').innerHTML = d.siteApprovals.length ? d.siteApprovals.map(function (approval) {
       var system = d.systems.find(function (x) { return x.id === approval.systemId; }), contractor = d.contractors.find(function (x) { return x.id === approval.contractorId; }), active = approval.status === 'active';
-      return '<div class="alert-row" style="background:#f8fafc;border-color:#e2e8f0;color:#334155"><span><strong>' + esc(approval.siteName) + '</strong><small style="display:block">' + esc(entityName(system)) + ' — ' + esc(entityName(contractor)) + ' — حتى ' + esc(approval.validUntil) + '</small></span><button class="btn ' + (active ? 'btn-red' : 'btn-green') + '" data-toggle-approval="' + approval.id + '" data-active="' + active + '">' + (active ? 'تعطيل' : 'تفعيل') + '</button></div>';
+      return '<div class="alert-row" style="background:#f8fafc;border-color:#e2e8f0;color:#334155"><span><strong>' + esc(approval.siteName) + '</strong><small style="display:block">' + esc(entityName(system)) + ' — ' + esc(entityName(contractor)) + ' — من ' + esc(approval.validFrom) + ' حتى ' + esc(approval.validUntil) + '</small></span><span class="actions" style="margin-top:0"><button class="btn btn-light" data-edit-approval="' + approval.id + '">تعديل</button><button class="btn ' + (active ? 'btn-red' : 'btn-green') + '" data-toggle-approval="' + approval.id + '" data-active="' + active + '">' + (active ? 'تعطيل' : 'تفعيل') + '</button><button class="btn btn-light" data-delete-approval="' + approval.id + '">حذف</button></span></div>';
     }).join('') : '<div class="empty">لا توجد اعتمادات مواقع</div>';
     document.getElementById('qualifications-list').innerHTML = d.qualifications.length ? d.qualifications.map(function (qualification) {
       var system = d.systems.find(function (x) { return x.id === qualification.systemId; }), contractor = d.contractors.find(function (x) { return x.id === qualification.contractorId; }), active = qualification.status === 'active';
@@ -377,9 +377,13 @@
   });
 
   document.addEventListener('click', async function (event) {
-    var target = event.target.closest('[data-toggle-system],[data-toggle-contractor],[data-toggle-approval],[data-toggle-qualification],[data-toggle-rep],[data-delete-contractor],[data-delete-qualification],[data-delete-rep],[data-rep-systems],[data-upload-doc],[data-download-doc],[data-disable-doc],[data-link],[data-reject],[data-preview],[data-visit-detail],[data-upload-signed],[data-download-signed]'); if (!target) return;
+    var target = event.target.closest('[data-edit-system],[data-delete-system],[data-edit-approval],[data-delete-approval],[data-toggle-system],[data-toggle-contractor],[data-toggle-approval],[data-toggle-qualification],[data-toggle-rep],[data-delete-contractor],[data-delete-qualification],[data-delete-rep],[data-rep-systems],[data-upload-doc],[data-download-doc],[data-disable-doc],[data-link],[data-reject],[data-preview],[data-visit-detail],[data-upload-signed],[data-download-signed]'); if (!target) return;
     try {
-      if (target.dataset.toggleSystem) await toggleEntity('/management/systems/' + target.dataset.toggleSystem, target.dataset.active !== 'true');
+      if (target.dataset.editSystem) openEditSystem(Number(target.dataset.editSystem));
+      else if (target.dataset.deleteSystem) openSafeDelete('النظام', '/management/systems/' + target.dataset.deleteSystem);
+      else if (target.dataset.editApproval) openEditSiteApproval(Number(target.dataset.editApproval));
+      else if (target.dataset.deleteApproval) openSafeDelete('اعتماد الموقع', '/management/site-approvals/' + target.dataset.deleteApproval);
+      else if (target.dataset.toggleSystem) await toggleEntity('/management/systems/' + target.dataset.toggleSystem, target.dataset.active !== 'true');
       else if (target.dataset.toggleContractor) await toggleEntity('/management/contractors/' + target.dataset.toggleContractor, target.dataset.active !== 'true');
       else if (target.dataset.toggleApproval) await toggleStatus('/management/site-approvals/' + target.dataset.toggleApproval, target.dataset.active !== 'true');
       else if (target.dataset.toggleQualification) await toggleStatus('/management/qualifications/' + target.dataset.toggleQualification, target.dataset.active !== 'true');
@@ -406,6 +410,26 @@
     modal('حذف ' + label, '<div class="note" style="background:#fff7ed;color:#9a3412;border-color:#fed7aa">يُسمح بالحذف النهائي فقط إذا كان السجل غير مستخدم. إذا كان مرتبطًا بزيارة أو وثيقة فسيمنع النظام الحذف ويطلب استخدام التعطيل.</div>', [{ label: 'تأكيد الحذف', className: 'btn-red', action: async function (button) {
       button.disabled = true;
       try { await api(path, { method: 'DELETE' }); closeModal(); toast('تم حذف ' + label + ' غير المستخدم', true); await loadBootstrap(); }
+      catch (error) { toast(error.message, false); button.disabled = false; }
+    } }]);
+  }
+
+  function openEditSystem(id) {
+    var system = state.data.systems.find(function (row) { return row.id === id; }); if (!system) return;
+    modal('تعديل نظام مقاول الباطن', '<form id="edit-system-form" class="form-grid"><div class="field full"><label>الاسم الكامل</label><input name="name" value="' + esc(system.name) + '" required></div><div class="field"><label>الكود</label><input name="code" value="' + esc(system.code || '') + '"></div><div class="field"><label>الوصف</label><input name="description" value="' + esc(system.description || '') + '"></div></form>', [{ label: 'حفظ التعديلات', className: 'btn-green', action: async function (button) {
+      var form = document.getElementById('edit-system-form'); if (!form.reportValidity()) return; button.disabled = true;
+      try { await api('/management/systems/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formObject(form)) }); closeModal(); toast('تم تعديل النظام', true); await loadBootstrap(); }
+      catch (error) { toast(error.message, false); button.disabled = false; }
+    } }]);
+  }
+
+  function openEditSiteApproval(id) {
+    var approval = state.data.siteApprovals.find(function (row) { return row.id === id; }); if (!approval) return;
+    var systems = state.data.systems.filter(function (row) { return row.isActive || row.id === approval.systemId; });
+    var contractors = state.data.contractors.filter(function (row) { return row.isActive || row.id === approval.contractorId; });
+    modal('تعديل اعتماد الموقع', '<form id="edit-site-approval-form" class="form-grid"><div class="field"><label>الموقع</label><select name="siteName" required>' + siteOptions(allMaintenanceSites(), approval.siteName) + '</select></div><div class="field"><label>النظام</label><select name="systemId" required>' + optionRows(systems, entityName, approval.systemId) + '</select></div><div class="field"><label>مقاول الباطن</label><select name="contractorId" required>' + optionRows(contractors, entityName, approval.contractorId) + '</select></div><div class="field"><label>من</label><input type="date" name="validFrom" value="' + esc(approval.validFrom) + '" required></div><div class="field"><label>إلى</label><input type="date" name="validUntil" value="' + esc(approval.validUntil) + '" required></div><div class="field"><label>الحالة</label><select name="status"><option value="active"' + (approval.status === 'active' ? ' selected' : '') + '>نشط</option><option value="disabled"' + (approval.status === 'disabled' ? ' selected' : '') + '>معطل</option><option value="expired"' + (approval.status === 'expired' ? ' selected' : '') + '>منتهي</option></select></div><div class="field full"><label>ملاحظات</label><input name="notes" value="' + esc(approval.notes || '') + '"></div></form>', [{ label: 'حفظ التعديلات', className: 'btn-green', action: async function (button) {
+      var form = document.getElementById('edit-site-approval-form'); if (!form.reportValidity()) return; var body = formObject(form); body.systemId = Number(body.systemId); body.contractorId = Number(body.contractorId); button.disabled = true;
+      try { await api('/management/site-approvals/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); closeModal(); toast('تم تعديل اعتماد الموقع', true); await loadBootstrap(); }
       catch (error) { toast(error.message, false); button.disabled = false; }
     } }]);
   }

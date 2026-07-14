@@ -343,6 +343,24 @@ test('unused companies, qualifications and representatives can be deleted safely
   assert.doesNotMatch(centerJs, /\bconfirm\s*\(/);
 });
 
+test('systems and site approvals support modal editing and safe deletion', () => {
+  for (const entity of ['systems', 'site-approvals']) {
+    const block = route.match(new RegExp(`router\\.delete\\("/management/${entity}/:id"[\\s\\S]*?\\n}\\);`));
+    assert.ok(block, `safe delete route for ${entity}`);
+    assert.match(block[0], /requireClusterVisitManagement/);
+    assert.match(block[0], /status\(409\)/);
+    assert.match(block[0], /استخدم التعطيل/);
+    assert.match(block[0], /await audit/);
+  }
+  assert.match(centerJs, /data-edit-system/);
+  assert.match(centerJs, /data-delete-system/);
+  assert.match(centerJs, /openEditSystem/);
+  assert.match(centerJs, /data-edit-approval/);
+  assert.match(centerJs, /data-delete-approval/);
+  assert.match(centerJs, /openEditSiteApproval/);
+  assert.match(route, /APPROVED_CATALOG_SEEDED_SETTING/);
+});
+
 test('representative screen can create and immediately select a missing company', () => {
   assert.match(center, /id="rep-add-contractor"/);
   assert.match(centerJs, /openStandaloneContractor/);
