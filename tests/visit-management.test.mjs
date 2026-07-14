@@ -12,6 +12,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const route = read('artifacts/api-server/src/routes/visits.ts');
 const security = read('artifacts/api-server/src/lib/visit-security.ts');
 const middleware = read('artifacts/api-server/src/middleware/requireClusterVisitManagement.ts');
+const requireAuthSource = read('artifacts/api-server/src/middleware/requireAuth.ts');
 const schema = read('lib/db/src/schema/index.ts');
 const center = read('artifacts/mustaklassat/public/original/cluster-subcontractor-visits.html');
 const centerJs = read('artifacts/mustaklassat/public/original/cluster-subcontractor-visits.js');
@@ -116,8 +117,17 @@ test('QR uses random tokens, stores hash plus ciphertext, rate limits scans and 
 
 test('approved certificate catalogue uses full display names and seeds the supplied qualification dates', () => {
   assert.match(route, /APPROVED_SUBCONTRACTOR_CATALOG/);
-  for (const system of ['إطفاء الحريق', 'إنذار الحريق', 'التكييف والتبريد', 'محطات تحلية المياه']) assert.match(route, new RegExp(system));
-  assert.match(route, /نظام كاميرات المراقبة الأمنية \(CCTV\)/);
+  for (const system of [
+    'صيانة ونظافة مجارى الهواء والدكتات \\(زيارة واحدة مدة العقد\\)',
+    'صيانة انظمة التكيف والتبريد وانظمة التهوية وملحقاتها',
+    'صيانة المصاعد الكهربائية',
+    'صيانة واصلاح نظام اطفاء الحريق',
+    'صيانة واصلاح نظام انذار الحريق',
+    'صيانة محطات التوليد الكهربائية',
+    'صيانة جهاز UPS',
+    'صيانة نظم المراقبات الامنية',
+    'صيانة محطة معالجة مياه الصرف الصحى',
+  ]) assert.match(route, new RegExp(system));
   for (const contractor of ['مؤسسة أفق الحجاز المحدودة', 'شركة المفردون للمقاولات', 'شركة دائرة التحكم', 'مؤسسة نبراس حنين لأنظمة السلامة', 'شركة إيكوفا للمقاولات']) assert.match(route, new RegExp(contractor));
   const catalogBlock = route.match(/const APPROVED_SUBCONTRACTOR_CATALOG[\s\S]*?\] as const;/);
   assert.ok(catalogBlock);
@@ -159,7 +169,21 @@ test('direct issue can complete a company, site approval and representative with
   assert.ok(representative);
   assert.match(representative[0], /visitRepresentativeSystemsTable/);
   assert.match(representative[0], /maskIdentity/);
-  assert.doesNotMatch(representative[0].match(/return res\.status\(201\)[\s\S]*/)[0], /identityNumber:/);
+  assert.match(representative[0], /onConflictDoUpdate/);
+  assert.match(representative[0], /reusedExisting/);
+  const response = representative[0].match(/return res\.status\(result\.created \? 201 : 200\)\.json\([\s\S]*?reusedExisting:[\s\S]*?\);/);
+  assert.ok(response);
+  assert.doesNotMatch(response[0], /identityNumber\s*:/);
+  assert.match(route, /IDENTITY_BELONGS_TO_OTHER_CONTRACTOR/);
+});
+
+test('representative expiry is optional, expired entered dates still block issue, and no-residence exceptions keep a required reason', () => {
+  assert.match(center, /انتهاء الإقامة \(اختياري\)/);
+  assert.doesNotMatch(centerJs, /residenceExpiresAt\.required\s*=\s*!this\.checked/);
+  assert.doesNotMatch(route, /!noResidenceException && !residenceExpiresAt/);
+  assert.match(route, /else if \(representative\.residenceExpiresAt\)/);
+  assert.match(route, /الإقامة منتهية أو لا تغطي تاريخ الزيارة/);
+  assert.match(route, /noResidenceException && !exceptionReason/);
 });
 
 test('periodic visits do not ask for purpose or times in the direct and requester forms', () => {
@@ -172,12 +196,45 @@ test('periodic visits do not ask for purpose or times in the direct and requeste
 
 test('center retries expired auth, opens through the authenticated viewer and QR can securely download the permit', () => {
   assert.match(center, /original-viewer\?/);
-  assert.match(centerJs, /response\.status === 401 && !retried/);
+  assert.match(centerJs, /response\.status === 401/);
+  assert.match(centerJs, /renewSession/);
+  assert.match(centerJs, /clearCachedToken/);
+  assert.match(center, /id="renew-session"/);
+  assert.match(requireAuthSource, /AUTH_TOKEN_INVALID/);
+  assert.doesNotMatch(requireAuthSource, /error: "Invalid token"/);
   assert.match(centerJs, /handleQrDeepLink/);
   assert.match(centerJs, /downloadPermitFromScan/);
   assert.match(centerJs, /v\.hasSignedPermit/);
   assert.match(centerJs, /NajranVisitPermit\.print\(v\.id\)/);
   assert.match(route, /hasSignedPermit: full \? !!row\.visit\.signedPermitFile : undefined/);
+});
+
+test('direct issue control shows readiness and keeps every active company available for manual completion', () => {
+  assert.match(center, /id="direct-readiness"/);
+  assert.match(centerJs, /renderDirectReadiness/);
+  assert.match(centerJs, /يحتاج استكمال التأهيل/);
+  assert.match(centerJs, /state\.data\.contractors[^\n]*row\.isActive/);
+  assert.match(centerJs, /أكمل اعتماد الموقع للشركة والنظام/);
+});
+
+test('legacy Word representatives import previews masked data then confirms company, representative and system links atomically', () => {
+  assert.match(route, /legacy-representatives\/preview/);
+  assert.match(route, /legacy-representatives\/confirm/);
+  assert.match(route, /word\/document\.xml/);
+  assert.match(route, /validateZipEntries\(entries\)/);
+  assert.match(route, /identityMasked: maskIdentity\(record\.identityNumber\)/);
+  assert.match(route, /mobileMasked:/);
+  const confirmBlock = route.match(/router\.post\("\/management\/legacy-representatives\/confirm"[\s\S]*?\n}\);/);
+  assert.ok(confirmBlock);
+  assert.match(confirmBlock[0], /db\.transaction/);
+  assert.match(confirmBlock[0], /upsertRepresentative/);
+  assert.match(confirmBlock[0], /visitRepresentativeSystemsTable/);
+  assert.match(confirmBlock[0], /await audit/);
+  assert.match(center, /id="legacy-representatives-form"/);
+  assert.match(center, /multiple required/);
+  assert.match(center, /id="direct-saved-representative"/);
+  assert.match(centerJs, /applySavedRepresentative/);
+  assert.match(centerJs, /identityMasked/);
 });
 
 test('archive supports all requested filters and pagination', () => {

@@ -84,10 +84,22 @@ const MAINTENANCE_CONTRACTORS = [
 ] as const;
 
 const SYSTEM_CANONICAL_NAMES = [
-  { name: "أنظمة مزودات الطاقة غير المنقطعة (UPS)", aliases: ["UPS"] },
-  { name: "نظام إدارة المباني (BMS)", aliases: ["BMS"] },
-  { name: "نظام كاميرات المراقبة الأمنية (CCTV)", aliases: ["كاميرات المراقبة الأمنية CCTV"] },
-  { name: "المولدات الكهربائية وأنظمة التحويل الآلي (ATS)", aliases: ["المولدات الكهربائية وATS"] },
+  { name: "صيانة ونظافة مجارى الهواء والدكتات (زيارة واحدة مدة العقد)", aliases: ["تنظيف مجاري الهواء", "صيانة ونظافة مجاري الهواء والدكتات (زيارة واحدة مدة العقد)"] },
+  { name: "صيانة انظمة التكيف والتبريد وانظمة التهوية وملحقاتها", aliases: ["التكييف والتبريد", "صيانة أنظمة التكييف والتبريد وأنظمة التهوية وملحقاتها"] },
+  { name: "صيانة المصاعد الكهربائية", aliases: ["المصاعد", "المصاعد الكهربائية"] },
+  { name: "صيانة واصلاح نظام اطفاء الحريق", aliases: ["إطفاء الحريق", "اطفاء الحريق", "صيانة وإصلاح نظام إطفاء الحريق"] },
+  { name: "صيانة واصلاح نظام انذار الحريق", aliases: ["إنذار الحريق", "انذار الحريق", "صيانة وإصلاح نظام إنذار الحريق"] },
+  { name: "صيانة واصلاح السنترالات والنداء الالى والاذاعة الداخلية والساعة المركزية واستدعاء الممرضات", aliases: ["السنترال والنداء واستدعاء الممرضات"] },
+  { name: "صيانة محطات التوليد الكهربائية (مولدات الطوارى) ولوحات التحكم والتشغيل والـ ATS", aliases: ["المولدات الكهربائية وأنظمة التحويل الآلي (ATS)", "المولدات الكهربائية وATS"] },
+  { name: "صيانة شبكة الغازات الطبية وملحقاتها وخزانات الغاز", aliases: ["الغازات الطبية"] },
+  { name: "صيانة معدات المغسلة", aliases: ["المغاسل", "معدات المغسلة"] },
+  { name: "صيانة محولات الكهرباء والقواطع الكهربائية وكامل اللوحات الكهربائية", aliases: ["المحولات واللوحات والقواطع الكهربائية"] },
+  { name: "صيانة محطات تحلية مياه الشرب وملحقاتها", aliases: ["محطات تحلية المياه", "محطات تحلية مياه الشرب"] },
+  { name: "صيانة جهاز UPS", aliases: ["UPS", "أنظمة مزودات الطاقة غير المنقطعة (UPS)"] },
+  { name: "صيانة نظم المراقبات الامنية", aliases: ["نظام كاميرات المراقبة الأمنية (CCTV)", "كاميرات المراقبة الأمنية CCTV", "نظم المراقبات الأمنية"] },
+  { name: "صيانة ثلاجة الموتى", aliases: ["ثلاجة الموتى"] },
+  { name: "مكافحة الحشرات والقوارض والافات البيئية", aliases: ["مكافحة الحشرات", "مكافحة الحشرات والقوارض والآفات البيئية"] },
+  { name: "صيانة محطة معالجة مياه الصرف الصحى", aliases: ["محطات معالجة مياه الصرف الصحي", "صيانة محطة معالجة مياه الصرف الصحي"] },
 ] as const;
 
 const CONTRACTOR_CANONICAL_NAMES = [
@@ -101,29 +113,43 @@ const CONTRACTOR_CANONICAL_NAMES = [
   { name: "شركة النسر الفضي للمقاولات", aliases: ["النسر الفضي"] },
   { name: "شركة قمم شار للمقاولات", aliases: ["قمم شار"] },
   { name: "مؤسسة نبراس حنين لأنظمة السلامة", aliases: ["نبراس حنين"] },
+  { name: "شركة صفوق الريادة للمقاولات العامة", aliases: ["صفوق الريادة", "صفوف الريادة"] },
+  { name: "شركة سايت تكنولوجي العربية السعودية", aliases: ["سايت تكنولوجي"] },
+  { name: "مؤسسة أسس التطوير للمقاولات", aliases: ["أسس التطوير للمقاولات"] },
+  { name: "مؤسسة المتألق البيئي", aliases: ["مؤسسة التألق البيئي", "المتألق البيئي"] },
+  { name: "مؤسسة ماسة لمكافحة الحشرات للمبيدات الزراعية", aliases: ["مؤسسة ماسة الحشرات", "مؤسسة ماسة مكافحة الحشرات للمبيدات الزراعية"] },
+  { name: "مؤسسة خالد عايض الجعيدي الدوسري للمقاولات", aliases: ["خالد عايض الجعيدي"] },
+  { name: "شركة دائرة الأنظمة للتجارة", aliases: [] },
+  { name: "مؤسسة شلالات النسيم للأعمال الكهرو ميكانيكية", aliases: [] },
+  { name: "شركة العالمية للصناعات الحديثة", aliases: [] },
+  { name: "شركة فوج السعودية للمصاعد والسلالم", aliases: [] },
+  { name: "شركة ميتسوبيشي الكهربائية المحدودة", aliases: [] },
+  { name: "مؤسسة ماس السعودية للمقاولات", aliases: [] },
+  { name: "تى كية اليفيتور العربية السعودية المحدودة", aliases: [] },
+  { name: "شركة شيندلر العليان للمصاعد المحدودة", aliases: [] },
+  { name: "شركة مصنع الغماس للصناعات الكهروميكانيكية المتطور", aliases: [] },
 ] as const;
 
 // Snapshot of the approved-subcontractor folders supplied by the maintenance
 // unit. Names shown to users are canonical and complete; aliases are retained
 // only to attach existing database rows and historical visits without loss.
 const APPROVED_SUBCONTRACTOR_CATALOG = [
-  { system: "محطات تحلية المياه", contractors: ["أسس التطوير للمقاولات", "تبرا العالمية"] },
-  { system: "السنترال والنداء واستدعاء الممرضات", contractors: ["دار المبتكر", "سايت تكنولوجي", "مؤسسة أشواق الجنوب", "شركة إيكوفا", "نبراس حنين"] },
-  { system: "مكافحة الحشرات", contractors: ["مستقبل الأوطان للتشغيل", "شركة تراب كيل", "مؤسسة ماسة الحشرات", "شركة الإيوان الطبية", "مؤسسة التألق البيئي", "شركة حنين للمقاولات", "مكسل", "سادن", "رسيل الشرق", "درة الفتاك"] },
-  { system: "أنظمة مزودات الطاقة غير المنقطعة (UPS)", contractors: ["الصدارة", "رواد الأمانة", "سايت تكنولوجي", "شركة النسر الفضي للمقاولات", "شركة إيكوفا للمقاولات", "شركة الأمان الحديثة للطاقة", "المرافق"] },
-  { system: "نظام إدارة المباني (BMS)", contractors: ["الصدارة", "دار المبتكر", "الأفق المتميزة", "إلهامات الحديثة", "شركة إيكوفا للمقاولات"] },
-  { system: "نظام كاميرات المراقبة الأمنية (CCTV)", contractors: ["سايت تكنولوجي", "الأفق المتميزة", "مؤسسة أشواق الجنوب", "دروع الأمنية", "مؤسسة نبراس حنين لأنظمة السلامة"] },
-  { system: "محطات معالجة مياه الصرف الصحي", contractors: ["أسس التطوير للمقاولات"] },
-  { system: "الغلايات", contractors: ["الصغير", "إلهامات الحديثة", "خالد عايض الجعيدي"] },
-  { system: "المغاسل", contractors: ["مصنع الجعيدي"] },
-  { system: "الغازات الطبية", contractors: ["النظم الاحترافية", "شركة ماس", "سيسنبر العالمية", "أهالينا", "دريجر", "شركة مودرن تشالنجر"] },
-  { system: "إطفاء الحريق", contractors: ["مؤسسة أجهزة الإطفاء لأجهزة السلامة", "شركة الركن السليم للسلامة", "الشركة العربية للتشغيل والصيانة", "شركة دائرة التحكم", "شركة إيكوفا للمقاولات", "مؤسسة أفق الحجاز المحدودة", "مؤسسة نبراس حنين لأنظمة السلامة", "شركة قمم شار للمقاولات", "شركة المفردون للمقاولات", "شركة النسر الفضي للمقاولات"] },
-  { system: "إنذار الحريق", contractors: ["شركة النسر الفضي للمقاولات", "مؤسسة أشواق الجنوب", "مؤسسة أجهزة الإطفاء لأجهزة السلامة", "شركة السامي للأمن والسلامة", "شركة الركن السليم للسلامة", "شركة دائرة التحكم", "شركة إيكوفا للمقاولات", "مؤسسة أفق الحجاز المحدودة", "شركة المفردون للمقاولات", "مؤسسة نبراس حنين لأنظمة السلامة", "شركة قمم شار للمقاولات"] },
-  { system: "المحولات واللوحات والقواطع الكهربائية", contractors: ["الصدارة", "سبق التقنية", "سايت تكنولوجي", "صفوف الريادة", "المرافق", "شركة الأمان الحديثة للطاقة", "شركة النسر الفضي للمقاولات"] },
-  { system: "المولدات الكهربائية وأنظمة التحويل الآلي (ATS)", contractors: ["سبق التقنية", "الصدارة", "سايت تكنولوجي", "صفوف الريادة", "شركة النسر الفضي للمقاولات", "شركة الأمان الحديثة للطاقة", "المرافق"] },
-  { system: "تنظيف مجاري الهواء", contractors: ["كيان التزويد", "مصداقية وطن", "شركة آراك الخليج", "بريق الجليد"] },
-  { system: "ثلاجة الموتى", contractors: ["شركة رياح النواة", "شنان الخليج"] },
-  { system: "التكييف والتبريد", contractors: ["إلهامات الحديثة", "شركة رياح النواة", "شركة وتين", "مصداقية الوطن", "شركة أهالينا", "شنان الخليج"] },
+  { system: "صيانة ونظافة مجارى الهواء والدكتات (زيارة واحدة مدة العقد)", contractors: ["كيان التزويد", "مصداقية وطن", "شركة آراك الخليج", "بريق الجليد"] },
+  { system: "صيانة انظمة التكيف والتبريد وانظمة التهوية وملحقاتها", contractors: ["إلهامات الحديثة", "شركة رياح النواة", "شركة وتين", "مصداقية الوطن", "شركة أهالينا", "شنان الخليج"] },
+  { system: "صيانة المصاعد الكهربائية", contractors: [] },
+  { system: "صيانة واصلاح نظام اطفاء الحريق", contractors: ["مؤسسة أجهزة الإطفاء لأجهزة السلامة", "شركة الركن السليم للسلامة", "الشركة العربية للتشغيل والصيانة", "شركة دائرة التحكم", "شركة إيكوفا للمقاولات", "مؤسسة أفق الحجاز المحدودة", "مؤسسة نبراس حنين لأنظمة السلامة", "شركة قمم شار للمقاولات", "شركة المفردون للمقاولات", "شركة النسر الفضي للمقاولات"] },
+  { system: "صيانة واصلاح نظام انذار الحريق", contractors: ["شركة النسر الفضي للمقاولات", "مؤسسة أشواق الجنوب", "مؤسسة أجهزة الإطفاء لأجهزة السلامة", "شركة السامي للأمن والسلامة", "شركة الركن السليم للسلامة", "شركة دائرة التحكم", "شركة إيكوفا للمقاولات", "مؤسسة أفق الحجاز المحدودة", "شركة المفردون للمقاولات", "مؤسسة نبراس حنين لأنظمة السلامة", "شركة قمم شار للمقاولات"] },
+  { system: "صيانة واصلاح السنترالات والنداء الالى والاذاعة الداخلية والساعة المركزية واستدعاء الممرضات", contractors: ["دار المبتكر", "سايت تكنولوجي", "مؤسسة أشواق الجنوب", "شركة إيكوفا", "نبراس حنين"] },
+  { system: "صيانة محطات التوليد الكهربائية (مولدات الطوارى) ولوحات التحكم والتشغيل والـ ATS", contractors: ["سبق التقنية", "الصدارة", "سايت تكنولوجي", "صفوف الريادة", "شركة النسر الفضي للمقاولات", "شركة الأمان الحديثة للطاقة", "المرافق"] },
+  { system: "صيانة شبكة الغازات الطبية وملحقاتها وخزانات الغاز", contractors: ["النظم الاحترافية", "شركة ماس", "سيسنبر العالمية", "أهالينا", "دريجر", "شركة مودرن تشالنجر"] },
+  { system: "صيانة معدات المغسلة", contractors: ["مصنع الجعيدي"] },
+  { system: "صيانة محولات الكهرباء والقواطع الكهربائية وكامل اللوحات الكهربائية", contractors: ["الصدارة", "سبق التقنية", "سايت تكنولوجي", "صفوف الريادة", "المرافق", "شركة الأمان الحديثة للطاقة", "شركة النسر الفضي للمقاولات"] },
+  { system: "صيانة محطات تحلية مياه الشرب وملحقاتها", contractors: ["أسس التطوير للمقاولات", "تبرا العالمية"] },
+  { system: "صيانة جهاز UPS", contractors: ["الصدارة", "رواد الأمانة", "سايت تكنولوجي", "شركة النسر الفضي للمقاولات", "شركة إيكوفا للمقاولات", "شركة الأمان الحديثة للطاقة", "المرافق"] },
+  { system: "صيانة نظم المراقبات الامنية", contractors: ["سايت تكنولوجي", "الأفق المتميزة", "مؤسسة أشواق الجنوب", "دروع الأمنية", "مؤسسة نبراس حنين لأنظمة السلامة"] },
+  { system: "صيانة ثلاجة الموتى", contractors: ["شركة رياح النواة", "شنان الخليج"] },
+  { system: "مكافحة الحشرات والقوارض والافات البيئية", contractors: ["مستقبل الأوطان للتشغيل", "شركة تراب كيل", "مؤسسة ماسة الحشرات", "شركة الإيوان الطبية", "مؤسسة التألق البيئي", "شركة حنين للمقاولات", "مكسل", "سادن", "رسيل الشرق", "درة الفتاك"] },
+  { system: "صيانة محطة معالجة مياه الصرف الصحى", contractors: ["أسس التطوير للمقاولات"] },
 ] as const;
 
 // These names and validity dates are transcribed from the supplied Ministry of
@@ -159,6 +185,10 @@ const zipUploadMemory = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_VISIT_ZIP_BYTES, files: 1 },
 });
+const legacyDocxUploadMemory = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 40 },
+});
 
 type AnyDb = typeof db | any;
 type VisitContext = {
@@ -172,6 +202,8 @@ type VisitContext = {
 };
 
 const zipPreviews = new Map<string, { expiresAt: number; sha: string; records: Record<string, any[]>; entries: string[]; uploadedBy: number }>();
+type LegacyRepresentativeRecord = { sourceFile: string; fullName: string; identityNumber: string; mobile: string; companyName: string; suggestedSystemName: string | null };
+const legacyRepresentativePreviews = new Map<string, { expiresAt: number; uploadedBy: number; records: LegacyRepresentativeRecord[] }>();
 const scanRate = new Map<string, number[]>();
 
 function clientIp(req: any): string {
@@ -246,6 +278,132 @@ function validDateRange(fromValue: unknown, untilValue: unknown): { validFrom: s
   const validFrom = dayString(fromValue), validUntil = dayString(untilValue);
   if (!validFrom || !validUntil || validUntil < validFrom) return null;
   return { validFrom, validUntil };
+}
+
+function databaseErrorCode(err: any): string {
+  return String(err?.code || err?.cause?.code || "");
+}
+
+function respondVisitMutationError(req: any, res: any, err: any, fallbackMessage: string, duplicateMessage?: string) {
+  const code = databaseErrorCode(err);
+  if (code === "42P01" || code === "42703") {
+    req.log.error({ err, code }, "Visit database schema is outdated");
+    return res.status(503).json({
+      error: "قاعدة بيانات الزيارات تحتاج إلى تطبيق آخر تحديث للمخطط ثم إعادة المحاولة",
+      code: "VISIT_SCHEMA_OUTDATED",
+    });
+  }
+  if (code === "23503") {
+    return res.status(409).json({ error: "تعذر الربط لأن الشركة أو النظام لم يعد متاحًا؛ حدّث الصفحة ثم أعد الاختيار", code: "VISIT_REFERENCE_CHANGED" });
+  }
+  if (code === "23505" || String(err?.message).toLocaleLowerCase().includes("unique")) {
+    return res.status(409).json({ error: duplicateMessage || "البيانات مسجلة من قبل", code: "VISIT_DUPLICATE" });
+  }
+  req.log.error({ err, code }, "Visit mutation failed");
+  return res.status(500).json({ error: fallbackMessage, code: "VISIT_SAVE_FAILED" });
+}
+
+type RepresentativeInput = {
+  contractorId: number;
+  fullName: string;
+  identityNumber: string;
+  mobile: string;
+  residenceExpiresAt: string | null;
+  noResidenceException: boolean;
+  exceptionReason: string | null;
+};
+
+async function upsertRepresentative(tx: AnyDb, input: RepresentativeInput) {
+  const [existing] = await tx.select({ id: visitRepresentativesTable.id }).from(visitRepresentativesTable)
+    .where(eq(visitRepresentativesTable.identityNumber, input.identityNumber)).limit(1);
+  const [row] = await tx.insert(visitRepresentativesTable).values({
+    contractorId: input.contractorId,
+    fullName: input.fullName,
+    identityNumber: input.identityNumber,
+    mobile: input.mobile,
+    residenceExpiresAt: input.noResidenceException ? null : input.residenceExpiresAt,
+    noResidenceException: input.noResidenceException,
+    exceptionReason: input.noResidenceException ? input.exceptionReason : null,
+    isActive: true,
+  }).onConflictDoUpdate({
+    target: visitRepresentativesTable.identityNumber,
+    set: {
+      fullName: input.fullName,
+      mobile: input.mobile,
+      residenceExpiresAt: input.noResidenceException ? null : input.residenceExpiresAt,
+      noResidenceException: input.noResidenceException,
+      exceptionReason: input.noResidenceException ? input.exceptionReason : null,
+      isActive: true,
+      updatedAt: new Date(),
+    },
+  }).returning();
+  if (row.contractorId !== input.contractorId) throw new Error("IDENTITY_BELONGS_TO_OTHER_CONTRACTOR");
+  return { row, created: !existing };
+}
+
+function decodeWordXml(value: string): string {
+  return value
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_match, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([\da-f]+);/gi, (_match, code) => String.fromCodePoint(Number.parseInt(code, 16)))
+    .replace(/&amp;/g, "&");
+}
+
+function wordCellText(xml: string): string {
+  const currentXml = xml.replace(/<w:(?:del|moveFrom)\b[\s\S]*?<\/w:(?:del|moveFrom)>/g, "");
+  return [...currentXml.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)]
+    .map((match) => decodeWordXml(match[1]))
+    .join("")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function suggestedLegacySystem(companyName: string): string | null {
+  if (/(?:مصاعد|اليفيتور|ميتسوبيشي|شيندلر|فوج)/u.test(companyName)) return "صيانة المصاعد الكهربائية";
+  if (/(?:حشرات|البيئي)/u.test(companyName)) return "مكافحة الحشرات والقوارض والافات البيئية";
+  if (/ماس السعودية/u.test(companyName)) return "صيانة شبكة الغازات الطبية وملحقاتها وخزانات الغاز";
+  return null;
+}
+
+function parseLegacyRepresentativeDocx(file: Express.Multer.File): LegacyRepresentativeRecord[] {
+  if (!file.originalname.toLocaleLowerCase().endsWith(".docx") || file.buffer.length < 4 || file.buffer[0] !== 0x50 || file.buffer[1] !== 0x4b) {
+    throw new Error("الملف ليس مستند Word DOCX حقيقيًا");
+  }
+  const zip = new AdmZip(file.buffer);
+  const entries = zip.getEntries();
+  validateZipEntries(entries);
+  const documentEntry = entries.find((entry) => entry.entryName === "word/document.xml" && !entry.isDirectory);
+  if (!documentEntry || Number(documentEntry.header?.size || 0) > 3 * 1024 * 1024) throw new Error("بنية مستند Word غير صالحة أو كبيرة بصورة غير آمنة");
+  const xml = documentEntry.getData().toString("utf8");
+  const rows = [...xml.matchAll(/<w:tr\b[\s\S]*?<\/w:tr>/g)].map((rowMatch) =>
+    [...rowMatch[0].matchAll(/<w:tc\b[\s\S]*?<\/w:tc>/g)].map((cellMatch) => wordCellText(cellMatch[0])),
+  );
+  const identityRowIndex = rows.findIndex((row) => row.some((cell) => /رقم الهوية|الإقامة/u.test(cell)));
+  const mobileRowIndex = rows.findIndex((row) => row.some((cell) => /رقم الجوال/u.test(cell)));
+  const companyRow = rows.find((row) => row.some((cell) => /مقاول الباطن/u.test(cell))) || [];
+  const companyName = canonicalContractorName(companyRow.find((cell) => cell && !/مقاول الباطن/u.test(cell)) || "");
+  const mobile = rows.flat().flatMap((cell) => cell.match(/05\d{8}/g) || [])[0] || "";
+  const identityCells = rows.slice(Math.max(0, identityRowIndex), mobileRowIndex > identityRowIndex ? mobileRowIndex : undefined).flat();
+  const identities = identityCells.flatMap((cell) => cell.match(/\b[12]\d{9}\b/g) || []);
+  const nameHeaderRow = rows.find((row) => row.some((cell) => /^الاسم$/u.test(cell.trim()))) || [];
+  const nameLabelIndex = nameHeaderRow.findIndex((cell) => /^الاسم$/u.test(cell.trim()));
+  const nameColumnIndex = nameLabelIndex > 0 ? nameLabelIndex - 1 : 1;
+  const nameRows = identityRowIndex > 0 ? rows.slice(0, identityRowIndex) : rows.slice(0, 2);
+  const names = nameRows.map((row) => cleanText(row[nameColumnIndex], 200)).filter((cell) => cell && /[\p{L}]/u.test(cell) && !/(?:الموقع|الاسم|تاريخ الزيارة|النظام)/u.test(cell));
+  if (!companyName || !mobile || !names.length || names.length !== identities.length) {
+    throw new Error("تعذر مطابقة الاسم والهوية والجوال واسم الشركة داخل المستند");
+  }
+  return names.map((fullName, index) => ({
+    sourceFile: sanitizeFilename(file.originalname),
+    fullName: cleanText(fullName, 200),
+    identityNumber: identities[index],
+    mobile,
+    companyName,
+    suggestedSystemName: suggestedLegacySystem(companyName),
+  }));
 }
 
 function maintenanceContractor(key: unknown) {
@@ -430,7 +588,7 @@ async function validateCentralContext(executor: AnyDb, context: VisitContext): P
   if (!repSystem) return "المندوب غير مرتبط بالنظام المحدد";
   if (representative.noResidenceException) {
     if (!cleanText(representative.exceptionReason, 1_000)) return "الاستثناء بدون إقامة يحتاج سببًا إجباريًا ومسجلًا";
-  } else {
+  } else if (representative.residenceExpiresAt) {
     const expiry = parseIsoDate(String(representative.residenceExpiresAt || ""));
     if (!expiry || expiry.toISOString().slice(0, 10) < visitDay.toISOString().slice(0, 10)) return "الإقامة منتهية أو لا تغطي تاريخ الزيارة";
   }
@@ -896,8 +1054,8 @@ async function seedCertificateQualifications(req: any) {
     db.select().from(visitSystemsTable),
     db.select().from(visitContractorsTable),
   ]);
-  const systemByKey = new Map(systems.map((row) => [catalogNameKey(canonicalSystemName(row.name)), row]));
-  const contractorByKey = new Map(contractors.map((row) => [catalogNameKey(canonicalContractorName(row.name)), row]));
+  const systemByKey = firstCanonicalRowMap(systems, canonicalSystemName);
+  const contractorByKey = firstCanonicalRowMap(contractors, canonicalContractorName);
   const inserted = await db.transaction(async (tx) => {
     let qualifications = 0;
     for (const certificate of QUALIFICATION_CERTIFICATES) {
@@ -923,9 +1081,18 @@ async function seedCertificateQualifications(req: any) {
   return inserted;
 }
 
+function firstCanonicalRowMap(rows: any[], canonicalizer: (value: unknown) => string) {
+  const result = new Map<string, any>();
+  for (const row of rows) {
+    const key = catalogNameKey(canonicalizer(row.name));
+    if (!result.has(key)) result.set(key, row);
+  }
+  return result;
+}
+
 function approvedCatalogResponse(systems: any[], contractors: any[]) {
-  const systemByKey = new Map(systems.map((row) => [catalogNameKey(canonicalSystemName(row.name)), row]));
-  const contractorByKey = new Map(contractors.map((row) => [catalogNameKey(canonicalContractorName(row.name)), row]));
+  const systemByKey = firstCanonicalRowMap(systems, canonicalSystemName);
+  const contractorByKey = firstCanonicalRowMap(contractors, canonicalContractorName);
   return APPROVED_SUBCONTRACTOR_CATALOG.map((catalog) => {
     const system = systemByKey.get(catalogNameKey(canonicalSystemName(catalog.system)));
     return {
@@ -937,8 +1104,8 @@ function approvedCatalogResponse(systems: any[], contractors: any[]) {
 }
 
 function approvedPersonnelResponse(systems: any[], contractors: any[]) {
-  const systemByKey = new Map(systems.map((row) => [catalogNameKey(canonicalSystemName(row.name)), row]));
-  const contractorByKey = new Map(contractors.map((row) => [catalogNameKey(canonicalContractorName(row.name)), row]));
+  const systemByKey = firstCanonicalRowMap(systems, canonicalSystemName);
+  const contractorByKey = firstCanonicalRowMap(contractors, canonicalContractorName);
   return QUALIFICATION_CERTIFICATES.flatMap((certificate) => {
     const system = systemByKey.get(catalogNameKey(certificate.system));
     const contractor = contractorByKey.get(catalogNameKey(certificate.company));
@@ -946,6 +1113,7 @@ function approvedPersonnelResponse(systems: any[], contractors: any[]) {
     return certificate.personnel.map((fullName) => ({
       contractorId: contractor.id,
       systemId: system.id,
+      systemName: canonicalSystemName(system.name),
       fullName,
       sourceCertificate: certificate.reference,
       requiresManualCompletion: true,
@@ -1098,6 +1266,107 @@ router.post("/management/direct-setup", requireAuth, requireApproved, requireClu
   }
 });
 
+router.post("/management/legacy-representatives/preview", requireAuth, requireApproved, requireClusterVisitManagement, legacyDocxUploadMemory.array("files", 40), async (req: any, res) => {
+  const files = (Array.isArray(req.files) ? req.files : []) as Express.Multer.File[];
+  if (!files.length) return res.status(400).json({ error: "اختر ملف Word واحدًا على الأقل من النظام القديم" });
+  if (files.reduce((total, file) => total + file.size, 0) > 30 * 1024 * 1024) return res.status(413).json({ error: "إجمالي ملفات Word يتجاوز 30MB" });
+  try {
+    const records = files.flatMap((file) => parseLegacyRepresentativeDocx(file));
+    if (!records.length) return res.status(400).json({ error: "لم يتم العثور على بيانات مناديب صالحة" });
+    const now = Date.now();
+    for (const [key, preview] of legacyRepresentativePreviews) if (preview.expiresAt <= now) legacyRepresentativePreviews.delete(key);
+    const previewToken = randomBytes(24).toString("base64url");
+    const expiresAt = now + 15 * 60_000;
+    legacyRepresentativePreviews.set(previewToken, { expiresAt, uploadedBy: req.currentUser.id, records });
+    const cleanupTimer = setTimeout(() => {
+      const current = legacyRepresentativePreviews.get(previewToken);
+      if (current?.expiresAt === expiresAt) legacyRepresentativePreviews.delete(previewToken);
+    }, 15 * 60_000 + 1_000);
+    cleanupTimer.unref();
+    await audit(req, "معاينة استيراد مناديب من مستندات النظام القديم", { files: files.length, representatives: records.length });
+    return res.json({
+      previewToken,
+      expiresInSeconds: 900,
+      rows: records.map((record, index) => ({
+        index,
+        sourceFile: record.sourceFile,
+        fullName: record.fullName,
+        identityMasked: maskIdentity(record.identityNumber),
+        mobileMasked: `${record.mobile.slice(0, 3)}••••${record.mobile.slice(-3)}`,
+        companyName: record.companyName,
+        suggestedSystemName: record.suggestedSystemName,
+      })),
+    });
+  } catch (err: any) {
+    req.log.warn({ err: err?.message }, "Legacy representative DOCX preview rejected");
+    return res.status(400).json({ error: cleanText(err?.message, 300) || "تعذر قراءة ملفات Word القديمة" });
+  }
+});
+
+router.post("/management/legacy-representatives/confirm", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
+  const previewToken = cleanText(req.body?.previewToken, 200);
+  const selectedRows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+  const preview = legacyRepresentativePreviews.get(previewToken);
+  if (!preview || preview.expiresAt <= Date.now() || preview.uploadedBy !== req.currentUser.id) {
+    legacyRepresentativePreviews.delete(previewToken);
+    return res.status(410).json({ error: "انتهت معاينة ملفات النظام القديم؛ أعد رفع الملفات" });
+  }
+  if (selectedRows.length > preview.records.length) return res.status(400).json({ error: "عدد الصفوف المحددة أكبر من المعاينة الأصلية" });
+  const selectionByIndex = new Map<number, number | null>();
+  for (const row of selectedRows) {
+    const index = Number(row?.index);
+    if (Number.isInteger(index) && index >= 0 && index < preview.records.length) selectionByIndex.set(index, numberId(row?.systemId));
+  }
+  const selections = [...selectionByIndex].map(([index, systemId]) => ({ index, systemId }));
+  if (!selections.length || selections.some((row: any) => !row.systemId)) return res.status(400).json({ error: "حدد النظام لكل مندوب تريد استيراده" });
+  const confirmedSelections = selections.map((row) => ({ index: row.index, systemId: row.systemId as number }));
+  try {
+    const summary = await db.transaction(async (tx) => {
+      const systemIds = [...new Set(confirmedSelections.map((row) => row.systemId))];
+      const systems = await tx.select({ id: visitSystemsTable.id }).from(visitSystemsTable)
+        .where(and(inArray(visitSystemsTable.id, systemIds), eq(visitSystemsTable.isActive, true)));
+      if (systems.length !== systemIds.length) throw new Error("LEGACY_SYSTEM_NOT_FOUND");
+      const contractors = await tx.select().from(visitContractorsTable);
+      const contractorByKey = firstCanonicalRowMap(contractors, canonicalContractorName);
+      let representativesCreated = 0, representativesUpdated = 0, contractorsCreated = 0;
+      for (const selection of confirmedSelections) {
+        const record = preview.records[selection.index];
+        const contractorKey = catalogNameKey(canonicalContractorName(record.companyName));
+        let contractor = contractorByKey.get(contractorKey);
+        if (!contractor) {
+          const [created] = await tx.insert(visitContractorsTable).values({ name: canonicalContractorName(record.companyName), createdByUserId: req.currentUser.id }).returning();
+          contractor = created;
+          contractorByKey.set(contractorKey, created);
+          contractorsCreated += 1;
+        } else if (!contractor.isActive) {
+          [contractor] = await tx.update(visitContractorsTable).set({ isActive: true, updatedAt: new Date() }).where(eq(visitContractorsTable.id, contractor.id)).returning();
+          contractorByKey.set(contractorKey, contractor);
+        }
+        const saved = await upsertRepresentative(tx, {
+          contractorId: contractor.id,
+          fullName: record.fullName,
+          identityNumber: record.identityNumber,
+          mobile: record.mobile,
+          residenceExpiresAt: null,
+          noResidenceException: false,
+          exceptionReason: null,
+        });
+        if (saved.created) representativesCreated += 1; else representativesUpdated += 1;
+        await tx.insert(visitRepresentativeSystemsTable).values({ representativeId: saved.row.id, systemId: selection.systemId, isActive: true })
+          .onConflictDoUpdate({ target: [visitRepresentativeSystemsTable.representativeId, visitRepresentativeSystemsTable.systemId], set: { isActive: true } });
+      }
+      return { imported: confirmedSelections.length, representativesCreated, representativesUpdated, contractorsCreated };
+    });
+    legacyRepresentativePreviews.delete(previewToken);
+    await audit(req, "استيراد مناديب وربطهم بالأنظمة من مستندات النظام القديم", summary);
+    return res.status(201).json(summary);
+  } catch (err: any) {
+    if (err?.message === "LEGACY_SYSTEM_NOT_FOUND") return res.status(400).json({ error: "أحد الأنظمة المحددة غير موجود أو معطل؛ حدّث الصفحة وأعد المعاينة" });
+    if (err?.message === "IDENTITY_BELONGS_TO_OTHER_CONTRACTOR") return res.status(409).json({ error: "توجد هوية مرتبطة بشركة مختلفة؛ راجع ملف المندوب قبل الاستيراد", code: "REPRESENTATIVE_CONTRACTOR_MISMATCH" });
+    return respondVisitMutationError(req, res, err, "تعذر استيراد مناديب النظام القديم؛ لم يتم حفظ أي صف", "يوجد مندوب مكرر في الملفات المختارة");
+  }
+});
+
 router.post("/management/direct-representative", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
   const contractorId = numberId(req.body.contractorId), systemId = numberId(req.body.systemId);
   const fullName = cleanText(req.body.fullName, 200), identityNumber = cleanText(req.body.identityNumber, 40).replace(/\s+/g, ""), mobile = cleanText(req.body.mobile, 30);
@@ -1108,25 +1377,46 @@ router.post("/management/direct-representative", requireAuth, requireApproved, r
   if (!/^\d{10}$/.test(identityNumber)) return res.status(400).json({ error: "رقم الهوية أو الإقامة يجب أن يتكون من 10 أرقام" });
   if (!isValidSaudiMobile(mobile)) return res.status(400).json({ error: "رقم الجوال السعودي غير صالح" });
   if (noResidenceException && !exceptionReason) return res.status(400).json({ error: "سبب الاستثناء بدون إقامة مطلوب" });
-  if (!noResidenceException && !residenceExpiresAt) return res.status(400).json({ error: "تاريخ انتهاء الإقامة مطلوب" });
   try {
-    const representative = await db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
       const [[contractor], [system]] = await Promise.all([
         tx.select({ id: visitContractorsTable.id }).from(visitContractorsTable).where(and(eq(visitContractorsTable.id, contractorId), eq(visitContractorsTable.isActive, true))).limit(1),
         tx.select({ id: visitSystemsTable.id }).from(visitSystemsTable).where(and(eq(visitSystemsTable.id, systemId), eq(visitSystemsTable.isActive, true))).limit(1),
       ]);
       if (!contractor || !system) throw new Error("CENTRAL_REFERENCE_NOT_FOUND");
-      const [row] = await tx.insert(visitRepresentativesTable).values({ contractorId, fullName, identityNumber, mobile, residenceExpiresAt, noResidenceException, exceptionReason: noResidenceException ? exceptionReason : null }).returning();
-      await tx.insert(visitRepresentativeSystemsTable).values({ representativeId: row.id, systemId, isActive: true });
-      return row;
+      const saved = await upsertRepresentative(tx, {
+        contractorId,
+        fullName,
+        identityNumber,
+        mobile,
+        residenceExpiresAt,
+        noResidenceException,
+        exceptionReason: noResidenceException ? exceptionReason : null,
+      });
+      await tx.insert(visitRepresentativeSystemsTable).values({ representativeId: saved.row.id, systemId, isActive: true })
+        .onConflictDoUpdate({
+          target: [visitRepresentativeSystemsTable.representativeId, visitRepresentativeSystemsTable.systemId],
+          set: { isActive: true },
+        });
+      return saved;
     });
-    await audit(req, "إضافة مندوب وربطه بالنظام من الإصدار المباشر", { representativeId: representative.id, contractorId, systemId, noResidenceException, exceptionReason: noResidenceException ? exceptionReason : null });
-    return res.status(201).json({ representative: { id: representative.id, contractorId, fullName: representative.fullName, identityMasked: maskIdentity(representative.identityNumber), residenceExpiresAt: representative.residenceExpiresAt, noResidenceException, isActive: true } });
+    await audit(req, result.created ? "إضافة مندوب وربطه بالنظام من الإصدار المباشر" : "تحديث مندوب وإعادة ربطه بالنظام من الإصدار المباشر", { representativeId: result.row.id, contractorId, systemId, noResidenceException, exceptionReason: noResidenceException ? exceptionReason : null });
+    return res.status(result.created ? 201 : 200).json({
+      representative: {
+        id: result.row.id,
+        contractorId,
+        fullName: result.row.fullName,
+        identityMasked: maskIdentity(result.row.identityNumber),
+        residenceExpiresAt: result.row.residenceExpiresAt,
+        noResidenceException: result.row.noResidenceException,
+        isActive: result.row.isActive,
+      },
+      reusedExisting: !result.created,
+    });
   } catch (err: any) {
     if (err?.message === "CENTRAL_REFERENCE_NOT_FOUND") return res.status(404).json({ error: "الشركة أو النظام غير موجود أو معطل" });
-    if (err?.code === "23505" || String(err?.message).includes("unique")) return res.status(409).json({ error: "رقم الهوية أو الإقامة مسجل من قبل" });
-    req.log.error({ err }, "Direct representative creation failed");
-    return res.status(500).json({ error: "تعذر حفظ المندوب وربطه بالنظام" });
+    if (err?.message === "IDENTITY_BELONGS_TO_OTHER_CONTRACTOR") return res.status(409).json({ error: "رقم الهوية أو الإقامة مرتبط بشركة أخرى؛ افتح المندوب الموجود وراجع الشركة", code: "REPRESENTATIVE_CONTRACTOR_MISMATCH" });
+    return respondVisitMutationError(req, res, err, "تعذر حفظ المندوب وربطه بالنظام؛ حدّث الصفحة ثم أعد المحاولة", "رقم الهوية أو الإقامة مسجل من قبل");
   }
 });
 
@@ -1171,18 +1461,27 @@ router.patch("/management/site-approvals/:id", requireAuth, requireApproved, req
 });
 
 router.post("/management/representatives", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
-  const contractorId = numberId(req.body.contractorId), fullName = cleanText(req.body.fullName, 200), identityNumber = cleanText(req.body.identityNumber, 40), mobile = cleanText(req.body.mobile, 30);
+  const contractorId = numberId(req.body.contractorId), fullName = cleanText(req.body.fullName, 200), identityNumber = cleanText(req.body.identityNumber, 40).replace(/\s+/g, ""), mobile = cleanText(req.body.mobile, 30);
   const noResidenceException = req.body.noResidenceException === true;
   const exceptionReason = cleanText(req.body.exceptionReason, 1_000);
   const residenceExpiresAt = dayString(req.body.residenceExpiresAt);
-  if (!contractorId || !fullName || !identityNumber || !isValidSaudiMobile(mobile)) return res.status(400).json({ error: "بيانات المندوب أو رقم الجوال غير صالحة" });
+  if (!contractorId || !fullName || !/^\d{10}$/.test(identityNumber) || !isValidSaudiMobile(mobile)) return res.status(400).json({ error: "اسم المندوب ورقم هوية أو إقامة من 10 أرقام وجوال سعودي صحيح مطلوبة" });
   if (noResidenceException && !exceptionReason) return res.status(400).json({ error: "سبب الاستثناء بدون إقامة مطلوب" });
-  if (!noResidenceException && !residenceExpiresAt) return res.status(400).json({ error: "تاريخ انتهاء الإقامة مطلوب" });
   try {
-    const [row] = await db.insert(visitRepresentativesTable).values({ contractorId, fullName, identityNumber, mobile, residenceExpiresAt, noResidenceException, exceptionReason: noResidenceException ? exceptionReason : null }).returning();
-    await audit(req, "إضافة مندوب مقاول باطن", { representativeId: row.id, contractorId, noResidenceException, exceptionReason: noResidenceException ? exceptionReason : null });
-    return res.status(201).json({ representative: { ...row, identityNumber: undefined, identityMasked: maskIdentity(row.identityNumber) } });
-  } catch { return res.status(409).json({ error: "رقم الهوية أو الإقامة مسجل من قبل" }); }
+    const result = await db.transaction(async (tx) => {
+      const [contractor] = await tx.select({ id: visitContractorsTable.id }).from(visitContractorsTable)
+        .where(and(eq(visitContractorsTable.id, contractorId), eq(visitContractorsTable.isActive, true))).limit(1);
+      if (!contractor) throw new Error("CONTRACTOR_NOT_FOUND");
+      return upsertRepresentative(tx, { contractorId, fullName, identityNumber, mobile, residenceExpiresAt, noResidenceException, exceptionReason: noResidenceException ? exceptionReason : null });
+    });
+    await audit(req, result.created ? "إضافة مندوب مقاول باطن" : "تحديث مندوب مقاول باطن مسجل", { representativeId: result.row.id, contractorId, noResidenceException, exceptionReason: noResidenceException ? exceptionReason : null });
+    const { identityNumber: _identityNumber, ...safeRow } = result.row;
+    return res.status(result.created ? 201 : 200).json({ representative: { ...safeRow, identityMasked: maskIdentity(result.row.identityNumber) }, reusedExisting: !result.created });
+  } catch (err: any) {
+    if (err?.message === "CONTRACTOR_NOT_FOUND") return res.status(404).json({ error: "الشركة غير موجودة أو معطلة" });
+    if (err?.message === "IDENTITY_BELONGS_TO_OTHER_CONTRACTOR") return res.status(409).json({ error: "رقم الهوية أو الإقامة مرتبط بشركة أخرى؛ راجع المندوب الموجود", code: "REPRESENTATIVE_CONTRACTOR_MISMATCH" });
+    return respondVisitMutationError(req, res, err, "تعذر حفظ المندوب؛ حدّث الصفحة ثم أعد المحاولة", "رقم الهوية أو الإقامة مسجل من قبل");
+  }
 });
 
 router.patch("/management/representatives/:id", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
