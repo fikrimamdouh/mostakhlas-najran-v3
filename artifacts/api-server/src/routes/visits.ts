@@ -311,7 +311,6 @@ type RepresentativeInput = {
   fullName: string;
   identityNumber: string;
   mobile: string;
-  residenceExpiresAt: string | null;
   noResidenceException: boolean;
   exceptionReason: string | null;
 };
@@ -324,7 +323,6 @@ async function upsertRepresentative(tx: AnyDb, input: RepresentativeInput) {
     fullName: input.fullName,
     identityNumber: input.identityNumber,
     mobile: input.mobile,
-    residenceExpiresAt: input.noResidenceException ? null : input.residenceExpiresAt,
     noResidenceException: input.noResidenceException,
     exceptionReason: input.noResidenceException ? input.exceptionReason : null,
     isActive: true,
@@ -333,7 +331,6 @@ async function upsertRepresentative(tx: AnyDb, input: RepresentativeInput) {
     set: {
       fullName: input.fullName,
       mobile: input.mobile,
-      residenceExpiresAt: input.noResidenceException ? null : input.residenceExpiresAt,
       noResidenceException: input.noResidenceException,
       exceptionReason: input.noResidenceException ? input.exceptionReason : null,
       isActive: true,
@@ -596,9 +593,6 @@ async function validateCentralContext(executor: AnyDb, context: VisitContext, op
   if (!repSystem) return "المندوب غير مرتبط بالنظام المحدد";
   if (representative.noResidenceException) {
     if (!cleanText(representative.exceptionReason, 1_000)) return "الاستثناء بدون إقامة يحتاج سببًا إجباريًا ومسجلًا";
-  } else if (representative.residenceExpiresAt) {
-    const expiry = parseIsoDate(String(representative.residenceExpiresAt || ""));
-    if (!expiry || expiry.toISOString().slice(0, 10) < visitDay.toISOString().slice(0, 10)) return "الإقامة منتهية أو لا تغطي تاريخ الزيارة";
   }
   const window = validateVisitWindow(metadata.startsAt, metadata.endsAt);
   if ("error" in window) return window.error;
@@ -633,11 +627,10 @@ async function canAccessVisit(user: any, visit: any): Promise<boolean> {
   return hasClusterVisitManagement(user) || (visit.userId != null && Number(visit.userId) === Number(user.id));
 }
 
-function isResidenceVerified(representative: any | null, visit: any): boolean {
+function isResidenceVerified(representative: any | null, _visit: any): boolean {
   if (!representative) return false;
   if (representative.noResidenceException) return !!cleanText(representative.exceptionReason, 1_000);
-  const expiry = dayString(representative.residenceExpiresAt), visitDay = dayString(visit.visitDate);
-  return !!expiry && !!visitDay && expiry >= visitDay;
+  return true;
 }
 
 async function hasActiveVisitDocuments(visitId: number, metadata: any | null): Promise<boolean> {
@@ -747,8 +740,8 @@ async function importZipRecords(records: Record<string, any[]>, userId: number) 
       const exception = row.noResidenceException === true;
       const exceptionReason = cleanText(row.exceptionReason, 1_000);
       if (exception && !exceptionReason) continue;
-      await tx.insert(visitRepresentativesTable).values({ contractorId, identityNumber, mobile, fullName, residenceExpiresAt: dayString(row.residenceExpiresAt), noResidenceException: exception, exceptionReason: exception ? exceptionReason : null })
-        .onConflictDoUpdate({ target: visitRepresentativesTable.identityNumber, set: { contractorId, mobile, fullName, residenceExpiresAt: dayString(row.residenceExpiresAt), noResidenceException: exception, exceptionReason: exception ? exceptionReason : null, isActive: true, updatedAt: new Date() } });
+      await tx.insert(visitRepresentativesTable).values({ contractorId, identityNumber, mobile, fullName, noResidenceException: exception, exceptionReason: exception ? exceptionReason : null })
+        .onConflictDoUpdate({ target: visitRepresentativesTable.identityNumber, set: { contractorId, mobile, fullName, noResidenceException: exception, exceptionReason: exception ? exceptionReason : null, isActive: true, updatedAt: new Date() } });
       counts.representatives = (counts.representatives || 0) + 1;
     }
     for (const row of records.qualifications || []) {
@@ -844,7 +837,6 @@ router.get("/catalog", requireAuth, requireApproved, async (req: any, res) => {
       contractorId: x.contractorId,
       fullName: x.fullName,
       identityMasked: maskIdentity(x.identityNumber),
-      residenceExpiresAt: x.residenceExpiresAt,
       noResidenceException: x.noResidenceException,
       exceptionReason: cluster ? x.exceptionReason : undefined,
       isActive: x.isActive,
@@ -1370,7 +1362,6 @@ router.post("/management/legacy-representatives/confirm", requireAuth, requireAp
           fullName: record.fullName,
           identityNumber: record.identityNumber,
           mobile: record.mobile,
-          residenceExpiresAt: null,
           noResidenceException: false,
           exceptionReason: null,
         });
@@ -1395,7 +1386,6 @@ router.post("/management/direct-representative", requireAuth, requireApproved, r
   const fullName = cleanText(req.body.fullName, 200), identityNumber = cleanText(req.body.identityNumber, 40).replace(/\s+/g, ""), mobile = cleanText(req.body.mobile, 30);
   const noResidenceException = req.body.noResidenceException === true;
   const exceptionReason = cleanText(req.body.exceptionReason, 1_000);
-  const residenceExpiresAt = dayString(req.body.residenceExpiresAt);
   if (!contractorId || !systemId || !fullName) return res.status(400).json({ error: "اختر الشركة والنظام واكتب اسم المندوب" });
   if (!/^\d{10}$/.test(identityNumber)) return res.status(400).json({ error: "رقم الهوية أو الإقامة يجب أن يتكون من 10 أرقام" });
   if (!isValidSaudiMobile(mobile)) return res.status(400).json({ error: "رقم الجوال السعودي غير صالح" });
@@ -1412,7 +1402,6 @@ router.post("/management/direct-representative", requireAuth, requireApproved, r
         fullName,
         identityNumber,
         mobile,
-        residenceExpiresAt,
         noResidenceException,
         exceptionReason: noResidenceException ? exceptionReason : null,
       });
@@ -1430,7 +1419,6 @@ router.post("/management/direct-representative", requireAuth, requireApproved, r
         contractorId,
         fullName: result.row.fullName,
         identityMasked: maskIdentity(result.row.identityNumber),
-        residenceExpiresAt: result.row.residenceExpiresAt,
         noResidenceException: result.row.noResidenceException,
         isActive: result.row.isActive,
       },
@@ -1472,7 +1460,6 @@ router.post("/management/direct-representative-link", requireAuth, requireApprov
         contractorId: representative.contractorId,
         fullName: representative.fullName,
         identityMasked: maskIdentity(representative.identityNumber),
-        residenceExpiresAt: representative.residenceExpiresAt,
         noResidenceException: representative.noResidenceException,
         isActive: representative.isActive,
       },
@@ -1529,7 +1516,6 @@ router.post("/management/representatives", requireAuth, requireApproved, require
   const contractorId = numberId(req.body.contractorId), fullName = cleanText(req.body.fullName, 200), identityNumber = cleanText(req.body.identityNumber, 40).replace(/\s+/g, ""), mobile = cleanText(req.body.mobile, 30);
   const noResidenceException = req.body.noResidenceException === true;
   const exceptionReason = cleanText(req.body.exceptionReason, 1_000);
-  const residenceExpiresAt = dayString(req.body.residenceExpiresAt);
   if (!contractorId || !fullName || !/^\d{10}$/.test(identityNumber) || !isValidSaudiMobile(mobile)) return res.status(400).json({ error: "اسم المندوب ورقم هوية أو إقامة من 10 أرقام وجوال سعودي صحيح مطلوبة" });
   if (noResidenceException && !exceptionReason) return res.status(400).json({ error: "سبب الاستثناء بدون إقامة مطلوب" });
   try {
@@ -1537,7 +1523,7 @@ router.post("/management/representatives", requireAuth, requireApproved, require
       const [contractor] = await tx.select({ id: visitContractorsTable.id }).from(visitContractorsTable)
         .where(and(eq(visitContractorsTable.id, contractorId), eq(visitContractorsTable.isActive, true))).limit(1);
       if (!contractor) throw new Error("CONTRACTOR_NOT_FOUND");
-      return upsertRepresentative(tx, { contractorId, fullName, identityNumber, mobile, residenceExpiresAt, noResidenceException, exceptionReason: noResidenceException ? exceptionReason : null });
+      return upsertRepresentative(tx, { contractorId, fullName, identityNumber, mobile, noResidenceException, exceptionReason: noResidenceException ? exceptionReason : null });
     });
     await audit(req, result.created ? "إضافة مندوب مقاول باطن" : "تحديث مندوب مقاول باطن مسجل", { representativeId: result.row.id, contractorId, noResidenceException, exceptionReason: noResidenceException ? exceptionReason : null });
     const { identityNumber: _identityNumber, ...safeRow } = result.row;
@@ -1556,7 +1542,7 @@ router.patch("/management/representatives/:id", requireAuth, requireApproved, re
   if (noResidenceException === true && !exceptionReason) return res.status(400).json({ error: "سبب الاستثناء بدون إقامة مطلوب" });
   const mobile = req.body.mobile === undefined ? undefined : cleanText(req.body.mobile, 30);
   if (mobile && !isValidSaudiMobile(mobile)) return res.status(400).json({ error: "رقم الجوال غير صالح" });
-  const [row] = await db.update(visitRepresentativesTable).set({ contractorId: numberId(req.body.contractorId) || undefined, fullName: cleanText(req.body.fullName, 200) || undefined, mobile, residenceExpiresAt: req.body.residenceExpiresAt === undefined ? undefined : dayString(req.body.residenceExpiresAt), noResidenceException: noResidenceException === undefined ? undefined : !!noResidenceException, exceptionReason: noResidenceException === true ? exceptionReason : (noResidenceException === false ? null : undefined), isActive: req.body.isActive === undefined ? undefined : !!req.body.isActive, updatedAt: new Date() }).where(eq(visitRepresentativesTable.id, id)).returning();
+  const [row] = await db.update(visitRepresentativesTable).set({ contractorId: numberId(req.body.contractorId) || undefined, fullName: cleanText(req.body.fullName, 200) || undefined, mobile, noResidenceException: noResidenceException === undefined ? undefined : !!noResidenceException, exceptionReason: noResidenceException === true ? exceptionReason : (noResidenceException === false ? null : undefined), isActive: req.body.isActive === undefined ? undefined : !!req.body.isActive, updatedAt: new Date() }).where(eq(visitRepresentativesTable.id, id)).returning();
   if (!row) return res.status(404).json({ error: "المندوب غير موجود" });
   await audit(req, "تعديل مندوب مقاول باطن", { representativeId: id, isActive: row.isActive, noResidenceException: row.noResidenceException, exceptionReason: row.noResidenceException ? row.exceptionReason : null });
   return res.json({ representative: { ...row, identityNumber: undefined, identityMasked: maskIdentity(row.identityNumber) } });
@@ -1763,13 +1749,11 @@ router.get("/management/archive", requireAuth, requireApproved, requireClusterVi
 async function buildAlerts() {
   const today = new Date().toISOString().slice(0, 10);
   const soon = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const [residences, qualifications, approvals] = await Promise.all([
-    db.select({ id: visitRepresentativesTable.id, name: visitRepresentativesTable.fullName, date: visitRepresentativesTable.residenceExpiresAt }).from(visitRepresentativesTable).where(and(eq(visitRepresentativesTable.isActive, true), eq(visitRepresentativesTable.noResidenceException, false), lte(visitRepresentativesTable.residenceExpiresAt, soon))),
+  const [qualifications, approvals] = await Promise.all([
     db.select({ id: visitQualificationsTable.id, date: visitQualificationsTable.validUntil }).from(visitQualificationsTable).where(and(eq(visitQualificationsTable.status, "active"), lte(visitQualificationsTable.validUntil, soon))),
     db.select({ id: visitSiteApprovalsTable.id, site: visitSiteApprovalsTable.siteName, date: visitSiteApprovalsTable.validUntil }).from(visitSiteApprovalsTable).where(and(eq(visitSiteApprovalsTable.status, "active"), lte(visitSiteApprovalsTable.validUntil, soon))),
   ]);
   return [
-    ...residences.map((x) => ({ type: "residence_expiry", title: x.date && x.date < today ? "إقامة منتهية" : "إقامة قاربت على الانتهاء", entityId: x.id, name: x.name, date: x.date })),
     ...qualifications.map((x) => ({ type: "qualification_expiry", title: x.date < today ? "تأهيل شركة منتهٍ" : "تأهيل شركة قارب على الانتهاء", entityId: x.id, date: x.date })),
     ...approvals.map((x) => ({ type: "site_approval_expiry", title: x.date < today ? "اعتماد موقع منتهٍ" : "اعتماد موقع قارب على الانتهاء", entityId: x.id, site: x.site, date: x.date })),
   ];

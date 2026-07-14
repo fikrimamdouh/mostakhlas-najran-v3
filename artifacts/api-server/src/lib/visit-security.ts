@@ -40,6 +40,7 @@ export function isValidSaudiMobile(value: unknown): boolean {
 }
 
 export function parseIsoDate(value: unknown): Date | null {
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : new Date(value.getTime());
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(value)) return null;
   const [year, month, day] = value.slice(0, 10).split("-").map(Number);
   const calendarDay = new Date(Date.UTC(year, month - 1, day));

@@ -43,6 +43,8 @@ test('security helpers enforce exact permissions, masking, validation, magic byt
   assert.equal(visitSecurity.parseIsoDate('2026-02-30'), null);
   assert.ok(visitSecurity.parseIsoDate('2026-02-28'));
   assert.ok(visitSecurity.validateVisitWindow('2026-07-14', null).startsAt);
+  const storedDate = new Date('2026-07-14T12:00:00.000Z');
+  assert.equal(visitSecurity.validateVisitWindow(storedDate, null).startsAt.toISOString(), storedDate.toISOString());
   const openEnded = visitSecurity.validateVisitWindow('2026-07-15T08:00:00.000Z', null);
   assert.equal(openEnded.endsAt, null);
   assert.deepEqual(visitSecurity.detectVisitFile(Buffer.from('%PDF-1.7\n')), { mimeType: 'application/pdf', extension: 'pdf' });
@@ -158,15 +160,15 @@ test('approved certificate catalogue uses full display names and seeds the suppl
   assert.match(centerJs, /approvedSubcontractors/);
 });
 
-test('direct issue uses the maintenance-contractor site catalogue and permits an optional end date', () => {
+test('direct issue uses the maintenance-contractor site catalogue and one validated visit date', () => {
   assert.match(route, /key: "بيت_العرب"/);
   assert.match(route, /key: "سراكو"/);
   assert.match(route, /الموقع المحدد لا يتبع مقاول الصيانة المختار/);
   assert.match(route, /endsAtProvided: !!window\.endsAt/);
-  assert.match(center, /تاريخ نهاية الزيارة \(اختياري\)/);
   assert.match(centerJs, /body\.startsAt = startDay/);
-  assert.match(centerJs, /body\.endsAt = endDay \? endDay \+ 'T23:59:59\.999Z' : null/);
+  assert.match(centerJs, /body\.endsAt = null/);
   assert.match(centerJs, /اختر تاريخ الزيارة من حقل التاريخ/);
+  assert.doesNotMatch(center + centerJs, /تاريخ نهاية الزيارة|تاريخ النهاية \(اختياري\)|name="endsAt"|elements\.endsAt/);
 });
 
 test('direct issue requires site approval but makes qualification optional at this stage', () => {
@@ -199,13 +201,10 @@ test('direct issue requires site approval but makes qualification optional at th
   assert.match(route, /IDENTITY_BELONGS_TO_OTHER_CONTRACTOR/);
 });
 
-test('representative expiry is optional, expired entered dates still block issue, and no-residence exceptions keep a required reason', () => {
-  assert.match(center, /انتهاء الإقامة \(اختياري\)/);
-  assert.doesNotMatch(centerJs, /residenceExpiresAt\.required\s*=\s*!this\.checked/);
-  assert.doesNotMatch(route, /!noResidenceException && !residenceExpiresAt/);
-  assert.match(route, /else if \(representative\.residenceExpiresAt\)/);
-  assert.match(route, /الإقامة منتهية أو لا تغطي تاريخ الزيارة/);
+test('representative expiry is absent from current APIs and forms while no-residence exceptions keep a required reason', () => {
+  assert.doesNotMatch(center + centerJs + route, /residenceExpiresAt|انتهاء الإقامة|تاريخ الانتهاء|الإقامة منتهية/);
   assert.match(route, /noResidenceException && !exceptionReason/);
+  assert.match(route, /if \(representative\.noResidenceException\)/);
 });
 
 test('periodic visits do not ask for purpose or times in the direct and requester forms', () => {
