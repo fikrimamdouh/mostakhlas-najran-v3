@@ -51,7 +51,7 @@
     var representativesHtml = '<table style="width:100%;border-collapse:collapse;margin-bottom:10px;table-layout:fixed"><thead><tr><th style="border:1px solid #cbd5e1;padding:6px 5px;background:#eaf0f8;font-size:11px;width:7%">م</th><th style="border:1px solid #cbd5e1;padding:6px 5px;background:#eaf0f8;font-size:11px;width:39%">اسم المندوب</th><th style="border:1px solid #cbd5e1;padding:6px 5px;background:#eaf0f8;font-size:11px;width:28%">الهوية / الإقامة</th><th style="border:1px solid #cbd5e1;padding:6px 5px;background:#eaf0f8;font-size:11px;width:26%">الجوال</th></tr></thead><tbody>' + representatives.map(function (representative, index) { return '<tr><td style="border:1px solid #d1d5db;padding:6px 5px;text-align:center;font-size:11px">' + (index + 1) + '</td><td style="border:1px solid #d1d5db;padding:6px 7px;font-size:11px;font-weight:700">' + esc(representative.fullName || '—') + '</td><td style="border:1px solid #d1d5db;padding:6px 7px;font-size:11px;direction:ltr;text-align:center">' + esc(representative.identityNumber || '—') + '</td><td style="border:1px solid #d1d5db;padding:6px 7px;font-size:11px;direction:ltr;text-align:center">' + esc(representative.mobile || '—') + '</td></tr>'; }).join('') + '</tbody></table>';
     var stampSource = settings.stamp || '/original/visit-default-stamp.png';
     var signatureSource = settings.signature || '/original/visit-default-signature.png';
-    var stampHtml = '<img src="' + esc(stampSource) + '" alt="الختم الإلكتروني" style="max-width:108px;max-height:108px;object-fit:contain">';
+    var stampHtml = '<img src="' + esc(stampSource) + '" alt="الختم الإلكتروني" style="display:block;width:auto;height:auto;max-width:190px;max-height:140px;object-fit:contain">';
     var signatureHtml = '<img src="' + esc(signatureSource) + '" alt="التوقيع الإلكتروني" style="display:block;max-width:165px;max-height:72px;object-fit:contain;margin:7px auto 0">';
     var draft = v.isDraft ? '<div style="position:absolute;inset:35% 8% auto;transform:rotate(-24deg);font-size:92px;font-weight:900;color:rgba(185,28,28,.13);text-align:center;border:9px solid rgba(185,28,28,.12);z-index:3;pointer-events:none">مسودة</div>' : '';
     var node = document.createElement('div');
@@ -72,7 +72,7 @@
         '<div data-role="permit-signature" style="grid-column:1;text-align:center"><p style="font-weight:800;font-size:14px;color:#1e3c72;margin:0 0 6px">' + esc(settings.signerTitle || 'مدير وحدة الصيانة العامة بتجمع نجران الصحي') + '</p>' +
         '<p style="font-size:13px;margin:0 0 4px">الاسم: ' + esc(settings.signerName || settings.managerName || 'م. محمد عباس المكرمي') + '</p>' +
         '<p style="font-size:13px;margin:0 0 8px">التاريخ: ' + formatDate(v.approvedAt, false) + ' م</p>' + signatureHtml + '</div>' +
-        '<div data-role="permit-stamp" style="grid-column:2;min-height:108px;display:flex;align-items:center;justify-content:center;text-align:center">' + stampHtml + '</div>' +
+        '<div data-role="permit-stamp" style="grid-column:2;min-height:140px;display:flex;align-items:center;justify-content:center;text-align:center;overflow:visible">' + stampHtml + '</div>' +
         '<div data-role="permit-qr" style="grid-column:3;text-align:center;justify-self:center"><img src="' + esc(v.qrDataUrl || '') + '" alt="QR تصريح الزيارة" style="width:92px;height:92px;display:block;image-rendering:pixelated">' +
         '<div style="font-size:9px;font-weight:700;margin-top:3px;color:#475569">تحقق عام من التصريح</div><div style="font-size:9px;font-weight:800;margin-top:2px;color:#1e3c72">' + esc(v.serialNumber || 'مسودة') + '</div></div></div>' +
       '<div data-role="permit-footer-note" style="margin-top:10px;border-top:1px solid #cbd5e1;padding-top:8px;text-align:center;font-size:10.5px;font-weight:800;color:#334155">يرجى إبراز بطاقة تأهيل الفريق الفني ونموذج اعتماد موافقة زيارة مقاولي الباطن للمسؤول بالمنشأة.</div>';
@@ -139,4 +139,5 @@
   }
 
   window.NajranVisitPermit = { load: loadPermit, preview: preview, print: print, showError: showError };
+
 })();
