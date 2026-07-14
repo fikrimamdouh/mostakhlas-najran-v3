@@ -1445,22 +1445,38 @@ function approvedPersonnelResponse(systems: any[], contractors: any[]) {
 }
 
 router.get("/management/bootstrap", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
-  await seedVisitCatalogFromLegacyRequests(req);
-  await seedApprovedSubcontractorCatalog(req);
-  await seedCertificateQualifications(req);
-  const [catalogResponse, pending, alerts] = await Promise.all([
-    Promise.all([
-      db.select().from(visitSystemsTable).orderBy(asc(visitSystemsTable.name)),
-      db.select().from(visitContractorsTable).orderBy(asc(visitContractorsTable.name)),
-      db.select().from(visitQualificationsTable),
-      db.select().from(visitSiteApprovalsTable),
-      db.select().from(visitRepresentativesTable).orderBy(asc(visitRepresentativesTable.fullName)),
-      db.select().from(visitRepresentativeSystemsTable),
-    ]),
-    db.select({ visit: visitRequestsTable, metadata: visitRequestMetadataTable }).from(visitRequestsTable).leftJoin(visitRequestMetadataTable, eq(visitRequestMetadataTable.visitId, visitRequestsTable.id)).where(and(eq(visitRequestsTable.status, "pending"), isNull(visitRequestsTable.archivedAt))).orderBy(desc(visitRequestsTable.createdAt)).limit(100),
-    buildAlerts(),
+  const warnings: string[] = [];
+  async function optionalStep<T>(label: string, operation: () => Promise<T>, fallback: T): Promise<T> {
+    try {
+      return await operation();
+    } catch (error: any) {
+      warnings.push(label);
+      // Keep the management center usable when one optional catalogue seed or
+      // summary query encounters legacy production data. The error remains in
+      // server logs without leaking SQL or connection details to the browser.
+      console.error(`[visits/bootstrap] ${label} failed`, {
+        code: error?.code,
+        constraint: error?.constraint,
+        message: error?.message,
+      });
+      return fallback;
+    }
+  }
+
+  await optionalStep("استكمال الكتالوج القديم", () => seedVisitCatalogFromLegacyRequests(req), { systems: 0, contractors: 0 });
+  await optionalStep("مزامنة دليل مقاولي الباطن", () => seedApprovedSubcontractorCatalog(req), { systems: 0, systemsDisabled: 0, contractors: 0 });
+  await optionalStep("مزامنة شهادات التأهيل", () => seedCertificateQualifications(req), { qualifications: 0 });
+
+  const [systems, contractors, qualifications, siteApprovals, representatives, representativeSystems, pending, alerts] = await Promise.all([
+    optionalStep("تحميل الأنظمة", () => db.select().from(visitSystemsTable).orderBy(asc(visitSystemsTable.name)), []),
+    optionalStep("تحميل الشركات", () => db.select().from(visitContractorsTable).orderBy(asc(visitContractorsTable.name)), []),
+    optionalStep("تحميل التأهيلات", () => db.select().from(visitQualificationsTable), []),
+    optionalStep("تحميل اعتمادات المواقع", () => db.select().from(visitSiteApprovalsTable), []),
+    optionalStep("تحميل المندوبين", () => db.select().from(visitRepresentativesTable).orderBy(asc(visitRepresentativesTable.fullName)), []),
+    optionalStep("تحميل ربط المندوبين", () => db.select().from(visitRepresentativeSystemsTable), []),
+    optionalStep("تحميل الطلبات الواردة", () => db.select({ visit: visitRequestsTable, metadata: visitRequestMetadataTable }).from(visitRequestsTable).leftJoin(visitRequestMetadataTable, eq(visitRequestMetadataTable.visitId, visitRequestsTable.id)).where(and(eq(visitRequestsTable.status, "pending"), isNull(visitRequestsTable.archivedAt))).orderBy(desc(visitRequestsTable.createdAt)).limit(100), []),
+    optionalStep("تحميل التنبيهات", () => buildAlerts(), []),
   ]);
-  const [systems, contractors, qualifications, siteApprovals, representatives, representativeSystems] = catalogResponse;
   return res.json({
     systems: systems.map((row) => ({ ...row, displayName: canonicalSystemName(row.name) })),
     contractors: contractors.map((row) => ({ ...row, displayName: canonicalContractorName(row.name) })),
@@ -1473,6 +1489,7 @@ router.get("/management/bootstrap", requireAuth, requireApproved, requireCluster
     approvedPersonnel: approvedPersonnelResponse(systems, contractors),
     pending: pending.map((row) => sanitizeVisit(row.visit, row.metadata)),
     alerts,
+    warnings,
     stats: { pending: pending.length, systems: systems.filter((x) => x.isActive).length, contractors: contractors.filter((x) => x.isActive).length, representatives: representatives.filter((x) => x.isActive).length },
   });
 });
