@@ -49,6 +49,63 @@ import { sendVisitApprovedEmail, sendVisitNewRequestEmail, sendVisitRejectedEmai
 const ADMIN_EMAIL = "rorofikri@gmail.com";
 const router = Router();
 
+const DEFAULT_VISIT_SIGNER_TITLE = "مشرف وحدة الصيانة العامة";
+const DEFAULT_VISIT_SIGNER_NAME = "م. محمد عباس المكرمي";
+const MAX_VISIT_PRINT_ASSET_BYTES = 2 * 1024 * 1024;
+const MAINTENANCE_CONTRACTORS = [
+  {
+    key: "بيت_العرب",
+    name: "شركة مجموعة بيت العرب الحديثة المحدودة",
+    sites: [
+      "مستشفى يدمه العام",
+      "مستشفى حبونا العام",
+      "مستشفى بدر الجنوب العام",
+      "مستشفى الولادة والأطفال",
+      "مستشفى غرب نجران للولادة والأطفال والعيادات التخصصية",
+      "المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة",
+    ],
+  },
+  {
+    key: "سراكو",
+    name: "شركة سراكو",
+    sites: [
+      "مستشفى نجران العام الجديد",
+      "مركز طب الأسنان التخصصي",
+      "مجمع الأمل للصحة النفسية",
+      "مستشفى ثار العام",
+      "مستشفى خباش العام",
+      "المراكز الصحية",
+      "مستشفى الملك خالد",
+      "مركز الأمير سلطان",
+      "مستشفى شروره العام",
+    ],
+  },
+] as const;
+
+// Snapshot of the approved-subcontractor folders supplied by the maintenance
+// unit. The folder names are systems and the PDF names identify the approved
+// companies. This seeds names and system/company relationships only; the
+// operational validity dates remain explicit in visit_qualifications.
+const APPROVED_SUBCONTRACTOR_CATALOG = [
+  { system: "محطات تحلية المياه", contractors: ["أسس التطوير للمقاولات", "تبرا العالمية"] },
+  { system: "السنترال والنداء واستدعاء الممرضات", contractors: ["دار المبتكر", "سايت تكنولوجي", "مؤسسة أشواق الجنوب", "شركة إيكوفا", "نبراس حنين"] },
+  { system: "مكافحة الحشرات", contractors: ["مستقبل الأوطان للتشغيل", "شركة تراب كيل", "مؤسسة ماسة الحشرات", "شركة الإيوان الطبية", "مؤسسة التألق البيئي", "شركة حنين للمقاولات", "مكسل", "سادن", "رسيل الشرق", "درة الفتاك"] },
+  { system: "UPS", contractors: ["الصدارة", "رواد الأمانة", "سايت تكنولوجي", "النسر الفضي", "شركة إيكوفا", "شركة الأمان الحديثة للطاقة", "المرافق"] },
+  { system: "BMS", contractors: ["الصدارة", "دار المبتكر", "الأفق المتميزة", "إلهامات الحديثة", "شركة إيكوفا"] },
+  { system: "كاميرات المراقبة الأمنية CCTV", contractors: ["سايت تكنولوجي", "الأفق المتميزة", "مؤسسة أشواق الجنوب", "دروع الأمنية", "نبراس حنين"] },
+  { system: "محطات معالجة مياه الصرف الصحي", contractors: ["أسس التطوير للمقاولات"] },
+  { system: "الغلايات", contractors: ["الصغير", "إلهامات الحديثة", "خالد عايض الجعيدي"] },
+  { system: "المغاسل", contractors: ["مصنع الجعيدي"] },
+  { system: "الغازات الطبية", contractors: ["النظم الاحترافية", "شركة ماس", "سيسنبر العالمية", "أهالينا", "دريجر", "شركة مودرن تشالنجر"] },
+  { system: "إطفاء الحريق", contractors: ["مؤسسة أجهزة الإطفاء لأجهزة السلامة", "الركن السليم", "الشركة العربية", "شركة دائرة التحكم", "شركة إيكوفا", "أفق الحجاز", "نبراس حنين", "قمم شار", "المفردون", "النسر الفضي"] },
+  { system: "إنذار الحريق", contractors: ["النسر الفضي", "مؤسسة أشواق الجنوب", "مؤسسة أجهزة الإطفاء لأجهزة السلامة", "شركة السامي للأمن", "الركن السليم", "شركة دائرة التحكم", "شركة إيكوفا", "أفق الحجاز", "المفردون", "نبراس حنين", "قمم شار"] },
+  { system: "المحولات واللوحات والقواطع الكهربائية", contractors: ["الصدارة", "سبق التقنية", "سايت تكنولوجي", "صفوف الريادة", "المرافق", "شركة الأمان الحديثة للطاقة", "النسر الفضي"] },
+  { system: "المولدات الكهربائية وATS", contractors: ["سبق التقنية", "الصدارة", "سايت تكنولوجي", "صفوف الريادة", "النسر الفضي", "شركة الأمان الحديثة للطاقة", "المرافق"] },
+  { system: "تنظيف مجاري الهواء", contractors: ["كيان التزويد", "مصداقية وطن", "شركة آراك الخليج", "بريق الجليد"] },
+  { system: "ثلاجة الموتى", contractors: ["شركة رياح النواة", "شنان الخليج"] },
+  { system: "التكييف والتبريد", contractors: ["إلهامات الحديثة", "شركة رياح النواة", "شركة وتين", "مصداقية الوطن", "شركة أهالينا", "شنان الخليج"] },
+] as const;
+
 const uploadMemory = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_VISIT_DOCUMENT_BYTES, files: 1 },
@@ -108,6 +165,35 @@ function audit(req: any, action: string, details: Record<string, unknown>) {
 
 function cleanText(value: unknown, max = 500): string {
   return String(value ?? "").trim().slice(0, max);
+}
+
+function catalogNameKey(value: unknown): string {
+  return cleanText(value, 250)
+    .normalize("NFKC")
+    .toLocaleLowerCase("ar")
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+function maintenanceContractor(key: unknown) {
+  const normalized = cleanText(key, 80);
+  return MAINTENANCE_CONTRACTORS.find((row) => row.key === normalized) || null;
+}
+
+function normalizedPrintAsset(value: unknown): string {
+  if (value === undefined) throw new Error("PRINT_ASSET_UNDEFINED");
+  if (value === null || value === "") return "";
+  const raw = String(value);
+  const match = raw.match(/^data:(image\/(?:png|jpeg));base64,([A-Za-z0-9+/=]+)$/);
+  if (!match) throw new Error("PRINT_ASSET_FORMAT");
+  const buffer = Buffer.from(match[2], "base64");
+  if (!buffer.length || buffer.length > MAX_VISIT_PRINT_ASSET_BYTES) throw new Error("PRINT_ASSET_SIZE");
+  const detected = detectVisitFile(buffer);
+  if (!detected || detected.mimeType === "application/pdf" || detected.mimeType !== match[1]) throw new Error("PRINT_ASSET_MAGIC");
+  return `data:${detected.mimeType};base64,${buffer.toString("base64")}`;
 }
 
 function numberId(value: unknown): number | null {
@@ -459,19 +545,46 @@ async function importZipRecords(records: Record<string, any[]>, userId: number) 
 
 // ── Shared settings and submitter endpoints ─────────────────────────────────
 router.get("/settings", requireAuth, requireApproved, async (_req, res) => {
-  const [stamp, signature, managerName] = await Promise.all([
-    getSetting("visit_stamp"), getSetting("visit_signature"), getSetting("visit_manager_name"),
+  const [stamp, signature, signerName, signerTitle, legacyManagerName] = await Promise.all([
+    getSetting("visit_stamp"), getSetting("visit_signature"), getSetting("visit_signer_name"), getSetting("visit_signer_title"), getSetting("visit_manager_name"),
   ]);
-  return res.json({ stamp, signature, managerName: managerName || "م. محمد عباس المكرمي" });
+  const effectiveSignerName = signerName || legacyManagerName || DEFAULT_VISIT_SIGNER_NAME;
+  res.setHeader("Cache-Control", "no-store");
+  return res.json({
+    stamp,
+    signature,
+    signerName: effectiveSignerName,
+    signerTitle: signerTitle || DEFAULT_VISIT_SIGNER_TITLE,
+    // Compatibility for clients deployed before signer fields were renamed.
+    managerName: effectiveSignerName,
+  });
 });
 
 router.post("/settings", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
-  const { stamp, signature, managerName } = req.body || {};
-  const ops: Promise<void>[] = [];
-  if (stamp !== undefined) ops.push(setSetting("visit_stamp", cleanText(stamp, 5_000_000), req.currentUser.email));
-  if (signature !== undefined) ops.push(setSetting("visit_signature", cleanText(signature, 5_000_000), req.currentUser.email));
-  if (managerName !== undefined) ops.push(setSetting("visit_manager_name", cleanText(managerName, 200) || "م. محمد عباس المكرمي", req.currentUser.email));
-  await Promise.all(ops);
+  const { stamp, signature } = req.body || {};
+  const signerName = req.body?.signerName ?? req.body?.managerName;
+  const signerTitle = req.body?.signerTitle;
+  let normalizedStamp: string | undefined;
+  let normalizedSignature: string | undefined;
+  try {
+    normalizedStamp = stamp === undefined ? undefined : normalizedPrintAsset(stamp);
+    normalizedSignature = signature === undefined ? undefined : normalizedPrintAsset(signature);
+  } catch (err: any) {
+    if (err?.message === "PRINT_ASSET_SIZE") return res.status(413).json({ error: "حجم صورة الختم أو التوقيع يتجاوز 2 ميجابايت" });
+    if (err?.message === "PRINT_ASSET_FORMAT" || err?.message === "PRINT_ASSET_MAGIC") return res.status(415).json({ error: "يجب رفع صورة PNG أو JPEG حقيقية للختم والتوقيع" });
+    return res.status(400).json({ error: "بيانات الختم أو التوقيع غير صالحة" });
+  }
+  try {
+    const ops: Promise<void>[] = [];
+    if (normalizedStamp !== undefined) ops.push(setSetting("visit_stamp", normalizedStamp, req.currentUser.email));
+    if (normalizedSignature !== undefined) ops.push(setSetting("visit_signature", normalizedSignature, req.currentUser.email));
+    if (signerName !== undefined) ops.push(setSetting("visit_signer_name", cleanText(signerName, 200) || DEFAULT_VISIT_SIGNER_NAME, req.currentUser.email));
+    if (signerTitle !== undefined) ops.push(setSetting("visit_signer_title", cleanText(signerTitle, 200) || DEFAULT_VISIT_SIGNER_TITLE, req.currentUser.email));
+    await Promise.all(ops);
+  } catch (err: any) {
+    req.log.error({ err }, "Failed to update visit print settings");
+    return res.status(500).json({ error: "تعذر حفظ إعدادات الطباعة" });
+  }
   await audit(req, "تحديث إعدادات طباعة تصاريح الزيارة", { fields: Object.keys(req.body || {}) });
   return res.json({ success: true });
 });
@@ -576,7 +689,11 @@ router.post("/", requireAuth, requireApproved, async (req: any, res) => {
 router.post("/management/direct-issue", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
   const systemId = numberId(req.body.systemId), contractorId = numberId(req.body.contractorId), representativeId = numberId(req.body.representativeId), siteApprovalId = numberId(req.body.siteApprovalId), qualificationId = numberId(req.body.qualificationId);
   const purpose = cleanText(req.body.purpose, 500);
+  const maintenance = maintenanceContractor(req.body.maintenanceContractorKey);
+  const siteName = cleanText(req.body.siteName, 200);
   const window = validateVisitWindow(req.body.startsAt, req.body.endsAt);
+  if (!maintenance) return res.status(400).json({ error: "اختر مقاول الصيانة: بيت العرب أو سراكو" });
+  if (!siteName || !(maintenance.sites as readonly string[]).includes(siteName)) return res.status(400).json({ error: "الموقع المحدد لا يتبع مقاول الصيانة المختار" });
   if (!systemId || !contractorId || !representativeId || !siteApprovalId || !qualificationId || !purpose) return res.status(400).json({ error: "بيانات الإصدار المباشر كاملة والغرض مطلوبة" });
   if ("error" in window) return res.status(400).json({ error: window.error });
   const [systemRows, contractorRows, representativeRows, approvalRows] = await Promise.all([
@@ -587,6 +704,7 @@ router.post("/management/direct-issue", requireAuth, requireApproved, requireClu
   ]);
   const system = systemRows[0], contractor = contractorRows[0], representative = representativeRows[0], approval = approvalRows[0];
   if (!system || !contractor || !representative || !approval) return res.status(400).json({ error: "أحد مراجع الإصدار المباشر غير موجود" });
+  if (approval.siteName !== siteName) return res.status(400).json({ error: "اعتماد الموقع لا يطابق الموقع المحدد" });
   try {
     const context = await db.transaction(async (tx) => {
       const [visit] = await tx.insert(visitRequestsTable).values({
@@ -597,7 +715,7 @@ router.post("/management/direct-issue", requireAuth, requireApproved, requireClu
         visitDate: window.startsAt.toISOString().slice(0, 10),
         repMobile: representative.mobile,
         systemName: system.name,
-        mainContractor: cleanText(req.body.mainContractor || "تجمع نجران الصحي", 250),
+        mainContractor: maintenance.name,
         subContractor: contractor.name,
         status: "pending",
         submittedByName: req.currentUser.name,
@@ -608,7 +726,7 @@ router.post("/management/direct-issue", requireAuth, requireApproved, requireClu
       await ensurePermitToken(tx, visit.id);
       return approveVisit(tx, visit.id, req.currentUser);
     });
-    await audit(req, "إصدار مباشر لتصريح زيارة", { visitId: context.visit.id, serialNumber: context.visit.serialNumber, siteLocation: context.visit.siteLocation });
+    await audit(req, "إصدار مباشر لتصريح زيارة", { visitId: context.visit.id, serialNumber: context.visit.serialNumber, maintenanceContractor: maintenance.name, siteLocation: context.visit.siteLocation, endsAtProvided: !!window.endsAt });
     return res.status(201).json({ visit: sanitizeVisit(context.visit, context.metadata) });
   } catch (err: any) {
     if (String(err?.message).startsWith("VALIDATION:")) return res.status(400).json({ error: String(err.message).slice(11) });
@@ -648,7 +766,78 @@ router.get("/:id", requireAuth, requireApproved, async (req: any, res) => {
 });
 
 // ── Center bootstrap, catalogue management and linking ──────────────────────
+async function seedVisitCatalogFromLegacyRequests(req: any) {
+  const legacyRows = await db.selectDistinct({
+    systemName: visitRequestsTable.systemName,
+    contractorName: visitRequestsTable.subContractor,
+  }).from(visitRequestsTable);
+  const systemNames = [...new Set(legacyRows.map((row) => cleanText(row.systemName, 200)).filter(Boolean))];
+  const contractorNames = [...new Set(legacyRows.map((row) => cleanText(row.contractorName, 200)).filter(Boolean))];
+  if (!systemNames.length && !contractorNames.length) return { systems: 0, contractors: 0 };
+  const inserted = await db.transaction(async (tx) => {
+    let systems = 0;
+    let contractors = 0;
+    for (const name of systemNames) {
+      const rows = await tx.insert(visitSystemsTable).values({ name, createdByUserId: req.currentUser.id }).onConflictDoNothing().returning({ id: visitSystemsTable.id });
+      systems += rows.length;
+    }
+    for (const name of contractorNames) {
+      const rows = await tx.insert(visitContractorsTable).values({ name, createdByUserId: req.currentUser.id }).onConflictDoNothing().returning({ id: visitContractorsTable.id });
+      contractors += rows.length;
+    }
+    return { systems, contractors };
+  });
+  if (inserted.systems || inserted.contractors) {
+    await audit(req, "استكمال كتالوج الزيارات من السجلات السابقة", inserted);
+  }
+  return inserted;
+}
+
+async function seedApprovedSubcontractorCatalog(req: any) {
+  const [existingSystems, existingContractors] = await Promise.all([
+    db.select({ id: visitSystemsTable.id, name: visitSystemsTable.name }).from(visitSystemsTable),
+    db.select({ id: visitContractorsTable.id, name: visitContractorsTable.name }).from(visitContractorsTable),
+  ]);
+  const systemKeys = new Set(existingSystems.map((row) => catalogNameKey(row.name)));
+  const contractorKeys = new Set(existingContractors.map((row) => catalogNameKey(row.name)));
+  const inserted = await db.transaction(async (tx) => {
+    let systems = 0;
+    let contractors = 0;
+    for (const catalog of APPROVED_SUBCONTRACTOR_CATALOG) {
+      const systemKey = catalogNameKey(catalog.system);
+      if (!systemKeys.has(systemKey)) {
+        const rows = await tx.insert(visitSystemsTable).values({ name: catalog.system, description: "مستورد من كتالوج مقاولي الباطن المعتمدين", createdByUserId: req.currentUser.id }).onConflictDoNothing().returning({ id: visitSystemsTable.id });
+        if (rows.length) { systems += 1; systemKeys.add(systemKey); }
+      }
+      for (const name of catalog.contractors) {
+        const contractorKey = catalogNameKey(name);
+        if (contractorKeys.has(contractorKey)) continue;
+        const rows = await tx.insert(visitContractorsTable).values({ name, createdByUserId: req.currentUser.id }).onConflictDoNothing().returning({ id: visitContractorsTable.id });
+        if (rows.length) { contractors += 1; contractorKeys.add(contractorKey); }
+      }
+    }
+    return { systems, contractors };
+  });
+  if (inserted.systems || inserted.contractors) await audit(req, "مزامنة أسماء مقاولي الباطن المعتمدين", inserted);
+  return inserted;
+}
+
+function approvedCatalogResponse(systems: any[], contractors: any[]) {
+  const systemByKey = new Map(systems.map((row) => [catalogNameKey(row.name), row]));
+  const contractorByKey = new Map(contractors.map((row) => [catalogNameKey(row.name), row]));
+  return APPROVED_SUBCONTRACTOR_CATALOG.map((catalog) => {
+    const system = systemByKey.get(catalogNameKey(catalog.system));
+    return {
+      systemId: system?.id || null,
+      systemName: system?.name || catalog.system,
+      contractors: catalog.contractors.map((name) => contractorByKey.get(catalogNameKey(name))).filter(Boolean).map((row) => ({ id: row.id, name: row.name })),
+    };
+  }).filter((row) => row.systemId);
+}
+
 router.get("/management/bootstrap", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
+  await seedVisitCatalogFromLegacyRequests(req);
+  await seedApprovedSubcontractorCatalog(req);
   const [catalogResponse, pending, alerts] = await Promise.all([
     Promise.all([
       db.select().from(visitSystemsTable).orderBy(asc(visitSystemsTable.name)),
@@ -669,6 +858,8 @@ router.get("/management/bootstrap", requireAuth, requireApproved, requireCluster
     siteApprovals,
     representatives: representatives.map(({ identityNumber, mobile, ...row }) => ({ ...row, identityMasked: maskIdentity(identityNumber), mobileMasked: mobile ? `${mobile.slice(0, 3)}••••${mobile.slice(-3)}` : "—" })),
     representativeSystems,
+    maintenanceContractors: MAINTENANCE_CONTRACTORS,
+    approvedSubcontractors: approvedCatalogResponse(systems, contractors),
     pending: pending.map((row) => sanitizeVisit(row.visit, row.metadata)),
     alerts,
     stats: { pending: pending.length, systems: systems.filter((x) => x.isActive).length, contractors: contractors.filter((x) => x.isActive).length, representatives: representatives.filter((x) => x.isActive).length },
@@ -959,8 +1150,14 @@ router.get("/management/archive", requireAuth, requireApproved, requireClusterVi
   if (cleanText(req.query.site, 200)) conditions.push(ilike(visitRequestsTable.siteLocation, `%${cleanText(req.query.site, 200)}%`));
   const requestedStatus = cleanText(req.query.status, 30);
   const today = new Date().toISOString().slice(0, 10);
-  if (requestedStatus === "expired") conditions.push(and(eq(visitRequestsTable.status, "approved"), or(lte(visitRequestMetadataTable.endsAt, new Date()), and(isNull(visitRequestMetadataTable.id), lt(visitRequestsTable.visitDate, today)))));
-  else if (requestedStatus === "active") conditions.push(and(eq(visitRequestsTable.status, "approved"), or(gte(visitRequestMetadataTable.endsAt, new Date()), and(isNull(visitRequestMetadataTable.id), gte(visitRequestsTable.visitDate, today)))));
+  if (requestedStatus === "expired") conditions.push(and(eq(visitRequestsTable.status, "approved"), or(
+    lte(visitRequestMetadataTable.endsAt, new Date()),
+    and(isNull(visitRequestMetadataTable.endsAt), lt(visitRequestsTable.visitDate, today)),
+  )));
+  else if (requestedStatus === "active") conditions.push(and(eq(visitRequestsTable.status, "approved"), or(
+    gte(visitRequestMetadataTable.endsAt, new Date()),
+    and(isNull(visitRequestMetadataTable.endsAt), gte(visitRequestsTable.visitDate, today)),
+  )));
   else if (requestedStatus) conditions.push(eq(visitRequestsTable.status, requestedStatus as any));
   const from = dayString(req.query.from), to = dayString(req.query.to);
   if (from) conditions.push(gte(visitRequestsTable.visitDate, from));
@@ -1109,8 +1306,15 @@ router.get("/:id/permit", requireAuth, requireApproved, async (req: any, res) =>
     const qr = await db.transaction((tx) => ensurePermitToken(tx, id));
     const token = decryptPermitToken(qr.tokenCiphertext);
     const origin = `${req.protocol}://${req.get("host")}`;
-    const qrDataUrl = await QRCode.toDataURL(`${origin}/api/visits/qr/verify-link?token=${encodeURIComponent(token)}`, { errorCorrectionLevel: "M", margin: 1, width: 220 });
-    const [stamp, signature, managerName, documentsVerified] = await Promise.all([getSetting("visit_stamp"), getSetting("visit_signature"), getSetting("visit_manager_name"), hasActiveVisitDocuments(id, context.metadata)]);
+    const qrDataUrl = await QRCode.toDataURL(`${origin}/original-viewer?page=cluster-subcontractor-visits.html&visitQr=${encodeURIComponent(token)}&download=1`, { errorCorrectionLevel: "M", margin: 1, width: 220 });
+    const [stamp, signature, signerName, signerTitle, legacyManagerName, documentsVerified] = await Promise.all([
+      getSetting("visit_stamp"),
+      getSetting("visit_signature"),
+      getSetting("visit_signer_name"),
+      getSetting("visit_signer_title"),
+      getSetting("visit_manager_name"),
+      hasActiveVisitDocuments(id, context.metadata),
+    ]);
     await audit(req, context.visit.status === "approved" ? "معاينة تصريح زيارة" : "معاينة مسودة تصريح زيارة", { visitId: id, serialNumber: context.visit.serialNumber || null });
     return res.json({
       permit: {
@@ -1122,7 +1326,13 @@ router.get("/:id/permit", requireAuth, requireApproved, async (req: any, res) =>
         isDraft: context.visit.status !== "approved",
         qrDataUrl,
       },
-      settings: { stamp, signature, managerName: managerName || "م. محمد عباس المكرمي" },
+      settings: {
+        stamp,
+        signature,
+        signerName: signerName || legacyManagerName || DEFAULT_VISIT_SIGNER_NAME,
+        signerTitle: signerTitle || DEFAULT_VISIT_SIGNER_TITLE,
+        managerName: signerName || legacyManagerName || DEFAULT_VISIT_SIGNER_NAME,
+      },
     });
   } catch (err: any) {
     req.log.error({ err }, "Permit preview failed");
@@ -1173,6 +1383,7 @@ async function verifyToken(req: any, token: string) {
       cancellationReason: full ? row.visit.cancelledReason : undefined,
       exceptionReason: full && row.representative?.noResidenceException ? row.representative.exceptionReason : undefined,
       canOpenFull: full,
+      hasSignedPermit: full ? !!row.visit.signedPermitFile : undefined,
     },
   };
 }
@@ -1209,7 +1420,7 @@ router.get("/qr/manual", requireAuth, requireApproved, async (req: any, res) => 
   if (!row) return res.status(404).json({ error: "رقم التصريح غير موجود" });
   const full = hasClusterVisitManagement(req.currentUser);
   const documentsVerified = full ? await hasActiveVisitDocuments(row.visit.id, row.metadata) : undefined;
-  return res.json({ full, visit: { id: full ? row.visit.id : undefined, serialNumber: row.visit.serialNumber, status: visitEffectiveStatus(row.visit, row.metadata), visitorName: full ? row.visit.repName : shortenVisitorName(row.visit.repName), repIdMasked: full ? maskIdentity(row.visit.repId) : undefined, company: full ? row.visit.subContractor : undefined, system: full ? row.visit.systemName : undefined, site: row.visit.siteLocation, purpose: full ? row.metadata?.purpose : undefined, visitDate: row.visit.visitDate, startsAt: full ? row.metadata?.startsAt : undefined, endsAt: full ? row.metadata?.endsAt : undefined, representativeName: full ? row.representative?.fullName || row.visit.repName : undefined, residenceVerified: full ? isResidenceVerified(row.representative, row.visit) : undefined, documentsVerified, cancellationReason: full ? row.visit.cancelledReason : undefined, exceptionReason: full && row.representative?.noResidenceException ? row.representative.exceptionReason : undefined, canOpenFull: full } });
+  return res.json({ full, visit: { id: full ? row.visit.id : undefined, serialNumber: row.visit.serialNumber, status: visitEffectiveStatus(row.visit, row.metadata), visitorName: full ? row.visit.repName : shortenVisitorName(row.visit.repName), repIdMasked: full ? maskIdentity(row.visit.repId) : undefined, company: full ? row.visit.subContractor : undefined, system: full ? row.visit.systemName : undefined, site: row.visit.siteLocation, purpose: full ? row.metadata?.purpose : undefined, visitDate: row.visit.visitDate, startsAt: full ? row.metadata?.startsAt : undefined, endsAt: full ? row.metadata?.endsAt : undefined, representativeName: full ? row.representative?.fullName || row.visit.repName : undefined, residenceVerified: full ? isResidenceVerified(row.representative, row.visit) : undefined, documentsVerified, cancellationReason: full ? row.visit.cancelledReason : undefined, exceptionReason: full && row.representative?.noResidenceException ? row.representative.exceptionReason : undefined, canOpenFull: full, hasSignedPermit: full ? !!row.visit.signedPermitFile : undefined } });
 });
 
 export default router;

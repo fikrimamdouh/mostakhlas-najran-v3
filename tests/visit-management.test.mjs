@@ -40,6 +40,8 @@ test('security helpers enforce exact permissions, masking, validation, magic byt
   assert.equal(visitSecurity.isValidSaudiMobile('123'), false);
   assert.equal(visitSecurity.parseIsoDate('2026-02-30'), null);
   assert.ok(visitSecurity.parseIsoDate('2026-02-28'));
+  const openEnded = visitSecurity.validateVisitWindow('2026-07-15T08:00:00.000Z', null);
+  assert.equal(openEnded.endsAt, null);
   assert.deepEqual(visitSecurity.detectVisitFile(Buffer.from('%PDF-1.7\n')), { mimeType: 'application/pdf', extension: 'pdf' });
   assert.equal(visitSecurity.detectVisitFile(Buffer.from('not a pdf')), null);
   assert.throws(() => visitSecurity.validateZipEntries([{ entryName: '../escape.json', header: { size: 10, compressedSize: 10 } }]));
@@ -108,6 +110,37 @@ test('QR uses random tokens, stores hash plus ciphertext, rate limits scans and 
   const qrPayload = route.match(/QRCode\.toDataURL\(([\s\S]*?), \{ errorCorrectionLevel/);
   assert.ok(qrPayload);
   assert.doesNotMatch(qrPayload[1], /repId|repName|identity|mobile|visitId/);
+  assert.match(qrPayload[1], /original-viewer\?page=cluster-subcontractor-visits\.html&visitQr=/);
+});
+
+test('approved Drive catalogue seeds systems and subcontractor names without inventing qualification dates', () => {
+  assert.match(route, /APPROVED_SUBCONTRACTOR_CATALOG/);
+  for (const system of ['إطفاء الحريق', 'إنذار الحريق', 'التكييف والتبريد', 'محطات تحلية المياه', 'كاميرات المراقبة الأمنية CCTV']) assert.match(route, new RegExp(system));
+  for (const contractor of ['أفق الحجاز', 'المفردون', 'شركة دائرة التحكم', 'نبراس حنين', 'شركة إيكوفا']) assert.match(route, new RegExp(contractor));
+  const catalogBlock = route.match(/const APPROVED_SUBCONTRACTOR_CATALOG[\s\S]*?\] as const;/);
+  assert.ok(catalogBlock);
+  assert.doesNotMatch(catalogBlock[0], /validFrom|validUntil/);
+  assert.match(route, /مزامنة أسماء مقاولي الباطن المعتمدين/);
+  assert.match(centerJs, /approvedSubcontractors/);
+});
+
+test('direct issue uses the maintenance-contractor site catalogue and permits an optional end time', () => {
+  assert.match(route, /key: "بيت_العرب"/);
+  assert.match(route, /key: "سراكو"/);
+  assert.match(route, /الموقع المحدد لا يتبع مقاول الصيانة المختار/);
+  assert.match(route, /endsAtProvided: !!window\.endsAt/);
+  assert.match(center, /نهاية الزيارة \(اختياري\)/);
+  assert.match(centerJs, /body\.endsAt = body\.endsAt \? new Date\(body\.endsAt\)\.toISOString\(\) : null/);
+});
+
+test('center retries expired auth, opens through the authenticated viewer and QR can securely download the permit', () => {
+  assert.match(center, /original-viewer\?/);
+  assert.match(centerJs, /response\.status === 401 && !retried/);
+  assert.match(centerJs, /handleQrDeepLink/);
+  assert.match(centerJs, /downloadPermitFromScan/);
+  assert.match(centerJs, /v\.hasSignedPermit/);
+  assert.match(centerJs, /NajranVisitPermit\.print\(v\.id\)/);
+  assert.match(route, /hasSignedPermit: full \? !!row\.visit\.signedPermitFile : undefined/);
 });
 
 test('archive supports all requested filters and pagination', () => {
@@ -118,12 +151,33 @@ test('archive supports all requested filters and pagination', () => {
 });
 
 test('printing reuses one shared permit layout, includes QR and verification text, and excludes identity images', () => {
-  assert.match(printJs, /موافقة زيارة مقاولي الباطن/);
+  assert.match(printJs, /إعتماد موافقة زيارة مقاولي الباطن/);
   assert.match(printJs, /تم التحقق من بيانات الهوية\/الإقامة إلكترونيًا/);
+  assert.match(printJs, /توافق وحدة الصيانة العامة بتجمع نجران الصحي/);
+  assert.match(printJs, /مشرف وحدة الصيانة العامة/);
+  assert.match(printJs, /م\. محمد عباس المكرمي/);
   assert.match(printJs, /qrDataUrl/);
+  assert.match(printJs, /data-role="permit-stamp"/);
+  assert.match(printJs, /data-role="permit-qr"/);
   assert.match(printJs, /مسودة/);
+  assert.doesNotMatch(printJs, /\['الموقع',/);
+  assert.doesNotMatch(printJs, /\['وقت بداية الزيارة',/);
+  assert.doesNotMatch(printJs, /\['وقت نهاية الزيارة',/);
+  assert.doesNotMatch(printJs, /\['الغرض من الزيارة',/);
   assert.doesNotMatch(printJs, /repIdPhoto|صورة الهوية|صورة الإقامة/);
   assert.doesNotMatch(center + centerJs, /repIdPhoto|signedPermitFile/);
+});
+
+test('electronic stamp and signature settings validate real image bytes and remain outside listing APIs', () => {
+  assert.match(route, /normalizedPrintAsset/);
+  assert.match(route, /MAX_VISIT_PRINT_ASSET_BYTES/);
+  assert.match(route, /detectVisitFile\(buffer\)/);
+  assert.match(route, /PRINT_ASSET_MAGIC/);
+  const bootstrapBlock = route.match(/router\.get\("\/management\/bootstrap"[\s\S]*?\n}\);/);
+  assert.ok(bootstrapBlock);
+  assert.doesNotMatch(bootstrapBlock[0], /visit_stamp|visit_signature/);
+  assert.match(center, /id="stamp-preview"/);
+  assert.match(center, /id="signature-preview"/);
 });
 
 test('camera scanner supports BarcodeDetector, jsQR fallback, camera switching and manual permit search', () => {

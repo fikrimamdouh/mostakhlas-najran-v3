@@ -47,7 +47,10 @@ test('classic scripts do not redeclare top-level functions that silently overrid
   const scripts = walk(publicDir, (file) => file.endsWith('.js'));
 
   for (const script of scripts) {
-    // Vendored jsQR is a webpack bundle; repeated internal function names are\n    // module-scoped and cannot override application globals.\n    if (path.basename(script) === 'jsQR.js') continue;\n    const source = fs.readFileSync(script, 'utf8');
+    // Vendored jsQR is a webpack bundle; repeated internal function names are
+    // module-scoped and cannot override application globals.
+    if (path.basename(script) === 'jsQR.js') continue;
+    const source = fs.readFileSync(script, 'utf8');
     const names = [...source.matchAll(/^function\s+([A-Za-z_$][\w$]*)\s*\(/gm)].map((match) => match[1]);
     const repeated = [...new Set(names.filter((name, index) => names.indexOf(name) !== index))];
     if (repeated.length) duplicates.push(`${path.relative(publicDir, script)}: ${repeated.join(', ')}`);

@@ -56,10 +56,14 @@ export function isDateWithin(target: Date, validFrom: unknown, validUntil: unkno
   return day >= from.toISOString().slice(0, 10) && day <= until.toISOString().slice(0, 10);
 }
 
-export function validateVisitWindow(startsAt: unknown, endsAt: unknown): { startsAt: Date; endsAt: Date } | { error: string } {
+export function validateVisitWindow(startsAt: unknown, endsAt: unknown): { startsAt: Date; endsAt: Date | null } | { error: string } {
   const start = parseIsoDate(startsAt);
+  if (!start) return { error: "تاريخ ووقت الزيارة مطلوبان بصيغة صحيحة" };
+  if (endsAt === undefined || endsAt === null || String(endsAt).trim() === "") {
+    return { startsAt: start, endsAt: null };
+  }
   const end = parseIsoDate(endsAt);
-  if (!start || !end) return { error: "تاريخ ووقت بداية ونهاية الزيارة مطلوبان بصيغة صحيحة" };
+  if (!end) return { error: "وقت نهاية الزيارة غير صالح" };
   if (end.getTime() <= start.getTime()) return { error: "وقت نهاية الزيارة يجب أن يكون بعد وقت البداية" };
   if (end.getTime() - start.getTime() > 7 * 24 * 60 * 60 * 1000) return { error: "مدة الزيارة لا يمكن أن تتجاوز سبعة أيام" };
   return { startsAt: start, endsAt: end };
