@@ -6,6 +6,7 @@ import { randomBytes } from "node:crypto";
 import {
   db,
   usersTable,
+  auditLogTable,
   visitRequestsTable,
   systemSettingsTable,
   visitSystemsTable,
@@ -15,6 +16,7 @@ import {
   visitRepresentativesTable,
   visitRepresentativeSystemsTable,
   visitRequestMetadataTable,
+  visitFacilityApprovalsTable,
   visitDocumentsTable,
   visitDocumentContentsTable,
   visitNumberSequencesTable,
@@ -43,15 +45,17 @@ import {
   validateZipEntries,
   visitEffectiveStatus,
 } from "../lib/visit-security";
-import { and, asc, desc, eq, gte, ilike, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import { sendVisitApprovedEmail, sendVisitNewRequestEmail, sendVisitRejectedEmail } from "../lib/email";
 
 const ADMIN_EMAIL = "rorofikri@gmail.com";
 const router = Router();
 
-const DEFAULT_VISIT_SIGNER_TITLE = "مشرف وحدة الصيانة العامة";
+const LEGACY_VISIT_SIGNER_TITLE = "مشرف وحدة الصيانة العامة";
+const DEFAULT_VISIT_SIGNER_TITLE = "مدير وحدة الصيانة العامة بتجمع نجران الصحي";
 const DEFAULT_VISIT_SIGNER_NAME = "م. محمد عباس المكرمي";
 const DEFAULT_VISIT_PURPOSE = "زيارة دورية لأنظمة المستشفى";
+const FACILITY_VISIT_APPROVAL_MODULE = "facility_visit_approval";
 const MAX_VISIT_PRINT_ASSET_BYTES = 2 * 1024 * 1024;
 const APPROVED_CATALOG_SOURCE = "مستورد من كتالوج مقاولي الباطن المعتمدين";
 const MAINTENANCE_CONTRACTORS = [
@@ -238,6 +242,22 @@ async function requireApproved(req: any, res: any, next: any) {
   return next();
 }
 
+function hasFacilityVisitApproval(user: any): boolean {
+  if (!user?.allowedModules) return false;
+  try {
+    const modules = Array.isArray(user.allowedModules) ? user.allowedModules : JSON.parse(user.allowedModules);
+    return Array.isArray(modules) && modules.includes(FACILITY_VISIT_APPROVAL_MODULE);
+  } catch {
+    return false;
+  }
+}
+
+function requireFacilityVisitApproval(req: any, res: any, next: any) {
+  if (!hasFacilityVisitApproval(req.currentUser)) return res.status(403).json({ error: "لا تملك صلاحية اعتماد زيارات المنشأة" });
+  if (!cleanText(req.currentUser?.hospital, 250)) return res.status(403).json({ error: "يجب ربط حسابك بموقع معتمد أولاً" });
+  return next();
+}
+
 function audit(req: any, action: string, details: Record<string, unknown>) {
   const user = req.currentUser;
   return logAudit(user?.id ?? null, user?.email ?? null, user?.name ?? null, action, JSON.stringify(details), clientIp(req));
@@ -245,6 +265,24 @@ function audit(req: any, action: string, details: Record<string, unknown>) {
 
 function cleanText(value: unknown, max = 500): string {
   return String(value ?? "").trim().slice(0, max);
+}
+
+function effectiveSignerTitle(value: unknown): string {
+  const title = cleanText(value, 200);
+  return !title || title === LEGACY_VISIT_SIGNER_TITLE ? DEFAULT_VISIT_SIGNER_TITLE : title;
+}
+
+function publicVisitVerifyOrigin(req: any): string {
+  const configured = cleanText(process.env.PUBLIC_APP_URL, 1_000);
+  if (configured) {
+    try {
+      const url = new URL(configured);
+      if (url.protocol === "https:" || url.protocol === "http:") return url.origin;
+    } catch {}
+  }
+  if (process.env.NODE_ENV === "production") return "https://mostakhlas-najran.com";
+  const host = cleanText(req.get("host"), 300);
+  return /^[A-Za-z0-9.[\]:-]+$/.test(host) ? `${req.protocol === "https" ? "https" : "http"}://${host}` : "http://localhost";
 }
 
 function catalogNameKey(value: unknown): string {
@@ -451,6 +489,8 @@ function sanitizeVisit(visit: any, metadata?: any | null) {
     approvedAt: visit.approvedAt,
     cancelledAt: visit.cancelledAt,
     cancelledReason: visit.cancelledReason,
+    archivedAt: visit.archivedAt,
+    archiveReason: visit.archiveReason,
     reissuedFromVisitId: visit.reissuedFromVisitId,
     purpose: metadata?.purpose || null,
     startsAt: metadata?.startsAt || null,
@@ -459,6 +499,23 @@ function sanitizeVisit(visit: any, metadata?: any | null) {
     createdAt: visit.createdAt,
     updatedAt: visit.updatedAt,
   };
+}
+
+function facilityApprovalSummary(approval: any | null | undefined) {
+  return {
+    status: approval?.status || "pending",
+    approverName: approval?.approverName || null,
+    approverTitle: approval?.approverTitle || null,
+    notes: approval?.notes || null,
+    decidedAt: approval?.decidedAt || null,
+    updatedAt: approval?.updatedAt || null,
+  };
+}
+
+function sameFacilitySite(user: any, visit: any): boolean {
+  const userSite = cleanText(user?.hospital, 250).normalize("NFKC").replace(/\s+/g, " ");
+  const visitSite = cleanText(visit?.siteLocation, 250).normalize("NFKC").replace(/\s+/g, " ");
+  return !!userSite && userSite === visitSite;
 }
 
 type PermitRepresentative = {
@@ -598,7 +655,9 @@ async function ensurePermitToken(executor: AnyDb, visitId: number) {
 }
 
 async function nextPermitNumber(executor: AnyDb, visit: any): Promise<string> {
-  const year = new Date().getFullYear();
+  const issuedAt = new Date();
+  const year = issuedAt.getFullYear();
+  const month = String(issuedAt.getMonth() + 1).padStart(2, "0");
   // One global sequence per year prevents duplicates across hospitals too.
   const scopeKey = `${year}:global`;
   const [sequence] = await executor.insert(visitNumberSequencesTable).values({ scopeKey, lastValue: 1 })
@@ -608,7 +667,7 @@ async function nextPermitNumber(executor: AnyDb, visit: any): Promise<string> {
     })
     .returning({ lastValue: visitNumberSequencesTable.lastValue });
   if (!sequence) throw new Error("SERIAL_SEQUENCE_NOT_RETURNED");
-  return `NHC-NJ-VIS-${year}-${String(sequence.lastValue).padStart(6, "0")}`;
+  return `VIS--NHC${String(sequence.lastValue).padStart(6, "0")}-${year}-${month}`;
 }
 
 type CentralValidationOptions = { qualificationOptional?: boolean };
@@ -832,7 +891,7 @@ router.get("/settings", requireAuth, requireApproved, async (_req, res) => {
     stamp,
     signature,
     signerName: effectiveSignerName,
-    signerTitle: signerTitle || DEFAULT_VISIT_SIGNER_TITLE,
+    signerTitle: effectiveSignerTitle(signerTitle),
     // Compatibility for clients deployed before signer fields were renamed.
     managerName: effectiveSignerName,
   });
@@ -1021,13 +1080,203 @@ router.post("/management/direct-issue", requireAuth, requireApproved, requireClu
   }
 });
 
+// ── Facility/site approval workflow ────────────────────────────────────────
+// Access is granted only by the database module permission and the current
+// database-backed hospital. Role, email and browser storage are not trusted.
+router.get("/facility/visits", requireAuth, requireApproved, requireFacilityVisitApproval, async (req: any, res) => {
+  const siteName = cleanText(req.currentUser.hospital, 250);
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(50, Math.max(10, Number(req.query.limit) || 20));
+  const requestedStatus = cleanText(req.query.status, 20);
+  const conditions: any[] = [
+    eq(visitRequestsTable.siteLocation, siteName),
+    inArray(visitRequestsTable.status, ["approved", "cancelled"]),
+    isNull(visitRequestsTable.archivedAt),
+  ];
+  if (requestedStatus === "pending") conditions.push(or(isNull(visitFacilityApprovalsTable.id), eq(visitFacilityApprovalsTable.status, "pending")));
+  else if (requestedStatus === "approved" || requestedStatus === "rejected") conditions.push(eq(visitFacilityApprovalsTable.status, requestedStatus));
+  const search = cleanText(req.query.search, 150);
+  if (search) conditions.push(or(
+    ilike(visitRequestsTable.serialNumber, `%${search}%`),
+    ilike(visitRequestsTable.repName, `%${search}%`),
+    ilike(visitRequestsTable.subContractor, `%${search}%`),
+  ));
+  const where = and(...conditions);
+  const base = db.select({ visit: visitRequestsTable, metadata: visitRequestMetadataTable, approval: visitFacilityApprovalsTable })
+    .from(visitRequestsTable)
+    .leftJoin(visitRequestMetadataTable, eq(visitRequestMetadataTable.visitId, visitRequestsTable.id))
+    .leftJoin(visitFacilityApprovalsTable, eq(visitFacilityApprovalsTable.visitId, visitRequestsTable.id));
+  const countBase = db.select({ count: sql<number>`count(*)` })
+    .from(visitRequestsTable)
+    .leftJoin(visitFacilityApprovalsTable, eq(visitFacilityApprovalsTable.visitId, visitRequestsTable.id));
+  const approvalStatus = sql<string>`coalesce(${visitFacilityApprovalsTable.status}, 'pending')`;
+  const summaryBase = db.select({ status: approvalStatus, count: sql<number>`count(*)` })
+    .from(visitRequestsTable)
+    .leftJoin(visitFacilityApprovalsTable, eq(visitFacilityApprovalsTable.visitId, visitRequestsTable.id))
+    .where(and(eq(visitRequestsTable.siteLocation, siteName), inArray(visitRequestsTable.status, ["approved", "cancelled"]), isNull(visitRequestsTable.archivedAt)))
+    .groupBy(approvalStatus);
+  const [rows, counts, summaryRows] = await Promise.all([
+    base.where(where).orderBy(desc(visitRequestsTable.visitDate), desc(visitRequestsTable.createdAt)).limit(limit).offset((page - 1) * limit),
+    countBase.where(where),
+    summaryBase,
+  ]);
+  const total = Number(counts[0]?.count || 0);
+  const summary = { pending: 0, approved: 0, rejected: 0 };
+  for (const row of summaryRows) if (row.status in summary) summary[row.status as keyof typeof summary] = Number(row.count || 0);
+  return res.json({
+    siteName,
+    visits: rows.map((row) => ({ ...sanitizeVisit(row.visit, row.metadata), facilityApproval: facilityApprovalSummary(row.approval) })),
+    total,
+    page,
+    limit,
+    pages: Math.max(1, Math.ceil(total / limit)),
+    summary,
+  });
+});
+
+router.get("/facility/visits/:id", requireAuth, requireApproved, requireFacilityVisitApproval, async (req: any, res) => {
+  const id = numberId(req.params.id);
+  if (!id) return res.status(400).json({ error: "رقم زيارة غير صالح" });
+  const context = await getVisitContext(db, id);
+  if (!context) return res.status(404).json({ error: "الزيارة غير موجودة" });
+  if (!sameFacilitySite(req.currentUser, context.visit)) return res.status(403).json({ error: "هذه الزيارة لا تخص موقعك الحالي" });
+  const [[approval], documents] = await Promise.all([
+    db.select().from(visitFacilityApprovalsTable).where(eq(visitFacilityApprovalsTable.visitId, id)).limit(1),
+    db.select({
+      id: visitDocumentsTable.id,
+      originalName: visitDocumentsTable.originalName,
+      mimeType: visitDocumentsTable.mimeType,
+      sizeBytes: visitDocumentsTable.sizeBytes,
+      status: visitDocumentsTable.status,
+      createdAt: visitDocumentsTable.createdAt,
+    }).from(visitDocumentsTable).where(and(
+      eq(visitDocumentsTable.ownerType, "visit"),
+      eq(visitDocumentsTable.ownerId, id),
+      eq(visitDocumentsTable.documentType, "facility_approval_proof"),
+    )).orderBy(desc(visitDocumentsTable.createdAt)),
+  ]);
+  return res.json({
+    visit: sanitizeVisit(context.visit, context.metadata),
+    representatives: permitRepresentatives(context.visit, context.metadata, context.representative),
+    facilityApproval: facilityApprovalSummary(approval),
+    documents,
+  });
+});
+
+router.patch("/facility/visits/:id/decision", requireAuth, requireApproved, requireFacilityVisitApproval, async (req: any, res) => {
+  const id = numberId(req.params.id);
+  const status = cleanText(req.body.status, 20);
+  const notes = cleanText(req.body.notes, 1_500);
+  if (!id || !new Set(["approved", "rejected"]).has(status)) return res.status(400).json({ error: "قرار اعتماد المنشأة غير صالح" });
+  if (status === "rejected" && !notes) return res.status(400).json({ error: "سبب رفض المنشأة مطلوب" });
+  const context = await getVisitContext(db, id);
+  if (!context) return res.status(404).json({ error: "الزيارة غير موجودة" });
+  if (!sameFacilitySite(req.currentUser, context.visit)) return res.status(403).json({ error: "هذه الزيارة لا تخص موقعك الحالي" });
+  if (context.visit.status !== "approved") return res.status(409).json({ error: "لا يمكن اعتماد زيارة غير سارية من المركز" });
+  const approverName = cleanText(req.body.approverName, 200) || cleanText(req.currentUser.name, 200);
+  const approverTitle = cleanText(req.body.approverTitle, 200) || cleanText(req.currentUser.jobTitle, 200) || "إدارة المنشأة";
+  if (!approverName) return res.status(400).json({ error: "اسم معتمد المنشأة مطلوب" });
+  const [previous] = await db.select({ status: visitFacilityApprovalsTable.status }).from(visitFacilityApprovalsTable).where(eq(visitFacilityApprovalsTable.visitId, id)).limit(1);
+  const [approval] = await db.insert(visitFacilityApprovalsTable).values({
+    visitId: id,
+    siteName: context.visit.siteLocation,
+    status: status as "approved" | "rejected",
+    decidedByUserId: req.currentUser.id,
+    approverName,
+    approverTitle,
+    notes: notes || null,
+    decidedAt: new Date(),
+    updatedAt: new Date(),
+  }).onConflictDoUpdate({
+    target: visitFacilityApprovalsTable.visitId,
+    set: {
+      status: status as "approved" | "rejected",
+      decidedByUserId: req.currentUser.id,
+      approverName,
+      approverTitle,
+      notes: notes || null,
+      decidedAt: new Date(),
+      updatedAt: new Date(),
+    },
+  }).returning();
+  await audit(req, status === "approved" ? "اعتماد زيارة من إدارة المنشأة" : "رفض زيارة من إدارة المنشأة", {
+    visitId: id,
+    siteName: context.visit.siteLocation,
+    previousStatus: previous?.status || "pending",
+    newStatus: status,
+    approverName,
+  });
+  return res.json({ facilityApproval: facilityApprovalSummary(approval) });
+});
+
+router.post("/facility/visits/:id/attachment", requireAuth, requireApproved, requireFacilityVisitApproval, uploadMemory.single("file"), async (req: any, res) => {
+  const id = numberId(req.params.id);
+  if (!id || !req.file) return res.status(400).json({ error: "اختر صورة أو ملف PDF لإثبات اعتماد المنشأة" });
+  const context = await getVisitContext(db, id);
+  if (!context) return res.status(404).json({ error: "الزيارة غير موجودة" });
+  if (!sameFacilitySite(req.currentUser, context.visit)) return res.status(403).json({ error: "هذه الزيارة لا تخص موقعك الحالي" });
+  try {
+    await db.insert(visitFacilityApprovalsTable).values({ visitId: id, siteName: context.visit.siteLocation }).onConflictDoNothing();
+    const stored = await storeDocument(req, "visit", id, "facility_approval_proof", req.file);
+    await audit(req, stored.replacedDocumentId ? "استبدال مرفق اعتماد المنشأة" : "رفع مرفق اعتماد المنشأة", {
+      visitId: id,
+      siteName: context.visit.siteLocation,
+      documentId: stored.document.id,
+      replacedDocumentId: stored.replacedDocumentId,
+      sha256: stored.document.sha256,
+    });
+    return res.status(201).json({
+      document: {
+        id: stored.document.id,
+        originalName: stored.document.originalName,
+        mimeType: stored.document.mimeType,
+        sizeBytes: stored.document.sizeBytes,
+        status: stored.document.status,
+        createdAt: stored.document.createdAt,
+      },
+      replacedDocumentId: stored.replacedDocumentId,
+    });
+  } catch (err: any) {
+    if (err.message === "FILE_MAGIC_MISMATCH" || err.message === "FILE_MIME_MISMATCH") return res.status(415).json({ error: "نوع الملف الحقيقي لا يطابق PDF أو الصورة المسموح بها" });
+    if (err.message === "DUPLICATE_DOCUMENT") return res.status(409).json({ error: "المرفق نفسه محفوظ مسبقًا ولن يتم تكراره" });
+    req.log.error({ err }, "Facility approval attachment failed");
+    return res.status(500).json({ error: "تعذر حفظ مرفق اعتماد المنشأة" });
+  }
+});
+
+router.get("/facility/visits/:id/attachments/:documentId/content", requireAuth, requireApproved, requireFacilityVisitApproval, async (req: any, res) => {
+  const id = numberId(req.params.id), documentId = numberId(req.params.documentId);
+  if (!id || !documentId) return res.status(400).json({ error: "رقم المرفق غير صالح" });
+  const context = await getVisitContext(db, id);
+  if (!context) return res.status(404).json({ error: "الزيارة غير موجودة" });
+  if (!sameFacilitySite(req.currentUser, context.visit)) return res.status(403).json({ error: "هذه الزيارة لا تخص موقعك الحالي" });
+  const [row] = await db.select({ document: visitDocumentsTable, content: visitDocumentContentsTable.content })
+    .from(visitDocumentsTable)
+    .innerJoin(visitDocumentContentsTable, eq(visitDocumentContentsTable.documentId, visitDocumentsTable.id))
+    .where(and(
+      eq(visitDocumentsTable.id, documentId),
+      eq(visitDocumentsTable.ownerType, "visit"),
+      eq(visitDocumentsTable.ownerId, id),
+      eq(visitDocumentsTable.documentType, "facility_approval_proof"),
+    )).limit(1);
+  if (!row) return res.status(404).json({ error: "المرفق غير موجود" });
+  await audit(req, "عرض مرفق اعتماد المنشأة", { visitId: id, documentId, siteName: context.visit.siteLocation });
+  res.setHeader("Content-Type", row.document.mimeType);
+  res.setHeader("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(row.document.originalName)}`);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  return res.send(row.content);
+});
+
 router.get("/", requireAuth, requireApproved, async (req: any, res) => {
   const cluster = hasClusterVisitManagement(req.currentUser);
   const query = db.select({ visit: visitRequestsTable, metadata: visitRequestMetadataTable })
     .from(visitRequestsTable)
     .leftJoin(visitRequestMetadataTable, eq(visitRequestMetadataTable.visitId, visitRequestsTable.id))
     .orderBy(desc(visitRequestsTable.createdAt));
-  const rows = cluster ? await query : await query.where(eq(visitRequestsTable.userId, req.currentUser.id));
+  const rows = cluster
+    ? await query.where(isNull(visitRequestsTable.archivedAt))
+    : await query.where(and(eq(visitRequestsTable.userId, req.currentUser.id), isNull(visitRequestsTable.archivedAt)));
   return res.json({ visits: rows.map((row) => sanitizeVisit(row.visit, row.metadata)) });
 });
 
@@ -1035,9 +1284,12 @@ router.get("/:id", requireAuth, requireApproved, async (req: any, res) => {
   const id = numberId(req.params.id); if (!id) return res.status(400).json({ error: "رقم زيارة غير صالح" });
   const context = await getVisitContext(db, id); if (!context) return res.status(404).json({ error: "الزيارة غير موجودة" });
   if (!await canAccessVisit(req.currentUser, context.visit)) return res.status(403).json({ error: "غير مصرح بعرض الزيارة" });
-  const docs = hasClusterVisitManagement(req.currentUser)
-    ? await db.select({ id: visitDocumentsTable.id, documentType: visitDocumentsTable.documentType, originalName: visitDocumentsTable.originalName, mimeType: visitDocumentsTable.mimeType, sizeBytes: visitDocumentsTable.sizeBytes, status: visitDocumentsTable.status, createdAt: visitDocumentsTable.createdAt }).from(visitDocumentsTable).where(and(eq(visitDocumentsTable.ownerType, "visit"), eq(visitDocumentsTable.ownerId, id))).orderBy(desc(visitDocumentsTable.createdAt))
-    : [];
+  const [docs, facilityRows] = await Promise.all([
+    hasClusterVisitManagement(req.currentUser)
+      ? db.select({ id: visitDocumentsTable.id, documentType: visitDocumentsTable.documentType, originalName: visitDocumentsTable.originalName, mimeType: visitDocumentsTable.mimeType, sizeBytes: visitDocumentsTable.sizeBytes, status: visitDocumentsTable.status, createdAt: visitDocumentsTable.createdAt }).from(visitDocumentsTable).where(and(eq(visitDocumentsTable.ownerType, "visit"), eq(visitDocumentsTable.ownerId, id))).orderBy(desc(visitDocumentsTable.createdAt))
+      : Promise.resolve([]),
+    db.select().from(visitFacilityApprovalsTable).where(eq(visitFacilityApprovalsTable.visitId, id)).limit(1),
+  ]);
   return res.json({
     visit: sanitizeVisit(context.visit, context.metadata),
     representatives: permitRepresentatives(context.visit, context.metadata, context.representative),
@@ -1048,6 +1300,7 @@ router.get("/:id", requireAuth, requireApproved, async (req: any, res) => {
       siteApprovalId: context.siteApproval?.id || null,
       qualificationId: context.qualification?.id || null,
     },
+    facilityApproval: facilityApprovalSummary(facilityRows[0]),
     documents: docs,
   });
 });
@@ -1204,7 +1457,7 @@ router.get("/management/bootstrap", requireAuth, requireApproved, requireCluster
       db.select().from(visitRepresentativesTable).orderBy(asc(visitRepresentativesTable.fullName)),
       db.select().from(visitRepresentativeSystemsTable),
     ]),
-    db.select({ visit: visitRequestsTable, metadata: visitRequestMetadataTable }).from(visitRequestsTable).leftJoin(visitRequestMetadataTable, eq(visitRequestMetadataTable.visitId, visitRequestsTable.id)).where(eq(visitRequestsTable.status, "pending")).orderBy(desc(visitRequestsTable.createdAt)).limit(100),
+    db.select({ visit: visitRequestsTable, metadata: visitRequestMetadataTable }).from(visitRequestsTable).leftJoin(visitRequestMetadataTable, eq(visitRequestMetadataTable.visitId, visitRequestsTable.id)).where(and(eq(visitRequestsTable.status, "pending"), isNull(visitRequestsTable.archivedAt))).orderBy(desc(visitRequestsTable.createdAt)).limit(100),
     buildAlerts(),
   ]);
   const [systems, contractors, qualifications, siteApprovals, representatives, representativeSystems] = catalogResponse;
@@ -1773,7 +2026,75 @@ router.patch("/:id/cancel", requireAuth, requireApproved, requireClusterVisitMan
   return res.json({ visit: sanitizeVisit(updated) });
 });
 
-router.delete("/:id", requireAuth, requireApproved, requireClusterVisitManagement, (_req, res) => res.status(405).json({ error: "الحذف النهائي للزيارات غير مسموح؛ استخدم الإلغاء" }));
+router.patch("/:id/archive", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
+  const id = numberId(req.params.id), reason = cleanText(req.body.reason, 1_000);
+  if (!id || !reason) return res.status(400).json({ error: "رقم الزيارة وسبب الحذف من العرض مطلوبان" });
+  const now = new Date();
+  const [updated] = await db.update(visitRequestsTable).set({
+    status: "cancelled",
+    cancelledAt: now,
+    cancelledReason: reason,
+    archivedAt: now,
+    archivedByUserId: req.currentUser.id,
+    archiveReason: reason,
+    updatedAt: now,
+  }).where(and(eq(visitRequestsTable.id, id), isNull(visitRequestsTable.archivedAt))).returning();
+  if (!updated) return res.status(404).json({ error: "الزيارة غير موجودة أو محذوفة من العرض بالفعل" });
+  await audit(req, "إلغاء زيارة تجريبية وإخفاؤها من العرض دون حذف", { visitId: id, serialNumber: updated.serialNumber, reason });
+  return res.json({ visit: sanitizeVisit(updated) });
+});
+
+router.patch("/:id/archive/restore", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
+  const id = numberId(req.params.id);
+  if (!id) return res.status(400).json({ error: "رقم زيارة غير صالح" });
+  const [updated] = await db.update(visitRequestsTable).set({ archivedAt: null, archivedByUserId: null, archiveReason: null, updatedAt: new Date() })
+    .where(and(eq(visitRequestsTable.id, id), isNotNull(visitRequestsTable.archivedAt))).returning();
+  if (!updated) return res.status(404).json({ error: "الزيارة غير موجودة في المحذوف من العرض" });
+  await audit(req, "استعادة زيارة ملغاة إلى الأرشيف المرئي", { visitId: id, serialNumber: updated.serialNumber });
+  return res.json({ visit: sanitizeVisit(updated) });
+});
+
+router.delete("/:id/permanent", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
+  const id = numberId(req.params.id), reason = cleanText(req.body.reason, 1_000), confirmation = cleanText(req.body.confirmation, 250);
+  if (!id || reason.length < 4) return res.status(400).json({ error: "رقم الزيارة وسبب الحذف النهائي مطلوبان" });
+  try {
+    const deleted = await db.transaction(async (tx) => {
+      const [visit] = await tx.select().from(visitRequestsTable).where(eq(visitRequestsTable.id, id)).limit(1);
+      if (!visit) throw new Error("DELETE_NOT_FOUND");
+      if (!visit.archivedAt) throw new Error("DELETE_NOT_ARCHIVED");
+      const expectedConfirmation = `DELETE:${visit.serialNumber || `VISIT-${visit.id}`}`;
+      if (confirmation !== expectedConfirmation) throw new Error(`DELETE_CONFIRMATION:${expectedConfirmation}`);
+      const [reissuedChild] = await tx.select({ id: visitRequestsTable.id }).from(visitRequestsTable).where(eq(visitRequestsTable.reissuedFromVisitId, id)).limit(1);
+      if (reissuedChild) throw new Error("DELETE_HAS_REISSUE");
+      const documents = await tx.select({ id: visitDocumentsTable.id }).from(visitDocumentsTable).where(and(eq(visitDocumentsTable.ownerType, "visit"), eq(visitDocumentsTable.ownerId, id)));
+      if (documents.length) await tx.delete(visitDocumentContentsTable).where(inArray(visitDocumentContentsTable.documentId, documents.map((row) => row.id)));
+      await tx.delete(visitDocumentsTable).where(and(eq(visitDocumentsTable.ownerType, "visit"), eq(visitDocumentsTable.ownerId, id)));
+      await tx.delete(visitFacilityApprovalsTable).where(eq(visitFacilityApprovalsTable.visitId, id));
+      await tx.delete(visitPermitTokensTable).where(eq(visitPermitTokensTable.visitId, id));
+      await tx.delete(visitRequestMetadataTable).where(eq(visitRequestMetadataTable.visitId, id));
+      await tx.delete(visitRequestsTable).where(and(eq(visitRequestsTable.id, id), isNotNull(visitRequestsTable.archivedAt)));
+      await tx.insert(auditLogTable).values({
+        userId: req.currentUser.id,
+        userEmail: req.currentUser.email,
+        userName: req.currentUser.name,
+        action: "حذف نهائي لزيارة تجريبية بعد تأكيد رقم التصريح",
+        details: JSON.stringify({ visitId: id, serialNumber: visit.serialNumber, reason, deletedVisitDocuments: documents.length }),
+        ipAddress: clientIp(req),
+      });
+      return { serialNumber: visit.serialNumber, deletedDocuments: documents.length };
+    });
+    return res.json({ deleted: true, ...deleted });
+  } catch (err: any) {
+    if (err.message === "DELETE_NOT_FOUND") return res.status(404).json({ error: "الزيارة غير موجودة" });
+    if (err.message === "DELETE_NOT_ARCHIVED") return res.status(409).json({ error: "انقل الزيارة إلى المحذوف من العرض أولاً قبل الحذف النهائي" });
+    if (err.message === "DELETE_HAS_REISSUE") return res.status(409).json({ error: "احذف التصريح المعاد إصداره أولاً لأنه مرتبط بهذه الزيارة" });
+    if (String(err.message).startsWith("DELETE_CONFIRMATION:")) return res.status(400).json({ error: "نص التأكيد لا يطابق رقم التصريح", expectedConfirmation: String(err.message).slice("DELETE_CONFIRMATION:".length) });
+    req.log.error({ err }, "Permanent test visit deletion failed");
+    return res.status(500).json({ error: "تعذر حذف الزيارة التجريبية نهائيًا" });
+  }
+});
+
+router.delete("/:id", requireAuth, requireApproved, requireClusterVisitManagement, (_req, res) => res.status(405).json({ error: "استخدم حذف من العرض أولاً، ثم الحذف النهائي المؤكد من شاشة الأرشيف" }));
 
 router.post("/:id/reissue", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
   const originalId = numberId(req.params.id); if (!originalId) return res.status(400).json({ error: "رقم زيارة غير صالح" });
@@ -1830,6 +2151,9 @@ router.post("/:id/reissue", requireAuth, requireApproved, requireClusterVisitMan
 router.get("/management/archive", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
   const page = Math.max(1, Number(req.query.page) || 1), limit = Math.min(100, Math.max(10, Number(req.query.limit) || 25));
   const conditions: any[] = [];
+  const visibility = cleanText(req.query.visibility, 20);
+  if (visibility === "archived") conditions.push(isNotNull(visitRequestsTable.archivedAt));
+  else if (visibility !== "all") conditions.push(isNull(visitRequestsTable.archivedAt));
   if (cleanText(req.query.permitNumber, 100)) conditions.push(ilike(visitRequestsTable.serialNumber, `%${cleanText(req.query.permitNumber, 100)}%`));
   if (cleanText(req.query.visitorName, 200)) conditions.push(ilike(visitRequestsTable.repName, `%${cleanText(req.query.visitorName, 200)}%`));
   if (cleanText(req.query.company, 200)) conditions.push(ilike(visitRequestsTable.subContractor, `%${cleanText(req.query.company, 200)}%`));
@@ -1850,13 +2174,16 @@ router.get("/management/archive", requireAuth, requireApproved, requireClusterVi
   if (from) conditions.push(gte(visitRequestsTable.visitDate, from));
   if (to) conditions.push(lte(visitRequestsTable.visitDate, to));
   const where = conditions.length ? and(...conditions) : undefined;
-  const base = db.select({ visit: visitRequestsTable, metadata: visitRequestMetadataTable }).from(visitRequestsTable).leftJoin(visitRequestMetadataTable, eq(visitRequestMetadataTable.visitId, visitRequestsTable.id));
+  const base = db.select({ visit: visitRequestsTable, metadata: visitRequestMetadataTable, facilityApproval: visitFacilityApprovalsTable })
+    .from(visitRequestsTable)
+    .leftJoin(visitRequestMetadataTable, eq(visitRequestMetadataTable.visitId, visitRequestsTable.id))
+    .leftJoin(visitFacilityApprovalsTable, eq(visitFacilityApprovalsTable.visitId, visitRequestsTable.id));
   const countBase = db.select({ count: sql<number>`count(*)` }).from(visitRequestsTable).leftJoin(visitRequestMetadataTable, eq(visitRequestMetadataTable.visitId, visitRequestsTable.id));
   const [rows, countRows] = await Promise.all([
     (where ? base.where(where) : base).orderBy(desc(visitRequestsTable.createdAt)).limit(limit).offset((page - 1) * limit),
     where ? countBase.where(where) : countBase,
   ]);
-  return res.json({ visits: rows.map((row) => sanitizeVisit(row.visit, row.metadata)), total: Number(countRows[0]?.count || 0), page, limit, pages: Math.ceil(Number(countRows[0]?.count || 0) / limit) });
+  return res.json({ visits: rows.map((row) => ({ ...sanitizeVisit(row.visit, row.metadata), facilityApproval: facilityApprovalSummary(row.facilityApproval) })), total: Number(countRows[0]?.count || 0), page, limit, pages: Math.ceil(Number(countRows[0]?.count || 0) / limit) });
 });
 
 async function buildAlerts() {
@@ -1990,7 +2317,8 @@ router.get("/:id/permit", requireAuth, requireApproved, async (req: any, res) =>
   try {
     const qr = await db.transaction((tx) => ensurePermitToken(tx, id));
     const token = decryptPermitToken(qr.tokenCiphertext);
-    const qrDataUrl = await QRCode.toDataURL(`NHC-NJ-VISIT:${token}`, { errorCorrectionLevel: "M", margin: 1, width: 220 });
+    const verifyUrl = `${publicVisitVerifyOrigin(req)}/visit-permit-verify.html#${encodeURIComponent(token)}`;
+    const qrDataUrl = await QRCode.toDataURL(verifyUrl, { errorCorrectionLevel: "M", margin: 1, width: 220 });
     const [stamp, signature, signerName, signerTitle, legacyManagerName, documentsVerified] = await Promise.all([
       getSetting("visit_stamp"),
       getSetting("visit_signature"),
@@ -2017,7 +2345,7 @@ router.get("/:id/permit", requireAuth, requireApproved, async (req: any, res) =>
         stamp,
         signature,
         signerName: signerName || legacyManagerName || DEFAULT_VISIT_SIGNER_NAME,
-        signerTitle: signerTitle || DEFAULT_VISIT_SIGNER_TITLE,
+        signerTitle: effectiveSignerTitle(signerTitle),
         managerName: signerName || legacyManagerName || DEFAULT_VISIT_SIGNER_NAME,
       },
     });
@@ -2075,6 +2403,25 @@ async function verifyToken(req: any, token: string) {
     },
   };
 }
+
+router.get("/qr/public", async (req: any, res) => {
+  if (!assertScanRate(req, res)) return;
+  const token = cleanText(req.query.token, 300);
+  if (!token) return res.status(400).json({ error: "رمز التحقق مطلوب" });
+  const result = await verifyToken(req, token);
+  await audit(req, "تحقق عام من QR لتصريح زيارة", { result: result ? result.visit.status : "invalid", visitId: null });
+  if (!result) return res.status(404).json({ error: "رمز التصريح غير صالح أو معطل" });
+  res.setHeader("Cache-Control", "no-store");
+  return res.json({
+    visit: {
+      serialNumber: result.visit.serialNumber,
+      status: result.visit.status,
+      visitorName: result.visit.visitorName,
+      site: result.visit.site,
+      visitDate: result.visit.visitDate,
+    },
+  });
+});
 
 router.post("/qr/verify", requireAuth, requireApproved, async (req: any, res) => {
   if (!assertScanRate(req, res)) return;

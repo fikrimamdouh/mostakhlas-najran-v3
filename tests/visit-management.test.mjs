@@ -17,6 +17,11 @@ const schema = read('lib/db/src/schema/index.ts');
 const center = read('artifacts/mustaklassat/public/original/cluster-subcontractor-visits.html');
 const centerJs = read('artifacts/mustaklassat/public/original/cluster-subcontractor-visits.js');
 const printJs = read('artifacts/mustaklassat/public/original/visit-permit-print.js');
+const publicVerify = read('artifacts/mustaklassat/public/visit-permit-verify.html');
+const facilityPage = read('artifacts/mustaklassat/public/original/facility-visit-approval.html');
+const facilityJs = read('artifacts/mustaklassat/public/original/facility-visit-approval.js');
+const modulesSource = read('artifacts/mustaklassat/src/lib/modules.ts');
+const originalViewerSource = read('artifacts/mustaklassat/src/pages/OriginalViewer.tsx');
 const requestVisit = read('artifacts/mustaklassat/public/original/request-visit.html');
 const authCheck = read('artifacts/mustaklassat/public/original/auth-check.js');
 const require = createRequire(import.meta.url);
@@ -74,6 +79,29 @@ test('visits and documents are soft-cancelled or disabled instead of deleted', (
   assert.match(route, /status: "disabled", disabledAt: new Date\(\)/);
   assert.doesNotMatch(route, /db\.delete\(visitRequestsTable\)|db\.delete\(visitDocumentsTable\)/);
   assert.match(route, /router\.get\("\/:id\/signed-permit"[\s\S]*canAccessVisit\(req\.currentUser, context\.visit\)/);
+  assert.match(schema, /archivedAt: timestamp\("archived_at"\)/);
+  assert.match(route, /router\.patch\("\/:id\/archive"[\s\S]*status: "cancelled"[\s\S]*archivedAt: now/);
+  assert.match(route, /إلغاء زيارة تجريبية وإخفاؤها من العرض دون حذف/);
+  assert.match(route, /router\.patch\("\/:id\/archive\/restore"/);
+  assert.match(center, /المحذوفة من العرض/);
+  assert.match(centerJs, /openArchiveVisit/);
+});
+
+test('permanent test-visit deletion is two-stage, transactionally complete and explicitly confirmed', () => {
+  const block = route.match(/router\.delete\("\/:id\/permanent"[\s\S]*?\n}\);/);
+  assert.ok(block);
+  assert.match(block[0], /requireClusterVisitManagement/);
+  assert.match(block[0], /if \(!visit\.archivedAt\)/);
+  assert.match(block[0], /DELETE:\$\{visit\.serialNumber/);
+  assert.match(block[0], /DELETE_HAS_REISSUE/);
+  for (const table of ['visitDocumentContentsTable', 'visitDocumentsTable', 'visitFacilityApprovalsTable', 'visitPermitTokensTable', 'visitRequestMetadataTable', 'visitRequestsTable']) {
+    assert.match(block[0], new RegExp(`tx\\.delete\\(${table}\\)`));
+  }
+  assert.match(block[0], /tx\.insert\(auditLogTable\)/);
+  assert.match(block[0], /حذف نهائي لزيارة تجريبية بعد تأكيد رقم التصريح/);
+  assert.match(centerJs, /openPermanentDelete/);
+  assert.match(centerJs, /DELETE:'\+\(v\.serialNumber/);
+  assert.match(centerJs, /حذف نهائي لا يمكن التراجع عنه/);
 });
 
 test('permit numbers use one atomic database upsert and have a uniqueness backstop', () => {
@@ -82,7 +110,8 @@ test('permit numbers use one atomic database upsert and have a uniqueness backst
   assert.match(schema, /visit_number_sequences[\s\S]*scopeKey: text\("scope_key"\)\.notNull\(\)\.unique\(\)/);
   assert.match(schema, /visit_requests_atomic_serial_unique/);
   assert.match(schema, /visit_number_sequences/);
-  assert.match(route, /NHC-NJ-VIS-\$\{year\}-\$\{String\(sequence\.lastValue\)\.padStart\(6, "0"\)\}/);
+  assert.match(route, /VIS--NHC\$\{String\(sequence\.lastValue\)\.padStart\(6, "0"\)\}-\$\{year\}-\$\{month\}/);
+  assert.match(route, /getMonth\(\) \+ 1/);
 });
 
 test('reissue creates a new visit, metadata and QR without updating the original visit', () => {
@@ -117,8 +146,11 @@ test('QR uses random tokens, stores hash plus ciphertext, rate limits scans and 
   const qrPayload = route.match(/QRCode\.toDataURL\(([\s\S]*?), \{ errorCorrectionLevel/);
   assert.ok(qrPayload);
   assert.doesNotMatch(qrPayload[1], /repId|repName|identity|mobile|visitId/);
-  assert.match(qrPayload[1], /NHC-NJ-VISIT:/);
-  assert.doesNotMatch(qrPayload[1], /https?:|original-viewer|download=1/);
+  assert.match(qrPayload[1], /verifyUrl/);
+  const verifyUrl = route.match(/const verifyUrl = ([^;]+);/);
+  assert.ok(verifyUrl);
+  assert.match(verifyUrl[1], /visit-permit-verify\.html#/);
+  assert.doesNotMatch(verifyUrl[1], /repId|repName|identity|mobile|visitId|download=1/);
 });
 
 test('approved certificate catalogue uses full display names and seeds the supplied qualification dates', () => {
@@ -257,6 +289,10 @@ test('session renewal and proactive keepalive preserve progress without leaving 
   assert.match(centerJs, /retried \? await refreshSessionToken\(\) : await freshToken\(false\)/);
   assert.match(centerJs, /restoreDirectSelection\(saved\.direct\)/);
   assert.match(centerJs, /activateTab\(saved\.tab\)/);
+  assert.match(centerJs, /NAJRAN_TOKEN_REQUEST/);
+  assert.match(centerJs, /loadBootstrap\(\{ throwOnError: true \}\)/);
+  assert.match(originalViewerSource, /NAJRAN_TOKEN_RESPONSE/);
+  assert.match(originalViewerSource, /session as any\)\?\.reload/);
   assert.match(center, /تحديث آمن/);
   assert.doesNotMatch(centerJs, /location\.(?:href|replace)[^\n]*sign-in/);
   assert.match(center, /#najran-revision-mode-badge\{display:none!important\}/);
@@ -348,7 +384,7 @@ test('printing reuses one shared permit layout, includes QR and verification tex
   assert.match(printJs, /إعتماد موافقة زيارة مقاولي الباطن/);
   assert.match(printJs, /تم التحقق من بيانات الهوية\/الإقامة إلكترونيًا/);
   assert.match(printJs, /توافق وحدة الصيانة العامة بتجمع نجران الصحي/);
-  assert.match(printJs, /مشرف وحدة الصيانة العامة/);
+  assert.match(printJs, /مدير وحدة الصيانة العامة بتجمع نجران الصحي/);
   assert.match(printJs, /م\. محمد عباس المكرمي/);
   assert.match(printJs, /qrDataUrl/);
   assert.match(printJs, /data-role="permit-stamp"/);
@@ -359,7 +395,12 @@ test('printing reuses one shared permit layout, includes QR and verification tex
   assert.match(printJs, /representative\.identityNumber/);
   assert.match(printJs, /representative\.mobile/);
   assert.match(printJs, /اسم المندوب/);
-  assert.match(printJs, /رمز تحقق داخلي/);
+  assert.match(printJs, /تحقق عام من التصريح/);
+  assert.match(printJs, /يرجى إبراز بطاقة تأهيل الفريق الفني ونموذج اعتماد موافقة زيارة مقاولي الباطن للمسؤول بالمنشأة/);
+  assert.match(printJs, /data-role="permit-stamp"[\s\S]*data-role="permit-qr"/);
+  assert.match(printJs, /visit-default-stamp\.png/);
+  assert.match(printJs, /visit-default-signature\.png/);
+  assert.match(printJs, /waitForImages/);
   assert.doesNotMatch(printJs, /\['وقت بداية الزيارة',/);
   assert.doesNotMatch(printJs, /\['وقت نهاية الزيارة',/);
   assert.doesNotMatch(printJs, /\['الغرض من الزيارة',/);
@@ -377,6 +418,10 @@ test('electronic stamp and signature settings validate real image bytes and rema
   assert.doesNotMatch(bootstrapBlock[0], /visit_stamp|visit_signature/);
   assert.match(center, /id="stamp-preview"/);
   assert.match(center, /id="signature-preview"/);
+  assert.equal(fs.existsSync(path.join(root, 'artifacts/mustaklassat/public/original/visit-default-stamp.png')), true);
+  assert.equal(fs.existsSync(path.join(root, 'artifacts/mustaklassat/public/original/visit-default-signature.png')), true);
+  assert.match(route, /DEFAULT_VISIT_SIGNER_TITLE = "مدير وحدة الصيانة العامة بتجمع نجران الصحي"/);
+  assert.match(route, /title === LEGACY_VISIT_SIGNER_TITLE/);
 });
 
 test('camera scanner supports BarcodeDetector, jsQR fallback, camera switching and manual permit search', () => {
@@ -386,10 +431,25 @@ test('camera scanner supports BarcodeDetector, jsQR fallback, camera switching a
   assert.match(centerJs, /facingMode: \{ ideal: 'environment' \}/);
   assert.match(centerJs, /getTracks\(\)\.forEach/);
   assert.match(centerJs, /\/qr\/manual\?serialNumber=/);
-  assert.match(centerJs, /\^NHC-NJ-VISIT:/);
-  assert.match(center, /QR رمز تحقق داخلي لا يفتح موقعًا/);
+  assert.match(centerJs, /visit-permit-verify\.html/);
+  assert.match(centerJs, /decodeURIComponent\(url\.hash\.slice\(1\)\)/);
+  assert.match(center, /QR يفتح صفحة تحقق عامة مختصرة/);
   assert.match(center, /id="camera-select"/);
   assert.match(center, /id="camera-rescan"/);
+});
+
+test('public QR verification is rate limited, current, and exposes only the approved summary fields', () => {
+  const publicRoute = route.match(/router\.get\("\/qr\/public"[\s\S]*?\n}\);/);
+  assert.ok(publicRoute);
+  assert.doesNotMatch(publicRoute[0], /requireAuth|requireApproved|requireClusterVisitManagement/);
+  assert.match(publicRoute[0], /assertScanRate/);
+  assert.match(publicRoute[0], /verifyToken/);
+  for (const field of ['serialNumber', 'status', 'visitorName', 'site', 'visitDate']) assert.match(publicRoute[0], new RegExp(field));
+  assert.doesNotMatch(publicRoute[0], /repId|identityNumber|mobile|documentsVerified|exceptionReason|cancellationReason/);
+  assert.match(publicVerify, /\/api\/visits\/qr\/public\?token=/);
+  assert.match(publicVerify, /location\.hash/);
+  assert.match(publicVerify, /credentials:'omit'/);
+  assert.doesNotMatch(publicVerify, /repId|identityNumber|mobileMasked|documentsVerified|exceptionReason/);
 });
 
 test('full identity and mobile are limited to authorized permit, detail and scan responses while listings stay masked', () => {
@@ -405,8 +465,51 @@ test('full identity and mobile are limited to authorized permit, detail and scan
   assert.match(centerJs, /representative\.mobile/);
 });
 
+test('facility approval is database-permission-only, site-scoped and legacy-compatible', () => {
+  assert.match(schema, /visit_facility_approvals/);
+  assert.match(schema, /visitId: integer\("visit_id"\)\.notNull\(\)\.references\(\(\) => visitRequestsTable\.id\)\.unique\(\)/);
+  assert.match(schema, /status: text\("status", \{ enum: \["pending", "approved", "rejected"\] \}\)/);
+  assert.match(route, /FACILITY_VISIT_APPROVAL_MODULE = "facility_visit_approval"/);
+  const permission = route.match(/function hasFacilityVisitApproval[\s\S]*?\n}/);
+  assert.ok(permission);
+  assert.match(permission[0], /allowedModules/);
+  assert.doesNotMatch(permission[0], /\.role|\.email|admin|supervisor/);
+  assert.match(route, /function sameFacilitySite[\s\S]*user\?\.hospital[\s\S]*visit\?\.siteLocation/);
+  assert.match(route, /router\.get\("\/facility\/visits"[\s\S]*leftJoin\(visitFacilityApprovalsTable/);
+  assert.match(route, /approval\?\.status \|\| "pending"/);
+  assert.match(route, /router\.get\("\/facility\/visits\/:id"[\s\S]*sameFacilitySite/);
+  assert.match(route, /router\.patch\("\/facility\/visits\/:id\/decision"[\s\S]*status === "rejected" && !notes/);
+});
+
+test('facility decisions and proof files are protected, audited and visible to the center', () => {
+  assert.match(route, /اعتماد زيارة من إدارة المنشأة/);
+  assert.match(route, /رفض زيارة من إدارة المنشأة/);
+  assert.match(route, /router\.post\("\/facility\/visits\/:id\/attachment"[\s\S]*storeDocument\(req, "visit", id, "facility_approval_proof"/);
+  assert.match(route, /router\.get\("\/facility\/visits\/:id\/attachments\/:documentId\/content"[\s\S]*sameFacilitySite/);
+  assert.match(route, /FILE_MAGIC_MISMATCH|FILE_MIME_MISMATCH/);
+  assert.match(route, /facilityApproval: facilityApprovalSummary\(facilityRows\[0\]\)/);
+  assert.match(route, /management\/archive[\s\S]*facilityApprovalSummary\(row\.facilityApproval\)/);
+  assert.match(center, /اعتماد المنشأة/);
+  assert.match(centerJs, /اعتمدتها المنشأة/);
+});
+
+test('facility approval page is an explicit database module with secure in-page decisions', () => {
+  assert.match(modulesSource, /FACILITY_VISIT_APPROVAL_MODULE_KEY = "facility_visit_approval"/);
+  assert.match(modulesSource, /facility-visit-approval\.html[\s\S]*explicitOnly: true/);
+  assert.match(authCheck, /'facility-visit-approval\.html': 'facility_visit_approval'/);
+  assert.match(facilityPage, /اعتماد زيارات المنشأة/);
+  assert.match(facilityPage, /لا تظهر هنا إلا الزيارات المطابقة للموقع المرتبط بحسابك/);
+  assert.match(facilityJs, /\/facility\/visits\/.*\/decision/);
+  assert.match(facilityJs, /\/attachment/);
+  assert.match(facilityJs, /سبب الرفض \(مطلوب\)/);
+  assert.match(facilityJs, /identityNumber/);
+  assert.doesNotMatch(facilityJs.match(/async function loadVisits[\s\S]*?\n  }/)[0], /identityNumber|repId/);
+});
+
 test('new visit browser scripts are syntactically valid and do not use native dialogs', () => {
   new vm.Script(centerJs, { filename: 'cluster-subcontractor-visits.js' });
   new vm.Script(printJs, { filename: 'visit-permit-print.js' });
-  for (const source of [center, centerJs, printJs]) assert.doesNotMatch(source, /(?<![\w.])(?:window\s*\.\s*)?(?:alert|confirm|prompt)\s*\(/);
+  new vm.Script(facilityJs, { filename: 'facility-visit-approval.js' });
+  new vm.Script(publicVerify.match(/<script>([\s\S]*?)<\/script>/)[1], { filename: 'visit-permit-verify.html' });
+  for (const source of [center, centerJs, printJs, publicVerify, facilityPage, facilityJs]) assert.doesNotMatch(source, /(?<![\w.])(?:window\s*\.\s*)?(?:alert|confirm|prompt)\s*\(/);
 });

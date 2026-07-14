@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearch } from "wouter";
-import { useAuth } from "@clerk/react";
+import { useAuth, useSession } from "@clerk/react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { QuranRadioFloatingPlayer } from "@/components/QuranRadioFloatingPlayer";
 import { usePageTracking } from "@/hooks/usePageTracking";
@@ -15,7 +15,7 @@ const KNOWN_ORIGINAL_PAGES = new Set([
   ...originalPages.adminOnlyPages,
 ]);
 const ADMIN_ONLY_ORIGINAL_PAGES = new Set(originalPages.adminOnlyPages);
-const FRAME_POLICY_CACHE_VERSION = "20260713_self_v2";
+const FRAME_POLICY_CACHE_VERSION = "20260714_token_bridge_v3";
 
 function UnauthorizedPage() {
   return (
@@ -59,7 +59,8 @@ export default function OriginalViewer() {
   const page = KNOWN_ORIGINAL_PAGES.has(requestedPage) ? requestedPage : null;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [frameEscaped, setFrameEscaped] = useState(false);
-  const { getToken } = useAuth();
+  const { getToken, isLoaded: authLoaded, sessionId } = useAuth();
+  const { session } = useSession();
 
   const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
 
@@ -75,16 +76,40 @@ export default function OriginalViewer() {
       } catch {}
     };
 
-    (window as any).najranGetFreshToken = async (options?: { skipCache?: boolean }) => {
-      const token = await getToken(options?.skipCache ? ({ skipCache: true } as any) : undefined);
+    const getFreshViewerToken = async (options?: { skipCache?: boolean }) => {
+      if (!authLoaded || !sessionId) return null;
+      if (options?.skipCache) {
+        try { await (session as any)?.reload?.(); } catch {}
+      }
+      let token = await getToken(options?.skipCache ? ({ skipCache: true } as any) : undefined);
+      if (!token && options?.skipCache) {
+        await new Promise(resolve => setTimeout(resolve, 250));
+        token = await getToken({ skipCache: true } as any);
+      }
       saveSessionToken(token);
       return token;
     };
 
+    (window as any).najranGetFreshToken = getFreshViewerToken;
+
+    const tokenRequestHandler = async (event: MessageEvent) => {
+      if (event.source !== iframeRef.current?.contentWindow || event.data?.type !== "NAJRAN_TOKEN_REQUEST") return;
+      const requestId = String(event.data?.requestId || "");
+      if (!requestId) return;
+      try {
+        const token = await getFreshViewerToken({ skipCache: event.data?.skipCache !== false });
+        iframeRef.current?.contentWindow?.postMessage({ type: "NAJRAN_TOKEN_RESPONSE", requestId, token: token || null }, window.location.origin);
+      } catch (error: any) {
+        iframeRef.current?.contentWindow?.postMessage({ type: "NAJRAN_TOKEN_RESPONSE", requestId, token: null, error: error?.message || "TOKEN_REFRESH_FAILED" }, window.location.origin);
+      }
+    };
+    window.addEventListener("message", tokenRequestHandler);
+
     return () => {
+      window.removeEventListener("message", tokenRequestHandler);
       try { delete (window as any).najranGetFreshToken; } catch {}
     };
-  }, [getToken]);
+  }, [getToken, authLoaded, sessionId, session]);
 
   useEffect(() => {
     const handler = (e: Event) => {

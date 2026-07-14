@@ -139,6 +139,7 @@
       'request-visit.html': 'request-visit',
       'visit-admin-review.html': 'cluster_visit_management',
       'cluster-subcontractor-visits.html': 'cluster_visit_management',
+      'facility-visit-approval.html': 'facility_visit_approval',
       'health_centers_attendance.html': 'health_centers_attendance',
       'health_centers_consumables.html': 'health_centers_consumables',
       'admin_offices_attendance.html': 'admin_offices_attendance',
@@ -155,9 +156,9 @@
     var role = String(session.role || 'user').toLowerCase();
     var moduleKey = moduleKeyFromPage(getOriginalPageFile());
     if (!moduleKey) return true;
-    var explicitOnly = { 'request-visit': true, 'cluster_visit_management': true };
+    var explicitOnly = { 'request-visit': true, 'cluster_visit_management': true, 'facility_visit_approval': true };
     var allowed = parseAllowedModules(session.allowedModules);
-    if (moduleKey === 'cluster_visit_management') return allowed !== null && allowed.indexOf(moduleKey) > -1;
+    if (moduleKey === 'cluster_visit_management' || moduleKey === 'facility_visit_approval') return allowed !== null && allowed.indexOf(moduleKey) > -1;
     if (role === 'admin' || role === 'supervisor') return true;
     if (allowed === null) return !explicitOnly[moduleKey];
     return allowed.indexOf(moduleKey) > -1;

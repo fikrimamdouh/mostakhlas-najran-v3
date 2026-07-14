@@ -187,6 +187,9 @@ export const visitRequestsTable = pgTable("visit_requests", {
   signedPermitFile: text("signed_permit_file"),
   cancelledAt: timestamp("cancelled_at"),
   cancelledReason: text("cancelled_reason"),
+  archivedAt: timestamp("archived_at"),
+  archivedByUserId: integer("archived_by_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+  archiveReason: text("archive_reason"),
   reissuedFromVisitId: integer("reissued_from_visit_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -308,6 +311,26 @@ export const visitRequestMetadataTable = pgTable("visit_request_metadata", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Site/facility acknowledgement is deliberately separate from the central
+// visit approval. This keeps legacy visit_requests rows intact and lets every
+// facility record (and later revise) its own operational decision without
+// changing or deleting the issued permit.
+export const visitFacilityApprovalsTable = pgTable("visit_facility_approvals", {
+  id: serial("id").primaryKey(),
+  visitId: integer("visit_id").notNull().references(() => visitRequestsTable.id).unique(),
+  siteName: text("site_name").notNull(),
+  status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
+  decidedByUserId: integer("decided_by_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+  approverName: text("approver_name"),
+  approverTitle: text("approver_title"),
+  notes: text("notes"),
+  decidedAt: timestamp("decided_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("visit_facility_approvals_site_status_idx").on(t.siteName, t.status),
+]);
+
 export const visitDocumentsTable = pgTable("visit_documents", {
   id: serial("id").primaryKey(),
   ownerType: text("owner_type", { enum: ["visit", "representative", "contractor", "qualification", "site_approval"] }).notNull(),
@@ -361,6 +384,7 @@ export type VisitSystem = typeof visitSystemsTable.$inferSelect;
 export type VisitContractor = typeof visitContractorsTable.$inferSelect;
 export type VisitRepresentative = typeof visitRepresentativesTable.$inferSelect;
 export type VisitRequestMetadata = typeof visitRequestMetadataTable.$inferSelect;
+export type VisitFacilityApproval = typeof visitFacilityApprovalsTable.$inferSelect;
 
 // Scheduled automatic backups — saved daily by the server scheduler
 export const scheduledBackupsTable = pgTable("scheduled_backups", {

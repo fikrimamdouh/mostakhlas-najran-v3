@@ -135,7 +135,7 @@ test('every mutating API route requires verified authentication', () => {
 
 test('all original HTML pages reference files that exist in the deployment', () => {
   const htmlFiles = walk(originalDir, (file) => file.endsWith('.html'));
-  assert.equal(htmlFiles.length, 39);
+  assert.equal(htmlFiles.length, 40);
   const missing = [];
 
   for (const htmlFile of htmlFiles) {
@@ -227,7 +227,7 @@ test('settings pages use a cache-busted same-origin frame with live token renewa
 
   assert.match(sidebar, /const href = `\/original-viewer\?page=\$\{m\.file\}`/);
   assert.match(dashboard, /function ov\(page: string\) \{ return `\/original-viewer\?page=\$\{page\}`; \}/);
-  assert.match(originalViewer, /FRAME_POLICY_CACHE_VERSION = "20260713_self_v2"/);
+  assert.match(originalViewer, /FRAME_POLICY_CACHE_VERSION = "20260714_token_bridge_v3"/);
   assert.match(originalViewer, /`\/original\/\$\{page\}\?framePolicy=\$\{FRAME_POLICY_CACHE_VERSION\}`/);
   assert.match(originalViewer, /najranGetFreshToken/);
   assert.match(originalViewer, /getToken\(options\?\.skipCache/);
