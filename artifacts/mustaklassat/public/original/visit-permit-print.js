@@ -141,3 +141,303 @@
   window.NajranVisitPermit = { load: loadPermit, preview: preview, print: print, showError: showError };
 
 })();
+
+(function () {
+  'use strict';
+
+  if (!/request-visit\.html(?:$|[?#])/.test(location.href) && document.title !== 'بوابة تسجيل ومتابعة الزيارات') return;
+
+  var requestSubmitting = false;
+  var requestCatalog = null;
+  var requestVisits = [];
+  var requestSearchBound = false;
+
+  function esc(value) {
+    return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function showMessage(message, type) {
+    var node = document.getElementById('status-message');
+    if (!node) return;
+    node.textContent = message;
+    node.className = type;
+    node.style.display = 'block';
+    clearTimeout(node._safeTimer);
+    node._safeTimer = setTimeout(function () { node.style.display = 'none'; }, 8000);
+  }
+
+  async function parentToken(force) {
+    if (!window.parent || window.parent === window) return null;
+    return new Promise(function (resolve) {
+      var requestId = 'request-visit-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+      var finished = false;
+      function done(value) {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        window.removeEventListener('message', receive);
+        resolve(typeof value === 'string' && value.trim() ? value.trim() : null);
+      }
+      function receive(event) {
+        if (event.origin !== location.origin || event.source !== window.parent || !event.data || event.data.type !== 'NAJRAN_TOKEN_RESPONSE' || event.data.requestId !== requestId) return;
+        done(event.data.token);
+      }
+      var timer = setTimeout(function () { done(null); }, 9000);
+      window.addEventListener('message', receive);
+      try { window.parent.postMessage({ type: 'NAJRAN_TOKEN_REQUEST', requestId: requestId, skipCache: !!force }, location.origin); }
+      catch (_) { done(null); }
+    });
+  }
+
+  async function freshToken(force) {
+    var scopes = [window, window.parent, window.top];
+    for (var i = 0; i < scopes.length; i++) {
+      try {
+        var getter = scopes[i] && scopes[i].najranGetFreshToken;
+        if (typeof getter === 'function') {
+          var value = await getter.call(scopes[i], force ? { skipCache: true } : undefined);
+          if (typeof value === 'string' && value.trim()) return value.trim();
+        }
+      } catch (_) {}
+    }
+    var bridged = await parentToken(force);
+    if (bridged) return bridged;
+    if (!force) try {
+      var session = JSON.parse(localStorage.getItem('najran_session') || '{}');
+      if (session.clerkToken && Date.now() - Number(session.timestamp || 0) < 55000) return session.clerkToken;
+    } catch (_) {}
+    throw new Error('انتهت صلاحية جلسة الدخول أو لم تعد صالحة؛ اضغط «تحديث آمن» ثم أعد المحاولة');
+  }
+
+  async function visitApi(path, options, retried) {
+    options = options || {};
+    var token = await freshToken(!!retried);
+    var response = await fetch('/api/visits' + path, Object.assign({}, options, {
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: Object.assign({ Authorization: 'Bearer ' + token }, options.headers || {})
+    }));
+    var body = await response.json().catch(function () { return {}; });
+    if (response.status === 401 && !retried) return visitApi(path, options, true);
+    if (!response.ok) {
+      var error = new Error(body.error || 'فشلت العملية');
+      error.status = response.status;
+      error.code = body.code || '';
+      throw error;
+    }
+    return body;
+  }
+
+  function visitDateText(value) {
+    if (!value) return '—';
+    try { return new Date(String(value).slice(0, 10) + 'T12:00:00').toLocaleDateString('ar-SA'); }
+    catch (_) { return String(value); }
+  }
+
+  function renderRequestVisits() {
+    var tbody = document.getElementById('req-tbody');
+    if (!tbody) return;
+    var query = String(document.getElementById('search-input')?.value || '').toLocaleLowerCase('ar').trim();
+    var rows = requestVisits.filter(function (visit) {
+      return !query || Object.keys(visit).some(function (key) { return visit[key] != null && String(visit[key]).toLocaleLowerCase('ar').indexOf(query) !== -1; });
+    });
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-row"><i class="fas fa-inbox" style="font-size:20px;color:#cbd5e1"></i><br>لا توجد طلبات</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(function (visit) {
+      var statusClass = visit.status === 'approved' ? 'status-approved' : visit.status === 'rejected' ? 'status-rejected' : 'status-pending';
+      var statusText = visit.status === 'approved' ? 'موافق عليه' : visit.status === 'rejected' ? 'مرفوض' : visit.status === 'cancelled' ? 'ملغى' : 'قيد المراجعة';
+      var actions = '';
+      if (visit.status === 'approved') {
+        var serial = visit.serialNumber ? '<div class="serial-badge"><i class="fas fa-hashtag"></i> ' + esc(visit.serialNumber) + '</div>' : '';
+        actions = serial + '<button class="btn-dl btn-dl-pdf" onclick="genPDF(' + visit.id + ')"><i class="fas fa-file-pdf"></i> تحميل إلكتروني</button>';
+        if (visit.hasSignedPermit) actions += '<button class="btn-dl btn-dl-signed" onclick="downloadSignedPermit(' + visit.id + ',\'' + esc(visit.serialNumber || visit.id) + '\')"><i class="fas fa-signature"></i> نسخة موقعة</button>';
+        actions += '<button class="btn-dl" style="background:#1e3c72;color:#fff" onclick="NajranVisitPermit.preview(' + visit.id + ').catch(NajranVisitPermit.showError)"><i class="fas fa-eye"></i> معاينة</button>';
+      } else if (visit.status === 'pending') {
+        actions = '<button class="btn-dl" style="background:#b45309;color:#fff" onclick="NajranVisitPermit.preview(' + visit.id + ').catch(NajranVisitPermit.showError)"><i class="fas fa-eye"></i> معاينة مسودة</button>';
+      } else if (visit.status === 'rejected' && visit.adminNotes) {
+        actions = '<small style="color:#b91c1c;font-size:11px"><i class="fas fa-info-circle"></i> ' + esc(visit.adminNotes) + '</small>';
+      }
+      return '<tr><td><strong>' + esc(visit.repName) + '</strong><br><small style="color:#94a3b8">' + esc(visit.repIdMasked) + '</small></td><td>' + esc(visit.siteLocation) + '</td><td>' + esc(visit.systemName) + '</td><td>' + esc(visit.subContractor) + '</td><td>' + visitDateText(visit.visitDate) + '</td><td><span class="status-badge ' + statusClass + '">' + statusText + '</span></td><td>' + (actions || '—') + '</td></tr>';
+    }).join('');
+  }
+
+  function bindSearch() {
+    if (requestSearchBound) return;
+    var input = document.getElementById('search-input');
+    if (!input) return;
+    requestSearchBound = true;
+    input.addEventListener('input', function (event) {
+      event.stopImmediatePropagation();
+      renderRequestVisits();
+    }, true);
+  }
+
+  function selectedRepresentativeIds() {
+    return Array.from(document.querySelectorAll('.representative-select')).map(function (select) { return Number(select.value || 0); }).filter(Boolean);
+  }
+
+  function refreshRepresentativeOptions(selectedIds) {
+    if (!requestCatalog) return;
+    var contractorId = Number(document.getElementById('f_sub')?.value || 0);
+    var systemId = Number(document.getElementById('f_system')?.value || 0);
+    var allowed = requestCatalog.representatives.filter(function (representative) {
+      return representative.isActive && representative.contractorId === contractorId && requestCatalog.representativeSystems.some(function (link) { return link.isActive && link.representativeId === representative.id && link.systemId === systemId; });
+    });
+    document.querySelectorAll('.representative-select').forEach(function (select, index) {
+      var current = selectedIds && selectedIds[index] ? String(selectedIds[index]) : select.value;
+      select.innerHTML = '<option value="">اختر المندوب المسجل</option>' + allowed.map(function (representative) { return '<option value="' + representative.id + '">' + esc(representative.fullName) + ' — ' + esc(representative.identityMasked) + '</option>'; }).join('');
+      if (allowed.some(function (representative) { return String(representative.id) === current; })) select.value = current;
+    });
+  }
+
+  async function loadSafeCatalog() {
+    var systemValue = document.getElementById('f_system')?.value || '';
+    var contractorValue = document.getElementById('f_sub')?.value || '';
+    var representativeIds = selectedRepresentativeIds();
+    var body = await visitApi('/catalog');
+    requestCatalog = body;
+    var systemSelect = document.getElementById('f_system');
+    var contractorSelect = document.getElementById('f_sub');
+    if (systemSelect) {
+      systemSelect.innerHTML = '<option value="">اختر النظام من الكتالوج المركزي</option>' + body.systems.filter(function (row) { return row.isActive; }).map(function (row) { return '<option value="' + row.id + '">' + esc(row.displayName || row.name) + '</option>'; }).join('');
+      if (body.systems.some(function (row) { return String(row.id) === String(systemValue); })) systemSelect.value = String(systemValue);
+    }
+    if (contractorSelect) {
+      contractorSelect.innerHTML = '<option value="">اختر الشركة المؤهلة</option>' + body.contractors.filter(function (row) { return row.isActive; }).map(function (row) { return '<option value="' + row.id + '">' + esc(row.displayName || row.name) + '</option>'; }).join('');
+      if (body.contractors.some(function (row) { return String(row.id) === String(contractorValue); })) contractorSelect.value = String(contractorValue);
+    }
+    refreshRepresentativeOptions(representativeIds);
+  }
+
+  async function loadSafeVisits() {
+    var body = await visitApi('/');
+    requestVisits = Array.isArray(body.visits) ? body.visits : [];
+    renderRequestVisits();
+  }
+
+  async function safeRefresh(announce) {
+    var button = document.getElementById('request-visit-safe-refresh');
+    if (button) button.disabled = true;
+    try {
+      await freshToken(true);
+      await Promise.all([loadSafeCatalog(), loadSafeVisits()]);
+      bindSearch();
+      if (announce) showMessage('تم تجديد الجلسة وتحديث بيانات الزيارات بدون فقد المدخلات الحالية', 'success');
+      return true;
+    } catch (error) {
+      if (announce) showMessage(error.message || 'تعذر تجديد الجلسة', 'error');
+      return false;
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  function injectSafeRefreshButton() {
+    if (document.getElementById('request-visit-safe-refresh')) return;
+    var header = document.querySelector('.form-header');
+    if (!header) return;
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.id = 'request-visit-safe-refresh';
+    button.innerHTML = '<i class="fas fa-rotate"></i> تحديث آمن';
+    button.style.cssText = 'margin-top:14px;border:0;border-radius:10px;padding:10px 18px;background:#1e3c72;color:#fff;font-family:Tajawal,sans-serif;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:7px';
+    button.addEventListener('click', function () { safeRefresh(true); });
+    header.appendChild(button);
+  }
+
+  function activeOnDate(row, date) {
+    return row && row.status === 'active' && (!row.validFrom || row.validFrom <= date) && (!row.validUntil || row.validUntil >= date);
+  }
+
+  async function submitRequest(event) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (requestSubmitting) return;
+
+    var button = document.getElementById('submit-btn');
+    requestSubmitting = true;
+    if (button) button.disabled = true;
+    try {
+      if (!requestCatalog && !(await safeRefresh(false))) throw new Error('تعذر تحميل بيانات الزيارات بعد تجديد الجلسة');
+      var representativeIds = selectedRepresentativeIds();
+      if (!representativeIds.length) throw new Error('اختر مندوبًا واحدًا على الأقل');
+      if (new Set(representativeIds).size !== representativeIds.length) throw new Error('تم اختيار نفس المندوب أكثر من مرة؛ كل مندوب يُحفظ مرة واحدة فقط');
+
+      var siteLocation = String(document.getElementById('f_site')?.value || '').trim();
+      var mainContractor = String(document.getElementById('f_main')?.value || '').trim();
+      var systemId = Number(document.getElementById('f_system')?.value || 0);
+      var contractorId = Number(document.getElementById('f_sub')?.value || 0);
+      var visitDate = String(document.getElementById('f_date')?.value || '');
+      if (!siteLocation || !mainContractor || !systemId || !contractorId || !/^\d{4}-\d{2}-\d{2}$/.test(visitDate)) throw new Error('أكمل الموقع والمقاول والنظام والشركة وتاريخ الزيارة');
+
+      var approval = requestCatalog.siteApprovals.find(function (row) { return row.siteName === siteLocation && row.systemId === systemId && row.contractorId === contractorId && activeOnDate(row, visitDate); });
+      var qualification = requestCatalog.qualifications.find(function (row) { return row.systemId === systemId && row.contractorId === contractorId && activeOnDate(row, visitDate); });
+      if (!approval || !qualification) throw new Error('لا يوجد اعتماد موقع وتأهيل ساريان للشركة والنظام في تاريخ الزيارة');
+
+      if (button) button.innerHTML = '<span class="spinner"></span> جارٍ الحفظ الآمن...';
+      var created = 0, duplicates = 0, failures = [];
+      for (var i = 0; i < representativeIds.length; i++) {
+        try {
+          var result = await visitApi('/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              siteLocation: siteLocation,
+              mainContractor: mainContractor,
+              systemId: systemId,
+              contractorId: contractorId,
+              representativeId: representativeIds[i],
+              siteApprovalId: approval.id,
+              qualificationId: qualification.id,
+              visitDate: visitDate,
+              startsAt: visitDate + 'T00:00:00.000Z',
+              endsAt: null
+            })
+          });
+          if (result.duplicate || result.code === 'VISIT_ALREADY_EXISTS') duplicates += 1;
+          else created += 1;
+        } catch (error) {
+          failures.push(error.message || 'فشل الحفظ');
+        }
+      }
+
+      await loadSafeVisits();
+      if (!failures.length) {
+        showMessage(created ? 'تم حفظ ' + created + ' زيارة مرة واحدة' + (duplicates ? '، وتم تجاهل ' + duplicates + ' طلب مكرر موجود بالفعل' : '') : 'الزيارة مسجلة بالفعل؛ لم يتم إنشاء نسخة مكررة', 'success');
+        var wrapper = document.getElementById('visitors-wrap');
+        if (wrapper && typeof window.addVisitor === 'function') {
+          wrapper.innerHTML = '';
+          try { window.visitorCount = 0; } catch (_) {}
+          window.addVisitor();
+          refreshRepresentativeOptions([]);
+        }
+      } else {
+        showMessage('تم حفظ ' + created + '، وتم تجاهل ' + duplicates + ' مكرر، وتعذر حفظ ' + failures.length + ': ' + failures[0], 'error');
+      }
+    } catch (error) {
+      showMessage(error.message || 'تعذر حفظ طلب الزيارة', 'error');
+    } finally {
+      requestSubmitting = false;
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الطلب';
+      }
+    }
+  }
+
+  function install() {
+    var form = document.getElementById('visit-form');
+    if (!form || form.dataset.safeRequestInstalled === '1') return;
+    form.dataset.safeRequestInstalled = '1';
+    form.addEventListener('submit', submitRequest, true);
+    document.getElementById('f_system')?.addEventListener('change', function () { refreshRepresentativeOptions(selectedRepresentativeIds()); }, true);
+    document.getElementById('f_sub')?.addEventListener('change', function () { refreshRepresentativeOptions(selectedRepresentativeIds()); }, true);
+    injectSafeRefreshButton();
+    bindSearch();
+    setTimeout(function () { safeRefresh(false); }, 350);
+  }
+
+  install();
+})();
