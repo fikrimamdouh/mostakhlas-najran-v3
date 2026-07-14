@@ -156,8 +156,7 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
         <input type="date" id="f_date" required>
       </div>
       <div class="input-group full">
-        <label for="f_purpose"><i class="fas fa-clipboard-list"></i> الغرض من الزيارة</label>
-        <input type="text" id="f_purpose" maxlength="500" placeholder="وصف الأعمال المطلوب تنفيذها أثناء الزيارة" required>
+        <div class="info-banner"><i class="fas fa-tools"></i> نوع الطلب ثابت: زيارة دورية لأنظمة المستشفى.</div>
       </div>
     </div>
 
@@ -238,8 +237,8 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
       var body = await r.json().catch(function(){ return {}; });
       if (!r.ok) throw new Error(body.error || 'تعذر تحميل كتالوج الزيارات');
       catalog = body;
-      document.getElementById('f_system').innerHTML = '<option value="">اختر النظام من الكتالوج المركزي</option>' + catalog.systems.filter(function(x){return x.isActive;}).map(function(x){return '<option value="'+x.id+'">'+esc(x.name)+'</option>';}).join('');
-      document.getElementById('f_sub').innerHTML = '<option value="">اختر الشركة المؤهلة</option>' + catalog.contractors.filter(function(x){return x.isActive;}).map(function(x){return '<option value="'+x.id+'">'+esc(x.name)+'</option>';}).join('');
+      document.getElementById('f_system').innerHTML = '<option value="">اختر النظام من الكتالوج المركزي</option>' + catalog.systems.filter(function(x){return x.isActive;}).map(function(x){return '<option value="'+x.id+'">'+esc(x.displayName || x.name)+'</option>';}).join('');
+      document.getElementById('f_sub').innerHTML = '<option value="">اختر الشركة المؤهلة</option>' + catalog.contractors.filter(function(x){return x.isActive;}).map(function(x){return '<option value="'+x.id+'">'+esc(x.displayName || x.name)+'</option>';}).join('');
       refreshRepresentativeOptions();
     } catch (e) { showMsg(e.message || 'تعذر تحميل كتالوج الزيارات', 'error'); }
   }
@@ -307,11 +306,8 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
       mainContractor: document.getElementById('f_main').value,
       contractorId:   Number(document.getElementById('f_sub').value),
       visitDate:      document.getElementById('f_date').value,
-      purpose:        document.getElementById('f_purpose').value,
     };
-    var dayStart = new Date(shared.visitDate + 'T08:00:00');
-    var dayEnd = new Date(shared.visitDate + 'T17:00:00');
-    shared.startsAt = dayStart.toISOString(); shared.endsAt = dayEnd.toISOString();
+    shared.startsAt = shared.visitDate + 'T00:00:00.000Z'; shared.endsAt = null;
     var approval = catalog.siteApprovals.find(function(x){ return x.status === 'active' && x.siteName === shared.siteLocation && x.systemId === shared.systemId && x.contractorId === shared.contractorId; });
     var qualification = catalog.qualifications.find(function(x){ return x.status === 'active' && x.systemId === shared.systemId && x.contractorId === shared.contractorId; });
     if (!approval || !qualification) { showMsg('لا يوجد اعتماد موقع وتأهيل ساريان للشركة والنظام المحددين', 'error'); btn.disabled = false; return; }
@@ -355,7 +351,6 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
       document.getElementById('visitors-wrap').innerHTML = '';
       visitorCount = 0;
       addVisitor();
-      document.getElementById('f_purpose').value = '';
     } else if (successCount > 0) {
       showMsg('نجح ' + successCount + ' طلب وفشل ' + failCount, 'error');
     } else {

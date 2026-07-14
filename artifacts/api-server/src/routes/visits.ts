@@ -51,6 +51,7 @@ const router = Router();
 
 const DEFAULT_VISIT_SIGNER_TITLE = "مشرف وحدة الصيانة العامة";
 const DEFAULT_VISIT_SIGNER_NAME = "م. محمد عباس المكرمي";
+const DEFAULT_VISIT_PURPOSE = "زيارة دورية لأنظمة المستشفى";
 const MAX_VISIT_PRINT_ASSET_BYTES = 2 * 1024 * 1024;
 const MAINTENANCE_CONTRACTORS = [
   {
@@ -82,28 +83,72 @@ const MAINTENANCE_CONTRACTORS = [
   },
 ] as const;
 
+const SYSTEM_CANONICAL_NAMES = [
+  { name: "أنظمة مزودات الطاقة غير المنقطعة (UPS)", aliases: ["UPS"] },
+  { name: "نظام إدارة المباني (BMS)", aliases: ["BMS"] },
+  { name: "نظام كاميرات المراقبة الأمنية (CCTV)", aliases: ["كاميرات المراقبة الأمنية CCTV"] },
+  { name: "المولدات الكهربائية وأنظمة التحويل الآلي (ATS)", aliases: ["المولدات الكهربائية وATS"] },
+] as const;
+
+const CONTRACTOR_CANONICAL_NAMES = [
+  { name: "مؤسسة أفق الحجاز المحدودة", aliases: ["أفق الحجاز"] },
+  { name: "شركة المفردون للمقاولات", aliases: ["المفردون"] },
+  { name: "شركة إيكوفا للمقاولات", aliases: ["شركة إيكوفا", "إيكوفا للمقاولات"] },
+  { name: "شركة دائرة التحكم", aliases: [] },
+  { name: "شركة الركن السليم للسلامة", aliases: ["الركن السليم"] },
+  { name: "الشركة العربية للتشغيل والصيانة", aliases: ["الشركة العربية"] },
+  { name: "شركة السامي للأمن والسلامة", aliases: ["شركة السامي للأمن"] },
+  { name: "شركة النسر الفضي للمقاولات", aliases: ["النسر الفضي"] },
+  { name: "شركة قمم شار للمقاولات", aliases: ["قمم شار"] },
+  { name: "مؤسسة نبراس حنين لأنظمة السلامة", aliases: ["نبراس حنين"] },
+] as const;
+
 // Snapshot of the approved-subcontractor folders supplied by the maintenance
-// unit. The folder names are systems and the PDF names identify the approved
-// companies. This seeds names and system/company relationships only; the
-// operational validity dates remain explicit in visit_qualifications.
+// unit. Names shown to users are canonical and complete; aliases are retained
+// only to attach existing database rows and historical visits without loss.
 const APPROVED_SUBCONTRACTOR_CATALOG = [
   { system: "محطات تحلية المياه", contractors: ["أسس التطوير للمقاولات", "تبرا العالمية"] },
   { system: "السنترال والنداء واستدعاء الممرضات", contractors: ["دار المبتكر", "سايت تكنولوجي", "مؤسسة أشواق الجنوب", "شركة إيكوفا", "نبراس حنين"] },
   { system: "مكافحة الحشرات", contractors: ["مستقبل الأوطان للتشغيل", "شركة تراب كيل", "مؤسسة ماسة الحشرات", "شركة الإيوان الطبية", "مؤسسة التألق البيئي", "شركة حنين للمقاولات", "مكسل", "سادن", "رسيل الشرق", "درة الفتاك"] },
-  { system: "UPS", contractors: ["الصدارة", "رواد الأمانة", "سايت تكنولوجي", "النسر الفضي", "شركة إيكوفا", "شركة الأمان الحديثة للطاقة", "المرافق"] },
-  { system: "BMS", contractors: ["الصدارة", "دار المبتكر", "الأفق المتميزة", "إلهامات الحديثة", "شركة إيكوفا"] },
-  { system: "كاميرات المراقبة الأمنية CCTV", contractors: ["سايت تكنولوجي", "الأفق المتميزة", "مؤسسة أشواق الجنوب", "دروع الأمنية", "نبراس حنين"] },
+  { system: "أنظمة مزودات الطاقة غير المنقطعة (UPS)", contractors: ["الصدارة", "رواد الأمانة", "سايت تكنولوجي", "شركة النسر الفضي للمقاولات", "شركة إيكوفا للمقاولات", "شركة الأمان الحديثة للطاقة", "المرافق"] },
+  { system: "نظام إدارة المباني (BMS)", contractors: ["الصدارة", "دار المبتكر", "الأفق المتميزة", "إلهامات الحديثة", "شركة إيكوفا للمقاولات"] },
+  { system: "نظام كاميرات المراقبة الأمنية (CCTV)", contractors: ["سايت تكنولوجي", "الأفق المتميزة", "مؤسسة أشواق الجنوب", "دروع الأمنية", "مؤسسة نبراس حنين لأنظمة السلامة"] },
   { system: "محطات معالجة مياه الصرف الصحي", contractors: ["أسس التطوير للمقاولات"] },
   { system: "الغلايات", contractors: ["الصغير", "إلهامات الحديثة", "خالد عايض الجعيدي"] },
   { system: "المغاسل", contractors: ["مصنع الجعيدي"] },
   { system: "الغازات الطبية", contractors: ["النظم الاحترافية", "شركة ماس", "سيسنبر العالمية", "أهالينا", "دريجر", "شركة مودرن تشالنجر"] },
-  { system: "إطفاء الحريق", contractors: ["مؤسسة أجهزة الإطفاء لأجهزة السلامة", "الركن السليم", "الشركة العربية", "شركة دائرة التحكم", "شركة إيكوفا", "أفق الحجاز", "نبراس حنين", "قمم شار", "المفردون", "النسر الفضي"] },
-  { system: "إنذار الحريق", contractors: ["النسر الفضي", "مؤسسة أشواق الجنوب", "مؤسسة أجهزة الإطفاء لأجهزة السلامة", "شركة السامي للأمن", "الركن السليم", "شركة دائرة التحكم", "شركة إيكوفا", "أفق الحجاز", "المفردون", "نبراس حنين", "قمم شار"] },
-  { system: "المحولات واللوحات والقواطع الكهربائية", contractors: ["الصدارة", "سبق التقنية", "سايت تكنولوجي", "صفوف الريادة", "المرافق", "شركة الأمان الحديثة للطاقة", "النسر الفضي"] },
-  { system: "المولدات الكهربائية وATS", contractors: ["سبق التقنية", "الصدارة", "سايت تكنولوجي", "صفوف الريادة", "النسر الفضي", "شركة الأمان الحديثة للطاقة", "المرافق"] },
+  { system: "إطفاء الحريق", contractors: ["مؤسسة أجهزة الإطفاء لأجهزة السلامة", "شركة الركن السليم للسلامة", "الشركة العربية للتشغيل والصيانة", "شركة دائرة التحكم", "شركة إيكوفا للمقاولات", "مؤسسة أفق الحجاز المحدودة", "مؤسسة نبراس حنين لأنظمة السلامة", "شركة قمم شار للمقاولات", "شركة المفردون للمقاولات", "شركة النسر الفضي للمقاولات"] },
+  { system: "إنذار الحريق", contractors: ["شركة النسر الفضي للمقاولات", "مؤسسة أشواق الجنوب", "مؤسسة أجهزة الإطفاء لأجهزة السلامة", "شركة السامي للأمن والسلامة", "شركة الركن السليم للسلامة", "شركة دائرة التحكم", "شركة إيكوفا للمقاولات", "مؤسسة أفق الحجاز المحدودة", "شركة المفردون للمقاولات", "مؤسسة نبراس حنين لأنظمة السلامة", "شركة قمم شار للمقاولات"] },
+  { system: "المحولات واللوحات والقواطع الكهربائية", contractors: ["الصدارة", "سبق التقنية", "سايت تكنولوجي", "صفوف الريادة", "المرافق", "شركة الأمان الحديثة للطاقة", "شركة النسر الفضي للمقاولات"] },
+  { system: "المولدات الكهربائية وأنظمة التحويل الآلي (ATS)", contractors: ["سبق التقنية", "الصدارة", "سايت تكنولوجي", "صفوف الريادة", "شركة النسر الفضي للمقاولات", "شركة الأمان الحديثة للطاقة", "المرافق"] },
   { system: "تنظيف مجاري الهواء", contractors: ["كيان التزويد", "مصداقية وطن", "شركة آراك الخليج", "بريق الجليد"] },
   { system: "ثلاجة الموتى", contractors: ["شركة رياح النواة", "شنان الخليج"] },
   { system: "التكييف والتبريد", contractors: ["إلهامات الحديثة", "شركة رياح النواة", "شركة وتين", "مصداقية الوطن", "شركة أهالينا", "شنان الخليج"] },
+] as const;
+
+// These names and validity dates are transcribed from the supplied Ministry of
+// Health qualification certificates. Identity numbers are intentionally not
+// copied into source code or listing APIs. A manager completes identity,
+// mobile, and residence data before a listed person becomes selectable.
+const QUALIFICATION_CERTIFICATES = [
+  { reference: "MOH-MAIN-2026-023", company: "مؤسسة أفق الحجاز المحدودة", system: "إطفاء الحريق", validFrom: "2026-05-17", validUntil: "2027-12-31", contactMobile: "0535588407", personnel: ["أحمد محمد أبو اليزيد", "فيصل فهد البري", "عتيق محمد عتيق الحارثي", "محمود إيهاب حمود", "سيول نذر السلام", "محمود السيد محمد إبراهيم", "عبدالعزيز مسعود ضيف الله", "محمد محمد أحمد إبراهيم", "شهيد الرحمن مفيض"] },
+  { reference: "MOH-MAIN-2026-024", company: "مؤسسة أفق الحجاز المحدودة", system: "إنذار الحريق", validFrom: "2026-05-17", validUntil: "2027-12-31", contactMobile: "0535588407", personnel: ["نثار خليفة عثمان العمودي", "ثابت محمد ثابت الشهري", "سعد سلطان الحكمي", "مد الرز", "يحي محمد سعيد صقر", "يوسف عبيد عبدالله الجدعاني", "محمد حسن علي قحل", "علي أحمد المقري", "أبو الحسن نور السلام"] },
+  { reference: "MOH-MAIN-2026-027", company: "شركة المفردون للمقاولات", system: "إنذار الحريق", validFrom: "2026-05-20", validUntil: "2027-12-31", contactMobile: "0542197396", personnel: ["بلقر شعبان رمضان", "إبراهيم سلمي عمارة", "محمد منور علي"] },
+  { reference: "MOH-MAIN-2026-028", company: "شركة المفردون للمقاولات", system: "إطفاء الحريق", validFrom: "2026-05-20", validUntil: "2027-12-31", contactMobile: "0542197396", personnel: ["خالد حسين أحمد", "ربيع شعبان عبدالعليم", "محمد السيد عزوز"] },
+  { reference: "MOH-MAIN-2026-029", company: "شركة إيكوفا للمقاولات", system: "إنذار الحريق", validFrom: "2026-05-20", validUntil: "2027-12-31", contactMobile: "0539668455", personnel: ["فوزي السيد فايد", "جوزيف أورتيز", "أحمد فتحي محمد"] },
+  { reference: "MOH-MAIN-2026-043", company: "شركة إيكوفا للمقاولات", system: "إطفاء الحريق", validFrom: "2026-06-20", validUntil: "2027-12-31", contactMobile: "0582224263", personnel: ["مجيحت عنتر رجب", "محمد حسن الخنجور", "زياد عماد عبدالمنور"] },
+  { reference: "MOH-MAIN-2026-046", company: "شركة دائرة التحكم", system: "إطفاء الحريق", validFrom: "2026-06-20", validUntil: "2027-12-31", contactMobile: "0505139763", personnel: ["موسى إقبال", "محمد مأمون مياه", "بسام ربيع فكري"] },
+  { reference: "MOH-MAIN-2026-047", company: "شركة دائرة التحكم", system: "إنذار الحريق", validFrom: "2026-06-20", validUntil: "2027-12-31", contactMobile: "0505139763", personnel: ["شكيل ملا", "مد عمران", "سهريب مرسلين"] },
+  { reference: "MOH-MAIN-2026-050", company: "شركة الركن السليم للسلامة", system: "إطفاء الحريق", validFrom: "2026-06-22", validUntil: "2027-12-31", contactMobile: "0503820195", personnel: ["عامر محمود الشراونه", "محمد أحمد نور داوود", "محمود داوود", "أحمد نور محمد داوود", "شاه فيصل مير عبدالرحمن", "عمار ماهر عبدالمجيد المنصور", "هاشم أحمد نور محمد داوود", "درويش محمد"] },
+  { reference: "MOH-MAIN-2026-051", company: "الشركة العربية للتشغيل والصيانة", system: "إطفاء الحريق", validFrom: "2026-05-10", validUntil: "2027-12-31", contactMobile: "0557889797", personnel: ["جيلاني عبدالله الجيلاني محمد الحسن", "إبراهيم علي عبدالرحمن عبدالله", "عماد الدين التاج بكري الشيخ"] },
+  { reference: "MOH-MAIN-2026-052", company: "شركة الركن السليم للسلامة", system: "إنذار الحريق", validFrom: "2026-06-22", validUntil: "2027-12-31", contactMobile: "0503820195", personnel: ["إبراهيم عبد الفتاح مصطفى ثابت", "سونو سونو الأنصاري سلك", "أكبر علي كينال ميان", "وليد محمد أمين صديق تركستاني", "وليد أرشد محمد أرشد", "عبدالعزيز محمود محمد المدني"] },
+  { reference: "MOH-MAIN-2026-054", company: "شركة السامي للأمن والسلامة", system: "إنذار الحريق", validFrom: "2026-06-24", validUntil: "2027-12-31", contactMobile: "0550535225", personnel: ["أحمد نجاح أبو رفاعي", "حيدر شكر الله أحمد", "سعد محمد رمضان"] },
+  { reference: "MOH-MAIN-2026-015", company: "شركة النسر الفضي للمقاولات", system: "إطفاء الحريق", validFrom: "2026-05-17", validUntil: "2027-12-31", contactMobile: "0560007092", personnel: ["عبدالعزيز عبدالله الزهراني", "سلطان طيب القيسي", "محمد قاسم محمد"] },
+  { reference: "MOH-MAIN-2026-013", company: "شركة النسر الفضي للمقاولات", system: "إنذار الحريق", validFrom: "2026-05-17", validUntil: "2027-12-31", contactMobile: "0560007092", personnel: ["مشاري مطلق العطوي", "ثريا مفضي العنزي", "محمد عارف"] },
+  { reference: "MOH-MAIN-2026-009", company: "شركة قمم شار للمقاولات", system: "إطفاء الحريق", validFrom: "2026-05-17", validUntil: "2027-12-31", contactMobile: "0580615950", personnel: ["أحمد فرج طعيمة", "جابر محمد خليل", "عبدالرحمن ظافر العنزي"] },
+  { reference: "MOH-MAIN-2026-010", company: "شركة قمم شار للمقاولات", system: "إنذار الحريق", validFrom: "2026-05-17", validUntil: "2027-12-31", contactMobile: "0580615950", personnel: ["السيد إبراهيم ناصف", "رضى محي الدين الشريني", "حمدي عوف هارون"] },
+  { reference: "MOH-MAIN-2026-018", company: "مؤسسة نبراس حنين لأنظمة السلامة", system: "إطفاء الحريق", validFrom: "2026-05-17", validUntil: "2027-12-31", contactMobile: "0536893723", personnel: ["يحي محمد العنزي", "يوسف أحمد يوسف القاري", "عبدالإله نايف القحطاني"] },
+  { reference: "MOH-MAIN-2026-017", company: "مؤسسة نبراس حنين لأنظمة السلامة", system: "إنذار الحريق", validFrom: "2026-05-17", validUntil: "2027-12-31", contactMobile: "0536893723", personnel: ["مشاري عبدالله العنزي", "راكان حامد عواد الزارع", "عبدالله عبدالكريم القازح"] },
 ] as const;
 
 const uploadMemory = multer({
@@ -178,6 +223,31 @@ function catalogNameKey(value: unknown): string {
     .replace(/[^\p{L}\p{N}]+/gu, "");
 }
 
+function canonicalName(value: unknown, rows: readonly { name: string; aliases: readonly string[] }[]): string {
+  const raw = cleanText(value, 250);
+  const key = catalogNameKey(raw);
+  const match = rows.find((row) => catalogNameKey(row.name) === key || row.aliases.some((alias) => catalogNameKey(alias) === key));
+  return match?.name || raw;
+}
+
+function canonicalSystemName(value: unknown): string {
+  return canonicalName(value, SYSTEM_CANONICAL_NAMES);
+}
+
+function canonicalContractorName(value: unknown): string {
+  return canonicalName(value, CONTRACTOR_CANONICAL_NAMES);
+}
+
+function isFullCompanyName(value: unknown): boolean {
+  return /^(?:شركة|مؤسسة|مصنع)\s+\S+(?:\s+\S+)+$/u.test(cleanText(value, 200));
+}
+
+function validDateRange(fromValue: unknown, untilValue: unknown): { validFrom: string; validUntil: string } | null {
+  const validFrom = dayString(fromValue), validUntil = dayString(untilValue);
+  if (!validFrom || !validUntil || validUntil < validFrom) return null;
+  return { validFrom, validUntil };
+}
+
 function maintenanceContractor(key: unknown) {
   const normalized = cleanText(key, 80);
   return MAINTENANCE_CONTRACTORS.find((row) => row.key === normalized) || null;
@@ -213,9 +283,9 @@ function sanitizeVisit(visit: any, metadata?: any | null) {
     repIdMasked: maskIdentity(visit.repId),
     siteLocation: visit.siteLocation,
     visitDate: visit.visitDate,
-    systemName: visit.systemName,
+    systemName: canonicalSystemName(visit.systemName),
     mainContractor: visit.mainContractor,
-    subContractor: visit.subContractor,
+    subContractor: canonicalContractorName(visit.subContractor),
     status: visit.status,
     effectiveStatus: visitEffectiveStatus(visit, metadata),
     adminNotes: visit.adminNotes,
@@ -278,9 +348,9 @@ function snapshotFor(context: VisitContext) {
       visitDate: visit.visitDate,
       startsAt: metadata?.startsAt || null,
       endsAt: metadata?.endsAt || null,
-      systemName: system?.name || visit.systemName,
+      systemName: canonicalSystemName(system?.name || visit.systemName),
       mainContractor: visit.mainContractor,
-      subContractor: contractor?.name || visit.subContractor,
+      subContractor: canonicalContractorName(contractor?.name || visit.subContractor),
     },
     references: {
       systemId: system?.id || null,
@@ -366,7 +436,6 @@ async function validateCentralContext(executor: AnyDb, context: VisitContext): P
   }
   const window = validateVisitWindow(metadata.startsAt, metadata.endsAt);
   if ("error" in window) return window.error;
-  if (!cleanText(metadata.purpose, 500)) return "الغرض من الزيارة مطلوب";
   return null;
 }
 
@@ -600,8 +669,8 @@ router.get("/catalog", requireAuth, requireApproved, async (req: any, res) => {
     db.select().from(visitRepresentativeSystemsTable),
   ]);
   return res.json({
-    systems: systems.filter((x) => cluster || x.isActive).map(({ createdByUserId: _createdBy, ...x }) => x),
-    contractors: contractors.filter((x) => cluster || x.isActive).map(({ registrationNumber, contactMobile, ...x }) => cluster ? { ...x, registrationNumber, contactMobile } : x),
+    systems: systems.filter((x) => cluster || x.isActive).map(({ createdByUserId: _createdBy, ...x }) => ({ ...x, displayName: canonicalSystemName(x.name) })),
+    contractors: contractors.filter((x) => cluster || x.isActive).map(({ registrationNumber, contactMobile, ...x }) => cluster ? { ...x, registrationNumber, contactMobile, displayName: canonicalContractorName(x.name) } : { ...x, displayName: canonicalContractorName(x.name) }),
     qualifications: qualifications.filter((x) => cluster || x.status === "active"),
     siteApprovals: siteApprovals.filter((x) => cluster || (x.status === "active" && x.siteName === req.currentUser.hospital)),
     representatives: representatives.filter((x) => cluster || x.isActive).map((x) => ({
@@ -625,7 +694,7 @@ router.post("/", requireAuth, requireApproved, async (req: any, res) => {
   const representativeId = numberId(body.representativeId);
   const siteApprovalId = numberId(body.siteApprovalId);
   const qualificationId = numberId(body.qualificationId);
-  const purpose = cleanText(body.purpose, 500);
+  const purpose = DEFAULT_VISIT_PURPOSE;
   const visitDate = dayString(body.visitDate || body.startsAt);
   if (!visitDate) return res.status(400).json({ error: "تاريخ الزيارة غير صالح" });
 
@@ -643,17 +712,17 @@ router.post("/", requireAuth, requireApproved, async (req: any, res) => {
     if (!resolved.system || !resolved.contractor || !resolved.representative || !resolved.siteApproval || !resolved.qualification) return res.status(400).json({ error: "أحد المراجع المركزية المحددة غير موجود" });
   }
 
-  const window = validateVisitWindow(body.startsAt || `${visitDate}T08:00:00.000Z`, body.endsAt || `${visitDate}T17:00:00.000Z`);
+  const window = validateVisitWindow(body.startsAt || `${visitDate}T00:00:00.000Z`, body.endsAt);
   if ("error" in window) return res.status(400).json({ error: window.error });
   const repName = resolved?.representative?.fullName || cleanText(body.repName, 200);
   const repId = resolved?.representative?.identityNumber || cleanText(body.repId, 40);
   const repMobile = resolved?.representative?.mobile || cleanText(body.repMobile, 30);
   const siteLocation = resolved?.siteApproval?.siteName || cleanText(body.siteLocation || req.currentUser.hospital, 200);
-  const systemName = resolved?.system?.name || cleanText(body.systemName, 250);
-  const subContractor = resolved?.contractor?.name || cleanText(body.subContractor, 250);
+  const systemName = canonicalSystemName(resolved?.system?.name || cleanText(body.systemName, 250));
+  const subContractor = canonicalContractorName(resolved?.contractor?.name || cleanText(body.subContractor, 250));
   const mainContractor = cleanText(body.mainContractor || req.currentUser.company || "تجمع نجران الصحي", 250);
-  if (!repName || !repId || !isValidSaudiMobile(repMobile) || !siteLocation || !systemName || !subContractor || !purpose) {
-    return res.status(400).json({ error: "الاسم والهوية والجوال السعودي والموقع والنظام والشركة والغرض حقول مطلوبة" });
+  if (!repName || !repId || !isValidSaudiMobile(repMobile) || !siteLocation || !systemName || !subContractor) {
+    return res.status(400).json({ error: "الاسم والهوية والجوال السعودي والموقع والنظام والشركة حقول مطلوبة" });
   }
 
   try {
@@ -688,13 +757,13 @@ router.post("/", requireAuth, requireApproved, async (req: any, res) => {
 
 router.post("/management/direct-issue", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
   const systemId = numberId(req.body.systemId), contractorId = numberId(req.body.contractorId), representativeId = numberId(req.body.representativeId), siteApprovalId = numberId(req.body.siteApprovalId), qualificationId = numberId(req.body.qualificationId);
-  const purpose = cleanText(req.body.purpose, 500);
+  const purpose = DEFAULT_VISIT_PURPOSE;
   const maintenance = maintenanceContractor(req.body.maintenanceContractorKey);
   const siteName = cleanText(req.body.siteName, 200);
   const window = validateVisitWindow(req.body.startsAt, req.body.endsAt);
   if (!maintenance) return res.status(400).json({ error: "اختر مقاول الصيانة: بيت العرب أو سراكو" });
   if (!siteName || !(maintenance.sites as readonly string[]).includes(siteName)) return res.status(400).json({ error: "الموقع المحدد لا يتبع مقاول الصيانة المختار" });
-  if (!systemId || !contractorId || !representativeId || !siteApprovalId || !qualificationId || !purpose) return res.status(400).json({ error: "بيانات الإصدار المباشر كاملة والغرض مطلوبة" });
+  if (!systemId || !contractorId || !representativeId || !siteApprovalId || !qualificationId) return res.status(400).json({ error: "بيانات الإصدار المباشر المركزية مطلوبة" });
   if ("error" in window) return res.status(400).json({ error: window.error });
   const [systemRows, contractorRows, representativeRows, approvalRows] = await Promise.all([
     db.select().from(visitSystemsTable).where(eq(visitSystemsTable.id, systemId)).limit(1),
@@ -714,9 +783,9 @@ router.post("/management/direct-issue", requireAuth, requireApproved, requireClu
         repId: representative.identityNumber,
         visitDate: window.startsAt.toISOString().slice(0, 10),
         repMobile: representative.mobile,
-        systemName: system.name,
+        systemName: canonicalSystemName(system.name),
         mainContractor: maintenance.name,
-        subContractor: contractor.name,
+        subContractor: canonicalContractorName(contractor.name),
         status: "pending",
         submittedByName: req.currentUser.name,
         submittedByHospital: approval.siteName,
@@ -798,21 +867,21 @@ async function seedApprovedSubcontractorCatalog(req: any) {
     db.select({ id: visitSystemsTable.id, name: visitSystemsTable.name }).from(visitSystemsTable),
     db.select({ id: visitContractorsTable.id, name: visitContractorsTable.name }).from(visitContractorsTable),
   ]);
-  const systemKeys = new Set(existingSystems.map((row) => catalogNameKey(row.name)));
-  const contractorKeys = new Set(existingContractors.map((row) => catalogNameKey(row.name)));
+  const systemKeys = new Set(existingSystems.map((row) => catalogNameKey(canonicalSystemName(row.name))));
+  const contractorKeys = new Set(existingContractors.map((row) => catalogNameKey(canonicalContractorName(row.name))));
   const inserted = await db.transaction(async (tx) => {
     let systems = 0;
     let contractors = 0;
     for (const catalog of APPROVED_SUBCONTRACTOR_CATALOG) {
-      const systemKey = catalogNameKey(catalog.system);
+      const systemKey = catalogNameKey(canonicalSystemName(catalog.system));
       if (!systemKeys.has(systemKey)) {
-        const rows = await tx.insert(visitSystemsTable).values({ name: catalog.system, description: "مستورد من كتالوج مقاولي الباطن المعتمدين", createdByUserId: req.currentUser.id }).onConflictDoNothing().returning({ id: visitSystemsTable.id });
+        const rows = await tx.insert(visitSystemsTable).values({ name: canonicalSystemName(catalog.system), description: "مستورد من كتالوج مقاولي الباطن المعتمدين", createdByUserId: req.currentUser.id }).onConflictDoNothing().returning({ id: visitSystemsTable.id });
         if (rows.length) { systems += 1; systemKeys.add(systemKey); }
       }
       for (const name of catalog.contractors) {
-        const contractorKey = catalogNameKey(name);
+        const contractorKey = catalogNameKey(canonicalContractorName(name));
         if (contractorKeys.has(contractorKey)) continue;
-        const rows = await tx.insert(visitContractorsTable).values({ name, createdByUserId: req.currentUser.id }).onConflictDoNothing().returning({ id: visitContractorsTable.id });
+        const rows = await tx.insert(visitContractorsTable).values({ name: canonicalContractorName(name), createdByUserId: req.currentUser.id }).onConflictDoNothing().returning({ id: visitContractorsTable.id });
         if (rows.length) { contractors += 1; contractorKeys.add(contractorKey); }
       }
     }
@@ -822,22 +891,72 @@ async function seedApprovedSubcontractorCatalog(req: any) {
   return inserted;
 }
 
+async function seedCertificateQualifications(req: any) {
+  const [systems, contractors] = await Promise.all([
+    db.select().from(visitSystemsTable),
+    db.select().from(visitContractorsTable),
+  ]);
+  const systemByKey = new Map(systems.map((row) => [catalogNameKey(canonicalSystemName(row.name)), row]));
+  const contractorByKey = new Map(contractors.map((row) => [catalogNameKey(canonicalContractorName(row.name)), row]));
+  const inserted = await db.transaction(async (tx) => {
+    let qualifications = 0;
+    for (const certificate of QUALIFICATION_CERTIFICATES) {
+      const system = systemByKey.get(catalogNameKey(certificate.system));
+      const contractor = contractorByKey.get(catalogNameKey(certificate.company));
+      if (!system || !contractor) continue;
+      if (!contractor.contactMobile && certificate.contactMobile) {
+        await tx.update(visitContractorsTable).set({ contactMobile: certificate.contactMobile, updatedAt: new Date() }).where(eq(visitContractorsTable.id, contractor.id));
+      }
+      const rows = await tx.insert(visitQualificationsTable).values({
+        contractorId: contractor.id,
+        systemId: system.id,
+        validFrom: certificate.validFrom,
+        validUntil: certificate.validUntil,
+        status: "active",
+        notes: `شهادة تأهيل ${certificate.reference}`,
+      }).onConflictDoNothing({ target: [visitQualificationsTable.contractorId, visitQualificationsTable.systemId] }).returning({ id: visitQualificationsTable.id });
+      qualifications += rows.length;
+    }
+    return { qualifications };
+  });
+  if (inserted.qualifications) await audit(req, "مزامنة مدد شهادات تأهيل مقاولي الباطن", inserted);
+  return inserted;
+}
+
 function approvedCatalogResponse(systems: any[], contractors: any[]) {
-  const systemByKey = new Map(systems.map((row) => [catalogNameKey(row.name), row]));
-  const contractorByKey = new Map(contractors.map((row) => [catalogNameKey(row.name), row]));
+  const systemByKey = new Map(systems.map((row) => [catalogNameKey(canonicalSystemName(row.name)), row]));
+  const contractorByKey = new Map(contractors.map((row) => [catalogNameKey(canonicalContractorName(row.name)), row]));
   return APPROVED_SUBCONTRACTOR_CATALOG.map((catalog) => {
-    const system = systemByKey.get(catalogNameKey(catalog.system));
+    const system = systemByKey.get(catalogNameKey(canonicalSystemName(catalog.system)));
     return {
       systemId: system?.id || null,
-      systemName: system?.name || catalog.system,
-      contractors: catalog.contractors.map((name) => contractorByKey.get(catalogNameKey(name))).filter(Boolean).map((row) => ({ id: row.id, name: row.name })),
+      systemName: canonicalSystemName(system?.name || catalog.system),
+      contractors: catalog.contractors.map((name) => contractorByKey.get(catalogNameKey(canonicalContractorName(name)))).filter(Boolean).map((row) => ({ id: row.id, name: canonicalContractorName(row.name) })),
     };
   }).filter((row) => row.systemId);
+}
+
+function approvedPersonnelResponse(systems: any[], contractors: any[]) {
+  const systemByKey = new Map(systems.map((row) => [catalogNameKey(canonicalSystemName(row.name)), row]));
+  const contractorByKey = new Map(contractors.map((row) => [catalogNameKey(canonicalContractorName(row.name)), row]));
+  return QUALIFICATION_CERTIFICATES.flatMap((certificate) => {
+    const system = systemByKey.get(catalogNameKey(certificate.system));
+    const contractor = contractorByKey.get(catalogNameKey(certificate.company));
+    if (!system || !contractor) return [];
+    return certificate.personnel.map((fullName) => ({
+      contractorId: contractor.id,
+      systemId: system.id,
+      fullName,
+      sourceCertificate: certificate.reference,
+      requiresManualCompletion: true,
+    }));
+  });
 }
 
 router.get("/management/bootstrap", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
   await seedVisitCatalogFromLegacyRequests(req);
   await seedApprovedSubcontractorCatalog(req);
+  await seedCertificateQualifications(req);
   const [catalogResponse, pending, alerts] = await Promise.all([
     Promise.all([
       db.select().from(visitSystemsTable).orderBy(asc(visitSystemsTable.name)),
@@ -852,14 +971,15 @@ router.get("/management/bootstrap", requireAuth, requireApproved, requireCluster
   ]);
   const [systems, contractors, qualifications, siteApprovals, representatives, representativeSystems] = catalogResponse;
   return res.json({
-    systems,
-    contractors,
+    systems: systems.map((row) => ({ ...row, displayName: canonicalSystemName(row.name) })),
+    contractors: contractors.map((row) => ({ ...row, displayName: canonicalContractorName(row.name) })),
     qualifications,
     siteApprovals,
     representatives: representatives.map(({ identityNumber, mobile, ...row }) => ({ ...row, identityMasked: maskIdentity(identityNumber), mobileMasked: mobile ? `${mobile.slice(0, 3)}••••${mobile.slice(-3)}` : "—" })),
     representativeSystems,
     maintenanceContractors: MAINTENANCE_CONTRACTORS,
     approvedSubcontractors: approvedCatalogResponse(systems, contractors),
+    approvedPersonnel: approvedPersonnelResponse(systems, contractors),
     pending: pending.map((row) => sanitizeVisit(row.visit, row.metadata)),
     alerts,
     stats: { pending: pending.length, systems: systems.filter((x) => x.isActive).length, contractors: contractors.filter((x) => x.isActive).length, representatives: representatives.filter((x) => x.isActive).length },
@@ -902,6 +1022,112 @@ router.patch("/management/contractors/:id", requireAuth, requireApproved, requir
   if (!row) return res.status(404).json({ error: "الشركة غير موجودة" });
   await audit(req, "تعديل شركة مقاول باطن", { contractorId: id, isActive: row.isActive });
   return res.json({ contractor: row });
+});
+
+router.post("/management/direct-setup", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
+  const systemId = numberId(req.body.systemId), existingContractorId = numberId(req.body.contractorId);
+  const maintenance = maintenanceContractor(req.body.maintenanceContractorKey);
+  const siteName = cleanText(req.body.siteName, 200);
+  const dates = validDateRange(req.body.validFrom, req.body.validUntil);
+  const companyName = canonicalContractorName(req.body.companyName);
+  const contactMobile = cleanText(req.body.contactMobile, 30);
+  if (!maintenance || !siteName || !(maintenance.sites as readonly string[]).includes(siteName)) return res.status(400).json({ error: "اختر مقاول الصيانة والموقع الصحيحين أولًا" });
+  if (!systemId || !dates) return res.status(400).json({ error: "النظام وبداية ونهاية التأهيل الصحيحة مطلوبة" });
+  if (!existingContractorId && !isFullCompanyName(companyName)) return res.status(400).json({ error: "اكتب الاسم الرسمي الكامل ويبدأ بكلمة شركة أو مؤسسة أو مصنع" });
+  if (contactMobile && !isValidSaudiMobile(contactMobile)) return res.status(400).json({ error: "رقم جوال الشركة غير صالح" });
+  try {
+    const result = await db.transaction(async (tx) => {
+      const [system] = await tx.select().from(visitSystemsTable).where(and(eq(visitSystemsTable.id, systemId), eq(visitSystemsTable.isActive, true))).limit(1);
+      if (!system) throw new Error("SYSTEM_NOT_FOUND");
+      let contractor: any;
+      if (existingContractorId) {
+        [contractor] = await tx.select().from(visitContractorsTable).where(and(eq(visitContractorsTable.id, existingContractorId), eq(visitContractorsTable.isActive, true))).limit(1);
+        if (!contractor) throw new Error("CONTRACTOR_NOT_FOUND");
+      } else {
+        [contractor] = await tx.insert(visitContractorsTable).values({
+          name: companyName,
+          registrationNumber: cleanText(req.body.registrationNumber, 100) || null,
+          contactName: cleanText(req.body.contactName, 200) || null,
+          contactMobile: contactMobile || null,
+          createdByUserId: req.currentUser.id,
+        }).returning();
+      }
+      const [qualification] = await tx.insert(visitQualificationsTable).values({
+        contractorId: contractor.id,
+        systemId,
+        validFrom: dates.validFrom,
+        validUntil: dates.validUntil,
+        status: "active",
+        notes: cleanText(req.body.notes, 1_000) || "استكمال يدوي من الإصدار المباشر",
+      }).onConflictDoUpdate({
+        target: [visitQualificationsTable.contractorId, visitQualificationsTable.systemId],
+        set: { validFrom: dates.validFrom, validUntil: dates.validUntil, status: "active", notes: cleanText(req.body.notes, 1_000) || "استكمال يدوي من الإصدار المباشر", updatedAt: new Date() },
+      }).returning();
+      const [siteApproval] = await tx.insert(visitSiteApprovalsTable).values({
+        siteName,
+        contractorId: contractor.id,
+        systemId,
+        validFrom: dates.validFrom,
+        validUntil: dates.validUntil,
+        status: "active",
+        notes: cleanText(req.body.notes, 1_000) || "اعتماد موقع من الإصدار المباشر",
+      }).onConflictDoUpdate({
+        target: [visitSiteApprovalsTable.siteName, visitSiteApprovalsTable.systemId, visitSiteApprovalsTable.contractorId],
+        set: { validFrom: dates.validFrom, validUntil: dates.validUntil, status: "active", notes: cleanText(req.body.notes, 1_000) || "اعتماد موقع من الإصدار المباشر", updatedAt: new Date() },
+      }).returning();
+      return { contractor, qualification, siteApproval, system };
+    });
+    await audit(req, existingContractorId ? "استكمال تأهيل واعتماد موقع من الإصدار المباشر" : "إضافة شركة وتأهيلها من الإصدار المباشر", {
+      contractorId: result.contractor.id,
+      systemId,
+      siteName,
+      validFrom: dates.validFrom,
+      validUntil: dates.validUntil,
+    });
+    return res.status(existingContractorId ? 200 : 201).json({
+      contractor: { id: result.contractor.id, name: canonicalContractorName(result.contractor.name) },
+      qualification: result.qualification,
+      siteApproval: result.siteApproval,
+    });
+  } catch (err: any) {
+    if (err?.message === "SYSTEM_NOT_FOUND") return res.status(404).json({ error: "النظام غير موجود أو معطل" });
+    if (err?.message === "CONTRACTOR_NOT_FOUND") return res.status(404).json({ error: "الشركة غير موجودة أو معطلة" });
+    if (err?.code === "23505" || String(err?.message).includes("unique")) return res.status(409).json({ error: "اسم الشركة مستخدم من قبل؛ اخترها ثم استكمل اعتماد الموقع" });
+    req.log.error({ err }, "Direct visit catalogue setup failed");
+    return res.status(500).json({ error: "تعذر استكمال الشركة والتأهيل واعتماد الموقع" });
+  }
+});
+
+router.post("/management/direct-representative", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
+  const contractorId = numberId(req.body.contractorId), systemId = numberId(req.body.systemId);
+  const fullName = cleanText(req.body.fullName, 200), identityNumber = cleanText(req.body.identityNumber, 40).replace(/\s+/g, ""), mobile = cleanText(req.body.mobile, 30);
+  const noResidenceException = req.body.noResidenceException === true;
+  const exceptionReason = cleanText(req.body.exceptionReason, 1_000);
+  const residenceExpiresAt = dayString(req.body.residenceExpiresAt);
+  if (!contractorId || !systemId || !fullName) return res.status(400).json({ error: "اختر الشركة والنظام واكتب اسم المندوب" });
+  if (!/^\d{10}$/.test(identityNumber)) return res.status(400).json({ error: "رقم الهوية أو الإقامة يجب أن يتكون من 10 أرقام" });
+  if (!isValidSaudiMobile(mobile)) return res.status(400).json({ error: "رقم الجوال السعودي غير صالح" });
+  if (noResidenceException && !exceptionReason) return res.status(400).json({ error: "سبب الاستثناء بدون إقامة مطلوب" });
+  if (!noResidenceException && !residenceExpiresAt) return res.status(400).json({ error: "تاريخ انتهاء الإقامة مطلوب" });
+  try {
+    const representative = await db.transaction(async (tx) => {
+      const [[contractor], [system]] = await Promise.all([
+        tx.select({ id: visitContractorsTable.id }).from(visitContractorsTable).where(and(eq(visitContractorsTable.id, contractorId), eq(visitContractorsTable.isActive, true))).limit(1),
+        tx.select({ id: visitSystemsTable.id }).from(visitSystemsTable).where(and(eq(visitSystemsTable.id, systemId), eq(visitSystemsTable.isActive, true))).limit(1),
+      ]);
+      if (!contractor || !system) throw new Error("CENTRAL_REFERENCE_NOT_FOUND");
+      const [row] = await tx.insert(visitRepresentativesTable).values({ contractorId, fullName, identityNumber, mobile, residenceExpiresAt, noResidenceException, exceptionReason: noResidenceException ? exceptionReason : null }).returning();
+      await tx.insert(visitRepresentativeSystemsTable).values({ representativeId: row.id, systemId, isActive: true });
+      return row;
+    });
+    await audit(req, "إضافة مندوب وربطه بالنظام من الإصدار المباشر", { representativeId: representative.id, contractorId, systemId, noResidenceException, exceptionReason: noResidenceException ? exceptionReason : null });
+    return res.status(201).json({ representative: { id: representative.id, contractorId, fullName: representative.fullName, identityMasked: maskIdentity(representative.identityNumber), residenceExpiresAt: representative.residenceExpiresAt, noResidenceException, isActive: true } });
+  } catch (err: any) {
+    if (err?.message === "CENTRAL_REFERENCE_NOT_FOUND") return res.status(404).json({ error: "الشركة أو النظام غير موجود أو معطل" });
+    if (err?.code === "23505" || String(err?.message).includes("unique")) return res.status(409).json({ error: "رقم الهوية أو الإقامة مسجل من قبل" });
+    req.log.error({ err }, "Direct representative creation failed");
+    return res.status(500).json({ error: "تعذر حفظ المندوب وربطه بالنظام" });
+  }
 });
 
 router.post("/management/qualifications", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
@@ -1017,9 +1243,8 @@ router.post("/management/copy-site/confirm", requireAuth, requireApproved, requi
 router.patch("/:id/link", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
   const visitId = numberId(req.params.id), systemId = numberId(req.body.systemId), contractorId = numberId(req.body.contractorId), representativeId = numberId(req.body.representativeId), siteApprovalId = numberId(req.body.siteApprovalId), qualificationId = numberId(req.body.qualificationId);
   if (!visitId || !systemId || !contractorId || !representativeId || !siteApprovalId || !qualificationId) return res.status(400).json({ error: "جميع روابط البيانات المركزية مطلوبة" });
-  const purpose = cleanText(req.body.purpose, 500);
+  const purpose = DEFAULT_VISIT_PURPOSE;
   const window = validateVisitWindow(req.body.startsAt, req.body.endsAt);
-  if (!purpose) return res.status(400).json({ error: "الغرض من الزيارة مطلوب" });
   if ("error" in window) return res.status(400).json({ error: window.error });
   const values = { systemId, contractorId, representativeId, siteApprovalId, qualificationId, purpose, startsAt: window.startsAt, endsAt: window.endsAt, linkedAt: new Date(), linkedByUserId: req.currentUser.id, updatedAt: new Date() };
   try {
@@ -1092,9 +1317,8 @@ router.post("/:id/reissue", requireAuth, requireApproved, requireClusterVisitMan
   const originalId = numberId(req.params.id); if (!originalId) return res.status(400).json({ error: "رقم زيارة غير صالح" });
   const original = await getVisitContext(db, originalId); if (!original) return res.status(404).json({ error: "الزيارة الأصلية غير موجودة" });
   if (!original.metadata) return res.status(400).json({ error: "اربط الزيارة الأصلية بالبيانات المركزية قبل إعادة الإصدار" });
-  const purpose = cleanText(req.body.purpose ?? original.metadata.purpose, 500);
+  const purpose = DEFAULT_VISIT_PURPOSE;
   const window = validateVisitWindow(req.body.startsAt, req.body.endsAt);
-  if (!purpose) return res.status(400).json({ error: "الغرض من الزيارة مطلوب" });
   if ("error" in window) return res.status(400).json({ error: window.error });
   try {
     const context = await db.transaction(async (tx) => {
@@ -1370,10 +1594,9 @@ async function verifyToken(req: any, token: string) {
       status: visitEffectiveStatus(row.visit, row.metadata),
       visitorName: full ? row.visit.repName : shortenVisitorName(row.visit.repName),
       repIdMasked: full ? maskIdentity(row.visit.repId) : undefined,
-      company: full ? row.visit.subContractor : undefined,
-      system: full ? row.visit.systemName : undefined,
+      company: full ? canonicalContractorName(row.visit.subContractor) : undefined,
+      system: full ? canonicalSystemName(row.visit.systemName) : undefined,
       site: row.visit.siteLocation,
-      purpose: full ? row.metadata?.purpose || null : undefined,
       visitDate: row.visit.visitDate,
       startsAt: full ? row.metadata?.startsAt || null : undefined,
       endsAt: full ? row.metadata?.endsAt || null : undefined,
@@ -1420,7 +1643,7 @@ router.get("/qr/manual", requireAuth, requireApproved, async (req: any, res) => 
   if (!row) return res.status(404).json({ error: "رقم التصريح غير موجود" });
   const full = hasClusterVisitManagement(req.currentUser);
   const documentsVerified = full ? await hasActiveVisitDocuments(row.visit.id, row.metadata) : undefined;
-  return res.json({ full, visit: { id: full ? row.visit.id : undefined, serialNumber: row.visit.serialNumber, status: visitEffectiveStatus(row.visit, row.metadata), visitorName: full ? row.visit.repName : shortenVisitorName(row.visit.repName), repIdMasked: full ? maskIdentity(row.visit.repId) : undefined, company: full ? row.visit.subContractor : undefined, system: full ? row.visit.systemName : undefined, site: row.visit.siteLocation, purpose: full ? row.metadata?.purpose : undefined, visitDate: row.visit.visitDate, startsAt: full ? row.metadata?.startsAt : undefined, endsAt: full ? row.metadata?.endsAt : undefined, representativeName: full ? row.representative?.fullName || row.visit.repName : undefined, residenceVerified: full ? isResidenceVerified(row.representative, row.visit) : undefined, documentsVerified, cancellationReason: full ? row.visit.cancelledReason : undefined, exceptionReason: full && row.representative?.noResidenceException ? row.representative.exceptionReason : undefined, canOpenFull: full, hasSignedPermit: full ? !!row.visit.signedPermitFile : undefined } });
+  return res.json({ full, visit: { id: full ? row.visit.id : undefined, serialNumber: row.visit.serialNumber, status: visitEffectiveStatus(row.visit, row.metadata), visitorName: full ? row.visit.repName : shortenVisitorName(row.visit.repName), repIdMasked: full ? maskIdentity(row.visit.repId) : undefined, company: full ? canonicalContractorName(row.visit.subContractor) : undefined, system: full ? canonicalSystemName(row.visit.systemName) : undefined, site: row.visit.siteLocation, visitDate: row.visit.visitDate, startsAt: full ? row.metadata?.startsAt : undefined, endsAt: full ? row.metadata?.endsAt : undefined, representativeName: full ? row.representative?.fullName || row.visit.repName : undefined, residenceVerified: full ? isResidenceVerified(row.representative, row.visit) : undefined, documentsVerified, cancellationReason: full ? row.visit.cancelledReason : undefined, exceptionReason: full && row.representative?.noResidenceException ? row.representative.exceptionReason : undefined, canOpenFull: full, hasSignedPermit: full ? !!row.visit.signedPermitFile : undefined } });
 });
 
 export default router;

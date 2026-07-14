@@ -58,13 +58,13 @@ export function isDateWithin(target: Date, validFrom: unknown, validUntil: unkno
 
 export function validateVisitWindow(startsAt: unknown, endsAt: unknown): { startsAt: Date; endsAt: Date | null } | { error: string } {
   const start = parseIsoDate(startsAt);
-  if (!start) return { error: "تاريخ ووقت الزيارة مطلوبان بصيغة صحيحة" };
+  if (!start) return { error: "تاريخ الزيارة مطلوب بصيغة صحيحة" };
   if (endsAt === undefined || endsAt === null || String(endsAt).trim() === "") {
     return { startsAt: start, endsAt: null };
   }
   const end = parseIsoDate(endsAt);
-  if (!end) return { error: "وقت نهاية الزيارة غير صالح" };
-  if (end.getTime() <= start.getTime()) return { error: "وقت نهاية الزيارة يجب أن يكون بعد وقت البداية" };
+  if (!end) return { error: "تاريخ نهاية الزيارة غير صالح" };
+  if (end.getTime() <= start.getTime()) return { error: "تاريخ نهاية الزيارة يجب أن يكون بعد بداية الزيارة" };
   if (end.getTime() - start.getTime() > 7 * 24 * 60 * 60 * 1000) return { error: "مدة الزيارة لا يمكن أن تتجاوز سبعة أيام" };
   return { startsAt: start, endsAt: end };
 }

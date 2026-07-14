@@ -16,6 +16,7 @@ const schema = read('lib/db/src/schema/index.ts');
 const center = read('artifacts/mustaklassat/public/original/cluster-subcontractor-visits.html');
 const centerJs = read('artifacts/mustaklassat/public/original/cluster-subcontractor-visits.js');
 const printJs = read('artifacts/mustaklassat/public/original/visit-permit-print.js');
+const requestVisit = read('artifacts/mustaklassat/public/original/request-visit.html');
 const authCheck = read('artifacts/mustaklassat/public/original/auth-check.js');
 const require = createRequire(import.meta.url);
 const compiledSecurity = ts.transpileModule(security, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText;
@@ -113,24 +114,60 @@ test('QR uses random tokens, stores hash plus ciphertext, rate limits scans and 
   assert.match(qrPayload[1], /original-viewer\?page=cluster-subcontractor-visits\.html&visitQr=/);
 });
 
-test('approved Drive catalogue seeds systems and subcontractor names without inventing qualification dates', () => {
+test('approved certificate catalogue uses full display names and seeds the supplied qualification dates', () => {
   assert.match(route, /APPROVED_SUBCONTRACTOR_CATALOG/);
-  for (const system of ['إطفاء الحريق', 'إنذار الحريق', 'التكييف والتبريد', 'محطات تحلية المياه', 'كاميرات المراقبة الأمنية CCTV']) assert.match(route, new RegExp(system));
-  for (const contractor of ['أفق الحجاز', 'المفردون', 'شركة دائرة التحكم', 'نبراس حنين', 'شركة إيكوفا']) assert.match(route, new RegExp(contractor));
+  for (const system of ['إطفاء الحريق', 'إنذار الحريق', 'التكييف والتبريد', 'محطات تحلية المياه']) assert.match(route, new RegExp(system));
+  assert.match(route, /نظام كاميرات المراقبة الأمنية \(CCTV\)/);
+  for (const contractor of ['مؤسسة أفق الحجاز المحدودة', 'شركة المفردون للمقاولات', 'شركة دائرة التحكم', 'مؤسسة نبراس حنين لأنظمة السلامة', 'شركة إيكوفا للمقاولات']) assert.match(route, new RegExp(contractor));
   const catalogBlock = route.match(/const APPROVED_SUBCONTRACTOR_CATALOG[\s\S]*?\] as const;/);
   assert.ok(catalogBlock);
   assert.doesNotMatch(catalogBlock[0], /validFrom|validUntil/);
+  const certificateBlock = route.match(/const QUALIFICATION_CERTIFICATES[\s\S]*?\] as const;/);
+  assert.ok(certificateBlock);
+  assert.match(certificateBlock[0], /MOH-MAIN-2026-023/);
+  assert.match(certificateBlock[0], /validFrom: "2026-05-17"/);
+  assert.match(certificateBlock[0], /validUntil: "2027-12-31"/);
+  assert.doesNotMatch(certificateBlock[0], /identityNumber|repId|residenceExpiresAt/);
   assert.match(route, /مزامنة أسماء مقاولي الباطن المعتمدين/);
+  assert.match(route, /seedCertificateQualifications/);
+  assert.match(route, /approvedPersonnel: approvedPersonnelResponse/);
   assert.match(centerJs, /approvedSubcontractors/);
 });
 
-test('direct issue uses the maintenance-contractor site catalogue and permits an optional end time', () => {
+test('direct issue uses the maintenance-contractor site catalogue and permits an optional end date', () => {
   assert.match(route, /key: "بيت_العرب"/);
   assert.match(route, /key: "سراكو"/);
   assert.match(route, /الموقع المحدد لا يتبع مقاول الصيانة المختار/);
   assert.match(route, /endsAtProvided: !!window\.endsAt/);
-  assert.match(center, /نهاية الزيارة \(اختياري\)/);
-  assert.match(centerJs, /body\.endsAt = body\.endsAt \? new Date\(body\.endsAt\)\.toISOString\(\) : null/);
+  assert.match(center, /تاريخ نهاية الزيارة \(اختياري\)/);
+  assert.match(centerJs, /body\.endsAt = dateOnlyIso\(body\.endsAt, true\)/);
+  assert.match(centerJs, /dateOnlyIso\(body\.startsAt, false\)/);
+});
+
+test('direct issue can complete a company, site approval and representative without leaving the screen', () => {
+  for (const id of ['direct-add-contractor', 'direct-complete-approval', 'direct-add-representative']) assert.match(center, new RegExp(`id="${id}"`));
+  assert.match(centerJs, /\/management\/direct-setup/);
+  assert.match(centerJs, /\/management\/direct-representative/);
+  assert.match(centerJs, /approvedPersonnel/);
+  const setup = route.match(/router\.post\("\/management\/direct-setup"[\s\S]*?\n}\);/);
+  assert.ok(setup);
+  assert.match(setup[0], /db\.transaction/);
+  assert.match(setup[0], /visitQualificationsTable/);
+  assert.match(setup[0], /visitSiteApprovalsTable/);
+  assert.match(setup[0], /await audit/);
+  const representative = route.match(/router\.post\("\/management\/direct-representative"[\s\S]*?\n}\);/);
+  assert.ok(representative);
+  assert.match(representative[0], /visitRepresentativeSystemsTable/);
+  assert.match(representative[0], /maskIdentity/);
+  assert.doesNotMatch(representative[0].match(/return res\.status\(201\)[\s\S]*/)[0], /identityNumber:/);
+});
+
+test('periodic visits do not ask for purpose or times in the direct and requester forms', () => {
+  assert.match(route, /DEFAULT_VISIT_PURPOSE = "زيارة دورية لأنظمة المستشفى"/);
+  assert.doesNotMatch(center + centerJs, /name="purpose"|id="f_purpose"|datetime-local/);
+  assert.doesNotMatch(requestVisit, /id="f_purpose"|purpose:\s*document/);
+  assert.match(requestVisit, /زيارة دورية لأنظمة المستشفى/);
+  assert.match(requestVisit, /shared\.endsAt = null/);
 });
 
 test('center retries expired auth, opens through the authenticated viewer and QR can securely download the permit', () => {
