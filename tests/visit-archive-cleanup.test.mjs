@@ -10,18 +10,20 @@ const html = read('artifacts/mustaklassat/public/original/cluster-subcontractor-
 const cleanup = read('artifacts/mustaklassat/public/original/visit-archive-cleanup.js');
 const print = read('artifacts/mustaklassat/public/original/visit-permit-print.js');
 
-test('archive cleanup is explicit, restricted and uses the existing protected permanent-delete route', () => {
+test('archive cleanup reads all visits and requires explicit manual selection', () => {
   assert.match(html, /id="archive-clean-tests"/);
   assert.match(html, /visit-archive-cleanup\.js\?v=20260714_archive_cleanup_v1/);
-  assert.match(cleanup, /archive-clean-tests/);
-  assert.match(cleanup, /visibility=archived&status=cancelled/);
-  assert.match(cleanup, /TEST_REASON_PATTERN = \/تجريب\/u/);
-  assert.match(cleanup, /!!visit\.archivedAt && visit\.status === 'cancelled'/);
-  assert.match(cleanup, /!!visit\.hasSignedPermit/);
-  assert.match(cleanup, /facilityApproval && visit\.facilityApproval\.status === 'approved'/);
-  assert.match(cleanup, /confirmation: 'DELETE:' \+/);
-  assert.match(cleanup, /\/' \+ visit\.id \+ '\/permanent'/);
-  assert.match(cleanup, /سجل التدقيق/);
+  assert.match(cleanup, /visibility=all/);
+  assert.match(cleanup, /data-clean-visit/);
+  assert.match(cleanup, /archive-clean-search/);
+  assert.match(cleanup, /تحديد الظاهر/);
+  assert.match(cleanup, /تنظيف المحدد/);
+  assert.match(cleanup, /selectedIds\.length/);
+  assert.match(cleanup, /\/' \+ visit\.id \+ '\/archive'/);
+  assert.match(cleanup, /method: 'PATCH'/);
+  assert.match(cleanup, /لا يحذف السجل أو رقم التصريح أو المرفقات والتوقيعات/);
+  assert.doesNotMatch(cleanup, /\/permanent/);
+  assert.doesNotMatch(cleanup, /method: 'DELETE'/);
   assert.doesNotMatch(cleanup, /\b(?:alert|confirm|prompt)\s*\(/);
 });
 
