@@ -222,20 +222,32 @@ test('center retries expired auth, opens through the authenticated viewer and QR
   assert.match(route, /hasSignedPermit: full \? !!row\.visit\.signedPermitFile : undefined/);
 });
 
-test('direct issue control shows readiness and keeps every active company available for manual completion', () => {
+test('direct issue filters companies by system and falls back when no links exist', () => {
   assert.match(center, /id="direct-readiness"/);
   assert.match(centerJs, /renderDirectReadiness/);
-  assert.match(centerJs, /يحتاج استكمال التأهيل/);
-  assert.match(centerJs, /state\.data\.contractors[^\n]*row\.isActive/);
+  assert.match(centerJs, /اختر النظام أولًا/);
+  assert.match(centerJs, /state\.data\.siteApprovals/);
+  assert.match(centerJs, /state\.data\.representativeSystems/);
+  assert.match(centerJs, /Object\.keys\(allowed\)\.length > 0/);
+  assert.match(centerJs, /row\.isActive && \(!hasLinkedContractors \|\| !!allowed\[row\.id\]\)/);
+  assert.match(centerJs, /متاحة للاستكمال/);
+  assert.match(center, /بعد اختيار النظام تظهر الشركات المرتبطة به/);
   assert.match(centerJs, /أكمل اعتماد الموقع للشركة والنظام/);
 });
 
-test('session renewal preserves direct-issue progress and the active center tab', () => {
+test('session renewal and proactive keepalive preserve progress without leaving the center', () => {
   assert.match(centerJs, /UI_STATE_KEY/);
   assert.match(centerJs, /sessionStorage\.setItem\(UI_STATE_KEY/);
   assert.match(centerJs, /saveUiState\(\);\s*clearCachedToken\(\)/);
+  assert.match(centerJs, /SESSION_KEEPALIVE_MS = 45 \* 1000/);
+  assert.match(centerJs, /setInterval\(keepSessionAlive, SESSION_KEEPALIVE_MS\)/);
+  assert.match(centerJs, /window\.addEventListener\('focus', keepSessionAlive\)/);
+  assert.match(centerJs, /document\.addEventListener\('visibilitychange'/);
+  assert.match(centerJs, /retried \? await refreshSessionToken\(\) : await freshToken\(false\)/);
   assert.match(centerJs, /restoreDirectSelection\(saved\.direct\)/);
   assert.match(centerJs, /activateTab\(saved\.tab\)/);
+  assert.match(center, /تحديث آمن/);
+  assert.doesNotMatch(centerJs, /location\.(?:href|replace)[^\n]*sign-in/);
   assert.match(center, /#najran-revision-mode-badge\{display:none!important\}/);
 });
 

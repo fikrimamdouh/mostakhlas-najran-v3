@@ -3,6 +3,8 @@
 
   var state = { data: null, settings: null, archivePage: 1, archivePages: 1, stream: null, scanLoop: 0, scanning: false, barcodeDetector: null, qrDeepLinkHandled: false };
   var UI_STATE_KEY = 'najran_visit_center_ui_state_v1';
+  var SESSION_KEEPALIVE_MS = 45 * 1000;
+  var sessionRefreshPromise = null;
 
   function esc(value) { return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function formObject(form) { var out = {}; new FormData(form).forEach(function (value, key) { out[key] = typeof value === 'string' ? value.trim() : value; }); return out; }
@@ -74,9 +76,22 @@
     var error = new Error('انتهت جلسة الدخول؛ اضغط «تجديد الجلسة» ثم أعد المحاولة'); error.status = 401; error.code = 'AUTH_REFRESH_REQUIRED'; throw error;
   }
 
+  async function refreshSessionToken() {
+    if (sessionRefreshPromise) return sessionRefreshPromise;
+    sessionRefreshPromise = freshToken(true);
+    try { return await sessionRefreshPromise; }
+    finally { sessionRefreshPromise = null; }
+  }
+
+  async function keepSessionAlive() {
+    if (document.hidden) return false;
+    try { await refreshSessionToken(); return true; }
+    catch (_) { return false; }
+  }
+
   async function api(path, options, retried) {
     options = options || {};
-    var token = await freshToken(!!retried);
+    var token = retried ? await refreshSessionToken() : await freshToken(false);
     var headers = Object.assign({ Authorization: 'Bearer ' + token }, options.headers || {});
     var response = await fetch('/api/visits' + path, Object.assign({}, options, { headers: headers, credentials: 'same-origin', cache: 'no-store' }));
     var body = await response.json().catch(function () { return {}; });
@@ -93,7 +108,7 @@
   async function renewSession() {
     saveUiState();
     clearCachedToken();
-    await freshToken(true);
+    await refreshSessionToken();
     return loadBootstrap();
   }
 
@@ -194,12 +209,24 @@
 
   function refreshDirectContractors() {
     var form = document.getElementById('direct-form'), systemId = Number(form.elements.systemId.value || 0), current = Number(form.elements.contractorId.value || 0), allowed = Object.create(null);
+    if (!systemId) {
+      form.elements.contractorId.innerHTML = '<option value="">اختر النظام أولًا</option>';
+      refreshDirectRepresentatives();
+      return;
+    }
     var selectedSystem = (state.data.systems || []).find(function (row) { return row.id === systemId; });
     var catalog = (state.data.approvedSubcontractors || []).find(function (row) { return row.systemId === systemId || (selectedSystem && row.systemName === entityName(selectedSystem)); });
     if (catalog) (catalog.contractors || []).forEach(function (row) { allowed[row.id] = true; });
     (state.data.qualifications || []).forEach(function (row) { if (row.status === 'active' && row.systemId === systemId) allowed[row.contractorId] = true; });
-    var rows = uniqueNamedRows((state.data.contractors || []).filter(function (row) { return row.isActive; })).sort(function (a, b) { return Number(!!allowed[b.id]) - Number(!!allowed[a.id]) || entityName(a).localeCompare(entityName(b), 'ar'); });
-    form.elements.contractorId.innerHTML = optionRows(rows, function (row) { return entityName(row) + (allowed[row.id] ? '' : ' — يحتاج استكمال التأهيل'); }, current);
+    (state.data.siteApprovals || []).forEach(function (row) { if (row.status === 'active' && row.systemId === systemId) allowed[row.contractorId] = true; });
+    (state.data.representativeSystems || []).forEach(function (link) {
+      if (!link.isActive || link.systemId !== systemId) return;
+      var representative = (state.data.representatives || []).find(function (row) { return row.id === link.representativeId && row.isActive; });
+      if (representative) allowed[representative.contractorId] = true;
+    });
+    var hasLinkedContractors = Object.keys(allowed).length > 0;
+    var rows = uniqueNamedRows((state.data.contractors || []).filter(function (row) { return row.isActive && (!hasLinkedContractors || !!allowed[row.id]); })).sort(function (a, b) { return entityName(a).localeCompare(entityName(b), 'ar'); });
+    form.elements.contractorId.innerHTML = optionRows(rows, function (row) { return entityName(row) + (hasLinkedContractors ? '' : ' — متاحة للاستكمال'); }, current);
     refreshDirectRepresentatives();
   }
 
@@ -550,6 +577,9 @@
   document.getElementById('camera-start').addEventListener('click', startCamera); document.getElementById('camera-stop').addEventListener('click', stopCamera); document.getElementById('camera-rescan').addEventListener('click', function(){scanMessage('جاهز للمسح مرة أخرى',true);startCamera();}); document.getElementById('camera-select').addEventListener('change', function(){if(state.stream)startCamera();});
   document.getElementById('manual-scan-form').addEventListener('submit', async function(event){event.preventDefault();try{var body=await api('/qr/manual?serialNumber='+encodeURIComponent(this.elements.serialNumber.value.trim()));showScanResult(body);}catch(e){scanMessage(e.message,false);}});
 
+  setInterval(keepSessionAlive, SESSION_KEEPALIVE_MS);
+  window.addEventListener('focus', keepSessionAlive);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) keepSessionAlive(); });
   window.addEventListener('beforeunload', function () { saveUiState(); stopCamera(); });
   loadBootstrap();
 })();
