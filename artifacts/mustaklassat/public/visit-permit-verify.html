@@ -15,7 +15,7 @@
   <main class="card">
     <header class="head"><img src="/original/najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي"><div><h1>التحقق من تصريح زيارة</h1><p>تجمع نجران الصحي — وحدة الصيانة العامة</p></div></header>
     <section class="body" id="result"><div class="state"><div class="spinner"></div>جارٍ التحقق من التصريح...</div></section>
-    <footer class="foot">تعرض هذه الصفحة بيانات تحقق مختصرة فقط، ولا تعرض الهوية أو الجوال أو الوثائق.</footer>
+    <footer class="foot">تعرض هذه الصفحة بيانات التصريح اللازمة للتحقق الأمني، ولا تعرض أرقام الهوية أو الجوال أو الوثائق المحمية.</footer>
   </main>
   <script>
     (function () {
@@ -26,7 +26,8 @@
       function dateText(value) { if (!value) return '—'; try { return new Date(String(value).slice(0,10) + 'T12:00:00Z').toLocaleDateString('ar-SA',{dateStyle:'long'}); } catch (_) { return String(value); } }
       function showError(message) { result.innerHTML = '<div class="notice error">' + esc(message || 'تعذر التحقق من التصريح') + '</div>'; }
       function showVisit(visit) {
-        var fields = [['رقم التصريح',visit.serialNumber],['اسم الزائر',visit.visitorName],['الموقع',visit.site],['تاريخ الزيارة',dateText(visit.visitDate)]];
+        var names = Array.isArray(visit.representatives) && visit.representatives.length ? visit.representatives.map(function (row) { return row.fullName; }).filter(Boolean).join('، ') : visit.visitorName;
+        var fields = [['رقم التصريح',visit.serialNumber],['المندوب / المندوبون',names],['شركة مقاول الباطن',visit.company],['النظام / المشروع',visit.system],['الموقع',visit.site],['بداية الزيارة',dateText(visit.startsAt || visit.visitDate)],['نهاية الزيارة',visit.endsAt ? dateText(visit.endsAt) : 'نهاية اليوم']];
         result.innerHTML = '<span class="status ' + esc(visit.status) + '">' + esc(statusLabel(visit.status)) + '</span><div class="grid">' + fields.map(function (field) { return '<div class="item"><small>' + esc(field[0]) + '</small><strong>' + esc(field[1] || '—') + '</strong></div>'; }).join('') + '</div><div class="notice">تم فحص حالة التصريح لحظيًا من نظام تجمع نجران الصحي.</div>';
       }
       async function verify() {

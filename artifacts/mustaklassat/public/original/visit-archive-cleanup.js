@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var CONFIRMATION_TEXT = 'تنظيف المحدد';
+  var CONFIRMATION_TEXT = 'حذف المحدد نهائيًا';
 
   function esc(value) {
     return String(value == null ? '' : value)
@@ -132,31 +132,38 @@
   function refreshArchive() {
     var form = document.getElementById('archive-filter');
     if (!form) return;
-    if (form.elements.visibility) form.elements.visibility.value = 'archived';
+    if (form.elements.visibility) form.elements.visibility.value = 'all';
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   }
 
-  async function archiveSelected(visits, progressNode) {
-    var archived = 0, alreadyArchived = 0, failed = [];
+  async function permanentlyDeleteSelected(visits, progressNode) {
+    var deleted = 0, archivedFirst = 0, failed = [];
     for (var i = 0; i < visits.length; i++) {
       var visit = visits[i];
-      if (progressNode) progressNode.textContent = 'جارٍ تنظيف ' + (i + 1) + ' من ' + visits.length + ': ' + (visit.serialNumber || ('زيارة ' + visit.id));
-      if (visit.archivedAt) {
-        alreadyArchived += 1;
-        continue;
-      }
+      if (progressNode) progressNode.textContent = 'جارٍ حذف ' + (i + 1) + ' من ' + visits.length + ': ' + (visit.serialNumber || ('زيارة ' + visit.id));
       try {
-        await api('/' + visit.id + '/archive', {
-          method: 'PATCH',
+        if (!visit.archivedAt) {
+          await api('/' + visit.id + '/archive', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason: 'تهيئة الزيارة التجريبية للحذف النهائي من أداة التنظيف' })
+          });
+          archivedFirst += 1;
+        }
+        await api('/' + visit.id + '/permanent', {
+          method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason: 'تنظيف يدوي محدد من أرشيف الزيارات قبل التشغيل الفعلي' })
+          body: JSON.stringify({
+            confirmation: 'DELETE:' + (visit.serialNumber || ('VISIT-' + visit.id)),
+            reason: 'حذف نهائي لبيانات زيارة تجريبية من أداة تنظيف الأرشيف'
+          })
         });
-        archived += 1;
+        deleted += 1;
       } catch (error) {
         failed.push({ visit: visit, message: error.message });
       }
     }
-    return { archived: archived, alreadyArchived: alreadyArchived, failed: failed };
+    return { deleted: deleted, archivedFirst: archivedFirst, failed: failed };
   }
 
   async function openCleanup() {
@@ -169,13 +176,13 @@
         return;
       }
 
-      showModal('تنظيف زيارات محددة',
-        '<div class="note" style="background:#fff7ed;color:#9a3412;border-color:#fed7aa"><strong>اختر الزيارات بنفسك.</strong><br>التنظيف يلغي الزيارة المحددة ويخفيها من العرض، لكنه لا يحذف السجل أو رقم التصريح أو المرفقات والتوقيعات من قاعدة البيانات.</div>' +
+      showModal('حذف الزيارات التجريبية',
+        '<div class="note" style="background:#fef2f2;color:#991b1b;border-color:#fecaca"><strong>اختر الزيارات بنفسك.</strong><br>سيحذف النظام الزيارات المحددة نهائيًا مع QR والمرفقات واعتماد المنشأة وبيانات الربط. العملية لا يمكن التراجع عنها، وسيبقى سجل تدقيق بالحذف.</div>' +
         '<div class="toolbar" style="margin-top:12px"><input id="archive-clean-search" type="search" placeholder="ابحث بالرقم أو الاسم أو الموقع أو النظام" style="flex:1;min-width:260px"><button type="button" class="btn btn-primary" id="archive-clean-select-visible">تحديد الظاهر</button><button type="button" class="btn btn-light" id="archive-clean-clear">إلغاء التحديد</button></div>' +
         '<div id="archive-clean-list" style="max-height:430px;overflow:auto;padding:2px">' + visits.map(visitRow).join('') + '</div>' +
         '<div class="field" style="margin-top:12px"><label>اكتب «' + CONFIRMATION_TEXT + '» للتأكيد</label><input id="archive-clean-confirmation" autocomplete="off"></div>' +
         '<div id="archive-clean-progress" class="note" style="display:none;margin-top:12px"></div>',
-        [{ label: 'تنظيف الزيارات المحددة من العرض', className: 'btn-red', action: async function (button) {
+        [{ label: 'حذف الزيارات المحددة نهائيًا', className: 'btn-red', action: async function (button) {
           var confirmation = document.getElementById('archive-clean-confirmation');
           if (!confirmation || confirmation.value.trim() !== CONFIRMATION_TEXT) { toast('اكتب نص التأكيد كما هو ظاهر', false); return; }
           var selectedIds = Array.from(document.querySelectorAll('[data-clean-visit]:checked')).map(function (node) { return Number(node.value); }).filter(Boolean);
@@ -185,10 +192,10 @@
           confirmation.disabled = true;
           var progress = document.getElementById('archive-clean-progress');
           progress.style.display = 'block';
-          var result = await archiveSelected(selected, progress);
-          progress.innerHTML = 'تم تنظيف <strong>' + result.archived + '</strong> زيارة من العرض.' + (result.alreadyArchived ? ' وكان <strong>' + result.alreadyArchived + '</strong> محددًا منظفًا بالفعل.' : '') + (result.failed.length ? ' وتعذر تنظيف <strong>' + result.failed.length + '</strong> زيارة.' : ' لم تُحذف أي بيانات نهائيًا.');
+          var result = await permanentlyDeleteSelected(selected, progress);
+          progress.innerHTML = 'تم حذف <strong>' + result.deleted + '</strong> زيارة نهائيًا.' + (result.archivedFirst ? ' ونُقلت <strong>' + result.archivedFirst + '</strong> زيارة أولًا إلى المحذوف من العرض.' : '') + (result.failed.length ? ' وتعذر حذف <strong>' + result.failed.length + '</strong> زيارة مرتبطة؛ افتحها واحذف التصاريح المعاد إصدارها أولًا.' : '');
           refreshArchive();
-          toast(result.failed.length ? 'تم التنظيف مع وجود زيارات لم تتغير' : 'تم تنظيف الزيارات المحددة من العرض', result.failed.length === 0);
+          toast(result.failed.length ? 'تم الحذف مع وجود زيارات مرتبطة لم تُحذف' : 'تم حذف الزيارات المحددة نهائيًا', result.failed.length === 0);
           button.textContent = 'تم التنفيذ';
           setTimeout(closeModal, 1700);
         } }]
@@ -214,9 +221,9 @@
       button.className = 'btn btn-red';
       title.appendChild(button);
     }
-    if (button) button.innerHTML = '<i class="fas fa-broom"></i> تنظيف زيارات محددة';
+    if (button) button.innerHTML = '<i class="fas fa-trash-alt"></i> حذف وتنظيف الزيارات';
     var note = document.querySelector('[data-panel="archive"] .note');
-    if (note) note.textContent = 'زر التنظيف يقرأ كل الزيارات ويعرضها للاختيار اليدوي. الزيارات المحددة تُلغى وتُخفى من العرض فقط مع الاحتفاظ بالسجل ورقم التصريح والمرفقات والتوقيعات.';
+    if (note) note.textContent = 'زر الحذف والتنظيف يقرأ جميع الزيارات ويعرضها للاختيار اليدوي. الزيارات المحددة تُحذف نهائيًا مع QR والمرفقات وبيانات الربط، مع تسجيل عملية الحذف باسم المنفذ.';
     return button;
   }
 
