@@ -198,6 +198,7 @@ test('approved certificate catalogue uses full display names and seeds the suppl
 test('direct issue uses the maintenance-contractor site catalogue and one validated visit date', () => {
   assert.match(route, /key: "بيت_العرب"/);
   assert.match(route, /key: "سراكو"/);
+  assert.match(route, /"تجمع نجران الصحي"/);
   assert.match(route, /الموقع المحدد لا يتبع مقاول الصيانة المختار/);
   assert.match(route, /endsAtProvided: !!window\.endsAt/);
   assert.match(centerJs, /body\.startsAt = startDay/);
@@ -206,13 +207,13 @@ test('direct issue uses the maintenance-contractor site catalogue and one valida
   assert.doesNotMatch(center + centerJs, /تاريخ نهاية الزيارة|تاريخ النهاية \(اختياري\)|name="endsAt"|elements\.endsAt/);
 });
 
-test('direct issue requires site approval but makes qualification optional at this stage', () => {
+test('direct issue allows site approval and qualification to be completed later', () => {
   for (const id of ['direct-add-contractor', 'direct-complete-approval', 'direct-add-representative']) assert.match(center, new RegExp(`id="${id}"`));
   assert.match(center, /التأهيل فيمكن تأجيله لهذه المرحلة/);
   assert.match(centerJs, /\/management\/direct-setup/);
   assert.match(centerJs, /\/management\/direct-representative/);
   assert.match(centerJs, /body\.qualificationId = qualification \? qualification\.id : null/);
-  assert.match(centerJs, /if \(!approval\).*استكمل اعتماد الموقع/);
+  assert.match(centerJs, /body\.siteApprovalId = approval \? approval\.id : null/);
   assert.match(centerJs, /approvedPersonnel/);
   const setup = route.match(/router\.post\("\/management\/direct-setup"[\s\S]*?\n}\);/);
   assert.ok(setup);
@@ -221,8 +222,8 @@ test('direct issue requires site approval but makes qualification optional at th
   assert.match(setup[0], /if \(includeQualification\)/);
   assert.match(setup[0], /visitSiteApprovalsTable/);
   assert.match(setup[0], /await audit/);
-  assert.match(route, /if \(!systemId \|\| !contractorId \|\| !representativeId \|\| !siteApprovalId\) return res\.status\(400\)/);
-  assert.match(route, /approveVisit\(tx, visit\.id, req\.currentUser, \{ qualificationOptional: true \}\)/);
+  assert.match(route, /if \(!systemId \|\| !contractorId \|\| !representativeId\) return res\.status\(400\)/);
+  assert.match(route, /approveVisit\(tx, visit\.id, req\.currentUser, \{ qualificationOptional: true, siteApprovalOptional: true \}\)/);
   assert.match(route, /qualificationDeferred: !qualificationId/);
   const representative = route.match(/router\.post\("\/management\/direct-representative"[\s\S]*?\n}\);/);
   assert.ok(representative);
@@ -462,7 +463,7 @@ test('public QR verification is rate limited, current, and exposes only the appr
   assert.doesNotMatch(publicRoute[0], /requireAuth|requireApproved|requireClusterVisitManagement/);
   assert.match(publicRoute[0], /assertScanRate/);
   assert.match(publicRoute[0], /verifyToken/);
-  for (const field of ['serialNumber', 'status', 'visitorName', 'site', 'visitDate']) assert.match(publicRoute[0], new RegExp(field));
+  for (const field of ['serialNumber', 'status', 'visitorName', 'representatives', 'company', 'system', 'site', 'visitDate', 'startsAt', 'endsAt']) assert.match(publicRoute[0], new RegExp(field));
   assert.doesNotMatch(publicRoute[0], /repId|identityNumber|mobile|documentsVerified|exceptionReason|cancellationReason/);
   assert.match(publicVerify, /\/api\/visits\/qr\/public\?token=/);
   assert.match(publicVerify, /location\.hash/);

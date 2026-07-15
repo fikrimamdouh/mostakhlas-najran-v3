@@ -70,6 +70,7 @@ const MAINTENANCE_CONTRACTORS = [
       "مستشفى الولادة والأطفال",
       "مستشفى غرب نجران للولادة والأطفال والعيادات التخصصية",
       "المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة",
+      "تجمع نجران الصحي",
     ],
   },
   {
@@ -671,11 +672,11 @@ async function nextPermitNumber(executor: AnyDb, visit: any): Promise<string> {
   return `VIS--NHC${String(sequence.lastValue).padStart(6, "0")}-${year}-${month}`;
 }
 
-type CentralValidationOptions = { qualificationOptional?: boolean };
+type CentralValidationOptions = { qualificationOptional?: boolean; siteApprovalOptional?: boolean };
 
 async function validateCentralContext(executor: AnyDb, context: VisitContext, options: CentralValidationOptions = {}): Promise<string | null> {
   const { visit, metadata, system, contractor, representative, siteApproval, qualification } = context;
-  if (!metadata?.systemId || !metadata?.contractorId || !metadata?.representativeId || !metadata?.siteApprovalId) {
+  if (!metadata?.systemId || !metadata?.contractorId || !metadata?.representativeId || (!options.siteApprovalOptional && !metadata?.siteApprovalId)) {
     return "يجب ربط الطلب بالنظام والشركة والمندوب واعتماد الموقع قبل الاعتماد";
   }
   if (!options.qualificationOptional && !metadata?.qualificationId) {
@@ -687,7 +688,7 @@ async function validateCentralContext(executor: AnyDb, context: VisitContext, op
   if (representative.contractorId !== contractor.id) return "المندوب لا يتبع شركة مقاول الباطن المحددة";
   const visitDay = parseIsoDate(String(visit.visitDate));
   if (!visitDay) return "تاريخ الزيارة غير صالح";
-  if (siteApproval?.siteName !== visit.siteLocation || siteApproval?.systemId !== system.id || siteApproval?.contractorId !== contractor.id || siteApproval?.status !== "active" || !isDateWithin(visitDay, siteApproval?.validFrom, siteApproval?.validUntil)) {
+  if (metadata.siteApprovalId && (siteApproval?.siteName !== visit.siteLocation || siteApproval?.systemId !== system.id || siteApproval?.contractorId !== contractor.id || siteApproval?.status !== "active" || !isDateWithin(visitDay, siteApproval?.validFrom, siteApproval?.validUntil))) {
     return "الموقع غير معتمد لهذا النظام والشركة في تاريخ الزيارة";
   }
   if (metadata.qualificationId && (qualification?.contractorId !== contractor.id || qualification?.systemId !== system.id || qualification?.status !== "active" || !isDateWithin(visitDay, qualification?.validFrom, qualification?.validUntil))) {
@@ -1033,23 +1034,23 @@ router.post("/management/direct-issue", requireAuth, requireApproved, requireClu
   const window = validateVisitWindow(req.body.startsAt, req.body.endsAt);
   if (!maintenance) return res.status(400).json({ error: "اختر مقاول الصيانة: بيت العرب أو سراكو" });
   if (!siteName || !(maintenance.sites as readonly string[]).includes(siteName)) return res.status(400).json({ error: "الموقع المحدد لا يتبع مقاول الصيانة المختار" });
-  if (!systemId || !contractorId || !representativeId || !siteApprovalId) return res.status(400).json({ error: "النظام والشركة ومندوب واحد على الأقل واعتماد الموقع مطلوبة للإصدار المباشر" });
+  if (!systemId || !contractorId || !representativeId) return res.status(400).json({ error: "النظام والشركة ومندوب واحد على الأقل مطلوبة للإصدار المباشر" });
   if (representativeIds.length > 4) return res.status(400).json({ error: "يمكن اختيار أربعة مناديب كحد أقصى للتصريح الواحد" });
   if ("error" in window) return res.status(400).json({ error: window.error });
   const [systemRows, contractorRows, representativeRows, approvalRows, representativeSystemRows] = await Promise.all([
     db.select().from(visitSystemsTable).where(eq(visitSystemsTable.id, systemId)).limit(1),
     db.select().from(visitContractorsTable).where(eq(visitContractorsTable.id, contractorId)).limit(1),
     db.select().from(visitRepresentativesTable).where(inArray(visitRepresentativesTable.id, representativeIds)),
-    db.select().from(visitSiteApprovalsTable).where(eq(visitSiteApprovalsTable.id, siteApprovalId)).limit(1),
+    siteApprovalId ? db.select().from(visitSiteApprovalsTable).where(eq(visitSiteApprovalsTable.id, siteApprovalId)).limit(1) : Promise.resolve([]),
     db.select().from(visitRepresentativeSystemsTable).where(and(inArray(visitRepresentativeSystemsTable.representativeId, representativeIds), eq(visitRepresentativeSystemsTable.systemId, systemId), eq(visitRepresentativeSystemsTable.isActive, true))),
   ]);
   const system = systemRows[0], contractor = contractorRows[0], representatives = representativeIds.map((id) => representativeRows.find((row) => row.id === id)).filter(Boolean) as any[], representative = representatives[0], approval = approvalRows[0];
-  if (!system || !contractor || representatives.length !== representativeIds.length || !representative || !approval) return res.status(400).json({ error: "أحد مراجع الإصدار المباشر غير موجود" });
+  if (!system || !contractor || representatives.length !== representativeIds.length || !representative || (siteApprovalId && !approval)) return res.status(400).json({ error: "أحد مراجع الإصدار المباشر غير موجود" });
   if (representatives.some((row) => !row.isActive || row.contractorId !== contractorId)) return res.status(400).json({ error: "كل المناديب المختارين يجب أن يكونوا نشطين ومسجلين في نفس شركة مقاول الباطن" });
   const linkedRepresentativeIds = new Set(representativeSystemRows.map((row) => row.representativeId));
   if (representativeIds.some((id) => !linkedRepresentativeIds.has(id))) return res.status(400).json({ error: "كل المندوبين المختارين يجب ربطهم بالنظام المحدد" });
   if (representatives.some((row) => row.noResidenceException && !cleanText(row.exceptionReason, 1_000))) return res.status(400).json({ error: "سبب الاستثناء بدون إقامة مطلوب لكل مندوب مستثنى" });
-  if (approval.siteName !== siteName) return res.status(400).json({ error: "اعتماد الموقع لا يطابق الموقع المحدد" });
+  if (approval && approval.siteName !== siteName) return res.status(400).json({ error: "اعتماد الموقع لا يطابق الموقع المحدد" });
   const representativeSnapshot = representatives.map((row) => ({ id: row.id, fullName: row.fullName, identityNumber: row.identityNumber, mobile: row.mobile, noResidenceException: row.noResidenceException === true, exceptionReason: row.noResidenceException ? row.exceptionReason : null }));
   let context: VisitContext;
   let issueStage = "إنشاء سجل الزيارة";
@@ -1058,7 +1059,7 @@ router.post("/management/direct-issue", requireAuth, requireApproved, requireClu
       const [visit] = await tx.insert(visitRequestsTable).values({
         userId: req.currentUser.id,
         repName: representative.fullName,
-        siteLocation: approval.siteName,
+        siteLocation: siteName,
         repId: representative.identityNumber,
         visitDate: window.startsAt.toISOString().slice(0, 10),
         repMobile: representative.mobile,
@@ -1067,7 +1068,7 @@ router.post("/management/direct-issue", requireAuth, requireApproved, requireClu
         subContractor: canonicalContractorName(contractor.name),
         status: "pending",
         submittedByName: req.currentUser.name,
-        submittedByHospital: approval.siteName,
+        submittedByHospital: siteName,
         submittedByContract: cleanText(req.body.contractNumber, 100) || null,
       }).returning();
       issueStage = "ربط بيانات الزيارة";
@@ -1075,7 +1076,7 @@ router.post("/management/direct-issue", requireAuth, requireApproved, requireClu
       // approveVisit creates the active QR token in the same transaction. Do
       // not create it twice; this also keeps the failure stage unambiguous.
       issueStage = "اعتماد الزيارة وإنشاء رقم التصريح وQR";
-      return approveVisit(tx, visit.id, req.currentUser, { qualificationOptional: true });
+      return approveVisit(tx, visit.id, req.currentUser, { qualificationOptional: true, siteApprovalOptional: true });
     });
   } catch (err: any) {
     if (String(err?.message).startsWith("VALIDATION:")) return res.status(400).json({ error: String(err.message).slice(11) });
@@ -1876,7 +1877,12 @@ router.patch("/management/qualifications/:id", requireAuth, requireApproved, req
   const id = numberId(req.params.id); if (!id) return res.status(400).json({ error: "رقم غير صالح" });
   const status = cleanText(req.body.status, 20);
   if (!new Set(["active", "disabled", "expired"]).has(status)) return res.status(400).json({ error: "حالة التأهيل غير صالحة" });
-  const [row] = await db.update(visitQualificationsTable).set({ status: status as any, notes: req.body.notes === undefined ? undefined : cleanText(req.body.notes, 1_000) || null, updatedAt: new Date() }).where(eq(visitQualificationsTable.id, id)).returning();
+  const contractorId = req.body.contractorId === undefined ? undefined : numberId(req.body.contractorId) ?? undefined;
+  const systemId = req.body.systemId === undefined ? undefined : numberId(req.body.systemId) ?? undefined;
+  const validFrom = req.body.validFrom === undefined ? undefined : dayString(req.body.validFrom) ?? undefined;
+  const validUntil = req.body.validUntil === undefined ? undefined : dayString(req.body.validUntil) ?? undefined;
+  if ((req.body.contractorId !== undefined && !contractorId) || (req.body.systemId !== undefined && !systemId) || (req.body.validFrom !== undefined && !validFrom) || (req.body.validUntil !== undefined && !validUntil) || (validFrom && validUntil && validUntil < validFrom)) return res.status(400).json({ error: "بيانات التأهيل وتواريخه غير صالحة" });
+  const [row] = await db.update(visitQualificationsTable).set({ contractorId, systemId, validFrom, validUntil, status: status as any, notes: req.body.notes === undefined ? undefined : cleanText(req.body.notes, 1_000) || null, updatedAt: new Date() }).where(eq(visitQualificationsTable.id, id)).returning();
   if (!row) return res.status(404).json({ error: "التأهيل غير موجود" });
   await audit(req, "تعديل حالة تأهيل", { qualificationId: id, status: row.status });
   return res.json({ qualification: row });
@@ -2460,23 +2466,25 @@ async function verifyToken(req: any, token: string) {
   if (!row || !tokenHashesMatch(token, row.qr.tokenHash) || row.qr.status !== "active") return null;
   await db.update(visitPermitTokensTable).set({ lastScannedAt: new Date(), scanCount: sql`${visitPermitTokensTable.scanCount} + 1` }).where(eq(visitPermitTokensTable.id, row.qr.id));
   const full = hasClusterVisitManagement(req.currentUser);
+  const publicVerification = !req.currentUser;
   const documentsVerified = full ? await hasActiveVisitDocuments(row.visit.id, row.metadata) : undefined;
-  const representatives = full ? permitRepresentatives(row.visit, row.metadata, row.representative) : undefined;
+  const permitPeople = (full || publicVerification) ? permitRepresentatives(row.visit, row.metadata, row.representative) : [];
+  const representatives = full ? permitPeople : publicVerification ? permitPeople.map((representative) => ({ fullName: representative.fullName })) : undefined;
   return {
     full,
     visit: {
       id: full ? row.visit.id : undefined,
       serialNumber: row.visit.serialNumber,
       status: visitEffectiveStatus(row.visit, row.metadata),
-      visitorName: full ? row.visit.repName : shortenVisitorName(row.visit.repName),
+      visitorName: (full || publicVerification) ? row.visit.repName : shortenVisitorName(row.visit.repName),
       repIdMasked: full ? maskIdentity(row.visit.repId) : undefined,
       representatives,
-      company: full ? canonicalContractorName(row.visit.subContractor) : undefined,
-      system: full ? canonicalSystemName(row.visit.systemName) : undefined,
+      company: (full || publicVerification) ? canonicalContractorName(row.visit.subContractor) : undefined,
+      system: (full || publicVerification) ? canonicalSystemName(row.visit.systemName) : undefined,
       site: row.visit.siteLocation,
       visitDate: row.visit.visitDate,
-      startsAt: full ? row.metadata?.startsAt || null : undefined,
-      endsAt: full ? row.metadata?.endsAt || null : undefined,
+      startsAt: (full || publicVerification) ? row.metadata?.startsAt || null : undefined,
+      endsAt: (full || publicVerification) ? row.metadata?.endsAt || null : undefined,
       representativeName: full ? row.representative?.fullName || row.visit.repName : undefined,
       residenceVerified: full ? isResidenceVerified(row.representative, row.visit) : undefined,
       documentsVerified,
@@ -2501,8 +2509,13 @@ router.get("/qr/public", async (req: any, res) => {
       serialNumber: result.visit.serialNumber,
       status: result.visit.status,
       visitorName: result.visit.visitorName,
+      representatives: result.visit.representatives,
+      company: result.visit.company,
+      system: result.visit.system,
       site: result.visit.site,
       visitDate: result.visit.visitDate,
+      startsAt: result.visit.startsAt,
+      endsAt: result.visit.endsAt,
     },
   });
 });
