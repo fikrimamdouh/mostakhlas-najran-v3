@@ -660,8 +660,8 @@ async function nextPermitNumber(executor: AnyDb, visit: any): Promise<string> {
   const issuedAt = new Date();
   const year = issuedAt.getFullYear();
   const month = String(issuedAt.getMonth() + 1).padStart(2, "0");
-  // One global sequence per year prevents duplicates across hospitals too.
-  const scopeKey = `${year}:global`;
+  // One shared sequence per year and month prevents duplicates across sites.
+  const scopeKey = `${year}-${month}:visits`;
   const [sequence] = await executor.insert(visitNumberSequencesTable).values({ scopeKey, lastValue: 1 })
     .onConflictDoUpdate({
       target: visitNumberSequencesTable.scopeKey,
@@ -669,7 +669,7 @@ async function nextPermitNumber(executor: AnyDb, visit: any): Promise<string> {
     })
     .returning({ lastValue: visitNumberSequencesTable.lastValue });
   if (!sequence) throw new Error("SERIAL_SEQUENCE_NOT_RETURNED");
-  return `VIS--NHC${String(sequence.lastValue).padStart(6, "0")}-${year}-${month}`;
+  return `NHC-NJ-VIS-${year}-${month}-${String(sequence.lastValue).padStart(5, "0")}`;
 }
 
 type CentralValidationOptions = { qualificationOptional?: boolean; siteApprovalOptional?: boolean };
@@ -1948,23 +1948,58 @@ router.delete("/management/site-approvals/:id", requireAuth, requireApproved, re
 });
 
 router.post("/management/representatives", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
-  const contractorId = numberId(req.body.contractorId), fullName = cleanText(req.body.fullName, 200), identityNumber = cleanText(req.body.identityNumber, 40).replace(/\s+/g, ""), mobile = cleanText(req.body.mobile, 30);
+  const requestedContractorId = numberId(req.body.contractorId), fullName = cleanText(req.body.fullName, 200), identityNumber = cleanText(req.body.identityNumber, 40).replace(/\s+/g, ""), mobile = cleanText(req.body.mobile, 30);
+  const systemIds = [...new Set((Array.isArray(req.body.systemIds) ? req.body.systemIds : []).map(numberId).filter(Boolean))] as number[];
+  const newContractor = req.body.newContractor && typeof req.body.newContractor === "object" ? req.body.newContractor : null;
+  const newContractorName = newContractor ? canonicalContractorName(newContractor.name) : "";
+  const newContractorMobile = newContractor ? cleanText(newContractor.contactMobile, 30) : "";
   const noResidenceException = req.body.noResidenceException === true;
   const exceptionReason = cleanText(req.body.exceptionReason, 1_000);
-  if (!contractorId || !fullName || !/^\d{10}$/.test(identityNumber) || !isValidSaudiMobile(mobile)) return res.status(400).json({ error: "اسم المندوب ورقم هوية أو إقامة من 10 أرقام وجوال سعودي صحيح مطلوبة" });
+  if ((newContractor && !isFullCompanyName(newContractorName)) || (!newContractor && !requestedContractorId) || !systemIds.length || !fullName || !/^\d{10}$/.test(identityNumber) || !isValidSaudiMobile(mobile)) return res.status(400).json({ error: "الشركة ونظام واحد على الأقل واسم المندوب ورقم هوية أو إقامة من 10 أرقام وجوال سعودي صحيح مطلوبة" });
+  if (newContractorMobile && !isValidSaudiMobile(newContractorMobile)) return res.status(400).json({ error: "رقم جوال الشركة غير صالح" });
   if (noResidenceException && !exceptionReason) return res.status(400).json({ error: "سبب الاستثناء بدون إقامة مطلوب" });
   try {
     const result = await db.transaction(async (tx) => {
-      const [contractor] = await tx.select({ id: visitContractorsTable.id }).from(visitContractorsTable)
-        .where(and(eq(visitContractorsTable.id, contractorId), eq(visitContractorsTable.isActive, true))).limit(1);
+      let contractor: any;
+      if (newContractor) {
+        [contractor] = await tx.insert(visitContractorsTable).values({
+          name: newContractorName,
+          registrationNumber: cleanText(newContractor.registrationNumber, 100) || null,
+          contactName: cleanText(newContractor.contactName, 200) || null,
+          contactMobile: newContractorMobile || null,
+          isActive: true,
+          createdByUserId: req.currentUser.id,
+        }).onConflictDoUpdate({
+          target: visitContractorsTable.name,
+          set: {
+            registrationNumber: cleanText(newContractor.registrationNumber, 100) || null,
+            contactName: cleanText(newContractor.contactName, 200) || null,
+            contactMobile: newContractorMobile || null,
+            isActive: true,
+            updatedAt: new Date(),
+          },
+        }).returning();
+      } else {
+        [contractor] = await tx.select().from(visitContractorsTable)
+          .where(and(eq(visitContractorsTable.id, requestedContractorId!), eq(visitContractorsTable.isActive, true))).limit(1);
+      }
       if (!contractor) throw new Error("CONTRACTOR_NOT_FOUND");
-      return upsertRepresentative(tx, { contractorId, fullName, identityNumber, mobile, noResidenceException, exceptionReason: noResidenceException ? exceptionReason : null });
+      const activeSystems = await tx.select({ id: visitSystemsTable.id }).from(visitSystemsTable)
+        .where(and(inArray(visitSystemsTable.id, systemIds), eq(visitSystemsTable.isActive, true)));
+      if (activeSystems.length !== systemIds.length) throw new Error("SYSTEM_NOT_FOUND");
+      const saved = await upsertRepresentative(tx, { contractorId: contractor.id, fullName, identityNumber, mobile, noResidenceException, exceptionReason: noResidenceException ? exceptionReason : null });
+      for (const systemId of systemIds) {
+        await tx.insert(visitRepresentativeSystemsTable).values({ representativeId: saved.row.id, systemId, isActive: true })
+          .onConflictDoUpdate({ target: [visitRepresentativeSystemsTable.representativeId, visitRepresentativeSystemsTable.systemId], set: { isActive: true } });
+      }
+      return { ...saved, contractor };
     });
-    await audit(req, result.created ? "إضافة مندوب مقاول باطن" : "تحديث مندوب مقاول باطن مسجل", { representativeId: result.row.id, contractorId, noResidenceException, exceptionReason: noResidenceException ? exceptionReason : null });
+    await audit(req, result.created ? "إضافة شركة ومندوب وربط الأنظمة بخطوة واحدة" : "تحديث مندوب وربط الأنظمة بخطوة واحدة", { representativeId: result.row.id, contractorId: result.contractor.id, systemIds, companyCreatedInline: !!newContractor, noResidenceException, exceptionReason: noResidenceException ? exceptionReason : null });
     const { identityNumber: _identityNumber, ...safeRow } = result.row;
-    return res.status(result.created ? 201 : 200).json({ representative: { ...safeRow, identityMasked: maskIdentity(result.row.identityNumber) }, reusedExisting: !result.created });
+    return res.status(result.created ? 201 : 200).json({ contractor: result.contractor, representative: { ...safeRow, identityMasked: maskIdentity(result.row.identityNumber) }, systemIds, reusedExisting: !result.created });
   } catch (err: any) {
     if (err?.message === "CONTRACTOR_NOT_FOUND") return res.status(404).json({ error: "الشركة غير موجودة أو معطلة" });
+    if (err?.message === "SYSTEM_NOT_FOUND") return res.status(404).json({ error: "أحد الأنظمة المحددة غير موجود أو معطل" });
     if (err?.message === "IDENTITY_BELONGS_TO_OTHER_CONTRACTOR") return res.status(409).json({ error: "رقم الهوية أو الإقامة مرتبط بشركة أخرى؛ راجع المندوب الموجود", code: "REPRESENTATIVE_CONTRACTOR_MISMATCH" });
     return respondVisitMutationError(req, res, err, "تعذر حفظ المندوب؛ حدّث الصفحة ثم أعد المحاولة", "رقم الهوية أو الإقامة مسجل من قبل");
   }
