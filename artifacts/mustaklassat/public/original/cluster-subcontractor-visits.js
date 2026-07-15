@@ -293,12 +293,12 @@
     var rows = (state.data.representatives || []).filter(function (row) {
       if (!row.isActive) return false;
       var contractor = state.data.contractors.find(function (item) { return item.id === row.contractorId; });
-      var searchable = [row.fullName, entityName(contractor), row.identityMasked, row.mobileMasked].join(' ').toLocaleLowerCase('ar');
+      var searchable = [row.fullName, entityName(contractor), representativeIdentity(row), representativeMobile(row)].join(' ').toLocaleLowerCase('ar');
       return !needle || searchable.indexOf(needle) !== -1;
     }).sort(function (a, b) { return a.fullName.localeCompare(b.fullName, 'ar'); });
     select.innerHTML = '<option value="">' + (needle ? 'اختر من نتائج البحث' : 'اختر اسم المندوب') + '</option>' + rows.map(function (row) {
       var contractor = state.data.contractors.find(function (item) { return item.id === row.contractorId; });
-      return '<option value="' + row.id + '"' + (String(row.id) === String(selectedId || '') ? ' selected' : '') + '>' + esc(row.fullName + ' — ' + entityName(contractor) + ' — ' + row.identityMasked) + '</option>';
+      return '<option value="' + row.id + '"' + (String(row.id) === String(selectedId || '') ? ' selected' : '') + '>' + esc(row.fullName + ' — ' + entityName(contractor) + ' — ' + representativeIdentity(row)) + '</option>';
     }).join('');
   }
 
@@ -356,6 +356,14 @@
     return value ? value.charAt(0) : 'م';
   }
 
+  function representativeIdentity(representative) {
+    return representative && (representative.identityNumber || representative.identityMasked) || '—';
+  }
+
+  function representativeMobile(representative) {
+    return representative && (representative.mobile || representative.mobileMasked) || '—';
+  }
+
   function renderRepresentativesList() {
     var d = state.data;
     if (!d) return;
@@ -368,7 +376,7 @@
       return { rep: rep, contractor: contractor, systems: systems, documents: documents };
     }).filter(function (row) {
       if (!needle) return true;
-      var searchable = [row.rep.fullName, row.rep.identityMasked, row.rep.mobileMasked, entityName(row.contractor)]
+      var searchable = [row.rep.fullName, representativeIdentity(row.rep), representativeMobile(row.rep), entityName(row.contractor)]
         .concat(row.systems.map(entityName)).join(' ').toLocaleLowerCase('ar');
       return searchable.indexOf(needle) !== -1;
     });
@@ -380,7 +388,7 @@
         return '<div class="document-row"><div class="document-copy"><i class="fas fa-id-card" aria-hidden="true"></i><span><strong>' + esc(documentTypeLabel(document.documentType)) + '</strong><small>' + esc(document.originalName) + ' — ' + esc(documentSizeText(document.sizeBytes)) + '</small></span></div><div class="document-actions"><button type="button" class="btn btn-primary" data-preview-doc="' + document.id + '" data-name="' + esc(document.originalName) + '" data-mime="' + esc(document.mimeType) + '"><i class="fas fa-eye" aria-hidden="true"></i> معاينة</button><button type="button" class="btn btn-light" data-download-doc="' + document.id + '" data-name="' + esc(document.originalName) + '"><i class="fas fa-download" aria-hidden="true"></i> تنزيل</button></div></div>';
       }).join('') + '</div>' : '<div class="note representative-empty-document"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> لم تُرفع هوية أو إقامة لهذا المندوب بعد.</div>';
       var systemsHtml = row.systems.length ? row.systems.map(function (system) { return '<span class="check-chip"><i class="fas fa-link" aria-hidden="true"></i> ' + esc(entityName(system)) + '</span>'; }).join('') : '<span class="check-chip">غير مرتبط بنظام</span>';
-      return '<article class="representative-card"><div class="representative-head"><div class="representative-avatar" aria-hidden="true">' + esc(representativeInitial(rep.fullName)) + '</div><div class="representative-identity"><div class="representative-name-line"><strong class="representative-name">' + esc(rep.fullName) + '</strong>' + badge('active') + '</div><div class="representative-meta"><span><i class="fas fa-building" aria-hidden="true"></i>' + esc(entityName(row.contractor) || 'شركة غير محددة') + '</span><span><i class="fas fa-id-card" aria-hidden="true"></i>' + esc(rep.identityMasked) + '</span><span><i class="fas fa-mobile-screen" aria-hidden="true"></i>' + esc(rep.mobileMasked || '—') + '</span></div></div></div><div class="representative-systems">' + systemsHtml + '</div>' + documentsHtml + '<div class="representative-actions"><button type="button" class="btn btn-light" data-rep-systems="' + rep.id + '"><i class="fas fa-link" aria-hidden="true"></i> ربط الأنظمة</button><button type="button" class="btn btn-green" data-upload-doc="representative:' + rep.id + '"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i> ' + (row.documents.length ? 'رفع بديل للهوية' : 'رفع الهوية') + '</button><button type="button" class="btn btn-red" data-toggle-rep="' + rep.id + '" data-active="true"><i class="fas fa-user-slash" aria-hidden="true"></i> تعطيل</button><button type="button" class="btn btn-light" data-delete-rep="' + rep.id + '"><i class="fas fa-trash" aria-hidden="true"></i> حذف</button></div></article>';
+      return '<article class="representative-card"><div class="representative-head"><div class="representative-avatar" aria-hidden="true">' + esc(representativeInitial(rep.fullName)) + '</div><div class="representative-identity"><div class="representative-name-line"><strong class="representative-name">' + esc(rep.fullName) + '</strong>' + badge('active') + '</div><div class="representative-meta"><span><i class="fas fa-building" aria-hidden="true"></i>' + esc(entityName(row.contractor) || 'شركة غير محددة') + '</span><span title="رقم الهوية أو الإقامة كامل داخل مركز الإدارة"><i class="fas fa-id-card" aria-hidden="true"></i>' + esc(representativeIdentity(rep)) + '</span><span title="رقم الجوال كامل داخل مركز الإدارة"><i class="fas fa-mobile-screen" aria-hidden="true"></i>' + esc(representativeMobile(rep)) + '</span></div></div></div><div class="representative-systems">' + systemsHtml + '</div>' + documentsHtml + '<div class="representative-actions"><button type="button" class="btn btn-light" data-rep-systems="' + rep.id + '"><i class="fas fa-link" aria-hidden="true"></i> ربط الأنظمة</button><button type="button" class="btn btn-green" data-upload-doc="representative:' + rep.id + '"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i> ' + (row.documents.length ? 'رفع بديل للهوية' : 'رفع الهوية') + '</button><button type="button" class="btn btn-red" data-toggle-rep="' + rep.id + '" data-active="true"><i class="fas fa-user-slash" aria-hidden="true"></i> تعطيل</button><button type="button" class="btn btn-light" data-delete-rep="' + rep.id + '"><i class="fas fa-trash" aria-hidden="true"></i> حذف</button></div></article>';
     }).join('') : '<div class="empty">' + (needle ? 'لا توجد نتائج مطابقة للبحث' : 'لا يوجد مندوبون نشطون') + '</div>';
   }
 
@@ -626,7 +634,7 @@
 
   function linkFormHtml(visit) {
     var d = state.data, start = localDateValue(visit.startsAt || visit.visitDate);
-    return '<form id="link-form" class="form-grid"><div class="field"><label>النظام</label><select name="systemId" required>' + optionRows(d.systems.filter(function(x){return x.isActive;}),entityName) + '</select></div><div class="field"><label>الشركة</label><select name="contractorId" required>' + optionRows(d.contractors.filter(function(x){return x.isActive;}),entityName) + '</select></div><div class="field"><label>المندوب</label><select name="representativeId" required>' + optionRows(d.representatives.filter(function(x){return x.isActive;}),function(x){return x.fullName+' — '+x.identityMasked;}) + '</select></div><div class="field"><label>اعتماد الموقع</label><select name="siteApprovalId" required>' + optionRows(d.siteApprovals.filter(function(x){return x.status==='active';}),function(x){return x.siteName+' #'+x.id;}) + '</select></div><div class="field"><label>التأهيل</label><select name="qualificationId" required>' + optionRows(d.qualifications.filter(function(x){return x.status==='active';}),function(x){return 'تأهيل #'+x.id;}) + '</select></div><div class="field"><label>تاريخ الزيارة</label><input type="date" name="startsAt" value="' + esc(start) + '" required></div><div class="field full"><div class="note">زيارة دورية لأنظمة الموقع.</div></div></form>';
+    return '<form id="link-form" class="form-grid"><div class="field"><label>النظام</label><select name="systemId" required>' + optionRows(d.systems.filter(function(x){return x.isActive;}),entityName) + '</select></div><div class="field"><label>الشركة</label><select name="contractorId" required>' + optionRows(d.contractors.filter(function(x){return x.isActive;}),entityName) + '</select></div><div class="field"><label>المندوب</label><select name="representativeId" required>' + optionRows(d.representatives.filter(function(x){return x.isActive;}),function(x){return x.fullName+' — '+representativeIdentity(x);}) + '</select></div><div class="field"><label>اعتماد الموقع</label><select name="siteApprovalId" required>' + optionRows(d.siteApprovals.filter(function(x){return x.status==='active';}),function(x){return x.siteName+' #'+x.id;}) + '</select></div><div class="field"><label>التأهيل</label><select name="qualificationId" required>' + optionRows(d.qualifications.filter(function(x){return x.status==='active';}),function(x){return 'تأهيل #'+x.id;}) + '</select></div><div class="field"><label>تاريخ الزيارة</label><input type="date" name="startsAt" value="' + esc(start) + '" required></div><div class="field full"><div class="note">زيارة دورية لأنظمة الموقع.</div></div></form>';
   }
   function openLink(id) { var visit = state.data.pending.find(function (x) { return x.id === id; }); if (!visit) return; modal('ربط الطلب واعتماده', linkFormHtml(visit), [{ label: 'حفظ الربط واعتماد التصريح', className: 'btn-green', action: async function (button) { button.disabled = true; try { var body = formObject(document.getElementById('link-form')); body.startsAt = dateOnlyIso(body.startsAt, false); body.endsAt = null; await api('/' + id + '/link', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); await api('/' + id + '/status', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'approved' }) }); closeModal(); toast('تم الربط والاعتماد وإصدار رقم جديد', true); await loadBootstrap(); } catch (e) { toast(e.message, false); button.disabled = false; } } }]); }
   function openReject(id) { modal('رفض طلب الزيارة', '<div class="field"><label>سبب الرفض</label><textarea id="reject-note" required></textarea></div>', [{ label: 'تأكيد الرفض', className: 'btn-red', action: async function (button) { var note = document.getElementById('reject-note').value.trim(); if (!note) { toast('سبب الرفض مطلوب', false); return; } button.disabled = true; try { await api('/' + id + '/status', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'rejected', adminNotes: note }) }); closeModal(); toast('تم رفض الطلب دون حذفه', true); await loadBootstrap(); } catch (e) { toast(e.message, false); button.disabled = false; } } }]); }
@@ -645,7 +653,7 @@
     var keep = Array.isArray(selectedIds) ? selectedIds : selectedDirectRepresentativeIds();
     var reps = (state.data ? state.data.representatives : []).filter(function (rep) { return rep.isActive && rep.contractorId === contractorId && state.data.representativeSystems.some(function (link) { return link.isActive && link.representativeId === rep.id && link.systemId === systemId; }); }).sort(function (a, b) { return a.fullName.localeCompare(b.fullName, 'ar'); });
     document.getElementById('direct-representative-options').innerHTML = reps.length ? reps.map(function (rep) {
-      return '<label class="representative-choice"><input type="checkbox" data-direct-representative value="' + rep.id + '"><span><strong>' + esc(rep.fullName) + '</strong><small>' + esc(rep.identityMasked) + ' — ' + esc(rep.mobileMasked) + '</small></span></label>';
+      return '<label class="representative-choice"><input type="checkbox" data-direct-representative value="' + rep.id + '"><span><strong>' + esc(rep.fullName) + '</strong><small>' + esc(representativeIdentity(rep)) + ' — ' + esc(representativeMobile(rep)) + '</small></span></label>';
     }).join('') : '<div class="empty" style="grid-column:1/-1;padding:16px!important">لا يوجد مندوب مرتبط بهذه الشركة والنظام. استخدم زر الإضافة.</div>';
     setDirectRepresentativeIds(keep);
     renderDirectReadiness();
@@ -658,7 +666,7 @@
     if (!representative) { node.textContent = 'ابحث ثم اختر اسمًا محفوظًا لإضافته إلى التصريح وتحديد شركته ونظامه.'; return; }
     var contractor = state.data.contractors.find(function (row) { return row.id === representative.contractorId; });
     var systems = state.data.representativeSystems.filter(function (link) { return link.representativeId === representative.id && link.isActive; }).map(function (link) { var system = state.data.systems.find(function (row) { return row.id === link.systemId; }); return entityName(system); }).filter(Boolean);
-    node.textContent = 'الشركة: ' + entityName(contractor) + ' — الهوية/الإقامة: ' + representative.identityMasked + ' — الجوال: ' + representative.mobileMasked + (systems.length ? ' — الأنظمة: ' + systems.join('، ') : ' — يحتاج ربط نظام') + ' — اختيار الاسم يضيفه لقائمة المندوبين.';
+    node.textContent = 'الشركة: ' + entityName(contractor) + ' — الهوية/الإقامة: ' + representativeIdentity(representative) + ' — الجوال: ' + representativeMobile(representative) + (systems.length ? ' — الأنظمة: ' + systems.join('، ') : ' — يحتاج ربط نظام') + ' — اختيار الاسم يضيفه لقائمة المندوبين.';
   }
 
   function applySavedRepresentative(representativeId) {
@@ -754,7 +762,7 @@
     var existingRepresentatives = state.data.representatives.filter(function (row) { return row.isActive && row.contractorId === contractorId; }).sort(function (a, b) { return a.fullName.localeCompare(b.fullName, 'ar'); });
     var existingOptions = '<option value="">اختر مندوبًا مسجلًا</option>' + existingRepresentatives.map(function (row) {
       var linked = state.data.representativeSystems.some(function (link) { return link.representativeId === row.id && link.systemId === systemId && link.isActive; });
-      return '<option value="' + row.id + '">' + esc(row.fullName + ' — ' + row.identityMasked + (linked ? ' — مرتبط بالفعل' : ' — سيتم ربطه بالنظام')) + '</option>';
+      return '<option value="' + row.id + '">' + esc(row.fullName + ' — ' + representativeIdentity(row) + (linked ? ' — مرتبط بالفعل' : ' — سيتم ربطه بالنظام')) + '</option>';
     }).join('');
     var suggestions = (state.data.approvedPersonnel || []).filter(function (row) { return row.contractorId === contractorId && (row.systemId === systemId || (selectedSystem && row.systemName === entityName(selectedSystem))); });
     var suggestionOptions = '<option value="">اكتب الاسم يدويًا</option>' + suggestions.map(function (row, index) { return '<option value="' + index + '">' + esc(row.fullName + ' — ' + row.sourceCertificate) + '</option>'; }).join('');
