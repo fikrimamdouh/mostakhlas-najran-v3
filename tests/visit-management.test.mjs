@@ -11,6 +11,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const route = read('artifacts/api-server/src/routes/visits.ts');
 const security = read('artifacts/api-server/src/lib/visit-security.ts');
+const rosterXlsxSource = read('artifacts/api-server/src/lib/visit-roster-xlsx.ts');
 const middleware = read('artifacts/api-server/src/middleware/requireClusterVisitManagement.ts');
 const requireAuthSource = read('artifacts/api-server/src/middleware/requireAuth.ts');
 const schema = read('lib/db/src/schema/index.ts');
@@ -29,6 +30,27 @@ const compiledSecurity = ts.transpileModule(security, { compilerOptions: { modul
 const securityModule = { exports: {} };
 new Function('require', 'module', 'exports', compiledSecurity)(require, securityModule, securityModule.exports);
 const visitSecurity = securityModule.exports;
+const compiledRosterXlsx = ts.transpileModule(rosterXlsxSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText;
+const rosterXlsxModule = { exports: {} };
+new Function('require', 'module', 'exports', compiledRosterXlsx)(
+  (specifier) => specifier === './visit-security.js' ? visitSecurity : require(specifier),
+  rosterXlsxModule,
+  rosterXlsxModule.exports,
+);
+const { parseRepresentativeRosterXlsx } = rosterXlsxModule.exports;
+
+function representativeRosterWorkbook() {
+  const AdmZip = require('adm-zip');
+  const zip = new AdmZip();
+  zip.addFile('[Content_Types].xml', Buffer.from('<?xml version="1.0"?><Types><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/></Types>'));
+  zip.addFile('xl/workbook.xml', Buffer.from('<?xml version="1.0"?><x:workbook xmlns:x="urn:test" xmlns:r="urn:rels"><x:sheets><x:sheet name="المندوبون" sheetId="3" r:id="roster"/></x:sheets></x:workbook>'));
+  zip.addFile('xl/_rels/workbook.xml.rels', Buffer.from('<?xml version="1.0"?><Relationships><Relationship Id="roster" Target="/xl/worksheets/sheet3.xml"/></Relationships>'));
+  const headers = ['اسم المندوب', 'رقم الهوية / الإقامة', 'رقم الجوال', 'النظام', 'مقاول الباطن'];
+  const values = ['مندوب تجريبي', String(2).padEnd(10, '0'), '05' + '0'.repeat(8), 'نظام تجريبي', 'شركة تجريبية للمقاولات'];
+  const row = (number, cells) => '<x:row r="' + number + '">' + cells.map((value, index) => '<x:c r="' + String.fromCharCode(65 + index) + number + '" t="inlineStr"><x:is><x:t>' + value + '</x:t></x:is></x:c>').join('') + '</x:row>';
+  zip.addFile('xl/worksheets/sheet3.xml', Buffer.from('<?xml version="1.0"?><x:worksheet xmlns:x="urn:test"><x:sheetData>' + row(1, headers) + row(2, values) + '</x:sheetData></x:worksheet>'));
+  return zip.toBuffer();
+}
 
 test('cluster visit management permission is database-only and fails closed for admins too', () => {
   assert.match(security, /CLUSTER_VISIT_PERMISSION = "cluster_visit_management"/);
@@ -146,6 +168,13 @@ test('representative identity documents are listed, previewed securely and kept 
   assert.match(catalog[0], /status, "active"/);
   assert.match(catalog[0], /representativeDocuments: cluster \? representativeDocuments : \[\]/);
   assert.doesNotMatch(catalog[0], /visitDocumentContentsTable|sha256/);
+  const bootstrapStart = route.indexOf('router.get("/management/bootstrap"');
+  const bootstrapEnd = route.indexOf('router.post("/management/systems"', bootstrapStart);
+  const bootstrap = route.slice(bootstrapStart, bootstrapEnd);
+  assert.match(bootstrap, /representativeDocuments/);
+  assert.match(bootstrap, /ownerType, "representative"/);
+  assert.match(bootstrap, /status, "active"/);
+  assert.doesNotMatch(bootstrap, /visitDocumentContentsTable|sha256/);
   const contentRoute = route.match(/router\.get\("\/management\/documents\/:id\/content"[\s\S]*?\n}\);/);
   assert.ok(contentRoute);
   assert.match(contentRoute[0], /requireClusterVisitManagement/);
@@ -161,8 +190,46 @@ test('representative identity documents are listed, previewed securely and kept 
   assert.match(centerJs, /data-preview-doc/);
   assert.match(centerJs, /previewDocument/);
   assert.match(centerJs, /fetchDocumentBlob/);
+  assert.match(centerJs, /تم حفظ الوثيقة مع الاحتفاظ بتاريخ البدائل[\s\S]*await loadBootstrap\(\)/);
   assert.match(centerJs, /تم تسجيل عملية المعاينة في سجل التدقيق/);
   assert.doesNotMatch(publicVerify, /iqama_front|iqama_back|iqama_pdf|representativeDocuments/);
+});
+
+test('XLSX representative roster is parsed, masked, confirmed and applied transactionally', () => {
+  const parsed = parseRepresentativeRosterXlsx(representativeRosterWorkbook());
+  assert.equal(parsed.length, 1);
+  assert.equal(parsed[0].fullName, 'مندوب تجريبي');
+  assert.equal(parsed[0].identityNumber, String(2).padEnd(10, '0'));
+  assert.equal(parsed[0].mobile, '05' + '0'.repeat(8));
+  assert.match(rosterXlsxSource, /validateZipEntries\(zip\.getEntries\(\)\)/);
+  assert.match(rosterXlsxSource, /ROSTER_SHEET_NOT_FOUND/);
+  assert.match(rosterXlsxSource, /ROSTER_HEADERS_NOT_FOUND/);
+  assert.match(rosterXlsxSource, /\^\\d\{10\}\$/);
+  assert.match(rosterXlsxSource, /ROSTER_IDENTITY_CONFLICT/);
+
+  const previewStart = route.indexOf('router.post("/management/representative-roster/preview"');
+  const confirmStart = route.indexOf('router.post("/management/representative-roster/confirm"');
+  const confirmEnd = route.indexOf('router.post("/management/direct-representative"', confirmStart);
+  const preview = route.slice(previewStart, confirmStart);
+  const confirm = route.slice(confirmStart, confirmEnd);
+  assert.match(preview, /requireClusterVisitManagement/);
+  assert.match(preview, /identityMasked: maskIdentity/);
+  assert.match(preview, /mobileMasked/);
+  assert.match(preview, /confirmationText: `REPLACE:/);
+  assert.doesNotMatch(preview.match(/return res\.json\(\{[\s\S]*$/)?.[0] || '', /identityNumber: record\.identityNumber|mobile: record\.mobile/);
+  assert.match(confirm, /db\.transaction/);
+  assert.match(confirm, /expectedConfirmation = `REPLACE:/);
+  assert.match(confirm, /update\(visitRepresentativeSystemsTable\)[\s\S]*isActive: false/);
+  assert.match(confirm, /approvedIdentities[\s\S]*isActive: false/);
+  assert.match(confirm, /onConflictDoUpdate\([\s\S]*contractorId: contractor\.id/);
+  assert.match(confirm, /insert\(visitRepresentativeSystemsTable\)/);
+  assert.match(confirm, /استبدال قائمة المندوبين المعتمدة من Excel/);
+  assert.match(center, /representative-roster-form/);
+  assert.match(centerJs, /representative-roster\/preview/);
+  assert.match(centerJs, /representative-roster\/confirm/);
+  assert.match(centerJs, /اكتب النص التالي كاملًا للتأكيد/);
+  assert.match(centerJs, /activeRepresentatives = d\.representatives\.filter/);
+  assert.doesNotMatch(rosterXlsxSource + preview + confirm, /بيانات_زيارات_مقاولي_الباطن_المستخرجة/);
 });
 
 test('QR uses random tokens, stores hash plus ciphertext, rate limits scans and never embeds identity fields', () => {
