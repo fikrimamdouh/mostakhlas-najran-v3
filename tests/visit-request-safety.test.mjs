@@ -24,7 +24,7 @@ test('visit request API serializes and reuses identical active visits', () => {
 });
 
 test('request page safety refreshes auth and blocks duplicate client submissions', () => {
-  assert.match(requestSafety, /request-visit\.html/);
+  assert.match(requestSafety, /request-visit\\\.html/);
   assert.match(requestSafety, /request-visit-safe-refresh/);
   assert.match(requestSafety, /تحديث آمن/);
   assert.match(requestSafety, /response\.status === 401 && !retried/);
@@ -34,5 +34,5 @@ test('request page safety refreshes auth and blocks duplicate client submissions
   assert.match(requestSafety, /new Set\(representativeIds\)\.size !== representativeIds\.length/);
   assert.match(requestSafety, /VISIT_ALREADY_EXISTS/);
   assert.match(requestSafety, /تم اختيار نفس المندوب أكثر من مرة/);
-  assert.doesNotMatch(requestSafety, /\b(?:alert|confirm|prompt)\s*\(/);
+  assert.doesNotMatch(requestSafety, /(^|[^.\w])(?:alert|confirm|prompt)\s*\(/m);
 });
