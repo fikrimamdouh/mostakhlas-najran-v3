@@ -227,10 +227,11 @@ test('settings pages use a cache-busted same-origin frame with live token renewa
 
   assert.match(sidebar, /const href = `\/original-viewer\?page=\$\{m\.file\}`/);
   assert.match(dashboard, /function ov\(page: string\) \{ return `\/original-viewer\?page=\$\{page\}`; \}/);
-  assert.match(originalViewer, /FRAME_POLICY_CACHE_VERSION = "20260714_token_bridge_v3"/);
+  assert.match(originalViewer, /FRAME_POLICY_CACHE_VERSION = "20260715_session_recovery_v4"/);
   assert.match(originalViewer, /`\/original\/\$\{page\}\?framePolicy=\$\{FRAME_POLICY_CACHE_VERSION\}`/);
   assert.match(originalViewer, /najranGetFreshToken/);
   assert.match(originalViewer, /getToken\(options\?\.skipCache/);
+  assert.match(originalViewer, /najranGetFreshToken === getFreshViewerToken/);
   assert.match(authCheck, /'settings_main\.html': 'settings_main'/);
   assert.match(authCheck, /'settings_advanced\.html': 'settings_advanced'/);
   assert.match(authCheck, /if \(!isOriginalPageAllowed\(\)\)/);

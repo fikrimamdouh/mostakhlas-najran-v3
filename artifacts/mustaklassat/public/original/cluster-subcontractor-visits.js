@@ -53,6 +53,27 @@
     } catch (_) {}
   }
 
+  function cacheSessionToken(token) {
+    if (typeof token !== 'string' || !token.trim()) return;
+    try {
+      var session = JSON.parse(localStorage.getItem('najran_session') || '{}');
+      session.clerkToken = token.trim(); session.timestamp = Date.now();
+      localStorage.setItem('najran_session', JSON.stringify(session));
+    } catch (_) {}
+  }
+
+  function tokenIsUsable(token, minimumLifetimeMs) {
+    if (typeof token !== 'string' || !token.trim()) return false;
+    try {
+      var parts = token.split('.');
+      if (parts.length < 2) return true;
+      var encoded = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      while (encoded.length % 4) encoded += '=';
+      var payload = JSON.parse(atob(encoded));
+      return !payload.exp || Number(payload.exp) * 1000 - Date.now() > Number(minimumLifetimeMs || 0);
+    } catch (_) { return true; }
+  }
+
   function tokenGetters() {
     var result = [], seen = [];
     function add(scope) { try { var fn = scope && scope.najranGetFreshToken; if (typeof fn === 'function' && seen.indexOf(fn) === -1) { seen.push(fn); result.push({ scope: scope, fn: fn }); } } catch (_) {} }
@@ -84,11 +105,14 @@
   async function freshToken(force) {
     var getters = tokenGetters();
     for (var i = 0; i < getters.length; i++) {
-      try { var value = await callTokenGetter(getters[i], !!force); if (typeof value === 'string' && value.trim()) return value.trim(); } catch (_) {}
+      try {
+        var value = await callTokenGetter(getters[i], !!force);
+        if (tokenIsUsable(value, force ? 15000 : 2000)) { cacheSessionToken(value); return value.trim(); }
+      } catch (_) {}
     }
     var bridged = await requestParentToken(!!force);
-    if (bridged) return bridged;
-    if (!force) try { var session = JSON.parse(localStorage.getItem('najran_session') || '{}'); if (session.clerkToken && Date.now() - Number(session.timestamp || 0) < 55000) return session.clerkToken; } catch (_) {}
+    if (tokenIsUsable(bridged, force ? 15000 : 2000)) { cacheSessionToken(bridged); return bridged.trim(); }
+    if (!force) try { var session = JSON.parse(localStorage.getItem('najran_session') || '{}'); if (session.clerkToken && Date.now() - Number(session.timestamp || 0) < 55000 && tokenIsUsable(session.clerkToken, 2000)) return session.clerkToken; } catch (_) {}
     var error = new Error('انتهت جلسة الدخول؛ اضغط «تجديد الجلسة» ثم أعد المحاولة'); error.status = 401; error.code = 'AUTH_REFRESH_REQUIRED'; throw error;
   }
 
@@ -317,15 +341,15 @@
 
   function renderCatalogLists() {
     var d = state.data;
-    document.getElementById('systems-list').innerHTML = d.systems.map(function (x) { return '<div class="alert-row" style="background:#f8fafc;border-color:#e2e8f0;color:#334155"><span><strong>' + esc(entityName(x)) + '</strong>' + (x.code ? '<small style="display:block">' + esc(x.code) + '</small>' : '') + '</span><span class="actions" style="margin-top:0"><button class="btn btn-light" data-edit-system="' + x.id + '">تعديل</button><button class="btn ' + (x.isActive ? 'btn-red' : 'btn-green') + '" data-toggle-system="' + x.id + '" data-active="' + x.isActive + '">' + (x.isActive ? 'تعطيل' : 'استعادة') + '</button><button class="btn btn-light" data-delete-system="' + x.id + '">حذف</button></span></div>'; }).join('');
-    document.getElementById('contractors-list').innerHTML = d.contractors.map(function (x) { return '<div class="alert-row" style="background:#f8fafc;border-color:#e2e8f0;color:#334155"><span>' + esc(entityName(x)) + '</span><span class="actions" style="margin-top:0"><button class="btn btn-light" data-edit-contractor="' + x.id + '">تعديل</button><button class="btn ' + (x.isActive ? 'btn-red' : 'btn-green') + '" data-toggle-contractor="' + x.id + '" data-active="' + x.isActive + '">' + (x.isActive ? 'تعطيل' : 'تفعيل') + '</button><button class="btn btn-light" data-delete-contractor="' + x.id + '">حذف</button></span></div>'; }).join('');
+    document.getElementById('systems-list').innerHTML = d.systems.map(function (x) { return '<div class="alert-row catalog-row"><div class="catalog-copy"><strong class="catalog-title">' + esc(entityName(x)) + '</strong><div class="catalog-meta">' + (x.code ? '<div class="catalog-meta-item"><b>الكود:</b><span>' + esc(x.code) + '</span></div>' : '') + (x.description ? '<div class="catalog-meta-item"><b>الوصف:</b><span>' + esc(x.description) + '</span></div>' : '') + '</div></div><div class="actions catalog-actions"><button class="btn btn-light" data-edit-system="' + x.id + '">تعديل</button><button class="btn ' + (x.isActive ? 'btn-red' : 'btn-green') + '" data-toggle-system="' + x.id + '" data-active="' + x.isActive + '">' + (x.isActive ? 'تعطيل' : 'استعادة') + '</button><button class="btn btn-light" data-delete-system="' + x.id + '">حذف</button></div></div>'; }).join('');
+    document.getElementById('contractors-list').innerHTML = d.contractors.map(function (x) { return '<div class="alert-row catalog-row"><div class="catalog-copy"><strong class="catalog-title">' + esc(entityName(x)) + '</strong></div><div class="actions catalog-actions"><button class="btn btn-light" data-edit-contractor="' + x.id + '">تعديل</button><button class="btn ' + (x.isActive ? 'btn-red' : 'btn-green') + '" data-toggle-contractor="' + x.id + '" data-active="' + x.isActive + '">' + (x.isActive ? 'تعطيل' : 'تفعيل') + '</button><button class="btn btn-light" data-delete-contractor="' + x.id + '">حذف</button></div></div>'; }).join('');
     document.getElementById('site-approvals-list').innerHTML = d.siteApprovals.length ? d.siteApprovals.map(function (approval) {
       var system = d.systems.find(function (x) { return x.id === approval.systemId; }), contractor = d.contractors.find(function (x) { return x.id === approval.contractorId; }), active = approval.status === 'active';
-      return '<div class="alert-row" style="background:#f8fafc;border-color:#e2e8f0;color:#334155"><span><strong>' + esc(approval.siteName) + '</strong><small style="display:block">' + esc(entityName(system)) + ' — ' + esc(entityName(contractor)) + ' — من ' + esc(approval.validFrom) + ' حتى ' + esc(approval.validUntil) + '</small></span><span class="actions" style="margin-top:0"><button class="btn btn-light" data-edit-approval="' + approval.id + '">تعديل</button><button class="btn ' + (active ? 'btn-red' : 'btn-green') + '" data-toggle-approval="' + approval.id + '" data-active="' + active + '">' + (active ? 'تعطيل' : 'تفعيل') + '</button><button class="btn btn-light" data-delete-approval="' + approval.id + '">حذف</button></span></div>';
+      return '<div class="alert-row catalog-row"><div class="catalog-copy"><strong class="catalog-title">' + esc(approval.siteName) + '</strong><div class="catalog-meta"><div class="catalog-meta-item"><b>النظام:</b><span>' + esc(entityName(system)) + '</span></div><div class="catalog-meta-item"><b>الشركة:</b><span>' + esc(entityName(contractor)) + '</span></div><div class="catalog-meta-item"><b>مدة الاعتماد:</b><span>من ' + esc(approval.validFrom) + ' حتى ' + esc(approval.validUntil) + '</span></div></div></div><div class="actions catalog-actions"><button class="btn btn-light" data-edit-approval="' + approval.id + '">تعديل</button><button class="btn ' + (active ? 'btn-red' : 'btn-green') + '" data-toggle-approval="' + approval.id + '" data-active="' + active + '">' + (active ? 'تعطيل' : 'تفعيل') + '</button><button class="btn btn-light" data-delete-approval="' + approval.id + '">حذف</button></div></div>';
     }).join('') : '<div class="empty">لا توجد اعتمادات مواقع</div>';
     document.getElementById('qualifications-list').innerHTML = d.qualifications.length ? d.qualifications.map(function (qualification) {
       var system = d.systems.find(function (x) { return x.id === qualification.systemId; }), contractor = d.contractors.find(function (x) { return x.id === qualification.contractorId; }), active = qualification.status === 'active';
-      return '<div class="alert-row" style="background:#f8fafc;border-color:#e2e8f0;color:#334155"><span><strong>' + esc(entityName(contractor)) + '</strong><small style="display:block">' + esc(entityName(system)) + ' — من ' + esc(qualification.validFrom) + ' حتى ' + esc(qualification.validUntil) + '</small></span><span class="actions" style="margin-top:0"><button class="btn btn-light" data-edit-qualification="' + qualification.id + '">تعديل</button><button class="btn ' + (active ? 'btn-red' : 'btn-green') + '" data-toggle-qualification="' + qualification.id + '" data-active="' + active + '">' + (active ? 'تعطيل' : 'تفعيل') + '</button><button class="btn btn-light" data-delete-qualification="' + qualification.id + '">حذف</button></span></div>';
+      return '<div class="alert-row catalog-row"><div class="catalog-copy"><strong class="catalog-title">' + esc(entityName(contractor)) + '</strong><div class="catalog-meta"><div class="catalog-meta-item"><b>النظام:</b><span>' + esc(entityName(system)) + '</span></div><div class="catalog-meta-item"><b>مدة التأهيل:</b><span>من ' + esc(qualification.validFrom) + ' حتى ' + esc(qualification.validUntil) + '</span></div></div></div><div class="actions catalog-actions"><button class="btn btn-light" data-edit-qualification="' + qualification.id + '">تعديل</button><button class="btn ' + (active ? 'btn-red' : 'btn-green') + '" data-toggle-qualification="' + qualification.id + '" data-active="' + active + '">' + (active ? 'تعطيل' : 'تفعيل') + '</button><button class="btn btn-light" data-delete-qualification="' + qualification.id + '">حذف</button></div></div>';
     }).join('') : '<div class="empty">لا توجد تأهيلات</div>';
     var activeRepresentatives = d.representatives.filter(function (rep) { return rep.isActive; });
     document.getElementById('reps-list').innerHTML = activeRepresentatives.length ? activeRepresentatives.map(function (rep) {
