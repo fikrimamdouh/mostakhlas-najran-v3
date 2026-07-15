@@ -56,6 +56,15 @@ const LEGACY_VISIT_SIGNER_TITLE = "مشرف وحدة الصيانة العامة
 const DEFAULT_VISIT_SIGNER_TITLE = "مدير وحدة الصيانة العامة بتجمع نجران الصحي";
 const DEFAULT_VISIT_SIGNER_NAME = "م. محمد عباس المكرمي";
 const DEFAULT_VISIT_PURPOSE = "زيارة دورية لأنظمة المستشفى";
+const VISIT_PRINT_TEXT_FIELDS = [
+  { field: "organizationText", key: "visit_permit_organization_text", fallback: "تجمع نجران الصحي — وحدة الصيانة العامة", max: 200 },
+  { field: "permitTitle", key: "visit_permit_title", fallback: "إعتماد موافقة زيارة مقاولي الباطن", max: 200 },
+  { field: "verificationText", key: "visit_permit_verification_text", fallback: "تم التحقق من بيانات الهوية/الإقامة إلكترونيًا", max: 300 },
+  { field: "approvalText", key: "visit_permit_approval_text", fallback: "توافق وحدة الصيانة العامة بتجمع نجران الصحي بقيام مندوب مقاول الباطن الموضح اسمه وبياناته بعالية لزيارة الموقع لتنفيذ أعمال الصيانة الوقائية للنظام حسب شروط ومواصفات العقد.", max: 2_000 },
+  { field: "closingText", key: "visit_permit_closing_text", fallback: "وعلي ذلك جري التوقيع ،،،", max: 300 },
+  { field: "qrLabel", key: "visit_permit_qr_label", fallback: "تحقق عام من التصريح", max: 120 },
+  { field: "footerNote", key: "visit_permit_footer_note", fallback: "يرجى إبراز بطاقة تأهيل الفريق الفني ونموذج اعتماد موافقة زيارة مقاولي الباطن للمسؤول بالمنشأة.", max: 1_000 },
+] as const;
 const FACILITY_VISIT_APPROVAL_MODULE = "facility_visit_approval";
 const MAX_VISIT_PRINT_ASSET_BYTES = 2 * 1024 * 1024;
 const APPROVED_CATALOG_SOURCE = "مستورد من كتالوج مقاولي الباطن المعتمدين";
@@ -583,6 +592,14 @@ async function setSetting(key: string, value: string, updatedBy: string) {
     .onConflictDoUpdate({ target: systemSettingsTable.key, set: { value, updatedAt: new Date(), updatedBy } });
 }
 
+async function getVisitPrintTexts() {
+  const values = await Promise.all(VISIT_PRINT_TEXT_FIELDS.map((definition) => getSetting(definition.key)));
+  return VISIT_PRINT_TEXT_FIELDS.reduce<Record<string, string>>((result, definition, index) => {
+    result[definition.field] = cleanText(values[index], definition.max) || definition.fallback;
+    return result;
+  }, {});
+}
+
 async function getVisitContext(executor: AnyDb, visitId: number): Promise<VisitContext | null> {
   const [row] = await executor.select({
     visit: visitRequestsTable,
@@ -893,8 +910,8 @@ async function importZipRecords(records: Record<string, any[]>, userId: number) 
 
 // ── Shared settings and submitter endpoints ─────────────────────────────────
 router.get("/settings", requireAuth, requireApproved, async (_req, res) => {
-  const [stamp, signature, signerName, signerTitle, legacyManagerName] = await Promise.all([
-    getSetting("visit_stamp"), getSetting("visit_signature"), getSetting("visit_signer_name"), getSetting("visit_signer_title"), getSetting("visit_manager_name"),
+  const [stamp, signature, signerName, signerTitle, legacyManagerName, printTexts] = await Promise.all([
+    getSetting("visit_stamp"), getSetting("visit_signature"), getSetting("visit_signer_name"), getSetting("visit_signer_title"), getSetting("visit_manager_name"), getVisitPrintTexts(),
   ]);
   const effectiveSignerName = signerName || legacyManagerName || DEFAULT_VISIT_SIGNER_NAME;
   res.setHeader("Cache-Control", "no-store");
@@ -905,6 +922,7 @@ router.get("/settings", requireAuth, requireApproved, async (_req, res) => {
     signerTitle: effectiveSignerTitle(signerTitle),
     // Compatibility for clients deployed before signer fields were renamed.
     managerName: effectiveSignerName,
+    ...printTexts,
   });
 });
 
@@ -928,6 +946,12 @@ router.post("/settings", requireAuth, requireApproved, requireClusterVisitManage
     if (normalizedSignature !== undefined) ops.push(setSetting("visit_signature", normalizedSignature, req.currentUser.email));
     if (signerName !== undefined) ops.push(setSetting("visit_signer_name", cleanText(signerName, 200) || DEFAULT_VISIT_SIGNER_NAME, req.currentUser.email));
     if (signerTitle !== undefined) ops.push(setSetting("visit_signer_title", cleanText(signerTitle, 200) || DEFAULT_VISIT_SIGNER_TITLE, req.currentUser.email));
+    for (const definition of VISIT_PRINT_TEXT_FIELDS) {
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, definition.field)) {
+        const value = cleanText(req.body[definition.field], definition.max) || definition.fallback;
+        ops.push(setSetting(definition.key, value, req.currentUser.email));
+      }
+    }
     await Promise.all(ops);
   } catch (err: any) {
     req.log.error({ err }, "Failed to update visit print settings");
@@ -2632,13 +2656,14 @@ router.get("/:id/permit", requireAuth, requireApproved, async (req: any, res) =>
     const token = decryptPermitToken(qr.tokenCiphertext);
     const verifyUrl = `${publicVisitVerifyOrigin(req)}/visit-permit-verify.html#${encodeURIComponent(token)}`;
     const qrDataUrl = await QRCode.toDataURL(verifyUrl, { errorCorrectionLevel: "M", margin: 1, width: 220 });
-    const [stamp, signature, signerName, signerTitle, legacyManagerName, documentsVerified] = await Promise.all([
+    const [stamp, signature, signerName, signerTitle, legacyManagerName, documentsVerified, printTexts] = await Promise.all([
       getSetting("visit_stamp"),
       getSetting("visit_signature"),
       getSetting("visit_signer_name"),
       getSetting("visit_signer_title"),
       getSetting("visit_manager_name"),
       hasActiveVisitDocuments(id, context.metadata),
+      getVisitPrintTexts(),
     ]);
     await audit(req, context.visit.status === "approved" ? "معاينة تصريح زيارة" : "معاينة مسودة تصريح زيارة", { visitId: id, serialNumber: context.visit.serialNumber || null });
     return res.json({
@@ -2660,6 +2685,7 @@ router.get("/:id/permit", requireAuth, requireApproved, async (req: any, res) =>
         signerName: signerName || legacyManagerName || DEFAULT_VISIT_SIGNER_NAME,
         signerTitle: effectiveSignerTitle(signerTitle),
         managerName: signerName || legacyManagerName || DEFAULT_VISIT_SIGNER_NAME,
+        ...printTexts,
       },
     });
   } catch (err: any) {
