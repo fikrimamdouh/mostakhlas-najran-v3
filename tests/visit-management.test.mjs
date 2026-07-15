@@ -605,6 +605,9 @@ test('representative page uses one responsive directory with search, clear metad
   assert.match(centerJs, /rep-list-search'\)\.addEventListener\('input'/);
   assert.match(centerJs, /data-preview-doc/);
   assert.match(centerJs, /data-download-doc/);
+  assert.match(center, /تظهر الهوية والجوال كاملين هنا للمطابقة المباشرة فقط/);
+  assert.match(centerJs, /function representativeIdentity[\s\S]*identityNumber/);
+  assert.match(centerJs, /function representativeMobile[\s\S]*representative\.mobile/);
 });
 
 test('camera scanner supports BarcodeDetector, jsQR fallback, camera switching and manual permit search', () => {
@@ -635,11 +638,13 @@ test('public QR verification is rate limited, current, and exposes only the appr
   assert.doesNotMatch(publicVerify, /repId|identityNumber|mobileMasked|documentsVerified|exceptionReason/);
 });
 
-test('full identity and mobile are limited to authorized permit, detail and scan responses while listings stay masked', () => {
+test('full identity and mobile are available only inside authorized management and protected permit flows', () => {
   const bootstrapBlock = route.match(/router\.get\("\/management\/bootstrap"[\s\S]*?\n}\);/);
   assert.ok(bootstrapBlock);
+  assert.match(bootstrapBlock[0], /requireClusterVisitManagement/);
+  assert.match(bootstrapBlock[0], /identityNumber,/);
+  assert.match(bootstrapBlock[0], /mobile: mobile \|\| ""/);
   assert.match(bootstrapBlock[0], /identityMasked: maskIdentity\(identityNumber\)/);
-  assert.match(bootstrapBlock[0], /mobileMasked:/);
   const permitBlock = route.match(/router\.get\("\/:id\/permit"[\s\S]*?\n}\);/);
   assert.ok(permitBlock);
   assert.match(permitBlock[0], /permitRepresentatives/);

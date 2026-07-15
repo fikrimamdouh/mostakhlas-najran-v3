@@ -1558,7 +1558,16 @@ router.get("/management/bootstrap", requireAuth, requireApproved, requireCluster
     contractors: contractors.map((row) => ({ ...row, displayName: canonicalContractorName(row.name) })),
     qualifications,
     siteApprovals,
-    representatives: representatives.map(({ identityNumber, mobile, ...row }) => ({ ...row, identityMasked: maskIdentity(identityNumber), mobileMasked: mobile ? `${mobile.slice(0, 3)}••••${mobile.slice(-3)}` : "—" })),
+    // This endpoint is restricted to the cluster visit-management permission.
+    // Managers need the complete values to verify the technician in person;
+    // public QR and general catalogue responses remain masked.
+    representatives: representatives.map(({ identityNumber, mobile, ...row }) => ({
+      ...row,
+      identityNumber,
+      mobile: mobile || "",
+      identityMasked: maskIdentity(identityNumber),
+      mobileMasked: mobile ? `${mobile.slice(0, 3)}••••${mobile.slice(-3)}` : "—",
+    })),
     representativeSystems,
     representativeDocuments,
     maintenanceContractors: MAINTENANCE_CONTRACTORS,
