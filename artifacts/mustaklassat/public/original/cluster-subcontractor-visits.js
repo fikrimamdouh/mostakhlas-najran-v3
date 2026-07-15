@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var state = { data: null, settings: null, archivePage: 1, archivePages: 1, stream: null, scanLoop: 0, scanning: false, barcodeDetector: null, qrDeepLinkHandled: false, pendingRepresentativeContractor: null };
+  var state = { data: null, settings: null, archivePage: 1, archivePages: 1, stream: null, scanLoop: 0, scanning: false, barcodeDetector: null, qrDeepLinkHandled: false, pendingRepresentativeContractor: null, documentPreviewUrl: null };
   var UI_STATE_KEY = 'najran_visit_center_ui_state_v1';
   var SESSION_KEEPALIVE_MS = 45 * 1000;
   var sessionRefreshPromise = null;
@@ -133,7 +133,14 @@
     clearTimeout(node._timer); node._timer = setTimeout(function () { node.className = 'toast'; }, 5000);
   }
 
+  function releaseDocumentPreview() {
+    if (!state.documentPreviewUrl) return;
+    URL.revokeObjectURL(state.documentPreviewUrl);
+    state.documentPreviewUrl = null;
+  }
+
   function modal(title, html, buttons) {
+    releaseDocumentPreview();
     document.getElementById('modal-title').textContent = title;
     document.getElementById('modal-body').innerHTML = html;
     var foot = document.getElementById('modal-foot'); foot.innerHTML = '';
@@ -143,7 +150,7 @@
     });
     document.getElementById('app-modal').classList.add('open'); document.body.style.overflow = 'hidden';
   }
-  function closeModal() { document.getElementById('app-modal').classList.remove('open'); document.body.style.overflow = ''; }
+  function closeModal() { releaseDocumentPreview(); document.getElementById('app-modal').classList.remove('open'); document.body.style.overflow = ''; }
   document.getElementById('modal-close').addEventListener('click', closeModal);
   document.getElementById('app-modal').addEventListener('click', function (event) { if (event.target === this) closeModal(); });
 
@@ -299,6 +306,15 @@
     renderAssetPreview('signature-preview', settings.signature || '/original/visit-default-signature.png', 'التوقيع الإلكتروني الافتراضي');
   }
 
+  function documentTypeLabel(type) {
+    return ({ iqama_front: 'الهوية / الإقامة — الوجه الأمامي', iqama_back: 'الهوية / الإقامة — الوجه الخلفي', iqama_pdf: 'الهوية / الإقامة — ملف PDF', identity: 'الهوية / الإقامة', residence: 'إثبات الإقامة', qualification: 'مستند التأهيل', other: 'مستند آخر', facility_approval_proof: 'إثبات اعتماد المنشأة' })[type] || type;
+  }
+
+  function documentSizeText(bytes) {
+    var value = Number(bytes || 0);
+    return value >= 1024 * 1024 ? (value / (1024 * 1024)).toFixed(1) + ' م.ب' : Math.max(1, Math.round(value / 1024)) + ' ك.ب';
+  }
+
   function renderCatalogLists() {
     var d = state.data;
     document.getElementById('systems-list').innerHTML = d.systems.map(function (x) { return '<div class="alert-row" style="background:#f8fafc;border-color:#e2e8f0;color:#334155"><span><strong>' + esc(entityName(x)) + '</strong>' + (x.code ? '<small style="display:block">' + esc(x.code) + '</small>' : '') + '</span><span class="actions" style="margin-top:0"><button class="btn btn-light" data-edit-system="' + x.id + '">تعديل</button><button class="btn ' + (x.isActive ? 'btn-red' : 'btn-green') + '" data-toggle-system="' + x.id + '" data-active="' + x.isActive + '">' + (x.isActive ? 'تعطيل' : 'استعادة') + '</button><button class="btn btn-light" data-delete-system="' + x.id + '">حذف</button></span></div>'; }).join('');
@@ -314,7 +330,9 @@
     document.getElementById('reps-list').innerHTML = d.representatives.length ? d.representatives.map(function (rep) {
       var contractor = d.contractors.find(function (x) { return x.id === rep.contractorId; });
       var systemNames = d.representativeSystems.filter(function (link) { return link.representativeId === rep.id && link.isActive; }).map(function (link) { var s = d.systems.find(function (x) { return x.id === link.systemId; }); return entityName(s); }).filter(Boolean);
-      return '<div class="card" style="margin-bottom:8px"><strong>' + esc(rep.fullName) + '</strong> ' + (rep.isActive ? badge('active') : badge('cancelled')) + '<small style="display:block;color:#64748b">' + esc(rep.identityMasked) + ' — ' + esc(entityName(contractor)) + '</small><div class="system-links">' + systemNames.map(function (name) { return '<span class="check-chip">' + esc(name) + '</span>'; }).join('') + '</div><div class="actions"><button class="btn btn-light" data-rep-systems="' + rep.id + '">ربط الأنظمة</button><button class="btn btn-light" data-upload-doc="representative:' + rep.id + '">رفع وثيقة</button><button class="btn ' + (rep.isActive ? 'btn-red' : 'btn-green') + '" data-toggle-rep="' + rep.id + '" data-active="' + rep.isActive + '">' + (rep.isActive ? 'تعطيل' : 'تفعيل') + '</button><button class="btn btn-light" data-delete-rep="' + rep.id + '">حذف</button></div></div>';
+      var documents = (d.representativeDocuments || []).filter(function (document) { return document.ownerId === rep.id; });
+      var documentsHtml = documents.length ? documents.map(function (document) { return '<div class="alert-row" style="margin-top:7px;background:#f8fafc;border-color:#e2e8f0;color:#334155"><span><strong>' + esc(documentTypeLabel(document.documentType)) + '</strong><small style="display:block">' + esc(document.originalName) + ' — ' + esc(documentSizeText(document.sizeBytes)) + '</small></span><span class="actions" style="margin-top:0"><button class="btn btn-primary" data-preview-doc="' + document.id + '" data-name="' + esc(document.originalName) + '" data-mime="' + esc(document.mimeType) + '">معاينة</button><button class="btn btn-light" data-download-doc="' + document.id + '" data-name="' + esc(document.originalName) + '">تنزيل</button></span></div>'; }).join('') : '<div class="note" style="margin-top:8px">لم تُرفع هوية أو إقامة لهذا المندوب بعد.</div>';
+      return '<div class="card" style="margin-bottom:8px"><strong>' + esc(rep.fullName) + '</strong> ' + (rep.isActive ? badge('active') : badge('cancelled')) + '<small style="display:block;color:#64748b">' + esc(rep.identityMasked) + ' — ' + esc(entityName(contractor)) + '</small><div class="system-links">' + systemNames.map(function (name) { return '<span class="check-chip">' + esc(name) + '</span>'; }).join('') + '</div>' + documentsHtml + '<div class="actions"><button class="btn btn-light" data-rep-systems="' + rep.id + '">ربط الأنظمة</button><button class="btn btn-green" data-upload-doc="representative:' + rep.id + '">' + (documents.length ? 'رفع بديل للهوية / الإقامة' : 'رفع الهوية / الإقامة') + '</button><button class="btn ' + (rep.isActive ? 'btn-red' : 'btn-green') + '" data-toggle-rep="' + rep.id + '" data-active="' + rep.isActive + '">' + (rep.isActive ? 'تعطيل' : 'تفعيل') + '</button><button class="btn btn-light" data-delete-rep="' + rep.id + '">حذف</button></div></div>';
     }).join('') : '<div class="empty">لا يوجد مندوبون</div>';
   }
 
@@ -389,7 +407,7 @@
   });
 
   document.addEventListener('click', async function (event) {
-    var target = event.target.closest('[data-edit-system],[data-edit-contractor],[data-edit-qualification],[data-delete-system],[data-edit-approval],[data-delete-approval],[data-toggle-system],[data-toggle-contractor],[data-toggle-approval],[data-toggle-qualification],[data-toggle-rep],[data-delete-contractor],[data-delete-qualification],[data-delete-rep],[data-rep-systems],[data-upload-doc],[data-download-doc],[data-disable-doc],[data-link],[data-reject],[data-preview],[data-visit-detail],[data-upload-signed],[data-download-signed]'); if (!target) return;
+    var target = event.target.closest('[data-edit-system],[data-edit-contractor],[data-edit-qualification],[data-delete-system],[data-edit-approval],[data-delete-approval],[data-toggle-system],[data-toggle-contractor],[data-toggle-approval],[data-toggle-qualification],[data-toggle-rep],[data-delete-contractor],[data-delete-qualification],[data-delete-rep],[data-rep-systems],[data-upload-doc],[data-preview-doc],[data-download-doc],[data-disable-doc],[data-link],[data-reject],[data-preview],[data-visit-detail],[data-upload-signed],[data-download-signed]'); if (!target) return;
     try {
       if (target.dataset.editSystem) openEditSystem(Number(target.dataset.editSystem));
       else if (target.dataset.editContractor) openEditContractor(Number(target.dataset.editContractor));
@@ -407,6 +425,7 @@
       else if (target.dataset.deleteRep) openSafeDelete('المندوب', '/management/representatives/' + target.dataset.deleteRep);
       else if (target.dataset.repSystems) openRepresentativeSystems(Number(target.dataset.repSystems));
       else if (target.dataset.uploadDoc) { var owner = target.dataset.uploadDoc.split(':'); openDocumentUpload(owner[0], Number(owner[1])); }
+      else if (target.dataset.previewDoc) previewDocument(Number(target.dataset.previewDoc), target.dataset.name || 'الهوية / الإقامة', target.dataset.mime || '');
       else if (target.dataset.downloadDoc) downloadDocument(Number(target.dataset.downloadDoc), target.dataset.name || 'document');
       else if (target.dataset.disableDoc) openDisableDocument(Number(target.dataset.disableDoc));
       else if (target.dataset.uploadSigned) openSignedPermitUpload(Number(target.dataset.uploadSigned));
@@ -474,11 +493,34 @@
   }
 
   function openDocumentUpload(ownerType, ownerId) {
-    modal('رفع وثيقة محمية', '<form id="document-form" class="form-grid"><div class="field"><label>نوع الوثيقة</label><select name="documentType" required><option value="identity">الهوية / الإقامة</option><option value="residence">إثبات الإقامة</option><option value="qualification">مستند التأهيل</option><option value="other">مستند آخر</option></select></div><div class="field"><label>الملف</label><input type="file" name="file" accept="application/pdf,image/png,image/jpeg" required></div><div class="field full"><div class="note">لن يظهر محتوى الملف في القوائم أو نتيجة مسح QR.</div></div></form>', [{ label: 'رفع وحفظ', className: 'btn-green', action: async function (button) { var form = document.getElementById('document-form'), file = form.elements.file.files[0]; if (!file) { toast('اختر الملف', false); return; } var data = new FormData(); data.append('ownerType', ownerType); data.append('ownerId', ownerId); data.append('documentType', form.elements.documentType.value); data.append('file', file); button.disabled = true; try { await api('/management/documents', { method: 'POST', body: data }); closeModal(); toast('تم حفظ الوثيقة مع الاحتفاظ بتاريخ البدائل', true); } catch (e) { toast(e.message, false); button.disabled = false; } } }]);
+    var representativeOptions = '<option value="iqama_front">الهوية / الإقامة — الوجه الأمامي (صورة)</option><option value="iqama_back">الهوية / الإقامة — الوجه الخلفي (صورة)</option><option value="iqama_pdf">الهوية / الإقامة — ملف PDF كامل</option><option value="other">مستند آخر</option>';
+    var generalOptions = '<option value="identity">الهوية / الإقامة</option><option value="residence">إثبات الإقامة</option><option value="qualification">مستند التأهيل</option><option value="other">مستند آخر</option>';
+    modal(ownerType === 'representative' ? 'رفع هوية أو إقامة المندوب' : 'رفع وثيقة محمية', '<form id="document-form" class="form-grid"><div class="field"><label>نوع الوثيقة</label><select name="documentType" required>' + (ownerType === 'representative' ? representativeOptions : generalOptions) + '</select></div><div class="field"><label>الملف</label><input type="file" name="file" accept="application/pdf,image/png,image/jpeg" required></div><div class="field full"><div class="note">الصور حتى 5 ميجابايت وPDF حتى 10 ميجابايت. الملف محمي ولا يظهر في الباركود العام، وتظهر المعاينة فقط للمستخدم المخول بإدارة الزيارات.</div></div></form>', [{ label: 'رفع وحفظ', className: 'btn-green', action: async function (button) { var form = document.getElementById('document-form'), file = form.elements.file.files[0]; if (!file) { toast('اختر الملف', false); return; } var data = new FormData(); data.append('ownerType', ownerType); data.append('ownerId', ownerId); data.append('documentType', form.elements.documentType.value); data.append('file', file); button.disabled = true; try { await api('/management/documents', { method: 'POST', body: data }); closeModal(); toast('تم حفظ الوثيقة مع الاحتفاظ بتاريخ البدائل', true); await loadBootstrap(); } catch (e) { toast(e.message, false); button.disabled = false; } } }]);
+  }
+
+  async function fetchDocumentBlob(id, preview, retried) {
+    var token = retried ? await refreshSessionToken() : await freshToken(false);
+    var response = await fetch('/api/visits/management/documents/' + id + '/content' + (preview ? '?preview=1' : ''), { headers: { Authorization: 'Bearer ' + token }, credentials: 'same-origin', cache: 'no-store' });
+    if (response.status === 401) {
+      saveUiState(); clearCachedToken();
+      if (!retried) return fetchDocumentBlob(id, preview, true);
+      throw new Error('انتهت صلاحية جلسة الدخول؛ اضغط «تجديد الجلسة» ثم أعد المحاولة');
+    }
+    if (!response.ok) { var body = await response.json().catch(function(){return{};}); throw new Error(body.error || (preview ? 'تعذر معاينة الوثيقة' : 'تعذر تنزيل الوثيقة')); }
+    return response.blob();
+  }
+
+  async function previewDocument(id, name, mimeType) {
+    try {
+      var blob = await fetchDocumentBlob(id, true), url = URL.createObjectURL(blob), type = blob.type || mimeType;
+      var content = type === 'application/pdf' ? '<iframe title="معاينة ' + esc(name) + '" src="' + esc(url) + '" style="width:100%;height:68vh;border:1px solid #dbe4f0;border-radius:10px;background:#f8fafc"></iframe>' : '<div style="text-align:center;background:#f8fafc;border:1px solid #dbe4f0;border-radius:10px;padding:10px"><img src="' + esc(url) + '" alt="معاينة ' + esc(name) + '" style="max-width:100%;max-height:68vh;object-fit:contain"></div>';
+      modal('معاينة محمية — ' + name, content + '<div class="note" style="margin-top:10px">هذه الوثيقة متاحة فقط للمستخدم المخول، وتم تسجيل عملية المعاينة في سجل التدقيق.</div>', [{ label: 'تنزيل نسخة', className: 'btn-light', action: function () { downloadDocument(id, name); } }]);
+      state.documentPreviewUrl = url;
+    } catch (e) { toast(e.message, false); }
   }
 
   async function downloadDocument(id, name) {
-    try { var token = await freshToken(), response = await fetch('/api/visits/management/documents/' + id + '/content', { headers: { Authorization: 'Bearer ' + token } }); if (!response.ok) { var body = await response.json().catch(function(){return{};}); throw new Error(body.error || 'تعذر تنزيل الوثيقة'); } var blob = await response.blob(), url = URL.createObjectURL(blob), link = document.createElement('a'); link.href = url; link.download = name; link.click(); setTimeout(function(){URL.revokeObjectURL(url);},1000); } catch (e) { toast(e.message, false); }
+    try { var blob = await fetchDocumentBlob(id, false), url = URL.createObjectURL(blob), link = document.createElement('a'); link.href = url; link.download = name; link.click(); setTimeout(function(){URL.revokeObjectURL(url);},1000); } catch (e) { toast(e.message, false); }
   }
 
   function openSignedPermitUpload(visitId) {
