@@ -187,7 +187,8 @@ test('representative identity documents are listed, previewed securely and kept 
   assert.match(route, /iqama_back/);
   assert.match(route, /iqama_pdf/);
   assert.match(route, /IDENTITY_IMAGE_TOO_LARGE/);
-  assert.match(center, /قائمة المندوبين وربط الأنظمة والوثائق/);
+  assert.match(center, /دليل المندوبين/);
+  assert.match(center, /ملف موحد للمندوب والشركة والأنظمة والوثائق/);
   assert.match(centerJs, /data-preview-doc/);
   assert.match(centerJs, /previewDocument/);
   assert.match(centerJs, /fetchDocumentBlob/);
@@ -229,7 +230,7 @@ test('XLSX representative roster is parsed, masked, confirmed and applied transa
   assert.match(centerJs, /representative-roster\/preview/);
   assert.match(centerJs, /representative-roster\/confirm/);
   assert.match(centerJs, /اكتب النص التالي كاملًا للتأكيد/);
-  assert.match(centerJs, /activeRepresentatives = d\.representatives\.filter/);
+  assert.match(centerJs, /var rows = d\.representatives\.filter/);
   assert.doesNotMatch(rosterXlsxSource + preview + confirm, /بيانات_زيارات_مقاولي_الباطن_المستخرجة/);
 });
 
@@ -556,6 +557,26 @@ test('printing reuses one shared permit layout, includes QR and verification tex
   assert.doesNotMatch(center + centerJs, /repIdPhoto|signedPermitFile/);
 });
 
+test('permit copy is editable, persisted centrally and escaped before print rendering', () => {
+  for (const field of ['organizationText', 'permitTitle', 'verificationText', 'approvalText', 'closingText', 'qrLabel', 'footerNote']) {
+    assert.match(center, new RegExp(`name="${field}"`));
+    assert.match(route, new RegExp(`field: "${field}"`));
+    assert.match(centerJs, new RegExp(`DEFAULT_VISIT_PRINT_TEXTS[\\s\\S]*${field}`));
+  }
+  for (const key of ['visit_permit_organization_text', 'visit_permit_title', 'visit_permit_verification_text', 'visit_permit_approval_text', 'visit_permit_closing_text', 'visit_permit_qr_label', 'visit_permit_footer_note']) {
+    assert.match(route, new RegExp(key));
+  }
+  assert.match(route, /getVisitPrintTexts\(\)/);
+  assert.match(route, /VISIT_PRINT_TEXT_FIELDS[\s\S]*setSetting\(definition\.key/);
+  assert.match(route, /settings:[\s\S]*\.\.\.printTexts/);
+  assert.match(centerJs, /printTextBody/);
+  assert.match(centerJs, /reset-print-texts/);
+  assert.match(printJs, /function textSetting/);
+  assert.match(printJs, /function multiline[\s\S]*esc\(value\)/);
+  assert.match(printJs, /settings, 'approvalText'/);
+  assert.match(printJs, /settings, 'footerNote'/);
+});
+
 test('electronic stamp and signature settings validate real image bytes and remain outside listing APIs', () => {
   assert.match(route, /normalizedPrintAsset/);
   assert.match(route, /MAX_VISIT_PRINT_ASSET_BYTES/);
@@ -570,6 +591,20 @@ test('electronic stamp and signature settings validate real image bytes and rema
   assert.equal(fs.existsSync(path.join(root, 'artifacts/mustaklassat/public/original/visit-default-signature.png')), true);
   assert.match(route, /DEFAULT_VISIT_SIGNER_TITLE = "مدير وحدة الصيانة العامة بتجمع نجران الصحي"/);
   assert.match(route, /title === LEGACY_VISIT_SIGNER_TITLE/);
+});
+
+test('representative page uses one responsive directory with search, clear metadata and protected document actions', () => {
+  assert.equal((center.match(/data-panel="representatives"/g) || []).length, 1);
+  for (const selector of ['representatives-layout', 'representative-form-card', 'representative-directory-card', 'rep-list-search', 'reps-list-count', 'representative-imports']) {
+    assert.match(center, new RegExp(selector));
+  }
+  assert.match(centerJs, /function renderRepresentativesList/);
+  assert.match(centerJs, /representative-card/);
+  assert.match(centerJs, /representative-meta/);
+  assert.match(centerJs, /document-list/);
+  assert.match(centerJs, /rep-list-search'\)\.addEventListener\('input'/);
+  assert.match(centerJs, /data-preview-doc/);
+  assert.match(centerJs, /data-download-doc/);
 });
 
 test('camera scanner supports BarcodeDetector, jsQR fallback, camera switching and manual permit search', () => {
