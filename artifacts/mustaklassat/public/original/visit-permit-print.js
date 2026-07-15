@@ -6,6 +6,15 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  function textSetting(settings, field, fallback) {
+    var value = String(settings && settings[field] || '').trim();
+    return value || fallback;
+  }
+
+  function multiline(value) {
+    return esc(value).replace(/\r?\n/g, '<br>');
+  }
+
   async function authToken(force) {
     var getters = [window.najranGetFreshToken, window.parent && window.parent.najranGetFreshToken, window.top && window.top.najranGetFreshToken];
     for (var i = 0; i < getters.length; i++) {
@@ -51,6 +60,13 @@
     var representativesHtml = '<table style="width:100%;border-collapse:collapse;margin-bottom:10px;table-layout:fixed"><thead><tr><th style="border:1px solid #cbd5e1;padding:6px 5px;background:#eaf0f8;font-size:11px;width:7%">م</th><th style="border:1px solid #cbd5e1;padding:6px 5px;background:#eaf0f8;font-size:11px;width:39%">اسم المندوب</th><th style="border:1px solid #cbd5e1;padding:6px 5px;background:#eaf0f8;font-size:11px;width:28%">الهوية / الإقامة</th><th style="border:1px solid #cbd5e1;padding:6px 5px;background:#eaf0f8;font-size:11px;width:26%">الجوال</th></tr></thead><tbody>' + representatives.map(function (representative, index) { return '<tr><td style="border:1px solid #d1d5db;padding:6px 5px;text-align:center;font-size:11px">' + (index + 1) + '</td><td style="border:1px solid #d1d5db;padding:6px 7px;font-size:11px;font-weight:700">' + esc(representative.fullName || '—') + '</td><td style="border:1px solid #d1d5db;padding:6px 7px;font-size:11px;direction:ltr;text-align:center">' + esc(representative.identityNumber || '—') + '</td><td style="border:1px solid #d1d5db;padding:6px 7px;font-size:11px;direction:ltr;text-align:center">' + esc(representative.mobile || '—') + '</td></tr>'; }).join('') + '</tbody></table>';
     var stampSource = settings.stamp || '/original/visit-default-stamp.png';
     var signatureSource = settings.signature || '/original/visit-default-signature.png';
+    var organizationText = textSetting(settings, 'organizationText', 'تجمع نجران الصحي — وحدة الصيانة العامة');
+    var permitTitle = textSetting(settings, 'permitTitle', 'إعتماد موافقة زيارة مقاولي الباطن');
+    var verificationText = textSetting(settings, 'verificationText', 'تم التحقق من بيانات الهوية/الإقامة إلكترونيًا');
+    var approvalText = textSetting(settings, 'approvalText', 'توافق وحدة الصيانة العامة بتجمع نجران الصحي بقيام مندوب مقاول الباطن الموضح اسمه وبياناته بعالية لزيارة الموقع لتنفيذ أعمال الصيانة الوقائية للنظام حسب شروط ومواصفات العقد.');
+    var closingText = textSetting(settings, 'closingText', 'وعلي ذلك جري التوقيع ،،،');
+    var qrLabel = textSetting(settings, 'qrLabel', 'تحقق عام من التصريح');
+    var footerNote = textSetting(settings, 'footerNote', 'يرجى إبراز بطاقة تأهيل الفريق الفني ونموذج اعتماد موافقة زيارة مقاولي الباطن للمسؤول بالمنشأة.');
     var stampHtml = '<img src="' + esc(stampSource) + '" alt="الختم الإلكتروني" style="display:block;width:auto;height:auto;max-width:190px;max-height:140px;object-fit:contain">';
     var signatureHtml = '<img src="' + esc(signatureSource) + '" alt="التوقيع الإلكتروني" style="display:block;max-width:165px;max-height:72px;object-fit:contain;margin:7px auto 0">';
     var draft = v.isDraft ? '<div style="position:absolute;inset:35% 8% auto;transform:rotate(-24deg);font-size:92px;font-weight:900;color:rgba(185,28,28,.13);text-align:center;border:9px solid rgba(185,28,28,.12);z-index:3;pointer-events:none">مسودة</div>' : '';
@@ -60,22 +76,22 @@
     node.innerHTML = draft +
       '<div style="display:flex;align-items:center;gap:18px;border-bottom:3px solid #1e3c72;padding-bottom:16px;margin-bottom:20px">' +
         '<img src="/original/najran_health_cluster_logo.png" style="width:70px;height:70px;object-fit:contain">' +
-        '<div><div style="font-size:11px;color:#64748b;margin-bottom:4px">تجمع نجران الصحي — وحدة الصيانة العامة</div>' +
-        '<h2 style="font-size:20px;color:#1e3c72;margin:0 0 4px;font-weight:800">إعتماد موافقة زيارة مقاولي الباطن</h2>' +
+        '<div><div style="font-size:11px;color:#64748b;margin-bottom:4px">' + esc(organizationText) + '</div>' +
+        '<h2 style="font-size:20px;color:#1e3c72;margin:0 0 4px;font-weight:800">' + esc(permitTitle) + '</h2>' +
         '<div style="font-size:13px;color:#475569">رقم الصادر: <strong>' + esc(v.serialNumber || 'بانتظار الاعتماد') + '</strong></div></div></div>' +
       '<table style="width:100%;border-collapse:collapse;margin-bottom:10px">' + rows.map(function (row) {
         return '<tr><td style="border:1px solid #d1d5db;padding:6px 10px;font-weight:700;background:#f8fafc;width:32%;font-size:11px">' + row[0] + '</td><td style="border:1px solid #d1d5db;padding:6px 10px;font-size:11px">' + row[1] + '</td></tr>';
       }).join('') + '</table>' + representativesHtml +
-      '<div style="font-size:12px;font-weight:800;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;margin-bottom:12px;text-align:center">تم التحقق من بيانات الهوية/الإقامة إلكترونيًا</div>' +
-      '<div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:12px 18px;margin-bottom:14px;line-height:1.8;font-size:12px;text-align:justify">توافق وحدة الصيانة العامة بتجمع نجران الصحي بقيام مندوب مقاول الباطن الموضح اسمه وبياناته بعالية لزيارة الموقع لتنفيذ أعمال الصيانة الوقائية للنظام حسب شروط ومواصفات العقد.<br>وعلي ذلك جري التوقيع ،،،</div>' +
+      '<div style="font-size:12px;font-weight:800;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;margin-bottom:12px;text-align:center">' + multiline(verificationText) + '</div>' +
+      '<div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:12px 18px;margin-bottom:14px;line-height:1.8;font-size:12px;text-align:justify">' + multiline(approvalText) + '<br>' + multiline(closingText) + '</div>' +
       '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;gap:14px;border:1.5px solid #d1d5db;border-radius:10px;padding:13px 20px">' +
         '<div data-role="permit-signature" style="grid-column:1;text-align:center"><p style="font-weight:800;font-size:14px;color:#1e3c72;margin:0 0 6px">' + esc(settings.signerTitle || 'مدير وحدة الصيانة العامة بتجمع نجران الصحي') + '</p>' +
         '<p style="font-size:13px;margin:0 0 4px">الاسم: ' + esc(settings.signerName || settings.managerName || 'م. محمد عباس المكرمي') + '</p>' +
         '<p style="font-size:13px;margin:0 0 8px">التاريخ: ' + formatDate(v.approvedAt, false) + ' م</p>' + signatureHtml + '</div>' +
         '<div data-role="permit-stamp" style="grid-column:2;min-height:140px;display:flex;align-items:center;justify-content:center;text-align:center;overflow:visible">' + stampHtml + '</div>' +
         '<div data-role="permit-qr" style="grid-column:3;text-align:center;justify-self:center"><img src="' + esc(v.qrDataUrl || '') + '" alt="QR تصريح الزيارة" style="width:92px;height:92px;display:block;image-rendering:pixelated">' +
-        '<div style="font-size:9px;font-weight:700;margin-top:3px;color:#475569">تحقق عام من التصريح</div><div style="font-size:9px;font-weight:800;margin-top:2px;color:#1e3c72">' + esc(v.serialNumber || 'مسودة') + '</div></div></div>' +
-      '<div data-role="permit-footer-note" style="margin-top:10px;border-top:1px solid #cbd5e1;padding-top:8px;text-align:center;font-size:10.5px;font-weight:800;color:#334155">يرجى إبراز بطاقة تأهيل الفريق الفني ونموذج اعتماد موافقة زيارة مقاولي الباطن للمسؤول بالمنشأة.</div>';
+        '<div style="font-size:9px;font-weight:700;margin-top:3px;color:#475569">' + esc(qrLabel) + '</div><div style="font-size:9px;font-weight:800;margin-top:2px;color:#1e3c72">' + esc(v.serialNumber || 'مسودة') + '</div></div></div>' +
+      '<div data-role="permit-footer-note" style="margin-top:10px;border-top:1px solid #cbd5e1;padding-top:8px;text-align:center;font-size:10.5px;font-weight:800;color:#334155">' + multiline(footerNote) + '</div>';
     return node;
   }
 

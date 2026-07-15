@@ -33,5 +33,5 @@ test('permit keeps signature, stamp and QR in one row and does not miniaturize t
   assert.match(print, /data-role="permit-signature"[\s\S]*data-role="permit-stamp"[\s\S]*data-role="permit-qr"/);
   assert.match(print, /max-width:190px;max-height:140px/);
   assert.doesNotMatch(print, /max-width:108px;max-height:108px/);
-  assert.match(html, /visit-permit-print\.js\?v=20260714_visit_center_stamp_size_v7/);
+  assert.match(html, /visit-permit-print\.js\?v=20260715_editable_visit_texts_v8/);
 });
