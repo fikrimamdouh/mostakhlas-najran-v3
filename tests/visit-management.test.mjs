@@ -138,6 +138,33 @@ test('document and ZIP security check bytes, MIME, hashes, paths, expansion and 
   assert.match(schema, /visit_documents_content_unique/);
 });
 
+test('representative identity documents are listed, previewed securely and kept out of public QR data', () => {
+  const catalog = route.match(/router\.get\("\/catalog"[\s\S]*?\n}\);/);
+  assert.ok(catalog);
+  assert.match(catalog[0], /representativeDocuments/);
+  assert.match(catalog[0], /ownerType, "representative"/);
+  assert.match(catalog[0], /status, "active"/);
+  assert.match(catalog[0], /representativeDocuments: cluster \? representativeDocuments : \[\]/);
+  assert.doesNotMatch(catalog[0], /visitDocumentContentsTable|sha256/);
+  const contentRoute = route.match(/router\.get\("\/management\/documents\/:id\/content"[\s\S]*?\n}\);/);
+  assert.ok(contentRoute);
+  assert.match(contentRoute[0], /requireClusterVisitManagement/);
+  assert.match(contentRoute[0], /req\.query\.preview === "1"/);
+  assert.match(contentRoute[0], /معاينة وثيقة زيارة محمية/);
+  assert.match(contentRoute[0], /preview \? "inline" : "attachment"/);
+  assert.match(contentRoute[0], /Cache-Control", "private, no-store, max-age=0/);
+  assert.match(route, /iqama_front/);
+  assert.match(route, /iqama_back/);
+  assert.match(route, /iqama_pdf/);
+  assert.match(route, /IDENTITY_IMAGE_TOO_LARGE/);
+  assert.match(center, /قائمة المندوبين وربط الأنظمة والوثائق/);
+  assert.match(centerJs, /data-preview-doc/);
+  assert.match(centerJs, /previewDocument/);
+  assert.match(centerJs, /fetchDocumentBlob/);
+  assert.match(centerJs, /تم تسجيل عملية المعاينة في سجل التدقيق/);
+  assert.doesNotMatch(publicVerify, /iqama_front|iqama_back|iqama_pdf|representativeDocuments/);
+});
+
 test('QR uses random tokens, stores hash plus ciphertext, rate limits scans and never embeds identity fields', () => {
   assert.match(security, /randomBytes\(32\)/);
   assert.match(security, /tokenHash: sha256\(token\)/);

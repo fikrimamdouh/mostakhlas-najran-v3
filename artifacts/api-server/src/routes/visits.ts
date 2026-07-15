@@ -771,6 +771,9 @@ async function storeDocument(req: any, ownerType: string, ownerId: number, docum
   const detected = detectVisitFile(file.buffer);
   if (!detected) throw new Error("FILE_MAGIC_MISMATCH");
   if (file.mimetype && file.mimetype !== "application/octet-stream" && file.mimetype !== detected.mimeType) throw new Error("FILE_MIME_MISMATCH");
+  if (documentType === "iqama_pdf" && detected.mimeType !== "application/pdf") throw new Error("IDENTITY_DOCUMENT_TYPE_MISMATCH");
+  if ((documentType === "iqama_front" || documentType === "iqama_back") && !detected.mimeType.startsWith("image/")) throw new Error("IDENTITY_DOCUMENT_TYPE_MISMATCH");
+  if ((documentType === "iqama_front" || documentType === "iqama_back") && file.buffer.length > 5 * 1024 * 1024) throw new Error("IDENTITY_IMAGE_TOO_LARGE");
   const digest = sha256(file.buffer);
   return db.transaction(async (tx) => {
     const [duplicate] = await tx.select({ id: visitDocumentsTable.id }).from(visitDocumentsTable)
@@ -930,13 +933,25 @@ router.post("/settings", requireAuth, requireApproved, requireClusterVisitManage
 
 router.get("/catalog", requireAuth, requireApproved, async (req: any, res) => {
   const cluster = hasClusterVisitManagement(req.currentUser);
-  const [systems, contractors, qualifications, siteApprovals, representatives, representativeSystems] = await Promise.all([
+  const [systems, contractors, qualifications, siteApprovals, representatives, representativeSystems, representativeDocuments] = await Promise.all([
     db.select().from(visitSystemsTable).orderBy(asc(visitSystemsTable.name)),
     db.select().from(visitContractorsTable).orderBy(asc(visitContractorsTable.name)),
     db.select().from(visitQualificationsTable),
     db.select().from(visitSiteApprovalsTable),
     db.select().from(visitRepresentativesTable).orderBy(asc(visitRepresentativesTable.fullName)),
     db.select().from(visitRepresentativeSystemsTable),
+    db.select({
+      id: visitDocumentsTable.id,
+      ownerId: visitDocumentsTable.ownerId,
+      documentType: visitDocumentsTable.documentType,
+      originalName: visitDocumentsTable.originalName,
+      mimeType: visitDocumentsTable.mimeType,
+      sizeBytes: visitDocumentsTable.sizeBytes,
+      createdAt: visitDocumentsTable.createdAt,
+    }).from(visitDocumentsTable).where(and(
+      eq(visitDocumentsTable.ownerType, "representative"),
+      eq(visitDocumentsTable.status, "active"),
+    )).orderBy(desc(visitDocumentsTable.createdAt)),
   ]);
   return res.json({
     systems: systems.filter((x) => cluster || x.isActive).map(({ createdByUserId: _createdBy, ...x }) => ({ ...x, displayName: canonicalSystemName(x.name) })),
@@ -953,6 +968,7 @@ router.get("/catalog", requireAuth, requireApproved, async (req: any, res) => {
       isActive: x.isActive,
     })),
     representativeSystems: representativeSystems.filter((x) => cluster || x.isActive),
+    representativeDocuments: cluster ? representativeDocuments : [],
   });
 });
 
@@ -2329,6 +2345,7 @@ router.get("/management/alerts", requireAuth, requireApproved, requireClusterVis
 router.post("/management/documents", requireAuth, requireApproved, requireClusterVisitManagement, uploadMemory.single("file"), async (req: any, res) => {
   const ownerType = cleanText(req.body.ownerType, 40), ownerId = numberId(req.body.ownerId), documentType = cleanText(req.body.documentType, 80);
   if (!req.file || !ownerId || !documentType || !new Set(["visit", "representative", "contractor", "qualification", "site_approval"]).has(ownerType)) return res.status(400).json({ error: "بيانات الوثيقة غير مكتملة" });
+  if (ownerType === "representative" && !new Set(["identity", "residence", "iqama_front", "iqama_back", "iqama_pdf", "other"]).has(documentType)) return res.status(400).json({ error: "نوع وثيقة المندوب غير مدعوم" });
   if (!await visitDocumentOwnerExists(ownerType, ownerId)) return res.status(404).json({ error: "الجهة المرتبطة بالوثيقة غير موجودة" });
   try {
     const stored = await storeDocument(req, ownerType, ownerId, documentType, req.file);
@@ -2336,6 +2353,8 @@ router.post("/management/documents", requireAuth, requireApproved, requireCluste
     return res.status(201).json({ document: { id: stored.document.id, ownerType, ownerId, documentType, originalName: stored.document.originalName, mimeType: stored.document.mimeType, sizeBytes: stored.document.sizeBytes, status: stored.document.status, createdAt: stored.document.createdAt }, replacedDocumentId: stored.replacedDocumentId });
   } catch (err: any) {
     if (err.message === "FILE_MAGIC_MISMATCH" || err.message === "FILE_MIME_MISMATCH") return res.status(415).json({ error: "نوع الملف الحقيقي لا يطابق PDF أو الصورة المسموح بها" });
+    if (err.message === "IDENTITY_DOCUMENT_TYPE_MISMATCH") return res.status(415).json({ error: "اختر صورة للوجه الأمامي أو الخلفي، أو ملف PDF عند اختيار ملف كامل" });
+    if (err.message === "IDENTITY_IMAGE_TOO_LARGE") return res.status(413).json({ error: "صورة الهوية أو الإقامة يجب ألا تتجاوز 5 ميجابايت" });
     if (err.message === "DUPLICATE_DOCUMENT") return res.status(409).json({ error: "الملف نفسه مرفوع من قبل ولن يتم تكراره" });
     req.log.error({ err }, "Visit document upload failed");
     return res.status(500).json({ error: "تعذر حفظ الوثيقة" });
@@ -2346,9 +2365,11 @@ router.get("/management/documents/:id/content", requireAuth, requireApproved, re
   const id = numberId(req.params.id); if (!id) return res.status(400).json({ error: "رقم وثيقة غير صالح" });
   const [row] = await db.select({ document: visitDocumentsTable, content: visitDocumentContentsTable.content }).from(visitDocumentsTable).innerJoin(visitDocumentContentsTable, eq(visitDocumentContentsTable.documentId, visitDocumentsTable.id)).where(eq(visitDocumentsTable.id, id)).limit(1);
   if (!row) return res.status(404).json({ error: "الوثيقة غير موجودة" });
-  await audit(req, "تنزيل وثيقة زيارة محمية", { documentId: id, ownerType: row.document.ownerType, ownerId: row.document.ownerId });
+  const preview = req.query.preview === "1";
+  await audit(req, preview ? "معاينة وثيقة زيارة محمية" : "تنزيل وثيقة زيارة محمية", { documentId: id, ownerType: row.document.ownerType, ownerId: row.document.ownerId });
   res.setHeader("Content-Type", row.document.mimeType);
-  res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(row.document.originalName)}`);
+  res.setHeader("Content-Disposition", `${preview ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(row.document.originalName)}`);
+  res.setHeader("Cache-Control", "private, no-store, max-age=0");
   res.setHeader("X-Content-Type-Options", "nosniff");
   return res.send(row.content);
 });
