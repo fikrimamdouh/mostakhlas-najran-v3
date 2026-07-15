@@ -12,18 +12,19 @@ const print = read('artifacts/mustaklassat/public/original/visit-permit-print.js
 
 test('archive cleanup reads all visits and requires explicit manual selection', () => {
   assert.match(html, /id="archive-clean-tests"/);
-  assert.match(html, /visit-archive-cleanup\.js\?v=20260714_archive_cleanup_v1/);
+  assert.match(html, /visit-archive-cleanup\.js\?v=20260715_permanent_cleanup_v2/);
   assert.match(cleanup, /visibility=all/);
   assert.match(cleanup, /data-clean-visit/);
   assert.match(cleanup, /archive-clean-search/);
   assert.match(cleanup, /تحديد الظاهر/);
-  assert.match(cleanup, /تنظيف المحدد/);
+  assert.match(cleanup, /حذف المحدد نهائيًا/);
   assert.match(cleanup, /selectedIds\.length/);
   assert.match(cleanup, /'\/' \+ visit\.id \+ '\/archive'/);
   assert.match(cleanup, /method: 'PATCH'/);
-  assert.match(cleanup, /لا يحذف السجل أو رقم التصريح أو المرفقات والتوقيعات/);
-  assert.doesNotMatch(cleanup, /\/permanent/);
-  assert.doesNotMatch(cleanup, /method: 'DELETE'/);
+  assert.match(cleanup, /'\/' \+ visit\.id \+ '\/permanent'/);
+  assert.match(cleanup, /method: 'DELETE'/);
+  assert.match(cleanup, /confirmation: 'DELETE:'/);
+  assert.match(cleanup, /سيحذف النظام الزيارات المحددة نهائيًا/);
   assert.doesNotMatch(cleanup, /\b(?:alert|confirm|prompt)\s*\(/);
 });
 
