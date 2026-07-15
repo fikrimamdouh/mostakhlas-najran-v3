@@ -5,6 +5,15 @@
   var UI_STATE_KEY = 'najran_visit_center_ui_state_v1';
   var SESSION_KEEPALIVE_MS = 45 * 1000;
   var sessionRefreshPromise = null;
+  var DEFAULT_VISIT_PRINT_TEXTS = {
+    organizationText: 'تجمع نجران الصحي — وحدة الصيانة العامة',
+    permitTitle: 'إعتماد موافقة زيارة مقاولي الباطن',
+    verificationText: 'تم التحقق من بيانات الهوية/الإقامة إلكترونيًا',
+    approvalText: 'توافق وحدة الصيانة العامة بتجمع نجران الصحي بقيام مندوب مقاول الباطن الموضح اسمه وبياناته بعالية لزيارة الموقع لتنفيذ أعمال الصيانة الوقائية للنظام حسب شروط ومواصفات العقد.',
+    closingText: 'وعلي ذلك جري التوقيع ،،،',
+    qrLabel: 'تحقق عام من التصريح',
+    footerNote: 'يرجى إبراز بطاقة تأهيل الفريق الفني ونموذج اعتماد موافقة زيارة مقاولي الباطن للمسؤول بالمنشأة.'
+  };
 
   function esc(value) { return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function formObject(form) { var out = {}; new FormData(form).forEach(function (value, key) { out[key] = typeof value === 'string' ? value.trim() : value; }); return out; }
@@ -326,6 +335,9 @@
     var settings = state.settings || {}, form = document.getElementById('print-form');
     form.elements.signerTitle.value = settings.signerTitle || 'مدير وحدة الصيانة العامة بتجمع نجران الصحي';
     form.elements.signerName.value = settings.signerName || settings.managerName || 'م. محمد عباس المكرمي';
+    Object.keys(DEFAULT_VISIT_PRINT_TEXTS).forEach(function (field) {
+      if (form.elements[field]) form.elements[field].value = settings[field] || DEFAULT_VISIT_PRINT_TEXTS[field];
+    });
     renderAssetPreview('stamp-preview', settings.stamp || '/original/visit-default-stamp.png', 'الختم الإلكتروني الافتراضي');
     renderAssetPreview('signature-preview', settings.signature || '/original/visit-default-signature.png', 'التوقيع الإلكتروني الافتراضي');
   }
@@ -337,6 +349,39 @@
   function documentSizeText(bytes) {
     var value = Number(bytes || 0);
     return value >= 1024 * 1024 ? (value / (1024 * 1024)).toFixed(1) + ' م.ب' : Math.max(1, Math.round(value / 1024)) + ' ك.ب';
+  }
+
+  function representativeInitial(name) {
+    var value = String(name || '').trim();
+    return value ? value.charAt(0) : 'م';
+  }
+
+  function renderRepresentativesList() {
+    var d = state.data;
+    if (!d) return;
+    var searchInput = document.getElementById('rep-list-search');
+    var needle = String(searchInput ? searchInput.value : '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('ar');
+    var rows = d.representatives.filter(function (rep) { return rep.isActive; }).map(function (rep) {
+      var contractor = d.contractors.find(function (item) { return item.id === rep.contractorId; });
+      var systems = d.representativeSystems.filter(function (link) { return link.representativeId === rep.id && link.isActive; }).map(function (link) { return d.systems.find(function (item) { return item.id === link.systemId; }); }).filter(Boolean);
+      var documents = (d.representativeDocuments || []).filter(function (document) { return document.ownerId === rep.id; });
+      return { rep: rep, contractor: contractor, systems: systems, documents: documents };
+    }).filter(function (row) {
+      if (!needle) return true;
+      var searchable = [row.rep.fullName, row.rep.identityMasked, row.rep.mobileMasked, entityName(row.contractor)]
+        .concat(row.systems.map(entityName)).join(' ').toLocaleLowerCase('ar');
+      return searchable.indexOf(needle) !== -1;
+    });
+    var count = document.getElementById('reps-list-count');
+    if (count) count.textContent = rows.length + (rows.length === 1 ? ' مندوب' : ' مندوبين');
+    document.getElementById('reps-list').innerHTML = rows.length ? rows.map(function (row) {
+      var rep = row.rep;
+      var documentsHtml = row.documents.length ? '<div class="document-list">' + row.documents.map(function (document) {
+        return '<div class="document-row"><div class="document-copy"><i class="fas fa-id-card" aria-hidden="true"></i><span><strong>' + esc(documentTypeLabel(document.documentType)) + '</strong><small>' + esc(document.originalName) + ' — ' + esc(documentSizeText(document.sizeBytes)) + '</small></span></div><div class="document-actions"><button type="button" class="btn btn-primary" data-preview-doc="' + document.id + '" data-name="' + esc(document.originalName) + '" data-mime="' + esc(document.mimeType) + '"><i class="fas fa-eye" aria-hidden="true"></i> معاينة</button><button type="button" class="btn btn-light" data-download-doc="' + document.id + '" data-name="' + esc(document.originalName) + '"><i class="fas fa-download" aria-hidden="true"></i> تنزيل</button></div></div>';
+      }).join('') + '</div>' : '<div class="note representative-empty-document"><i class="fas fa-circle-exclamation" aria-hidden="true"></i> لم تُرفع هوية أو إقامة لهذا المندوب بعد.</div>';
+      var systemsHtml = row.systems.length ? row.systems.map(function (system) { return '<span class="check-chip"><i class="fas fa-link" aria-hidden="true"></i> ' + esc(entityName(system)) + '</span>'; }).join('') : '<span class="check-chip">غير مرتبط بنظام</span>';
+      return '<article class="representative-card"><div class="representative-head"><div class="representative-avatar" aria-hidden="true">' + esc(representativeInitial(rep.fullName)) + '</div><div class="representative-identity"><div class="representative-name-line"><strong class="representative-name">' + esc(rep.fullName) + '</strong>' + badge('active') + '</div><div class="representative-meta"><span><i class="fas fa-building" aria-hidden="true"></i>' + esc(entityName(row.contractor) || 'شركة غير محددة') + '</span><span><i class="fas fa-id-card" aria-hidden="true"></i>' + esc(rep.identityMasked) + '</span><span><i class="fas fa-mobile-screen" aria-hidden="true"></i>' + esc(rep.mobileMasked || '—') + '</span></div></div></div><div class="representative-systems">' + systemsHtml + '</div>' + documentsHtml + '<div class="representative-actions"><button type="button" class="btn btn-light" data-rep-systems="' + rep.id + '"><i class="fas fa-link" aria-hidden="true"></i> ربط الأنظمة</button><button type="button" class="btn btn-green" data-upload-doc="representative:' + rep.id + '"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i> ' + (row.documents.length ? 'رفع بديل للهوية' : 'رفع الهوية') + '</button><button type="button" class="btn btn-red" data-toggle-rep="' + rep.id + '" data-active="true"><i class="fas fa-user-slash" aria-hidden="true"></i> تعطيل</button><button type="button" class="btn btn-light" data-delete-rep="' + rep.id + '"><i class="fas fa-trash" aria-hidden="true"></i> حذف</button></div></article>';
+    }).join('') : '<div class="empty">' + (needle ? 'لا توجد نتائج مطابقة للبحث' : 'لا يوجد مندوبون نشطون') + '</div>';
   }
 
   function renderCatalogLists() {
@@ -351,14 +396,7 @@
       var system = d.systems.find(function (x) { return x.id === qualification.systemId; }), contractor = d.contractors.find(function (x) { return x.id === qualification.contractorId; }), active = qualification.status === 'active';
       return '<div class="alert-row catalog-row"><div class="catalog-copy"><strong class="catalog-title">' + esc(entityName(contractor)) + '</strong><div class="catalog-meta"><div class="catalog-meta-item"><b>النظام:</b><span>' + esc(entityName(system)) + '</span></div><div class="catalog-meta-item"><b>مدة التأهيل:</b><span>من ' + esc(qualification.validFrom) + ' حتى ' + esc(qualification.validUntil) + '</span></div></div></div><div class="actions catalog-actions"><button class="btn btn-light" data-edit-qualification="' + qualification.id + '">تعديل</button><button class="btn ' + (active ? 'btn-red' : 'btn-green') + '" data-toggle-qualification="' + qualification.id + '" data-active="' + active + '">' + (active ? 'تعطيل' : 'تفعيل') + '</button><button class="btn btn-light" data-delete-qualification="' + qualification.id + '">حذف</button></div></div>';
     }).join('') : '<div class="empty">لا توجد تأهيلات</div>';
-    var activeRepresentatives = d.representatives.filter(function (rep) { return rep.isActive; });
-    document.getElementById('reps-list').innerHTML = activeRepresentatives.length ? activeRepresentatives.map(function (rep) {
-      var contractor = d.contractors.find(function (x) { return x.id === rep.contractorId; });
-      var systemNames = d.representativeSystems.filter(function (link) { return link.representativeId === rep.id && link.isActive; }).map(function (link) { var s = d.systems.find(function (x) { return x.id === link.systemId; }); return entityName(s); }).filter(Boolean);
-      var documents = (d.representativeDocuments || []).filter(function (document) { return document.ownerId === rep.id; });
-      var documentsHtml = documents.length ? documents.map(function (document) { return '<div class="alert-row" style="margin-top:7px;background:#f8fafc;border-color:#e2e8f0;color:#334155"><span><strong>' + esc(documentTypeLabel(document.documentType)) + '</strong><small style="display:block">' + esc(document.originalName) + ' — ' + esc(documentSizeText(document.sizeBytes)) + '</small></span><span class="actions" style="margin-top:0"><button class="btn btn-primary" data-preview-doc="' + document.id + '" data-name="' + esc(document.originalName) + '" data-mime="' + esc(document.mimeType) + '">معاينة</button><button class="btn btn-light" data-download-doc="' + document.id + '" data-name="' + esc(document.originalName) + '">تنزيل</button></span></div>'; }).join('') : '<div class="note" style="margin-top:8px">لم تُرفع هوية أو إقامة لهذا المندوب بعد.</div>';
-      return '<div class="card" style="margin-bottom:8px"><strong>' + esc(rep.fullName) + '</strong> ' + (rep.isActive ? badge('active') : badge('cancelled')) + '<small style="display:block;color:#64748b">' + esc(rep.identityMasked) + ' — ' + esc(entityName(contractor)) + '</small><div class="system-links">' + systemNames.map(function (name) { return '<span class="check-chip">' + esc(name) + '</span>'; }).join('') + '</div>' + documentsHtml + '<div class="actions"><button class="btn btn-light" data-rep-systems="' + rep.id + '">ربط الأنظمة</button><button class="btn btn-green" data-upload-doc="representative:' + rep.id + '">' + (documents.length ? 'رفع بديل للهوية / الإقامة' : 'رفع الهوية / الإقامة') + '</button><button class="btn ' + (rep.isActive ? 'btn-red' : 'btn-green') + '" data-toggle-rep="' + rep.id + '" data-active="' + rep.isActive + '">' + (rep.isActive ? 'تعطيل' : 'تفعيل') + '</button><button class="btn btn-light" data-delete-rep="' + rep.id + '">حذف</button></div></div>';
-    }).join('') : '<div class="empty">لا يوجد مندوبون</div>';
+    renderRepresentativesList();
   }
 
   async function refresh() { if (await loadBootstrap()) toast('تم تحديث بيانات المركز', true); }
@@ -386,6 +424,7 @@
     try { await api('/management/representatives', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); form.reset(); form.elements.contractorId.required = true; state.pendingRepresentativeContractor = null; renderPendingRepresentativeContractor(); toast('تم حفظ الشركة والمندوب وربط الأنظمة بخطوة واحدة', true); await loadBootstrap(); } catch (error) { toast(error.message, false); } finally { button.disabled = false; }
   });
   document.querySelector('#rep-form [name="noResidenceException"]').addEventListener('change', function () { var reason = document.querySelector('#rep-form [name="exceptionReason"]'); reason.required = this.checked; reason.disabled = !this.checked; if (!this.checked) reason.value = ''; });
+  document.getElementById('rep-list-search').addEventListener('input', renderRepresentativesList);
 
   function openStandaloneContractor() {
     var draft = state.pendingRepresentativeContractor || {};
@@ -787,10 +826,44 @@
   document.getElementById('zip-form').addEventListener('submit', async function (event) { event.preventDefault(); var file = this.elements.file.files[0]; if (!file) return; var data = new FormData(); data.append('file', file); try { var preview = await api('/management/import/preview', { method: 'POST', body: data }); document.getElementById('zip-preview').innerHTML = '<div class="card"><h3>نتيجة المعاينة</h3><p>SHA-256: <code>' + esc(preview.sha256) + '</code></p><p>الملفات: ' + preview.files.map(esc).join('، ') + '</p><p>السجلات: ' + esc(JSON.stringify(preview.counts)) + '</p><button class="btn btn-green" id="zip-confirm">تأكيد الاستيراد</button></div>'; document.getElementById('zip-confirm').addEventListener('click', async function () { try { await api('/management/import/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ previewToken: preview.previewToken, sha256: preview.sha256 }) }); toast('تم الاستيراد بنجاح', true); document.getElementById('zip-preview').innerHTML = ''; await loadBootstrap(); } catch (e) { toast(e.message, false); } }); } catch (e) { toast(e.message, false); } });
 
   function fileData(file) { return new Promise(function (resolve, reject) { if (!file) return resolve(undefined); if (!/^image\/(?:png|jpeg)$/.test(file.type || '')) return reject(new Error('يجب اختيار صورة PNG أو JPEG')); if (file.size > 2 * 1024 * 1024) return reject(new Error('حجم الصورة يتجاوز 2 ميجابايت')); var reader = new FileReader(); reader.onload = function () { resolve(reader.result); }; reader.onerror = reject; reader.readAsDataURL(file); }); }
-  document.getElementById('print-form').addEventListener('submit', async function (event) { event.preventDefault(); try { var body = { signerTitle: this.elements.signerTitle.value.trim(), signerName: this.elements.signerName.value.trim() }, stamp = await fileData(this.elements.stampFile.files[0]), signature = await fileData(this.elements.signatureFile.files[0]); if (stamp !== undefined) body.stamp = stamp; if (signature !== undefined) body.signature = signature; await api('/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); state.settings = await api('/settings'); renderPrintSettings(); this.elements.stampFile.value = ''; this.elements.signatureFile.value = ''; toast('تم حفظ بيانات الموقّع والختم والتوقيع', true); } catch (e) { toast(e.message, false); } });
+  function printTextBody(form) {
+    var body = {};
+    Object.keys(DEFAULT_VISIT_PRINT_TEXTS).forEach(function (field) { body[field] = form.elements[field].value.trim(); });
+    return body;
+  }
+  document.getElementById('print-form').addEventListener('submit', async function (event) {
+    event.preventDefault();
+    var form = this, button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    try {
+      var body = Object.assign({ signerTitle: form.elements.signerTitle.value.trim(), signerName: form.elements.signerName.value.trim() }, printTextBody(form));
+      var stamp = await fileData(form.elements.stampFile.files[0]), signature = await fileData(form.elements.signatureFile.files[0]);
+      if (stamp !== undefined) body.stamp = stamp;
+      if (signature !== undefined) body.signature = signature;
+      await api('/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      state.settings = await api('/settings');
+      renderPrintSettings();
+      form.elements.stampFile.value = '';
+      form.elements.signatureFile.value = '';
+      toast('تم حفظ بيانات الموقّع والنصوص والختم والتوقيع', true);
+    } catch (e) { toast(e.message, false); }
+    finally { button.disabled = false; }
+  });
   async function removePrintAsset(field, label) { try { var body = {}; body[field] = ''; await api('/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); state.settings = await api('/settings'); renderPrintSettings(); toast('تمت إزالة ' + label, true); } catch (e) { toast(e.message, false); } }
   document.getElementById('remove-stamp').addEventListener('click', function () { removePrintAsset('stamp', 'الختم الإلكتروني'); });
   document.getElementById('remove-signature').addEventListener('click', function () { removePrintAsset('signature', 'التوقيع الإلكتروني'); });
+  document.getElementById('reset-print-texts').addEventListener('click', function () {
+    modal('استعادة النصوص الافتراضية', '<div class="note" style="background:#fff7ed;color:#9a3412;border-color:#fed7aa">سيتم استبدال النصوص المحفوظة بالنصوص الافتراضية. لن يتغير اسم الموقّع أو الختم أو التوقيع.</div>', [{ label: 'استعادة النصوص الافتراضية', className: 'btn-amber', action: async function (button) {
+      button.disabled = true;
+      try {
+        await api('/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(DEFAULT_VISIT_PRINT_TEXTS) });
+        state.settings = await api('/settings');
+        renderPrintSettings();
+        closeModal();
+        toast('تمت استعادة نصوص التصريح الافتراضية', true);
+      } catch (error) { button.disabled = false; toast(error.message, false); }
+    } }]);
+  });
 
   function scanMessage(message, ok) { var node = document.getElementById('camera-message'); node.textContent = message; node.className = 'scan-message ' + (ok ? 'success' : 'error'); }
   async function listCameras() { try { var devices = await navigator.mediaDevices.enumerateDevices(), cameras = devices.filter(function (x) { return x.kind === 'videoinput'; }); document.getElementById('camera-select').innerHTML = '<option value="">الكاميرا الافتراضية</option>' + cameras.map(function (camera, index) { return '<option value="' + esc(camera.deviceId) + '">' + esc(camera.label || ('كاميرا ' + (index + 1))) + '</option>'; }).join(''); } catch (_) {} }
