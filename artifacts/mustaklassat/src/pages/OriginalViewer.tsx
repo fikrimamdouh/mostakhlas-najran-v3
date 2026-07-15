@@ -15,7 +15,7 @@ const KNOWN_ORIGINAL_PAGES = new Set([
   ...originalPages.adminOnlyPages,
 ]);
 const ADMIN_ONLY_ORIGINAL_PAGES = new Set(originalPages.adminOnlyPages);
-const FRAME_POLICY_CACHE_VERSION = "20260714_token_bridge_v3";
+const FRAME_POLICY_CACHE_VERSION = "20260715_session_recovery_v4";
 
 function UnauthorizedPage() {
   return (
@@ -65,6 +65,7 @@ export default function OriginalViewer() {
   const { data: dbUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
 
   useEffect(() => {
+    if (!authLoaded || !sessionId) return;
     const saveSessionToken = (token: string | null) => {
       if (!token) return;
       try {
@@ -107,9 +108,13 @@ export default function OriginalViewer() {
 
     return () => {
       window.removeEventListener("message", tokenRequestHandler);
-      try { delete (window as any).najranGetFreshToken; } catch {}
+      try { if ((window as any).najranGetFreshToken === getFreshViewerToken) delete (window as any).najranGetFreshToken; } catch {}
     };
   }, [getToken, authLoaded, sessionId, session]);
+
+  useEffect(() => {
+    try { sessionStorage.removeItem("najran_auth_return_path_v1"); } catch {}
+  }, []);
 
   useEffect(() => {
     const handler = (e: Event) => {

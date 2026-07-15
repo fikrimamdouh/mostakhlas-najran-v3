@@ -22,6 +22,7 @@ const publicVerify = read('artifacts/mustaklassat/public/visit-permit-verify.htm
 const facilityPage = read('artifacts/mustaklassat/public/original/facility-visit-approval.html');
 const facilityJs = read('artifacts/mustaklassat/public/original/facility-visit-approval.js');
 const modulesSource = read('artifacts/mustaklassat/src/lib/modules.ts');
+const webAppSource = read('artifacts/mustaklassat/src/App.tsx');
 const originalViewerSource = read('artifacts/mustaklassat/src/pages/OriginalViewer.tsx');
 const requestVisit = read('artifacts/mustaklassat/public/original/request-visit.html');
 const authCheck = read('artifacts/mustaklassat/public/original/auth-check.js');
@@ -387,12 +388,35 @@ test('session renewal and proactive keepalive preserve progress without leaving 
   assert.match(centerJs, /restoreDirectSelection\(saved\.direct\)/);
   assert.match(centerJs, /activateTab\(saved\.tab\)/);
   assert.match(centerJs, /NAJRAN_TOKEN_REQUEST/);
+  assert.match(centerJs, /tokenIsUsable/);
+  assert.match(centerJs, /force \? 15000 : 2000/);
+  assert.match(centerJs, /cacheSessionToken/);
   assert.match(centerJs, /loadBootstrap\(\{ throwOnError: true \}\)/);
   assert.match(originalViewerSource, /NAJRAN_TOKEN_RESPONSE/);
   assert.match(originalViewerSource, /session as any\)\?\.reload/);
+  assert.match(originalViewerSource, /najranGetFreshToken === getFreshViewerToken/);
+  assert.match(webAppSource, /const getFreshSessionToken = async/);
+  assert.match(webAppSource, /getToken\(force \? \(\{ skipCache: true \}/);
+  assert.match(webAppSource, /najranGetFreshToken === getFreshSessionToken/);
+  assert.match(webAppSource, /AUTH_RETURN_PATH_KEY/);
+  assert.match(webAppSource, /fallbackRedirectUrl=\{fallbackRedirectUrl\}/);
+  assert.match(webAppSource, /component=\{OriginalViewerRoute\}/);
+  assert.doesNotMatch(webAppSource, /path="\/original-viewer"[^\n]*<Show when="signed-in"/);
   assert.match(center, /تحديث آمن/);
   assert.doesNotMatch(centerJs, /location\.(?:href|replace)[^\n]*sign-in/);
   assert.match(center, /#najran-revision-mode-badge\{display:none!important\}/);
+});
+
+test('sites and subcontractor systems keep long names readable with consistent responsive actions', () => {
+  assert.match(center, /class="panel sites-panel" data-panel="sites"/);
+  assert.match(center, /\.catalog-row\{/);
+  assert.match(center, /\.catalog-copy\{[^}]*overflow-wrap:anywhere/);
+  assert.match(center, /\.catalog-actions \.btn\{[^}]*white-space:nowrap/);
+  assert.match(center, /@media\(max-width:560px\)[^{]*\{\.catalog-actions\{display:grid/);
+  assert.match(centerJs, /class="alert-row catalog-row"/);
+  assert.match(centerJs, /class="catalog-meta-item"><b>النظام:/);
+  assert.match(centerJs, /class="catalog-meta-item"><b>الشركة:/);
+  assert.match(centerJs, /class="actions catalog-actions"/);
 });
 
 test('direct issue can select an existing company representative and add an idempotent system link', () => {

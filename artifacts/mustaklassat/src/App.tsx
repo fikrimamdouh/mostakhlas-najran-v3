@@ -1,5 +1,5 @@
-import { Component, lazy, Suspense, useEffect, useRef, useState } from "react";
-import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser, useAuth } from "@clerk/react";
+import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser, useAuth, useSession } from "@clerk/react";
 import { shadcn } from "@clerk/themes";
 import { arSA } from "@clerk/localizations";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
@@ -45,6 +45,7 @@ const queryClient = new QueryClient({
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const AUTH_RETURN_PATH_KEY = "najran_auth_return_path_v1";
 
 function stripBase(path: string): string {
   return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || "/" : path;
@@ -88,6 +89,14 @@ function useHideClerkBadge() {
 
 function SignInPage() {
   useHideClerkBadge();
+  const fallbackRedirectUrl = (() => {
+    try {
+      const value = sessionStorage.getItem(AUTH_RETURN_PATH_KEY) || "";
+      return value.startsWith("/") && !value.startsWith("//") ? value : `${basePath}/dashboard`;
+    } catch {
+      return `${basePath}/dashboard`;
+    }
+  })();
   return (
     <div className="flex min-h-[100dvh] flex-col items-center justify-center p-4" style={{ background: "linear-gradient(135deg,#1e3c72 0%,#2a5298 100%)" }}>
       <div className="mb-6 flex flex-col items-center">
@@ -95,7 +104,7 @@ function SignInPage() {
         <span className="text-white font-bold text-xl">تجمع نجران الصحي</span>
         <span className="text-sm" style={{ color: "#d4af37" }}>وحدة الصيانة العامة</span>
       </div>
-      <SignIn routing="path" path={`${basePath}/sign-in`} />
+      <SignIn routing="path" path={`${basePath}/sign-in`} fallbackRedirectUrl={fallbackRedirectUrl} />
     </div>
   );
 }
@@ -117,8 +126,25 @@ function SignUpPage() {
 }
 
 function ClerkTokenSyncer() {
-  const { getToken } = useAuth();
-  setAuthTokenGetter(getToken);
+  const { getToken, isLoaded, sessionId } = useAuth();
+  const { session } = useSession();
+  const freshTokenGetter = useCallback(async (options?: { skipCache?: boolean }) => {
+    if (!isLoaded || !sessionId) return null;
+    const force = options?.skipCache === true;
+    if (force) {
+      try { await (session as any)?.reload?.(); } catch {}
+    }
+    let token = await getToken(force ? ({ skipCache: true } as any) : undefined);
+    if (!token && force) {
+      await new Promise(resolve => setTimeout(resolve, 250));
+      token = await getToken({ skipCache: true } as any);
+    }
+    return token;
+  }, [getToken, isLoaded, sessionId, session]);
+  useEffect(() => {
+    setAuthTokenGetter(freshTokenGetter);
+    return () => setAuthTokenGetter(null);
+  }, [freshTokenGetter]);
   return null;
 }
 
@@ -159,6 +185,7 @@ function HospitalPickerScreen({ hospitals, currentHospital, onPick }: { hospital
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, isLoaded: isClerkLoaded } = useUser();
   const { getToken } = useAuth();
+  const { session } = useSession();
   const queryClient = useQueryClient();
   const [syncState, setSyncState] = useState<"idle" | "syncing" | "done" | "error">("idle");
   const [hasToken, setHasToken] = useState(false);
@@ -305,10 +332,31 @@ const companyName = companyCode ? companyLabelMap[companyCode] || companyCode : 
       if (companyName) localStorage.setItem("companyName", companyName);
       if ((dbUser as any).contractNumber) localStorage.setItem("contractNumber", (dbUser as any).contractNumber);
     };
-    getToken().then(token => { saveSession(token); if (token) fetch("/api/users/me/login", { method: "PATCH", headers: { Authorization: `Bearer ${token}` } }).catch(() => {}); });
-    (window as any).najranGetFreshToken = async () => { const token = await getToken(); saveSession(token); return token; };
-    const interval = setInterval(() => { getToken().then(saveSession); }, 50_000);
-    return () => { clearInterval(interval); try { delete (window as any).najranGetFreshToken; } catch {} };
+    const getFreshSessionToken = async (options?: { skipCache?: boolean }) => {
+      const force = options?.skipCache === true;
+      if (force) {
+        try { await (session as any)?.reload?.(); } catch {}
+      }
+      let token = await getToken(force ? ({ skipCache: true } as any) : undefined);
+      if (!token && force) {
+        await new Promise(resolve => setTimeout(resolve, 250));
+        token = await getToken({ skipCache: true } as any);
+      }
+      saveSession(token);
+      return token;
+    };
+    getFreshSessionToken({ skipCache: true }).then(token => {
+      if (token) fetch("/api/users/me/login", { method: "PATCH", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+    }).catch(() => {});
+    (window as any).najranGetFreshToken = getFreshSessionToken;
+    const interval = setInterval(() => { getFreshSessionToken({ skipCache: true }).catch(() => {}); }, 45_000);
+    return () => {
+      clearInterval(interval);
+      try { if ((window as any).najranGetFreshToken === getFreshSessionToken) delete (window as any).najranGetFreshToken; } catch {}
+    };
+  // `session.reload()` may replace Clerk's session object; depending on that
+  // object here would re-run this effect and start another forced reload.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dbUser, getToken]);
 
   if (!isClerkLoaded || (!!user?.id && !hasToken) || isDbLoading || syncState === "syncing" || (isNotFound && syncState === "idle")) return <div className="flex h-screen items-center justify-center flex-col gap-3" style={{ background: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)" }}><img src="/logo.png" alt="" className="h-16 w-auto opacity-80" onError={e => ((e.target as HTMLImageElement).style.display = "none")} /><p className="text-white text-lg font-medium">جاري التحميل...</p></div>;
@@ -367,6 +415,16 @@ function RouteLoading() {
   return <div className="flex h-screen items-center justify-center flex-col gap-3" style={{ background: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)" }}><img src="/logo.png" alt="" className="h-16 w-auto opacity-80" onError={e => ((e.target as HTMLImageElement).style.display = "none")} /><p className="text-white text-lg font-medium">جاري تحميل الصفحة...</p></div>;
 }
 
+function OriginalViewerRoute() {
+  const { isLoaded, isSignedIn } = useAuth();
+  if (!isLoaded) return <RouteLoading />;
+  if (!isSignedIn) {
+    try { sessionStorage.setItem(AUTH_RETURN_PATH_KEY, window.location.pathname + window.location.search + window.location.hash); } catch {}
+    return <Redirect to="/sign-in" />;
+  }
+  return <AuthGuard><OriginalViewer /></AuthGuard>;
+}
+
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
   return (
@@ -400,7 +458,7 @@ function ClerkProviderWithRoutes() {
               <Route path="/viewer" component={() => <ProtectedRoute component={ViewerDashboard} roles={["viewer", "supervisor"]} />} />
               <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
               <Route path="/contacts" component={() => <ProtectedRoute component={ContactsRegistry} />} />
-              <Route path="/original-viewer" component={() => <Show when="signed-in" fallback={<Redirect to="/sign-in" />}><AuthGuard><OriginalViewer /></AuthGuard></Show>} />
+              <Route path="/original-viewer" component={OriginalViewerRoute} />
               <Route component={NotFound} />
             </Switch>
           </Suspense>
