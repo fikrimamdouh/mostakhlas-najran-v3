@@ -47,6 +47,7 @@ import {
 } from "../lib/visit-security";
 import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import { sendVisitApprovedEmail, sendVisitNewRequestEmail, sendVisitRejectedEmail } from "../lib/email";
+import { parseRepresentativeRosterXlsx, type RepresentativeRosterRecord } from "../lib/visit-roster-xlsx";
 
 const ADMIN_EMAIL = "rorofikri@gmail.com";
 const router = Router();
@@ -93,19 +94,19 @@ const MAINTENANCE_CONTRACTORS = [
 const SYSTEM_CANONICAL_NAMES = [
   { name: "تعقيم ونظافة مجاري الهواء والدكتات", aliases: ["تنظيف مجاري الهواء", "صيانة ونظافة مجارى الهواء والدكتات (زيارة واحدة مدة العقد)", "صيانة ونظافة مجاري الهواء والدكتات (زيارة واحدة مدة العقد)"] },
   { name: "صيانة أنظمة التكييف والتبريد وأنظمة التهوية", aliases: ["التكييف والتبريد", "صيانة انظمة التكيف والتبريد وانظمة التهوية وملحقاتها", "صيانة أنظمة التكييف والتبريد وأنظمة التهوية وملحقاتها"] },
-  { name: "صيانة المصاعد الكهربائية", aliases: ["المصاعد", "المصاعد الكهربائية"] },
+  { name: "صيانة المصاعد الكهربائية", aliases: ["المصاعد", "المصاعد الكهربائية", "صيانة وإصلاح المصاعد الكهرابئية", "صيانة وإصلاح المصاعد الكهربائية"] },
   { name: "صيانة وإصلاح نظام إطفاء الحريق", aliases: ["إطفاء الحريق", "اطفاء الحريق", "صيانة واصلاح نظام اطفاء الحريق"] },
   { name: "صيانة وإصلاح نظام إنذار الحريق", aliases: ["إنذار الحريق", "انذار الحريق", "صيانة واصلاح نظام انذار الحريق"] },
   { name: "صيانة السنترالات والنداء الآلي والإذاعة الداخلية والساعة المركزية واستدعاء الممرضات", aliases: ["السنترال والنداء واستدعاء الممرضات", "صيانة واصلاح السنترالات والنداء الالى والاذاعة الداخلية والساعة المركزية واستدعاء الممرضات"] },
   { name: "صيانة محطات التوليد الكهربائية ولوحات التحكم والتشغيل و(ATS)", aliases: ["المولدات الكهربائية وأنظمة التحويل الآلي (ATS)", "المولدات الكهربائية وATS", "صيانة محطات التوليد الكهربائية (مولدات الطوارى) ولوحات التحكم والتشغيل والـ ATS"] },
-  { name: "صيانة شبكة الغازات الطبية وملحقاتها وخزانات الغاز", aliases: ["الغازات الطبية"] },
-  { name: "صيانة الـ (UPS)", aliases: ["UPS", "أنظمة مزودات الطاقة غير المنقطعة (UPS)", "صيانة جهاز UPS"] },
-  { name: "صيانة محولات الكهرباء والقواطع الكهربائية وكامل اللوحات الكهربائية", aliases: ["المحولات واللوحات والقواطع الكهربائية"] },
+  { name: "صيانة شبكة الغازات الطبية وملحقاتها وخزانات الغاز", aliases: ["الغازات الطبية", "صيانة شبكة الغازات الطبية"] },
+  { name: "صيانة الـ (UPS)", aliases: ["UPS", "أنظمة مزودات الطاقة غير المنقطعة (UPS)", "صيانة جهاز UPS", "صيانة ال U.P.S"] },
+  { name: "صيانة محولات الكهرباء والقواطع الكهربائية وكامل اللوحات الكهربائية", aliases: ["المحولات واللوحات والقواطع الكهربائية", "صيانة محولات الكهرباء"] },
   { name: "صيانة معدات المغسلة", aliases: ["المغاسل", "معدات المغسلة"] },
   { name: "صيانة محطات تحلية مياه الشرب وملحقاتها", aliases: ["محطات تحلية المياه", "محطات تحلية مياه الشرب"] },
   { name: "صيانة محطة معالجة مياه الصرف الصحي", aliases: ["محطات معالجة مياه الصرف الصحي", "صيانة محطة معالجة مياه الصرف الصحى"] },
   { name: "مكافحة الحشرات والقوارض والآفات البيئية", aliases: ["مكافحة الحشرات", "مكافحة الحشرات والقوارض والافات البيئية"] },
-  { name: "صيانة ثلاجة الموتى", aliases: ["ثلاجة الموتى"] },
+  { name: "صيانة ثلاجة الموتى", aliases: ["ثلاجة الموتى", "صيانة ثلاجة الموتي"] },
   { name: "صيانة نظم المراقبات الأمنية", aliases: ["نظام كاميرات المراقبة الأمنية (CCTV)", "كاميرات المراقبة الأمنية CCTV", "نظم المراقبات الأمنية", "صيانة نظم المراقبات الامنية"] },
   { name: "عمرات المولدات", aliases: [] },
 ] as const;
@@ -198,6 +199,10 @@ const legacyDocxUploadMemory = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 40 },
 });
+const rosterXlsxUploadMemory = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+});
 
 type AnyDb = typeof db | any;
 type VisitContext = {
@@ -213,6 +218,7 @@ type VisitContext = {
 const zipPreviews = new Map<string, { expiresAt: number; sha: string; records: Record<string, any[]>; entries: string[]; uploadedBy: number }>();
 type LegacyRepresentativeRecord = { sourceFile: string; fullName: string; identityNumber: string; mobile: string; companyName: string; suggestedSystemName: string | null };
 const legacyRepresentativePreviews = new Map<string, { expiresAt: number; uploadedBy: number; records: LegacyRepresentativeRecord[] }>();
+const representativeRosterPreviews = new Map<string, { expiresAt: number; uploadedBy: number; sha: string; records: RepresentativeRosterRecord[] }>();
 const scanRate = new Map<string, number[]>();
 
 function clientIp(req: any): string {
@@ -1504,13 +1510,22 @@ router.get("/management/bootstrap", requireAuth, requireApproved, requireCluster
   await optionalStep("مزامنة دليل مقاولي الباطن", () => seedApprovedSubcontractorCatalog(req), { systems: 0, systemsDisabled: 0, contractors: 0 });
   await optionalStep("مزامنة شهادات التأهيل", () => seedCertificateQualifications(req), { qualifications: 0 });
 
-  const [systems, contractors, qualifications, siteApprovals, representatives, representativeSystems, pending, alerts] = await Promise.all([
+  const [systems, contractors, qualifications, siteApprovals, representatives, representativeSystems, representativeDocuments, pending, alerts] = await Promise.all([
     optionalStep("تحميل الأنظمة", () => db.select().from(visitSystemsTable).orderBy(asc(visitSystemsTable.name)), []),
     optionalStep("تحميل الشركات", () => db.select().from(visitContractorsTable).orderBy(asc(visitContractorsTable.name)), []),
     optionalStep("تحميل التأهيلات", () => db.select().from(visitQualificationsTable), []),
     optionalStep("تحميل اعتمادات المواقع", () => db.select().from(visitSiteApprovalsTable), []),
     optionalStep("تحميل المندوبين", () => db.select().from(visitRepresentativesTable).orderBy(asc(visitRepresentativesTable.fullName)), []),
     optionalStep("تحميل ربط المندوبين", () => db.select().from(visitRepresentativeSystemsTable), []),
+    optionalStep("تحميل وثائق المندوبين", () => db.select({
+      id: visitDocumentsTable.id,
+      ownerId: visitDocumentsTable.ownerId,
+      documentType: visitDocumentsTable.documentType,
+      originalName: visitDocumentsTable.originalName,
+      mimeType: visitDocumentsTable.mimeType,
+      sizeBytes: visitDocumentsTable.sizeBytes,
+      createdAt: visitDocumentsTable.createdAt,
+    }).from(visitDocumentsTable).where(and(eq(visitDocumentsTable.ownerType, "representative"), eq(visitDocumentsTable.status, "active"))).orderBy(desc(visitDocumentsTable.createdAt)), []),
     optionalStep("تحميل الطلبات الواردة", () => db.select({ visit: visitRequestsTable, metadata: visitRequestMetadataTable }).from(visitRequestsTable).leftJoin(visitRequestMetadataTable, eq(visitRequestMetadataTable.visitId, visitRequestsTable.id)).where(and(eq(visitRequestsTable.status, "pending"), isNull(visitRequestsTable.archivedAt))).orderBy(desc(visitRequestsTable.createdAt)).limit(100), []),
     optionalStep("تحميل التنبيهات", () => buildAlerts(), []),
   ]);
@@ -1521,6 +1536,7 @@ router.get("/management/bootstrap", requireAuth, requireApproved, requireCluster
     siteApprovals,
     representatives: representatives.map(({ identityNumber, mobile, ...row }) => ({ ...row, identityMasked: maskIdentity(identityNumber), mobileMasked: mobile ? `${mobile.slice(0, 3)}••••${mobile.slice(-3)}` : "—" })),
     representativeSystems,
+    representativeDocuments,
     maintenanceContractors: MAINTENANCE_CONTRACTORS,
     approvedSubcontractors: approvedCatalogResponse(systems, contractors),
     approvedPersonnel: approvedPersonnelResponse(systems, contractors),
@@ -1785,6 +1801,157 @@ router.post("/management/legacy-representatives/confirm", requireAuth, requireAp
     if (err?.message === "LEGACY_SYSTEM_NOT_FOUND") return res.status(400).json({ error: "أحد الأنظمة المحددة غير موجود أو معطل؛ حدّث الصفحة وأعد المعاينة" });
     if (err?.message === "IDENTITY_BELONGS_TO_OTHER_CONTRACTOR") return res.status(409).json({ error: "توجد هوية مرتبطة بشركة مختلفة؛ راجع ملف المندوب قبل الاستيراد", code: "REPRESENTATIVE_CONTRACTOR_MISMATCH" });
     return respondVisitMutationError(req, res, err, "تعذر استيراد مناديب النظام القديم؛ لم يتم حفظ أي صف", "يوجد مندوب مكرر في الملفات المختارة");
+  }
+});
+
+router.post("/management/representative-roster/preview", requireAuth, requireApproved, requireClusterVisitManagement, rosterXlsxUploadMemory.single("file"), async (req: any, res) => {
+  if (!req.file) return res.status(400).json({ error: "اختر ملف Excel لقائمة المندوبين" });
+  try {
+    const records = parseRepresentativeRosterXlsx(req.file.buffer).map((record) => ({
+      ...record,
+      systemName: canonicalSystemName(record.systemName),
+      contractorName: canonicalContractorName(record.contractorName),
+    }));
+    const uniqueRepresentatives = new Map<string, RepresentativeRosterRecord>();
+    for (const record of records) if (!uniqueRepresentatives.has(record.identityNumber)) uniqueRepresentatives.set(record.identityNumber, record);
+    const [systems, contractors] = await Promise.all([
+      db.select().from(visitSystemsTable),
+      db.select().from(visitContractorsTable),
+    ]);
+    const systemByKey = firstCanonicalRowMap(systems.filter((row) => row.isActive), canonicalSystemName);
+    const contractorByKey = firstCanonicalRowMap(contractors, canonicalContractorName);
+    const missingSystems = [...new Set(records.map((record) => record.systemName).filter((name) => !systemByKey.has(catalogNameKey(name))))];
+    if (missingSystems.length) return res.status(400).json({ error: "توجد أنظمة في الملف غير موجودة أو معطلة في النظام", missingSystems });
+    const newCompanies = [...new Set(records.map((record) => record.contractorName).filter((name) => !contractorByKey.has(catalogNameKey(name))))];
+    const now = Date.now();
+    for (const [key, preview] of representativeRosterPreviews) if (preview.expiresAt <= now) representativeRosterPreviews.delete(key);
+    const previewToken = randomBytes(24).toString("base64url");
+    const expiresAt = now + 15 * 60_000;
+    const digest = sha256(req.file.buffer);
+    representativeRosterPreviews.set(previewToken, { expiresAt, uploadedBy: req.currentUser.id, sha: digest, records });
+    const cleanupTimer = setTimeout(() => {
+      const current = representativeRosterPreviews.get(previewToken);
+      if (current?.expiresAt === expiresAt) representativeRosterPreviews.delete(previewToken);
+    }, 15 * 60_000 + 1_000);
+    cleanupTimer.unref();
+    await audit(req, "معاينة استبدال قائمة المندوبين من Excel", { sha256: digest, rows: records.length, representatives: uniqueRepresentatives.size, newCompanies: newCompanies.length });
+    return res.json({
+      previewToken,
+      sha256: digest,
+      expiresInSeconds: 900,
+      confirmationText: `REPLACE:${uniqueRepresentatives.size}`,
+      counts: {
+        rows: records.length,
+        representatives: uniqueRepresentatives.size,
+        companies: new Set(records.map((record) => catalogNameKey(record.contractorName))).size,
+        systems: new Set(records.map((record) => catalogNameKey(record.systemName))).size,
+        companiesMatched: new Set(records.map((record) => record.contractorName).filter((name) => contractorByKey.has(catalogNameKey(name))).map(catalogNameKey)).size,
+        companiesToCreate: newCompanies.length,
+      },
+      newCompanies,
+      rows: [...uniqueRepresentatives.values()].map((record) => ({
+        sourceRow: record.sourceRow,
+        fullName: record.fullName,
+        identityMasked: maskIdentity(record.identityNumber),
+        mobileMasked: `${record.mobile.slice(0, 3)}••••${record.mobile.slice(-3)}`,
+        contractorName: record.contractorName,
+        systemNames: [...new Set(records.filter((row) => row.identityNumber === record.identityNumber).map((row) => row.systemName))],
+        companyMatched: contractorByKey.has(catalogNameKey(record.contractorName)),
+      })),
+    });
+  } catch (err: any) {
+    const code = String(err?.message || "");
+    req.log.warn({ code }, "Representative roster XLSX preview rejected");
+    if (code === "ROSTER_NOT_XLSX") return res.status(415).json({ error: "الملف ليس Excel XLSX صالحًا" });
+    if (code === "ROSTER_SHEET_NOT_FOUND") return res.status(400).json({ error: "ورقة «المندوبون» غير موجودة في ملف Excel" });
+    if (code === "ROSTER_HEADERS_NOT_FOUND") return res.status(400).json({ error: "عناوين ورقة المندوبين لا تطابق النموذج المطلوب" });
+    if (code.startsWith("ROSTER_INVALID_ROW:")) return res.status(400).json({ error: `بيانات المندوب غير مكتملة أو غير صالحة في الصف ${code.split(":")[1]}` });
+    if (code.startsWith("ROSTER_IDENTITY_CONFLICT:")) return res.status(409).json({ error: `رقم هوية مكرر ببيانات مختلفة عند الصف ${code.split(":")[1]}` });
+    return res.status(400).json({ error: "تعذر قراءة قائمة المندوبين من ملف Excel" });
+  }
+});
+
+router.post("/management/representative-roster/confirm", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
+  const previewToken = cleanText(req.body?.previewToken, 200);
+  const digest = cleanText(req.body?.sha256, 100);
+  const confirmation = cleanText(req.body?.confirmation, 100);
+  const preview = representativeRosterPreviews.get(previewToken);
+  if (!preview || preview.expiresAt <= Date.now() || preview.uploadedBy !== req.currentUser.id || preview.sha !== digest) {
+    representativeRosterPreviews.delete(previewToken);
+    return res.status(410).json({ error: "انتهت معاينة ملف Excel أو تغير الملف؛ أعد رفعه" });
+  }
+  const grouped = new Map<string, { record: RepresentativeRosterRecord; systems: Set<string> }>();
+  for (const record of preview.records) {
+    const current = grouped.get(record.identityNumber);
+    if (current) current.systems.add(canonicalSystemName(record.systemName));
+    else grouped.set(record.identityNumber, { record, systems: new Set([canonicalSystemName(record.systemName)]) });
+  }
+  const expectedConfirmation = `REPLACE:${grouped.size}`;
+  if (confirmation !== expectedConfirmation) return res.status(400).json({ error: `اكتب ${expectedConfirmation} كاملًا لتأكيد استبدال القائمة` });
+  try {
+    const summary = await db.transaction(async (tx) => {
+      const [systems, contractors, existingRepresentatives] = await Promise.all([
+        tx.select().from(visitSystemsTable),
+        tx.select().from(visitContractorsTable),
+        tx.select().from(visitRepresentativesTable),
+      ]);
+      const systemByKey = firstCanonicalRowMap(systems.filter((row) => row.isActive), canonicalSystemName);
+      const contractorByKey = firstCanonicalRowMap(contractors, canonicalContractorName);
+      const existingByIdentity = new Map(existingRepresentatives.map((row) => [row.identityNumber, row]));
+      let contractorsCreated = 0, contractorsReactivated = 0, representativesCreated = 0, representativesUpdated = 0, representativesDisabled = 0, systemLinks = 0;
+      await tx.update(visitRepresentativeSystemsTable).set({ isActive: false }).where(eq(visitRepresentativeSystemsTable.isActive, true));
+      const approvedIdentities = new Set(grouped.keys());
+      for (const representative of existingRepresentatives) {
+        if (approvedIdentities.has(representative.identityNumber) || !representative.isActive) continue;
+        await tx.update(visitRepresentativesTable).set({ isActive: false, updatedAt: new Date() }).where(eq(visitRepresentativesTable.id, representative.id));
+        representativesDisabled += 1;
+      }
+      for (const { record, systems: representativeSystems } of grouped.values()) {
+        const contractorName = canonicalContractorName(record.contractorName);
+        const contractorKey = catalogNameKey(contractorName);
+        let contractor = contractorByKey.get(contractorKey);
+        if (!contractor) {
+          const rows = await tx.insert(visitContractorsTable).values({ name: contractorName, isActive: true, createdByUserId: req.currentUser.id }).onConflictDoNothing().returning();
+          contractor = rows[0];
+          if (!contractor) [contractor] = await tx.select().from(visitContractorsTable).where(eq(visitContractorsTable.name, contractorName)).limit(1);
+          if (!contractor) throw new Error("ROSTER_CONTRACTOR_NOT_AVAILABLE");
+          contractorByKey.set(contractorKey, contractor);
+          contractorsCreated += 1;
+        } else if (!contractor.isActive) {
+          [contractor] = await tx.update(visitContractorsTable).set({ isActive: true, updatedAt: new Date() }).where(eq(visitContractorsTable.id, contractor.id)).returning();
+          contractorByKey.set(contractorKey, contractor);
+          contractorsReactivated += 1;
+        }
+        const [representative] = await tx.insert(visitRepresentativesTable).values({
+          contractorId: contractor.id,
+          fullName: record.fullName,
+          identityNumber: record.identityNumber,
+          mobile: record.mobile,
+          noResidenceException: false,
+          exceptionReason: null,
+          isActive: true,
+        }).onConflictDoUpdate({
+          target: visitRepresentativesTable.identityNumber,
+          set: { contractorId: contractor.id, fullName: record.fullName, mobile: record.mobile, noResidenceException: false, exceptionReason: null, isActive: true, updatedAt: new Date() },
+        }).returning();
+        if (existingByIdentity.has(record.identityNumber)) representativesUpdated += 1; else representativesCreated += 1;
+        for (const systemName of representativeSystems) {
+          const system = systemByKey.get(catalogNameKey(canonicalSystemName(systemName)));
+          if (!system) throw new Error("ROSTER_SYSTEM_NOT_AVAILABLE");
+          await tx.insert(visitRepresentativeSystemsTable).values({ representativeId: representative.id, systemId: system.id, isActive: true })
+            .onConflictDoUpdate({ target: [visitRepresentativeSystemsTable.representativeId, visitRepresentativeSystemsTable.systemId], set: { isActive: true } });
+          systemLinks += 1;
+        }
+      }
+      return { imported: grouped.size, representativesCreated, representativesUpdated, representativesDisabled, contractorsCreated, contractorsReactivated, systemLinks };
+    });
+    representativeRosterPreviews.delete(previewToken);
+    await audit(req, "استبدال قائمة المندوبين المعتمدة من Excel", { ...summary, sha256: digest });
+    return res.status(201).json(summary);
+  } catch (err: any) {
+    if (err?.message === "ROSTER_SYSTEM_NOT_AVAILABLE") return res.status(409).json({ error: "أحد الأنظمة تغير أو تعطل بعد المعاينة؛ أعد رفع الملف" });
+    if (err?.message === "ROSTER_CONTRACTOR_NOT_AVAILABLE") return res.status(409).json({ error: "تعذر إنشاء أو مطابقة إحدى الشركات؛ لم يتم استبدال القائمة" });
+    return respondVisitMutationError(req, res, err, "تعذر استبدال قائمة المندوبين؛ لم يتم حفظ أي تغيير", "يوجد تعارض في هوية أحد المندوبين");
   }
 });
 

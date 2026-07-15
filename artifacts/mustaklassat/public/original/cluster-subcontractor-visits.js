@@ -327,7 +327,8 @@
       var system = d.systems.find(function (x) { return x.id === qualification.systemId; }), contractor = d.contractors.find(function (x) { return x.id === qualification.contractorId; }), active = qualification.status === 'active';
       return '<div class="alert-row" style="background:#f8fafc;border-color:#e2e8f0;color:#334155"><span><strong>' + esc(entityName(contractor)) + '</strong><small style="display:block">' + esc(entityName(system)) + ' — من ' + esc(qualification.validFrom) + ' حتى ' + esc(qualification.validUntil) + '</small></span><span class="actions" style="margin-top:0"><button class="btn btn-light" data-edit-qualification="' + qualification.id + '">تعديل</button><button class="btn ' + (active ? 'btn-red' : 'btn-green') + '" data-toggle-qualification="' + qualification.id + '" data-active="' + active + '">' + (active ? 'تعطيل' : 'تفعيل') + '</button><button class="btn btn-light" data-delete-qualification="' + qualification.id + '">حذف</button></span></div>';
     }).join('') : '<div class="empty">لا توجد تأهيلات</div>';
-    document.getElementById('reps-list').innerHTML = d.representatives.length ? d.representatives.map(function (rep) {
+    var activeRepresentatives = d.representatives.filter(function (rep) { return rep.isActive; });
+    document.getElementById('reps-list').innerHTML = activeRepresentatives.length ? activeRepresentatives.map(function (rep) {
       var contractor = d.contractors.find(function (x) { return x.id === rep.contractorId; });
       var systemNames = d.representativeSystems.filter(function (link) { return link.representativeId === rep.id && link.isActive; }).map(function (link) { var s = d.systems.find(function (x) { return x.id === link.systemId; }); return entityName(s); }).filter(Boolean);
       var documents = (d.representativeDocuments || []).filter(function (document) { return document.ownerId === rep.id; });
@@ -403,6 +404,31 @@
         catch (error) { toast(error.message, false); confirmButton.disabled = false; }
       } }]);
     } catch (error) { toast(error.message, false); }
+    finally { button.disabled = false; }
+  });
+
+  document.getElementById('representative-roster-form').addEventListener('submit', async function (event) {
+    event.preventDefault();
+    var form = this, file = form.elements.file.files[0], button = form.querySelector('button'), previewNode = document.getElementById('representative-roster-preview');
+    if (!file) { toast('اختر ملف Excel', false); return; }
+    button.disabled = true;
+    try {
+      var data = new FormData(); data.append('file', file);
+      var preview = await api('/management/representative-roster/preview', { method: 'POST', body: data });
+      var newCompanies = preview.newCompanies.length ? '<div class="note" style="margin-top:10px;background:#fff7ed;color:#9a3412;border-color:#fed7aa"><strong>شركات ستُنشأ لعدم وجود مطابقة:</strong> ' + preview.newCompanies.map(esc).join('، ') + '</div>' : '<div class="note" style="margin-top:10px">تمت مطابقة كل الشركات الموجودة في الملف مع النظام.</div>';
+      previewNode.innerHTML = '<div class="note"><strong>نتيجة المعاينة:</strong> ' + preview.counts.representatives + ' مندوبًا — ' + preview.counts.companies + ' شركة — ' + preview.counts.systems + ' أنظمة. الأرقام الكاملة لا تظهر في المعاينة.</div>' + newCompanies + '<div class="table-wrap" style="margin-top:12px"><table class="table"><thead><tr><th>المندوب</th><th>الهوية / الجوال</th><th>الشركة</th><th>النظام</th><th>المطابقة</th></tr></thead><tbody>' + preview.rows.map(function (row) { return '<tr><td>' + esc(row.fullName) + '</td><td>' + esc(row.identityMasked) + '<br><small>' + esc(row.mobileMasked) + '</small></td><td>' + esc(row.contractorName) + '</td><td>' + row.systemNames.map(esc).join('، ') + '</td><td>' + (row.companyMatched ? '<span class="badge badge-active">موجودة</span>' : '<span class="badge badge-pending">ستُنشأ</span>') + '</td></tr>'; }).join('') + '</tbody></table></div><div class="actions"><button type="button" class="btn btn-red" id="representative-roster-confirm">مراجعة الاستبدال النهائي</button></div>';
+      document.getElementById('representative-roster-confirm').addEventListener('click', function () {
+        modal('تأكيد استبدال قائمة المندوبين', '<div class="note" style="background:#fef2f2;color:#991b1b;border-color:#fecaca"><strong>تنبيه:</strong> سيُعطّل كل مندوب حالي غير موجود في الملف، وتصبح قائمة Excel هي القائمة النشطة الوحيدة. تبقى الزيارات القديمة محفوظة دون تغيير.</div><form id="roster-confirm-form" class="form-grid" style="margin-top:12px"><div class="field full"><label>اكتب النص التالي كاملًا للتأكيد</label><code style="direction:ltr;display:block;padding:9px;background:#f8fafc;border-radius:8px">' + esc(preview.confirmationText) + '</code><input name="confirmation" autocomplete="off" required></div></form>', [{ label: 'استبدال القائمة الآن', className: 'btn-red', action: async function (confirmButton) {
+          var confirmForm = document.getElementById('roster-confirm-form'); if (!confirmForm.reportValidity()) return;
+          if (confirmForm.elements.confirmation.value.trim() !== preview.confirmationText) { toast('اكتب نص التأكيد كما هو ظاهر', false); return; }
+          confirmButton.disabled = true;
+          try {
+            var result = await api('/management/representative-roster/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ previewToken: preview.previewToken, sha256: preview.sha256, confirmation: confirmForm.elements.confirmation.value.trim() }) });
+            closeModal(); form.reset(); previewNode.innerHTML = ''; await loadBootstrap(); toast('تم اعتماد ' + result.imported + ' مندوبًا وتعطيل ' + result.representativesDisabled + ' مندوبًا سابقًا', true);
+          } catch (error) { toast(error.message, false); confirmButton.disabled = false; }
+        } }]);
+      });
+    } catch (error) { previewNode.innerHTML = ''; toast(error.message, false); }
     finally { button.disabled = false; }
   });
 
