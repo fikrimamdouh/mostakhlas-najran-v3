@@ -1098,16 +1098,45 @@ router.post("/management/direct-issue", requireAuth, requireApproved, requireClu
   if (representatives.some((row) => row.noResidenceException && !cleanText(row.exceptionReason, 1_000))) return res.status(400).json({ error: "سبب الاستثناء بدون إقامة مطلوب لكل مندوب مستثنى" });
   if (approval && approval.siteName !== siteName) return res.status(400).json({ error: "اعتماد الموقع لا يطابق الموقع المحدد" });
   const representativeSnapshot = representatives.map((row) => ({ id: row.id, fullName: row.fullName, identityNumber: row.identityNumber, mobile: row.mobile, noResidenceException: row.noResidenceException === true, exceptionReason: row.noResidenceException ? row.exceptionReason : null }));
+  const visitDate = window.startsAt.toISOString().slice(0, 10);
+  const sortedRepresentativeIds = representativeIds.slice().sort((a, b) => a - b);
+  const directIssueDedupeKey = ["direct-issue", maintenance.key, siteName, systemId, contractorId, visitDate, sortedRepresentativeIds.join(",")].join("|");
   let context: VisitContext;
-  let issueStage = "إنشاء سجل الزيارة";
+  let duplicate = false;
+  let issueStage = "التحقق من وجود تصريح مطابق";
   try {
-    context = await db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
+      // Serialise identical submissions across double-clicks, tabs and server
+      // instances, then compare the complete representative set before insert.
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${directIssueDedupeKey}, 0))`);
+      const candidates = await tx.select({ visit: visitRequestsTable, metadata: visitRequestMetadataTable })
+        .from(visitRequestsTable)
+        .innerJoin(visitRequestMetadataTable, eq(visitRequestMetadataTable.visitId, visitRequestsTable.id))
+        .where(and(
+          eq(visitRequestsTable.siteLocation, siteName),
+          eq(visitRequestsTable.mainContractor, maintenance.name),
+          eq(visitRequestsTable.visitDate, visitDate),
+          eq(visitRequestMetadataTable.systemId, systemId),
+          eq(visitRequestMetadataTable.contractorId, contractorId),
+          ne(visitRequestsTable.status, "cancelled"),
+          isNull(visitRequestsTable.archivedAt),
+        )).orderBy(desc(visitRequestsTable.createdAt)).limit(25);
+      const existing = candidates.find((candidate) => {
+        const ids = representativeIdsFromMetadata(candidate.metadata).sort((a, b) => a - b);
+        return ids.length === sortedRepresentativeIds.length && ids.every((id, index) => id === sortedRepresentativeIds[index]);
+      });
+      if (existing) {
+        const existingContext = await getVisitContext(tx, existing.visit.id);
+        if (existingContext) return { context: existingContext, duplicate: true };
+      }
+
+      issueStage = "إنشاء سجل الزيارة";
       const [visit] = await tx.insert(visitRequestsTable).values({
         userId: req.currentUser.id,
         repName: representative.fullName,
         siteLocation: siteName,
         repId: representative.identityNumber,
-        visitDate: window.startsAt.toISOString().slice(0, 10),
+        visitDate,
         repMobile: representative.mobile,
         systemName: canonicalSystemName(system.name),
         mainContractor: maintenance.name,
@@ -1122,8 +1151,11 @@ router.post("/management/direct-issue", requireAuth, requireApproved, requireClu
       // approveVisit creates the active QR token in the same transaction. Do
       // not create it twice; this also keeps the failure stage unambiguous.
       issueStage = "اعتماد الزيارة وإنشاء رقم التصريح وQR";
-      return approveVisit(tx, visit.id, req.currentUser, { qualificationOptional: true, siteApprovalOptional: true });
+      const approvedContext = await approveVisit(tx, visit.id, req.currentUser, { qualificationOptional: true, siteApprovalOptional: true });
+      return { context: approvedContext, duplicate: false };
     });
+    context = result.context;
+    duplicate = result.duplicate;
   } catch (err: any) {
     if (String(err?.message).startsWith("VALIDATION:")) return res.status(400).json({ error: String(err.message).slice(11) });
     if (err?.message === "VISIT_QR_SECRET_OR_CLERK_SECRET_KEY_REQUIRED") {
@@ -1132,6 +1164,18 @@ router.post("/management/direct-issue", requireAuth, requireApproved, requireClu
     }
     req.log.error({ err, issueStage, dbCode: databaseErrorCode(err) }, "Direct visit issue failed");
     return respondVisitMutationError(req, res, err, `تعذر الإصدار أثناء: ${issueStage}`);
+  }
+
+  if (duplicate) {
+    try {
+      await audit(req, "منع تكرار إصدار مباشر لتصريح زيارة", { visitId: context.visit.id, serialNumber: context.visit.serialNumber || null, maintenanceContractor: maintenance.name, siteLocation: context.visit.siteLocation, representativeIds });
+    } catch (err) {
+      req.log.error({ err, visitId: context.visit.id }, "Direct visit duplicate detected but audit logging failed");
+    }
+    const message = context.visit.serialNumber
+      ? `تم إصدار تصريح سابق بنفس البيانات برقم ${context.visit.serialNumber}؛ لم يتم إنشاء تصريح جديد`
+      : "يوجد طلب زيارة سابق بنفس البيانات؛ لم يتم إنشاء طلب جديد";
+    return res.status(200).json({ visit: sanitizeVisit(context.visit, context.metadata), duplicate: true, code: "VISIT_ALREADY_EXISTS", message });
   }
 
   // The permit has already committed successfully at this point. Audit-log

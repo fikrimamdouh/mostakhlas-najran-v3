@@ -448,6 +448,19 @@ test('direct issue accepts one to four representatives from the same company and
   assert.match(centerJs, /يمكن اختيار أربعة مناديب كحد أقصى/);
 });
 
+test('direct issue serializes identical submissions and returns the existing permit instead of creating another', () => {
+  const directIssue = route.match(/router\.post\("\/management\/direct-issue"[\s\S]*?\n}\);/);
+  assert.ok(directIssue);
+  assert.match(directIssue[0], /directIssueDedupeKey/);
+  assert.match(directIssue[0], /pg_advisory_xact_lock\(hashtextextended/);
+  assert.match(directIssue[0], /representativeIdsFromMetadata/);
+  assert.match(directIssue[0], /ids\.length === sortedRepresentativeIds\.length/);
+  assert.match(directIssue[0], /code: "VISIT_ALREADY_EXISTS"/);
+  assert.match(directIssue[0], /لم يتم إنشاء تصريح جديد/);
+  assert.match(centerJs, /result\.duplicate/);
+  assert.match(centerJs, /تم إصدار تصريح سابق بنفس البيانات/);
+});
+
 test('unused companies, qualifications and representatives can be deleted safely while used records require disable', () => {
   for (const entity of ['contractors', 'qualifications', 'representatives']) {
     const block = route.match(new RegExp(`router\\.delete\\("/management/${entity}/:id"[\\s\\S]*?\\n}\\);`));
