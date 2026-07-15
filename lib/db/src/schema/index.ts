@@ -195,13 +195,13 @@ export const visitRequestsTable = pgTable("visit_requests", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (t) => [
   // Legacy rows may already contain duplicate four-digit numbers. New permits
-  // use the global atomic sequence below; a normal lookup index preserves a
+  // use the monthly atomic sequence below; a normal lookup index preserves a
   // safe schema push without rewriting historical records.
   index("visit_requests_serial_number_idx").on(t.serialNumber),
-  // New numbers have a distinct year-sequence shape, so they can receive a
+  // New numbers have a distinct year-month sequence shape, so they can receive a
   // database uniqueness backstop without rejecting duplicate legacy 4-digit
   // permit numbers that may already exist.
-  uniqueIndex("visit_requests_atomic_serial_unique").on(t.serialNumber).where(sql`${t.serialNumber} ~ '^[0-9]{4}-[0-9]{6}$'`),
+  uniqueIndex("visit_requests_atomic_serial_unique").on(t.serialNumber).where(sql`${t.serialNumber} ~ '^NHC-NJ-VIS-[0-9]{4}-[0-9]{2}-[0-9]{5}$'`),
   index("visit_requests_status_date_idx").on(t.status, t.visitDate),
 ]);
 

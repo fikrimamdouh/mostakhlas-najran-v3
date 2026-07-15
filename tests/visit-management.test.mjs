@@ -110,7 +110,9 @@ test('permit numbers use one atomic database upsert and have a uniqueness backst
   assert.match(schema, /visit_number_sequences[\s\S]*scopeKey: text\("scope_key"\)\.notNull\(\)\.unique\(\)/);
   assert.match(schema, /visit_requests_atomic_serial_unique/);
   assert.match(schema, /visit_number_sequences/);
-  assert.match(route, /VIS--NHC\$\{String\(sequence\.lastValue\)\.padStart\(6, "0"\)\}-\$\{year\}-\$\{month\}/);
+  assert.match(route, /NHC-NJ-VIS-\$\{year\}-\$\{month\}-\$\{String\(sequence\.lastValue\)\.padStart\(5, "0"\)\}/);
+  assert.match(route, /scopeKey = `\$\{year\}-\$\{month\}:visits`/);
+  assert.match(schema, /\^NHC-NJ-VIS-\[0-9\]\{4\}-\[0-9\]\{2\}-\[0-9\]\{5\}\$/);
   assert.match(route, /getMonth\(\) \+ 1/);
 });
 
@@ -364,9 +366,18 @@ test('systems and site approvals support modal editing and safe deletion', () =>
 
 test('representative screen can create and immediately select a missing company', () => {
   assert.match(center, /id="rep-add-contractor"/);
-  assert.match(centerJs, /openStandaloneContractor/);
-  assert.match(centerJs, /\/management\/contractors/);
-  assert.match(centerJs, /تم حفظ الشركة واختيارها للمندوب/);
+  assert.match(center, /id="rep-system-options"/);
+  assert.match(center, /حفظ الشركة والمندوب وربط الأنظمة/);
+  assert.match(centerJs, /pendingRepresentativeContractor/);
+  assert.match(centerJs, /body\.newContractor = state\.pendingRepresentativeContractor/);
+  assert.match(centerJs, /body\.systemIds = Array\.from/);
+  const representativeRoute = route.match(/router\.post\("\/management\/representatives"[\s\S]*?\n}\);/);
+  assert.ok(representativeRoute);
+  assert.match(representativeRoute[0], /db\.transaction/);
+  assert.match(representativeRoute[0], /visitContractorsTable/);
+  assert.match(representativeRoute[0], /upsertRepresentative/);
+  assert.match(representativeRoute[0], /visitRepresentativeSystemsTable/);
+  assert.match(representativeRoute[0], /onConflictDoUpdate/);
 });
 
 test('legacy Word representatives import previews masked data then confirms company, representative and system links atomically', () => {
