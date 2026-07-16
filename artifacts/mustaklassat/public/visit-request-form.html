@@ -6,67 +6,82 @@
   <title>نموذج طلب زيارة — تجمع نجران الصحي</title>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <style>
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(180deg,#eaf0f8,#f8fafc);font-family:Tajawal,Arial,sans-serif;color:#172033}.shell{width:min(980px,100%);margin:auto;padding:14px}.hero{display:flex;align-items:center;gap:15px;background:linear-gradient(135deg,#0f2050,#1e3c72 58%,#2a5298);color:#fff;padding:19px 21px;border-radius:17px;box-shadow:0 14px 34px rgba(15,32,80,.2)}.hero img{width:66px;height:66px;object-fit:contain;background:#fff;border-radius:12px}.hero h1{font-size:23px;margin:0}.hero p{font-size:12px;color:#dbeafe;margin:4px 0 0;line-height:1.7}.language-card{margin-top:13px;background:#fff;border:1px solid #dbe3ef;border-radius:15px;padding:15px;box-shadow:0 7px 24px rgba(15,32,80,.07)}.language-card strong{display:block;color:#1e3c72;margin-bottom:9px}.languages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.language{border:1.5px solid #cbd5e1;border-radius:10px;background:#f8fafc;padding:10px 8px;font:800 13px Tajawal;cursor:pointer;color:#334155}.language.active{background:#1e3c72;color:#fff;border-color:#1e3c72}.frame-card{margin-top:13px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:0;overflow:hidden;box-shadow:0 7px 24px rgba(15,32,80,.07)}iframe{display:block;width:100%;height:820px;border:0;background:transparent}@media(max-width:700px){.shell{padding:8px}.hero{align-items:flex-start;padding:15px}.hero img{width:54px;height:54px}.hero h1{font-size:19px}.languages{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    :root{--navy:#0f2050;--primary:#1e3c72;--blue:#2a5298;--green:#15803d;--red:#991b1b;--line:#dbe3ef;--muted:#64748b}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(180deg,#eaf0f8,#f8fafc);font-family:Tajawal,Arial,sans-serif;color:#172033}.shell{width:min(940px,100%);margin:auto;padding:16px}.hero{display:flex;align-items:center;gap:15px;background:linear-gradient(135deg,var(--navy),var(--primary) 58%,var(--blue));color:#fff;padding:20px 22px;border-radius:17px;box-shadow:0 14px 34px rgba(15,32,80,.2)}.hero img{width:66px;height:66px;object-fit:contain;background:#fff;border-radius:12px}.hero h1{font-size:24px;margin:0}.hero p{font-size:12px;color:#dbeafe;margin:4px 0 0;line-height:1.7}.card{margin-top:14px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:20px;box-shadow:0 7px 24px rgba(15,32,80,.07)}.language-title{display:block;color:var(--primary);font-weight:800;margin-bottom:9px}.languages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.language{border:1.5px solid #cbd5e1;border-radius:10px;background:#f8fafc;padding:10px 8px;font:800 13px Tajawal;cursor:pointer;color:#334155}.language.active{background:var(--primary);color:#fff;border-color:var(--primary)}.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:16px}.step{border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;color:#1e40af;padding:10px 12px;font-size:12px;line-height:1.65}.step b{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#1e3c72;color:#fff;margin-inline-end:5px}.notice{border-radius:11px;padding:11px 13px;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-size:12px;line-height:1.7;margin-bottom:16px}.notice.manual{background:#f0fdf4;color:#166534;border-color:#bbf7d0}.notice.strict{background:#fff7ed;color:#9a3412;border-color:#fed7aa}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}.field label{font-size:12px;font-weight:800;color:#334155}.field input,.field select{width:100%;min-height:44px;border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;background:#fff;font:inherit}.field input:focus,.field select:focus{outline:0;border-color:var(--blue);box-shadow:0 0 0 3px rgba(42,82,152,.09)}.submit{grid-column:1/-1;border:0;border-radius:11px;padding:13px 18px;background:linear-gradient(135deg,#15803d,#166534);color:#fff;font:800 15px Tajawal;cursor:pointer}.submit:disabled{opacity:.58;cursor:not-allowed}.status{display:none;margin-top:14px;border-radius:11px;padding:12px 14px;font-weight:700;line-height:1.7}.status.show{display:block}.status.ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}.status.error{background:#fef2f2;color:var(--red);border:1px solid #fecaca}.privacy{font-size:11px;color:var(--muted);line-height:1.8;margin:13px 0 0}.hp{position:absolute!important;right:-9999px!important;width:1px!important;height:1px!important;overflow:hidden!important}@media(max-width:700px){.shell{padding:9px}.hero{align-items:flex-start;padding:16px}.hero img{width:54px;height:54px}.hero h1{font-size:20px}.card{padding:15px}.languages{grid-template-columns:repeat(2,minmax(0,1fr))}.steps,.grid{grid-template-columns:1fr}.field.full,.submit{grid-column:auto}}
   </style>
 </head>
 <body>
   <main class="shell">
-    <header class="hero"><img src="/original/najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي"><div><h1 id="page-title">نموذج طلب زيارة</h1><p id="page-subtitle">تجمع نجران الصحي — اختر اللغة ثم أكمل بيانات طلب الزيارة.</p></div></header>
-    <section class="language-card"><strong id="language-title">اختر لغة النموذج</strong><div class="languages"><button class="language" data-lang="ar">العربية</button><button class="language" data-lang="en">English</button><button class="language" data-lang="ur">اردو</button><button class="language" data-lang="hi">हिन्दी</button></div></section>
-    <section class="frame-card"><iframe id="visit-form-frame" title="نموذج طلب زيارة تجمع نجران الصحي"></iframe></section>
+    <header class="hero"><img src="/original/najran_health_cluster_logo.png" alt="Najran Health Cluster"><div><h1 id="title"></h1><p id="subtitle"></p></div></header>
+    <section class="card"><strong id="language-title" class="language-title"></strong><div class="languages"><button class="language" data-lang="ar" type="button">العربية</button><button class="language" data-lang="en" type="button">English</button><button class="language" data-lang="ur" type="button">اردو</button><button class="language" data-lang="hi" type="button">हिन्दी</button></div></section>
+    <section class="card">
+      <div id="steps" class="steps"></div>
+      <div id="mode-notice" class="notice"></div>
+      <form id="request-form" class="grid" autocomplete="on">
+        <div class="field"><label id="maintenance-label" for="maintenance"></label><select id="maintenance" required></select></div>
+        <div class="field"><label id="site-label" for="site"></label><select id="site" required></select></div>
+        <div class="field"><label id="date-label" for="visit-date"></label><input id="visit-date" type="date" required></div>
+        <div class="field"><label id="system-label" for="system"></label><select id="system" required></select></div>
+        <div class="field full"><label id="contractor-label" for="contractor"></label><select id="contractor" required></select></div>
+        <div class="field full"><label id="name-label" for="full-name"></label><input id="full-name" maxlength="200" required autocomplete="name"></div>
+        <div class="field"><label id="identity-label" for="identity"></label><input id="identity" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" required autocomplete="off"></div>
+        <div class="field"><label id="mobile-label" for="mobile"></label><input id="mobile" inputmode="tel" maxlength="14" required autocomplete="tel" placeholder="05xxxxxxxx"></div>
+        <div class="hp" aria-hidden="true"><label for="website">Website</label><input id="website" tabindex="-1" autocomplete="off"></div>
+        <button id="submit" class="submit" type="submit"></button>
+      </form>
+      <div id="status" class="status" aria-live="polite"></div>
+      <p id="privacy" class="privacy"></p>
+    </section>
   </main>
   <script>
     (function () {
       'use strict';
-      var labels = {
-        ar:{dir:'rtl',title:'نموذج طلب زيارة',subtitle:'تجمع نجران الصحي — اختر اللغة ثم أكمل بيانات طلب الزيارة.',language:'اختر لغة النموذج'},
-        en:{dir:'ltr',title:'Visit Request Form',subtitle:'Najran Health Cluster — choose your language, then complete the visit request.',language:'Choose form language'},
-        ur:{dir:'rtl',title:'وزٹ درخواست فارم',subtitle:'نجران ہیلتھ کلسٹر — زبان منتخب کریں، پھر وزٹ کی معلومات مکمل کریں۔',language:'فارم کی زبان منتخب کریں'},
-        hi:{dir:'ltr',title:'विज़िट अनुरोध फ़ॉर्म',subtitle:'नजरान हेल्थ क्लस्टर — भाषा चुनें, फिर विज़िट अनुरोध पूरा करें।',language:'फ़ॉर्म की भाषा चुनें'}
+      var messages = {
+        ar:{dir:'rtl',title:'نموذج طلب زيارة',subtitle:'تجمع نجران الصحي — تسجيل زيارة مقاولي الباطن وإرسالها مباشرة إلى الإدارة المختصة.',language:'اختر لغة النموذج',steps:['اختر الموقع والنظام والشركة','أدخل الاسم والهوية والجوال','أرسل الطلب للمراجعة'],maintenance:'مقاول الصيانة',site:'الموقع / المستشفى',date:'تاريخ الزيارة المطلوب',system:'النظام المراد زيارته',contractor:'شركة مقاول الباطن',name:'اسم الزائر الكامل',identity:'رقم الهوية / الإقامة',mobile:'رقم الجوال السعودي',submit:'إرسال طلب الزيارة',privacy:'تُستخدم البيانات لمراجعة طلب الزيارة وإصدار التصريح فقط. لا تعرض الصفحة العامة أسماء المندوبين أو أرقامهم المسجلة.',select:'اختر',loading:'جارٍ التحميل...',manual:'التسجيل اليدوي مُفعّل حاليًا: أدخل بيانات الزائر واختر الموقع والنظام وشركة مقاول الباطن. سيصل الطلب إلى الإدارة للمراجعة.',strict:'التحقق الإلزامي مُفعّل: يجب أن تطابق بيانات الزائر قائمة المندوبين المعتمدة.',success:'تم إرسال طلب الزيارة بنجاح إلى الإدارة للمراجعة.',failure:'تعذر إرسال طلب الزيارة'},
+        en:{dir:'ltr',title:'Visit Request Form',subtitle:'Najran Health Cluster — submit a subcontractor visit request directly to the responsible team.',language:'Choose form language',steps:['Choose the site, system and company','Enter name, ID and mobile number','Submit the request for review'],maintenance:'Maintenance contractor',site:'Site / Hospital',date:'Requested visit date',system:'System to be visited',contractor:'Subcontractor company',name:'Visitor full name',identity:'National ID / Iqama number',mobile:'Saudi mobile number',submit:'Submit visit request',privacy:'The data is used only to review the visit request and issue the permit. Registered personnel data is not displayed publicly.',select:'Select',loading:'Loading...',manual:'Manual registration is currently available. Enter the visitor details and select the site, system and subcontractor.',strict:'Approved-list verification is enabled. The visitor details must match an approved representative.',success:'The visit request was sent successfully for review.',failure:'Unable to submit the visit request'},
+        ur:{dir:'rtl',title:'وزٹ درخواست فارم',subtitle:'نجران ہیلتھ کلسٹر — ذیلی ٹھیکیدار کے وزٹ کی درخواست براہِ راست متعلقہ انتظامیہ کو بھیجیں۔',language:'فارم کی زبان منتخب کریں',steps:['مقام، نظام اور کمپنی منتخب کریں','نام، شناختی نمبر اور موبائل درج کریں','جائزے کے لیے درخواست بھیجیں'],maintenance:'مینٹیننس کنٹریکٹر',site:'مقام / ہسپتال',date:'مطلوبہ وزٹ کی تاریخ',system:'وزٹ کا نظام',contractor:'ذیلی ٹھیکیدار کمپنی',name:'وزیٹر کا مکمل نام',identity:'شناختی کارڈ / اقامہ نمبر',mobile:'سعودی موبائل نمبر',submit:'وزٹ درخواست بھیجیں',privacy:'یہ معلومات صرف درخواست کے جائزے اور اجازت نامہ جاری کرنے کے لیے استعمال ہوتی ہیں۔ رجسٹرڈ افراد کی معلومات عوامی طور پر ظاہر نہیں ہوتیں۔',select:'منتخب کریں',loading:'لوڈ ہو رہا ہے...',manual:'دستی اندراج فی الحال دستیاب ہے۔ وزیٹر کی معلومات درج کریں اور مقام، نظام اور کمپنی منتخب کریں۔',strict:'منظور شدہ فہرست کی جانچ فعال ہے۔ وزیٹر کی معلومات منظور شدہ نمائندے سے مطابقت ہونی چاہییں۔',success:'وزٹ کی درخواست کامیابی سے جائزے کے لیے بھیج دی گئی۔',failure:'وزٹ کی درخواست نہیں بھیجی جا سکی'},
+        hi:{dir:'ltr',title:'विज़िट अनुरोध फ़ॉर्म',subtitle:'नजरान हेल्थ क्लस्टर — उप-ठेकेदार का विज़िट अनुरोध सीधे संबंधित टीम को भेजें।',language:'फ़ॉर्म की भाषा चुनें',steps:['स्थान, सिस्टम और कंपनी चुनें','नाम, पहचान संख्या और मोबाइल दर्ज करें','समीक्षा के लिए अनुरोध भेजें'],maintenance:'रखरखाव ठेकेदार',site:'स्थान / अस्पताल',date:'अनुरोधित विज़िट तिथि',system:'विज़िट किया जाने वाला सिस्टम',contractor:'उप-ठेकेदार कंपनी',name:'आगंतुक का पूरा नाम',identity:'राष्ट्रीय पहचान / इकामा नंबर',mobile:'सऊदी मोबाइल नंबर',submit:'विज़िट अनुरोध भेजें',privacy:'डेटा का उपयोग केवल अनुरोध की समीक्षा और परमिट जारी करने के लिए किया जाता है। पंजीकृत प्रतिनिधियों की जानकारी सार्वजनिक रूप से नहीं दिखाई जाती।',select:'चुनें',loading:'लोड हो रहा है...',manual:'मैन्युअल पंजीकरण अभी उपलब्ध है। आगंतुक की जानकारी दर्ज करें और स्थान, सिस्टम तथा कंपनी चुनें।',strict:'स्वीकृत सूची सत्यापन चालू है। आगंतुक की जानकारी स्वीकृत प्रतिनिधि से मेल खानी चाहिए।',success:'विज़िट अनुरोध सफलतापूर्वक समीक्षा के लिए भेजा गया।',failure:'विज़िट अनुरोध भेजा नहीं जा सका'}
       };
-      var frame = document.getElementById('visit-form-frame');
-      var current = localStorage.getItem('najran_visit_form_language') || 'ar';
-      if (!labels[current]) current = 'ar';
+      var language = localStorage.getItem('najran_visit_form_language') || new URLSearchParams(location.search).get('lang') || 'ar';
+      if (!messages[language]) language = 'ar';
+      var catalog = null;
+      var policy = { requireApprovedRepresentative:false };
+      var form = document.getElementById('request-form');
+      var maintenance = document.getElementById('maintenance');
+      var site = document.getElementById('site');
+      var visitDate = document.getElementById('visit-date');
+      var system = document.getElementById('system');
+      var contractor = document.getElementById('contractor');
+      var submit = document.getElementById('submit');
+      var status = document.getElementById('status');
 
-      function coreUrl(language) {
-        var params = new URLSearchParams(location.search);
-        params.set('lang', language);
-        return '/visit-request-form-core.html?' + params.toString();
+      function t(){return messages[language] || messages.ar}
+      function esc(value){return String(value==null?'':value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+      function localDay(){var date=new Date();date.setMinutes(date.getMinutes()-date.getTimezoneOffset());return date.toISOString().slice(0,10)}
+      function activeOnDate(row,day){return row&&row.status==='active'&&(!row.validFrom||row.validFrom<=day)&&(!row.validUntil||row.validUntil>=day)}
+      function option(value,label,selected){return '<option value="'+esc(value)+'"'+(String(value)===String(selected||'')?' selected':'')+'>'+esc(label)+'</option>'}
+      function setStatus(message,ok){status.textContent=message;status.className='status show '+(ok?'ok':'error')}
+
+      function applyLanguage(next){
+        language=messages[next]?next:'ar';localStorage.setItem('najran_visit_form_language',language);var m=t();document.documentElement.lang=language;document.documentElement.dir=m.dir;document.body.dir=m.dir;document.title=m.title+' — Najran Health Cluster';
+        document.getElementById('title').textContent=m.title;document.getElementById('subtitle').textContent=m.subtitle;document.getElementById('language-title').textContent=m.language;document.getElementById('steps').innerHTML=m.steps.map(function(row,index){return '<div class="step"><b>'+(index+1)+'</b>'+esc(row)+'</div>'}).join('');
+        document.getElementById('maintenance-label').textContent=m.maintenance;document.getElementById('site-label').textContent=m.site;document.getElementById('date-label').textContent=m.date;document.getElementById('system-label').textContent=m.system;document.getElementById('contractor-label').textContent=m.contractor;document.getElementById('name-label').textContent=m.name;document.getElementById('identity-label').textContent=m.identity;document.getElementById('mobile-label').textContent=m.mobile;submit.textContent=m.submit;document.getElementById('privacy').textContent=m.privacy;
+        document.querySelectorAll('[data-lang]').forEach(function(button){button.classList.toggle('active',button.dataset.lang===language)});renderPolicy();populateCatalog(true);
       }
 
-      function injectTranslation() {
-        try {
-          var doc = frame.contentDocument;
-          if (!doc || !doc.body || doc.getElementById('najran-public-i18n-loader')) return;
-          var script = doc.createElement('script');
-          script.id = 'najran-public-i18n-loader';
-          script.src = '/original/visit-public-form-i18n.js?v=20260716_multilingual_v1';
-          doc.body.appendChild(script);
-        } catch (_) {}
-      }
+      function renderPolicy(){var m=t(),notice=document.getElementById('mode-notice'),strict=policy.requireApprovedRepresentative===true;notice.className='notice '+(strict?'strict':'manual');notice.textContent=strict?m.strict:m.manual}
+      function maintenanceRows(){return catalog&&Array.isArray(catalog.maintenanceContractors)?catalog.maintenanceContractors:[]}
+      function refreshSites(preferred){var row=maintenanceRows().find(function(item){return item.key===maintenance.value});site.innerHTML=option('',t().select+' '+t().site,'')+(row&&Array.isArray(row.sites)?row.sites.map(function(name){return option(name,name,preferred)}).join(''):'');refreshSystems()}
+      function validApprovals(){var day=visitDate.value;return catalog?catalog.siteApprovals.filter(function(row){return row.siteName===site.value&&activeOnDate(row,day)}):[]}
+      function qualificationValid(systemId,contractorId){var day=visitDate.value;return catalog.qualifications.some(function(row){return row.systemId===systemId&&row.contractorId===contractorId&&activeOnDate(row,day)})}
+      function refreshSystems(preferred){var current=preferred||system.value,allowed={};validApprovals().forEach(function(row){if(qualificationValid(row.systemId,row.contractorId))allowed[row.systemId]=true});var rows=catalog?catalog.systems.filter(function(row){return row.isActive&&allowed[row.id]}):[];system.innerHTML=option('',t().select+' '+t().system,'')+rows.map(function(row){return option(row.id,row.displayName||row.name,current)}).join('');if(!rows.some(function(row){return String(row.id)===String(current)}))system.value='';refreshContractors()}
+      function refreshContractors(preferred){var current=preferred||contractor.value,systemId=Number(system.value||0),allowed={};validApprovals().forEach(function(row){if(row.systemId===systemId&&qualificationValid(systemId,row.contractorId))allowed[row.contractorId]=true});var rows=catalog?catalog.contractors.filter(function(row){return row.isActive&&allowed[row.id]}):[];contractor.innerHTML=option('',t().select+' '+t().contractor,'')+rows.map(function(row){return option(row.id,row.displayName||row.name,current)}).join('');if(!rows.some(function(row){return String(row.id)===String(current)}))contractor.value=''}
+      function populateCatalog(preserve){if(!catalog)return;var currentMaintenance=preserve?maintenance.value:new URLSearchParams(location.search).get('maintenance')||'',currentSite=preserve?site.value:new URLSearchParams(location.search).get('site')||'';maintenance.innerHTML=option('',t().select+' '+t().maintenance,'')+maintenanceRows().map(function(row){return option(row.key,row.name,currentMaintenance)}).join('');if(currentMaintenance)maintenance.value=currentMaintenance;refreshSites(currentSite)}
 
-      function setLanguage(language) {
-        current = labels[language] ? language : 'ar';
-        localStorage.setItem('najran_visit_form_language', current);
-        var text = labels[current];
-        document.documentElement.lang = current;
-        document.documentElement.dir = text.dir;
-        document.body.dir = text.dir;
-        document.getElementById('page-title').textContent = text.title;
-        document.getElementById('page-subtitle').textContent = text.subtitle;
-        document.getElementById('language-title').textContent = text.language;
-        document.querySelectorAll('[data-lang]').forEach(function (button) { button.classList.toggle('active', button.dataset.lang === current); });
-        frame.src = coreUrl(current);
-      }
+      async function load(){
+        submit.disabled=true;try{var responses=await Promise.all([fetch('/api/visits/public/request-catalog',{cache:'no-store'}),fetch('/api/visits/public/request-policy',{cache:'no-store'})]);var catalogBody=await responses[0].json().catch(function(){return{}}),policyBody=await responses[1].json().catch(function(){return{}});if(!responses[0].ok)throw new Error(catalogBody.error||t().failure);catalog=catalogBody;policy=responses[1].ok?policyBody:{requireApprovedRepresentative:false};populateCatalog(false);renderPolicy()}catch(error){setStatus(error.message||t().failure,false)}finally{submit.disabled=false}}
 
-      document.querySelectorAll('[data-lang]').forEach(function (button) { button.addEventListener('click', function () { setLanguage(button.dataset.lang); }); });
-      frame.addEventListener('load', injectTranslation);
-      window.addEventListener('message', function (event) {
-        if (event.origin !== location.origin || !event.data || event.data.type !== 'visit-form-height') return;
-        var height = Math.max(650, Math.min(1800, Number(event.data.height || 0) + 12));
-        if (height) frame.style.height = height + 'px';
-      });
-      setLanguage(current);
+      form.addEventListener('submit',async function(event){event.preventDefault();if(!form.reportValidity())return;submit.disabled=true;submit.textContent=t().loading;try{var response=await fetch('/api/visits/public/requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({maintenanceContractorKey:maintenance.value,siteLocation:site.value,visitDate:visitDate.value,systemId:Number(system.value),contractorId:Number(contractor.value),fullName:document.getElementById('full-name').value.trim(),identityNumber:document.getElementById('identity').value.trim(),mobile:document.getElementById('mobile').value.trim(),website:document.getElementById('website').value})});var body=await response.json().catch(function(){return{}});if(!response.ok)throw new Error(body.error||t().failure);setStatus(body.message||t().success,true);document.getElementById('full-name').value='';document.getElementById('identity').value='';document.getElementById('mobile').value=''}catch(error){setStatus(error.message||t().failure,false)}finally{submit.disabled=false;submit.textContent=t().submit}});
+      maintenance.addEventListener('change',function(){refreshSites()});site.addEventListener('change',function(){refreshSystems()});visitDate.addEventListener('change',function(){refreshSystems()});system.addEventListener('change',function(){refreshContractors()});document.querySelectorAll('[data-lang]').forEach(function(button){button.addEventListener('click',function(){applyLanguage(button.dataset.lang)})});visitDate.min=localDay();visitDate.value=localDay();applyLanguage(language);load();
     })();
   </script>
 </body>

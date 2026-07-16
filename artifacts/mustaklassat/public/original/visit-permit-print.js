@@ -5,7 +5,7 @@
     document.write('<script src="' + src + '"><\/script>');
   }
 
-  loadScript('/original/visit-permit-print-core.js?v=20260716_core_v1');
+  loadScript('/original/visit-permit-engine.js?v=20260716_engine_v1');
   loadScript('/original/visit-permit-download-qr-layout.js?v=20260716_footer_layout_v1');
 
   var pageUrl = String(window.location.href || '');

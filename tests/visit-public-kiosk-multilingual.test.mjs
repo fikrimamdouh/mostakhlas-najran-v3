@@ -14,7 +14,6 @@ const layout = read('artifacts/mustaklassat/public/original/visit-permit-downloa
 const hospitalMode = read('artifacts/mustaklassat/public/original/request-visit-postponement-mode.js');
 const centerKiosk = read('artifacts/mustaklassat/public/original/visit-center-public-kiosk.js');
 const publicWrapper = read('artifacts/mustaklassat/public/visit-request-form.html');
-const publicI18n = read('artifacts/mustaklassat/public/original/visit-public-form-i18n.js');
 
 function inlineScripts(html) {
   return [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map((match) => match[1]).filter((source) => source.trim());
@@ -31,10 +30,10 @@ test('general QR is mounted before the legacy site-specific route and has no sit
 
 test('printed poster and public form support Arabic, English, Urdu and Hindi', () => {
   for (const value of ['العربية', 'English', 'اردو', 'हिन्दी']) assert.match(publicWrapper, new RegExp(value));
-  for (const value of ['Visit Request Form', 'وزٹ درخواست فارم', 'विज़िट अनुरोध फ़ॉर्म']) assert.match(centerKiosk + publicWrapper + publicI18n, new RegExp(value));
+  for (const value of ['Visit Request Form', 'وزٹ درخواست فارم', 'विज़िट अनुरोध फ़ॉर्म']) assert.match(centerKiosk + publicWrapper, new RegExp(value));
   assert.match(publicWrapper, /najran_health_cluster_logo\.png/);
-  assert.match(publicI18n, /steps:/);
-  assert.match(publicI18n, /admin\.remove\(\)/);
+  assert.match(publicWrapper, /steps:/);
+  assert.doesNotMatch(publicWrapper, /admin-policy-card|public-request-policy/);
 });
 
 test('hospital portal owns postponement mode while the public visitor form remains new-visit only', () => {
@@ -44,11 +43,11 @@ test('hospital portal owns postponement mode while the public visitor form remai
   assert.match(hospitalMode, /طلب تأجيل زيارة/);
   assert.match(hospitalMode, /سبب الموقع للتأجيل/);
   assert.match(hospitalMode, /postponement-request/);
-  assert.doesNotMatch(publicWrapper + publicI18n, /طلب تأجيل زيارة|postponement-request/);
+  assert.doesNotMatch(publicWrapper, /طلب تأجيل زيارة|postponement-request/);
 });
 
 test('download QR is moved to the right side of the footer without changing PDF generation', () => {
-  assert.match(printLoader, /visit-permit-print-core\.js/);
+  assert.match(printLoader, /visit-permit-engine\.js/);
   assert.match(layout, /permit-download-qr/);
   assert.match(layout, /permit-footer-note/);
   assert.match(layout, /footer\.appendChild\(downloadQr\)/);
@@ -57,7 +56,7 @@ test('download QR is moved to the right side of the footer without changing PDF 
 });
 
 test('new scripts and wrapper inline scripts are syntactically valid and avoid native dialogs', () => {
-  for (const [name, source] of Object.entries({ printLoader, layout, hospitalMode, centerKiosk, publicI18n })) {
+  for (const [name, source] of Object.entries({ printLoader, layout, hospitalMode, centerKiosk })) {
     new vm.Script(source, { filename: name + '.js' });
     assert.doesNotMatch(source, /(?<![\w.])(?:window\s*\.\s*)?(?:alert|confirm|prompt)\s*\(/);
   }
