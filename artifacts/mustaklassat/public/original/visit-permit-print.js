@@ -69,6 +69,7 @@
     var footerNote = textSetting(settings, 'footerNote', 'يرجى إبراز بطاقة تأهيل الفريق الفني ونموذج اعتماد موافقة زيارة مقاولي الباطن للمسؤول بالمنشأة.');
     var stampHtml = '<img src="' + esc(stampSource) + '" alt="الختم الإلكتروني" style="display:block;width:auto;height:auto;max-width:190px;max-height:140px;object-fit:contain">';
     var signatureHtml = '<img src="' + esc(signatureSource) + '" alt="التوقيع الإلكتروني" style="display:block;max-width:165px;max-height:72px;object-fit:contain;margin:7px auto 0">';
+    var downloadQrHtml = !v.isDraft && v.downloadQrDataUrl ? '<div data-role="permit-download-qr" style="text-align:center"><img src="' + esc(v.downloadQrDataUrl) + '" alt="QR تحميل تصريح الزيارة" style="width:64px;height:64px;display:block;margin:auto;image-rendering:pixelated"><div style="font-size:8px;font-weight:800;margin-top:3px;color:#166534;line-height:1.35">تحميل النموذج<br>على الجوال</div></div>' : '';
     var draft = v.isDraft ? '<div style="position:absolute;inset:35% 8% auto;transform:rotate(-24deg);font-size:92px;font-weight:900;color:rgba(185,28,28,.13);text-align:center;border:9px solid rgba(185,28,28,.12);z-index:3;pointer-events:none">مسودة</div>' : '';
     var node = document.createElement('div');
     node.className = 'najran-visit-permit-document';
@@ -84,13 +85,13 @@
       }).join('') + '</table>' + representativesHtml +
       '<div style="font-size:12px;font-weight:800;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;margin-bottom:12px;text-align:center">' + multiline(verificationText) + '</div>' +
       '<div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:12px 18px;margin-bottom:14px;line-height:1.8;font-size:12px;text-align:justify">' + multiline(approvalText) + '<br>' + multiline(closingText) + '</div>' +
-      '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;gap:14px;border:1.5px solid #d1d5db;border-radius:10px;padding:13px 20px">' +
+      '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;gap:10px;border:1.5px solid #d1d5db;border-radius:10px;padding:13px 16px">' +
         '<div data-role="permit-signature" style="grid-column:1;text-align:center"><p style="font-weight:800;font-size:14px;color:#1e3c72;margin:0 0 6px">' + esc(settings.signerTitle || 'مدير وحدة الصيانة العامة بتجمع نجران الصحي') + '</p>' +
         '<p style="font-size:13px;margin:0 0 4px">الاسم: ' + esc(settings.signerName || settings.managerName || 'م. محمد عباس المكرمي') + '</p>' +
         '<p style="font-size:13px;margin:0 0 8px">التاريخ: ' + formatDate(v.approvedAt, false) + ' م</p>' + signatureHtml + '</div>' +
         '<div data-role="permit-stamp" style="grid-column:2;min-height:140px;display:flex;align-items:center;justify-content:center;text-align:center;overflow:visible">' + stampHtml + '</div>' +
-        '<div data-role="permit-qr" style="grid-column:3;text-align:center;justify-self:center"><img src="' + esc(v.qrDataUrl || '') + '" alt="QR تصريح الزيارة" style="width:92px;height:92px;display:block;image-rendering:pixelated">' +
-        '<div style="font-size:9px;font-weight:700;margin-top:3px;color:#475569">' + esc(qrLabel) + '</div><div style="font-size:9px;font-weight:800;margin-top:2px;color:#1e3c72">' + esc(v.serialNumber || 'مسودة') + '</div></div></div>' +
+        '<div data-role="permit-qr" style="grid-column:3;display:flex;align-items:flex-start;justify-content:center;gap:10px"><div style="text-align:center"><img src="' + esc(v.qrDataUrl || '') + '" alt="QR تصريح الزيارة" style="width:88px;height:88px;display:block;image-rendering:pixelated">' +
+        '<div style="font-size:9px;font-weight:700;margin-top:3px;color:#475569">' + esc(qrLabel) + '</div><div style="font-size:9px;font-weight:800;margin-top:2px;color:#1e3c72">' + esc(v.serialNumber || 'مسودة') + '</div></div>' + downloadQrHtml + '</div></div>' +
       '<div data-role="permit-footer-note" style="margin-top:10px;border-top:1px solid #cbd5e1;padding-top:8px;text-align:center;font-size:10.5px;font-weight:800;color:#334155">' + multiline(footerNote) + '</div>';
     return node;
   }
@@ -146,6 +147,26 @@
     return payload;
   }
 
+  async function loadPublic(token) {
+    var response = await fetch('/api/visits/qr/public-permit?token=' + encodeURIComponent(String(token || '').trim()), { cache: 'no-store' });
+    var body = await response.json().catch(function () { return {}; });
+    if (!response.ok) throw new Error(body.error || 'تعذر تحميل تصريح الزيارة');
+    return body;
+  }
+
+  function mount(payload, target) {
+    if (!target) throw new Error('مكان عرض التصريح غير متاح');
+    target.innerHTML = '';
+    target.appendChild(buildPermitNode(payload, false));
+    return payload;
+  }
+
+  async function printPayload(payload) {
+    var permit = payload && payload.permit || {};
+    await renderPdf(payload, 'تصريح-زيارة-' + (permit.serialNumber || permit.id || 'معتمد') + '.pdf');
+    return payload;
+  }
+
   function showError(error) {
     var message = error && error.message ? error.message : 'تعذر تجهيز التصريح';
     if (window.NajranDialogs && typeof window.NajranDialogs.alert === 'function') return window.NajranDialogs.alert(message);
@@ -154,7 +175,7 @@
     modal.style.display = 'block';
   }
 
-  window.NajranVisitPermit = { load: loadPermit, preview: preview, print: print, showError: showError };
+  window.NajranVisitPermit = { load: loadPermit, loadPublic: loadPublic, mount: mount, preview: preview, print: print, printPayload: printPayload, showError: showError };
 
 })();
 
@@ -166,6 +187,7 @@
   var requestSubmitting = false;
   var requestCatalog = null;
   var requestVisits = [];
+  var requestPostponementReasons = [];
   var requestSearchBound = false;
 
   function esc(value) {
@@ -265,13 +287,20 @@
       var statusClass = visit.status === 'approved' ? 'status-approved' : visit.status === 'rejected' ? 'status-rejected' : 'status-pending';
       var statusText = visit.status === 'approved' ? 'موافق عليه' : visit.status === 'rejected' ? 'مرفوض' : visit.status === 'cancelled' ? 'ملغى' : 'قيد المراجعة';
       var actions = '';
+      var postponement = visit.postponement || null;
+      var postponementDecision = postponement && postponement.status === 'approved' ? '<div style="margin-top:5px;color:#166534;font-size:11px;font-weight:800">وافقت الإدارة على التأجيل إلى ' + visitDateText(postponement.requestedVisitDate) + '</div>' : postponement && postponement.status === 'rejected' ? '<div style="margin-top:5px;color:#991b1b;font-size:11px;font-weight:800">رُفض طلب التأجيل' + (postponement.decisionNotes ? ': ' + esc(postponement.decisionNotes) : '') + '</div>' : '';
+      var postponementAction = postponement && postponement.status === 'pending'
+        ? '<div style="margin-top:5px;color:#92400e;font-size:11px;font-weight:800">طلب التأجيل إلى ' + visitDateText(postponement.requestedVisitDate) + ' قيد مراجعة الإدارة</div>'
+        : postponementDecision + '<button class="btn-dl" style="background:#0f766e;color:#fff" onclick="NajranVisitPostponement.open(' + visit.id + ')"><i class="fas fa-calendar-day"></i> طلب تأجيل</button>';
       if (visit.status === 'approved') {
         var serial = visit.serialNumber ? '<div class="serial-badge"><i class="fas fa-hashtag"></i> ' + esc(visit.serialNumber) + '</div>' : '';
         actions = serial + '<button class="btn-dl btn-dl-pdf" onclick="genPDF(' + visit.id + ')"><i class="fas fa-file-pdf"></i> تحميل إلكتروني</button>';
         if (visit.hasSignedPermit) actions += '<button class="btn-dl btn-dl-signed" onclick="downloadSignedPermit(' + visit.id + ',\'' + esc(visit.serialNumber || visit.id) + '\')"><i class="fas fa-signature"></i> نسخة موقعة</button>';
         actions += '<button class="btn-dl" style="background:#1e3c72;color:#fff" onclick="NajranVisitPermit.preview(' + visit.id + ').catch(NajranVisitPermit.showError)"><i class="fas fa-eye"></i> معاينة</button>';
+        actions += postponementAction;
       } else if (visit.status === 'pending') {
         actions = '<button class="btn-dl" style="background:#b45309;color:#fff" onclick="NajranVisitPermit.preview(' + visit.id + ').catch(NajranVisitPermit.showError)"><i class="fas fa-eye"></i> معاينة مسودة</button>';
+        actions += postponementAction;
       } else if (visit.status === 'rejected' && visit.adminNotes) {
         actions = '<small style="color:#b91c1c;font-size:11px"><i class="fas fa-info-circle"></i> ' + esc(visit.adminNotes) + '</small>';
       }
@@ -330,8 +359,62 @@
   async function loadSafeVisits() {
     var body = await visitApi('/');
     requestVisits = Array.isArray(body.visits) ? body.visits : [];
+    requestPostponementReasons = Array.isArray(body.postponementReasons) ? body.postponementReasons : [];
     renderRequestVisits();
   }
+
+  function nextDayValue(value) {
+    var date = new Date(String(value || '').slice(0, 10) + 'T12:00:00.000Z');
+    if (Number.isNaN(date.getTime())) date = new Date();
+    date.setUTCDate(date.getUTCDate() + 1);
+    return date.toISOString().slice(0, 10);
+  }
+
+  function ensurePostponementModal() {
+    var existing = document.getElementById('visit-postponement-modal');
+    if (existing) return existing;
+    var root = document.createElement('div');
+    root.id = 'visit-postponement-modal';
+    root.style.cssText = 'position:fixed;inset:0;background:rgba(15,32,80,.76);z-index:2147483100;display:none;align-items:center;justify-content:center;padding:18px';
+    root.innerHTML = '<div style="width:min(620px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.3);font-family:Tajawal,Arial,sans-serif"><div style="padding:15px 18px;background:linear-gradient(135deg,#0f2050,#1e3c72);color:#fff;display:flex;align-items:center;justify-content:space-between"><h3 style="margin:0">طلب تأجيل زيارة</h3><button type="button" data-close style="border:0;background:rgba(255,255,255,.16);color:#fff;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:20px">×</button></div><form data-form style="padding:19px;display:grid;gap:12px"><div data-summary style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;border-radius:10px;padding:11px 13px;font-size:12px;line-height:1.7"></div><label style="display:grid;gap:5px;font-size:12px;font-weight:800;color:#334155">التاريخ الجديد المطلوب<input name="requestedVisitDate" type="date" required style="border:1.5px solid #dbe3ef;border-radius:9px;padding:10px;font:inherit"></label><label style="display:grid;gap:5px;font-size:12px;font-weight:800;color:#334155">سبب الموقع للتأجيل<select name="reasonCode" required style="border:1.5px solid #dbe3ef;border-radius:9px;padding:10px;font:inherit"></select></label><label data-details style="display:grid;gap:5px;font-size:12px;font-weight:800;color:#334155">تفاصيل السبب<textarea name="reasonDetails" maxlength="1000" style="border:1.5px solid #dbe3ef;border-radius:9px;padding:10px;font:inherit;min-height:90px;resize:vertical"></textarea></label><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="submit" style="border:0;border-radius:9px;padding:10px 17px;background:#0f766e;color:#fff;font:800 13px Tajawal;cursor:pointer">إرسال طلب التأجيل للإدارة</button><button type="button" data-close style="border:1px solid #cbd5e1;border-radius:9px;padding:10px 17px;background:#fff;color:#334155;font:800 13px Tajawal;cursor:pointer">إلغاء</button></div></form></div>';
+    function close() { root.style.display = 'none'; document.body.style.overflow = ''; }
+    root.querySelectorAll('[data-close]').forEach(function (button) { button.addEventListener('click', close); });
+    root.addEventListener('click', function (event) { if (event.target === root) close(); });
+    root.querySelector('[name="reasonCode"]').addEventListener('change', function () { var details = root.querySelector('[name="reasonDetails"]'); details.required = this.value === 'other'; });
+    root.querySelector('[data-form]').addEventListener('submit', async function (event) {
+      event.preventDefault();
+      var visitId = Number(root.dataset.visitId || 0), button = this.querySelector('button[type="submit"]');
+      if (!visitId || !this.reportValidity()) return;
+      button.disabled = true;
+      try {
+        await visitApi('/' + visitId + '/postponement-request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestedVisitDate: this.elements.requestedVisitDate.value, reasonCode: this.elements.reasonCode.value, reasonDetails: this.elements.reasonDetails.value.trim() }) });
+        close();
+        await loadSafeVisits();
+        showMessage('تم إرسال طلب التأجيل إلى الإدارة دون تغيير موعد الزيارة الحالي حتى صدور القرار', 'success');
+      } catch (error) { showMessage(error.message || 'تعذر إرسال طلب التأجيل', 'error'); }
+      finally { button.disabled = false; }
+    });
+    document.body.appendChild(root);
+    return root;
+  }
+
+  function openPostponement(visitId) {
+    var visit = requestVisits.find(function (row) { return row.id === Number(visitId); });
+    if (!visit || !new Set(['pending', 'approved']).has(visit.status)) return;
+    if (visit.postponement && visit.postponement.status === 'pending') { showMessage('يوجد طلب تأجيل قيد مراجعة الإدارة بالفعل', 'error'); return; }
+    var root = ensurePostponementModal(), form = root.querySelector('[data-form]');
+    root.dataset.visitId = String(visit.id);
+    root.querySelector('[data-summary]').textContent = visit.repName + ' — ' + visit.siteLocation + ' — الموعد الحالي: ' + visitDateText(visit.visitDate);
+    form.elements.requestedVisitDate.min = nextDayValue(visit.visitDate);
+    form.elements.requestedVisitDate.value = nextDayValue(visit.visitDate);
+    form.elements.reasonCode.innerHTML = '<option value="">اختر سبب الموقع</option>' + requestPostponementReasons.map(function (row) { return '<option value="' + esc(row.code) + '">' + esc(row.label) + '</option>'; }).join('');
+    form.elements.reasonDetails.value = '';
+    form.elements.reasonDetails.required = false;
+    root.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  window.NajranVisitPostponement = { open: openPostponement };
 
   async function safeRefresh(announce) {
     var button = document.getElementById('request-visit-safe-refresh');

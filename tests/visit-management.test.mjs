@@ -89,6 +89,10 @@ test('security helpers enforce exact permissions, masking, validation, magic byt
     assert.equal(visitSecurity.decryptPermitToken(generated.tokenCiphertext), generated.token);
     assert.equal(visitSecurity.tokenHashesMatch(generated.token, generated.tokenHash), true);
     assert.equal(visitSecurity.tokenHashesMatch(generated.token + 'x', generated.tokenHash), false);
+    const downloadToken = visitSecurity.createPermitDownloadToken(generated.tokenHash);
+    assert.equal(visitSecurity.verifyPermitDownloadToken(downloadToken), generated.tokenHash);
+    assert.equal(visitSecurity.verifyPermitDownloadToken(downloadToken.slice(0, -1) + 'x'), null);
+    assert.equal(visitSecurity.verifyPermitDownloadToken(generated.token), null);
   } finally {
     if (previousSecret === undefined) delete process.env.VISIT_QR_SECRET;
     else process.env.VISIT_QR_SECRET = previousSecret;

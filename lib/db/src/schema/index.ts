@@ -191,6 +191,11 @@ export const visitRequestsTable = pgTable("visit_requests", {
   archivedByUserId: integer("archived_by_user_id").references(() => usersTable.id, { onDelete: "set null" }),
   archiveReason: text("archive_reason"),
   reissuedFromVisitId: integer("reissued_from_visit_id"),
+  // The current postponement request stays on the visit row so it is covered
+  // by the existing visit backup/restore path. The JSON payload also keeps the
+  // immutable decision history when a later postponement is requested.
+  postponementStatus: text("postponement_status", { enum: ["pending", "approved", "rejected"] }),
+  postponementRequestJson: text("postponement_request_json"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (t) => [
@@ -203,6 +208,7 @@ export const visitRequestsTable = pgTable("visit_requests", {
   // permit numbers that may already exist.
   uniqueIndex("visit_requests_atomic_serial_unique").on(t.serialNumber).where(sql`${t.serialNumber} ~ '^NHC-NJ-VIS-[0-9]{4}-[0-9]{2}-[0-9]{5}$'`),
   index("visit_requests_status_date_idx").on(t.status, t.visitDate),
+  index("visit_requests_postponement_status_idx").on(t.postponementStatus, t.visitDate),
 ]);
 
 export const insertVisitRequestSchema = createInsertSchema(visitRequestsTable).omit({ id: true, createdAt: true, updatedAt: true });

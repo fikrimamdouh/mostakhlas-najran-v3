@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var state = { data: null, settings: null, archivePage: 1, archivePages: 1, stream: null, scanLoop: 0, scanning: false, barcodeDetector: null, qrDeepLinkHandled: false, pendingRepresentativeContractor: null, documentPreviewUrl: null };
+  var state = { data: null, settings: null, archivePage: 1, archivePages: 1, stream: null, scanLoop: 0, scanning: false, barcodeDetector: null, qrDeepLinkHandled: false, pendingRepresentativeContractor: null, documentPreviewUrl: null, kioskQr: null };
   var UI_STATE_KEY = 'najran_visit_center_ui_state_v1';
   var SESSION_KEEPALIVE_MS = 45 * 1000;
   var sessionRefreshPromise = null;
@@ -219,11 +219,13 @@
   function renderAll() {
     var data = state.data;
     document.getElementById('stat-pending').textContent = data.stats.pending;
+    document.getElementById('stat-postponements').textContent = data.stats.pendingPostponements || 0;
     document.getElementById('stat-systems').textContent = data.stats.systems;
     document.getElementById('stat-contractors').textContent = data.stats.contractors;
     document.getElementById('stat-reps').textContent = data.stats.representatives;
     renderAlerts(data.alerts || []);
     renderPending(data.pending || []);
+    renderPostponements(data.pendingPostponements || []);
     populateForms();
     renderCatalogLists();
     renderPrintSettings();
@@ -240,6 +242,15 @@
     document.getElementById('incoming-body').innerHTML = rows.length ? rows.map(function (visit) {
       return '<tr><td><strong>' + esc(visit.repName) + '</strong><br><small>' + esc(visit.repIdMasked) + '</small></td><td>' + esc(visit.siteLocation) + '</td><td>' + esc(visit.systemName) + '</td><td>' + esc(visit.subContractor) + '</td><td>' + dateText(visit.visitDate) + '</td><td>' + badge(visit.status) + '</td><td><div class="actions"><button class="btn btn-green" data-link="' + visit.id + '">ربط واعتماد</button><button class="btn btn-red" data-reject="' + visit.id + '">رفض</button><button class="btn btn-light" data-preview="' + visit.id + '">معاينة</button></div></td></tr>';
     }).join('') : '<tr><td colspan="7" class="empty">لا توجد طلبات واردة</td></tr>';
+  }
+
+  function renderPostponements(rows) {
+    document.getElementById('postponements-body').innerHTML = rows.length ? rows.map(function (visit) {
+      var request = visit.postponement || {};
+      var reason = request.reasonLabel || '—';
+      if (request.reasonDetails) reason += '<br><small>' + esc(request.reasonDetails) + '</small>';
+      return '<tr><td><strong>' + esc(visit.repName) + '</strong><br><small>' + esc(visit.serialNumber || ('VIS-' + visit.id)) + '</small></td><td>' + esc(visit.siteLocation) + '</td><td>' + dateOnlyText(request.previousVisitDate || visit.visitDate) + '</td><td><strong>' + dateOnlyText(request.requestedVisitDate) + '</strong></td><td>' + reason + '</td><td>' + esc(request.requestedByName || 'مستخدم الموقع') + '<br><small>' + esc(request.requestedBySite || '') + '</small></td><td><div class="actions"><button class="btn btn-green" data-postpone-approve="' + visit.id + '">موافقة</button><button class="btn btn-red" data-postpone-reject="' + visit.id + '">رفض</button><button class="btn btn-light" data-visit-detail="' + visit.id + '">فتح الزيارة</button></div></td></tr>';
+    }).join('') : '<tr><td colspan="7" class="empty">لا توجد طلبات تأجيل معلقة</td></tr>';
   }
 
   function uniqueNamedRows(rows) {
@@ -262,6 +273,14 @@
     var company = (state.data.maintenanceContractors || []).find(function (row) { return row.key === key; });
     form.elements.siteName.innerHTML = siteOptions(company ? company.sites : [], current);
     renderDirectReadiness();
+  }
+
+  function refreshKioskSites() {
+    var form = document.getElementById('kiosk-form');
+    if (!form || !state.data) return;
+    var key = form.elements.maintenanceContractorKey.value, current = form.elements.siteName.value;
+    var company = (state.data.maintenanceContractors || []).find(function (row) { return row.key === key; });
+    form.elements.siteName.innerHTML = siteOptions(company ? company.sites : [], current);
   }
 
   function refreshDirectContractors() {
@@ -311,6 +330,8 @@
     if (repSystemOptions) repSystemOptions.innerHTML = systems.map(function (system) { return '<label class="check-chip"><input type="checkbox" name="repSystemIds" value="' + system.id + '"> ' + esc(entityName(system)) + '</label>'; }).join('');
     var maintenanceSelect = document.querySelector('#direct-form [name="maintenanceContractorKey"]'), maintenanceCurrent = maintenanceSelect.value;
     maintenanceSelect.innerHTML = '<option value="">اختر مقاول الصيانة</option>' + (d.maintenanceContractors || []).map(function (row) { return '<option value="' + esc(row.key) + '"' + (row.key === maintenanceCurrent ? ' selected' : '') + '>' + esc(row.name) + '</option>'; }).join('');
+    var kioskMaintenance = document.querySelector('#kiosk-form [name="maintenanceContractorKey"]'), kioskCurrent = kioskMaintenance.value;
+    kioskMaintenance.innerHTML = '<option value="">اختر مقاول الصيانة</option>' + (d.maintenanceContractors || []).map(function (row) { return '<option value="' + esc(row.key) + '"' + (row.key === kioskCurrent ? ' selected' : '') + '>' + esc(row.name) + '</option>'; }).join('');
     var savedRepresentativeSelect = document.getElementById('direct-saved-representative'), savedRepresentativeCurrent = savedRepresentativeSelect.value;
     refreshSavedRepresentativeOptions(document.getElementById('direct-representative-search').value, savedRepresentativeCurrent);
     var allSites = allMaintenanceSites(), approvalSite = document.getElementById('approval-site'), targetSite = document.querySelector('#copy-form [name="targetSite"]');
@@ -319,6 +340,7 @@
     var approvedSites = Array.from(new Set(d.siteApprovals.map(function (x) { return x.siteName; }))).filter(Boolean), sourceSite = document.querySelector('#copy-form [name="sourceSite"]');
     sourceSite.innerHTML = siteOptions(approvedSites, sourceSite.value);
     refreshDirectSites();
+    refreshKioskSites();
     refreshDirectContractors();
     var startInput = document.querySelector('#direct-form [name="startsAt"]');
     if (!startInput.value) startInput.value = localDateValue();
@@ -504,7 +526,7 @@
   });
 
   document.addEventListener('click', async function (event) {
-    var target = event.target.closest('[data-edit-system],[data-edit-contractor],[data-edit-qualification],[data-delete-system],[data-edit-approval],[data-delete-approval],[data-toggle-system],[data-toggle-contractor],[data-toggle-approval],[data-toggle-qualification],[data-toggle-rep],[data-delete-contractor],[data-delete-qualification],[data-delete-rep],[data-rep-systems],[data-upload-doc],[data-preview-doc],[data-download-doc],[data-disable-doc],[data-link],[data-reject],[data-preview],[data-visit-detail],[data-upload-signed],[data-download-signed]'); if (!target) return;
+    var target = event.target.closest('[data-edit-system],[data-edit-contractor],[data-edit-qualification],[data-delete-system],[data-edit-approval],[data-delete-approval],[data-toggle-system],[data-toggle-contractor],[data-toggle-approval],[data-toggle-qualification],[data-toggle-rep],[data-delete-contractor],[data-delete-qualification],[data-delete-rep],[data-rep-systems],[data-upload-doc],[data-preview-doc],[data-download-doc],[data-disable-doc],[data-link],[data-reject],[data-preview],[data-visit-detail],[data-upload-signed],[data-download-signed],[data-postpone-approve],[data-postpone-reject]'); if (!target) return;
     try {
       if (target.dataset.editSystem) openEditSystem(Number(target.dataset.editSystem));
       else if (target.dataset.editContractor) openEditContractor(Number(target.dataset.editContractor));
@@ -529,6 +551,8 @@
       else if (target.dataset.downloadSigned) downloadSignedPermit(Number(target.dataset.downloadSigned));
       else if (target.dataset.link) openLink(Number(target.dataset.link));
       else if (target.dataset.reject) openReject(Number(target.dataset.reject));
+      else if (target.dataset.postponeApprove) openPostponementDecision(Number(target.dataset.postponeApprove), 'approved');
+      else if (target.dataset.postponeReject) openPostponementDecision(Number(target.dataset.postponeReject), 'rejected');
       else if (target.dataset.preview) window.NajranVisitPermit.preview(Number(target.dataset.preview)).catch(window.NajranVisitPermit.showError);
       else if (target.dataset.visitDetail) openVisitDetail(Number(target.dataset.visitDetail));
     } catch (error) { toast(error.message, false); }
@@ -638,6 +662,24 @@
   }
   function openLink(id) { var visit = state.data.pending.find(function (x) { return x.id === id; }); if (!visit) return; modal('ربط الطلب واعتماده', linkFormHtml(visit), [{ label: 'حفظ الربط واعتماد التصريح', className: 'btn-green', action: async function (button) { button.disabled = true; try { var body = formObject(document.getElementById('link-form')); body.startsAt = dateOnlyIso(body.startsAt, false); body.endsAt = null; await api('/' + id + '/link', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); await api('/' + id + '/status', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'approved' }) }); closeModal(); toast('تم الربط والاعتماد وإصدار رقم جديد', true); await loadBootstrap(); } catch (e) { toast(e.message, false); button.disabled = false; } } }]); }
   function openReject(id) { modal('رفض طلب الزيارة', '<div class="field"><label>سبب الرفض</label><textarea id="reject-note" required></textarea></div>', [{ label: 'تأكيد الرفض', className: 'btn-red', action: async function (button) { var note = document.getElementById('reject-note').value.trim(); if (!note) { toast('سبب الرفض مطلوب', false); return; } button.disabled = true; try { await api('/' + id + '/status', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'rejected', adminNotes: note }) }); closeModal(); toast('تم رفض الطلب دون حذفه', true); await loadBootstrap(); } catch (e) { toast(e.message, false); button.disabled = false; } } }]); }
+
+  function openPostponementDecision(id, decision) {
+    var visit = (state.data.pendingPostponements || []).find(function (row) { return row.id === id; });
+    if (!visit || !visit.postponement) return;
+    var request = visit.postponement, rejected = decision === 'rejected';
+    var summary = '<div class="detail-grid"><div class="detail"><small>الزائر</small><strong>' + esc(visit.repName) + '</strong></div><div class="detail"><small>الموقع</small><strong>' + esc(visit.siteLocation) + '</strong></div><div class="detail"><small>التاريخ الحالي</small><strong>' + dateOnlyText(request.previousVisitDate) + '</strong></div><div class="detail"><small>التاريخ المطلوب</small><strong>' + dateOnlyText(request.requestedVisitDate) + '</strong></div><div class="detail"><small>سبب الموقع</small><strong>' + esc(request.reasonLabel) + '</strong></div><div class="detail"><small>مقدم الطلب</small><strong>' + esc(request.requestedByName || 'مستخدم الموقع') + '</strong></div></div>' + (request.reasonDetails ? '<div class="note" style="margin-top:11px">' + esc(request.reasonDetails) + '</div>' : '') + '<div class="field" style="margin-top:12px"><label>' + (rejected ? 'سبب رفض التأجيل' : 'ملاحظة القرار — اختيارية') + '</label><textarea id="postponement-decision-note"' + (rejected ? ' required' : '') + '></textarea></div>';
+    modal(rejected ? 'رفض طلب تأجيل الزيارة' : 'الموافقة على تأجيل الزيارة', summary, [{ label: rejected ? 'تأكيد رفض التأجيل' : 'تأكيد التاريخ الجديد', className: rejected ? 'btn-red' : 'btn-green', action: async function (button) {
+      var note = document.getElementById('postponement-decision-note').value.trim();
+      if (rejected && !note) { toast('سبب رفض التأجيل مطلوب', false); return; }
+      button.disabled = true;
+      try {
+        await api('/management/postponement-requests/' + id + '/decision', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId: request.requestId, decision: decision, decisionNotes: note }) });
+        closeModal();
+        toast(rejected ? 'تم رفض طلب التأجيل وبقي موعد الزيارة دون تغيير' : 'تم اعتماد التأجيل وتحديث موعد الزيارة والتصريح', true);
+        await loadBootstrap();
+      } catch (error) { toast(error.message, false); button.disabled = false; }
+    } }]);
+  }
 
   function selectedDirectRepresentativeIds() {
     return Array.from(document.querySelectorAll('[data-direct-representative]:checked')).map(function (node) { return Number(node.value); }).filter(Boolean);
@@ -812,6 +854,44 @@
     var visitDay = localDateValue(body.startsAt); var approval = state.data.siteApprovals.find(function (x) { return x.siteName === body.siteName && x.systemId === body.systemId && x.contractorId === body.contractorId && activeForVisitDate(x, visitDay); }); var qualification = state.data.qualifications.find(function (x) { return x.systemId === body.systemId && x.contractorId === body.contractorId && activeForVisitDate(x, visitDay); });
     body.siteApprovalId = approval ? approval.id : null; body.qualificationId = qualification ? qualification.id : null;
     try { var result = await api('/management/direct-issue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); toast(result.duplicate ? (result.message || ('تم إصدار تصريح سابق بنفس البيانات برقم ' + (result.visit.serialNumber || '—') + '؛ لم يتم إنشاء تصريح جديد')) : ('تم إصدار التصريح رقم ' + result.visit.serialNumber), true); await loadBootstrap(); window.NajranVisitPermit.preview(result.visit.id).catch(window.NajranVisitPermit.showError); } catch (e) { toast(e.message, false); }
+  });
+
+  function renderKioskQr(result) {
+    state.kioskQr = result;
+    var node = document.getElementById('kiosk-preview');
+    node.innerHTML = '<div id="kiosk-poster" class="kiosk-poster"><img class="logo" src="/original/najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي"><h3>نموذج طلب زيارة</h3><strong>' + esc(result.siteName) + '</strong><span style="display:block;color:#475569;font-size:12px;margin-top:4px">' + esc(result.maintenanceContractor) + '</span><img class="qr" src="' + esc(result.qrDataUrl) + '" alt="باركود نموذج طلب زيارة"><p>امسح الباركود بكاميرا الجوال، ثم اختر النظام والشركة وسجّل بيانات الزيارة. يصل الطلب مباشرة إلى إدارة الزيارات.</p></div><div class="actions" style="justify-content:center"><button type="button" class="btn btn-green" id="kiosk-download-pdf"><i class="fas fa-file-pdf"></i> تحميل بوستر PDF</button><button type="button" class="btn btn-light" id="kiosk-download-png"><i class="fas fa-qrcode"></i> تحميل الباركود PNG</button><a class="btn btn-primary" href="' + esc(result.requestUrl) + '" target="_blank" rel="noopener">فتح النموذج</a></div>';
+    document.getElementById('kiosk-download-pdf').addEventListener('click', downloadKioskPoster);
+    document.getElementById('kiosk-download-png').addEventListener('click', function () {
+      var link = document.createElement('a'); link.href = result.qrDataUrl; link.download = 'باركود-نموذج-طلب-زيارة-' + result.siteName + '.png'; link.click();
+    });
+  }
+
+  async function downloadKioskPoster() {
+    var poster = document.getElementById('kiosk-poster');
+    if (!poster || !state.kioskQr || !window.html2canvas || !window.jspdf?.jsPDF) { toast('مكتبة تجهيز البوستر غير متاحة', false); return; }
+    var button = document.getElementById('kiosk-download-pdf'); button.disabled = true;
+    try {
+      var canvas = await window.html2canvas(poster, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
+      var pdf = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      var pageWidth = pdf.internal.pageSize.getWidth(), margin = 18, imageWidth = pageWidth - margin * 2, imageHeight = canvas.height * imageWidth / canvas.width;
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, 20, imageWidth, Math.min(imageHeight, pdf.internal.pageSize.getHeight() - 40));
+      pdf.save('بوستر-نموذج-طلب-زيارة-' + state.kioskQr.siteName + '.pdf');
+      toast('تم تجهيز بوستر الموقع للطباعة', true);
+    } catch (error) { toast(error.message || 'تعذر تجهيز بوستر PDF', false); }
+    finally { button.disabled = false; }
+  }
+
+  document.querySelector('#kiosk-form [name="maintenanceContractorKey"]').addEventListener('change', refreshKioskSites);
+  document.getElementById('kiosk-form').addEventListener('submit', async function (event) {
+    event.preventDefault();
+    if (!this.reportValidity()) return;
+    var button = this.querySelector('button[type="submit"]'); button.disabled = true;
+    try {
+      var result = await api('/management/request-form-qr', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formObject(this)) });
+      renderKioskQr(result);
+      toast('تم تجهيز باركود نموذج طلب الزيارة للموقع', true);
+    } catch (error) { toast(error.message, false); }
+    finally { button.disabled = false; }
   });
 
   document.getElementById('copy-form').addEventListener('submit', async function (event) { event.preventDefault(); var body = formObject(this); try { var preview = await api('/management/copy-site/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); var html = preview.rows.length ? '<div class="note">راجع الصفوف وحدد المطلوب نسخه إلى «' + esc(preview.targetSite) + '».</div><div class="system-links" style="margin-top:12px">' + preview.rows.map(function (row) { return '<label class="check-chip"><input type="checkbox" name="copy-approval" value="' + row.id + '" checked> ' + esc(row.systemName) + ' — ' + esc(row.contractorName) + '</label>'; }).join('') + '</div>' : '<div class="empty">لا توجد اعتمادات في الموقع المصدر</div>'; modal('مراجعة نسخ إعدادات الموقع', html, preview.rows.length ? [{ label: 'تأكيد النسخ', className: 'btn-green', action: async function () { var ids = Array.from(document.querySelectorAll('input[name="copy-approval"]:checked')).map(function (x) { return Number(x.value); }); try { await api('/management/copy-site/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sourceSite: preview.sourceSite, targetSite: preview.targetSite, approvalIds: ids }) }); closeModal(); toast('تم نسخ الاعتمادات بعد المراجعة', true); await loadBootstrap(); } catch (e) { toast(e.message, false); } } }] : []); } catch (e) { toast(e.message, false); } });

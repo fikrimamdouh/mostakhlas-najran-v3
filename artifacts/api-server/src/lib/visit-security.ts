@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import path from "node:path";
 
 export const CLUSTER_VISIT_PERMISSION = "cluster_visit_management";
@@ -146,6 +146,22 @@ export function tokenHashesMatch(token: string, expectedHex: string): boolean {
   const actual = Buffer.from(sha256(token), "hex");
   const expected = Buffer.from(expectedHex, "hex");
   return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
+export function createPermitDownloadToken(tokenHash: string): string {
+  if (!/^[a-f\d]{64}$/i.test(tokenHash)) throw new Error("INVALID_PERMIT_TOKEN_HASH");
+  const normalizedHash = tokenHash.toLowerCase();
+  const signature = createHmac("sha256", getTokenSecret()).update(`permit-download:${normalizedHash}`).digest("base64url");
+  return `${normalizedHash}.${signature}`;
+}
+
+export function verifyPermitDownloadToken(value: string): string | null {
+  const match = value.match(/^([a-f\d]{64})\.([A-Za-z0-9_-]{43})$/i);
+  if (!match) return null;
+  const tokenHash = match[1].toLowerCase();
+  const actual = Buffer.from(match[2], "utf8");
+  const expected = Buffer.from(createHmac("sha256", getTokenSecret()).update(`permit-download:${tokenHash}`).digest("base64url"), "utf8");
+  return actual.length === expected.length && timingSafeEqual(actual, expected) ? tokenHash : null;
 }
 
 export function sanitizeFilename(name: unknown): string {

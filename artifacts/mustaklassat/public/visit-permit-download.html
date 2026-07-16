@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>تحميل تصريح الزيارة</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#eef2f8;color:#172033;font-family:Tajawal,Arial,sans-serif}.shell{max-width:920px;margin:auto;padding:18px}.head{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#0f2050,#1e3c72 58%,#2a5298);color:#fff;border-radius:16px;padding:17px 20px;box-shadow:0 12px 30px rgba(15,32,80,.2)}.head img{width:58px;height:58px;object-fit:contain;background:#fff;border-radius:11px}.head h1{font-size:21px;margin:0}.head p{font-size:12px;color:#dbeafe;margin:4px 0 0}.actions{display:flex;gap:9px;flex-wrap:wrap;margin:14px 0}.button{border:0;border-radius:10px;padding:11px 18px;font:800 14px Tajawal;cursor:pointer}.button:disabled{opacity:.55;cursor:not-allowed}.download{background:#15803d;color:#fff}.retry{background:#1e3c72;color:#fff}.status{display:none;border-radius:11px;padding:12px 14px;margin:13px 0;font-weight:700}.status.show{display:block}.status.error{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}.status.ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}.permit-wrap{overflow:auto;border-radius:14px;padding:10px;background:#dbe3ef}.permit-wrap:empty{display:none}#permit-host .najran-visit-permit-document{max-width:100%;height:auto}@media(max-width:620px){.shell{padding:10px}.head{align-items:flex-start}.head h1{font-size:18px}.actions{display:grid}.button{width:100%}.permit-wrap{padding:4px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="head"><img src="/original/najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي"><div><h1>تحميل تصريح الزيارة</h1><p>نسخة إلكترونية مطابقة للنموذج المعتمد داخل النظام</p></div></header>
+    <div id="status" class="status">جارٍ تحميل التصريح...</div>
+    <div class="actions"><button id="download" class="button download" type="button" disabled>تحميل الزيارة PDF</button><button id="retry" class="button retry" type="button" hidden>إعادة المحاولة</button></div>
+    <section id="permit-host" class="permit-wrap" aria-live="polite"></section>
+  </main>
+  <script src="/original/visit-permit-print.js?v=20260716_public_download_qr_v9"></script>
+  <script>
+    (function () {
+      'use strict';
+      var payload = null;
+      var status = document.getElementById('status');
+      var download = document.getElementById('download');
+      var retry = document.getElementById('retry');
+
+      function setStatus(message, ok) {
+        status.textContent = message;
+        status.className = 'status show ' + (ok ? 'ok' : 'error');
+      }
+
+      function tokenFromHash() {
+        try { return decodeURIComponent(location.hash.slice(1)).trim(); } catch (_) { return ''; }
+      }
+
+      async function load() {
+        download.disabled = true;
+        retry.hidden = true;
+        document.getElementById('permit-host').innerHTML = '';
+        var token = tokenFromHash();
+        if (!token) { setStatus('رابط تحميل الزيارة غير مكتمل', false); retry.hidden = false; return; }
+        status.textContent = 'جارٍ تحميل التصريح المعتمد...';
+        status.className = 'status show ok';
+        try {
+          payload = await window.NajranVisitPermit.loadPublic(token);
+          window.NajranVisitPermit.mount(payload, document.getElementById('permit-host'));
+          setStatus('تم تحميل النسخة الإلكترونية المعتمدة. يمكن حفظها PDF على الهاتف.', true);
+          download.disabled = false;
+        } catch (error) {
+          payload = null;
+          setStatus(error.message || 'تعذر تحميل تصريح الزيارة', false);
+          retry.hidden = false;
+        }
+      }
+
+      download.addEventListener('click', async function () {
+        if (!payload) return;
+        download.disabled = true;
+        download.textContent = 'جارٍ تجهيز PDF...';
+        try { await window.NajranVisitPermit.printPayload(payload); }
+        catch (error) { setStatus(error.message || 'تعذر تجهيز ملف PDF', false); }
+        finally { download.disabled = false; download.textContent = 'تحميل الزيارة PDF'; }
+      });
+      retry.addEventListener('click', load);
+      load();
+    })();
+  </script>
+</body>
+</html>

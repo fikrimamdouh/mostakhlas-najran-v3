@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>نموذج طلب زيارة</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{--navy:#0f2050;--primary:#1e3c72;--blue:#2a5298;--green:#15803d;--red:#991b1b;--line:#dbe3ef;--muted:#64748b}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(180deg,#eaf0f8,#f8fafc);font-family:Tajawal,Arial,sans-serif;color:#172033}.shell{width:min(920px,100%);margin:auto;padding:18px}.hero{display:flex;align-items:center;gap:15px;background:linear-gradient(135deg,var(--navy),var(--primary) 58%,var(--blue));color:#fff;padding:20px 22px;border-radius:17px;box-shadow:0 14px 34px rgba(15,32,80,.2)}.hero img{width:64px;height:64px;object-fit:contain;background:#fff;border-radius:12px}.hero h1{font-size:24px;margin:0}.hero p{font-size:12px;color:#dbeafe;margin:4px 0 0;line-height:1.7}.card{margin-top:14px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:21px;box-shadow:0 7px 24px rgba(15,32,80,.07)}.notice{border-radius:11px;padding:11px 13px;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-size:12px;line-height:1.7;margin-bottom:16px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}.field label{font-size:12px;font-weight:800;color:#334155}.field input,.field select{width:100%;min-height:44px;border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;background:#fff;font:inherit}.field input:focus,.field select:focus{outline:0;border-color:var(--blue);box-shadow:0 0 0 3px rgba(42,82,152,.09)}.field input:disabled,.field select:disabled{background:#f1f5f9;color:#475569}.submit{grid-column:1/-1;border:0;border-radius:11px;padding:13px 18px;background:linear-gradient(135deg,#15803d,#166534);color:#fff;font:800 15px Tajawal;cursor:pointer}.submit:disabled{opacity:.58;cursor:not-allowed}.status{display:none;margin-top:14px;border-radius:11px;padding:12px 14px;font-weight:700;line-height:1.7}.status.show{display:block}.status.ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}.status.error{background:#fef2f2;color:var(--red);border:1px solid #fecaca}.privacy{font-size:11px;color:var(--muted);line-height:1.8;margin:13px 0 0}.hp{position:absolute!important;right:-9999px!important;width:1px!important;height:1px!important;overflow:hidden!important}@media(max-width:680px){.shell{padding:10px}.hero{align-items:flex-start;padding:16px}.hero img{width:54px;height:54px}.hero h1{font-size:20px}.card{padding:15px}.grid{grid-template-columns:1fr}.field.full,.submit{grid-column:auto}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero"><img src="/original/najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي"><div><h1>نموذج طلب زيارة</h1><p>سجّل بيانات الزيارة من القوائم المعتمدة. يصل الطلب مباشرة إلى إدارة زيارات مقاولي الباطن للمراجعة.</p></div></header>
+    <section class="card">
+      <div class="notice">الموقع والنظام والشركة تُراجع آليًا مع اعتماد الموقع وتأهيل الشركة ودليل المندوبين. لن يُعتبر الطلب محفوظًا إلا بعد ظهور رقم الطلب.</div>
+      <form id="request-form" class="grid" autocomplete="on">
+        <div class="field"><label for="maintenance">مقاول الصيانة</label><select id="maintenance" required><option value="">جارٍ التحميل...</option></select></div>
+        <div class="field"><label for="site">الموقع / المستشفى</label><select id="site" required><option value="">اختر مقاول الصيانة أولًا</option></select></div>
+        <div class="field"><label for="visit-date">تاريخ الزيارة المطلوب</label><input id="visit-date" type="date" required></div>
+        <div class="field"><label for="system">النظام المراد زيارته</label><select id="system" required><option value="">اختر الموقع والتاريخ أولًا</option></select></div>
+        <div class="field full"><label for="contractor">شركة مقاول الباطن</label><select id="contractor" required><option value="">اختر النظام أولًا</option></select></div>
+        <div class="field full"><label for="full-name">اسم الزائر كما هو مسجل في الدليل</label><input id="full-name" maxlength="200" required autocomplete="name"></div>
+        <div class="field"><label for="identity">رقم الهوية / الإقامة</label><input id="identity" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" required autocomplete="off"></div>
+        <div class="field"><label for="mobile">رقم الجوال السعودي</label><input id="mobile" inputmode="tel" maxlength="14" required autocomplete="tel" placeholder="05xxxxxxxx"></div>
+        <div class="hp" aria-hidden="true"><label for="website">الموقع الإلكتروني</label><input id="website" tabindex="-1" autocomplete="off"></div>
+        <button id="submit" class="submit" type="submit">إرسال طلب الزيارة</button>
+      </form>
+      <div id="status" class="status" aria-live="polite"></div>
+      <p class="privacy">تُستخدم البيانات للتحقق من أهلية الزيارة وإصدار التصريح فقط. لا تعرض الصفحة العامة أسماء المندوبين أو أرقامهم المسجلة.</p>
+    </section>
+  </main>
+  <script>
+    (function () {
+      'use strict';
+      var catalog = null;
+      var form = document.getElementById('request-form');
+      var maintenance = document.getElementById('maintenance');
+      var site = document.getElementById('site');
+      var visitDate = document.getElementById('visit-date');
+      var system = document.getElementById('system');
+      var contractor = document.getElementById('contractor');
+      var submit = document.getElementById('submit');
+      var status = document.getElementById('status');
+
+      function esc(value) { return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+      function localDay() { var date = new Date(); date.setMinutes(date.getMinutes() - date.getTimezoneOffset()); return date.toISOString().slice(0,10); }
+      function activeOnDate(row, day) { return row && row.status === 'active' && (!row.validFrom || row.validFrom <= day) && (!row.validUntil || row.validUntil >= day); }
+      function setStatus(message, ok) { status.textContent = message; status.className = 'status show ' + (ok ? 'ok' : 'error'); }
+      function option(value, label, selected) { return '<option value="' + esc(value) + '"' + (String(value) === String(selected || '') ? ' selected' : '') + '>' + esc(label) + '</option>'; }
+
+      function refreshSites(preferred) {
+        var row = catalog && catalog.maintenanceContractors.find(function (item) { return item.key === maintenance.value; });
+        site.innerHTML = '<option value="">اختر الموقع</option>' + (row ? row.sites.map(function (name) { return option(name, name, preferred); }).join('') : '');
+        refreshSystems();
+      }
+
+      function validApprovalRows() {
+        var day = visitDate.value;
+        return catalog ? catalog.siteApprovals.filter(function (row) { return row.siteName === site.value && activeOnDate(row, day); }) : [];
+      }
+
+      function qualificationValid(systemId, contractorId) {
+        var day = visitDate.value;
+        return catalog.qualifications.some(function (row) { return row.systemId === systemId && row.contractorId === contractorId && activeOnDate(row, day); });
+      }
+
+      function refreshSystems(preferred) {
+        var current = preferred || system.value;
+        var allowed = Object.create(null);
+        validApprovalRows().forEach(function (row) { if (qualificationValid(row.systemId, row.contractorId)) allowed[row.systemId] = true; });
+        var rows = catalog ? catalog.systems.filter(function (row) { return allowed[row.id]; }) : [];
+        system.innerHTML = '<option value="">اختر النظام</option>' + rows.map(function (row) { return option(row.id, row.name, current); }).join('');
+        if (!rows.some(function (row) { return String(row.id) === String(current); })) system.value = '';
+        refreshContractors();
+      }
+
+      function refreshContractors(preferred) {
+        var current = preferred || contractor.value;
+        var systemId = Number(system.value || 0), allowed = Object.create(null);
+        validApprovalRows().forEach(function (row) { if (row.systemId === systemId && qualificationValid(row.systemId, row.contractorId)) allowed[row.contractorId] = true; });
+        var rows = catalog ? catalog.contractors.filter(function (row) { return allowed[row.id]; }) : [];
+        contractor.innerHTML = '<option value="">اختر شركة مقاول الباطن</option>' + rows.map(function (row) { return option(row.id, row.name, current); }).join('');
+        if (!rows.some(function (row) { return String(row.id) === String(current); })) contractor.value = '';
+      }
+
+      async function loadCatalog() {
+        try {
+          var response = await fetch('/api/visits/public/request-catalog', { cache: 'no-store' });
+          var body = await response.json().catch(function () { return {}; });
+          if (!response.ok) throw new Error(body.error || 'تعذر تحميل بيانات الزيارات');
+          catalog = body;
+          maintenance.innerHTML = '<option value="">اختر مقاول الصيانة</option>' + body.maintenanceContractors.map(function (row) { return option(row.key, row.name); }).join('');
+          var params = new URLSearchParams(location.search);
+          var maintenanceKey = params.get('maintenance') || '';
+          var siteName = params.get('site') || '';
+          if (body.maintenanceContractors.some(function (row) { return row.key === maintenanceKey; })) maintenance.value = maintenanceKey;
+          refreshSites(siteName);
+          if (maintenance.value && site.value === siteName) {
+            maintenance.disabled = true;
+            site.disabled = true;
+          }
+          setStatus('تم تحميل القوائم المعتمدة. أكمل بيانات الزيارة ثم أرسل الطلب.', true);
+        } catch (error) {
+          maintenance.innerHTML = '<option value="">تعذر التحميل</option>';
+          setStatus(error.message || 'تعذر تحميل بيانات الزيارات', false);
+        }
+      }
+
+      maintenance.addEventListener('change', function () { refreshSites(); });
+      site.addEventListener('change', function () { refreshSystems(); });
+      visitDate.addEventListener('change', function () { refreshSystems(); });
+      system.addEventListener('change', function () { refreshContractors(); });
+      document.getElementById('identity').addEventListener('input', function () { this.value = this.value.replace(/\D/g, '').slice(0, 10); });
+
+      form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        if (!catalog || !form.reportValidity()) return;
+        submit.disabled = true;
+        submit.textContent = 'جارٍ حفظ الطلب...';
+        try {
+          var response = await fetch('/api/visits/public/requests', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              maintenanceContractorKey: maintenance.value,
+              siteLocation: site.value,
+              visitDate: visitDate.value,
+              systemId: Number(system.value),
+              contractorId: Number(contractor.value),
+              fullName: document.getElementById('full-name').value.trim(),
+              identityNumber: document.getElementById('identity').value.trim(),
+              mobile: document.getElementById('mobile').value.trim(),
+              website: document.getElementById('website').value,
+            })
+          });
+          var body = await response.json().catch(function () { return {}; });
+          if (!response.ok) throw new Error(body.error || 'تعذر حفظ طلب الزيارة');
+          setStatus(body.duplicate ? 'الطلب مسجل بالفعل ولم يتم إنشاء نسخة مكررة. رقم الطلب: ' + body.requestNumber : 'تم إرسال طلب الزيارة للإدارة بنجاح. رقم الطلب: ' + body.requestNumber, true);
+          document.getElementById('full-name').value = '';
+          document.getElementById('identity').value = '';
+          document.getElementById('mobile').value = '';
+        } catch (error) {
+          setStatus(error.message || 'تعذر حفظ طلب الزيارة', false);
+        } finally {
+          submit.disabled = false;
+          submit.textContent = 'إرسال طلب الزيارة';
+        }
+      });
+
+      visitDate.value = localDay();
+      visitDate.min = localDay();
+      loadCatalog();
+    })();
+  </script>
+</body>
+</html>

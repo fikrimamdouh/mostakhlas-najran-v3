@@ -28,6 +28,7 @@ import { findCurrentUser } from "../lib/current-user";
 import { logAudit } from "./audit";
 import {
   createPermitToken,
+  createPermitDownloadToken,
   decryptPermitToken,
   detectVisitFile,
   hasClusterVisitManagement,
@@ -41,6 +42,7 @@ import {
   sha256,
   shortenVisitorName,
   tokenHashesMatch,
+  verifyPermitDownloadToken,
   validateVisitWindow,
   validateZipEntries,
   visitEffectiveStatus,
@@ -56,6 +58,17 @@ const LEGACY_VISIT_SIGNER_TITLE = "مشرف وحدة الصيانة العامة
 const DEFAULT_VISIT_SIGNER_TITLE = "مدير وحدة الصيانة العامة بتجمع نجران الصحي";
 const DEFAULT_VISIT_SIGNER_NAME = "م. محمد عباس المكرمي";
 const DEFAULT_VISIT_PURPOSE = "زيارة دورية لأنظمة المستشفى";
+const permitVerificationQrDataUrl = (verifyUrl: string) =>
+  QRCode.toDataURL(verifyUrl, { errorCorrectionLevel: "M", margin: 1, width: 220 });
+const POSTPONEMENT_REASONS = [
+  { code: "site_not_ready", label: "الموقع غير جاهز لاستقبال الزيارة" },
+  { code: "operational_conflict", label: "تعارض مع أعمال أو تشغيل داخل الموقع" },
+  { code: "access_unavailable", label: "تعذر توفير الدخول أو التصاريح اللازمة" },
+  { code: "safety_emergency", label: "حالة طارئة أو متطلبات سلامة بالموقع" },
+  { code: "coordination_incomplete", label: "عدم اكتمال التنسيق مع الجهة المختصة" },
+  { code: "site_request", label: "طلب إدارة الموقع تغيير الموعد" },
+  { code: "other", label: "سبب آخر" },
+] as const;
 const VISIT_PRINT_TEXT_FIELDS = [
   { field: "organizationText", key: "visit_permit_organization_text", fallback: "تجمع نجران الصحي — وحدة الصيانة العامة", max: 200 },
   { field: "permitTitle", key: "visit_permit_title", fallback: "إعتماد موافقة زيارة مقاولي الباطن", max: 200 },
@@ -229,6 +242,7 @@ type LegacyRepresentativeRecord = { sourceFile: string; fullName: string; identi
 const legacyRepresentativePreviews = new Map<string, { expiresAt: number; uploadedBy: number; records: LegacyRepresentativeRecord[] }>();
 const representativeRosterPreviews = new Map<string, { expiresAt: number; uploadedBy: number; sha: string; records: RepresentativeRosterRecord[] }>();
 const scanRate = new Map<string, number[]>();
+const publicVisitRequestRate = new Map<string, number[]>();
 
 function clientIp(req: any): string {
   return req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
@@ -247,6 +261,23 @@ function assertScanRate(req: any, res: any): boolean {
   scanRate.set(key, recent);
   if (scanRate.size > 2_000) {
     for (const [candidate, times] of scanRate) if (!times.some((at) => now - at < 60_000)) scanRate.delete(candidate);
+  }
+  return true;
+}
+
+function assertPublicVisitRequestRate(req: any, res: any): boolean {
+  const key = clientIp(req);
+  const now = Date.now();
+  const recent = (publicVisitRequestRate.get(key) || []).filter((at) => now - at < 60_000);
+  if (recent.length >= 6) {
+    res.setHeader("Retry-After", "60");
+    res.status(429).json({ error: "تم تجاوز عدد طلبات الزيارة المسموح؛ حاول بعد دقيقة" });
+    return false;
+  }
+  recent.push(now);
+  publicVisitRequestRate.set(key, recent);
+  if (publicVisitRequestRate.size > 2_000) {
+    for (const [candidate, times] of publicVisitRequestRate) if (!times.some((at) => now - at < 60_000)) publicVisitRequestRate.delete(candidate);
   }
   return true;
 }
@@ -282,6 +313,65 @@ function audit(req: any, action: string, details: Record<string, unknown>) {
 
 function cleanText(value: unknown, max = 500): string {
   return String(value ?? "").trim().slice(0, max);
+}
+
+function normalizedDigits(value: unknown): string {
+  return String(value ?? "").replace(/\D/g, "");
+}
+
+function normalizedSaudiMobile(value: unknown): string {
+  const digits = normalizedDigits(value);
+  return digits.startsWith("966") ? `0${digits.slice(3)}` : digits;
+}
+
+type PostponementEntry = {
+  requestId: string;
+  previousVisitDate: string;
+  requestedVisitDate: string;
+  reasonCode: string;
+  reasonLabel: string;
+  reasonDetails: string | null;
+  requestedByUserId: number | null;
+  requestedByName: string;
+  requestedBySite: string | null;
+  requestedAt: string;
+  status: "pending" | "approved" | "rejected";
+  decidedByUserId?: number | null;
+  decidedByName?: string | null;
+  decisionNotes?: string | null;
+  decidedAt?: string | null;
+};
+
+type PostponementEnvelope = { schemaVersion: 1; current: PostponementEntry | null; history: PostponementEntry[] };
+
+function parsedPostponement(value: unknown): PostponementEnvelope {
+  try {
+    const parsed = JSON.parse(String(value || "null"));
+    if (parsed?.schemaVersion === 1 && Array.isArray(parsed.history)) {
+      return { schemaVersion: 1, current: parsed.current && typeof parsed.current === "object" ? parsed.current : null, history: parsed.history.filter((row: unknown) => row && typeof row === "object").slice(-50) } as PostponementEnvelope;
+    }
+  } catch {}
+  return { schemaVersion: 1, current: null, history: [] };
+}
+
+function postponementSummary(visit: any) {
+  const current = parsedPostponement(visit?.postponementRequestJson).current;
+  if (!current) return null;
+  return {
+    requestId: current.requestId,
+    previousVisitDate: current.previousVisitDate,
+    requestedVisitDate: current.requestedVisitDate,
+    reasonCode: current.reasonCode,
+    reasonLabel: current.reasonLabel,
+    reasonDetails: current.reasonDetails,
+    requestedByName: current.requestedByName,
+    requestedBySite: current.requestedBySite,
+    requestedAt: current.requestedAt,
+    status: visit.postponementStatus || current.status,
+    decidedByName: current.decidedByName || null,
+    decisionNotes: current.decisionNotes || null,
+    decidedAt: current.decidedAt || null,
+  };
 }
 
 function effectiveSignerTitle(value: unknown): string {
@@ -509,6 +599,7 @@ function sanitizeVisit(visit: any, metadata?: any | null) {
     archivedAt: visit.archivedAt,
     archiveReason: visit.archiveReason,
     reissuedFromVisitId: visit.reissuedFromVisitId,
+    postponement: postponementSummary(visit),
     purpose: metadata?.purpose || null,
     startsAt: metadata?.startsAt || null,
     endsAt: metadata?.endsAt || null,
@@ -961,6 +1052,116 @@ router.post("/settings", requireAuth, requireApproved, requireClusterVisitManage
   return res.json({ success: true });
 });
 
+router.get("/public/request-catalog", async (req: any, res) => {
+  if (!assertScanRate(req, res)) return;
+  const [systems, contractors, qualifications, siteApprovals] = await Promise.all([
+    db.select({ id: visitSystemsTable.id, name: visitSystemsTable.name }).from(visitSystemsTable).where(eq(visitSystemsTable.isActive, true)).orderBy(asc(visitSystemsTable.name)),
+    db.select({ id: visitContractorsTable.id, name: visitContractorsTable.name }).from(visitContractorsTable).where(eq(visitContractorsTable.isActive, true)).orderBy(asc(visitContractorsTable.name)),
+    db.select({ id: visitQualificationsTable.id, systemId: visitQualificationsTable.systemId, contractorId: visitQualificationsTable.contractorId, validFrom: visitQualificationsTable.validFrom, validUntil: visitQualificationsTable.validUntil, status: visitQualificationsTable.status }).from(visitQualificationsTable).where(eq(visitQualificationsTable.status, "active")),
+    db.select({ id: visitSiteApprovalsTable.id, siteName: visitSiteApprovalsTable.siteName, systemId: visitSiteApprovalsTable.systemId, contractorId: visitSiteApprovalsTable.contractorId, validFrom: visitSiteApprovalsTable.validFrom, validUntil: visitSiteApprovalsTable.validUntil, status: visitSiteApprovalsTable.status }).from(visitSiteApprovalsTable).where(eq(visitSiteApprovalsTable.status, "active")),
+  ]);
+  res.setHeader("Cache-Control", "no-store");
+  return res.json({
+    maintenanceContractors: MAINTENANCE_CONTRACTORS.map((row) => ({ key: row.key, name: row.name, sites: [...row.sites] })),
+    systems: systems.map((row) => ({ ...row, name: canonicalSystemName(row.name) })),
+    contractors: contractors.map((row) => ({ ...row, name: canonicalContractorName(row.name) })),
+    qualifications,
+    siteApprovals,
+  });
+});
+
+router.post("/public/requests", async (req: any, res) => {
+  if (!assertPublicVisitRequestRate(req, res)) return;
+  const body = req.body || {};
+  if (cleanText(body.website, 200)) return res.status(400).json({ error: "تعذر قبول الطلب" });
+
+  const maintenance = maintenanceContractor(body.maintenanceContractorKey);
+  const siteLocation = cleanText(body.siteLocation, 200);
+  const systemId = numberId(body.systemId);
+  const contractorId = numberId(body.contractorId);
+  const identityNumber = normalizedDigits(body.identityNumber);
+  const submittedMobile = cleanText(body.mobile, 30);
+  const submittedName = cleanText(body.fullName, 200);
+  const visitDate = dayString(body.visitDate);
+  if (!maintenance || !maintenance.sites.some((site) => site === siteLocation) || !systemId || !contractorId || !/^\d{10}$/.test(identityNumber) || !isValidSaudiMobile(submittedMobile) || !submittedName || !visitDate) {
+    return res.status(400).json({ error: "أكمل بيانات الموقع والنظام والشركة والاسم والهوية والجوال وتاريخ الزيارة بصورة صحيحة" });
+  }
+  const visitDay = parseIsoDate(visitDate);
+  if (!visitDay) return res.status(400).json({ error: "تاريخ الزيارة غير صالح" });
+
+  try {
+    const [systems, contractors, representatives, approvals, qualifications, representativeSystems] = await Promise.all([
+      db.select().from(visitSystemsTable).where(eq(visitSystemsTable.id, systemId)).limit(1),
+      db.select().from(visitContractorsTable).where(eq(visitContractorsTable.id, contractorId)).limit(1),
+      db.select().from(visitRepresentativesTable).where(eq(visitRepresentativesTable.identityNumber, identityNumber)).limit(1),
+      db.select().from(visitSiteApprovalsTable).where(and(eq(visitSiteApprovalsTable.siteName, siteLocation), eq(visitSiteApprovalsTable.systemId, systemId), eq(visitSiteApprovalsTable.contractorId, contractorId), eq(visitSiteApprovalsTable.status, "active"))).limit(1),
+      db.select().from(visitQualificationsTable).where(and(eq(visitQualificationsTable.systemId, systemId), eq(visitQualificationsTable.contractorId, contractorId), eq(visitQualificationsTable.status, "active"))).limit(1),
+      db.select({ representativeId: visitRepresentativeSystemsTable.representativeId }).from(visitRepresentativeSystemsTable).where(and(eq(visitRepresentativeSystemsTable.systemId, systemId), eq(visitRepresentativeSystemsTable.isActive, true))),
+    ]);
+    const system = systems[0], contractor = contractors[0], representative = representatives[0], approval = approvals[0], qualification = qualifications[0];
+    const representativeLinked = representative && representativeSystems.some((row) => row.representativeId === representative.id);
+    const identityMatches = representative && representative.contractorId === contractorId && normalizedSaudiMobile(representative.mobile) === normalizedSaudiMobile(submittedMobile) && catalogNameKey(representative.fullName) === catalogNameKey(submittedName);
+    const referencesValid = system?.isActive && contractor?.isActive && representative?.isActive && representativeLinked && approval && qualification && isDateWithin(visitDay, approval.validFrom, approval.validUntil) && isDateWithin(visitDay, qualification.validFrom, qualification.validUntil);
+    if (!identityMatches || !referencesValid) return res.status(400).json({ error: "بيانات الزائر غير مطابقة لدليل الشركة والنظام أو الاعتمادات غير سارية في التاريخ المحدد" });
+
+    const repName = cleanText(representative.fullName, 200);
+    const repMobile = cleanText(representative.mobile, 30);
+    const systemName = canonicalSystemName(system.name);
+    const subContractor = canonicalContractorName(contractor.name);
+    const mainContractor = maintenance.name;
+    const dedupeKey = [identityNumber, siteLocation, systemName, subContractor, visitDate].map((value) => catalogNameKey(value)).join("|");
+    const result = await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${dedupeKey}, 0))`);
+      const [existing] = await tx.select().from(visitRequestsTable).where(and(
+        eq(visitRequestsTable.repId, identityNumber),
+        eq(visitRequestsTable.siteLocation, siteLocation),
+        eq(visitRequestsTable.systemName, systemName),
+        eq(visitRequestsTable.subContractor, subContractor),
+        eq(visitRequestsTable.visitDate, visitDate),
+        ne(visitRequestsTable.status, "cancelled"),
+        isNull(visitRequestsTable.archivedAt),
+      )).orderBy(desc(visitRequestsTable.createdAt)).limit(1);
+      if (existing) return { visit: existing, duplicate: true };
+      const [visit] = await tx.insert(visitRequestsTable).values({
+        userId: null,
+        repName,
+        repId: identityNumber,
+        repMobile,
+        siteLocation,
+        visitDate,
+        systemName,
+        mainContractor,
+        subContractor,
+        status: "pending",
+        submittedByName: "نموذج طلب زيارة العام",
+        submittedByHospital: siteLocation,
+        submittedByContract: "PUBLIC_SITE_QR",
+      }).returning();
+      await tx.insert(visitRequestMetadataTable).values({
+        visitId: visit.id,
+        systemId,
+        contractorId,
+        representativeId: representative.id,
+        siteApprovalId: approval.id,
+        qualificationId: qualification.id,
+        purpose: DEFAULT_VISIT_PURPOSE,
+        startsAt: new Date(`${visitDate}T00:00:00.000Z`),
+        endsAt: null,
+        linkedAt: new Date(),
+      });
+      await ensurePermitToken(tx, visit.id);
+      return { visit, duplicate: false };
+    });
+
+    await audit(req, result.duplicate ? "منع تكرار طلب زيارة من النموذج العام" : "إنشاء طلب زيارة من النموذج العام", { visitId: result.visit.id, siteLocation, systemName, subContractor, duplicate: result.duplicate });
+    if (!result.duplicate) sendVisitNewRequestEmail(ADMIN_EMAIL, { repName, siteLocation, systemName, mainContractor, subContractor, visitDate, submittedByName: "نموذج طلب زيارة العام", submittedByHospital: siteLocation }).catch((err) => req.log.error({ err }, "Failed to send public visit request email"));
+    return res.status(result.duplicate ? 200 : 201).json({ success: true, duplicate: result.duplicate, requestNumber: `VIS-${result.visit.id}`, status: result.visit.status });
+  } catch (err) {
+    req.log.error({ err }, "Public visit request failed");
+    return res.status(500).json({ error: "تعذر حفظ طلب الزيارة؛ لم يتم اعتبار العملية ناجحة" });
+  }
+});
+
 router.get("/catalog", requireAuth, requireApproved, async (req: any, res) => {
   const cluster = hasClusterVisitManagement(req.currentUser);
   const [systems, contractors, qualifications, siteApprovals, representatives, representativeSystems, representativeDocuments] = await Promise.all([
@@ -1386,7 +1587,7 @@ router.get("/", requireAuth, requireApproved, async (req: any, res) => {
   const rows = cluster
     ? await query.where(isNull(visitRequestsTable.archivedAt))
     : await query.where(and(eq(visitRequestsTable.userId, req.currentUser.id), isNull(visitRequestsTable.archivedAt)));
-  return res.json({ visits: rows.map((row) => sanitizeVisit(row.visit, row.metadata)) });
+  return res.json({ visits: rows.map((row) => sanitizeVisit(row.visit, row.metadata)), postponementReasons: POSTPONEMENT_REASONS });
 });
 
 router.get("/:id", requireAuth, requireApproved, async (req: any, res) => {
@@ -1412,6 +1613,66 @@ router.get("/:id", requireAuth, requireApproved, async (req: any, res) => {
     facilityApproval: facilityApprovalSummary(facilityRows[0]),
     documents: docs,
   });
+});
+
+router.post("/:id/postponement-request", requireAuth, requireApproved, async (req: any, res) => {
+  const id = numberId(req.params.id);
+  const requestedVisitDate = dayString(req.body?.requestedVisitDate);
+  const reasonCode = cleanText(req.body?.reasonCode, 80);
+  const reason = POSTPONEMENT_REASONS.find((row) => row.code === reasonCode);
+  const reasonDetails = cleanText(req.body?.reasonDetails, 1_000) || null;
+  if (!id || !requestedVisitDate || !reason || (reason.code === "other" && !reasonDetails)) return res.status(400).json({ error: "اختر التاريخ الجديد وسبب التأجيل، واكتب التفاصيل عند اختيار سبب آخر" });
+
+  try {
+    const updated = await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(${id}, 94021)`);
+      const context = await getVisitContext(tx, id);
+      if (!context) throw new Error("POSTPONEMENT_VISIT_NOT_FOUND");
+      const allowed = await canAccessVisit(req.currentUser, context.visit) || (hasFacilityVisitApproval(req.currentUser) && sameFacilitySite(req.currentUser, context.visit));
+      if (!allowed) throw new Error("POSTPONEMENT_FORBIDDEN");
+      if (context.visit.archivedAt || !new Set(["pending", "approved"]).has(context.visit.status)) throw new Error("POSTPONEMENT_VISIT_NOT_ACTIVE");
+      const previousVisitDate = dayString(context.visit.visitDate);
+      if (!previousVisitDate || requestedVisitDate <= previousVisitDate) throw new Error("POSTPONEMENT_DATE_NOT_LATER");
+      const requestedDay = parseIsoDate(requestedVisitDate);
+      if (!requestedDay || !context.siteApproval || context.siteApproval.status !== "active" || !isDateWithin(requestedDay, context.siteApproval.validFrom, context.siteApproval.validUntil)) throw new Error("POSTPONEMENT_SITE_APPROVAL_INVALID");
+      if (!context.qualification || context.qualification.status !== "active" || !isDateWithin(requestedDay, context.qualification.validFrom, context.qualification.validUntil)) throw new Error("POSTPONEMENT_QUALIFICATION_INVALID");
+
+      const envelope = parsedPostponement(context.visit.postponementRequestJson);
+      if (context.visit.postponementStatus === "pending" && envelope.current?.status === "pending") throw new Error("POSTPONEMENT_ALREADY_PENDING");
+      const history = envelope.current ? [...envelope.history, envelope.current].slice(-50) : envelope.history;
+      const current: PostponementEntry = {
+        requestId: randomBytes(10).toString("hex"),
+        previousVisitDate,
+        requestedVisitDate,
+        reasonCode: reason.code,
+        reasonLabel: reason.label,
+        reasonDetails,
+        requestedByUserId: req.currentUser.id || null,
+        requestedByName: cleanText(req.currentUser.name, 200) || "مستخدم الموقع",
+        requestedBySite: cleanText(req.currentUser.hospital, 200) || context.visit.siteLocation || null,
+        requestedAt: new Date().toISOString(),
+        status: "pending",
+      };
+      const [visit] = await tx.update(visitRequestsTable).set({
+        postponementStatus: "pending",
+        postponementRequestJson: JSON.stringify({ schemaVersion: 1, current, history }),
+        updatedAt: new Date(),
+      }).where(eq(visitRequestsTable.id, id)).returning();
+      return { visit, metadata: context.metadata, current };
+    });
+    await audit(req, "طلب تأجيل زيارة من الموقع", { visitId: id, requestId: updated.current.requestId, previousVisitDate: updated.current.previousVisitDate, requestedVisitDate, reasonCode, site: updated.current.requestedBySite });
+    return res.status(201).json({ visit: sanitizeVisit(updated.visit, updated.metadata), postponement: postponementSummary(updated.visit) });
+  } catch (err: any) {
+    if (err.message === "POSTPONEMENT_VISIT_NOT_FOUND") return res.status(404).json({ error: "الزيارة غير موجودة" });
+    if (err.message === "POSTPONEMENT_FORBIDDEN") return res.status(403).json({ error: "غير مصرح بطلب تأجيل هذه الزيارة" });
+    if (err.message === "POSTPONEMENT_VISIT_NOT_ACTIVE") return res.status(409).json({ error: "لا يمكن تأجيل زيارة مرفوضة أو ملغاة أو محذوفة من العرض" });
+    if (err.message === "POSTPONEMENT_DATE_NOT_LATER") return res.status(400).json({ error: "تاريخ التأجيل يجب أن يكون بعد تاريخ الزيارة الحالي" });
+    if (err.message === "POSTPONEMENT_SITE_APPROVAL_INVALID") return res.status(400).json({ error: "اعتماد الموقع لا يغطي التاريخ الجديد المطلوب" });
+    if (err.message === "POSTPONEMENT_QUALIFICATION_INVALID") return res.status(400).json({ error: "تأهيل الشركة لا يغطي التاريخ الجديد المطلوب" });
+    if (err.message === "POSTPONEMENT_ALREADY_PENDING") return res.status(409).json({ error: "يوجد طلب تأجيل قيد مراجعة الإدارة بالفعل" });
+    req.log.error({ err }, "Visit postponement request failed");
+    return res.status(500).json({ error: "تعذر حفظ طلب التأجيل؛ لم يتم اعتبار العملية ناجحة" });
+  }
 });
 
 // ── Center bootstrap, catalogue management and linking ──────────────────────
@@ -1578,7 +1839,7 @@ router.get("/management/bootstrap", requireAuth, requireApproved, requireCluster
   await optionalStep("مزامنة دليل مقاولي الباطن", () => seedApprovedSubcontractorCatalog(req), { systems: 0, systemsDisabled: 0, contractors: 0 });
   await optionalStep("مزامنة شهادات التأهيل", () => seedCertificateQualifications(req), { qualifications: 0 });
 
-  const [systems, contractors, qualifications, siteApprovals, representatives, representativeSystems, representativeDocuments, pending, alerts] = await Promise.all([
+  const [systems, contractors, qualifications, siteApprovals, representatives, representativeSystems, representativeDocuments, pending, pendingPostponements, alerts] = await Promise.all([
     optionalStep("تحميل الأنظمة", () => db.select().from(visitSystemsTable).orderBy(asc(visitSystemsTable.name)), []),
     optionalStep("تحميل الشركات", () => db.select().from(visitContractorsTable).orderBy(asc(visitContractorsTable.name)), []),
     optionalStep("تحميل التأهيلات", () => db.select().from(visitQualificationsTable), []),
@@ -1595,6 +1856,7 @@ router.get("/management/bootstrap", requireAuth, requireApproved, requireCluster
       createdAt: visitDocumentsTable.createdAt,
     }).from(visitDocumentsTable).where(and(eq(visitDocumentsTable.ownerType, "representative"), eq(visitDocumentsTable.status, "active"))).orderBy(desc(visitDocumentsTable.createdAt)), []),
     optionalStep("تحميل الطلبات الواردة", () => db.select({ visit: visitRequestsTable, metadata: visitRequestMetadataTable }).from(visitRequestsTable).leftJoin(visitRequestMetadataTable, eq(visitRequestMetadataTable.visitId, visitRequestsTable.id)).where(and(eq(visitRequestsTable.status, "pending"), isNull(visitRequestsTable.archivedAt))).orderBy(desc(visitRequestsTable.createdAt)).limit(100), []),
+    optionalStep("تحميل طلبات التأجيل", () => db.select({ visit: visitRequestsTable, metadata: visitRequestMetadataTable }).from(visitRequestsTable).leftJoin(visitRequestMetadataTable, eq(visitRequestMetadataTable.visitId, visitRequestsTable.id)).where(and(eq(visitRequestsTable.postponementStatus, "pending"), isNull(visitRequestsTable.archivedAt))).orderBy(desc(visitRequestsTable.updatedAt)).limit(100), []),
     optionalStep("تحميل التنبيهات", () => buildAlerts(), []),
   ]);
   return res.json({
@@ -1618,10 +1880,100 @@ router.get("/management/bootstrap", requireAuth, requireApproved, requireCluster
     approvedSubcontractors: approvedCatalogResponse(systems, contractors),
     approvedPersonnel: approvedPersonnelResponse(systems, contractors),
     pending: pending.map((row) => sanitizeVisit(row.visit, row.metadata)),
+    pendingPostponements: pendingPostponements.map((row) => sanitizeVisit(row.visit, row.metadata)),
+    postponementReasons: POSTPONEMENT_REASONS,
     alerts,
     warnings,
-    stats: { pending: pending.length, systems: systems.filter((x) => x.isActive).length, contractors: contractors.filter((x) => x.isActive).length, representatives: representatives.filter((x) => x.isActive).length },
+    stats: { pending: pending.length, pendingPostponements: pendingPostponements.length, systems: systems.filter((x) => x.isActive).length, contractors: contractors.filter((x) => x.isActive).length, representatives: representatives.filter((x) => x.isActive).length },
   });
+});
+
+router.post("/management/request-form-qr", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
+  const maintenance = maintenanceContractor(req.body?.maintenanceContractorKey);
+  const siteName = cleanText(req.body?.siteName, 200);
+  if (!maintenance || !maintenance.sites.some((site) => site === siteName)) return res.status(400).json({ error: "اختر مقاول الصيانة والموقع من القوائم المعتمدة" });
+  const params = new URLSearchParams({ maintenance: maintenance.key, site: siteName });
+  const requestUrl = `${publicVisitVerifyOrigin(req)}/visit-request-form.html?${params.toString()}`;
+  const qrDataUrl = await QRCode.toDataURL(requestUrl, { errorCorrectionLevel: "M", margin: 2, width: 520 });
+  await audit(req, "تجهيز باركود نموذج طلب زيارة للموقع", { maintenanceContractor: maintenance.name, siteName });
+  res.setHeader("Cache-Control", "no-store");
+  return res.json({ requestUrl, qrDataUrl, siteName, maintenanceContractor: maintenance.name });
+});
+
+router.patch("/management/postponement-requests/:id/decision", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
+  const id = numberId(req.params.id);
+  const requestId = cleanText(req.body?.requestId, 100);
+  const decision = cleanText(req.body?.decision, 30);
+  const decisionNotes = cleanText(req.body?.decisionNotes, 1_000) || null;
+  if (!id || !requestId || !new Set(["approved", "rejected"]).has(decision) || (decision === "rejected" && !decisionNotes)) return res.status(400).json({ error: "حدد طلب التأجيل والقرار، ودوّن سبب الرفض" });
+
+  try {
+    const result = await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(${id}, 94021)`);
+      const context = await getVisitContext(tx, id);
+      if (!context) throw new Error("POSTPONEMENT_VISIT_NOT_FOUND");
+      const envelope = parsedPostponement(context.visit.postponementRequestJson);
+      const current = envelope.current;
+      if (context.visit.postponementStatus !== "pending" || !current || current.status !== "pending" || current.requestId !== requestId) throw new Error("POSTPONEMENT_STALE_DECISION");
+      if (context.visit.archivedAt || context.visit.status === "cancelled") throw new Error("POSTPONEMENT_VISIT_NOT_ACTIVE");
+
+      let nextStartsAt = context.metadata?.startsAt || null;
+      let nextEndsAt = context.metadata?.endsAt || null;
+      if (decision === "approved") {
+        const requestedDay = parseIsoDate(current.requestedVisitDate);
+        if (!requestedDay || !context.siteApproval || context.siteApproval.status !== "active" || !isDateWithin(requestedDay, context.siteApproval.validFrom, context.siteApproval.validUntil)) throw new Error("POSTPONEMENT_SITE_APPROVAL_INVALID");
+        if (!context.qualification || context.qualification.status !== "active" || !isDateWithin(requestedDay, context.qualification.validFrom, context.qualification.validUntil)) throw new Error("POSTPONEMENT_QUALIFICATION_INVALID");
+        const oldStart = context.metadata?.startsAt ? new Date(context.metadata.startsAt) : new Date(`${context.visit.visitDate}T00:00:00.000Z`);
+        const oldEnd = context.metadata?.endsAt ? new Date(context.metadata.endsAt) : null;
+        const duration = oldEnd && !Number.isNaN(oldEnd.getTime()) && !Number.isNaN(oldStart.getTime()) ? oldEnd.getTime() - oldStart.getTime() : null;
+        nextStartsAt = new Date(`${current.requestedVisitDate}T${oldStart.toISOString().slice(11)}`);
+        nextEndsAt = duration && duration > 0 ? new Date(nextStartsAt.getTime() + duration) : null;
+      }
+
+      const decidedCurrent: PostponementEntry = {
+        ...current,
+        status: decision as "approved" | "rejected",
+        decidedByUserId: req.currentUser.id || null,
+        decidedByName: cleanText(req.currentUser.name, 200) || "إدارة الزيارات",
+        decisionNotes,
+        decidedAt: new Date().toISOString(),
+      };
+      const nextEnvelope: PostponementEnvelope = { ...envelope, current: decidedCurrent };
+      const visitValues: any = {
+        postponementStatus: decision,
+        postponementRequestJson: JSON.stringify(nextEnvelope),
+        updatedAt: new Date(),
+      };
+      if (decision === "approved") visitValues.visitDate = current.requestedVisitDate;
+      const [visit] = await tx.update(visitRequestsTable).set(visitValues).where(and(eq(visitRequestsTable.id, id), eq(visitRequestsTable.postponementStatus, "pending"))).returning();
+      if (!visit) throw new Error("POSTPONEMENT_STALE_DECISION");
+
+      if (decision === "approved" && context.metadata) {
+        let snapshotJson = context.metadata.snapshotJson;
+        try {
+          const snapshot = JSON.parse(String(snapshotJson || "null"));
+          if (snapshot?.visit) {
+            snapshot.visit.visitDate = current.requestedVisitDate;
+            snapshot.visit.startsAt = nextStartsAt;
+            snapshot.visit.endsAt = nextEndsAt;
+            snapshotJson = JSON.stringify(snapshot);
+          }
+        } catch {}
+        await tx.update(visitRequestMetadataTable).set({ startsAt: nextStartsAt, endsAt: nextEndsAt, snapshotJson, updatedAt: new Date() }).where(eq(visitRequestMetadataTable.visitId, id));
+      }
+      return { visit, metadata: decision === "approved" && context.metadata ? { ...context.metadata, startsAt: nextStartsAt, endsAt: nextEndsAt } : context.metadata, current: decidedCurrent };
+    });
+    await audit(req, decision === "approved" ? "الموافقة على طلب تأجيل زيارة" : "رفض طلب تأجيل زيارة", { visitId: id, requestId, previousVisitDate: result.current.previousVisitDate, requestedVisitDate: result.current.requestedVisitDate, decisionNotes });
+    return res.json({ visit: sanitizeVisit(result.visit, result.metadata), postponement: postponementSummary(result.visit) });
+  } catch (err: any) {
+    if (err.message === "POSTPONEMENT_VISIT_NOT_FOUND") return res.status(404).json({ error: "الزيارة غير موجودة" });
+    if (err.message === "POSTPONEMENT_STALE_DECISION") return res.status(409).json({ error: "طلب التأجيل تغير أو تمت مراجعته بالفعل؛ حدّث الصفحة" });
+    if (err.message === "POSTPONEMENT_VISIT_NOT_ACTIVE") return res.status(409).json({ error: "لا يمكن تعديل موعد زيارة ملغاة أو محذوفة من العرض" });
+    if (err.message === "POSTPONEMENT_SITE_APPROVAL_INVALID") return res.status(400).json({ error: "اعتماد الموقع لا يغطي التاريخ الجديد المطلوب" });
+    if (err.message === "POSTPONEMENT_QUALIFICATION_INVALID") return res.status(400).json({ error: "تأهيل الشركة لا يغطي التاريخ الجديد المطلوب" });
+    req.log.error({ err }, "Visit postponement decision failed");
+    return res.status(500).json({ error: "تعذر حفظ قرار طلب التأجيل" });
+  }
 });
 
 router.post("/management/systems", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
@@ -2708,8 +3060,11 @@ router.get("/:id/permit", requireAuth, requireApproved, async (req: any, res) =>
     const qr = await db.transaction((tx) => ensurePermitToken(tx, id));
     const token = decryptPermitToken(qr.tokenCiphertext);
     const verifyUrl = `${publicVisitVerifyOrigin(req)}/visit-permit-verify.html#${encodeURIComponent(token)}`;
-    const qrDataUrl = await QRCode.toDataURL(verifyUrl, { errorCorrectionLevel: "M", margin: 1, width: 220 });
-    const [stamp, signature, signerName, signerTitle, legacyManagerName, documentsVerified, printTexts] = await Promise.all([
+    const downloadToken = createPermitDownloadToken(qr.tokenHash);
+    const downloadUrl = `${publicVisitVerifyOrigin(req)}/visit-permit-download.html#${encodeURIComponent(downloadToken)}`;
+    const [qrDataUrl, downloadQrDataUrl, stamp, signature, signerName, signerTitle, legacyManagerName, documentsVerified, printTexts] = await Promise.all([
+      permitVerificationQrDataUrl(verifyUrl),
+      QRCode.toDataURL(downloadUrl, { errorCorrectionLevel: "M", margin: 1, width: 180 }),
       getSetting("visit_stamp"),
       getSetting("visit_signature"),
       getSetting("visit_signer_name"),
@@ -2731,6 +3086,7 @@ router.get("/:id/permit", requireAuth, requireApproved, async (req: any, res) =>
         documentsVerified,
         isDraft: context.visit.status !== "approved",
         qrDataUrl,
+        downloadQrDataUrl,
       },
       settings: {
         stamp,
@@ -2820,6 +3176,68 @@ router.get("/qr/public", async (req: any, res) => {
       endsAt: result.visit.endsAt,
     },
   });
+});
+
+router.get("/qr/public-permit", async (req: any, res) => {
+  if (!assertScanRate(req, res)) return;
+  const downloadToken = cleanText(req.query.token, 300);
+  if (!downloadToken) return res.status(400).json({ error: "رمز تحميل التصريح مطلوب" });
+  try {
+    const tokenHash = verifyPermitDownloadToken(downloadToken);
+    if (!tokenHash) return res.status(404).json({ error: "رمز تحميل التصريح غير صالح أو معطل" });
+    const [row] = await db.select({ qr: visitPermitTokensTable, visit: visitRequestsTable })
+      .from(visitPermitTokensTable)
+      .innerJoin(visitRequestsTable, eq(visitRequestsTable.id, visitPermitTokensTable.visitId))
+      .where(eq(visitPermitTokensTable.tokenHash, tokenHash)).limit(1);
+    if (!row || row.qr.status !== "active") return res.status(404).json({ error: "رمز تحميل التصريح غير صالح أو معطل" });
+    if (row.visit.status !== "approved" || row.visit.archivedAt) return res.status(409).json({ error: "التصريح غير معتمد أو لم يعد متاحًا للتحميل" });
+    const context = await getVisitContext(db, row.visit.id);
+    if (!context) return res.status(404).json({ error: "الزيارة غير موجودة" });
+    await db.update(visitPermitTokensTable).set({ lastScannedAt: new Date(), scanCount: sql`${visitPermitTokensTable.scanCount} + 1` }).where(eq(visitPermitTokensTable.id, row.qr.id));
+    const origin = publicVisitVerifyOrigin(req);
+    const token = decryptPermitToken(row.qr.tokenCiphertext);
+    const verifyUrl = `${origin}/visit-permit-verify.html#${encodeURIComponent(token)}`;
+    const downloadUrl = `${origin}/visit-permit-download.html#${encodeURIComponent(downloadToken)}`;
+    const [qrDataUrl, downloadQrDataUrl, stamp, signature, signerName, signerTitle, legacyManagerName, documentsVerified, printTexts] = await Promise.all([
+      permitVerificationQrDataUrl(verifyUrl),
+      QRCode.toDataURL(downloadUrl, { errorCorrectionLevel: "M", margin: 1, width: 180 }),
+      getSetting("visit_stamp"),
+      getSetting("visit_signature"),
+      getSetting("visit_signer_name"),
+      getSetting("visit_signer_title"),
+      getSetting("visit_manager_name"),
+      hasActiveVisitDocuments(row.visit.id, context.metadata),
+      getVisitPrintTexts(),
+    ]);
+    await audit(req, "تحميل عام لتصريح زيارة معتمد عبر QR", { visitId: row.visit.id, serialNumber: row.visit.serialNumber });
+    res.setHeader("Cache-Control", "no-store");
+    return res.json({
+      permit: {
+        ...sanitizeVisit(context.visit, context.metadata),
+        repIdMasked: maskIdentity(context.visit.repId),
+        repId: context.visit.repId,
+        repMobile: context.visit.repMobile,
+        representatives: permitRepresentatives(context.visit, context.metadata, context.representative),
+        representativeName: context.representative?.fullName || context.visit.repName,
+        residenceVerified: isResidenceVerified(context.representative, context.visit),
+        documentsVerified,
+        isDraft: false,
+        qrDataUrl,
+        downloadQrDataUrl,
+      },
+      settings: {
+        stamp,
+        signature,
+        signerName: signerName || legacyManagerName || DEFAULT_VISIT_SIGNER_NAME,
+        signerTitle: effectiveSignerTitle(signerTitle),
+        managerName: signerName || legacyManagerName || DEFAULT_VISIT_SIGNER_NAME,
+        ...printTexts,
+      },
+    });
+  } catch (err) {
+    req.log.error({ err }, "Public permit download failed");
+    return res.status(503).json({ error: "تعذر تجهيز تصريح الزيارة للتحميل" });
+  }
 });
 
 router.post("/qr/verify", requireAuth, requireApproved, async (req: any, res) => {

@@ -116,7 +116,7 @@ test('hospital switching never changes context before a verified complete save',
   assert.doesNotMatch(legacyReviewSwitch, /indexOf\('attendance'\)/);
 });
 
-test('every mutating API route requires verified authentication', () => {
+test('every mutating API route requires verified authentication except the guarded public visit intake', () => {
   const failures = [];
   const routeFiles = walk(path.join(repoDir, 'artifacts/api-server/src/routes'), (file) => file.endsWith('.ts'));
 
@@ -124,6 +124,15 @@ test('every mutating API route requires verified authentication', () => {
     const source = fs.readFileSync(routeFile, 'utf8');
     const declarations = source.matchAll(/router\.(post|put|patch|delete)\s*\(([\s\S]*?)(?:async\s*\(|async\s+function)/g);
     for (const declaration of declarations) {
+      const isGuardedPublicVisitIntake =
+        path.relative(repoDir, routeFile) === 'artifacts/api-server/src/routes/visits.ts' &&
+        declaration[1] === 'post' &&
+        /["']\/public\/requests["']/.test(declaration[2]);
+      if (isGuardedPublicVisitIntake) {
+        assert.match(source, /router\.post\("\/public\/requests"[\s\S]*assertPublicVisitRequestRate\(req, res\)/);
+        assert.match(source, /router\.post\("\/public\/requests"[\s\S]*isValidSaudiMobile\(mobile\)/);
+        continue;
+      }
       if (!declaration[2].includes('requireAuth')) {
         failures.push(`${path.relative(repoDir, routeFile)}: ${declaration[1].toUpperCase()}`);
       }
