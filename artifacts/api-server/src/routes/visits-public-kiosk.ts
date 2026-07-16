@@ -33,17 +33,15 @@ router.post("/management/request-form-qr", requireAuth, requireApproved, require
       req.currentUser.email,
       req.currentUser.name,
       "تجهيز باركود عام متعدد اللغات لنموذج طلب الزيارة",
-      JSON.stringify({ requestUrl, scope: "all_sites_all_maintenance_contractors", languages: ["ar", "en", "ur", "hi"] }),
+      JSON.stringify({ requestUrl, languages: ["ar", "en", "ur", "hi"] }),
       req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.socket.remoteAddress || "unknown",
     );
     res.setHeader("Cache-Control", "no-store");
     return res.json({
       requestUrl,
       qrDataUrl,
-      scope: "all_sites_all_maintenance_contractors",
       languages: ["ar", "en", "ur", "hi"],
-      siteName: "جميع المواقع",
-      maintenanceContractor: "جميع مقاولي الصيانة",
+      title: "نموذج طلب زيارة مقاول الباطن",
     });
   } catch (err) {
     req.log.error({ err }, "Failed to generate public multilingual visit request QR");

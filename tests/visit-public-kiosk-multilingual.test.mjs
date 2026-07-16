@@ -19,21 +19,21 @@ function inlineScripts(html) {
   return [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map((match) => match[1]).filter((source) => source.trim());
 }
 
-test('general QR is mounted before the legacy site-specific route and has no site selection', () => {
+test('one public QR is mounted before the legacy site-specific route and requires no site selection', () => {
   assert.ok(routeIndex.indexOf('visitsPublicKioskRouter') < routeIndex.indexOf('router.use("/visits", visitsRouter)'));
   assert.match(kioskRoute, /requestUrl = `\$\{publicOrigin\(req\)\}\/visit-request-form\.html`/);
-  assert.doesNotMatch(kioskRoute, /maintenanceContractorKey|req\.body\?\.siteName/);
-  assert.match(kioskRoute, /all_sites_all_maintenance_contractors/);
-  assert.match(centerKiosk, /جميع المواقع والمقاولين/);
-  assert.match(centerKiosk, /باركود ثابت واحد/);
+  assert.doesNotMatch(kioskRoute, /maintenanceContractorKey|req\.body\?\.siteName|جميع المواقع/);
+  assert.match(centerKiosk, /باركود ثابت للطباعة والتعليق/);
+  assert.doesNotMatch(centerKiosk, /جميع المواقع/);
 });
 
-test('printed poster and public form support Arabic, English, Urdu and Hindi', () => {
+test('printed poster and public form support Arabic, English, Urdu and Hindi with Najran Health Cluster branding', () => {
   for (const value of ['العربية', 'English', 'اردو', 'हिन्दी']) assert.match(publicWrapper, new RegExp(value));
-  for (const value of ['Visit Request Form', 'وزٹ درخواست فارم', 'विज़िट अनुरोध फ़ॉर्म']) assert.match(centerKiosk + publicWrapper, new RegExp(value));
+  for (const value of ['Subcontractor Visit Request', 'ذیلی ٹھیکیدار وزٹ درخواست', 'उप-ठेकेदार विज़िट अनुरोध']) assert.match(centerKiosk + publicWrapper, new RegExp(value));
   assert.match(publicWrapper, /najran_health_cluster_logo\.png/);
+  assert.match(publicWrapper, /تجمع نجران الصحي/);
   assert.match(publicWrapper, /steps:/);
-  assert.doesNotMatch(publicWrapper, /admin-policy-card|public-request-policy/);
+  assert.doesNotMatch(publicWrapper, /admin-policy-card/);
 });
 
 test('hospital portal owns postponement mode while the public visitor form remains new-visit only', () => {
@@ -46,16 +46,17 @@ test('hospital portal owns postponement mode while the public visitor form remai
   assert.doesNotMatch(publicWrapper, /طلب تأجيل زيارة|postponement-request/);
 });
 
-test('download QR is moved to the right side of the footer without changing PDF generation', () => {
+test('download QR is fixed in the right footer column without changing PDF generation', () => {
   assert.match(printLoader, /visit-permit-engine\.js/);
   assert.match(layout, /permit-download-qr/);
   assert.match(layout, /permit-footer-note/);
-  assert.match(layout, /footer\.appendChild\(downloadQr\)/);
+  assert.match(layout, /grid-template-columns:72px minmax\(0,1fr\)/);
+  assert.match(layout, /downloadQr\.style\.cssText = 'grid-column:1/);
   assert.match(layout, /direction:rtl/);
   assert.doesNotMatch(layout, /printPayload|renderPdf|loadPublic/);
 });
 
-test('new scripts and wrapper inline scripts are syntactically valid and avoid native dialogs', () => {
+test('new scripts and public page inline scripts are syntactically valid and avoid native dialogs', () => {
   for (const [name, source] of Object.entries({ printLoader, layout, hospitalMode, centerKiosk })) {
     new vm.Script(source, { filename: name + '.js' });
     assert.doesNotMatch(source, /(?<![\w.])(?:window\s*\.\s*)?(?:alert|confirm|prompt)\s*\(/);

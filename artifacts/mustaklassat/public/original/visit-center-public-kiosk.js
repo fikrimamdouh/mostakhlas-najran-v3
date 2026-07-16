@@ -44,8 +44,8 @@
     return '<div id="public-kiosk-poster" class="kiosk-poster" style="width:min(560px,100%);padding:25px">' +
       '<img class="logo" src="/original/najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي">' +
       '<h3 style="margin-bottom:3px">تجمع نجران الصحي</h3>' +
-      '<div style="font-size:14px;font-weight:900;color:#1e3c72;line-height:1.65">نموذج طلب زيارة<br><span dir="ltr">Visit Request Form</span><br><span dir="rtl">وزٹ درخواست فارم</span><br><span dir="ltr">विज़िट अनुरोध फ़ॉर्म</span></div>' +
-      '<img class="qr" src="' + esc(result.qrDataUrl) + '" alt="باركود نموذج طلب زيارة عام">' +
+      '<div style="font-size:14px;font-weight:900;color:#1e3c72;line-height:1.65">نموذج طلب زيارة مقاول الباطن<br><span dir="ltr">Subcontractor Visit Request</span><br><span dir="rtl">ذیلی ٹھیکیدار وزٹ درخواست</span><br><span dir="ltr">उप-ठेकेदार विज़िट अनुरोध</span></div>' +
+      '<img class="qr" src="' + esc(result.qrDataUrl) + '" alt="باركود نموذج طلب زيارة">' +
       '<div style="display:grid;gap:5px;font-size:12px;line-height:1.65;color:#334155;font-weight:800">' +
         '<div>امسح الرمز واختر لغتك ثم سجّل طلب الزيارة</div>' +
         '<div dir="ltr">Scan the code, choose your language, and submit the visit request</div>' +
@@ -63,16 +63,16 @@
       var preview = document.getElementById('kiosk-preview');
       preview.innerHTML = posterHtml(result);
       document.getElementById('public-kiosk-png').addEventListener('click', function () {
-        var link = document.createElement('a'); link.href = result.qrDataUrl; link.download = 'باركود-نموذج-طلب-زيارة-عام.png'; link.click();
+        var link = document.createElement('a'); link.href = result.qrDataUrl; link.download = 'باركود-نموذج-طلب-زيارة.png'; link.click();
       });
       document.getElementById('public-kiosk-pdf').addEventListener('click', downloadPoster);
       document.getElementById('public-kiosk-copy').addEventListener('click', async function () {
-        try { await navigator.clipboard.writeText(result.requestUrl); toast('تم نسخ رابط نموذج الزيارة العام', true); }
+        try { await navigator.clipboard.writeText(result.requestUrl); toast('تم نسخ رابط نموذج الزيارة', true); }
         catch (_) { toast('تعذر النسخ التلقائي؛ افتح النموذج وانسخ الرابط من المتصفح', false); }
       });
-      toast('تم تجهيز الباركود العام لجميع المواقع والمقاولين', true);
+      toast('تم تجهيز باركود نموذج طلب الزيارة', true);
     } catch (error) {
-      toast(error.message || 'تعذر تجهيز الباركود العام', false);
+      toast(error.message || 'تعذر تجهيز الباركود', false);
     } finally {
       if (button) button.disabled = false;
     }
@@ -89,8 +89,8 @@
       var width = pdf.internal.pageSize.getWidth() - 30;
       var height = canvas.height * width / canvas.width;
       pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 15, width, Math.min(height, pdf.internal.pageSize.getHeight() - 30));
-      pdf.save('بوستر-نموذج-طلب-زيارة-عام-أربع-لغات.pdf');
-      toast('تم تجهيز البوستر العام للطباعة', true);
+      pdf.save('بوستر-نموذج-طلب-زيارة-أربع-لغات.pdf');
+      toast('تم تجهيز البوستر للطباعة', true);
     } catch (error) { toast(error.message || 'تعذر تجهيز البوستر', false); }
     finally { button.disabled = false; }
   }
@@ -102,15 +102,15 @@
     var card = oldForm.closest('.card');
     var title = card && card.querySelector('h3');
     var note = card && card.querySelector('.note');
-    if (title) title.textContent = 'باركود عام لنموذج طلب زيارة مقاول الباطن';
-    if (note) note.textContent = 'باركود ثابت واحد لجميع المواقع والمستشفيات ومقاولي الصيانة. اطبعه وعلّقه في المكتب؛ الزائر يختار اللغة ثم الموقع والشركة والنظام داخل النموذج.';
+    if (title) title.textContent = 'باركود نموذج طلب زيارة مقاول الباطن';
+    if (note) note.textContent = 'باركود ثابت للطباعة والتعليق في المكتب. الزائر يمسحه، يختار اللغة، ثم يختار الموقع والشركة والنظام داخل النموذج.';
 
     var form = oldForm.cloneNode(false);
     form.id = 'kiosk-form';
     form.dataset.publicKioskInstalled = '1';
     form.className = 'form-grid';
     form.style.marginTop = '12px';
-    form.innerHTML = '<div class="field full"><button class="btn btn-primary" type="submit"><i class="fas fa-qrcode"></i> تجهيز الباركود العام</button></div>';
+    form.innerHTML = '<div class="field full"><button class="btn btn-primary" type="submit"><i class="fas fa-qrcode"></i> تجهيز الباركود</button></div>';
     oldForm.replaceWith(form);
     form.addEventListener('submit', function (event) { event.preventDefault(); generate(form.querySelector('button')); });
     generate(form.querySelector('button'));
