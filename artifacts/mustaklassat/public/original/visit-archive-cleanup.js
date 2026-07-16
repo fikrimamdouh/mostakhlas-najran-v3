@@ -2,6 +2,7 @@
   'use strict';
 
   var CONFIRMATION_TEXT = 'حذف المحدد نهائيًا';
+  var POLICY_ADMIN_HEADER = 'visit-center-v1';
 
   function esc(value) {
     return String(value == null ? '' : value)
@@ -227,6 +228,92 @@
     return button;
   }
 
+  function renderPublicRequestPolicy(enabled) {
+    var checkbox = document.getElementById('visit-public-policy-toggle');
+    var state = document.getElementById('visit-public-policy-state');
+    if (checkbox) checkbox.checked = !!enabled;
+    if (!state) return;
+    state.style.background = enabled ? '#fff7ed' : '#f0fdf4';
+    state.style.borderColor = enabled ? '#fed7aa' : '#bbf7d0';
+    state.style.color = enabled ? '#9a3412' : '#166534';
+    state.innerHTML = enabled
+      ? '<strong>الوضع الحالي: المطابقة الإلزامية مفعلة.</strong><br>الباركود يظل عامًا، لكن الإرسال يُقبل فقط عند مطابقة بيانات الزائر مع القائمة المعتمدة.'
+      : '<strong>الوضع الحالي: التسجيل اليدوي متاح.</strong><br>الباركود عام ومفتوح لأي زائر، والطلب يصل للإدارة للمراجعة حتى لو لم يكن الاسم في القائمة المعتمدة.';
+  }
+
+  function ensurePublicRequestPolicyControl() {
+    var kioskForm = document.getElementById('kiosk-form');
+    if (!kioskForm) return null;
+    var existing = document.getElementById('visit-public-policy-admin');
+    if (existing) return existing;
+
+    var panel = document.createElement('div');
+    panel.id = 'visit-public-policy-admin';
+    panel.className = 'note';
+    panel.style.marginTop = '14px';
+    panel.style.background = '#f8fafc';
+    panel.style.color = '#334155';
+    panel.style.borderColor = '#cbd5e1';
+    panel.innerHTML =
+      '<div style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap">' +
+        '<div style="flex:1;min-width:260px"><strong style="display:block;color:#1e3c72;font-size:14px;margin-bottom:4px"><i class="fas fa-user-shield" aria-hidden="true"></i> سياسة تسجيل الزائر عبر الباركود</strong>' +
+        '<span>هذا الإعداد موجود داخل مركز الإدارة فقط. صفحة الزائر العامة لا تعرض أي أدوات إدارية ولا تحتاج إلى تسجيل دخول.</span></div>' +
+        '<button type="button" class="btn btn-primary" id="visit-public-policy-save"><i class="fas fa-floppy-disk" aria-hidden="true"></i> حفظ السياسة</button>' +
+      '</div>' +
+      '<label style="display:flex;align-items:flex-start;gap:9px;margin-top:12px;font-weight:800;cursor:pointer"><input id="visit-public-policy-toggle" type="checkbox" style="width:20px;height:20px;margin-top:1px"><span>تفعيل منع الإرسال إلا بعد مطابقة رقم الهوية أو الإقامة والاسم والجوال مع قائمة المندوبين المعتمدة</span></label>' +
+      '<div id="visit-public-policy-state" class="note" style="margin-top:10px">جارٍ تحميل السياسة الحالية...</div>';
+
+    kioskForm.insertAdjacentElement('afterend', panel);
+    return panel;
+  }
+
+  async function loadPublicRequestPolicyControl() {
+    var panel = ensurePublicRequestPolicyControl();
+    if (!panel) return;
+    var saveButton = document.getElementById('visit-public-policy-save');
+    try {
+      var body = await api('/management/public-request-policy', {
+        headers: { 'X-Visit-Policy-Admin': POLICY_ADMIN_HEADER }
+      });
+      renderPublicRequestPolicy(body.requireApprovedRepresentative === true);
+    } catch (error) {
+      var state = document.getElementById('visit-public-policy-state');
+      if (state) {
+        state.style.background = '#fef2f2';
+        state.style.borderColor = '#fecaca';
+        state.style.color = '#991b1b';
+        state.textContent = error.message || 'تعذر تحميل سياسة التسجيل';
+      }
+      if (saveButton) saveButton.disabled = true;
+      return;
+    }
+
+    saveButton.addEventListener('click', async function () {
+      var checkbox = document.getElementById('visit-public-policy-toggle');
+      var enabled = !!(checkbox && checkbox.checked);
+      saveButton.disabled = true;
+      saveButton.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> جارٍ الحفظ';
+      try {
+        var body = await api('/management/public-request-policy', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Visit-Policy-Admin': POLICY_ADMIN_HEADER
+          },
+          body: JSON.stringify({ requireApprovedRepresentative: enabled })
+        });
+        renderPublicRequestPolicy(body.requireApprovedRepresentative === true);
+        toast(body.requireApprovedRepresentative ? 'تم تفعيل المطابقة الإلزامية للطلبات العامة' : 'تم فتح التسجيل اليدوي عبر الباركود العام', true);
+      } catch (error) {
+        toast(error.message || 'تعذر حفظ سياسة التسجيل', false);
+      } finally {
+        saveButton.disabled = false;
+        saveButton.innerHTML = '<i class="fas fa-floppy-disk" aria-hidden="true"></i> حفظ السياسة';
+      }
+    });
+  }
+
   var button = ensureCleanupButton();
   if (button) button.addEventListener('click', openCleanup);
+  loadPublicRequestPolicyControl();
 })();
