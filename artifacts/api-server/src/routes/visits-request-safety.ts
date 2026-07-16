@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   db,
+  systemSettingsTable,
   visitRequestsTable,
   visitSystemsTable,
   visitContractorsTable,
@@ -13,6 +14,7 @@ import {
 } from "@workspace/db";
 import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import { requireAuth } from "../middleware/requireAuth";
+import { requireClusterVisitManagement } from "../middleware/requireClusterVisitManagement";
 import { findCurrentUser } from "../lib/current-user";
 import { logAudit } from "./audit";
 import { sendVisitNewRequestEmail } from "../lib/email";
@@ -28,6 +30,39 @@ import {
 const router = Router();
 const ADMIN_EMAIL = "rorofikri@gmail.com";
 const DEFAULT_VISIT_PURPOSE = "زيارة دورية لأنظمة المستشفى";
+const PUBLIC_REQUEST_POLICY_KEY = "visit_public_require_approved_representative_v1";
+const PUBLIC_REQUEST_RATE_LIMIT = 6;
+const publicVisitRequestRate = new Map<string, number[]>();
+const MAINTENANCE_CONTRACTORS = [
+  {
+    key: "بيت_العرب",
+    name: "شركة مجموعة بيت العرب الحديثة المحدودة",
+    sites: [
+      "مستشفى يدمه العام",
+      "مستشفى حبونا العام",
+      "مستشفى بدر الجنوب العام",
+      "مستشفى الولادة والأطفال",
+      "مستشفى غرب نجران للولادة والأطفال والعيادات التخصصية",
+      "المكاتب الإدارية والمرافق الصحية وصيانة وإصلاح السيارات والعيادات المتنقلة",
+      "تجمع نجران الصحي",
+    ],
+  },
+  {
+    key: "سراكو",
+    name: "شركة سراكو",
+    sites: [
+      "مستشفى نجران العام الجديد",
+      "مركز طب الأسنان التخصصي",
+      "مجمع الأمل للصحة النفسية",
+      "مستشفى ثار العام",
+      "مستشفى خباش العام",
+      "المراكز الصحية",
+      "مستشفى الملك خالد",
+      "مركز الأمير سلطان",
+      "مستشفى شروره العام",
+    ],
+  },
+] as const;
 
 type AnyDb = typeof db | any;
 
@@ -45,8 +80,36 @@ function dayString(value: unknown): string | null {
   return parsed ? parsed.toISOString().slice(0, 10) : null;
 }
 
+function normalizedDigits(value: unknown): string {
+  return String(value ?? "").replace(/\D/g, "");
+}
+
 function clientIp(req: any): string {
   return req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
+}
+
+function maintenanceContractor(value: unknown) {
+  const key = cleanText(value, 80);
+  return MAINTENANCE_CONTRACTORS.find((row) => row.key === key) || null;
+}
+
+function assertPublicVisitRequestRate(req: any, res: any): boolean {
+  const key = clientIp(req);
+  const now = Date.now();
+  const recent = (publicVisitRequestRate.get(key) || []).filter((at) => now - at < 60_000);
+  if (recent.length >= PUBLIC_REQUEST_RATE_LIMIT) {
+    res.setHeader("Retry-After", "60");
+    res.status(429).json({ error: "تم تجاوز عدد طلبات الزيارة المسموح؛ حاول بعد دقيقة" });
+    return false;
+  }
+  recent.push(now);
+  publicVisitRequestRate.set(key, recent);
+  if (publicVisitRequestRate.size > 2_000) {
+    for (const [candidate, times] of publicVisitRequestRate) {
+      if (!times.some((at) => now - at < 60_000)) publicVisitRequestRate.delete(candidate);
+    }
+  }
+  return true;
 }
 
 async function requireApproved(req: any, res: any, next: any) {
@@ -55,6 +118,25 @@ async function requireApproved(req: any, res: any, next: any) {
   if (user.status !== "approved") return res.status(403).json({ error: "الحساب غير معتمد" });
   req.currentUser = user;
   return next();
+}
+
+async function publicRequestRequiresApprovedRepresentative(): Promise<boolean> {
+  const [setting] = await db.select({ value: systemSettingsTable.value })
+    .from(systemSettingsTable)
+    .where(eq(systemSettingsTable.key, PUBLIC_REQUEST_POLICY_KEY))
+    .limit(1);
+  return setting?.value === "1";
+}
+
+async function savePublicRequestPolicy(enabled: boolean, updatedBy: string): Promise<void> {
+  await db.insert(systemSettingsTable).values({
+    key: PUBLIC_REQUEST_POLICY_KEY,
+    value: enabled ? "1" : "0",
+    updatedBy,
+  }).onConflictDoUpdate({
+    target: systemSettingsTable.key,
+    set: { value: enabled ? "1" : "0", updatedBy, updatedAt: new Date() },
+  });
 }
 
 async function ensurePermitToken(executor: AnyDb, visitId: number) {
@@ -99,6 +181,189 @@ function responseVisit(visit: any, startsAt: Date, endsAt: Date | null) {
     updatedAt: visit.updatedAt,
   };
 }
+
+router.get("/public/request-policy", async (_req, res) => {
+  try {
+    const requireApprovedRepresentative = await publicRequestRequiresApprovedRepresentative();
+    res.setHeader("Cache-Control", "no-store");
+    return res.json({ requireApprovedRepresentative });
+  } catch (err) {
+    return res.status(503).json({ error: "تعذر تحميل سياسة التحقق من طلب الزيارة" });
+  }
+});
+
+router.get("/management/public-request-policy", requireAuth, requireApproved, requireClusterVisitManagement, async (_req: any, res) => {
+  try {
+    const requireApprovedRepresentative = await publicRequestRequiresApprovedRepresentative();
+    res.setHeader("Cache-Control", "no-store");
+    return res.json({ requireApprovedRepresentative });
+  } catch (err) {
+    return res.status(503).json({ error: "تعذر تحميل إعداد التحقق من طلبات الزيارة" });
+  }
+});
+
+router.post("/management/public-request-policy", requireAuth, requireApproved, requireClusterVisitManagement, async (req: any, res) => {
+  const requireApprovedRepresentative = req.body?.requireApprovedRepresentative;
+  if (typeof requireApprovedRepresentative !== "boolean") {
+    return res.status(400).json({ error: "قيمة إعداد التحقق غير صالحة" });
+  }
+  try {
+    await savePublicRequestPolicy(requireApprovedRepresentative, req.currentUser.email || req.currentUser.name || "visit-center");
+    await logAudit(
+      req.currentUser.id,
+      req.currentUser.email,
+      req.currentUser.name,
+      requireApprovedRepresentative ? "تفعيل المطابقة الإلزامية لطلبات الزيارة العامة" : "إيقاف المطابقة الإلزامية لطلبات الزيارة العامة",
+      JSON.stringify({ requireApprovedRepresentative }),
+      clientIp(req),
+    );
+    return res.json({ success: true, requireApprovedRepresentative });
+  } catch (err) {
+    req.log.error({ err }, "Failed to update public visit request policy");
+    return res.status(500).json({ error: "تعذر حفظ إعداد التحقق من طلبات الزيارة" });
+  }
+});
+
+// This route is mounted before the legacy visits router. When strict matching is
+// enabled it deliberately yields to the existing approved-representative flow.
+// When disabled it accepts the visitor's typed identity details while still
+// validating the site, system, subcontractor and qualification on the server.
+router.post("/public/requests", async (req: any, res, next) => {
+  let requireApprovedRepresentative: boolean;
+  try {
+    requireApprovedRepresentative = await publicRequestRequiresApprovedRepresentative();
+  } catch (err) {
+    req.log.error({ err }, "Failed to read public visit request policy");
+    return res.status(503).json({ error: "تعذر التحقق من إعداد طلب الزيارة؛ لم يتم حفظ الطلب" });
+  }
+  if (requireApprovedRepresentative) return next();
+  if (!assertPublicVisitRequestRate(req, res)) return;
+
+  const body = req.body || {};
+  if (cleanText(body.website, 200)) return res.status(400).json({ error: "تعذر قبول الطلب" });
+
+  const maintenance = maintenanceContractor(body.maintenanceContractorKey);
+  const siteLocation = cleanText(body.siteLocation, 200);
+  const systemId = numberId(body.systemId);
+  const contractorId = numberId(body.contractorId);
+  const repId = normalizedDigits(body.identityNumber);
+  const repMobile = cleanText(body.mobile, 30);
+  const repName = cleanText(body.fullName, 200);
+  const visitDate = dayString(body.visitDate);
+  if (!maintenance || !maintenance.sites.some((site) => site === siteLocation) || !systemId || !contractorId || !/^\d{10}$/.test(repId) || !isValidSaudiMobile(repMobile) || !repName || !visitDate) {
+    return res.status(400).json({ error: "أكمل بيانات الموقع والنظام والشركة والاسم والهوية والجوال وتاريخ الزيارة بصورة صحيحة" });
+  }
+  const visitDay = parseIsoDate(visitDate);
+  if (!visitDay) return res.status(400).json({ error: "تاريخ الزيارة غير صالح" });
+
+  try {
+    const [systems, contractors, approvals, qualifications] = await Promise.all([
+      db.select().from(visitSystemsTable).where(eq(visitSystemsTable.id, systemId)).limit(1),
+      db.select().from(visitContractorsTable).where(eq(visitContractorsTable.id, contractorId)).limit(1),
+      db.select().from(visitSiteApprovalsTable).where(and(
+        eq(visitSiteApprovalsTable.siteName, siteLocation),
+        eq(visitSiteApprovalsTable.systemId, systemId),
+        eq(visitSiteApprovalsTable.contractorId, contractorId),
+        eq(visitSiteApprovalsTable.status, "active"),
+      )).limit(1),
+      db.select().from(visitQualificationsTable).where(and(
+        eq(visitQualificationsTable.systemId, systemId),
+        eq(visitQualificationsTable.contractorId, contractorId),
+        eq(visitQualificationsTable.status, "active"),
+      )).limit(1),
+    ]);
+    const system = systems[0];
+    const contractor = contractors[0];
+    const approval = approvals[0];
+    const qualification = qualifications[0];
+    if (!system || !contractor || !approval || !qualification || !system.isActive || !contractor.isActive
+      || !isDateWithin(visitDay, approval.validFrom, approval.validUntil)
+      || !isDateWithin(visitDay, qualification.validFrom, qualification.validUntil)) {
+      return res.status(400).json({ error: "الموقع أو النظام أو شركة مقاول الباطن غير معتمدة في التاريخ المحدد" });
+    }
+
+    const systemName = cleanText(system.name, 250);
+    const subContractor = cleanText(contractor.name, 250);
+    const mainContractor = maintenance.name;
+    const dedupeKey = [repId, siteLocation, systemName, subContractor, visitDate]
+      .map((value) => value.normalize("NFKC").replace(/\s+/g, " ").trim().toLocaleLowerCase("ar"))
+      .join("|");
+    const result = await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${dedupeKey}, 0))`);
+      const [existing] = await tx.select().from(visitRequestsTable).where(and(
+        eq(visitRequestsTable.repId, repId),
+        eq(visitRequestsTable.siteLocation, siteLocation),
+        eq(visitRequestsTable.systemName, systemName),
+        eq(visitRequestsTable.subContractor, subContractor),
+        eq(visitRequestsTable.visitDate, visitDate),
+        ne(visitRequestsTable.status, "cancelled"),
+        isNull(visitRequestsTable.archivedAt),
+      )).orderBy(desc(visitRequestsTable.createdAt)).limit(1);
+      if (existing) return { visit: existing, duplicate: true };
+
+      const [visit] = await tx.insert(visitRequestsTable).values({
+        userId: null,
+        repName,
+        repId,
+        repMobile,
+        siteLocation,
+        visitDate,
+        systemName,
+        mainContractor,
+        subContractor,
+        status: "pending",
+        submittedByName: "نموذج طلب زيارة العام — إدخال يدوي",
+        submittedByHospital: siteLocation,
+        submittedByContract: "PUBLIC_SITE_QR_MANUAL",
+      }).returning();
+      await tx.insert(visitRequestMetadataTable).values({
+        visitId: visit.id,
+        systemId,
+        contractorId,
+        siteApprovalId: approval.id,
+        qualificationId: qualification.id,
+        purpose: DEFAULT_VISIT_PURPOSE,
+        startsAt: new Date(`${visitDate}T00:00:00.000Z`),
+        endsAt: null,
+        snapshotJson: JSON.stringify({ schemaVersion: 1, source: "public_manual_request", verificationMode: "manual_review" }),
+        linkedAt: null,
+      });
+      await ensurePermitToken(tx, visit.id);
+      return { visit, duplicate: false };
+    });
+
+    await logAudit(
+      null,
+      null,
+      "نموذج طلب زيارة العام",
+      result.duplicate ? "منع تكرار طلب زيارة عام بإدخال يدوي" : "إنشاء طلب زيارة عام بإدخال يدوي",
+      JSON.stringify({ visitId: result.visit.id, siteLocation, systemName, subContractor, duplicate: result.duplicate, verificationMode: "manual_review" }),
+      clientIp(req),
+    );
+    if (!result.duplicate) {
+      sendVisitNewRequestEmail(ADMIN_EMAIL, {
+        repName,
+        siteLocation,
+        systemName,
+        mainContractor,
+        subContractor,
+        visitDate,
+        submittedByName: "نموذج طلب زيارة العام — إدخال يدوي",
+        submittedByHospital: siteLocation,
+      }).catch((err) => req.log.error({ err }, "Failed to send manual public visit request email"));
+    }
+    return res.status(result.duplicate ? 200 : 201).json({
+      success: true,
+      duplicate: result.duplicate,
+      requestNumber: `VIS-${result.visit.id}`,
+      status: result.visit.status,
+      verificationMode: "manual_review",
+    });
+  } catch (err) {
+    req.log.error({ err }, "Manual public visit request failed");
+    return res.status(500).json({ error: "تعذر حفظ طلب الزيارة؛ لم يتم اعتبار العملية ناجحة" });
+  }
+});
 
 router.post("/", requireAuth, requireApproved, async (req: any, res, next) => {
   const body = req.body || {};
