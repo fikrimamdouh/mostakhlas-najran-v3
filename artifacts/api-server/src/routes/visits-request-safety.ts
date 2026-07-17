@@ -246,11 +246,12 @@ router.post("/public/requests", async (req: any, res, next) => {
   const siteLocation = cleanText(body.siteLocation, 200);
   const systemId = numberId(body.systemId);
   const contractorId = numberId(body.contractorId);
+  const unlistedContractorName = contractorId ? "" : cleanText(body.contractorName, 250);
   const repId = normalizedDigits(body.identityNumber);
   const repMobile = cleanText(body.mobile, 30);
   const repName = cleanText(body.fullName, 200);
   const visitDate = dayString(body.visitDate);
-  if (!maintenance || !maintenance.sites.some((site) => site === siteLocation) || !systemId || !contractorId || !/^\d{10}$/.test(repId) || !isValidSaudiMobile(repMobile) || !repName || !visitDate) {
+  if (!maintenance || !maintenance.sites.some((site) => site === siteLocation) || !systemId || (!contractorId && unlistedContractorName.length < 2) || !/^\d{10}$/.test(repId) || !isValidSaudiMobile(repMobile) || !repName || !visitDate) {
     return res.status(400).json({ error: "أكمل بيانات الموقع والنظام والشركة والاسم والهوية والجوال وتاريخ الزيارة بصورة صحيحة" });
   }
   const visitDay = parseIsoDate(visitDate);
@@ -259,31 +260,34 @@ router.post("/public/requests", async (req: any, res, next) => {
   try {
     const [systems, contractors, approvals, qualifications] = await Promise.all([
       db.select().from(visitSystemsTable).where(eq(visitSystemsTable.id, systemId)).limit(1),
-      db.select().from(visitContractorsTable).where(eq(visitContractorsTable.id, contractorId)).limit(1),
-      db.select().from(visitSiteApprovalsTable).where(and(
+      contractorId ? db.select().from(visitContractorsTable).where(eq(visitContractorsTable.id, contractorId)).limit(1) : Promise.resolve([]),
+      contractorId ? db.select().from(visitSiteApprovalsTable).where(and(
         eq(visitSiteApprovalsTable.siteName, siteLocation),
         eq(visitSiteApprovalsTable.systemId, systemId),
         eq(visitSiteApprovalsTable.contractorId, contractorId),
         eq(visitSiteApprovalsTable.status, "active"),
-      )).limit(1),
-      db.select().from(visitQualificationsTable).where(and(
+      )).limit(1) : Promise.resolve([]),
+      contractorId ? db.select().from(visitQualificationsTable).where(and(
         eq(visitQualificationsTable.systemId, systemId),
         eq(visitQualificationsTable.contractorId, contractorId),
         eq(visitQualificationsTable.status, "active"),
-      )).limit(1),
+      )).limit(1) : Promise.resolve([]),
     ]);
     const system = systems[0];
     const contractor = contractors[0];
     const approval = approvals[0];
     const qualification = qualifications[0];
-    if (!system || !contractor || !approval || !qualification || !system.isActive || !contractor.isActive
+    if (!system || !system.isActive) {
+      return res.status(400).json({ error: "النظام المحدد غير متاح" });
+    }
+    if (contractorId && (!contractor || !approval || !qualification || !contractor.isActive
       || !isDateWithin(visitDay, approval.validFrom, approval.validUntil)
-      || !isDateWithin(visitDay, qualification.validFrom, qualification.validUntil)) {
+      || !isDateWithin(visitDay, qualification.validFrom, qualification.validUntil))) {
       return res.status(400).json({ error: "الموقع أو النظام أو شركة مقاول الباطن غير معتمدة في التاريخ المحدد" });
     }
 
     const systemName = cleanText(system.name, 250);
-    const subContractor = cleanText(contractor.name, 250);
+    const subContractor = contractorId ? cleanText(contractor.name, 250) : unlistedContractorName;
     const mainContractor = maintenance.name;
     const dedupeKey = [repId, siteLocation, systemName, subContractor, visitDate]
       .map((value) => value.normalize("NFKC").replace(/\s+/g, " ").trim().toLocaleLowerCase("ar"))
@@ -314,18 +318,18 @@ router.post("/public/requests", async (req: any, res, next) => {
         status: "pending",
         submittedByName: "نموذج طلب زيارة العام — إدخال يدوي",
         submittedByHospital: siteLocation,
-        submittedByContract: "PUBLIC_SITE_QR_MANUAL",
+        submittedByContract: contractorId ? "PUBLIC_SITE_QR_MANUAL" : "PUBLIC_SITE_QR_MANUAL_UNLISTED",
       }).returning();
       await tx.insert(visitRequestMetadataTable).values({
         visitId: visit.id,
         systemId,
-        contractorId,
-        siteApprovalId: approval.id,
-        qualificationId: qualification.id,
+        contractorId: contractorId || null,
+        siteApprovalId: approval ? approval.id : null,
+        qualificationId: qualification ? qualification.id : null,
         purpose: DEFAULT_VISIT_PURPOSE,
         startsAt: new Date(`${visitDate}T00:00:00.000Z`),
         endsAt: null,
-        snapshotJson: JSON.stringify({ schemaVersion: 1, source: "public_manual_request", verificationMode: "manual_review" }),
+        snapshotJson: JSON.stringify({ schemaVersion: 1, source: contractorId ? "public_manual_request" : "public_manual_request_unlisted_contractor", verificationMode: "manual_review", unlistedContractorName: contractorId ? undefined : unlistedContractorName }),
         linkedAt: null,
       });
       await ensurePermitToken(tx, visit.id);
