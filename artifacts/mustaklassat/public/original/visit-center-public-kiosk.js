@@ -43,7 +43,7 @@
   function posterHtml(result) {
     return '<div id="public-kiosk-poster" class="kiosk-poster" style="width:min(560px,100%);padding:25px">' +
       '<img class="logo" src="/original/najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي">' +
-      '<h3 style="margin-bottom:3px">تجمع نجران الصحي</h3>' +
+      '<h3 style="margin-bottom:3px">تجمع نجران الصحي | Najran Health Cluster</h3>' +
       '<div style="font-size:14px;font-weight:900;color:#1e3c72;line-height:1.65">نموذج طلب زيارة مقاول الباطن<br><span dir="ltr">Subcontractor Visit Request</span><br><span dir="rtl">ذیلی ٹھیکیدار وزٹ درخواست</span><br><span dir="ltr">उप-ठेकेदार विज़िट अनुरोध</span></div>' +
       '<img class="qr" src="' + esc(result.qrDataUrl) + '" alt="باركود نموذج طلب زيارة">' +
       '<div style="display:grid;gap:5px;font-size:12px;line-height:1.65;color:#334155;font-weight:800">' +
