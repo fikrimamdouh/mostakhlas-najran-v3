@@ -73,7 +73,7 @@
     if (!select) return;
     var rows = eligibleVisits();
     select.innerHTML = '<option value="">اختر الزيارة المطلوب تأجيلها</option>' + rows.map(function (visit) {
-      var label = [visit.serialNumber || ('زيارة ' + visit.id), visit.repName, visit.siteLocation, dateText(visit.visitDate)].filter(Boolean).join(' — ');
+      var label = [visit.serialNumber || ('زيارة ' + visit.id), visit.systemName, visit.subContractor, visit.repName, visit.siteLocation, dateText(visit.visitDate)].filter(Boolean).join(' — ');
       return '<option value="' + visit.id + '"' + (String(selected || '') === String(visit.id) ? ' selected' : '') + '>' + esc(label) + '</option>';
     }).join('');
     if (!rows.length) select.innerHTML = '<option value="">لا توجد زيارة متاحة للتأجيل حاليًا</option>';
@@ -91,6 +91,7 @@
     }
     summary.innerHTML = '<strong>' + esc(visit.repName || '—') + '</strong> — ' + esc(visit.siteLocation || '—') + '<br>الموعد الحالي: ' + esc(dateText(visit.visitDate)) + ' — النظام: ' + esc(visit.systemName || '—') + ' — الشركة: ' + esc(visit.subContractor || '—');
     var requestedDate = document.getElementById('hospital-postponement-date');
+    if (!requestedDate) return;
     requestedDate.min = nextDay(visit.visitDate);
     if (!requestedDate.value || requestedDate.value <= String(visit.visitDate || '').slice(0, 10)) requestedDate.value = nextDay(visit.visitDate);
   }
