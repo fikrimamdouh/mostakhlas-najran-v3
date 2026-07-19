@@ -76,14 +76,16 @@ test('request portal keeps systems, companies and representatives and sends defe
   assert.doesNotMatch(modeScript, /اختر زيارة من طلباتك السابقة/);
 });
 
-test('kiosk keeps the original site fields and guards every value read', () => {
+test('kiosk keeps compatibility fields while generating one general all-sites QR', () => {
   assert.match(kioskScript, /form\.elements\.maintenanceContractorKey/);
   assert.match(kioskScript, /form\.elements\.siteName/);
   assert.match(kioskScript, /if \(!maintenanceSelect \|\| !siteSelect\)/);
   assert.doesNotMatch(kioskScript, /oldForm\.replaceWith\(form\)/);
+  assert.match(kioskScript, /باركود عام لجميع المواقع/);
+  assert.match(kioskScript, /body: '\{\}'/);
   assert.match(centerScript, /if \(!maintenanceSelect \|\| !siteSelect\) return/);
   assert.match(centerScript, /if \(kioskMaintenance\)/);
-  assert.match(permitScript, /20260719_kiosk_form_safe_v5/);
+  assert.match(permitScript, /20260719_general_all_sites_v6/);
 });
 
 test('management decision remains stale-safe', () => {
