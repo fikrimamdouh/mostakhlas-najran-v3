@@ -13,6 +13,6 @@
     loadScript('/original/request-visit-postponement-mode.js?v=20260719_deferred_visit_request_v5');
   }
   if (/cluster-subcontractor-visits\.html/i.test(pageUrl)) {
-    loadScript('/original/visit-center-public-kiosk.js?v=20260719_kiosk_form_safe_v5');
+    loadScript('/original/visit-center-public-kiosk.js?v=20260719_general_all_sites_v6');
   }
 })();
