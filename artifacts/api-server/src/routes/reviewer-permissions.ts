@@ -10,9 +10,12 @@ const DISABLED_REVIEW_PERMISSIONS = {
   permissions: [] as string[],
   reviewHospitals: [] as string[],
   canReviewCurrentHospital: false,
-  canEditCurrentHospital: true,
   reviewOnly: false,
 };
+
+function canEditCurrentHospital(user: any) {
+  return String(user?.role || "user").toLowerCase() !== "viewer";
+}
 
 async function requireAdmin(req: any, res: any, next: any) {
   try {
@@ -38,6 +41,7 @@ router.get("/me", requireAuth, async (req: any, res) => {
     return res.json({
       userId: user.id,
       ...DISABLED_REVIEW_PERMISSIONS,
+      canEditCurrentHospital: canEditCurrentHospital(user),
     });
   } catch (err) {
     req.log?.error?.({ err }, "Failed to get disabled reviewer permissions for me");
