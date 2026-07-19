@@ -59,15 +59,13 @@
       '<img class="logo" src="/original/najran_health_cluster_logo.png" alt="شعار تجمع نجران الصحي">' +
       '<h3 style="margin-bottom:1px">تجمع نجران الصحي</h3>' +
       '<div dir="ltr" style="font-size:13px;font-weight:800;color:#475569;letter-spacing:.4px;margin-bottom:6px">Najran Health Cluster</div>' +
-      '<div style="font-size:14px;font-weight:900;color:#1e3c72;line-height:1.65">نموذج طلب زيارة مقاول الباطن<br><span dir="ltr">Subcontractor Visit Request</span><br><span dir="rtl">ذیلی ٹھیکیدار وزٹ درخواست</span><br><span dir="ltr">उप-ठेकेदार विज़िट अनुरोध</span></div>' +
-      '<img class="qr" src="' + esc(result.qrDataUrl) + '" alt="باركود نموذج طلب زيارة">' +
-      '<strong>' + esc(result.siteName || '') + '</strong>' +
-      '<p>' + esc(result.maintenanceContractor || '') + '</p>' +
+      '<div style="font-size:14px;font-weight:900;color:#1e3c72;line-height:1.65">نموذج طلب زيارة مقاول الباطن — جميع المواقع<br><span dir="ltr">Subcontractor Visit Request — All Sites</span><br><span dir="rtl">ذیلی ٹھیکیدار وزٹ درخواست — تمام مقامات</span><br><span dir="ltr">उप-ठेकेदार विज़िट अनुरोध — सभी स्थान</span></div>' +
+      '<img class="qr" src="' + esc(result.qrDataUrl) + '" alt="باركود نموذج طلب زيارة عام">' +
       '<div style="display:grid;gap:5px;font-size:12px;line-height:1.65;color:#334155;font-weight:800">' +
-        '<div>امسح الرمز واختر لغتك ثم سجّل طلب الزيارة</div>' +
-        '<div dir="ltr">Scan the code, choose your language, and submit the visit request</div>' +
-        '<div dir="rtl">کوڈ اسکین کریں، اپنی زبان منتخب کریں اور وزٹ کی درخواست جمع کریں</div>' +
-        '<div dir="ltr">कोड स्कैन करें, अपनी भाषा चुनें और विज़िट अनुरोध जमा करें</div>' +
+        '<div>امسح الرمز، اختر لغتك، ثم اختر الموقع والنظام والشركة والمندوب</div>' +
+        '<div dir="ltr">Scan the code, choose your language, then select the site, system, company and representative</div>' +
+        '<div dir="rtl">کوڈ اسکین کریں، زبان منتخب کریں، پھر مقام، نظام، کمپنی اور نمائندہ منتخب کریں</div>' +
+        '<div dir="ltr">कोड स्कैन करें, भाषा चुनें, फिर स्थान, सिस्टम, कंपनी और प्रतिनिधि चुनें</div>' +
       '</div></div>' +
       '<div class="actions" style="justify-content:center"><button type="button" class="btn btn-green" id="public-kiosk-pdf"><i class="fas fa-file-pdf"></i> تحميل بوستر PDF</button><button type="button" class="btn btn-light" id="public-kiosk-png"><i class="fas fa-qrcode"></i> تحميل الباركود PNG</button><button type="button" class="btn btn-primary" id="public-kiosk-copy"><i class="fas fa-link"></i> نسخ الرابط</button><a class="btn btn-light" href="' + esc(result.requestUrl) + '" target="_blank" rel="noopener">فتح النموذج</a></div>';
   }
@@ -75,24 +73,10 @@
   async function generate(button) {
     if (button) button.disabled = true;
     try {
-      var form = document.getElementById('kiosk-form');
-      var maintenanceSelect = form && form.elements && form.elements.maintenanceContractorKey;
-      var siteSelect = form && form.elements && form.elements.siteName;
-
-      if (!maintenanceSelect || !siteSelect) {
-        throw new Error('حقول الموقع ومقاول الصيانة غير متاحة؛ حدّث الصفحة تحديثًا آمنًا');
-      }
-      if (!maintenanceSelect.value || !siteSelect.value) {
-        throw new Error('اختر مقاول الصيانة والموقع أولًا');
-      }
-
       var result = await api('/management/request-form-qr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          maintenanceContractorKey: maintenanceSelect.value,
-          siteName: siteSelect.value
-        })
+        body: '{}'
       });
       currentQr = result;
 
@@ -103,19 +87,19 @@
       document.getElementById('public-kiosk-png').addEventListener('click', function () {
         var link = document.createElement('a');
         link.href = result.qrDataUrl;
-        link.download = 'باركود-نموذج-طلب-زيارة-' + (result.siteName || 'الموقع') + '.png';
+        link.download = 'باركود-نموذج-طلب-زيارة-جميع-المواقع.png';
         link.click();
       });
       document.getElementById('public-kiosk-pdf').addEventListener('click', downloadPoster);
       document.getElementById('public-kiosk-copy').addEventListener('click', async function () {
         try {
           await navigator.clipboard.writeText(result.requestUrl);
-          toast('تم نسخ رابط نموذج الزيارة', true);
+          toast('تم نسخ رابط نموذج الزيارة العام', true);
         } catch (_) {
           toast('تعذر النسخ التلقائي؛ افتح النموذج وانسخ الرابط من المتصفح', false);
         }
       });
-      toast('تم تجهيز باركود نموذج طلب الزيارة للموقع المحدد', true);
+      toast('تم تجهيز باركود عام لجميع المواقع', true);
     } catch (error) {
       toast(error.message || 'تعذر تجهيز الباركود', false);
     } finally {
@@ -141,8 +125,8 @@
       var width = pdf.internal.pageSize.getWidth() - 30;
       var height = canvas.height * width / canvas.width;
       pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 15, width, Math.min(height, pdf.internal.pageSize.getHeight() - 30));
-      pdf.save('بوستر-نموذج-طلب-زيارة-' + (currentQr.siteName || 'الموقع') + '.pdf');
-      toast('تم تجهيز البوستر للطباعة', true);
+      pdf.save('بوستر-نموذج-طلب-زيارة-جميع-المواقع.pdf');
+      toast('تم تجهيز البوستر العام للطباعة', true);
     } catch (error) {
       toast(error.message || 'تعذر تجهيز البوستر', false);
     } finally {
@@ -156,16 +140,29 @@
     if (!form || !preview || form.dataset.publicKioskInstalled === '1') return false;
 
     form.dataset.publicKioskInstalled = '1';
+    var maintenanceSelect = form.elements.maintenanceContractorKey;
+    var siteSelect = form.elements.siteName;
+    if (!maintenanceSelect || !siteSelect) {
+      // The general QR does not depend on these fields, but old layouts remain supported.
+    }
+    [maintenanceSelect, siteSelect].forEach(function (select) {
+      if (!select) return;
+      select.required = false;
+      var field = select.closest('.field');
+      if (field) field.hidden = true;
+    });
+
     var card = form.closest('.card');
     var title = card && card.querySelector('h3');
     var note = card && card.querySelector('.note');
-    if (title) title.textContent = 'باركود نموذج طلب زيارة مقاول الباطن';
-    if (note) note.textContent = 'اختر مقاول الصيانة والموقع ثم جهّز الباركود. تظل القوائم الأصلية موجودة ولا يتم استبدالها.';
+    if (title) title.textContent = 'باركود عام لنموذج طلب زيارة مقاول الباطن';
+    if (note) note.textContent = 'باركود واحد لجميع المواقع. الزائر يفتح النموذج ثم يختار الموقع والنظام والشركة والمندوب.';
 
     form.addEventListener('submit', function (event) {
       event.preventDefault();
       generate(form.querySelector('button[type="submit"]'));
     });
+    generate(form.querySelector('button[type="submit"]'));
     return true;
   }
 
