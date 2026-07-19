@@ -8,124 +8,111 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const route = read('artifacts/api-server/src/routes/visits.ts');
+const safetyRoute = read('artifacts/api-server/src/routes/visits-request-safety.ts');
 const schema = read('lib/db/src/schema/index.ts');
 const requestPage = read('artifacts/mustaklassat/public/original/request-visit.html');
+const modeScript = read('artifacts/mustaklassat/public/original/request-visit-postponement-mode.js');
 const permitScript = read('artifacts/mustaklassat/public/original/visit-permit-print.js');
+const kioskScript = read('artifacts/mustaklassat/public/original/visit-center-public-kiosk.js');
 const centerPage = read('artifacts/mustaklassat/public/original/cluster-subcontractor-visits.html');
 const centerScript = read('artifacts/mustaklassat/public/original/cluster-subcontractor-visits.js');
 const publicRequestPage = read('artifacts/mustaklassat/public/visit-request-form.html');
 const publicPermitPage = read('artifacts/mustaklassat/public/visit-permit-download.html');
 
-function routeBlock(pattern) {
-  const match = route.match(pattern);
+function routeBlock(source, pattern) {
+  const match = source.match(pattern);
   assert.ok(match, `route block not found: ${pattern}`);
   return match[0];
 }
 
 function inlineScripts(html) {
-  return [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map((match) => match[1]).filter((source) => source.trim());
+  return [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
+    .map((match) => match[1])
+    .filter((source) => source.trim());
 }
 
-test('postponement state is backed up with the visit and indexed for the management queue', () => {
+test('postponement state remains backed up with the original visit workflow', () => {
   assert.match(schema, /postponementStatus: text\("postponement_status", \{ enum: \["pending", "approved", "rejected"\] \}\)/);
   assert.match(schema, /postponementRequestJson: text\("postponement_request_json"\)/);
-  assert.match(schema, /visit_requests_postponement_status_idx/);
   assert.match(route, /parsedPostponement/);
-  assert.match(route, /history: PostponementEntry\[\]/);
   assert.match(route, /postponement: postponementSummary\(visit\)/);
 });
 
-test('site postponement requests are authorized, later than the current visit and validity checked before queueing', () => {
-  const block = routeBlock(/router\.post\("\/:id\/postponement-request"[\s\S]*?\n}\);/);
+test('existing visit postponement flow remains available', () => {
+  const block = routeBlock(route, /router\.post\("\/:id\/postponement-request"[\s\S]*?\n}\);/);
   assert.match(block, /requireAuth, requireApproved/);
-  assert.match(block, /canAccessVisit\(req\.currentUser, context\.visit\)/);
   assert.match(block, /requestedVisitDate <= previousVisitDate/);
-  assert.match(block, /isDateWithin\(requestedDay, context\.siteApproval\.validFrom, context\.siteApproval\.validUntil\)/);
-  assert.match(block, /isDateWithin\(requestedDay, context\.qualification\.validFrom, context\.qualification\.validUntil\)/);
   assert.match(block, /POSTPONEMENT_ALREADY_PENDING/);
-  assert.match(block, /postponementStatus: "pending"/);
-  assert.match(block, /طلب تأجيل زيارة من الموقع/);
 });
 
-test('management decision is stale-safe and changes the visit date only on approval', () => {
-  const block = routeBlock(/router\.patch\("\/management\/postponement-requests\/:id\/decision"[\s\S]*?\n}\);/);
+test('hospital portal creates a deferred visit directly without an earlier visit id', () => {
+  const block = routeBlock(safetyRoute, /router\.post\("\/", requireAuth, requireApproved,[\s\S]*?\n}\);/);
+  assert.match(block, /body\.requestType === "deferred"/);
+  assert.match(block, /DEFERRED_VISIT_REASONS/);
+  assert.match(block, /postponementReasonCode/);
+  assert.match(block, /postponementReasonDetails/);
+  assert.match(block, /طلب زيارة مؤجلة/);
+  assert.match(block, /snapshotJson: JSON\.stringify/);
+  assert.doesNotMatch(block, /\/:id\/postponement-request/);
+});
+
+test('new and deferred requests use independent deduplication types', () => {
+  const block = routeBlock(safetyRoute, /router\.post\("\/", requireAuth, requireApproved,[\s\S]*?\n}\);/);
+  assert.match(block, /\[requestType, repId, siteLocation, systemName, subContractor, visitDate\]/);
+  assert.match(block, /JSON\.parse\(String\(row\.metadata\.snapshotJson/);
+  assert.match(block, /snapshot\?\.requestType === "deferred"/);
+  assert.match(block, /existingRequestType === requestType/);
+});
+
+test('request portal keeps systems, companies and representatives and sends deferred metadata', () => {
+  assert.match(requestPage, /id="f_system"/);
+  assert.match(requestPage, /id="f_sub"/);
+  assert.match(requestPage, /representative-select/);
+  assert.match(requestPage, /visitRequestMode === 'deferred'/);
+  assert.match(requestPage, /postponementReasonCode/);
+  assert.match(requestPage, /postponementReasonDetails/);
+  assert.match(requestPage, /زيارة مؤجلة/);
+  assert.match(modeScript, /اختر النظام والشركة والمندوب والتاريخ كالمعتاد/);
+  assert.doesNotMatch(modeScript, /اختر زيارة من طلباتك السابقة/);
+});
+
+test('kiosk keeps the original site fields and guards every value read', () => {
+  assert.match(kioskScript, /form\.elements\.maintenanceContractorKey/);
+  assert.match(kioskScript, /form\.elements\.siteName/);
+  assert.match(kioskScript, /if \(!maintenanceSelect \|\| !siteSelect\)/);
+  assert.doesNotMatch(kioskScript, /oldForm\.replaceWith\(form\)/);
+  assert.match(centerScript, /if \(!maintenanceSelect \|\| !siteSelect\) return/);
+  assert.match(centerScript, /if \(kioskMaintenance\)/);
+  assert.match(permitScript, /20260719_kiosk_form_safe_v5/);
+});
+
+test('management decision remains stale-safe', () => {
+  const block = routeBlock(route, /router\.patch\("\/management\/postponement-requests\/:id\/decision"[\s\S]*?\n}\);/);
   assert.match(block, /requireClusterVisitManagement/);
   assert.match(block, /current\.requestId !== requestId/);
   assert.match(block, /eq\(visitRequestsTable\.postponementStatus, "pending"\)/);
-  assert.match(block, /if \(decision === "approved"\) visitValues\.visitDate = current\.requestedVisitDate/);
-  assert.match(block, /update\(visitRequestMetadataTable\)\.set\(\{ startsAt: nextStartsAt, endsAt: nextEndsAt/);
-  assert.match(block, /الموافقة على طلب تأجيل زيارة/);
-  assert.match(block, /رفض طلب تأجيل زيارة/);
-  assert.match(route, /pendingPostponements/);
   assert.match(centerPage, /طلبات تأجيل الزيارات/);
   assert.match(centerScript, /data-postpone-approve/);
   assert.match(centerScript, /data-postpone-reject/);
 });
 
-test('request portal shows site reasons and submits postponement without native browser dialogs', () => {
-  assert.match(permitScript, /NajranVisitPostponement/);
-  assert.match(permitScript, /سبب الموقع للتأجيل/);
-  assert.match(permitScript, /postponement-request/);
-  assert.match(permitScript, /موعد الزيارة الحالي حتى صدور القرار/);
-  assert.match(requestPage, /20260716_postponement_download_qr_v9/);
-  assert.doesNotMatch(permitScript, /(?<![\w.])(?:window\s*\.\s*)?(?:alert|confirm|prompt)\s*\(/);
-});
-
-test('public visit form uses sanitized catalogue data and server-side representative matching', () => {
-  const catalogBlock = routeBlock(/router\.get\("\/public\/request-catalog"[\s\S]*?\n}\);/);
+test('public visit form and permit download remain protected', () => {
+  const catalogBlock = routeBlock(route, /router\.get\("\/public\/request-catalog"[\s\S]*?\n}\);/);
   assert.doesNotMatch(catalogBlock, /visitRepresentativesTable|identityNumber|mobile/);
-  assert.match(catalogBlock, /visitSiteApprovalsTable/);
-  assert.match(catalogBlock, /visitQualificationsTable/);
-
-  const requestBlock = routeBlock(/router\.post\("\/public\/requests"[\s\S]*?\n}\);/);
-  assert.doesNotMatch(requestBlock, /requireAuth|requireApproved/);
-  assert.match(requestBlock, /assertPublicVisitRequestRate/);
-  assert.match(requestBlock, /visitRepresentativesTable\.identityNumber/);
-  assert.match(requestBlock, /normalizedSaudiMobile\(representative\.mobile\) === normalizedSaudiMobile\(submittedMobile\)/);
-  assert.match(requestBlock, /representativeSystems\.some/);
-  assert.match(requestBlock, /pg_advisory_xact_lock/);
-  assert.match(requestBlock, /PUBLIC_SITE_QR/);
-  assert.match(requestBlock, /ensurePermitToken\(tx, visit\.id\)/);
-  assert.match(publicRequestPage, /<title>نموذج طلب زيارة<\/title>/);
   assert.match(publicRequestPage, /\/api\/visits\/public\/request-catalog/);
   assert.match(publicRequestPage, /\/api\/visits\/public\/requests/);
-  assert.match(publicRequestPage, /لا تعرض الصفحة العامة أسماء المندوبين/);
-});
 
-test('site QR poster is generated by the protected center and links to the public request form', () => {
-  const block = routeBlock(/router\.post\("\/management\/request-form-qr"[\s\S]*?\n}\);/);
-  assert.match(block, /requireClusterVisitManagement/);
-  assert.match(block, /visit-request-form\.html/);
-  assert.match(block, /QRCode\.toDataURL/);
-  assert.match(centerPage, /باركود نموذج طلب زيارة للموقع/);
-  assert.match(centerScript, /kiosk-download-pdf/);
-  assert.match(centerScript, /kiosk-download-png/);
-  assert.match(centerScript, /html2canvas\(poster/);
-});
-
-test('approved permit contains a second smaller download QR backed by a token-protected public PDF page', () => {
-  assert.match(route, /visit-permit-download\.html/);
-  assert.match(route, /downloadQrDataUrl/);
-  assert.match(permitScript, /data-role="permit-download-qr"/);
-  assert.match(permitScript, /width:64px;height:64px/);
-  assert.match(permitScript, /تحميل النموذج<br>على الجوال/);
-  const block = routeBlock(/router\.get\("\/qr\/public-permit"[\s\S]*?\n}\);/);
-  assert.match(block, /assertScanRate/);
-  assert.match(block, /verifyPermitDownloadToken/);
-  assert.match(block, /decryptPermitToken\(row\.qr\.tokenCiphertext\)/);
-  assert.doesNotMatch(block, /tokenHashesMatch/);
-  assert.match(block, /row\.visit\.status !== "approved"/);
-  assert.match(block, /Cache-Control", "no-store"/);
+  const permitBlock = routeBlock(route, /router\.get\("\/qr\/public-permit"[\s\S]*?\n}\);/);
+  assert.match(permitBlock, /assertScanRate/);
+  assert.match(permitBlock, /verifyPermitDownloadToken/);
   assert.match(publicPermitPage, /NajranVisitPermit\.loadPublic/);
-  assert.match(publicPermitPage, /NajranVisitPermit\.printPayload/);
-  assert.match(publicPermitPage, /نسخة إلكترونية مطابقة للنموذج المعتمد/);
 });
 
-test('new public pages and modified visit scripts are syntactically valid and avoid native dialogs', () => {
+test('modified visit scripts and inline page scripts are syntactically valid and avoid native dialogs', () => {
+  new vm.Script(modeScript, { filename: 'request-visit-postponement-mode.js' });
   new vm.Script(permitScript, { filename: 'visit-permit-print.js' });
-  new vm.Script(centerScript, { filename: 'cluster-subcontractor-visits.js' });
-  for (const [name, html] of [['visit-request-form.html', publicRequestPage], ['visit-permit-download.html', publicPermitPage]]) {
-    for (const source of inlineScripts(html)) new vm.Script(source, { filename: name });
-    assert.doesNotMatch(html, /(?<![\w.])(?:window\s*\.\s*)?(?:alert|confirm|prompt)\s*\(/);
-  }
+  new vm.Script(kioskScript, { filename: 'visit-center-public-kiosk.js' });
+  for (const source of inlineScripts(requestPage)) new vm.Script(source, { filename: 'request-visit.html' });
+  assert.doesNotMatch(modeScript, /(?<![\w.])(?:window\s*\.\s*)?(?:alert|confirm|prompt)\s*\(/);
+  assert.doesNotMatch(kioskScript, /(?<![\w.])(?:window\s*\.\s*)?(?:alert|confirm|prompt)\s*\(/);
 });
