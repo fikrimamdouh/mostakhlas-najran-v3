@@ -58,11 +58,47 @@
       ]
     },
     {
-      "source": "/original/:path*.css",
+      "source": "/original/visit-permit-print.js",
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=2592000, immutable"
+          "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/original/request-visit-postponement-mode.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/original/cluster-subcontractor-visits.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/original/visit-center-public-kiosk.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/visit-request-form.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
         }
       ]
     },
