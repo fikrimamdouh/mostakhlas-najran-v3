@@ -2,7 +2,6 @@
   'use strict';
 
   var currentQr = null;
-  var deferredPurposeByVisitId = Object.create(null);
 
   function esc(value) {
     return String(value == null ? '' : value)
@@ -10,89 +9,6 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
-  }
-
-  function requestUrl(input) {
-    if (typeof input === 'string') return input;
-    if (input && typeof input.url === 'string') return input.url;
-    return '';
-  }
-
-  function captureBootstrap(body) {
-    deferredPurposeByVisitId = Object.create(null);
-    (body && Array.isArray(body.pending) ? body.pending : []).forEach(function (visit) {
-      var purpose = String(visit && visit.purpose || '');
-      if (purpose.indexOf('طلب زيارة مؤجلة') === 0) {
-        deferredPurposeByVisitId[String(visit.id)] = purpose;
-      }
-    });
-    decoratePendingRows();
-  }
-
-  function installBootstrapCapture() {
-    if (window.__najranVisitBootstrapCaptureInstalled) return;
-    window.__najranVisitBootstrapCaptureInstalled = true;
-
-    var originalFetch = window.fetch.bind(window);
-    window.fetch = async function (input, init) {
-      var response = await originalFetch(input, init);
-      var url = requestUrl(input);
-      if (response.ok && /\/api\/visits\/management\/bootstrap(?:\?|$)/.test(url)) {
-        response.clone().json().then(captureBootstrap).catch(function () {});
-      }
-      return response;
-    };
-  }
-
-  function decoratePendingRows() {
-    var body = document.getElementById('incoming-body');
-    if (!body) return;
-
-    body.querySelectorAll('tr').forEach(function (row) {
-      var action = row.querySelector('[data-link], [data-preview]');
-      if (!action) return;
-      var visitId = String(action.getAttribute('data-link') || action.getAttribute('data-preview') || '');
-      var purpose = deferredPurposeByVisitId[visitId];
-      if (!purpose || row.dataset.deferredVisitDecorated === '1') return;
-
-      var cells = row.querySelectorAll('td');
-      if (!cells.length) return;
-
-      row.dataset.deferredVisitDecorated = '1';
-      var badge = document.createElement('span');
-      badge.className = 'badge badge-pending';
-      badge.style.marginRight = '6px';
-      badge.textContent = 'زيارة مؤجلة';
-      cells[0].appendChild(document.createElement('br'));
-      cells[0].appendChild(badge);
-
-      if (cells[4]) {
-        var reason = purpose.replace(/^طلب زيارة مؤجلة\s*[—-]?\s*/, '');
-        if (reason) {
-          var reasonNode = document.createElement('small');
-          reasonNode.style.display = 'block';
-          reasonNode.style.marginTop = '4px';
-          reasonNode.style.color = '#92400e';
-          reasonNode.textContent = reason;
-          cells[4].appendChild(reasonNode);
-        }
-      }
-    });
-  }
-
-  function observePendingRows() {
-    var attempts = 0;
-    var timer = setInterval(function () {
-      attempts += 1;
-      var body = document.getElementById('incoming-body');
-      if (!body) {
-        if (attempts > 40) clearInterval(timer);
-        return;
-      }
-      clearInterval(timer);
-      new MutationObserver(decoratePendingRows).observe(body, { childList: true, subtree: true });
-      decoratePendingRows();
-    }, 250);
   }
 
   async function token(force) {
@@ -252,9 +168,6 @@
     });
     return true;
   }
-
-  installBootstrapCapture();
-  observePendingRows();
 
   var attempts = 0;
   var timer = setInterval(function () {
