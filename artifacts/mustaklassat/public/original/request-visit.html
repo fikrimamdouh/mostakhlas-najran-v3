@@ -300,13 +300,46 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
     var btn = document.getElementById('submit-btn');
     btn.disabled = true;
 
-    var shared = {
-      siteLocation:   document.getElementById('f_site').value,
-      systemId:       Number(document.getElementById('f_system').value),
-      mainContractor: document.getElementById('f_main').value,
-      contractorId:   Number(document.getElementById('f_sub').value),
-      visitDate:      document.getElementById('f_date').value,
-    };
+  var requestType =
+  document.body.dataset.visitRequestMode === 'deferred'
+    ? 'deferred'
+    : 'new';
+
+var deferredReason = document.getElementById('deferred-reason');
+var deferredDetails = document.getElementById('deferred-details');
+
+var shared = {
+  siteLocation: document.getElementById('f_site').value,
+  systemId: Number(document.getElementById('f_system').value),
+  mainContractor: document.getElementById('f_main').value,
+  contractorId: Number(document.getElementById('f_sub').value),
+  visitDate: document.getElementById('f_date').value,
+  requestType: requestType,
+  postponementReasonCode:
+    requestType === 'deferred' && deferredReason
+      ? deferredReason.value
+      : '',
+  postponementReasonDetails:
+    requestType === 'deferred' && deferredDetails
+      ? deferredDetails.value.trim()
+      : ''
+};
+
+if (requestType === 'deferred' && !shared.postponementReasonCode) {
+  showMsg('اختر سبب تأجيل الزيارة', 'error');
+  btn.disabled = false;
+  return;
+}
+
+if (
+  requestType === 'deferred' &&
+  shared.postponementReasonCode === 'other' &&
+  !shared.postponementReasonDetails
+) {
+  showMsg('اكتب تفاصيل سبب التأجيل', 'error');
+  btn.disabled = false;
+  return;
+}
     shared.startsAt = shared.visitDate + 'T00:00:00.000Z'; shared.endsAt = null;
     var approval = catalog.siteApprovals.find(function(x){ return x.status === 'active' && x.siteName === shared.siteLocation && x.systemId === shared.systemId && x.contractorId === shared.contractorId; });
     var qualification = catalog.qualifications.find(function(x){ return x.status === 'active' && x.systemId === shared.systemId && x.contractorId === shared.contractorId; });
@@ -346,8 +379,14 @@ body{font-family:'Tajawal',sans-serif;background:linear-gradient(135deg,var(--pr
     btn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الطلب';
 
     if (successCount > 0 && failCount === 0) {
-      showMsg('تم إرسال ' + successCount + ' طلب بنجاح ✓ — سيتم مراجعتهم قريباً', 'success');
-      /* Reset visitors */
+showMsg(
+  'تم إرسال ' + successCount + ' ' +
+  (shared.requestType === 'deferred'
+    ? 'طلب زيارة مؤجلة'
+    : 'طلب زيارة جديدة') +
+  ' بنجاح — سيتم مراجعته من الإدارة',
+  'success'
+);      /* Reset visitors */
       document.getElementById('visitors-wrap').innerHTML = '';
       visitorCount = 0;
       addVisitor();
