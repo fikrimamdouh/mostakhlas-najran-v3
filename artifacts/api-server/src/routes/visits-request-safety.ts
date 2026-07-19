@@ -30,6 +30,15 @@ import {
 const router = Router();
 const ADMIN_EMAIL = "rorofikri@gmail.com";
 const DEFAULT_VISIT_PURPOSE = "زيارة دورية لأنظمة المستشفى";
+const DEFERRED_VISIT_REASONS = [
+  { code: "site_not_ready", label: "الموقع غير جاهز لاستقبال الزيارة" },
+  { code: "operational_conflict", label: "تعارض مع أعمال أو تشغيل داخل الموقع" },
+  { code: "access_unavailable", label: "تعذر توفير الدخول أو التصاريح اللازمة" },
+  { code: "safety_emergency", label: "حالة طارئة أو متطلبات سلامة بالموقع" },
+  { code: "coordination_incomplete", label: "عدم اكتمال التنسيق مع الجهة المختصة" },
+  { code: "site_request", label: "طلب إدارة الموقع تغيير الموعد" },
+  { code: "other", label: "سبب آخر" },
+] as const;
 const PUBLIC_REQUEST_POLICY_KEY = "visit_public_require_approved_representative_v1";
 const PUBLIC_REQUEST_RATE_LIMIT = 6;
 const publicVisitRequestRate = new Map<string, number[]>();
@@ -384,6 +393,20 @@ router.post("/", requireAuth, requireApproved, async (req: any, res, next) => {
     return res.status(400).json({ error: "يجب اختيار النظام والشركة والمندوب واعتماد الموقع والتأهيل" });
   }
 
+  const requestType = body.requestType === "deferred" ? "deferred" : "new";
+  const postponementReasonCode = cleanText(body.postponementReasonCode, 80);
+  const postponementReasonDetails = cleanText(body.postponementReasonDetails, 1_000);
+  const postponementReason = DEFERRED_VISIT_REASONS.find(
+    (reason) => reason.code === postponementReasonCode,
+  );
+
+  if (requestType === "deferred" && !postponementReason) {
+    return res.status(400).json({ error: "اختر سببًا صحيحًا للزيارة المؤجلة" });
+  }
+  if (requestType === "deferred" && postponementReasonCode === "other" && !postponementReasonDetails) {
+    return res.status(400).json({ error: "تفاصيل سبب التأجيل مطلوبة عند اختيار سبب آخر" });
+  }
+
   const visitDate = dayString(body.visitDate || body.startsAt);
   if (!visitDate) return res.status(400).json({ error: "تاريخ الزيارة غير صالح" });
   const window = validateVisitWindow(body.startsAt || `${visitDate}T00:00:00.000Z`, body.endsAt);
@@ -430,23 +453,47 @@ router.post("/", requireAuth, requireApproved, async (req: any, res, next) => {
   const systemName = cleanText(system.name, 250);
   const subContractor = cleanText(contractor.name, 250);
   const mainContractor = cleanText(body.mainContractor || req.currentUser.company || "تجمع نجران الصحي", 250);
-  const dedupeKey = [repId, siteLocation, systemName, subContractor, visitDate].map((value) => value.normalize("NFKC").replace(/\s+/g, " ").trim().toLocaleLowerCase("ar")).join("|");
+  const dedupeKey = [requestType, repId, siteLocation, systemName, subContractor, visitDate]
+    .map((value) => value.normalize("NFKC").replace(/\s+/g, " ").trim().toLocaleLowerCase("ar"))
+    .join("|");
 
   try {
     const result = await db.transaction(async (tx) => {
       // Serialises equal requests across tabs, retries and server instances.
       await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${dedupeKey}, 0))`);
-      const [existing] = await tx.select().from(visitRequestsTable).where(and(
-        eq(visitRequestsTable.repId, repId),
-        eq(visitRequestsTable.siteLocation, siteLocation),
-        eq(visitRequestsTable.systemName, systemName),
-        eq(visitRequestsTable.subContractor, subContractor),
-        eq(visitRequestsTable.visitDate, visitDate),
-        ne(visitRequestsTable.status, "cancelled"),
-        isNull(visitRequestsTable.archivedAt),
-      )).orderBy(desc(visitRequestsTable.createdAt)).limit(1);
+      const existingRows = await tx
+        .select({
+          visit: visitRequestsTable,
+          metadata: visitRequestMetadataTable,
+        })
+        .from(visitRequestsTable)
+        .innerJoin(
+          visitRequestMetadataTable,
+          eq(visitRequestMetadataTable.visitId, visitRequestsTable.id),
+        )
+        .where(and(
+          eq(visitRequestsTable.repId, repId),
+          eq(visitRequestsTable.siteLocation, siteLocation),
+          eq(visitRequestsTable.systemName, systemName),
+          eq(visitRequestsTable.subContractor, subContractor),
+          eq(visitRequestsTable.visitDate, visitDate),
+          ne(visitRequestsTable.status, "cancelled"),
+          isNull(visitRequestsTable.archivedAt),
+        ))
+        .orderBy(desc(visitRequestsTable.createdAt))
+        .limit(10);
 
-      if (existing) return { visit: existing, duplicate: true };
+      const existing = existingRows.find((row) => {
+        try {
+          const snapshot = JSON.parse(String(row.metadata.snapshotJson || "null"));
+          const existingRequestType = snapshot?.requestType === "deferred" ? "deferred" : "new";
+          return existingRequestType === requestType;
+        } catch {
+          return requestType === "new";
+        }
+      });
+
+      if (existing) return { visit: existing.visit, duplicate: true };
 
       const [visit] = await tx.insert(visitRequestsTable).values({
         userId: req.currentUser.id,
@@ -459,7 +506,9 @@ router.post("/", requireAuth, requireApproved, async (req: any, res, next) => {
         mainContractor,
         subContractor,
         status: "pending",
-        submittedByName: req.currentUser.name,
+        submittedByName: requestType === "deferred"
+          ? `${req.currentUser.name} — طلب زيارة مؤجلة`
+          : req.currentUser.name,
         submittedByHospital: req.currentUser.hospital || siteLocation,
         submittedByContract: req.currentUser.contractNumber || null,
       }).returning();
@@ -474,6 +523,17 @@ router.post("/", requireAuth, requireApproved, async (req: any, res, next) => {
         purpose: DEFAULT_VISIT_PURPOSE,
         startsAt: window.startsAt,
         endsAt: window.endsAt,
+        snapshotJson: JSON.stringify({
+          schemaVersion: 1,
+          requestType,
+          deferredVisit: requestType === "deferred"
+            ? {
+                reasonCode: postponementReason!.code,
+                reasonLabel: postponementReason!.label,
+                reasonDetails: postponementReasonDetails || null,
+              }
+            : null,
+        }),
         linkedAt: new Date(),
         linkedByUserId: req.currentUser.id,
       });
@@ -482,13 +542,47 @@ router.post("/", requireAuth, requireApproved, async (req: any, res, next) => {
     });
 
     if (result.duplicate) {
-      await logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "منع تكرار طلب زيارة مقاول باطن", JSON.stringify({ visitId: result.visit.id, repIdMasked: maskIdentity(repId), siteLocation, systemName, visitDate }), clientIp(req));
-      return res.status(200).json({ visit: responseVisit(result.visit, window.startsAt, window.endsAt), duplicate: true, code: "VISIT_ALREADY_EXISTS" });
+      await logAudit(
+        req.currentUser.id,
+        req.currentUser.email,
+        req.currentUser.name,
+        requestType === "deferred" ? "منع تكرار طلب زيارة مؤجلة" : "منع تكرار طلب زيارة مقاول باطن",
+        JSON.stringify({ visitId: result.visit.id, requestType, repIdMasked: maskIdentity(repId), siteLocation, systemName, visitDate }),
+        clientIp(req),
+      );
+      return res.status(200).json({
+        visit: responseVisit(result.visit, window.startsAt, window.endsAt),
+        duplicate: true,
+        code: "VISIT_ALREADY_EXISTS",
+        requestType,
+      });
     }
 
-    await logAudit(req.currentUser.id, req.currentUser.email, req.currentUser.name, "إنشاء طلب زيارة مقاول باطن", JSON.stringify({ visitId: result.visit.id, centralLinked: true, siteLocation, systemName }), clientIp(req));
-    sendVisitNewRequestEmail(ADMIN_EMAIL, { repName, siteLocation, systemName, mainContractor, subContractor, visitDate, submittedByName: req.currentUser.name, submittedByHospital: req.currentUser.hospital || null }).catch((err) => req.log.error({ err }, "Failed to send visit request email"));
-    return res.status(201).json({ visit: responseVisit(result.visit, window.startsAt, window.endsAt), duplicate: false });
+    await logAudit(
+      req.currentUser.id,
+      req.currentUser.email,
+      req.currentUser.name,
+      requestType === "deferred" ? "إنشاء طلب زيارة مؤجلة" : "إنشاء طلب زيارة مقاول باطن",
+      JSON.stringify({ visitId: result.visit.id, requestType, centralLinked: true, siteLocation, systemName }),
+      clientIp(req),
+    );
+    sendVisitNewRequestEmail(ADMIN_EMAIL, {
+      repName,
+      siteLocation,
+      systemName,
+      mainContractor,
+      subContractor,
+      visitDate,
+      submittedByName: requestType === "deferred"
+        ? `${req.currentUser.name} — طلب زيارة مؤجلة`
+        : req.currentUser.name,
+      submittedByHospital: req.currentUser.hospital || null,
+    }).catch((err) => req.log.error({ err }, "Failed to send visit request email"));
+    return res.status(201).json({
+      visit: responseVisit(result.visit, window.startsAt, window.endsAt),
+      duplicate: false,
+      requestType,
+    });
   } catch (err: any) {
     req.log.error({ err }, "Safe visit request creation failed");
     return res.status(500).json({ error: "تعذر حفظ طلب الزيارة؛ لم يتم اعتبار العملية ناجحة", code: "VISIT_SAVE_FAILED" });
