@@ -1,16 +1,17 @@
 /* consumables-submit-snapshot-guard.js
  * يثبت Snapshot المستهلكات ويجبر بيانات توجيه الرفع على مستهلكات قبل /api/submitted-extracts.
- * V4:
+ * V5:
  * - زر الرئيسية في المستهلكات العادية يحفظ لقطة محلية مباشرة كمسار أمان.
  * - يستمر pre-save قبل أي خروج للرئيسية.
+ * - يعيد تثبيت صف غرامة السكن بعد تطبيق Snapshot التعديل المتأخر ثم يعيد رسم الجدول.
  * - لا يلمس التوقيعات؛ extract-snapshot V5 يحفظ signatures_data_consumables_v27 و sb_sigs_ كما هي.
  */
 (function () {
   'use strict';
   var pageSig = location.pathname + location.search;
   if (!/\/original\/.*consumables\.html(?:$|[?#])/.test(pageSig)) return;
-  if (window.__NAJRAN_CONSUMABLES_SUBMIT_SNAPSHOT_GUARD_V4__) return;
-  window.__NAJRAN_CONSUMABLES_SUBMIT_SNAPSHOT_GUARD_V4__ = true;
+  if (window.__NAJRAN_CONSUMABLES_SUBMIT_SNAPSHOT_GUARD_V5__) return;
+  window.__NAJRAN_CONSUMABLES_SUBMIT_SNAPSHOT_GUARD_V5__ = true;
 
   var KEY = 'summary_data_consumables_v27';
   var IS_STANDARD_CONSUMABLES = /\/original\/consumables\.html(?:$|[?#])/.test(pageSig) || /[?&]page=consumables\.html(?:$|[&#])/.test(pageSig);
@@ -107,6 +108,23 @@
     return rows;
   }
 
+  function repairAfterRevisionSnapshot(reason) {
+    try {
+      var before = existingRows();
+      var wasMissing = !hasHousingDeductionRow(before);
+      var rows = ensureSummarySnapshot();
+      if (wasMissing && hasHousingDeductionRow(rows)) {
+        console.warn('[ConsumablesSnapshotGuard] restored missing housing deduction row after revision snapshot:', reason || 'late-repair');
+        if (typeof window.renderTables === 'function') window.renderTables();
+        else if (typeof window.renderAllTables === 'function') window.renderAllTables();
+      }
+      return rows;
+    } catch (e) {
+      console.warn('[ConsumablesSnapshotGuard] late revision repair failed:', reason, e);
+      return [];
+    }
+  }
+
   function isHomeTarget(el) {
     if (!el) return false;
     var target = el.closest && el.closest('a,button,[role="button"]');
@@ -163,7 +181,7 @@
     a.addEventListener('click', saveLocalAndGoHome, true);
     if (bar.classList && bar.classList.contains('main-action-buttons')) bar.insertBefore(a, bar.firstChild);
     else bar.appendChild(a);
-    console.info('[ConsumablesSnapshotGuard] home button installed v4 direct local save');
+    console.info('[ConsumablesSnapshotGuard] home button installed v5 direct local save');
   }
 
   function injectIntoPayloadBody(body) {
@@ -188,13 +206,13 @@
   document.addEventListener('click', function (ev) { var btn = ev.target && ev.target.closest && ev.target.closest('#_najran_approve_btn_inner, #_najran_approve_btn'); if (btn) ensureSummarySnapshot(); }, true);
   document.addEventListener('pointerdown', ensureBeforeHomeNavigation, true);
   document.addEventListener('click', ensureBeforeHomeNavigation, true);
-  document.addEventListener('DOMContentLoaded', function () { ensureSummarySnapshot(); installHomeButton(); });
-  setTimeout(installHomeButton, 300);
-  setTimeout(installHomeButton, 1200);
-  setTimeout(installHomeButton, 2500);
+  document.addEventListener('DOMContentLoaded', function () { repairAfterRevisionSnapshot('domcontentloaded'); installHomeButton(); });
+  setTimeout(function () { repairAfterRevisionSnapshot('late-300'); installHomeButton(); }, 300);
+  setTimeout(function () { repairAfterRevisionSnapshot('late-1200'); installHomeButton(); }, 1200);
+  setTimeout(function () { repairAfterRevisionSnapshot('late-2500'); installHomeButton(); }, 2500);
 
-  if (!window.__najranConsumablesFetchGuardV4) {
-    window.__najranConsumablesFetchGuardV4 = true;
+  if (!window.__najranConsumablesFetchGuardV5) {
+    window.__najranConsumablesFetchGuardV5 = true;
     var nativeFetch = window.fetch;
     window.fetch = function () {
       try {
@@ -213,5 +231,6 @@
   window.najranEnsureConsumablesSummarySnapshot = ensureSummarySnapshot;
   window.najranInstallConsumablesHomeButton = installHomeButton;
   window.najranConsumablesSaveLocalAndGoHome = saveLocalAndGoHome;
-  console.info('[ConsumablesSnapshotGuard] installed v4 direct home local-save + summary pre-snapshot');
+  window.najranRepairConsumablesHousingDeduction = repairAfterRevisionSnapshot;
+  console.info('[ConsumablesSnapshotGuard] installed v5 revision housing-row repair + direct home local-save + summary pre-snapshot');
 })();
