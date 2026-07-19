@@ -276,12 +276,23 @@
   }
 
   function refreshKioskSites() {
-    var form = document.getElementById('kiosk-form');
-    if (!form || !state.data) return;
-    var key = form.elements.maintenanceContractorKey.value, current = form.elements.siteName.value;
-    var company = (state.data.maintenanceContractors || []).find(function (row) { return row.key === key; });
-    form.elements.siteName.innerHTML = siteOptions(company ? company.sites : [], current);
-  }
+  var form = document.getElementById('kiosk-form');
+  if (!form || !state.data) return;
+
+  var maintenanceSelect = form.elements.maintenanceContractorKey;
+  var siteSelect = form.elements.siteName;
+
+  // نموذج الباركود العام الجديد لا يحتوي على حقول الموقع والمقاول.
+  if (!maintenanceSelect || !siteSelect) return;
+
+  var key = maintenanceSelect.value;
+  var current = siteSelect.value;
+  var company = (state.data.maintenanceContractors || []).find(function (row) {
+    return row.key === key;
+  });
+
+  siteSelect.innerHTML = siteOptions(company ? company.sites : [], current);
+}
 
   function refreshDirectContractors() {
     var form = document.getElementById('direct-form'), systemId = Number(form.elements.systemId.value || 0), current = Number(form.elements.contractorId.value || 0), allowed = Object.create(null);
@@ -330,8 +341,17 @@
     if (repSystemOptions) repSystemOptions.innerHTML = systems.map(function (system) { return '<label class="check-chip"><input type="checkbox" name="repSystemIds" value="' + system.id + '"> ' + esc(entityName(system)) + '</label>'; }).join('');
     var maintenanceSelect = document.querySelector('#direct-form [name="maintenanceContractorKey"]'), maintenanceCurrent = maintenanceSelect.value;
     maintenanceSelect.innerHTML = '<option value="">اختر مقاول الصيانة</option>' + (d.maintenanceContractors || []).map(function (row) { return '<option value="' + esc(row.key) + '"' + (row.key === maintenanceCurrent ? ' selected' : '') + '>' + esc(row.name) + '</option>'; }).join('');
-    var kioskMaintenance = document.querySelector('#kiosk-form [name="maintenanceContractorKey"]'), kioskCurrent = kioskMaintenance.value;
-    kioskMaintenance.innerHTML = '<option value="">اختر مقاول الصيانة</option>' + (d.maintenanceContractors || []).map(function (row) { return '<option value="' + esc(row.key) + '"' + (row.key === kioskCurrent ? ' selected' : '') + '>' + esc(row.name) + '</option>'; }).join('');
+    var kioskMaintenance = document.querySelector('#kiosk-form [name="maintenanceContractorKey"]');
+if (kioskMaintenance) {
+  var kioskCurrent = kioskMaintenance.value;
+  kioskMaintenance.innerHTML =
+    '<option value="">اختر مقاول الصيانة</option>' +
+    (d.maintenanceContractors || []).map(function (row) {
+      return '<option value="' + esc(row.key) + '"' +
+        (row.key === kioskCurrent ? ' selected' : '') +
+        '>' + esc(row.name) + '</option>';
+    }).join('');
+}
     var savedRepresentativeSelect = document.getElementById('direct-saved-representative'), savedRepresentativeCurrent = savedRepresentativeSelect.value;
     refreshSavedRepresentativeOptions(document.getElementById('direct-representative-search').value, savedRepresentativeCurrent);
     var allSites = allMaintenanceSites(), approvalSite = document.getElementById('approval-site'), targetSite = document.querySelector('#copy-form [name="targetSite"]');
