@@ -15,7 +15,7 @@ const KNOWN_ORIGINAL_PAGES = new Set([
   ...originalPages.adminOnlyPages,
 ]);
 const ADMIN_ONLY_ORIGINAL_PAGES = new Set(originalPages.adminOnlyPages);
-const FRAME_POLICY_CACHE_VERSION = "20260715_session_recovery_v4";
+const FRAME_POLICY_CACHE_VERSION = "20260719_consumables_housing_revision_v5";
 
 function UnauthorizedPage() {
   return (
@@ -160,6 +160,51 @@ export default function OriginalViewer() {
         script.defer = true;
         script.src = "/original/extract-submit-flow-control.js?v=20260713_all_native_dialogs_v1";
         doc.head.appendChild(script);
+      }
+
+      if (page === "consumables.html" && !doc.documentElement.dataset.najranConsumablesHousingRepairV1) {
+        doc.documentElement.dataset.najranConsumablesHousingRepairV1 = "true";
+        const frameWindow = iframeRef.current?.contentWindow as any;
+        const repairHousingDeduction = () => {
+          try {
+            if (typeof frameWindow?.najranRepairConsumablesHousingDeduction === "function") {
+              frameWindow.najranRepairConsumablesHousingDeduction("viewer-cache-bust");
+              return;
+            }
+
+            const key = "summary_data_consumables_v27";
+            const raw = frameWindow?.localStorage?.getItem(key);
+            const rows = raw ? JSON.parse(raw) : [];
+            if (!Array.isArray(rows) || !rows.length) return;
+
+            const hasHousingDeduction = rows.some((row: any) => {
+              if (!row || typeof row !== "object") return false;
+              if (row.id === "sm_total_5") return true;
+              return String(row.name ?? "").trim() === "غرامة الكهرباء + الماء للسكن";
+            });
+
+            if (!hasHousingDeduction) {
+              rows.push({
+                id: "sm_total_5",
+                name: "غرامة الكهرباء + الماء للسكن",
+                value: 0,
+                netValue: 0,
+                isEditable: true,
+                isCustom: true,
+              });
+              frameWindow.localStorage.setItem(key, JSON.stringify(rows));
+              console.warn("[OriginalViewer] restored missing consumables housing deduction after revision snapshot");
+            }
+
+            if (typeof frameWindow?.renderTables === "function") frameWindow.renderTables();
+            else if (typeof frameWindow?.renderAllTables === "function") frameWindow.renderAllTables();
+          } catch (error) {
+            console.warn("[OriginalViewer] consumables housing deduction repair failed", error);
+          }
+        };
+
+        window.setTimeout(repairHousingDeduction, 1100);
+        window.setTimeout(repairHousingDeduction, 2400);
       }
 
       if (page === "achievement.html" && !doc.getElementById("najran-achievement-print-signature-once-loader")) {
