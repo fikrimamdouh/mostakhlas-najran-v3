@@ -94,7 +94,7 @@ router.patch(
         approvalRecordedAs: approverName,
         approverTitle,
       }),
-      req.headers["x-forwarded-for"]?.toString() || req.socket?.remoteAddress || null,
+      req.headers["x-forwarded-for"]?.toString() || req.socket?.remoteAddress || undefined,
     );
 
     return res.json({
