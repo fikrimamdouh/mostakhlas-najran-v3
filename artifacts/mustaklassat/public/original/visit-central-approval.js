@@ -93,6 +93,7 @@
     if (!response.ok) {
       var error = new Error(body.error || 'تعذر اعتماد الزيارة');
       error.status = response.status;
+      error.code = body.code || '';
       throw error;
     }
     return body;
@@ -132,6 +133,11 @@
     return !!(card && String(card.textContent || '').indexOf('اعتمدتها المنشأة') !== -1);
   }
 
+  function facilityRejected() {
+    var card = facilityApprovalCard();
+    return !!(card && String(card.textContent || '').indexOf('رفضتها المنشأة') !== -1);
+  }
+
   function refreshVisibleData() {
     var refreshButton = document.querySelector('[data-action="refresh"]');
     if (refreshButton && !refreshButton.disabled) refreshButton.click();
@@ -162,6 +168,10 @@
 
   async function approveCurrentVisit(button) {
     if (approvalInFlight || !currentVisitId || facilityAlreadyApproved()) return;
+    if (facilityRejected()) {
+      toast('المنشأة رفضت الزيارة بالفعل؛ لا يمكن للاعتماد المركزي تجاوز قرار الرفض', false);
+      return;
+    }
     approvalInFlight = true;
     button.disabled = true;
     button.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> جارٍ اعتماد الزيارة';
@@ -175,9 +185,10 @@
         throw new Error('لم يرجع الخادم تأكيدًا صحيحًا لاعتماد الزيارة');
       }
       markModalApproved(result);
+      button.className = 'btn btn-green';
       button.innerHTML = '<i class="fas fa-circle-check" aria-hidden="true"></i> الزيارة معتمدة';
       button.disabled = true;
-      toast('تم اعتماد الزيارة وحفظ القرار باسم الموقع', true);
+      toast(result.alreadyApproved ? 'الزيارة كانت معتمدة بالفعل' : 'تم اعتماد الزيارة وحفظ القرار باسم الموقع', true);
       refreshVisibleData();
     } catch (error) {
       button.disabled = false;
@@ -188,26 +199,33 @@
     }
   }
 
+  function applyButtonState(button) {
+    if (facilityRejected()) {
+      button.className = 'btn btn-red';
+      button.disabled = true;
+      button.innerHTML = '<i class="fas fa-ban" aria-hidden="true"></i> المنشأة رفضت الزيارة';
+      return;
+    }
+    button.className = 'btn btn-green';
+    button.disabled = facilityAlreadyApproved();
+    button.innerHTML = button.disabled
+      ? '<i class="fas fa-circle-check" aria-hidden="true"></i> الزيارة معتمدة'
+      : '<i class="fas fa-check-double" aria-hidden="true"></i> اعتماد الزيارة';
+  }
+
   function ensureApprovalButton() {
     if (!visitModalIsOpen() || !currentVisitId) return;
     var foot = document.getElementById('modal-foot');
     if (!foot) return;
     var existing = document.getElementById(BUTTON_ID);
     if (existing) {
-      if (facilityAlreadyApproved()) {
-        existing.disabled = true;
-        existing.innerHTML = '<i class="fas fa-circle-check" aria-hidden="true"></i> الزيارة معتمدة';
-      }
+      applyButtonState(existing);
       return;
     }
     var button = document.createElement('button');
     button.type = 'button';
     button.id = BUTTON_ID;
-    button.className = 'btn btn-green';
-    button.disabled = facilityAlreadyApproved();
-    button.innerHTML = button.disabled
-      ? '<i class="fas fa-circle-check" aria-hidden="true"></i> الزيارة معتمدة'
-      : '<i class="fas fa-check-double" aria-hidden="true"></i> اعتماد الزيارة';
+    applyButtonState(button);
     button.addEventListener('click', function () { approveCurrentVisit(button); });
     foot.insertBefore(button, foot.firstChild);
   }
