@@ -151,6 +151,50 @@
         document.head.appendChild(script);
       })();
     </script>
+    <script>
+      (function () {
+        'use strict';
+        if (!/\/original-viewer(?:$|[?#])/.test(location.pathname)) return;
+        var params = new URLSearchParams(location.search);
+        if (params.get('page') !== 'cluster-subcontractor-visits.html') return;
+
+        var loaderId = 'najran-central-visit-approval-loader';
+        var attempts = 0;
+        function injectIntoFrame(frame) {
+          try {
+            var doc = frame && frame.contentDocument;
+            if (!doc || !doc.head || doc.getElementById(loaderId)) return false;
+            var script = doc.createElement('script');
+            script.id = loaderId;
+            script.src = '/original/visit-central-approval.js?v=20260722_central_site_approval_v2';
+            script.addEventListener('load', function () {
+              console.log('[NajranVisits] central approval control loaded');
+            });
+            script.addEventListener('error', function () {
+              console.error('[NajranVisits] central approval control failed to load');
+            });
+            doc.head.appendChild(script);
+            return true;
+          } catch (_) {
+            return false;
+          }
+        }
+
+        function findFrame() {
+          attempts += 1;
+          var frame = document.querySelector('iframe[title="cluster-subcontractor-visits.html"]') || document.querySelector('iframe');
+          if (frame) {
+            frame.addEventListener('load', function () { injectIntoFrame(frame); });
+            injectIntoFrame(frame);
+            return;
+          }
+          if (attempts < 80) setTimeout(findFrame, 250);
+        }
+
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', findFrame, { once: true });
+        else findFrame();
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
