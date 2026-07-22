@@ -10,6 +10,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const route = read('artifacts/api-server/src/routes/visits-central-approval.ts');
 const routesIndex = read('artifacts/api-server/src/routes/index.ts');
 const viewer = read('artifacts/mustaklassat/src/pages/OriginalViewer.tsx');
+const appIndex = read('artifacts/mustaklassat/index.html');
 const centerControl = read('artifacts/mustaklassat/public/original/visit-central-approval.js');
 
 test('central fallback approval is permission-gated and mounted before the main visit router', () => {
@@ -61,4 +62,13 @@ test('visit management center loads one-click approval control and validates the
   assert.match(centerControl, /function facilityRejected\(\)/);
   assert.match(centerControl, /المنشأة رفضت الزيارة/);
   assert.match(centerControl, /button\.disabled = true/);
+});
+
+test('application shell has a second guarded loader for the visit approval control', () => {
+  assert.match(appIndex, /params\.get\('page'\) !== 'cluster-subcontractor-visits\.html'/);
+  assert.match(appIndex, /iframe\[title="cluster-subcontractor-visits\.html"\]/);
+  assert.match(appIndex, /najran-central-visit-approval-loader/);
+  assert.match(appIndex, /visit-central-approval\.js\?v=20260722_central_site_approval_v2/);
+  assert.match(appIndex, /doc\.getElementById\(loaderId\)/);
+  assert.match(appIndex, /central approval control loaded/);
 });
