@@ -58,4 +58,7 @@ test('visit management center loads one-click approval control and validates the
   assert.match(centerControl, /!result\.facilityApproval\.id/);
   assert.match(centerControl, /result\.facilityApproval\.status !== 'approved'/);
   assert.match(centerControl, /حفظ القرار باسم الموقع/);
+  assert.match(centerControl, /function facilityRejected\(\)/);
+  assert.match(centerControl, /المنشأة رفضت الزيارة/);
+  assert.match(centerControl, /button\.disabled = true/);
 });
