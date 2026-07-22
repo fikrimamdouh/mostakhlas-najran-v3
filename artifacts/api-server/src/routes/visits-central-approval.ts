@@ -13,6 +13,18 @@ function numberId(value: unknown): number | null {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
+function approvalPayload(approval: any) {
+  return {
+    id: approval.id,
+    status: approval.status,
+    siteName: approval.siteName,
+    approverName: approval.approverName,
+    approverTitle: approval.approverTitle,
+    notes: approval.notes,
+    decidedAt: approval.decidedAt,
+  };
+}
+
 router.patch(
   "/management/visits/:id/facility-approve",
   requireAuth,
@@ -24,22 +36,43 @@ router.patch(
       return res.status(403).json({ error: "حساب منفذ الاعتماد غير مفعل" });
     }
 
-    const [visit] = await db
-      .select({
-        id: visitRequestsTable.id,
-        status: visitRequestsTable.status,
-        siteLocation: visitRequestsTable.siteLocation,
-        serialNumber: visitRequestsTable.serialNumber,
-        archivedAt: visitRequestsTable.archivedAt,
-      })
-      .from(visitRequestsTable)
-      .where(eq(visitRequestsTable.id, id))
-      .limit(1);
+    const [[visit], [existingApproval]] = await Promise.all([
+      db
+        .select({
+          id: visitRequestsTable.id,
+          status: visitRequestsTable.status,
+          siteLocation: visitRequestsTable.siteLocation,
+          serialNumber: visitRequestsTable.serialNumber,
+          archivedAt: visitRequestsTable.archivedAt,
+        })
+        .from(visitRequestsTable)
+        .where(eq(visitRequestsTable.id, id))
+        .limit(1),
+      db
+        .select()
+        .from(visitFacilityApprovalsTable)
+        .where(eq(visitFacilityApprovalsTable.visitId, id))
+        .limit(1),
+    ]);
 
     if (!visit) return res.status(404).json({ error: "الزيارة غير موجودة" });
     if (visit.archivedAt) return res.status(409).json({ error: "لا يمكن اعتماد زيارة محذوفة من العرض" });
     if (visit.status !== "approved") {
       return res.status(409).json({ error: "اعتمد تصريح الزيارة من المركز أولًا قبل اعتمادها تشغيليًا" });
+    }
+    if (existingApproval?.status === "rejected") {
+      return res.status(409).json({
+        error: "المنشأة رفضت الزيارة بالفعل؛ لا يمكن للاعتماد المركزي تجاوز قرار الرفض",
+        code: "FACILITY_REJECTION_EXISTS",
+      });
+    }
+    if (existingApproval?.status === "approved") {
+      return res.json({
+        approved: true,
+        alreadyApproved: true,
+        visitId: id,
+        facilityApproval: approvalPayload(existingApproval),
+      });
     }
 
     const approverName = visit.siteLocation;
@@ -99,16 +132,9 @@ router.patch(
 
     return res.json({
       approved: true,
+      alreadyApproved: false,
       visitId: id,
-      facilityApproval: {
-        id: approval.id,
-        status: approval.status,
-        siteName: approval.siteName,
-        approverName: approval.approverName,
-        approverTitle: approval.approverTitle,
-        notes: approval.notes,
-        decidedAt: approval.decidedAt,
-      },
+      facilityApproval: approvalPayload(approval),
     });
   },
 );
