@@ -155,7 +155,7 @@
       note.style.background = '#f0fdf4';
       note.style.borderColor = '#bbf7d0';
       note.style.color = '#166534';
-      note.textContent = 'تم الاعتماد مركزيًا بواسطة ' + (result.facilityApproval.approverName || 'إدارة مركز الزيارات') + '.';
+      note.textContent = 'تم الاعتماد باسم الموقع: ' + (result.facilityApproval.approverName || result.facilityApproval.siteName || 'الموقع') + ' — الصفة: ' + (result.facilityApproval.approverTitle || 'مدير وحدة الصيانة العامة بتجمع نجران الصحي') + '.';
       card.appendChild(note);
     }
   }
@@ -177,7 +177,7 @@
       markModalApproved(result);
       button.innerHTML = '<i class="fas fa-circle-check" aria-hidden="true"></i> الزيارة معتمدة';
       button.disabled = true;
-      toast('تم اعتماد الزيارة وحفظ القرار باسم منفذ الاعتماد', true);
+      toast('تم اعتماد الزيارة وحفظ القرار باسم الموقع', true);
       refreshVisibleData();
     } catch (error) {
       button.disabled = false;
