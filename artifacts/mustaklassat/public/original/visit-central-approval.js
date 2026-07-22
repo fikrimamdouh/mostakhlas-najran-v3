@@ -1,6 +1,23 @@
 (function () {
   'use strict';
 
+  function loadIncomingWorkflow() {
+    if (document.getElementById('najran-incoming-visit-workflow-loader')) return;
+    var script = document.createElement('script');
+    script.id = 'najran-incoming-visit-workflow-loader';
+    script.defer = true;
+    script.src = '/original/visit-incoming-workflow.js?v=20260722_incoming_split_v1';
+    script.addEventListener('load', function () {
+      console.log('[NajranVisits] incoming visit workflow loaded');
+    });
+    script.addEventListener('error', function () {
+      console.error('[NajranVisits] incoming visit workflow failed to load');
+    });
+    document.head.appendChild(script);
+  }
+
+  loadIncomingWorkflow();
+
   var currentVisitId = 0;
   var currentTrigger = null;
   var approvalInFlight = false;
