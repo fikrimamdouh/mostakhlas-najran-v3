@@ -18,13 +18,17 @@
 
   loadIncomingWorkflow();
 
+  if (window.__NAJRAN_CENTRAL_VISIT_APPROVAL_V3__) return;
+  window.__NAJRAN_CENTRAL_VISIT_APPROVAL_V3__ = true;
+
   var currentVisitId = 0;
-  var currentTrigger = null;
   var approvalInFlight = false;
+  var ensureScheduled = false;
   var BUTTON_ID = 'central-facility-approve';
 
   function tokenGetters() {
-    var scopes = [], seen = [];
+    var scopes = [];
+    var seen = [];
     [window.parent, window.top, window].forEach(function (scope) {
       try {
         var fn = scope && scope.najranGetFreshToken;
@@ -42,6 +46,8 @@
       if (!window.parent || window.parent === window) return resolve(null);
       var requestId = 'central-visit-approval-' + Date.now() + '-' + Math.random().toString(36).slice(2);
       var settled = false;
+      var timer;
+
       function finish(token) {
         if (settled) return;
         settled = true;
@@ -49,6 +55,7 @@
         window.removeEventListener('message', receive);
         resolve(typeof token === 'string' && token.trim() ? token.trim() : null);
       }
+
       function receive(event) {
         if (
           event.origin !== location.origin ||
@@ -59,7 +66,8 @@
         ) return;
         finish(event.data.token);
       }
-      var timer = setTimeout(function () { finish(null); }, 10000);
+
+      timer = setTimeout(function () { finish(null); }, 10000);
       window.addEventListener('message', receive);
       try {
         window.parent.postMessage({
@@ -67,7 +75,9 @@
           requestId: requestId,
           skipCache: !!force
         }, location.origin);
-      } catch (_) { finish(null); }
+      } catch (_) {
+        finish(null);
+      }
     });
   }
 
@@ -84,16 +94,17 @@
         if (typeof token === 'string' && token.trim()) return token.trim();
       } catch (_) {}
     }
+
     var bridged = await requestParentToken(!!force);
     if (bridged) return bridged;
+
     if (!force) {
       try {
         var session = JSON.parse(localStorage.getItem('najran_session') || '{}');
-        if (session.clerkToken && Date.now() - Number(session.timestamp || 0) < 55000) {
-          return session.clerkToken;
-        }
+        if (session.clerkToken && Date.now() - Number(session.timestamp || 0) < 55000) return session.clerkToken;
       } catch (_) {}
     }
+
     throw new Error('انتهت جلسة الدخول؛ اضغط «تحديث آمن» ثم أعد المحاولة');
   }
 
@@ -167,8 +178,8 @@
     if (!card) return;
     var badge = card.querySelector('.badge');
     if (badge) {
-      badge.className = 'badge badge-approved';
-      badge.textContent = 'اعتمدتها المنشأة';
+      if (badge.className !== 'badge badge-approved') badge.className = 'badge badge-approved';
+      if (badge.textContent !== 'اعتمدتها المنشأة') badge.textContent = 'اعتمدتها المنشأة';
     }
     if (!card.querySelector('[data-central-approval-note]')) {
       var note = document.createElement('div');
@@ -183,15 +194,33 @@
     }
   }
 
+  function setButtonState(button, className, disabled, label) {
+    if (button.className !== className) button.className = className;
+    if (button.disabled !== disabled) button.disabled = disabled;
+    if (button.textContent !== label) button.textContent = label;
+  }
+
+  function applyButtonState(button) {
+    if (facilityRejected()) {
+      setButtonState(button, 'btn btn-red', true, 'المنشأة رفضت الزيارة');
+      return;
+    }
+    if (facilityAlreadyApproved()) {
+      setButtonState(button, 'btn btn-green', true, 'الزيارة معتمدة');
+      return;
+    }
+    setButtonState(button, 'btn btn-green', false, 'اعتماد الزيارة');
+  }
+
   async function approveCurrentVisit(button) {
     if (approvalInFlight || !currentVisitId || facilityAlreadyApproved()) return;
     if (facilityRejected()) {
       toast('المنشأة رفضت الزيارة بالفعل؛ لا يمكن للاعتماد المركزي تجاوز قرار الرفض', false);
       return;
     }
+
     approvalInFlight = true;
-    button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> جارٍ اعتماد الزيارة';
+    setButtonState(button, 'btn btn-green', true, 'جارٍ اعتماد الزيارة');
     try {
       var result = await api('/management/visits/' + currentVisitId + '/facility-approve', {
         method: 'PATCH',
@@ -202,32 +231,15 @@
         throw new Error('لم يرجع الخادم تأكيدًا صحيحًا لاعتماد الزيارة');
       }
       markModalApproved(result);
-      button.className = 'btn btn-green';
-      button.innerHTML = '<i class="fas fa-circle-check" aria-hidden="true"></i> الزيارة معتمدة';
-      button.disabled = true;
+      setButtonState(button, 'btn btn-green', true, 'الزيارة معتمدة');
       toast(result.alreadyApproved ? 'الزيارة كانت معتمدة بالفعل' : 'تم اعتماد الزيارة وحفظ القرار باسم الموقع', true);
       refreshVisibleData();
     } catch (error) {
-      button.disabled = false;
-      button.innerHTML = '<i class="fas fa-check-double" aria-hidden="true"></i> اعتماد الزيارة';
+      setButtonState(button, 'btn btn-green', false, 'اعتماد الزيارة');
       toast(error.message || 'تعذر اعتماد الزيارة', false);
     } finally {
       approvalInFlight = false;
     }
-  }
-
-  function applyButtonState(button) {
-    if (facilityRejected()) {
-      button.className = 'btn btn-red';
-      button.disabled = true;
-      button.innerHTML = '<i class="fas fa-ban" aria-hidden="true"></i> المنشأة رفضت الزيارة';
-      return;
-    }
-    button.className = 'btn btn-green';
-    button.disabled = facilityAlreadyApproved();
-    button.innerHTML = button.disabled
-      ? '<i class="fas fa-circle-check" aria-hidden="true"></i> الزيارة معتمدة'
-      : '<i class="fas fa-check-double" aria-hidden="true"></i> اعتماد الزيارة';
   }
 
   function ensureApprovalButton() {
@@ -239,28 +251,47 @@
       applyButtonState(existing);
       return;
     }
+
     var button = document.createElement('button');
     button.type = 'button';
     button.id = BUTTON_ID;
+    button.dataset.visitId = String(currentVisitId);
     applyButtonState(button);
     button.addEventListener('click', function () { approveCurrentVisit(button); });
     foot.insertBefore(button, foot.firstChild);
+  }
+
+  function scheduleEnsureApprovalButton() {
+    if (ensureScheduled) return;
+    ensureScheduled = true;
+    var schedule = typeof window.requestAnimationFrame === 'function'
+      ? window.requestAnimationFrame.bind(window)
+      : function (callback) { return setTimeout(callback, 0); };
+    schedule(function () {
+      ensureScheduled = false;
+      ensureApprovalButton();
+    });
   }
 
   document.addEventListener('click', function (event) {
     var trigger = event.target.closest('[data-visit-detail]');
     if (!trigger) return;
     currentVisitId = Number(trigger.dataset.visitDetail || 0);
-    currentTrigger = trigger;
-    setTimeout(ensureApprovalButton, 0);
+    scheduleEnsureApprovalButton();
   }, true);
 
   var modal = document.getElementById('app-modal');
   if (modal) {
     new MutationObserver(function () {
       if (!visitModalIsOpen()) return;
-      if (!currentVisitId && currentTrigger) currentVisitId = Number(currentTrigger.dataset.visitDetail || 0);
-      ensureApprovalButton();
-    }).observe(modal, { attributes: true, childList: true, subtree: true });
+      scheduleEnsureApprovalButton();
+    }).observe(modal, {
+      attributes: true,
+      attributeFilter: ['class'],
+      childList: true,
+      subtree: true
+    });
   }
+
+  console.log('[NajranVisits] central approval observer hotfix loaded');
 })();
