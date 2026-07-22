@@ -162,6 +162,14 @@ export default function OriginalViewer() {
         doc.head.appendChild(script);
       }
 
+      if (page === "cluster-subcontractor-visits.html" && !doc.getElementById("najran-central-visit-approval-loader")) {
+        const centralApproval = doc.createElement("script");
+        centralApproval.id = "najran-central-visit-approval-loader";
+        centralApproval.defer = true;
+        centralApproval.src = "/original/visit-central-approval.js?v=20260722_central_site_approval_v1";
+        doc.head.appendChild(centralApproval);
+      }
+
       if (page === "consumables.html" && !doc.documentElement.dataset.najranConsumablesHousingRepairV1) {
         doc.documentElement.dataset.najranConsumablesHousingRepairV1 = "true";
         const frameWindow = iframeRef.current?.contentWindow as any;
