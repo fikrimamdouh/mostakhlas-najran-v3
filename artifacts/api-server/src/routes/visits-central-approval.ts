@@ -6,14 +6,11 @@ import { requireClusterVisitManagement } from "../middleware/requireClusterVisit
 import { logAudit } from "./audit";
 
 const router = Router();
+const CENTRAL_APPROVER_TITLE = "مدير وحدة الصيانة العامة بتجمع نجران الصحي";
 
 function numberId(value: unknown): number | null {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-}
-
-function cleanText(value: unknown, max: number): string {
-  return typeof value === "string" ? value.trim().replace(/\s+/g, " ").slice(0, max) : "";
 }
 
 router.patch(
@@ -45,14 +42,9 @@ router.patch(
       return res.status(409).json({ error: "اعتمد تصريح الزيارة من المركز أولًا قبل اعتمادها تشغيليًا" });
     }
 
-    const approverName =
-      cleanText(req.currentUser?.name, 200) ||
-      cleanText(req.currentUser?.email, 200) ||
-      "إدارة مركز الزيارات";
-    const approverTitle =
-      cleanText(req.currentUser?.jobTitle, 200) ||
-      "إدارة مركز الزيارات بتجمع نجران الصحي";
-    const notes = "اعتماد مركزي من إدارة الزيارات عند عدم دخول المنشأة إلى النظام.";
+    const approverName = visit.siteLocation;
+    const approverTitle = CENTRAL_APPROVER_TITLE;
+    const notes = "اعتماد مركزي باسم الموقع عند عدم دخول المنشأة إلى النظام.";
     const decidedAt = new Date();
 
     const [approval] = await db
@@ -99,6 +91,8 @@ router.patch(
         siteName: visit.siteLocation,
         facilityApprovalId: approval.id,
         status: approval.status,
+        approvalRecordedAs: approverName,
+        approverTitle,
       }),
       req.headers["x-forwarded-for"]?.toString() || req.socket?.remoteAddress || null,
     );
