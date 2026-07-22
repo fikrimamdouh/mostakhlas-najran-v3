@@ -61,7 +61,19 @@ test('visit management center loads one-click approval control and validates the
   assert.match(centerControl, /حفظ القرار باسم الموقع/);
   assert.match(centerControl, /function facilityRejected\(\)/);
   assert.match(centerControl, /المنشأة رفضت الزيارة/);
-  assert.match(centerControl, /button\.disabled = true/);
+  assert.match(centerControl, /setButtonState\(button, 'btn btn-green', true/);
+});
+
+test('visit detail modal observer is throttled and button rendering is idempotent', () => {
+  assert.match(centerControl, /var ensureScheduled = false/);
+  assert.match(centerControl, /if \(ensureScheduled\) return/);
+  assert.match(centerControl, /requestAnimationFrame/);
+  assert.match(centerControl, /if \(button\.className !== className\)/);
+  assert.match(centerControl, /if \(button\.disabled !== disabled\)/);
+  assert.match(centerControl, /if \(button\.textContent !== label\)/);
+  assert.match(centerControl, /attributeFilter: \['class'\]/);
+  assert.doesNotMatch(centerControl, /function applyButtonState\(button\)[\s\S]*?button\.innerHTML\s*=/);
+  assert.match(centerControl, /__NAJRAN_CENTRAL_VISIT_APPROVAL_V3__/);
 });
 
 test('application shell has a second guarded loader for the visit approval control', () => {
