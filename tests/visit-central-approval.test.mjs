@@ -32,11 +32,21 @@ test('central fallback approval is recorded under the visit site, not the operat
 });
 
 test('central fallback approval only reports success after a confirmed persisted approval id', () => {
+  assert.match(route, /function approvalPayload\(approval/);
+  assert.match(route, /id: approval\.id/);
+  assert.match(route, /status: approval\.status/);
   assert.match(route, /if \(!approval\?\.id \|\| approval\.status !== "approved"\)/);
-  assert.match(route, /approved: true/);
-  assert.match(route, /facilityApproval:[\s\S]*id: approval\.id[\s\S]*status: approval\.status/);
+  assert.match(route, /facilityApproval: approvalPayload\(approval\)/);
   assert.match(route, /visit\.status !== "approved"/);
   assert.match(route, /visit\.archivedAt/);
+});
+
+test('central fallback approval preserves explicit facility decisions and is idempotent', () => {
+  assert.match(route, /existingApproval\?\.status === "rejected"/);
+  assert.match(route, /FACILITY_REJECTION_EXISTS/);
+  assert.match(route, /existingApproval\?\.status === "approved"/);
+  assert.match(route, /alreadyApproved: true/);
+  assert.match(route, /alreadyApproved: false/);
 });
 
 test('visit management center loads one-click approval control and validates the server response', () => {
@@ -47,4 +57,5 @@ test('visit management center loads one-click approval control and validates the
   assert.match(centerControl, /result\.approved !== true/);
   assert.match(centerControl, /!result\.facilityApproval\.id/);
   assert.match(centerControl, /result\.facilityApproval\.status !== 'approved'/);
+  assert.match(centerControl, /حفظ القرار باسم الموقع/);
 });
