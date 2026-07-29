@@ -52,7 +52,8 @@ test('central fallback approval preserves explicit facility decisions and is ide
 
 test('visit management center loads one-click approval control and validates the server response', () => {
   assert.match(viewer, /page === "cluster-subcontractor-visits\.html"/);
-  assert.match(viewer, /visit-central-approval\.js\?v=20260722_central_site_approval_v1/);
+  assert.match(viewer, /visit-central-approval\.js\?v=20260729_direct_representative_binding_v1/);
+  assert.match(viewer, /FRAME_POLICY_CACHE_VERSION = "20260729_visit_representative_binding_v1"/);
   assert.match(centerControl, /اعتماد الزيارة/);
   assert.match(centerControl, /management\/visits\/.*\/facility-approve/);
   assert.match(centerControl, /result\.approved !== true/);
