@@ -15,7 +15,7 @@ const KNOWN_ORIGINAL_PAGES = new Set([
   ...originalPages.adminOnlyPages,
 ]);
 const ADMIN_ONLY_ORIGINAL_PAGES = new Set(originalPages.adminOnlyPages);
-const FRAME_POLICY_CACHE_VERSION = "20260719_consumables_housing_revision_v5";
+const FRAME_POLICY_CACHE_VERSION = "20260729_visit_representative_binding_v1";
 
 function UnauthorizedPage() {
   return (
@@ -166,7 +166,7 @@ export default function OriginalViewer() {
         const centralApproval = doc.createElement("script");
         centralApproval.id = "najran-central-visit-approval-loader";
         centralApproval.defer = true;
-        centralApproval.src = "/original/visit-central-approval.js?v=20260722_central_site_approval_v1";
+        centralApproval.src = "/original/visit-central-approval.js?v=20260729_direct_representative_binding_v1";
         doc.head.appendChild(centralApproval);
       }
 
