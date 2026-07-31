@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F4F7FA"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layoutDirection="rtl"
+        android:padding="18dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#10243E"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="22dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="مساعد فكري"
+                android:textColor="#FFFFFF"
+                android:textSize="30sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center"
+                android:text="مساعدك الصوتي للمستخلصات والمصنع والإدارة"
+                android:textColor="#DCE5EF"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/connectionStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="#6B7C8F"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="7dp"
+                android:text="الوضع التجريبي"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/resultText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="#FFFFFF"
+            android:gravity="right"
+            android:lineSpacingMultiplier="1.2"
+            android:minHeight="125dp"
+            android:padding="18dp"
+            android:text="جاهز. اضغط وتكلم أو اكتب أمرك."
+            android:textColor="#192534"
+            android:textIsSelectable="true"
+            android:textSize="18sp" />
+
+        <Button
+            android:id="@+id/micButton"
+            android:layout_width="match_parent"
+            android:layout_height="62dp"
+            android:layout_marginTop="16dp"
+            android:backgroundTint="#C58A36"
+            android:text="ابدأ الكلام"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/commandInput"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="#FFFFFF"
+                android:gravity="right"
+                android:hint="اكتب الأمر هنا"
+                android:maxLines="3"
+                android:minHeight="52dp"
+                android:padding="12dp"
+                android:textSize="16sp" />
+
+            <Button
+                android:id="@+id/sendButton"
+                android:layout_width="wrap_content"
+                android:layout_height="52dp"
+                android:layout_marginStart="8dp"
+                android:backgroundTint="#10243E"
+                android:text="تنفيذ"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="right"
+            android:text="أوامر سريعة"
+            android:textColor="#192534"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="2"
+            android:layout_marginTop="6dp">
+
+            <Button android:id="@+id/extractButton" style="@style/QuickButton" android:text="حالة المستخلص" />
+            <Button android:id="@+id/factoryButton" style="@style/QuickButton" android:text="ملخص المصنع" />
+            <Button android:id="@+id/fuelButton" style="@style/QuickButton" android:text="تقرير الديزل" />
+            <Button android:id="@+id/emailButton" style="@style/QuickButton" android:text="فتح البريد" />
+            <Button android:id="@+id/calendarButton" style="@style/QuickButton" android:text="فتح التقويم" />
+            <Button android:id="@+id/settingsButton" style="@style/QuickButton" android:text="الإعدادات" />
+        </GridLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:gravity="center"
+            android:text="نسخة خاصة للتجربة. لا تحتوي كلمات مرور أو مفاتيح سرية."
+            android:textColor="#5B6878"
+            android:textSize="13sp" />
+    </LinearLayout>
+</ScrollView>
