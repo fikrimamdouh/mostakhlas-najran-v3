@@ -3,14 +3,16 @@ import { Router } from "express";
 const router = Router();
 
 const COMPANY_NAME = "شركة العالمية للصناعات الحديثة";
-const FIRE_SYSTEMS = new Set([
+const LINKED_SYSTEMS = new Set([
   "صيانة وإصلاح نظام إطفاء الحريق",
   "صيانة وإصلاح نظام إنذار الحريق",
+  "صيانة نظم المراقبات الأمنية",
 ]);
 
 // The company is created through the normal visit-management UI. This response
-// overlay only links that existing active company to both fire-system catalogue
-// entries; it never creates a second contractor row or mutates historical data.
+// overlay only links that existing active company to the requested system
+// catalogue entries; it never creates a second contractor row or mutates
+// historical data.
 router.get("/management/bootstrap", (req: any, res, next) => {
   const originalJson = res.json.bind(res);
   res.json = ((body: any) => {
@@ -22,7 +24,7 @@ router.get("/management/bootstrap", (req: any, res, next) => {
 
         if (contractor) {
           body.approvedSubcontractors = body.approvedSubcontractors.map((catalog: any) => {
-            if (!FIRE_SYSTEMS.has(String(catalog?.systemName || ""))) return catalog;
+            if (!LINKED_SYSTEMS.has(String(catalog?.systemName || ""))) return catalog;
             const contractors = Array.isArray(catalog.contractors) ? catalog.contractors : [];
             const alreadyLinked = contractors.some((row: any) =>
               Number(row?.id) === Number(contractor.id) || String(row?.name || "").trim() === COMPANY_NAME,
@@ -36,7 +38,7 @@ router.get("/management/bootstrap", (req: any, res, next) => {
         }
       }
     } catch (err) {
-      req.log?.warn?.({ err }, "Failed to overlay fire-system company catalogue link");
+      req.log?.warn?.({ err }, "Failed to overlay linked company catalogue entries");
     }
     return originalJson(body);
   }) as any;
