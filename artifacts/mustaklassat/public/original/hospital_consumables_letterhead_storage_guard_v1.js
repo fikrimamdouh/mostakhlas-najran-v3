@@ -324,7 +324,8 @@
     }
 
     var cell = row.cells && row.cells[0];
-    if (cell) cell.textContent = tafqeetSAR(net);
+    var fixedText = tafqeetSAR(net);
+    if (cell && cell.textContent !== fixedText) cell.textContent = fixedText;
   }
 
   function patchLetterPopup(win) {
@@ -398,7 +399,8 @@
       var label = field.querySelector('label');
       var box = field.querySelector('.readonly-box');
       if (label && box && /الإجمالي شامل الضريبة/.test(label.textContent || '')) {
-        box.textContent = moneySAR(grand);
+        var fixedText = moneySAR(grand);
+        if (box.textContent !== fixedText) box.textContent = fixedText;
       }
     });
   }
